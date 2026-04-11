@@ -25,7 +25,7 @@ signals:
     confidence: high
     description: Multiple sales/marketing automation tools — indicates mature revenue operations
     requires:
-      any: [6sense, outreach, salesloft, pardot, eloqua, klaviyo, hubspot, marketo, demandbase, clearbit, drift, gong, intercom, apollo]
+      any: [6sense, outreach, salesloft, pardot, eloqua, klaviyo, hubspot, marketo, demandbase, clearbit, drift, gong, intercom, apollo, salesforce-mc, braze, iterable, customerio, unbounce]
     min_matches: 2
 
   - name: Enterprise Security Stack
@@ -33,7 +33,7 @@ signals:
     confidence: high
     description: Layered security tooling — endpoint, email, network, or cloud security in place
     requires:
-      any: [crowdstrike, knowbe4, proofpoint, mimecast, zscaler, paloalto, wiz, sophos, trellix, barracuda, trendmicro, okta, duo, 1password, sentinelone, netskope, ping-identity, cyberark, cato]
+      any: [crowdstrike, knowbe4, proofpoint, mimecast, zscaler, paloalto, wiz, sophos, trellix, barracuda, trendmicro, okta, auth0, duo, 1password, sentinelone, netskope, ping-identity, cyberark, cato, onelogin, imperva]
     min_matches: 2
 
   - name: Modern Collaboration
@@ -49,7 +49,7 @@ signals:
     confidence: medium
     description: Developer tooling footprint suggests significant engineering headcount
     requires:
-      any: [github, gitlab, vercel, netlify, postman, linear, figma, autodesk, databricks, snowflake, mongodb, webflow]
+      any: [github, gitlab, vercel, netlify, postman, linear, figma, autodesk, databricks, snowflake, mongodb, webflow, launchdarkly, contentful, sanity]
     min_matches: 2
 
   - name: Data & Analytics Investment
@@ -57,7 +57,7 @@ signals:
     confidence: medium
     description: Multiple analytics/data platforms — data-driven decision making culture
     requires:
-      any: [databricks, snowflake, mongodb, dynatrace, mixpanel, amplitude, heap, pendo, hotjar, segment]
+      any: [databricks, snowflake, mongodb, dynatrace, mixpanel, amplitude, heap, pendo, hotjar, segment, optimizely, walkme]
     min_matches: 2
 
   - name: Multi-Cloud
@@ -65,7 +65,7 @@ signals:
     confidence: high
     description: Infrastructure spread across multiple cloud providers
     requires:
-      any: [aws-route53, azure-dns, gcp-dns, aws-cloudfront, azure-cdn, azure-appservice, cloudflare]
+      any: [aws-route53, aws-cloudfront, aws-elb, aws-s3, aws-eb, azure-dns, azure-cdn, azure-appservice, azure-fd, azure-tm, gcp-dns, gcp-app, cloudflare, akamai, fastly]
     min_matches: 2
 
   - name: Observability & SRE
@@ -95,7 +95,7 @@ signals:
     confidence: medium
     description: CRM + sales engagement + marketing automation — revenue engine investment
     requires:
-      any: [salesforce, hubspot, outreach, salesloft, 6sense, pardot, eloqua, marketo, gong, apollo, drift, clearbit, demandbase, intercom]
+      any: [salesforce, salesforce-mc, hubspot, outreach, salesloft, 6sense, pardot, eloqua, marketo, gong, apollo, drift, clearbit, demandbase, intercom, braze, iterable]
     min_matches: 3
 
   - name: Product-Led Growth
@@ -103,7 +103,7 @@ signals:
     confidence: medium
     description: Analytics + engagement + support tooling — product usage-driven growth model
     requires:
-      any: [mixpanel, amplitude, heap, pendo, hotjar, segment, intercom, zendesk, freshdesk]
+      any: [mixpanel, amplitude, heap, pendo, hotjar, segment, intercom, zendesk, freshdesk, optimizely, walkme, customerio, braze]
     min_matches: 3
 
   - name: Enterprise IT Maturity
@@ -111,7 +111,7 @@ signals:
     confidence: high
     description: Identity + endpoint + email security + MDM — mature IT governance
     requires:
-      any: [okta, duo, ping-identity, crowdstrike, sophos, sentinelone, jamf, kandji, proofpoint, mimecast, zscaler, netskope, paloalto, cato, wiz, 1password, cyberark, knowbe4]
+      any: [okta, auth0, onelogin, duo, ping-identity, crowdstrike, sophos, sentinelone, jamf, kandji, proofpoint, mimecast, zscaler, netskope, paloalto, cato, wiz, 1password, cyberark, knowbe4, imperva]
     min_matches: 4
 
   - name: AI Security Posture
@@ -165,7 +165,7 @@ signals:
     confidence: high
     description: Identity provider + SASE/ZTNA + endpoint security — Zero Trust architecture signals
     requires:
-      any: [okta, duo, ping-identity, zscaler, netskope, paloalto, cato, crowdstrike, sentinelone, 1password, cyberark]
+      any: [okta, auth0, onelogin, duo, ping-identity, zscaler, netskope, paloalto, cato, crowdstrike, sentinelone, 1password, cyberark, imperva]
     min_matches: 3
 
   - name: Startup Tool Mix
