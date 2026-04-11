@@ -64,6 +64,8 @@ The MCP server already works well. These items make recon a better citizen in mu
 
 - **Batch-friendly streaming** — emit results as they complete (JSONL / newline-delimited JSON) so agents and pipelines can process incrementally instead of waiting for the entire batch.
 
+- **OpenClaw / NemoClaw compatibility** — OpenClaw is the fastest-growing open-source agent platform (NVIDIA's NemoClaw builds on it for enterprise). As local-first AI agents become the norm, ensure recon's MCP server works cleanly as a tool provider in the OpenClaw ecosystem. This mostly means staying MCP-compliant and keeping the tool interface simple — recon does intelligence, the agent handles actions.
+
 ### Distribution
 
 - **PyPI publish** — `pip install recon-tool` instead of clone + editable install.
