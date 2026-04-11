@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 from recon_tool.constants import (
     SVC_BIMI,
     SVC_DKIM,
@@ -12,8 +14,10 @@ from recon_tool.constants import (
 )
 from recon_tool.insights import generate_insights
 from recon_tool.models import (
+    BIMIIdentity,
     CertSummary,
     ConfidenceLevel,
+    EvidenceRecord,
     ReconLookupError,
     SignalContext,
     SourceResult,
@@ -24,8 +28,90 @@ from recon_tool.signals import evaluate_signals
 __all__ = [
     "build_insights_with_signals",
     "compute_confidence",
+    "compute_detection_scores",
+    "compute_evidence_confidence",
+    "compute_inference_confidence",
     "merge_results",
 ]
+
+
+def _min_confidence(a: ConfidenceLevel, b: ConfidenceLevel) -> ConfidenceLevel:
+    """Return the lower of two confidence levels (HIGH > MEDIUM > LOW)."""
+    order = {ConfidenceLevel.HIGH: 2, ConfidenceLevel.MEDIUM: 1, ConfidenceLevel.LOW: 0}
+    return a if order[a] <= order[b] else b
+
+
+def compute_evidence_confidence(results: list[SourceResult]) -> ConfidenceLevel:
+    """Compute evidence confidence from the number of successful sources.
+
+    3+ successful sources → HIGH, 2 → MEDIUM, 1 or fewer → LOW.
+    """
+    successful = sum(1 for r in results if r.is_success)
+    if successful >= 3:
+        return ConfidenceLevel.HIGH
+    if successful >= 2:
+        return ConfidenceLevel.MEDIUM
+    return ConfidenceLevel.LOW
+
+
+def compute_inference_confidence(results: list[SourceResult]) -> ConfidenceLevel:
+    """Compute inference confidence from the strength of the logical chain.
+
+    HIGH when tenant_id from OIDC + corroborating source, or 3+ independent
+    record types confirm the same provider.
+    LOW when single record type with no corroboration.
+    MEDIUM otherwise.
+    """
+    has_tenant_id = any(r.tenant_id is not None for r in results)
+    has_corroboration = any(
+        r.is_success and r.source_name != "oidc_discovery" and (r.m365_detected or r.display_name or r.auth_type)
+        for r in results
+    )
+
+    if has_tenant_id and has_corroboration:
+        return ConfidenceLevel.HIGH
+
+    # Check for multiple independent record types confirming same provider
+    all_evidence: list[EvidenceRecord] = []
+    for r in results:
+        all_evidence.extend(r.evidence)
+
+    if all_evidence:
+        source_types = {e.source_type for e in all_evidence}
+        if len(source_types) >= 3:
+            return ConfidenceLevel.HIGH
+
+    successful = sum(1 for r in results if r.is_success)
+    if successful >= 2:
+        return ConfidenceLevel.MEDIUM
+
+    return ConfidenceLevel.LOW
+
+
+def compute_detection_scores(
+    evidence: tuple[EvidenceRecord, ...],
+) -> tuple[tuple[str, str], ...]:
+    """Compute per-slug detection confidence from evidence diversity.
+
+    Groups evidence by slug, counts distinct source_types per slug.
+    3+ types → "high", 2 → "medium", 1 → "low".
+
+    Returns tuple of (slug, score) pairs sorted by slug.
+    """
+    slug_types: dict[str, set[str]] = {}
+    for ev in evidence:
+        slug_types.setdefault(ev.slug, set()).add(ev.source_type)
+
+    scores: list[tuple[str, str]] = []
+    for slug in sorted(slug_types):
+        count = len(slug_types[slug])
+        if count >= 3:
+            scores.append((slug, "high"))
+        elif count >= 2:
+            scores.append((slug, "medium"))
+        else:
+            scores.append((slug, "low"))
+    return tuple(scores)
 
 
 def build_insights_with_signals(
@@ -37,6 +123,8 @@ def build_insights_with_signals(
     email_security_score: int | None = None,
     spf_include_count: int | None = None,
     issuance_velocity: int | None = None,
+    google_auth_type: str | None = None,
+    google_idp_name: str | None = None,
 ) -> list[str]:
     """Generate insights and append signal intelligence.
 
@@ -44,7 +132,15 @@ def build_insights_with_signals(
     (related domain enrichment) to avoid duplicating the insight+signal
     formatting pipeline.
     """
-    insights = generate_insights(services, slugs, auth_type, dmarc_policy, domain_count)
+    insights = generate_insights(
+        services,
+        slugs,
+        auth_type,
+        dmarc_policy,
+        domain_count,
+        google_auth_type=google_auth_type,
+        google_idp_name=google_idp_name,
+    )
     context = SignalContext(
         detected_slugs=frozenset(slugs),
         dmarc_policy=dmarc_policy,
@@ -88,7 +184,8 @@ def compute_confidence(results: list[SourceResult]) -> tuple[ConfidenceLevel, bo
         # confirmation that this is a real M365 tenant.
         tenant_id_sources = {r.source_name for r in results if r.tenant_id is not None}
         corroborating = [
-            r for r in results
+            r
+            for r in results
             if r.source_name not in tenant_id_sources
             and r.is_success
             and (r.m365_detected or r.display_name or r.auth_type or len(r.tenant_domains) > 0)
@@ -126,6 +223,11 @@ def merge_results(
     auth_type: str | None = None
     dmarc_policy: str | None = None
     all_domains: set[str] = set()
+    google_auth_type: str | None = None
+    google_idp_name: str | None = None
+    bimi_identity: BIMIIdentity | None = None
+    mta_sts_mode: str | None = None
+    all_site_verification_tokens: set[str] = set()
 
     # First-wins merge: for each field, the first source (in priority order)
     # that provides a non-None value wins. This is intentional — sources are
@@ -145,7 +247,16 @@ def merge_results(
             auth_type = result.auth_type
         if dmarc_policy is None and result.dmarc_policy is not None:
             dmarc_policy = result.dmarc_policy
+        if google_auth_type is None and result.google_auth_type is not None:
+            google_auth_type = result.google_auth_type
+        if google_idp_name is None and result.google_idp_name is not None:
+            google_idp_name = result.google_idp_name
+        if bimi_identity is None and result.bimi_identity is not None:
+            bimi_identity = result.bimi_identity
+        if mta_sts_mode is None and result.mta_sts_mode is not None:
+            mta_sts_mode = result.mta_sts_mode
         all_domains.update(result.tenant_domains)
+        all_site_verification_tokens.update(result.site_verification_tokens)
 
     # If no tenant_id found, check if we at least have DNS services.
     # tenant_id stays None when no M365 tenant exists.
@@ -156,15 +267,16 @@ def merge_results(
         if not all_services_check:
             raise ReconLookupError(
                 domain=queried_domain,
-                message=(
-                    f"No information could be resolved "
-                    f"for {queried_domain} from any source"
-                ),
+                message=(f"No information could be resolved for {queried_domain} from any source"),
                 error_type="all_sources_failed",
             )
 
     if display_name is None:
-        display_name = tenant_id if tenant_id else queried_domain
+        # BIMI VMC organization name as fallback
+        if bimi_identity is not None:
+            display_name = bimi_identity.organization
+        else:
+            display_name = tenant_id if tenant_id else queried_domain
     if default_domain is None:
         default_domain = queried_domain
 
@@ -192,7 +304,7 @@ def merge_results(
 
     # Extract spf_include_count from services like "SPF complexity: N includes"
     spf_include_count: int | None = None
-    import contextlib
+
     for svc in all_services:
         if svc.startswith("SPF complexity:"):
             with contextlib.suppress(ValueError, IndexError):
@@ -214,10 +326,16 @@ def merge_results(
 
     # Build insights list, then append signal intelligence.
     insights = build_insights_with_signals(
-        all_services, all_slugs, auth_type, dmarc_policy, domain_count,
+        all_services,
+        all_slugs,
+        auth_type,
+        dmarc_policy,
+        domain_count,
         email_security_score=email_security_score,
         spf_include_count=spf_include_count,
         issuance_velocity=issuance_velocity,
+        google_auth_type=google_auth_type,
+        google_idp_name=google_idp_name,
     )
 
     # Surface conflicting tenant IDs — this is high-value intel that explains
@@ -228,6 +346,21 @@ def merge_results(
 
     # Check if crt.sh was degraded in any DNS result
     crtsh_degraded = any(r.crtsh_degraded for r in results)
+
+    # Propagate evidence from all sources
+    all_evidence: list[EvidenceRecord] = []
+    for result in results:
+        all_evidence.extend(result.evidence)
+    evidence_tuple = tuple(all_evidence)
+
+    # Compute dual confidence
+    evidence_confidence = compute_evidence_confidence(results)
+    inference_confidence = compute_inference_confidence(results)
+    # Backward-compatible confidence: min of the two dimensions
+    confidence = _min_confidence(confidence, _min_confidence(evidence_confidence, inference_confidence))
+
+    # Compute per-detection corroboration scores
+    detection_scores = compute_detection_scores(evidence_tuple)
 
     return TenantInfo(
         tenant_id=tenant_id,
@@ -247,4 +380,13 @@ def merge_results(
         insights=tuple(insights),
         crtsh_degraded=crtsh_degraded,
         cert_summary=cert_summary,
+        evidence=evidence_tuple,
+        evidence_confidence=evidence_confidence,
+        inference_confidence=inference_confidence,
+        detection_scores=detection_scores,
+        bimi_identity=bimi_identity,
+        site_verification_tokens=tuple(sorted(all_site_verification_tokens)),
+        mta_sts_mode=mta_sts_mode,
+        google_auth_type=google_auth_type,
+        google_idp_name=google_idp_name,
     )

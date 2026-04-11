@@ -54,10 +54,15 @@ class Signal:
     metadata: tuple[MetadataCondition, ...] = ()
 
 
-_VALID_METADATA_FIELDS = frozenset({
-    "dmarc_policy", "auth_type", "email_security_score",
-    "spf_include_count", "issuance_velocity",
-})
+_VALID_METADATA_FIELDS = frozenset(
+    {
+        "dmarc_policy",
+        "auth_type",
+        "email_security_score",
+        "spf_include_count",
+        "issuance_velocity",
+    }
+)
 _VALID_OPERATORS = frozenset({"eq", "neq", "gte", "lte"})
 
 
@@ -265,20 +270,21 @@ def evaluate_signals(
         slug_satisfied = len(matched) >= signal.min_matches
 
         # Check metadata conditions (if signal has any)
-        metadata_satisfied = all(
-            _evaluate_metadata_condition(cond, context)
-            for cond in signal.metadata
-        ) if signal.metadata else True
+        metadata_satisfied = (
+            all(_evaluate_metadata_condition(cond, context) for cond in signal.metadata) if signal.metadata else True
+        )
 
         # Signal fires only if BOTH slug and metadata conditions are met
         # For metadata-only signals (no candidates), slug_satisfied is True (min_matches=0)
         if slug_satisfied and metadata_satisfied:
-            results.append(SignalMatch(
-                name=signal.name,
-                category=signal.category,
-                confidence=signal.confidence,
-                matched=tuple(matched),
-                description=signal.description,
-            ))
+            results.append(
+                SignalMatch(
+                    name=signal.name,
+                    category=signal.category,
+                    confidence=signal.confidence,
+                    matched=tuple(matched),
+                    description=signal.description,
+                )
+            )
 
     return results

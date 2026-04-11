@@ -16,9 +16,7 @@ from recon_tool.http import http_client
 from recon_tool.models import SourceResult
 from recon_tool.validator import UUID_RE
 
-METADATA_URL_TEMPLATE = (
-    "https://login.microsoftonline.com/{tenant_id}/v2.0/.well-known/openid-configuration"
-)
+METADATA_URL_TEMPLATE = "https://login.microsoftonline.com/{tenant_id}/v2.0/.well-known/openid-configuration"
 
 
 class AzureMetadataSource:

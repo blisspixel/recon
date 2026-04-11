@@ -33,6 +33,8 @@ class InsightContext:
     auth_type: str | None
     dmarc_policy: str | None
     domain_count: int
+    google_auth_type: str | None = None
+    google_idp_name: str | None = None
 
     @classmethod
     def from_sets(
@@ -42,6 +44,8 @@ class InsightContext:
         auth_type: str | None,
         dmarc_policy: str | None,
         domain_count: int,
+        google_auth_type: str | None = None,
+        google_idp_name: str | None = None,
     ) -> InsightContext:
         """Convenience constructor that converts mutable sets to frozensets."""
         return cls(
@@ -50,6 +54,8 @@ class InsightContext:
             auth_type=auth_type,
             dmarc_policy=dmarc_policy,
             domain_count=domain_count,
+            google_auth_type=google_auth_type,
+            google_idp_name=google_idp_name,
         )
 
 
@@ -59,10 +65,19 @@ _GOOGLE_SLUGS = frozenset({"google-workspace"})
 
 # Slugs that indicate the domain sends/receives email — used to decide
 # whether to show the email security score (vs just a bare DMARC line).
-_EMAIL_SLUGS = frozenset({
-    "aws-ses", "sendgrid", "mailgun", "postmark", "sparkpost", "brevo",
-    "mailchimp", "zoho", "protonmail",
-})
+_EMAIL_SLUGS = frozenset(
+    {
+        "aws-ses",
+        "sendgrid",
+        "mailgun",
+        "postmark",
+        "sparkpost",
+        "brevo",
+        "mailchimp",
+        "zoho",
+        "protonmail",
+    }
+)
 
 _GATEWAY_SLUG_MAP: dict[str, str] = {
     "proofpoint": "Proofpoint",
@@ -312,10 +327,34 @@ def _pki_insights(ctx: InsightContext) -> list[str]:
     return []
 
 
+def _google_auth_insights(ctx: InsightContext) -> list[str]:
+    """Surface Google Workspace federated/managed identity insights."""
+    if "google-federated" in ctx.slugs:
+        if ctx.google_idp_name:
+            return [f"Google Workspace: Federated identity via {ctx.google_idp_name}"]
+        return ["Google Workspace: Federated identity (external IdP)"]
+    if "google-managed" in ctx.slugs:
+        return ["Google Workspace: Managed identity (Google-native)"]
+    return []
+
+
+# Google Workspace module service prefix used to detect active modules.
+_GWS_MODULE_PREFIX = "Google Workspace: "
+
+
+def _google_modules_insights(ctx: InsightContext) -> list[str]:
+    """Surface a summary of active Google Workspace modules."""
+    modules = sorted(svc[len(_GWS_MODULE_PREFIX) :] for svc in ctx.services if svc.startswith(_GWS_MODULE_PREFIX))
+    if modules:
+        return [f"Google Workspace modules: {', '.join(modules)}"]
+    return []
+
+
 # ── Ordered pipeline of all generators ──────────────────────────────────
 
 _INSIGHT_GENERATORS = [
     _auth_insights,
+    _google_auth_insights,
     _email_security_insights,
     _org_size_insights,
     _gateway_insights,
@@ -325,6 +364,7 @@ _INSIGHT_GENERATORS = [
     _sase_insights,
     _mdm_insights,
     _pki_insights,
+    _google_modules_insights,
     _infrastructure_insights,
 ]
 
@@ -335,13 +375,23 @@ def generate_insights(
     auth_type: str | None,
     dmarc_policy: str | None,
     domain_count: int,
+    google_auth_type: str | None = None,
+    google_idp_name: str | None = None,
 ) -> list[str]:
     """Derive intelligence signals from collected data.
 
     Runs all insight generators in order and collects results.
     Each generator is a pure function operating on an immutable context.
     """
-    ctx = InsightContext.from_sets(services, slugs, auth_type, dmarc_policy, domain_count)
+    ctx = InsightContext.from_sets(
+        services,
+        slugs,
+        auth_type,
+        dmarc_policy,
+        domain_count,
+        google_auth_type=google_auth_type,
+        google_idp_name=google_idp_name,
+    )
     insights: list[str] = []
     for generator in _INSIGHT_GENERATORS:
         insights.extend(generator(ctx))

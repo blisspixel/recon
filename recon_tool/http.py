@@ -46,8 +46,8 @@ _BLOCKED_NETWORKS = [
     ipaddress.ip_network("192.168.0.0/16"),
     ipaddress.ip_network("169.254.0.0/16"),  # link-local / cloud metadata
     ipaddress.ip_network("::1/128"),
-    ipaddress.ip_network("fc00::/7"),         # IPv6 unique local
-    ipaddress.ip_network("fe80::/10"),        # IPv6 link-local
+    ipaddress.ip_network("fc00::/7"),  # IPv6 unique local
+    ipaddress.ip_network("fe80::/10"),  # IPv6 link-local
 ]
 
 
@@ -87,7 +87,9 @@ async def _is_private_ip_async(host: str) -> bool:
             ip_str = sockaddr[0]
             if _is_blocked_ip(ip_str):
                 logger.warning(
-                    "SSRF blocked: hostname %s resolves to private IP %s", host, ip_str,
+                    "SSRF blocked: hostname %s resolves to private IP %s",
+                    host,
+                    ip_str,
                 )
                 return True
     except (socket.gaierror, OSError):
@@ -122,7 +124,9 @@ def _is_private_ip(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
             ip_str = str(sockaddr[0])
             if _is_blocked_ip(ip_str):
                 logger.warning(
-                    "SSRF blocked: hostname %s resolves to private IP %s", host, ip_str,
+                    "SSRF blocked: hostname %s resolves to private IP %s",
+                    host,
+                    ip_str,
                 )
                 return True
     except (socket.gaierror, OSError):
@@ -145,9 +149,7 @@ class _SSRFSafeTransport(httpx.AsyncHTTPTransport):
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         host = request.url.host or ""
         if await _is_private_ip_async(host):
-            raise httpx.ConnectError(
-                f"SSRF blocked: request to private/internal IP {host}"
-            )
+            raise httpx.ConnectError(f"SSRF blocked: request to private/internal IP {host}")
         return await super().handle_async_request(request)
 
 
@@ -187,12 +189,16 @@ class _RetryTransport(httpx.AsyncHTTPTransport):
                     try:
                         delay = min(float(retry_after), 30.0)
                     except ValueError:
-                        delay = RETRY_BACKOFF_BASE * (2 ** attempt)
+                        delay = RETRY_BACKOFF_BASE * (2**attempt)
                 else:
-                    delay = RETRY_BACKOFF_BASE * (2 ** attempt)
+                    delay = RETRY_BACKOFF_BASE * (2**attempt)
                 logger.debug(
                     "HTTP %d from %s — retrying in %.1fs (attempt %d/%d)",
-                    response.status_code, request.url.host, delay, attempt + 1, MAX_RETRIES,
+                    response.status_code,
+                    request.url.host,
+                    delay,
+                    attempt + 1,
+                    MAX_RETRIES,
                 )
                 await asyncio.sleep(delay)
         # Exhausted retries — return the last response so caller sees the status code.

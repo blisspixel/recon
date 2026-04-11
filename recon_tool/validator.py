@@ -16,9 +16,9 @@ UUID_RE = re.compile(
 
 # Regex: valid domain has labels separated by dots, TLD at least 2 chars, no spaces
 _DOMAIN_RE = re.compile(
-    r"^(?!-)"                       # label must not start with hyphen
+    r"^(?!-)"  # label must not start with hyphen
     r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+"  # one or more labels followed by dot
-    r"[a-z]{2,}$"                   # TLD: at least 2 alpha chars
+    r"[a-z]{2,}$"  # TLD: at least 2 alpha chars
 )
 
 _SCHEME_RE = re.compile(r"^https?://", re.IGNORECASE)

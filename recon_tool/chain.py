@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import logging
 import time
+from collections import defaultdict
+from dataclasses import replace
 
 from recon_tool.models import ChainReport, ChainResult, ReconLookupError
 from recon_tool.resolver import RESOLVE_TIMEOUT, SourcePool, resolve_tenant
@@ -142,12 +144,61 @@ async def chain_resolve(
             break
 
         # Deduplicate next level, preserving discovery order
-        current_level = list(dict.fromkeys(
-            d for d in next_level if d not in visited
-        ))
+        current_level = list(dict.fromkeys(d for d in next_level if d not in visited))
+
+    # Correlate site-verification tokens across resolved domains
+    results = _correlate_site_verification(results)
 
     return ChainReport(
         results=tuple(results),
         max_depth_reached=max_depth_reached,
         truncated=truncated,
     )
+
+
+def _correlate_site_verification(
+    results: list[ChainResult],
+) -> list[ChainResult]:
+    """Identify domains sharing google-site-verification tokens.
+
+    When two or more domains share the same token, an insight is added
+    to each domain's TenantInfo noting the relationship.
+    """
+    # Build token → list of domains mapping
+    token_to_domains: dict[str, list[str]] = defaultdict(list)
+    for r in results:
+        for token in r.info.site_verification_tokens:
+            token_to_domains[token].append(r.domain)
+
+    # Find tokens shared by 2+ domains
+    shared: dict[str, list[str]] = {token: domains for token, domains in token_to_domains.items() if len(domains) >= 2}
+
+    if not shared:
+        return results
+
+    # Build per-domain insight strings
+    domain_insights: dict[str, set[str]] = defaultdict(set)
+    for _token, domains in shared.items():
+        for domain in domains:
+            siblings = sorted(d for d in domains if d != domain)
+            if siblings:
+                domain_insights[domain].add(f"Shares google-site-verification token with {', '.join(siblings)}")
+
+    # Create updated ChainResults with correlation insights
+    updated: list[ChainResult] = []
+    for r in results:
+        new_insights = domain_insights.get(r.domain)
+        if new_insights:
+            merged = tuple(sorted(set(r.info.insights) | new_insights))
+            updated_info = replace(r.info, insights=merged)
+            updated.append(
+                ChainResult(
+                    domain=r.domain,
+                    info=updated_info,
+                    chain_depth=r.chain_depth,
+                )
+            )
+        else:
+            updated.append(r)
+
+    return updated

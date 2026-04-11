@@ -4,11 +4,13 @@ from dataclasses import dataclass
 from enum import Enum
 
 __all__ = [
+    "BIMIIdentity",
     "CertSummary",
     "ChainReport",
     "ChainResult",
     "ConfidenceLevel",
     "DeltaReport",
+    "EvidenceRecord",
     "MetadataCondition",
     "Observation",
     "ReconLookupError",
@@ -27,23 +29,52 @@ class ConfidenceLevel(str, Enum):
 
 
 @dataclass(frozen=True)
+class EvidenceRecord:
+    """A single piece of evidence linking a detection to its source record.
+
+    Created at detection time and propagated through the merge pipeline
+    from SourceResult to TenantInfo without loss.
+    """
+
+    source_type: str  # "TXT", "MX", "CNAME", "HTTP", "SPF", "NS", "CAA", "SRV"
+    raw_value: str  # The actual record value or HTTP response excerpt
+    rule_name: str  # Fingerprint/detection rule name that matched
+    slug: str  # The fingerprint slug that was detected
+
+
+@dataclass(frozen=True)
+class BIMIIdentity:
+    """Corporate identity extracted from a BIMI VMC certificate.
+
+    VMC certificates require strict legal verification, so the extracted
+    organization name is a high-confidence corporate identity signal.
+    """
+
+    organization: str
+    country: str | None = None
+    state: str | None = None
+    locality: str | None = None
+    trademark: str | None = None
+
+
+@dataclass(frozen=True)
 class CertSummary:
     """Certificate transparency summary from crt.sh metadata."""
 
     cert_count: int
     issuer_diversity: int
-    issuance_velocity: int          # certs issued in last 90 days
+    issuance_velocity: int  # certs issued in last 90 days
     newest_cert_age_days: int
     oldest_cert_age_days: int
-    top_issuers: tuple[str, ...]    # up to 3 most frequent issuer_name values
+    top_issuers: tuple[str, ...]  # up to 3 most frequent issuer_name values
 
 
 @dataclass(frozen=True)
 class MetadataCondition:
     """A single metadata condition for signal evaluation."""
 
-    field: str       # dmarc_policy, auth_type, email_security_score, spf_include_count, issuance_velocity
-    operator: str    # eq, neq, gte, lte
+    field: str  # dmarc_policy, auth_type, email_security_score, spf_include_count, issuance_velocity
+    operator: str  # eq, neq, gte, lte
     value: str | int
 
 
@@ -63,8 +94,8 @@ class SignalContext:
 class Observation:
     """A neutral factual observation about a domain's configuration."""
 
-    category: str        # identity, email, infrastructure, saas_footprint, certificate, consistency
-    salience: str        # high, medium, low
+    category: str  # identity, email, infrastructure, saas_footprint, certificate, consistency
+    salience: str  # high, medium, low
     statement: str
     related_slugs: tuple[str, ...]
 
@@ -82,8 +113,8 @@ class SourceResult:
     error: str | None = None
     detected_services: tuple[str, ...] = ()
     # Extended intel fields
-    auth_type: str | None = None          # "Federated" or "Managed"
-    dmarc_policy: str | None = None       # "reject", "quarantine", "none"
+    auth_type: str | None = None  # "Federated" or "Managed"
+    dmarc_policy: str | None = None  # "reject", "quarantine", "none"
     tenant_domains: tuple[str, ...] = ()  # All domains in the tenant
     detected_slugs: tuple[str, ...] = ()  # Fingerprint slugs that matched
     # Domains discovered from CNAME targets (autodiscover redirects, DKIM
@@ -96,14 +127,18 @@ class SourceResult:
 
     cert_summary: CertSummary | None = None
 
+    # --- Google Workspace & evidence fields (v0.3.0) ---
+    evidence: tuple[EvidenceRecord, ...] = ()
+    bimi_identity: BIMIIdentity | None = None
+    site_verification_tokens: tuple[str, ...] = ()
+    mta_sts_mode: str | None = None  # "enforce", "testing", "none"
+    google_auth_type: str | None = None  # "Federated", "Managed"
+    google_idp_name: str | None = None  # "Okta", "Ping Identity", etc.
+
     @property
     def is_success(self) -> bool:
         """True if this result contains any useful data (identity or services)."""
-        return (
-            self.tenant_id is not None
-            or self.m365_detected
-            or len(self.detected_services) > 0
-        )
+        return self.tenant_id is not None or self.m365_detected or len(self.detected_services) > 0
 
     @property
     def is_complete(self) -> bool:
@@ -129,16 +164,27 @@ class TenantInfo:
     region: str | None = None
     sources: tuple[str, ...] = ()
     services: tuple[str, ...] = ()
-    slugs: tuple[str, ...] = ()          # Stable fingerprint identifiers
+    slugs: tuple[str, ...] = ()  # Stable fingerprint identifiers
     # Extended intel
-    auth_type: str | None = None          # "Federated" or "Managed"
-    dmarc_policy: str | None = None       # "reject", "quarantine", "none"
-    domain_count: int = 0                 # Number of domains in tenant
+    auth_type: str | None = None  # "Federated" or "Managed"
+    dmarc_policy: str | None = None  # "reject", "quarantine", "none"
+    domain_count: int = 0  # Number of domains in tenant
     tenant_domains: tuple[str, ...] = ()  # All domains found
-    related_domains: tuple[str, ...] = () # Domains inferred from CNAME targets
-    insights: tuple[str, ...] = ()        # Derived intelligence signals
-    crtsh_degraded: bool = False          # True when crt.sh was unreachable
+    related_domains: tuple[str, ...] = ()  # Domains inferred from CNAME targets
+    insights: tuple[str, ...] = ()  # Derived intelligence signals
+    crtsh_degraded: bool = False  # True when crt.sh was unreachable
     cert_summary: CertSummary | None = None
+
+    # --- Google Workspace, evidence & confidence fields (v0.3.0) ---
+    evidence: tuple[EvidenceRecord, ...] = ()
+    evidence_confidence: ConfidenceLevel = ConfidenceLevel.MEDIUM
+    inference_confidence: ConfidenceLevel = ConfidenceLevel.MEDIUM
+    detection_scores: tuple[tuple[str, str], ...] = ()  # (slug, score) pairs
+    bimi_identity: BIMIIdentity | None = None
+    site_verification_tokens: tuple[str, ...] = ()
+    mta_sts_mode: str | None = None  # "enforce", "testing", "none"
+    google_auth_type: str | None = None  # "Federated", "Managed"
+    google_idp_name: str | None = None  # "Okta", "Ping Identity", etc.
 
 
 @dataclass(frozen=True)
@@ -161,9 +207,12 @@ class DeltaReport:
     @property
     def has_changes(self) -> bool:
         return bool(
-            self.added_services or self.removed_services
-            or self.added_slugs or self.removed_slugs
-            or self.added_signals or self.removed_signals
+            self.added_services
+            or self.removed_services
+            or self.added_slugs
+            or self.removed_slugs
+            or self.added_signals
+            or self.removed_signals
             or self.changed_auth_type is not None
             or self.changed_dmarc_policy is not None
             or self.changed_email_security_score is not None

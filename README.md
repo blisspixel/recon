@@ -92,11 +92,12 @@ Input is normalized automatically — URLs, schemes, `www.` prefixes, paths, and
 | Signal | Source |
 |--------|--------|
 | Company name, tenant ID, auth type | Microsoft OIDC + GetUserRealm |
+| Google Workspace auth type, modules, corporate identity | Google login flow + CNAME probing + BIMI VMC |
 | Email provider | MX records |
 | Email security score (0–5) | DMARC + DKIM + SPF + MTA-STS + BIMI |
 | 185+ SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors |
 | Email gateway / SASE / security stack | DNS fingerprints |
-| Signal intelligence (26 signals) | Metadata-aware YAML rules with cross-reference conditions |
+| Signal intelligence (29 signals) | Metadata-aware YAML rules with cross-reference conditions |
 | Certificate intelligence | crt.sh metadata: issuance velocity, issuer diversity, cert age |
 | Posture observations | Neutral factual analysis across email, identity, infrastructure |
 | Related domains | CNAME breadcrumbs + certificate transparency (crt.sh) |
@@ -142,7 +143,7 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/                          # 455 tests
+pytest tests/                          # 604 tests
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 ```
