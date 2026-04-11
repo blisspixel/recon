@@ -65,7 +65,7 @@ recon reads the organizational metadata layer — DNS records, identity endpoint
 Requires Python 3.10+.
 
 ```bash
-pip install recon-tool                    # from PyPI (when published)
+pip install recon-tool                    # from PyPI
 pip install -e .                          # or from source
 recon doctor                              # verify connectivity
 ```
