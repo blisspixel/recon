@@ -4,7 +4,7 @@ Passive domain intelligence CLI and MCP server. Queries public DNS records and u
 
 ## What it does
 
-`recon <domain>` returns: company name, email provider, tenant ID, auth type, email security score (0-5), 140+ SaaS service fingerprints, security stack detection, signal intelligence (AI adoption, GTM maturity, org size hints), and related domains.
+`recon <domain>` returns: company name, email provider, tenant ID, auth type, email security score (0-5), 156 SaaS service fingerprints, security stack detection, signal intelligence (AI adoption, GTM maturity, org size hints), and related domains (via CNAME breadcrumbs + certificate transparency).
 
 ## Commands
 
@@ -22,7 +22,7 @@ recon doctor                            # connectivity check
 - `recon_tool/` — source code
   - `cli.py` — Typer CLI, entry point is `run()`
   - `resolver.py` — orchestrates concurrent source queries
-  - `sources/` — OIDC, UserRealm, DNS lookup sources
+  - `sources/` — OIDC, UserRealm, DNS lookup sources (DNS includes crt.sh cert transparency)
   - `fingerprints.py` + `data/fingerprints.yaml` — SaaS detection (data-driven, no code changes needed)
   - `signals.py` + `data/signals.yaml` — signal intelligence engine
   - `insights.py` — derived intelligence from fingerprint matches
@@ -32,9 +32,9 @@ recon doctor                            # connectivity check
   - `http.py` — SSRF-safe HTTP client with retry/backoff
   - `validator.py` — domain input validation
   - `models.py` — frozen dataclasses (TenantInfo, SourceResult)
-- `tests/` — 411 tests, pytest + hypothesis
-- `data/fingerprints.yaml` — 143 SaaS fingerprints
-- `data/signals.yaml` — 3-layer signal definitions
+- `tests/` — 455 tests, pytest + hypothesis
+- `data/fingerprints.yaml` — 156 SaaS fingerprints
+- `data/signals.yaml` — 3-layer signal definitions (20 signals)
 
 ## Development
 
@@ -53,6 +53,7 @@ pyright recon_tool/              # type check
 - HTTP transport has SSRF protection and retry with exponential backoff
 - MCP server has TTL cache (120s) and per-domain rate limiting
 - Custom fingerprints go in `~/.recon/fingerprints.yaml` (additive only)
+- Custom signals go in `~/.recon/signals.yaml` (additive only)
 
 ## Testing
 

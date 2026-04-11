@@ -17,6 +17,7 @@ from typing import Any
 import dns.asyncresolver
 import dns.exception
 import dns.resolver
+import httpx
 
 from recon_tool.constants import (
     SVC_BIMI,
@@ -291,21 +292,47 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
     """Check DKIM selectors for Exchange Online, Google, and common providers.
 
     Exchange uses selector1/selector2, Google uses 'google', and many ESPs
-    use 's1'/'s2' or 'k1'. We check all common selectors and record which
-    type of DKIM we found.
+    use 's1'/'s2', 'k1', 'default', 'dkim', 'mail', or 'em' selectors.
+    We check all common selectors and record which type of DKIM we found.
 
     Also extracts the onmicrosoft.com domain from Exchange DKIM CNAMEs —
     this reveals the tenant's internal domain name.
     """
+    # Common ESP DKIM selectors beyond Exchange/Google.
+    # Each tuple is (selector_prefix, cname_hint, service_name, slug).
+    # If the CNAME target contains the hint, we attribute it to that service.
+    _ESP_SELECTORS: list[tuple[str, str, str, str]] = [
+        ("k1", "domainkey.u", "Mailchimp", "mailchimp"),
+        ("s1", "domainkey.u", "Mailchimp", "mailchimp"),
+        ("em", "sendgrid.net", "SendGrid", "sendgrid"),
+        ("s1", "sendgrid.net", "SendGrid", "sendgrid"),
+        ("default", "mailgun.org", "Mailgun", "mailgun"),
+        ("pm", "dkim.pstmrk.com", "Postmark", "postmark"),
+        ("mxvault", "mimecast", "Mimecast", "mimecast"),
+    ]
+
     # Fire Exchange and Google DKIM queries concurrently
     sel1_task = _safe_resolve(f"selector1._domainkey.{domain}", "CNAME")
     sel2_task = _safe_resolve(f"selector2._domainkey.{domain}", "CNAME")
     google_txt_task = _safe_resolve(f"google._domainkey.{domain}", "TXT")
     google_cname_task = _safe_resolve(f"google._domainkey.{domain}", "CNAME")
 
-    sel1_results, sel2_results, google_txt_results, google_cname_results = await asyncio.gather(
+    # Also fire ESP selector queries concurrently
+    esp_tasks = [
+        _safe_resolve(f"{sel}._domainkey.{domain}", "CNAME")
+        for sel, _, _, _ in _ESP_SELECTORS
+    ]
+
+    all_results = await asyncio.gather(
         sel1_task, sel2_task, google_txt_task, google_cname_task,
+        *esp_tasks,
     )
+
+    sel1_results = all_results[0]
+    sel2_results = all_results[1]
+    google_txt_results = all_results[2]
+    google_cname_results = all_results[3]
+    esp_results = all_results[4:]
 
     # Exchange DKIM selectors
     for selector_results in (sel1_results, sel2_results):
@@ -331,6 +358,14 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
     if not google_dkim_found:
         for cname in google_cname_results:
             if "google.com" in cname.lower():
+                ctx.services.add(SVC_DKIM)
+                break
+
+    # ESP DKIM selectors — attribute to specific services when CNAME matches
+    for (_, hint, svc_name, slug), cname_results in zip(_ESP_SELECTORS, esp_results, strict=True):
+        for cname in cname_results:
+            if hint in cname.lower():
+                ctx.add(svc_name, slug)
                 ctx.services.add(SVC_DKIM)
                 break
 
@@ -448,6 +483,109 @@ async def _detect_caa(ctx: _DetectionCtx, domain: str) -> None:
                 break
 
 
+async def _detect_srv(ctx: _DetectionCtx, domain: str) -> None:
+    """Check common SRV records for collaboration and identity services.
+
+    SRV records reveal services that don't leave TXT/SPF/MX footprints.
+    Only checks a focused set of high-signal SRV names — not brute-forcing.
+    """
+    # (srv_name, target_hint, service_name, slug)
+    _SRV_CHECKS: list[tuple[str, str | None, str, str]] = [
+        ("_sip._tls", "lync.com", "Skype for Business / Lync", "microsoft365"),
+        ("_sipfederationtls._tcp", "lync.com", "Skype for Business Federation", "microsoft365"),
+        ("_xmpp-server._tcp", None, "XMPP (Jabber)", ""),
+        ("_caldavs._tcp", None, "CalDAV", ""),
+        ("_carddavs._tcp", None, "CardDAV", ""),
+    ]
+
+    tasks = [_safe_resolve(f"{srv}.{domain}", "SRV") for srv, _, _, _ in _SRV_CHECKS]
+    results = await asyncio.gather(*tasks)
+
+    for (_, hint, svc_name, slug), srv_records in zip(_SRV_CHECKS, results, strict=True):
+        for record in srv_records:
+            # SRV records with target "." mean "service not available" — skip
+            if record.strip().rstrip(".") == "":
+                continue
+            if hint is None or hint in record.lower():
+                ctx.add(svc_name, slug if slug else None)
+                break
+
+
+# ── Certificate Transparency (crt.sh) ──────────────────────────────────
+
+# Maximum number of unique subdomains to extract from crt.sh results.
+# Prevents unbounded related_domains when a domain has thousands of certs.
+_CRTSH_MAX_SUBDOMAINS = 20
+
+# Timeout for the crt.sh HTTP call — separate from DNS query timeout
+# because crt.sh can be slow under load.
+_CRTSH_TIMEOUT = 8.0
+
+# Patterns to filter out from crt.sh results — wildcards, common noise,
+# and subdomains that rarely have interesting TXT/MX records.
+_CRTSH_SKIP_PREFIXES = (
+    "*.", "cpanel.", "cpcalendars.", "cpcontacts.", "webdisk.", "webmail.",
+    "mail.", "ftp.", "localhost.", "www.",
+)
+
+
+async def _detect_crtsh(ctx: _DetectionCtx, domain: str) -> None:
+    """Query crt.sh certificate transparency logs for subdomain discovery.
+
+    Adds discovered subdomains to ctx.related_domains so the resolver's
+    enrichment pipeline can run DNS fingerprinting on them. This is 100%
+    passive — crt.sh is a public, free, unauthenticated JSON API that
+    returns certificate transparency log entries.
+
+    Failures are silently ignored — crt.sh is a bonus source, not critical.
+    """
+    url = f"https://crt.sh/?q=%.{domain}&output=json"
+    try:
+        async with httpx.AsyncClient(timeout=_CRTSH_TIMEOUT) as client:
+            resp = await client.get(url)
+            if resp.status_code != 200:
+                logger.debug("crt.sh returned HTTP %d for %s", resp.status_code, domain)
+                return
+            data = resp.json()
+    except (httpx.TimeoutException, httpx.ConnectError, httpx.HTTPError, ValueError) as exc:
+        logger.debug("crt.sh lookup failed for %s: %s", domain, exc)
+        return
+
+    if not isinstance(data, list):
+        return
+
+    seen: set[str] = set()
+    domain_lower = domain.lower()
+
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        name_value = entry.get("name_value", "")
+        if not isinstance(name_value, str):
+            continue
+        # crt.sh can return multiple names separated by newlines
+        for raw_name in name_value.lower().strip().split("\n"):
+            name = raw_name.strip()
+            if not name or name == domain_lower:
+                continue
+            # Skip wildcards and common noise
+            if any(name.startswith(prefix) for prefix in _CRTSH_SKIP_PREFIXES):
+                continue
+            # Must be a subdomain of the queried domain
+            if not name.endswith(f".{domain_lower}"):
+                continue
+            if name not in seen:
+                seen.add(name)
+                if len(seen) >= _CRTSH_MAX_SUBDOMAINS:
+                    break
+        if len(seen) >= _CRTSH_MAX_SUBDOMAINS:
+            break
+
+    if seen:
+        logger.debug("crt.sh found %d subdomains for %s", len(seen), domain)
+        ctx.related_domains.update(seen)
+
+
 # ── Main source class ──────────────────────────────────────────────────
 
 
@@ -513,6 +651,8 @@ class DNSSource:
             _detect_domain_connect(ctx, domain),
             _detect_subdomain_txt(ctx, domain),
             _detect_caa(ctx, domain),
+            _detect_srv(ctx, domain),
+            _detect_crtsh(ctx, domain),
         )
 
         # Remove the queried domain itself from related_domains

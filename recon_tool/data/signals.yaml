@@ -1,4 +1,5 @@
 # signals.yaml — derived intelligence from fingerprint matches
+# Version: 2026-04-11
 # These fire automatically after fingerprint detection.
 # No extra DNS calls — pure pattern matching on detected slugs.
 #
@@ -32,7 +33,7 @@ signals:
     confidence: high
     description: Layered security tooling — endpoint, email, network, or cloud security in place
     requires:
-      any: [crowdstrike, knowbe4, proofpoint, mimecast, zscaler, paloalto, wiz, sophos, trellix, barracuda, trendmicro, okta, duo, 1password, sentinelone, netskope]
+      any: [crowdstrike, knowbe4, proofpoint, mimecast, zscaler, paloalto, wiz, sophos, trellix, barracuda, trendmicro, okta, duo, 1password, sentinelone, netskope, ping-identity, cyberark, cato]
     min_matches: 2
 
   - name: Modern Collaboration
@@ -65,6 +66,14 @@ signals:
     description: Infrastructure spread across multiple cloud providers
     requires:
       any: [aws-route53, azure-dns, gcp-dns, aws-cloudfront, azure-cdn, azure-appservice, cloudflare]
+    min_matches: 2
+
+  - name: Observability & SRE
+    category: Engineering
+    confidence: high
+    description: Multiple monitoring/incident tools — strong engineering maturity and reliability focus
+    requires:
+      any: [datadog, newrelic, pagerduty, dynatrace]
     min_matches: 2
 
   # ── Layer 2: Cross-category composite signals ─────────────────────────
@@ -102,8 +111,16 @@ signals:
     confidence: high
     description: Identity + endpoint + email security + MDM — mature IT governance
     requires:
-      any: [okta, duo, crowdstrike, sophos, sentinelone, jamf, kandji, proofpoint, mimecast, zscaler, netskope, paloalto, wiz, 1password, knowbe4]
+      any: [okta, duo, ping-identity, crowdstrike, sophos, sentinelone, jamf, kandji, proofpoint, mimecast, zscaler, netskope, paloalto, cato, wiz, 1password, cyberark, knowbe4]
     min_matches: 4
+
+  - name: AI Security Posture
+    category: Composite
+    confidence: high
+    description: Enterprise AI tooling + dedicated LLM guardrails or advanced SASE — mature AI governance
+    requires:
+      any: [openai, anthropic, mistral, perplexity, lakera, zscaler, netskope, crowdstrike]
+    min_matches: 3
 
   # ── Layer 3: Cross-signal consistency checks ──────────────────────────
   # Inspired by the research's core thesis: "penalize contradictions
@@ -125,4 +142,44 @@ signals:
     description: Multiple email sending services — high-volume outbound email operation
     requires:
       any: [sendgrid, mailgun, postmark, sparkpost, brevo, mailchimp, aws-ses]
+    min_matches: 2
+
+  - name: Shadow IT Risk
+    category: Consistency
+    confidence: medium
+    description: Consumer-grade SaaS alongside weak email security — possible unmanaged tool sprawl
+    requires:
+      any: [canva, dropbox, mailchimp, zoom, airtable, notion, monday, clickup, loom]
+    min_matches: 3
+
+  - name: File Collaboration Sprawl
+    category: Consistency
+    confidence: medium
+    description: Multiple enterprise file-sharing platforms — possible duplication or migration in progress
+    requires:
+      any: [dropbox, box, egnyte]
+    min_matches: 2
+
+  - name: Zero Trust Posture
+    category: Composite
+    confidence: high
+    description: Identity provider + SASE/ZTNA + endpoint security — Zero Trust architecture signals
+    requires:
+      any: [okta, duo, ping-identity, zscaler, netskope, paloalto, cato, crowdstrike, sentinelone, 1password, cyberark]
+    min_matches: 3
+
+  - name: Startup Tool Mix
+    category: Composite
+    confidence: medium
+    description: Modern dev + collaboration + PLG analytics — early-stage or growth-stage tool profile
+    requires:
+      any: [vercel, netlify, github, gitlab, slack, notion, figma, linear, amplitude, mixpanel, segment, intercom]
+    min_matches: 4
+
+  - name: Dual Email Provider
+    category: Consistency
+    confidence: high
+    description: Both Microsoft 365 and Google Workspace detected — possible migration in progress or hybrid setup
+    requires:
+      any: [microsoft365, google-workspace]
     min_matches: 2

@@ -7,30 +7,31 @@ recon northwindtraders.com
 ```
 
 ```
-╭────────────────────────── Northwind Traders ──────────────────────────╮
-│   Company:    Northwind Traders                                       │
-│   Domain:     northwindtraders.onmicrosoft.com                        │
-│   Provider:   Microsoft 365                                           │
-│   Tenant ID:  a1b2c3d4-e5f6-7890-abcd-ef1234567890                   │
-│   Region:     NA                                                      │
-│   Auth:       Federated                                               │
-│   Confidence: ●●● High (3 sources)                                    │
-│   Services:   Anthropic (Claude), Atlassian (Jira/Confluence),        │
-│ DKIM (Exchange Online), DocuSign, Exchange Autodiscover, Figma,       │
-│ Intune / MDM, KnowBe4, Microsoft 365, Microsoft Teams, Miro,         │
-│ Salesforce, Slack, Zendesk                                            │
-│                                                                       │
-│   Federated identity via Okta                                         │
-│   Email security 4/5 strong (DMARC reject, DKIM, SPF strict, BIMI)   │
-│   Email gateway: Proofpoint in front of Exchange                      │
-│   Likely M365 E3/E5 (Intune + federated auth)                        │
-│   Security stack: KnowBe4 (security training), Okta (identity)       │
-│   Mac management (Jamf)                                               │
-│   AI Adoption: anthropic                                              │
-│   Modern Collaboration: slack, miro, atlassian, figma                 │
-│                                                                       │
-│   Related:    northwind-internal.com                                  │
-╰───────────────────────────────────────────────────────────────────────╯
+╭──────────────────────── Northwind Traders ────────────────────────╮
+│                                                                   │
+│  Company:    Northwind Traders                                    │
+│  Domain:     northwindtraders.onmicrosoft.com                     │
+│  Provider:   Microsoft 365                                        │
+│  Tenant ID:  a1b2c3d4-e5f6-7890-abcd-ef1234567890                │
+│  Region:     NA                                                   │
+│  Auth:       Federated                                            │
+│  Confidence: ●●● High (3 sources)                                │
+│  Services:   Anthropic (Claude), Atlassian (Jira/Confluence),     │
+│  DocuSign, Exchange Autodiscover, Figma, Intune / MDM, KnowBe4,  │
+│  Microsoft 365, Microsoft Teams, Miro, Salesforce, Slack, Zendesk │
+│                                                                   │
+│  Insights:                                                        │
+│    Federated identity via Okta                                    │
+│    Email security 4/5 strong (DMARC reject, DKIM, SPF strict)    │
+│    Email gateway: Proofpoint in front of Exchange                 │
+│    Likely M365 E3/E5 (Intune + federated auth)                   │
+│    Security stack: KnowBe4 (security training), Okta (identity)  │
+│    AI Adoption: anthropic                                         │
+│    Modern Collaboration: slack, miro, atlassian, figma            │
+│                                                                   │
+│  Related:    northwind-internal.com                               │
+│                                                                   │
+╰───────────────────────────────────────────────────────────────────╯
 ```
 
 > The example above is fictional. "Northwind Traders" is a [Microsoft sample company name](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges). All tenant IDs, domains, and service lists shown are fabricated for illustration.
@@ -39,9 +40,32 @@ Give it a domain. It queries public endpoints and DNS records — no credentials
 
 Works for Microsoft 365, Google Workspace, or any provider. Useful if you're an architect, MSP, or partner trying to understand a company before a call or proposal. Also runs as an MCP server for AI tools.
 
+## Why recon?
+
+| | recon | dig / nslookup | whatweb | dnsrecon | cloud_enum | Paid tools (BuiltWith, etc.) |
+|---|---|---|---|---|---|---|
+| Zero credentials / API keys | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| M365 tenant detection | ✓ | ✗ | ✗ | ✗ | partial | varies |
+| Email security scoring | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
+| SaaS fingerprinting (155+) | ✓ | ✗ | partial | ✗ | ✗ | ✓ |
+| Signal intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Related domain enrichment | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
+| MCP server for AI agents | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Batch mode | ✓ | manual | ✗ | ✗ | ✓ | ✓ |
+| JSON / Markdown export | ✓ | ✗ | JSON | ✗ | ✗ | ✓ |
+| Extensible (custom YAML) | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+
+recon isn't trying to replace full-scope recon tools. It's focused on the specific workflow of "I have a domain, I need to understand this company in 30 seconds, from public data only."
+
 ## Install
 
 Requires Python 3.10+.
+
+```bash
+pip install recon-tool
+```
+
+Or install from source:
 
 ```bash
 pip install -e .
@@ -53,8 +77,10 @@ Run `recon doctor` after install to verify connectivity to all data sources. It 
 - GetUserRealm endpoint
 - Autodiscover SOAP endpoint
 - DNS resolution (TXT records)
+- crt.sh certificate transparency
 - MCP server module loading
 - Fingerprint database loading (built-in + custom from `~/.recon/`)
+- Signal database loading (built-in + custom from `~/.recon/`)
 
 If any check fails, lookups will still work but may return incomplete results for that source.
 
@@ -138,7 +164,7 @@ Batch-specific:
 | Auth type (Federated / Managed) | GetUserRealm NameSpaceType |
 | Identity provider | DNS TXT (Okta, Duo detected → refines auth insight) |
 | Email security score (0-5) | DMARC + DKIM + SPF strict + MTA-STS + BIMI |
-| 140+ SaaS services | TXT, SPF, MX, CNAME, NS, CAA, subdomain TXT (only services that leave DNS footprints) |
+| 155+ SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, subdomain TXT, DKIM selectors (only services that leave DNS footprints) |
 | Email gateway detection | Proofpoint, Mimecast, Barracuda, Trend Micro, Symantec, Trellix |
 | SASE / ZTNA detection | Zscaler, Netskope, Palo Alto |
 | Security tooling | CrowdStrike, SentinelOne, KnowBe4, Wiz, 1Password, etc. |
@@ -146,7 +172,7 @@ Batch-specific:
 | License tier hints | Intune + auth type signals E3/E5 |
 | Infrastructure and CDN | NS records, CNAME records |
 | Signal intelligence | AI adoption, GTM maturity, digital transformation (directional, not definitive) |
-| Related domains | Auto-discovered from CNAME breadcrumbs (autodiscover, DKIM) |
+| Related domains | Auto-discovered from CNAME breadcrumbs (autodiscover, DKIM) and certificate transparency (crt.sh) |
 | Migration signals | Google + Microsoft coexistence |
 | Org size estimate | SPF complexity, tenant domain count (rough heuristic) |
 
@@ -154,7 +180,7 @@ All from public sources. Zero authentication. Results vary — some domains are 
 
 ### Related Domain Auto-Enrichment
 
-When a domain's autodiscover CNAME or DKIM delegation points to a different domain (e.g., `autodiscover.northwindtraders.com` → `autodiscover.northwind-internal.com`), the tool automatically runs DNS fingerprinting on the related domain and merges the results. This means looking up a public-facing brand domain automatically picks up services configured on the organization's internal IT domain.
+When a domain's autodiscover CNAME or DKIM delegation points to a different domain (e.g., `autodiscover.northwindtraders.com` → `autodiscover.northwind-internal.com`), the tool automatically runs DNS fingerprinting on the related domain and merges the results. Certificate transparency logs (via crt.sh) also discover subdomains that may have their own SaaS verification records. This means looking up a public-facing brand domain automatically picks up services configured on the organization's internal IT domain or subdomains.
 
 ### Email Security Score Details
 
@@ -224,6 +250,21 @@ Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 
 |--------|--------------|
 | Security Gap — Gateway Without DMARC | Email gateway deployed but DMARC not enforcing |
 
+Custom signals: drop a `signals.yaml` in `~/.recon/` to add your own signal rules. Custom signals are validated the same way as built-in ones — invalid entries are skipped with a warning. Custom signals are additive only.
+
+Example custom signal:
+
+```yaml
+signals:
+  - name: Healthcare Compliance Stack
+    category: Vertical
+    confidence: medium
+    description: HIPAA-adjacent tooling detected
+    requires:
+      any: [okta, crowdstrike, proofpoint, knowbe4, 1password]
+    min_matches: 3
+```
+
 ## Exit Codes
 
 | Code | Meaning |
@@ -233,9 +274,20 @@ Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 
 | 3 | No data found (domain resolved but no information) |
 | 4 | Internal or network error |
 
-## MCP Server
+## MCP Server (AI Agent Integration)
 
-Works with any MCP client — Claude, Kiro, VS Code Copilot, Cursor, ChatGPT, etc.
+recon runs as an MCP server so any MCP-compatible AI tool can call it directly — no API keys, no glue code. Works with Claude Desktop, Cursor, VS Code + Copilot, ChatGPT, Kiro, or any other [MCP client](https://modelcontextprotocol.io/).
+
+### Setup
+
+1. Install recon (if you haven't already):
+
+```bash
+pip install recon-tool                    # from PyPI (when published)
+pip install -e .                          # or from source
+```
+
+2. Add this to your AI client's MCP config:
 
 ```json
 {
@@ -251,15 +303,35 @@ Works with any MCP client — Claude, Kiro, VS Code Copilot, Cursor, ChatGPT, et
 
 > On macOS/Linux, use `"python3"` instead of `"python"` if that's your default.
 
-The `lookup_tenant` tool accepts `domain` and optional `format` parameter (`"text"`, `"json"`, or `"markdown"`). Invalid format values are rejected with a clear error. The `reload_data` tool reloads fingerprint and signal definitions from disk without restarting the server — useful after editing `~/.recon/fingerprints.yaml`. Includes a `domain_report` prompt template for clients that support slash commands.
+3. Ask your AI tool something like: "Run a recon lookup on northwindtraders.com and summarize the security posture."
+
+### Available tools
+
+| Tool | What it does | Parameters |
+|------|-------------|------------|
+| `lookup_tenant` | Full domain intelligence — tenant details, email score, SaaS fingerprints, signals | `domain` (required), `format`: `text` / `json` / `markdown` |
+| `reload_data` | Reload fingerprints and signals after editing `~/.recon/*.yaml` | none |
+| `domain_report` | Prompt template for clients that support slash commands | `domain` |
+
+The server includes a bounded TTL cache (120s) and per-domain rate limiting to prevent hammering upstream endpoints when an agent calls `lookup_tenant` repeatedly. All tools are read-only and idempotent.
+
+### Where to put the config
+
+| Client | Config file location |
+|--------|---------------------|
+| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
+| Cursor | `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally |
+| VS Code + Copilot | `.vscode/mcp.json` in your project |
+| Kiro | `.kiro/settings/mcp.json` in your project or `~/.kiro/settings/mcp.json` globally |
 
 ## How It Works
 
-Three sources queried concurrently via `asyncio.gather`, results merged and cross-validated:
+Three sources queried concurrently via `asyncio.gather`, plus certificate transparency, results merged and cross-validated:
 
 1. **OIDC Discovery** — tenant ID, region (Microsoft only)
 2. **GetUserRealm + Autodiscover** — company name, auth type, tenant domains (Microsoft only)
 3. **DNS Records** — services, tech stack, email security, infrastructure (all domains)
+4. **crt.sh** — certificate transparency logs for subdomain discovery (all domains)
 
 Microsoft-specific sources return empty results when no M365 tenant is detected. DNS fingerprinting runs for every domain.
 
@@ -274,7 +346,7 @@ This is passive reconnaissance only. It queries public DNS records and unauthent
 - Signal intelligence (AI adoption, org size hints, etc.) is inferred from fingerprint matches. It's directional, not definitive. A company with an OpenAI TXT record is probably evaluating or using it, but you don't know how deeply.
 - Microsoft-specific data (tenant ID, auth type, company name) only works for M365 tenants. Google Workspace domains get DNS fingerprinting but no tenant metadata.
 - Related domain enrichment follows one level of CNAME breadcrumbs. It won't map an entire corporate domain tree.
-- The fingerprint database (143 services as of v0.1.0) is good but not exhaustive. It grows with contributions.
+- The fingerprint database (156 services as of v0.1.1) is good but not exhaustive. It grows with contributions.
 
 Treat the output as a starting point for conversation, not a complete picture.
 
@@ -284,8 +356,6 @@ Ideas under consideration. The guiding principle: stay passive, stay zero-creds,
 
 ### Deepen the intelligence
 
-- Custom signals YAML (`~/.recon/signals.yaml`) — same extensibility model as fingerprints, so you can encode your own signal rules without code changes
-- Certificate transparency lookups (crt.sh) — additional passive source for subdomain discovery and certificate history, still zero-creds
 - Expanded org-size and maturity heuristics — better bucketing (SMB / mid-market / enterprise) from SPF complexity, domain count, and service mix
 - Smarter CNAME/DKIM following — deeper passive subdomain discovery from public records without active scanning
 - Migration and risk signal refinement — detect patterns like recent Google → M365 shifts, legacy auth exposure, or security posture gaps that suggest conversation starters
@@ -300,7 +370,6 @@ Ideas under consideration. The guiding principle: stay passive, stay zero-creds,
 
 The MCP server already works and follows good practices (outcome-oriented tools, caching, rate limiting, structured logging). The next step is making recon a first-class citizen across the AI agent ecosystem:
 
-- CLAUDE.md / Kiro steering / agent context files — ship ready-made project context files so AI coding tools (Claude Code, Kiro, Cursor, etc.) immediately understand how to use recon. A `CLAUDE.md` tells Claude Code what the tool does and how to call it. A `.kiro/steering/` file does the same for Kiro. These are just markdown files in the repo — zero cost, high value.
 - llms.txt — when recon has a docs site or PyPI page, publish an `llms.txt` at the root so AI crawlers and agents can discover what the tool does without parsing HTML.
 - Structured output contracts — stable, versioned JSON schema for `--json` output so agents can rely on the shape without breaking when new fields are added. Treat `--json` like an API contract with semver guarantees.
 - Richer MCP toolset — `compare_tenants(domain_a, domain_b)` that returns a structured diff, `suggest_security_wins(domain)` that highlights the lowest-hanging email security improvements. Keep tools outcome-oriented (one call, one useful answer) per [MCP best practices](https://www.philschmid.de/mcp-best-practices).
@@ -318,10 +387,12 @@ The MCP server already works and follows good practices (outcome-oriented tools,
 
 These come up but don't fit the tool's identity:
 
-- Paid API integrations (Shodan, BuiltWith, Clearbit, etc.) — the zero-creds constraint is a feature, not a limitation. Adding paid sources changes who can use the tool and adds key management complexity. If you need enrichment beyond public DNS, pipe the `--json` output into whatever paid tool you already have.
+- Plugin / module system (SpiderFoot-style) — recon is a focused pipeline, not a framework. SpiderFoot's 200+ modules are both its superpower and its curse — most users end up cherry-picking 10-20 modules from a mountain of noise. recon stays opinionated: one pipeline, YAML-extensible data, clean output. If you need broad OSINT, use SpiderFoot or Amass. If you need focused domain intelligence, use recon.
+- Active scanning (brute-force, zone transfers, port scanning, web scraping) — this would destroy the "passive and legally safe" property. recon only reads public records that are published to be read. That's the whole point.
+- Paid API integrations (Shodan, BuiltWith, Clearbit, etc.) — the zero-creds constraint is a feature, not a limitation. Adding paid sources changes who can use the tool and adds key management complexity. If you need enrichment beyond public data, pipe the `--json` output into whatever paid tool you already have.
 - Web dashboard / `recon serve` — this is a CLI tool and MCP server. A web UI is a different product with different maintenance costs. The `--html` export covers the "share a pretty report" use case without running a server.
 - Local database / history store — adds state management, migration concerns, and disk usage tracking to what's currently a stateless tool. Save your `--json` output to files if you want history. Your filesystem is the database.
-- AI-generated pitch text / natural language copilot — the tool's job is to surface signal intelligence, not to write your emails. Feed the `--json` output to an LLM and prompt it yourself. Baking generation into the CLI couples it to a model provider and adds a dependency that will break. This is exactly what the MCP server and A2A support are for — let a downstream agent handle the prose.
+- AI-generated pitch text / natural language copilot — the tool's job is to surface signal intelligence, not to write your emails. Feed the `--json` output to an LLM and prompt it yourself. This is exactly what the MCP server and A2A support are for — let a downstream agent handle the prose.
 - Interactive REPL mode — the CLI flags already cover every query type. For live exploration, use the MCP server inside an AI tool — that's literally what it's for.
 
 ## Development
@@ -340,9 +411,9 @@ pyright recon_tool/                    # type check
 
 ### Disclaimer
 
-This tool queries publicly available DNS records and unauthenticated HTTP endpoints (Microsoft OIDC discovery, GetUserRealm, Google Workspace). It does not attempt to authenticate, exploit vulnerabilities, bypass access controls, or access any non-public data.
+This tool queries publicly available DNS records and unauthenticated HTTP endpoints (Microsoft OIDC discovery, GetUserRealm, Google Workspace, crt.sh certificate transparency logs). It does not attempt to authenticate, exploit vulnerabilities, bypass access controls, or access any non-public data. There is no active scanning, no brute-forcing, and no interaction with target systems beyond reading their published DNS records and querying public discovery endpoints.
 
-The information returned is the same information available to anyone running `dig`, `nslookup`, or visiting the same public endpoints in a browser. No credentials, API keys, or special access are used or required.
+Every piece of information this tool returns is already available to anyone running `dig`, `nslookup`, or visiting the same public endpoints in a browser. The tool simply automates the collection and adds interpretation. If an organization's security depends on this information not being looked at, that's security by obscurity — the records are public by design.
 
 This tool is intended for legitimate purposes such as:
 
@@ -351,7 +422,7 @@ This tool is intended for legitimate purposes such as:
 - Email security posture review
 - Vendor and partner due diligence
 
-You are responsible for ensuring your use of this tool complies with all applicable laws, regulations, and terms of service in your jurisdiction. The authors are not responsible for how this tool is used.
+You are responsible for ensuring your use complies with all applicable laws, regulations, and terms of service in your jurisdiction. The authors are not responsible for how this tool is used.
 
 This tool is not designed for, and should not be used for, unauthorized access, competitive intelligence gathering that violates applicable law, harassment, or any purpose that would violate the terms of service of the queried endpoints.
 

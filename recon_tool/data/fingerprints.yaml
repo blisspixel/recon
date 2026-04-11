@@ -1,8 +1,18 @@
 # saas_fingerprints.yaml
-# Version: 2026-04 — 100+ high-signal fingerprints
-# Curated from real DNS scans, official docs, and enterprise recon patterns
+# Version: 2026-04-11
+# Curated from real DNS scans, official docs, and enterprise recon patterns.
 # Add new fingerprints here — no code changes needed.
 # Custom overrides: ~/.recon/fingerprints.yaml (additive only — cannot disable built-ins)
+#
+# To contribute a new fingerprint:
+#   - name: Service Name
+#     slug: service-slug          # lowercase, unique, used by signals.yaml
+#     category: Category Name     # use an existing category if possible
+#     confidence: high             # high, medium, or low
+#     detections:
+#       - type: txt                # txt, spf, mx, ns, cname, subdomain_txt, caa, srv
+#         pattern: "^service-domain-verification="
+#         description: What this record means
 
 fingerprints:
 
@@ -336,6 +346,30 @@ fingerprints:
     detections:
       - type: txt
         pattern: "^apple-domain-verification="
+
+  - name: Box
+    slug: box
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^box-domain-verification="
+
+  - name: Egnyte
+    slug: egnyte
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^egnyte-domain-verification="
+
+  - name: Glean (Enterprise AI Search)
+    slug: glean
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^glean-domain-verification="
 
   # ====================== CRM & MARKETING ======================
 
@@ -701,6 +735,38 @@ fingerprints:
         pattern: "^kandji-domain-verification="
         description: Kandji Apple device management domain verification
 
+  - name: Ping Identity (PingOne)
+    slug: ping-identity
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^pingone-domain-verification="
+
+  - name: CyberArk
+    slug: cyberark
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^cyberark-domain-verification="
+
+  - name: Lakera (LLM Guardrails)
+    slug: lakera
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^lakera-domain-verification="
+
+  - name: Cato Networks (SASE)
+    slug: cato
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^cato-domain-verification="
+
   # ====================== PAYMENTS & FINANCE ======================
 
   - name: Stripe
@@ -753,6 +819,22 @@ fingerprints:
       - type: spf
         pattern: "_spf.qualtrics.com"
 
+  - name: Rippling
+    slug: rippling
+    category: HR & Operations
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^rippling-domain-verification="
+
+  - name: Deel
+    slug: deel
+    category: HR & Operations
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^deel-domain-verification="
+
   # ====================== DATA & ANALYTICS ======================
 
   - name: Databricks
@@ -786,6 +868,22 @@ fingerprints:
     detections:
       - type: txt
         pattern: "^dynatrace-site-verification="
+
+  - name: Datadog
+    slug: datadog
+    category: Data & Analytics
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^datadog-domain-verification="
+
+  - name: New Relic
+    slug: newrelic
+    category: Data & Analytics
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^newrelic-domain-verification="
 
   # ====================== DEVTOOLS & INFRASTRUCTURE ======================
 
@@ -920,6 +1018,24 @@ fingerprints:
     detections:
       - type: txt
         pattern: "^unity-sso-verification="
+
+  - name: PagerDuty
+    slug: pagerduty
+    category: DevTools & Infrastructure
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^pagerduty-domain-verification="
+
+  - name: Render
+    slug: render
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "onrender.com"
+      - type: txt
+        pattern: "^render-domain-verification="
 
   # ====================== SOCIAL & ADVERTISING ======================
 

@@ -7,11 +7,16 @@ Signals are organized in three layers (defined in signals.yaml):
 
 This layered approach is inspired by multi-vector fusion architectures —
 combining independent signal layers produces insights no single layer can.
+
+Also supports custom signals from ~/.recon/signals.yaml
+(additive only — custom entries cannot override or disable built-in ones).
+Set RECON_CONFIG_DIR to override the custom directory.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -83,36 +88,52 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
     )
 
 
-@lru_cache(maxsize=1)
-def load_signals() -> tuple[Signal, ...]:
-    """Load and validate signal definitions from YAML.
-
-    Returns a tuple of frozen Signal dataclasses. The tuple (immutable)
-    and frozen dataclasses ensure the cached result cannot be corrupted.
-
-    Results are cached for the process lifetime. In the CLI this is fine
-    (short-lived process). In the MCP server (long-lived), call
-    reload_signals() to pick up changes.
-    """
-    path = Path(__file__).parent / "data" / "signals.yaml"
+def _load_from_path(path: Path) -> list[Signal]:
+    """Load and validate signals from a single YAML file."""
     if not path.exists():
-        return ()
+        return []
+    source = str(path)
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except (yaml.YAMLError, OSError) as exc:
-        logger.warning("Failed to load signals from %s: %s", path, exc)
-        return ()
+        logger.warning("Failed to load signals from %s: %s", source, exc)
+        return []
     if not isinstance(data, dict):
-        return ()
+        return []
     raw = data.get("signals", [])
     if not isinstance(raw, list):
-        return ()
+        return []
     results: list[Signal] = []
     for i, s in enumerate(raw):
         sig = _validate_and_build_signal(s, i)
         if sig is not None:
             results.append(sig)
-    return tuple(results)
+    return results
+
+
+@lru_cache(maxsize=1)
+def load_signals() -> tuple[Signal, ...]:
+    """Load and validate signal definitions from YAML (built-in + custom).
+
+    Returns a tuple of frozen Signal dataclasses. The tuple (immutable)
+    and frozen dataclasses ensure the cached result cannot be corrupted.
+
+    Custom signals from ~/.recon/signals.yaml (or RECON_CONFIG_DIR) are
+    loaded after built-in signals and are additive only — they cannot
+    override or disable built-in signals.
+
+    Results are cached for the process lifetime. In the CLI this is fine
+    (short-lived process). In the MCP server (long-lived), call
+    reload_signals() to pick up changes.
+    """
+    data_path = Path(__file__).parent / "data" / "signals.yaml"
+    custom_dir = os.environ.get("RECON_CONFIG_DIR")
+    custom_path = Path(custom_dir) / "signals.yaml" if custom_dir else Path.home() / ".recon" / "signals.yaml"
+
+    entries: list[Signal] = []
+    entries.extend(_load_from_path(data_path))
+    entries.extend(_load_from_path(custom_path))
+    return tuple(entries)
 
 
 def reload_signals() -> None:
