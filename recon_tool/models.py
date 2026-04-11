@@ -41,6 +41,9 @@ class SourceResult:
     # in the Autodiscover tenant domain list.
     related_domains: tuple[str, ...] = ()
 
+    # True when crt.sh was unreachable — signals partial subdomain coverage
+    crtsh_degraded: bool = False
+
     @property
     def is_success(self) -> bool:
         """True if this result contains any useful data (identity or services)."""
@@ -82,6 +85,7 @@ class TenantInfo:
     tenant_domains: tuple[str, ...] = ()  # All domains found
     related_domains: tuple[str, ...] = () # Domains inferred from CNAME targets
     insights: tuple[str, ...] = ()        # Derived intelligence signals
+    crtsh_degraded: bool = False          # True when crt.sh was unreachable
 
 
 @dataclass
