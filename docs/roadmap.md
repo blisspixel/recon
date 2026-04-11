@@ -15,10 +15,11 @@ The guiding principle: stay passive, stay zero-creds, stay focused on signal int
 - `--csv` output for batch mode — MSPs and sales engineers live in spreadsheets
 - Delta / change reports — compare current scan to a previous `--json` export and surface what changed
 - `recon doctor --fix` — auto-scaffold `~/.recon/fingerprints.yaml` and `signals.yaml` templates with inline comments
+- Real-world screenshots in README — show actual (non-fictional) output for a well-known domain so people can see what the tool does before installing
 
 ## Reliability & resilience
 
-- Lightweight local cache (`~/.recon/cache/`) — the MCP server already caches results in-memory (120s TTL), but the CLI is stateless. A disk-backed cache with configurable TTL (default 24h) would avoid re-hitting endpoints on repeated lookups. Useful for humans running the same domain twice and for agents that call recon multiple times in a workflow. No external dependencies — just JSON files on disk.
+- Lightweight local cache (`~/.recon/cache/`) — the MCP server already caches results in-memory (120s TTL), but the CLI is stateless. A disk-backed cache with configurable TTL (default 24h) would avoid re-hitting endpoints on repeated lookups. Useful for humans running the same domain twice and for agents that call recon multiple times in a workflow. No external dependencies — just JSON files on disk. CLI flags: `--no-cache` to bypass, `--cache-ttl` to override the default.
 - Cost-ordered error recovery — classify errors by recovery cost and try cheapest first. DNS timeout → retry with fallback resolver (cheap). crt.sh timeout → skip (free, bonus source). Microsoft 429 → backoff (medium). Instead of treating all errors the same, make the retry strategy aware of what each failure actually costs.
 - Consecutive-error tracking in the MCP server — if `lookup_tenant` fails 3 times in a row for the same error class, surface a more specific diagnostic message instead of repeating the same generic error. Helps agents and users understand whether the problem is transient or structural.
 - Batch cascade bail-out — in batch mode, if a class of failure repeats across domains (e.g., a DNS resolver is down, or Microsoft endpoints are returning 503s), detect the pattern and bail early on remaining domains that would hit the same failure. Prevents large batch runs from wasting minutes timing out on each domain individually when the underlying issue is systemic.
@@ -39,6 +40,11 @@ The MCP server already works and follows good practices (outcome-oriented tools,
 - PyPI publish — `pip install recon-tool` instead of clone + editable install
 - Docker image — for pipelines, CI/CD, and air-gapped environments
 - Community fingerprint contribution flow — automated validation on PR, optional `recon update-fingerprints` to pull latest
+
+## CLI cleanup
+
+- Kill the `sys.argv` preprocessing hack — `_preprocess_args()` mutates `sys.argv` to inject `lookup` as the default subcommand. It works but it's fragile and surprising for anyone importing the module. Replace with a proper Typer default command or callback-based approach.
+- `recon mcp` subcommand — start the MCP server from the CLI instead of requiring `python -m recon_tool.server`. Makes it discoverable and consistent with the other subcommands.
 
 ## Not planned
 
