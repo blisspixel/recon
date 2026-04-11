@@ -171,7 +171,7 @@ async def lookup_tenant(
     tech stack, email security score, and signal intelligence.
 
     Works for any domain — Microsoft 365, Google Workspace, or any provider.
-    Returns detected SaaS services (155+ fingerprints), email security posture,
+    Returns detected SaaS services (185+ fingerprints), email security posture,
     infrastructure, and derived signals (AI adoption, GTM maturity, security
     stack, collaboration tools, etc.).
 
