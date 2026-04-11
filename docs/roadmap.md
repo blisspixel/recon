@@ -8,8 +8,8 @@ Stay passive. Stay zero-creds. Stay focused on signal intelligence. Be a great t
 |---------|-----------|
 | v0.1.0 | Core pipeline: OIDC + UserRealm + DNS sources, 155 fingerprints, Rich CLI, MCP server |
 | v0.2.0 | Certificate intelligence, 4-layer signal engine (26 signals), posture analysis, delta mode, chain resolution |
-| v0.4.0 | Hedged inference language, removed sys.argv hack, `recon mcp` subcommand, disk cache (`--no-cache`, `--cache-ttl`), `--html` output, `--csv` batch output, `doctor --fix` scaffolding |
-| v0.3.0 | Google Workspace parity (identity routing, CNAME modules, BIMI/VMC, MTA-STS/TLS-RPT), evidence traceability, dual confidence model, per-detection scoring, fingerprint metadata enrichment. 187 fingerprints, 29 signals, 22 posture rules, 604 tests, 84% coverage |
+| v0.3.0 | Google Workspace parity (identity routing, CNAME modules, BIMI/VMC, MTA-STS/TLS-RPT), evidence traceability, dual confidence model, per-detection scoring, fingerprint metadata enrichment. 187 fingerprints, 29 signals, 22 posture rules |
+| v0.4.0 | Hedged inference language, removed sys.argv hack, `recon mcp` subcommand, disk cache (`--no-cache`, `--cache-ttl`), `--html` output, `--csv` batch output, `doctor --fix` scaffolding. 597 tests |
 
 ## What's next
 

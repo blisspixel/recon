@@ -21,11 +21,11 @@ recon northwindtraders.com
 │              Intune / MDM, KnowBe4, Microsoft 365,               │
 │              Microsoft Teams, Miro, Salesforce, Slack, Zendesk   │
 │                                                                  │
-│  Insights:   Federated identity via Okta                         │
+│  Insights:   Federated identity indicators observed (likely Okta)│
 │              Email security 4/5 strong (DMARC reject, DKIM,      │
 │              SPF strict)                                         │
 │              Email gateway: Proofpoint in front of Exchange      │
-│              Likely M365 E3/E5 (Intune + federated auth)         │
+│              M365 E3/E5 indicators (Intune + federated auth)     │
 │              Security stack: KnowBe4 (training), Okta (identity) │
 │              AI Adoption: anthropic                              │
 │              Modern Collaboration: slack, miro, atlassian, figma │
@@ -150,7 +150,7 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/                          # 604 tests
+pytest tests/                          # 597 tests
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 ```
