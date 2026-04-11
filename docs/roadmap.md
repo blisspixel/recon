@@ -4,6 +4,7 @@ The guiding principle: stay passive, stay zero-creds, stay focused on signal int
 
 ## Deepen the intelligence
 
+- Google Workspace parity — M365 gets tenant ID, company name, auth type, and region from public endpoints. Google Workspace currently only gets MX/SPF detection. Google has public discovery endpoints that could surface org name, directory info, and workspace configuration without credentials. This is the biggest coverage gap.
 - Expanded org-size and maturity heuristics — better bucketing (SMB / mid-market / enterprise) from SPF complexity, domain count, and service mix
 - Smarter CNAME/DKIM following — deeper passive subdomain discovery from public records without active scanning
 - Migration and risk signal refinement — detect patterns like recent Google → M365 shifts, legacy auth exposure, or security posture gaps that suggest conversation starters
@@ -11,8 +12,16 @@ The guiding principle: stay passive, stay zero-creds, stay focused on signal int
 ## Better output
 
 - `--html` output — self-contained single-file report for sharing in email or proposals
+- `--csv` output for batch mode — MSPs and sales engineers live in spreadsheets
 - Delta / change reports — compare current scan to a previous `--json` export and surface what changed
 - `recon doctor --fix` — auto-scaffold `~/.recon/fingerprints.yaml` and `signals.yaml` templates with inline comments
+
+## Reliability & resilience
+
+- Lightweight local cache (`~/.recon/cache/`) — the MCP server already caches results in-memory (120s TTL), but the CLI is stateless. A disk-backed cache with configurable TTL (default 24h) would avoid re-hitting endpoints on repeated lookups. Useful for humans running the same domain twice and for agents that call recon multiple times in a workflow. No external dependencies — just JSON files on disk.
+- Cost-ordered error recovery — classify errors by recovery cost and try cheapest first. DNS timeout → retry with fallback resolver (cheap). crt.sh timeout → skip (free, bonus source). Microsoft 429 → backoff (medium). Instead of treating all errors the same, make the retry strategy aware of what each failure actually costs.
+- Consecutive-error tracking in the MCP server — if `lookup_tenant` fails 3 times in a row for the same error class, surface a more specific diagnostic message instead of repeating the same generic error. Helps agents and users understand whether the problem is transient or structural.
+- Batch cascade bail-out — in batch mode, if a class of failure repeats across domains (e.g., a DNS resolver is down, or Microsoft endpoints are returning 503s), detect the pattern and bail early on remaining domains that would hit the same failure. Prevents large batch runs from wasting minutes timing out on each domain individually when the underlying issue is systemic.
 
 ## Agent-friendly by default
 
