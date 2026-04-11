@@ -1,0 +1,148 @@
+"""Tests for signal loading, validation, and evaluation."""
+
+from __future__ import annotations
+
+from recon_tool.signals import evaluate_signals, load_signals
+
+
+class TestLoadSignals:
+    def test_loads_builtin_signals(self):
+        signals = load_signals()
+        assert len(signals) > 0
+        names = {s.name for s in signals}
+        assert "AI Adoption" in names
+        assert "High GTM Maturity" in names
+
+    def test_all_signals_have_required_fields(self):
+        for signal in load_signals():
+            assert signal.name
+            assert signal.candidates
+            assert len(signal.candidates) > 0
+
+
+class TestEvaluateSignals:
+    def test_ai_adoption_fires(self):
+        results = evaluate_signals({"openai"})
+        names = {r.name for r in results}
+        assert "AI Adoption" in names
+
+    def test_ai_adoption_fires_anthropic(self):
+        results = evaluate_signals({"anthropic"})
+        names = {r.name for r in results}
+        assert "AI Adoption" in names
+
+    def test_ai_adoption_fires_mistral(self):
+        results = evaluate_signals({"mistral"})
+        names = {r.name for r in results}
+        assert "AI Adoption" in names
+
+    def test_ai_adoption_fires_perplexity(self):
+        results = evaluate_signals({"perplexity"})
+        names = {r.name for r in results}
+        assert "AI Adoption" in names
+
+    def test_gtm_maturity_needs_two(self):
+        # One tool shouldn't fire
+        results = evaluate_signals({"hubspot"})
+        names = {r.name for r in results}
+        assert "High GTM Maturity" not in names
+
+        # Two tools should fire
+        results = evaluate_signals({"hubspot", "outreach"})
+        names = {r.name for r in results}
+        assert "High GTM Maturity" in names
+
+    def test_modern_collaboration_needs_three(self):
+        results = evaluate_signals({"slack", "notion"})
+        names = {r.name for r in results}
+        assert "Modern Collaboration" not in names
+
+        results = evaluate_signals({"slack", "notion", "miro"})
+        names = {r.name for r in results}
+        assert "Modern Collaboration" in names
+
+    def test_no_matches_returns_empty(self):
+        results = evaluate_signals({"nonexistent-slug"})
+        assert results == []
+
+    def test_matched_slugs_included(self):
+        results = evaluate_signals({"openai", "anthropic"})
+        ai_signal = next(r for r in results if r.name == "AI Adoption")
+        assert "openai" in ai_signal.matched
+        assert "anthropic" in ai_signal.matched
+
+    def test_description_included_when_present(self):
+        results = evaluate_signals({"openai"})
+        ai_signal = next(r for r in results if r.name == "AI Adoption")
+        assert ai_signal.description
+        assert len(ai_signal.description) > 0
+
+    # ── Composite signals (Layer 2) ─────────────────────────────────────
+
+    def test_digital_transformation_needs_four(self):
+        results = evaluate_signals({"openai", "slack", "notion"})
+        names = {r.name for r in results}
+        assert "Digital Transformation" not in names
+
+        results = evaluate_signals({"openai", "slack", "notion", "vercel"})
+        names = {r.name for r in results}
+        assert "Digital Transformation" in names
+
+    def test_sales_led_growth(self):
+        results = evaluate_signals({"salesforce", "outreach", "6sense"})
+        names = {r.name for r in results}
+        assert "Sales-Led Growth" in names
+
+    def test_product_led_growth(self):
+        results = evaluate_signals({"mixpanel", "pendo", "intercom"})
+        names = {r.name for r in results}
+        assert "Product-Led Growth" in names
+
+    def test_enterprise_it_maturity(self):
+        results = evaluate_signals({"okta", "crowdstrike", "proofpoint", "jamf"})
+        names = {r.name for r in results}
+        assert "Enterprise IT Maturity" in names
+
+    def test_heavy_outbound_stack(self):
+        results = evaluate_signals({"sendgrid", "mailchimp"})
+        names = {r.name for r in results}
+        assert "Heavy Outbound Stack" in names
+
+    # ── Consistency checks (Layer 3) ────────────────────────────────────
+
+    def test_gateway_without_dmarc_fires_when_no_enforcement(self):
+        """Gateway present + DMARC none = inconsistency signal fires."""
+        results = evaluate_signals({"proofpoint"}, dmarc_policy="none")
+        names = {r.name for r in results}
+        assert "Security Gap — Gateway Without DMARC Enforcement" in names
+
+    def test_gateway_without_dmarc_fires_when_dmarc_missing(self):
+        """Gateway present + no DMARC at all = inconsistency signal fires."""
+        results = evaluate_signals({"mimecast"}, dmarc_policy=None)
+        names = {r.name for r in results}
+        assert "Security Gap — Gateway Without DMARC Enforcement" in names
+
+    def test_gateway_with_dmarc_reject_does_not_fire(self):
+        """Gateway present + DMARC reject = no inconsistency."""
+        results = evaluate_signals({"proofpoint"}, dmarc_policy="reject")
+        names = {r.name for r in results}
+        assert "Security Gap — Gateway Without DMARC Enforcement" not in names
+
+    def test_gateway_with_dmarc_quarantine_does_not_fire(self):
+        """Gateway present + DMARC quarantine = no inconsistency."""
+        results = evaluate_signals({"trendmicro"}, dmarc_policy="quarantine")
+        names = {r.name for r in results}
+        assert "Security Gap — Gateway Without DMARC Enforcement" not in names
+
+
+class TestReloadFingerprints:
+    def test_reload_clears_caches(self):
+        from recon_tool.fingerprints import load_fingerprints, reload_fingerprints
+
+        # Load once to populate cache
+        fps1 = load_fingerprints()
+        # Reload clears cache
+        reload_fingerprints()
+        # Load again — should work (reloads from disk)
+        fps2 = load_fingerprints()
+        assert len(fps2) == len(fps1)

@@ -1,0 +1,1307 @@
+# saas_fingerprints.yaml
+# Version: 2026-04 — 100+ high-signal fingerprints
+# Curated from real DNS scans, official docs, and enterprise recon patterns
+# Add new fingerprints here — no code changes needed.
+# Custom overrides: ~/.recon/fingerprints.yaml (additive only — cannot disable built-ins)
+
+fingerprints:
+
+  # ====================== AI & GENERATIVE ======================
+
+  - name: OpenAI Enterprise
+    slug: openai
+    category: AI & Generative
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^openai-domain-verification="
+        description: OpenAI enterprise domain verification for ChatGPT Team/Enterprise
+        reference: https://help.openai.com/en/articles/8871611-domain-verification
+
+  - name: Anthropic (Claude)
+    slug: anthropic
+    category: AI & Generative
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^anthropic-domain-verification"
+        description: Anthropic Claude enterprise domain claim
+
+  - name: Mistral AI
+    slug: mistral
+    category: AI & Generative
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^mistral-domain-verification="
+        description: Mistral AI enterprise domain verification for SAML SSO
+
+  - name: Perplexity Enterprise
+    slug: perplexity
+    category: AI & Generative
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^perplexity-domain-verification="
+        description: Perplexity AI Enterprise Pro domain verification
+
+  # ====================== EMAIL & COMMUNICATION ======================
+
+  - name: Microsoft 365
+    slug: microsoft365
+    category: Email & Communication
+    confidence: high
+    m365: true
+    detections:
+      - type: txt
+        pattern: "^MS=ms"
+        description: Microsoft 365 domain verification
+      - type: txt
+        pattern: "^ms-domain-verification="
+      - type: mx
+        pattern: "mail.protection.outlook.com"
+      - type: spf
+        pattern: "spf.protection.outlook.com"
+
+  - name: Google Workspace
+    slug: google-workspace
+    category: Email & Communication
+    confidence: high
+    detections:
+      - type: mx
+        pattern: "aspmx.l.google.com"
+      - type: spf
+        pattern: "_spf.google.com"
+
+  - name: Zoho Mail
+    slug: zoho
+    category: Email & Communication
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^zoho-verification="
+      - type: mx
+        pattern: "zoho.com"
+
+  - name: ProtonMail
+    slug: protonmail
+    category: Email & Communication
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^protonmail-verification="
+
+  - name: AWS SES
+    slug: aws-ses
+    category: Email & Communication
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^amazonses:"
+      - type: spf
+        pattern: "amazonses.com"
+
+  - name: SendGrid
+    slug: sendgrid
+    category: Email & Communication
+    confidence: high
+    detections:
+      - type: spf
+        pattern: "sendgrid.net"
+
+  - name: Mailgun
+    slug: mailgun
+    category: Email & Communication
+    confidence: high
+    detections:
+      - type: spf
+        pattern: "mailgun.org"
+
+  - name: SendCloud
+    slug: sendcloud
+    category: Email & Communication
+    confidence: medium
+    detections:
+      - type: spf
+        pattern: "spf1.sendcloud.org"
+      - type: spf
+        pattern: "spf2.sendcloud.org"
+
+  - name: Postmark
+    slug: postmark
+    category: Email & Communication
+    confidence: high
+    detections:
+      - type: spf
+        pattern: "postmarkapp.com"
+
+  - name: SparkPost
+    slug: sparkpost
+    category: Email & Communication
+    confidence: high
+    detections:
+      - type: spf
+        pattern: "sparkpostmail.com"
+
+  - name: Brevo (Sendinblue)
+    slug: brevo
+    category: Email & Communication
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^Sendinblue-code"
+      - type: txt
+        pattern: "^brevo-code"
+
+  - name: Mailchimp
+    slug: mailchimp
+    category: Email & Communication
+    confidence: high
+    detections:
+      - type: spf
+        pattern: "servers.mcsv.net"
+      - type: spf
+        pattern: "spf.mandrillapp.com"
+
+  # ====================== PRODUCTIVITY & COLLABORATION ======================
+
+  - name: Atlassian (Jira/Confluence)
+    slug: atlassian
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^atlassian-domain-verification="
+        description: Atlassian Cloud organization domain verification (SSO, Guard)
+
+  - name: Slack
+    slug: slack
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^slack-domain-verification="
+        description: Slack workspace domain claim (Enterprise Grid)
+        reference: https://slack.com/help/articles/5513043606547
+      - type: subdomain_txt
+        pattern: "_slack-challenge:."
+        description: Slack Enterprise Grid verification — proves Enterprise tier (not Pro/Business)
+
+  - name: Notion
+    slug: notion
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^notion-domain-verification="
+      - type: txt
+        pattern: "^notion-verification-code"
+
+  - name: Miro
+    slug: miro
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^miro-verification="
+
+  - name: Asana
+    slug: asana
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^asana-domain-verification="
+
+  - name: Monday.com
+    slug: monday
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^monday-domain-verification="
+      - type: txt
+        pattern: "^monday-verification"
+
+  - name: Wrike
+    slug: wrike
+    category: Productivity & Collaboration
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^wrike-verification="
+
+  - name: Smartsheet
+    slug: smartsheet
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^smartsheet-site-validation="
+
+  - name: Airtable
+    slug: airtable
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^airtable-domain-verification="
+      - type: txt
+        pattern: "^airtable-verification="
+
+  - name: ClickUp
+    slug: clickup
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^clickup-domain-verification="
+
+  - name: Loom
+    slug: loom
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^loom-site-verification="
+
+  - name: Canva
+    slug: canva
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^canva-site-verification="
+
+  - name: Beautiful.ai
+    slug: beautifulai
+    category: Productivity & Collaboration
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^beautifulai-site-verification="
+
+  - name: Zoom
+    slug: zoom
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^ZOOM_verify_"
+
+  - name: Dropbox
+    slug: dropbox
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^dropbox-domain-verification="
+
+  - name: Workplace (Meta)
+    slug: workplace-meta
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^workplace-domain-verification="
+
+  - name: LucidLink
+    slug: lucidlink
+    category: Productivity & Collaboration
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^lucidlink-verification="
+
+  - name: Adobe (IDP)
+    slug: adobe-idp
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^adobe-idp-site-verification="
+
+  - name: Adobe Sign
+    slug: adobe-sign
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^adobe-sign-verification="
+
+  - name: Apple Business
+    slug: apple
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^apple-domain-verification="
+
+  # ====================== CRM & MARKETING ======================
+
+  - name: Salesforce
+    slug: salesforce
+    category: CRM & Marketing
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^salesforce-domain-verification="
+      - type: txt
+        pattern: "^00D[A-Za-z0-9]{12,15}="
+        description: "Salesforce OrgID (00D prefix) — unique tenant identifier, proves CRM relationship"
+      - type: spf
+        pattern: "salesforce.com"
+      - type: spf
+        pattern: "_spf.salesforce.com"
+
+  - name: HubSpot
+    slug: hubspot
+    category: CRM & Marketing
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^hubspot-domain-verification="
+      - type: txt
+        pattern: "^hubspot-developer-verification="
+        description: HubSpot developer portal / sandbox domain verification
+      - type: spf
+        pattern: "hubspotemail.net"
+      - type: cname
+        pattern: "hubspot.net"
+
+  - name: Marketo (Adobe)
+    slug: marketo
+    category: CRM & Marketing
+    confidence: high
+    detections:
+      - type: spf
+        pattern: "mktomail.com"
+      - type: cname
+        pattern: "mktosvc.com"
+      - type: cname
+        pattern: "mkto-"
+
+  - name: Klaviyo
+    slug: klaviyo
+    category: CRM & Marketing
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^klaviyo-site-verification="
+
+  - name: LiveRamp
+    slug: liveramp
+    category: CRM & Marketing
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^liveramp-site-verification="
+
+  - name: Segment (Twilio)
+    slug: segment
+    category: CRM & Marketing
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^segment-site-verification="
+
+  # ====================== SUPPORT & HELPDESK ======================
+
+  - name: Zendesk
+    slug: zendesk
+    category: Support & Helpdesk
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^zendesk-domain-verification="
+      - type: spf
+        pattern: "zendesk.com"
+      - type: spf
+        pattern: "mail.zendesk.com"
+
+  - name: Freshdesk
+    slug: freshdesk
+    category: Support & Helpdesk
+    confidence: high
+    detections:
+      - type: spf
+        pattern: "freshdesk.com"
+
+  - name: ServiceNow
+    slug: servicenow
+    category: Support & Helpdesk
+    confidence: high
+    detections:
+      - type: spf
+        pattern: "service-now.com"
+
+  - name: Statuspage (Atlassian)
+    slug: statuspage
+    category: Support & Helpdesk
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^statuspage-domain-verification="
+
+  # ====================== SECURITY & COMPLIANCE ======================
+
+  - name: CrowdStrike Falcon
+    slug: crowdstrike
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^crowdstrike-falcon-site-verification="
+      - type: txt
+        pattern: "crowdstrike"
+
+  - name: KnowBe4
+    slug: knowbe4
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^knowbe4-site-verification="
+      - type: spf
+        pattern: "_spf.psm.knowbe4.com"
+
+  - name: Proofpoint
+    slug: proofpoint
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^proofpoint-domain-verification="
+      - type: txt
+        pattern: "^proofpoint-"
+      - type: mx
+        pattern: "pphosted.com"
+      - type: spf
+        pattern: "spf.pphosted.com"
+      - type: spf
+        pattern: "_spf.proofpoint.com"
+
+  - name: Mimecast
+    slug: mimecast
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^mimecast"
+      - type: mx
+        pattern: "mimecast.com"
+      - type: spf
+        pattern: "_netblocks.mimecast.com"
+
+  - name: Barracuda
+    slug: barracuda
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: mx
+        pattern: "barracudanetworks.com"
+
+  - name: Trend Micro Email Security
+    slug: trendmicro
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: mx
+        pattern: "tmes.trendmicro.com"
+      - type: spf
+        pattern: "spf.tmes.trendmicro.com"
+
+  - name: Sophos
+    slug: sophos
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^sophos-domain-verification="
+
+  - name: Palo Alto Networks
+    slug: paloalto
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^paloaltonetworks-domain-verification="
+
+  - name: Zscaler
+    slug: zscaler
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^zscaler-domain-verification="
+      - type: txt
+        pattern: "zscaler"
+
+  - name: Wiz Security
+    slug: wiz
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^wiz-domain-verification="
+
+  - name: OneTrust
+    slug: onetrust
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^onetrust-domain-verification="
+
+  - name: Have I Been Pwned
+    slug: hibp
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^have-i-been-pwned-verification="
+        description: Troy Hunt's breach notification service — domain-level monitoring
+
+  - name: Duo Security
+    slug: duo
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^duo_sso_verification="
+
+  - name: Okta
+    slug: okta
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^_oktaverification="
+      - type: txt
+        pattern: "^okta-domain-verification"
+
+  - name: 1Password
+    slug: 1password
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^1password-site-verification="
+
+  - name: Jamf
+    slug: jamf
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^jamf-site-verification="
+
+  - name: GlobalSign (SSL)
+    slug: globalsign
+    category: Security & Compliance
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^_globalsign-domain-verification="
+      - type: txt
+        pattern: "^globalsign-domain-verification"
+
+  - name: Imperva (Incapsula)
+    slug: imperva
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "incapdns.net"
+
+  - name: Sucuri WAF
+    slug: sucuri
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "sucuri.net"
+
+  - name: Symantec Email Security
+    slug: symantec
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: mx
+        pattern: "messagelabs.com"
+      - type: spf
+        pattern: "spf.messagelabs.com"
+
+  - name: Cisco IronPort
+    slug: cisco-ironport
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: mx
+        pattern: "iphmx.com"
+
+  - name: Cisco Secure Email
+    slug: cisco-email
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: mx
+        pattern: "ess.cisco.com"
+
+  - name: Cisco Webex
+    slug: webex
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^webexdomainverification"
+
+  - name: Cisco (Identity)
+    slug: cisco-identity
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^cisco-ci-domain-verification="
+      - type: txt
+        pattern: "^ciscocidomainverification="
+
+  - name: Trellix (FireEye)
+    slug: trellix
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: mx
+        pattern: "fireeyecloud.com"
+
+  - name: SentinelOne
+    slug: sentinelone
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^sentinelone-domain-verification="
+        description: SentinelOne Singularity endpoint protection domain claim
+
+  - name: Netskope
+    slug: netskope
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^netskope-domain-verification="
+        description: Netskope SASE/SSE platform domain verification
+
+  - name: Kandji
+    slug: kandji
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^kandji-domain-verification="
+        description: Kandji Apple device management domain verification
+
+  # ====================== PAYMENTS & FINANCE ======================
+
+  - name: Stripe
+    slug: stripe
+    category: Payments & Finance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^stripe-verification="
+
+  - name: DocuSign
+    slug: docusign
+    category: Payments & Finance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^docusign="
+
+  # ====================== HR & OPERATIONS ======================
+
+  - name: Workday
+    slug: workday
+    category: HR & Operations
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^workday-domain-verification="
+
+  - name: SAP
+    slug: sap
+    category: HR & Operations
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^sap-domain-verification="
+
+  - name: UKG (UltiPro)
+    slug: ukg
+    category: HR & Operations
+    confidence: high
+    detections:
+      - type: spf
+        pattern: "_spf.ultipro.com"
+
+  - name: Qualtrics
+    slug: qualtrics
+    category: HR & Operations
+    confidence: high
+    detections:
+      - type: spf
+        pattern: "_spf.qualtrics.com"
+
+  # ====================== DATA & ANALYTICS ======================
+
+  - name: Databricks
+    slug: databricks
+    category: Data & Analytics
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^databricks-domain-verification="
+
+  - name: Snowflake
+    slug: snowflake
+    category: Data & Analytics
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^snowflake-domain-verification="
+
+  - name: MongoDB Atlas
+    slug: mongodb
+    category: Data & Analytics
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^mongodb-site-verification="
+
+  - name: Dynatrace
+    slug: dynatrace
+    category: Data & Analytics
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^dynatrace-site-verification="
+
+  # ====================== DEVTOOLS & INFRASTRUCTURE ======================
+
+  - name: GitHub
+    slug: github
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^github-site-verification="
+      - type: txt
+        pattern: "^_github-pages-challenge"
+
+  - name: GitLab
+    slug: gitlab
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^gitlab-pages-verification-code="
+        description: GitLab SaaS / Pages domain verification at zone apex
+      - type: subdomain_txt
+        pattern: "_gitlab-pages-verification-code:."
+        description: GitLab Pages verification at designated subdomain
+
+  - name: Postman
+    slug: postman
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^postman-domain-verification="
+
+  - name: Figma
+    slug: figma
+    category: Productivity & Collaboration
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^figma-domain-verification="
+      - type: txt
+        pattern: "^figma-verification"
+
+  - name: Linear
+    slug: linear
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^linear-domain-verification="
+
+  - name: Autodesk
+    slug: autodesk
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^autodesk-domain-verification="
+
+  - name: Grammarly
+    slug: grammarly
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^grammarly-domain-verification="
+
+  - name: Vercel
+    slug: vercel
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^vercel-domain-verification="
+      - type: cname
+        pattern: "vercel-dns.com"
+
+  - name: Webflow
+    slug: webflow
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^webflow-domain-verification="
+
+  - name: Netlify
+    slug: netlify
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^netlify="
+      - type: cname
+        pattern: "netlify.app"
+
+  - name: Twilio
+    slug: twilio
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^twilio-domain-verification="
+
+  - name: Citrix
+    slug: citrix
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^citrix-verification-code="
+
+  - name: Dell Technologies
+    slug: dell
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^dell-technologies-domain-verification="
+
+  - name: CloudHealth (VMware)
+    slug: cloudhealth
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^cloudhealth="
+
+  - name: Unity
+    slug: unity
+    category: DevTools & Infrastructure
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^unity-sso-verification="
+
+  # ====================== SOCIAL & ADVERTISING ======================
+
+  - name: Meta Business Suite
+    slug: meta
+    category: Social & Advertising
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^facebook-domain-verification="
+
+  - name: Yandex
+    slug: yandex
+    category: Social & Advertising
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^yandex-verification:"
+
+  # ====================== MISC ======================
+
+  - name: Google (site verified)
+    slug: google-site
+    category: Misc
+    confidence: low
+    detections:
+      - type: txt
+        pattern: "^google-site-verification="
+        description: Google Search Console / site ownership — NOT Google Workspace email
+
+  # ====================== INFRASTRUCTURE ======================
+
+  - name: Cloudflare
+    slug: cloudflare
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^cloudflare-verify="
+      - type: ns
+        pattern: "cloudflare.com"
+      - type: cname
+        pattern: "cloudflare"
+
+  - name: AWS Route 53
+    slug: aws-route53
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: ns
+        pattern: "awsdns"
+
+  - name: Azure DNS
+    slug: azure-dns
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: ns
+        pattern: "azure-dns"
+
+  - name: Google Cloud DNS
+    slug: gcp-dns
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: ns
+        pattern: "google.com"
+
+  - name: UltraDNS (Neustar)
+    slug: ultradns
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: ns
+        pattern: "ultradns"
+
+  - name: Dyn (Oracle)
+    slug: dyn
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: ns
+        pattern: "dynect.net"
+
+  - name: Akamai
+    slug: akamai
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: ns
+        pattern: "akamai"
+      - type: cname
+        pattern: "akamaiedge.net"
+      - type: cname
+        pattern: "edgekey.net"
+
+  - name: NS1 (IBM)
+    slug: ns1
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: ns
+        pattern: "nsone.net"
+
+  - name: GoDaddy
+    slug: godaddy
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: ns
+        pattern: "domaincontrol.com"
+
+  - name: AWS CloudFront
+    slug: aws-cloudfront
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "cloudfront.net"
+
+  - name: Azure CDN
+    slug: azure-cdn
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "azureedge.net"
+
+  - name: Azure App Service
+    slug: azure-appservice
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "azurewebsites.net"
+
+  - name: Azure Traffic Manager
+    slug: azure-tm
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "trafficmanager.net"
+
+  - name: Fastly
+    slug: fastly
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "fastly.net"
+
+  - name: Shopify
+    slug: shopify
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "myshopify.com"
+
+  - name: Wix
+    slug: wix
+    category: Infrastructure
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "wixdns.net"
+
+  - name: Squarespace
+    slug: squarespace
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "squarespace.com"
+
+  - name: Heroku
+    slug: heroku
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "herokuapp.com"
+
+  - name: WP Engine
+    slug: wpengine
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "wpengine.com"
+
+  - name: Pantheon
+    slug: pantheon
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "pantheon.io"
+
+  # ====================== CERTIFICATE AUTHORITIES (CAA) ======================
+
+  - name: "CAA: Let's Encrypt"
+    slug: letsencrypt
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: caa
+        pattern: "letsencrypt.org"
+
+  - name: "CAA: DigiCert"
+    slug: digicert
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: caa
+        pattern: "digicert.com"
+
+  - name: "CAA: Sectigo"
+    slug: sectigo
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: caa
+        pattern: "sectigo.com"
+      - type: caa
+        pattern: "comodoca.com"
+
+  - name: "CAA: AWS Certificate Manager"
+    slug: aws-acm
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: caa
+        pattern: "amazon.com"
+      - type: caa
+        pattern: "amazontrust.com"
+
+  - name: "CAA: Google Trust Services"
+    slug: google-trust
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: caa
+        pattern: "pki.goog"
+
+  # ====================== SALES INTELLIGENCE & MARKETING AUTOMATION ======================
+
+  - name: 6sense
+    slug: 6sense
+    category: Sales Intelligence
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "6sense.com"
+      - type: cname
+        pattern: "6sense.io"
+      - type: txt
+        pattern: "^6sense"
+
+  - name: Demandbase
+    slug: demandbase
+    category: Sales Intelligence
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "demandbase.com"
+
+  - name: Pardot (Salesforce)
+    slug: pardot
+    category: Sales Intelligence
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "pardot.com"
+
+  - name: Eloqua (Oracle)
+    slug: eloqua
+    category: Sales Intelligence
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "eloqua.com"
+
+  - name: Clearbit
+    slug: clearbit
+    category: Sales Intelligence
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "clearbit.com"
+
+  - name: Outreach
+    slug: outreach
+    category: Sales Intelligence
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^outreach"
+      - type: spf
+        pattern: "outreach.io"
+
+  - name: Salesloft
+    slug: salesloft
+    category: Sales Intelligence
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^salesloft"
+      - type: spf
+        pattern: "salesloft.com"
+
+  - name: Apollo.io
+    slug: apollo
+    category: Sales Intelligence
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^apollo-domain-verification="
+
+  - name: Gong
+    slug: gong
+    category: Sales Intelligence
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^gong-domain-verification="
+
+  - name: Drift / Salesloft
+    slug: drift
+    category: Sales Intelligence
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "drift.com"
+
+  - name: Intercom
+    slug: intercom
+    category: Sales Intelligence
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "intercom.io"
+      - type: txt
+        pattern: "^intercom-domain-verification="
+
+  - name: Mixpanel
+    slug: mixpanel
+    category: Data & Analytics
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "mixpanel.com"
+
+  - name: Amplitude
+    slug: amplitude
+    category: Data & Analytics
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^amplitude-domain-verification="
+
+  - name: Heap Analytics
+    slug: heap
+    category: Data & Analytics
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "heapanalytics.com"
+
+  - name: Pendo
+    slug: pendo
+    category: Data & Analytics
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "pendo.io"
+
+  - name: Hotjar
+    slug: hotjar
+    category: Data & Analytics
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^hotjar-domain-verification="
