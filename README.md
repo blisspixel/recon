@@ -49,7 +49,7 @@ Works for Microsoft 365, Google Workspace, or any provider. Useful for anyone wh
 | M365 tenant detection | ✓ | ✗ | ✗ | ✗ | partial | varies |
 | Google Workspace detection | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
 | Email security scoring | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
-| SaaS fingerprinting (185+) | ✓ | ✗ | partial | ✗ | ✗ | ✓ |
+| SaaS fingerprinting (187) | ✓ | ✗ | partial | ✗ | ✗ | ✓ |
 | Signal intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | Certificate intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
 | Posture analysis | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
@@ -96,13 +96,14 @@ Input is normalized automatically — URLs, schemes, `www.` prefixes, paths, and
 | Google Workspace auth type, modules, corporate identity | Google login flow + CNAME probing + BIMI VMC |
 | Email provider | MX records |
 | Email security score (0–5) | DMARC + DKIM + SPF + MTA-STS + BIMI |
-| 185+ SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors |
+| 187 SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors |
 | Email gateway / SASE / security stack | DNS fingerprints |
 | Signal intelligence (29 signals) | Metadata-aware YAML rules with cross-reference conditions |
 | Certificate intelligence | crt.sh metadata: issuance velocity, issuer diversity, cert age |
 | Posture observations | Neutral factual analysis across email, identity, infrastructure |
 | Related domains | CNAME breadcrumbs + certificate transparency (crt.sh) |
 | Delta / change detection | Compare current vs. previous JSON export |
+| Evidence traceability | Per-detection source records with dual confidence scoring |
 
 All from public sources. Zero authentication. Results vary by domain.
 
