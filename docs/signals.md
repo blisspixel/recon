@@ -1,0 +1,53 @@
+# Signal Intelligence
+
+Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. Signals are organized in three layers:
+
+## Layer 1 — Single-category detection
+
+| Signal | Triggers when |
+|--------|--------------|
+| AI Adoption | OpenAI, Anthropic, Mistral, or Perplexity detected |
+| High GTM Maturity | 2+ sales/marketing tools |
+| Enterprise Security Stack | 2+ security tools |
+| Modern Collaboration | 3+ collaboration tools |
+| Dev & Engineering Heavy | 2+ dev tools |
+| Data & Analytics Investment | 2+ data tools |
+| Multi-Cloud | 2+ cloud providers detected |
+| Observability & SRE | 2+ monitoring/incident tools |
+
+## Layer 2 — Cross-category composites
+
+| Signal | Triggers when |
+|--------|--------------|
+| Digital Transformation | 4+ tools across AI, collaboration, and cloud |
+| Sales-Led Growth | 3+ CRM, sales engagement, and marketing automation tools |
+| Product-Led Growth | 3+ analytics, engagement, and support tools |
+| Enterprise IT Maturity | 4+ identity, endpoint, email security, and MDM tools |
+| Heavy Outbound Stack | 2+ email sending services |
+| AI Security Posture | 3+ AI tools + guardrails + Zero Trust |
+| Zero Trust Posture | 3+ identity + SASE + endpoint tools |
+| Startup Tool Mix | 4+ modern dev + collaboration + PLG tools |
+
+## Layer 3 — Consistency checks
+
+| Signal | Triggers when |
+|--------|--------------|
+| Security Gap — Gateway Without DMARC | Email gateway deployed but DMARC not enforcing |
+| Shadow IT Risk | 3+ consumer-grade SaaS tools |
+| File Collaboration Sprawl | 2+ enterprise file-sharing platforms |
+| Dual Email Provider | Both Microsoft 365 and Google Workspace detected |
+
+## Custom Signals
+
+Drop a `signals.yaml` in `~/.recon/` to add your own signal rules. Custom signals are validated the same way as built-in ones — invalid entries are skipped with a warning. Custom signals are additive only.
+
+```yaml
+signals:
+  - name: Healthcare Compliance Stack
+    category: Vertical
+    confidence: medium
+    description: HIPAA-adjacent tooling detected
+    requires:
+      any: [okta, crowdstrike, proofpoint, knowbe4, 1password]
+    min_matches: 3
+```
