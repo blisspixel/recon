@@ -47,6 +47,7 @@ Works for Microsoft 365, Google Workspace, or any provider. Useful for anyone wh
 |---|---|---|---|---|---|---|
 | Zero credentials | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
 | M365 tenant detection | ✓ | ✗ | ✗ | ✗ | partial | varies |
+| Google Workspace detection | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
 | Email security scoring | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
 | SaaS fingerprinting (185+) | ✓ | ✗ | partial | ✗ | ✗ | ✓ |
 | Signal intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
@@ -132,7 +133,7 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 | Doc | Contents |
 |-----|----------|
 | [Fingerprints](docs/fingerprints.md) | Detection types, custom fingerprints, email security scoring, related domain enrichment |
-| [Signals](docs/signals.md) | 4-layer signal intelligence, 26 signal rules, metadata conditions, custom signals |
+| [Signals](docs/signals.md) | 4-layer signal intelligence, 29 signal rules, metadata conditions, custom signals |
 | [MCP Server](docs/mcp.md) | AI agent integration setup, tools, config locations |
 | [Roadmap](docs/roadmap.md) | What's planned, what's not, and why |
 | [Legal](docs/legal.md) | Disclaimer, accuracy, fictional examples, third-party notice |
