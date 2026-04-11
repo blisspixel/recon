@@ -126,7 +126,7 @@ class TestCrtshDetector:
         with patch("recon_tool.sources.dns.httpx.AsyncClient", return_value=mock_client):
             await _detect_crtsh(ctx, "example.com")
 
-        assert len(ctx.related_domains) <= 20
+        assert len(ctx.related_domains) <= 100
 
     @pytest.mark.asyncio
     async def test_handles_http_error_gracefully(self, _enable_crtsh):

@@ -89,18 +89,20 @@ async def _enrich_from_related(
     info: TenantInfo,
     all_results: list[SourceResult],
 ) -> tuple[TenantInfo, list[SourceResult]]:
-    """If related domains were found, run DNS-only lookups on them and merge.
+    """If related domains were found, run lookups on them and merge.
 
-    Only looks up non-onmicrosoft related domains (onmicrosoft domains don't
-    have interesting TXT/MX records). Merges discovered services and slugs
-    into the existing TenantInfo without overwriting identity fields.
+    Two-tier enrichment:
+    - Subdomains of the queried domain (from crt.sh): lightweight CNAME+TXT only.
+      These are high-volume (dozens of subdomains) and most DNS record types
+      (MX, NS, DKIM, SRV, M365 CNAMEs) are meaningless for subdomains.
+    - Separate domains (from autodiscover/DKIM breadcrumbs): full DNS lookup.
+      These are rare (1-2 typically) and may have their own TXT/MX/NS records.
 
-    Caps at MAX_RELATED_ENRICHMENTS to prevent runaway lookups when a domain
-    has many CNAME breadcrumbs.
+    Caps at MAX_RELATED_ENRICHMENTS total to prevent runaway lookups.
     """
-    from recon_tool.sources.dns import DNSSource
+    from recon_tool.sources.dns import DNSSource, _detect_cname_infra, _detect_txt, _DetectionCtx
 
-    MAX_RELATED_ENRICHMENTS = 10
+    MAX_RELATED_ENRICHMENTS = 25
 
     # Filter to actionable related domains (skip onmicrosoft — they're just
     # the tenant's internal M365 domain with no SaaS verification records)
@@ -112,15 +114,41 @@ async def _enrich_from_related(
     if not candidates:
         return info, all_results
 
+    # Split into subdomains vs separate domains
+    base_domain = info.queried_domain.lower() if info.queried_domain else ""
+    subdomains = [d for d in candidates if base_domain and d.endswith(f".{base_domain}")]
+    separate_domains = [d for d in candidates if d not in subdomains]
+
     logger.debug(
-        "Enriching from %d related domains: %s",
-        len(candidates), ", ".join(candidates),
+        "Enriching from %d related (%d subdomains, %d separate): %s",
+        len(candidates), len(subdomains), len(separate_domains),
+        ", ".join(candidates[:5]) + ("..." if len(candidates) > 5 else ""),
     )
 
+    # Lightweight CNAME+TXT enrichment for subdomains
+    async def _lightweight_lookup(subdomain: str) -> SourceResult:
+        """Check only CNAME and TXT records — skip MX/NS/DKIM/SRV/crt.sh."""
+        ctx = _DetectionCtx()
+        try:
+            await asyncio.gather(
+                _detect_cname_infra(ctx, subdomain),
+                _detect_txt(ctx, subdomain),
+            )
+        except Exception as exc:
+            return SourceResult(source_name="dns_records", error=str(exc))
+        return SourceResult(
+            source_name="dns_records",
+            detected_services=tuple(sorted(ctx.services)),
+            detected_slugs=tuple(sorted(ctx.slugs)),
+        )
+
+    # Run both tiers concurrently
     dns_source = DNSSource()
-    related_results = await asyncio.gather(
-        *(_safe_lookup(dns_source, d) for d in candidates)
-    )
+    all_tasks = [
+        *(_lightweight_lookup(d) for d in subdomains),
+        *(_safe_lookup(dns_source, d) for d in separate_domains),
+    ]
+    related_results = await asyncio.gather(*all_tasks)
 
     # Collect additional services and slugs from related domains
     extra_services: set[str] = set(info.services)
