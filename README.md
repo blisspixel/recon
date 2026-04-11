@@ -48,7 +48,7 @@ Works for Microsoft 365, Google Workspace, or any provider. Useful if you're an 
 | Zero credentials | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
 | M365 tenant detection | ✓ | ✗ | ✗ | ✗ | partial | varies |
 | Email security scoring | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
-| SaaS fingerprinting (155+) | ✓ | ✗ | partial | ✗ | ✗ | ✓ |
+| SaaS fingerprinting (185+) | ✓ | ✗ | partial | ✗ | ✗ | ✓ |
 | Signal intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | MCP server for AI agents | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | Extensible (custom YAML) | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
@@ -87,7 +87,7 @@ Input is normalized automatically — URLs, schemes, `www.` prefixes, paths, and
 | Company name, tenant ID, auth type | Microsoft OIDC + GetUserRealm |
 | Email provider | MX records |
 | Email security score (0–5) | DMARC + DKIM + SPF + MTA-STS + BIMI |
-| 155+ SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors |
+| 185+ SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors |
 | Email gateway / SASE / security stack | DNS fingerprints |
 | Signal intelligence | AI adoption, GTM maturity, Zero Trust posture, org size hints |
 | Related domains | CNAME breadcrumbs + certificate transparency (crt.sh) |
@@ -119,7 +119,7 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 | Doc | Contents |
 |-----|----------|
 | [Fingerprints](docs/fingerprints.md) | Detection types, custom fingerprints, email security scoring, related domain enrichment |
-| [Signals](docs/signals.md) | 3-layer signal intelligence, all 20 signal rules, custom signals |
+| [Signals](docs/signals.md) | 3-layer signal intelligence, all 23 signal rules, custom signals |
 | [MCP Server](docs/mcp.md) | AI agent integration setup, tools, config locations |
 | [Roadmap](docs/roadmap.md) | What's planned, what's not, and why |
 | [Legal](docs/legal.md) | Disclaimer, accuracy, fictional examples, third-party notice |

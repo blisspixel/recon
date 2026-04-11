@@ -16,9 +16,10 @@ Set `RECON_CONFIG_DIR` to override the custom fingerprint directory (default: `~
 | `spf` | SPF include directives | Substring |
 | `mx` | MX record hostnames | Substring |
 | `ns` | NS record hostnames | Substring |
-| `cname` | CNAME targets (www, root) | Substring |
+| `cname` | CNAME targets (www, root, subdomains) | Substring |
 | `subdomain_txt` | TXT at a specific subdomain | `subdomain:regex` format |
 | `caa` | CAA record values | Substring |
+| `srv` | SRV record targets | Substring |
 
 ## Categories
 
@@ -40,4 +41,14 @@ A domain with DMARC `none` + DKIM + SPF `~all` scores 1/5 (only DKIM counts).
 
 ## Related Domain Auto-Enrichment
 
-When a domain's autodiscover CNAME or DKIM delegation points to a different domain (e.g., `autodiscover.northwindtraders.com` → `autodiscover.northwind-internal.com`), the tool automatically runs DNS fingerprinting on the related domain and merges the results. Certificate transparency logs (via crt.sh) also discover subdomains that may have their own SaaS verification records.
+Related domains are discovered from three sources:
+
+1. **CNAME breadcrumbs** — when autodiscover or DKIM delegation points to a different domain (e.g., `autodiscover.northwindtraders.com` → `northwind-internal.com`).
+2. **Certificate transparency** — crt.sh discovers subdomains from public CT logs.
+3. **Common subdomain probing** — ~35 high-signal prefixes (auth, login, sso, shop, api, status, cdn, etc.) are probed directly via DNS CNAME lookups. This works even when crt.sh is down.
+
+Enrichment uses two tiers for efficiency:
+- **Subdomains** of the queried domain get lightweight CNAME+TXT-only lookups (fast, ~2 DNS queries each).
+- **Separate domains** (from CNAME breadcrumbs) get full DNS fingerprinting.
+
+Subdomains are prioritized by signal value before the enrichment cap (25) is applied — auth/login/shop/api subdomains are enriched first, deep internal subdomains last. When crt.sh is unreachable, a note is shown in the output.

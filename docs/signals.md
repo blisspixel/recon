@@ -1,18 +1,18 @@
 # Signal Intelligence
 
-Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. Signals are organized in three layers:
+Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 23 signals organized in three layers:
 
 ## Layer 1 — Single-category detection
 
 | Signal | Triggers when |
 |--------|--------------|
 | AI Adoption | OpenAI, Anthropic, Mistral, or Perplexity detected |
-| High GTM Maturity | 2+ sales/marketing tools |
-| Enterprise Security Stack | 2+ security tools |
+| High GTM Maturity | 2+ sales/marketing tools (includes Salesforce MC, Braze, Iterable) |
+| Enterprise Security Stack | 2+ security tools (includes Okta, Auth0, Imperva, OneLogin) |
 | Modern Collaboration | 3+ collaboration tools |
-| Dev & Engineering Heavy | 2+ dev tools |
-| Data & Analytics Investment | 2+ data tools |
-| Multi-Cloud | 2+ cloud providers detected |
+| Dev & Engineering Heavy | 2+ dev tools (includes LaunchDarkly, Contentful) |
+| Data & Analytics Investment | 2+ data tools (includes Optimizely, WalkMe) |
+| Multi-Cloud | 2+ cloud/CDN providers (includes AWS ELB/S3, Azure Front Door, GCP App Engine) |
 | Observability & SRE | 2+ monitoring/incident tools |
 
 ## Layer 2 — Cross-category composites
@@ -27,6 +27,9 @@ Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 
 | AI Security Posture | 3+ AI tools + guardrails + Zero Trust |
 | Zero Trust Posture | 3+ identity + SASE + endpoint tools |
 | Startup Tool Mix | 4+ modern dev + collaboration + PLG tools |
+| Google-Native Identity | 3+ Google services (Workspace, DNS, Trust Services) |
+| Google Cloud Investment | 2+ Google Cloud services |
+| High-Security Posture (CSE) | Google Workspace Client-Side Encryption detected |
 
 ## Layer 3 — Consistency checks
 
