@@ -224,7 +224,7 @@ def _gateway_insights(ctx: InsightContext) -> list[str]:
 
 def _migration_insights(ctx: InsightContext) -> list[str]:
     if bool(ctx.slugs & _GOOGLE_SLUGS) and bool(ctx.slugs & _EXCHANGE_SLUGS):
-        return ["Hybrid/migration signal: Google email + Microsoft services detected"]
+        return ["Dual provider: Google + Microsoft coexistence"]
     return []
 
 

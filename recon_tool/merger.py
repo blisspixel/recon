@@ -42,10 +42,14 @@ def build_insights_with_signals(
 def compute_confidence(results: list[SourceResult]) -> tuple[ConfidenceLevel, bool]:
     """Compute confidence based on cross-validation of results.
 
-    For M365 domains: confidence is based on tenant_id agreement across sources.
-    For non-M365 domains: confidence is based on the richness of DNS data,
-    since DNS fingerprinting is inherently reliable (you either have the
-    record or you don't).
+    For M365 domains: confidence is based on tenant_id presence plus
+    corroboration from other sources (UserRealm display name, auth type,
+    tenant domains). A single tenant_id with corroborating M365 evidence
+    from another source is HIGH — the sources are independent and agree.
+
+    For non-M365 domains: confidence is based on the richness of DNS data.
+    DNS records are authoritative (you either have the record or you don't),
+    so rich DNS data warrants high confidence in the overall picture.
 
     Returns:
         Tuple of (confidence_level, has_conflicting_tenant_ids).
@@ -56,6 +60,20 @@ def compute_confidence(results: list[SourceResult]) -> tuple[ConfidenceLevel, bo
         unique_ids = set(tenant_ids)
         if len(unique_ids) > 1:
             return ConfidenceLevel.LOW, True
+
+        # We have at least one tenant_id. Check for corroboration from
+        # other sources — UserRealm returning m365_detected + real data
+        # (display_name, auth_type, or tenant_domains) counts as independent
+        # confirmation that this is a real M365 tenant.
+        tenant_id_sources = {r.source_name for r in results if r.tenant_id is not None}
+        corroborating = [
+            r for r in results
+            if r.source_name not in tenant_id_sources
+            and r.is_success
+            and (r.m365_detected or r.display_name or r.auth_type or len(r.tenant_domains) > 0)
+        ]
+        if corroborating:
+            return ConfidenceLevel.HIGH, False
         if len(tenant_ids) >= 2:
             return ConfidenceLevel.HIGH, False
         return ConfidenceLevel.MEDIUM, False
@@ -66,7 +84,9 @@ def compute_confidence(results: list[SourceResult]) -> tuple[ConfidenceLevel, bo
     total_services = sum(len(r.detected_services) for r in results)
     successful_sources = sum(1 for r in results if r.is_success)
 
-    if total_services >= 5 or successful_sources >= 2:
+    if total_services >= 8 and successful_sources >= 2:
+        return ConfidenceLevel.HIGH, False
+    if total_services >= 3 or successful_sources >= 2:
         return ConfidenceLevel.MEDIUM, False
     if total_services > 0:
         return ConfidenceLevel.LOW, False

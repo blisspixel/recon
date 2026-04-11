@@ -163,8 +163,8 @@ class TestConfidenceColorMappingCompleteness:
     @settings(max_examples=100)
     def test_all_confidence_levels_have_valid_color(self, level: ConfidenceLevel):
         assert level in CONFIDENCE_COLORS, f"{level} not in CONFIDENCE_COLORS"
-        assert CONFIDENCE_COLORS[level] in {"green", "yellow", "red"}, (
-            f"Color for {level} is {CONFIDENCE_COLORS[level]!r}, expected green/yellow/red"
+        assert CONFIDENCE_COLORS[level] in {"#a3d9a5", "#7ec8e3", "#e07a5f"}, (
+            f"Color for {level} is {CONFIDENCE_COLORS[level]!r}, expected a valid palette color"
         )
 
 
