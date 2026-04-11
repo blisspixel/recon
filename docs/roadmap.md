@@ -69,7 +69,7 @@ The MCP server already works well. These items make recon a better citizen in mu
 
 ### Distribution
 
-- **PyPI publish** — `pip install recon-tool` instead of clone + editable install.
+- ~~**PyPI publish**~~ ✓ Done (v0.4.1 — `pip install recon-tool`)
 - **Docker image** — for pipelines, CI/CD, and air-gapped environments.
 - **Community fingerprint contribution flow** — automated validation on PR, optional `recon update-fingerprints` to pull latest.
 

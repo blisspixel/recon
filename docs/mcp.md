@@ -9,8 +9,7 @@ Works with Claude Desktop, Cursor, VS Code + Copilot, ChatGPT, Kiro, or any othe
 1. Install recon:
 
 ```bash
-pip install recon-tool                    # from PyPI (when published)
-pip install -e .                          # or from source
+pip install recon-tool                    # from PyPI
 ```
 
 2. Add this to your AI client's MCP config:
@@ -19,15 +18,15 @@ pip install -e .                          # or from source
 {
   "mcpServers": {
     "recon": {
-      "command": "python",
-      "args": ["-m", "recon_tool.server"],
+      "command": "recon",
+      "args": ["mcp"],
       "autoApprove": ["lookup_tenant"]
     }
   }
 }
 ```
 
-> On macOS/Linux, use `"python3"` instead of `"python"` if that's your default.
+> Alternative: use `"command": "python", "args": ["-m", "recon_tool.server"]` if `recon` isn't on your PATH.
 
 3. Ask your AI tool something like: "Run a recon lookup on northwindtraders.com and summarize the security posture."
 
