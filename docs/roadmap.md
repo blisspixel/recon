@@ -8,6 +8,7 @@ Stay passive. Stay zero-creds. Stay focused on signal intelligence. Be a great t
 |---------|-----------|
 | v0.1.0 | Core pipeline: OIDC + UserRealm + DNS sources, 155 fingerprints, Rich CLI, MCP server |
 | v0.2.0 | Certificate intelligence, 4-layer signal engine (26 signals), posture analysis, delta mode, chain resolution |
+| v0.4.0 | Hedged inference language, removed sys.argv hack, `recon mcp` subcommand, disk cache (`--no-cache`, `--cache-ttl`), `--html` output, `--csv` batch output, `doctor --fix` scaffolding |
 | v0.3.0 | Google Workspace parity (identity routing, CNAME modules, BIMI/VMC, MTA-STS/TLS-RPT), evidence traceability, dual confidence model, per-detection scoring, fingerprint metadata enrichment. 187 fingerprints, 29 signals, 22 posture rules, 604 tests, 84% coverage |
 
 ## What's next
@@ -18,7 +19,7 @@ Priorities are ordered by impact. Items near the top are more likely to ship soo
 
 The tool's biggest risk is sounding more certain than the evidence warrants. These items make uncertainty visible and inference auditable.
 
-- **Tighten inference language** — use "suggests," "likely," "indicators observed" instead of declarative claims in insights and signals. The posture analysis already uses neutral framing; extend that discipline to all derived output. This is a quick pass through `insights.py` and `signals.yaml` — low effort, high trust impact.
+- ~~**Tighten inference language**~~ ✓ Done (v0.4.0)
 
 - **Validation corpus** — a curated set of 20–30 well-known domains with expected outputs (services, signals, confidence levels). Run as a regression suite to measure fingerprint accuracy, surface false positives, and document known failure modes. Publish the results so users can calibrate how much to trust the output. The tool already has 604 unit tests; this adds *quality-of-inference* tests.
 
@@ -28,9 +29,9 @@ The tool's biggest risk is sounding more certain than the evidence warrants. The
 
 - **crt.sh fallback** — crt.sh is slow, frequently down, and rate-limited. Everyone who works with CT logs knows this. Add CertSpotter or Cloudflare CT as a secondary source so certificate intelligence and related domain discovery don't depend on a single fragile endpoint. The `crtsh_degraded` flag already signals when crt.sh fails; a fallback would eliminate the gap entirely.
 
-- **Lightweight local cache** — the MCP server caches in-memory (120s TTL), but the CLI is stateless. A disk-backed cache at `~/.recon/cache/` with configurable TTL (default 24h) would avoid re-hitting endpoints on repeated lookups. JSON files on disk, no external dependencies. CLI flags: `--no-cache` to bypass, `--cache-ttl` to override. This is the single biggest ergonomic improvement for humans running the tool interactively.
+- ~~**Lightweight local cache**~~ ✓ Done (v0.4.0 — `--no-cache`, `--cache-ttl`)
 
-- **Authoritative DNS option** — add `--resolver` flag to query specific nameservers (e.g., `--resolver 8.8.8.8`) or authoritative nameservers directly, bypassing local caching resolvers. Useful for fresh data and avoiding stale/poisoned cache entries.
+- ~~**Authoritative DNS option**~~ — deferred. The current resolver uses system DNS which works well for most users.
 
 - **Cost-ordered error recovery** — classify errors by recovery cost and try cheapest first. DNS timeout → retry with fallback resolver (cheap). crt.sh timeout → skip (free, bonus source). Microsoft 429 → backoff (medium). Instead of treating all errors the same, make the retry strategy aware of what each failure actually costs.
 
@@ -38,9 +39,9 @@ The tool's biggest risk is sounding more certain than the evidence warrants. The
 
 ### Better output
 
-- **`--html` output** — self-contained single-file report for sharing in email or proposals. No external dependencies, no JavaScript — just styled HTML that opens in any browser.
+- ~~**`--html` output**~~ ✓ Done (v0.4.0)
 
-- **`--csv` output for batch mode** — MSPs and sales engineers live in spreadsheets. A flat CSV with one row per domain and columns for key fields (provider, auth type, confidence, service count, email security score) would make batch results immediately usable.
+- ~~**`--csv` output for batch mode**~~ ✓ Done (v0.4.0)
 
 - **Graph export from `--chain`** — `.dot` for Graphviz, CSV for Maltego, or JSONL for Neo4j. The ChainReport data is already structured for this; it just needs new formatters. Visualizing recursive domain relationships in a terminal gets messy past depth 1.
 
@@ -74,11 +75,11 @@ The MCP server already works well. These items make recon a better citizen in mu
 
 ### CLI cleanup
 
-- **Kill the `sys.argv` hack** — `_preprocess_args()` mutates `sys.argv` to inject `lookup` as the default subcommand. It works but it's fragile and surprising for anyone importing the module. Replace with a proper Typer default command or callback-based approach.
+- ~~**Kill the `sys.argv` hack**~~ ✓ Done (v0.4.0 — replaced with custom TyperGroup)
 
-- **`recon mcp` subcommand** — start the MCP server from the CLI instead of requiring `python -m recon_tool.server`. Makes it discoverable and consistent with the other subcommands.
+- ~~**`recon mcp` subcommand**~~ ✓ Done (v0.4.0)
 
-- **`recon doctor --fix`** — auto-scaffold `~/.recon/fingerprints.yaml` and `signals.yaml` templates with inline comments.
+- ~~**`recon doctor --fix`**~~ ✓ Done (v0.4.0)
 
 ## Not planned
 

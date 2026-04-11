@@ -76,14 +76,19 @@ recon doctor                              # verify connectivity
 recon northwindtraders.com                # default panel output
 recon northwindtraders.com --json         # structured JSON
 recon northwindtraders.com --md           # markdown report
+recon northwindtraders.com --html         # self-contained HTML report
 recon northwindtraders.com --full         # everything (services + domains + posture)
-recon northwindtraders.com --services     # M365 vs tech stack split
+recon northwindtraders.com --services     # M365 vs GWS vs tech stack split
 recon northwindtraders.com --posture      # neutral posture observations
 recon northwindtraders.com --compare prev.json  # delta: what changed since last run
 recon northwindtraders.com --chain --depth 2    # recursive domain discovery
+recon northwindtraders.com --no-cache     # bypass disk cache
 recon batch domains.txt --json            # batch mode (default 5 concurrent)
+recon batch domains.txt --csv             # batch CSV for spreadsheets
 recon batch domains.txt --json -c 10      # batch with 10 concurrent
 recon doctor                              # connectivity check
+recon doctor --fix                        # scaffold custom config templates
+recon mcp                                 # start MCP server (stdio)
 ```
 
 Input is normalized automatically — URLs, schemes, `www.` prefixes, paths, and whitespace are all stripped.

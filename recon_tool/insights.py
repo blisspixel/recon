@@ -132,15 +132,15 @@ def _auth_insights(ctx: InsightContext) -> list[str]:
         # If we can see the identity provider in DNS, name it specifically
         detected_idps = [name for slug, name in _IDP_SLUG_MAP.items() if slug in ctx.slugs]
         if detected_idps:
-            return [f"Federated identity via {', '.join(detected_idps)}"]
-        return ["Federated identity (likely ADFS/Okta/Ping — enterprise SSO)"]
+            return [f"Federated identity indicators observed (likely {', '.join(detected_idps)})"]
+        return ["Federated identity indicators (likely ADFS/Okta/Ping — enterprise SSO)"]
     if ctx.auth_type == "Managed":
         # Only claim "Entra ID native" when we actually see M365 evidence.
         # GetUserRealm returns "Managed" for non-Microsoft domains too —
         # it just means "not federated" from Microsoft's perspective.
         has_m365 = bool(ctx.slugs & _EXCHANGE_SLUGS)
         if has_m365:
-            return ["Cloud-managed identity (Entra ID native)"]
+            return ["Cloud-managed identity indicators (Entra ID native)"]
         return []
     return []
 
@@ -248,11 +248,11 @@ def _license_insights(ctx: InsightContext) -> list[str]:
     has_office_proplus = SVC_OFFICE_PROPLUS in ctx.services
 
     if has_intune and ctx.auth_type == "Federated":
-        return ["Likely M365 E3/E5 (Intune + federated auth)"]
+        return ["M365 E3/E5 indicators (Intune + federated auth)"]
     if has_intune:
-        return ["Likely M365 E3+ (Intune enrolled)"]
+        return ["M365 E3+ indicators (Intune enrolled)"]
     if has_office_proplus:
-        return ["Office ProPlus deployed (E3+ or Apps for Enterprise)"]
+        return ["Office ProPlus indicators (E3+ or Apps for Enterprise)"]
     return []
 
 

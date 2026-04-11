@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-04-11
+
+### Added
+
+- `--html` output — self-contained single-file HTML report with inline CSS, no JavaScript. Professional styling for sharing via email or archiving.
+- `--csv` output for batch mode — flat CSV with one row per domain. Columns: domain, provider, display_name, tenant_id, auth_type, confidence, email_security_score, service_count, dmarc_policy, mta_sts_mode, google_auth_type.
+- Lightweight local disk cache — `~/.recon/cache/` with configurable TTL (default 24h). CLI flags: `--no-cache` to bypass, `--cache-ttl` to override. JSON files on disk, lazy eviction, no external dependencies.
+- `recon mcp` subcommand — start the MCP server from the CLI instead of `python -m recon_tool.server`.
+- `recon doctor --fix` — scaffolds template `~/.recon/fingerprints.yaml` and `~/.recon/signals.yaml` with inline YAML comments explaining the format.
+
+### Changed
+
+- Inference language tightened across insights and signals. Derived claims now use hedged language ("suggests," "indicators," "likely") instead of declarative phrasing. Factual observations (DMARC values, DKIM presence, email security scores) remain declarative.
+- Removed `_preprocess_args()` sys.argv mutation hack. Domain shorthand routing (`recon pepsi.com`) now uses a custom Typer group with `resolve_command()` override — cleaner, safer for library imports, no global state mutation.
+- `_SUBCOMMANDS` now includes `"mcp"`.
+- Mutual exclusion enforced for output format flags (`--json`, `--md`, `--html`, `--csv`).
+
 ## [0.3.0] — 2026-04-11
 
 ### Added

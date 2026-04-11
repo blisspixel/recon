@@ -5,11 +5,10 @@ Supports both:
   recon lookup pepsi.com   (explicit subcommand)
   recon doctor
   recon batch domains.txt
+  recon mcp                (start MCP server)
 
-NOTE on _preprocess_args: This mutates sys.argv to support the shorthand
-syntax. If you import and call app() directly (as a library), the
-preprocessing won't run — use run() instead. This is a known limitation
-of the shorthand syntax approach.
+The shorthand syntax uses Typer's invoke_without_command callback to route
+domain-like arguments to the lookup command. No sys.argv mutation needed.
 """
 
 from __future__ import annotations
@@ -19,6 +18,7 @@ import json
 import sys
 from typing import Any
 
+import click
 import typer
 
 from recon_tool.formatter import get_console
@@ -41,9 +41,9 @@ EXIT_VALIDATION = 2
 EXIT_NO_DATA = 3
 EXIT_INTERNAL = 4
 
-# Known subcommands — used by _preprocess_args to distinguish domains from commands.
+# Known subcommands — used by the callback to distinguish domains from commands.
 # UPDATE THIS SET when adding new subcommands.
-_SUBCOMMANDS = frozenset({"doctor", "batch", "lookup"})
+_SUBCOMMANDS = frozenset({"doctor", "batch", "lookup", "mcp"})
 
 # Maximum number of domains in a batch file to prevent OOM from huge files.
 _MAX_BATCH_DOMAINS = 10000
@@ -65,41 +65,33 @@ _STATUS_MESSAGES = (
 )
 
 
-_preprocessed = False
+class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseClass, reportAttributeAccessIssue]
+    """Custom Click group that routes domain-like args to the lookup command.
 
-
-def _preprocess_args() -> None:
-    """Insert 'lookup' subcommand when first arg looks like a domain.
-
-    This enables `recon pepsi.com` as shorthand for `recon lookup pepsi.com`.
-    Only triggers when the first positional arg contains a dot and isn't a
-    known subcommand or flag.
-
-    Guarded against double-invocation — safe to call multiple times per process.
-    Use _reset_preprocess() in tests to clear the guard between test runs.
+    When the first positional arg contains a dot and isn't a known subcommand
+    or flag, it's treated as a domain and routed to `lookup`.
     """
-    global _preprocessed  # noqa: PLW0603
-    if _preprocessed:
-        return
-    _preprocessed = True
 
-    if len(sys.argv) > 1:
-        first = sys.argv[1]
-        if not first.startswith("-") and "." in first and first not in _SUBCOMMANDS:
-            sys.argv.insert(1, "lookup")
-
-
-def _reset_preprocess() -> None:  # pyright: ignore[reportUnusedFunction]
-    """Reset the preprocessing guard — for test use only."""
-    global _preprocessed  # noqa: PLW0603
-    _preprocessed = False
+    def resolve_command(
+        self,
+        ctx: click.Context,
+        args: list[str],
+    ) -> tuple[str | None, click.Command | None, list[str]]:
+        # Try normal subcommand resolution first
+        try:
+            return super().resolve_command(ctx, args)
+        except click.UsageError:
+            # If the first arg looks like a domain, route to lookup
+            if args and "." in args[0] and args[0] not in _SUBCOMMANDS and not args[0].startswith("-"):
+                return super().resolve_command(ctx, ["lookup"] + args)
+            raise
 
 
 app = typer.Typer(
     name="recon",
     help="Domain intelligence from the command line.",
-    no_args_is_help=True,
     rich_markup_mode="rich",
+    cls=_DomainGroup,
 )
 
 
@@ -125,8 +117,9 @@ def _debug_callback(value: bool) -> None:
         logger.setLevel(logging.DEBUG)
 
 
-@app.callback()
+@app.callback(invoke_without_command=True)
 def main(
+    ctx: typer.Context,
     version: bool | None = typer.Option(
         None,
         "--version",
@@ -156,7 +149,11 @@ def main(
       recon softchoice.com --md > report.md
       recon batch domains.txt --json
       recon doctor
+      recon mcp
     """
+    if ctx.invoked_subcommand is None:
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
 
 
 @app.command()
@@ -164,6 +161,7 @@ def lookup(
     domain: str = typer.Argument(help="Domain to look up"),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
     markdown: bool = typer.Option(False, "--md", help="Markdown report"),
+    html_output: bool = typer.Option(False, "--html", help="Self-contained HTML report"),
     services: bool = typer.Option(False, "--services", "-s", help="M365 vs tech stack breakdown"),
     domains: bool = typer.Option(False, "--domains", "-d", help="All tenant domains"),
     full: bool = typer.Option(False, "--full", "-f", help="Everything (verbose + services + domains + posture)"),
@@ -179,6 +177,8 @@ def lookup(
     compare: str | None = typer.Option(None, "--compare", help="Compare against previous JSON export"),
     chain: bool = typer.Option(False, "--chain", help="Recursively follow related domains"),
     depth: int = typer.Option(1, "--depth", help="Chain depth (1-3, requires --chain)"),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Bypass disk cache entirely"),
+    cache_ttl: int = typer.Option(86400, "--cache-ttl", help="Cache TTL in seconds (default: 86400)"),
 ) -> None:
     """
     Look up a domain. This is the default command.
@@ -200,6 +200,9 @@ def lookup(
             compare_file=compare,
             chain_mode=chain,
             chain_depth=depth,
+            no_cache=no_cache,
+            cache_ttl=cache_ttl,
+            html_output=html_output,
         )
     )
 
@@ -209,6 +212,7 @@ def batch(
     file: str = typer.Argument(help="File with one domain per line"),
     json_output: bool = typer.Option(False, "--json", help="JSON array output"),
     markdown: bool = typer.Option(False, "--md", help="Markdown report per domain"),
+    csv_output: bool = typer.Option(False, "--csv", help="CSV output"),
     concurrency: int = typer.Option(
         5,
         "--concurrency",
@@ -222,15 +226,116 @@ def batch(
     [dim]One domain per line. Lines starting with # are skipped.[/dim]
     """
     concurrency = max(1, min(20, concurrency))
-    asyncio.run(_batch(file, json_output, markdown, concurrency))
+    asyncio.run(_batch(file, json_output, markdown, concurrency, csv_output=csv_output))
 
 
 @app.command()
-def doctor() -> None:
+def doctor(
+    fix: bool = typer.Option(False, "--fix", help="Scaffold template config files"),
+) -> None:
     """
     Check connectivity to all data sources.
     """
+    if fix:
+        _doctor_fix()
+        return
     asyncio.run(_doctor())
+
+
+# ── Template content for doctor --fix ────────────────────────────────────
+
+_FINGERPRINTS_TEMPLATE = """\
+# Custom fingerprints — merged with built-in fingerprints at load time.
+# Each entry adds a new SaaS/service detection rule.
+#
+# Fields:
+#   name:           Human-readable service name (shown in output)
+#   slug:           Unique identifier (lowercase, hyphens)
+#   type:           Detection type — txt, mx, cname, ns, caa, http
+#   pattern:        Regex pattern to match against DNS record value
+#   category:       Service category — email, security, identity, saas, infrastructure
+#   provider_group: (optional) Group for display — microsoft365, google-workspace
+#   display_group:  (optional) Override display grouping
+#
+# Example:
+# fingerprints:
+#   - name: "Acme SSO"
+#     slug: "acme-sso"
+#     type: "txt"
+#     pattern: "acme-domain-verification="
+#     category: "identity"
+
+fingerprints: []
+"""
+
+_SIGNALS_TEMPLATE = """\
+# Custom signals — merged with built-in signals at load time.
+# Each entry defines a derived intelligence signal.
+#
+# Fields:
+#   name:           Signal display name
+#   category:       Signal category — security, identity, infrastructure, saas
+#   confidence:     Signal confidence — high, medium, low
+#   description:    Human-readable description (use hedged language for inferences)
+#   requires:       List of fingerprint slugs required (all must match)
+#   min_matches:    (optional) Minimum number of required slugs that must match
+#   metadata:       (optional) Additional conditions on metadata fields
+#     - field:      Metadata field — dmarc_policy, auth_type, email_security_score
+#       operator:   Comparison — eq, neq, gte, lte
+#       value:      Value to compare against
+#
+# Example:
+# signals:
+#   - name: "Custom Security Signal"
+#     category: "security"
+#     confidence: "medium"
+#     description: "Custom security tooling indicators"
+#     requires:
+#       - "acme-sso"
+#     min_matches: 1
+
+signals: []
+"""
+
+
+def _doctor_fix() -> None:
+    """Scaffold template fingerprints.yaml and signals.yaml in config dir."""
+    import os
+    from pathlib import Path
+
+    console = get_console()
+    config_dir_env = os.environ.get("RECON_CONFIG_DIR")
+    config_dir = Path(config_dir_env) if config_dir_env else Path.home() / ".recon"
+
+    try:
+        config_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        console.print(f"[red]Cannot create config directory {config_dir}: {exc}[/red]")
+        return
+
+    templates = [
+        ("fingerprints.yaml", _FINGERPRINTS_TEMPLATE),
+        ("signals.yaml", _SIGNALS_TEMPLATE),
+    ]
+
+    for filename, content in templates:
+        target = config_dir / filename
+        if target.exists():
+            console.print(f"  already exists: {target}")
+        else:
+            try:
+                target.write_text(content, encoding="utf-8")
+                console.print(f"  [green]created:[/green] {target}")
+            except OSError as exc:
+                console.print(f"  [red]failed to create {target}: {exc}[/red]")
+
+
+@app.command()
+def mcp() -> None:
+    """Start the MCP server (stdio transport)."""
+    from recon_tool.server import main as server_main
+
+    server_main()
 
 
 async def _doctor() -> None:
@@ -394,6 +499,9 @@ async def _lookup(
     compare_file: str | None = None,
     chain_mode: bool = False,
     chain_depth: int = 1,
+    no_cache: bool = False,
+    cache_ttl: int = 86400,
+    html_output: bool = False,
 ) -> None:
     """Async lookup implementation."""
     # Lazy imports: formatter, resolver, validator are imported here (not at module
@@ -424,6 +532,11 @@ async def _lookup(
     # Mutual exclusion: --chain and --compare cannot be used together
     if chain_mode and compare_file:
         render_error("--chain and --compare are mutually exclusive")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    # Mutual exclusion: only one output format allowed
+    if sum([json_output, markdown, html_output]) > 1:
+        render_error("--json, --md, and --html are mutually exclusive")
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
     # --depth > 1 requires --chain
@@ -500,14 +613,31 @@ async def _lookup(
 
     # ── Standard lookup ──────────────────────────────────────────────
     try:
-        if not json_output and not markdown:
-            import random
+        # Check cache before hitting upstream
+        info: Any = None
+        results: list[Any] = []
+        if not no_cache:
+            from recon_tool.cache import cache_get
 
-            msg = random.choice(_STATUS_MESSAGES)  # noqa: S311 — not security-sensitive
-            with console.status(msg):
+            cached = cache_get(validated, ttl=cache_ttl)
+            if cached is not None:
+                info = cached
+
+        if info is None:
+            if not json_output and not markdown and not html_output:
+                import random
+
+                msg = random.choice(_STATUS_MESSAGES)  # noqa: S311 — not security-sensitive
+                with console.status(msg):
+                    info, results = await resolve_tenant(validated, timeout=timeout)
+            else:
                 info, results = await resolve_tenant(validated, timeout=timeout)
-        else:
-            info, results = await resolve_tenant(validated, timeout=timeout)
+
+            # Write to cache after fresh lookup
+            if not no_cache:
+                from recon_tool.cache import cache_put
+
+                cache_put(validated, info)
 
         if verbose:
             render_verbose_sources(results)
@@ -539,6 +669,12 @@ async def _lookup(
             typer.echo(md)
             return
 
+        if html_output:
+            from recon_tool.formatter import format_tenant_html
+
+            typer.echo(format_tenant_html(info, observations=observations))
+            return
+
         console.print(
             render_tenant_panel(
                 info,
@@ -567,7 +703,7 @@ async def _lookup(
         raise typer.Exit(code=EXIT_INTERNAL) from None
 
 
-async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int) -> None:
+async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int, csv_output: bool = False) -> None:
     """Process multiple domains from a file with controlled concurrency.
 
     Rate limiting: Each domain hits 3+ external endpoints concurrently.
@@ -585,10 +721,16 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int)
         render_tenant_panel,
     )
     from recon_tool.models import ReconLookupError
+    from recon_tool.models import TenantInfo as _TenantInfo  # noqa: F811
     from recon_tool.resolver import resolve_tenant
     from recon_tool.validator import validate_domain
 
     console = get_console()
+
+    # Mutual exclusion: only one output format allowed
+    if sum([json_output, markdown, csv_output]) > 1:
+        render_error("--json, --md, and --csv are mutually exclusive")
+        raise typer.Exit(code=EXIT_VALIDATION)
 
     path = Path(file)
     if not path.exists():
@@ -622,7 +764,7 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int)
         if d_lower not in seen:
             seen.add(d_lower)
             unique_domains.append(d)
-    if len(unique_domains) < len(domain_list) and not json_output and not markdown:
+    if len(unique_domains) < len(domain_list) and not json_output and not markdown and not csv_output:
         skipped = len(domain_list) - len(unique_domains)
         console.print(f"  [dim]{skipped} duplicate(s) removed[/dim]")
     domain_list = unique_domains
@@ -640,6 +782,7 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int)
         Returns:
             - dict for JSON mode (success or error)
             - str for markdown mode (rendered markdown)
+            - tuple (domain, TenantInfo, None) or (domain, None, error) for CSV mode
             - Panel for display mode
             - Error sentinel string for display-mode errors
             - None when nothing to show
@@ -649,6 +792,8 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int)
         except ValueError as exc:
             if json_output:
                 return {"domain": domain, "error": str(exc)}
+            if csv_output:
+                return (domain, None, str(exc))
             if markdown:
                 return None
             return f"{_ERROR_PREFIX}{domain}: {exc}"
@@ -663,6 +808,8 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int)
 
                 if json_output:
                     return format_tenant_dict(info)
+                if csv_output:
+                    return (domain, info, None)
                 if markdown:
                     return format_tenant_markdown(info)
                 return render_tenant_panel(info)
@@ -670,10 +817,14 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int)
             except ReconLookupError as exc:
                 if json_output:
                     return {"domain": domain, "error": str(exc)}
+                if csv_output:
+                    return (domain, None, str(exc))
                 return f"{_ERROR_PREFIX}{domain}: {exc}"
             except Exception as exc:
                 if json_output:
                     return {"domain": domain, "error": str(exc)}
+                if csv_output:
+                    return (domain, None, str(exc))
                 return f"{_ERROR_PREFIX}{domain}: {exc}"
 
     # Gather all results concurrently, then output in input-file order.
@@ -685,7 +836,7 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int)
         nonlocal completed
         result = await _process_one(domain)
         completed += 1
-        if not json_output and not markdown:
+        if not json_output and not markdown and not csv_output:
             console.print(f"  [{completed}/{total}] {domain}", style="dim", highlight=False)
         return result
 
@@ -695,6 +846,14 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int)
     if json_output:
         json_results: list[dict[str, Any]] = [r for r in results if r is not None]  # type: ignore[misc]
         typer.echo(json_mod.dumps(json_results, indent=2))
+    elif csv_output:
+        from recon_tool.formatter import format_batch_csv
+
+        csv_rows: list[tuple[str, _TenantInfo | None, str | None]] = []
+        for r in results:
+            if isinstance(r, tuple) and len(r) == 3:
+                csv_rows.append(r)  # type: ignore[arg-type]
+        typer.echo(format_batch_csv(csv_rows), nl=False)
     elif markdown:
         for r in results:
             if r is not None:
@@ -712,11 +871,11 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int)
 
 
 def run() -> None:
-    """Entry point — preprocess args before typer runs.
+    """Entry point — invokes the Typer app.
 
-    Use this instead of app() directly to get shorthand domain syntax.
+    The callback handles shorthand domain syntax (e.g., `recon pepsi.com`)
+    via invoke_without_command routing. No preprocessing needed.
     """
-    _preprocess_args()
     app()
 
 

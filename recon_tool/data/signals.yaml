@@ -15,7 +15,7 @@ signals:
   - name: AI Adoption
     category: AI
     confidence: high
-    description: Enterprise AI tooling detected — likely evaluating or deploying LLM-based workflows
+    description: Enterprise AI tooling indicators — suggests LLM-based workflow evaluation or deployment
     requires:
       any: [openai, anthropic, mistral, perplexity]
     min_matches: 1
@@ -23,7 +23,7 @@ signals:
   - name: High GTM Maturity
     category: Go-to-Market
     confidence: high
-    description: Multiple sales/marketing automation tools — indicates mature revenue operations
+    description: Multiple sales/marketing automation tools — suggests mature revenue operations
     requires:
       any: [6sense, outreach, salesloft, pardot, eloqua, klaviyo, hubspot, marketo, demandbase, clearbit, drift, gong, intercom, apollo, salesforce-mc, braze, iterable, customerio, unbounce]
     min_matches: 2
@@ -31,7 +31,7 @@ signals:
   - name: Enterprise Security Stack
     category: Security
     confidence: high
-    description: Layered security tooling — endpoint, email, network, or cloud security in place
+    description: Layered security tooling indicators — suggests endpoint, email, network, or cloud security investment
     requires:
       any: [crowdstrike, knowbe4, proofpoint, mimecast, zscaler, paloalto, wiz, sophos, trellix, barracuda, trendmicro, okta, auth0, duo, 1password, sentinelone, netskope, ping-identity, cyberark, cato, onelogin, imperva]
     min_matches: 2
@@ -39,7 +39,7 @@ signals:
   - name: Modern Collaboration
     category: Productivity
     confidence: high
-    description: Broad adoption of cloud collaboration tools beyond basic email/docs
+    description: Cloud collaboration tool indicators — suggests adoption beyond basic email/docs
     requires:
       any: [slack, notion, miro, atlassian, figma, dropbox, clickup, asana, monday, loom, canva, zoom, airtable]
     min_matches: 3
@@ -55,7 +55,7 @@ signals:
   - name: Data & Analytics Investment
     category: Data
     confidence: medium
-    description: Multiple analytics/data platforms — data-driven decision making culture
+    description: Multiple analytics/data platforms — suggests data-driven decision making culture
     requires:
       any: [databricks, snowflake, mongodb, dynatrace, mixpanel, amplitude, heap, pendo, hotjar, segment, optimizely, walkme]
     min_matches: 2
@@ -63,7 +63,7 @@ signals:
   - name: Multi-Cloud
     category: Infrastructure
     confidence: high
-    description: Infrastructure spread across multiple cloud providers
+    description: Infrastructure indicators across multiple cloud providers
     requires:
       any: [aws-route53, aws-cloudfront, aws-elb, aws-s3, aws-eb, azure-dns, azure-cdn, azure-appservice, azure-fd, azure-tm, gcp-dns, gcp-app, cloudflare, akamai, fastly]
     min_matches: 2
@@ -71,7 +71,7 @@ signals:
   - name: Observability & SRE
     category: Engineering
     confidence: high
-    description: Multiple monitoring/incident tools — strong engineering maturity and reliability focus
+    description: Multiple monitoring/incident tools — suggests strong engineering maturity and reliability focus
     requires:
       any: [datadog, newrelic, pagerduty, dynatrace]
     min_matches: 2
@@ -85,7 +85,7 @@ signals:
   - name: Digital Transformation
     category: Composite
     confidence: medium
-    description: AI + modern collaboration + cloud infrastructure — active modernization
+    description: AI + modern collaboration + cloud infrastructure — suggests active modernization
     requires:
       any: [openai, anthropic, slack, notion, miro, figma, atlassian, vercel, netlify, databricks, snowflake]
     min_matches: 4
@@ -93,7 +93,7 @@ signals:
   - name: Sales-Led Growth
     category: Composite
     confidence: medium
-    description: CRM + sales engagement + marketing automation — revenue engine investment
+    description: CRM + sales engagement + marketing automation — suggests revenue engine investment
     requires:
       any: [salesforce, salesforce-mc, hubspot, outreach, salesloft, 6sense, pardot, eloqua, marketo, gong, apollo, drift, clearbit, demandbase, intercom, braze, iterable]
     min_matches: 3
@@ -101,7 +101,7 @@ signals:
   - name: Product-Led Growth
     category: Composite
     confidence: medium
-    description: Analytics + engagement + support tooling — product usage-driven growth model
+    description: Analytics + engagement + support tooling — suggests product usage-driven growth model
     requires:
       any: [mixpanel, amplitude, heap, pendo, hotjar, segment, intercom, zendesk, freshdesk, optimizely, walkme, customerio, braze]
     min_matches: 3
@@ -109,7 +109,7 @@ signals:
   - name: Enterprise IT Maturity
     category: Composite
     confidence: high
-    description: Identity + endpoint + email security + MDM — mature IT governance
+    description: Identity + endpoint + email security + MDM — suggests mature IT governance
     requires:
       any: [okta, auth0, onelogin, duo, ping-identity, crowdstrike, sophos, sentinelone, jamf, kandji, proofpoint, mimecast, zscaler, netskope, paloalto, cato, wiz, 1password, cyberark, knowbe4, imperva]
     min_matches: 4
@@ -117,7 +117,7 @@ signals:
   - name: AI Security Posture
     category: Composite
     confidence: high
-    description: Enterprise AI tooling + dedicated LLM guardrails or advanced SASE — mature AI governance
+    description: Enterprise AI tooling + dedicated LLM guardrails or advanced SASE — suggests mature AI governance
     requires:
       any: [openai, anthropic, mistral, perplexity, lakera, zscaler, netskope, crowdstrike]
     min_matches: 3
@@ -146,7 +146,7 @@ signals:
   - name: Heavy Outbound Stack
     category: Composite
     confidence: medium
-    description: Multiple email sending services — high-volume outbound email operation
+    description: Multiple email sending services — suggests high-volume outbound email operation
     requires:
       any: [sendgrid, mailgun, postmark, sparkpost, brevo, mailchimp, aws-ses]
     min_matches: 2
@@ -178,7 +178,7 @@ signals:
   - name: Startup Tool Mix
     category: Composite
     confidence: medium
-    description: Modern dev + collaboration + PLG analytics — early-stage or growth-stage tool profile
+    description: Modern dev + collaboration + PLG analytics — suggests early-stage or growth-stage tool profile
     requires:
       any: [vercel, netlify, github, gitlab, slack, notion, figma, linear, amplitude, mixpanel, segment, intercom]
     min_matches: 4
