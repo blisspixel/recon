@@ -1,0 +1,9 @@
+# Sample batch file for recon
+# One domain per line. Lines starting with # are ignored.
+# Usage: recon batch examples/sample-batch.txt --json
+
+northwindtraders.com
+contoso.com
+fabrikam.com
+tailspintoys.com
+woodgrovebank.com
