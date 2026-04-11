@@ -525,7 +525,7 @@ async def _detect_srv(ctx: _DetectionCtx, domain: str) -> None:
 
 # Maximum number of unique subdomains to extract from crt.sh results.
 # Prevents unbounded related_domains when a domain has thousands of certs.
-_CRTSH_MAX_SUBDOMAINS = 20
+_CRTSH_MAX_SUBDOMAINS = 100
 
 # Timeout for the crt.sh HTTP call — separate from DNS query timeout
 # because crt.sh can be slow under load.
@@ -584,16 +584,36 @@ async def _detect_crtsh(ctx: _DetectionCtx, domain: str) -> None:
             # Must be a subdomain of the queried domain
             if not name.endswith(f".{domain_lower}"):
                 continue
-            if name not in seen:
-                seen.add(name)
-                if len(seen) >= _CRTSH_MAX_SUBDOMAINS:
-                    break
-        if len(seen) >= _CRTSH_MAX_SUBDOMAINS:
-            break
+            seen.add(name)
 
-    if seen:
-        logger.debug("crt.sh found %d subdomains for %s", len(seen), domain)
-        ctx.related_domains.update(seen)
+    if not seen:
+        return
+
+    # Prioritize subdomains likely to have interesting CNAME targets.
+    # High-signal prefixes (auth, login, shop, api, etc.) sort first,
+    # deep subdomains (3+ levels) sort last (often internal/noise).
+    _HIGH_SIGNAL_PREFIXES = (
+        "auth", "login", "sso", "secure", "id", "identity",
+        "shop", "store", "checkout", "pay",
+        "api", "app", "portal", "dashboard",
+        "support", "help", "status",
+        "track", "click", "image", "view", "email", "em.",
+        "cdn", "assets", "static", "media",
+        "blog", "docs", "kb",
+        "stage", "staging", "dev", "sandbox", "preview", "uat",
+    )
+
+    def _sort_key(name: str) -> tuple[int, int, str]:
+        """Sort: high-signal prefixes first, then by depth (shallow first), then alpha."""
+        prefix = name.split(f".{domain_lower}")[0]
+        is_high = 0 if any(prefix.startswith(p) or prefix.endswith(p) for p in _HIGH_SIGNAL_PREFIXES) else 1
+        depth = prefix.count(".")
+        return (is_high, depth, name)
+
+    prioritized = sorted(seen, key=_sort_key)[:_CRTSH_MAX_SUBDOMAINS]
+
+    logger.debug("crt.sh found %d subdomains for %s (kept %d)", len(seen), domain, len(prioritized))
+    ctx.related_domains.update(prioritized)
 
 
 # ── Main source class ──────────────────────────────────────────────────

@@ -388,6 +388,21 @@ fingerprints:
       - type: spf
         pattern: "_spf.salesforce.com"
 
+  - name: Salesforce Marketing Cloud
+    slug: salesforce-mc
+    category: CRM & Marketing
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "sfmc-marketing.com"
+        description: Salesforce Marketing Cloud click/view tracking CNAME
+      - type: cname
+        pattern: "sfmc-content.com"
+        description: Salesforce Marketing Cloud image/content hosting CNAME
+      - type: cname
+        pattern: "exacttarget.com"
+        description: Salesforce Marketing Cloud (legacy ExactTarget) CNAME
+
   - name: HubSpot
     slug: hubspot
     category: CRM & Marketing
@@ -613,6 +628,12 @@ fingerprints:
         pattern: "^_oktaverification="
       - type: txt
         pattern: "^okta-domain-verification"
+      - type: cname
+        pattern: "okta.com"
+        description: Okta custom domain CNAME delegation (login/SSO pages)
+      - type: cname
+        pattern: "oktapreview.com"
+        description: Okta preview/staging environment CNAME
 
   - name: 1Password
     slug: 1password
@@ -1235,6 +1256,260 @@ fingerprints:
     detections:
       - type: cname
         pattern: "pantheon.io"
+
+  - name: AWS Elastic Load Balancer
+    slug: aws-elb
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "elb.amazonaws.com"
+        description: AWS Application/Network Load Balancer CNAME
+      - type: cname
+        pattern: "elasticloadbalancing"
+
+  - name: AWS S3
+    slug: aws-s3
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "s3.amazonaws.com"
+      - type: cname
+        pattern: "s3-website"
+
+  - name: AWS Elastic Beanstalk
+    slug: aws-eb
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "elasticbeanstalk.com"
+
+  - name: Google Cloud (App Engine / Cloud Run)
+    slug: gcp-app
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "appspot.com"
+      - type: cname
+        pattern: "run.app"
+
+  - name: Azure Front Door
+    slug: azure-fd
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "azurefd.net"
+      - type: cname
+        pattern: "afd.ms"
+
+  # ====================== CNAME-DETECTED SAAS ======================
+  # Services commonly discovered via subdomain CNAME targets during
+  # related-domain enrichment (crt.sh subdomains).
+
+  - name: Auth0 (Okta)
+    slug: auth0
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "auth0.com"
+        description: Auth0 custom domain CNAME for login/identity pages
+
+  - name: OneLogin
+    slug: onelogin
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^onelogin-domain-verification="
+      - type: cname
+        pattern: "onelogin.com"
+
+  - name: Zendesk (hosted)
+    slug: zendesk
+    category: Support & Helpdesk
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "zendesk.com"
+
+  - name: Freshdesk (hosted)
+    slug: freshdesk
+    category: Support & Helpdesk
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "freshdesk.com"
+
+  - name: Contentful
+    slug: contentful
+    category: DevTools & Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "contentful.com"
+
+  - name: Sanity.io
+    slug: sanity
+    category: DevTools & Infrastructure
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "sanity.io"
+
+  - name: Prismic
+    slug: prismic
+    category: DevTools & Infrastructure
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "prismic.io"
+
+  - name: Unbounce
+    slug: unbounce
+    category: CRM & Marketing
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "unbounce.com"
+
+  - name: Marketo Landing Pages
+    slug: marketo
+    category: CRM & Marketing
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "mkto-"
+        description: Marketo landing page CNAME (mkto- prefix)
+
+  - name: Pardot Landing Pages
+    slug: pardot
+    category: Sales Intelligence
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "pardot.com"
+
+  - name: Drift Chat
+    slug: drift
+    category: Sales Intelligence
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "drift.com"
+
+  - name: Statuspage (hosted)
+    slug: statuspage
+    category: Support & Helpdesk
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "statuspage.io"
+
+  - name: LaunchDarkly
+    slug: launchdarkly
+    category: DevTools & Infrastructure
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "launchdarkly.com"
+
+  - name: Segment CDN
+    slug: segment
+    category: CRM & Marketing
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "segment.com"
+      - type: cname
+        pattern: "segment.io"
+
+  - name: Braze
+    slug: braze
+    category: CRM & Marketing
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "braze.com"
+        description: Braze customer engagement platform CNAME
+
+  - name: Iterable
+    slug: iterable
+    category: CRM & Marketing
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "iterable.com"
+
+  - name: Customer.io
+    slug: customerio
+    category: CRM & Marketing
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "customer.io"
+
+  - name: WalkMe
+    slug: walkme
+    category: Data & Analytics
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "walkme.com"
+
+  - name: Optimizely
+    slug: optimizely
+    category: Data & Analytics
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "optimizely.com"
+
+  - name: Cloudinary
+    slug: cloudinary
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "cloudinary.com"
+
+  - name: Imgix
+    slug: imgix
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "imgix.net"
+
+  - name: KeyCDN
+    slug: keycdn
+    category: Infrastructure
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "keycdn.com"
+      - type: cname
+        pattern: "kxcdn.com"
+
+  - name: StackPath / MaxCDN
+    slug: stackpath
+    category: Infrastructure
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "stackpathdns.com"
+
+  - name: Ghost (CMS)
+    slug: ghost
+    category: Infrastructure
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "ghost.io"
 
   # ====================== CERTIFICATE AUTHORITIES (CAA) ======================
 
