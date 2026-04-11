@@ -673,6 +673,31 @@ async def _detect_crtsh(ctx: _DetectionCtx, domain: str) -> None:
     ctx.related_domains.update(prioritized)
 
 
+# ── Public lightweight lookup for subdomain enrichment ─────────────────
+
+
+async def lightweight_subdomain_lookup(subdomain: str) -> SourceResult:
+    """Check only CNAME and TXT records for a subdomain — skip MX/NS/DKIM/SRV/crt.sh.
+
+    Public API for the resolver's two-tier enrichment pipeline. Subdomains
+    discovered via crt.sh or common-prefix probing don't need full DNS
+    fingerprinting — CNAME and TXT are the high-signal record types.
+    """
+    ctx = _DetectionCtx()
+    try:
+        await asyncio.gather(
+            _detect_cname_infra(ctx, subdomain),
+            _detect_txt(ctx, subdomain),
+        )
+    except Exception as exc:
+        return SourceResult(source_name="dns_records", error=str(exc))
+    return SourceResult(
+        source_name="dns_records",
+        detected_services=tuple(sorted(ctx.services)),
+        detected_slugs=tuple(sorted(ctx.slugs)),
+    )
+
+
 # ── Main source class ──────────────────────────────────────────────────
 
 
