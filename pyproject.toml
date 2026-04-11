@@ -5,6 +5,22 @@ description = "Domain intelligence CLI and MCP server — tech stack, email secu
 requires-python = ">=3.10"
 readme = "README.md"
 license = "MIT"
+keywords = ["dns", "osint", "recon", "domain-intelligence", "mcp", "security", "saas-fingerprinting"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: System :: Networking",
+    "Typing :: Typed",
+]
 dependencies = [
     "typer>=0.12",
     "rich>=13.0",
@@ -18,15 +34,18 @@ dependencies = [
 [project.scripts]
 recon = "recon_tool.cli:run"
 
+[project.urls]
+Homepage = "https://github.com/blisspixel/recon"
+Repository = "https://github.com/blisspixel/recon"
+Changelog = "https://github.com/blisspixel/recon/blob/main/CHANGELOG.md"
+Issues = "https://github.com/blisspixel/recon/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["recon_tool"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"recon_tool/data" = "recon_tool/data"
 
 [project.optional-dependencies]
 dev = [
