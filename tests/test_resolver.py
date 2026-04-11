@@ -85,14 +85,17 @@ class TestSourcePool:
 # ---------------------------------------------------------------------------
 
 class TestDefaultPool:
-    def test_default_pool_has_four_sources(self) -> None:
+    def test_default_pool_has_five_sources(self) -> None:
         pool = default_pool()
-        assert len(pool) == 4
+        assert len(pool) == 5
 
     def test_default_pool_order(self) -> None:
         pool = default_pool()
         names = [s.name for s in pool]
-        assert names == ["oidc_discovery", "user_realm", "google_workspace", "dns_records"]
+        assert names == [
+            "oidc_discovery", "user_realm", "google_workspace",
+            "google_identity", "dns_records",
+        ]
 
 
 # ---------------------------------------------------------------------------

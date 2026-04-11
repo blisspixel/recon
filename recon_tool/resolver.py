@@ -64,10 +64,19 @@ def default_pool() -> SourcePool:
     """Return a SourcePool with the standard sources."""
     from recon_tool.sources.dns import DNSSource
     from recon_tool.sources.google import GoogleSource
+    from recon_tool.sources.google_identity import GoogleIdentitySource
     from recon_tool.sources.oidc import OIDCSource
     from recon_tool.sources.userrealm import UserRealmSource
 
-    return SourcePool([OIDCSource(), UserRealmSource(), GoogleSource(), DNSSource()])
+    return SourcePool(
+        [
+            OIDCSource(),
+            UserRealmSource(),
+            GoogleSource(),
+            GoogleIdentitySource(),
+            DNSSource(),
+        ]
+    )
 
 
 async def _safe_lookup(
@@ -106,10 +115,7 @@ async def _enrich_from_related(
 
     # Filter to actionable related domains (skip onmicrosoft — they're just
     # the tenant's internal M365 domain with no SaaS verification records)
-    all_candidates = [
-        d for d in info.related_domains
-        if not d.endswith(".onmicrosoft.com")
-    ]
+    all_candidates = [d for d in info.related_domains if not d.endswith(".onmicrosoft.com")]
 
     if not all_candidates:
         return info, all_results
@@ -123,19 +129,49 @@ async def _enrich_from_related(
     # High-signal prefixes (auth, login, shop, api, em) sort first so they
     # survive the enrichment cap. Low-signal or deep subdomains sort last.
     _HIGH_SIGNAL_PREFIXES = (
-        "auth", "login", "sso", "secure", "id", "identity",
-        "shop", "store", "checkout", "pay",
-        "api", "app", "portal", "dashboard", "admin",
-        "support", "help", "status",
-        "click", "image", "view", "email", "em",
-        "cdn", "assets", "static", "media",
-        "blog", "docs", "stage", "staging", "dev",
+        "auth",
+        "login",
+        "sso",
+        "secure",
+        "id",
+        "identity",
+        "shop",
+        "store",
+        "checkout",
+        "pay",
+        "api",
+        "app",
+        "portal",
+        "dashboard",
+        "admin",
+        "support",
+        "help",
+        "status",
+        "click",
+        "image",
+        "view",
+        "email",
+        "em",
+        "cdn",
+        "assets",
+        "static",
+        "media",
+        "blog",
+        "docs",
+        "stage",
+        "staging",
+        "dev",
     )
 
     def _enrich_priority(name: str) -> tuple[int, int, str]:
         prefix = name.split(f".{base_domain}")[0] if base_domain else name
-        is_high = 0 if any(prefix == p or prefix.startswith(p + ".") or prefix.startswith(p + "-")
-                          for p in _HIGH_SIGNAL_PREFIXES) else 1
+        is_high = (
+            0
+            if any(
+                prefix == p or prefix.startswith(p + ".") or prefix.startswith(p + "-") for p in _HIGH_SIGNAL_PREFIXES
+            )
+            else 1
+        )
         depth = prefix.count(".")
         return (is_high, depth, name)
 
@@ -144,15 +180,16 @@ async def _enrich_from_related(
     # Cap total enrichment lookups, but separate domains always get a slot
     sep_cap = min(len(separate_domains), MAX_RELATED_ENRICHMENTS)
     sub_cap = MAX_RELATED_ENRICHMENTS - sep_cap
-    capped_subs = prioritized_subs[:max(sub_cap, 0)]
+    capped_subs = prioritized_subs[: max(sub_cap, 0)]
     capped_separate = separate_domains[:sep_cap]
 
     logger.debug(
         "Enriching from %d related (%d/%d subdomains, %d separate): %s",
         len(capped_subs) + len(capped_separate),
-        len(capped_subs), len(all_subdomains), len(capped_separate),
-        ", ".join((capped_subs + capped_separate)[:5])
-        + ("..." if len(capped_subs) + len(capped_separate) > 5 else ""),
+        len(capped_subs),
+        len(all_subdomains),
+        len(capped_separate),
+        ", ".join((capped_subs + capped_separate)[:5]) + ("..." if len(capped_subs) + len(capped_separate) > 5 else ""),
     )
 
     # Run both tiers concurrently
@@ -183,7 +220,13 @@ async def _enrich_from_related(
     from recon_tool.merger import build_insights_with_signals
 
     enriched_insights = build_insights_with_signals(
-        extra_services, extra_slugs, info.auth_type, info.dmarc_policy, info.domain_count,
+        extra_services,
+        extra_slugs,
+        info.auth_type,
+        info.dmarc_policy,
+        info.domain_count,
+        google_auth_type=info.google_auth_type,
+        google_idp_name=info.google_idp_name,
     )
 
     # Build enriched TenantInfo — keep identity fields, update services/slugs/insights
@@ -217,9 +260,7 @@ async def _resolve_tenant_inner(
         kwargs["client"] = client
 
     # Run all sources concurrently
-    results = await asyncio.gather(
-        *(_safe_lookup(source, domain, **kwargs) for source in sources)
-    )
+    results = await asyncio.gather(*(_safe_lookup(source, domain, **kwargs) for source in sources))
 
     info = merge_results(list(results), domain)
 

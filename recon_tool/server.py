@@ -187,10 +187,7 @@ async def lookup_tenant(
     """
     output_format = format
     if output_format not in _VALID_FORMATS:
-        return (
-            f"Error: invalid format {output_format!r}. "
-            f"Must be one of: {', '.join(sorted(_VALID_FORMATS))}"
-        )
+        return f"Error: invalid format {output_format!r}. Must be one of: {', '.join(sorted(_VALID_FORMATS))}"
 
     request_id = uuid.uuid4().hex[:12]
     start_time = time.monotonic()
@@ -199,8 +196,11 @@ async def lookup_tenant(
         validated = validate_domain(domain)
     except ValueError as exc:
         _log_structured(
-            logging.WARNING, "validation_failed",
-            request_id=request_id, domain=domain, error=str(exc),
+            logging.WARNING,
+            "validation_failed",
+            request_id=request_id,
+            domain=domain,
+            error=str(exc),
         )
         return f"Error: {exc}"
 
@@ -209,31 +209,35 @@ async def lookup_tenant(
     if cached is not None:
         info, results = cached
         _log_structured(
-            logging.INFO, "cache_hit",
-            request_id=request_id, domain=validated,
+            logging.INFO,
+            "cache_hit",
+            request_id=request_id,
+            domain=validated,
         )
     else:
         # Rate limit check — only for cache misses (actual network calls)
         if not _rate_limit_check(validated):
-            return (
-                f"Rate limited: {domain} was looked up recently. "
-                f"Try again in a few seconds."
-            )
+            return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
 
         try:
             info, results = await resolve_tenant(validated)
         except ReconLookupError as exc:
             elapsed = time.monotonic() - start_time
             _log_structured(
-                logging.INFO, "no_data",
-                request_id=request_id, domain=domain,
-                elapsed_s=round(elapsed, 2), error=exc.message,
+                logging.INFO,
+                "no_data",
+                request_id=request_id,
+                domain=domain,
+                elapsed_s=round(elapsed, 2),
+                error=exc.message,
             )
             return f"No information found for {domain}"
         except Exception:
             elapsed = time.monotonic() - start_time
             logger.exception(
-                "Unexpected error looking up %s (request_id=%s)", domain, request_id,
+                "Unexpected error looking up %s (request_id=%s)",
+                domain,
+                request_id,
             )
             return f"Error looking up {domain}: an internal error occurred"
 
@@ -243,9 +247,13 @@ async def lookup_tenant(
 
     elapsed = time.monotonic() - start_time
     _log_structured(
-        logging.INFO, "resolved",
-        request_id=request_id, domain=domain, display_name=info.display_name,
-        services=len(info.services), elapsed_s=round(elapsed, 2),
+        logging.INFO,
+        "resolved",
+        request_id=request_id,
+        domain=domain,
+        display_name=info.display_name,
+        services=len(info.services),
+        elapsed_s=round(elapsed, 2),
     )
 
     # JSON format
@@ -278,6 +286,19 @@ async def lookup_tenant(
         lines.append(f"Domains in tenant: {info.domain_count}")
     if info.related_domains:
         lines.append(f"Related domains: {', '.join(info.related_domains)}")
+
+    # Google Workspace details
+    gws_slugs = set(info.slugs)
+    is_gws = any(s.lower().startswith("google workspace") for s in info.services) or "google-workspace" in gws_slugs
+    if is_gws:
+        if info.google_auth_type:
+            auth_label = info.google_auth_type
+            if info.google_idp_name:
+                auth_label += f" ({info.google_idp_name})"
+            lines.append(f"GWS Auth: {auth_label}")
+        gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
+        if gws_modules:
+            lines.append(f"GWS Modules: {', '.join(gws_modules)}")
 
     return "\n".join(lines)
 
@@ -312,8 +333,11 @@ async def analyze_posture(domain: str) -> str:
         validated = validate_domain(domain)
     except ValueError as exc:
         _log_structured(
-            logging.WARNING, "validation_failed",
-            request_id=request_id, domain=domain, error=str(exc),
+            logging.WARNING,
+            "validation_failed",
+            request_id=request_id,
+            domain=domain,
+            error=str(exc),
         )
         return f"Error: {exc}"
 
@@ -322,29 +346,33 @@ async def analyze_posture(domain: str) -> str:
     if cached is not None:
         info, _results = cached
         _log_structured(
-            logging.INFO, "cache_hit",
-            request_id=request_id, domain=validated,
+            logging.INFO,
+            "cache_hit",
+            request_id=request_id,
+            domain=validated,
         )
     else:
         if not _rate_limit_check(validated):
-            return (
-                f"Rate limited: {domain} was looked up recently. "
-                f"Try again in a few seconds."
-            )
+            return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
 
         try:
             info, results = await resolve_tenant(validated)
         except ReconLookupError as exc:
             elapsed = time.monotonic() - start_time
             _log_structured(
-                logging.INFO, "no_data",
-                request_id=request_id, domain=domain,
-                elapsed_s=round(elapsed, 2), error=exc.message,
+                logging.INFO,
+                "no_data",
+                request_id=request_id,
+                domain=domain,
+                elapsed_s=round(elapsed, 2),
+                error=exc.message,
             )
             return f"No information found for {domain}"
         except Exception:
             logger.exception(
-                "Unexpected error looking up %s (request_id=%s)", domain, request_id,
+                "Unexpected error looking up %s (request_id=%s)",
+                domain,
+                request_id,
             )
             return f"Error looking up {domain}: an internal error occurred"
 
@@ -358,9 +386,12 @@ async def analyze_posture(domain: str) -> str:
 
     elapsed = time.monotonic() - start_time
     _log_structured(
-        logging.INFO, "posture_analyzed",
-        request_id=request_id, domain=domain,
-        observations=len(observations), elapsed_s=round(elapsed, 2),
+        logging.INFO,
+        "posture_analyzed",
+        request_id=request_id,
+        domain=domain,
+        observations=len(observations),
+        elapsed_s=round(elapsed, 2),
     )
 
     return json_mod.dumps(format_posture_observations(observations), indent=2)
@@ -398,8 +429,11 @@ async def chain_lookup(domain: str, depth: int = 1) -> str:
         validated = validate_domain(domain)
     except ValueError as exc:
         _log_structured(
-            logging.WARNING, "validation_failed",
-            request_id=request_id, domain=domain, error=str(exc),
+            logging.WARNING,
+            "validation_failed",
+            request_id=request_id,
+            domain=domain,
+            error=str(exc),
         )
         return f"Error: {exc}"
 
@@ -410,14 +444,18 @@ async def chain_lookup(domain: str, depth: int = 1) -> str:
         report = await chain_resolve(validated, depth=depth)
     except Exception:
         logger.exception(
-            "Unexpected error in chain lookup for %s (request_id=%s)", domain, request_id,
+            "Unexpected error in chain lookup for %s (request_id=%s)",
+            domain,
+            request_id,
         )
         return f"Error looking up {domain}: an internal error occurred"
 
     elapsed = time.monotonic() - start_time
     _log_structured(
-        logging.INFO, "chain_resolved",
-        request_id=request_id, domain=domain,
+        logging.INFO,
+        "chain_resolved",
+        request_id=request_id,
+        domain=domain,
         total_domains=len(report.results),
         max_depth=report.max_depth_reached,
         truncated=report.truncated,
@@ -460,13 +498,13 @@ async def reload_data() -> str:
     posture_count = len(load_posture_rules())
 
     _log_structured(
-        logging.INFO, "data_reloaded",
-        fingerprints=fp_count, signals=sig_count, posture_rules=posture_count,
+        logging.INFO,
+        "data_reloaded",
+        fingerprints=fp_count,
+        signals=sig_count,
+        posture_rules=posture_count,
     )
-    return (
-        f"Reloaded: {fp_count} fingerprints, {sig_count} signals, "
-        f"{posture_count} posture rules. Cache cleared."
-    )
+    return f"Reloaded: {fp_count} fingerprints, {sig_count} signals, {posture_count} posture rules. Cache cleared."
 
 
 @mcp.prompt()
@@ -476,10 +514,7 @@ def domain_report(domain: str) -> str:
     Use this to get a comprehensive analysis of a company's email provider,
     tech stack, email security posture, and infrastructure.
     """
-    return (
-        f"Look up {domain} using the lookup_tenant tool with format='markdown', "
-        f"then summarize the key findings."
-    )
+    return f"Look up {domain} using the lookup_tenant tool with format='markdown', then summarize the key findings."
 
 
 def main() -> None:

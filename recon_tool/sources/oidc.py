@@ -8,12 +8,10 @@ from urllib.parse import urlparse
 import httpx
 
 from recon_tool.http import http_client
-from recon_tool.models import ReconLookupError, SourceResult
+from recon_tool.models import EvidenceRecord, ReconLookupError, SourceResult
 from recon_tool.validator import UUID_RE
 
-DISCOVERY_URL_TEMPLATE = (
-    "https://login.microsoftonline.com/{domain}/.well-known/openid-configuration"
-)
+DISCOVERY_URL_TEMPLATE = "https://login.microsoftonline.com/{domain}/.well-known/openid-configuration"
 
 
 def parse_tenant_info_from_oidc(response_json: dict[str, Any]) -> SourceResult:
@@ -57,6 +55,14 @@ def parse_tenant_info_from_oidc(response_json: dict[str, Any]) -> SourceResult:
         source_name="oidc_discovery",
         tenant_id=tenant_id,
         region=region,
+        evidence=(
+            EvidenceRecord(
+                source_type="HTTP",
+                raw_value=f"tenant_id={tenant_id}",
+                rule_name="OIDC Discovery",
+                slug="microsoft365",
+            ),
+        ),
     )
 
 

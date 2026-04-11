@@ -21,11 +21,12 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
 from recon_tool.http import http_client
-from recon_tool.models import SourceResult
+from recon_tool.models import EvidenceRecord, SourceResult
 
 logger = logging.getLogger("recon")
 
@@ -42,6 +43,8 @@ def parse_cse_config(data: dict[str, Any], domain: str) -> dict[str, Any]:
         - cse_enabled: True
         - cse_idp: the external IdP discovery URI (if present)
         - cse_client_id: the OAuth client ID (if present)
+        - cse_kacls: the KACLS (Key Access Control List Service) URL (if present)
+        - cse_key_providers: sorted list of distinct key service provider names (if present)
     """
     result: dict[str, Any] = {"cse_enabled": True}
 
@@ -54,6 +57,23 @@ def parse_cse_config(data: dict[str, Any], domain: str) -> dict[str, Any]:
     client_id = data.get("client_id") or data.get("clientId")
     if client_id and isinstance(client_id, str):
         result["cse_client_id"] = client_id
+
+    # KACLS URL extraction
+    kacls_url = data.get("kacls_url") or data.get("kaclsUrl")
+    if kacls_url and isinstance(kacls_url, str):
+        result["cse_kacls"] = kacls_url
+
+    # Multiple key service entries
+    key_services = data.get("key_services") or data.get("keyServices") or []
+    if isinstance(key_services, list):
+        providers: set[str] = set()
+        for ks in key_services:
+            if isinstance(ks, dict):
+                provider = ks.get("provider") or ks.get("name")
+                if provider and isinstance(provider, str):
+                    providers.add(provider)
+        if providers:
+            result["cse_key_providers"] = sorted(providers)
 
     return result
 
@@ -82,12 +102,21 @@ class GoogleSource:
 
         services: list[str] = []
         slugs: list[str] = []
+        evidence: list[EvidenceRecord] = []
 
         # Probe CSE configuration
         cse_result = await self._probe_cse(domain, kwargs.get("client"))
         if cse_result:
             services.append("Google Workspace CSE")
             slugs.append("google-cse")
+            evidence.append(
+                EvidenceRecord(
+                    source_type="HTTP",
+                    raw_value="CSE configuration found",
+                    rule_name="Google Workspace CSE",
+                    slug="google-cse",
+                )
+            )
             idp = cse_result.get("cse_idp")
             if idp:
                 services.append(f"CSE Key Manager: {_extract_idp_name(idp)}")
@@ -97,6 +126,7 @@ class GoogleSource:
                 source_name="google_workspace",
                 detected_services=tuple(sorted(services)),
                 detected_slugs=tuple(sorted(slugs)),
+                evidence=tuple(evidence),
             )
 
         return SourceResult(
@@ -154,7 +184,6 @@ def _extract_idp_name(discovery_uri: str) -> str:
         return "Auth0"
     # Fall back to the hostname
     try:
-        from urllib.parse import urlparse
         parsed = urlparse(discovery_uri)
         return parsed.hostname or discovery_uri
     except Exception:

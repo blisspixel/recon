@@ -15,6 +15,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from recon_tool.fingerprints import load_fingerprints
 from recon_tool.models import (
     ChainReport,
     ConfidenceLevel,
@@ -69,9 +70,9 @@ def set_console(console: Console) -> None:
 
 
 CONFIDENCE_COLORS: dict[ConfidenceLevel, str] = {
-    ConfidenceLevel.HIGH: "#a3d9a5",     # soft sage green
-    ConfidenceLevel.MEDIUM: "#7ec8e3",   # muted sky blue
-    ConfidenceLevel.LOW: "#e07a5f",      # warm terracotta
+    ConfidenceLevel.HIGH: "#a3d9a5",  # soft sage green
+    ConfidenceLevel.MEDIUM: "#7ec8e3",  # muted sky blue
+    ConfidenceLevel.LOW: "#e07a5f",  # warm terracotta
 }
 
 CONFIDENCE_DOTS: dict[ConfidenceLevel, str] = {
@@ -84,17 +85,66 @@ CONFIDENCE_DOTS: dict[ConfidenceLevel, str] = {
 # COUPLING WARNING: If you add a new M365 service to fingerprints.yaml, you may
 # need to add a keyword here too, or it will show up under "Tech Stack" instead
 # of "M365" in the --services view. Detection logic uses slugs (not these keywords).
-_M365_KEYWORDS = frozenset({
-    "exchange", "teams", "intune", "mdm", "dkim",
-    "microsoft", "domain verified",
-})
+# NOTE: provider_group on fingerprints takes precedence when available.
+_M365_KEYWORDS = frozenset(
+    {
+        "exchange",
+        "teams",
+        "intune",
+        "mdm",
+        "dkim",
+        "microsoft",
+        "domain verified",
+    }
+)
+
+
+def _get_slug_provider_groups() -> dict[str, str]:
+    """Build a slug → provider_group mapping from loaded fingerprints."""
+    return {fp.slug: fp.provider_group for fp in load_fingerprints() if fp.provider_group is not None}
+
+
+def _get_slug_display_groups() -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
+    """Build a slug → display_group mapping from loaded fingerprints."""
+    return {fp.slug: fp.display_group for fp in load_fingerprints() if fp.display_group is not None}
+
+
+def _get_name_to_slug() -> dict[str, str]:
+    """Build a service name → slug mapping from loaded fingerprints."""
+    return {fp.name: fp.slug for fp in load_fingerprints()}
+
+
+def _service_provider_group(svc: str) -> str | None:
+    """Return the provider_group for a service name, or None if not found."""
+    name_to_slug = _get_name_to_slug()
+    slug = name_to_slug.get(svc)
+    if slug is None:
+        return None
+    return _get_slug_provider_groups().get(slug)
+
+
+def _is_gws_service(svc: str) -> bool:
+    """Check if a service name should be categorized as Google Workspace."""
+    pg = _service_provider_group(svc)
+    if pg is not None:
+        return pg == "google-workspace"
+    # Fallback heuristic for services added with "Google Workspace" prefix
+    return svc.lower().startswith("google workspace")
+
 
 # Services filtered from the compact (default) view because they appear
 # in insights instead. Uses exact prefix matching to avoid false positives
 # (e.g. a service named "Advanced DNS Security" won't be hidden).
 _SKIP_COMPACT_PREFIXES = (
-    "dmarc", "domain verified", "spf:", "spf complexity",
-    "dns:", "cdn:", "hosting:", "waf:", "domain connect",
+    "dmarc",
+    "domain verified",
+    "spf:",
+    "spf complexity",
+    "dns:",
+    "cdn:",
+    "hosting:",
+    "waf:",
+    "domain connect",
 )
 
 # Exact substrings that must appear as standalone tokens in the service name.
@@ -102,7 +152,13 @@ _SKIP_COMPACT_EXACT = frozenset({"(SPF)", "(site verified)"})
 
 
 def _is_m365_service(svc: str) -> bool:
-    """Check if a service name should be categorized as M365."""
+    """Check if a service name should be categorized as M365.
+
+    Checks fingerprint provider_group first, falls back to _M365_KEYWORDS.
+    """
+    pg = _service_provider_group(svc)
+    if pg is not None:
+        return pg == "microsoft365"
     svc_lower = svc.lower()
     return any(kw in svc_lower for kw in _M365_KEYWORDS)
 
@@ -203,6 +259,7 @@ def render_tenant_panel(
     info: TenantInfo,
     show_services: bool = False,
     show_domains: bool = False,
+    verbose: bool = False,
 ) -> Panel:
     """Render TenantInfo as a rich Panel — adapts to provider."""
     color = CONFIDENCE_COLORS[info.confidence]
@@ -230,18 +287,49 @@ def render_tenant_panel(
         text.append("  Auth:       ", style="dim")
         text.append(f"{info.auth_type}\n")
 
+    # Google Workspace identity — shown when GWS is detected
+    gws_slugs = set(info.slugs)
+    is_gws = any(_is_gws_service(s) for s in info.services) or "google-workspace" in gws_slugs
+    if is_gws:
+        if info.google_auth_type:
+            text.append("  GWS Auth:   ", style="dim")
+            auth_label = info.google_auth_type
+            if info.google_idp_name:
+                auth_label += f" ({info.google_idp_name})"
+            text.append(f"{auth_label}\n")
+        gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
+        if gws_modules:
+            text.append("  GWS Modules:", style="dim")
+            text.append(f" {', '.join(gws_modules)}\n")
+
     text.append("  Confidence: ", style="dim")
     text.append(f"{dots} {info.confidence.value.capitalize()} ({source_count} sources)", style=color)
 
-    # Always show services — compact by default, split into M365/Tech Stack with --services
+    # Verbose: dual confidence breakdown
+    if verbose:
+        ev_color = CONFIDENCE_COLORS[info.evidence_confidence]
+        inf_color = CONFIDENCE_COLORS[info.inference_confidence]
+        text.append("\n")
+        text.append("  Evidence:   ", style="dim")
+        text.append(f"{info.evidence_confidence.value.capitalize()}", style=ev_color)
+        text.append("\n")
+        text.append("  Inference:  ", style="dim")
+        text.append(f"{info.inference_confidence.value.capitalize()}", style=inf_color)
+
+    # Always show services — compact by default, split into provider groups with --services
     if info.services:
         if show_services:
             m365_svcs = [svc for svc in info.services if _is_m365_service(svc)]
-            other_svcs = [svc for svc in info.services if not _is_m365_service(svc)]
+            gws_svcs = [svc for svc in info.services if _is_gws_service(svc)]
+            other_svcs = [svc for svc in info.services if not _is_m365_service(svc) and not _is_gws_service(svc)]
             if m365_svcs:
                 text.append("\n")
                 text.append("  M365:       ", style="dim")
                 text.append(_wrap_service_list(m365_svcs, label_width=14, panel_width=80, panel_pad=2))
+            if gws_svcs:
+                text.append("\n")
+                text.append("  GWS:        ", style="dim")
+                text.append(_wrap_service_list(gws_svcs, label_width=14, panel_width=80, panel_pad=2))
             if other_svcs:
                 text.append("\n")
                 text.append("  Tech Stack: ", style="dim")
@@ -291,8 +379,7 @@ def render_tenant_panel(
         text.append("\n\n")
         text.append("  Certs:      ", style="dim")
         text.append(
-            f"{cs.cert_count} total, {cs.issuance_velocity} in last 90d, "
-            f"{cs.issuer_diversity} issuers ({issuer_list})"
+            f"{cs.cert_count} total, {cs.issuance_velocity} in last 90d, {cs.issuer_diversity} issuers ({issuer_list})"
         )
 
     # Domains (opt-in via --domains or --full)
@@ -313,10 +400,33 @@ def render_tenant_panel(
         text.append("\n\n")
         text.append("  Note:       ", style="dim")
         text.append(
-            "crt.sh was unreachable — some subdomains may be missing. "
-            "Try again later for fuller results.",
+            "crt.sh was unreachable — some subdomains may be missing. Try again later for fuller results.",
             style="dim italic",
         )
+
+    # Verbose: detection scores
+    if verbose and info.detection_scores:
+        text.append("\n\n")
+        text.append("  Detection Scores:\n", style="bold")
+        for slug, score in info.detection_scores:
+            score_style = {
+                "high": "#a3d9a5",
+                "medium": "#7ec8e3",
+                "low": "#e07a5f",
+            }.get(score, "dim")
+            text.append(f"    {slug}: ", style="dim")
+            text.append(f"{score}", style=score_style)
+            text.append("\n")
+
+    # Verbose: evidence chains
+    if verbose and info.evidence:
+        text.append("\n")
+        text.append("  Evidence Chain:\n", style="bold")
+        for ev in info.evidence:
+            text.append(f"    [{ev.source_type}] ", style="dim")
+            text.append(f"{ev.rule_name}")
+            text.append(f" → {ev.slug}", style="dim")
+            text.append("\n")
 
     return Panel(
         text,
@@ -398,6 +508,8 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "queried_domain": info.queried_domain,
         "provider": provider,
         "confidence": info.confidence.value,
+        "evidence_confidence": info.evidence_confidence.value,
+        "inference_confidence": info.inference_confidence.value,
         "region": info.region,
         "auth_type": info.auth_type,
         "dmarc_policy": info.dmarc_policy,
@@ -408,6 +520,10 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "tenant_domains": list(info.tenant_domains),
         "related_domains": list(info.related_domains),
         "partial": info.crtsh_degraded,
+        "google_auth_type": info.google_auth_type,
+        "google_idp_name": info.google_idp_name,
+        "mta_sts_mode": info.mta_sts_mode,
+        "site_verification_tokens": list(info.site_verification_tokens),
     }
     if info.cert_summary is not None:
         d["cert_summary"] = {
@@ -418,6 +534,26 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
             "oldest_cert_age_days": info.cert_summary.oldest_cert_age_days,
             "top_issuers": list(info.cert_summary.top_issuers),
         }
+    if info.bimi_identity is not None:
+        d["bimi_identity"] = {
+            "organization": info.bimi_identity.organization,
+            "country": info.bimi_identity.country,
+            "state": info.bimi_identity.state,
+            "locality": info.bimi_identity.locality,
+            "trademark": info.bimi_identity.trademark,
+        }
+    if info.evidence:
+        d["evidence"] = [
+            {
+                "source_type": ev.source_type,
+                "raw_value": ev.raw_value,
+                "rule_name": ev.rule_name,
+                "slug": ev.slug,
+            }
+            for ev in info.evidence
+        ]
+    if info.detection_scores:
+        d["detection_scores"] = {slug: score for slug, score in info.detection_scores}
     return d
 
 
@@ -440,17 +576,29 @@ def format_tenant_markdown(info: TenantInfo) -> str:
     if info.auth_type:
         lines.append(f"**Auth Type:** {info.auth_type}  ")
     lines.append(f"**Confidence:** {info.confidence.value} ({len(info.sources)} sources)  ")
+    lines.append(
+        f"**Evidence Confidence:** {info.evidence_confidence.value}  \n"
+        f"**Inference Confidence:** {info.inference_confidence.value}  "
+    )
     lines.append("")
 
-    # Services split
+    # Services split — group by provider_group when available
     if info.services:
         m365_svcs = [s for s in info.services if _is_m365_service(s)]
-        other_svcs = [s for s in info.services if not _is_m365_service(s)]
+        gws_svcs = [s for s in info.services if _is_gws_service(s)]
+        other_svcs = [s for s in info.services if not _is_m365_service(s) and not _is_gws_service(s)]
 
         if m365_svcs:
             lines.append("## Microsoft 365 Services")
             lines.append("")
             for svc in m365_svcs:
+                lines.append(f"- {svc}")
+            lines.append("")
+
+        if gws_svcs:
+            lines.append("## Google Workspace Services")
+            lines.append("")
+            for svc in gws_svcs:
                 lines.append(f"- {svc}")
             lines.append("")
 
@@ -460,6 +608,26 @@ def format_tenant_markdown(info: TenantInfo) -> str:
             for svc in other_svcs:
                 lines.append(f"- {svc}")
             lines.append("")
+
+    # Google Workspace details section
+    gws_slugs = set(info.slugs)
+    has_gws = any(_is_gws_service(s) for s in info.services) or "google-workspace" in gws_slugs
+    if has_gws:
+        lines.append("## Google Workspace")
+        lines.append("")
+        if info.google_auth_type:
+            lines.append(f"**Auth Type:** {info.google_auth_type}  ")
+        if info.google_idp_name:
+            lines.append(f"**Identity Provider:** {info.google_idp_name}  ")
+        # Active modules from GWS CNAME detections
+        gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
+        if gws_modules:
+            lines.append(f"**Active Modules:** {', '.join(gws_modules)}  ")
+        # CSE details
+        cse_svcs = [s for s in info.services if "CSE" in s]
+        if cse_svcs:
+            lines.append(f"**CSE:** {', '.join(cse_svcs)}  ")
+        lines.append("")
 
     # Insights
     if info.insights:
@@ -503,8 +671,7 @@ def format_tenant_markdown(info: TenantInfo) -> str:
     lines.append("---")
     if info.crtsh_degraded:
         lines.append(
-            "*Note: crt.sh was unreachable — some subdomains may be missing."
-            " Try again later for fuller results.*  "
+            "*Note: crt.sh was unreachable — some subdomains may be missing. Try again later for fuller results.*  "
         )
     lines.append(f"*Sources: {', '.join(info.sources)}*")
     lines.append("")
@@ -654,9 +821,7 @@ def render_delta_panel(report: DeltaReport) -> Panel:
         if report.changed_dmarc_policy is not None:
             text.append("\n  ")
             text.append("~ ", style="yellow bold")
-            text.append(
-                f"DMARC: {report.changed_dmarc_policy[0]} → {report.changed_dmarc_policy[1]}", style="yellow"
-            )
+            text.append(f"DMARC: {report.changed_dmarc_policy[0]} → {report.changed_dmarc_policy[1]}", style="yellow")
         if report.changed_email_security_score is not None:
             text.append("\n  ")
             text.append("~ ", style="yellow bold")
@@ -668,9 +833,7 @@ def render_delta_panel(report: DeltaReport) -> Panel:
         if report.changed_confidence is not None:
             text.append("\n  ")
             text.append("~ ", style="yellow bold")
-            text.append(
-                f"Confidence: {report.changed_confidence[0]} → {report.changed_confidence[1]}", style="yellow"
-            )
+            text.append(f"Confidence: {report.changed_confidence[0]} → {report.changed_confidence[1]}", style="yellow")
         if report.changed_domain_count is not None:
             text.append("\n  ")
             text.append("~ ", style="yellow bold")

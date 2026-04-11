@@ -60,11 +60,11 @@ _VALID_CONFIDENCE_LEVELS = frozenset({"high", "medium", "low"})
 # This is a heuristic — not exhaustive — but catches the most common
 # ReDoS vectors from user-supplied custom fingerprints.
 _REDOS_RE = re.compile(
-    r"\([^)]*[+*][^)]*\)[+*]"       # (group-with-quantifier) followed by quantifier
+    r"\([^)]*[+*][^)]*\)[+*]"  # (group-with-quantifier) followed by quantifier
     r"|"
-    r"(?:[+*]\??\.\*[+*])"          # quantifier + .* + quantifier
+    r"(?:[+*]\??\.\*[+*])"  # quantifier + .* + quantifier
     r"|"
-    r"(?:\.[+*]\??\.[+*]\??\.[+*])" # three adjacent .X quantifiers (polynomial)
+    r"(?:\.[+*]\??\.[+*]\??\.[+*])"  # three adjacent .X quantifiers (polynomial)
 )
 
 
@@ -101,6 +101,8 @@ class Fingerprint:
     confidence: str
     m365: bool
     detections: tuple[DetectionRule, ...]
+    provider_group: str | None = None  # e.g., "microsoft365", "google-workspace"
+    display_group: str | None = None  # e.g., "Email & Communication", "Security"
 
 
 def _validate_regex(pattern: str, source: str) -> bool:
@@ -184,12 +186,14 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
         pattern = det.get("pattern", "")
         if not _validate_regex(pattern, f"{source}:{name}"):
             continue
-        valid_detections.append(DetectionRule(
-            type=det_type,
-            pattern=pattern,
-            description=det.get("description", ""),
-            reference=det.get("reference", ""),
-        ))
+        valid_detections.append(
+            DetectionRule(
+                type=det_type,
+                pattern=pattern,
+                description=det.get("description", ""),
+                reference=det.get("reference", ""),
+            )
+        )
 
     if not valid_detections:
         logger.warning("Fingerprint %r has no valid detections in %s — skipped", name, source)
@@ -206,6 +210,8 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
         confidence=confidence,
         m365=m365,
         detections=tuple(valid_detections),
+        provider_group=fp.get("provider_group") if isinstance(fp.get("provider_group"), str) else None,
+        display_group=fp.get("display_group") if isinstance(fp.get("display_group"), str) else None,
     )
 
 
@@ -294,6 +300,7 @@ def _get_detections(det_type: str) -> tuple[Detection, ...]:
 
 # Public accessors — thin wrappers over _get_detections for readability.
 # All return tuple[Detection, ...] (immutable).
+
 
 def get_txt_patterns() -> tuple[Detection, ...]:
     """Return Detection tuples for TXT record matching."""

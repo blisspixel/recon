@@ -182,3 +182,37 @@ observations:
       slugs_any: [canva, dropbox, mailchimp, zoom, airtable, notion, monday, clickup, loom]
       slugs_min: 3
     template: "Multiple consumer-grade SaaS tools detected ({matched_slugs}) alongside enterprise infrastructure"
+
+  # ── Google Workspace posture ──────────────────────────────────────────
+
+  - name: google_federated_identity
+    category: identity
+    salience: medium
+    condition:
+      slugs_any: [google-federated]
+      slugs_min: 1
+    template: "Google Workspace uses federated authentication via an external identity provider"
+
+  - name: google_managed_identity
+    category: identity
+    salience: low
+    condition:
+      slugs_any: [google-managed]
+      slugs_min: 1
+    template: "Google Workspace uses Google-native authentication — no external identity federation"
+
+  - name: mta_sts_enforcing
+    category: email
+    salience: low
+    condition:
+      slugs_any: [mta-sts-enforce]
+      slugs_min: 1
+    template: "MTA-STS policy is set to enforce — email transport encryption is mandatory"
+
+  - name: tls_rpt_configured
+    category: email
+    salience: low
+    condition:
+      slugs_any: [tls-rpt]
+      slugs_min: 1
+    template: "TLS-RPT is configured — the domain receives TLS failure reports"

@@ -47,7 +47,8 @@ from recon_tool.fingerprints import (
 from recon_tool.fingerprints import (
     get_m365_slugs as _get_m365_slugs,
 )
-from recon_tool.models import CertSummary, SourceResult
+from recon_tool.http import http_client as _http_client
+from recon_tool.models import BIMIIdentity, CertSummary, EvidenceRecord, SourceResult
 
 logger = logging.getLogger("recon")
 
@@ -144,6 +145,7 @@ def _safe_resolve_sync(domain: str, rdtype: str, timeout: float = DNS_QUERY_TIME
 # Thread-safe is NOT required — all sub-detectors run on the event loop,
 # not in separate threads.
 
+
 class _DetectionCtx:
     """Mutable accumulator for service detection results.
 
@@ -160,8 +162,19 @@ class _DetectionCtx:
     """
 
     __slots__ = (
-        "services", "slugs", "m365", "dmarc_policy", "spf_include_count",
-        "_m365_slugs", "related_domains", "crtsh_degraded", "cert_summary",
+        "services",
+        "slugs",
+        "m365",
+        "dmarc_policy",
+        "spf_include_count",
+        "_m365_slugs",
+        "related_domains",
+        "crtsh_degraded",
+        "cert_summary",
+        "evidence",
+        "bimi_identity",
+        "site_verification_tokens",
+        "mta_sts_mode",
     )
 
     def __init__(self) -> None:
@@ -174,18 +187,33 @@ class _DetectionCtx:
         self.related_domains: set[str] = set()
         self.crtsh_degraded: bool = False
         self.cert_summary: CertSummary | None = None
+        self.evidence: list[EvidenceRecord] = []
+        self.bimi_identity: Any = None  # BIMIIdentity | None
+        self.site_verification_tokens: set[str] = set()
+        self.mta_sts_mode: str | None = None
 
-    def add(self, svc_name: str, slug: str | None = None) -> None:
-        """Register a detected service, optionally with its slug.
+    def add(self, svc_name: str, slug: str | None = None, source_type: str = "", raw_value: str = "") -> None:
+        """Register a detected service, optionally with its slug and evidence.
 
         M365 detection is based on the slug (stable identifier) rather than
         the display name, so renaming a fingerprint won't break detection.
+        When source_type and raw_value are provided, an EvidenceRecord is
+        created and appended to self.evidence for traceability.
         """
         self.services.add(svc_name)
         if slug:
             self.slugs.add(slug)
             if slug in self._m365_slugs:
                 self.m365 = True
+            if source_type and raw_value:
+                self.evidence.append(
+                    EvidenceRecord(
+                        source_type=source_type,
+                        raw_value=raw_value,
+                        rule_name=svc_name,
+                        slug=slug,
+                    )
+                )
 
 
 # ── Sub-detectors ───────────────────────────────────────────────────────
@@ -204,7 +232,13 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
 
         result = match_txt(txt, txt_patterns)
         if result:
-            ctx.add(result.name, result.slug)
+            ctx.add(result.name, result.slug, source_type="TXT", raw_value=txt)
+
+        # Extract google-site-verification tokens for relationship mapping
+        if txt_lower.startswith("google-site-verification="):
+            token = txt[len("google-site-verification=") :].strip()
+            if token:
+                ctx.site_verification_tokens.add(token)
 
         if txt_lower.startswith("v=spf1"):
             ctx.spf_include_count = txt_lower.count("include:")
@@ -254,10 +288,20 @@ async def _detect_m365_cnames(ctx: _DetectionCtx, domain: str) -> None:
     enterprise_task = _safe_resolve(f"enterpriseregistration.{domain}", "CNAME")
     msoid_task = _safe_resolve(f"msoid.{domain}", "CNAME")
 
-    (autodiscover_results, lyncdiscover_results, sip_results,
-     srv_results, enterprise_results, msoid_results) = await asyncio.gather(
-        autodiscover_task, lyncdiscover_task, sip_task,
-        srv_task, enterprise_task, msoid_task,
+    (
+        autodiscover_results,
+        lyncdiscover_results,
+        sip_results,
+        srv_results,
+        enterprise_results,
+        msoid_results,
+    ) = await asyncio.gather(
+        autodiscover_task,
+        lyncdiscover_task,
+        sip_task,
+        srv_task,
+        enterprise_task,
+        msoid_task,
     )
 
     for cname in autodiscover_results:
@@ -295,6 +339,40 @@ async def _detect_m365_cnames(ctx: _DetectionCtx, domain: str) -> None:
             ctx.m365 = True
 
 
+# --- Google Workspace CNAME module probing ---
+
+_GWS_MODULE_PREFIXES = ("mail", "calendar", "docs", "drive", "sites", "groups")
+_GWS_CNAME_TARGET = "ghs.googlehosted.com"
+
+
+async def _detect_gws_cnames(ctx: _DetectionCtx, domain: str) -> None:
+    """Check Google Workspace module CNAMEs concurrently.
+
+    Administrators frequently create custom CNAMEs for GWS apps that
+    resolve to ghs.googlehosted.com. Detecting these reveals which
+    specific Workspace modules are actively deployed and branded.
+    """
+    tasks = [_safe_resolve(f"{prefix}.{domain}", "CNAME") for prefix in _GWS_MODULE_PREFIXES]
+    results = await asyncio.gather(*tasks)
+
+    active_modules: list[str] = []
+    for prefix, cname_results in zip(_GWS_MODULE_PREFIXES, results, strict=True):
+        for cname in cname_results:
+            if _GWS_CNAME_TARGET in cname.lower():
+                module_name = prefix.capitalize()
+                ctx.add(
+                    f"Google Workspace: {module_name}",
+                    "google-workspace",
+                    source_type="CNAME",
+                    raw_value=f"{prefix}.{domain} → {cname}",
+                )
+                active_modules.append(module_name)
+                break
+
+    if active_modules:
+        ctx.slugs.add("google-workspace-modules")
+
+
 async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
     """Check DKIM selectors for Exchange Online, Google, and common providers.
 
@@ -325,13 +403,13 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
     google_cname_task = _safe_resolve(f"google._domainkey.{domain}", "CNAME")
 
     # Also fire ESP selector queries concurrently
-    esp_tasks = [
-        _safe_resolve(f"{sel}._domainkey.{domain}", "CNAME")
-        for sel, _, _, _ in _ESP_SELECTORS
-    ]
+    esp_tasks = [_safe_resolve(f"{sel}._domainkey.{domain}", "CNAME") for sel, _, _, _ in _ESP_SELECTORS]
 
     all_results = await asyncio.gather(
-        sel1_task, sel2_task, google_txt_task, google_cname_task,
+        sel1_task,
+        sel2_task,
+        google_txt_task,
+        google_cname_task,
         *esp_tasks,
     )
 
@@ -381,14 +459,126 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
                 break
 
 
+async def _parse_bimi_vmc(ctx: _DetectionCtx, bimi_txt: str) -> None:
+    """Fetch VMC PEM from BIMI 'a=' URL and extract corporate identity.
+
+    BIMI TXT records may contain an 'a=' tag pointing to a .pem VMC
+    (Verified Mark Certificate). VMCs require strict legal verification,
+    so the Subject fields are high-confidence corporate identity data.
+    """
+
+    # Extract a= URL from BIMI TXT record
+    a_url: str | None = None
+    for part in bimi_txt.split(";"):
+        cleaned = part.strip()
+        if cleaned.lower().startswith("a="):
+            candidate = cleaned[2:].strip()
+            if candidate.lower().endswith(".pem"):
+                a_url = candidate
+                break
+
+    if not a_url:
+        return
+
+    try:
+        async with _http_client(timeout=5.0) as client:
+            resp = await client.get(a_url)
+            if resp.status_code != 200:
+                return
+            pem_data = resp.text
+
+        # Parse X.509 certificate Subject
+        org = country = state = locality = trademark = None
+
+        # Try using the cryptography library if available (more reliable)
+        try:
+            from cryptography import x509
+
+            cert_obj = x509.load_pem_x509_certificate(pem_data.encode())
+            subject = cert_obj.subject
+            for attr in subject:
+                oid_name = attr.oid.dotted_string
+                val = str(attr.value)
+                if oid_name == "2.5.4.10":  # Organization
+                    org = val
+                elif oid_name == "2.5.4.6":  # Country
+                    country = val
+                elif oid_name == "2.5.4.8":  # State
+                    state = val
+                elif oid_name == "2.5.4.7":  # Locality
+                    locality = val
+        except ImportError:
+            # Fallback: regex parse the PEM for common Subject fields
+            import re as _re
+
+            for line in pem_data.splitlines():
+                line_stripped = line.strip()
+                # Look for Subject line in text representation
+                if "O=" in line_stripped or "O =" in line_stripped:
+                    m = _re.search(r"O\s*=\s*([^,/]+)", line_stripped)
+                    if m:
+                        org = m.group(1).strip()
+                if "C=" in line_stripped:
+                    m = _re.search(r"C\s*=\s*([^,/]+)", line_stripped)
+                    if m:
+                        country = m.group(1).strip()
+
+        if org:
+            ctx.bimi_identity = BIMIIdentity(
+                organization=org,
+                country=country,
+                state=state,
+                locality=locality,
+                trademark=trademark,
+            )
+            ctx.slugs.add("bimi-vmc")
+            ctx.evidence.append(
+                EvidenceRecord(
+                    source_type="HTTP",
+                    raw_value=f"VMC Organization={org}",
+                    rule_name="BIMI VMC",
+                    slug="bimi-vmc",
+                )
+            )
+
+    except Exception as exc:
+        logger.debug("BIMI VMC parsing failed: %s", exc)
+
+
+async def _fetch_mta_sts_policy(domain: str) -> str | None:
+    """Fetch MTA-STS policy mode from the well-known endpoint.
+
+    Returns the policy mode ("enforce", "testing", "none") or None
+    if the policy file is unreachable or malformed.
+    """
+    url = f"https://mta-sts.{domain}/.well-known/mta-sts.txt"
+    try:
+        async with _http_client(timeout=5.0) as client:
+            resp = await client.get(url)
+            if resp.status_code == 200:
+                for line in resp.text.splitlines():
+                    stripped = line.strip().lower()
+                    if stripped.startswith("mode:"):
+                        mode = stripped.split(":", 1)[1].strip()
+                        if mode in ("enforce", "testing", "none"):
+                            return mode
+    except Exception as exc:
+        logger.debug("MTA-STS policy fetch failed for %s: %s", domain, exc)
+    return None
+
+
 async def _detect_email_security(ctx: _DetectionCtx, domain: str) -> None:
-    """Check DMARC, BIMI, and MTA-STS records concurrently."""
+    """Check DMARC, BIMI, MTA-STS, and TLS-RPT records concurrently."""
     dmarc_task = _safe_resolve(f"_dmarc.{domain}", "TXT")
     bimi_task = _safe_resolve(f"default._bimi.{domain}", "TXT")
     mta_sts_task = _safe_resolve(f"_mta-sts.{domain}", "TXT")
+    tls_rpt_task = _safe_resolve(f"_smtp._tls.{domain}", "TXT")
 
-    dmarc_results, bimi_results, mta_sts_results = await asyncio.gather(
-        dmarc_task, bimi_task, mta_sts_task,
+    dmarc_results, bimi_results, mta_sts_results, tls_rpt_results = await asyncio.gather(
+        dmarc_task,
+        bimi_task,
+        mta_sts_task,
+        tls_rpt_task,
     )
 
     for txt in dmarc_results:
@@ -403,10 +593,28 @@ async def _detect_email_security(ctx: _DetectionCtx, domain: str) -> None:
     for txt in bimi_results:
         if "v=bimi1" in txt.lower():
             ctx.services.add(SVC_BIMI)
+            # Attempt VMC corporate identity extraction
+            await _parse_bimi_vmc(ctx, txt)
 
+    mta_sts_detected = False
     for txt in mta_sts_results:
         if "v=stsv1" in txt.lower():
             ctx.services.add(SVC_MTA_STS)
+            mta_sts_detected = True
+
+    # Fetch MTA-STS policy file if TXT record found
+    if mta_sts_detected:
+        policy_mode = await _fetch_mta_sts_policy(domain)
+        if policy_mode:
+            ctx.mta_sts_mode = policy_mode
+            if policy_mode == "enforce":
+                ctx.slugs.add("mta-sts-enforce")
+
+    # TLS-RPT detection
+    for txt in tls_rpt_results:
+        if "v=tlsrptv1" in txt.lower():
+            ctx.add("TLS-RPT", "tls-rpt", source_type="TXT", raw_value=txt)
+            break
 
 
 async def _detect_ns(ctx: _DetectionCtx, domain: str) -> None:
@@ -541,8 +749,16 @@ _CRTSH_TIMEOUT = 8.0
 # Patterns to filter out from crt.sh results — wildcards, common noise,
 # and subdomains that rarely have interesting TXT/MX records.
 _CRTSH_SKIP_PREFIXES = (
-    "*.", "cpanel.", "cpcalendars.", "cpcontacts.", "webdisk.", "webmail.",
-    "mail.", "ftp.", "localhost.", "www.",
+    "*.",
+    "cpanel.",
+    "cpcalendars.",
+    "cpcontacts.",
+    "webdisk.",
+    "webmail.",
+    "mail.",
+    "ftp.",
+    "localhost.",
+    "www.",
 )
 
 # ── Common subdomain probing ───────────────────────────────────────────
@@ -553,21 +769,57 @@ _CRTSH_SKIP_PREFIXES = (
 # revealing a SaaS CNAME (auth→Okta, shop→Shopify, status→Statuspage, etc.).
 _COMMON_SUBDOMAIN_PREFIXES = (
     # Identity / SSO
-    "auth", "login", "sso", "id", "identity", "secure-auth", "accounts",
+    "auth",
+    "login",
+    "sso",
+    "id",
+    "identity",
+    "secure-auth",
+    "accounts",
     # Commerce / customer-facing
-    "shop", "store", "checkout",
+    "shop",
+    "store",
+    "checkout",
     # App / API
-    "app", "api", "portal", "dashboard", "admin",
+    "app",
+    "api",
+    "portal",
+    "dashboard",
+    "admin",
     # Support
-    "support", "help", "status", "docs", "kb",
+    "support",
+    "help",
+    "status",
+    "docs",
+    "kb",
     # Marketing / email
-    "click.em", "image.em", "view.em", "em", "email", "go", "info", "pages",
+    "click.em",
+    "image.em",
+    "view.em",
+    "em",
+    "email",
+    "go",
+    "info",
+    "pages",
     # Content / CDN
-    "cdn", "assets", "static", "media", "images",
+    "cdn",
+    "assets",
+    "static",
+    "media",
+    "images",
     # Blog / marketing sites
-    "blog", "news", "events", "careers",
+    "blog",
+    "news",
+    "events",
+    "careers",
     # Dev / staging
-    "staging", "stage", "dev", "sandbox", "preview", "uat", "stage-auth",
+    "staging",
+    "stage",
+    "dev",
+    "sandbox",
+    "preview",
+    "uat",
+    "stage-auth",
 )
 
 
@@ -582,6 +834,7 @@ async def _detect_common_subdomains(ctx: _DetectionCtx, domain: str) -> None:
     the subdomain points to, not just that it exists. Subdomains that resolve
     to a CNAME are added to ctx.related_domains for enrichment.
     """
+
     async def _probe(prefix: str) -> str | None:
         fqdn = f"{prefix}.{domain}"
         results = await _safe_resolve(fqdn, "CNAME")
@@ -653,14 +906,42 @@ async def _detect_crtsh(ctx: _DetectionCtx, domain: str) -> None:
     # High-signal prefixes (auth, login, shop, api, etc.) sort first,
     # deep subdomains (3+ levels) sort last (often internal/noise).
     _HIGH_SIGNAL_PREFIXES = (
-        "auth", "login", "sso", "secure", "id", "identity",
-        "shop", "store", "checkout", "pay",
-        "api", "app", "portal", "dashboard",
-        "support", "help", "status",
-        "track", "click", "image", "view", "email", "em.",
-        "cdn", "assets", "static", "media",
-        "blog", "docs", "kb",
-        "stage", "staging", "dev", "sandbox", "preview", "uat",
+        "auth",
+        "login",
+        "sso",
+        "secure",
+        "id",
+        "identity",
+        "shop",
+        "store",
+        "checkout",
+        "pay",
+        "api",
+        "app",
+        "portal",
+        "dashboard",
+        "support",
+        "help",
+        "status",
+        "track",
+        "click",
+        "image",
+        "view",
+        "email",
+        "em.",
+        "cdn",
+        "assets",
+        "static",
+        "media",
+        "blog",
+        "docs",
+        "kb",
+        "stage",
+        "staging",
+        "dev",
+        "sandbox",
+        "preview",
+        "uat",
     )
 
     def _sort_key(name: str) -> tuple[int, int, str]:
@@ -788,6 +1069,10 @@ class DNSSource:
                 related_domains=tuple(sorted(ctx.related_domains)),
                 crtsh_degraded=ctx.crtsh_degraded,
                 cert_summary=ctx.cert_summary,
+                evidence=tuple(ctx.evidence),
+                bimi_identity=ctx.bimi_identity,
+                site_verification_tokens=tuple(sorted(ctx.site_verification_tokens)),
+                mta_sts_mode=ctx.mta_sts_mode,
             )
 
         return SourceResult(
@@ -797,6 +1082,10 @@ class DNSSource:
             related_domains=tuple(sorted(ctx.related_domains)),
             crtsh_degraded=ctx.crtsh_degraded,
             cert_summary=ctx.cert_summary,
+            evidence=tuple(ctx.evidence),
+            bimi_identity=ctx.bimi_identity,
+            site_verification_tokens=tuple(sorted(ctx.site_verification_tokens)),
+            mta_sts_mode=ctx.mta_sts_mode,
         )
 
     @staticmethod
@@ -815,6 +1104,7 @@ class DNSSource:
             _detect_txt(ctx, domain),
             _detect_mx(ctx, domain),
             _detect_m365_cnames(ctx, domain),
+            _detect_gws_cnames(ctx, domain),
             _detect_dkim(ctx, domain),
             _detect_email_security(ctx, domain),
             _detect_ns(ctx, domain),

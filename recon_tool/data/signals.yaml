@@ -196,7 +196,7 @@ signals:
     confidence: high
     description: Google Workspace as primary identity provider — email, DNS, and site verification all Google
     requires:
-      any: [google-workspace, google-site, gcp-dns, google-trust]
+      any: [google-workspace, google-site, gcp-dns, google-trust, google-federated, google-managed]
     min_matches: 3
 
   - name: High-Security Posture (CSE)
@@ -214,6 +214,30 @@ signals:
     requires:
       any: [gcp-dns, google-trust, google-workspace, google-cse]
     min_matches: 2
+
+  - name: Google Workspace Full Suite
+    category: Composite
+    confidence: high
+    description: Google Workspace module CNAMEs detected alongside MX — full suite deployment
+    requires:
+      any: [google-workspace-modules, google-workspace]
+    min_matches: 2
+
+  - name: Google Federated Identity
+    category: Identity
+    confidence: high
+    description: Google Workspace with external identity provider — enterprise SSO
+    requires:
+      any: [google-federated]
+    min_matches: 1
+
+  - name: Google MTA-STS Enforcing
+    category: Security
+    confidence: high
+    description: MTA-STS policy set to enforce — mandatory email transport encryption
+    requires:
+      any: [mta-sts-enforce]
+    min_matches: 1
 
   # ── Layer 4: Metadata-aware signals ───────────────────────────────────
   # These combine slug detection with metadata conditions (DMARC policy,

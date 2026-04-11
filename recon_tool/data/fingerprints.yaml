@@ -62,6 +62,8 @@ fingerprints:
     category: Email & Communication
     confidence: high
     m365: true
+    provider_group: microsoft365
+    display_group: Microsoft 365
     detections:
       - type: txt
         pattern: "^MS=ms"
@@ -77,6 +79,8 @@ fingerprints:
     slug: google-workspace
     category: Email & Communication
     confidence: high
+    provider_group: google-workspace
+    display_group: Google Workspace
     detections:
       - type: mx
         pattern: "aspmx.l.google.com"
@@ -87,6 +91,7 @@ fingerprints:
     slug: zoho
     category: Email & Communication
     confidence: high
+    display_group: Email & Communication
     detections:
       - type: txt
         pattern: "^zoho-verification="
@@ -97,6 +102,7 @@ fingerprints:
     slug: protonmail
     category: Email & Communication
     confidence: high
+    display_group: Email & Communication
     detections:
       - type: txt
         pattern: "^protonmail-verification="
@@ -172,6 +178,16 @@ fingerprints:
         pattern: "servers.mcsv.net"
       - type: spf
         pattern: "spf.mandrillapp.com"
+
+  - name: TLS-RPT
+    slug: tls-rpt
+    category: Email & Communication
+    confidence: high
+    display_group: Email Security
+    detections:
+      - type: txt
+        pattern: "^v=TLSRPTv1"
+        description: SMTP TLS Reporting — domain receives TLS failure reports
 
   # ====================== PRODUCTIVITY & COLLABORATION ======================
 
@@ -623,6 +639,7 @@ fingerprints:
     slug: okta
     category: Security & Compliance
     confidence: high
+    display_group: Security & Compliance
     detections:
       - type: txt
         pattern: "^_oktaverification="
@@ -1093,6 +1110,7 @@ fingerprints:
     slug: cloudflare
     category: Infrastructure
     confidence: high
+    display_group: Infrastructure
     detections:
       - type: txt
         pattern: "^cloudflare-verify="

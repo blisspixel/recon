@@ -38,21 +38,42 @@ __all__ = [
     "reload_posture",
 ]
 
-BANNED_TERMS = frozenset({
-    "vulnerability", "attack", "exploit", "weakness",
-    "recommendation", "should", "must fix", "risk",
-    "threat", "remediate", "harden",
-})
+BANNED_TERMS = frozenset(
+    {
+        "vulnerability",
+        "attack",
+        "exploit",
+        "weakness",
+        "recommendation",
+        "should",
+        "must fix",
+        "risk",
+        "threat",
+        "remediate",
+        "harden",
+    }
+)
 
-_VALID_CATEGORIES = frozenset({
-    "identity", "email", "infrastructure",
-    "saas_footprint", "certificate", "consistency",
-})
+_VALID_CATEGORIES = frozenset(
+    {
+        "identity",
+        "email",
+        "infrastructure",
+        "saas_footprint",
+        "certificate",
+        "consistency",
+    }
+)
 _VALID_SALIENCE = frozenset({"high", "medium", "low"})
-_VALID_METADATA_FIELDS = frozenset({
-    "dmarc_policy", "auth_type", "email_security_score",
-    "spf_include_count", "issuance_velocity",
-})
+_VALID_METADATA_FIELDS = frozenset(
+    {
+        "dmarc_policy",
+        "auth_type",
+        "email_security_score",
+        "spf_include_count",
+        "issuance_velocity",
+    }
+)
 _VALID_OPERATORS = frozenset({"eq", "neq", "gte", "lte"})
 
 
@@ -237,7 +258,8 @@ def _compute_metadata_value(field: str, info: TenantInfo) -> str | int | None:
     if field == "email_security_score":
         # Count presence of DMARC, DKIM, SPF strict, MTA-STS, BIMI (0-5)
         score = sum(
-            1 for svc in info.services
+            1
+            for svc in info.services
             if svc in {SVC_DMARC, SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI}
         )
         return min(score, 5)
@@ -316,10 +338,7 @@ def analyze_posture(info: TenantInfo) -> tuple[Observation, ...]:
 
         # Evaluate metadata conditions
         if rule.metadata:
-            all_met = all(
-                _evaluate_metadata_condition(cond, info)
-                for cond in rule.metadata
-            )
+            all_met = all(_evaluate_metadata_condition(cond, info) for cond in rule.metadata)
             if not all_met:
                 continue
 
@@ -339,15 +358,18 @@ def analyze_posture(info: TenantInfo) -> tuple[Observation, ...]:
         # Enforce banned terms
         if _contains_banned_term(statement):
             logger.warning(
-                "Posture observation %r contains banned term — dropped", rule.name,
+                "Posture observation %r contains banned term — dropped",
+                rule.name,
             )
             continue
 
-        results.append(Observation(
-            category=rule.category,
-            salience=rule.salience,
-            statement=statement,
-            related_slugs=tuple(matched_slugs),
-        ))
+        results.append(
+            Observation(
+                category=rule.category,
+                salience=rule.salience,
+                statement=statement,
+                related_slugs=tuple(matched_slugs),
+            )
+        )
 
     return tuple(results)

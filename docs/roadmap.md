@@ -9,7 +9,7 @@ The guiding principle: stay passive, stay zero-creds, stay focused on signal int
 - ~~Neutral posture analysis — factual observations about domain configuration without attack/defense framing, driven by YAML rules~~ ✓ Done (`--posture`, `analyze_posture` MCP tool)
 - ~~Delta / change detection — compare current lookup against a previous JSON export~~ ✓ Done (`--compare`)
 - ~~Recursive domain chaining — follow related domains via CNAME/CT breadcrumbs up to configurable depth~~ ✓ Done (`--chain --depth N`, `chain_lookup` MCP tool)
-- Google Workspace parity — M365 gets tenant ID, company name, auth type, and region from public endpoints. Google Workspace currently only gets MX/SPF detection. Google has public discovery endpoints that could surface org name, directory info, and workspace configuration without credentials. This is the biggest coverage gap.
+- Google Workspace parity — ~~M365 gets tenant ID, company name, auth type, and region from public endpoints. Google Workspace currently only gets MX/SPF detection. Google has public discovery endpoints that could surface org name, directory info, and workspace configuration without credentials. This is the biggest coverage gap.~~ ✓ Done (identity routing, CNAME module probing, BIMI/VMC identity, site-verification tokens, MTA-STS/TLS-RPT, enhanced CSE)
 - Expanded org-size and maturity heuristics — better bucketing (SMB / mid-market / enterprise) from SPF complexity, domain count, and service mix
 
 ## Better output

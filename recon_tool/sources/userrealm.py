@@ -15,7 +15,7 @@ from xml.sax.saxutils import escape as xml_escape
 import defusedxml.ElementTree as DefusedET
 
 from recon_tool.http import http_client
-from recon_tool.models import SourceResult
+from recon_tool.models import EvidenceRecord, SourceResult
 
 logger = logging.getLogger("recon")
 
@@ -141,6 +141,25 @@ class UserRealmSource:
 
             has_data = display_name or default_domain or auth_type or tenant_domains
             if has_data:
+                evidence: list[EvidenceRecord] = []
+                if display_name:
+                    evidence.append(
+                        EvidenceRecord(
+                            source_type="HTTP",
+                            raw_value=f"FederationBrandName={display_name}",
+                            rule_name="GetUserRealm",
+                            slug="microsoft365",
+                        )
+                    )
+                if auth_type:
+                    evidence.append(
+                        EvidenceRecord(
+                            source_type="HTTP",
+                            raw_value=f"NameSpaceType={auth_type}",
+                            rule_name="GetUserRealm",
+                            slug="microsoft365",
+                        )
+                    )
                 return SourceResult(
                     source_name="user_realm",
                     display_name=display_name,
@@ -148,6 +167,7 @@ class UserRealmSource:
                     m365_detected=True,
                     auth_type=auth_type,
                     tenant_domains=tuple(tenant_domains),
+                    evidence=tuple(evidence),
                 )
 
             return SourceResult(
