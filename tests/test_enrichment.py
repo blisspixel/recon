@@ -46,17 +46,17 @@ class TestEnrichFromRelated:
     @pytest.mark.asyncio
     async def test_cap_limits_enrichment_candidates(self):
         """More than MAX_RELATED_ENRICHMENTS candidates should be capped."""
-        # Create 15 related domains — only first 10 should be looked up
-        related = tuple(f"related{i}.com" for i in range(15))
+        # Create 30 related domains — only first 25 should be looked up
+        related = tuple(f"related{i}.com" for i in range(30))
         info = TenantInfo(
             tenant_id="aaa", display_name="Test", default_domain="test.com",
             queried_domain="test.com", related_domains=related,
         )
         # This will attempt real DNS lookups on the fake domains, which will
-        # fail gracefully. The point is it doesn't try all 15.
+        # fail gracefully. The point is it doesn't try all 30.
         enriched, results = await _enrich_from_related(info, [])
-        # At most 10 additional results from enrichment
-        assert len(results) <= 10
+        # At most 25 additional results from enrichment
+        assert len(results) <= 25
 
 
 class TestEnrichmentIntegration:
