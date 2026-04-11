@@ -157,7 +157,10 @@ class _DetectionCtx:
     with a lock-protected accumulator or per-detector return values.
     """
 
-    __slots__ = ("services", "slugs", "m365", "dmarc_policy", "spf_include_count", "_m365_slugs", "related_domains")
+    __slots__ = (
+        "services", "slugs", "m365", "dmarc_policy", "spf_include_count",
+        "_m365_slugs", "related_domains", "crtsh_degraded",
+    )
 
     def __init__(self) -> None:
         self.services: set[str] = set()
@@ -167,6 +170,7 @@ class _DetectionCtx:
         self.spf_include_count: int = 0
         self._m365_slugs: frozenset[str] = _get_m365_slugs()
         self.related_domains: set[str] = set()
+        self.crtsh_degraded: bool = False
 
     def add(self, svc_name: str, slug: str | None = None) -> None:
         """Register a detected service, optionally with its slug.
@@ -538,6 +542,57 @@ _CRTSH_SKIP_PREFIXES = (
     "mail.", "ftp.", "localhost.", "www.",
 )
 
+# ── Common subdomain probing ───────────────────────────────────────────
+
+# High-signal subdomain prefixes that commonly CNAME to SaaS providers.
+# These are probed directly via DNS — no external service dependency.
+# Kept intentionally focused: each prefix has a high probability of
+# revealing a SaaS CNAME (auth→Okta, shop→Shopify, status→Statuspage, etc.).
+_COMMON_SUBDOMAIN_PREFIXES = (
+    # Identity / SSO
+    "auth", "login", "sso", "id", "identity", "secure-auth", "accounts",
+    # Commerce / customer-facing
+    "shop", "store", "checkout",
+    # App / API
+    "app", "api", "portal", "dashboard", "admin",
+    # Support
+    "support", "help", "status", "docs", "kb",
+    # Marketing / email
+    "click.em", "image.em", "view.em", "em", "email", "go", "info", "pages",
+    # Content / CDN
+    "cdn", "assets", "static", "media", "images",
+    # Blog / marketing sites
+    "blog", "news", "events", "careers",
+    # Dev / staging
+    "staging", "stage", "dev", "sandbox", "preview", "uat", "stage-auth",
+)
+
+
+async def _detect_common_subdomains(ctx: _DetectionCtx, domain: str) -> None:
+    """Probe common subdomain prefixes for CNAME targets that reveal SaaS usage.
+
+    This is the fallback/complement to crt.sh — works even when crt.sh is
+    down, and catches high-signal subdomains that may not appear in CT logs
+    (e.g., internal auth endpoints with private certs).
+
+    Only checks CNAME records (not A/AAAA) — we want to discover what service
+    the subdomain points to, not just that it exists. Subdomains that resolve
+    to a CNAME are added to ctx.related_domains for enrichment.
+    """
+    async def _probe(prefix: str) -> str | None:
+        fqdn = f"{prefix}.{domain}"
+        results = await _safe_resolve(fqdn, "CNAME")
+        if results:
+            return fqdn
+        return None
+
+    probes = await asyncio.gather(*(_probe(p) for p in _COMMON_SUBDOMAIN_PREFIXES))
+
+    found = [fqdn for fqdn in probes if fqdn is not None]
+    if found:
+        logger.debug("Common subdomain probing found %d for %s: %s", len(found), domain, ", ".join(found))
+        ctx.related_domains.update(found)
+
 
 async def _detect_crtsh(ctx: _DetectionCtx, domain: str) -> None:
     """Query crt.sh certificate transparency logs for subdomain discovery.
@@ -555,10 +610,12 @@ async def _detect_crtsh(ctx: _DetectionCtx, domain: str) -> None:
             resp = await client.get(url)
             if resp.status_code != 200:
                 logger.debug("crt.sh returned HTTP %d for %s", resp.status_code, domain)
+                ctx.crtsh_degraded = True
                 return
             data = resp.json()
     except (httpx.TimeoutException, httpx.ConnectError, httpx.HTTPError, ValueError) as exc:
         logger.debug("crt.sh lookup failed for %s: %s", domain, exc)
+        ctx.crtsh_degraded = True
         return
 
     if not isinstance(data, list):
@@ -649,6 +706,7 @@ class DNSSource:
                 detected_slugs=tuple(sorted(ctx.slugs)),
                 dmarc_policy=ctx.dmarc_policy,
                 related_domains=tuple(sorted(ctx.related_domains)),
+                crtsh_degraded=ctx.crtsh_degraded,
             )
 
         return SourceResult(
@@ -656,6 +714,7 @@ class DNSSource:
             m365_detected=False,
             dmarc_policy=ctx.dmarc_policy,
             related_domains=tuple(sorted(ctx.related_domains)),
+            crtsh_degraded=ctx.crtsh_degraded,
         )
 
     @staticmethod
@@ -683,6 +742,7 @@ class DNSSource:
             _detect_caa(ctx, domain),
             _detect_srv(ctx, domain),
             _detect_crtsh(ctx, domain),
+            _detect_common_subdomains(ctx, domain),
         )
 
         # Remove the queried domain itself from related_domains

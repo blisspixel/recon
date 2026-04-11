@@ -282,6 +282,16 @@ def render_tenant_panel(
         text.append("  Related:    ", style="dim")
         text.append(", ".join(info.related_domains), style="dim")
 
+    # crt.sh degraded notice — subtle hint that results may be partial
+    if info.crtsh_degraded:
+        text.append("\n\n")
+        text.append("  Note:       ", style="dim")
+        text.append(
+            "crt.sh was unreachable — some subdomains may be missing. "
+            "Try again later for fuller results.",
+            style="dim italic",
+        )
+
     return Panel(
         text,
         title=info.display_name,
@@ -371,6 +381,7 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "insights": list(info.insights),
         "tenant_domains": list(info.tenant_domains),
         "related_domains": list(info.related_domains),
+        "partial": info.crtsh_degraded,
     }
 
 
@@ -440,6 +451,11 @@ def format_tenant_markdown(info: TenantInfo) -> str:
 
     # Footer
     lines.append("---")
+    if info.crtsh_degraded:
+        lines.append(
+            "*Note: crt.sh was unreachable — some subdomains may be missing."
+            " Try again later for fuller results.*  "
+        )
     lines.append(f"*Sources: {', '.join(info.sources)}*")
     lines.append("")
 

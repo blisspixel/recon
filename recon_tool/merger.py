@@ -174,6 +174,9 @@ def merge_results(
         conflicting = sorted({r.tenant_id for r in results if r.tenant_id is not None})
         insights.insert(0, f"Conflicting tenant IDs detected: {', '.join(conflicting)}")
 
+    # Check if crt.sh was degraded in any DNS result
+    crtsh_degraded = any(r.crtsh_degraded for r in results)
+
     return TenantInfo(
         tenant_id=tenant_id,
         display_name=display_name,
@@ -190,4 +193,5 @@ def merge_results(
         tenant_domains=tenant_domains,
         related_domains=tuple(sorted(all_related)),
         insights=tuple(insights),
+        crtsh_degraded=crtsh_degraded,
     )
