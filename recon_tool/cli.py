@@ -47,6 +47,22 @@ _SUBCOMMANDS = frozenset({"doctor", "batch", "lookup"})
 # Maximum number of domains in a batch file to prevent OOM from huge files.
 _MAX_BATCH_DOMAINS = 10000
 
+# Spinner messages — one is picked at random for each lookup.
+# Keeps the CLI feeling alive without being gimmicky.
+_STATUS_MESSAGES = (
+    "Querying public DNS records...",
+    "Following CNAME breadcrumbs...",
+    "Reading the TXT record tea leaves...",
+    "Fingerprinting the SaaS stack...",
+    "Checking Microsoft's public tenant registry...",
+    "Mapping the organizational footprint...",
+    "Extracting signal from the public noise...",
+    "Tracing domain verification trails...",
+    "Scoring the email security posture...",
+    "Assembling the tech stack mosaic...",
+    "No credentials were harmed in this lookup...",
+)
+
 
 _preprocessed = False
 
@@ -244,6 +260,13 @@ async def _doctor() -> None:
             dns.exception.Timeout, OSError) as exc:
         checks.append(("DNS resolution", False, str(exc)))
 
+    # Check crt.sh connectivity (certificate transparency)
+    try:
+        resp = await httpx.AsyncClient(timeout=8.0).get("https://crt.sh/?q=%.example.com&output=json")
+        checks.append(("crt.sh (cert transparency)", resp.status_code == 200, f"HTTP {resp.status_code}"))
+    except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
+        checks.append(("crt.sh (cert transparency)", False, str(exc)))
+
     try:
         from recon_tool.server import mcp  # noqa: F401  # pyright: ignore[reportUnusedImport]
         checks.append(("MCP server module", True, "loaded"))
@@ -280,6 +303,32 @@ async def _doctor() -> None:
             checks.append(("Custom fingerprints", False, str(exc)))
     else:
         checks.append(("Custom fingerprints", True, f"none ({custom_path} not found)"))
+
+    # Check signal database loading
+    try:
+        from recon_tool.signals import load_signals
+        sigs = load_signals()
+        if sigs:
+            checks.append(("Signal database", True, f"{len(sigs)} signals loaded"))
+        else:
+            checks.append(("Signal database", False, "no signals loaded — signal intelligence will not work"))
+    except Exception as exc:
+        checks.append(("Signal database", False, str(exc)))
+
+    # Check custom signals path
+    custom_signals_path = Path(custom_dir) / "signals.yaml" if custom_dir else Path.home() / ".recon" / "signals.yaml"
+    if custom_signals_path.exists():
+        try:
+            import yaml as _yaml
+            data = _yaml.safe_load(custom_signals_path.read_text(encoding="utf-8"))
+            count = 0
+            if isinstance(data, dict) and "signals" in data:
+                count = len(data["signals"])
+            checks.append(("Custom signals", True, f"{count} entries in {custom_signals_path}"))
+        except Exception as exc:
+            checks.append(("Custom signals", False, str(exc)))
+    else:
+        checks.append(("Custom signals", True, f"none ({custom_signals_path} not found)"))
 
     all_ok = True
     for name, ok, detail in checks:
@@ -344,7 +393,9 @@ async def _lookup(
 
     try:
         if not json_output and not markdown:
-            with console.status(f"Resolving {validated}..."):
+            import random
+            msg = random.choice(_STATUS_MESSAGES)  # noqa: S311 — not security-sensitive
+            with console.status(msg):
                 info, results = await resolve_tenant(validated, timeout=timeout)
         else:
             info, results = await resolve_tenant(validated, timeout=timeout)

@@ -173,34 +173,35 @@ def render_tenant_panel(
             if compact:
                 text.append("\n")
                 text.append("  Services:   ", style="bold")
-                text.append(", ".join(compact), style="dim")
+                text.append(", ".join(compact))
 
-    # Always show insights
+    # Insights — separated by a blank line, with a section label
     if info.insights:
-        text.append("\n")
+        text.append("\n\n")
+        text.append("  Insights:", style="bold")
         for insight in info.insights:
             text.append("\n  ")
             if "gap" in insight.lower() or "not enforced" in insight.lower() or "not configured" in insight.lower():
-                text.append(insight, style="red")
+                text.append(f"  {insight}", style="red")
             elif "hybrid" in insight.lower() or "migration" in insight.lower():
-                text.append(insight, style="yellow")
+                text.append(f"  {insight}", style="yellow")
             else:
-                text.append(insight, style="dim")
+                text.append(f"  {insight}")
 
     # Domains (opt-in via --domains or --full)
     if show_domains and info.tenant_domains:
         text.append("\n\n")
         text.append(f"  Domains ({info.domain_count}):", style="bold")
         for d in info.tenant_domains:
-            text.append(f"\n    {d}")
+            text.append(f"\n    {d}", style="dim")
 
-    # Related domains — always shown when present (they're high-value intel)
+    # Related domains — supplementary, shown dim
     if info.related_domains:
         text.append("\n\n")
         text.append("  Related:    ", style="bold")
-        text.append(", ".join(info.related_domains), style="cyan")
+        text.append(", ".join(info.related_domains), style="dim")
 
-    return Panel(text, title=info.display_name)
+    return Panel(text, title=info.display_name, width=80, padding=(1, 2))
 
 
 def render_verbose_sources(results: list[SourceResult]) -> None:
