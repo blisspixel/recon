@@ -3,8 +3,8 @@
 When related domains are discovered (via CNAME breadcrumbs like autodiscover
 redirects or DKIM delegation), the resolver automatically runs DNS-only lookups
 on them and merges the additional services/slugs into the primary result.
-This means `recon canadiantire.com` automatically picks up services configured
-on `cantire.com` without the user needing to know about the internal domain.
+This means `recon northwindtraders.com` automatically picks up services configured
+on `northwind-internal.com` without the user needing to know about the internal domain.
 
 NOTE: Related domain enrichment is intentionally non-recursive. If a related
 domain's DNS records point to yet another domain, those second-level related
@@ -181,8 +181,8 @@ async def _resolve_tenant_inner(
 
     info = merge_results(list(results), domain)
 
-    # Auto-enrich from related domains (e.g. cantire.com discovered via
-    # autodiscover CNAME when looking up canadiantire.com)
+    # Auto-enrich from related domains (e.g. northwind-internal.com discovered via
+    # autodiscover CNAME when looking up northwindtraders.com)
     info, all_results = await _enrich_from_related(info, list(results))
 
     return info, all_results
