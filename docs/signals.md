@@ -1,6 +1,6 @@
 # Signal Intelligence
 
-Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 23 signals organized in three layers:
+Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 29 signals organized in four layers:
 
 ## Layer 1 — Single-category detection
 

@@ -120,8 +120,8 @@ recon runs as an MCP server for Claude, Cursor, VS Code, Kiro, ChatGPT, or any M
 {
   "mcpServers": {
     "recon": {
-      "command": "python",
-      "args": ["-m", "recon_tool.server"],
+      "command": "recon",
+      "args": ["mcp"],
       "autoApprove": ["lookup_tenant", "analyze_posture"]
     }
   }
