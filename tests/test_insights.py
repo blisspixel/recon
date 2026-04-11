@@ -76,12 +76,12 @@ class TestInsightGeneration:
     def test_google_mx_microsoft_txt_migration(self):
         slugs = {"google-workspace", "microsoft365"}
         insights = generate_insights(set(), slugs, None, None, 0)
-        assert any("migration" in i.lower() or "hybrid" in i.lower() for i in insights)
+        assert any("dual provider" in i.lower() for i in insights)
 
     def test_exchange_mx_google_spf_migration(self):
         slugs = {"microsoft365", "google-workspace"}
         insights = generate_insights(set(), slugs, None, None, 0)
-        assert any("migration" in i.lower() or "hybrid" in i.lower() for i in insights)
+        assert any("dual provider" in i.lower() for i in insights)
 
     def test_google_site_verified_no_migration(self):
         """google-site-verification alone should NOT trigger migration signal."""

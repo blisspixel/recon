@@ -349,16 +349,20 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
 
     # Google DKIM selector — proves Google handles email signing.
     # Check TXT first; if no TXT match, fall back to CNAME delegation.
+    # When found, add both generic DKIM and Google Workspace attribution
+    # so the signal fires even when MX points to a gateway (Proofpoint, etc.).
     google_dkim_found = False
     for record in google_txt_results:
         if "v=dkim1" in record.lower():
             ctx.services.add(SVC_DKIM)
+            ctx.add("DKIM (Google Workspace)", "google-workspace")
             google_dkim_found = True
             break
     if not google_dkim_found:
         for cname in google_cname_results:
             if "google.com" in cname.lower():
                 ctx.services.add(SVC_DKIM)
+                ctx.add("DKIM (Google Workspace)", "google-workspace")
                 break
 
     # ESP DKIM selectors — attribute to specific services when CNAME matches
@@ -490,9 +494,15 @@ async def _detect_srv(ctx: _DetectionCtx, domain: str) -> None:
     Only checks a focused set of high-signal SRV names — not brute-forcing.
     """
     # (srv_name, target_hint, service_name, slug)
+    # NOTE: _sip._tls and _sipfederationtls._tcp SRV records pointing to
+    # lync.com are legacy Skype for Business DNS entries. Microsoft retired
+    # Skype for Business Online (July 2021) but recommends keeping these
+    # records for Teams interop. We label them as Microsoft Teams since
+    # that's what they serve in 2024+. The display name matches the CNAME-
+    # based detection in _detect_m365_cnames so they deduplicate naturally.
     _SRV_CHECKS: list[tuple[str, str | None, str, str]] = [
-        ("_sip._tls", "lync.com", "Skype for Business / Lync", "microsoft365"),
-        ("_sipfederationtls._tcp", "lync.com", "Skype for Business Federation", "microsoft365"),
+        ("_sip._tls", "lync.com", SVC_MICROSOFT_TEAMS, "microsoft365"),
+        ("_sipfederationtls._tcp", "lync.com", SVC_MICROSOFT_TEAMS, "microsoft365"),
         ("_xmpp-server._tcp", None, "XMPP (Jabber)", ""),
         ("_caldavs._tcp", None, "CalDAV", ""),
         ("_carddavs._tcp", None, "CardDAV", ""),

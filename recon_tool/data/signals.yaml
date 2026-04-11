@@ -183,3 +183,27 @@ signals:
     requires:
       any: [microsoft365, google-workspace]
     min_matches: 2
+
+  - name: Google-Native Identity
+    category: Composite
+    confidence: high
+    description: Google Workspace as primary identity provider — email, DNS, and site verification all Google
+    requires:
+      any: [google-workspace, google-site, gcp-dns, google-trust]
+    min_matches: 3
+
+  - name: High-Security Posture (CSE)
+    category: Security
+    confidence: high
+    description: Google Workspace Client-Side Encryption — external key management for data sovereignty
+    requires:
+      any: [google-cse]
+    min_matches: 1
+
+  - name: Google Cloud Investment
+    category: Infrastructure
+    confidence: medium
+    description: Multiple Google Cloud services detected — significant GCP footprint
+    requires:
+      any: [gcp-dns, google-trust, google-workspace, google-cse]
+    min_matches: 2

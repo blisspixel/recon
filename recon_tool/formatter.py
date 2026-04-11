@@ -54,9 +54,9 @@ def set_console(console: Console) -> None:
 
 
 CONFIDENCE_COLORS: dict[ConfidenceLevel, str] = {
-    ConfidenceLevel.HIGH: "green",
-    ConfidenceLevel.MEDIUM: "yellow",
-    ConfidenceLevel.LOW: "red",
+    ConfidenceLevel.HIGH: "#a3d9a5",     # soft sage green
+    ConfidenceLevel.MEDIUM: "#7ec8e3",   # muted sky blue
+    ConfidenceLevel.LOW: "#e07a5f",      # warm terracotta
 }
 
 CONFIDENCE_DOTS: dict[ConfidenceLevel, str] = {
@@ -70,7 +70,7 @@ CONFIDENCE_DOTS: dict[ConfidenceLevel, str] = {
 # need to add a keyword here too, or it will show up under "Tech Stack" instead
 # of "M365" in the --services view. Detection logic uses slugs (not these keywords).
 _M365_KEYWORDS = frozenset({
-    "exchange", "teams", "skype", "intune", "mdm", "dkim",
+    "exchange", "teams", "intune", "mdm", "dkim",
     "microsoft", "domain verified",
 })
 
@@ -121,6 +121,69 @@ def detect_provider(services: tuple[str, ...] | set[str], slugs: tuple[str, ...]
     return " + ".join(providers) if providers else "Unknown"
 
 
+def _wrap_service_list(
+    services: list[str],
+    label_width: int = 14,
+    panel_width: int = 80,
+    panel_pad: int = 2,
+) -> str:
+    """Join services with comma-separation, wrapping lines to align under the label.
+
+    The available content width inside a Rich Panel is:
+        panel_width - 2 (border chars) - 2 * panel_pad (left + right padding)
+
+    The first line starts after the label (e.g. "  Services:   "), so it has
+    fewer chars available than continuation lines.  Continuation lines are
+    indented with spaces so text aligns with the first service name.
+    """
+    content_width = panel_width - 2 - 2 * panel_pad
+    # First line: "  " prefix + label already consumed by caller
+    first_line_max = content_width - 2 - label_width
+    # Continuation lines: indented by label_width (no "  " prefix needed)
+    cont_line_max = content_width - label_width
+    continuation_indent = " " * label_width
+
+    joined = ", ".join(services)
+    # If it fits on one line, just return it
+    if len(joined) <= first_line_max:
+        return joined
+
+    # Word-wrap at comma boundaries.
+    # Account for trailing comma (1 char) on non-final lines when checking fit.
+    lines: list[str] = []
+    current_line = ""
+    for svc in services:
+        candidate = svc if not current_line else f"{current_line}, {svc}"
+        limit = first_line_max if not lines else cont_line_max
+        # Reserve 1 char for the trailing comma on non-final lines
+        if current_line and len(candidate) + 1 > limit:
+            lines.append(current_line + ",")
+            current_line = svc
+        else:
+            current_line = candidate
+    if current_line:
+        lines.append(current_line)
+
+    return ("\n" + continuation_indent).join(lines)
+
+
+def _wrap_text(text: str, max_width: int) -> list[str]:
+    """Word-wrap a plain text string to fit within max_width characters."""
+    words = text.split()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = word if not current else f"{current} {word}"
+        if len(candidate) > max_width and current:
+            lines.append(current)
+            current = word
+        else:
+            current = candidate
+    if current:
+        lines.append(current)
+    return lines or [text]
+
+
 def render_tenant_panel(
     info: TenantInfo,
     show_services: bool = False,
@@ -134,25 +197,25 @@ def render_tenant_panel(
     is_m365 = "Microsoft" in provider
 
     text = Text()
-    text.append("  Company:    ", style="bold")
+    text.append("  Company:    ", style="dim")
     text.append(f"{info.display_name}\n")
-    text.append("  Domain:     ", style="bold")
+    text.append("  Domain:     ", style="dim")
     text.append(f"{info.default_domain}\n")
-    text.append("  Provider:   ", style="bold")
+    text.append("  Provider:   ", style="dim")
     text.append(f"{provider}\n")
 
     # M365-specific fields — only shown when provider is Microsoft
     if is_m365 and info.tenant_id:
-        text.append("  Tenant ID:  ", style="bold")
+        text.append("  Tenant ID:  ", style="dim")
         text.append(f"{info.tenant_id}\n")
     if info.region:
-        text.append("  Region:     ", style="bold")
+        text.append("  Region:     ", style="dim")
         text.append(f"{info.region}\n")
     if info.auth_type:
-        text.append("  Auth:       ", style="bold")
+        text.append("  Auth:       ", style="dim")
         text.append(f"{info.auth_type}\n")
 
-    text.append("  Confidence: ", style="bold")
+    text.append("  Confidence: ", style="dim")
     text.append(f"{dots} {info.confidence.value.capitalize()} ({source_count} sources)", style=color)
 
     # Always show services — compact by default, split into M365/Tech Stack with --services
@@ -162,46 +225,70 @@ def render_tenant_panel(
             other_svcs = [svc for svc in info.services if not _is_m365_service(svc)]
             if m365_svcs:
                 text.append("\n")
-                text.append("  M365:       ", style="bold")
-                text.append(", ".join(m365_svcs))
+                text.append("  M365:       ", style="dim")
+                text.append(_wrap_service_list(m365_svcs, label_width=14, panel_width=80, panel_pad=2))
             if other_svcs:
                 text.append("\n")
-                text.append("  Tech Stack: ", style="bold")
-                text.append(", ".join(other_svcs))
+                text.append("  Tech Stack: ", style="dim")
+                text.append(_wrap_service_list(other_svcs, label_width=14, panel_pad=2))
         else:
             compact = [svc for svc in info.services if not _is_compact_noise(svc)]
             if compact:
                 text.append("\n")
-                text.append("  Services:   ", style="bold")
-                text.append(", ".join(compact))
+                text.append("  Services:   ", style="dim")
+                text.append(_wrap_service_list(compact, label_width=14, panel_width=80, panel_pad=2))
 
-    # Insights — separated by a blank line, with a section label
+    # Insights — separated by a blank line, same label:value alignment as other fields
     if info.insights:
-        text.append("\n\n")
-        text.append("  Insights:", style="bold")
-        for insight in info.insights:
-            text.append("\n  ")
-            if "gap" in insight.lower() or "not enforced" in insight.lower() or "not configured" in insight.lower():
-                text.append(f"  {insight}", style="red")
-            elif "hybrid" in insight.lower() or "migration" in insight.lower():
-                text.append(f"  {insight}", style="yellow")
+        indent = " " * 14  # align with value column
+        max_width = 80 - 2 - 4 - 14  # panel - borders - padding - label
+        for i, insight in enumerate(info.insights):
+            if i == 0:
+                text.append("\n\n")
+                text.append("  Insights:   ", style="dim")
             else:
-                text.append(f"  {insight}")
+                text.append("\n")
+                text.append(indent)
+
+            # Determine style for this insight
+            if "gap" in insight.lower() or "not enforced" in insight.lower() or "not configured" in insight.lower():
+                style = "#e07a5f"  # warm terracotta for warnings
+            elif "hybrid" in insight.lower() or "migration" in insight.lower():
+                style = "#e6c07b"  # soft amber for transitions
+            else:
+                style = None
+
+            # Wrap long insights to stay within the panel
+            if len(insight) <= max_width:
+                text.append(insight, style=style)
+            else:
+                wrapped = _wrap_text(insight, max_width)
+                for j, line in enumerate(wrapped):
+                    if j > 0:
+                        text.append("\n")
+                        text.append(indent)
+                    text.append(line, style=style)
 
     # Domains (opt-in via --domains or --full)
     if show_domains and info.tenant_domains:
         text.append("\n\n")
-        text.append(f"  Domains ({info.domain_count}):", style="bold")
+        text.append(f"  Domains ({info.domain_count}):", style="dim")
         for d in info.tenant_domains:
             text.append(f"\n    {d}", style="dim")
 
     # Related domains — supplementary, shown dim
     if info.related_domains:
         text.append("\n\n")
-        text.append("  Related:    ", style="bold")
+        text.append("  Related:    ", style="dim")
         text.append(", ".join(info.related_domains), style="dim")
 
-    return Panel(text, title=info.display_name, width=80, padding=(1, 2))
+    return Panel(
+        text,
+        title=info.display_name,
+        width=80,
+        padding=(1, 2),
+        border_style="dim",
+    )
 
 
 def render_verbose_sources(results: list[SourceResult]) -> None:

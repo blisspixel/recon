@@ -63,10 +63,11 @@ class SourcePool:
 def default_pool() -> SourcePool:
     """Return a SourcePool with the standard sources."""
     from recon_tool.sources.dns import DNSSource
+    from recon_tool.sources.google import GoogleSource
     from recon_tool.sources.oidc import OIDCSource
     from recon_tool.sources.userrealm import UserRealmSource
 
-    return SourcePool([OIDCSource(), UserRealmSource(), DNSSource()])
+    return SourcePool([OIDCSource(), UserRealmSource(), GoogleSource(), DNSSource()])
 
 
 async def _safe_lookup(
