@@ -19,15 +19,18 @@ class TestSignalValidation:
         assert _validate_and_build_signal({"name": 123}, 0) is None
 
     def test_missing_requires_rejected(self):
+        """Signal with no requires and no metadata is rejected."""
         assert _validate_and_build_signal({"name": "Test"}, 0) is None
 
     def test_requires_not_dict_rejected(self):
         assert _validate_and_build_signal({"name": "Test", "requires": "bad"}, 0) is None
 
     def test_empty_any_list_rejected(self):
+        """Signal with empty requires.any and no metadata is rejected."""
         assert _validate_and_build_signal({"name": "Test", "requires": {"any": []}}, 0) is None
 
     def test_missing_any_key_rejected(self):
+        """Signal with requires but no 'any' key and no metadata is rejected."""
         assert _validate_and_build_signal({"name": "Test", "requires": {"all": ["a"]}}, 0) is None
 
     def test_invalid_min_matches_defaults_to_1(self):

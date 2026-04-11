@@ -15,15 +15,30 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from recon_tool.models import ConfidenceLevel, SourceResult, TenantInfo
+from recon_tool.models import (
+    ChainReport,
+    ConfidenceLevel,
+    DeltaReport,
+    Observation,
+    SourceResult,
+    TenantInfo,
+)
 
 __all__ = [
     "detect_provider",
+    "format_chain_dict",
+    "format_chain_json",
+    "format_delta_dict",
+    "format_delta_json",
+    "format_posture_observations",
     "format_tenant_dict",
     "format_tenant_json",
     "format_tenant_markdown",
     "get_console",
+    "render_chain_panel",
+    "render_delta_panel",
     "render_error",
+    "render_posture_panel",
     "render_sources_detail",
     "render_tenant_panel",
     "render_verbose_sources",
@@ -269,6 +284,17 @@ def render_tenant_panel(
                         text.append(indent)
                     text.append(line, style=style)
 
+    # Certificate summary — after insights, before domains
+    if info.cert_summary is not None:
+        cs = info.cert_summary
+        issuer_list = ", ".join(cs.top_issuers) if cs.top_issuers else "unknown"
+        text.append("\n\n")
+        text.append("  Certs:      ", style="dim")
+        text.append(
+            f"{cs.cert_count} total, {cs.issuance_velocity} in last 90d, "
+            f"{cs.issuer_diversity} issuers ({issuer_list})"
+        )
+
     # Domains (opt-in via --domains or --full)
     if show_domains and info.tenant_domains:
         text.append("\n\n")
@@ -365,7 +391,7 @@ def render_error(message: str) -> None:
 def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
     """Build a dict representation of TenantInfo (shared by JSON and batch)."""
     provider = detect_provider(info.services, info.slugs)
-    return {
+    d: dict[str, Any] = {
         "tenant_id": info.tenant_id,
         "display_name": info.display_name,
         "default_domain": info.default_domain,
@@ -383,6 +409,16 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "related_domains": list(info.related_domains),
         "partial": info.crtsh_degraded,
     }
+    if info.cert_summary is not None:
+        d["cert_summary"] = {
+            "cert_count": info.cert_summary.cert_count,
+            "issuer_diversity": info.cert_summary.issuer_diversity,
+            "issuance_velocity": info.cert_summary.issuance_velocity,
+            "newest_cert_age_days": info.cert_summary.newest_cert_age_days,
+            "oldest_cert_age_days": info.cert_summary.oldest_cert_age_days,
+            "top_issuers": list(info.cert_summary.top_issuers),
+        }
+    return d
 
 
 def format_tenant_json(info: TenantInfo) -> str:
@@ -433,6 +469,20 @@ def format_tenant_markdown(info: TenantInfo) -> str:
             lines.append(f"- {insight}")
         lines.append("")
 
+    # Certificate Intelligence
+    if info.cert_summary is not None:
+        cs = info.cert_summary
+        lines.append("## Certificate Intelligence")
+        lines.append("")
+        lines.append(f"- **Total Certificates:** {cs.cert_count}")
+        lines.append(f"- **Issuer Diversity:** {cs.issuer_diversity} distinct issuers")
+        lines.append(f"- **Issuance Velocity:** {cs.issuance_velocity} certs in last 90 days")
+        lines.append(f"- **Newest Cert Age:** {cs.newest_cert_age_days} days")
+        lines.append(f"- **Oldest Cert Age:** {cs.oldest_cert_age_days} days")
+        if cs.top_issuers:
+            lines.append(f"- **Top Issuers:** {', '.join(cs.top_issuers)}")
+        lines.append("")
+
     # Domains
     if info.tenant_domains:
         lines.append(f"## Tenant Domains ({info.domain_count})")
@@ -460,3 +510,241 @@ def format_tenant_markdown(info: TenantInfo) -> str:
     lines.append("")
 
     return "\n".join(lines)
+
+
+# ── Posture observation rendering ────────────────────────────────────────
+
+_SALIENCE_INDICATORS: dict[str, str] = {
+    "high": "●",
+    "medium": "◐",
+    "low": "○",
+}
+
+
+def format_posture_observations(observations: tuple[Observation, ...]) -> list[dict[str, Any]]:
+    """Format observations as a list of dicts for JSON output."""
+    return [
+        {
+            "category": obs.category,
+            "salience": obs.salience,
+            "statement": obs.statement,
+            "related_slugs": list(obs.related_slugs),
+        }
+        for obs in observations
+    ]
+
+
+def render_posture_panel(observations: tuple[Observation, ...]) -> Panel | None:
+    """Render posture observations as a Rich panel grouped by category."""
+    if not observations:
+        return None
+
+    # Group by category, preserving order of first appearance
+    groups: dict[str, list[Observation]] = {}
+    for obs in observations:
+        groups.setdefault(obs.category, []).append(obs)
+
+    text = Text()
+    first_group = True
+    for category, obs_list in groups.items():
+        if not first_group:
+            text.append("\n\n")
+        first_group = False
+
+        text.append(f"  {category.replace('_', ' ').title()}\n", style="bold")
+        for obs in obs_list:
+            indicator = _SALIENCE_INDICATORS.get(obs.salience, "○")
+            text.append(f"  {indicator} ", style="dim")
+            text.append(obs.statement)
+            text.append("\n")
+
+    return Panel(
+        text,
+        title="Posture Analysis",
+        width=80,
+        padding=(1, 2),
+        border_style="dim",
+    )
+
+
+# ── Delta rendering ─────────────────────────────────────────────────────
+
+
+def format_delta_dict(report: DeltaReport) -> dict[str, Any]:
+    """Format DeltaReport as a dict for JSON output."""
+    from datetime import datetime, timezone
+
+    d: dict[str, Any] = {
+        "domain": report.domain,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "has_changes": report.has_changes,
+        "added_services": list(report.added_services),
+        "removed_services": list(report.removed_services),
+        "added_slugs": list(report.added_slugs),
+        "removed_slugs": list(report.removed_slugs),
+        "added_signals": list(report.added_signals),
+        "removed_signals": list(report.removed_signals),
+    }
+    if report.changed_auth_type is not None:
+        d["changed_auth_type"] = {"from": report.changed_auth_type[0], "to": report.changed_auth_type[1]}
+    if report.changed_dmarc_policy is not None:
+        d["changed_dmarc_policy"] = {"from": report.changed_dmarc_policy[0], "to": report.changed_dmarc_policy[1]}
+    if report.changed_email_security_score is not None:
+        d["changed_email_security_score"] = {
+            "from": report.changed_email_security_score[0],
+            "to": report.changed_email_security_score[1],
+        }
+    if report.changed_confidence is not None:
+        d["changed_confidence"] = {"from": report.changed_confidence[0], "to": report.changed_confidence[1]}
+    if report.changed_domain_count is not None:
+        d["changed_domain_count"] = {"from": report.changed_domain_count[0], "to": report.changed_domain_count[1]}
+    return d
+
+
+def format_delta_json(report: DeltaReport) -> str:
+    """Format DeltaReport as a JSON string."""
+    return json.dumps(format_delta_dict(report), indent=2)
+
+
+def render_delta_panel(report: DeltaReport) -> Panel:
+    """Render delta report as a Rich panel with +/- markers."""
+    text = Text()
+
+    text.append("  Domain: ", style="dim")
+    text.append(f"{report.domain}\n")
+
+    if not report.has_changes:
+        text.append("\n  No changes detected.", style="dim italic")
+    else:
+        # Services
+        for svc in report.added_services:
+            text.append("\n  ")
+            text.append("+ ", style="green bold")
+            text.append(f"Service: {svc}", style="green")
+        for svc in report.removed_services:
+            text.append("\n  ")
+            text.append("- ", style="red bold")
+            text.append(f"Service: {svc}", style="red")
+
+        # Slugs
+        for slug in report.added_slugs:
+            text.append("\n  ")
+            text.append("+ ", style="green bold")
+            text.append(f"Slug: {slug}", style="green")
+        for slug in report.removed_slugs:
+            text.append("\n  ")
+            text.append("- ", style="red bold")
+            text.append(f"Slug: {slug}", style="red")
+
+        # Signals
+        for sig in report.added_signals:
+            text.append("\n  ")
+            text.append("+ ", style="green bold")
+            text.append(f"Signal: {sig}", style="green")
+        for sig in report.removed_signals:
+            text.append("\n  ")
+            text.append("- ", style="red bold")
+            text.append(f"Signal: {sig}", style="red")
+
+        # Scalar changes
+        if report.changed_auth_type is not None:
+            text.append("\n  ")
+            text.append("~ ", style="yellow bold")
+            text.append(f"Auth: {report.changed_auth_type[0]} → {report.changed_auth_type[1]}", style="yellow")
+        if report.changed_dmarc_policy is not None:
+            text.append("\n  ")
+            text.append("~ ", style="yellow bold")
+            text.append(
+                f"DMARC: {report.changed_dmarc_policy[0]} → {report.changed_dmarc_policy[1]}", style="yellow"
+            )
+        if report.changed_email_security_score is not None:
+            text.append("\n  ")
+            text.append("~ ", style="yellow bold")
+            text.append(
+                f"Email Security Score: {report.changed_email_security_score[0]} → "
+                f"{report.changed_email_security_score[1]}",
+                style="yellow",
+            )
+        if report.changed_confidence is not None:
+            text.append("\n  ")
+            text.append("~ ", style="yellow bold")
+            text.append(
+                f"Confidence: {report.changed_confidence[0]} → {report.changed_confidence[1]}", style="yellow"
+            )
+        if report.changed_domain_count is not None:
+            text.append("\n  ")
+            text.append("~ ", style="yellow bold")
+            text.append(
+                f"Domain Count: {report.changed_domain_count[0]} → {report.changed_domain_count[1]}",
+                style="yellow",
+            )
+
+    return Panel(
+        text,
+        title="Delta Report",
+        width=80,
+        padding=(1, 2),
+        border_style="dim",
+    )
+
+
+# ── Chain rendering ──────────────────────────────────────────────────────
+
+
+def format_chain_dict(report: ChainReport) -> dict[str, Any]:
+    """Format ChainReport as a dict for JSON output."""
+    return {
+        "total_domains": len(report.results),
+        "max_depth_reached": report.max_depth_reached,
+        "truncated": report.truncated,
+        "domains": [
+            {
+                **format_tenant_dict(r.info),
+                "chain_depth": r.chain_depth,
+            }
+            for r in report.results
+        ],
+    }
+
+
+def format_chain_json(report: ChainReport) -> str:
+    """Format ChainReport as a JSON string."""
+    return json.dumps(format_chain_dict(report), indent=2)
+
+
+def render_chain_panel(report: ChainReport) -> Panel:
+    """Render chain report as a Rich panel with domain tree."""
+    text = Text()
+
+    text.append("  Total Domains: ", style="dim")
+    text.append(f"{len(report.results)}\n")
+    text.append("  Max Depth:     ", style="dim")
+    text.append(f"{report.max_depth_reached}\n")
+    if report.truncated:
+        text.append("  Status:        ", style="dim")
+        text.append("Truncated (cap reached)", style="yellow")
+        text.append("\n")
+
+    # Domain tree grouped by depth
+    if report.results:
+        text.append("\n")
+        current_depth = -1
+        for r in report.results:
+            if r.chain_depth != current_depth:
+                current_depth = r.chain_depth
+                text.append(f"  Depth {current_depth}:\n", style="bold")
+            indent = "    " + "  " * r.chain_depth
+            provider = detect_provider(r.info.services, r.info.slugs)
+            text.append(f"{indent}{r.domain}", style="cyan")
+            text.append(f" — {r.info.display_name}", style="dim")
+            if provider != "Unknown":
+                text.append(f" ({provider})", style="dim")
+            text.append("\n")
+
+    return Panel(
+        text,
+        title="Chain Resolution",
+        width=80,
+        padding=(1, 2),
+        border_style="dim",
+    )

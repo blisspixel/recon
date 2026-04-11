@@ -7,7 +7,12 @@ from pathlib import Path
 
 import pytest
 
+from recon_tool.models import SignalContext
 from recon_tool.signals import evaluate_signals, load_signals, reload_signals
+
+
+def _ctx(slugs: set[str]) -> SignalContext:
+    return SignalContext(detected_slugs=frozenset(slugs))
 
 
 @pytest.fixture(autouse=True)
@@ -63,7 +68,7 @@ class TestCustomSignalsLoading:
             encoding="utf-8",
         )
         reload_signals()
-        results = evaluate_signals({"okta", "crowdstrike"})
+        results = evaluate_signals(_ctx({"okta", "crowdstrike"}))
         names = {r.name for r in results}
         assert "Healthcare Stack" in names
 
@@ -79,7 +84,7 @@ class TestCustomSignalsLoading:
             encoding="utf-8",
         )
         reload_signals()
-        results = evaluate_signals({"a", "b"})
+        results = evaluate_signals(_ctx({"a", "b"}))
         names = {r.name for r in results}
         assert "Needs Three" not in names
 

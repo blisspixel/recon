@@ -37,9 +37,9 @@ recon northwindtraders.com
 
 > The example above is fictional. All tenant IDs, domains, and service lists are fabricated for illustration.
 
-Give it a domain. It queries public endpoints and DNS records — no credentials, no API keys — and returns what it can find: tenant details, email security posture, SaaS fingerprints, and derived signals.
+Give it a domain. It queries public endpoints and DNS records — no credentials, no API keys — and returns what it can find: tenant details, email security posture, SaaS fingerprints, derived signals, certificate intelligence, and neutral posture observations.
 
-Works for Microsoft 365, Google Workspace, or any provider. Useful if you're an architect, MSP, or partner trying to understand a company before a call or proposal. Also runs as an [MCP server](docs/mcp.md) for AI tools.
+Works for Microsoft 365, Google Workspace, or any provider. Useful for anyone who needs domain intelligence — architects, MSPs, security professionals, red teamers, defenders, sales engineers, researchers. Also runs as an [MCP server](docs/mcp.md) for AI tools.
 
 ## Why recon?
 
@@ -50,6 +50,10 @@ Works for Microsoft 365, Google Workspace, or any provider. Useful if you're an 
 | Email security scoring | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
 | SaaS fingerprinting (185+) | ✓ | ✗ | partial | ✗ | ✗ | ✓ |
 | Signal intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Certificate intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
+| Posture analysis | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Delta / change detection | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Recursive domain chaining | ✓ | ✗ | ✗ | partial | ✗ | varies |
 | MCP server for AI agents | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | Extensible (custom YAML) | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 
@@ -71,8 +75,11 @@ recon doctor                              # verify connectivity
 recon northwindtraders.com                # default panel output
 recon northwindtraders.com --json         # structured JSON
 recon northwindtraders.com --md           # markdown report
-recon northwindtraders.com --full         # everything
+recon northwindtraders.com --full         # everything (services + domains + posture)
 recon northwindtraders.com --services     # M365 vs tech stack split
+recon northwindtraders.com --posture      # neutral posture observations
+recon northwindtraders.com --compare prev.json  # delta: what changed since last run
+recon northwindtraders.com --chain --depth 2    # recursive domain discovery
 recon batch domains.txt --json            # batch mode (default 5 concurrent)
 recon batch domains.txt --json -c 10      # batch with 10 concurrent
 recon doctor                              # connectivity check
@@ -89,8 +96,11 @@ Input is normalized automatically — URLs, schemes, `www.` prefixes, paths, and
 | Email security score (0–5) | DMARC + DKIM + SPF + MTA-STS + BIMI |
 | 185+ SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors |
 | Email gateway / SASE / security stack | DNS fingerprints |
-| Signal intelligence | AI adoption, GTM maturity, Zero Trust posture, org size hints |
+| Signal intelligence (26 signals) | Metadata-aware YAML rules with cross-reference conditions |
+| Certificate intelligence | crt.sh metadata: issuance velocity, issuer diversity, cert age |
+| Posture observations | Neutral factual analysis across email, identity, infrastructure |
 | Related domains | CNAME breadcrumbs + certificate transparency (crt.sh) |
+| Delta / change detection | Compare current vs. previous JSON export |
 
 All from public sources. Zero authentication. Results vary by domain.
 
@@ -104,13 +114,15 @@ recon runs as an MCP server for Claude, Cursor, VS Code, Kiro, ChatGPT, or any M
     "recon": {
       "command": "python",
       "args": ["-m", "recon_tool.server"],
-      "autoApprove": ["lookup_tenant"]
+      "autoApprove": ["lookup_tenant", "analyze_posture"]
     }
   }
 }
 ```
 
-Then ask your AI: "Run a recon lookup on northwindtraders.com and summarize the security posture."
+Then ask your AI: "Run a recon lookup on northwindtraders.com and analyze the posture."
+
+Available MCP tools: `lookup_tenant`, `analyze_posture`, `chain_lookup`, `reload_data`.
 
 See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config file locations per client.
 
@@ -119,7 +131,7 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 | Doc | Contents |
 |-----|----------|
 | [Fingerprints](docs/fingerprints.md) | Detection types, custom fingerprints, email security scoring, related domain enrichment |
-| [Signals](docs/signals.md) | 3-layer signal intelligence, all 23 signal rules, custom signals |
+| [Signals](docs/signals.md) | 4-layer signal intelligence, 26 signal rules, metadata conditions, custom signals |
 | [MCP Server](docs/mcp.md) | AI agent integration setup, tools, config locations |
 | [Roadmap](docs/roadmap.md) | What's planned, what's not, and why |
 | [Legal](docs/legal.md) | Disclaimer, accuracy, fictional examples, third-party notice |

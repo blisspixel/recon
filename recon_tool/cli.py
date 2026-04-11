@@ -15,6 +15,7 @@ of the shorthand syntax approach.
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from typing import Any
 
@@ -162,7 +163,7 @@ def lookup(
         False, "--domains", "-d", help="All tenant domains"
     ),
     full: bool = typer.Option(
-        False, "--full", "-f", help="Everything (verbose + services + domains)"
+        False, "--full", "-f", help="Everything (verbose + services + domains + posture)"
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Per-source resolution status"
@@ -173,13 +174,28 @@ def lookup(
     timeout: float = typer.Option(
         60.0, "--timeout", "-t", help="Max seconds for resolution (default: 60)",
     ),
+    posture: bool = typer.Option(
+        False, "--posture", "-p", help="Show posture observations"
+    ),
+    compare: str | None = typer.Option(
+        None, "--compare", help="Compare against previous JSON export"
+    ),
+    chain: bool = typer.Option(
+        False, "--chain", help="Recursively follow related domains"
+    ),
+    depth: int = typer.Option(
+        1, "--depth", help="Chain depth (1-3, requires --chain)"
+    ),
 ) -> None:
     """
     Look up a domain. This is the default command.
 
     [dim]recon pepsi.com is the same as recon lookup pepsi.com[/dim]
     """
-    asyncio.run(_lookup(domain, json_output, markdown, verbose, services, domains, full, sources, timeout))
+    asyncio.run(_lookup(
+        domain, json_output, markdown, verbose, services, domains, full, sources, timeout,
+        show_posture=posture, compare_file=compare, chain_mode=chain, chain_depth=depth,
+    ))
 
 
 @app.command()
@@ -356,6 +372,10 @@ async def _lookup(
     full: bool,
     show_sources: bool,
     timeout: float = 60.0,
+    show_posture: bool = False,
+    compare_file: str | None = None,
+    chain_mode: bool = False,
+    chain_depth: int = 1,
 ) -> None:
     """Async lookup implementation."""
     # Lazy imports: formatter, resolver, validator are imported here (not at module
@@ -363,7 +383,7 @@ async def _lookup(
     # so top-level imports of heavy modules (httpx, dns, yaml) would slow down
     # even `recon --help`. The doctor and batch functions do the same.
     from recon_tool.formatter import (
-        format_tenant_json,
+        format_tenant_dict,
         format_tenant_markdown,
         render_error,
         render_sources_detail,
@@ -381,16 +401,84 @@ async def _lookup(
         show_services = True
         show_domains = True
         verbose = True
+        show_posture = True
+
+    # Mutual exclusion: --chain and --compare cannot be used together
+    if chain_mode and compare_file:
+        render_error("--chain and --compare are mutually exclusive")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    # --depth > 1 requires --chain
+    if chain_depth > 1 and not chain_mode:
+        render_error("--depth requires --chain")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
 
     try:
         validated = validate_domain(domain)
     except ValueError as exc:
         render_error(str(exc))
-        # `from None` suppresses the ValueError chain in the traceback.
-        # The user already sees the error message via render_error();
-        # showing the full traceback for a validation error is noise.
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
+    # ── Compare mode ─────────────────────────────────────────────────
+    if compare_file:
+        from pathlib import Path
+
+        from recon_tool.delta import compute_delta, load_previous
+        from recon_tool.formatter import format_delta_json, render_delta_panel
+
+        try:
+            previous = load_previous(Path(compare_file))
+        except (FileNotFoundError, ValueError) as exc:
+            render_error(str(exc))
+            raise typer.Exit(code=EXIT_VALIDATION) from None
+
+        try:
+            if not json_output and not markdown:
+                import random
+                msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
+                with console.status(msg):
+                    info, results = await resolve_tenant(validated, timeout=timeout)
+            else:
+                info, results = await resolve_tenant(validated, timeout=timeout)
+        except ReconLookupError:
+            render_warning(domain)
+            raise typer.Exit(code=EXIT_NO_DATA) from None
+        except Exception as exc:
+            render_error(str(exc))
+            raise typer.Exit(code=EXIT_INTERNAL) from None
+
+        delta = compute_delta(previous, info)
+
+        if json_output:
+            typer.echo(format_delta_json(delta))
+        else:
+            console.print(render_delta_panel(delta))
+        return
+
+    # ── Chain mode ───────────────────────────────────────────────────
+    if chain_mode:
+        from recon_tool.chain import chain_resolve
+        from recon_tool.formatter import format_chain_json, render_chain_panel
+
+        try:
+            if not json_output and not markdown:
+                import random
+                msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
+                with console.status(msg):
+                    report = await chain_resolve(validated, depth=chain_depth)
+            else:
+                report = await chain_resolve(validated, depth=chain_depth)
+        except Exception as exc:
+            render_error(str(exc))
+            raise typer.Exit(code=EXIT_INTERNAL) from None
+
+        if json_output:
+            typer.echo(format_chain_json(report))
+        else:
+            console.print(render_chain_panel(report))
+        return
+
+    # ── Standard lookup ──────────────────────────────────────────────
     try:
         if not json_output and not markdown:
             import random
@@ -403,12 +491,29 @@ async def _lookup(
         if verbose:
             render_verbose_sources(results)
 
+        # Compute posture observations if requested
+        observations = ()
+        if show_posture:
+            from recon_tool.posture import analyze_posture
+            observations = analyze_posture(info)
+
         if json_output:
-            typer.echo(format_tenant_json(info))
+            from recon_tool.formatter import format_posture_observations
+            tenant_dict = format_tenant_dict(info)
+            if show_posture:
+                tenant_dict["posture"] = format_posture_observations(observations)
+            typer.echo(json.dumps(tenant_dict, indent=2))
             return
 
         if markdown:
-            typer.echo(format_tenant_markdown(info))
+            md = format_tenant_markdown(info)
+            if show_posture and observations:
+                md += "\n## Posture Analysis\n\n"
+                for obs in observations:
+                    indicator = {"high": "●", "medium": "◐", "low": "○"}.get(obs.salience, "○")
+                    md += f"- {indicator} **[{obs.category}]** {obs.statement}\n"
+                md += "\n"
+            typer.echo(md)
             return
 
         console.print(render_tenant_panel(
@@ -419,6 +524,13 @@ async def _lookup(
 
         if show_sources:
             console.print(render_sources_detail(results))
+
+        # Posture panel after main output
+        if show_posture and observations:
+            from recon_tool.formatter import render_posture_panel
+            posture_panel = render_posture_panel(observations)
+            if posture_panel:
+                console.print(posture_panel)
 
     except ReconLookupError:
         render_warning(domain)
