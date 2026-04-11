@@ -49,9 +49,12 @@ class TestHelp:
     def test_lookup_help(self) -> None:
         result = runner.invoke(app, ["lookup", "--help"])
         assert result.exit_code == 0
-        assert "--json" in result.output
-        assert "--md" in result.output
-        assert "--full" in result.output
+        # Strip ANSI escape codes — Rich renders markup in help output
+        import re
+        plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+        assert "--json" in plain
+        assert "--md" in plain
+        assert "--full" in plain
 
     def test_version_flag(self) -> None:
         from recon_tool.cli import version_callback
