@@ -284,6 +284,151 @@ async def lookup_tenant(
 
 @mcp.tool(
     annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def analyze_posture(domain: str) -> str:
+    """Analyze a domain's configuration posture and return neutral observations.
+
+    Returns factual observations about the domain's email security, identity,
+    infrastructure, SaaS footprint, certificate activity, and configuration
+    consistency. Observations are neutral — they describe what is, not what
+    should be.
+
+    Args:
+        domain: A domain name to analyze (e.g., "northwindtraders.com")
+
+    Returns:
+        JSON array of observations, each with category, salience, statement,
+        and related_slugs.
+    """
+    request_id = uuid.uuid4().hex[:12]
+    start_time = time.monotonic()
+
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        _log_structured(
+            logging.WARNING, "validation_failed",
+            request_id=request_id, domain=domain, error=str(exc),
+        )
+        return f"Error: {exc}"
+
+    # Check cache first
+    cached = _cache_get(validated)
+    if cached is not None:
+        info, _results = cached
+        _log_structured(
+            logging.INFO, "cache_hit",
+            request_id=request_id, domain=validated,
+        )
+    else:
+        if not _rate_limit_check(validated):
+            return (
+                f"Rate limited: {domain} was looked up recently. "
+                f"Try again in a few seconds."
+            )
+
+        try:
+            info, results = await resolve_tenant(validated)
+        except ReconLookupError as exc:
+            elapsed = time.monotonic() - start_time
+            _log_structured(
+                logging.INFO, "no_data",
+                request_id=request_id, domain=domain,
+                elapsed_s=round(elapsed, 2), error=exc.message,
+            )
+            return f"No information found for {domain}"
+        except Exception:
+            logger.exception(
+                "Unexpected error looking up %s (request_id=%s)", domain, request_id,
+            )
+            return f"Error looking up {domain}: an internal error occurred"
+
+        _cache_set(validated, info, results)
+        _rate_limit_record(validated)
+
+    from recon_tool.formatter import format_posture_observations
+    from recon_tool.posture import analyze_posture as _analyze_posture
+
+    observations = _analyze_posture(info)
+
+    elapsed = time.monotonic() - start_time
+    _log_structured(
+        logging.INFO, "posture_analyzed",
+        request_id=request_id, domain=domain,
+        observations=len(observations), elapsed_s=round(elapsed, 2),
+    )
+
+    return json_mod.dumps(format_posture_observations(observations), indent=2)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def chain_lookup(domain: str, depth: int = 1) -> str:
+    """Recursively resolve a domain and its related domains.
+
+    Follows CNAME breadcrumbs and certificate transparency discoveries
+    up to the specified depth. Returns intelligence for all discovered domains.
+
+    Args:
+        domain: Starting domain (e.g., "northwindtraders.com")
+        depth: Maximum recursion depth (1-3, default 1)
+
+    Returns:
+        JSON object with total_domains, max_depth_reached, truncated flag,
+        and an array of domain intelligence objects with chain_depth.
+    """
+    request_id = uuid.uuid4().hex[:12]
+    start_time = time.monotonic()
+
+    # Clamp depth
+    depth = max(1, min(depth, 3))
+
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        _log_structured(
+            logging.WARNING, "validation_failed",
+            request_id=request_id, domain=domain, error=str(exc),
+        )
+        return f"Error: {exc}"
+
+    try:
+        from recon_tool.chain import chain_resolve
+        from recon_tool.formatter import format_chain_json
+
+        report = await chain_resolve(validated, depth=depth)
+    except Exception:
+        logger.exception(
+            "Unexpected error in chain lookup for %s (request_id=%s)", domain, request_id,
+        )
+        return f"Error looking up {domain}: an internal error occurred"
+
+    elapsed = time.monotonic() - start_time
+    _log_structured(
+        logging.INFO, "chain_resolved",
+        request_id=request_id, domain=domain,
+        total_domains=len(report.results),
+        max_depth=report.max_depth_reached,
+        truncated=report.truncated,
+        elapsed_s=round(elapsed, 2),
+    )
+
+    return format_chain_json(report)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
         readOnlyHint=False,
         destructiveHint=False,
         idempotentHint=True,
@@ -298,20 +443,30 @@ async def reload_data() -> str:
     the new definitions.
     """
     from recon_tool.fingerprints import reload_fingerprints
+    from recon_tool.posture import reload_posture
     from recon_tool.signals import reload_signals
 
     reload_fingerprints()
     reload_signals()
+    reload_posture()
     _cache_clear()
 
     from recon_tool.fingerprints import load_fingerprints
+    from recon_tool.posture import load_posture_rules
     from recon_tool.signals import load_signals
 
     fp_count = len(load_fingerprints())
     sig_count = len(load_signals())
+    posture_count = len(load_posture_rules())
 
-    _log_structured(logging.INFO, "data_reloaded", fingerprints=fp_count, signals=sig_count)
-    return f"Reloaded: {fp_count} fingerprints, {sig_count} signals. Cache cleared."
+    _log_structured(
+        logging.INFO, "data_reloaded",
+        fingerprints=fp_count, signals=sig_count, posture_rules=posture_count,
+    )
+    return (
+        f"Reloaded: {fp_count} fingerprints, {sig_count} signals, "
+        f"{posture_count} posture rules. Cache cleared."
+    )
 
 
 @mcp.prompt()

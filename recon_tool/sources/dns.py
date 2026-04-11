@@ -12,6 +12,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from collections import Counter
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import dns.asyncresolver
@@ -45,7 +47,7 @@ from recon_tool.fingerprints import (
 from recon_tool.fingerprints import (
     get_m365_slugs as _get_m365_slugs,
 )
-from recon_tool.models import SourceResult
+from recon_tool.models import CertSummary, SourceResult
 
 logger = logging.getLogger("recon")
 
@@ -159,7 +161,7 @@ class _DetectionCtx:
 
     __slots__ = (
         "services", "slugs", "m365", "dmarc_policy", "spf_include_count",
-        "_m365_slugs", "related_domains", "crtsh_degraded",
+        "_m365_slugs", "related_domains", "crtsh_degraded", "cert_summary",
     )
 
     def __init__(self) -> None:
@@ -171,6 +173,7 @@ class _DetectionCtx:
         self._m365_slugs: frozenset[str] = _get_m365_slugs()
         self.related_domains: set[str] = set()
         self.crtsh_degraded: bool = False
+        self.cert_summary: CertSummary | None = None
 
     def add(self, svc_name: str, slug: str | None = None) -> None:
         """Register a detected service, optionally with its slug.
@@ -672,6 +675,58 @@ async def _detect_crtsh(ctx: _DetectionCtx, domain: str) -> None:
     logger.debug("crt.sh found %d subdomains for %s (kept %d)", len(seen), domain, len(prioritized))
     ctx.related_domains.update(prioritized)
 
+    # ── Second pass: extract certificate metadata for CertSummary ───
+    # Reuses the same `data` list already fetched — no additional HTTP requests.
+    now = datetime.now(timezone.utc)
+    issuer_ca_ids: set[int] = set()
+    issuer_name_counter: Counter[str] = Counter()
+    not_before_dates: list[datetime] = []
+    cert_meta_count = 0
+
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        # All four metadata fields must be present to count
+        issuer_ca_id = entry.get("issuer_ca_id")
+        issuer_name = entry.get("issuer_name")
+        not_before_raw = entry.get("not_before")
+        not_after_raw = entry.get("not_after")
+        if issuer_ca_id is None or issuer_name is None or not_before_raw is None or not_after_raw is None:
+            continue
+        if not isinstance(not_before_raw, str) or not isinstance(not_after_raw, str):
+            continue
+        try:
+            not_before_dt = datetime.fromisoformat(not_before_raw)
+            # Validate not_after is also parseable (required field)
+            datetime.fromisoformat(not_after_raw)
+        except (ValueError, TypeError):
+            continue
+
+        cert_meta_count += 1
+        issuer_ca_ids.add(issuer_ca_id)
+        issuer_name_counter[str(issuer_name)] += 1
+        not_before_dates.append(not_before_dt)
+
+    if cert_meta_count > 0 and not_before_dates:
+        # Make all dates offset-aware for comparison with `now`
+        aware_dates = []
+        for dt in not_before_dates:
+            aware_dt = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+            aware_dates.append(aware_dt)
+
+        newest_dt = max(aware_dates)
+        oldest_dt = min(aware_dates)
+        ninety_days_ago = now - timedelta(days=90)
+
+        ctx.cert_summary = CertSummary(
+            cert_count=cert_meta_count,
+            issuer_diversity=len(issuer_ca_ids),
+            issuance_velocity=sum(1 for dt in aware_dates if dt >= ninety_days_ago),
+            newest_cert_age_days=max((now - newest_dt).days, 0),
+            oldest_cert_age_days=max((now - oldest_dt).days, 0),
+            top_issuers=tuple(name for name, _ in issuer_name_counter.most_common(3)),
+        )
+
 
 # ── Public lightweight lookup for subdomain enrichment ─────────────────
 
@@ -732,6 +787,7 @@ class DNSSource:
                 dmarc_policy=ctx.dmarc_policy,
                 related_domains=tuple(sorted(ctx.related_domains)),
                 crtsh_degraded=ctx.crtsh_degraded,
+                cert_summary=ctx.cert_summary,
             )
 
         return SourceResult(
@@ -740,6 +796,7 @@ class DNSSource:
             dmarc_policy=ctx.dmarc_policy,
             related_domains=tuple(sorted(ctx.related_domains)),
             crtsh_degraded=ctx.crtsh_degraded,
+            cert_summary=ctx.cert_summary,
         )
 
     @staticmethod

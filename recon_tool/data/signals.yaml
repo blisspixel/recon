@@ -135,6 +135,13 @@ signals:
     requires:
       any: [proofpoint, mimecast, barracuda, trendmicro, cisco-ironport, cisco-email, symantec, trellix]
     min_matches: 1
+    metadata:
+      - field: dmarc_policy
+        operator: neq
+        value: reject
+      - field: dmarc_policy
+        operator: neq
+        value: quarantine
 
   - name: Heavy Outbound Stack
     category: Composite
@@ -207,3 +214,41 @@ signals:
     requires:
       any: [gcp-dns, google-trust, google-workspace, google-cse]
     min_matches: 2
+
+  # ── Layer 4: Metadata-aware signals ───────────────────────────────────
+  # These combine slug detection with metadata conditions (DMARC policy,
+  # SPF complexity, email security score, certificate issuance velocity)
+  # for richer cross-reference intelligence.
+
+  - name: Federated Identity with Complex Email Delegation
+    category: Consistency
+    confidence: medium
+    description: Federated identity provider detected alongside high SPF complexity — multiple email sending services delegated through federated auth
+    requires:
+      any: [okta, auth0, onelogin, duo, ping-identity]
+    min_matches: 1
+    metadata:
+      - field: spf_include_count
+        operator: gte
+        value: 5
+
+  - name: Active Email Sending with Minimal Security
+    category: Consistency
+    confidence: high
+    description: Email sending services detected with email security score at or below 1 — outbound email lacks standard authentication controls
+    requires:
+      any: [sendgrid, mailgun, postmark, sparkpost, brevo, mailchimp, aws-ses]
+    min_matches: 1
+    metadata:
+      - field: email_security_score
+        operator: lte
+        value: 1
+
+  - name: High Certificate Issuance Activity
+    category: Infrastructure
+    confidence: medium
+    description: 20+ certificates issued in the last 90 days — active infrastructure provisioning or automation
+    metadata:
+      - field: issuance_velocity
+        operator: gte
+        value: 20

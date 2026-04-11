@@ -1,0 +1,184 @@
+# posture.yaml — neutral observation rules for posture analysis
+# Version: 2026-04-11
+# Observations are factual statements about domain configuration.
+# They do NOT prescribe action, assign blame, or frame findings as attacks/defenses.
+
+observations:
+
+  # ── Email posture ─────────────────────────────────────────────────────
+
+  - name: gateway_without_dmarc_enforcement
+    category: email
+    salience: high
+    condition:
+      slugs_any: [proofpoint, mimecast, barracuda, trendmicro, cisco-ironport, cisco-email, symantec, trellix]
+      slugs_min: 1
+      metadata:
+        - field: dmarc_policy
+          operator: neq
+          value: reject
+        - field: dmarc_policy
+          operator: neq
+          value: quarantine
+    template: "Email gateway ({matched_slugs}) is active while DMARC policy is not set to reject or quarantine"
+
+  - name: no_dmarc_record
+    category: email
+    salience: high
+    condition:
+      metadata:
+        - field: dmarc_policy
+          operator: eq
+          value: "none"
+    template: "DMARC policy is set to none — email sender verification is not enforcing at the domain level"
+
+  - name: strong_email_security
+    category: email
+    salience: low
+    condition:
+      metadata:
+        - field: email_security_score
+          operator: gte
+          value: 4
+    template: "Email security score is {email_security_score}/5 — DMARC, DKIM, SPF, and additional controls are in place"
+
+  - name: weak_email_security
+    category: email
+    salience: high
+    condition:
+      metadata:
+        - field: email_security_score
+          operator: lte
+          value: 1
+    template: "Email security score is {email_security_score}/5 — minimal email authentication controls detected"
+
+  - name: heavy_outbound_email
+    category: email
+    salience: medium
+    condition:
+      slugs_any: [sendgrid, mailgun, postmark, sparkpost, brevo, mailchimp, aws-ses]
+      slugs_min: 2
+    template: "Multiple email sending services detected ({matched_slugs}) — high-volume outbound email operation"
+
+  # ── Identity posture ──────────────────────────────────────────────────
+
+  - name: federated_identity
+    category: identity
+    salience: medium
+    condition:
+      metadata:
+        - field: auth_type
+          operator: eq
+          value: Federated
+    template: "Authentication is federated — identity is managed by an external provider"
+
+  - name: managed_identity
+    category: identity
+    salience: low
+    condition:
+      metadata:
+        - field: auth_type
+          operator: eq
+          value: Managed
+    template: "Authentication is managed directly by the email provider — no external identity federation detected"
+
+  - name: identity_provider_detected
+    category: identity
+    salience: medium
+    condition:
+      slugs_any: [okta, auth0, onelogin, duo, ping-identity, cyberark]
+      slugs_min: 1
+    template: "Identity provider detected ({matched_slugs})"
+
+  # ── Infrastructure posture ────────────────────────────────────────────
+
+  - name: multi_cloud_infrastructure
+    category: infrastructure
+    salience: medium
+    condition:
+      slugs_any: [aws-route53, aws-cloudfront, aws-elb, aws-s3, azure-dns, azure-cdn, azure-appservice, gcp-dns, gcp-app, cloudflare, akamai, fastly]
+      slugs_min: 3
+    template: "Infrastructure spans multiple cloud providers ({matched_slugs})"
+
+  - name: single_dns_provider
+    category: infrastructure
+    salience: low
+    condition:
+      slugs_any: [aws-route53, azure-dns, gcp-dns, cloudflare]
+      slugs_min: 1
+      slugs_max: 1
+    template: "DNS is managed by a single provider ({matched_slugs})"
+
+  # ── SaaS footprint ───────────────────────────────────────────────────
+
+  - name: broad_saas_adoption
+    category: saas_footprint
+    salience: medium
+    condition:
+      slugs_any: [slack, notion, miro, atlassian, figma, dropbox, clickup, asana, monday, loom, canva, zoom, airtable, github, gitlab, vercel, netlify, salesforce, hubspot, zendesk, intercom, datadog, newrelic]
+      slugs_min: 6
+    template: "Broad SaaS adoption detected — {matched_count} services across collaboration, dev, and business tools"
+
+  - name: ai_tooling_detected
+    category: saas_footprint
+    salience: medium
+    condition:
+      slugs_any: [openai, anthropic, mistral, perplexity]
+      slugs_min: 1
+    template: "AI/LLM tooling detected ({matched_slugs})"
+
+  - name: security_tooling_detected
+    category: saas_footprint
+    salience: low
+    condition:
+      slugs_any: [crowdstrike, sentinelone, sophos, zscaler, netskope, paloalto, cato, wiz, knowbe4]
+      slugs_min: 2
+    template: "Multiple security tools detected ({matched_slugs})"
+
+  # ── Certificate posture ───────────────────────────────────────────────
+
+  - name: high_cert_issuance
+    category: certificate
+    salience: high
+    condition:
+      metadata:
+        - field: issuance_velocity
+          operator: gte
+          value: 20
+    template: "High certificate issuance activity — {issuance_velocity} certificates issued in the last 90 days"
+
+  - name: low_cert_activity
+    category: certificate
+    salience: low
+    condition:
+      metadata:
+        - field: issuance_velocity
+          operator: lte
+          value: 2
+    template: "Low certificate issuance activity — {issuance_velocity} certificates issued in the last 90 days"
+
+  # ── Consistency observations ──────────────────────────────────────────
+
+  - name: dual_email_provider
+    category: consistency
+    salience: high
+    condition:
+      slugs_any: [microsoft365, google-workspace]
+      slugs_min: 2
+    template: "Both Microsoft 365 and Google Workspace detected — possible migration in progress or hybrid configuration"
+
+  - name: file_sharing_sprawl
+    category: consistency
+    salience: medium
+    condition:
+      slugs_any: [dropbox, box, egnyte]
+      slugs_min: 2
+    template: "Multiple enterprise file-sharing platforms detected ({matched_slugs}) — possible duplication or migration"
+
+  - name: consumer_saas_sprawl
+    category: consistency
+    salience: medium
+    condition:
+      slugs_any: [canva, dropbox, mailchimp, zoom, airtable, notion, monday, clickup, loom]
+      slugs_min: 3
+    template: "Multiple consumer-grade SaaS tools detected ({matched_slugs}) alongside enterprise infrastructure"

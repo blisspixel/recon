@@ -4,16 +4,19 @@ The guiding principle: stay passive, stay zero-creds, stay focused on signal int
 
 ## Deepen the intelligence
 
+- ~~Certificate metadata extraction — extract issuer diversity, issuance velocity, cert age, and top issuers from the crt.sh JSON response already being fetched~~ ✓ Done
+- ~~Metadata-aware signal matching — extend the YAML signal engine to match on DMARC policy, auth type, email security score, SPF complexity, and issuance velocity~~ ✓ Done (26 signals, 4 layers)
+- ~~Neutral posture analysis — factual observations about domain configuration without attack/defense framing, driven by YAML rules~~ ✓ Done (`--posture`, `analyze_posture` MCP tool)
+- ~~Delta / change detection — compare current lookup against a previous JSON export~~ ✓ Done (`--compare`)
+- ~~Recursive domain chaining — follow related domains via CNAME/CT breadcrumbs up to configurable depth~~ ✓ Done (`--chain --depth N`, `chain_lookup` MCP tool)
 - Google Workspace parity — M365 gets tenant ID, company name, auth type, and region from public endpoints. Google Workspace currently only gets MX/SPF detection. Google has public discovery endpoints that could surface org name, directory info, and workspace configuration without credentials. This is the biggest coverage gap.
 - Expanded org-size and maturity heuristics — better bucketing (SMB / mid-market / enterprise) from SPF complexity, domain count, and service mix
-- Smarter CNAME/DKIM following — deeper passive subdomain discovery from public records without active scanning
-- Migration and risk signal refinement — detect patterns like recent Google → M365 shifts, legacy auth exposure, or security posture gaps that suggest conversation starters
 
 ## Better output
 
 - `--html` output — self-contained single-file report for sharing in email or proposals
 - `--csv` output for batch mode — MSPs and sales engineers live in spreadsheets
-- Delta / change reports — compare current scan to a previous `--json` export and surface what changed
+- ~~Delta / change reports — compare current scan to a previous `--json` export and surface what changed~~ ✓ Done (`--compare`)
 - `recon doctor --fix` — auto-scaffold `~/.recon/fingerprints.yaml` and `signals.yaml` templates with inline comments
 - Real-world screenshots in README — show actual (non-fictional) output for a well-known domain so people can see what the tool does before installing
 
@@ -30,7 +33,8 @@ The MCP server already works and follows good practices (outcome-oriented tools,
 
 - llms.txt — when recon has a docs site or PyPI page, publish an `llms.txt` at the root so AI crawlers and agents can discover what the tool does without parsing HTML.
 - Structured output contracts — stable, versioned JSON schema for `--json` output so agents can rely on the shape without breaking when new fields are added. Treat `--json` like an API contract with semver guarantees.
-- Richer MCP toolset — `compare_tenants(domain_a, domain_b)` that returns a structured diff, `suggest_security_wins(domain)` that highlights the lowest-hanging email security improvements. Keep tools outcome-oriented (one call, one useful answer) per [MCP best practices](https://www.philschmid.de/mcp-best-practices).
+- ~~Richer MCP toolset~~ ✓ Done — `analyze_posture(domain)` returns neutral observations, `chain_lookup(domain, depth)` recursively maps domain ecosystems. Both outcome-oriented (one call, one useful answer).
+- `compare_tenants(domain_a, domain_b)` — structured diff between two domains' intelligence. Next MCP tool to add.
 - A2A Agent Card — publish a `/.well-known/agent.json` so recon can participate in multi-agent workflows via Google's [Agent-to-Agent protocol](https://github.com/google/A2A). An orchestrator agent could discover recon, delegate a domain lookup, and pass the structured result to a proposal-writing agent or CRM-update agent. recon stays focused on intelligence; downstream agents handle actions.
 - Batch-friendly streaming — for large domain lists, emit results as they complete (JSONL / newline-delimited JSON) so agents and pipelines can process incrementally instead of waiting for the entire batch.
 - OpenClaw / open agent compatibility — as self-hosted AI agent platforms (OpenClaw, etc.) mature, ensure recon's MCP server works cleanly as a tool provider in those ecosystems. This mostly means staying standards-compliant and keeping the tool interface simple.

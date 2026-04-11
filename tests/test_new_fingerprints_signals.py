@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from recon_tool.fingerprints import load_fingerprints
+from recon_tool.models import SignalContext
 from recon_tool.signals import evaluate_signals, load_signals
+
+
+def _ctx(slugs: set[str]) -> SignalContext:
+    return SignalContext(detected_slugs=frozenset(slugs))
 
 
 class TestNewFingerprints:
@@ -25,37 +30,37 @@ class TestNewSignals:
         assert len(sigs) >= 19  # was 16, added 3
 
     def test_observability_sre(self):
-        results = evaluate_signals({"datadog", "pagerduty"})
+        results = evaluate_signals(_ctx({"datadog", "pagerduty"}))
         names = {r.name for r in results}
         assert "Observability & SRE" in names
 
     def test_observability_sre_needs_two(self):
-        results = evaluate_signals({"datadog"})
+        results = evaluate_signals(_ctx({"datadog"}))
         names = {r.name for r in results}
         assert "Observability & SRE" not in names
 
     def test_ai_security_posture(self):
-        results = evaluate_signals({"openai", "lakera", "zscaler"})
+        results = evaluate_signals(_ctx({"openai", "lakera", "zscaler"}))
         names = {r.name for r in results}
         assert "AI Security Posture" in names
 
     def test_ai_security_posture_needs_three(self):
-        results = evaluate_signals({"openai", "lakera"})
+        results = evaluate_signals(_ctx({"openai", "lakera"}))
         names = {r.name for r in results}
         assert "AI Security Posture" not in names
 
     def test_file_collaboration_sprawl(self):
-        results = evaluate_signals({"dropbox", "box"})
+        results = evaluate_signals(_ctx({"dropbox", "box"}))
         names = {r.name for r in results}
         assert "File Collaboration Sprawl" in names
 
     def test_file_collaboration_sprawl_needs_two(self):
-        results = evaluate_signals({"dropbox"})
+        results = evaluate_signals(_ctx({"dropbox"}))
         names = {r.name for r in results}
         assert "File Collaboration Sprawl" not in names
 
     def test_zero_trust_includes_new_slugs(self):
         """Zero Trust should fire with new security slugs."""
-        results = evaluate_signals({"ping-identity", "cato", "cyberark"})
+        results = evaluate_signals(_ctx({"ping-identity", "cato", "cyberark"}))
         names = {r.name for r in results}
         assert "Zero Trust Posture" in names

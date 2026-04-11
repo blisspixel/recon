@@ -24,6 +24,8 @@ from typing import Any
 
 import yaml
 
+from recon_tool.models import MetadataCondition, SignalContext
+
 logger = logging.getLogger("recon")
 
 __all__ = [
@@ -49,12 +51,43 @@ class Signal:
     description: str
     candidates: tuple[str, ...]
     min_matches: int
+    metadata: tuple[MetadataCondition, ...] = ()
+
+
+_VALID_METADATA_FIELDS = frozenset({
+    "dmarc_policy", "auth_type", "email_security_score",
+    "spf_include_count", "issuance_velocity",
+})
+_VALID_OPERATORS = frozenset({"eq", "neq", "gte", "lte"})
+
+
+def _parse_metadata_block(name: str, raw_metadata: list[dict[str, Any]]) -> tuple[MetadataCondition, ...] | None:
+    """Parse and validate a metadata block. Returns None if any entry is invalid."""
+    conditions: list[MetadataCondition] = []
+    for entry in raw_metadata:
+        if not isinstance(entry, dict):
+            logger.warning("Signal %r has non-dict metadata entry — skipped entire signal", name)
+            return None
+        field = entry.get("field")
+        operator = entry.get("operator")
+        value = entry.get("value")
+        if field not in _VALID_METADATA_FIELDS:
+            logger.warning("Signal %r has invalid metadata field %r — skipped entire signal", name, field)
+            return None
+        if operator not in _VALID_OPERATORS:
+            logger.warning("Signal %r has invalid metadata operator %r — skipped entire signal", name, operator)
+            return None
+        if value is None:
+            logger.warning("Signal %r has missing metadata value — skipped entire signal", name)
+            return None
+        conditions.append(MetadataCondition(field=field, operator=operator, value=value))
+    return tuple(conditions)
 
 
 def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | None:
     """Validate a single signal definition and return a frozen Signal, or None.
 
-    Required: name (str), requires.any (non-empty list).
+    Required: name (str), and at least one of requires.any or metadata.
     Optional: category, confidence, min_matches, description.
     Logs warnings and returns None for invalid entries.
     Does NOT mutate the input dict.
@@ -66,25 +99,54 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
     if not name or not isinstance(name, str):
         logger.warning("Signal at index %d missing 'name' — skipped", index)
         return None
+
+    # Parse optional metadata block
+    metadata_conditions: tuple[MetadataCondition, ...] = ()
+    raw_metadata = signal.get("metadata")
+    if raw_metadata is not None:
+        if not isinstance(raw_metadata, list) or not raw_metadata:
+            logger.warning("Signal %r has invalid 'metadata' block — skipped", name)
+            return None
+        parsed = _parse_metadata_block(name, raw_metadata)
+        if parsed is None:
+            return None
+        metadata_conditions = parsed
+
+    # Parse optional requires block
     requires = signal.get("requires")
-    if not isinstance(requires, dict):
-        logger.warning("Signal %r missing 'requires' dict — skipped", name)
+    candidates: tuple[str, ...] = ()
+    min_matches = 0
+
+    if requires is not None:
+        if not isinstance(requires, dict):
+            logger.warning("Signal %r has invalid 'requires' — skipped", name)
+            return None
+        any_list = requires.get("any")
+        if isinstance(any_list, list) and any_list:
+            candidates = tuple(any_list)
+            min_matches = signal.get("min_matches", 1)
+            if not isinstance(min_matches, int) or min_matches < 1:
+                logger.warning("Signal %r has invalid min_matches %r — defaulting to 1", name, min_matches)
+                min_matches = 1
+        elif metadata_conditions:
+            # requires block present but no valid any list — OK if metadata present
+            pass
+        else:
+            logger.warning("Signal %r has empty or missing 'requires.any' and no metadata — skipped", name)
+            return None
+    elif not metadata_conditions:
+        # No requires and no metadata — skip
+        logger.warning("Signal %r has neither 'requires' nor 'metadata' — skipped", name)
         return None
-    candidates = requires.get("any")
-    if not isinstance(candidates, list) or not candidates:
-        logger.warning("Signal %r has empty or missing 'requires.any' — skipped", name)
-        return None
-    min_matches = signal.get("min_matches", 1)
-    if not isinstance(min_matches, int) or min_matches < 1:
-        logger.warning("Signal %r has invalid min_matches %r — defaulting to 1", name, min_matches)
-        min_matches = 1
+
     return Signal(
         name=name,
         category=signal.get("category", ""),
         confidence=signal.get("confidence", "medium"),
         description=signal.get("description", ""),
-        candidates=tuple(candidates),
+        candidates=candidates,
         min_matches=min_matches,
+        metadata=metadata_conditions,
     )
 
 
@@ -152,34 +214,65 @@ class SignalMatch:
     description: str = ""
 
 
+def _evaluate_metadata_condition(condition: MetadataCondition, context: SignalContext) -> bool:
+    """Evaluate a single metadata condition against the context."""
+    field_value = getattr(context, condition.field, None)
+
+    op = condition.operator
+    target = condition.value
+
+    # neq with None field → True (field doesn't exist, so it's not equal to target)
+    if field_value is None:
+        return op == "neq"
+
+    # For numeric operators, try numeric comparison
+    if op in ("gte", "lte"):
+        try:
+            numeric_field = int(field_value) if not isinstance(field_value, int) else field_value
+            numeric_target = int(target) if not isinstance(target, int) else target
+            if op == "gte":
+                return numeric_field >= numeric_target
+            return numeric_field <= numeric_target
+        except (ValueError, TypeError):
+            return False
+
+    # String comparison for eq/neq
+    str_field = str(field_value).lower()
+    str_target = str(target).lower()
+    if op == "eq":
+        return str_field == str_target
+    if op == "neq":
+        return str_field != str_target
+    return False
+
+
 def evaluate_signals(
-    detected_slugs: set[str],
-    dmarc_policy: str | None = None,
+    context: SignalContext,
 ) -> list[SignalMatch]:
-    """Evaluate which signals fire based on detected fingerprint slugs.
+    """Evaluate which signals fire based on detected fingerprint slugs and metadata.
 
     Returns list of frozen SignalMatch dataclasses with metadata, matched slugs,
     and optional description.
 
-    The dmarc_policy parameter enables cross-signal consistency checks
-    that combine slug-based detection with non-slug context (e.g.,
-    "gateway deployed but DMARC not enforcing").
+    Signals can match on slug presence (requires.any), metadata conditions, or both.
+    When both are present, the signal fires only if both slug threshold AND all
+    metadata conditions are satisfied.
     """
     results: list[SignalMatch] = []
     for signal in load_signals():
-        matched = [slug for slug in signal.candidates if slug in detected_slugs]
+        # Check slug matches (if signal has candidates)
+        matched = [slug for slug in signal.candidates if slug in context.detected_slugs]
+        slug_satisfied = len(matched) >= signal.min_matches
 
-        if len(matched) >= signal.min_matches:
-            # Cross-signal consistency check: "Gateway Without DMARC Enforcement"
-            # fires only if a gateway is present AND dmarc is not enforcing.
-            # This can't be expressed in pure YAML slug matching, so we filter here.
-            if (
-                signal.category == "Consistency"
-                and "DMARC" in signal.name
-                and dmarc_policy in ("reject", "quarantine")
-            ):
-                continue  # DMARC is enforcing — no inconsistency
+        # Check metadata conditions (if signal has any)
+        metadata_satisfied = all(
+            _evaluate_metadata_condition(cond, context)
+            for cond in signal.metadata
+        ) if signal.metadata else True
 
+        # Signal fires only if BOTH slug and metadata conditions are met
+        # For metadata-only signals (no candidates), slug_satisfied is True (min_matches=0)
+        if slug_satisfied and metadata_satisfied:
             results.append(SignalMatch(
                 name=signal.name,
                 category=signal.category,

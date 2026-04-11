@@ -4,8 +4,15 @@ from dataclasses import dataclass
 from enum import Enum
 
 __all__ = [
+    "CertSummary",
+    "ChainReport",
+    "ChainResult",
     "ConfidenceLevel",
+    "DeltaReport",
+    "MetadataCondition",
+    "Observation",
     "ReconLookupError",
+    "SignalContext",
     "SourceResult",
     "TenantInfo",
 ]
@@ -17,6 +24,49 @@ class ConfidenceLevel(str, Enum):
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
+
+
+@dataclass(frozen=True)
+class CertSummary:
+    """Certificate transparency summary from crt.sh metadata."""
+
+    cert_count: int
+    issuer_diversity: int
+    issuance_velocity: int          # certs issued in last 90 days
+    newest_cert_age_days: int
+    oldest_cert_age_days: int
+    top_issuers: tuple[str, ...]    # up to 3 most frequent issuer_name values
+
+
+@dataclass(frozen=True)
+class MetadataCondition:
+    """A single metadata condition for signal evaluation."""
+
+    field: str       # dmarc_policy, auth_type, email_security_score, spf_include_count, issuance_velocity
+    operator: str    # eq, neq, gte, lte
+    value: str | int
+
+
+@dataclass(frozen=True)
+class SignalContext:
+    """All metadata available for signal evaluation."""
+
+    detected_slugs: frozenset[str]
+    dmarc_policy: str | None = None
+    auth_type: str | None = None
+    email_security_score: int | None = None
+    spf_include_count: int | None = None
+    issuance_velocity: int | None = None
+
+
+@dataclass(frozen=True)
+class Observation:
+    """A neutral factual observation about a domain's configuration."""
+
+    category: str        # identity, email, infrastructure, saas_footprint, certificate, consistency
+    salience: str        # high, medium, low
+    statement: str
+    related_slugs: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -43,6 +93,8 @@ class SourceResult:
 
     # True when crt.sh was unreachable — signals partial subdomain coverage
     crtsh_degraded: bool = False
+
+    cert_summary: CertSummary | None = None
 
     @property
     def is_success(self) -> bool:
@@ -86,6 +138,56 @@ class TenantInfo:
     related_domains: tuple[str, ...] = () # Domains inferred from CNAME targets
     insights: tuple[str, ...] = ()        # Derived intelligence signals
     crtsh_degraded: bool = False          # True when crt.sh was unreachable
+    cert_summary: CertSummary | None = None
+
+
+@dataclass(frozen=True)
+class DeltaReport:
+    """Structured diff between two domain intelligence snapshots."""
+
+    domain: str
+    added_services: tuple[str, ...]
+    removed_services: tuple[str, ...]
+    added_slugs: tuple[str, ...]
+    removed_slugs: tuple[str, ...]
+    added_signals: tuple[str, ...]
+    removed_signals: tuple[str, ...]
+    changed_auth_type: tuple[str | None, str | None] | None = None
+    changed_dmarc_policy: tuple[str | None, str | None] | None = None
+    changed_email_security_score: tuple[int | None, int | None] | None = None
+    changed_confidence: tuple[str, str] | None = None
+    changed_domain_count: tuple[int, int] | None = None
+
+    @property
+    def has_changes(self) -> bool:
+        return bool(
+            self.added_services or self.removed_services
+            or self.added_slugs or self.removed_slugs
+            or self.added_signals or self.removed_signals
+            or self.changed_auth_type is not None
+            or self.changed_dmarc_policy is not None
+            or self.changed_email_security_score is not None
+            or self.changed_confidence is not None
+            or self.changed_domain_count is not None
+        )
+
+
+@dataclass(frozen=True)
+class ChainResult:
+    """A single domain's intelligence within a chain resolution."""
+
+    domain: str
+    info: TenantInfo
+    chain_depth: int
+
+
+@dataclass(frozen=True)
+class ChainReport:
+    """Result of recursive domain chain resolution."""
+
+    results: tuple[ChainResult, ...]
+    max_depth_reached: int
+    truncated: bool
 
 
 @dataclass

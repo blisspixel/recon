@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
+from recon_tool.constants import (
+    SVC_BIMI,
+    SVC_DKIM,
+    SVC_DKIM_EXCHANGE,
+    SVC_DMARC,
+    SVC_MTA_STS,
+    SVC_SPF_STRICT,
+)
 from recon_tool.insights import generate_insights
 from recon_tool.models import (
+    CertSummary,
     ConfidenceLevel,
     ReconLookupError,
+    SignalContext,
     SourceResult,
     TenantInfo,
 )
@@ -24,6 +34,9 @@ def build_insights_with_signals(
     auth_type: str | None,
     dmarc_policy: str | None,
     domain_count: int,
+    email_security_score: int | None = None,
+    spf_include_count: int | None = None,
+    issuance_velocity: int | None = None,
 ) -> list[str]:
     """Generate insights and append signal intelligence.
 
@@ -32,7 +45,15 @@ def build_insights_with_signals(
     formatting pipeline.
     """
     insights = generate_insights(services, slugs, auth_type, dmarc_policy, domain_count)
-    active_signals = evaluate_signals(slugs, dmarc_policy=dmarc_policy)
+    context = SignalContext(
+        detected_slugs=frozenset(slugs),
+        dmarc_policy=dmarc_policy,
+        auth_type=auth_type,
+        email_security_score=email_security_score,
+        spf_include_count=spf_include_count,
+        issuance_velocity=issuance_velocity,
+    )
+    active_signals = evaluate_signals(context)
     for sig in active_signals:
         matched_names = ", ".join(sig.matched)
         insights.append(f"{sig.name}: {matched_names}")
@@ -165,8 +186,39 @@ def merge_results(
     domain_count = len(all_domains)
     tenant_domains = tuple(sorted(all_domains))
 
+    # Compute email_security_score: count presence of DMARC, any DKIM, SPF strict, MTA-STS, BIMI (0-5)
+    _score_services = {SVC_DMARC, SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI}
+    email_security_score = min(sum(1 for svc in all_services if svc in _score_services), 5)
+
+    # Extract spf_include_count from services like "SPF complexity: N includes"
+    spf_include_count: int | None = None
+    import contextlib
+    for svc in all_services:
+        if svc.startswith("SPF complexity:"):
+            with contextlib.suppress(ValueError, IndexError):
+                spf_include_count = int(svc.split(":")[1].strip().split()[0])
+            break
+
+    # Extract issuance_velocity from cert_summary if available
+    issuance_velocity: int | None = None
+
+    # Propagate first non-None cert_summary from any source
+    cert_summary: CertSummary | None = None
+    for result in results:
+        if result.cert_summary is not None:
+            cert_summary = result.cert_summary
+            break
+
+    if cert_summary is not None:
+        issuance_velocity = cert_summary.issuance_velocity
+
     # Build insights list, then append signal intelligence.
-    insights = build_insights_with_signals(all_services, all_slugs, auth_type, dmarc_policy, domain_count)
+    insights = build_insights_with_signals(
+        all_services, all_slugs, auth_type, dmarc_policy, domain_count,
+        email_security_score=email_security_score,
+        spf_include_count=spf_include_count,
+        issuance_velocity=issuance_velocity,
+    )
 
     # Surface conflicting tenant IDs — this is high-value intel that explains
     # why confidence is LOW and may indicate a misconfigured or transitioning tenant.
@@ -194,4 +246,5 @@ def merge_results(
         related_domains=tuple(sorted(all_related)),
         insights=tuple(insights),
         crtsh_degraded=crtsh_degraded,
+        cert_summary=cert_summary,
     )
