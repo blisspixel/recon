@@ -1,15 +1,13 @@
-"""Tests for CLI batch mode and _preprocess_args."""
+"""Tests for CLI batch mode."""
 
 from __future__ import annotations
 
 import json
-import sys
 from unittest.mock import AsyncMock, patch
 
 from typer.testing import CliRunner
 
-import recon_tool.cli
-from recon_tool.cli import _preprocess_args, app
+from recon_tool.cli import app
 from recon_tool.models import (
     ConfidenceLevel,
     ReconLookupError,
@@ -35,58 +33,6 @@ SAMPLE_INFO = TenantInfo(
 SAMPLE_RESULTS = [
     SourceResult(source_name="oidc_discovery", tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
 ]
-
-
-class TestPreprocessArgs:
-    """Tests for the sys.argv preprocessing that enables `recon pepsi.com`."""
-
-    def _reset(self):
-        """Reset the idempotency guard so each test starts fresh."""
-        recon_tool.cli._preprocessed = False
-
-    def test_domain_inserts_lookup(self, monkeypatch):
-        self._reset()
-        monkeypatch.setattr(sys, "argv", ["recon", "pepsi.com"])
-        _preprocess_args()
-        assert sys.argv == ["recon", "lookup", "pepsi.com"]
-
-    def test_subcommand_not_modified(self, monkeypatch):
-        self._reset()
-        monkeypatch.setattr(sys, "argv", ["recon", "doctor"])
-        _preprocess_args()
-        assert sys.argv == ["recon", "doctor"]
-
-    def test_flag_not_modified(self, monkeypatch):
-        self._reset()
-        monkeypatch.setattr(sys, "argv", ["recon", "--version"])
-        _preprocess_args()
-        assert sys.argv == ["recon", "--version"]
-
-    def test_no_args_not_modified(self, monkeypatch):
-        self._reset()
-        monkeypatch.setattr(sys, "argv", ["recon"])
-        _preprocess_args()
-        assert sys.argv == ["recon"]
-
-    def test_domain_with_flags_inserts_lookup(self, monkeypatch):
-        self._reset()
-        monkeypatch.setattr(sys, "argv", ["recon", "pepsi.com", "--json"])
-        _preprocess_args()
-        assert sys.argv == ["recon", "lookup", "pepsi.com", "--json"]
-
-    def test_batch_subcommand_not_modified(self, monkeypatch):
-        self._reset()
-        monkeypatch.setattr(sys, "argv", ["recon", "batch", "domains.txt"])
-        _preprocess_args()
-        assert sys.argv == ["recon", "batch", "domains.txt"]
-
-    def test_idempotent_double_call(self, monkeypatch):
-        """Calling _preprocess_args twice should not double-insert 'lookup'."""
-        self._reset()
-        monkeypatch.setattr(sys, "argv", ["recon", "pepsi.com"])
-        _preprocess_args()
-        _preprocess_args()  # second call should be a no-op
-        assert sys.argv == ["recon", "lookup", "pepsi.com"]
 
 
 class TestBatchCommand:

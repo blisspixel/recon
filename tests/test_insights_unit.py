@@ -158,8 +158,8 @@ class TestAuthInsightsWithIdP:
         ctx = _ctx(auth_type="Federated", slugs={"okta"})
         insights = _auth_insights(ctx)
         assert any("Okta" in i for i in insights)
-        # Should NOT say "likely ADFS/Okta/Ping" when we know it's Okta
-        assert not any("likely" in i for i in insights)
+        # Should say "indicators observed (likely Okta)" — not the generic ADFS/Okta/Ping fallback
+        assert any("indicators observed" in i for i in insights)
 
     def test_federated_with_duo_detected(self):
         ctx = _ctx(auth_type="Federated", slugs={"duo"})

@@ -26,13 +26,17 @@ from recon_tool.models import (
 )
 
 __all__ = [
+    "CSV_COLUMNS",
     "detect_provider",
+    "format_batch_csv",
     "format_chain_dict",
     "format_chain_json",
     "format_delta_dict",
     "format_delta_json",
     "format_posture_observations",
+    "format_tenant_csv_row",
     "format_tenant_dict",
+    "format_tenant_html",
     "format_tenant_json",
     "format_tenant_markdown",
     "get_console",
@@ -911,3 +915,224 @@ def render_chain_panel(report: ChainReport) -> Panel:
         padding=(1, 2),
         border_style="dim",
     )
+
+
+# ── CSV output ───────────────────────────────────────────────────────────
+
+CSV_COLUMNS: tuple[str, ...] = (
+    "domain",
+    "provider",
+    "display_name",
+    "tenant_id",
+    "auth_type",
+    "confidence",
+    "email_security_score",
+    "service_count",
+    "dmarc_policy",
+    "mta_sts_mode",
+    "google_auth_type",
+)
+
+
+def _compute_email_security_score(info: TenantInfo) -> int:
+    """Compute email security score (0-5) from services, matching insights.py logic."""
+    from recon_tool.constants import (
+        SVC_BIMI,
+        SVC_DKIM,
+        SVC_DKIM_EXCHANGE,
+        SVC_MTA_STS,
+        SVC_SPF_STRICT,
+    )
+
+    score = 0
+    if info.dmarc_policy in ("reject", "quarantine"):
+        score += 1
+    if SVC_DKIM_EXCHANGE in info.services or SVC_DKIM in info.services:
+        score += 1
+    if SVC_SPF_STRICT in info.services:
+        score += 1
+    if SVC_MTA_STS in info.services:
+        score += 1
+    if SVC_BIMI in info.services:
+        score += 1
+    return score
+
+
+def format_tenant_csv_row(info: TenantInfo) -> dict[str, str]:
+    """Build a dict of CSV column values for a single TenantInfo."""
+    provider = detect_provider(info.services, info.slugs)
+    return {
+        "domain": info.queried_domain,
+        "provider": provider,
+        "display_name": info.display_name,
+        "tenant_id": info.tenant_id or "",
+        "auth_type": info.auth_type or "",
+        "confidence": info.confidence.value,
+        "email_security_score": str(_compute_email_security_score(info)),
+        "service_count": str(len(info.services)),
+        "dmarc_policy": info.dmarc_policy or "",
+        "mta_sts_mode": info.mta_sts_mode or "",
+        "google_auth_type": info.google_auth_type or "",
+    }
+
+
+def format_batch_csv(infos: list[tuple[str, TenantInfo | None, str | None]]) -> str:
+    """Format a list of (domain, info_or_none, error_or_none) as RFC 4180 CSV.
+
+    Returns a string with header row + one data row per domain.
+    """
+    import csv
+    import io
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(CSV_COLUMNS)
+
+    for domain, info, _error in infos:
+        if info is not None:
+            row_dict = format_tenant_csv_row(info)
+            writer.writerow([row_dict[col] for col in CSV_COLUMNS])
+        else:
+            # Error row: domain + empty fields
+            row = [domain] + [""] * (len(CSV_COLUMNS) - 1)
+            writer.writerow(row)
+
+    return buf.getvalue()
+
+
+# ── HTML output ──────────────────────────────────────────────────────────
+
+
+def format_tenant_html(
+    info: TenantInfo,
+    observations: tuple[Observation, ...] = (),
+) -> str:
+    """Render TenantInfo as a self-contained HTML document.
+
+    No JavaScript, no external references. Inline CSS only.
+    """
+    import html as html_mod
+
+    e = html_mod.escape
+    provider = detect_provider(info.services, info.slugs)
+
+    # Build sections
+    sections: list[str] = []
+
+    # Identity section
+    identity_rows = [
+        ("Domain", e(info.queried_domain)),
+        ("Default Domain", e(info.default_domain)),
+        ("Provider", e(provider)),
+    ]
+    if info.tenant_id:
+        identity_rows.append(("Tenant ID", e(info.tenant_id)))
+    if info.region:
+        identity_rows.append(("Region", e(info.region)))
+    if info.auth_type:
+        identity_rows.append(("Auth Type", e(info.auth_type)))
+    identity_rows.append(("Confidence", e(f"{info.confidence.value} ({len(info.sources)} sources)")))
+    if info.dmarc_policy:
+        identity_rows.append(("DMARC Policy", e(info.dmarc_policy)))
+    if info.mta_sts_mode:
+        identity_rows.append(("MTA-STS", e(info.mta_sts_mode)))
+
+    identity_html = "\n".join(f'<tr><td class="label">{label}</td><td>{val}</td></tr>' for label, val in identity_rows)
+    sections.append(f'<div class="section"><h2>Identity</h2><table>{identity_html}</table></div>')
+
+    # Services section
+    if info.services:
+        svc_items = "\n".join(f"<li>{e(svc)}</li>" for svc in info.services)
+        sections.append(f'<div class="section"><h2>Services ({len(info.services)})</h2><ul>{svc_items}</ul></div>')
+
+    # Insights section
+    if info.insights:
+        insight_items = "\n".join(f"<li>{e(ins)}</li>" for ins in info.insights)
+        sections.append(f'<div class="section"><h2>Insights</h2><ul>{insight_items}</ul></div>')
+
+    # Certificate summary
+    if info.cert_summary is not None:
+        cs = info.cert_summary
+        issuers = ", ".join(cs.top_issuers) if cs.top_issuers else "unknown"
+        cert_rows = [
+            ("Total Certificates", str(cs.cert_count)),
+            ("Issuer Diversity", str(cs.issuer_diversity)),
+            ("Issuance Velocity (90d)", str(cs.issuance_velocity)),
+            ("Newest Cert Age", f"{cs.newest_cert_age_days} days"),
+            ("Oldest Cert Age", f"{cs.oldest_cert_age_days} days"),
+            ("Top Issuers", e(issuers)),
+        ]
+        cert_html = "\n".join(f'<tr><td class="label">{label}</td><td>{val}</td></tr>' for label, val in cert_rows)
+        sections.append(f'<div class="section"><h2>Certificates</h2><table>{cert_html}</table></div>')
+
+    # Domains section
+    if info.tenant_domains:
+        domain_items = "\n".join(f"<li>{e(d)}</li>" for d in info.tenant_domains)
+        sections.append(f'<div class="section"><h2>Domains ({info.domain_count})</h2><ul>{domain_items}</ul></div>')
+
+    if info.related_domains:
+        rel_items = "\n".join(f"<li>{e(d)}</li>" for d in info.related_domains)
+        sections.append(f'<div class="section"><h2>Related Domains</h2><ul>{rel_items}</ul></div>')
+
+    # Google Workspace section (conditional)
+    gws_slugs = set(info.slugs)
+    is_gws = any(_is_gws_service(s) for s in info.services) or "google-workspace" in gws_slugs
+    if is_gws:
+        gws_rows: list[tuple[str, str]] = []
+        if info.google_auth_type:
+            label = e(info.google_auth_type)
+            if info.google_idp_name:
+                label += f" ({e(info.google_idp_name)})"
+            gws_rows.append(("Auth Type", label))
+        gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
+        if gws_modules:
+            gws_rows.append(("Active Modules", e(", ".join(gws_modules))))
+        if gws_rows:
+            gws_html = "\n".join(f'<tr><td class="label">{lbl}</td><td>{val}</td></tr>' for lbl, val in gws_rows)
+            sections.append(f'<div class="section"><h2>Google Workspace</h2><table>{gws_html}</table></div>')
+
+    # Posture section (conditional)
+    if observations:
+        obs_items: list[str] = []
+        for obs in observations:
+            indicator = {"high": "●", "medium": "◐", "low": "○"}.get(obs.salience, "○")
+            obs_items.append(
+                f'<li><span class="indicator">{indicator}</span> '
+                f"<strong>[{e(obs.category)}]</strong> {e(obs.statement)}</li>"
+            )
+        obs_html = "\n".join(obs_items)
+        sections.append(f'<div class="section"><h2>Posture Analysis</h2><ul>{obs_html}</ul></div>')
+
+    body = "\n".join(sections)
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{e(info.display_name)} — Domain Intelligence Report</title>
+<style>
+body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+       max-width: 800px; margin: 0 auto; padding: 2rem; color: #333; background: #fafafa; }}
+h1 {{ color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; }}
+h2 {{ color: #34495e; font-size: 1.1rem; margin-top: 1.5rem; }}
+.section {{ background: #fff; border: 1px solid #e0e0e0; border-radius: 6px;
+            padding: 1rem 1.5rem; margin-bottom: 1rem; }}
+table {{ border-collapse: collapse; width: 100%; }}
+td {{ padding: 0.4rem 0.8rem; border-bottom: 1px solid #f0f0f0; }}
+td.label {{ font-weight: 600; color: #555; width: 180px; }}
+ul {{ list-style: none; padding: 0; margin: 0; }}
+li {{ padding: 0.3rem 0; border-bottom: 1px solid #f8f8f8; }}
+.header {{ text-align: center; margin-bottom: 2rem; }}
+.subtitle {{ color: #777; font-size: 0.95rem; }}
+.indicator {{ margin-right: 0.3rem; }}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>{e(info.display_name)}</h1>
+<p class="subtitle">{e(info.queried_domain)} &mdash; {e(provider)}</p>
+</div>
+{body}
+</body>
+</html>"""

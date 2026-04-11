@@ -100,7 +100,7 @@ class TestLookupSubcommand:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_verbose_flag(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--verbose"])
+        result = runner.invoke(app, ["lookup", "contoso.com", "--verbose", "--no-cache"])
         assert result.exit_code == 0
         assert "oidc_discovery" in result.output
 
