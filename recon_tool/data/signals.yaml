@@ -1,0 +1,128 @@
+# signals.yaml — derived intelligence from fingerprint matches
+# These fire automatically after fingerprint detection.
+# No extra DNS calls — pure pattern matching on detected slugs.
+#
+# Design inspired by multi-vector fusion: signals are layered from simple
+# (single-category detection) to composite (cross-category correlation)
+# to consistency checks (contradiction detection across layers).
+
+signals:
+
+  # ── Layer 1: Single-category detection ────────────────────────────────
+  # These fire when enough tools from one category are present.
+
+  - name: AI Adoption
+    category: AI
+    confidence: high
+    description: Enterprise AI tooling detected — likely evaluating or deploying LLM-based workflows
+    requires:
+      any: [openai, anthropic, mistral, perplexity]
+    min_matches: 1
+
+  - name: High GTM Maturity
+    category: Go-to-Market
+    confidence: high
+    description: Multiple sales/marketing automation tools — indicates mature revenue operations
+    requires:
+      any: [6sense, outreach, salesloft, pardot, eloqua, klaviyo, hubspot, marketo, demandbase, clearbit, drift, gong, intercom, apollo]
+    min_matches: 2
+
+  - name: Enterprise Security Stack
+    category: Security
+    confidence: high
+    description: Layered security tooling — endpoint, email, network, or cloud security in place
+    requires:
+      any: [crowdstrike, knowbe4, proofpoint, mimecast, zscaler, paloalto, wiz, sophos, trellix, barracuda, trendmicro, okta, duo, 1password, sentinelone, netskope]
+    min_matches: 2
+
+  - name: Modern Collaboration
+    category: Productivity
+    confidence: high
+    description: Broad adoption of cloud collaboration tools beyond basic email/docs
+    requires:
+      any: [slack, notion, miro, atlassian, figma, dropbox, clickup, asana, monday, loom, canva, zoom, airtable]
+    min_matches: 3
+
+  - name: Dev & Engineering Heavy
+    category: Engineering
+    confidence: medium
+    description: Developer tooling footprint suggests significant engineering headcount
+    requires:
+      any: [github, gitlab, vercel, netlify, postman, linear, figma, autodesk, databricks, snowflake, mongodb, webflow]
+    min_matches: 2
+
+  - name: Data & Analytics Investment
+    category: Data
+    confidence: medium
+    description: Multiple analytics/data platforms — data-driven decision making culture
+    requires:
+      any: [databricks, snowflake, mongodb, dynatrace, mixpanel, amplitude, heap, pendo, hotjar, segment]
+    min_matches: 2
+
+  - name: Multi-Cloud
+    category: Infrastructure
+    confidence: high
+    description: Infrastructure spread across multiple cloud providers
+    requires:
+      any: [aws-route53, azure-dns, gcp-dns, aws-cloudfront, azure-cdn, azure-appservice, cloudflare]
+    min_matches: 2
+
+  # ── Layer 2: Cross-category composite signals ─────────────────────────
+  # These correlate detections across different categories to surface
+  # higher-level organizational patterns. Inspired by the research's
+  # "multi-vector fusion" concept — combining independent signal layers
+  # produces insights that no single layer can provide alone.
+
+  - name: Digital Transformation
+    category: Composite
+    confidence: medium
+    description: AI + modern collaboration + cloud infrastructure — active modernization
+    requires:
+      any: [openai, anthropic, slack, notion, miro, figma, atlassian, vercel, netlify, databricks, snowflake]
+    min_matches: 4
+
+  - name: Sales-Led Growth
+    category: Composite
+    confidence: medium
+    description: CRM + sales engagement + marketing automation — revenue engine investment
+    requires:
+      any: [salesforce, hubspot, outreach, salesloft, 6sense, pardot, eloqua, marketo, gong, apollo, drift, clearbit, demandbase, intercom]
+    min_matches: 3
+
+  - name: Product-Led Growth
+    category: Composite
+    confidence: medium
+    description: Analytics + engagement + support tooling — product usage-driven growth model
+    requires:
+      any: [mixpanel, amplitude, heap, pendo, hotjar, segment, intercom, zendesk, freshdesk]
+    min_matches: 3
+
+  - name: Enterprise IT Maturity
+    category: Composite
+    confidence: high
+    description: Identity + endpoint + email security + MDM — mature IT governance
+    requires:
+      any: [okta, duo, crowdstrike, sophos, sentinelone, jamf, kandji, proofpoint, mimecast, zscaler, netskope, paloalto, wiz, 1password, knowbe4]
+    min_matches: 4
+
+  # ── Layer 3: Cross-signal consistency checks ──────────────────────────
+  # Inspired by the research's core thesis: "penalize contradictions
+  # between layers." These detect when signals from different domains
+  # are inconsistent, which often reveals interesting organizational
+  # dynamics (not necessarily problems — sometimes transitions).
+
+  - name: Security Gap — Gateway Without DMARC Enforcement
+    category: Consistency
+    confidence: medium
+    description: Email gateway deployed but DMARC not enforcing — gateway may not be fully effective
+    requires:
+      any: [proofpoint, mimecast, barracuda, trendmicro, cisco-ironport, cisco-email, symantec, trellix]
+    min_matches: 1
+
+  - name: Heavy Outbound Stack
+    category: Composite
+    confidence: medium
+    description: Multiple email sending services — high-volume outbound email operation
+    requires:
+      any: [sendgrid, mailgun, postmark, sparkpost, brevo, mailchimp, aws-ses]
+    min_matches: 2
