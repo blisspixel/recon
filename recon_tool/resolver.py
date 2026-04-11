@@ -106,30 +106,60 @@ async def _enrich_from_related(
 
     # Filter to actionable related domains (skip onmicrosoft — they're just
     # the tenant's internal M365 domain with no SaaS verification records)
-    candidates = [
+    all_candidates = [
         d for d in info.related_domains
         if not d.endswith(".onmicrosoft.com")
-    ][:MAX_RELATED_ENRICHMENTS]
+    ]
 
-    if not candidates:
+    if not all_candidates:
         return info, all_results
 
     # Split into subdomains vs separate domains
     base_domain = info.queried_domain.lower() if info.queried_domain else ""
-    subdomains = [d for d in candidates if base_domain and d.endswith(f".{base_domain}")]
-    separate_domains = [d for d in candidates if d not in subdomains]
+    all_subdomains = [d for d in all_candidates if base_domain and d.endswith(f".{base_domain}")]
+    separate_domains = [d for d in all_candidates if d not in all_subdomains]
+
+    # Prioritize subdomains by signal value before capping.
+    # High-signal prefixes (auth, login, shop, api, em) sort first so they
+    # survive the enrichment cap. Low-signal or deep subdomains sort last.
+    _HIGH_SIGNAL_PREFIXES = (
+        "auth", "login", "sso", "secure", "id", "identity",
+        "shop", "store", "checkout", "pay",
+        "api", "app", "portal", "dashboard", "admin",
+        "support", "help", "status",
+        "click", "image", "view", "email", "em",
+        "cdn", "assets", "static", "media",
+        "blog", "docs", "stage", "staging", "dev",
+    )
+
+    def _enrich_priority(name: str) -> tuple[int, int, str]:
+        prefix = name.split(f".{base_domain}")[0] if base_domain else name
+        is_high = 0 if any(prefix == p or prefix.startswith(p + ".") or prefix.startswith(p + "-")
+                          for p in _HIGH_SIGNAL_PREFIXES) else 1
+        depth = prefix.count(".")
+        return (is_high, depth, name)
+
+    prioritized_subs = sorted(all_subdomains, key=_enrich_priority)
+
+    # Cap total enrichment lookups, but separate domains always get a slot
+    sep_cap = min(len(separate_domains), MAX_RELATED_ENRICHMENTS)
+    sub_cap = MAX_RELATED_ENRICHMENTS - sep_cap
+    capped_subs = prioritized_subs[:max(sub_cap, 0)]
+    capped_separate = separate_domains[:sep_cap]
 
     logger.debug(
-        "Enriching from %d related (%d subdomains, %d separate): %s",
-        len(candidates), len(subdomains), len(separate_domains),
-        ", ".join(candidates[:5]) + ("..." if len(candidates) > 5 else ""),
+        "Enriching from %d related (%d/%d subdomains, %d separate): %s",
+        len(capped_subs) + len(capped_separate),
+        len(capped_subs), len(all_subdomains), len(capped_separate),
+        ", ".join((capped_subs + capped_separate)[:5])
+        + ("..." if len(capped_subs) + len(capped_separate) > 5 else ""),
     )
 
     # Run both tiers concurrently
     dns_source = DNSSource()
     all_tasks = [
-        *(lightweight_subdomain_lookup(d) for d in subdomains),
-        *(_safe_lookup(dns_source, d) for d in separate_domains),
+        *(lightweight_subdomain_lookup(d) for d in capped_subs),
+        *(_safe_lookup(dns_source, d) for d in capped_separate),
     ]
     related_results = await asyncio.gather(*all_tasks)
 
