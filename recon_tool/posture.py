@@ -79,7 +79,7 @@ class _PostureRule:
     metadata: tuple[_MetadataCondition, ...] = ()
 
 
-def _parse_metadata_block(name: str, raw_metadata: list[dict[str, Any]]) -> tuple[_MetadataCondition, ...] | None:
+def _parse_metadata_block(name: str, raw_metadata: list[Any]) -> tuple[_MetadataCondition, ...] | None:
     """Parse and validate a metadata block. Returns None if any entry is invalid."""
     conditions: list[_MetadataCondition] = []
     for entry in raw_metadata:

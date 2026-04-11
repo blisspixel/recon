@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 from recon_tool.constants import (
     SVC_BIMI,
@@ -29,7 +30,7 @@ __all__ = [
 ]
 
 
-def load_previous(path: Path) -> dict:
+def load_previous(path: Path) -> dict[str, Any]:
     """Load and validate a previous JSON export file.
 
     Raises:
@@ -72,7 +73,7 @@ def _compute_email_security_score(services: tuple[str, ...] | list[str]) -> int:
     return min(sum(1 for svc in services if svc in score_services), 5)
 
 
-def compute_delta(previous_json: dict, current: TenantInfo) -> DeltaReport:
+def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaReport:
     """Compare a deserialized JSON export against a live TenantInfo.
 
     Uses set operations for services, slugs, and signals to correctly

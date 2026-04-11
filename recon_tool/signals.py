@@ -61,7 +61,7 @@ _VALID_METADATA_FIELDS = frozenset({
 _VALID_OPERATORS = frozenset({"eq", "neq", "gte", "lte"})
 
 
-def _parse_metadata_block(name: str, raw_metadata: list[dict[str, Any]]) -> tuple[MetadataCondition, ...] | None:
+def _parse_metadata_block(name: str, raw_metadata: list[Any]) -> tuple[MetadataCondition, ...] | None:
     """Parse and validate a metadata block. Returns None if any entry is invalid."""
     conditions: list[MetadataCondition] = []
     for entry in raw_metadata:
