@@ -7,32 +7,32 @@ recon northwindtraders.com
 ```
 
 ```
-╭─────────────────────── Northwind Traders ───────────────────────╮
-│                                                                 │
-│  Company:    Northwind Traders                                  │
-│  Domain:     northwindtraders.onmicrosoft.com                   │
-│  Provider:   Microsoft 365                                      │
-│  Tenant ID:  a1b2c3d4-e5f6-7890-abcd-ef1234567890              │
-│  Region:     NA                                                 │
-│  Auth:       Federated                                          │
-│  Confidence: ●●● High (3 sources)                               │
-│  Services:   Anthropic (Claude), Atlassian (Jira/Confluence),   │
+╭──────────────────────── Northwind Traders ───────────────────────╮
+│                                                                  │
+│  Company:    Northwind Traders                                   │
+│  Domain:     northwindtraders.onmicrosoft.com                    │
+│  Provider:   Microsoft 365                                       │
+│  Tenant ID:  a1b2c3d4-e5f6-7890-abcd-ef1234567890                │
+│  Region:     NA                                                  │
+│  Auth:       Federated                                           │
+│  Confidence: ●●● High (3 sources)                                │
+│  Services:   Anthropic (Claude), Atlassian (Jira/Confluence),    │
 │              DocuSign, Exchange Autodiscover, Figma,             │
-│              Intune / MDM, KnowBe4, Microsoft 365,              │
-│              Microsoft Teams, Miro, Salesforce, Slack, Zendesk  │
-│                                                                 │
-│  Insights:   Federated identity via Okta                        │
-│              Email security 4/5 strong (DMARC reject, DKIM,     │
-│              SPF strict)                                        │
+│              Intune / MDM, KnowBe4, Microsoft 365,               │
+│              Microsoft Teams, Miro, Salesforce, Slack, Zendesk   │
+│                                                                  │
+│  Insights:   Federated identity via Okta                         │
+│              Email security 4/5 strong (DMARC reject, DKIM,      │
+│              SPF strict)                                         │
 │              Email gateway: Proofpoint in front of Exchange      │
-│              Likely M365 E3/E5 (Intune + federated auth)        │
-│              Security stack: KnowBe4 (training), Okta (identity)│
+│              Likely M365 E3/E5 (Intune + federated auth)         │
+│              Security stack: KnowBe4 (training), Okta (identity) │
 │              AI Adoption: anthropic                              │
-│              Modern Collaboration: slack, miro, atlassian, figma│
-│                                                                 │
-│  Related:    northwind-internal.com                             │
-│                                                                 │
-╰─────────────────────────────────────────────────────────────────╯
+│              Modern Collaboration: slack, miro, atlassian, figma │
+│                                                                  │
+│  Related:    northwind-internal.com                              │
+│                                                                  │
+╰──────────────────────────────────────────────────────────────────╯
 ```
 
 > The example above is fictional. All tenant IDs, domains, and service lists are fabricated for illustration.
