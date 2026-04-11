@@ -53,7 +53,7 @@ Works for Microsoft 365, Google Workspace, or any provider. Useful if you're an 
 | MCP server for AI agents | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | Extensible (custom YAML) | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 
-Focused on "I have a domain, I need to understand this company in 30 seconds, from public data only."
+recon reads the organizational metadata layer — DNS records, identity endpoints, and certificate transparency logs that companies publish to make their email, SaaS, and security infrastructure work. It doesn't scrape websites, probe servers, or analyze page content. It turns infrastructure signals into business intelligence.
 
 ## Install
 
