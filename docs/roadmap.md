@@ -10,6 +10,7 @@ Stay passive. Stay zero-creds. Stay focused on signal intelligence. Be a great t
 | v0.2.0 | Certificate intelligence, 4-layer signal engine (26 signals), posture analysis, delta mode, chain resolution |
 | v0.3.0 | Google Workspace parity (identity routing, CNAME modules, BIMI/VMC, MTA-STS/TLS-RPT), evidence traceability, dual confidence model, per-detection scoring, fingerprint metadata enrichment. 187 fingerprints, 29 signals, 22 posture rules |
 | v0.4.0 | Hedged inference language, removed sys.argv hack, `recon mcp` subcommand, disk cache (`--no-cache`, `--cache-ttl`), `--html` output, `--csv` batch output, `doctor --fix` scaffolding. 597 tests |
+| v0.5.0 | Defensive security assessment tools: `assess_exposure` (posture score 0–100), `find_hardening_gaps` (categorized gaps with "Consider" recommendations), `compare_postures` (side-by-side comparison). CLI flags `--exposure`, `--gaps`. 7 MCP tools total. Legal docs updated |
 
 ## What's next
 
@@ -21,7 +22,7 @@ The tool's biggest risk is sounding more certain than the evidence warrants. The
 
 - ~~**Tighten inference language**~~ ✓ Done (v0.4.0)
 
-- **Validation corpus** — a curated set of 20–30 well-known domains with expected outputs (services, signals, confidence levels). Run as a regression suite to measure fingerprint accuracy, surface false positives, and document known failure modes. Publish the results so users can calibrate how much to trust the output. The tool already has 604 unit tests; this adds *quality-of-inference* tests.
+- **Validation corpus** — a curated set of 20–30 well-known domains with expected outputs (services, signals, confidence levels). Run as a regression suite to measure fingerprint accuracy, surface false positives, and document known failure modes. Publish the results so users can calibrate how much to trust the output. The tool already has 597 unit tests; this adds *quality-of-inference* tests.
 
 - **Per-insight provenance in default output** — the evidence chain is already available in `--verbose` and `--json`, but the default panel should hint at provenance. When the tool says "Email security 4/5 strong," users should be able to see which records contributed without switching to verbose mode. The data is there; it's a formatting question.
 
@@ -51,7 +52,7 @@ The tool's biggest risk is sounding more certain than the evidence warrants. The
 
 - **Expanded org-size heuristics** — better bucketing (SMB / mid-market / enterprise) from SPF complexity, domain count, service mix, and certificate issuance patterns.
 
-- **`compare_tenants(domain_a, domain_b)` MCP tool** — structured diff between two domains' intelligence. Useful for competitive analysis, M&A due diligence, or comparing a company's posture against industry peers.
+- ~~**`compare_tenants(domain_a, domain_b)` MCP tool**~~ ✓ Done (v0.5.0 — shipped as `compare_postures` with defensive framing)
 
 ### Agent ecosystem
 
