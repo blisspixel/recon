@@ -2,6 +2,8 @@
 
 Stay passive. Stay zero-creds. Stay focused on signal intelligence. Be a great tool for both humans and AI agents. If it needs a paid API key or a database, it doesn't belong here.
 
+The priority order is: machine trust (stable, evidence-backed, deterministic) → explainability (why a signal fired, what weakens confidence) → composability (MCP quality, JSON quality, batch workflows) → accuracy (validation corpus, precision/recall). Features come last. Trust comes first.
+
 ## What's shipped
 
 | Version | Highlights |
@@ -14,19 +16,31 @@ Stay passive. Stay zero-creds. Stay focused on signal intelligence. Be a great t
 
 ## Now
 
-- **crt.sh fallback** — crt.sh is the single point of failure for certificate intelligence and related domain discovery. It's slow, frequently down, and rate-limited. Add CertSpotter as a secondary CT source (free, no API key, reliable). The `crtsh_degraded` flag already signals when crt.sh fails; a fallback eliminates the gap.
+These build on each other in order:
 
-- **Validation corpus** — a set of 20–30 known domains with expected outputs (services, signals, confidence) run as automated regression tests. Produces a markdown accuracy report (`docs/accuracy.md`) that both humans and agents can consume. This is the "how often is this right?" story — the tool has 660 unit tests for code correctness, but no tests for inference quality.
+1. **crt.sh fallback via CertIntelProvider abstraction** — crt.sh is the single point of failure for certificate intelligence and related domain discovery. Add CertSpotter as a secondary CT source (free, no API key, reliable) behind a `CertIntelProvider` interface so future sources can be added cleanly.
 
-- **Degraded sources in output** — expand the existing `crtsh_degraded` boolean into a `degraded_sources` list so users and agents always know which data sources were unavailable and how that affects result quality.
+2. **Degraded sources in output** — expand the existing `crtsh_degraded` boolean into a `degraded_sources` list across all sources. Users and agents always know which data sources were unavailable and how that affects result quality. Depends on the CertIntelProvider abstraction being in place.
+
+3. **Validation corpus + accuracy report** — a set of 20–30 known domains with expected outputs (services, signals, confidence) run as automated regression tests. Produces a markdown accuracy report (`docs/accuracy.md`) with precision/recall per signal category and false-positive rates. Depends on degraded_sources so accuracy metrics account for partial data.
 
 ## Soon
 
-- **Docker image** — for CI/CD pipelines and air-gapped environments. `docker run recon-tool contoso.com` as a one-liner.
+Ordered by dependency and impact:
 
-- **MCP introspection tools** — `get_fingerprints`, `get_signals`, `explain_signal(name)` so agents can understand why a signal triggered and what fingerprints are available. Makes the tool self-documenting for AI workflows.
+1. **`--explain` flag** — for every insight and signal, show the matched evidence, which rules fired, and why confidence landed where it did. The data is already in evidence records and detection scores — this is a formatting feature, not new infrastructure.
 
-- **Agent workflow documentation** — document common patterns like "Run recon on all vendors from a CSV and rank by exposure score" so MCP users have a starting point.
+2. **Conflict-aware merge output** — enrich the `--json` output to expose candidate values when sources disagree. Depends on `--explain` establishing the pattern for richer output.
+
+3. **MCP introspection tools** — `get_fingerprints`, `get_signals`, `explain_signal(name)` so agents can understand why a signal triggered. Depends on `--explain` logic existing.
+
+4. **Cloud strategy inference from CA fingerprints** — correlate dominant CA families with infrastructure CNAMEs to surface a "Primary Cloud Bias" observation. Pure analysis on existing data. Depends on validation corpus to catch false positives.
+
+5. **Delegation graph topology in chain mode** — summarize the shape of SPF include chains, CNAME delegation trees, and shared site-verification tokens. Depends on validation corpus.
+
+6. **Docker image** — for CI/CD pipelines and air-gapped environments. No dependencies.
+
+7. **Agent workflow documentation** — document common patterns for MCP users. No dependencies, but more useful after MCP introspection tools exist.
 
 ## Intentionally not doing
 
@@ -42,7 +56,9 @@ These are deliberate design decisions, not missing features:
 - **Local database / history store** — save `--json` to files. Your filesystem is the database. `--compare` handles diffing.
 - **AI-generated pitch text** — the tool surfaces signal intelligence, not prose. Feed `--json` to an LLM via the MCP server.
 - **Interactive REPL** — use the MCP server inside an AI tool. That's what it's for.
-- **Structured JSON schema contract** — the tool is still evolving. Locking down a schema now slows iteration.
+- **Structured JSON schema contract** — the tool is still evolving. Locking down a schema now slows iteration. Snapshot tests are a lighter alternative when stability matters.
+- **Formal observation/predicate layer** — the current EvidenceRecord + TenantInfo model is sufficient. A full subject/predicate/value graph is a research project, not a CLI tool improvement.
+- **SBOM / signed releases** — enterprise packaging theater. Premature for the current project stage.
 - **llms.txt / A2A Agent Card** — premature until the tool has a web presence beyond PyPI.
 - **Batch streaming (JSONL)** — the current batch mode works fine.
 - **Prometheus metrics / structured logging overhaul** — the existing JSON logging in the MCP server is sufficient. This is a CLI tool, not a web service.

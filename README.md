@@ -1,6 +1,6 @@
 # recon
 
-Passive domain intelligence from public DNS and Microsoft/Google endpoints.
+Passive infrastructure intelligence for humans and agents. Turns public DNS, identity endpoints, and certificate transparency into structured organizational intelligence — no credentials, no API keys, no interaction with target systems.
 
 ```bash
 recon contoso.com
@@ -44,9 +44,11 @@ recon contoso.com
 
 > This example is based on the structure and density of a real Fortune 500 lookup, with all identifying details replaced using [Microsoft's standard fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam, etc.). Tenant IDs, domains, and service lists are fabricated. No real company is depicted.
 
-Give it a domain. It queries public endpoints and DNS records — no credentials, no API keys — and returns what it can find: tenant details, email security posture, SaaS fingerprints, derived signals, certificate intelligence, and neutral posture observations.
+Give it a domain. No credentials, no API keys, no interaction with the target's servers. recon queries public DNS, identity endpoints, and certificate transparency logs — the signals every organization must emit for email, SaaS, and cloud infrastructure to function — and assembles them into a coherent picture of the organization's technology posture.
 
-Works for Microsoft 365, Google Workspace, or any provider. Useful for anyone who needs domain intelligence — architects, MSPs, security professionals, red teamers, defenders, sales engineers, researchers. Also runs as an [MCP server](docs/mcp.md) for AI tools.
+Each signal alone is unremarkable: a TXT record here, a CNAME delegation there, a certificate issuer pattern in the CT logs. The art is in the correlation. recon reads these scattered, public signals across orthogonal sources (OIDC discovery, GetUserRealm, Google identity routing, DNS fingerprints, certificate transparency) and synthesizes them into structured intelligence — tenant details, email security posture, SaaS fingerprints, derived signals, hardening gaps, and posture scores. The target never knows they were observed.
+
+Works for Microsoft 365, Google Workspace, or any provider. Useful for anyone who needs domain intelligence — architects, MSPs, security professionals, defenders, sales engineers, researchers. Also runs as an [MCP server](docs/mcp.md) for AI agents.
 
 ## Why recon?
 

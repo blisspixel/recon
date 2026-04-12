@@ -21,6 +21,8 @@ This tool is not designed for, and should not be used for, unauthorized access, 
 
 Output is derived from public DNS records and unauthenticated endpoints. It may be incomplete, outdated, or incorrect. Do not make business decisions based solely on this tool's output without independent verification.
 
+DNS records are self-reported metadata. Organizations may leave stale records from previous configurations, and sophisticated actors could intentionally publish misleading information. All output should be treated as observed indicators, not confirmed facts. The tool's dual confidence model, per-detection corroboration scoring, and evidence traceability are designed to surface uncertainty — but no passive tool can guarantee the accuracy of self-reported public data.
+
 ## Fictional Examples
 
 All company names, tenant IDs, and domains used in the README, the `examples/` folder, and test fixtures are fictional. They use [Microsoft's standard sample company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam, etc.) or clearly fabricated identifiers. The README example is based on the structure and density of a real Fortune 500 lookup, with all identifying details replaced. No real company is depicted. Any resemblance to real organizations is coincidental.

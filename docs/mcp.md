@@ -20,7 +20,7 @@ pip install recon-tool                    # from PyPI
     "recon": {
       "command": "recon",
       "args": ["mcp"],
-      "autoApprove": ["lookup_tenant"]
+      "autoApprove": ["lookup_tenant", "analyze_posture", "assess_exposure", "find_hardening_gaps"]
     }
   }
 }
@@ -34,11 +34,15 @@ pip install recon-tool                    # from PyPI
 
 | Tool | What it does | Parameters |
 |------|-------------|------------|
-| `lookup_tenant` | Full domain intelligence — tenant details, email score, SaaS fingerprints, signals | `domain` (required), `format`: `text` / `json` / `markdown` |
-| `reload_data` | Reload fingerprints and signals after editing `~/.recon/*.yaml` | none |
-| `domain_report` | Prompt template for clients that support slash commands | `domain` |
+| `lookup_tenant` | Full domain intelligence — tenant details, email score, SaaS fingerprints, signals | `domain`, `format`: `text` / `json` / `markdown` |
+| `analyze_posture` | Neutral posture observations across email, identity, infrastructure | `domain` |
+| `assess_exposure` | Security posture score (0–100) with email, identity, infrastructure sections | `domain` |
+| `find_hardening_gaps` | Categorized hardening gaps with severity and "Consider" recommendations | `domain` |
+| `compare_postures` | Side-by-side posture comparison of two domains | `domain_a`, `domain_b` |
+| `chain_lookup` | Recursive domain discovery via CNAME/CT breadcrumbs | `domain`, `depth` (1–3) |
+| `reload_data` | Reload fingerprints, signals, and posture rules from disk | none |
 
-The server includes a bounded TTL cache (120s) and per-domain rate limiting to prevent hammering upstream endpoints when an agent calls `lookup_tenant` repeatedly. All tools are read-only and idempotent.
+All tools are read-only and idempotent. The defensive tools (`assess_exposure`, `find_hardening_gaps`, `compare_postures`) operate on existing pipeline data with zero additional network calls. The server includes a bounded TTL cache (120s) and per-domain rate limiting.
 
 ## Where to Put the Config
 
