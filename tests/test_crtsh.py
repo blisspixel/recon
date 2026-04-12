@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from recon_tool.sources.dns import _detect_crtsh, _DetectionCtx
 
 
-@pytest.fixture()
+@pytest.fixture
 def _enable_crtsh():
     """Override the conftest auto-mock to allow real _detect_crtsh in these tests."""
 

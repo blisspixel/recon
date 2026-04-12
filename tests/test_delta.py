@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from recon_tool.delta import compute_delta, load_previous
-from recon_tool.models import CertSummary, ConfidenceLevel, DeltaReport, TenantInfo
+from recon_tool.models import ConfidenceLevel, DeltaReport, TenantInfo
 
 
 def _make_info(**overrides) -> TenantInfo:

@@ -77,7 +77,6 @@ recon doctor                              # verify connectivity
 recon northwindtraders.com                # default panel output
 recon northwindtraders.com --json         # structured JSON
 recon northwindtraders.com --md           # markdown report
-recon northwindtraders.com --html         # self-contained HTML report
 recon northwindtraders.com --full         # everything (services + domains + posture)
 recon northwindtraders.com --services     # M365 vs GWS vs tech stack split
 recon northwindtraders.com --posture      # neutral posture observations

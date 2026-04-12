@@ -5,10 +5,9 @@ from __future__ import annotations
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
-from recon_tool.cli import app, _debug_callback, version_callback
+from recon_tool.cli import _debug_callback, app, version_callback
 from recon_tool.models import (
     ConfidenceLevel,
     ReconLookupError,
