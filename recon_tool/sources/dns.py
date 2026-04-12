@@ -12,14 +12,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from collections import Counter
-from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import dns.asyncresolver
 import dns.exception
 import dns.resolver
-import httpx
 
 from recon_tool.constants import (
     SVC_BIMI,
@@ -49,6 +46,7 @@ from recon_tool.fingerprints import (
 )
 from recon_tool.http import http_client as _http_client
 from recon_tool.models import BIMIIdentity, CertSummary, EvidenceRecord, SourceResult
+from recon_tool.sources.cert_providers import CertIntelProvider, CertSpotterProvider, CrtshProvider
 
 logger = logging.getLogger("recon")
 
@@ -169,7 +167,7 @@ class _DetectionCtx:
         "spf_include_count",
         "_m365_slugs",
         "related_domains",
-        "crtsh_degraded",
+        "degraded_sources",
         "cert_summary",
         "evidence",
         "bimi_identity",
@@ -185,7 +183,7 @@ class _DetectionCtx:
         self.spf_include_count: int = 0
         self._m365_slugs: frozenset[str] = _get_m365_slugs()
         self.related_domains: set[str] = set()
-        self.crtsh_degraded: bool = False
+        self.degraded_sources: set[str] = set()
         self.cert_summary: CertSummary | None = None
         self.evidence: list[EvidenceRecord] = []
         self.bimi_identity: Any = None  # BIMIIdentity | None
@@ -736,30 +734,25 @@ async def _detect_srv(ctx: _DetectionCtx, domain: str) -> None:
                 break
 
 
-# ── Certificate Transparency (crt.sh) ──────────────────────────────────
+# ── Certificate Transparency (fallback chain) ──────────────────────────
 
-# Maximum number of unique subdomains to extract from crt.sh results.
-# Prevents unbounded related_domains when a domain has thousands of certs.
-_CRTSH_MAX_SUBDOMAINS = 100
 
-# Timeout for the crt.sh HTTP call — separate from DNS query timeout
-# because crt.sh can be slow under load.
-_CRTSH_TIMEOUT = 8.0
+async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
+    """Try CrtshProvider, fall back to CertSpotterProvider, mark degraded if both fail."""
+    providers: list[CertIntelProvider] = [CrtshProvider(), CertSpotterProvider()]
+    for provider in providers:
+        try:
+            subdomains, cert_summary = await provider.query(domain)
+            ctx.related_domains.update(subdomains)
+            if cert_summary is not None:
+                ctx.cert_summary = cert_summary
+            logger.debug("cert intel from %s for %s: %d subdomains", provider.name, domain, len(subdomains))
+            return
+        except Exception as exc:
+            logger.debug("cert intel provider %s failed for %s: %s", provider.name, domain, exc)
+            ctx.degraded_sources.add(provider.name)
+    # Both failed — all provider names already in degraded_sources
 
-# Patterns to filter out from crt.sh results — wildcards, common noise,
-# and subdomains that rarely have interesting TXT/MX records.
-_CRTSH_SKIP_PREFIXES = (
-    "*.",
-    "cpanel.",
-    "cpcalendars.",
-    "cpcontacts.",
-    "webdisk.",
-    "webmail.",
-    "mail.",
-    "ftp.",
-    "localhost.",
-    "www.",
-)
 
 # ── Common subdomain probing ───────────────────────────────────────────
 
@@ -850,165 +843,6 @@ async def _detect_common_subdomains(ctx: _DetectionCtx, domain: str) -> None:
         ctx.related_domains.update(found)
 
 
-async def _detect_crtsh(ctx: _DetectionCtx, domain: str) -> None:
-    """Query crt.sh certificate transparency logs for subdomain discovery.
-
-    Adds discovered subdomains to ctx.related_domains so the resolver's
-    enrichment pipeline can run DNS fingerprinting on them. This is 100%
-    passive — crt.sh is a public, free, unauthenticated JSON API that
-    returns certificate transparency log entries.
-
-    Failures are silently ignored — crt.sh is a bonus source, not critical.
-    """
-    url = f"https://crt.sh/?q=%.{domain}&output=json"
-    try:
-        async with httpx.AsyncClient(timeout=_CRTSH_TIMEOUT) as client:
-            resp = await client.get(url)
-            if resp.status_code != 200:
-                logger.debug("crt.sh returned HTTP %d for %s", resp.status_code, domain)
-                ctx.crtsh_degraded = True
-                return
-            data = resp.json()
-    except (httpx.TimeoutException, httpx.ConnectError, httpx.HTTPError, ValueError) as exc:
-        logger.debug("crt.sh lookup failed for %s: %s", domain, exc)
-        ctx.crtsh_degraded = True
-        return
-
-    if not isinstance(data, list):
-        return
-
-    seen: set[str] = set()
-    domain_lower = domain.lower()
-
-    for entry in data:
-        if not isinstance(entry, dict):
-            continue
-        name_value = entry.get("name_value", "")
-        if not isinstance(name_value, str):
-            continue
-        # crt.sh can return multiple names separated by newlines
-        for raw_name in name_value.lower().strip().split("\n"):
-            name = raw_name.strip()
-            if not name or name == domain_lower:
-                continue
-            # Skip wildcards and common noise
-            if any(name.startswith(prefix) for prefix in _CRTSH_SKIP_PREFIXES):
-                continue
-            # Must be a subdomain of the queried domain
-            if not name.endswith(f".{domain_lower}"):
-                continue
-            seen.add(name)
-
-    if not seen:
-        return
-
-    # Prioritize subdomains likely to have interesting CNAME targets.
-    # High-signal prefixes (auth, login, shop, api, etc.) sort first,
-    # deep subdomains (3+ levels) sort last (often internal/noise).
-    _HIGH_SIGNAL_PREFIXES = (
-        "auth",
-        "login",
-        "sso",
-        "secure",
-        "id",
-        "identity",
-        "shop",
-        "store",
-        "checkout",
-        "pay",
-        "api",
-        "app",
-        "portal",
-        "dashboard",
-        "support",
-        "help",
-        "status",
-        "track",
-        "click",
-        "image",
-        "view",
-        "email",
-        "em.",
-        "cdn",
-        "assets",
-        "static",
-        "media",
-        "blog",
-        "docs",
-        "kb",
-        "stage",
-        "staging",
-        "dev",
-        "sandbox",
-        "preview",
-        "uat",
-    )
-
-    def _sort_key(name: str) -> tuple[int, int, str]:
-        """Sort: high-signal prefixes first, then by depth (shallow first), then alpha."""
-        prefix = name.split(f".{domain_lower}")[0]
-        is_high = 0 if any(prefix.startswith(p) or prefix.endswith(p) for p in _HIGH_SIGNAL_PREFIXES) else 1
-        depth = prefix.count(".")
-        return (is_high, depth, name)
-
-    prioritized = sorted(seen, key=_sort_key)[:_CRTSH_MAX_SUBDOMAINS]
-
-    logger.debug("crt.sh found %d subdomains for %s (kept %d)", len(seen), domain, len(prioritized))
-    ctx.related_domains.update(prioritized)
-
-    # ── Second pass: extract certificate metadata for CertSummary ───
-    # Reuses the same `data` list already fetched — no additional HTTP requests.
-    now = datetime.now(timezone.utc)
-    issuer_ca_ids: set[int] = set()
-    issuer_name_counter: Counter[str] = Counter()
-    not_before_dates: list[datetime] = []
-    cert_meta_count = 0
-
-    for entry in data:
-        if not isinstance(entry, dict):
-            continue
-        # All four metadata fields must be present to count
-        issuer_ca_id = entry.get("issuer_ca_id")
-        issuer_name = entry.get("issuer_name")
-        not_before_raw = entry.get("not_before")
-        not_after_raw = entry.get("not_after")
-        if issuer_ca_id is None or issuer_name is None or not_before_raw is None or not_after_raw is None:
-            continue
-        if not isinstance(not_before_raw, str) or not isinstance(not_after_raw, str):
-            continue
-        try:
-            not_before_dt = datetime.fromisoformat(not_before_raw)
-            # Validate not_after is also parseable (required field)
-            datetime.fromisoformat(not_after_raw)
-        except (ValueError, TypeError):
-            continue
-
-        cert_meta_count += 1
-        issuer_ca_ids.add(issuer_ca_id)
-        issuer_name_counter[str(issuer_name)] += 1
-        not_before_dates.append(not_before_dt)
-
-    if cert_meta_count > 0 and not_before_dates:
-        # Make all dates offset-aware for comparison with `now`
-        aware_dates = []
-        for dt in not_before_dates:
-            aware_dt = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
-            aware_dates.append(aware_dt)
-
-        newest_dt = max(aware_dates)
-        oldest_dt = min(aware_dates)
-        ninety_days_ago = now - timedelta(days=90)
-
-        ctx.cert_summary = CertSummary(
-            cert_count=cert_meta_count,
-            issuer_diversity=len(issuer_ca_ids),
-            issuance_velocity=sum(1 for dt in aware_dates if dt >= ninety_days_ago),
-            newest_cert_age_days=max((now - newest_dt).days, 0),
-            oldest_cert_age_days=max((now - oldest_dt).days, 0),
-            top_issuers=tuple(name for name, _ in issuer_name_counter.most_common(3)),
-        )
-
-
 # ── Public lightweight lookup for subdomain enrichment ─────────────────
 
 
@@ -1067,7 +901,7 @@ class DNSSource:
                 detected_slugs=tuple(sorted(ctx.slugs)),
                 dmarc_policy=ctx.dmarc_policy,
                 related_domains=tuple(sorted(ctx.related_domains)),
-                crtsh_degraded=ctx.crtsh_degraded,
+                degraded_sources=tuple(sorted(ctx.degraded_sources)),
                 cert_summary=ctx.cert_summary,
                 evidence=tuple(ctx.evidence),
                 bimi_identity=ctx.bimi_identity,
@@ -1080,7 +914,7 @@ class DNSSource:
             m365_detected=False,
             dmarc_policy=ctx.dmarc_policy,
             related_domains=tuple(sorted(ctx.related_domains)),
-            crtsh_degraded=ctx.crtsh_degraded,
+            degraded_sources=tuple(sorted(ctx.degraded_sources)),
             cert_summary=ctx.cert_summary,
             evidence=tuple(ctx.evidence),
             bimi_identity=ctx.bimi_identity,
@@ -1113,7 +947,7 @@ class DNSSource:
             _detect_subdomain_txt(ctx, domain),
             _detect_caa(ctx, domain),
             _detect_srv(ctx, domain),
-            _detect_crtsh(ctx, domain),
+            _detect_cert_intel(ctx, domain),
             _detect_common_subdomains(ctx, domain),
         )
 

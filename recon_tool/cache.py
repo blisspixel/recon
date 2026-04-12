@@ -102,6 +102,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "related_domains": list(info.related_domains),
         "insights": list(info.insights),
         "crtsh_degraded": info.crtsh_degraded,
+        "degraded_sources": list(info.degraded_sources),
         "evidence_confidence": info.evidence_confidence.value,
         "inference_confidence": info.inference_confidence.value,
         "site_verification_tokens": list(info.site_verification_tokens),
@@ -162,6 +163,18 @@ def _parse_confidence(value: Any, fallback: ConfidenceLevel = ConfidenceLevel.ME
         except ValueError:
             return fallback
     return fallback
+
+
+def _parse_degraded_sources(data: dict[str, Any]) -> tuple[str, ...]:
+    """Parse degraded_sources from cache data, with backward compat for crtsh_degraded."""
+    # New format: degraded_sources list
+    ds = data.get("degraded_sources")
+    if isinstance(ds, list):
+        return tuple(str(s) for s in ds)
+    # Old format: crtsh_degraded bool
+    if bool(data.get("crtsh_degraded", False)):
+        return ("crt.sh",)
+    return ()
 
 
 def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
@@ -246,7 +259,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         tenant_domains=tuple(data.get("tenant_domains", [])),
         related_domains=tuple(data.get("related_domains", [])),
         insights=tuple(data.get("insights", [])),
-        crtsh_degraded=bool(data.get("crtsh_degraded", False)),
+        degraded_sources=_parse_degraded_sources(data),
         cert_summary=cert_summary,
         evidence=evidence,
         evidence_confidence=_parse_confidence(data.get("evidence_confidence")),

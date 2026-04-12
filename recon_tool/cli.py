@@ -1,8 +1,8 @@
 """CLI application — recon: domain intelligence from the command line.
 
 Supports both:
-  recon pepsi.com          (shorthand — domain has a dot)
-  recon lookup pepsi.com   (explicit subcommand)
+  recon contoso.com          (shorthand — domain has a dot)
+  recon lookup contoso.com   (explicit subcommand)
   recon doctor
   recon batch domains.txt
   recon mcp                (start MCP server)
@@ -143,10 +143,10 @@ def main(
     All from public sources. No credentials needed.
 
     [dim]Usage:[/dim]
-      recon pepsi.com
-      recon microsoft.com --services
-      recon tesla.com --full
-      recon softchoice.com --md > report.md
+      recon contoso.com
+      recon northwindtraders.com --services
+      recon fabrikam.com --full
+      recon contoso.com --md > report.md
       recon batch domains.txt --json
       recon doctor
       recon mcp
@@ -184,7 +184,7 @@ def lookup(
     """
     Look up a domain. This is the default command.
 
-    [dim]recon pepsi.com is the same as recon lookup pepsi.com[/dim]
+    [dim]recon contoso.com is the same as recon lookup contoso.com[/dim]
     """
     asyncio.run(
         _lookup(
@@ -965,7 +965,7 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int,
 def run() -> None:
     """Entry point — invokes the Typer app.
 
-    The callback handles shorthand domain syntax (e.g., `recon pepsi.com`)
+    The callback handles shorthand domain syntax (e.g., `recon contoso.com`)
     via invoke_without_command routing. No preprocessing needed.
     """
     app()

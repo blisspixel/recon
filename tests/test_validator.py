@@ -11,44 +11,44 @@ class TestValidateDomain:
     # --- Happy path ---
 
     def test_simple_domain(self):
-        assert validate_domain("pepsi.com") == "pepsi.com"
+        assert validate_domain("contoso.com") == "contoso.com"
 
     def test_subdomain(self):
         assert validate_domain("mail.google.com") == "mail.google.com"
 
     def test_uppercase_normalized(self):
-        assert validate_domain("Pepsi.COM") == "pepsi.com"
+        assert validate_domain("Contoso.COM") == "contoso.com"
 
     def test_leading_trailing_whitespace_stripped(self):
-        assert validate_domain("  pepsi.com  ") == "pepsi.com"
+        assert validate_domain("  contoso.com  ") == "contoso.com"
 
     # --- Scheme stripping ---
 
     def test_strip_https(self):
-        assert validate_domain("https://pepsi.com") == "pepsi.com"
+        assert validate_domain("https://contoso.com") == "contoso.com"
 
     def test_strip_http(self):
-        assert validate_domain("http://pepsi.com") == "pepsi.com"
+        assert validate_domain("http://contoso.com") == "contoso.com"
 
     def test_strip_scheme_case_insensitive(self):
-        assert validate_domain("HTTPS://Pepsi.com") == "pepsi.com"
+        assert validate_domain("HTTPS://Contoso.com") == "contoso.com"
 
     def test_strip_scheme_with_path(self):
-        assert validate_domain("https://pepsi.com/some/path") == "pepsi.com"
+        assert validate_domain("https://contoso.com/some/path") == "contoso.com"
 
     def test_strip_trailing_slash(self):
-        assert validate_domain("pepsi.com/") == "pepsi.com"
+        assert validate_domain("contoso.com/") == "contoso.com"
 
     # --- www. stripping ---
 
     def test_strip_www_prefix(self):
-        assert validate_domain("www.pepsi.com") == "pepsi.com"
+        assert validate_domain("www.contoso.com") == "contoso.com"
 
     def test_strip_www_with_scheme(self):
-        assert validate_domain("https://www.pepsi.com/") == "pepsi.com"
+        assert validate_domain("https://www.contoso.com/") == "contoso.com"
 
     def test_strip_www_case_insensitive(self):
-        assert validate_domain("WWW.Pepsi.COM") == "pepsi.com"
+        assert validate_domain("WWW.Contoso.COM") == "contoso.com"
 
     # --- Empty / whitespace rejection ---
 
@@ -72,27 +72,27 @@ class TestValidateDomain:
 
     def test_spaces_in_domain_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain("pep si.com")
+            validate_domain("con toso.com")
 
     def test_single_char_tld_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain("pepsi.c")
+            validate_domain("contoso.c")
 
     def test_consecutive_dots_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain("pepsi..com")
+            validate_domain("contoso..com")
 
     def test_trailing_dot_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain("pepsi.com.")
+            validate_domain("contoso.com.")
 
     def test_leading_dot_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain(".pepsi.com")
+            validate_domain(".contoso.com")
 
     def test_numeric_tld_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain("pepsi.123")
+            validate_domain("contoso.123")
 
     # --- Input length limit ---
 
@@ -199,9 +199,9 @@ class TestSchemeStrippingPreservesDomain:
 
     # Strategy that generates valid domain strings (excluding www. prefix
     # since the validator strips it, which would change the expected output)
-    _valid_domain = st.from_regex(
-        r"[a-z][a-z0-9]{0,10}\.[a-z]{2,6}", fullmatch=True
-    ).filter(lambda d: not d.startswith("www."))
+    _valid_domain = st.from_regex(r"[a-z][a-z0-9]{0,10}\.[a-z]{2,6}", fullmatch=True).filter(
+        lambda d: not d.startswith("www.")
+    )
 
     @given(domain=_valid_domain)
     @settings(max_examples=100)

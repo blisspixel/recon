@@ -1,24 +1,26 @@
-"""Tests for crt.sh certificate transparency integration."""
+"""Tests for certificate transparency integration (CrtshProvider via cert_providers)."""
 
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 
-from recon_tool.sources.dns import _detect_crtsh, _DetectionCtx
+from recon_tool.sources.cert_providers import CrtshProvider, filter_subdomains
 
 
 @pytest.fixture
 def _enable_crtsh():
-    """Override the conftest auto-mock to allow real _detect_crtsh in these tests."""
+    """Override the conftest auto-mock to allow real cert intel in these tests."""
 
 
-class TestCrtshDetector:
+@pytest.mark.usefixtures("_enable_crtsh")
+class TestCrtshProvider:
     @pytest.mark.asyncio
-    async def test_discovers_subdomains(self, _enable_crtsh):
-        """crt.sh results should add subdomains to related_domains."""
-        ctx = _DetectionCtx()
+    async def test_discovers_subdomains(self):
+        """crt.sh results should return discovered subdomains."""
+        provider = CrtshProvider()
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [
@@ -29,20 +31,20 @@ class TestCrtshDetector:
 
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=mock_response)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns.httpx.AsyncClient", return_value=mock_client):
-            await _detect_crtsh(ctx, "example.com")
+        with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
+            mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
+            subdomains, _ = await provider.query("example.com")
 
-        assert "dev.example.com" in ctx.related_domains
-        assert "staging.example.com" in ctx.related_domains
-        assert "api.example.com" in ctx.related_domains
+        assert "dev.example.com" in subdomains
+        assert "staging.example.com" in subdomains
+        assert "api.example.com" in subdomains
 
     @pytest.mark.asyncio
-    async def test_filters_wildcards(self, _enable_crtsh):
+    async def test_filters_wildcards(self):
         """Wildcard entries should be filtered out."""
-        ctx = _DetectionCtx()
+        provider = CrtshProvider()
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [
@@ -52,19 +54,19 @@ class TestCrtshDetector:
 
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=mock_response)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns.httpx.AsyncClient", return_value=mock_client):
-            await _detect_crtsh(ctx, "example.com")
+        with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
+            mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
+            subdomains, _ = await provider.query("example.com")
 
-        assert "real.example.com" in ctx.related_domains
-        assert len([d for d in ctx.related_domains if "*" in d]) == 0
+        assert "real.example.com" in subdomains
+        assert len([d for d in subdomains if "*" in d]) == 0
 
     @pytest.mark.asyncio
-    async def test_filters_noise_prefixes(self, _enable_crtsh):
+    async def test_filters_noise_prefixes(self):
         """Common noise subdomains (www, mail, ftp, etc.) should be filtered."""
-        ctx = _DetectionCtx()
+        provider = CrtshProvider()
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [
@@ -77,20 +79,20 @@ class TestCrtshDetector:
 
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=mock_response)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns.httpx.AsyncClient", return_value=mock_client):
-            await _detect_crtsh(ctx, "example.com")
+        with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
+            mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
+            subdomains, _ = await provider.query("example.com")
 
-        assert "app.example.com" in ctx.related_domains
-        assert "www.example.com" not in ctx.related_domains
-        assert "mail.example.com" not in ctx.related_domains
+        assert "app.example.com" in subdomains
+        assert "www.example.com" not in subdomains
+        assert "mail.example.com" not in subdomains
 
     @pytest.mark.asyncio
-    async def test_excludes_queried_domain(self, _enable_crtsh):
-        """The queried domain itself should not appear in related_domains."""
-        ctx = _DetectionCtx()
+    async def test_excludes_queried_domain(self):
+        """The queried domain itself should not appear in subdomains."""
+        provider = CrtshProvider()
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [
@@ -100,71 +102,69 @@ class TestCrtshDetector:
 
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=mock_response)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns.httpx.AsyncClient", return_value=mock_client):
-            await _detect_crtsh(ctx, "example.com")
+        with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
+            mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
+            subdomains, _ = await provider.query("example.com")
 
-        assert "example.com" not in ctx.related_domains
-        assert "sub.example.com" in ctx.related_domains
+        assert "example.com" not in subdomains
+        assert "sub.example.com" in subdomains
 
     @pytest.mark.asyncio
-    async def test_caps_at_max_subdomains(self, _enable_crtsh):
-        """Should not return more than _CRTSH_MAX_SUBDOMAINS."""
-        ctx = _DetectionCtx()
-        entries = [{"name_value": f"sub{i}.example.com"} for i in range(100)]
+    async def test_caps_at_max_subdomains(self):
+        """Should not return more than MAX_SUBDOMAINS."""
+        provider = CrtshProvider()
+        entries = [{"name_value": f"sub{i}.example.com"} for i in range(150)]
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = entries
 
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=mock_response)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns.httpx.AsyncClient", return_value=mock_client):
-            await _detect_crtsh(ctx, "example.com")
+        with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
+            mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
+            subdomains, _ = await provider.query("example.com")
 
-        assert len(ctx.related_domains) <= 100
+        assert len(subdomains) <= 100
 
     @pytest.mark.asyncio
-    async def test_handles_http_error_gracefully(self, _enable_crtsh):
-        """HTTP errors should be silently ignored."""
-        ctx = _DetectionCtx()
+    async def test_handles_http_error(self):
+        """HTTP errors should raise an exception."""
+        provider = CrtshProvider()
         mock_response = MagicMock()
         mock_response.status_code = 503
+        mock_response.request = MagicMock()
 
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=mock_response)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns.httpx.AsyncClient", return_value=mock_client):
-            await _detect_crtsh(ctx, "example.com")
-
-        assert len(ctx.related_domains) == 0
+        with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
+            mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
+            with pytest.raises(httpx.HTTPStatusError):
+                await provider.query("example.com")
 
     @pytest.mark.asyncio
-    async def test_handles_timeout_gracefully(self, _enable_crtsh):
-        """Timeouts should be silently ignored."""
-        import httpx
-        ctx = _DetectionCtx()
+    async def test_handles_timeout(self):
+        """Timeouts should raise an exception."""
+        provider = CrtshProvider()
 
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns.httpx.AsyncClient", return_value=mock_client):
-            await _detect_crtsh(ctx, "example.com")
-
-        assert len(ctx.related_domains) == 0
+        with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
+            mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
+            with pytest.raises(httpx.TimeoutException):
+                await provider.query("example.com")
 
     @pytest.mark.asyncio
-    async def test_handles_multiline_name_value(self, _enable_crtsh):
+    async def test_handles_multiline_name_value(self):
         """crt.sh sometimes returns multiple names separated by newlines."""
-        ctx = _DetectionCtx()
+        provider = CrtshProvider()
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [
@@ -173,13 +173,27 @@ class TestCrtshDetector:
 
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=mock_response)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns.httpx.AsyncClient", return_value=mock_client):
-            await _detect_crtsh(ctx, "example.com")
+        with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
+            mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
+            subdomains, _ = await provider.query("example.com")
 
-        assert "a.example.com" in ctx.related_domains
-        assert "b.example.com" in ctx.related_domains
+        assert "a.example.com" in subdomains
+        assert "b.example.com" in subdomains
         # Wildcard should be filtered
-        assert len([d for d in ctx.related_domains if "*" in d]) == 0
+        assert len([d for d in subdomains if "*" in d]) == 0
+
+    def test_name_property(self):
+        """Provider name should be 'crt.sh'."""
+        assert CrtshProvider().name == "crt.sh"
+
+
+class TestFilterSubdomains:
+    def test_basic_filtering(self):
+        raw = ["app.example.com", "*.example.com", "www.example.com", "api.example.com"]
+        result = filter_subdomains(raw, "example.com")
+        assert "app.example.com" in result
+        assert "api.example.com" in result
+        assert "*.example.com" not in result
+        assert "www.example.com" not in result

@@ -80,9 +80,7 @@ class TestOIDCSource:
             "authorization_endpoint": "https://login.microsoftonline.com/a1b2c3d4-e5f6-7890-abcd-ef1234567890/oauth2/v2.0/authorize",
             "tenant_region_scope": "NA",
         }
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(200, json=response_json)
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(200, json=response_json))
         async with httpx.AsyncClient(transport=transport) as client:
             source = OIDCSource()
             result = await source.lookup("example.com", client=client)
@@ -92,9 +90,7 @@ class TestOIDCSource:
 
     @pytest.mark.asyncio
     async def test_http_error_returns_source_result_with_error(self):
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(404)
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(404))
         async with httpx.AsyncClient(transport=transport) as client:
             source = OIDCSource()
             result = await source.lookup("nonexistent.com", client=client)
@@ -104,9 +100,7 @@ class TestOIDCSource:
 
     @pytest.mark.asyncio
     async def test_unparseable_response_returns_error(self):
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(200, json={"foo": "bar"})
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(200, json={"foo": "bar"}))
         async with httpx.AsyncClient(transport=transport) as client:
             source = OIDCSource()
             result = await source.lookup("example.com", client=client)
@@ -143,8 +137,8 @@ class TestOIDCSource:
         transport = httpx.MockTransport(capture_request)
         async with httpx.AsyncClient(transport=transport) as client:
             source = OIDCSource()
-            await source.lookup("pepsi.com", client=client)
-        assert captured_url == DISCOVERY_URL_TEMPLATE.format(domain="pepsi.com")
+            await source.lookup("contoso.com", client=client)
+        assert captured_url == DISCOVERY_URL_TEMPLATE.format(domain="contoso.com")
 
 
 # --- Property-based tests (Hypothesis) ---
@@ -168,9 +162,7 @@ def valid_domain_labels():
 
 def valid_domains():
     """Strategy for valid domain strings like 'example.com'."""
-    return st.tuples(valid_domain_labels(), valid_domain_labels()).map(
-        lambda parts: f"{parts[0]}.{parts[1]}"
-    )
+    return st.tuples(valid_domain_labels(), valid_domain_labels()).map(lambda parts: f"{parts[0]}.{parts[1]}")
 
 
 class TestProperty4DiscoveryURLConstruction:
@@ -185,11 +177,7 @@ class TestProperty4DiscoveryURLConstruction:
         """For any valid domain d, DISCOVERY_URL_TEMPLATE.format(domain=d) should equal
         'https://login.microsoftonline.com/' + d + '/.well-known/openid-configuration'."""
         url = DISCOVERY_URL_TEMPLATE.format(domain=domain)
-        expected = (
-            "https://login.microsoftonline.com/"
-            + domain
-            + "/.well-known/openid-configuration"
-        )
+        expected = "https://login.microsoftonline.com/" + domain + "/.well-known/openid-configuration"
         assert url == expected
 
 
@@ -213,9 +201,7 @@ class TestProperty5TenantInfoParsingRoundTrip:
         assert result.tenant_id == uuid_str.lower()
 
 
-_UUID_PATTERN = re.compile(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-)
+_UUID_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 
 class TestProperty6TenantIDUUIDFormatInvariant:
@@ -234,9 +220,7 @@ class TestProperty6TenantIDUUIDFormatInvariant:
             "authorization_endpoint": f"https://login.microsoftonline.com/{uuid_str}/oauth2/v2.0/authorize",
         }
         result = parse_tenant_info_from_oidc(response_json)
-        assert _UUID_PATTERN.match(result.tenant_id), (
-            f"tenant_id '{result.tenant_id}' does not match UUID format"
-        )
+        assert _UUID_PATTERN.match(result.tenant_id), f"tenant_id '{result.tenant_id}' does not match UUID format"
 
 
 class TestProperty17LookupSourceProtocolCompliance:

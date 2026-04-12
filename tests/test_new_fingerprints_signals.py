@@ -18,9 +18,21 @@ class TestNewFingerprints:
 
     def test_new_fingerprints_loaded(self):
         slugs = {fp.slug for fp in load_fingerprints()}
-        for expected in ("box", "egnyte", "glean", "datadog", "newrelic",
-                         "pagerduty", "render", "ping-identity", "cyberark",
-                         "lakera", "cato", "rippling", "deel"):
+        for expected in (
+            "box",
+            "egnyte",
+            "glean",
+            "datadog",
+            "newrelic",
+            "pagerduty",
+            "render",
+            "ping-identity",
+            "cyberark",
+            "lakera",
+            "cato",
+            "rippling",
+            "deel",
+        ):
             assert expected in slugs, f"Missing fingerprint: {expected}"
 
 

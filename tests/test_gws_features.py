@@ -40,6 +40,7 @@ def _mock_safe_resolve_factory(records_by_query: dict[str, list[str]]):
     async def mock_resolve(domain, rdtype, **kwargs):
         key = f"{domain}/{rdtype}"
         return records_by_query.get(key, [])
+
     return mock_resolve
 
 
@@ -69,11 +70,13 @@ class TestDetectGwsCnames:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_single_gws_module_detected(self, mock_resolve):
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": [],
-            "example.com/MX": [],
-            "mail.example.com/CNAME": ["ghs.googlehosted.com"],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "mail.example.com/CNAME": ["ghs.googlehosted.com"],
+            }
+        )
         result = await DNSSource().lookup("example.com")
         assert "Google Workspace: Mail" in result.detected_services
         assert "google-workspace" in result.detected_slugs
@@ -81,13 +84,15 @@ class TestDetectGwsCnames:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_multiple_gws_modules_detected(self, mock_resolve):
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": [],
-            "example.com/MX": [],
-            "mail.example.com/CNAME": ["ghs.googlehosted.com"],
-            "calendar.example.com/CNAME": ["ghs.googlehosted.com"],
-            "drive.example.com/CNAME": ["ghs.googlehosted.com"],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "mail.example.com/CNAME": ["ghs.googlehosted.com"],
+                "calendar.example.com/CNAME": ["ghs.googlehosted.com"],
+                "drive.example.com/CNAME": ["ghs.googlehosted.com"],
+            }
+        )
         result = await DNSSource().lookup("example.com")
         assert "Google Workspace: Mail" in result.detected_services
         assert "Google Workspace: Calendar" in result.detected_services
@@ -97,11 +102,13 @@ class TestDetectGwsCnames:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_non_gws_cname_ignored(self, mock_resolve):
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": [],
-            "example.com/MX": [],
-            "mail.example.com/CNAME": ["some.other.host.com"],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "mail.example.com/CNAME": ["some.other.host.com"],
+            }
+        )
         result = await DNSSource().lookup("example.com")
         gws_services = [s for s in (result.detected_services or ()) if "Google Workspace:" in s]
         assert len(gws_services) == 0
@@ -111,23 +118,27 @@ class TestSiteVerificationTokenExtraction:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_google_site_verification_extracted(self, mock_resolve):
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": ["google-site-verification=abc123xyz"],
-            "example.com/MX": [],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": ["google-site-verification=abc123xyz"],
+                "example.com/MX": [],
+            }
+        )
         result = await DNSSource().lookup("example.com")
         assert "abc123xyz" in result.site_verification_tokens
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_multiple_tokens_extracted(self, mock_resolve):
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": [
-                "google-site-verification=token1",
-                "google-site-verification=token2",
-            ],
-            "example.com/MX": [],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [
+                    "google-site-verification=token1",
+                    "google-site-verification=token2",
+                ],
+                "example.com/MX": [],
+            }
+        )
         result = await DNSSource().lookup("example.com")
         assert "token1" in result.site_verification_tokens
         assert "token2" in result.site_verification_tokens
@@ -135,10 +146,12 @@ class TestSiteVerificationTokenExtraction:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_no_verification_token(self, mock_resolve):
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": ["v=spf1 -all"],
-            "example.com/MX": [],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": ["v=spf1 -all"],
+                "example.com/MX": [],
+            }
+        )
         result = await DNSSource().lookup("example.com")
         assert len(result.site_verification_tokens) == 0
 
@@ -147,11 +160,13 @@ class TestTlsRptDetection:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_tls_rpt_detected(self, mock_resolve):
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": [],
-            "example.com/MX": [],
-            "_smtp._tls.example.com/TXT": ["v=TLSRPTv1; rua=mailto:tls@example.com"],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "_smtp._tls.example.com/TXT": ["v=TLSRPTv1; rua=mailto:tls@example.com"],
+            }
+        )
         result = await DNSSource().lookup("example.com")
         assert "TLS-RPT" in result.detected_services
         assert "tls-rpt" in result.detected_slugs
@@ -159,10 +174,12 @@ class TestTlsRptDetection:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_tls_rpt_not_detected_without_record(self, mock_resolve):
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": [],
-            "example.com/MX": [],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+            }
+        )
         result = await DNSSource().lookup("example.com")
         assert "TLS-RPT" not in (result.detected_services or ())
 
@@ -172,19 +189,18 @@ class TestParseBimiVmc:
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_bimi_vmc_identity_extracted(self, mock_resolve):
         """BIMI with a= PEM URL should extract VMC corporate identity."""
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": [],
-            "example.com/MX": [],
-            "default._bimi.example.com/TXT": [
-                "v=BIMI1; l=https://example.com/logo.svg; a=https://example.com/vmc.pem"
-            ],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "default._bimi.example.com/TXT": [
+                    "v=BIMI1; l=https://example.com/logo.svg; a=https://example.com/vmc.pem"
+                ],
+            }
+        )
 
         # Mock the HTTP fetch for the PEM file — use regex fallback path
-        pem_content = (
-            "Subject: O=Northwind Traders, C=US\n"
-            "-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----"
-        )
+        pem_content = "Subject: O=Northwind Traders, C=US\n-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----"
         mock_resp = httpx.Response(
             status_code=200,
             request=httpx.Request("GET", "https://example.com/vmc.pem"),
@@ -195,10 +211,11 @@ class TestParseBimiVmc:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns._http_client", return_value=mock_client):
-            # Also need to make cryptography import fail to test regex fallback
-            with patch.dict("sys.modules", {"cryptography": None, "cryptography.x509": None}):
-                result = await DNSSource().lookup("example.com")
+        with (
+            patch("recon_tool.sources.dns._http_client", return_value=mock_client),
+            patch.dict("sys.modules", {"cryptography": None, "cryptography.x509": None}),
+        ):
+            result = await DNSSource().lookup("example.com")
 
         assert result.bimi_identity is not None
         assert result.bimi_identity.organization == "Northwind Traders"
@@ -208,13 +225,13 @@ class TestParseBimiVmc:
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_bimi_no_a_tag_skips_vmc(self, mock_resolve):
         """BIMI without a= tag should not attempt VMC fetch."""
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": [],
-            "example.com/MX": [],
-            "default._bimi.example.com/TXT": [
-                "v=BIMI1; l=https://example.com/logo.svg"
-            ],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "default._bimi.example.com/TXT": ["v=BIMI1; l=https://example.com/logo.svg"],
+            }
+        )
         result = await DNSSource().lookup("example.com")
         assert "BIMI" in result.detected_services
         assert result.bimi_identity is None
@@ -223,13 +240,15 @@ class TestParseBimiVmc:
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_bimi_vmc_http_error(self, mock_resolve):
         """BIMI VMC fetch returning non-200 should not crash."""
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": [],
-            "example.com/MX": [],
-            "default._bimi.example.com/TXT": [
-                "v=BIMI1; l=https://example.com/logo.svg; a=https://example.com/vmc.pem"
-            ],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "default._bimi.example.com/TXT": [
+                    "v=BIMI1; l=https://example.com/logo.svg; a=https://example.com/vmc.pem"
+                ],
+            }
+        )
         mock_resp = httpx.Response(
             status_code=404,
             request=httpx.Request("GET", "https://example.com/vmc.pem"),
@@ -250,11 +269,13 @@ class TestFetchMtaStsPolicy:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_mta_sts_enforce_mode(self, mock_resolve):
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": [],
-            "example.com/MX": [],
-            "_mta-sts.example.com/TXT": ["v=STSv1; id=20240101"],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "_mta-sts.example.com/TXT": ["v=STSv1; id=20240101"],
+            }
+        )
         policy_body = "version: STSv1\nmode: enforce\nmax_age: 86400\nmx: *.example.com\n"
         mock_resp = httpx.Response(
             status_code=200,
@@ -275,11 +296,13 @@ class TestFetchMtaStsPolicy:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_mta_sts_testing_mode(self, mock_resolve):
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": [],
-            "example.com/MX": [],
-            "_mta-sts.example.com/TXT": ["v=STSv1; id=20240101"],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "_mta-sts.example.com/TXT": ["v=STSv1; id=20240101"],
+            }
+        )
         policy_body = "version: STSv1\nmode: testing\nmax_age: 86400\n"
         mock_resp = httpx.Response(
             status_code=200,
@@ -299,11 +322,13 @@ class TestFetchMtaStsPolicy:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
     async def test_mta_sts_policy_fetch_failure(self, mock_resolve):
-        mock_resolve.side_effect = _mock_safe_resolve_factory({
-            "example.com/TXT": [],
-            "example.com/MX": [],
-            "_mta-sts.example.com/TXT": ["v=STSv1; id=20240101"],
-        })
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "_mta-sts.example.com/TXT": ["v=STSv1; id=20240101"],
+            }
+        )
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(side_effect=httpx.ConnectError("refused"))
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -592,9 +617,7 @@ class TestComputeInferenceConfidence:
 
 class TestComputeDetectionScores:
     def test_single_source_type_low(self):
-        evidence = (
-            EvidenceRecord(source_type="TXT", raw_value="v=spf1", rule_name="SPF", slug="m365"),
-        )
+        evidence = (EvidenceRecord(source_type="TXT", raw_value="v=spf1", rule_name="SPF", slug="m365"),)
         scores = compute_detection_scores(evidence)
         assert scores == (("m365", "low"),)
 

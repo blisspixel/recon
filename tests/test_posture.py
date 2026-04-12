@@ -1,4 +1,5 @@
 """Tests for the posture analyzer."""
+
 from recon_tool.models import CertSummary, ConfidenceLevel, TenantInfo
 from recon_tool.posture import BANNED_TERMS, analyze_posture
 
@@ -45,8 +46,11 @@ class TestAnalyzePosture:
 
     def test_high_cert_issuance(self):
         cs = CertSummary(
-            cert_count=50, issuer_diversity=3, issuance_velocity=25,
-            newest_cert_age_days=1, oldest_cert_age_days=365,
+            cert_count=50,
+            issuer_diversity=3,
+            issuance_velocity=25,
+            newest_cert_age_days=1,
+            oldest_cert_age_days=365,
             top_issuers=("Let's Encrypt",),
         )
         info = _make_info(cert_summary=cs)
@@ -62,8 +66,11 @@ class TestAnalyzePosture:
             auth_type="Federated",
             dmarc_policy="none",
             cert_summary=CertSummary(
-                cert_count=100, issuer_diversity=5, issuance_velocity=30,
-                newest_cert_age_days=1, oldest_cert_age_days=1000,
+                cert_count=100,
+                issuer_diversity=5,
+                issuance_velocity=30,
+                newest_cert_age_days=1,
+                oldest_cert_age_days=1000,
                 top_issuers=("LE", "DigiCert", "Sectigo"),
             ),
         )

@@ -90,6 +90,7 @@ class TestBoundedRateLimiter:
     def test_rate_limit_bounded_size(self):
         """Rate limiter should not grow unbounded."""
         from recon_tool.server import _RATE_LIMIT_MAX_SIZE
+
         for i in range(_RATE_LIMIT_MAX_SIZE + 100):
             _rate_limit_record(f"domain-{i}.com")
         # After eviction, should be at or below max

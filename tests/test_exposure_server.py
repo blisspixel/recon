@@ -113,7 +113,9 @@ class TestAssessExposure:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_recon_lookup_error(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="unknown.com", message="No data", error_type="all_sources_failed",
+            domain="unknown.com",
+            message="No data",
+            error_type="all_sources_failed",
         )
         result = await assess_exposure("unknown.com")
         assert "No information found for unknown.com" in result
@@ -175,7 +177,9 @@ class TestFindHardeningGaps:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_recon_lookup_error(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="unknown.com", message="No data", error_type="all_sources_failed",
+            domain="unknown.com",
+            message="No data",
+            error_type="all_sources_failed",
         )
         result = await find_hardening_gaps("unknown.com")
         assert "No information found for unknown.com" in result
@@ -222,7 +226,9 @@ class TestComparePostures:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_domain_a_fails(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="bad.com", message="No data", error_type="all_sources_failed",
+            domain="bad.com",
+            message="No data",
+            error_type="all_sources_failed",
         )
         result = await compare_postures("bad.com", "contoso.com")
         assert "Could not resolve domain_a" in result
@@ -242,7 +248,9 @@ class TestComparePostures:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_both_domains_fail(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="bad.com", message="No data", error_type="all_sources_failed",
+            domain="bad.com",
+            message="No data",
+            error_type="all_sources_failed",
         )
         result = await compare_postures("bad.com", "worse.com")
         # domain_a fails first (fail-fast)
@@ -275,6 +283,7 @@ class TestComparePostures:
 class TestToolAnnotations:
     def _get_tool(self, name: str):
         from recon_tool.server import mcp as server_mcp
+
         return server_mcp._tool_manager.get_tool(name)  # noqa: SLF001
 
     def test_assess_exposure_annotations(self) -> None:

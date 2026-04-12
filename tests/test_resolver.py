@@ -14,6 +14,7 @@ from recon_tool.resolver import SourcePool, default_pool, resolve_tenant
 # Helpers: fake sources
 # ---------------------------------------------------------------------------
 
+
 class FakeSource:
     """A configurable fake LookupSource for testing."""
 
@@ -51,6 +52,7 @@ class ExplodingSource:
 # SourcePool tests
 # ---------------------------------------------------------------------------
 
+
 class TestSourcePool:
     def test_empty_pool(self) -> None:
         pool = SourcePool()
@@ -72,10 +74,7 @@ class TestSourcePool:
         assert list(pool)[0] is s
 
     def test_iteration_order(self) -> None:
-        sources = [
-            FakeSource(f"s{i}", SourceResult(source_name=f"s{i}"))
-            for i in range(5)
-        ]
+        sources = [FakeSource(f"s{i}", SourceResult(source_name=f"s{i}")) for i in range(5)]
         pool = SourcePool(sources)
         assert list(pool) == sources
 
@@ -83,6 +82,7 @@ class TestSourcePool:
 # ---------------------------------------------------------------------------
 # default_pool tests
 # ---------------------------------------------------------------------------
+
 
 class TestDefaultPool:
     def test_default_pool_has_five_sources(self) -> None:
@@ -93,14 +93,18 @@ class TestDefaultPool:
         pool = default_pool()
         names = [s.name for s in pool]
         assert names == [
-            "oidc_discovery", "user_realm", "google_workspace",
-            "google_identity", "dns_records",
+            "oidc_discovery",
+            "user_realm",
+            "google_workspace",
+            "google_identity",
+            "dns_records",
         ]
 
 
 # ---------------------------------------------------------------------------
 # resolve_tenant tests
 # ---------------------------------------------------------------------------
+
 
 class TestResolveTenant:
     @pytest.mark.asyncio
@@ -206,11 +210,13 @@ class TestResolveTenant:
             tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
         )
         r3 = SourceResult(source_name="s3", m365_detected=True)
-        pool = SourcePool([
-            FakeSource("s1", r1),
-            FakeSource("s2", r2),
-            FakeSource("s3", r3),
-        ])
+        pool = SourcePool(
+            [
+                FakeSource("s1", r1),
+                FakeSource("s2", r2),
+                FakeSource("s3", r3),
+            ]
+        )
 
         info, results = await resolve_tenant("example.com", pool=pool)
         assert len(results) == 3

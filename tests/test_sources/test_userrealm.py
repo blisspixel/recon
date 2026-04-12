@@ -12,10 +12,10 @@ from recon_tool.sources.userrealm import UserRealmSource
 USERREALM_JSON = {
     "State": 4,
     "UserState": 2,
-    "Login": "user@pepsi.com",
+    "Login": "user@contoso.com",
     "NameSpaceType": "Managed",
-    "DomainName": "pepsi.com",
-    "FederationBrandName": "PepsiCo, Inc.",
+    "DomainName": "contoso.com",
+    "FederationBrandName": "Contoso Ltd",
     "CloudInstanceName": "microsoftonline.com",
 }
 
@@ -25,9 +25,9 @@ AUTODISCOVER_XML = """<?xml version="1.0" encoding="utf-8"?>
     <GetFederationInformationResponseMessage xmlns="http://schemas.microsoft.com/exchange/2010/Autodiscover">
       <Response>
         <Domains>
-          <Domain>pepsi.com</Domain>
-          <Domain>pepsico.onmicrosoft.com</Domain>
-          <Domain>pepsi.onmicrosoft.com</Domain>
+          <Domain>contoso.com</Domain>
+          <Domain>contoso.onmicrosoft.com</Domain>
+          <Domain>contosoltd.onmicrosoft.com</Domain>
         </Domains>
       </Response>
     </GetFederationInformationResponseMessage>
@@ -62,10 +62,10 @@ class TestUserRealmSourceLookup:
         transport = httpx.MockTransport(handler)
         async with httpx.AsyncClient(transport=transport) as client:
             source = UserRealmSource()
-            result = await source.lookup("pepsi.com", client=client)
+            result = await source.lookup("contoso.com", client=client)
 
-        assert result.display_name == "PepsiCo, Inc."
-        assert result.default_domain == "pepsico.onmicrosoft.com"
+        assert result.display_name == "Contoso Ltd"
+        assert result.default_domain == "contoso.onmicrosoft.com"
         assert result.m365_detected is True
         assert result.error is None
 
@@ -79,9 +79,9 @@ class TestUserRealmSourceLookup:
         transport = httpx.MockTransport(handler)
         async with httpx.AsyncClient(transport=transport) as client:
             source = UserRealmSource()
-            result = await source.lookup("pepsi.com", client=client)
+            result = await source.lookup("contoso.com", client=client)
 
-        assert result.display_name == "PepsiCo, Inc."
+        assert result.display_name == "Contoso Ltd"
         assert result.default_domain is None
         assert result.m365_detected is True
 
@@ -97,10 +97,10 @@ class TestUserRealmSourceLookup:
         transport = httpx.MockTransport(handler)
         async with httpx.AsyncClient(transport=transport) as client:
             source = UserRealmSource()
-            result = await source.lookup("pepsi.com", client=client)
+            result = await source.lookup("contoso.com", client=client)
 
         assert result.display_name is None
-        assert result.default_domain == "pepsico.onmicrosoft.com"
+        assert result.default_domain == "contoso.onmicrosoft.com"
         assert result.m365_detected is True
 
     @pytest.mark.asyncio
@@ -108,7 +108,7 @@ class TestUserRealmSourceLookup:
         transport = httpx.MockTransport(lambda r: httpx.Response(500))
         async with httpx.AsyncClient(transport=transport) as client:
             source = UserRealmSource()
-            result = await source.lookup("pepsi.com", client=client)
+            result = await source.lookup("contoso.com", client=client)
 
         assert result.error is not None
         assert result.display_name is None
@@ -124,7 +124,7 @@ class TestUserRealmSourceLookup:
         transport = httpx.MockTransport(handler)
         async with httpx.AsyncClient(transport=transport) as client:
             source = UserRealmSource()
-            result = await source.lookup("pepsi.com", client=client)
+            result = await source.lookup("contoso.com", client=client)
 
         assert result.error is not None
         assert result.display_name is None
@@ -137,7 +137,7 @@ class TestUserRealmSourceLookup:
         transport = httpx.MockTransport(raise_error)
         async with httpx.AsyncClient(transport=transport) as client:
             source = UserRealmSource()
-            result = await source.lookup("pepsi.com", client=client)
+            result = await source.lookup("contoso.com", client=client)
 
         assert result.error is not None
         assert isinstance(result, SourceResult)

@@ -97,7 +97,9 @@ class TestBatchCommand:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_batch_json_handles_errors(self, mock_resolve, tmp_path):
         mock_resolve.side_effect = ReconLookupError(
-            domain="bad.com", message="No data", error_type="all_sources_failed",
+            domain="bad.com",
+            message="No data",
+            error_type="all_sources_failed",
         )
         domain_file = tmp_path / "domains.txt"
         domain_file.write_text("bad.com\n")
