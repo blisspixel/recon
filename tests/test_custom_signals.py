@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -23,7 +22,7 @@ def _clear_signal_cache():
     reload_signals()
 
 
-@pytest.fixture()
+@pytest.fixture
 def custom_signals_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """Create a temp dir and point RECON_CONFIG_DIR at it."""
     monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))

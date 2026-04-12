@@ -11,7 +11,6 @@ Covers:
 
 from __future__ import annotations
 
-from dataclasses import replace
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -33,7 +32,6 @@ from recon_tool.models import (
 )
 from recon_tool.sources.dns import DNSSource
 from recon_tool.sources.google import GoogleSource, parse_cse_config
-
 
 # ── Helpers ─────────────────────────────────────────────────────────────
 

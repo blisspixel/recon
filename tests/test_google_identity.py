@@ -6,7 +6,7 @@ _is_workspace_domain(), _extract_idp_name().
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -15,7 +15,6 @@ from recon_tool.sources.google_identity import (
     GoogleIdentitySource,
     _extract_idp_name,
 )
-
 
 # ── _extract_idp_name unit tests ────────────────────────────────────────
 

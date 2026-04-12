@@ -161,7 +161,6 @@ def lookup(
     domain: str = typer.Argument(help="Domain to look up"),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
     markdown: bool = typer.Option(False, "--md", help="Markdown report"),
-    html_output: bool = typer.Option(False, "--html", help="Self-contained HTML report"),
     services: bool = typer.Option(False, "--services", "-s", help="M365 vs tech stack breakdown"),
     domains: bool = typer.Option(False, "--domains", "-d", help="All tenant domains"),
     full: bool = typer.Option(False, "--full", "-f", help="Everything (verbose + services + domains + posture)"),
@@ -204,7 +203,6 @@ def lookup(
             chain_depth=depth,
             no_cache=no_cache,
             cache_ttl=cache_ttl,
-            html_output=html_output,
             show_exposure=exposure,
             show_gaps=gaps,
         )
@@ -505,7 +503,6 @@ async def _lookup(
     chain_depth: int = 1,
     no_cache: bool = False,
     cache_ttl: int = 86400,
-    html_output: bool = False,
     show_exposure: bool = False,
     show_gaps: bool = False,
 ) -> None:
@@ -550,8 +547,8 @@ async def _lookup(
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
     # Mutual exclusion: only one output format allowed
-    if sum([json_output, markdown, html_output]) > 1:
-        render_error("--json, --md, and --html are mutually exclusive")
+    if sum([json_output, markdown]) > 1:
+        render_error("--json and --md are mutually exclusive")
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
     # --depth > 1 requires --chain
@@ -641,7 +638,7 @@ async def _lookup(
                     info_exp = cached
 
             if info_exp is None:
-                if not json_output and not markdown and not html_output:
+                if not json_output and not markdown:
                     import random
 
                     msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
@@ -684,7 +681,7 @@ async def _lookup(
                     info_gaps = cached
 
             if info_gaps is None:
-                if not json_output and not markdown and not html_output:
+                if not json_output and not markdown:
                     import random
 
                     msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
@@ -725,7 +722,7 @@ async def _lookup(
                 info = cached
 
         if info is None:
-            if not json_output and not markdown and not html_output:
+            if not json_output and not markdown:
                 import random
 
                 msg = random.choice(_STATUS_MESSAGES)  # noqa: S311 — not security-sensitive
@@ -768,12 +765,6 @@ async def _lookup(
                     md += f"- {indicator} **[{obs.category}]** {obs.statement}\n"
                 md += "\n"
             typer.echo(md)
-            return
-
-        if html_output:
-            from recon_tool.formatter import format_tenant_html
-
-            typer.echo(format_tenant_html(info, observations=observations))
             return
 
         console.print(

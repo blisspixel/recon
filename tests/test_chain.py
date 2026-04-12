@@ -1,7 +1,7 @@
 """Tests for the chain resolver."""
 import pytest
 
-from recon_tool.chain import MAX_CHAIN_DEPTH, MAX_CHAIN_DOMAINS, chain_resolve
+from recon_tool.chain import MAX_CHAIN_DOMAINS, chain_resolve
 from recon_tool.models import ChainReport, ConfidenceLevel, TenantInfo
 
 

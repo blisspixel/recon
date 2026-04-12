@@ -1,5 +1,5 @@
 """Tests for the posture analyzer."""
-from recon_tool.models import CertSummary, ConfidenceLevel, Observation, TenantInfo
+from recon_tool.models import CertSummary, ConfidenceLevel, TenantInfo
 from recon_tool.posture import BANNED_TERMS, analyze_posture
 
 

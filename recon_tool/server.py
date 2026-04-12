@@ -615,7 +615,7 @@ async def find_hardening_gaps(domain: str) -> str:
     For defensive security posture assessment only.
 
     Returns a JSON array of hardening gaps, each with category, severity,
-    observation, recommendation, and supporting evidence references.
+    observation, suggested action, and supporting evidence references.
 
     Args:
         domain: A domain name to analyze (e.g., "northwindtraders.com")
