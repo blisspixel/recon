@@ -23,7 +23,7 @@ Output is derived from public DNS records and unauthenticated endpoints. It may 
 
 ## Fictional Examples
 
-All company names, tenant IDs, and domains used in the README, the `examples/` folder, and test fixtures are fictional. They use [Microsoft's standard sample company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Northwind Traders, Contoso, Fabrikam, etc.) or clearly fabricated identifiers. Any resemblance to real organizations is coincidental.
+All company names, tenant IDs, and domains used in the README, the `examples/` folder, and test fixtures are fictional. They use [Microsoft's standard sample company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam, etc.) or clearly fabricated identifiers. The README example is based on the structure and density of a real Fortune 500 lookup, with all identifying details replaced. No real company is depicted. Any resemblance to real organizations is coincidental.
 
 ## Third-Party Services
 
