@@ -25,9 +25,9 @@ recon contoso.com
 │              Okta, Salesforce Marketing Cloud                        │
 │                                                                      │
 │  Insights:   Cloud-managed identity indicators (Entra ID native)     │
-│              Google Workspace: Managed identity (Google-native)      │
+│              Google Workspace: Managed identity (Google-native)       │
 │              Email security 2/5 moderate (DMARC reject, DKIM)        │
-│              Dual provider: Google + Microsoft coexistence           │
+│              Dual provider: Google + Microsoft coexistence            │
 │              Security stack: Okta (identity), Imperva (WAF)          │
 │              Enterprise Security Stack: okta, imperva                │
 │              Multi-Cloud: aws-cloudfront, aws-elb                    │
