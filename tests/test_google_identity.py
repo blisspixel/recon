@@ -65,29 +65,22 @@ class TestIsFederatedRedirect:
         assert GoogleIdentitySource._is_federated_redirect("https://acme.okta.com/sso") is True
 
     def test_google_accounts_not_federated(self):
-        assert GoogleIdentitySource._is_federated_redirect(
-            "https://accounts.google.com/servicelogin?hd=example.com"
-        ) is False
+        assert (
+            GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/servicelogin?hd=example.com")
+            is False
+        )
 
     def test_google_with_saml_indicator(self):
-        assert GoogleIdentitySource._is_federated_redirect(
-            "https://accounts.google.com/saml/redirect?idp=okta"
-        ) is True
+        assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/saml/redirect?idp=okta") is True
 
     def test_google_with_sso_indicator(self):
-        assert GoogleIdentitySource._is_federated_redirect(
-            "https://accounts.google.com/sso/redirect"
-        ) is True
+        assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/sso/redirect") is True
 
     def test_plain_google_com(self):
-        assert GoogleIdentitySource._is_federated_redirect(
-            "https://www.google.com/accounts/servicelogin"
-        ) is False
+        assert GoogleIdentitySource._is_federated_redirect("https://www.google.com/accounts/servicelogin") is False
 
     def test_adfs_indicator(self):
-        assert GoogleIdentitySource._is_federated_redirect(
-            "https://accounts.google.com/adfs/ls"
-        ) is True
+        assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/adfs/ls") is True
 
 
 # ── _is_workspace_domain unit tests ────────────────────────────────────

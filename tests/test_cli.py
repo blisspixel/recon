@@ -51,6 +51,7 @@ class TestHelp:
         assert result.exit_code == 0
         # Strip ANSI escape codes — Rich renders markup in help output
         import re
+
         plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
         assert "--json" in plain
         assert "--md" in plain
@@ -58,12 +59,13 @@ class TestHelp:
 
     def test_version_flag(self) -> None:
         from recon_tool.cli import version_callback
+
         with pytest.raises(typer.Exit):
             version_callback(True)
 
 
 class TestDirectDomainLookup:
-    """recon pepsi.com works via sys.argv preprocessing (not testable via CliRunner).
+    """recon contoso.com works via sys.argv preprocessing (not testable via CliRunner).
     These test the lookup subcommand which is equivalent."""
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -124,7 +126,9 @@ class TestErrors:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_not_found(self, mock_resolve) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="unknown.com", message="No tenant found", error_type="all_sources_failed",
+            domain="unknown.com",
+            message="No tenant found",
+            error_type="all_sources_failed",
         )
         result = runner.invoke(app, ["lookup", "unknown.com"])
         assert result.exit_code == 3

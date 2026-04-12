@@ -27,8 +27,11 @@ class TestEnrichFromRelated:
     @pytest.mark.asyncio
     async def test_no_related_domains_returns_unchanged(self):
         info = TenantInfo(
-            tenant_id="aaa", display_name="Test", default_domain="test.com",
-            queried_domain="test.com", related_domains=(),
+            tenant_id="aaa",
+            display_name="Test",
+            default_domain="test.com",
+            queried_domain="test.com",
+            related_domains=(),
         )
         enriched, results = await _enrich_from_related(info, [])
         assert enriched is info  # same object, no change
@@ -36,7 +39,9 @@ class TestEnrichFromRelated:
     @pytest.mark.asyncio
     async def test_onmicrosoft_domains_skipped(self):
         info = TenantInfo(
-            tenant_id="aaa", display_name="Test", default_domain="test.com",
+            tenant_id="aaa",
+            display_name="Test",
+            default_domain="test.com",
             queried_domain="test.com",
             related_domains=("contoso.onmicrosoft.com",),
         )
@@ -49,8 +54,11 @@ class TestEnrichFromRelated:
         # Create 30 related domains — only first 25 should be looked up
         related = tuple(f"related{i}.com" for i in range(30))
         info = TenantInfo(
-            tenant_id="aaa", display_name="Test", default_domain="test.com",
-            queried_domain="test.com", related_domains=related,
+            tenant_id="aaa",
+            display_name="Test",
+            default_domain="test.com",
+            queried_domain="test.com",
+            related_domains=related,
         )
         # This will attempt real DNS lookups on the fake domains, which will
         # fail gracefully. The point is it doesn't try all 30.

@@ -75,11 +75,7 @@ class TestCustomSignalsLoading:
         """Custom signal should not fire if min_matches not met."""
         custom_yaml = custom_signals_dir / "signals.yaml"
         custom_yaml.write_text(
-            "signals:\n"
-            "  - name: Needs Three\n"
-            "    requires:\n"
-            "      any: [a, b, c]\n"
-            "    min_matches: 3\n",
+            "signals:\n  - name: Needs Three\n    requires:\n      any: [a, b, c]\n    min_matches: 3\n",
             encoding="utf-8",
         )
         reload_signals()
@@ -94,12 +90,7 @@ class TestCustomSignalsLoading:
 
         custom_yaml = custom_signals_dir / "signals.yaml"
         custom_yaml.write_text(
-            "signals:\n"
-            "  - name: Valid Signal\n"
-            "    requires:\n"
-            "      any: [slug-x]\n"
-            "  - bad_entry: true\n"
-            "  - name: \"\"\n",
+            'signals:\n  - name: Valid Signal\n    requires:\n      any: [slug-x]\n  - bad_entry: true\n  - name: ""\n',
             encoding="utf-8",
         )
         reload_signals()

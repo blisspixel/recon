@@ -122,8 +122,8 @@ class SourceResult:
     # in the Autodiscover tenant domain list.
     related_domains: tuple[str, ...] = ()
 
-    # True when crt.sh was unreachable — signals partial subdomain coverage
-    crtsh_degraded: bool = False
+    # Names of data sources that were unavailable during lookup
+    degraded_sources: tuple[str, ...] = ()
 
     cert_summary: CertSummary | None = None
 
@@ -134,6 +134,11 @@ class SourceResult:
     mta_sts_mode: str | None = None  # "enforce", "testing", "none"
     google_auth_type: str | None = None  # "Federated", "Managed"
     google_idp_name: str | None = None  # "Okta", "Ping Identity", etc.
+
+    @property
+    def crtsh_degraded(self) -> bool:
+        """Backward-compatible: True when crt.sh was unreachable."""
+        return "crt.sh" in self.degraded_sources
 
     @property
     def is_success(self) -> bool:
@@ -172,7 +177,7 @@ class TenantInfo:
     tenant_domains: tuple[str, ...] = ()  # All domains found
     related_domains: tuple[str, ...] = ()  # Domains inferred from CNAME targets
     insights: tuple[str, ...] = ()  # Derived intelligence signals
-    crtsh_degraded: bool = False  # True when crt.sh was unreachable
+    degraded_sources: tuple[str, ...] = ()  # Names of unavailable data sources
     cert_summary: CertSummary | None = None
 
     # --- Google Workspace, evidence & confidence fields (v0.3.0) ---
@@ -185,6 +190,11 @@ class TenantInfo:
     mta_sts_mode: str | None = None  # "enforce", "testing", "none"
     google_auth_type: str | None = None  # "Federated", "Managed"
     google_idp_name: str | None = None  # "Okta", "Ping Identity", etc.
+
+    @property
+    def crtsh_degraded(self) -> bool:
+        """Backward-compatible: True when crt.sh was unreachable."""
+        return "crt.sh" in self.degraded_sources
 
 
 @dataclass(frozen=True)

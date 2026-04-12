@@ -1,4 +1,5 @@
 """Tests for the delta engine."""
+
 import json
 from pathlib import Path
 

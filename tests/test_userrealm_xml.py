@@ -10,9 +10,9 @@ VALID_XML = """<?xml version="1.0" encoding="utf-8"?>
     <GetFederationInformationResponseMessage xmlns="http://schemas.microsoft.com/exchange/2010/Autodiscover">
       <Response>
         <Domains>
-          <Domain>pepsi.com</Domain>
-          <Domain>pepsico.onmicrosoft.com</Domain>
-          <Domain>pepsi.onmicrosoft.com</Domain>
+          <Domain>contoso.com</Domain>
+          <Domain>contoso.onmicrosoft.com</Domain>
+          <Domain>contosoltd.onmicrosoft.com</Domain>
         </Domains>
       </Response>
     </GetFederationInformationResponseMessage>
@@ -23,9 +23,9 @@ VALID_XML = """<?xml version="1.0" encoding="utf-8"?>
 class TestParseAutodiscoverDomains:
     def test_extracts_all_domains(self):
         domains, default = _parse_autodiscover_domains(VALID_XML)
-        assert "pepsi.com" in domains
-        assert "pepsico.onmicrosoft.com" in domains
-        assert "pepsi.onmicrosoft.com" in domains
+        assert "contoso.com" in domains
+        assert "contoso.onmicrosoft.com" in domains
+        assert "contosoltd.onmicrosoft.com" in domains
 
     def test_extracts_default_onmicrosoft_domain(self):
         domains, default = _parse_autodiscover_domains(VALID_XML)
@@ -33,9 +33,9 @@ class TestParseAutodiscoverDomains:
         assert default.endswith(".onmicrosoft.com")
 
     def test_domains_are_lowercase(self):
-        xml = VALID_XML.replace("pepsi.com", "PEPSI.COM")
+        xml = VALID_XML.replace("contoso.com", "CONTOSO.COM")
         domains, _ = _parse_autodiscover_domains(xml)
-        assert "pepsi.com" in domains
+        assert "contoso.com" in domains
 
     def test_domains_are_sorted_and_deduped(self):
         domains, _ = _parse_autodiscover_domains(VALID_XML)

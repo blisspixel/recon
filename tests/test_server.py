@@ -109,7 +109,9 @@ class TestErrors:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_not_found(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="unknown.com", message="No data", error_type="all_sources_failed",
+            domain="unknown.com",
+            message="No data",
+            error_type="all_sources_failed",
         )
         result = await lookup_tenant("unknown.com")
         assert "No information found for unknown.com" in result
@@ -141,6 +143,7 @@ class TestErrors:
 class TestMCPMetadata:
     def test_server_name(self) -> None:
         from recon_tool.server import mcp
+
         assert mcp.name == "recon-tool"
 
     def test_tool_description(self) -> None:
@@ -150,6 +153,7 @@ class TestMCPMetadata:
 
     def test_prompt_exists(self) -> None:
         from recon_tool.server import domain_report
-        result = domain_report("pepsi.com")
-        assert "pepsi.com" in result
+
+        result = domain_report("contoso.com")
+        assert "contoso.com" in result
         assert "lookup_tenant" in result

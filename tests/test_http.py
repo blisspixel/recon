@@ -44,6 +44,7 @@ class TestHttpClientLifecycle:
     @pytest.mark.asyncio
     async def test_provided_client_reused(self):
         import httpx
+
         existing = httpx.AsyncClient()
         try:
             async with http_client(provided=existing) as client:
@@ -55,6 +56,7 @@ class TestHttpClientLifecycle:
     async def test_new_client_created_when_none(self):
         async with http_client() as client:
             import httpx
+
             assert isinstance(client, httpx.AsyncClient)
 
     @pytest.mark.asyncio

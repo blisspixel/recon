@@ -214,9 +214,7 @@ class TestProperty2SubsectionFaithfulness:
         infra = result.infrastructure_footprint
 
         # Every cloud provider in the output must come from a slug in the input
-        expected_providers = {
-            _CLOUD_PROVIDER_SLUGS[s] for s in info.slugs if s in _CLOUD_PROVIDER_SLUGS
-        }
+        expected_providers = {_CLOUD_PROVIDER_SLUGS[s] for s in info.slugs if s in _CLOUD_PROVIDER_SLUGS}
         assert set(infra.cloud_providers) == expected_providers
 
 
@@ -505,9 +503,7 @@ class TestProperty11ComparisonDifferences:
         for diff in result.differences:
             # If domain_a_has is True and domain_b_has is False, the control
             # is present in a but absent in b (and vice versa)
-            assert diff.domain_a_has != diff.domain_b_has, (
-                f"Difference should be asymmetric: {diff.description}"
-            )
+            assert diff.domain_a_has != diff.domain_b_has, f"Difference should be asymmetric: {diff.description}"
 
 
 # ── Property 12: Relative assessment consistency ─────────────────────
@@ -539,7 +535,6 @@ class TestProperty12RelativeAssessmentConsistency:
             assert "stronger" in email_assessment.summary.lower()
         else:
             assert "comparable" in email_assessment.summary.lower()
-
 
 
 # ── Task 6.1: Import safety test ─────────────────────────────────────
@@ -685,6 +680,4 @@ class TestBannedTermsIntegration:
             for term in EXPOSURE_BANNED_TERMS:
                 # Use word boundary to avoid false positives (e.g. "hardening" vs "harden")
                 pattern = rf"\b{re.escape(term)}\b"
-                assert not re.search(pattern, lower), (
-                    f"Banned term '{term}' in docstring of {func.__name__}"
-                )
+                assert not re.search(pattern, lower), f"Banned term '{term}' in docstring of {func.__name__}"

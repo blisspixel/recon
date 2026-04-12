@@ -179,7 +179,7 @@ async def lookup_tenant(
     No credentials or API keys required.
 
     Args:
-        domain: A domain name to look up (e.g., pepsi.com, microsoft.com).
+        domain: A domain name to look up (e.g., contoso.com, northwindtraders.com).
         format: Output format — "text" (default), "json" (structured), or "markdown" (full report).
 
     Returns:
@@ -299,6 +299,9 @@ async def lookup_tenant(
         gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
         if gws_modules:
             lines.append(f"GWS Modules: {', '.join(gws_modules)}")
+
+    if info.degraded_sources:
+        lines.append(f"Degraded sources: {', '.join(info.degraded_sources)}")
 
     return "\n".join(lines)
 

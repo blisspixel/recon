@@ -70,8 +70,11 @@ source_result_st = st.builds(
 def _render_panel_to_str(panel) -> str:
     """Render a rich Panel to a plain string."""
     c = Console(
-        file=io.StringIO(), force_terminal=True, width=200,
-        no_color=True, highlight=False,
+        file=io.StringIO(),
+        force_terminal=True,
+        width=200,
+        no_color=True,
+        highlight=False,
     )
     c.print(panel)
     return c.file.getvalue()
@@ -114,8 +117,11 @@ class TestNotFoundWarningContainsDomain:
     def test_warning_contains_domain(self, domain: str):
         buf = io.StringIO()
         test_console = Console(
-            file=buf, force_terminal=True, width=200,
-            no_color=True, highlight=False,
+            file=buf,
+            force_terminal=True,
+            width=200,
+            no_color=True,
+            highlight=False,
         )
         original = get_console()
         set_console(test_console)
@@ -180,13 +186,14 @@ class TestVerboseOutputListsAllSources:
 
     @given(results=st.lists(source_result_st, min_size=1, max_size=10))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-    def test_verbose_output_contains_all_source_names(
-        self, results: list[SourceResult]
-    ):
+    def test_verbose_output_contains_all_source_names(self, results: list[SourceResult]):
         buf = io.StringIO()
         test_console = Console(
-            file=buf, force_terminal=True, width=200,
-            no_color=True, highlight=False,
+            file=buf,
+            force_terminal=True,
+            width=200,
+            no_color=True,
+            highlight=False,
         )
         original = get_console()
         set_console(test_console)
@@ -195,8 +202,6 @@ class TestVerboseOutputListsAllSources:
             output = buf.getvalue()
 
             for result in results:
-                assert result.source_name in output, (
-                    f"source_name {result.source_name!r} not found in verbose output"
-                )
+                assert result.source_name in output, f"source_name {result.source_name!r} not found in verbose output"
         finally:
             set_console(original)

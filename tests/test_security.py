@@ -14,7 +14,7 @@ class TestXmlInjectionPrevention:
     def test_xml_escape_in_autodiscover_body(self):
         from xml.sax.saxutils import escape as xml_escape
 
-        malicious = 'foo.com</Domain></Request></GetFederationInformationRequestMessage>'
+        malicious = "foo.com</Domain></Request></GetFederationInformationRequestMessage>"
         escaped = xml_escape(malicious)
         assert "</" not in escaped
         assert "&lt;" in escaped

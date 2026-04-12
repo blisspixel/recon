@@ -1,6 +1,8 @@
 # recon
 
-Passive infrastructure intelligence for humans and agents. Turns public DNS, identity endpoints, and certificate transparency into structured organizational intelligence — no credentials, no API keys, no interaction with target systems.
+Passive infrastructure intelligence for humans and agents. Turns public DNS, identity endpoints, and certificate transparency into structured organizational intelligence — no credentials, no API keys, no interaction with the queried organization's systems.
+
+> Intended for defensive use only. recon is designed for legitimate security posture assessment, IT architecture review, vendor due diligence, and defensive hardening. It performs zero active scanning, zero credentialed access, and zero interaction with the queried organization's systems. See [docs/legal.md](docs/legal.md) for full intended-use policy and disclaimers.
 
 ```bash
 recon contoso.com
@@ -44,11 +46,11 @@ recon contoso.com
 
 > This example is based on the structure and density of a real Fortune 500 lookup, with all identifying details replaced using [Microsoft's standard fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam, etc.). Tenant IDs, domains, and service lists are fabricated. No real company is depicted.
 
-Give it a domain. No credentials, no API keys, no interaction with the target's servers. recon queries public DNS, identity endpoints, and certificate transparency logs — the signals every organization must emit for email, SaaS, and cloud infrastructure to function — and assembles them into a coherent picture of the organization's technology posture.
+Give it a domain. No credentials, no API keys, no interaction with the organization's servers. recon queries public DNS, identity endpoints, and certificate transparency logs — the signals every organization must emit for email, SaaS, and cloud infrastructure to function — and assembles them into a coherent picture of the organization's technology posture.
 
-Each signal alone is unremarkable: a TXT record here, a CNAME delegation there, a certificate issuer pattern in the CT logs. The art is in the correlation. recon reads these scattered, public signals across orthogonal sources (OIDC discovery, GetUserRealm, Google identity routing, DNS fingerprints, certificate transparency) and synthesizes them into structured intelligence — tenant details, email security posture, SaaS fingerprints, derived signals, hardening gaps, and posture scores. The target never knows they were observed.
+Each signal alone is unremarkable: a TXT record here, a CNAME delegation there, a certificate issuer pattern in the CT logs. The art is in the correlation. recon reads these scattered, public signals across orthogonal sources (OIDC discovery, GetUserRealm, Google identity routing, DNS fingerprints, certificate transparency) and synthesizes them into structured intelligence — tenant details, email security posture, SaaS fingerprints, derived signals, hardening gaps, and posture scores. The organization is never contacted or notified.
 
-Works for Microsoft 365, Google Workspace, or any provider. Useful for anyone who needs domain intelligence — architects, MSPs, security professionals, defenders, sales engineers, researchers. Also runs as an [MCP server](docs/mcp.md) for AI agents.
+Works for Microsoft 365, Google Workspace, or any provider. No accounts, no API keys, no credentials — ever. Every data source the tool queries is public and unauthenticated by design. The organization's servers never receive a packet; the intermediary services (DNS resolvers, Microsoft/Google identity endpoints, certificate transparency logs) are queried directly. Useful for anyone who needs domain intelligence — defenders, IT architects, MSPs, security professionals, sales engineers, and researchers. Also runs as an [MCP server](docs/mcp.md) for AI agents.
 
 ## Why recon?
 
@@ -69,6 +71,18 @@ Works for Microsoft 365, Google Workspace, or any provider. Useful for anyone wh
 | Extensible (custom YAML) | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 
 recon reads the organizational metadata layer — DNS records, identity endpoints, and certificate transparency logs that companies publish to make their email, SaaS, and security infrastructure work. It doesn't scrape websites, probe servers, or analyze page content. It turns infrastructure signals into business intelligence.
+
+## Vision
+
+recon is designed to become the leading passive intelligence platform for organizational technology and security posture. It works by systematically collecting and correlating the public signals every organization must emit for email, SaaS, cloud services, and identity systems to function — DNS records, certificate transparency logs, and unauthenticated identity endpoints.
+
+From these signals, recon builds a structured, evidence-based model of the organization's actual infrastructure — not the glossy version in marketing materials, but the real one revealed by observable configuration choices, historical patterns, and inconsistencies.
+
+Where it's heading: timeline reconstruction from certificate issuance patterns, dependency and relationship mapping across CNAME delegations and SPF include chains, explainable intelligence with full provenance for every finding, and switchable interpretive lenses (defensive security, vendor due diligence, M&A assessment, operational maturity). All extensible through community-contributed YAML profiles for vertical-specific logic.
+
+For human users today — defenders, IT architects, security professionals, sales engineers, researchers, and anyone who needs organizational intelligence — recon provides immediate value: a 30-second lookup gives a clear picture of an organization's real tech stack, email security maturity, identity providers, SaaS footprint, and hardening gaps. For AI agents, recon is already exposed as a clean MCP server, giving any MCP-compatible agent structured, traceable, JSON-ready intelligence without credentials or active scanning.
+
+All of this remains strictly passive: zero credentials, zero active scanning, zero interaction with the queried organization's systems.
 
 ## Install
 
@@ -115,9 +129,9 @@ Input is normalized automatically — URLs, schemes, `www.` prefixes, paths, and
 | 187 SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors |
 | Email gateway / SASE / security stack | DNS fingerprints |
 | Signal intelligence (29 signals) | Metadata-aware YAML rules with cross-reference conditions |
-| Certificate intelligence | crt.sh metadata: issuance velocity, issuer diversity, cert age |
+| Certificate intelligence | crt.sh + CertSpotter fallback: issuance velocity, issuer diversity, cert age |
 | Posture observations | Neutral factual analysis across email, identity, infrastructure |
-| Related domains | CNAME breadcrumbs + certificate transparency (crt.sh) |
+| Related domains | CNAME breadcrumbs + certificate transparency (crt.sh / CertSpotter) |
 | Delta / change detection | Compare current vs. previous JSON export |
 | Evidence traceability | Per-detection source records with dual confidence scoring |
 | Security posture assessment | Exposure scoring, hardening gaps, comparative analysis (MCP + CLI) |
@@ -162,7 +176,7 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/                          # 660 tests
+pytest tests/                          # 723 tests
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 ```

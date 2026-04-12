@@ -29,14 +29,10 @@ class TestAzureMetadataSourceLookup:
             "authorization_endpoint": f"https://login.microsoftonline.com/{SAMPLE_TENANT_ID}/oauth2/v2.0/authorize",
             "tenant_region_scope": "NA",
         }
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(200, json=response_json)
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(200, json=response_json))
         async with httpx.AsyncClient(transport=transport) as client:
             source = AzureMetadataSource()
-            result = await source.lookup(
-                "example.com", tenant_id=SAMPLE_TENANT_ID, client=client
-            )
+            result = await source.lookup("example.com", tenant_id=SAMPLE_TENANT_ID, client=client)
 
         assert result.source_name == "azure_ad_metadata"
         assert result.tenant_id == SAMPLE_TENANT_ID
@@ -50,31 +46,21 @@ class TestAzureMetadataSourceLookup:
         def capture_request(request):
             nonlocal captured_url
             captured_url = str(request.url)
-            return httpx.Response(
-                200, json={"tenant_region_scope": "EU"}
-            )
+            return httpx.Response(200, json={"tenant_region_scope": "EU"})
 
         transport = httpx.MockTransport(capture_request)
         async with httpx.AsyncClient(transport=transport) as client:
             source = AzureMetadataSource()
-            await source.lookup(
-                "example.com", tenant_id=SAMPLE_TENANT_ID, client=client
-            )
+            await source.lookup("example.com", tenant_id=SAMPLE_TENANT_ID, client=client)
 
-        assert captured_url == METADATA_URL_TEMPLATE.format(
-            tenant_id=SAMPLE_TENANT_ID
-        )
+        assert captured_url == METADATA_URL_TEMPLATE.format(tenant_id=SAMPLE_TENANT_ID)
 
     @pytest.mark.asyncio
     async def test_region_is_none_when_not_in_response(self):
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(200, json={})
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(200, json={}))
         async with httpx.AsyncClient(transport=transport) as client:
             source = AzureMetadataSource()
-            result = await source.lookup(
-                "example.com", tenant_id=SAMPLE_TENANT_ID, client=client
-            )
+            result = await source.lookup("example.com", tenant_id=SAMPLE_TENANT_ID, client=client)
 
         assert result.tenant_id == SAMPLE_TENANT_ID
         assert result.region is None
@@ -92,14 +78,10 @@ class TestAzureMetadataSourceLookup:
 
     @pytest.mark.asyncio
     async def test_http_error_returns_source_result_with_error(self):
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(404)
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(404))
         async with httpx.AsyncClient(transport=transport) as client:
             source = AzureMetadataSource()
-            result = await source.lookup(
-                "example.com", tenant_id=SAMPLE_TENANT_ID, client=client
-            )
+            result = await source.lookup("example.com", tenant_id=SAMPLE_TENANT_ID, client=client)
 
         assert result.error is not None
         assert "404" in result.error
@@ -113,9 +95,7 @@ class TestAzureMetadataSourceLookup:
         transport = httpx.MockTransport(raise_timeout)
         async with httpx.AsyncClient(transport=transport) as client:
             source = AzureMetadataSource()
-            result = await source.lookup(
-                "example.com", tenant_id=SAMPLE_TENANT_ID, client=client
-            )
+            result = await source.lookup("example.com", tenant_id=SAMPLE_TENANT_ID, client=client)
 
         assert result.error is not None
         assert result.tenant_id is None

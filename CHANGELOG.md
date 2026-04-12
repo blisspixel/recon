@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-04-12
+
+### Added
+
+- CertIntelProvider protocol — abstracts certificate transparency querying behind a clean interface. Two implementations: CrtshProvider (primary) and CertSpotterProvider (fallback). Shared filtering helpers ensure behavioral parity.
+- CertSpotter fallback — when crt.sh is down (slow, rate-limited, or unreachable), the tool automatically falls back to CertSpotter's free, unauthenticated API. Zero API keys, zero accounts.
+- Generalized `degraded_sources` — replaces the single-boolean `crtsh_degraded` with a `degraded_sources: tuple[str, ...]` field on both SourceResult and TenantInfo. Users and agents always know which public data sources were unavailable and how that affects result quality.
+- Degraded sources surfaced in all output formats: Rich panel, JSON (`degraded_sources` list + backward-compatible `partial` key), markdown, and MCP text.
+- 61 new tests: unit tests for providers, fallback chain, degraded_sources propagation, and 6 property-based tests (Hypothesis). 723 tests total, 84% coverage.
+- Validation corpus — integration test runner (`pytest -m integration`) and accuracy report generator (`python -m tests.validation.generate_report` → `docs/accuracy.md`). Fixture files are local-only (gitignored).
+
+### Changed
+
+- `_detect_crtsh` replaced by `_detect_cert_intel` fallback chain in DNS sub-detector.
+- `crtsh_degraded` is now a computed `@property` on SourceResult and TenantInfo (backward-compatible).
+- Merger collects and deduplicates `degraded_sources` from all source results.
+- README: defensive-use-only banner, "organization" replaces "target" throughout, zero-accounts emphasis.
+- Legal docs: "What sees your queries" table showing exactly which services see your IP.
+- Roadmap: dependency-ordered Now/Soon sections, custom profiles and `--explain` in Soon.
+
 ## [0.5.1] — 2026-04-12
 
 ### Added
@@ -56,7 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Inference language tightened across insights and signals. Derived claims now use hedged language ("suggests," "indicators," "likely") instead of declarative phrasing. Factual observations (DMARC values, DKIM presence, email security scores) remain declarative.
-- Removed `_preprocess_args()` sys.argv mutation hack. Domain shorthand routing (`recon pepsi.com`) now uses a custom Typer group with `resolve_command()` override — cleaner, safer for library imports, no global state mutation.
+- Removed `_preprocess_args()` sys.argv mutation hack. Domain shorthand routing (`recon contoso.com`) now uses a custom Typer group with `resolve_command()` override — cleaner, safer for library imports, no global state mutation.
 - `_SUBCOMMANDS` now includes `"mcp"`.
 - Mutual exclusion enforced for output format flags (`--json`, `--md`, `--csv`).
 

@@ -344,8 +344,10 @@ def merge_results(
         conflicting = sorted({r.tenant_id for r in results if r.tenant_id is not None})
         insights.insert(0, f"Conflicting tenant IDs detected: {', '.join(conflicting)}")
 
-    # Check if crt.sh was degraded in any DNS result
-    crtsh_degraded = any(r.crtsh_degraded for r in results)
+    # Collect degraded_sources from all results, deduplicate
+    all_degraded: set[str] = set()
+    for result in results:
+        all_degraded.update(result.degraded_sources)
 
     # Propagate evidence from all sources
     all_evidence: list[EvidenceRecord] = []
@@ -378,7 +380,7 @@ def merge_results(
         tenant_domains=tenant_domains,
         related_domains=tuple(sorted(all_related)),
         insights=tuple(insights),
-        crtsh_degraded=crtsh_degraded,
+        degraded_sources=tuple(sorted(all_degraded)),
         cert_summary=cert_summary,
         evidence=evidence_tuple,
         evidence_confidence=evidence_confidence,

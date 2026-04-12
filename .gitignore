@@ -20,6 +20,8 @@ build/
 .coverage.*
 coverage.xml
 htmlcov/
+tests/validation/fixtures/
+docs/accuracy.md
 
 # Linting
 .ruff_cache/

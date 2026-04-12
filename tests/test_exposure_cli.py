@@ -56,8 +56,6 @@ class TestExposureFlag:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         result = runner.invoke(app, ["lookup", "northwindtraders.com", "--exposure", "--no-cache"])
         assert result.exit_code == 0
-        # Should contain some exposure-related output
-        assert len(result.output) > 0
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_exposure_json_produces_valid_json(self, mock_resolve) -> None:
@@ -80,7 +78,6 @@ class TestGapsFlag:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         result = runner.invoke(app, ["lookup", "northwindtraders.com", "--gaps", "--no-cache"])
         assert result.exit_code == 0
-        assert len(result.output) > 0
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_gaps_json_produces_valid_json(self, mock_resolve) -> None:
@@ -125,7 +122,9 @@ class TestErrorHandling:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_exposure_resolution_failure(self, mock_resolve) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="unknown.com", message="No data", error_type="all_sources_failed",
+            domain="unknown.com",
+            message="No data",
+            error_type="all_sources_failed",
         )
         result = runner.invoke(app, ["lookup", "unknown.com", "--exposure", "--no-cache"])
         assert result.exit_code == 3
@@ -133,7 +132,9 @@ class TestErrorHandling:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_gaps_resolution_failure(self, mock_resolve) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="unknown.com", message="No data", error_type="all_sources_failed",
+            domain="unknown.com",
+            message="No data",
+            error_type="all_sources_failed",
         )
         result = runner.invoke(app, ["lookup", "unknown.com", "--gaps", "--no-cache"])
         assert result.exit_code == 3

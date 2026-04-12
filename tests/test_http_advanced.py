@@ -158,7 +158,8 @@ class TestRetryTransport:
                 call_count += 1
                 if call_count == 1:
                     return httpx.Response(
-                        429, request=request,
+                        429,
+                        request=request,
                         headers={"Retry-After": "0.01"},
                     )
                 return httpx.Response(200, request=request)
@@ -182,7 +183,8 @@ class TestRetryTransport:
                 call_count += 1
                 if call_count == 1:
                     return httpx.Response(
-                        429, request=request,
+                        429,
+                        request=request,
                         headers={"Retry-After": "0.01"},
                     )
                 return httpx.Response(200, request=request)
@@ -203,7 +205,8 @@ class TestRetryTransport:
                 call_count += 1
                 if call_count == 1:
                     return httpx.Response(
-                        429, request=request,
+                        429,
+                        request=request,
                         headers={"Retry-After": "not-a-number"},
                     )
                 return httpx.Response(200, request=request)
