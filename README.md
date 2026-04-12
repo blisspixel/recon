@@ -53,6 +53,7 @@ Works for Microsoft 365, Google Workspace, or any provider. Useful for anyone wh
 | Signal intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | Certificate intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
 | Posture analysis | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Security posture scoring | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
 | Delta / change detection | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | Recursive domain chaining | ✓ | ✗ | ✗ | partial | ✗ | varies |
 | MCP server for AI agents | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
@@ -83,6 +84,8 @@ recon northwindtraders.com --posture      # neutral posture observations
 recon northwindtraders.com --compare prev.json  # delta: what changed since last run
 recon northwindtraders.com --chain --depth 2    # recursive domain discovery
 recon northwindtraders.com --no-cache     # bypass disk cache
+recon northwindtraders.com --exposure     # security posture assessment
+recon northwindtraders.com --gaps         # hardening gap analysis
 recon batch domains.txt --json            # batch mode (default 5 concurrent)
 recon batch domains.txt --csv             # batch CSV for spreadsheets
 recon batch domains.txt --json -c 10      # batch with 10 concurrent
@@ -109,6 +112,7 @@ Input is normalized automatically — URLs, schemes, `www.` prefixes, paths, and
 | Related domains | CNAME breadcrumbs + certificate transparency (crt.sh) |
 | Delta / change detection | Compare current vs. previous JSON export |
 | Evidence traceability | Per-detection source records with dual confidence scoring |
+| Security posture assessment | Exposure scoring, hardening gaps, comparative analysis (MCP + CLI) |
 
 All from public sources. Zero authentication. Results vary by domain.
 
@@ -130,7 +134,7 @@ recon runs as an MCP server for Claude, Cursor, VS Code, Kiro, ChatGPT, or any M
 
 Then ask your AI: "Run a recon lookup on northwindtraders.com and analyze the posture."
 
-Available MCP tools: `lookup_tenant`, `analyze_posture`, `chain_lookup`, `reload_data`.
+Available MCP tools: `lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `compare_postures`, `chain_lookup`, `reload_data`.
 
 See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config file locations per client.
 
