@@ -133,7 +133,7 @@ class TestErrors:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_unexpected_error(self, mock_resolve) -> None:
         mock_resolve.side_effect = RuntimeError("connection failed")
-        result = runner.invoke(app, ["lookup", "example.com"])
+        result = runner.invoke(app, ["lookup", "example.com", "--no-cache"])
         assert result.exit_code == 4
         assert "connection failed" in result.output
 

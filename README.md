@@ -3,39 +3,46 @@
 Passive domain intelligence from public DNS and Microsoft/Google endpoints.
 
 ```bash
-recon northwindtraders.com
+recon contoso.com
 ```
 
 ```
-╭──────────────────────── Northwind Traders ───────────────────────╮
-│                                                                  │
-│  Company:    Northwind Traders                                   │
-│  Domain:     northwindtraders.onmicrosoft.com                    │
-│  Provider:   Microsoft 365                                       │
-│  Tenant ID:  a1b2c3d4-e5f6-7890-abcd-ef1234567890                │
-│  Region:     NA                                                  │
-│  Auth:       Federated                                           │
-│  Confidence: ●●● High (3 sources)                                │
-│  Services:   Anthropic (Claude), Atlassian (Jira/Confluence),    │
-│              DocuSign, Exchange Autodiscover, Figma,             │
-│              Intune / MDM, KnowBe4, Microsoft 365,               │
-│              Microsoft Teams, Miro, Salesforce, Slack, Zendesk   │
-│                                                                  │
-│  Insights:   Federated identity indicators observed (likely Okta)│
-│              Email security 4/5 strong (DMARC reject, DKIM,      │
-│              SPF strict)                                         │
-│              Email gateway: Proofpoint in front of Exchange      │
-│              M365 E3/E5 indicators (Intune + federated auth)     │
-│              Security stack: KnowBe4 (training), Okta (identity) │
-│              AI Adoption: anthropic                              │
-│              Modern Collaboration: slack, miro, atlassian, figma │
-│                                                                  │
-│  Related:    northwind-internal.com                              │
-│                                                                  │
-╰──────────────────────────────────────────────────────────────────╯
+╭──────────────────────────── Contoso Ltd ─────────────────────────────╮
+│                                                                      │
+│  Company:    Contoso Ltd                                             │
+│  Domain:     contoso.onmicrosoft.com                                 │
+│  Provider:   Microsoft 365 + Google Workspace                        │
+│  Tenant ID:  a1b2c3d4-e5f6-7890-abcd-ef1234567890                    │
+│  Region:     NA                                                      │
+│  Auth:       Managed                                                 │
+│  GWS Auth:   Managed                                                 │
+│  Confidence: ●●● High (4 sources)                                    │
+│  Services:   AWS CloudFront, AWS Elastic Load Balancer,              │
+│              DKIM (Exchange Online), Google (site verified),         │
+│              Google Workspace, Imperva (Incapsula), Microsoft 365,   │
+│              Okta, Salesforce Marketing Cloud                        │
+│                                                                      │
+│  Insights:   Cloud-managed identity indicators (Entra ID native)     │
+│              Google Workspace: Managed identity (Google-native)      │
+│              Email security 2/5 moderate (DMARC reject, DKIM)        │
+│              Dual provider: Google + Microsoft coexistence           │
+│              Security stack: Okta (identity), Imperva (WAF)          │
+│              Enterprise Security Stack: okta, imperva                │
+│              Multi-Cloud: aws-cloudfront, aws-elb                    │
+│              Dual Email Provider: microsoft365, google-workspace     │
+│              Google-Native Identity: google-workspace, google-site,  │
+│              google-managed                                          │
+│                                                                      │
+│  Certs:      280 total, 10 in last 90d, 3 issuers (DigiCert,        │
+│              Entrust, Sectigo)                                       │
+│                                                                      │
+│  Related:    api.contoso.com, cdn.contoso.com, dev.contoso.com,      │
+│              shop.contoso.com, staging.contoso.com                   │
+│                                                                      │
+╰──────────────────────────────────────────────────────────────────────╯
 ```
 
-> The example above is fictional. All tenant IDs, domains, and service lists are fabricated for illustration.
+> This example is based on the structure and density of a real Fortune 500 lookup, with all identifying details replaced using [Microsoft's standard fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam, etc.). Tenant IDs, domains, and service lists are fabricated. No real company is depicted.
 
 Give it a domain. It queries public endpoints and DNS records — no credentials, no API keys — and returns what it can find: tenant details, email security posture, SaaS fingerprints, derived signals, certificate intelligence, and neutral posture observations.
 
