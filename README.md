@@ -153,7 +153,7 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/                          # 597 tests
+pytest tests/                          # 660 tests
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 ```
