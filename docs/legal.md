@@ -28,3 +28,19 @@ All company names, tenant IDs, and domains used in the README, the `examples/` f
 ## Third-Party Services
 
 This tool queries endpoints operated by Microsoft, Google, and public DNS infrastructure. It is not affiliated with, endorsed by, or sponsored by any of these companies. Product names mentioned in fingerprint definitions are trademarks of their respective owners.
+
+## Defensive Security Assessment Tools
+
+The `assess_exposure`, `find_hardening_gaps`, and `compare_postures` tools synthesize existing pipeline data into structured security posture views. These tools operate exclusively on data already collected by the standard domain resolution pipeline — they perform zero additional network calls, query no new endpoints, and require no credentials beyond what the base tool uses.
+
+These tools are intended for the following legitimate use cases:
+
+- Defensive security review and posture assessment
+- Vendor and partner due diligence
+- Security architecture planning and gap analysis
+- Peer benchmarking of publicly observable security controls
+- Acquisition target assessment based on public configuration data
+
+All tool output uses neutral, factual language describing what is publicly observable. Output is not intended to facilitate unauthorized access, offensive security operations, or any activity that would violate applicable law or terms of service.
+
+The Posture Score (0–100) and Hardening Gap outputs are based on publicly observable controls such as DNS records, DMARC policies, and MTA-STS configuration. They do not constitute a comprehensive security audit, security rating, or certification. Organizations may have additional security controls that are not publicly visible and therefore not reflected in these assessments.

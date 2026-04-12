@@ -179,6 +179,8 @@ def lookup(
     depth: int = typer.Option(1, "--depth", help="Chain depth (1-3, requires --chain)"),
     no_cache: bool = typer.Option(False, "--no-cache", help="Bypass disk cache entirely"),
     cache_ttl: int = typer.Option(86400, "--cache-ttl", help="Cache TTL in seconds (default: 86400)"),
+    exposure: bool = typer.Option(False, "--exposure", help="Show exposure assessment"),
+    gaps: bool = typer.Option(False, "--gaps", help="Show hardening gap analysis"),
 ) -> None:
     """
     Look up a domain. This is the default command.
@@ -203,6 +205,8 @@ def lookup(
             no_cache=no_cache,
             cache_ttl=cache_ttl,
             html_output=html_output,
+            show_exposure=exposure,
+            show_gaps=gaps,
         )
     )
 
@@ -502,6 +506,8 @@ async def _lookup(
     no_cache: bool = False,
     cache_ttl: int = 86400,
     html_output: bool = False,
+    show_exposure: bool = False,
+    show_gaps: bool = False,
 ) -> None:
     """Async lookup implementation."""
     # Lazy imports: formatter, resolver, validator are imported here (not at module
@@ -532,6 +538,15 @@ async def _lookup(
     # Mutual exclusion: --chain and --compare cannot be used together
     if chain_mode and compare_file:
         render_error("--chain and --compare are mutually exclusive")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    # Mutual exclusion: --exposure and --gaps are mutually exclusive with --chain and --compare
+    if show_exposure and (chain_mode or compare_file):
+        render_error("--exposure and --chain/--compare are mutually exclusive")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    if show_gaps and (chain_mode or compare_file):
+        render_error("--gaps and --chain/--compare are mutually exclusive")
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
     # Mutual exclusion: only one output format allowed
@@ -609,6 +624,92 @@ async def _lookup(
             typer.echo(format_chain_json(report))
         else:
             console.print(render_chain_panel(report))
+        return
+
+    # ── Exposure mode ────────────────────────────────────────────────
+    if show_exposure:
+        from recon_tool.exposure import assess_exposure_from_info
+        from recon_tool.formatter import format_exposure_json, render_exposure_panel
+
+        try:
+            info_exp: Any = None
+            if not no_cache:
+                from recon_tool.cache import cache_get
+
+                cached = cache_get(validated, ttl=cache_ttl)
+                if cached is not None:
+                    info_exp = cached
+
+            if info_exp is None:
+                if not json_output and not markdown and not html_output:
+                    import random
+
+                    msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
+                    with console.status(msg):
+                        info_exp, _results = await resolve_tenant(validated, timeout=timeout)
+                else:
+                    info_exp, _results = await resolve_tenant(validated, timeout=timeout)
+
+                if not no_cache:
+                    from recon_tool.cache import cache_put
+
+                    cache_put(validated, info_exp)
+
+            assessment = assess_exposure_from_info(info_exp)
+
+            if json_output:
+                typer.echo(format_exposure_json(assessment))
+            else:
+                console.print(render_exposure_panel(assessment))
+        except ReconLookupError:
+            render_warning(domain)
+            raise typer.Exit(code=EXIT_NO_DATA) from None
+        except Exception as exc:
+            render_error(str(exc))
+            raise typer.Exit(code=EXIT_INTERNAL) from None
+        return
+
+    # ── Gaps mode ────────────────────────────────────────────────────
+    if show_gaps:
+        from recon_tool.exposure import find_gaps_from_info
+        from recon_tool.formatter import format_gaps_json, render_gaps_panel
+
+        try:
+            info_gaps: Any = None
+            if not no_cache:
+                from recon_tool.cache import cache_get
+
+                cached = cache_get(validated, ttl=cache_ttl)
+                if cached is not None:
+                    info_gaps = cached
+
+            if info_gaps is None:
+                if not json_output and not markdown and not html_output:
+                    import random
+
+                    msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
+                    with console.status(msg):
+                        info_gaps, _results = await resolve_tenant(validated, timeout=timeout)
+                else:
+                    info_gaps, _results = await resolve_tenant(validated, timeout=timeout)
+
+                if not no_cache:
+                    from recon_tool.cache import cache_put
+
+                    cache_put(validated, info_gaps)
+
+            report = find_gaps_from_info(info_gaps)
+
+            if json_output:
+                typer.echo(format_gaps_json(report))
+            else:
+                console.print(render_gaps_panel(report))
+        except ReconLookupError:
+            render_warning(domain)
+            raise typer.Exit(code=EXIT_NO_DATA) from None
+        except Exception as exc:
+            render_error(str(exc))
+            raise typer.Exit(code=EXIT_INTERNAL) from None
         return
 
     # ── Standard lookup ──────────────────────────────────────────────

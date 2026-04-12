@@ -507,6 +507,303 @@ async def reload_data() -> str:
     return f"Reloaded: {fp_count} fingerprints, {sig_count} signals, {posture_count} posture rules. Cache cleared."
 
 
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def assess_exposure(domain: str) -> str:
+    """Assess a domain's publicly observable security posture for defensive review.
+
+    For defensive security posture assessment only.
+
+    Returns a structured JSON object containing email security posture, identity
+    posture, infrastructure footprint, configuration consistency observations,
+    hardening status, and an overall posture score (0–100) based on publicly
+    observable controls.
+
+    Args:
+        domain: A domain name to assess (e.g., "northwindtraders.com")
+
+    Returns:
+        JSON object with the full exposure assessment, or an error message.
+    """
+    request_id = uuid.uuid4().hex[:12]
+    start_time = time.monotonic()
+
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        _log_structured(
+            logging.WARNING,
+            "validation_failed",
+            request_id=request_id,
+            domain=domain,
+            error=str(exc),
+        )
+        return f"Error: {exc}"
+
+    # Check cache first
+    cached = _cache_get(validated)
+    if cached is not None:
+        info, _results = cached
+        _log_structured(
+            logging.INFO,
+            "cache_hit",
+            request_id=request_id,
+            domain=validated,
+        )
+    else:
+        if not _rate_limit_check(validated):
+            return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+
+        try:
+            info, results = await resolve_tenant(validated)
+        except ReconLookupError:
+            elapsed = time.monotonic() - start_time
+            _log_structured(
+                logging.INFO,
+                "no_data",
+                request_id=request_id,
+                domain=domain,
+                elapsed_s=round(elapsed, 2),
+            )
+            return f"No information found for {domain}"
+        except Exception:
+            logger.exception(
+                "Unexpected error looking up %s (request_id=%s)",
+                domain,
+                request_id,
+            )
+            return f"Error looking up {domain}: an internal error occurred"
+
+        _cache_set(validated, info, results)
+        _rate_limit_record(validated)
+
+    from recon_tool.exposure import assess_exposure_from_info
+    from recon_tool.formatter import format_exposure_json
+
+    assessment = assess_exposure_from_info(info)
+
+    elapsed = time.monotonic() - start_time
+    _log_structured(
+        logging.INFO,
+        "exposure_assessed",
+        request_id=request_id,
+        domain=domain,
+        posture_score=assessment.posture_score,
+        elapsed_s=round(elapsed, 2),
+    )
+
+    return format_exposure_json(assessment)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def find_hardening_gaps(domain: str) -> str:
+    """Identify hardening opportunities in a domain's public configuration.
+
+    For defensive security posture assessment only.
+
+    Returns a JSON array of hardening gaps, each with category, severity,
+    observation, recommendation, and supporting evidence references.
+
+    Args:
+        domain: A domain name to analyze (e.g., "northwindtraders.com")
+
+    Returns:
+        JSON object with the gap report, or an error message.
+    """
+    request_id = uuid.uuid4().hex[:12]
+    start_time = time.monotonic()
+
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        _log_structured(
+            logging.WARNING,
+            "validation_failed",
+            request_id=request_id,
+            domain=domain,
+            error=str(exc),
+        )
+        return f"Error: {exc}"
+
+    # Check cache first
+    cached = _cache_get(validated)
+    if cached is not None:
+        info, _results = cached
+        _log_structured(
+            logging.INFO,
+            "cache_hit",
+            request_id=request_id,
+            domain=validated,
+        )
+    else:
+        if not _rate_limit_check(validated):
+            return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+
+        try:
+            info, results = await resolve_tenant(validated)
+        except ReconLookupError:
+            elapsed = time.monotonic() - start_time
+            _log_structured(
+                logging.INFO,
+                "no_data",
+                request_id=request_id,
+                domain=domain,
+                elapsed_s=round(elapsed, 2),
+            )
+            return f"No information found for {domain}"
+        except Exception:
+            logger.exception(
+                "Unexpected error looking up %s (request_id=%s)",
+                domain,
+                request_id,
+            )
+            return f"Error looking up {domain}: an internal error occurred"
+
+        _cache_set(validated, info, results)
+        _rate_limit_record(validated)
+
+    from recon_tool.exposure import find_gaps_from_info
+    from recon_tool.formatter import format_gaps_json
+
+    report = find_gaps_from_info(info)
+
+    elapsed = time.monotonic() - start_time
+    _log_structured(
+        logging.INFO,
+        "gaps_analyzed",
+        request_id=request_id,
+        domain=domain,
+        gaps=len(report.gaps),
+        elapsed_s=round(elapsed, 2),
+    )
+
+    return format_gaps_json(report)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def compare_postures(domain_a: str, domain_b: str) -> str:
+    """Compare the security postures of two domains side by side.
+
+    For defensive security posture assessment only.
+
+    Returns a structured JSON comparison with side-by-side metrics,
+    control differences, and relative posture assessment.
+
+    Args:
+        domain_a: First domain to compare (e.g., "northwindtraders.com")
+        domain_b: Second domain to compare (e.g., "contoso.com")
+
+    Returns:
+        JSON object with the posture comparison, or an error message.
+    """
+    request_id = uuid.uuid4().hex[:12]
+    start_time = time.monotonic()
+
+    # Validate both domains
+    try:
+        validated_a = validate_domain(domain_a)
+    except ValueError as exc:
+        _log_structured(
+            logging.WARNING,
+            "validation_failed",
+            request_id=request_id,
+            domain=domain_a,
+            error=str(exc),
+        )
+        return f"Error: {exc}"
+
+    try:
+        validated_b = validate_domain(domain_b)
+    except ValueError as exc:
+        _log_structured(
+            logging.WARNING,
+            "validation_failed",
+            request_id=request_id,
+            domain=domain_b,
+            error=str(exc),
+        )
+        return f"Error: {exc}"
+
+    # Resolve domain_a
+    cached_a = _cache_get(validated_a)
+    if cached_a is not None:
+        info_a, _ = cached_a
+    else:
+        if not _rate_limit_check(validated_a):
+            return f"Rate limited: {domain_a} was looked up recently. Try again in a few seconds."
+        try:
+            info_a, results_a = await resolve_tenant(validated_a)
+        except ReconLookupError:
+            return f"Could not resolve domain_a: {domain_a}. The comparison requires both domains to be resolvable."
+        except Exception:
+            logger.exception(
+                "Unexpected error looking up %s (request_id=%s)",
+                domain_a,
+                request_id,
+            )
+            return f"Error looking up {domain_a}: an internal error occurred"
+        _cache_set(validated_a, info_a, results_a)
+        _rate_limit_record(validated_a)
+
+    # Resolve domain_b
+    cached_b = _cache_get(validated_b)
+    if cached_b is not None:
+        info_b, _ = cached_b
+    else:
+        if not _rate_limit_check(validated_b):
+            return f"Rate limited: {domain_b} was looked up recently. Try again in a few seconds."
+        try:
+            info_b, results_b = await resolve_tenant(validated_b)
+        except ReconLookupError:
+            return f"Could not resolve domain_b: {domain_b}. The comparison requires both domains to be resolvable."
+        except Exception:
+            logger.exception(
+                "Unexpected error looking up %s (request_id=%s)",
+                domain_b,
+                request_id,
+            )
+            return f"Error looking up {domain_b}: an internal error occurred"
+        _cache_set(validated_b, info_b, results_b)
+        _rate_limit_record(validated_b)
+
+    from recon_tool.exposure import compare_postures_from_infos
+    from recon_tool.formatter import format_comparison_json
+
+    comparison = compare_postures_from_infos(info_a, info_b)
+
+    elapsed = time.monotonic() - start_time
+    _log_structured(
+        logging.INFO,
+        "postures_compared",
+        request_id=request_id,
+        domain_a=domain_a,
+        domain_b=domain_b,
+        elapsed_s=round(elapsed, 2),
+    )
+
+    return format_comparison_json(comparison)
+
+
 @mcp.prompt()
 def domain_report(domain: str) -> str:
     """Generate a domain intelligence report.
