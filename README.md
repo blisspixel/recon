@@ -1,8 +1,8 @@
 # recon
 
-Passive infrastructure intelligence for humans and agents. Turns public DNS, identity endpoints, and certificate transparency into structured organizational intelligence — no credentials, no API keys, no interaction with the queried organization's systems.
+Passive domain intelligence from public sources. Queries DNS records, Microsoft/Google identity endpoints, and certificate transparency logs to build a picture of an organization's technology stack — no credentials, no API keys, no active scanning.
 
-> Intended for defensive use only. recon is designed exclusively for legitimate security posture assessment, IT architecture review, vendor due diligence, and defensive hardening. It performs zero active scanning, zero credentialed access, and zero interaction with the queried organization's systems. See [docs/legal.md](docs/legal.md) for the full intended-use policy and disclaimers.
+> **Defensive use only.** recon is designed for legitimate security posture assessment, IT architecture review, vendor due diligence, and defensive hardening. It performs zero active scanning and zero credentialed access. See [docs/legal.md](docs/legal.md) for the full intended-use policy.
 
 ```bash
 recon contoso.com
@@ -44,45 +44,34 @@ recon contoso.com
 ╰──────────────────────────────────────────────────────────────────────╯
 ```
 
-> This example is based on the structure and density of a real Fortune 500 lookup, with all identifying details replaced using [Microsoft's standard fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam, etc.). Tenant IDs, domains, and service lists are fabricated. No real company is depicted.
+> This example uses [Microsoft's fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam). Tenant IDs, domains, and service lists are fabricated. No real company is depicted.
 
-Give it a domain. No credentials, no API keys, no interaction with the organization's servers. recon queries public DNS, identity endpoints, and certificate transparency logs — the signals every organization must emit for email, SaaS, and cloud infrastructure to function — and assembles them into a coherent picture of the organization's technology posture.
+Give it a domain. recon queries public DNS, identity endpoints, and certificate transparency logs — the signals organizations emit for email, SaaS, and cloud infrastructure to function — and correlates them into structured output.
 
-Each signal alone is unremarkable: a single TXT record, a CNAME delegation, or a certificate issuance pattern in the CT logs. The art is in the correlation. recon fuses these scattered, orthogonal public signals — DNS records, Microsoft and Google identity endpoints, and certificate transparency logs — using layered, metadata-aware YAML rules. What emerges is not a raw data dump but a coherent, evidence-based picture of the organization's actual technology posture: tenant details, email security maturity, SaaS footprint, derived signals, hardening gaps, and posture scores. The organization is never contacted or notified.
+Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP server](docs/mcp.md) for AI agents.
 
-Works for Microsoft 365, Google Workspace, or any provider. No accounts, no API keys, no credentials — ever. Every data source the tool queries is public and unauthenticated by design. The organization's servers never receive a packet; the intermediary services (DNS resolvers, Microsoft/Google identity endpoints, certificate transparency logs) are queried directly. Useful for anyone who needs domain intelligence — defenders, IT architects, MSPs, security professionals, sales engineers, and researchers. Also runs as an [MCP server](docs/mcp.md) for AI agents.
+## What it does
 
-## Why recon?
+recon collects public signals (DNS TXT/MX/CNAME/NS/SRV/CAA records, Microsoft and Google identity endpoints, certificate transparency logs) and matches them against a set of YAML-defined fingerprint and signal rules. The correlation is rule-based — not machine learning — but the value is in combining scattered, individually unremarkable records into a coherent view of what an organization is actually running.
 
-| | recon | dig / nslookup | whatweb | dnsrecon | cloud_enum | Paid tools |
-|---|---|---|---|---|---|---|
-| Zero credentials | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
-| M365 tenant detection | ✓ | ✗ | ✗ | ✗ | partial | varies |
-| Google Workspace detection | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
-| Email security scoring | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
-| SaaS fingerprinting (194) | ✓ | ✗ | partial | ✗ | ✗ | ✓ |
-| Signal intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| Certificate intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
-| Posture analysis | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| Security posture scoring | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
-| Delta / change detection | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| Recursive domain chaining | ✓ | ✗ | ✗ | partial | ✗ | varies |
-| MCP server for AI agents | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| Extensible (custom YAML) | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+It's a young project (started 2026, solo developer). The fingerprint database covers ~190 SaaS services and the signal engine has 34 rules across 4 layers. Coverage and accuracy will vary by domain — organizations with rich public DNS get detailed results; those with minimal records or heavy proxying will produce sparse output. Results should be treated as indicators, not ground truth.
 
-recon reads the organizational metadata layer — DNS records, identity endpoints, and certificate transparency logs that companies publish to make their email, SaaS, and security infrastructure work. It doesn't scrape websites, probe servers, or analyze page content. It turns infrastructure signals into business intelligence.
+## How it compares
 
-## Vision
+recon occupies a specific niche: it fuses DNS, identity endpoints, and CT logs into correlated output. Most existing tools do one of these well but not the combination.
 
-recon is designed to become the leading passive intelligence platform for organizational technology and security posture. It works by systematically collecting and correlating the public signals every organization must emit for email, SaaS, cloud services, and identity systems to function — DNS records, certificate transparency logs, and unauthenticated identity endpoints.
+| | recon | dig / nslookup | dnsrecon | Paid tools |
+|---|---|---|---|---|
+| Zero credentials | ✓ | ✓ | ✓ | varies |
+| M365 / GWS tenant detection | ✓ | ✗ | ✗ | varies |
+| Email security scoring | ✓ | ✗ | ✗ | varies |
+| SaaS fingerprinting | ~190 services | ✗ | ✗ | typically more |
+| Signal correlation rules | 34 rules | ✗ | ✗ | varies |
+| Certificate intelligence | ✓ | ✗ | ✗ | varies |
+| MCP server for AI agents | ✓ | ✗ | ✗ | rare |
+| Custom YAML extensibility | ✓ | ✗ | ✗ | varies |
 
-From these signals, recon builds a structured, evidence-based model of the organization's actual infrastructure — not the glossy version in marketing materials, but the real one revealed by observable configuration choices, historical patterns, and inconsistencies.
-
-Where it's heading: timeline reconstruction from certificate issuance patterns, dependency and relationship mapping across CNAME delegations and SPF include chains, explainable intelligence with full provenance for every finding, contradiction detection across signal layers, and switchable interpretive lenses for defensive security, vendor due diligence, IT architecture review, and operational maturity. All extensible through community-contributed YAML profiles for vertical-specific logic.
-
-For human users today — defenders, IT architects, security professionals, sales engineers, researchers, and anyone who needs organizational intelligence — recon provides immediate value: a 30-second lookup gives a clear picture of an organization's real tech stack, email security maturity, identity providers, SaaS footprint, and hardening gaps. For AI agents, recon is already exposed as a clean MCP server, giving any MCP-compatible agent structured, traceable, JSON-ready intelligence without credentials or active scanning.
-
-All of this remains strictly passive: zero credentials, zero active scanning, zero interaction with the queried organization's systems.
+Paid tools (BuiltWith, SecurityTrails, etc.) generally have broader coverage, more data sources, and battle-tested accuracy. recon's advantage is that it's free, requires no accounts, and runs locally.
 
 ## Install
 
@@ -108,7 +97,7 @@ recon northwindtraders.com --chain --depth 2    # recursive domain discovery
 recon northwindtraders.com --no-cache     # bypass disk cache
 recon northwindtraders.com --exposure     # security posture assessment
 recon northwindtraders.com --gaps         # hardening gap analysis
-recon northwindtraders.com --explain     # show why each signal fired
+recon northwindtraders.com --explain      # show why each signal fired
 recon batch domains.txt --json            # batch mode (default 5 concurrent)
 recon batch domains.txt --csv             # batch CSV for spreadsheets
 recon batch domains.txt --json -c 10      # batch with 10 concurrent
@@ -119,25 +108,23 @@ recon mcp                                 # start MCP server (stdio)
 
 Input is normalized automatically — URLs, schemes, `www.` prefixes, paths, and whitespace are all stripped.
 
-## What You Get
+## What you get
 
 | Signal | Source |
 |--------|--------|
 | Company name, tenant ID, auth type | Microsoft OIDC + GetUserRealm |
-| Google Workspace auth type, modules, corporate identity | Google login flow + CNAME probing + BIMI VMC |
+| Google Workspace auth type, modules | Google login flow + CNAME probing + BIMI VMC |
 | Email provider | MX records |
 | Email security score (0–5) | DMARC + DKIM + SPF + MTA-STS + BIMI |
-| 194 SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors |
-| Email gateway / SASE / security stack | DNS fingerprints |
-| Signal intelligence (34 signals) | Metadata-aware YAML rules with cross-reference conditions |
-| Certificate intelligence | crt.sh + CertSpotter fallback: issuance velocity, issuer diversity, cert age |
+| ~190 SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors |
+| Signal intelligence (34 rules) | YAML-based correlation rules with cross-reference conditions |
+| Certificate intelligence | crt.sh + CertSpotter: issuance velocity, issuer diversity |
 | Posture observations | Neutral factual analysis across email, identity, infrastructure |
-| Related domains | CNAME breadcrumbs + certificate transparency (crt.sh / CertSpotter) |
+| Related domains | CNAME breadcrumbs + certificate transparency |
 | Delta / change detection | Compare current vs. previous JSON export |
-| Evidence traceability | Per-detection source records with dual confidence scoring |
-| Security posture assessment | Exposure scoring, hardening gaps, comparative analysis (MCP + CLI) |
+| Security posture assessment | Exposure scoring, hardening gaps, comparative analysis |
 
-All from public sources. Zero authentication. Results vary by domain.
+All from public sources. Zero authentication. Results vary by domain — sparse DNS means sparse output.
 
 ## MCP Server
 
@@ -157,9 +144,9 @@ recon runs as an MCP server for Claude, Cursor, VS Code, Kiro, ChatGPT, or any M
 
 Then ask your AI: "Run a recon lookup on northwindtraders.com and analyze the posture."
 
-Available MCP tools: `lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `compare_postures`, `chain_lookup`, `reload_data`, `get_fingerprints`, `get_signals`, `explain_signal`, `test_hypothesis`, `simulate_hardening`.
+12 MCP tools available: `lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `compare_postures`, `chain_lookup`, `reload_data`, `get_fingerprints`, `get_signals`, `explain_signal`, `test_hypothesis`, `simulate_hardening`.
 
-Because recon's correlation engine is built on pure-analysis YAML rules, MCP agents can interrogate it deeply — asking for provenance on any signal, testing hypotheses, or dynamically exploring the evidence chain — all with zero additional network calls.
+All tools are read-only and idempotent. The agentic tools (`test_hypothesis`, `simulate_hardening`, `explain_signal`) operate on cached data with zero additional network calls.
 
 See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config file locations per client.
 
@@ -167,13 +154,21 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 
 | Doc | Contents |
 |-----|----------|
-| [Fingerprints](docs/fingerprints.md) | Detection types, custom fingerprints, email security scoring, related domain enrichment |
-| [Signals](docs/signals.md) | 4-layer signal intelligence, 34 signal rules, metadata conditions, custom signals |
+| [Fingerprints](docs/fingerprints.md) | Detection types, custom fingerprints, email security scoring |
+| [Signals](docs/signals.md) | Signal rules, layers, metadata conditions, custom signals |
 | [MCP Server](docs/mcp.md) | AI agent integration setup, tools, config locations |
 | [Roadmap](docs/roadmap.md) | What's planned, what's not, and why |
-| [Legal](docs/legal.md) | Disclaimer, accuracy, fictional examples, third-party notice |
+| [Legal](docs/legal.md) | Disclaimer, accuracy, fictional examples |
 | [Contributing](CONTRIBUTING.md) | How to add fingerprints, signals, and code |
 | [Changelog](CHANGELOG.md) | Version history |
+
+## Limitations
+
+- **Coverage depends on public DNS.** Organizations that minimize their DNS footprint, use heavy proxying (e.g., Cloudflare), or don't publish verification records will produce thin results.
+- **Fingerprints can go stale.** SaaS providers change DNS patterns. ~190 fingerprints maintained by one person will lag behind reality. Contributions welcome.
+- **Signal rules are heuristic.** The 34 YAML rules are useful indicators, not definitive assessments. False positives and missed signals are expected.
+- **No accuracy benchmarks yet.** There's no published precision/recall data. Treat output as a starting point for investigation, not a source of truth.
+- **Young project.** This is a solo project, early stage. Expect rough edges.
 
 ## Development
 

@@ -1,8 +1,6 @@
 # Roadmap
 
-Stay passive. Stay zero-creds. Stay focused on signal intelligence. Be a great tool for both humans and AI agents. If it needs a paid API key or a database, it doesn't belong here.
-
-The priority order is: machine trust (stable, evidence-backed, deterministic) → explainability (why a signal fired, what weakens confidence) → composability (MCP quality, JSON quality, batch workflows) → accuracy (validation corpus, precision/recall). Features come last. Trust comes first.
+Guiding constraints: stay passive, stay zero-creds, no paid API keys, no database. Priority order: correctness and trust → explainability → composability (MCP, JSON, batch) → accuracy (validation, precision/recall) → new features.
 
 ## What's shipped
 
@@ -14,7 +12,7 @@ The priority order is: machine trust (stable, evidence-backed, deterministic) �
 | v0.4.0 | Hedged inference language, CLI cleanup (sys.argv fix, `recon mcp`, `doctor --fix`), disk cache, CSV batch output |
 | v0.5.1 | Defensive security tools (`assess_exposure`, `find_hardening_gaps`, `compare_postures`), CLI flags (`--exposure`, `--gaps`), 660 tests, 83% coverage. HTML removed |
 | v0.6.0 | CertIntelProvider protocol, CertSpotter fallback, generalized `degraded_sources`, validation corpus, 723 tests, 84% coverage |
-| v0.7.0 | Explainable Correlation Engine: `--explain` flag, enhanced YAML (`contradicts`, `match_mode: all`, detection `weight`, meta-signals), 5 new MCP tools (`get_fingerprints`, `get_signals`, `explain_signal`, `test_hypothesis`, `simulate_hardening`), conflict-aware merge, 194 fingerprints, 34 signals, 896 tests |
+| v0.7.0 | `--explain` flag, enhanced YAML (`contradicts`, `match_mode: all`, detection `weight`, meta-signals), 5 new MCP tools (`get_fingerprints`, `get_signals`, `explain_signal`, `test_hypothesis`, `simulate_hardening`), conflict-aware merge, ~190 fingerprints, 34 signals, 896 tests |
 
 ## Now
 
