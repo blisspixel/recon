@@ -67,6 +67,78 @@ class TestSignalValidation:
         assert result.description == ""
         assert result.min_matches == 1
 
+    # ── contradicts validation ──────────────────────────────────────────
+
+    def test_contradicts_valid_list(self):
+        result = _validate_and_build_signal(
+            {"name": "T", "requires": {"any": ["a"]}, "contradicts": ["slug-x", "slug-y"]}, 0
+        )
+        assert result is not None
+        assert result.contradicts == ("slug-x", "slug-y")
+
+    def test_contradicts_omitted_defaults_empty(self):
+        result = _validate_and_build_signal({"name": "T", "requires": {"any": ["a"]}}, 0)
+        assert result is not None
+        assert result.contradicts == ()
+
+    def test_contradicts_not_a_list_rejected(self):
+        assert _validate_and_build_signal({"name": "T", "requires": {"any": ["a"]}, "contradicts": "bad"}, 0) is None
+
+    def test_contradicts_empty_string_entry_rejected(self):
+        assert (
+            _validate_and_build_signal({"name": "T", "requires": {"any": ["a"]}, "contradicts": ["ok", ""]}, 0) is None
+        )
+
+    def test_contradicts_non_string_entry_rejected(self):
+        assert _validate_and_build_signal({"name": "T", "requires": {"any": ["a"]}, "contradicts": [123]}, 0) is None
+
+    # ── requires_signals validation ─────────────────────────────────────
+
+    def test_requires_signals_valid_list(self):
+        result = _validate_and_build_signal(
+            {"name": "T", "requires": {"any": ["a"]}, "requires_signals": ["Sig A", "Sig B"]}, 0
+        )
+        assert result is not None
+        assert result.requires_signals == ("Sig A", "Sig B")
+
+    def test_requires_signals_omitted_defaults_empty(self):
+        result = _validate_and_build_signal({"name": "T", "requires": {"any": ["a"]}}, 0)
+        assert result is not None
+        assert result.requires_signals == ()
+
+    def test_requires_signals_not_a_list_rejected(self):
+        assert (
+            _validate_and_build_signal({"name": "T", "requires": {"any": ["a"]}, "requires_signals": "bad"}, 0) is None
+        )
+
+    def test_requires_signals_empty_string_entry_rejected(self):
+        assert (
+            _validate_and_build_signal({"name": "T", "requires": {"any": ["a"]}, "requires_signals": ["ok", ""]}, 0)
+            is None
+        )
+
+    def test_requires_signals_non_string_entry_rejected(self):
+        assert (
+            _validate_and_build_signal({"name": "T", "requires": {"any": ["a"]}, "requires_signals": [42]}, 0) is None
+        )
+
+    # ── explain validation ──────────────────────────────────────────────
+
+    def test_explain_valid_string(self):
+        result = _validate_and_build_signal({"name": "T", "requires": {"any": ["a"]}, "explain": "Why this matters"}, 0)
+        assert result is not None
+        assert result.explain == "Why this matters"
+
+    def test_explain_omitted_defaults_empty(self):
+        result = _validate_and_build_signal({"name": "T", "requires": {"any": ["a"]}}, 0)
+        assert result is not None
+        assert result.explain == ""
+
+    def test_explain_non_string_defaults_empty(self):
+        result = _validate_and_build_signal({"name": "T", "requires": {"any": ["a"]}, "explain": 123}, 0)
+        assert result is not None
+        assert result.explain == ""
+
     def test_reload_signals_clears_cache(self):
         """reload_signals should not raise."""
         reload_signals()

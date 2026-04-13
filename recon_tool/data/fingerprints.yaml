@@ -780,6 +780,9 @@ fingerprints:
     detections:
       - type: txt
         pattern: "^pingone-domain-verification="
+      - type: cname
+        pattern: "ping-ccd.com"
+        description: PingOne custom domain CNAME delegation for SSO/MFA pages
 
   - name: CyberArk
     slug: cyberark
@@ -1170,6 +1173,9 @@ fingerprints:
         pattern: "akamaiedge.net"
       - type: cname
         pattern: "edgekey.net"
+      - type: cname
+        pattern: "edgesuite.net"
+        description: Akamai EdgeSuite CDN/WAF CNAME delegation
 
   - name: NS1 (IBM)
     slug: ns1
@@ -1714,3 +1720,72 @@ fingerprints:
     detections:
       - type: txt
         pattern: "^hotjar-domain-verification="
+
+  # ====================== AGENTIC AI & AUTOMATION ======================
+
+  - name: n8n (Workflow Automation)
+    slug: n8n
+    category: AI & Generative
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^n8n-domain-verification="
+        description: n8n workflow automation platform domain verification
+
+  - name: Dify (AI App Builder)
+    slug: dify
+    category: AI & Generative
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^dify-domain-verification="
+        description: Dify AI application builder domain verification
+
+  - name: AutoGen (Microsoft)
+    slug: autogen
+    category: AI & Generative
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^autogen-domain-verification="
+        description: Microsoft AutoGen agentic framework domain verification
+
+  # ====================== SUPPLY CHAIN & VENDOR RISK ======================
+
+  - name: Snyk
+    slug: snyk
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^snyk-domain-verification="
+        description: Snyk software composition analysis domain verification
+
+  - name: GitHub Advanced Security
+    slug: github-advanced-security
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: subdomain_txt
+        pattern: "_github-challenge:."
+        description: GitHub Enterprise domain challenge — proves GitHub Enterprise Cloud with Advanced Security
+
+  - name: Sonatype
+    slug: sonatype
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^sonatype-domain-verification="
+        description: Sonatype Nexus supply chain security domain verification
+
+  # ====================== IDENTITY & ZERO TRUST ======================
+
+  - name: Beyond Identity
+    slug: beyond-identity
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^beyondidentity-domain-verification="
+        description: Beyond Identity passwordless MFA domain verification

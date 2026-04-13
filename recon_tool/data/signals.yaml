@@ -276,3 +276,61 @@ signals:
       - field: issuance_velocity
         operator: gte
         value: 20
+
+  # ── Layer 4 (continued): Contradiction signals ───────────────────────
+  # These use the `contradicts` key to detect split-brain configurations,
+  # incomplete migrations, and governance gaps. A contradiction slug's
+  # presence suppresses the signal — indicating the inconsistency has
+  # been resolved.
+
+  - name: Incomplete Identity Migration
+    category: Consistency
+    confidence: medium
+    description: External identity provider detected alongside Microsoft 365 — possible split-brain identity configuration or incomplete migration
+    explain: "When an external IdP (Okta, Auth0, Ping Identity) is detected but Microsoft 365 is also present, it may indicate a partially completed identity migration. If M365 were fully decommissioned, the contradiction would resolve."
+    requires:
+      any: [okta, auth0, ping-identity]
+    min_matches: 1
+    contradicts: [microsoft365]
+
+  - name: Split-Brain Email Config
+    category: Consistency
+    confidence: medium
+    description: Dual email provider indicators detected — possible split-brain email routing or migration in progress
+    explain: "When both Microsoft 365 and Google Workspace email indicators are present, it may suggest a dual-provider configuration. If MTA-STS enforce is also active, it typically indicates a completed migration with unified transport policy, which suppresses this signal."
+    requires:
+      any: [microsoft365, google-workspace]
+    min_matches: 2
+    contradicts: [mta-sts-enforce]
+
+  - name: Security Stack Without Governance
+    category: Consistency
+    confidence: medium
+    description: Enterprise security tooling detected without strong email governance — security investment may lack email-layer controls
+    explain: "When multiple enterprise security tools are present but DMARC is not set to reject, it may indicate that email governance has not kept pace with endpoint and network security investment. Strong DMARC enforcement would suppress this signal."
+    requires:
+      any: [crowdstrike, sentinelone, zscaler, paloalto, netskope, cato, wiz]
+    min_matches: 2
+    metadata:
+      - field: dmarc_policy
+        operator: neq
+        value: reject
+
+  # ── Layer 4 (continued): Meta-signals ─────────────────────────────────
+  # These use `requires_signals` to fire only when other named signals
+  # are already active. They represent higher-order organizational
+  # patterns that emerge from the combination of simpler signals.
+
+  - name: Complex Migration Window
+    category: Composite
+    confidence: medium
+    description: Enterprise security stack and dual email provider both active — indicators suggest a complex infrastructure migration in progress
+    explain: "When both a mature security stack and dual email providers are detected simultaneously, it typically indicates a complex migration window where the organization is transitioning between providers while maintaining security controls across both environments."
+    requires_signals: [Enterprise Security Stack, Dual Email Provider]
+
+  - name: Governance Sprawl
+    category: Composite
+    confidence: medium
+    description: AI adoption alongside shadow IT risk indicators — possible governance gap across emerging and unmanaged tooling
+    explain: "When enterprise AI adoption signals coincide with shadow IT risk indicators, it may suggest that governance frameworks have not expanded to cover the full range of tools in use. This combination often appears in organizations rapidly adopting AI while consumer-grade SaaS usage remains unmanaged."
+    requires_signals: [AI Adoption, Shadow IT Risk]

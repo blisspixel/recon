@@ -101,6 +101,43 @@ class TestFingerprintValidation:
         }
         assert _validate_fingerprint(fp, "test") is None
 
+    def test_match_mode_defaults_to_any(self):
+        fp = {
+            "name": "Test",
+            "detections": [{"type": "txt", "pattern": "^test="}],
+        }
+        result = _validate_fingerprint(fp, "test")
+        assert result is not None
+        assert result.match_mode == "any"
+
+    def test_match_mode_any_accepted(self):
+        fp = {
+            "name": "Test",
+            "match_mode": "any",
+            "detections": [{"type": "txt", "pattern": "^test="}],
+        }
+        result = _validate_fingerprint(fp, "test")
+        assert result is not None
+        assert result.match_mode == "any"
+
+    def test_match_mode_all_accepted(self):
+        fp = {
+            "name": "Test",
+            "match_mode": "all",
+            "detections": [{"type": "txt", "pattern": "^test="}],
+        }
+        result = _validate_fingerprint(fp, "test")
+        assert result is not None
+        assert result.match_mode == "all"
+
+    def test_invalid_match_mode_skips_fingerprint(self):
+        fp = {
+            "name": "Test",
+            "match_mode": "first",
+            "detections": [{"type": "txt", "pattern": "^test="}],
+        }
+        assert _validate_fingerprint(fp, "test") is None
+
 
 class TestLoadFingerprints:
     def test_loads_builtin_fingerprints(self):

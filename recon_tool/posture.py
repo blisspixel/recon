@@ -98,6 +98,7 @@ class _PostureRule:
     slugs_min: int = 0
     slugs_max: int | None = None
     metadata: tuple[_MetadataCondition, ...] = ()
+    explain: str = ""
 
 
 def _parse_metadata_block(name: str, raw_metadata: list[Any]) -> tuple[_MetadataCondition, ...] | None:
@@ -189,6 +190,15 @@ def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule |
         logger.warning("Posture rule %r has no slug or metadata conditions — skipped", name)
         return None
 
+    # Parse explain field
+    explain = ""
+    raw_explain = rule.get("explain")
+    if raw_explain is not None:
+        if isinstance(raw_explain, str):
+            explain = raw_explain
+        else:
+            logger.warning("Posture rule %r has non-string 'explain' — defaulting to empty", name)
+
     return _PostureRule(
         name=name,
         category=category,
@@ -198,6 +208,7 @@ def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule |
         slugs_min=slugs_min,
         slugs_max=slugs_max,
         metadata=metadata_conditions,
+        explain=explain,
     )
 
 

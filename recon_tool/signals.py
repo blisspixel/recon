@@ -52,6 +52,9 @@ class Signal:
     candidates: tuple[str, ...]
     min_matches: int
     metadata: tuple[MetadataCondition, ...] = ()
+    contradicts: tuple[str, ...] = ()
+    requires_signals: tuple[str, ...] = ()
+    explain: str = ""
 
 
 _VALID_METADATA_FIELDS = frozenset(
@@ -140,9 +143,44 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
             logger.warning("Signal %r has empty or missing 'requires.any' and no metadata — skipped", name)
             return None
     elif not metadata_conditions:
-        # No requires and no metadata — skip
-        logger.warning("Signal %r has neither 'requires' nor 'metadata' — skipped", name)
-        return None
+        # No requires and no metadata — check if requires_signals is present
+        raw_requires_signals_check = signal.get("requires_signals")
+        if not (isinstance(raw_requires_signals_check, list) and raw_requires_signals_check):
+            logger.warning("Signal %r has neither 'requires' nor 'metadata' nor 'requires_signals' — skipped", name)
+            return None
+
+    # Parse optional contradicts field
+    contradicts: tuple[str, ...] = ()
+    raw_contradicts = signal.get("contradicts")
+    if raw_contradicts is not None:
+        if not isinstance(raw_contradicts, list):
+            logger.warning("Signal %r has invalid 'contradicts' (not a list) — skipped", name)
+            return None
+        for entry in raw_contradicts:
+            if not isinstance(entry, str) or not entry:
+                logger.warning("Signal %r has invalid entry in 'contradicts' — skipped", name)
+                return None
+        contradicts = tuple(raw_contradicts)
+
+    # Parse optional requires_signals field
+    requires_signals: tuple[str, ...] = ()
+    raw_requires_signals = signal.get("requires_signals")
+    if raw_requires_signals is not None:
+        if not isinstance(raw_requires_signals, list):
+            logger.warning("Signal %r has invalid 'requires_signals' (not a list) — skipped", name)
+            return None
+        for entry in raw_requires_signals:
+            if not isinstance(entry, str) or not entry:
+                logger.warning("Signal %r has invalid entry in 'requires_signals' — skipped", name)
+                return None
+        requires_signals = tuple(raw_requires_signals)
+
+    # Parse optional explain field
+    raw_explain = signal.get("explain")
+    if raw_explain is not None and not isinstance(raw_explain, str):
+        logger.warning("Signal %r has non-string 'explain' — defaulting to empty", name)
+        raw_explain = ""
+    explain: str = raw_explain if isinstance(raw_explain, str) else ""
 
     return Signal(
         name=name,
@@ -152,6 +190,9 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
         candidates=candidates,
         min_matches=min_matches,
         metadata=metadata_conditions,
+        contradicts=contradicts,
+        requires_signals=requires_signals,
+        explain=explain,
     )
 
 
@@ -178,6 +219,52 @@ def _load_from_path(path: Path) -> list[Signal]:
     return results
 
 
+def _validate_meta_signals(entries: list[Signal]) -> list[Signal]:
+    """Validate meta-signals at load time and remove invalid ones.
+
+    A meta-signal (has requires_signals) is invalid if it references:
+    - A signal name that does not exist in the loaded definitions
+    - Another meta-signal (cycle prevention)
+
+    Invalid meta-signals are logged as warnings and excluded from the result.
+    Non-meta signals pass through unchanged.
+    """
+    non_meta_names: set[str] = set()
+    meta_names: set[str] = set()
+    for sig in entries:
+        if sig.requires_signals:
+            meta_names.add(sig.name)
+        else:
+            non_meta_names.add(sig.name)
+
+    all_names = non_meta_names | meta_names
+    valid: list[Signal] = []
+    for sig in entries:
+        if not sig.requires_signals:
+            valid.append(sig)
+            continue
+        # Check for references to non-existent signals
+        missing = [name for name in sig.requires_signals if name not in all_names]
+        if missing:
+            logger.warning(
+                "Meta-signal %r references non-existent signal(s) %r — skipped",
+                sig.name,
+                missing,
+            )
+            continue
+        # Check for references to other meta-signals (cycle prevention)
+        meta_refs = [name for name in sig.requires_signals if name in meta_names]
+        if meta_refs:
+            logger.warning(
+                "Meta-signal %r references other meta-signal(s) %r — skipped (cycle prevention)",
+                sig.name,
+                meta_refs,
+            )
+            continue
+        valid.append(sig)
+    return valid
+
+
 @lru_cache(maxsize=1)
 def load_signals() -> tuple[Signal, ...]:
     """Load and validate signal definitions from YAML (built-in + custom).
@@ -188,6 +275,10 @@ def load_signals() -> tuple[Signal, ...]:
     Custom signals from ~/.recon/signals.yaml (or RECON_CONFIG_DIR) are
     loaded after built-in signals and are additive only — they cannot
     override or disable built-in signals.
+
+    Meta-signals (those with requires_signals) are validated at load time:
+    references to non-existent signals or other meta-signals are logged
+    as warnings and the invalid meta-signal is excluded.
 
     Results are cached for the process lifetime. In the CLI this is fine
     (short-lived process). In the MCP server (long-lived), call
@@ -200,6 +291,7 @@ def load_signals() -> tuple[Signal, ...]:
     entries: list[Signal] = []
     entries.extend(_load_from_path(data_path))
     entries.extend(_load_from_path(custom_path))
+    entries = _validate_meta_signals(entries)
     return tuple(entries)
 
 
@@ -251,40 +343,80 @@ def _evaluate_metadata_condition(condition: MetadataCondition, context: SignalCo
     return False
 
 
+def _evaluate_single_signal(signal: Signal, context: SignalContext) -> SignalMatch | None:
+    """Evaluate a single signal against the context, returning a match or None.
+
+    Checks contradicts suppression, slug matches, and metadata conditions.
+    """
+    # Check contradicts: if any contradiction slug is present, suppress
+    if signal.contradicts and any(slug in context.detected_slugs for slug in signal.contradicts):
+        return None
+
+    # Check slug matches (if signal has candidates)
+    matched = [slug for slug in signal.candidates if slug in context.detected_slugs]
+    slug_satisfied = len(matched) >= signal.min_matches
+
+    # Check metadata conditions (if signal has any)
+    metadata_satisfied = (
+        all(_evaluate_metadata_condition(cond, context) for cond in signal.metadata) if signal.metadata else True
+    )
+
+    # Signal fires only if BOTH slug and metadata conditions are met
+    # For metadata-only signals (no candidates), slug_satisfied is True (min_matches=0)
+    if slug_satisfied and metadata_satisfied:
+        return SignalMatch(
+            name=signal.name,
+            category=signal.category,
+            confidence=signal.confidence,
+            matched=tuple(matched),
+            description=signal.description,
+        )
+    return None
+
+
 def evaluate_signals(
     context: SignalContext,
 ) -> list[SignalMatch]:
-    """Evaluate which signals fire based on detected fingerprint slugs and metadata.
+    """Two-pass signal evaluation with contradicts suppression.
 
     Returns list of frozen SignalMatch dataclasses with metadata, matched slugs,
     and optional description.
 
-    Signals can match on slug presence (requires.any), metadata conditions, or both.
-    When both are present, the signal fires only if both slug threshold AND all
-    metadata conditions are satisfied.
+    Pass 1: Evaluate all non-meta signals (those without requires_signals).
+      - Contradicts suppression: if any slug in signal.contradicts is present
+        in context.detected_slugs, the signal is skipped.
+      - Then standard slug + metadata evaluation.
+
+    Pass 2: Evaluate meta-signals (those with requires_signals).
+      - A meta-signal fires only if ALL named signals from requires_signals
+        fired in pass 1, AND all other conditions (contradicts, slug, metadata)
+        are also satisfied.
+
+    Evaluation order within each pass is file order (deterministic).
     """
-    results: list[SignalMatch] = []
-    for signal in load_signals():
-        # Check slug matches (if signal has candidates)
-        matched = [slug for slug in signal.candidates if slug in context.detected_slugs]
-        slug_satisfied = len(matched) >= signal.min_matches
+    all_signals = load_signals()
 
-        # Check metadata conditions (if signal has any)
-        metadata_satisfied = (
-            all(_evaluate_metadata_condition(cond, context) for cond in signal.metadata) if signal.metadata else True
-        )
+    # Split into non-meta and meta signals, preserving file order
+    non_meta = [s for s in all_signals if not s.requires_signals]
+    meta = [s for s in all_signals if s.requires_signals]
 
-        # Signal fires only if BOTH slug and metadata conditions are met
-        # For metadata-only signals (no candidates), slug_satisfied is True (min_matches=0)
-        if slug_satisfied and metadata_satisfied:
-            results.append(
-                SignalMatch(
-                    name=signal.name,
-                    category=signal.category,
-                    confidence=signal.confidence,
-                    matched=tuple(matched),
-                    description=signal.description,
-                )
-            )
+    # Pass 1: evaluate non-meta signals
+    first_pass: list[SignalMatch] = []
+    for signal in non_meta:
+        match = _evaluate_single_signal(signal, context)
+        if match is not None:
+            first_pass.append(match)
 
-    return results
+    # Pass 2: evaluate meta-signals against first-pass results
+    fired_names = {m.name for m in first_pass}
+    second_pass: list[SignalMatch] = []
+    for signal in meta:
+        # All referenced signals must have fired in pass 1
+        if not all(name in fired_names for name in signal.requires_signals):
+            continue
+        # Then check contradicts + slug + metadata conditions
+        match = _evaluate_single_signal(signal, context)
+        if match is not None:
+            second_pass.append(match)
+
+    return first_pass + second_pass

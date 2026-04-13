@@ -15,9 +15,11 @@ from recon_tool.constants import (
 from recon_tool.insights import generate_insights
 from recon_tool.models import (
     BIMIIdentity,
+    CandidateValue,
     CertSummary,
     ConfidenceLevel,
     EvidenceRecord,
+    MergeConflicts,
     ReconLookupError,
     SignalContext,
     SourceResult,
@@ -88,26 +90,70 @@ def compute_inference_confidence(results: list[SourceResult]) -> ConfidenceLevel
     return ConfidenceLevel.LOW
 
 
+def _build_detection_weight_map() -> dict[tuple[str, str], float]:
+    """Build a (slug, source_type) → max weight mapping from loaded fingerprints.
+
+    For each fingerprint, for each detection rule, maps (fp.slug, det.type)
+    to the maximum weight seen across all fingerprints sharing that slug+type.
+    """
+    from recon_tool.fingerprints import load_fingerprints
+
+    weight_map: dict[tuple[str, str], float] = {}
+    for fp in load_fingerprints():
+        for det in fp.detections:
+            key = (fp.slug, det.type.upper())
+            existing = weight_map.get(key)
+            if existing is None or det.weight > existing:
+                weight_map[key] = det.weight
+    return weight_map
+
+
 def compute_detection_scores(
     evidence: tuple[EvidenceRecord, ...],
+    weights: dict[tuple[str, str], float] | None = None,
 ) -> tuple[tuple[str, str], ...]:
-    """Compute per-slug detection confidence from evidence diversity.
+    """Compute per-slug detection confidence from weighted evidence.
 
-    Groups evidence by slug, counts distinct source_types per slug.
-    3+ types → "high", 2 → "medium", 1 → "low".
+    Groups evidence by slug, computes a weighted sum of distinct source_types
+    per slug using detection weights. Each (slug, source_type) pair contributes
+    its weight once (max weight if duplicated).
+
+    Thresholds: weighted_sum >= 2.5 → "high", >= 1.5 → "medium", else "low".
+
+    When all weights are 1.0 (default), the weighted sum equals the count of
+    distinct source types, preserving existing behavior:
+    3+ types (sum >= 3.0 >= 2.5) → "high", 2 types (sum 2.0 >= 1.5) → "medium",
+    1 type (sum 1.0 < 1.5) → "low".
+
+    Args:
+        evidence: Tuple of EvidenceRecord instances.
+        weights: Optional mapping of (slug, source_type) → weight.
+            If None, weights are loaded automatically from fingerprints.
+            Pass an explicit dict to override (useful for testing).
 
     Returns tuple of (slug, score) pairs sorted by slug.
     """
-    slug_types: dict[str, set[str]] = {}
+    if not evidence:
+        return ()
+
+    if weights is None:
+        weights = _build_detection_weight_map()
+
+    # For each slug, track the max weight per distinct source_type
+    slug_source_weights: dict[str, dict[str, float]] = {}
     for ev in evidence:
-        slug_types.setdefault(ev.slug, set()).add(ev.source_type)
+        per_source = slug_source_weights.setdefault(ev.slug, {})
+        w = weights.get((ev.slug, ev.source_type), 1.0)
+        # Keep max weight if multiple evidence records share (slug, source_type)
+        if ev.source_type not in per_source or w > per_source[ev.source_type]:
+            per_source[ev.source_type] = w
 
     scores: list[tuple[str, str]] = []
-    for slug in sorted(slug_types):
-        count = len(slug_types[slug])
-        if count >= 3:
+    for slug in sorted(slug_source_weights):
+        weighted_sum = sum(slug_source_weights[slug].values())
+        if weighted_sum >= 2.5:
             scores.append((slug, "high"))
-        elif count >= 2:
+        elif weighted_sum >= 1.5:
             scores.append((slug, "medium"))
         else:
             scores.append((slug, "low"))
@@ -234,6 +280,18 @@ def merge_results(
     # ordered by reliability (OIDC > UserRealm > DNS), so the first non-None
     # value is the most trustworthy. A "most-complete-wins" strategy would
     # require scoring each result, adding complexity for little benefit.
+    #
+    # Conflict tracking: collect all non-None candidate values per tracked field
+    # so we can surface disagreements when 2+ sources provide different values.
+    _tracked_candidates: dict[str, list[CandidateValue]] = {
+        "display_name": [],
+        "auth_type": [],
+        "region": [],
+        "tenant_id": [],
+        "dmarc_policy": [],
+        "google_auth_type": [],
+    }
+
     for result in results:
         if tenant_id is None and result.tenant_id is not None:
             tenant_id = result.tenant_id
@@ -257,6 +315,44 @@ def merge_results(
             mta_sts_mode = result.mta_sts_mode
         all_domains.update(result.tenant_domains)
         all_site_verification_tokens.update(result.site_verification_tokens)
+
+        # Collect candidates for conflict tracking
+        _src_confidence = "high" if result.is_complete else ("medium" if result.is_success else "low")
+        if result.display_name is not None:
+            _tracked_candidates["display_name"].append(
+                CandidateValue(value=result.display_name, source=result.source_name, confidence=_src_confidence)
+            )
+        if result.auth_type is not None:
+            _tracked_candidates["auth_type"].append(
+                CandidateValue(value=result.auth_type, source=result.source_name, confidence=_src_confidence)
+            )
+        if result.region is not None:
+            _tracked_candidates["region"].append(
+                CandidateValue(value=result.region, source=result.source_name, confidence=_src_confidence)
+            )
+        if result.tenant_id is not None:
+            _tracked_candidates["tenant_id"].append(
+                CandidateValue(value=result.tenant_id, source=result.source_name, confidence=_src_confidence)
+            )
+        if result.dmarc_policy is not None:
+            _tracked_candidates["dmarc_policy"].append(
+                CandidateValue(value=result.dmarc_policy, source=result.source_name, confidence=_src_confidence)
+            )
+        if result.google_auth_type is not None:
+            _tracked_candidates["google_auth_type"].append(
+                CandidateValue(value=result.google_auth_type, source=result.source_name, confidence=_src_confidence)
+            )
+
+    # Build MergeConflicts: only populate fields where 2+ sources disagree
+    _conflict_fields: dict[str, tuple[CandidateValue, ...]] = {}
+    for field_name, candidates in _tracked_candidates.items():
+        if len(candidates) >= 2:
+            unique_values = {c.value for c in candidates}
+            if len(unique_values) >= 2:
+                _conflict_fields[field_name] = tuple(candidates)
+    merge_conflicts: MergeConflicts | None = None
+    if _conflict_fields:
+        merge_conflicts = MergeConflicts(**_conflict_fields)
 
     # If no tenant_id found, check if we at least have DNS services.
     # tenant_id stays None when no M365 tenant exists.
@@ -391,4 +487,5 @@ def merge_results(
         mta_sts_mode=mta_sts_mode,
         google_auth_type=google_auth_type,
         google_idp_name=google_idp_name,
+        merge_conflicts=merge_conflicts,
     )

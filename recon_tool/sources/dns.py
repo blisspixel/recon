@@ -39,6 +39,7 @@ from recon_tool.fingerprints import (
     get_spf_patterns,
     get_subdomain_txt_patterns,
     get_txt_patterns,
+    load_fingerprints,
     match_txt,
 )
 from recon_tool.fingerprints import (
@@ -173,6 +174,7 @@ class _DetectionCtx:
         "bimi_identity",
         "site_verification_tokens",
         "mta_sts_mode",
+        "_matched_fp_detections",
     )
 
     def __init__(self) -> None:
@@ -189,6 +191,10 @@ class _DetectionCtx:
         self.bimi_identity: Any = None  # BIMIIdentity | None
         self.site_verification_tokens: set[str] = set()
         self.mta_sts_mode: str | None = None
+        # Tracks (slug, detection_type, pattern) for each matched fingerprint
+        # detection rule. Used by enforce_match_mode_all() to verify that
+        # fingerprints with match_mode: all had ALL their detections match.
+        self._matched_fp_detections: set[tuple[str, str, str]] = set()
 
     def add(self, svc_name: str, slug: str | None = None, source_type: str = "", raw_value: str = "") -> None:
         """Register a detected service, optionally with its slug and evidence.
@@ -213,6 +219,72 @@ class _DetectionCtx:
                     )
                 )
 
+    def record_fp_match(self, slug: str, det_type: str, pattern: str) -> None:
+        """Record that a specific fingerprint detection rule matched.
+
+        Used by enforce_match_mode_all() to verify that fingerprints with
+        match_mode: all had every detection rule produce a match.
+        """
+        self._matched_fp_detections.add((slug, det_type, pattern))
+
+    def enforce_match_mode_all(self) -> None:
+        """Post-process detections: remove partial matches for match_mode: all fingerprints.
+
+        For fingerprints with match_mode: all, every detection rule must have
+        produced a match. If any detection rule within such a fingerprint did
+        NOT match, we remove the fingerprint's slug and service name from the
+        accumulated results.
+
+        Fingerprints with match_mode: any (the default) are unaffected.
+        """
+        all_fps = [fp for fp in load_fingerprints() if fp.match_mode == "all"]
+        if not all_fps:
+            return
+
+        for fp in all_fps:
+            # Check if ALL detection rules for this fingerprint matched
+            all_matched = all((fp.slug, det.type, det.pattern) in self._matched_fp_detections for det in fp.detections)
+            if all_matched:
+                # All detections matched — keep the fingerprint's results
+                continue
+
+            # Partial match — remove this fingerprint's contributions.
+            slug = fp.slug
+            name = fp.name
+
+            # Remove service name
+            self.services.discard(name)
+
+            # Check if another fingerprint shares this slug and was fully matched
+            other_has_slug = False
+            for other_fp in load_fingerprints():
+                if other_fp is fp or other_fp.slug != slug:
+                    continue
+                if other_fp.match_mode == "any":
+                    # match_mode: any — any single detection match is enough
+                    if any(
+                        (other_fp.slug, det.type, det.pattern) in self._matched_fp_detections
+                        for det in other_fp.detections
+                    ):
+                        other_has_slug = True
+                        break
+                else:
+                    # match_mode: all — all detections must match
+                    if all(
+                        (other_fp.slug, det.type, det.pattern) in self._matched_fp_detections
+                        for det in other_fp.detections
+                    ):
+                        other_has_slug = True
+                        break
+
+            if not other_has_slug:
+                self.slugs.discard(slug)
+                # Also remove evidence records for this slug
+                self.evidence = [e for e in self.evidence if e.slug != slug]
+                # Re-check m365 flag if this slug was an m365 slug
+                if slug in self._m365_slugs:
+                    self.m365 = any(s in self._m365_slugs for s in self.slugs)
+
 
 # ── Sub-detectors ───────────────────────────────────────────────────────
 # Each function handles one DNS record type. All are async and operate
@@ -231,6 +303,7 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
         result = match_txt(txt, txt_patterns)
         if result:
             ctx.add(result.name, result.slug, source_type="TXT", raw_value=txt)
+            ctx.record_fp_match(result.slug, "txt", result.pattern)
 
         # Extract google-site-verification tokens for relationship mapping
         if txt_lower.startswith("google-site-verification="):
@@ -248,6 +321,7 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
             for det in spf_patterns:
                 if det.pattern.lower() in txt_lower:
                     ctx.add(det.name, det.slug)
+                    ctx.record_fp_match(det.slug, "spf", det.pattern)
             if txt_lower.rstrip().endswith("-all"):
                 ctx.services.add(SVC_SPF_STRICT)
             elif txt_lower.rstrip().endswith("~all"):
@@ -266,6 +340,7 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
         for det in get_mx_patterns():
             if det.pattern in mx_lower:
                 ctx.add(det.name, det.slug)
+                ctx.record_fp_match(det.slug, "mx", det.pattern)
                 break
 
 
@@ -622,6 +697,7 @@ async def _detect_ns(ctx: _DetectionCtx, domain: str) -> None:
         for det in get_ns_patterns():
             if det.pattern in ns_lower:
                 ctx.add(det.name, det.slug)
+                ctx.record_fp_match(det.slug, "ns", det.pattern)
                 break
 
 
@@ -638,6 +714,7 @@ async def _detect_cname_infra(ctx: _DetectionCtx, domain: str) -> None:
             for det in get_cname_patterns():
                 if det.pattern in cl:
                     ctx.add(det.name, det.slug)
+                    ctx.record_fp_match(det.slug, "cname", det.pattern)
                     break
 
 
@@ -666,25 +743,26 @@ async def _detect_subdomain_txt(ctx: _DetectionCtx, domain: str) -> None:
         return
 
     # Parse patterns and build query tasks
-    parsed: list[tuple[str, str, str, str]] = []  # (subdomain, regex, name, slug)
+    parsed: list[tuple[str, str, str, str, str]] = []  # (subdomain, regex, name, slug, original_pattern)
     for det in patterns:
         if ":" not in det.pattern:
             continue
         subdomain, regex = det.pattern.split(":", 1)
-        parsed.append((subdomain, regex, det.name, det.slug))
+        parsed.append((subdomain, regex, det.name, det.slug, det.pattern))
 
     if not parsed:
         return
 
     # Fire all subdomain TXT queries concurrently
-    tasks = [_safe_resolve(f"{subdomain}.{domain}", "TXT") for subdomain, _, _, _ in parsed]
+    tasks = [_safe_resolve(f"{subdomain}.{domain}", "TXT") for subdomain, _, _, _, _ in parsed]
     results = await asyncio.gather(*tasks)
 
-    for (_, regex, name, slug), txt_records in zip(parsed, results, strict=True):
+    for (_, regex, name, slug, original_pattern), txt_records in zip(parsed, results, strict=True):
         for txt in txt_records:
             try:
                 if re.search(regex, txt, re.IGNORECASE):
                     ctx.add(name, slug)
+                    ctx.record_fp_match(slug, "subdomain_txt", original_pattern)
                     break
             except re.error:
                 continue
@@ -697,6 +775,7 @@ async def _detect_caa(ctx: _DetectionCtx, domain: str) -> None:
         for det in get_caa_patterns():
             if det.pattern in caa_lower:
                 ctx.add(det.name, det.slug)
+                ctx.record_fp_match(det.slug, "caa", det.pattern)
                 break
 
 
@@ -953,5 +1032,8 @@ class DNSSource:
 
         # Remove the queried domain itself from related_domains
         ctx.related_domains.discard(domain.lower())
+
+        # Post-process: enforce match_mode: all — remove partial matches
+        ctx.enforce_match_mode_all()
 
         return ctx
