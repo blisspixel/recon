@@ -19,31 +19,27 @@ The priority order is: machine trust (stable, evidence-backed, deterministic) �
 
 These build on each other in order:
 
-1. **crt.sh fallback via CertIntelProvider abstraction** — crt.sh is the single point of failure for certificate intelligence and related domain discovery. Add CertSpotter as a secondary CT source (free, no API key, reliable) behind a `CertIntelProvider` interface so future sources can be added cleanly.
+1. **Explainable intelligence (`--explain` flag)** — for every insight and signal, show the matched evidence, which rules fired, and why confidence landed where it did. Include "what would weaken this signal" context. The data is already in evidence records and detection scores — this is a formatting + MCP feature, not new infrastructure.
 
-2. **Degraded sources in output** — expand the existing `crtsh_degraded` boolean into a `degraded_sources` list across all sources. Users and agents always know which data sources were unavailable and how that affects result quality. Depends on the CertIntelProvider abstraction being in place.
+2. **Enhanced YAML correlation engine** — upgrade the signal and fingerprint YAML schema with `contradicts` (negation), `match_mode: all` (AND logic for fingerprint detections), detection `weight` (not all evidence is equal), and signal-to-signal references (meta-signals that fire when other signals are active). Small loader changes, massive correlation power.
 
-3. **Validation corpus + accuracy report** — a set of 20–30 known domains with expected outputs (services, signals, confidence) run as automated regression tests. Produces a markdown accuracy report (`docs/accuracy.md`) with precision/recall per signal category and false-positive rates. Depends on degraded_sources so accuracy metrics account for partial data.
+3. **MCP introspection tools** — `get_fingerprints`, `get_signals`, `explain_signal(name)` so agents can understand why a signal triggered and what would change the conclusion. Depends on `--explain` logic existing.
+
+4. **Conflict-aware merge output** — enrich `--json` output to expose candidate values when sources disagree, with per-candidate confidence. Natural extension of `--explain`.
 
 ## Soon
 
 Ordered by dependency and impact:
 
-1. **`--explain` flag** — for every insight and signal, show the matched evidence, which rules fired, and why confidence landed where it did. Include "what would weaken this signal" context (e.g., "this dual-provider detection relies on both the current MX record and the old one"). The data is already in evidence records and detection scores — this is a formatting feature, not new infrastructure.
+1. **Custom profile templates** — YAML files in `~/.recon/profiles/` that combine signals + posture rules into named archetypes (e.g., `--profile fintech`, `--profile startup`). Natural extension of the existing YAML extensibility for vertical-specific use cases. Community-contributable.
 
-2. **Conflict-aware merge output** — enrich the `--json` output to expose candidate values when sources disagree. Depends on `--explain` establishing the pattern for richer output.
+2. **Cloud strategy inference from CA fingerprints** — correlate dominant CA families with infrastructure CNAMEs to surface a "Primary Cloud Bias" observation. Pure analysis on existing data. Depends on validation corpus to catch false positives.
 
-3. **Custom profile templates** — YAML files in `~/.recon/profiles/` that combine signals + posture rules into named archetypes (e.g., `--profile fintech`, `--profile startup`). Natural extension of the existing YAML extensibility for vertical-specific use cases. Community-contributable.
+3. **Delegation graph topology in chain mode** — summarize the shape of SPF include chains, CNAME delegation trees, and shared site-verification tokens. Depends on validation corpus.
 
-3. **MCP introspection tools** — `get_fingerprints`, `get_signals`, `explain_signal(name)` so agents can understand why a signal triggered. Depends on `--explain` logic existing.
+4. **Docker image** — for CI/CD pipelines and air-gapped environments. No dependencies.
 
-4. **Cloud strategy inference from CA fingerprints** — correlate dominant CA families with infrastructure CNAMEs to surface a "Primary Cloud Bias" observation. Pure analysis on existing data. Depends on validation corpus to catch false positives.
-
-5. **Delegation graph topology in chain mode** — summarize the shape of SPF include chains, CNAME delegation trees, and shared site-verification tokens. Depends on validation corpus.
-
-6. **Docker image** — for CI/CD pipelines and air-gapped environments. No dependencies.
-
-7. **Agent workflow documentation** — document common patterns for MCP users. No dependencies, but more useful after MCP introspection tools exist.
+5. **Agent workflow documentation** — document common patterns for MCP users. No dependencies, but more useful after MCP introspection tools exist.
 
 ## Intentionally not doing
 
