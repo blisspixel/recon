@@ -34,15 +34,20 @@ pip install recon-tool                    # from PyPI
 
 | Tool | What it does | Parameters |
 |------|-------------|------------|
-| `lookup_tenant` | Full domain intelligence — tenant details, email score, SaaS fingerprints, signals | `domain`, `format`: `text` / `json` / `markdown` |
-| `analyze_posture` | Neutral posture observations across email, identity, infrastructure | `domain` |
+| `lookup_tenant` | Full domain intelligence — tenant details, email score, SaaS fingerprints, signals | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
+| `analyze_posture` | Neutral posture observations across email, identity, infrastructure | `domain`, `explain`: bool |
 | `assess_exposure` | Security posture score (0–100) with email, identity, infrastructure sections | `domain` |
 | `find_hardening_gaps` | Categorized hardening gaps with severity and "Consider" recommendations | `domain` |
 | `compare_postures` | Side-by-side posture comparison of two domains | `domain_a`, `domain_b` |
 | `chain_lookup` | Recursive domain discovery via CNAME/CT breadcrumbs | `domain`, `depth` (1–3) |
 | `reload_data` | Reload fingerprints, signals, and posture rules from disk | none |
+| `get_fingerprints` | List all loaded fingerprints with slugs, categories, detection types | `category` (optional filter) |
+| `get_signals` | List all loaded signals with rules, layers, conditions | `category`, `layer` (optional filters) |
+| `explain_signal` | Query a signal's trigger conditions and current state for a domain | `signal_name`, `domain` (optional) |
+| `test_hypothesis` | Test a theory against signals and evidence — returns likelihood + evidence | `domain`, `hypothesis` |
+| `simulate_hardening` | What-if: re-compute exposure score with hypothetical fixes applied | `domain`, `fixes` (array) |
 
-All tools are read-only and idempotent. The defensive tools (`assess_exposure`, `find_hardening_gaps`, `compare_postures`) operate on existing pipeline data with zero additional network calls. The server includes a bounded TTL cache (120s) and per-domain rate limiting.
+All tools are read-only and idempotent. Tools marked with `explain` parameter support structured provenance output. The agentic tools (`test_hypothesis`, `simulate_hardening`, `get_fingerprints`, `get_signals`, `explain_signal`) operate on cached pipeline data with zero additional network calls. The server includes a bounded TTL cache (120s) and per-domain rate limiting.
 
 ## Where to Put the Config
 
