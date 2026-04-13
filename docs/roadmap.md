@@ -31,15 +31,23 @@ These build on each other in order:
 
 Ordered by dependency and impact:
 
-1. **Custom profile templates** — YAML files in `~/.recon/profiles/` that combine signals + posture rules into named archetypes (e.g., `--profile fintech`, `--profile startup`). Natural extension of the existing YAML extensibility for vertical-specific use cases. Community-contributable.
+1. **Custom profile templates + interpretive lenses** — YAML files in `~/.recon/profiles/` that combine signals + posture rules into named archetypes (e.g., `--profile fintech`, `--profile startup`). Lenses reweight signals for different perspectives (defensive security, vendor due diligence, IT architecture review). Community-contributable. Depends on the enhanced YAML engine (v0.7.0).
 
-2. **Cloud strategy inference from CA fingerprints** — correlate dominant CA families with infrastructure CNAMEs to surface a "Primary Cloud Bias" observation. Pure analysis on existing data. Depends on validation corpus to catch false positives.
+2. **Negative-space analysis** — detect the absence of expected signals as intelligence. "M365 tenant detected but no DKIM selectors" or "Enterprise security stack but no MDM" are louder than what's present. Extends the `contradicts` engine from v0.7.0 into a dedicated absence-detection layer.
 
-3. **Delegation graph topology in chain mode** — summarize the shape of SPF include chains, CNAME delegation trees, and shared site-verification tokens. Depends on validation corpus.
+3. **Organizational archetype signatures** — build a "tech DNA" fingerprint from signal density and type mix. A startup with aggressive SaaS + high cert churn looks different from a regulated enterprise with compliance gateways + conservative DNS. Pure YAML rules, no new data sources.
 
-4. **Docker image** — for CI/CD pipelines and air-gapped environments. No dependencies.
+4. **Dynamic agent-driven weight tuning** — let MCP agents temporarily override fingerprint/signal weights for a single call, enabling real-time "what if I weight this higher?" reasoning loops. The static weights from v0.7.0 become the foundation.
 
-5. **Agent workflow documentation** — document common patterns for MCP users. No dependencies, but more useful after MCP introspection tools exist.
+5. **Cloud strategy inference from CA fingerprints** — correlate dominant CA families with infrastructure CNAMEs to surface a "Primary Cloud Bias" observation. Pure analysis on existing data.
+
+6. **Delegation graph topology in chain mode** — summarize the shape of SPF include chains, CNAME delegation trees, and shared site-verification tokens as a JSON graph structure.
+
+7. **Temporal signal sequencing** — use CT log issuance timestamps to detect clustering and velocity patterns (e.g., "8 new agent.* subdomains in 14 days"). Extends the existing `issuance_velocity` metadata into richer temporal awareness.
+
+8. **Docker image** — for CI/CD pipelines and air-gapped environments. No dependencies.
+
+9. **Agent workflow documentation** — document common patterns for MCP users: reasoning loops, hypothesis testing, supply-chain intel workflows.
 
 ## Intentionally not doing
 
