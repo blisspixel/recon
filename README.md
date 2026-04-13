@@ -2,7 +2,7 @@
 
 Passive infrastructure intelligence for humans and agents. Turns public DNS, identity endpoints, and certificate transparency into structured organizational intelligence — no credentials, no API keys, no interaction with the queried organization's systems.
 
-> Intended for defensive use only. recon is designed for legitimate security posture assessment, IT architecture review, vendor due diligence, and defensive hardening. It performs zero active scanning, zero credentialed access, and zero interaction with the queried organization's systems. See [docs/legal.md](docs/legal.md) for full intended-use policy and disclaimers.
+> Intended for defensive use only. recon is designed exclusively for legitimate security posture assessment, IT architecture review, vendor due diligence, and defensive hardening. It performs zero active scanning, zero credentialed access, and zero interaction with the queried organization's systems. See [docs/legal.md](docs/legal.md) for the full intended-use policy and disclaimers.
 
 ```bash
 recon contoso.com
@@ -48,7 +48,7 @@ recon contoso.com
 
 Give it a domain. No credentials, no API keys, no interaction with the organization's servers. recon queries public DNS, identity endpoints, and certificate transparency logs — the signals every organization must emit for email, SaaS, and cloud infrastructure to function — and assembles them into a coherent picture of the organization's technology posture.
 
-Each signal alone is unremarkable: a TXT record here, a CNAME delegation there, a certificate issuer pattern in the CT logs. The art is in the correlation. recon reads these scattered, public signals across orthogonal sources (OIDC discovery, GetUserRealm, Google identity routing, DNS fingerprints, certificate transparency) and synthesizes them into structured intelligence — tenant details, email security posture, SaaS fingerprints, derived signals, hardening gaps, and posture scores. The organization is never contacted or notified.
+Each signal alone is unremarkable: a single TXT record, a CNAME delegation, or a certificate issuance pattern in the CT logs. The art is in the correlation. recon fuses these scattered, orthogonal public signals — DNS records, Microsoft and Google identity endpoints, and certificate transparency logs — using layered, metadata-aware YAML rules. What emerges is not a raw data dump but a coherent, evidence-based picture of the organization's actual technology posture: tenant details, email security maturity, SaaS footprint, derived signals, hardening gaps, and posture scores. The organization is never contacted or notified.
 
 Works for Microsoft 365, Google Workspace, or any provider. No accounts, no API keys, no credentials — ever. Every data source the tool queries is public and unauthenticated by design. The organization's servers never receive a packet; the intermediary services (DNS resolvers, Microsoft/Google identity endpoints, certificate transparency logs) are queried directly. Useful for anyone who needs domain intelligence — defenders, IT architects, MSPs, security professionals, sales engineers, and researchers. Also runs as an [MCP server](docs/mcp.md) for AI agents.
 
@@ -78,7 +78,7 @@ recon is designed to become the leading passive intelligence platform for organi
 
 From these signals, recon builds a structured, evidence-based model of the organization's actual infrastructure — not the glossy version in marketing materials, but the real one revealed by observable configuration choices, historical patterns, and inconsistencies.
 
-Where it's heading: timeline reconstruction from certificate issuance patterns, dependency and relationship mapping across CNAME delegations and SPF include chains, explainable intelligence with full provenance for every finding, and switchable interpretive lenses (defensive security, vendor due diligence, M&A assessment, operational maturity). All extensible through community-contributed YAML profiles for vertical-specific logic.
+Where it's heading: timeline reconstruction from certificate issuance patterns, dependency and relationship mapping across CNAME delegations and SPF include chains, explainable intelligence with full provenance for every finding, contradiction detection across signal layers, and switchable interpretive lenses for defensive security, vendor due diligence, IT architecture review, and operational maturity. All extensible through community-contributed YAML profiles for vertical-specific logic.
 
 For human users today — defenders, IT architects, security professionals, sales engineers, researchers, and anyone who needs organizational intelligence — recon provides immediate value: a 30-second lookup gives a clear picture of an organization's real tech stack, email security maturity, identity providers, SaaS footprint, and hardening gaps. For AI agents, recon is already exposed as a clean MCP server, giving any MCP-compatible agent structured, traceable, JSON-ready intelligence without credentials or active scanning.
 
@@ -157,6 +157,8 @@ recon runs as an MCP server for Claude, Cursor, VS Code, Kiro, ChatGPT, or any M
 Then ask your AI: "Run a recon lookup on northwindtraders.com and analyze the posture."
 
 Available MCP tools: `lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `compare_postures`, `chain_lookup`, `reload_data`.
+
+Because recon's correlation engine is built on pure-analysis YAML rules, MCP agents can interrogate it deeply — asking for provenance on any signal, testing hypotheses, or dynamically exploring the evidence chain — all with zero additional network calls.
 
 See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config file locations per client.
 
