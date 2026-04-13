@@ -52,7 +52,7 @@ Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP
 
 ## What it does
 
-recon collects public signals (DNS TXT/MX/CNAME/NS/SRV/CAA records, Microsoft and Google identity endpoints, certificate transparency logs) and matches them against a set of YAML-defined fingerprint and signal rules. The correlation is rule-based — not machine learning — but the value is in combining scattered, individually unremarkable records into a coherent view of what an organization is actually running.
+recon collects public signals (DNS TXT/MX/CNAME/NS/SRV/CAA records, Microsoft and Google identity endpoints, certificate transparency logs) and matches them against a set of YAML-defined fingerprint and signal rules. Each signal alone is unremarkable — a TXT record, a CNAME delegation, a certificate pattern. The art is in the correlation. The matching is rule-based, not machine learning, but combining scattered records into a coherent view of what an organization is actually running is where the value comes from.
 
 It's a young project (started 2026, solo developer). The fingerprint database covers ~190 SaaS services and the signal engine has 34 rules across 4 layers. Coverage and accuracy will vary by domain — organizations with rich public DNS get detailed results; those with minimal records or heavy proxying will produce sparse output. Results should be treated as indicators, not ground truth.
 
@@ -164,11 +164,11 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 
 ## Limitations
 
-- **Coverage depends on public DNS.** Organizations that minimize their DNS footprint, use heavy proxying (e.g., Cloudflare), or don't publish verification records will produce thin results.
-- **Fingerprints can go stale.** SaaS providers change DNS patterns. ~190 fingerprints maintained by one person will lag behind reality. Contributions welcome.
-- **Signal rules are heuristic.** The 34 YAML rules are useful indicators, not definitive assessments. False positives and missed signals are expected.
-- **No accuracy benchmarks yet.** There's no published precision/recall data. Treat output as a starting point for investigation, not a source of truth.
-- **Young project.** This is a solo project, early stage. Expect rough edges.
+- **Coverage depends on public DNS.** Organizations behind Cloudflare, with minimal DNS records, or that don't publish SaaS verification tokens will return near-empty results. This is a fundamental constraint of passive-only collection — there's no workaround.
+- **Fingerprints will go stale.** SaaS providers rebrand, change DNS patterns, and get acquired. ~190 fingerprints maintained by one person will fall behind. Community contributions are the only way this scales.
+- **Signal rules are heuristic.** The 34 YAML rules produce useful indicators, not definitive assessments. False positives happen. Missed signals happen. Don't make business decisions based solely on this output.
+- **No accuracy benchmarks yet.** There's no published precision/recall data. The tool can produce confident-looking output that's wrong. Treat it as a starting point for investigation, not a source of truth.
+- **Early-stage solo project.** This is one developer, a few weeks old. It works, but it hasn't been battle-tested by a community yet. Expect rough edges and breaking changes.
 
 ## Development
 
