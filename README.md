@@ -108,6 +108,7 @@ recon northwindtraders.com --chain --depth 2    # recursive domain discovery
 recon northwindtraders.com --no-cache     # bypass disk cache
 recon northwindtraders.com --exposure     # security posture assessment
 recon northwindtraders.com --gaps         # hardening gap analysis
+recon northwindtraders.com --explain     # show why each signal fired
 recon batch domains.txt --json            # batch mode (default 5 concurrent)
 recon batch domains.txt --csv             # batch CSV for spreadsheets
 recon batch domains.txt --json -c 10      # batch with 10 concurrent
@@ -156,7 +157,7 @@ recon runs as an MCP server for Claude, Cursor, VS Code, Kiro, ChatGPT, or any M
 
 Then ask your AI: "Run a recon lookup on northwindtraders.com and analyze the posture."
 
-Available MCP tools: `lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `compare_postures`, `chain_lookup`, `reload_data`.
+Available MCP tools: `lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `compare_postures`, `chain_lookup`, `reload_data`, `get_fingerprints`, `get_signals`, `explain_signal`, `test_hypothesis`, `simulate_hardening`.
 
 Because recon's correlation engine is built on pure-analysis YAML rules, MCP agents can interrogate it deeply — asking for provenance on any signal, testing hypotheses, or dynamically exploring the evidence chain — all with zero additional network calls.
 
@@ -178,7 +179,7 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/                          # 723 tests
+pytest tests/                          # 896 tests
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 ```
