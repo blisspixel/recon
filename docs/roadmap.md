@@ -17,7 +17,7 @@ Guiding constraints: stay passive, stay zero-creds, no paid API keys, no databas
 
 ## Now
 
-Shipped. See "Soon" for what's next.
+Shipped. The engine is now sophisticated enough (weighted detections, contradictions, meta-signals, explain module, agentic MCP tools) that the highest-leverage next work is intelligence amplification — negative space, better explanations, agent-friendly ephemeral rules — rather than raw data collection. See "Soon" for what's next.
 
 ## Soon
 
