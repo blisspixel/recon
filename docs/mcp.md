@@ -30,6 +30,10 @@ pip install recon-tool                    # from PyPI
 
 3. Ask your AI tool something like: "Run a recon lookup on northwindtraders.com and summarize the security posture."
 
+Example multi-step prompt for deeper analysis:
+
+> "Look up contoso.com with explain=true. Then run assess_exposure and find_hardening_gaps. Finally, simulate_hardening with DMARC reject and MTA-STS enforce applied, and tell me the new posture score."
+
 ## Available Tools
 
 | Tool | What it does | Parameters |

@@ -8,18 +8,31 @@ Drop a `fingerprints.yaml` in `~/.recon/` to add your own. Custom patterns are v
 
 Set `RECON_CONFIG_DIR` to override the custom fingerprint directory (default: `~/.recon/`).
 
+```yaml
+# ~/.recon/fingerprints.yaml
+fingerprints:
+  - name: Internal SSO Portal
+    slug: internal-sso
+    category: Security & Compliance
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "sso\\.internal\\.example\\.com$"
+        description: Internal SSO portal CNAME delegation
+```
+
 ## Detection Types
 
-| Type | What it queries | Matching |
-|------|----------------|----------|
-| `txt` | TXT records at zone apex | Regex |
-| `spf` | SPF include directives | Substring |
-| `mx` | MX record hostnames | Substring |
-| `ns` | NS record hostnames | Substring |
-| `cname` | CNAME targets (www, root, subdomains) | Substring |
-| `subdomain_txt` | TXT at a specific subdomain | `subdomain:regex` format |
-| `caa` | CAA record values | Substring |
-| `srv` | SRV record targets | Substring |
+| Type | What it queries | Matching | Best for |
+|------|----------------|----------|----------|
+| `txt` | TXT records at zone apex | Regex | Domain verification tokens (`^service-verify=`) |
+| `spf` | SPF include directives | Substring | Email sending services (`sendgrid.net`) |
+| `mx` | MX record hostnames | Substring | Email providers and gateways |
+| `ns` | NS record hostnames | Substring | DNS hosting providers |
+| `cname` | CNAME targets (www, root, subdomains) | Regex | CDN, WAF, and SaaS infrastructure |
+| `subdomain_txt` | TXT at a specific subdomain | Regex | Site verification challenges (`_github-challenge-`) |
+| `caa` | CAA record values | Substring | Certificate authority restrictions |
+| `srv` | SRV record targets | Substring | Service discovery (Teams, XMPP) |
 
 ## Categories
 

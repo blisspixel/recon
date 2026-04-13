@@ -1,24 +1,31 @@
 # Signal Intelligence
 
-Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 41 signals organized in four layers:
+Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 41 signals organized in four layers.
+
+Signals are evaluated in two passes: non-meta signals first, then meta-signals (those with `requires_signals`) against the first-pass results. This supports `contradicts` (negation) and `requires_signals` (signal-to-signal references) safely without circular dependencies.
 
 ## Layer 1 — Single-category detection
 
 | Signal | Triggers when |
 |--------|--------------|
-| AI Adoption | OpenAI, Anthropic, Mistral, or Perplexity detected |
+| AI Adoption | OpenAI, Anthropic, Mistral, Perplexity, CrewAI AID, LangSmith, or MCP Discovery detected |
+| Enterprise Email Deliverability | SPF flattening or DMARC management service detected (AutoSPF, OnDMARC, dmarcian, EasyDMARC, Valimail) |
 | High GTM Maturity | 2+ sales/marketing tools (includes Salesforce MC, Braze, Iterable) |
-| Enterprise Security Stack | 2+ security tools (includes Okta, Auth0, Imperva, OneLogin) |
+| Enterprise Security Stack | 2+ security tools (includes Okta, Auth0, Imperva, OneLogin, Beyond Identity) |
 | Modern Collaboration | 3+ collaboration tools |
-| Dev & Engineering Heavy | 2+ dev tools (includes LaunchDarkly, Contentful) |
+| Dev & Engineering Heavy | 2+ dev tools (includes LaunchDarkly, Contentful, Fly.io, Railway, Fastly) |
 | Data & Analytics Investment | 2+ data tools (includes Optimizely, WalkMe) |
-| Multi-Cloud | 2+ cloud/CDN providers (includes AWS ELB/S3, Azure Front Door, GCP App Engine) |
+| Multi-Cloud | 2+ cloud/CDN providers (includes AWS ELB/S3, Azure Front Door, GCP App Engine, Fastly, Fly.io) |
 | Observability & SRE | 2+ monitoring/incident tools |
 
 ## Layer 2 — Cross-category composites
 
 | Signal | Triggers when |
 |--------|--------------|
+| Agentic AI Infrastructure | 2+ agentic AI slugs (CrewAI AID, LangSmith, MCP Discovery, OpenAI, Anthropic, etc.) |
+| AI Platform Diversity | 2+ distinct AI/LLM provider verifications (OpenAI, Anthropic, Mistral, Perplexity) |
+| Software Supply Chain Maturity | 2+ supply chain security tools (GitHub Advanced Security, Sonatype, Snyk, Cosign) |
+| Edge-Native Architecture | 2+ edge/serverless platforms (Vercel, Netlify, Fly.io, Railway, Fastly, Cloudflare) |
 | Digital Transformation | 4+ tools across AI, collaboration, and cloud |
 | Sales-Led Growth | 3+ CRM, sales engagement, and marketing automation tools |
 | Product-Led Growth | 3+ analytics, engagement, and support tools |
@@ -50,6 +57,8 @@ Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 
 | Incomplete Identity Migration | External IdP (Okta, Auth0, Ping) detected; contradicts on Microsoft 365 |
 | Split-Brain Email Config | Dual email provider detected; contradicts on MTA-STS enforce |
 | Security Stack Without Governance | 2+ enterprise security tools + DMARC not reject |
+| AI Adoption Without Governance | AI platform detected; contradicts on enterprise identity providers (Okta, CyberArk, Beyond Identity, Ping) |
+| DevSecOps Investment Without Email Governance | Supply chain security tool detected + email security score ≤ 2 |
 | Complex Migration Window | Requires "Enterprise Security Stack" AND "Dual Email Provider" signals |
 | Governance Sprawl | Requires "AI Adoption" AND "Shadow IT Risk" signals |
 
