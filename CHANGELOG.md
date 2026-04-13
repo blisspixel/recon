@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs/mcp.md: added multi-step example prompt for deeper analysis workflows.
 - docs/roadmap.md: refined "Now" section with intelligence amplification thesis.
 - CHANGELOG.md: added standard [Unreleased] section.
-- CLAUDE.md and .kiro/steering/recon-project.md: updated stale fingerprint/signal/test counts to current values.
+- CLAUDE.md: updated stale fingerprint/signal/test counts to current values.
 
 ## [0.8.0] — 2026-04-13
 
@@ -256,8 +256,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `recon doctor` now checks crt.sh connectivity, signal database loading, and custom signals path.
 - "Why recon?" comparison table in README.
 - Expanded MCP Server section with setup steps, tools table, and config file locations per client.
-- `CLAUDE.md` for Claude Code project context.
-- `.kiro/steering/recon-project.md` for Kiro IDE context.
+- `CLAUDE.md` for project context.
 - `CHANGELOG.md`, `CONTRIBUTING.md`.
 - `examples/` folder with sample JSON output and batch file (all fictional data).
 - GitHub Actions CI workflow (Python 3.10–3.13, lint, type check, tests).
