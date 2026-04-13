@@ -17,7 +17,7 @@ signals:
     confidence: high
     description: Enterprise AI tooling indicators — suggests LLM-based workflow evaluation or deployment
     requires:
-      any: [openai, anthropic, mistral, perplexity]
+      any: [openai, anthropic, mistral, perplexity, crewai-aid, langsmith, mcp-discovery]
     min_matches: 1
 
   - name: High GTM Maturity
@@ -33,7 +33,7 @@ signals:
     confidence: high
     description: Layered security tooling indicators — suggests endpoint, email, network, or cloud security investment
     requires:
-      any: [crowdstrike, knowbe4, proofpoint, mimecast, zscaler, paloalto, wiz, sophos, trellix, barracuda, trendmicro, okta, auth0, duo, 1password, sentinelone, netskope, ping-identity, cyberark, cato, onelogin, imperva]
+      any: [crowdstrike, knowbe4, proofpoint, mimecast, zscaler, paloalto, wiz, sophos, trellix, barracuda, trendmicro, okta, auth0, duo, 1password, sentinelone, netskope, ping-identity, cyberark, cato, onelogin, imperva, beyond-identity]
     min_matches: 2
 
   - name: Modern Collaboration
@@ -49,7 +49,7 @@ signals:
     confidence: medium
     description: Developer tooling footprint suggests significant engineering headcount
     requires:
-      any: [github, gitlab, vercel, netlify, postman, linear, figma, autodesk, databricks, snowflake, mongodb, webflow, launchdarkly, contentful, sanity]
+      any: [github, gitlab, vercel, netlify, postman, linear, figma, autodesk, databricks, snowflake, mongodb, webflow, launchdarkly, contentful, sanity, flyio, railway, fastly]
     min_matches: 2
 
   - name: Data & Analytics Investment
@@ -65,7 +65,7 @@ signals:
     confidence: high
     description: Infrastructure indicators across multiple cloud providers
     requires:
-      any: [aws-route53, aws-cloudfront, aws-elb, aws-s3, aws-eb, azure-dns, azure-cdn, azure-appservice, azure-fd, azure-tm, gcp-dns, gcp-app, cloudflare, akamai, fastly]
+      any: [aws-route53, aws-cloudfront, aws-elb, aws-s3, aws-eb, azure-dns, azure-cdn, azure-appservice, azure-fd, azure-tm, gcp-dns, gcp-app, cloudflare, akamai, fastly, flyio]
     min_matches: 2
 
   - name: Observability & SRE
@@ -334,3 +334,73 @@ signals:
     description: AI adoption alongside shadow IT risk indicators — possible governance gap across emerging and unmanaged tooling
     explain: "When enterprise AI adoption signals coincide with shadow IT risk indicators, it may suggest that governance frameworks have not expanded to cover the full range of tools in use. This combination often appears in organizations rapidly adopting AI while consumer-grade SaaS usage remains unmanaged."
     requires_signals: [AI Adoption, Shadow IT Risk]
+
+  # ── v0.8.0: Agentic AI & supply chain signals ────────────────────────
+
+  - name: Agentic AI Infrastructure
+    category: AI & Automation
+    confidence: medium
+    description: Agentic AI platform endpoints detected alongside enterprise AI tooling — suggests active autonomous agent deployment
+    explain: "This signal fires when DNS records indicate the presence of agentic AI infrastructure (agent discovery endpoints, AI observability platforms, or MCP server advertisements) alongside enterprise AI platform verification. The combination suggests the organization is moving beyond basic AI adoption into autonomous agent deployment."
+    requires:
+      any: [crewai-aid, langsmith, mcp-discovery, openai, anthropic, mistral, perplexity, dify, n8n, autogen]
+    min_matches: 2
+
+  - name: AI Adoption Without Governance
+    category: Consistency
+    confidence: medium
+    description: AI platform adoption detected without enterprise identity governance — possible shadow AI deployment
+    explain: "AI platform verification records are detected but no enterprise identity provider (Okta, CyberArk, Beyond Identity, Ping Identity) is present. The absence of centralized identity governance alongside AI adoption may indicate shadow AI deployment or early-stage adoption without security review."
+    requires:
+      any: [openai, anthropic, mistral, perplexity, crewai-aid, langsmith, mcp-discovery, dify, n8n, autogen]
+    min_matches: 1
+    contradicts: [okta, cyberark, beyond-identity, ping-identity]
+
+  - name: AI Platform Diversity
+    category: AI
+    confidence: medium
+    description: Multiple distinct AI/LLM platform verifications detected — suggests multi-vendor AI strategy or evaluation phase
+    explain: "Domain verification records for two or more distinct AI/LLM providers are present. This may indicate a multi-vendor AI strategy, an active evaluation phase comparing providers, or different teams adopting different platforms independently."
+    requires:
+      any: [openai, anthropic, mistral, perplexity]
+    min_matches: 2
+
+  - name: Software Supply Chain Maturity
+    category: DevOps & Engineering
+    confidence: medium
+    description: Multiple software supply chain security tools detected — indicates mature DevSecOps practices
+    explain: "Two or more supply chain security verification records are detected (GitHub Advanced Security, Sonatype/Maven Central, Snyk, Cosign attestation). The combination suggests the organization has invested in software composition analysis, dependency management, and repository security beyond basic CI/CD."
+    requires:
+      any: [github-advanced-security, sonatype, snyk, cosign-attestation, github]
+    min_matches: 2
+
+  - name: DevSecOps Investment Without Email Governance
+    category: Consistency
+    confidence: medium
+    description: Supply chain security tooling detected with weak email security — engineering security investment may not extend to email governance
+    explain: "Supply chain security tools (Snyk, Sonatype, GitHub Advanced Security) are present but email security score is below 3/5. This may indicate that engineering-focused security investment has not extended to email-layer controls."
+    requires:
+      any: [github-advanced-security, sonatype, snyk, cosign-attestation]
+    min_matches: 1
+    metadata:
+      - field: email_security_score
+        operator: lte
+        value: 2
+
+  - name: Edge-Native Architecture
+    category: Infrastructure
+    confidence: medium
+    description: Multiple edge/serverless platform indicators — suggests edge-native or JAMstack deployment architecture
+    explain: "Two or more edge compute or serverless deployment platforms are detected via CNAME delegations. This pattern is common in organizations using JAMstack, serverless functions, or edge-native architectures for web applications and API endpoints."
+    requires:
+      any: [vercel, netlify, flyio, railway, cloudflare, fastly, render]
+    min_matches: 2
+
+  - name: Enterprise Email Deliverability
+    category: Email
+    confidence: high
+    description: SPF flattening or DMARC management service detected — indicates dedicated email operations team
+    explain: "SPF flattening or DMARC management services (AutoSPF, OnDMARC, dmarcian, EasyDMARC, Valimail) are detected in the SPF include chain. These services are used by organizations that have hit the 10-lookup SPF limit or need centralized DMARC management, indicating a dedicated email operations team and mature deliverability practices."
+    requires:
+      any: [autospf, ondmarc, dmarcian, easydmarc, valimail]
+    min_matches: 1

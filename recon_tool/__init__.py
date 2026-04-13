@@ -7,4 +7,4 @@ try:
 except PackageNotFoundError:
     # Fallback for editable installs without metadata — kept in sync with
     # pyproject.toml. For true single-source versioning, consider hatch-vcs.
-    __version__ = "0.7.3"
+    __version__ = "0.8.0"

@@ -783,6 +783,11 @@ fingerprints:
       - type: cname
         pattern: "ping-ccd.com"
         description: PingOne custom domain CNAME delegation for SSO/MFA pages
+      - type: txt
+        pattern: "pingoneemail="
+        weight: 0.6
+        description: PingOne email trust verification — authorizes PingOne to send email on behalf of the domain
+        reference: https://docs.pingidentity.com/pingone/settings/p1_set_up_trusted_email_domain.html
 
   - name: CyberArk
     slug: cyberark
@@ -791,6 +796,10 @@ fingerprints:
     detections:
       - type: txt
         pattern: "^cyberark-domain-verification="
+      - type: cname
+        pattern: "\\.idaptive\\.(?:com|app)$"
+        weight: 0.7
+        description: CyberArk Identity (legacy Idaptive) CNAME delegation for identity portal
 
   - name: Lakera (LLM Guardrails)
     slug: lakera
@@ -1750,6 +1759,36 @@ fingerprints:
         pattern: "^autogen-domain-verification="
         description: Microsoft AutoGen agentic framework domain verification
 
+  - name: CrewAI Agent Interface Discovery (AID)
+    slug: crewai-aid
+    category: AI & Generative
+    confidence: high
+    detections:
+      - type: subdomain_txt
+        pattern: "v=aid1;.*(?:src=|uri=)"
+        description: CrewAI AID TXT record at _agent.<domain> advertising autonomous agent MCP endpoints
+        reference: https://github.com/crewAIInc/crewAI/discussions/3164
+
+  - name: LangSmith Enterprise
+    slug: langsmith
+    category: AI & Generative
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "\\.p\\.api\\.smith\\.langchain\\.com$"
+        description: CNAME delegation to LangSmith managed GCP infrastructure for AI observability
+        reference: https://docs.langchain.com/langsmith/cloud
+
+  - name: MCP DNS Discovery
+    slug: mcp-discovery
+    category: AI & Generative
+    confidence: medium
+    detections:
+      - type: subdomain_txt
+        pattern: "^v=mcp1;"
+        description: MCP DNS-native discovery record at _mcp.<domain> advertising Model Context Protocol endpoints
+        reference: https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/2368
+
   # ====================== SUPPLY CHAIN & VENDOR RISK ======================
 
   - name: Snyk
@@ -1760,6 +1799,9 @@ fingerprints:
       - type: txt
         pattern: "^snyk-domain-verification="
         description: Snyk software composition analysis domain verification
+      - type: txt
+        pattern: "snyk-site-verification="
+        description: Snyk alternate site verification pattern for web asset scanning authorization
 
   - name: GitHub Advanced Security
     slug: github-advanced-security
@@ -1767,7 +1809,7 @@ fingerprints:
     confidence: high
     detections:
       - type: subdomain_txt
-        pattern: "_github-challenge:."
+        pattern: "^_github-challenge-"
         description: GitHub Enterprise domain challenge — proves GitHub Enterprise Cloud with Advanced Security
 
   - name: Sonatype
@@ -1778,6 +1820,21 @@ fingerprints:
       - type: txt
         pattern: "^sonatype-domain-verification="
         description: Sonatype Nexus supply chain security domain verification
+      - type: txt
+        pattern: "^OSSRH-\\d+$"
+        weight: 0.8
+        description: Sonatype OSSRH Maven Central namespace verification — proves active Java/JVM artifact publishing
+        reference: https://central.sonatype.org/faq/verify-ownership/
+
+  - name: Container Signing Attestation (Cosign)
+    slug: cosign-attestation
+    category: Security & Compliance
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^cosign\\.pub=|cosign-verification="
+        description: Cosign container image signing public key or verification record — indicates supply chain attestation
+        reference: https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/
 
   # ====================== IDENTITY & ZERO TRUST ======================
 
@@ -1789,3 +1846,89 @@ fingerprints:
       - type: txt
         pattern: "^beyondidentity-domain-verification="
         description: Beyond Identity passwordless MFA domain verification
+      - type: cname
+        pattern: "authenticator\\.beyondidentity\\.com"
+        weight: 0.5
+        description: Beyond Identity platform authenticator CNAME — indicates passwordless MFA deployment
+        reference: https://docs.beyondidentity.com/docs/resources/proxy-end-user
+
+  # ====================== INFRASTRUCTURE — EDGE & CDN ======================
+
+  - name: Fastly CDN
+    slug: fastly
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "fastly\\.net$|fastlylb\\.net$"
+        description: Fastly CDN/edge compute CNAME delegation
+
+  - name: Fly.io
+    slug: flyio
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "fly\\.dev$|edgeapp\\.net$"
+        description: Fly.io edge compute CNAME delegation
+
+  - name: Railway
+    slug: railway
+    category: Infrastructure
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "railway\\.app$"
+        description: Railway deployment platform CNAME delegation
+
+  # ====================== SPF FLATTENING & EMAIL DELIVERABILITY ======================
+
+  - name: AutoSPF
+    slug: autospf
+    category: Email & Communication
+    confidence: high
+    display_group: Email Deliverability
+    detections:
+      - type: spf
+        pattern: "autospf.com"
+        description: AutoSPF flattening service — indicates enterprise SPF management
+
+  - name: OnDMARC (Red Sift)
+    slug: ondmarc
+    category: Email & Communication
+    confidence: high
+    display_group: Email Deliverability
+    detections:
+      - type: spf
+        pattern: "ondmarc.com"
+        description: OnDMARC (Red Sift) email authentication management
+
+  - name: dmarcian
+    slug: dmarcian
+    category: Email & Communication
+    confidence: high
+    display_group: Email Deliverability
+    detections:
+      - type: spf
+        pattern: "dmarcian"
+        description: dmarcian DMARC management and SPF optimization
+
+  - name: EasyDMARC
+    slug: easydmarc
+    category: Email & Communication
+    confidence: high
+    display_group: Email Deliverability
+    detections:
+      - type: spf
+        pattern: "easydmarc"
+        description: EasyDMARC email authentication management
+
+  - name: Valimail
+    slug: valimail
+    category: Email & Communication
+    confidence: high
+    display_group: Email Deliverability
+    detections:
+      - type: spf
+        pattern: "valimail.com"
+        description: Valimail email authentication automation and SPF management

@@ -60,6 +60,14 @@ observations:
       slugs_min: 2
     template: "Multiple email sending services detected ({matched_slugs}) — high-volume outbound email operation"
 
+  - name: email_deliverability_management
+    category: email
+    salience: medium
+    condition:
+      slugs_any: [autospf, ondmarc, dmarcian, easydmarc, valimail]
+      slugs_min: 1
+    template: "SPF flattening or DMARC management service detected ({matched_slugs}) — dedicated email deliverability operations"
+
   # ── Identity posture ──────────────────────────────────────────────────
 
   - name: federated_identity
@@ -109,6 +117,14 @@ observations:
       slugs_max: 1
     template: "DNS is managed by a single provider ({matched_slugs})"
 
+  - name: edge_compute_detected
+    category: infrastructure
+    salience: low
+    condition:
+      slugs_any: [vercel, netlify, flyio, railway, fastly, render]
+      slugs_min: 2
+    template: "Multiple edge/serverless platforms detected ({matched_slugs}) — edge-native deployment pattern"
+
   # ── SaaS footprint ───────────────────────────────────────────────────
 
   - name: broad_saas_adoption
@@ -123,9 +139,25 @@ observations:
     category: saas_footprint
     salience: medium
     condition:
-      slugs_any: [openai, anthropic, mistral, perplexity]
+      slugs_any: [openai, anthropic, mistral, perplexity, crewai-aid, langsmith, mcp-discovery, dify, n8n, autogen]
       slugs_min: 1
     template: "AI/LLM tooling detected ({matched_slugs})"
+
+  - name: agentic_ai_detected
+    category: saas_footprint
+    salience: medium
+    condition:
+      slugs_any: [crewai-aid, langsmith, mcp-discovery, dify, n8n, autogen]
+      slugs_min: 1
+    template: "Agentic AI platform indicators detected ({matched_slugs})"
+
+  - name: supply_chain_security_detected
+    category: saas_footprint
+    salience: medium
+    condition:
+      slugs_any: [github-advanced-security, sonatype, snyk, cosign-attestation]
+      slugs_min: 1
+    template: "Software supply chain security tooling detected ({matched_slugs})"
 
   - name: security_tooling_detected
     category: saas_footprint
