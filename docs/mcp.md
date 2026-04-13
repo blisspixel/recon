@@ -2,7 +2,7 @@
 
 recon runs as an MCP server so any MCP-compatible AI tool can call it directly — no API keys, no glue code.
 
-Works with Claude Desktop, Cursor, VS Code + Copilot, ChatGPT, Kiro, or any other [MCP client](https://modelcontextprotocol.io/).
+Works with Claude Desktop, Cursor, VS Code + Copilot, ChatGPT, or any other [MCP client](https://modelcontextprotocol.io/).
 
 ## Setup
 
@@ -60,4 +60,3 @@ All tools are read-only and idempotent. Tools marked with `explain` parameter su
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
 | Cursor | `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally |
 | VS Code + Copilot | `.vscode/mcp.json` in your project |
-| Kiro | `.kiro/settings/mcp.json` in your project or `~/.kiro/settings/mcp.json` globally |
