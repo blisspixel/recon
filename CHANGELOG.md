@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] — 2026-04-12
+
+### Changed
+
+- README panel alignment fixed (all lines exactly 72 characters).
+- All test fixtures and examples use fictional company names only (Contoso, Northwind Traders, Fabrikam). Zero real company names in the repository.
+- Validation corpus fixtures are gitignored — never committed.
+- Release workflow: `skip-existing: true` prevents PyPI duplicate upload failures on tag re-pushes.
+
 ## [0.6.0] — 2026-04-12
 
 ### Added
