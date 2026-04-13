@@ -166,6 +166,7 @@ def _log_structured(level: int, msg: str, **fields: object) -> None:
 async def lookup_tenant(
     domain: str,
     format: str = "text",  # noqa: A002 — shadows builtin, but is the public MCP parameter name
+    explain: bool = False,
 ) -> str:
     """Look up domain intelligence — company name, email provider, tenant ID,
     tech stack, email security score, and signal intelligence.
@@ -181,6 +182,7 @@ async def lookup_tenant(
     Args:
         domain: A domain name to look up (e.g., contoso.com, northwindtraders.com).
         format: Output format — "text" (default), "json" (structured), or "markdown" (full report).
+        explain: When true, include structured explanations for insights and signals in the response.
 
     Returns:
         Domain intelligence in the requested format, or an error message.
@@ -258,6 +260,8 @@ async def lookup_tenant(
 
     # JSON format
     if output_format == "json":
+        if explain:
+            return _lookup_tenant_json_with_explain(info, list(results))
         return format_tenant_json(info)
 
     # Markdown format
@@ -314,7 +318,7 @@ async def lookup_tenant(
         openWorldHint=True,
     ),
 )
-async def analyze_posture(domain: str) -> str:
+async def analyze_posture(domain: str, explain: bool = False) -> str:
     """Analyze a domain's configuration posture and return neutral observations.
 
     Returns factual observations about the domain's email security, identity,
@@ -324,10 +328,11 @@ async def analyze_posture(domain: str) -> str:
 
     Args:
         domain: A domain name to analyze (e.g., "northwindtraders.com")
+        explain: When true, include explanation data for each posture observation.
 
     Returns:
         JSON array of observations, each with category, salience, statement,
-        and related_slugs.
+        and related_slugs. When explain is true, includes explanation data.
     """
     request_id = uuid.uuid4().hex[:12]
     start_time = time.monotonic()
@@ -397,7 +402,18 @@ async def analyze_posture(domain: str) -> str:
         elapsed_s=round(elapsed, 2),
     )
 
-    return json_mod.dumps(format_posture_observations(observations), indent=2)
+    result_list = format_posture_observations(observations)
+
+    if explain:
+        from recon_tool.explanation import explain_observations, serialize_explanation
+        from recon_tool.posture import load_posture_rules
+
+        posture_rules = load_posture_rules()
+        explanation_records = explain_observations(observations, posture_rules, info.evidence, info.detection_scores)
+        explanations = [serialize_explanation(rec) for rec in explanation_records]
+        return json_mod.dumps({"observations": result_list, "explanations": explanations}, indent=2)
+
+    return json_mod.dumps(result_list, indent=2)
 
 
 @mcp.tool(
@@ -805,6 +821,683 @@ async def compare_postures(domain_a: str, domain_b: str) -> str:
     )
 
     return format_comparison_json(comparison)
+
+
+def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResult]) -> str:
+    """Build JSON response for lookup_tenant with explain=True.
+
+    Includes explanations for insights, signals, confidence, and conflicts.
+    """
+    from recon_tool.explanation import (
+        explain_confidence,
+        explain_insights,
+        explain_signals,
+        serialize_explanation,
+    )
+    from recon_tool.formatter import format_tenant_dict
+    from recon_tool.models import SignalContext, serialize_conflicts
+    from recon_tool.signals import evaluate_signals, load_signals
+
+    base = format_tenant_dict(info)
+
+    # Build signal context for explanation
+    context = SignalContext(
+        detected_slugs=frozenset(info.slugs),
+        dmarc_policy=info.dmarc_policy,
+        auth_type=info.auth_type,
+        email_security_score=sum(
+            1
+            for svc in info.services
+            if svc
+            in {
+                "DMARC",
+                "DKIM (Exchange Online)",
+                "DKIM",
+                "SPF: strict (-all)",
+                "MTA-STS",
+                "BIMI",
+            }
+        ),
+    )
+    signal_matches = evaluate_signals(context)
+    signals = load_signals()
+
+    context_metadata: dict[str, object] = {
+        "dmarc_policy": info.dmarc_policy,
+        "auth_type": info.auth_type,
+        "email_security_score": context.email_security_score,
+    }
+
+    all_explanations: list[dict[str, object]] = []
+
+    # Signal explanations
+    signal_recs = explain_signals(
+        signal_matches, signals, context.detected_slugs, context_metadata, info.evidence, info.detection_scores
+    )
+    all_explanations.extend(serialize_explanation(r) for r in signal_recs)
+
+    # Insight explanations
+    insight_recs = explain_insights(
+        list(info.insights), frozenset(info.slugs), frozenset(info.services), info.evidence, info.detection_scores
+    )
+    all_explanations.extend(serialize_explanation(r) for r in insight_recs)
+
+    # Confidence explanation
+    conf_rec = explain_confidence(results, info.evidence_confidence, info.inference_confidence, info.confidence)
+    all_explanations.append(serialize_explanation(conf_rec))
+
+    base["explanations"] = all_explanations
+
+    # Include conflicts when present
+    if info.merge_conflicts and info.merge_conflicts.has_conflicts:
+        base["conflicts"] = serialize_conflicts(info.merge_conflicts)
+
+    return json_mod.dumps(base, indent=2)
+
+
+# ── Helper: resolve or use cache ────────────────────────────────────────
+
+
+async def _resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]] | str:
+    """Resolve a domain, using cache if available. Returns error string on failure."""
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        return f"Error: {exc}"
+
+    cached = _cache_get(validated)
+    if cached is not None:
+        info, results = cached
+        return info, list(results)
+
+    if not _rate_limit_check(validated):
+        return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+
+    try:
+        info, results = await resolve_tenant(validated)
+    except ReconLookupError:
+        return f"No information found for {domain}"
+    except Exception:
+        logger.exception("Unexpected error looking up %s", domain)
+        return f"Error looking up {domain}: an internal error occurred"
+
+    _cache_set(validated, info, results)
+    _rate_limit_record(validated)
+    return info, list(results)
+
+
+# ── MCP Introspection Tools ─────────────────────────────────────────────
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
+)
+async def get_fingerprints(category: str | None = None) -> str:
+    """List all loaded fingerprints with slugs, categories, and detection types.
+
+    Returns a JSON array of fingerprint summaries from both built-in and custom
+    sources. Each entry includes name, slug, category, confidence, match_mode,
+    provider_group, display_group, and the set of detection types used.
+
+    Args:
+        category: Optional category filter (case-insensitive partial match).
+
+    Returns:
+        JSON array of fingerprint summaries.
+    """
+    from recon_tool.fingerprints import load_fingerprints
+
+    fps = load_fingerprints()
+    if category:
+        cat_lower = category.lower()
+        fps = tuple(fp for fp in fps if cat_lower in fp.category.lower())
+    result = [
+        {
+            "name": fp.name,
+            "slug": fp.slug,
+            "category": fp.category,
+            "confidence": fp.confidence,
+            "match_mode": fp.match_mode,
+            "provider_group": fp.provider_group,
+            "display_group": fp.display_group,
+            "detection_types": sorted({d.type for d in fp.detections}),
+        }
+        for fp in fps
+    ]
+    return json_mod.dumps(result, indent=2)
+
+
+def _classify_signal_layer(sig: object) -> int:
+    """Classify a signal into a layer number.
+
+    Layer 1: basic (no metadata, no requires_signals, single category focus)
+    Layer 2: composite (cross-category or has metadata conditions)
+    Layer 3: consistency (category is Consistency)
+    Layer 4: meta (has requires_signals)
+    """
+    from recon_tool.signals import Signal
+
+    if not isinstance(sig, Signal):
+        return 1
+    if sig.requires_signals:
+        return 4
+    if sig.category.lower() == "consistency":
+        return 3
+    if sig.metadata:
+        return 2
+    return 1
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
+)
+async def get_signals(category: str | None = None, layer: int | None = None) -> str:
+    """List all loaded signals with rules, layers, and conditions.
+
+    Returns a JSON array of signal definitions from both built-in and custom
+    sources. Each entry includes name, category, confidence, description,
+    candidates, min_matches, metadata conditions, contradicts, requires_signals,
+    explain, and computed layer.
+
+    Layers: 1=basic, 2=composite (has metadata), 3=consistency, 4=meta (requires_signals).
+
+    Args:
+        category: Optional category filter (case-insensitive partial match).
+        layer: Optional layer filter (1, 2, 3, or 4).
+
+    Returns:
+        JSON array of signal definitions.
+    """
+    from recon_tool.signals import load_signals
+
+    sigs = load_signals()
+    result: list[dict[str, object]] = []
+    for sig in sigs:
+        sig_layer = _classify_signal_layer(sig)
+        if category and category.lower() not in sig.category.lower():
+            continue
+        if layer is not None and sig_layer != layer:
+            continue
+        result.append(
+            {
+                "name": sig.name,
+                "category": sig.category,
+                "confidence": sig.confidence,
+                "description": sig.description,
+                "candidates": list(sig.candidates),
+                "min_matches": sig.min_matches,
+                "metadata": [{"field": m.field, "operator": m.operator, "value": m.value} for m in sig.metadata],
+                "contradicts": list(sig.contradicts),
+                "requires_signals": list(sig.requires_signals),
+                "explain": sig.explain,
+                "layer": sig_layer,
+            }
+        )
+    return json_mod.dumps(result, indent=2)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def explain_signal(signal_name: str, domain: str | None = None) -> str:
+    """Query a specific signal's trigger conditions and current state for a domain.
+
+    Without a domain: returns the signal's definition, trigger conditions,
+    and a list of conditions that would weaken or suppress the signal.
+
+    With a domain: resolves the domain (using cache if available), evaluates
+    the signal, and returns its current state with matched evidence and
+    specific weakening conditions.
+
+    Args:
+        signal_name: Name of the signal to explain (required).
+        domain: Optional domain to evaluate the signal against.
+
+    Returns:
+        JSON object with signal definition and evaluation state, or an error.
+    """
+    from recon_tool.signals import Signal, load_signals
+
+    all_signals = load_signals()
+    sig: Signal | None = None
+    for s in all_signals:
+        if s.name == signal_name:
+            sig = s
+            break
+
+    if sig is None:
+        available = sorted(s.name for s in all_signals)
+        return json_mod.dumps(
+            {"error": f"Signal '{signal_name}' not found", "available_signals": available},
+            indent=2,
+        )
+
+    # Build base definition
+    definition: dict[str, object] = {
+        "name": sig.name,
+        "category": sig.category,
+        "confidence": sig.confidence,
+        "description": sig.description,
+        "explain": sig.explain,
+        "layer": _classify_signal_layer(sig),
+        "trigger_conditions": {
+            "candidates": list(sig.candidates),
+            "min_matches": sig.min_matches,
+            "metadata": [{"field": m.field, "operator": m.operator, "value": m.value} for m in sig.metadata],
+            "contradicts": list(sig.contradicts),
+            "requires_signals": list(sig.requires_signals),
+        },
+        "weakening_conditions": _static_weakening_conditions(sig),
+    }
+
+    if domain is None:
+        return json_mod.dumps(definition, indent=2)
+
+    # Resolve domain and evaluate signal
+    resolved = await _resolve_or_cache(domain)
+    if isinstance(resolved, str):
+        return resolved
+
+    info, _results = resolved
+
+    from recon_tool.models import SignalContext
+    from recon_tool.signals import evaluate_signals
+
+    context = SignalContext(
+        detected_slugs=frozenset(info.slugs),
+        dmarc_policy=info.dmarc_policy,
+        auth_type=info.auth_type,
+        email_security_score=sum(
+            1
+            for svc in info.services
+            if svc
+            in {
+                "DMARC",
+                "DKIM (Exchange Online)",
+                "DKIM",
+                "SPF: strict (-all)",
+                "MTA-STS",
+                "BIMI",
+            }
+        ),
+    )
+    signal_matches = evaluate_signals(context)
+    fired = any(m.name == signal_name for m in signal_matches)
+    matched_slugs = [slug for slug in sig.candidates if slug in context.detected_slugs]
+
+    # Build domain-specific weakening conditions
+    from recon_tool.explanation import _weakening_conditions_for_signal  # pyright: ignore[reportPrivateUsage]
+
+    context_metadata: dict[str, object] = {
+        "dmarc_policy": info.dmarc_policy,
+        "auth_type": info.auth_type,
+        "email_security_score": context.email_security_score,
+    }
+    weakening = _weakening_conditions_for_signal(sig, matched_slugs, context_metadata)
+
+    # Collect evidence for matched slugs
+    evidence_list: list[dict[str, str]] = []
+    for slug in matched_slugs:
+        for ev in info.evidence:
+            if ev.slug == slug:
+                evidence_list.append(
+                    {
+                        "source_type": ev.source_type,
+                        "raw_value": ev.raw_value,
+                        "rule_name": ev.rule_name,
+                        "slug": ev.slug,
+                    }
+                )
+
+    evaluation: dict[str, object] = {
+        **definition,
+        "domain": domain,
+        "fired": fired,
+        "matched_slugs": matched_slugs,
+        "matched_evidence": evidence_list,
+        "domain_weakening_conditions": list(weakening),
+    }
+    return json_mod.dumps(evaluation, indent=2)
+
+
+def _static_weakening_conditions(sig: object) -> list[str]:
+    """Generate static weakening conditions for a signal definition (no domain context)."""
+    from recon_tool.signals import Signal
+
+    if not isinstance(sig, Signal):
+        return []
+    conditions: list[str] = []
+    if sig.candidates and sig.min_matches > 0:
+        conditions.append(
+            f"Signal requires at least {sig.min_matches} of {len(sig.candidates)} candidate slug(s) to be detected"
+        )
+    for cond in sig.metadata:
+        conditions.append(f"Metadata condition: {cond.field} {cond.operator} {cond.value}")
+    for slug in sig.contradicts:
+        conditions.append(f"Detecting slug '{slug}' would suppress this signal")
+    if sig.requires_signals:
+        conditions.append(f"Requires all of these signals to fire first: {', '.join(sig.requires_signals)}")
+    return conditions
+
+
+# ── MCP Agentic Tools ───────────────────────────────────────────────────
+
+# Keyword groups for hypothesis matching — maps keywords to signal/slug categories
+_HYPOTHESIS_KEYWORDS: dict[str, list[str]] = {
+    "migration": ["migration", "migrate", "transition", "moving", "switching"],
+    "security": ["security", "secure", "protection", "defense", "defensive"],
+    "email": ["email", "mail", "dmarc", "dkim", "spf", "mta-sts", "bimi"],
+    "identity": ["identity", "sso", "federated", "okta", "entra", "auth", "authentication"],
+    "cloud": ["cloud", "aws", "azure", "gcp", "saas"],
+    "ai": ["ai", "artificial intelligence", "llm", "openai", "generative", "machine learning"],
+    "compliance": ["compliance", "governance", "audit", "regulation"],
+    "collaboration": ["collaboration", "teams", "slack", "zoom", "communication"],
+    "monitoring": ["monitoring", "observability", "logging", "telemetry"],
+    "cdn": ["cdn", "edge", "waf", "firewall", "cloudflare", "akamai"],
+}
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def test_hypothesis(domain: str, hypothesis: str) -> str:
+    """Test a theory about a domain against signals and evidence.
+
+    Proposes a theory (e.g., "this organization appears to be mid-migration
+    to Entra ID") and receives a structured assessment of likelihood,
+    supporting evidence, contradicting evidence, and what is missing.
+
+    Operates purely on cached pipeline data — zero additional network calls
+    beyond the initial domain resolution.
+
+    Args:
+        domain: A domain name to test against (e.g., "northwindtraders.com").
+        hypothesis: A theory to evaluate (e.g., "mid-migration to cloud identity").
+
+    Returns:
+        JSON object with likelihood, supporting_signals, contradicting_signals,
+        missing_evidence, and confidence.
+    """
+    resolved = await _resolve_or_cache(domain)
+    if isinstance(resolved, str):
+        return resolved
+
+    info, _results = resolved
+
+    from recon_tool.models import SignalContext
+    from recon_tool.signals import evaluate_signals, load_signals
+
+    context = SignalContext(
+        detected_slugs=frozenset(info.slugs),
+        dmarc_policy=info.dmarc_policy,
+        auth_type=info.auth_type,
+        email_security_score=sum(
+            1
+            for svc in info.services
+            if svc
+            in {
+                "DMARC",
+                "DKIM (Exchange Online)",
+                "DKIM",
+                "SPF: strict (-all)",
+                "MTA-STS",
+                "BIMI",
+            }
+        ),
+    )
+    signal_matches = evaluate_signals(context)
+    all_signals = load_signals()
+    fired_names = {m.name for m in signal_matches}
+
+    # Map hypothesis to relevant categories via keyword matching
+    hyp_lower = hypothesis.lower()
+    relevant_categories: set[str] = set()
+    for cat, keywords in _HYPOTHESIS_KEYWORDS.items():
+        if any(kw in hyp_lower for kw in keywords):
+            relevant_categories.add(cat)
+
+    # Find supporting and contradicting signals
+    supporting: list[str] = []
+    contradicting: list[str] = []
+    missing: list[str] = []
+
+    for sig in all_signals:
+        # Check if signal is relevant to hypothesis via keyword matching
+        sig_text = f"{sig.name} {sig.description} {sig.category} {sig.explain}".lower()
+        is_relevant = any(kw in sig_text for kw in hyp_lower.split()) or any(
+            any(kw in sig_text for kw in keywords)
+            for cat, keywords in _HYPOTHESIS_KEYWORDS.items()
+            if cat in relevant_categories
+        )
+        if not is_relevant:
+            continue
+
+        if sig.name in fired_names:
+            supporting.append(sig.name)
+        else:
+            # Check if it contradicts or is just missing
+            has_contradiction_slugs = sig.contradicts and any(
+                slug in context.detected_slugs for slug in sig.contradicts
+            )
+            if has_contradiction_slugs:
+                contradicting.append(sig.name)
+            else:
+                missing.append(
+                    f"Signal '{sig.name}' did not fire — "
+                    f"detecting additional slugs ({', '.join(sig.candidates[:3])}) "
+                    f"could strengthen or weaken this hypothesis"
+                    if sig.candidates
+                    else f"Signal '{sig.name}' did not fire — metadata conditions not met"
+                )
+
+    # Determine likelihood
+    if supporting and not contradicting:
+        if len(supporting) >= 3:
+            likelihood = "strong"
+        elif len(supporting) >= 1:
+            likelihood = "moderate"
+        else:
+            likelihood = "weak"
+    elif contradicting and not supporting:
+        likelihood = "unsupported"
+    elif supporting and contradicting:
+        likelihood = "moderate" if len(supporting) > len(contradicting) else "weak"
+    else:
+        likelihood = "unsupported"
+
+    # Determine confidence based on data completeness
+    if info.degraded_sources:
+        confidence = "low"
+    elif len(info.sources) >= 3:
+        confidence = "high"
+    else:
+        confidence = "medium"
+
+    result: dict[str, object] = {
+        "domain": domain,
+        "hypothesis": hypothesis,
+        "likelihood": likelihood,
+        "supporting_signals": supporting,
+        "contradicting_signals": contradicting,
+        "missing_evidence": missing,
+        "confidence": confidence,
+        "disclaimer": (
+            "This assessment is based on publicly observable indicators and "
+            "cached pipeline data. Indicators suggest possible patterns but "
+            "do not confirm organizational intent or internal decisions."
+        ),
+    }
+    return json_mod.dumps(result, indent=2)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def simulate_hardening(domain: str, fixes: list[str]) -> str:
+    """What-if simulation: re-compute exposure score with hypothetical fixes.
+
+    Accepts a list of fix descriptions (e.g., "DMARC reject", "MTA-STS enforce")
+    and simulates what the posture score would be if those fixes were applied.
+
+    Operates purely on cached pipeline data — zero additional network calls
+    beyond the initial domain resolution.
+
+    Args:
+        domain: A domain name to simulate against (e.g., "northwindtraders.com").
+        fixes: Array of fix descriptions or gap slugs to hypothetically apply.
+
+    Returns:
+        JSON object with current_score, simulated_score, score_delta,
+        applied_fixes, and remaining_gaps.
+    """
+    resolved = await _resolve_or_cache(domain)
+    if isinstance(resolved, str):
+        return resolved
+
+    info, _results = resolved
+
+    from recon_tool.exposure import assess_exposure_from_info, find_gaps_from_info
+
+    current_assessment = assess_exposure_from_info(info)
+    current_score = current_assessment.posture_score
+
+    # Parse fixes and simulate by mutating a copy of TenantInfo fields
+    applied: list[str] = []
+    sim_services = set(info.services)
+    sim_slugs = set(info.slugs)
+    sim_dmarc = info.dmarc_policy
+    sim_mta_sts = info.mta_sts_mode
+
+    fixes_lower = [f.lower() for f in fixes]
+
+    for fix in fixes_lower:
+        if "dmarc" in fix and "reject" in fix:
+            sim_dmarc = "reject"
+            applied.append("DMARC policy set to reject")
+        elif "dmarc" in fix and "quarantine" in fix:
+            if sim_dmarc != "reject":
+                sim_dmarc = "quarantine"
+                applied.append("DMARC policy set to quarantine")
+        elif "dmarc" in fix:
+            if sim_dmarc is None or sim_dmarc == "none":
+                sim_dmarc = "reject"
+                applied.append("DMARC policy set to reject")
+        elif "dkim" in fix:
+            sim_services.add("DKIM")
+            sim_slugs.add("dkim")
+            applied.append("DKIM configured")
+        elif "mta-sts" in fix and "enforce" in fix:
+            sim_mta_sts = "enforce"
+            sim_services.add("MTA-STS")
+            sim_slugs.add("mta-sts-enforce")
+            applied.append("MTA-STS set to enforce")
+        elif "mta-sts" in fix:
+            if sim_mta_sts is None:
+                sim_mta_sts = "enforce"
+                sim_services.add("MTA-STS")
+                sim_slugs.add("mta-sts-enforce")
+                applied.append("MTA-STS set to enforce")
+        elif "bimi" in fix:
+            sim_services.add("BIMI")
+            sim_slugs.add("bimi")
+            applied.append("BIMI configured")
+        elif "spf" in fix and ("strict" in fix or "hardfail" in fix or "-all" in fix):
+            sim_services.add("SPF: strict (-all)")
+            applied.append("SPF set to strict (-all)")
+        elif "tls-rpt" in fix or "tlsrpt" in fix:
+            sim_slugs.add("tls-rpt")
+            applied.append("TLS-RPT configured")
+        elif "caa" in fix:
+            sim_slugs.add("letsencrypt")
+            applied.append("CAA records configured")
+        else:
+            applied.append(f"Unrecognized fix: {fix}")
+
+    # Build simulated TenantInfo
+    sim_info = TenantInfo(
+        tenant_id=info.tenant_id,
+        display_name=info.display_name,
+        default_domain=info.default_domain,
+        queried_domain=info.queried_domain,
+        confidence=info.confidence,
+        region=info.region,
+        sources=info.sources,
+        services=tuple(sorted(sim_services)),
+        slugs=tuple(sorted(sim_slugs)),
+        auth_type=info.auth_type,
+        dmarc_policy=sim_dmarc,
+        domain_count=info.domain_count,
+        tenant_domains=info.tenant_domains,
+        related_domains=info.related_domains,
+        insights=info.insights,
+        degraded_sources=info.degraded_sources,
+        cert_summary=info.cert_summary,
+        evidence=info.evidence,
+        evidence_confidence=info.evidence_confidence,
+        inference_confidence=info.inference_confidence,
+        detection_scores=info.detection_scores,
+        bimi_identity=info.bimi_identity,
+        site_verification_tokens=info.site_verification_tokens,
+        mta_sts_mode=sim_mta_sts,
+        google_auth_type=info.google_auth_type,
+        google_idp_name=info.google_idp_name,
+        merge_conflicts=info.merge_conflicts,
+    )
+
+    sim_assessment = assess_exposure_from_info(sim_info)
+    simulated_score = sim_assessment.posture_score
+
+    # Compute remaining gaps on simulated info
+    sim_gap_report = find_gaps_from_info(sim_info)
+    remaining_gaps = [
+        {
+            "category": gap.category,
+            "severity": gap.severity,
+            "observation": gap.observation,
+            "recommendation": gap.recommendation,
+        }
+        for gap in sim_gap_report.gaps
+    ]
+
+    result: dict[str, object] = {
+        "domain": domain,
+        "current_score": current_score,
+        "simulated_score": simulated_score,
+        "score_delta": simulated_score - current_score,
+        "applied_fixes": applied,
+        "remaining_gaps": remaining_gaps,
+        "disclaimer": (
+            "This simulation is based on publicly observable configuration data. "
+            "Consider these results as directional guidance for prioritizing "
+            "hardening actions, not as a guarantee of security posture improvement."
+        ),
+    }
+    return json_mod.dumps(result, indent=2)
 
 
 @mcp.prompt()

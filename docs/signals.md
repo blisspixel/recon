@@ -1,6 +1,6 @@
 # Signal Intelligence
 
-Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 29 signals organized in four layers:
+Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 34 signals organized in four layers:
 
 ## Layer 1 — Single-category detection
 
@@ -39,6 +39,19 @@ Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 
 | Shadow IT Risk | 3+ consumer-grade SaaS tools |
 | File Collaboration Sprawl | 2+ enterprise file-sharing platforms |
 | Dual Email Provider | Both Microsoft 365 and Google Workspace detected |
+
+## Layer 4 — Contradiction, metadata-aware, and meta-signals
+
+| Signal | Triggers when |
+|--------|--------------|
+| Federated Identity with Complex Email Delegation | External IdP detected + 5+ SPF includes |
+| Active Email Sending with Minimal Security | Email sending service detected + email security score ≤ 1 |
+| High Certificate Issuance Activity | 20+ certificates issued in last 90 days |
+| Incomplete Identity Migration | External IdP (Okta, Auth0, Ping) detected; contradicts on Microsoft 365 |
+| Split-Brain Email Config | Dual email provider detected; contradicts on MTA-STS enforce |
+| Security Stack Without Governance | 2+ enterprise security tools + DMARC not reject |
+| Complex Migration Window | Requires "Enterprise Security Stack" AND "Dual Email Provider" signals |
+| Governance Sprawl | Requires "AI Adoption" AND "Shadow IT Risk" signals |
 
 ## Custom Signals
 

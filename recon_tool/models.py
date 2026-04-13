@@ -1,22 +1,29 @@
 """Data models for domain intelligence lookup."""
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, fields
 from enum import Enum
+from typing import Any
 
 __all__ = [
     "BIMIIdentity",
+    "CandidateValue",
     "CertSummary",
     "ChainReport",
     "ChainResult",
     "ConfidenceLevel",
     "DeltaReport",
     "EvidenceRecord",
+    "ExplanationRecord",
+    "MergeConflicts",
     "MetadataCondition",
     "Observation",
     "ReconLookupError",
     "SignalContext",
     "SourceResult",
     "TenantInfo",
+    "serialize_conflicts",
 ]
 
 
@@ -98,6 +105,72 @@ class Observation:
     salience: str  # high, medium, low
     statement: str
     related_slugs: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CandidateValue:
+    """A per-source value for a merged field."""
+
+    value: str
+    source: str
+    confidence: str  # "high" | "medium" | "low"
+
+
+@dataclass(frozen=True)
+class MergeConflicts:
+    """Tracks disagreements between sources for merged fields.
+
+    Each field is a tuple of CandidateValue. Empty tuple means no conflict.
+    Only populated when 2+ sources provide different non-None values.
+    """
+
+    display_name: tuple[CandidateValue, ...] = ()
+    auth_type: tuple[CandidateValue, ...] = ()
+    region: tuple[CandidateValue, ...] = ()
+    tenant_id: tuple[CandidateValue, ...] = ()
+    dmarc_policy: tuple[CandidateValue, ...] = ()
+    google_auth_type: tuple[CandidateValue, ...] = ()
+
+    @property
+    def has_conflicts(self) -> bool:
+        """True if any tracked field has 2+ disagreeing candidates."""
+        return any(
+            [
+                self.display_name,
+                self.auth_type,
+                self.region,
+                self.tenant_id,
+                self.dmarc_policy,
+                self.google_auth_type,
+            ]
+        )
+
+
+def serialize_conflicts(conflicts: MergeConflicts) -> dict[str, Any]:
+    """Serialize MergeConflicts to a JSON-safe dict. Omits fields with no conflicts."""
+    result: dict[str, Any] = {}
+    for f in fields(conflicts):
+        candidates: tuple[CandidateValue, ...] = getattr(conflicts, f.name)
+        if candidates:
+            result[f.name] = [{"value": c.value, "source": c.source, "confidence": c.confidence} for c in candidates]
+    return result
+
+
+@dataclass(frozen=True)
+class ExplanationRecord:
+    """Structured explanation for a single insight, signal, or observation.
+
+    Captures the full reasoning chain: what matched, which rules fired,
+    how confidence was derived, and what would weaken the conclusion.
+    """
+
+    item_name: str
+    item_type: str  # "insight" | "signal" | "observation" | "confidence"
+    matched_evidence: tuple[EvidenceRecord, ...]
+    fired_rules: tuple[str, ...]
+    confidence_derivation: str
+    weakening_conditions: tuple[str, ...]
+    curated_explanation: str = ""
 
 
 @dataclass(frozen=True)
@@ -190,6 +263,9 @@ class TenantInfo:
     mta_sts_mode: str | None = None  # "enforce", "testing", "none"
     google_auth_type: str | None = None  # "Federated", "Managed"
     google_idp_name: str | None = None  # "Okta", "Ping Identity", etc.
+
+    # --- Conflict-aware merge (v0.7.0) ---
+    merge_conflicts: MergeConflicts | None = None
 
     @property
     def crtsh_degraded(self) -> bool:

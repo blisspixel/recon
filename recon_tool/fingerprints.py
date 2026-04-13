@@ -52,6 +52,7 @@ _MAX_PATTERN_LENGTH = 500
 
 _VALID_DETECTION_TYPES = frozenset({"txt", "spf", "mx", "ns", "cname", "subdomain_txt", "caa", "srv"})
 _VALID_CONFIDENCE_LEVELS = frozenset({"high", "medium", "low"})
+_VALID_MATCH_MODES = frozenset({"any", "all"})
 
 # Structural patterns known to cause catastrophic backtracking.
 # Matches nested quantifiers like (a+)+, (a*)+, (a+)*, (\w+)+, etc.
@@ -86,6 +87,7 @@ class DetectionRule:
     pattern: str
     description: str = ""
     reference: str = ""
+    weight: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -103,6 +105,7 @@ class Fingerprint:
     detections: tuple[DetectionRule, ...]
     provider_group: str | None = None  # e.g., "microsoft365", "google-workspace"
     display_group: str | None = None  # e.g., "Email & Communication", "Security"
+    match_mode: str = "any"  # "any" (OR) or "all" (AND)
 
 
 def _validate_regex(pattern: str, source: str) -> bool:
@@ -186,12 +189,37 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
         pattern = det.get("pattern", "")
         if not _validate_regex(pattern, f"{source}:{name}"):
             continue
+        # Parse and validate detection weight
+        weight = 1.0
+        raw_weight = det.get("weight")
+        if raw_weight is not None:
+            try:
+                weight = float(raw_weight)
+            except (TypeError, ValueError):
+                logger.warning(
+                    "Fingerprint %r detection has non-numeric weight %r in %s — defaulting to 1.0",
+                    name,
+                    raw_weight,
+                    source,
+                )
+                weight = 1.0
+            else:
+                if weight < 0.0 or weight > 1.0:
+                    logger.warning(
+                        "Fingerprint %r detection has out-of-range weight %r in %s — defaulting to 1.0",
+                        name,
+                        raw_weight,
+                        source,
+                    )
+                    weight = 1.0
+
         valid_detections.append(
             DetectionRule(
                 type=det_type,
                 pattern=pattern,
                 description=det.get("description", ""),
                 reference=det.get("reference", ""),
+                weight=weight,
             )
         )
 
@@ -203,6 +231,16 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
     category = fp.get("category", "Misc")
     m365 = bool(fp.get("m365", False))
 
+    match_mode = fp.get("match_mode", "any")
+    if match_mode not in _VALID_MATCH_MODES:
+        logger.warning(
+            "Fingerprint %r has invalid match_mode %r in %s — skipped",
+            name,
+            match_mode,
+            source,
+        )
+        return None
+
     return Fingerprint(
         name=name,
         slug=slug,
@@ -212,6 +250,7 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
         detections=tuple(valid_detections),
         provider_group=fp.get("provider_group") if isinstance(fp.get("provider_group"), str) else None,
         display_group=fp.get("display_group") if isinstance(fp.get("display_group"), str) else None,
+        match_mode=match_mode,
     )
 
 

@@ -22,8 +22,8 @@ class TestLoadSignals:
     def test_all_signals_have_required_fields(self):
         for signal in load_signals():
             assert signal.name
-            # Signals must have either candidates or metadata
-            assert signal.candidates or signal.metadata
+            # Signals must have either candidates, metadata, or requires_signals
+            assert signal.candidates or signal.metadata or signal.requires_signals
 
 
 class TestEvaluateSignals:

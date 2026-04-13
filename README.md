@@ -60,7 +60,7 @@ Works for Microsoft 365, Google Workspace, or any provider. No accounts, no API 
 | M365 tenant detection | ✓ | ✗ | ✗ | ✗ | partial | varies |
 | Google Workspace detection | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
 | Email security scoring | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
-| SaaS fingerprinting (187) | ✓ | ✗ | partial | ✗ | ✗ | ✓ |
+| SaaS fingerprinting (194) | ✓ | ✗ | partial | ✗ | ✗ | ✓ |
 | Signal intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | Certificate intelligence | ✓ | ✗ | ✗ | ✗ | ✗ | varies |
 | Posture analysis | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
@@ -126,9 +126,9 @@ Input is normalized automatically — URLs, schemes, `www.` prefixes, paths, and
 | Google Workspace auth type, modules, corporate identity | Google login flow + CNAME probing + BIMI VMC |
 | Email provider | MX records |
 | Email security score (0–5) | DMARC + DKIM + SPF + MTA-STS + BIMI |
-| 187 SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors |
+| 194 SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors |
 | Email gateway / SASE / security stack | DNS fingerprints |
-| Signal intelligence (29 signals) | Metadata-aware YAML rules with cross-reference conditions |
+| Signal intelligence (34 signals) | Metadata-aware YAML rules with cross-reference conditions |
 | Certificate intelligence | crt.sh + CertSpotter fallback: issuance velocity, issuer diversity, cert age |
 | Posture observations | Neutral factual analysis across email, identity, infrastructure |
 | Related domains | CNAME breadcrumbs + certificate transparency (crt.sh / CertSpotter) |
@@ -167,7 +167,7 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 | Doc | Contents |
 |-----|----------|
 | [Fingerprints](docs/fingerprints.md) | Detection types, custom fingerprints, email security scoring, related domain enrichment |
-| [Signals](docs/signals.md) | 4-layer signal intelligence, 29 signal rules, metadata conditions, custom signals |
+| [Signals](docs/signals.md) | 4-layer signal intelligence, 34 signal rules, metadata conditions, custom signals |
 | [MCP Server](docs/mcp.md) | AI agent integration setup, tools, config locations |
 | [Roadmap](docs/roadmap.md) | What's planned, what's not, and why |
 | [Legal](docs/legal.md) | Disclaimer, accuracy, fictional examples, third-party notice |

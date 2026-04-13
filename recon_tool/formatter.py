@@ -22,9 +22,12 @@ from recon_tool.exposure import (
 )
 from recon_tool.fingerprints import load_fingerprints
 from recon_tool.models import (
+    CandidateValue,
     ChainReport,
     ConfidenceLevel,
     DeltaReport,
+    ExplanationRecord,
+    MergeConflicts,
     Observation,
     SourceResult,
     TenantInfo,
@@ -40,6 +43,8 @@ __all__ = [
     "format_comparison_json",
     "format_delta_dict",
     "format_delta_json",
+    "format_explanations_list",
+    "format_explanations_markdown",
     "format_exposure_dict",
     "format_exposure_json",
     "format_gaps_dict",
@@ -51,8 +56,10 @@ __all__ = [
     "format_tenant_markdown",
     "get_console",
     "render_chain_panel",
+    "render_conflict_annotation",
     "render_delta_panel",
     "render_error",
+    "render_explanations_panel",
     "render_exposure_panel",
     "render_gaps_panel",
     "render_posture_panel",
@@ -276,6 +283,7 @@ def render_tenant_panel(
     show_services: bool = False,
     show_domains: bool = False,
     verbose: bool = False,
+    explain: bool = False,
 ) -> Panel:
     """Render TenantInfo as a rich Panel — adapts to provider."""
     color = CONFIDENCE_COLORS[info.confidence]
@@ -284,9 +292,17 @@ def render_tenant_panel(
     provider = detect_provider(info.services, info.slugs)
     is_m365 = "Microsoft" in provider
 
+    # Precompute conflict annotations when explain is active
+    conflicts = info.merge_conflicts if explain and info.merge_conflicts else None
+
     text = Text()
     text.append("  Company:    ", style="dim")
-    text.append(f"{info.display_name}\n")
+    text.append(f"{info.display_name}")
+    if conflicts:
+        ann = render_conflict_annotation("display_name", conflicts, verbose=verbose)
+        if ann:
+            text.append(ann, style="dim")
+    text.append("\n")
     text.append("  Domain:     ", style="dim")
     text.append(f"{info.default_domain}\n")
     text.append("  Provider:   ", style="dim")
@@ -295,13 +311,28 @@ def render_tenant_panel(
     # M365-specific fields — only shown when provider is Microsoft
     if is_m365 and info.tenant_id:
         text.append("  Tenant ID:  ", style="dim")
-        text.append(f"{info.tenant_id}\n")
+        text.append(f"{info.tenant_id}")
+        if conflicts:
+            ann = render_conflict_annotation("tenant_id", conflicts, verbose=verbose)
+            if ann:
+                text.append(ann, style="dim")
+        text.append("\n")
     if info.region:
         text.append("  Region:     ", style="dim")
-        text.append(f"{info.region}\n")
+        text.append(f"{info.region}")
+        if conflicts:
+            ann = render_conflict_annotation("region", conflicts, verbose=verbose)
+            if ann:
+                text.append(ann, style="dim")
+        text.append("\n")
     if info.auth_type:
         text.append("  Auth:       ", style="dim")
-        text.append(f"{info.auth_type}\n")
+        text.append(f"{info.auth_type}")
+        if conflicts:
+            ann = render_conflict_annotation("auth_type", conflicts, verbose=verbose)
+            if ann:
+                text.append(ann, style="dim")
+        text.append("\n")
 
     # Google Workspace identity — shown when GWS is detected
     gws_slugs = set(info.slugs)
@@ -1282,3 +1313,126 @@ def format_comparison_dict(comparison: PostureComparison) -> dict[str, Any]:
 def format_comparison_json(comparison: PostureComparison) -> str:
     """Format PostureComparison as a JSON string."""
     return json.dumps(format_comparison_dict(comparison), indent=2)
+
+
+# ── Explanation rendering ────────────────────────────────────────────────
+
+
+def render_explanations_panel(explanations: list[ExplanationRecord]) -> Panel:
+    """Render explanation records as a Rich panel for CLI --explain output."""
+    text = Text()
+
+    for i, rec in enumerate(explanations):
+        if i > 0:
+            text.append("\n\n")
+
+        # Header: item type + name
+        type_label = rec.item_type.capitalize()
+        text.append(f"  [{type_label}] ", style="bold")
+        text.append(f"{rec.item_name}\n")
+
+        # Curated explanation (from YAML explain field)
+        if rec.curated_explanation:
+            text.append(f"    {rec.curated_explanation}\n", style="dim italic")
+
+        # Fired rules
+        if rec.fired_rules:
+            text.append("    Rules: ", style="dim")
+            text.append(", ".join(rec.fired_rules))
+            text.append("\n")
+
+        # Confidence derivation
+        if rec.confidence_derivation:
+            text.append("    Confidence: ", style="dim")
+            text.append(f"{rec.confidence_derivation}\n")
+
+        # Evidence summary
+        if rec.matched_evidence:
+            text.append(f"    Evidence: {len(rec.matched_evidence)} record(s)\n", style="dim")
+
+        # Weakening conditions
+        if rec.weakening_conditions:
+            text.append("    Weakening:\n", style="dim")
+            for cond in rec.weakening_conditions:
+                text.append(f"      • {cond}\n", style="dim")
+
+    return Panel(
+        text,
+        title="Explanations",
+        width=80,
+        padding=(1, 2),
+        border_style="dim",
+    )
+
+
+def format_explanations_list(explanations: list[ExplanationRecord]) -> list[dict[str, Any]]:
+    """Serialize explanation records for JSON output."""
+    from recon_tool.explanation import serialize_explanation
+
+    return [serialize_explanation(rec) for rec in explanations]
+
+
+def format_explanations_markdown(explanations: list[ExplanationRecord]) -> str:
+    """Render explanation records as markdown subsections."""
+    lines: list[str] = []
+    lines.append("## Explanations")
+    lines.append("")
+
+    for rec in explanations:
+        type_label = rec.item_type.capitalize()
+        lines.append(f"### [{type_label}] {rec.item_name}")
+        lines.append("")
+
+        if rec.curated_explanation:
+            lines.append(f"*{rec.curated_explanation}*")
+            lines.append("")
+
+        if rec.fired_rules:
+            lines.append(f"**Rules:** {', '.join(rec.fired_rules)}  ")
+
+        if rec.confidence_derivation:
+            lines.append(f"**Confidence:** {rec.confidence_derivation}  ")
+
+        if rec.matched_evidence:
+            lines.append(f"**Evidence:** {len(rec.matched_evidence)} record(s)  ")
+
+        if rec.weakening_conditions:
+            lines.append("")
+            lines.append("**Weakening conditions:**")
+            lines.append("")
+            for cond in rec.weakening_conditions:
+                lines.append(f"- {cond}")
+
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def render_conflict_annotation(
+    field_name: str,
+    conflicts: MergeConflicts,
+    verbose: bool = False,
+) -> str:
+    """Render a dim conflict indicator for a Rich panel field.
+
+    Returns a string like "  [2 sources disagree]" when the field has conflicts.
+    When verbose=True, also lists all candidate values.
+    Returns empty string when no conflict exists for the field.
+    """
+    candidates: tuple[CandidateValue, ...] = getattr(conflicts, field_name, ())
+    if not candidates:
+        return ""
+
+    unique_values = {c.value for c in candidates}
+    if len(unique_values) < 2:
+        return ""
+
+    annotation = f"  [{len(candidates)} sources disagree]"
+
+    if verbose:
+        parts: list[str] = []
+        for c in candidates:
+            parts.append(f"{c.value} ({c.source})")
+        annotation += f"  ({', '.join(parts)})"
+
+    return annotation

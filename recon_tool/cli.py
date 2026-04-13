@@ -180,6 +180,7 @@ def lookup(
     cache_ttl: int = typer.Option(86400, "--cache-ttl", help="Cache TTL in seconds (default: 86400)"),
     exposure: bool = typer.Option(False, "--exposure", help="Show exposure assessment"),
     gaps: bool = typer.Option(False, "--gaps", help="Show hardening gap analysis"),
+    explain: bool = typer.Option(False, "--explain", help="Show why each insight and signal was produced"),
 ) -> None:
     """
     Look up a domain. This is the default command.
@@ -205,6 +206,7 @@ def lookup(
             cache_ttl=cache_ttl,
             show_exposure=exposure,
             show_gaps=gaps,
+            show_explain=explain,
         )
     )
 
@@ -487,6 +489,73 @@ async def _doctor() -> None:
     console.print()
 
 
+def _build_explanations(
+    info: Any,
+    results: list[Any],
+) -> list[Any]:
+    """Build ExplanationRecords for a TenantInfo using the explanation engine.
+
+    Generates explanations for signals, insights, confidence, and observations.
+    """
+    from recon_tool.explanation import (
+        explain_confidence,
+        explain_insights,
+        explain_observations,
+        explain_signals,
+    )
+    from recon_tool.merger import compute_evidence_confidence, compute_inference_confidence
+    from recon_tool.models import ExplanationRecord, SignalContext
+    from recon_tool.posture import analyze_posture, load_posture_rules
+    from recon_tool.signals import evaluate_signals, load_signals
+
+    explanations: list[ExplanationRecord] = []
+
+    # Build signal context from info
+    context = SignalContext(
+        detected_slugs=frozenset(info.slugs),
+        dmarc_policy=info.dmarc_policy,
+        auth_type=info.auth_type,
+    )
+    signals = load_signals()
+    signal_matches = evaluate_signals(context)
+
+    # Signal explanations
+    signal_recs = explain_signals(
+        signal_matches,
+        signals,
+        frozenset(info.slugs),
+        {},
+        info.evidence,
+        info.detection_scores,
+    )
+    explanations.extend(signal_recs)
+
+    # Insight explanations
+    insight_recs = explain_insights(
+        list(info.insights),
+        frozenset(info.slugs),
+        frozenset(info.services),
+        info.evidence,
+        info.detection_scores,
+    )
+    explanations.extend(insight_recs)
+
+    # Confidence explanation
+    if results:
+        evidence_conf = compute_evidence_confidence(results)
+        inference_conf = compute_inference_confidence(results)
+        conf_rec = explain_confidence(results, evidence_conf, inference_conf, info.confidence)
+        explanations.append(conf_rec)
+
+    # Observation explanations
+    observations = analyze_posture(info)
+    posture_rules = load_posture_rules()
+    obs_recs = explain_observations(observations, posture_rules, info.evidence, info.detection_scores)
+    explanations.extend(obs_recs)
+
+    return explanations
+
+
 async def _lookup(
     domain: str,
     json_output: bool,
@@ -505,6 +574,7 @@ async def _lookup(
     cache_ttl: int = 86400,
     show_exposure: bool = False,
     show_gaps: bool = False,
+    show_explain: bool = False,
 ) -> None:
     """Async lookup implementation."""
     # Lazy imports: formatter, resolver, validator are imported here (not at module
@@ -618,9 +688,29 @@ async def _lookup(
             raise typer.Exit(code=EXIT_INTERNAL) from None
 
         if json_output:
-            typer.echo(format_chain_json(report))
+            chain_dict = json.loads(format_chain_json(report))
+            if show_explain:
+                from recon_tool.formatter import format_explanations_list
+
+                for i, domain_entry in enumerate(chain_dict.get("domains", [])):
+                    if i < len(report.results):
+                        chain_info = report.results[i].info
+                        explanations = _build_explanations(chain_info, [])
+                        domain_entry["explanations"] = format_explanations_list(explanations)
+                        if chain_info.merge_conflicts and chain_info.merge_conflicts.has_conflicts:
+                            from recon_tool.models import serialize_conflicts
+
+                            domain_entry["conflicts"] = serialize_conflicts(chain_info.merge_conflicts)
+            typer.echo(json.dumps(chain_dict, indent=2))
         else:
             console.print(render_chain_panel(report))
+            if show_explain:
+                from recon_tool.formatter import render_explanations_panel
+
+                for r in report.results:
+                    explanations = _build_explanations(r.info, [])
+                    if explanations:
+                        console.print(render_explanations_panel(explanations))
         return
 
     # ── Exposure mode ────────────────────────────────────────────────
@@ -753,6 +843,14 @@ async def _lookup(
             tenant_dict = format_tenant_dict(info)
             if show_posture:
                 tenant_dict["posture"] = format_posture_observations(observations)
+            if show_explain:
+                from recon_tool.formatter import format_explanations_list
+                from recon_tool.models import serialize_conflicts
+
+                explanations = _build_explanations(info, results)
+                tenant_dict["explanations"] = format_explanations_list(explanations)
+                if info.merge_conflicts and info.merge_conflicts.has_conflicts:
+                    tenant_dict["conflicts"] = serialize_conflicts(info.merge_conflicts)
             typer.echo(json.dumps(tenant_dict, indent=2))
             return
 
@@ -764,6 +862,11 @@ async def _lookup(
                     indicator = {"high": "●", "medium": "◐", "low": "○"}.get(obs.salience, "○")
                     md += f"- {indicator} **[{obs.category}]** {obs.statement}\n"
                 md += "\n"
+            if show_explain:
+                from recon_tool.formatter import format_explanations_markdown
+
+                explanations = _build_explanations(info, results)
+                md += "\n" + format_explanations_markdown(explanations)
             typer.echo(md)
             return
 
@@ -773,6 +876,7 @@ async def _lookup(
                 show_services=show_services,
                 show_domains=show_domains,
                 verbose=verbose,
+                explain=show_explain,
             )
         )
 
@@ -786,6 +890,14 @@ async def _lookup(
             posture_panel = render_posture_panel(observations)
             if posture_panel:
                 console.print(posture_panel)
+
+        # Explanations panel after posture
+        if show_explain:
+            from recon_tool.formatter import render_explanations_panel
+
+            explanations = _build_explanations(info, results)
+            if explanations:
+                console.print(render_explanations_panel(explanations))
 
     except ReconLookupError:
         render_warning(domain)
