@@ -59,14 +59,14 @@ class TestComputeEmailTopology:
     def test_mx_only_provider(self) -> None:
         """MX-only provider slug → primary_email_provider populated, no gateway."""
         evidence = (_ev("MX", "microsoft365"),)
-        primary, gateway = _compute_email_topology(evidence)
+        primary, gateway, _likely = _compute_email_topology(evidence)
         assert primary == "Microsoft 365"
         assert gateway is None
 
     def test_mx_gateway_slug(self) -> None:
         """MX gateway slug → email_gateway populated, no primary."""
         evidence = (_ev("MX", "proofpoint"),)
-        primary, gateway = _compute_email_topology(evidence)
+        primary, gateway, _likely = _compute_email_topology(evidence)
         assert primary is None
         assert gateway == "Proofpoint"
 
@@ -76,7 +76,7 @@ class TestComputeEmailTopology:
             _ev("MX", "microsoft365"),
             _ev("MX", "proofpoint"),
         )
-        primary, gateway = _compute_email_topology(evidence)
+        primary, gateway, _likely = _compute_email_topology(evidence)
         assert primary == "Microsoft 365"
         assert gateway == "Proofpoint"
 
@@ -86,7 +86,7 @@ class TestComputeEmailTopology:
             _ev("TXT", "microsoft365"),
             _ev("SPF", "google-workspace"),
         )
-        primary, gateway = _compute_email_topology(evidence)
+        primary, gateway, _likely = _compute_email_topology(evidence)
         assert primary is None
         assert gateway is None
 
@@ -96,7 +96,7 @@ class TestComputeEmailTopology:
             _ev("MX", "microsoft365"),
             _ev("MX", "google-workspace"),
         )
-        primary, gateway = _compute_email_topology(evidence)
+        primary, gateway, _likely = _compute_email_topology(evidence)
         assert primary is not None
         assert "Google Workspace" in primary
         assert "Microsoft 365" in primary
@@ -108,13 +108,13 @@ class TestComputeEmailTopology:
             _ev("TXT", "microsoft365"),
             _ev("CNAME", "proofpoint"),
         )
-        primary, gateway = _compute_email_topology(evidence)
+        primary, gateway, _likely = _compute_email_topology(evidence)
         assert primary is None
         assert gateway is None
 
     def test_empty_evidence(self) -> None:
         """Empty evidence tuple → both None."""
-        primary, gateway = _compute_email_topology(())
+        primary, gateway, _likely = _compute_email_topology(())
         assert primary is None
         assert gateway is None
 
@@ -124,7 +124,7 @@ class TestComputeEmailTopology:
             _ev("MX", "proofpoint"),
             _ev("MX", "mimecast"),
         )
-        primary, gateway = _compute_email_topology(evidence)
+        primary, gateway, _likely = _compute_email_topology(evidence)
         assert primary is None
         assert gateway is not None
         assert "Mimecast" in gateway
@@ -134,7 +134,7 @@ class TestComputeEmailTopology:
     def test_unknown_mx_slug_ignored(self) -> None:
         """MX slug not in provider or gateway maps → ignored."""
         evidence = (_ev("MX", "unknown-provider"),)
-        primary, gateway = _compute_email_topology(evidence)
+        primary, gateway, _likely = _compute_email_topology(evidence)
         assert primary is None
         assert gateway is None
 
@@ -144,7 +144,7 @@ class TestComputeEmailTopology:
             _ev("MX", "microsoft365"),
             _ev("TXT", "google-workspace"),
         )
-        primary, gateway = _compute_email_topology(evidence)
+        primary, gateway, _likely = _compute_email_topology(evidence)
         assert primary == "Microsoft 365"
         assert gateway is None
 
@@ -423,11 +423,20 @@ class TestLegacyProviderResidueSignal:
         residue = [s for s in result if s.name == "Legacy Provider Residue"]
         assert len(residue) == 1
 
-    def test_fires_when_primary_is_none(self) -> None:
-        """Signal fires when primary_email_provider is None — residue detection still useful."""
+    def test_does_not_fire_when_primary_is_none(self) -> None:
+        """Signal does not fire when primary_email_provider is None.
+
+        Regression guard for the A4 follow-up: with exclude_matches_in_primary
+        set, the residue signal now refuses to fire at all when the primary
+        provider is unknown. A "residue" claim is meaningless without a
+        known primary to be residue against — the signal was firing on
+        hardened enterprise domains where MX routes through a gateway and
+        no primary provider slug appears in MX evidence, producing a
+        false-positive residue report on the secondary-via-TXT detections.
+        """
         result = evaluate_signals(_ctx({"microsoft365"}, primary_email_provider=None))
         residue = [s for s in result if s.name == "Legacy Provider Residue"]
-        assert len(residue) == 1
+        assert len(residue) == 0
 
     def test_does_not_fire_when_primary_is_empty(self) -> None:
         """Signal does not fire when primary_email_provider is empty string."""
@@ -473,7 +482,7 @@ class TestProperty1PrimaryEmailProviderClassification:
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_mx_provider_slugs_become_primary(self, evidence: tuple[EvidenceRecord, ...]) -> None:
         """MX provider slugs → primary_email_provider, MX gateway slugs → email_gateway, non-MX → neither."""
-        primary, gateway = _compute_email_topology(evidence)
+        primary, gateway, _likely = _compute_email_topology(evidence)
 
         mx_evidence = [e for e in evidence if e.source_type == "MX"]
         mx_slugs = {e.slug for e in mx_evidence}
@@ -510,7 +519,7 @@ class TestProperty1PrimaryEmailProviderClassification:
     @settings(max_examples=100)
     def test_non_mx_slugs_never_classified(self, evidence: tuple[EvidenceRecord, ...]) -> None:
         """Non-MX evidence never contributes to primary or gateway classification."""
-        primary, gateway = _compute_email_topology(evidence)
+        primary, gateway, _likely = _compute_email_topology(evidence)
 
         # Collect slugs that appear ONLY in non-MX evidence
         mx_slugs = {e.slug for e in evidence if e.source_type == "MX"}

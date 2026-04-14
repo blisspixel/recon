@@ -181,12 +181,20 @@ class TestBuiltInExpectedCounterparts:
         reload_signals()
         reload_fingerprints()
 
-    def test_at_least_five_signals_have_counterparts(self) -> None:
-        """At least 5 signals have expected_counterparts populated."""
+    def test_at_least_two_signals_have_counterparts(self) -> None:
+        """At least 2 signals have expected_counterparts populated.
+
+        Counterparts should be limited to signals where the listed slugs are
+        truly complementary (expected to co-occur), not competing alternatives.
+        See A2 audit: Enterprise Security Stack, Enterprise IT Maturity, and
+        DMARC Governance Investment had counterparts pointing at competing
+        vendors; those entries were removed to avoid false-positive absence
+        gaps.
+        """
         signals = load_signals()
         with_counterparts = [s for s in signals if s.expected_counterparts]
-        assert len(with_counterparts) >= 5, (
-            f"Expected 5+ signals with expected_counterparts, found {len(with_counterparts)}: "
+        assert len(with_counterparts) >= 2, (
+            f"Expected 2+ signals with expected_counterparts, found {len(with_counterparts)}: "
             f"{[s.name for s in with_counterparts]}"
         )
 
@@ -204,18 +212,20 @@ class TestBuiltInExpectedCounterparts:
 
         assert len(missing) == 0, f"Signals reference non-existent fingerprint slugs: {missing}"
 
-    def test_enterprise_it_maturity_counterparts(self) -> None:
-        """Enterprise IT Maturity lists MDM, endpoint, and email gateway slugs."""
+    def test_enterprise_it_maturity_no_competing_vendor_counterparts(self) -> None:
+        """Enterprise IT Maturity should not list competing vendors as counterparts.
+
+        Regression guard for A2: the previous design listed jamf/kandji,
+        crowdstrike/sentinelone, and proofpoint/mimecast as expected
+        counterparts, which generated false-positive "Missing Counterparts"
+        signals when the org picked one of each pair. Those are alternatives,
+        not complements, so the entire expected_counterparts entry was
+        removed.
+        """
         signals = load_signals()
         eit = [s for s in signals if s.name == "Enterprise IT Maturity"]
         assert len(eit) == 1
-        counterparts = set(eit[0].expected_counterparts)
-        # MDM slugs
-        assert "jamf" in counterparts or "kandji" in counterparts
-        # Endpoint security slugs
-        assert "crowdstrike" in counterparts or "sentinelone" in counterparts
-        # Email gateway slugs
-        assert "proofpoint" in counterparts or "mimecast" in counterparts
+        assert eit[0].expected_counterparts == ()
 
     def test_ai_adoption_counterparts(self) -> None:
         """AI Adoption lists governance and identity slugs."""
@@ -235,13 +245,18 @@ class TestBuiltInExpectedCounterparts:
         assert "cosign-attestation" in counterparts
         assert "snyk" in counterparts
 
-    def test_enterprise_security_stack_counterparts(self) -> None:
-        """Enterprise Security Stack lists email governance slugs."""
+    def test_enterprise_security_stack_no_competing_gateway_counterparts(self) -> None:
+        """Enterprise Security Stack should not list competing gateways as counterparts.
+
+        Regression guard for A2: Proofpoint/Mimecast/Barracuda are alternatives
+        to each other, not complementary tools. Listing them produced noise
+        like "Missing Counterparts: proofpoint, mimecast, barracuda" when an
+        org was already using one of them. Removed.
+        """
         signals = load_signals()
         ess = [s for s in signals if s.name == "Enterprise Security Stack"]
         assert len(ess) == 1
-        counterparts = set(ess[0].expected_counterparts)
-        assert "proofpoint" in counterparts or "mimecast" in counterparts or "barracuda" in counterparts
+        assert ess[0].expected_counterparts == ()
 
 
 # ── 14.3: Absence signal integration in merger pipeline ───────────────

@@ -73,15 +73,52 @@ _GATEWAY_SLUG_NAMES: dict[str, str] = {
 }
 
 
+# Non-MX evidence source types that carry signal about the downstream email
+# provider even when MX points to a gateway. Ordered by strength of signal.
+_PROVIDER_INFERENCE_SOURCES: frozenset[str] = frozenset(
+    {
+        "TXT",           # SPF includes, site-verification tokens
+        "DKIM",          # google._domainkey, selector1._domainkey
+        "HTTP",          # Google identity endpoint responses, Microsoft OIDC
+        "OIDC",          # Microsoft OIDC discovery
+        "USERREALM",     # Microsoft GetUserRealm
+    }
+)
+
+# Mapping from slug to the display name used when inferring a likely
+# downstream email provider from non-MX evidence. Must be a subset of the
+# strict provider map so the two stay consistent when both fire.
+_LIKELY_PROVIDER_SLUG_NAMES: dict[str, str] = {
+    "microsoft365": "Microsoft 365",
+    "google-workspace": "Google Workspace",
+    "zoho": "Zoho Mail",
+    "protonmail": "ProtonMail",
+}
+
+
 def _compute_email_topology(
     evidence: tuple[EvidenceRecord, ...],
-) -> tuple[str | None, str | None]:
-    """Compute primary_email_provider and email_gateway from evidence records.
+) -> tuple[str | None, str | None, str | None]:
+    """Compute email topology from evidence records.
 
-    Scans MX-sourced evidence for provider and gateway slugs.
+    Returns a triple of ``(primary_email_provider, email_gateway,
+    likely_primary_email_provider)``:
 
-    Returns:
-        (primary_email_provider, email_gateway) — both str | None.
+    - ``primary_email_provider`` — stated when MX directly names a provider
+      (e.g. ``aspmx.l.google.com`` → Google Workspace). Strict: only set from
+      MX evidence. Never set when MX only contains an enterprise gateway.
+
+    - ``email_gateway`` — stated when MX names an enterprise email security
+      gateway (Proofpoint, Mimecast, Symantec, Barracuda, Trellix, Trend
+      Micro, Cisco IronPort / Secure Email).
+
+    - ``likely_primary_email_provider`` — inferred when a gateway is in MX
+      but no direct provider appears there, AND non-MX evidence (DKIM
+      selectors, identity-endpoint responses, TXT verification tokens)
+      points to a specific downstream. Hedged: the word "likely" in the
+      field name is load-bearing — this is inference, not a direct record.
+      Only set when ``primary_email_provider`` is ``None``, so the two
+      fields never contradict each other.
     """
     mx_evidence = [e for e in evidence if e.source_type == "MX"]
     mx_slugs = {e.slug for e in mx_evidence}
@@ -96,7 +133,34 @@ def _compute_email_topology(
     provider_names = sorted(_EMAIL_PROVIDER_SLUG_NAMES[s] for s in provider_slugs if s in _EMAIL_PROVIDER_SLUG_NAMES)
     primary_email_provider = " + ".join(provider_names) if provider_names else None
 
-    return primary_email_provider, email_gateway
+    # Inference: when a gateway is present but no MX-based primary, look at
+    # non-MX evidence for provider slugs. Only fires if an actual gateway
+    # is in MX — without that anchor we can't distinguish legacy residue
+    # from a missed primary.
+    likely_primary_email_provider: str | None = None
+    if email_gateway and primary_email_provider is None:
+        non_mx_provider_slugs = {
+            e.slug
+            for e in evidence
+            if e.source_type in _PROVIDER_INFERENCE_SOURCES
+            and e.slug in _LIKELY_PROVIDER_SLUG_NAMES
+        }
+        if non_mx_provider_slugs:
+            likely_names = sorted(
+                _LIKELY_PROVIDER_SLUG_NAMES[s] for s in non_mx_provider_slugs
+            )
+            likely_primary_email_provider = " + ".join(likely_names)
+
+    return primary_email_provider, email_gateway, likely_primary_email_provider
+
+
+def _downgrade_confidence(level: ConfidenceLevel) -> ConfidenceLevel:
+    """Step a confidence level down by one rung (HIGH → MEDIUM → LOW → LOW)."""
+    if level == ConfidenceLevel.HIGH:
+        return ConfidenceLevel.MEDIUM
+    if level == ConfidenceLevel.MEDIUM:
+        return ConfidenceLevel.LOW
+    return ConfidenceLevel.LOW
 
 
 def _min_confidence(a: ConfidenceLevel, b: ConfidenceLevel) -> ConfidenceLevel:
@@ -235,6 +299,7 @@ def build_insights_with_signals(
     google_idp_name: str | None = None,
     dmarc_pct: int | None = None,
     primary_email_provider: str | None = None,
+    likely_primary_email_provider: str | None = None,
 ) -> list[str]:
     """Generate insights and append signal intelligence.
 
@@ -260,6 +325,7 @@ def build_insights_with_signals(
         issuance_velocity=issuance_velocity,
         dmarc_pct=dmarc_pct,
         primary_email_provider=primary_email_provider,
+        likely_primary_email_provider=likely_primary_email_provider,
     )
     active_signals = evaluate_signals(context)
     for sig in active_signals:
@@ -501,7 +567,7 @@ def merge_results(
     evidence_tuple = tuple(all_evidence)
 
     # Compute email topology from evidence
-    primary_email_provider, email_gateway = _compute_email_topology(evidence_tuple)
+    primary_email_provider, email_gateway, likely_primary_email_provider = _compute_email_topology(evidence_tuple)
 
     # Extract dmarc_pct from source results (first non-None wins)
     dmarc_pct: int | None = None
@@ -524,6 +590,7 @@ def merge_results(
         google_idp_name=google_idp_name,
         dmarc_pct=dmarc_pct,
         primary_email_provider=primary_email_provider,
+        likely_primary_email_provider=likely_primary_email_provider,
     )
 
     # Surface conflicting tenant IDs — this is high-value intel that explains
@@ -542,6 +609,13 @@ def merge_results(
     inference_confidence = compute_inference_confidence(results)
     # Backward-compatible confidence: min of the two dimensions
     confidence = _min_confidence(confidence, _min_confidence(evidence_confidence, inference_confidence))
+
+    # A7: if any source is degraded, downgrade both the headline confidence
+    # and evidence_confidence by one rung. The picture is incomplete even if
+    # the sources that did respond agree, so "High" overclaims in that state.
+    if all_degraded:
+        confidence = _downgrade_confidence(confidence)
+        evidence_confidence = _downgrade_confidence(evidence_confidence)
 
     # Compute per-detection corroboration scores
     detection_scores = compute_detection_scores(evidence_tuple)
@@ -577,4 +651,5 @@ def merge_results(
         primary_email_provider=primary_email_provider,
         email_gateway=email_gateway,
         dmarc_pct=dmarc_pct,
+        likely_primary_email_provider=likely_primary_email_provider,
     )

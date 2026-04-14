@@ -227,6 +227,8 @@ async def _enrich_from_related(
         info.domain_count,
         google_auth_type=info.google_auth_type,
         google_idp_name=info.google_idp_name,
+        primary_email_provider=info.primary_email_provider,
+        likely_primary_email_provider=info.likely_primary_email_provider,
     )
 
     # Build enriched TenantInfo — keep identity fields, update services/slugs/insights

@@ -36,7 +36,6 @@ signals:
     requires:
       any: [crowdstrike, knowbe4, proofpoint, mimecast, zscaler, paloalto, wiz, sophos, trellix, barracuda, trendmicro, okta, auth0, duo, 1password, sentinelone, netskope, ping-identity, cyberark, cato, onelogin, imperva, beyond-identity]
     min_matches: 2
-    expected_counterparts: [proofpoint, mimecast, barracuda]
 
   - name: Modern Collaboration
     category: Productivity
@@ -65,9 +64,17 @@ signals:
   - name: Multi-Cloud
     category: Infrastructure
     confidence: high
-    description: Infrastructure indicators across multiple cloud providers
+    description: Infrastructure indicators across multiple cloud providers (AWS/Azure/GCP)
     requires:
-      any: [aws-route53, aws-cloudfront, aws-elb, aws-s3, aws-eb, azure-dns, azure-cdn, azure-appservice, azure-fd, azure-tm, gcp-dns, gcp-app, cloudflare, akamai, fastly, flyio]
+      any: [aws-route53, aws-cloudfront, aws-elb, aws-s3, aws-eb, azure-dns, azure-cdn, azure-appservice, azure-fd, azure-tm, gcp-dns, gcp-app, flyio]
+    min_matches: 2
+
+  - name: Edge Layering
+    category: Infrastructure
+    confidence: high
+    description: Multiple CDN/edge providers detected — consistent with layered edge protection or multi-CDN delivery strategy
+    requires:
+      any: [cloudflare, akamai, fastly, imperva]
     min_matches: 2
 
   - name: Observability & SRE
@@ -115,7 +122,6 @@ signals:
     requires:
       any: [okta, auth0, onelogin, duo, ping-identity, crowdstrike, sophos, sentinelone, jamf, kandji, proofpoint, mimecast, zscaler, netskope, paloalto, cato, wiz, 1password, cyberark, knowbe4, imperva]
     min_matches: 4
-    expected_counterparts: [jamf, kandji, crowdstrike, sentinelone, proofpoint, mimecast]
 
   - name: AI Security Posture
     category: Composite
@@ -296,10 +302,10 @@ signals:
     min_matches: 1
     contradicts: [microsoft365]
 
-  - name: Split-Brain Email Config
+  - name: Dual Email Delivery Path
     category: Consistency
     confidence: medium
-    description: Dual email provider indicators detected — possible split-brain email routing or migration in progress
+    description: Dual email provider indicators detected — consistent with deliberate dual-delivery architecture, mail-routing split, or migration in progress
     explain: "When both Microsoft 365 and Google Workspace email indicators are present, it may suggest a dual-provider configuration. If MTA-STS enforce is also active, it typically indicates a completed migration with unified transport policy, which suppresses this signal."
     requires:
       any: [microsoft365, google-workspace]
@@ -417,7 +423,6 @@ signals:
     requires:
       any: [agari, proofpoint-efd, ondmarc, dmarcian, valimail, easydmarc]
     min_matches: 1
-    expected_counterparts: [proofpoint, mimecast, barracuda, trendmicro]
 
   # ── v0.9.0: Primary Email Provider Detection signals ──────────────────
 
@@ -446,3 +451,4 @@ signals:
       - field: primary_email_provider
         operator: neq
         value: ""
+    exclude_matches_in_primary: true

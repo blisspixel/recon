@@ -58,7 +58,7 @@ Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP
 
 recon collects public signals (DNS TXT/MX/CNAME/NS/SRV/CAA records, Microsoft and Google identity endpoints, certificate transparency logs) and matches them against a set of YAML-defined fingerprint and signal rules. Each signal alone is unremarkable — a TXT record, a CNAME delegation, a certificate pattern. The art is in the correlation. The matching is rule-based, not machine learning, but combining scattered records into a coherent view of what an organization is actually running is where the value comes from.
 
-It's an early-stage project maintained by a solo developer. The fingerprint database covers 208 SaaS services and the signal engine has 44 rules across 4 layers. Coverage and accuracy will vary by domain — organizations with rich public DNS get detailed results; those with minimal records or heavy proxying will produce sparse output. Results should be treated as indicators, not ground truth.
+It's an early-stage project maintained by a solo developer. The fingerprint database covers 208 SaaS services and the signal engine has 45 rules across 4 layers. Coverage and accuracy will vary by domain — organizations with rich public DNS get detailed results; those with minimal records or heavy proxying will produce sparse output. Results should be treated as indicators, not ground truth.
 
 ## How it compares
 
@@ -70,7 +70,7 @@ recon occupies a specific niche: it fuses DNS, identity endpoints, and CT logs i
 | M365 / GWS tenant detection | ✓ | ✗ | ✗ | varies |
 | Email security scoring | ✓ | ✗ | ✗ | varies |
 | SaaS fingerprinting | 208 services | ✗ | ✗ | typically more |
-| Signal correlation rules | 44 rules | ✗ | ✗ | varies |
+| Signal correlation rules | 45 rules | ✗ | ✗ | varies |
 | Certificate intelligence | ✓ | ✗ | ✗ | varies |
 | MCP server for AI agents | ✓ | ✗ | ✗ | rare |
 | Custom YAML extensibility | ✓ | ✗ | ✗ | varies |
@@ -121,7 +121,7 @@ Input is normalized automatically — URLs, schemes, `www.` prefixes, paths, and
 | Email provider | MX records |
 | Email security score (0–5) | DMARC + DKIM + SPF + MTA-STS + BIMI |
 | 208 SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors, DMARC RUA |
-| Signal intelligence (44 rules) | YAML-based correlation rules with cross-reference conditions |
+| Signal intelligence (45 rules) | YAML-based correlation rules with cross-reference conditions |
 | Certificate intelligence | crt.sh + CertSpotter: issuance velocity, issuer diversity |
 | Posture observations | Neutral factual analysis across email, identity, infrastructure |
 | Related domains | CNAME breadcrumbs + certificate transparency |
@@ -180,7 +180,7 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/                          # 1147 tests
+pytest tests/                          # 1165 tests
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 ```

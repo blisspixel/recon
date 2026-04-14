@@ -146,25 +146,25 @@ class TestNewSignalsEvaluate:
         names = {r.name for r in results}
         assert "Incomplete Identity Migration" in names
 
-    # -- Split-Brain Email Config (contradicts: mta-sts-enforce) --
+    # -- Dual Email Delivery Path (contradicts: mta-sts-enforce) --
 
     def test_split_brain_email_fires_with_both_providers(self) -> None:
         """Signal fires when both microsoft365 and google-workspace present."""
         results = evaluate_signals(_ctx({"microsoft365", "google-workspace"}))
         names = {r.name for r in results}
-        assert "Split-Brain Email Config" in names
+        assert "Dual Email Delivery Path" in names
 
     def test_split_brain_email_suppressed_by_mta_sts_enforce(self) -> None:
         """Signal suppressed when mta-sts-enforce present."""
         results = evaluate_signals(_ctx({"microsoft365", "google-workspace", "mta-sts-enforce"}))
         names = {r.name for r in results}
-        assert "Split-Brain Email Config" not in names
+        assert "Dual Email Delivery Path" not in names
 
     def test_split_brain_email_needs_both_providers(self) -> None:
         """Signal does not fire with only one provider."""
         results = evaluate_signals(_ctx({"microsoft365"}))
         names = {r.name for r in results}
-        assert "Split-Brain Email Config" not in names
+        assert "Dual Email Delivery Path" not in names
 
     # -- Security Stack Without Governance (contradicts via metadata) --
 

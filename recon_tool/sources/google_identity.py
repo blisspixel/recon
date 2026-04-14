@@ -142,6 +142,12 @@ class GoogleIdentitySource:
                         rule_name="Google Identity Routing",
                         slug="google-federated",
                     ),
+                    EvidenceRecord(
+                        source_type="HTTP",
+                        raw_value=f"Federated Google Workspace tenant (IdP: {idp_name})",
+                        rule_name="Google Identity Routing",
+                        slug="google-workspace",
+                    ),
                 ),
             )
 
@@ -160,6 +166,12 @@ class GoogleIdentitySource:
                         raw_value="Google Workspace managed auth detected",
                         rule_name="Google Identity Routing",
                         slug="google-managed",
+                    ),
+                    EvidenceRecord(
+                        source_type="HTTP",
+                        raw_value="Google Workspace tenant recognized at accounts.google.com",
+                        rule_name="Google Identity Routing",
+                        slug="google-workspace",
                     ),
                 ),
             )

@@ -369,16 +369,20 @@ class TestDmarcGovernanceInvestmentSignal:
         governance = [s for s in result if s.name == "DMARC Governance Investment"]
         assert len(governance) == 0
 
-    def test_expected_counterparts_populated(self) -> None:
-        """Signal has expected_counterparts with email gateway slugs."""
+    def test_expected_counterparts_empty(self) -> None:
+        """Signal should have no expected_counterparts.
+
+        Regression guard for A2: the previous design listed Proofpoint,
+        Mimecast, Barracuda, and Trend Micro as expected counterparts.
+        Those are competing email gateway vendors, not complements to a
+        DMARC report aggregation vendor — an org picks one gateway (or
+        none). Listing them produced noisy "Missing Counterparts" output
+        on every run where the signal fired. Removed.
+        """
         signals = load_signals()
         governance = [s for s in signals if s.name == "DMARC Governance Investment"]
         assert len(governance) == 1
-        sig = governance[0]
-        assert len(sig.expected_counterparts) > 0
-        # Should include email gateway slugs
-        assert "proofpoint" in sig.expected_counterparts
-        assert "mimecast" in sig.expected_counterparts
+        assert governance[0].expected_counterparts == ()
 
     def test_fires_for_each_vendor_slug(self) -> None:
         """Signal fires for each individual DMARC vendor slug."""

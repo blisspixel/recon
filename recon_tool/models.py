@@ -97,6 +97,7 @@ class SignalContext:
     issuance_velocity: int | None = None
     dmarc_pct: int | None = None
     primary_email_provider: str | None = None
+    likely_primary_email_provider: str | None = None
 
 
 @dataclass(frozen=True)
@@ -274,6 +275,11 @@ class TenantInfo:
     primary_email_provider: str | None = None  # MX-detected provider name(s)
     email_gateway: str | None = None  # MX-detected gateway name
     dmarc_pct: int | None = None  # DMARC pct= value (0-100)
+    # Downstream provider inferred from non-MX evidence (DKIM, identity
+    # endpoints, TXT tokens) when a gateway is present in MX but no
+    # direct provider appears there. Hedged: "likely" in the name is
+    # load-bearing. Never set when primary_email_provider is also set.
+    likely_primary_email_provider: str | None = None
 
     # --- Conflict-aware merge (v0.7.0) ---
     merge_conflicts: MergeConflicts | None = None

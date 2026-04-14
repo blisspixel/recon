@@ -109,6 +109,10 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "mta_sts_mode": info.mta_sts_mode,
         "google_auth_type": info.google_auth_type,
         "google_idp_name": info.google_idp_name,
+        "primary_email_provider": info.primary_email_provider,
+        "email_gateway": info.email_gateway,
+        "dmarc_pct": info.dmarc_pct,
+        "likely_primary_email_provider": info.likely_primary_email_provider,
     }
 
     # CertSummary → nested dict or None
@@ -270,4 +274,8 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         mta_sts_mode=data.get("mta_sts_mode"),
         google_auth_type=data.get("google_auth_type"),
         google_idp_name=data.get("google_idp_name"),
+        primary_email_provider=data.get("primary_email_provider"),
+        email_gateway=data.get("email_gateway"),
+        dmarc_pct=data.get("dmarc_pct"),
+        likely_primary_email_provider=data.get("likely_primary_email_provider"),
     )

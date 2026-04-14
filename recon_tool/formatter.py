@@ -8,6 +8,7 @@ that set_console() in tests captures everything.
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from rich.console import Console
@@ -32,6 +33,8 @@ from recon_tool.models import (
     SourceResult,
     TenantInfo,
 )
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "CSV_COLUMNS",
@@ -79,9 +82,25 @@ _console: Console | None = None
 
 
 def get_console() -> Console:
-    """Return the active console instance, creating a default if needed."""
+    """Return the active console instance, creating a default if needed.
+
+    On Windows, the default stdout encoding is often cp1252 which cannot
+    represent the Unicode characters used in panel rendering (confidence
+    dots, arrows, em-dashes, box-drawing). Reconfigure stdout to UTF-8
+    with replacement-on-error so the tool never crashes on unencodable
+    glyphs — worst case the user sees "?" in place of a decorator
+    character instead of a traceback.
+    """
     global _console  # noqa: PLW0603
     if _console is None:
+        import sys
+        try:
+            if hasattr(sys.stdout, "reconfigure"):
+                sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+            if hasattr(sys.stderr, "reconfigure"):
+                sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("stdout UTF-8 reconfigure failed: %s", exc)
         _console = Console()
     return _console
 
@@ -203,28 +222,36 @@ def detect_provider(
     slugs: tuple[str, ...] | set[str] = (),
     primary_email_provider: str | None = None,
     email_gateway: str | None = None,
+    likely_primary_email_provider: str | None = None,
 ) -> str:
     """Detect and format the provider line with email topology awareness.
 
     When primary_email_provider and email_gateway are provided (from TenantInfo),
     produces topology-aware output:
-      - "Microsoft 365 (primary email via Proofpoint gateway)"
-      - "Proofpoint (email gateway)"
+      - "Microsoft 365 (primary email via Proofpoint gateway)" — strict primary
+      - "Symantec/Broadcom (email gateway, likely delivering to Google Workspace)" — inferred downstream
+      - "Proofpoint (email gateway)" — gateway with no inferable downstream
       - "Microsoft 365; Google Workspace (secondary)"
 
     Falls back to existing slug-based detection when topology fields are None
     (backward compatible).
     """
     # If we have topology data, use it
-    if primary_email_provider or email_gateway:
+    if primary_email_provider or email_gateway or likely_primary_email_provider:
         parts: list[str] = []
 
         if primary_email_provider and email_gateway:
             parts.append(f"{primary_email_provider} (primary email via {email_gateway} gateway)")
         elif primary_email_provider:
             parts.append(primary_email_provider)
+        elif email_gateway and likely_primary_email_provider:
+            parts.append(
+                f"{email_gateway} (email gateway, likely delivering to {likely_primary_email_provider})"
+            )
         elif email_gateway:
             parts.append(f"{email_gateway} (email gateway)")
+        elif likely_primary_email_provider:
+            parts.append(f"{likely_primary_email_provider} (inferred)")
 
         # Detect secondary providers (slug-detected but not MX-based)
         slug_set = set(slugs)
@@ -236,17 +263,19 @@ def detect_provider(
             ("protonmail", "ProtonMail"),
         ]:
             if slug in slug_set:
-                # Check if this provider is already in the primary line
+                # Check if this provider is already in the primary or
+                # likely-primary line
                 if primary_email_provider and name in primary_email_provider:
+                    continue
+                if likely_primary_email_provider and name in likely_primary_email_provider:
                     continue
                 secondary.append(name)
 
-        if secondary and primary_email_provider:
+        if secondary and (primary_email_provider or likely_primary_email_provider):
             sec_str = ", ".join(secondary)
             parts.append(f"{sec_str} (secondary)")
-        elif secondary and not primary_email_provider:
+        elif secondary and not primary_email_provider and not likely_primary_email_provider:
             sec_str = ", ".join(secondary)
-            # Gateway already in parts if present — append secondary annotation
             parts.append(f"{sec_str} (no MX-based primary detected)")
 
         return "; ".join(parts) if parts else "Unknown"
@@ -330,6 +359,47 @@ def _wrap_text(text: str, max_width: int) -> list[str]:
     return lines or [text]
 
 
+def _low_scored_service_names(info: TenantInfo) -> frozenset[str]:
+    """Return the display names of services whose only evidence is a single
+    weak detection (detection_scores score == "low").
+
+    Used to annotate single-source detections in the panel so a high-signal
+    service name (e.g. a security tool detected from one TXT verification
+    record) is not rendered with the same weight as a multi-source match.
+    """
+    if not info.detection_scores:
+        return frozenset()
+    low_slugs = {slug for slug, score in info.detection_scores if score == "low"}
+    if not low_slugs:
+        return frozenset()
+    try:
+        from recon_tool.fingerprints import load_fingerprints
+        slug_to_name = {fp.slug: fp.name for fp in load_fingerprints()}
+    except Exception:
+        return frozenset()
+    return frozenset(
+        slug_to_name[slug] for slug in low_slugs if slug in slug_to_name
+    )
+
+
+def _annotate_single_source(services: list[str], low_names: frozenset[str]) -> tuple[list[str], bool]:
+    """Append a dim asterisk to services whose names appear in low_names.
+
+    Returns (annotated_list, any_annotated).
+    """
+    if not low_names:
+        return services, False
+    out: list[str] = []
+    any_annotated = False
+    for svc in services:
+        if svc in low_names:
+            out.append(f"{svc}*")
+            any_annotated = True
+        else:
+            out.append(svc)
+    return out, any_annotated
+
+
 def render_tenant_panel(
     info: TenantInfo,
     show_services: bool = False,
@@ -346,6 +416,7 @@ def render_tenant_panel(
         info.slugs,
         primary_email_provider=info.primary_email_provider,
         email_gateway=info.email_gateway,
+        likely_primary_email_provider=info.likely_primary_email_provider,
     )
     is_m365 = "Microsoft" in provider
 
@@ -445,11 +516,17 @@ def render_tenant_panel(
         text.append(f"{info.inference_confidence.value.capitalize()}", style=inf_color)
 
     # Always show services — compact by default, split into provider groups with --services
+    low_names = _low_scored_service_names(info)
+    any_single_source = False
     if info.services:
         if show_services:
             m365_svcs = [svc for svc in info.services if _is_m365_service(svc)]
             gws_svcs = [svc for svc in info.services if _is_gws_service(svc)]
             other_svcs = [svc for svc in info.services if not _is_m365_service(svc) and not _is_gws_service(svc)]
+            m365_svcs, a1 = _annotate_single_source(m365_svcs, low_names)
+            gws_svcs, a2 = _annotate_single_source(gws_svcs, low_names)
+            other_svcs, a3 = _annotate_single_source(other_svcs, low_names)
+            any_single_source = a1 or a2 or a3
             if m365_svcs:
                 text.append("\n")
                 text.append("  M365:       ", style="dim")
@@ -464,12 +541,25 @@ def render_tenant_panel(
                 text.append(_wrap_service_list(other_svcs, label_width=14, panel_pad=2))
         else:
             compact = [svc for svc in info.services if not _is_compact_noise(svc)]
+            compact, any_single_source = _annotate_single_source(compact, low_names)
             if compact:
                 text.append("\n")
                 text.append("  Services:   ", style="dim")
                 text.append(_wrap_service_list(compact, label_width=14, panel_width=80, panel_pad=2))
 
-    # Insights — separated by a blank line, same label:value alignment as other fields
+    # B1: footnote explaining the asterisk marker on single-source detections
+    if any_single_source:
+        footnote = "* single-source — --explain to see evidence"
+        text.append("\n")
+        text.append("              ", style="dim")
+        text.append(footnote, style="dim italic")
+
+    # Insights — separated by a blank line, same label:value alignment as
+    # other fields. B3: neutral insights render in dim so they read as a
+    # scannable secondary column below the services. Warnings (gaps, hedges)
+    # punch through in terracotta; transitions (hybrid, migration) in amber.
+    # Category labels ("Label: value") get a bold+dim treatment that keeps
+    # them gray but slightly heavier so the eye can align on the column.
     if info.insights:
         indent = " " * 14  # align with value column
         max_width = 80 - 2 - 4 - 14  # panel - borders - padding - label
@@ -481,24 +571,53 @@ def render_tenant_panel(
                 text.append("\n")
                 text.append(indent)
 
-            # Determine style for this insight
-            if "gap" in insight.lower() or "not enforced" in insight.lower() or "not configured" in insight.lower():
-                style = "#e07a5f"  # warm terracotta for warnings
-            elif "hybrid" in insight.lower() or "migration" in insight.lower():
-                style = "#e6c07b"  # soft amber for transitions
+            lower = insight.lower()
+            is_warning = (
+                "gap" in lower
+                or "not enforced" in lower
+                or "status unknown" in lower
+            )
+            is_transition = "hybrid" in lower or "migration" in lower
+            if is_warning:
+                content_style: str = "#e07a5f"  # warm terracotta
+            elif is_transition:
+                content_style = "#e6c07b"  # soft amber
             else:
-                style = None
+                content_style = "dim"  # neutral insights read as secondary
 
-            # Wrap long insights to stay within the panel
+            # Try to split a "Label: value" prefix when the label is short.
+            # Only applied to neutral insights. When split, the label gets a
+            # slightly heavier dim weight so the eye can still pick out the
+            # column structure without the value jumping to full white.
+            label: str | None = None
+            value: str = insight
+            if not is_warning and not is_transition:
+                colon_idx = insight.find(": ")
+                if 0 < colon_idx <= 32 and "(" not in insight[:colon_idx]:
+                    label = insight[: colon_idx + 2]  # include ": "
+                    value = insight[colon_idx + 2 :]
+
+            label_style = "bold dim"
+
             if len(insight) <= max_width:
-                text.append(insight, style=style)
+                if label is not None:
+                    text.append(label, style=label_style)
+                    text.append(value, style=content_style)
+                else:
+                    text.append(insight, style=content_style)
             else:
                 wrapped = _wrap_text(insight, max_width)
                 for j, line in enumerate(wrapped):
                     if j > 0:
                         text.append("\n")
                         text.append(indent)
-                    text.append(line, style=style)
+                        text.append(line, style=content_style)
+                        continue
+                    if label is not None and line.startswith(label):
+                        text.append(label, style=label_style)
+                        text.append(line[len(label) :], style=content_style)
+                    else:
+                        text.append(line, style=content_style)
 
     # Certificate summary — after insights, before domains
     if info.cert_summary is not None:
@@ -517,21 +636,52 @@ def render_tenant_panel(
         for d in info.tenant_domains:
             text.append(f"\n    {d}", style="dim")
 
-    # Related domains — supplementary, shown dim
+    # Related domains — supplementary, shown dim. Truncated by default (banks
+    # and other heavily proxied enterprise domains often surface 100+ entries,
+    # which overwhelms the panel). Full list rendered when --domains / --full.
+    # Manual wrapping keeps continuation lines aligned with the value column
+    # at 14 chars — Rich's auto-wrap would collapse them to the panel margin.
     if info.related_domains:
         text.append("\n\n")
         text.append("  Related:    ", style="dim")
-        text.append(", ".join(info.related_domains), style="dim")
+        total = len(info.related_domains)
+        RELATED_TRUNCATE = 10
+        max_width = 80 - 2 - 4 - 14  # panel - borders - padding - label
+        indent = " " * 14
+
+        def _emit_wrapped(items: tuple[str, ...]) -> None:
+            joined = ", ".join(items)
+            lines = _wrap_text(joined, max_width)
+            for j, line in enumerate(lines):
+                if j > 0:
+                    text.append("\n")
+                    text.append(indent)
+                text.append(line, style="dim")
+
+        if show_domains or total <= RELATED_TRUNCATE:
+            _emit_wrapped(info.related_domains)
+        else:
+            _emit_wrapped(info.related_domains[:RELATED_TRUNCATE])
+            remaining = total - RELATED_TRUNCATE
+            footer = f"…and {remaining} more — use --full for the complete list"
+            for line in _wrap_text(footer, max_width):
+                text.append("\n")
+                text.append(indent)
+                text.append(line, style="dim italic")
 
     # Degraded sources notice — subtle hint that results may be partial
     if info.degraded_sources:
         text.append("\n\n")
         text.append("  Note:       ", style="dim")
+        note_max_width = 80 - 2 - 4 - 14
+        note_indent = " " * 14
         sources_list = ", ".join(info.degraded_sources)
-        text.append(
-            f"Some sources were unavailable ({sources_list}) — subdomain discovery may be incomplete.",
-            style="dim italic",
-        )
+        note_text = f"Some sources unavailable ({sources_list}) — results may be incomplete."
+        for j, line in enumerate(_wrap_text(note_text, note_max_width)):
+            if j > 0:
+                text.append("\n")
+                text.append(note_indent)
+            text.append(line, style="dim italic")
 
     # Verbose: detection scores
     if verbose and info.detection_scores:
@@ -634,6 +784,7 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         info.slugs,
         primary_email_provider=info.primary_email_provider,
         email_gateway=info.email_gateway,
+        likely_primary_email_provider=info.likely_primary_email_provider,
     )
     d: dict[str, Any] = {
         "tenant_id": info.tenant_id,
@@ -660,6 +811,7 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "mta_sts_mode": info.mta_sts_mode,
         "site_verification_tokens": list(info.site_verification_tokens),
         "primary_email_provider": info.primary_email_provider,
+        "likely_primary_email_provider": info.likely_primary_email_provider,
         "email_gateway": info.email_gateway,
         "dmarc_pct": info.dmarc_pct,
     }
@@ -1230,7 +1382,7 @@ def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
     ep = assessment.email_posture
     text.append("\n  Email Security\n", style="bold")
     text.append(f"    DMARC:     {ep.dmarc_policy or 'not configured'}\n")
-    text.append(f"    DKIM:      {'configured' if ep.dkim_configured else 'not configured'}\n")
+    text.append(f"    DKIM:      {'observed' if ep.dkim_configured else 'not observed at common names'}\n")
     text.append(f"    SPF:       {'strict (-all)' if ep.spf_strict else 'not strict'}\n")
     text.append(f"    MTA-STS:   {ep.mta_sts_mode or 'not configured'}\n")
     text.append(f"    BIMI:      {'configured' if ep.bimi_configured else 'not configured'}\n")

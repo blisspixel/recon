@@ -1,9 +1,11 @@
-"""Integration tests that hit real endpoints.
+"""Integration tests that hit real network endpoints.
 
 These are skipped by default. Run with:
     pytest tests/test_integration.py -m integration
 
-Requires network access.
+Requires network access. Uses only RFC-2606 reserved domains (example.com,
+example.org) and a guaranteed-nonexistent domain to avoid referencing any
+real organization.
 """
 
 from __future__ import annotations
@@ -14,26 +16,36 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.mark.asyncio
-async def test_resolve_real_domain():
-    """Smoke test: resolve a well-known domain end-to-end."""
+async def test_resolve_reserved_domain_pipeline_runs():
+    """Smoke test: resolver completes end-to-end against a reserved domain.
+
+    example.com is an IANA-reserved domain with basic DNS records but no
+    Microsoft 365 tenant and no SaaS footprint. This test verifies the
+    full pipeline runs without crashing and returns source results; it
+    does not assert any specific services or tenant data.
+    """
     from recon_tool.resolver import resolve_tenant
 
-    info, results = await resolve_tenant("microsoft.com")
-    assert info.tenant_id is not None
-    assert info.display_name
-    assert len(info.services) > 0
+    info, results = await resolve_tenant("example.com")
+    assert info is not None
     assert len(results) > 0
+    assert info.tenant_id is None
 
 
 @pytest.mark.asyncio
-async def test_resolve_non_m365_domain():
-    """Smoke test: resolve a domain with no M365 tenant."""
+async def test_resolve_second_reserved_domain():
+    """Smoke test: resolver handles a second reserved domain.
+
+    example.org is a second IANA-reserved domain. Running a second
+    independent lookup catches per-run state leaks in caches, pools,
+    or session handlers.
+    """
     from recon_tool.resolver import resolve_tenant
 
-    info, results = await resolve_tenant("google.com")
-    # google.com has no M365 tenant but should have DNS services
+    info, results = await resolve_tenant("example.org")
+    assert info is not None
+    assert len(results) > 0
     assert info.tenant_id is None
-    assert len(info.services) > 0
 
 
 @pytest.mark.asyncio

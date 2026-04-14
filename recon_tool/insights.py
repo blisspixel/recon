@@ -197,7 +197,7 @@ def _email_security_insights(ctx: InsightContext) -> list[str]:
     elif ctx.dmarc_policy is None:
         insights.append("No DMARC record — potential email security gap")
     if not has_dkim:
-        insights.append("No DKIM selectors — email signing not configured")
+        insights.append("No DKIM selectors observed at common names — actual DKIM status unknown")
 
     return insights
 
