@@ -68,6 +68,20 @@ observations:
       slugs_min: 1
     template: "SPF flattening or DMARC management service detected ({matched_slugs}) — dedicated email deliverability operations"
 
+  - name: dmarc_phased_rollout
+    category: email
+    salience: medium
+    condition:
+      metadata:
+        - field: dmarc_pct
+          operator: lte
+          value: 99
+        - field: dmarc_policy
+          operator: neq
+          value: none
+    template: "DMARC enforcement in phased rollout (pct={dmarc_pct}%) — domain is actively tightening email authentication"
+    explain: "The DMARC pct= tag is set below 100%, meaning only a fraction of failing messages are subject to the stated policy. This is a common pattern during DMARC enforcement rollout — the domain is gradually increasing the percentage to avoid disrupting legitimate email flows."
+
   # ── Identity posture ──────────────────────────────────────────────────
 
   - name: federated_identity

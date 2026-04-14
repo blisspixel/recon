@@ -50,8 +50,56 @@ Example multi-step prompt for deeper analysis:
 | `explain_signal` | Query a signal's trigger conditions and current state for a domain | `signal_name`, `domain` (optional) |
 | `test_hypothesis` | Test a theory against signals and evidence — returns likelihood + evidence | `domain`, `hypothesis` |
 | `simulate_hardening` | What-if: re-compute exposure score with hypothetical fixes applied | `domain`, `fixes` (array) |
+| `inject_ephemeral_fingerprint` | Inject a temporary fingerprint for the current session | `name`, `slug`, `category`, `confidence`, `detections` (array) |
+| `reevaluate_domain` | Re-evaluate cached domain data against current fingerprints (including ephemeral) | `domain` |
+| `list_ephemeral_fingerprints` | List all currently loaded ephemeral fingerprints | none |
+| `clear_ephemeral_fingerprints` | Remove all ephemeral fingerprints from the session | none |
 
-All tools are read-only and idempotent. Tools marked with `explain` parameter support structured provenance output. The agentic tools (`test_hypothesis`, `simulate_hardening`, `get_fingerprints`, `get_signals`, `explain_signal`) operate on cached pipeline data with zero additional network calls. The server includes a bounded TTL cache (120s) and per-domain rate limiting.
+All tools are read-only and idempotent. Tools marked with `explain` parameter support structured provenance output. The agentic tools (`test_hypothesis`, `simulate_hardening`, `get_fingerprints`, `get_signals`, `explain_signal`) operate on cached pipeline data with zero additional network calls. The ephemeral fingerprint tools (`inject_ephemeral_fingerprint`, `reevaluate_domain`, `list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`) let AI agents inject temporary detection patterns and re-evaluate cached data without new network calls. The server includes a bounded TTL cache (120s) and per-domain rate limiting.
+
+## Ephemeral Fingerprints
+
+Ephemeral fingerprints let AI agents inject temporary detection patterns at runtime. They live in memory only, are scoped to the current server session, and are validated through the same regex/ReDoS checks as built-in fingerprints.
+
+### Workflow
+
+1. Look up a domain with `lookup_tenant` (caches DNS data).
+2. Inject an ephemeral fingerprint with `inject_ephemeral_fingerprint`.
+3. Re-evaluate the domain with `reevaluate_domain` — zero network calls, uses cached data.
+4. List active ephemeral fingerprints with `list_ephemeral_fingerprints`.
+5. Clear all ephemeral fingerprints with `clear_ephemeral_fingerprints` when done.
+
+### Example: Detecting a custom SaaS service
+
+```
+Agent: "Inject an ephemeral fingerprint for Fabrikam's internal platform."
+
+→ inject_ephemeral_fingerprint(
+    name="Fabrikam Platform",
+    slug="fabrikam-platform",
+    category="Internal",
+    confidence="medium",
+    detections=[{"type": "txt", "pattern": "fabrikam-platform-verify="}]
+  )
+
+← {"status": "ok", "name": "Fabrikam Platform", "slug": "fabrikam-platform", "detections_accepted": 1}
+
+Agent: "Now re-evaluate contoso.com to see if they use Fabrikam Platform."
+
+→ reevaluate_domain(domain="contoso.com")
+
+← Updated TenantInfo JSON (includes Fabrikam Platform if TXT record matches)
+```
+
+### Example: Listing and clearing
+
+```
+→ list_ephemeral_fingerprints()
+← [{"name": "Fabrikam Platform", "slug": "fabrikam-platform", "category": "Internal", "confidence": "medium", "detection_count": 1}]
+
+→ clear_ephemeral_fingerprints()
+← {"status": "ok", "removed": 1}
+```
 
 ## Where to Put the Config
 

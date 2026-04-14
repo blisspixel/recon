@@ -828,6 +828,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
 
     Includes explanations for insights, signals, confidence, and conflicts.
     """
+    from recon_tool.absence import evaluate_absence_signals
     from recon_tool.explanation import (
         explain_confidence,
         explain_insights,
@@ -862,6 +863,10 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
     signal_matches = evaluate_signals(context)
     signals = load_signals()
 
+    # Third pass: absence signals
+    absence_matches = evaluate_absence_signals(signal_matches, signals, context.detected_slugs)
+    all_signal_matches = signal_matches + absence_matches
+
     context_metadata: dict[str, object] = {
         "dmarc_policy": info.dmarc_policy,
         "auth_type": info.auth_type,
@@ -872,7 +877,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
 
     # Signal explanations
     signal_recs = explain_signals(
-        signal_matches, signals, context.detected_slugs, context_metadata, info.evidence, info.detection_scores
+        all_signal_matches, signals, context.detected_slugs, context_metadata, info.evidence, info.detection_scores
     )
     all_explanations.extend(serialize_explanation(r) for r in signal_recs)
 
@@ -1498,6 +1503,164 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> str:
         ),
     }
     return json_mod.dumps(result, indent=2)
+
+
+# ── Ephemeral Fingerprint MCP Tools ─────────────────────────────────────
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=False,
+    ),
+)
+async def inject_ephemeral_fingerprint(
+    name: str,
+    slug: str,
+    category: str,
+    confidence: str,
+    detections: list[dict[str, str]],
+) -> str:
+    """Inject a temporary fingerprint for the current session.
+
+    The fingerprint is validated through the same pipeline as built-in
+    fingerprints (regex compilation, ReDoS safety, valid detection types).
+    It lives in memory only and is discarded when the server process ends.
+
+    Args:
+        name: Display name for the fingerprint (e.g., "Acme Platform").
+        slug: Unique identifier (e.g., "acme-platform").
+        category: Category name (e.g., "SaaS").
+        confidence: Detection confidence — "high", "medium", or "low".
+        detections: List of detection rules, each with "type" and "pattern" keys.
+
+    Returns:
+        Confirmation message or validation error.
+    """
+    from recon_tool.fingerprints import _validate_fingerprint, inject_ephemeral  # pyright: ignore[reportPrivateUsage]
+
+    fp_dict: dict[str, object] = {
+        "name": name,
+        "slug": slug,
+        "category": category,
+        "confidence": confidence,
+        "detections": [{"type": d.get("type", ""), "pattern": d.get("pattern", "")} for d in detections],
+    }
+    validated = _validate_fingerprint(fp_dict, "ephemeral")
+    if validated is None:
+        return json_mod.dumps(
+            {
+                "error": f"Validation failed for fingerprint '{name}'. "
+                "Check detection types, patterns, and confidence level."
+            }
+        )
+
+    inject_ephemeral(validated)
+    return json_mod.dumps(
+        {
+            "status": "ok",
+            "name": validated.name,
+            "slug": validated.slug,
+            "detections_accepted": len(validated.detections),
+        }
+    )
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
+)
+async def list_ephemeral_fingerprints() -> str:
+    """List all ephemeral fingerprints loaded in the current session.
+
+    Returns a JSON array of fingerprint summaries.
+    """
+    from recon_tool.fingerprints import get_ephemeral
+
+    fps = get_ephemeral()
+    result = [
+        {
+            "name": fp.name,
+            "slug": fp.slug,
+            "category": fp.category,
+            "confidence": fp.confidence,
+            "detection_count": len(fp.detections),
+        }
+        for fp in fps
+    ]
+    return json_mod.dumps(result, indent=2)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
+)
+async def clear_ephemeral_fingerprints() -> str:
+    """Remove all ephemeral fingerprints from the current session.
+
+    Returns confirmation with the count of fingerprints removed.
+    """
+    from recon_tool.fingerprints import clear_ephemeral
+
+    count = clear_ephemeral()
+    return json_mod.dumps(
+        {
+            "status": "ok",
+            "removed": count,
+        }
+    )
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def reevaluate_domain(domain: str) -> str:
+    """Re-evaluate a previously looked-up domain against current fingerprints.
+
+    Uses cached raw DNS data from a prior lookup — zero network calls.
+    Useful after injecting ephemeral fingerprints to test detection hypotheses.
+
+    Args:
+        domain: Domain to re-evaluate (must have been looked up previously).
+
+    Returns:
+        Updated domain intelligence JSON, or error if domain not in cache.
+    """
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        return json_mod.dumps({"error": str(exc)})
+
+    cached = _cache_get(validated)
+    if cached is None:
+        return json_mod.dumps({"error": f"No cached data for {domain}. Run lookup_tenant first."})
+
+    _info, results = cached
+
+    # Re-run merge pipeline with current fingerprint set (including ephemeral)
+    from recon_tool.merger import merge_results
+
+    try:
+        new_info = merge_results(list(results), validated)
+    except Exception as exc:
+        return json_mod.dumps({"error": f"Re-evaluation failed: {exc}"})
+
+    return format_tenant_json(new_info)
 
 
 @mcp.prompt()

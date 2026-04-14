@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-04-14
+
+### Added
+
+- **Primary Email Provider Detection** — MX-based topology computation distinguishes primary email providers from secondary/legacy detections. New `primary_email_provider` and `email_gateway` fields on TenantInfo. Enhanced Provider line formatting shows email delivery path (e.g., "Microsoft 365 (primary email via Proofpoint gateway)"). New "Email Gateway Topology" and "Legacy Provider Residue" signals. New email topology insights.
+- **Negative-Space Analysis** — new `absence.py` module evaluates `expected_counterparts` on signal definitions. When a signal fires but expected companion services are absent, an absence signal is produced with hedged language. 5 built-in signals ship with `expected_counterparts` definitions for out-of-the-box absence detection. Absence signals appear alongside standard signals in all output formats.
+- **DMARC Intelligence Expansion** — `rua=mailto:` extraction identifies paid DMARC report vendors (Agari, Proofpoint EFD, OnDMARC, dmarcian, Valimail, EasyDMARC). `pct=` parsing surfaces phased DMARC rollout. 6 new DMARC vendor fingerprints (detection type `dmarc_rua`). New "DMARC Governance Investment" signal. New `dmarc_phased_rollout` posture observation.
+- **Ephemeral Fingerprints via MCP** — 4 new MCP tools: `inject_ephemeral_fingerprint` (inject temporary detection patterns), `reevaluate_domain` (re-evaluate cached data with zero network calls), `list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`. Session-scoped, in-memory, thread-safe. Validated through the same regex/ReDoS pipeline as built-in fingerprints.
+- 6 new DMARC vendor fingerprints: Agari, Proofpoint EFD, OnDMARC, dmarcian, Valimail, EasyDMARC. 208 fingerprints total.
+- 3 new signals: Email Gateway Topology, Legacy Provider Residue, DMARC Governance Investment. 44 signals total.
+- 1 new posture observation: `dmarc_phased_rollout`.
+- 1 new module: `recon_tool/absence.py` (absence signal evaluation engine).
+- 189 new tests (958 → 1147 total). 6 Hypothesis property-based tests covering all correctness properties.
+
+### Changed
+
+- `TenantInfo` extended with `primary_email_provider`, `email_gateway`, `dmarc_pct` fields.
+- `SignalContext` extended with `dmarc_pct`, `primary_email_provider` fields.
+- `Signal` dataclass extended with `expected_counterparts` field.
+- `SourceResult` extended with `dmarc_pct`, `raw_dns_records` fields.
+- `detect_provider()` in `formatter.py` now accepts topology fields for enhanced Provider line formatting. Falls back to existing slug-based detection when topology fields are None (backward compatible).
+- `merge_results()` in `merger.py` computes email topology, propagates DMARC metadata, and runs absence evaluation.
+- `_detect_email_security()` in `dns.py` extracts `rua=` and `pct=` from DMARC records.
+- MCP server now exposes 16 tools (was 12).
+- All backward compatible with existing YAML files — new fields default to safe values.
+
 ## [0.8.1] — 2026-04-13
 
 ### Changed

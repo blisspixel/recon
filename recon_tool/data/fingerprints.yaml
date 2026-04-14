@@ -1902,6 +1902,9 @@ fingerprints:
       - type: spf
         pattern: "ondmarc.com"
         description: OnDMARC (Red Sift) email authentication management
+      - type: dmarc_rua
+        pattern: "ondmarc.com"
+        description: Red Sift OnDMARC DMARC aggregate report receiving domain
 
   - name: dmarcian
     slug: dmarcian
@@ -1912,6 +1915,9 @@ fingerprints:
       - type: spf
         pattern: "dmarcian"
         description: dmarcian DMARC management and SPF optimization
+      - type: dmarc_rua
+        pattern: "dmarcian.com"
+        description: dmarcian DMARC aggregate report receiving domain
 
   - name: EasyDMARC
     slug: easydmarc
@@ -1922,6 +1928,9 @@ fingerprints:
       - type: spf
         pattern: "easydmarc"
         description: EasyDMARC email authentication management
+      - type: dmarc_rua
+        pattern: "easydmarc.com"
+        description: EasyDMARC DMARC aggregate report receiving domain
 
   - name: Valimail
     slug: valimail
@@ -1932,3 +1941,26 @@ fingerprints:
       - type: spf
         pattern: "valimail.com"
         description: Valimail email authentication automation and SPF management
+      - type: dmarc_rua
+        pattern: "valimail.com"
+        description: Valimail DMARC aggregate report receiving domain
+
+  # ====================== DMARC REPORT VENDORS ======================
+
+  - name: Agari (DMARC)
+    slug: agari
+    category: Email Governance
+    confidence: high
+    detections:
+      - type: dmarc_rua
+        pattern: "agari.com"
+        description: Agari DMARC aggregate report receiving domain
+
+  - name: Proofpoint EFD
+    slug: proofpoint-efd
+    category: Email Governance
+    confidence: high
+    detections:
+      - type: dmarc_rua
+        pattern: "emaildefense.proofpoint.com"
+        description: Proofpoint Email Fraud Defense DMARC report receiving domain

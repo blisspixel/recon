@@ -55,6 +55,7 @@ class Signal:
     contradicts: tuple[str, ...] = ()
     requires_signals: tuple[str, ...] = ()
     explain: str = ""
+    expected_counterparts: tuple[str, ...] = ()  # slugs expected to co-occur
 
 
 _VALID_METADATA_FIELDS = frozenset(
@@ -64,6 +65,8 @@ _VALID_METADATA_FIELDS = frozenset(
         "email_security_score",
         "spf_include_count",
         "issuance_velocity",
+        "dmarc_pct",
+        "primary_email_provider",
     }
 )
 _VALID_OPERATORS = frozenset({"eq", "neq", "gte", "lte"})
@@ -182,6 +185,28 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
         raw_explain = ""
     explain: str = raw_explain if isinstance(raw_explain, str) else ""
 
+    # Parse optional expected_counterparts field
+    expected_counterparts: tuple[str, ...] = ()
+    raw_counterparts = signal.get("expected_counterparts")
+    if raw_counterparts is not None:
+        if not isinstance(raw_counterparts, list):
+            logger.warning(
+                "Signal %r has invalid 'expected_counterparts' (not a list) — defaulting to empty",
+                name,
+            )
+        else:
+            valid_counterparts: list[str] = []
+            for entry in raw_counterparts:
+                if not isinstance(entry, str) or not entry.strip():
+                    logger.warning(
+                        "Signal %r has invalid entry in 'expected_counterparts' — defaulting to empty tuple",
+                        name,
+                    )
+                    valid_counterparts = []
+                    break
+                valid_counterparts.append(entry)
+            expected_counterparts = tuple(valid_counterparts)
+
     return Signal(
         name=name,
         category=signal.get("category", ""),
@@ -193,6 +218,7 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
         contradicts=contradicts,
         requires_signals=requires_signals,
         explain=explain,
+        expected_counterparts=expected_counterparts,
     )
 
 

@@ -497,6 +497,7 @@ def _build_explanations(
 
     Generates explanations for signals, insights, confidence, and observations.
     """
+    from recon_tool.absence import evaluate_absence_signals
     from recon_tool.explanation import (
         explain_confidence,
         explain_insights,
@@ -519,9 +520,13 @@ def _build_explanations(
     signals = load_signals()
     signal_matches = evaluate_signals(context)
 
+    # Third pass: absence signals
+    absence_matches = evaluate_absence_signals(signal_matches, signals, frozenset(info.slugs))
+    all_signal_matches = signal_matches + absence_matches
+
     # Signal explanations
     signal_recs = explain_signals(
-        signal_matches,
+        all_signal_matches,
         signals,
         frozenset(info.slugs),
         {},

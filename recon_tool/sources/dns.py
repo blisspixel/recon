@@ -175,6 +175,8 @@ class _DetectionCtx:
         "site_verification_tokens",
         "mta_sts_mode",
         "_matched_fp_detections",
+        "dmarc_pct",
+        "raw_dns_records",
     )
 
     def __init__(self) -> None:
@@ -195,6 +197,8 @@ class _DetectionCtx:
         # detection rule. Used by enforce_match_mode_all() to verify that
         # fingerprints with match_mode: all had ALL their detections match.
         self._matched_fp_detections: set[tuple[str, str, str]] = set()
+        self.dmarc_pct: int | None = None
+        self.raw_dns_records: dict[str, list[str]] = {}
 
     def add(self, svc_name: str, slug: str | None = None, source_type: str = "", raw_value: str = "") -> None:
         """Register a detected service, optionally with its slug and evidence.
@@ -297,7 +301,10 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
     txt_patterns = get_txt_patterns()
     spf_patterns = get_spf_patterns()
 
-    for txt in await _safe_resolve(domain, "TXT"):
+    txt_records = await _safe_resolve(domain, "TXT")
+    ctx.raw_dns_records.setdefault("TXT", []).extend(txt_records)
+
+    for txt in txt_records:
         txt_lower = txt.lower()
 
         result = match_txt(txt, txt_patterns)
@@ -335,7 +342,10 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
 
 async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
     """Scan MX records for email provider and gateway detection."""
-    for mx in await _safe_resolve(domain, "MX"):
+    mx_records = await _safe_resolve(domain, "MX")
+    ctx.raw_dns_records.setdefault("MX", []).extend(mx_records)
+
+    for mx in mx_records:
         mx_lower = mx.lower()
         for det in get_mx_patterns():
             if det.pattern in mx_lower:
@@ -640,6 +650,35 @@ async def _fetch_mta_sts_policy(domain: str) -> str | None:
     return None
 
 
+_RUA_MAILTO_RE = re.compile(r"rua\s*=\s*mailto:([^;,\s]+)", re.IGNORECASE)
+
+
+def _extract_dmarc_rua(ctx: _DetectionCtx, dmarc_record: str) -> None:
+    """Extract rua=mailto: addresses and match vendor domains against fingerprints."""
+    from recon_tool.fingerprints import get_dmarc_rua_patterns
+
+    matches = _RUA_MAILTO_RE.findall(dmarc_record)
+    rua_patterns = get_dmarc_rua_patterns()
+
+    for addr in matches:
+        # Extract domain portion from email address
+        if "@" not in addr:
+            continue
+        rua_domain = addr.split("@", 1)[1].lower().rstrip(".")
+
+        # Match against dmarc_rua fingerprint patterns
+        for det in rua_patterns:
+            if det.pattern.lower() in rua_domain:
+                ctx.add(
+                    det.name,
+                    det.slug,
+                    source_type="DMARC_RUA",
+                    raw_value=f"rua=mailto:{addr}",
+                )
+                ctx.record_fp_match(det.slug, "dmarc_rua", det.pattern)
+                break  # first match wins per RUA address
+
+
 async def _detect_email_security(ctx: _DetectionCtx, domain: str) -> None:
     """Check DMARC, BIMI, MTA-STS, and TLS-RPT records concurrently."""
     dmarc_task = _safe_resolve(f"_dmarc.{domain}", "TXT")
@@ -661,7 +700,27 @@ async def _detect_email_security(ctx: _DetectionCtx, domain: str) -> None:
                 cleaned = part.strip().lower()
                 if cleaned.startswith("p="):
                     ctx.dmarc_policy = cleaned[2:].strip()
-                    break
+                elif cleaned.startswith("pct="):
+                    raw_pct = cleaned[4:].strip()
+                    try:
+                        pct_val = int(raw_pct)
+                        if 0 <= pct_val <= 100:
+                            ctx.dmarc_pct = pct_val
+                        else:
+                            logger.warning(
+                                "DMARC pct= value %d out of range for %s — ignored",
+                                pct_val,
+                                domain,
+                            )
+                    except ValueError:
+                        logger.warning(
+                            "DMARC pct= value %r is not a valid integer for %s — ignored",
+                            raw_pct,
+                            domain,
+                        )
+
+            # Extract rua= mailto domains and match against fingerprints
+            _extract_dmarc_rua(ctx, txt)
 
     for txt in bimi_results:
         if "v=bimi1" in txt.lower():
@@ -692,7 +751,10 @@ async def _detect_email_security(ctx: _DetectionCtx, domain: str) -> None:
 
 async def _detect_ns(ctx: _DetectionCtx, domain: str) -> None:
     """Scan NS records for DNS provider / infrastructure detection."""
-    for ns in await _safe_resolve(domain, "NS"):
+    ns_records = await _safe_resolve(domain, "NS")
+    ctx.raw_dns_records.setdefault("NS", []).extend(ns_records)
+
+    for ns in ns_records:
         ns_lower = ns.lower()
         for det in get_ns_patterns():
             if det.pattern in ns_lower:
@@ -707,6 +769,10 @@ async def _detect_cname_infra(ctx: _DetectionCtx, domain: str) -> None:
     root_task = _safe_resolve(domain, "CNAME")
 
     www_results, root_results = await asyncio.gather(www_task, root_task)
+
+    all_cnames = www_results + root_results
+    if all_cnames:
+        ctx.raw_dns_records.setdefault("CNAME", []).extend(all_cnames)
 
     for cname_list in (www_results, root_results):
         for cname in cname_list:
@@ -986,6 +1052,10 @@ class DNSSource:
                 bimi_identity=ctx.bimi_identity,
                 site_verification_tokens=tuple(sorted(ctx.site_verification_tokens)),
                 mta_sts_mode=ctx.mta_sts_mode,
+                dmarc_pct=ctx.dmarc_pct,
+                raw_dns_records=tuple(
+                    (rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals
+                ),
             )
 
         return SourceResult(
@@ -999,6 +1069,8 @@ class DNSSource:
             bimi_identity=ctx.bimi_identity,
             site_verification_tokens=tuple(sorted(ctx.site_verification_tokens)),
             mta_sts_mode=ctx.mta_sts_mode,
+            dmarc_pct=ctx.dmarc_pct,
+            raw_dns_records=tuple((rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals),
         )
 
     @staticmethod

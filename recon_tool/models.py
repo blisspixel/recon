@@ -95,6 +95,8 @@ class SignalContext:
     email_security_score: int | None = None
     spf_include_count: int | None = None
     issuance_velocity: int | None = None
+    dmarc_pct: int | None = None
+    primary_email_provider: str | None = None
 
 
 @dataclass(frozen=True)
@@ -208,6 +210,10 @@ class SourceResult:
     google_auth_type: str | None = None  # "Federated", "Managed"
     google_idp_name: str | None = None  # "Okta", "Ping Identity", etc.
 
+    # --- v0.9.0: Intelligence Amplification ---
+    dmarc_pct: int | None = None  # DMARC pct= value (0-100)
+    raw_dns_records: tuple[tuple[str, str], ...] = ()  # (record_type, value) pairs for reevaluation cache
+
     @property
     def crtsh_degraded(self) -> bool:
         """Backward-compatible: True when crt.sh was unreachable."""
@@ -263,6 +269,11 @@ class TenantInfo:
     mta_sts_mode: str | None = None  # "enforce", "testing", "none"
     google_auth_type: str | None = None  # "Federated", "Managed"
     google_idp_name: str | None = None  # "Okta", "Ping Identity", etc.
+
+    # --- v0.9.0: Intelligence Amplification ---
+    primary_email_provider: str | None = None  # MX-detected provider name(s)
+    email_gateway: str | None = None  # MX-detected gateway name
+    dmarc_pct: int | None = None  # DMARC pct= value (0-100)
 
     # --- Conflict-aware merge (v0.7.0) ---
     merge_conflicts: MergeConflicts | None = None

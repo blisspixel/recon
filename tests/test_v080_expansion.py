@@ -97,9 +97,13 @@ class TestNewFingerprintsLoad:
         spf_slugs = {"autospf", "ondmarc", "dmarcian", "easydmarc", "valimail"}
         for fp in fps:
             if fp.slug in spf_slugs:
+                has_spf = False
                 for det in fp.detections:
-                    assert det.type == "spf", f"{fp.slug} should use spf detection type"
+                    assert det.type in ("spf", "dmarc_rua"), f"{fp.slug} has unexpected detection type {det.type}"
                     assert len(det.pattern) > 0, f"{fp.slug} has empty pattern"
+                    if det.type == "spf":
+                        has_spf = True
+                assert has_spf, f"{fp.slug} should have at least one spf detection"
 
     def test_fingerprint_count_increased(self) -> None:
         fps = load_fingerprints()
