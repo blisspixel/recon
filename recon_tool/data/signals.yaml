@@ -19,6 +19,7 @@ signals:
     requires:
       any: [openai, anthropic, mistral, perplexity, crewai-aid, langsmith, mcp-discovery]
     min_matches: 1
+    expected_counterparts: [lakera, okta, cyberark, beyond-identity]
 
   - name: High GTM Maturity
     category: Go-to-Market
@@ -35,6 +36,7 @@ signals:
     requires:
       any: [crowdstrike, knowbe4, proofpoint, mimecast, zscaler, paloalto, wiz, sophos, trellix, barracuda, trendmicro, okta, auth0, duo, 1password, sentinelone, netskope, ping-identity, cyberark, cato, onelogin, imperva, beyond-identity]
     min_matches: 2
+    expected_counterparts: [proofpoint, mimecast, barracuda]
 
   - name: Modern Collaboration
     category: Productivity
@@ -113,6 +115,7 @@ signals:
     requires:
       any: [okta, auth0, onelogin, duo, ping-identity, crowdstrike, sophos, sentinelone, jamf, kandji, proofpoint, mimecast, zscaler, netskope, paloalto, cato, wiz, 1password, cyberark, knowbe4, imperva]
     min_matches: 4
+    expected_counterparts: [jamf, kandji, crowdstrike, sentinelone, proofpoint, mimecast]
 
   - name: AI Security Posture
     category: Composite
@@ -345,6 +348,7 @@ signals:
     requires:
       any: [crewai-aid, langsmith, mcp-discovery, openai, anthropic, mistral, perplexity, dify, n8n, autogen]
     min_matches: 2
+    expected_counterparts: [cosign-attestation, snyk]
 
   - name: AI Adoption Without Governance
     category: Consistency
@@ -404,3 +408,41 @@ signals:
     requires:
       any: [autospf, ondmarc, dmarcian, easydmarc, valimail]
     min_matches: 1
+
+  - name: DMARC Governance Investment
+    category: Email
+    confidence: high
+    description: Paid DMARC report aggregation vendor detected — indicates dedicated email governance investment
+    explain: "DMARC RUA (aggregate report) addresses pointing to a paid vendor (Agari, Proofpoint EFD, dmarcian, Valimail, EasyDMARC, Red Sift/OnDMARC) indicate the organization has invested in professional DMARC monitoring and enforcement tooling. This is a strong signal of email security maturity."
+    requires:
+      any: [agari, proofpoint-efd, ondmarc, dmarcian, valimail, easydmarc]
+    min_matches: 1
+    expected_counterparts: [proofpoint, mimecast, barracuda, trendmicro]
+
+  # ── v0.9.0: Primary Email Provider Detection signals ──────────────────
+
+  - name: Email Gateway Topology
+    category: Email
+    confidence: high
+    description: Email gateway detected in front of primary email provider — indicates layered email security architecture
+    explain: "When MX records point to an email security gateway (Proofpoint, Mimecast, etc.) and a primary email provider (Microsoft 365, Google Workspace) is also detected, it indicates a layered email security architecture where inbound mail is filtered before reaching the mailbox provider."
+    requires:
+      any: [proofpoint, mimecast, barracuda, cisco-ironport, cisco-email, symantec, trellix, trendmicro]
+    min_matches: 1
+    metadata:
+      - field: primary_email_provider
+        operator: neq
+        value: ""
+
+  - name: Legacy Provider Residue
+    category: Consistency
+    confidence: medium
+    description: Provider detected only via TXT/DKIM records alongside a different MX-based primary — possible migration residue
+    explain: "When a provider is detected via TXT or DKIM verification records but a different provider handles MX-based email delivery, it may indicate residual DNS records from a previous provider. These records are often left behind after email migrations and may represent cleanup opportunities."
+    requires:
+      any: [microsoft365, google-workspace]
+    min_matches: 1
+    metadata:
+      - field: primary_email_provider
+        operator: neq
+        value: ""

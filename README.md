@@ -58,7 +58,7 @@ Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP
 
 recon collects public signals (DNS TXT/MX/CNAME/NS/SRV/CAA records, Microsoft and Google identity endpoints, certificate transparency logs) and matches them against a set of YAML-defined fingerprint and signal rules. Each signal alone is unremarkable — a TXT record, a CNAME delegation, a certificate pattern. The art is in the correlation. The matching is rule-based, not machine learning, but combining scattered records into a coherent view of what an organization is actually running is where the value comes from.
 
-It's an early-stage project maintained by a solo developer. The fingerprint database covers 206 SaaS services and the signal engine has 41 rules across 4 layers. Coverage and accuracy will vary by domain — organizations with rich public DNS get detailed results; those with minimal records or heavy proxying will produce sparse output. Results should be treated as indicators, not ground truth.
+It's an early-stage project maintained by a solo developer. The fingerprint database covers 208 SaaS services and the signal engine has 44 rules across 4 layers. Coverage and accuracy will vary by domain — organizations with rich public DNS get detailed results; those with minimal records or heavy proxying will produce sparse output. Results should be treated as indicators, not ground truth.
 
 ## How it compares
 
@@ -69,8 +69,8 @@ recon occupies a specific niche: it fuses DNS, identity endpoints, and CT logs i
 | Zero credentials | ✓ | ✓ | ✓ | varies |
 | M365 / GWS tenant detection | ✓ | ✗ | ✗ | varies |
 | Email security scoring | ✓ | ✗ | ✗ | varies |
-| SaaS fingerprinting | 206 services | ✗ | ✗ | typically more |
-| Signal correlation rules | 41 rules | ✗ | ✗ | varies |
+| SaaS fingerprinting | 208 services | ✗ | ✗ | typically more |
+| Signal correlation rules | 44 rules | ✗ | ✗ | varies |
 | Certificate intelligence | ✓ | ✗ | ✗ | varies |
 | MCP server for AI agents | ✓ | ✗ | ✗ | rare |
 | Custom YAML extensibility | ✓ | ✗ | ✗ | varies |
@@ -120,8 +120,8 @@ Input is normalized automatically — URLs, schemes, `www.` prefixes, paths, and
 | Google Workspace auth type, modules | Google login flow + CNAME probing + BIMI VMC |
 | Email provider | MX records |
 | Email security score (0–5) | DMARC + DKIM + SPF + MTA-STS + BIMI |
-| 206 SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors |
-| Signal intelligence (41 rules) | YAML-based correlation rules with cross-reference conditions |
+| 208 SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors, DMARC RUA |
+| Signal intelligence (44 rules) | YAML-based correlation rules with cross-reference conditions |
 | Certificate intelligence | crt.sh + CertSpotter: issuance velocity, issuer diversity |
 | Posture observations | Neutral factual analysis across email, identity, infrastructure |
 | Related domains | CNAME breadcrumbs + certificate transparency |
@@ -150,9 +150,9 @@ Then ask your AI: "Run a recon lookup on northwindtraders.com and analyze the po
 
 For deeper analysis, try: "Look up contoso.com with explain=true, then assess_exposure and find_hardening_gaps. Simulate hardening with DMARC reject and MTA-STS enforce, and tell me the new posture score."
 
-12 MCP tools available: `lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `compare_postures`, `chain_lookup`, `reload_data`, `get_fingerprints`, `get_signals`, `explain_signal`, `test_hypothesis`, `simulate_hardening`.
+16 MCP tools available: `lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `compare_postures`, `chain_lookup`, `reload_data`, `get_fingerprints`, `get_signals`, `explain_signal`, `test_hypothesis`, `simulate_hardening`, `inject_ephemeral_fingerprint`, `reevaluate_domain`, `list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`.
 
-All tools are read-only and idempotent. The agentic tools (`test_hypothesis`, `simulate_hardening`, `explain_signal`) operate on cached data with zero additional network calls.
+All tools are read-only and idempotent. The agentic tools (`test_hypothesis`, `simulate_hardening`, `explain_signal`) operate on cached data with zero additional network calls. The ephemeral fingerprint tools (`inject_ephemeral_fingerprint`, `reevaluate_domain`, `list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`) let AI agents inject temporary detection patterns and re-evaluate cached data.
 
 See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config file locations per client.
 
@@ -171,8 +171,8 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 ## Limitations
 
 - **Coverage depends on public DNS.** Organizations behind Cloudflare, with minimal DNS records, or that don't publish SaaS verification tokens will return near-empty results. This is a fundamental constraint of passive-only collection — there's no workaround.
-- **Fingerprints will go stale.** SaaS providers rebrand, change DNS patterns, and get acquired. 206 fingerprints maintained by a solo developer will fall behind. Community contributions are the only way this scales.
-- **Signal rules are heuristic.** The 41 YAML rules produce useful indicators, not definitive assessments. False positives happen. Missed signals happen. Don't make business decisions based solely on this output.
+- **Fingerprints will go stale.** SaaS providers rebrand, change DNS patterns, and get acquired. 208 fingerprints maintained by a solo developer will fall behind. Community contributions are the only way this scales.
+- **Signal rules are heuristic.** The 44 YAML rules produce useful indicators, not definitive assessments. False positives happen. Missed signals happen. Don't make business decisions based solely on this output.
 - **No accuracy benchmarks yet.** There's no published precision/recall data. The tool can produce confident-looking output that's wrong. Treat it as a starting point for investigation, not a source of truth.
 - **Early-stage project.** This is a solo developer effort. It works, but it hasn't been battle-tested by a community yet. Expect rough edges and breaking changes.
 
@@ -180,7 +180,7 @@ See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config fi
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/                          # 958 tests
+pytest tests/                          # 1147 tests
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 ```

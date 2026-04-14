@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import threading
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -32,8 +33,11 @@ __all__ = [
     "Detection",
     "DetectionRule",
     "Fingerprint",
+    "clear_ephemeral",
     "get_caa_patterns",
     "get_cname_patterns",
+    "get_dmarc_rua_patterns",
+    "get_ephemeral",
     "get_m365_names",
     "get_m365_slugs",
     "get_mx_patterns",
@@ -42,6 +46,7 @@ __all__ = [
     "get_srv_patterns",
     "get_subdomain_txt_patterns",
     "get_txt_patterns",
+    "inject_ephemeral",
     "load_fingerprints",
     "match_txt",
     "reload_fingerprints",
@@ -50,7 +55,7 @@ __all__ = [
 # Hard cap on pattern length. Not a ReDoS fix by itself — see _validate_regex.
 _MAX_PATTERN_LENGTH = 500
 
-_VALID_DETECTION_TYPES = frozenset({"txt", "spf", "mx", "ns", "cname", "subdomain_txt", "caa", "srv"})
+_VALID_DETECTION_TYPES = frozenset({"txt", "spf", "mx", "ns", "cname", "subdomain_txt", "caa", "srv", "dmarc_rua"})
 _VALID_CONFIDENCE_LEVELS = frozenset({"high", "medium", "low"})
 _VALID_MATCH_MODES = frozenset({"any", "all"})
 
@@ -290,6 +295,47 @@ def _load_from_path(path: Path) -> list[Fingerprint]:
     return results
 
 
+# ── Ephemeral fingerprint storage ───────────────────────────────────────
+# Session-scoped, in-memory only. Protected by a lock for thread safety
+# in async contexts (asyncio.to_thread, etc.).
+
+_ephemeral_lock = threading.Lock()
+_ephemeral_fingerprints: list[Fingerprint] = []
+
+
+def inject_ephemeral(fp: Fingerprint) -> None:
+    """Add a validated Fingerprint to the ephemeral collection.
+
+    Clears pattern caches so subsequent calls to load_fingerprints()
+    and get_*_patterns() include the new fingerprint.
+    """
+    with _ephemeral_lock:
+        _ephemeral_fingerprints.append(fp)
+    # Invalidate caches
+    load_fingerprints.cache_clear()
+    _get_detections.cache_clear()
+
+
+def clear_ephemeral() -> int:
+    """Remove all ephemeral fingerprints. Returns count removed.
+
+    Clears pattern caches so subsequent calls exclude ephemeral patterns.
+    """
+    with _ephemeral_lock:
+        count = len(_ephemeral_fingerprints)
+        _ephemeral_fingerprints.clear()
+    # Invalidate caches
+    load_fingerprints.cache_clear()
+    _get_detections.cache_clear()
+    return count
+
+
+def get_ephemeral() -> tuple[Fingerprint, ...]:
+    """Return all currently loaded ephemeral fingerprints."""
+    with _ephemeral_lock:
+        return tuple(_ephemeral_fingerprints)
+
+
 @lru_cache(maxsize=1)
 def load_fingerprints() -> tuple[Fingerprint, ...]:
     """Load fingerprints from YAML data files (built-in + custom).
@@ -309,6 +355,10 @@ def load_fingerprints() -> tuple[Fingerprint, ...]:
     entries: list[Fingerprint] = []
     entries.extend(_load_from_path(data_path))
     entries.extend(_load_from_path(custom_path))
+    # Append ephemeral fingerprints (not cached separately — cache is
+    # invalidated on inject/clear so this always reflects current state)
+    with _ephemeral_lock:
+        entries.extend(_ephemeral_fingerprints)
     return tuple(entries)
 
 
@@ -379,6 +429,11 @@ def get_subdomain_txt_patterns() -> tuple[Detection, ...]:
 def get_caa_patterns() -> tuple[Detection, ...]:
     """Return Detection tuples for CAA record matching."""
     return _get_detections("caa")
+
+
+def get_dmarc_rua_patterns() -> tuple[Detection, ...]:
+    """Return Detection tuples for DMARC RUA vendor domain matching."""
+    return _get_detections("dmarc_rua")
 
 
 def get_srv_patterns() -> tuple[Detection, ...]:

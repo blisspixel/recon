@@ -4,7 +4,7 @@ Passive domain intelligence CLI and MCP server. Queries public DNS records and u
 
 ## What it does
 
-`recon <domain>` returns: company name, email provider, tenant ID, auth type, email security score (0-5), 186 SaaS service fingerprints, security stack detection, signal intelligence (AI adoption, GTM maturity, org size hints), and related domains (via CNAME breadcrumbs + certificate transparency + common subdomain probing).
+`recon <domain>` returns: company name, email provider, tenant ID, auth type, email security score (0-5), 208 SaaS service fingerprints, security stack detection, signal intelligence (AI adoption, GTM maturity, org size hints), and related domains (via CNAME breadcrumbs + certificate transparency + common subdomain probing).
 
 ## Commands
 
@@ -32,9 +32,9 @@ recon doctor                            # connectivity check
   - `http.py` — SSRF-safe HTTP client with retry/backoff
   - `validator.py` — domain input validation
   - `models.py` — frozen dataclasses (TenantInfo, SourceResult)
-- `tests/` — 958 tests, pytest + hypothesis
-- `data/fingerprints.yaml` — 206 SaaS fingerprints
-- `data/signals.yaml` — 4-layer signal definitions (41 signals, two-pass evaluation)
+- `tests/` — 1147 tests, pytest + hypothesis
+- `data/fingerprints.yaml` — 208 SaaS fingerprints
+- `data/signals.yaml` — 4-layer signal definitions (44 signals, two-pass evaluation + absence detection)
 
 ## Development
 

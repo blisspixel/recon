@@ -145,6 +145,28 @@ def explain_signals(
     for match in signal_matches:
         sig = signal_by_name.get(match.name)
         if sig is None:
+            # Check if this is an absence signal (category="Absence")
+            if match.category == "Absence":
+                # Absence signals carry missing slugs in matched and the
+                # parent signal name in the name (e.g. "X — Missing Counterparts").
+                # Extract parent signal name for fired_rules.
+                parent_name = match.name.replace(" \u2014 Missing Counterparts", "")
+                weakening_abs = tuple(
+                    f"Detecting slug '{slug}' would suppress this absence signal" for slug in match.matched
+                )
+                records.append(
+                    ExplanationRecord(
+                        item_name=match.name,
+                        item_type="signal",
+                        matched_evidence=(),
+                        fired_rules=(parent_name,),
+                        confidence_derivation="Absence signal \u2014 expected counterparts not observed",
+                        weakening_conditions=weakening_abs,
+                        curated_explanation=match.description,
+                    )
+                )
+                continue
+
             # Defensive: signal match without a definition — produce minimal record
             records.append(
                 ExplanationRecord(

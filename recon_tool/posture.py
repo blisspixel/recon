@@ -72,6 +72,8 @@ _VALID_METADATA_FIELDS = frozenset(
         "email_security_score",
         "spf_include_count",
         "issuance_velocity",
+        "dmarc_pct",
+        "primary_email_provider",
     }
 )
 _VALID_OPERATORS = frozenset({"eq", "neq", "gte", "lte"})
@@ -286,6 +288,10 @@ def _compute_metadata_value(field: str, info: TenantInfo) -> str | int | None:
         if info.cert_summary is not None:
             return info.cert_summary.issuance_velocity
         return None
+    if field == "dmarc_pct":
+        return info.dmarc_pct
+    if field == "primary_email_provider":
+        return info.primary_email_provider
     return None
 
 
@@ -365,6 +371,9 @@ def analyze_posture(info: TenantInfo) -> tuple[Observation, ...]:
         if "{issuance_velocity}" in statement:
             velocity = _compute_metadata_value("issuance_velocity", info)
             statement = statement.replace("{issuance_velocity}", str(velocity if velocity is not None else 0))
+        if "{dmarc_pct}" in statement:
+            dmarc_pct = _compute_metadata_value("dmarc_pct", info)
+            statement = statement.replace("{dmarc_pct}", str(dmarc_pct if dmarc_pct is not None else 0))
 
         # Enforce banned terms
         if _contains_banned_term(statement):

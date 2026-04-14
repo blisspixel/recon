@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 
+from recon_tool.absence import evaluate_absence_signals
 from recon_tool.constants import (
     SVC_BIMI,
     SVC_DKIM,
@@ -25,7 +26,7 @@ from recon_tool.models import (
     SourceResult,
     TenantInfo,
 )
-from recon_tool.signals import evaluate_signals
+from recon_tool.signals import evaluate_signals, load_signals
 
 __all__ = [
     "build_insights_with_signals",
@@ -35,6 +36,67 @@ __all__ = [
     "compute_inference_confidence",
     "merge_results",
 ]
+
+# Gateway slugs — MX-detected slugs that represent email security gateways
+# rather than primary email providers. Shared with insights.py.
+_GATEWAY_SLUGS: frozenset[str] = frozenset(
+    {
+        "proofpoint",
+        "mimecast",
+        "barracuda",
+        "cisco-ironport",
+        "cisco-email",
+        "symantec",
+        "trellix",
+        "trendmicro",
+    }
+)
+
+# Provider slugs that can be primary email providers (MX-based)
+_EMAIL_PROVIDER_SLUG_NAMES: dict[str, str] = {
+    "microsoft365": "Microsoft 365",
+    "google-workspace": "Google Workspace",
+    "zoho": "Zoho Mail",
+    "protonmail": "ProtonMail",
+    "aws-ses": "AWS SES",
+}
+
+_GATEWAY_SLUG_NAMES: dict[str, str] = {
+    "proofpoint": "Proofpoint",
+    "mimecast": "Mimecast",
+    "barracuda": "Barracuda",
+    "cisco-ironport": "Cisco IronPort",
+    "cisco-email": "Cisco Secure Email",
+    "symantec": "Symantec/Broadcom",
+    "trellix": "Trellix (FireEye)",
+    "trendmicro": "Trend Micro",
+}
+
+
+def _compute_email_topology(
+    evidence: tuple[EvidenceRecord, ...],
+) -> tuple[str | None, str | None]:
+    """Compute primary_email_provider and email_gateway from evidence records.
+
+    Scans MX-sourced evidence for provider and gateway slugs.
+
+    Returns:
+        (primary_email_provider, email_gateway) — both str | None.
+    """
+    mx_evidence = [e for e in evidence if e.source_type == "MX"]
+    mx_slugs = {e.slug for e in mx_evidence}
+
+    # Identify gateways
+    gateway_slugs = mx_slugs & _GATEWAY_SLUGS
+    gateway_names = sorted(_GATEWAY_SLUG_NAMES[s] for s in gateway_slugs if s in _GATEWAY_SLUG_NAMES)
+    email_gateway = " + ".join(gateway_names) if gateway_names else None
+
+    # Identify primary providers (MX slugs that are NOT gateways)
+    provider_slugs = mx_slugs - _GATEWAY_SLUGS
+    provider_names = sorted(_EMAIL_PROVIDER_SLUG_NAMES[s] for s in provider_slugs if s in _EMAIL_PROVIDER_SLUG_NAMES)
+    primary_email_provider = " + ".join(provider_names) if provider_names else None
+
+    return primary_email_provider, email_gateway
 
 
 def _min_confidence(a: ConfidenceLevel, b: ConfidenceLevel) -> ConfidenceLevel:
@@ -171,6 +233,8 @@ def build_insights_with_signals(
     issuance_velocity: int | None = None,
     google_auth_type: str | None = None,
     google_idp_name: str | None = None,
+    dmarc_pct: int | None = None,
+    primary_email_provider: str | None = None,
 ) -> list[str]:
     """Generate insights and append signal intelligence.
 
@@ -194,11 +258,21 @@ def build_insights_with_signals(
         email_security_score=email_security_score,
         spf_include_count=spf_include_count,
         issuance_velocity=issuance_velocity,
+        dmarc_pct=dmarc_pct,
+        primary_email_provider=primary_email_provider,
     )
     active_signals = evaluate_signals(context)
     for sig in active_signals:
         matched_names = ", ".join(sig.matched)
         insights.append(f"{sig.name}: {matched_names}")
+
+    # Third pass: absence evaluation
+    all_signal_defs = load_signals()
+    absence_signals = evaluate_absence_signals(active_signals, all_signal_defs, context.detected_slugs)
+    for sig in absence_signals:
+        matched_names = ", ".join(sig.matched)
+        insights.append(f"{sig.name}: {matched_names}")
+
     return insights
 
 
@@ -420,6 +494,22 @@ def merge_results(
     if cert_summary is not None:
         issuance_velocity = cert_summary.issuance_velocity
 
+    # Propagate evidence from all sources (needed before insights for topology)
+    all_evidence: list[EvidenceRecord] = []
+    for result in results:
+        all_evidence.extend(result.evidence)
+    evidence_tuple = tuple(all_evidence)
+
+    # Compute email topology from evidence
+    primary_email_provider, email_gateway = _compute_email_topology(evidence_tuple)
+
+    # Extract dmarc_pct from source results (first non-None wins)
+    dmarc_pct: int | None = None
+    for result in results:
+        if result.dmarc_pct is not None:
+            dmarc_pct = result.dmarc_pct
+            break
+
     # Build insights list, then append signal intelligence.
     insights = build_insights_with_signals(
         all_services,
@@ -432,6 +522,8 @@ def merge_results(
         issuance_velocity=issuance_velocity,
         google_auth_type=google_auth_type,
         google_idp_name=google_idp_name,
+        dmarc_pct=dmarc_pct,
+        primary_email_provider=primary_email_provider,
     )
 
     # Surface conflicting tenant IDs — this is high-value intel that explains
@@ -444,12 +536,6 @@ def merge_results(
     all_degraded: set[str] = set()
     for result in results:
         all_degraded.update(result.degraded_sources)
-
-    # Propagate evidence from all sources
-    all_evidence: list[EvidenceRecord] = []
-    for result in results:
-        all_evidence.extend(result.evidence)
-    evidence_tuple = tuple(all_evidence)
 
     # Compute dual confidence
     evidence_confidence = compute_evidence_confidence(results)
@@ -488,4 +574,7 @@ def merge_results(
         google_auth_type=google_auth_type,
         google_idp_name=google_idp_name,
         merge_conflicts=merge_conflicts,
+        primary_email_provider=primary_email_provider,
+        email_gateway=email_gateway,
+        dmarc_pct=dmarc_pct,
     )

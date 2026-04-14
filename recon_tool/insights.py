@@ -350,6 +350,29 @@ def _google_modules_insights(ctx: InsightContext) -> list[str]:
     return []
 
 
+def _email_topology_insights(ctx: InsightContext) -> list[str]:
+    """Surface email gateway topology and secondary provider detection."""
+    insights: list[str] = []
+
+    # Gateway topology insight
+    gateway = [name for slug, name in _GATEWAY_SLUG_MAP.items() if slug in ctx.slugs]
+    has_exchange = bool(ctx.slugs & _EXCHANGE_SLUGS)
+    has_google = bool(ctx.slugs & _GOOGLE_SLUGS)
+
+    primary = []
+    if has_exchange:
+        primary.append("Microsoft 365")
+    if has_google:
+        primary.append("Google Workspace")
+
+    if gateway and primary:
+        gw_str = ", ".join(gateway)
+        pri_str = " + ".join(primary)
+        insights.append(f"Email delivery path: {gw_str} gateway → {pri_str}")
+
+    return insights
+
+
 # ── Ordered pipeline of all generators ──────────────────────────────────
 
 _INSIGHT_GENERATORS = [
@@ -358,6 +381,7 @@ _INSIGHT_GENERATORS = [
     _email_security_insights,
     _org_size_insights,
     _gateway_insights,
+    _email_topology_insights,
     _migration_insights,
     _license_insights,
     _security_stack_insights,

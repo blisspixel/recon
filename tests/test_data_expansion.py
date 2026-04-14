@@ -100,7 +100,7 @@ class TestNewFingerprintsLoad:
         for fp in fps:
             assert len(fp.detections) > 0, f"Fingerprint '{fp.name}' has no detections"
             for det in fp.detections:
-                assert det.type in {"txt", "spf", "mx", "ns", "cname", "subdomain_txt", "caa", "srv"}
+                assert det.type in {"txt", "spf", "mx", "ns", "cname", "subdomain_txt", "caa", "srv", "dmarc_rua"}
                 assert det.pattern, f"Fingerprint '{fp.name}' has empty pattern"
 
     def test_all_fingerprints_have_valid_confidence(self) -> None:

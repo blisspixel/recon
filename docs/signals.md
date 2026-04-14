@@ -1,8 +1,8 @@
 # Signal Intelligence
 
-Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 41 signals organized in four layers.
+Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 44 signals organized in four layers, plus absence signals generated from `expected_counterparts` definitions.
 
-Signals are evaluated in two passes: non-meta signals first, then meta-signals (those with `requires_signals`) against the first-pass results. This supports `contradicts` (negation) and `requires_signals` (signal-to-signal references) safely without circular dependencies.
+Signals are evaluated in two passes: non-meta signals first, then meta-signals (those with `requires_signals`) against the first-pass results. A third pass (absence evaluation) checks fired signals for missing expected counterparts. This supports `contradicts` (negation), `requires_signals` (signal-to-signal references), and `expected_counterparts` (absence detection) safely without circular dependencies.
 
 ## Layer 1 — Single-category detection
 
@@ -10,6 +10,7 @@ Signals are evaluated in two passes: non-meta signals first, then meta-signals (
 |--------|--------------|
 | AI Adoption | OpenAI, Anthropic, Mistral, Perplexity, CrewAI AID, LangSmith, or MCP Discovery detected |
 | Enterprise Email Deliverability | SPF flattening or DMARC management service detected (AutoSPF, OnDMARC, dmarcian, EasyDMARC, Valimail) |
+| DMARC Governance Investment | Paid DMARC report vendor detected via `rua=` (Agari, Proofpoint EFD, OnDMARC, dmarcian, Valimail, EasyDMARC) |
 | High GTM Maturity | 2+ sales/marketing tools (includes Salesforce MC, Braze, Iterable) |
 | Enterprise Security Stack | 2+ security tools (includes Okta, Auth0, Imperva, OneLogin, Beyond Identity) |
 | Modern Collaboration | 3+ collaboration tools |
@@ -22,6 +23,7 @@ Signals are evaluated in two passes: non-meta signals first, then meta-signals (
 
 | Signal | Triggers when |
 |--------|--------------|
+| Email Gateway Topology | Email gateway slug detected via MX + primary email provider identified |
 | Agentic AI Infrastructure | 2+ agentic AI slugs (CrewAI AID, LangSmith, MCP Discovery, OpenAI, Anthropic, etc.) |
 | AI Platform Diversity | 2+ distinct AI/LLM provider verifications (OpenAI, Anthropic, Mistral, Perplexity) |
 | Software Supply Chain Maturity | 2+ supply chain security tools (GitHub Advanced Security, Sonatype, Snyk, Cosign) |
@@ -46,6 +48,7 @@ Signals are evaluated in two passes: non-meta signals first, then meta-signals (
 | Shadow IT Risk | 3+ consumer-grade SaaS tools |
 | File Collaboration Sprawl | 2+ enterprise file-sharing platforms |
 | Dual Email Provider | Both Microsoft 365 and Google Workspace detected |
+| Legacy Provider Residue | Provider detected via TXT/DKIM alongside a different MX-based primary provider (migration residue) |
 
 ## Layer 4 — Contradiction, metadata-aware, and meta-signals
 
@@ -76,3 +79,51 @@ signals:
       any: [okta, crowdstrike, proofpoint, knowbe4, 1password]
     min_matches: 3
 ```
+
+## Expected Counterparts and Absence Signals
+
+Signals can define `expected_counterparts` — a list of slugs that are typically co-present when the signal fires. When a signal fires but one or more expected counterparts are absent from the detected slugs, the absence engine produces an "Absence" signal.
+
+### How it works
+
+1. Standard two-pass signal evaluation runs (non-meta signals, then meta-signals).
+2. The absence engine (third pass) checks each fired signal that has `expected_counterparts`.
+3. For each fired signal, any counterpart slug not found in the detected slugs produces an absence signal.
+4. Absence signals have `category="Absence"` and use hedged language ("not observed", "may indicate a gap").
+
+### Built-in expected counterparts
+
+| Signal | Expected counterparts |
+|--------|----------------------|
+| Enterprise IT Maturity | jamf, kandji, crowdstrike, sentinelone, proofpoint, mimecast |
+| AI Adoption | lakera, okta, cyberark, beyond-identity |
+| Agentic AI Infrastructure | cosign-attestation, snyk |
+| Enterprise Security Stack | proofpoint, mimecast, barracuda |
+| DMARC Governance Investment | proofpoint, mimecast, barracuda, trendmicro |
+
+### YAML syntax
+
+```yaml
+signals:
+  - name: My Custom Signal
+    category: Custom
+    confidence: medium
+    requires:
+      any: [tool-a, tool-b]
+    min_matches: 1
+    expected_counterparts: [companion-x, companion-y]
+```
+
+When "My Custom Signal" fires and `companion-x` is not detected, the engine produces:
+
+> My Custom Signal — Missing Counterparts: companion-x not observed — may indicate a gap in the expected deployment
+
+### Absence signal output
+
+Absence signals appear alongside standard signals in all output formats (CLI, JSON, markdown, MCP). They have:
+
+- **Name**: `{parent_signal} — Missing Counterparts`
+- **Category**: `Absence`
+- **Confidence**: `medium`
+- **Matched**: tuple of missing slug names
+- **Description**: hedged language describing what was not observed

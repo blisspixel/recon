@@ -198,8 +198,60 @@ def _is_compact_noise(svc: str) -> bool:
     return svc in _SKIP_COMPACT_EXACT
 
 
-def detect_provider(services: tuple[str, ...] | set[str], slugs: tuple[str, ...] | set[str] = ()) -> str:
-    """Detect the primary email/identity provider from slugs (preferred) or services."""
+def detect_provider(
+    services: tuple[str, ...] | set[str],
+    slugs: tuple[str, ...] | set[str] = (),
+    primary_email_provider: str | None = None,
+    email_gateway: str | None = None,
+) -> str:
+    """Detect and format the provider line with email topology awareness.
+
+    When primary_email_provider and email_gateway are provided (from TenantInfo),
+    produces topology-aware output:
+      - "Microsoft 365 (primary email via Proofpoint gateway)"
+      - "Proofpoint (email gateway)"
+      - "Microsoft 365; Google Workspace (secondary)"
+
+    Falls back to existing slug-based detection when topology fields are None
+    (backward compatible).
+    """
+    # If we have topology data, use it
+    if primary_email_provider or email_gateway:
+        parts: list[str] = []
+
+        if primary_email_provider and email_gateway:
+            parts.append(f"{primary_email_provider} (primary email via {email_gateway} gateway)")
+        elif primary_email_provider:
+            parts.append(primary_email_provider)
+        elif email_gateway:
+            parts.append(f"{email_gateway} (email gateway)")
+
+        # Detect secondary providers (slug-detected but not MX-based)
+        slug_set = set(slugs)
+        secondary = []
+        for slug, name in [
+            ("microsoft365", "Microsoft 365"),
+            ("google-workspace", "Google Workspace"),
+            ("zoho", "Zoho Mail"),
+            ("protonmail", "ProtonMail"),
+        ]:
+            if slug in slug_set:
+                # Check if this provider is already in the primary line
+                if primary_email_provider and name in primary_email_provider:
+                    continue
+                secondary.append(name)
+
+        if secondary and primary_email_provider:
+            sec_str = ", ".join(secondary)
+            parts.append(f"{sec_str} (secondary)")
+        elif secondary and not primary_email_provider:
+            sec_str = ", ".join(secondary)
+            # Gateway already in parts if present — append secondary annotation
+            parts.append(f"{sec_str} (no MX-based primary detected)")
+
+        return "; ".join(parts) if parts else "Unknown"
+
+    # Fallback: existing slug-based detection (backward compatible)
     slug_set = set(slugs)
     providers = []
     if "microsoft365" in slug_set:
@@ -289,7 +341,12 @@ def render_tenant_panel(
     color = CONFIDENCE_COLORS[info.confidence]
     dots = CONFIDENCE_DOTS[info.confidence]
     source_count = len(info.sources)
-    provider = detect_provider(info.services, info.slugs)
+    provider = detect_provider(
+        info.services,
+        info.slugs,
+        primary_email_provider=info.primary_email_provider,
+        email_gateway=info.email_gateway,
+    )
     is_m365 = "Microsoft" in provider
 
     # Precompute conflict annotations when explain is active
@@ -307,6 +364,30 @@ def render_tenant_panel(
     text.append(f"{info.default_domain}\n")
     text.append("  Provider:   ", style="dim")
     text.append(f"{provider}\n")
+
+    # When --explain is active, show provider classification reasoning
+    if explain and (info.primary_email_provider or info.email_gateway):
+        classification_parts: list[str] = []
+        if info.primary_email_provider:
+            classification_parts.append(f"Primary (MX): {info.primary_email_provider}")
+        if info.email_gateway:
+            classification_parts.append(f"Gateway (MX): {info.email_gateway}")
+        # Detect secondary providers (slug-detected but not MX-based)
+        _secondary_names = []
+        for _slug, _name in [
+            ("microsoft365", "Microsoft 365"),
+            ("google-workspace", "Google Workspace"),
+            ("zoho", "Zoho Mail"),
+            ("protonmail", "ProtonMail"),
+        ]:
+            if _slug in info.slugs and (not info.primary_email_provider or _name not in info.primary_email_provider):
+                _secondary_names.append(_name)
+        if _secondary_names:
+            classification_parts.append(f"Secondary (TXT/DKIM): {', '.join(_secondary_names)}")
+        if classification_parts:
+            text.append("              ", style="dim")
+            text.append(f"[{'; '.join(classification_parts)}]", style="dim italic")
+            text.append("\n")
 
     # M365-specific fields — only shown when provider is Microsoft
     if is_m365 and info.tenant_id:
@@ -548,7 +629,12 @@ def render_error(message: str) -> None:
 
 def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
     """Build a dict representation of TenantInfo (shared by JSON and batch)."""
-    provider = detect_provider(info.services, info.slugs)
+    provider = detect_provider(
+        info.services,
+        info.slugs,
+        primary_email_provider=info.primary_email_provider,
+        email_gateway=info.email_gateway,
+    )
     d: dict[str, Any] = {
         "tenant_id": info.tenant_id,
         "display_name": info.display_name,
@@ -573,6 +659,9 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "google_idp_name": info.google_idp_name,
         "mta_sts_mode": info.mta_sts_mode,
         "site_verification_tokens": list(info.site_verification_tokens),
+        "primary_email_provider": info.primary_email_provider,
+        "email_gateway": info.email_gateway,
+        "dmarc_pct": info.dmarc_pct,
     }
     if info.cert_summary is not None:
         d["cert_summary"] = {
