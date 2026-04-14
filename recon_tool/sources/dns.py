@@ -341,7 +341,13 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
 
 
 async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
-    """Scan MX records for email provider and gateway detection."""
+    """Scan MX records for email provider and gateway detection.
+
+    Passes source_type="MX" and the raw record so an EvidenceRecord is
+    created — the email topology computation in merger.py filters evidence
+    by source_type == "MX" to distinguish true primary providers (direct
+    MX) from secondary residue (DKIM/TXT/identity endpoint).
+    """
     mx_records = await _safe_resolve(domain, "MX")
     ctx.raw_dns_records.setdefault("MX", []).extend(mx_records)
 
@@ -349,7 +355,7 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
         mx_lower = mx.lower()
         for det in get_mx_patterns():
             if det.pattern in mx_lower:
-                ctx.add(det.name, det.slug)
+                ctx.add(det.name, det.slug, source_type="MX", raw_value=mx)
                 ctx.record_fp_match(det.slug, "mx", det.pattern)
                 break
 
@@ -507,7 +513,7 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
         for cname in selector_results:
             cl = cname.lower()
             if "protection.outlook.com" in cl or "onmicrosoft.com" in cl:
-                ctx.add(SVC_DKIM_EXCHANGE, "microsoft365")
+                ctx.add(SVC_DKIM_EXCHANGE, "microsoft365", source_type="DKIM", raw_value=cname)
                 ctx.m365 = True
                 if "onmicrosoft.com" in cl:
                     parts = cl.split("._domainkey.")
@@ -519,25 +525,38 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
     # Check TXT first; if no TXT match, fall back to CNAME delegation.
     # When found, add both generic DKIM and Google Workspace attribution
     # so the signal fires even when MX points to a gateway (Proofpoint, etc.).
+    # source_type="DKIM" is required for the email topology inference in
+    # merger.py to recognize this as downstream-provider evidence when MX
+    # points to a gateway.
     google_dkim_found = False
     for record in google_txt_results:
         if "v=dkim1" in record.lower():
             ctx.services.add(SVC_DKIM)
-            ctx.add("DKIM (Google Workspace)", "google-workspace")
+            ctx.add(
+                "DKIM (Google Workspace)",
+                "google-workspace",
+                source_type="DKIM",
+                raw_value=record,
+            )
             google_dkim_found = True
             break
     if not google_dkim_found:
         for cname in google_cname_results:
             if "google.com" in cname.lower():
                 ctx.services.add(SVC_DKIM)
-                ctx.add("DKIM (Google Workspace)", "google-workspace")
+                ctx.add(
+                    "DKIM (Google Workspace)",
+                    "google-workspace",
+                    source_type="DKIM",
+                    raw_value=cname,
+                )
                 break
 
     # ESP DKIM selectors — attribute to specific services when CNAME matches
     for (_, hint, svc_name, slug), cname_results in zip(_ESP_SELECTORS, esp_results, strict=True):
         for cname in cname_results:
             if hint in cname.lower():
-                ctx.add(svc_name, slug)
+                ctx.add(svc_name, slug, source_type="DKIM", raw_value=cname)
                 ctx.services.add(SVC_DKIM)
                 break
 

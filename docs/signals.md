@@ -1,6 +1,6 @@
 # Signal Intelligence
 
-Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 44 signals organized in four layers, plus absence signals generated from `expected_counterparts` definitions.
+Derived automatically from fingerprint matches. Defined in `data/signals.yaml`. 45 signals organized in four layers, plus absence signals generated from `expected_counterparts` definitions.
 
 Signals are evaluated in two passes: non-meta signals first, then meta-signals (those with `requires_signals`) against the first-pass results. A third pass (absence evaluation) checks fired signals for missing expected counterparts. This supports `contradicts` (negation), `requires_signals` (signal-to-signal references), and `expected_counterparts` (absence detection) safely without circular dependencies.
 
@@ -16,7 +16,8 @@ Signals are evaluated in two passes: non-meta signals first, then meta-signals (
 | Modern Collaboration | 3+ collaboration tools |
 | Dev & Engineering Heavy | 2+ dev tools (includes LaunchDarkly, Contentful, Fly.io, Railway, Fastly) |
 | Data & Analytics Investment | 2+ data tools (includes Optimizely, WalkMe) |
-| Multi-Cloud | 2+ cloud/CDN providers (includes AWS ELB/S3, Azure Front Door, GCP App Engine, Fastly, Fly.io) |
+| Multi-Cloud | 2+ cloud providers (AWS, Azure, GCP, fly.io) |
+| Edge Layering | 2+ CDN/edge providers (Cloudflare, Akamai, Fastly, Imperva) |
 | Observability & SRE | 2+ monitoring/incident tools |
 
 ## Layer 2 — Cross-category composites
@@ -58,7 +59,7 @@ Signals are evaluated in two passes: non-meta signals first, then meta-signals (
 | Active Email Sending with Minimal Security | Email sending service detected + email security score ≤ 1 |
 | High Certificate Issuance Activity | 20+ certificates issued in last 90 days |
 | Incomplete Identity Migration | External IdP (Okta, Auth0, Ping) detected; contradicts on Microsoft 365 |
-| Split-Brain Email Config | Dual email provider detected; contradicts on MTA-STS enforce |
+| Dual Email Delivery Path | Dual email provider detected; contradicts on MTA-STS enforce |
 | Security Stack Without Governance | 2+ enterprise security tools + DMARC not reject |
 | AI Adoption Without Governance | AI platform detected; contradicts on enterprise identity providers (Okta, CyberArk, Beyond Identity, Ping) |
 | DevSecOps Investment Without Email Governance | Supply chain security tool detected + email security score ≤ 2 |

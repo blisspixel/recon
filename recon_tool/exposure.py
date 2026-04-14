@@ -743,8 +743,13 @@ def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="email",
                 severity="medium",
-                observation=_enforce_banned_terms("No DKIM selectors detected for this domain"),
-                recommendation=_enforce_banned_terms("Consider configuring DKIM to enable email signing"),
+                observation=_enforce_banned_terms(
+                    "No DKIM selectors observed at common names for this domain"
+                ),
+                recommendation=_enforce_banned_terms(
+                    "Consider verifying DKIM configuration and, if missing, "
+                    "deploying signing with a common selector name"
+                ),
                 evidence=(),
             )
         )

@@ -56,6 +56,19 @@ class Signal:
     requires_signals: tuple[str, ...] = ()
     explain: str = ""
     expected_counterparts: tuple[str, ...] = ()  # slugs expected to co-occur
+    exclude_matches_in_primary: bool = False  # filter matches already in primary_email_provider
+
+
+# Display names for provider slugs that can appear in primary_email_provider.
+# Used by exclude_matches_in_primary filter. Kept in sync with merger.py
+# _EMAIL_PROVIDER_SLUG_NAMES.
+_PROVIDER_SLUG_DISPLAY_NAMES: dict[str, str] = {
+    "microsoft365": "Microsoft 365",
+    "google-workspace": "Google Workspace",
+    "zoho": "Zoho Mail",
+    "protonmail": "ProtonMail",
+    "aws-ses": "AWS SES",
+}
 
 
 _VALID_METADATA_FIELDS = frozenset(
@@ -207,6 +220,15 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
                 valid_counterparts.append(entry)
             expected_counterparts = tuple(valid_counterparts)
 
+    # Parse optional exclude_matches_in_primary field
+    raw_exclude_primary = signal.get("exclude_matches_in_primary", False)
+    if not isinstance(raw_exclude_primary, bool):
+        logger.warning(
+            "Signal %r has non-bool 'exclude_matches_in_primary' — defaulting to False",
+            name,
+        )
+        raw_exclude_primary = False
+
     return Signal(
         name=name,
         category=signal.get("category", ""),
@@ -219,6 +241,7 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
         requires_signals=requires_signals,
         explain=explain,
         expected_counterparts=expected_counterparts,
+        exclude_matches_in_primary=raw_exclude_primary,
     )
 
 
@@ -380,6 +403,31 @@ def _evaluate_single_signal(signal: Signal, context: SignalContext) -> SignalMat
 
     # Check slug matches (if signal has candidates)
     matched = [slug for slug in signal.candidates if slug in context.detected_slugs]
+
+    # Optionally filter out matches whose display name is already present
+    # in the known primary email provider. Used by signals like "Legacy
+    # Provider Residue" to avoid flagging the current primary as residue
+    # of itself. The check considers both the strict primary (from MX) and
+    # the inferred likely_primary (from DKIM/identity evidence on
+    # gateway-fronted domains). When exclude_matches_in_primary is set and
+    # neither is known, the signal refuses to fire — a residue claim
+    # requires a known primary to be residue against.
+    if signal.exclude_matches_in_primary:
+        combined_primary = " | ".join(
+            p for p in (
+                context.primary_email_provider,
+                context.likely_primary_email_provider,
+            )
+            if p
+        )
+        if not combined_primary:
+            return None
+        combined_primary_lower = combined_primary.lower()
+        matched = [
+            slug for slug in matched
+            if _PROVIDER_SLUG_DISPLAY_NAMES.get(slug, "").lower() not in combined_primary_lower
+        ]
+
     slug_satisfied = len(matched) >= signal.min_matches
 
     # Check metadata conditions (if signal has any)

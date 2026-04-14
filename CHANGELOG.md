@@ -7,6 +7,157 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-04-14
+
+This release is a correctness and honesty pass driven by real-world runs
+against heavily-proxied enterprise targets. Several v0.9.0 outputs were
+confidently wrong or framed misleadingly; this release fixes them without
+changing the core architecture.
+
+### Fixed
+
+- **DKIM wording overclaim** — insights, exposure gaps, and the exposure
+  panel all said "DKIM not configured" when the tool had only checked
+  common selector names (mail, selector1, google, k1, etc.). Rewrote to
+  "No DKIM selectors observed at common names — actual DKIM status
+  unknown" so the absence of a match at known selectors is never
+  reported as a configured-or-not claim. 3 files touched.
+- **Legacy Provider Residue false positives** — the signal was firing
+  on the *current* primary email provider, so a GWS-primary domain
+  would show "Legacy Provider Residue: google-workspace" and a
+  dual-M365+GWS domain would show both primaries flagged as residue.
+  New `exclude_matches_in_primary` field on the Signal schema filters
+  matched slugs whose display name appears in either
+  `primary_email_provider` or the new `likely_primary_email_provider`.
+  When neither primary is known, the signal refuses to fire — a
+  residue claim is meaningless without a known primary to be residue
+  against.
+- **Multi-Cloud miscategorizing CDNs** — Cloudflare, Akamai, Fastly,
+  and Imperva were triggering a "Multi-Cloud" signal despite being
+  edge/CDN providers, not cloud providers. Split into two signals:
+  `Multi-Cloud` (AWS/Azure/GCP/fly.io only) and new `Edge Layering`
+  (CF/Akamai/Fastly/Imperva). New `edge_layering` posture rule.
+- **Absence engine treating competitors as missing counterparts** —
+  `expected_counterparts` entries on Enterprise Security Stack,
+  Enterprise IT Maturity, and DMARC Governance Investment listed
+  alternative vendors (Proofpoint/Mimecast/Barracuda for one;
+  Jamf/Kandji and CrowdStrike/SentinelOne for another). Removed
+  those three entries. The two remaining entries (AI Adoption,
+  Agentic AI Infrastructure) describe genuine complements.
+- **"Split-Brain Email Config" pejorative framing** — renamed to
+  "Dual Email Delivery Path" (phrase already used in insights).
+  Common deliberate enterprise pattern; previous name read as a
+  defect.
+- **Confidence overclaiming on degraded sources** — headline confidence
+  now downgrades one rung (High→Medium→Low) when any source is in
+  `degraded_sources`. Previously "High (4 sources)" would render
+  while the bottom note said "crt.sh unavailable" — a self-contradiction.
+- **v0.9.0 email topology fields were silently broken** —
+  `_detect_mx` in the DNS source never passed `source_type` or
+  `raw_value` to `ctx.add()`, so no MX EvidenceRecords were ever
+  created. `_compute_email_topology` filters evidence by
+  `source_type == "MX"` and consequently always returned
+  `(None, None)` on live data. The v0.9.0 `primary_email_provider`
+  and `email_gateway` fields have never populated from a real
+  lookup. Same issue on Google DKIM detections. Fixed both — MX,
+  Exchange DKIM, Google DKIM, and ESP DKIM all now create
+  EvidenceRecords with correct source types.
+- **v0.9.0 topology fields were never serialized to disk cache** —
+  `primary_email_provider`, `email_gateway`, `dmarc_pct`, and the
+  new `likely_primary_email_provider` are now persisted and restored
+  from `~/.recon/cache/*.json`.
+- **Related-domain dump indent regression** — continuation lines on
+  the Related: section wrapped to the panel border (column 2)
+  instead of the value column (column 14). Same issue on the
+  bottom degraded-sources note. Both now wrap cleanly with manual
+  column-aware indent.
+- **Windows cp1252 Unicode crash** — the panel uses `●` confidence
+  dots, `→` arrows, `—` em-dashes, and box-drawing glyphs that
+  cp1252 cannot encode. On Windows terminals with the default
+  codepage this crashed with `UnicodeEncodeError`. The console
+  initializer now reconfigures stdout/stderr to UTF-8 with
+  error replacement as a safety net.
+
+### Added
+
+- **`likely_primary_email_provider` — hedged downstream inference**
+  for gateway-fronted domains. When MX points to an enterprise email
+  gateway (Proofpoint, Mimecast, Symantec, Barracuda, Trellix, Trend
+  Micro, Cisco IronPort / Secure Email) and no direct provider
+  appears in MX, non-MX evidence (DKIM selectors, identity endpoint
+  responses, TXT verification tokens) is scanned for provider slugs.
+  When found, the tool emits `likely_primary_email_provider` and
+  the Provider line renders as e.g. *"Proofpoint (email gateway,
+  likely delivering to Google Workspace + Microsoft 365)"*. Hedged
+  on purpose: the word "likely" in the field name is load-bearing.
+  Never set when `primary_email_provider` is also set, so the two
+  fields do not contradict each other. Plumbed through `TenantInfo`,
+  `SignalContext`, the formatter `detect_provider` helper, the
+  residue-guard filter, the JSON output, and the disk cache.
+- **New `Edge Layering` signal** — fires on 2+ CDN/edge providers
+  (Cloudflare/Akamai/Fastly/Imperva) as a deliberate hardening
+  indicator. Also added `edge_layering` posture rule.
+- **B1: single-source detection annotation in the default panel** —
+  service names backed by only one weak evidence type render with a
+  dim `*` suffix and a one-line footnote explaining the marker.
+  No information loss. Uses the existing v0.3.0 per-detection
+  corroboration scoring.
+- **B2: related-domains truncation** — default panel shows the first
+  10 priority-sorted related domains (via existing HIGH_SIGNAL_PREFIXES
+  ordering) with a dim footer `…and N more — use --full for the
+  complete list`. Full list still renders behind `--domains` or
+  `--full`. Continuation lines and footer manually wrapped to the
+  value column.
+- **B3: panel color hierarchy for insights** — neutral insights
+  render in dim so they read as a scannable secondary column below
+  the services list. `Label: value`–shaped insights get a bold-dim
+  label with the value in normal-dim. Warnings and hedged insights
+  punch through in terracotta; transitions in amber.
+- **12 new synthetic regression tests** in `tests/test_hardened_corpus.py`
+  across six archetypes (hardened edge, dual-provider baseline, true
+  legacy residue, dormant/parked, small-shop-on-CDN, and the new
+  likely-primary inference cases). Every fixture uses fabricated
+  slugs — no real company names anywhere.
+- **6 new regression guards** for `_compute_email_topology` covering
+  the likely-primary inference paths.
+- 1165 total tests (was 1147), 100% passing.
+
+### Changed
+
+- `TenantInfo.likely_primary_email_provider` — new field, defaults to
+  `None`, backward compatible.
+- `SignalContext.likely_primary_email_provider` — new field, defaults
+  to `None`, backward compatible.
+- `Signal.exclude_matches_in_primary` — new field, defaults to `False`,
+  backward compatible. When `True`, `_evaluate_single_signal` filters
+  matched slugs whose display name appears in the combined
+  primary/likely-primary string, and refuses to fire when neither is
+  known.
+- `_compute_email_topology` now returns a triple
+  `(primary_email_provider, email_gateway, likely_primary_email_provider)`
+  instead of a pair. Call sites and tests updated.
+- `detect_provider()` in `formatter.py` accepts an optional
+  `likely_primary_email_provider` parameter and renders the hedged
+  "email gateway, likely delivering to X" form when appropriate.
+- `google_identity.py` now emits a second `EvidenceRecord` with
+  `slug="google-workspace"` (in addition to `google-federated` or
+  `google-managed`) so the inference path can see Google as a
+  downstream provider on gateway-fronted domains.
+- `tests/test_integration.py` — replaced real corporate apex
+  references (`microsoft.com`, `google.com`) with RFC-2606 reserved
+  `example.com` and `example.org`. Repo is now clean of real
+  company names outside of fingerprint detection targets and the
+  Contoso/Northwind/Fabrikam fictional-example convention.
+- Refined roadmap with a tight "Now / Soon / Later" plan driven by
+  real-world findings from hardened enterprise targets.
+
+### Removed
+
+- `expected_counterparts` from Enterprise Security Stack, Enterprise
+  IT Maturity, and DMARC Governance Investment (see Fixed above).
+  Tests rewritten as regression guards that pin the *absence* of
+  those counterparts.
+
 ## [0.9.0] — 2026-04-14
 
 ### Added

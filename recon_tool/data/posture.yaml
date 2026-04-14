@@ -118,9 +118,17 @@ observations:
     category: infrastructure
     salience: medium
     condition:
-      slugs_any: [aws-route53, aws-cloudfront, aws-elb, aws-s3, azure-dns, azure-cdn, azure-appservice, gcp-dns, gcp-app, cloudflare, akamai, fastly]
+      slugs_any: [aws-route53, aws-cloudfront, aws-elb, aws-s3, azure-dns, azure-cdn, azure-appservice, gcp-dns, gcp-app]
       slugs_min: 3
     template: "Infrastructure spans multiple cloud providers ({matched_slugs})"
+
+  - name: edge_layering
+    category: infrastructure
+    salience: medium
+    condition:
+      slugs_any: [cloudflare, akamai, fastly, imperva]
+      slugs_min: 2
+    template: "Multiple CDN/edge providers observed ({matched_slugs})"
 
   - name: single_dns_provider
     category: infrastructure
