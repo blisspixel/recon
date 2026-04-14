@@ -32,6 +32,10 @@ docs/accuracy.md
 *.swp
 *.swo
 
+# Claude Code local settings
+.claude/
+CLAUDE.local.md
+
 # OS
 .DS_Store
 Thumbs.db
