@@ -18,6 +18,7 @@ import httpx
 
 from recon_tool.http import http_client
 from recon_tool.models import CertSummary
+from recon_tool.retry import retry_on_transient
 
 logger = logging.getLogger("recon")
 
@@ -302,71 +303,139 @@ class CertSpotterProvider:
     """CertIntelProvider backed by the CertSpotter free API.
 
     Zero API keys, zero credentials. Uses the public unauthenticated endpoint.
+
+    Pagination (v0.9.2): CertSpotter returns issuances in pages. Without
+    pagination a single request returns ~100 entries for small domains but
+    silently truncates on large targets — producing the enrichment
+    asymmetry observed on bank-scale domains (one run returned 5 related
+    subdomains, another returned 100+). This provider now follows the
+    ``after=`` cursor up to ``_MAX_PAGES`` pages, stopping early when
+    enough subdomains have been collected or when the API returns an
+    empty page.
+
+    Rate limits: CertSpotter's free tier has weekly IP quotas. When the
+    API returns a 429 or an empty first page, we stop and return what
+    we have. The caller sees a smaller but non-zero result rather than
+    a failure.
     """
 
     _BASE_URL = "https://api.certspotter.com/v1/issuances"
+    # Maximum number of pages to fetch. 4 pages × ~256 entries/page covers
+    # most enterprise domains while bounding total latency and respecting
+    # the free-tier quota. Tuned to stay well below MAX_SUBDOMAINS cap.
+    _MAX_PAGES = 4
 
     @property
     def name(self) -> str:
         return "certspotter"
 
-    async def query(self, domain: str) -> tuple[list[str], CertSummary | None]:
-        """Query CertSpotter for subdomain discovery and cert metadata.
-
-        Raises on any failure so the fallback chain can proceed.
-        """
-        params = {
+    @retry_on_transient()
+    async def _fetch_page(
+        self,
+        client: httpx.AsyncClient,
+        domain: str,
+        after_cursor: str | None,
+    ) -> httpx.Response:
+        """Fetch a single CertSpotter page. Decorated with retry_on_transient
+        so a transient httpx error on one page doesn't break the whole
+        pagination loop. Returns the raw httpx Response so the caller can
+        inspect status_code (429 vs 200 vs other)."""
+        params: dict[str, str | list[str]] = {
             "domain": domain,
             "include_subdomains": "true",
             "expand": ["dns_names", "issuer"],
         }
-        async with http_client(timeout=_CT_TIMEOUT) as client:
-            resp = await client.get(self._BASE_URL, params=params)
-            if resp.status_code != 200:
-                msg = f"CertSpotter returned HTTP {resp.status_code} for {domain}"
-                raise httpx.HTTPStatusError(msg, request=resp.request, response=resp)
-            data = resp.json()
+        if after_cursor is not None:
+            params["after"] = after_cursor
+        return await client.get(self._BASE_URL, params=params)
 
-        if not isinstance(data, list):
+    async def query(self, domain: str) -> tuple[list[str], CertSummary | None]:
+        """Query CertSpotter for subdomain discovery and cert metadata.
+
+        Iterates through up to ``_MAX_PAGES`` paginated responses using
+        CertSpotter's ``after=<issuance_id>`` cursor. Each page's results
+        are accumulated into a single raw-names list before filtering.
+        Stops early when a page is empty, when a 429 is returned, or when
+        the filtered subdomain count already exceeds ``MAX_SUBDOMAINS``.
+
+        Each page fetch is wrapped in ``retry_on_transient`` so a single
+        transient connection error doesn't break the entire pagination —
+        the retry decorator gives each page two retries before giving up.
+
+        Raises on unrecoverable failures (e.g. an HTTP 5xx that survives
+        retry, or a 4xx other than 429) so the fallback chain can proceed.
+        A 429 response is NOT raised — the provider returns the data
+        collected so far (which may be partial) and the caller can decide
+        whether that's enough.
+        """
+        all_raw_names: list[str] = []
+        all_cert_entries: list[dict[str, str | int | None]] = []
+        after_cursor: str | None = None
+
+        async with http_client(timeout=_CT_TIMEOUT) as client:
+            for _page_idx in range(self._MAX_PAGES):
+                resp = await self._fetch_page(client, domain, after_cursor)
+                if resp.status_code == 429:
+                    # Rate-limited — stop and return what we have so far.
+                    # The caller will see partial but usable data, and the
+                    # result is still better than a cascade failure.
+                    break
+                if resp.status_code != 200:
+                    msg = f"CertSpotter returned HTTP {resp.status_code} for {domain}"
+                    raise httpx.HTTPStatusError(msg, request=resp.request, response=resp)
+
+                data = resp.json()
+                if not isinstance(data, list) or not data:
+                    # Empty page — we've reached the end of the issuance list.
+                    break
+
+                # Extract dns_names and cert metadata from each issuance
+                last_id: str | None = None
+                for issuance in data:
+                    if not isinstance(issuance, dict):
+                        continue
+
+                    issuance_id = issuance.get("id")
+                    if isinstance(issuance_id, (str, int)):
+                        last_id = str(issuance_id)
+
+                    dns_names = issuance.get("dns_names", [])
+                    if isinstance(dns_names, list):
+                        for name in dns_names:
+                            if isinstance(name, str):
+                                all_raw_names.append(name.strip())
+
+                    issuer = issuance.get("issuer")
+                    issuer_name = None
+                    if isinstance(issuer, dict):
+                        issuer_name = issuer.get("friendly_name") or issuer.get("name")
+                    not_before = issuance.get("not_before")
+                    not_after = issuance.get("not_after")
+                    all_cert_entries.append(
+                        {
+                            "issuer_id": issuer_name,
+                            "issuer_name": issuer_name,
+                            "not_before": not_before,
+                            "not_after": not_after,
+                        }
+                    )
+
+                # If we already have enough unique candidate names to fill
+                # MAX_SUBDOMAINS after filtering, stop early — no point
+                # paying for more pages.
+                if len(set(all_raw_names)) >= MAX_SUBDOMAINS * 2:
+                    break
+
+                # Advance the cursor. If the response didn't include ids
+                # we can't paginate any further.
+                if last_id is None:
+                    break
+                after_cursor = last_id
+
+        if not all_raw_names and not all_cert_entries:
             return [], None
 
-        # Extract subdomain names from dns_names arrays
-        raw_names: list[str] = []
-        cert_entries: list[dict[str, str | int | None]] = []
-
-        for issuance in data:
-            if not isinstance(issuance, dict):
-                continue
-
-            # Subdomain extraction from dns_names
-            dns_names = issuance.get("dns_names", [])
-            if isinstance(dns_names, list):
-                for name in dns_names:
-                    if isinstance(name, str):
-                        raw_names.append(name.strip())
-
-            # Cert metadata extraction
-            issuer = issuance.get("issuer")
-            issuer_name = None
-            if isinstance(issuer, dict):
-                issuer_name = issuer.get("friendly_name") or issuer.get("name")
-
-            not_before = issuance.get("not_before")
-            not_after = issuance.get("not_after")
-
-            # Use a hash of issuer_name as issuer_id for diversity counting
-            cert_entries.append(
-                {
-                    "issuer_id": issuer_name,
-                    "issuer_name": issuer_name,
-                    "not_before": not_before,
-                    "not_after": not_after,
-                }
-            )
-
-        subdomains = filter_subdomains(raw_names, domain)
-
+        subdomains = filter_subdomains(all_raw_names, domain)
         now = datetime.now(timezone.utc)
-        cert_summary = build_cert_summary(cert_entries, now)
-
+        cert_summary = build_cert_summary(all_cert_entries, now)
         return subdomains, cert_summary

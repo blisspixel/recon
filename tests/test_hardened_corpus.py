@@ -90,7 +90,7 @@ class TestHardenedEdgeArchetype:
 
     def test_a4_legacy_provider_residue_does_not_flag_primary(self) -> None:
         names = _names(self._fixture())
-        assert "Legacy Provider Residue" not in names
+        assert "Secondary Email Provider Observed" not in names
 
     def test_a5_dual_email_delivery_path_fires(self) -> None:
         names = _names(self._fixture())
@@ -153,7 +153,7 @@ class TestDualProviderBaseline:
             dmarc_policy="reject",
             primary_email_provider="Microsoft 365 + Google Workspace",
         )
-        assert "Legacy Provider Residue" not in _names(ctx)
+        assert "Secondary Email Provider Observed" not in _names(ctx)
 
 
 class TestLegacyResidueStillFiresForTrueResidue:
@@ -171,7 +171,7 @@ class TestLegacyResidueStillFiresForTrueResidue:
             primary_email_provider="Microsoft 365",
         )
         # google-workspace is in slugs but not in primary → true residue
-        assert "Legacy Provider Residue" in _names(ctx)
+        assert "Secondary Email Provider Observed" in _names(ctx)
 
     def test_residue_does_not_fire_when_only_primary_present(self) -> None:
         ctx = _ctx(
@@ -179,7 +179,7 @@ class TestLegacyResidueStillFiresForTrueResidue:
             dmarc_policy="reject",
             primary_email_provider="Microsoft 365",
         )
-        assert "Legacy Provider Residue" not in _names(ctx)
+        assert "Secondary Email Provider Observed" not in _names(ctx)
 
 
 class TestDormantParkedNegative:
@@ -218,7 +218,7 @@ class TestSmallShopCdnNegative:
             dmarc_policy="quarantine",
             primary_email_provider="Google Workspace",
         )
-        assert "Legacy Provider Residue" not in _names(ctx)
+        assert "Secondary Email Provider Observed" not in _names(ctx)
 
 
 class TestLikelyPrimaryInference:
@@ -315,4 +315,4 @@ class TestLikelyPrimaryInference:
             likely_primary_email_provider="Google Workspace",
         )
         names = {m.name for m in evaluate_signals(ctx)}
-        assert "Legacy Provider Residue" not in names
+        assert "Secondary Email Provider Observed" not in names

@@ -5,7 +5,7 @@ Validates:
 - Enhanced detect_provider() formatting — all 5 topology cases + backward compat (11.2)
 - Email topology insights (11.3)
 - "Email Gateway Topology" signal (11.4)
-- "Legacy Provider Residue" signal (11.5)
+- "Secondary Email Provider Observed" signal (11.5)
 - Property 1: Primary Email Provider Classification from EvidenceRecords (11.6)
 - Requirements: 1.1–1.5, 2.1–2.5, 3.1–3.3, 4.1–4.4, 21.6, 21.12
 """
@@ -237,10 +237,15 @@ class TestDetectProviderFormatting:
         assert "Microsoft 365" in result
         assert "Google Workspace" in result
 
-    def test_backward_compat_no_slugs(self) -> None:
-        """Backward compat: No slugs → 'Unknown'."""
+    def test_no_slugs_returns_explicit_unknown(self) -> None:
+        """With no slugs and no topology data, return an explicit "unknown"
+        message that tells the user nothing matched. v0.9.2 extended the
+        bare "Unknown" fallback to explain WHY — so users know the tool
+        looked and came up empty, rather than silently rendering a generic
+        label that could be confused with "not queried"."""
         result = detect_provider(services=(), slugs=())
-        assert result == "Unknown"
+        assert result.startswith("Unknown")
+        assert "no known provider pattern matched" in result
 
     def test_primary_only_no_gateway_no_secondary(self) -> None:
         """Primary only, no gateway, no secondary → just the provider name."""
@@ -389,11 +394,11 @@ class TestEmailGatewayTopologySignal:
         assert len(topology) == 0
 
 
-# ── 11.5: "Legacy Provider Residue" signal ───────────────────────────
+# ── 11.5: "Secondary Email Provider Observed" signal ───────────────────────────
 
 
 class TestLegacyProviderResidueSignal:
-    """Verify the Legacy Provider Residue signal fires correctly."""
+    """Verify the Secondary Email Provider Observed signal fires correctly."""
 
     def setup_method(self) -> None:
         reload_signals()
@@ -407,7 +412,7 @@ class TestLegacyProviderResidueSignal:
                 primary_email_provider="Google Workspace",
             )
         )
-        residue = [s for s in result if s.name == "Legacy Provider Residue"]
+        residue = [s for s in result if s.name == "Secondary Email Provider Observed"]
         assert len(residue) == 1
         assert residue[0].confidence == "medium"
         assert residue[0].category == "Consistency"
@@ -420,7 +425,7 @@ class TestLegacyProviderResidueSignal:
                 primary_email_provider="Microsoft 365",
             )
         )
-        residue = [s for s in result if s.name == "Legacy Provider Residue"]
+        residue = [s for s in result if s.name == "Secondary Email Provider Observed"]
         assert len(residue) == 1
 
     def test_does_not_fire_when_primary_is_none(self) -> None:
@@ -435,19 +440,19 @@ class TestLegacyProviderResidueSignal:
         false-positive residue report on the secondary-via-TXT detections.
         """
         result = evaluate_signals(_ctx({"microsoft365"}, primary_email_provider=None))
-        residue = [s for s in result if s.name == "Legacy Provider Residue"]
+        residue = [s for s in result if s.name == "Secondary Email Provider Observed"]
         assert len(residue) == 0
 
     def test_does_not_fire_when_primary_is_empty(self) -> None:
         """Signal does not fire when primary_email_provider is empty string."""
         result = evaluate_signals(_ctx({"microsoft365"}, primary_email_provider=""))
-        residue = [s for s in result if s.name == "Legacy Provider Residue"]
+        residue = [s for s in result if s.name == "Secondary Email Provider Observed"]
         assert len(residue) == 0
 
     def test_does_not_fire_without_provider_slug(self) -> None:
         """Signal does not fire when no provider slug (m365/gws) is detected."""
         result = evaluate_signals(_ctx({"proofpoint"}, primary_email_provider="Microsoft 365"))
-        residue = [s for s in result if s.name == "Legacy Provider Residue"]
+        residue = [s for s in result if s.name == "Secondary Email Provider Observed"]
         assert len(residue) == 0
 
 

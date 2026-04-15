@@ -9,130 +9,75 @@ recon contoso.com
 ```
 
 ```
-╭──────────────────────────── Contoso Ltd ─────────────────────────────╮
-│                                                                      │
-│  Company:    Contoso Ltd                                             │
-│  Domain:     contoso.onmicrosoft.com                                 │
-│  Provider:   Microsoft 365 + Google Workspace                        │
-│  Tenant ID:  a1b2c3d4-e5f6-7890-abcd-ef1234567890                    │
-│  Region:     NA                                                      │
-│  Auth:       Managed                                                 │
-│  GWS Auth:   Managed                                                 │
-│  Confidence: ●●● High (4 sources)                                    │
-│  Services:   AWS CloudFront, AWS Elastic Load Balancer,              │
-│              DKIM (Exchange Online), Google (site verified),         │
-│              Google Workspace, Imperva (Incapsula), Microsoft 365,   │
-│              Okta, Salesforce Marketing Cloud                        │
-│                                                                      │
-│  Insights:   Cloud-managed identity indicators (Entra ID native)     │
-│              Google Workspace: Managed identity (Google-native)      │
-│              Email security 2/5 moderate (DMARC reject, DKIM)        │
-│              Dual provider: Google + Microsoft coexistence           │
-│              Security stack: Okta (identity), Imperva (WAF)          │
-│              Enterprise Security Stack: okta, imperva                │
-│              Multi-Cloud: aws-cloudfront, aws-elb                    │
-│              Dual Email Provider: microsoft365, google-workspace     │
-│              Google-Native Identity: google-workspace, google-site,  │
-│              google-managed                                          │
-│                                                                      │
-│  Certs:      280 total, 10 in last 90d, 3 issuers (DigiCert,         │
-│              Entrust, Sectigo)                                       │
-│                                                                      │
-│  Related:    api.contoso.com, cdn.contoso.com, dev.contoso.com,      │
-│              shop.contoso.com, staging.contoso.com                   │
-│                                                                      │
-╰──────────────────────────────────────────────────────────────────────╯
+┌──────────────────────────────── Contoso Ltd ────────────────────────────────┐
+│                                                                             │
+│    Company:    Contoso Ltd                                                  │
+│    Domain:     contoso.onmicrosoft.com                                      │
+│    Provider:   Microsoft 365 (primary email via Proofpoint gateway);        │
+│                Google Workspace (secondary)                                 │
+│    Tenant ID:  a1b2c3d4-e5f6-7890-abcd-ef1234567890                         │
+│    Region:     NA                                                           │
+│    Auth:       Federated                                                    │
+│    GWS Auth:   Managed                                                      │
+│    Confidence: ●●● High (4 sources)                                         │
+│    Services:   AWS Route 53, Atlassian (Jira/Confluence)*, BIMI,            │
+│                CAA: DigiCert, Cloudflare, DocuSign*, Google Workspace,      │
+│                Microsoft 365, Okta, Proofpoint, Salesforce*, Slack          │
+│                * single-source — --explain to see evidence                  │
+│                                                                             │
+│    Insights:   Federated identity indicators (likely ADFS/Okta/Ping —       │
+│                enterprise SSO)                                              │
+│                Email security 4/5 strong (DMARC reject, DKIM, SPF strict,   │
+│                BIMI)                                                        │
+│                Email gateway: Proofpoint in front of Exchange               │
+│                Email delivery path: Proofpoint gateway → Microsoft 365 +    │
+│                Google Workspace                                             │
+│                Security stack: Okta (identity), Wiz (cloud security)        │
+│                Edge Layering: cloudflare, akamai                            │
+│                Dual Email Provider: microsoft365, google-workspace          │
+│                                                                             │
+│    Certs:      280 total, 10 in last 90d, 3 issuers (DigiCert, Entrust,     │
+│                Sectigo)                                                     │
+│                                                                             │
+│    Related:    api.contoso.com, cdn.contoso.com, dev.contoso.com,           │
+│                login.contoso.com, portal.contoso.com, shop.contoso.com,     │
+│                sso.contoso.com, staging.contoso.com, status.contoso.com,    │
+│                support.contoso.com                                          │
+│                …and 47 more — use --full for the complete list              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-> This example uses [Microsoft's fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam). Tenant IDs, domains, and service lists are fabricated. No real company is depicted.
-
-Give it a domain. recon queries public DNS, identity endpoints, and certificate transparency logs — the signals organizations emit for email, SaaS, and cloud infrastructure to function — and correlates them into structured output.
-
-```bash
-recon northwindtraders.com --explain      # see why each signal fired
-```
+> Examples use [Microsoft's fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam). Tenant IDs, services, and domains are fabricated. No real company is depicted.
 
 Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP server](docs/mcp.md) for AI agents.
-
-## What it does
-
-recon collects public signals (DNS TXT/MX/CNAME/NS/SRV/CAA records, Microsoft and Google identity endpoints, certificate transparency logs) and matches them against a set of YAML-defined fingerprint and signal rules. Each signal alone is unremarkable — a TXT record, a CNAME delegation, a certificate pattern. The art is in the correlation. The matching is rule-based, not machine learning, but combining scattered records into a coherent view of what an organization is actually running is where the value comes from.
-
-It's an early-stage project maintained by a solo developer. The fingerprint database covers 208 SaaS services and the signal engine has 45 rules across 4 layers. Coverage and accuracy will vary by domain — organizations with rich public DNS get detailed results; those with minimal records or heavy proxying will produce sparse output. Results should be treated as indicators, not ground truth.
-
-## How it compares
-
-recon occupies a specific niche: it fuses DNS, identity endpoints, and CT logs into correlated output. Most existing tools do one of these well but not the combination.
-
-| | recon | dig / nslookup | dnsrecon | Paid tools |
-|---|---|---|---|---|
-| Zero credentials | ✓ | ✓ | ✓ | varies |
-| M365 / GWS tenant detection | ✓ | ✗ | ✗ | varies |
-| Email security scoring | ✓ | ✗ | ✗ | varies |
-| SaaS fingerprinting | 208 services | ✗ | ✗ | typically more |
-| Signal correlation rules | 45 rules | ✗ | ✗ | varies |
-| Certificate intelligence | ✓ | ✗ | ✗ | varies |
-| MCP server for AI agents | ✓ | ✗ | ✗ | rare |
-| Custom YAML extensibility | ✓ | ✗ | ✗ | varies |
-
-Paid tools (BuiltWith, SecurityTrails, etc.) generally have broader coverage, more data sources, and battle-tested accuracy. recon's advantage is that it's free, requires no accounts, and runs locally.
 
 ## Install
 
 Requires Python 3.10+.
 
 ```bash
-pip install recon-tool                    # from PyPI
-pip install -e .                          # or from source
-recon doctor                              # verify connectivity
+pip install recon-tool                 # from PyPI
+pip install -U recon-tool              # upgrade an existing install
+recon doctor                           # verify connectivity
 ```
 
 ## Usage
 
 ```bash
-recon northwindtraders.com                # default panel output
-recon northwindtraders.com --json         # structured JSON
-recon northwindtraders.com --md           # markdown report
-recon northwindtraders.com --full         # everything (services + domains + posture)
-recon northwindtraders.com --services     # M365 vs GWS vs tech stack split
-recon northwindtraders.com --posture      # neutral posture observations
-recon northwindtraders.com --compare prev.json  # delta: what changed since last run
-recon northwindtraders.com --chain --depth 2    # recursive domain discovery
-recon northwindtraders.com --no-cache     # bypass disk cache
-recon northwindtraders.com --exposure     # security posture assessment
-recon northwindtraders.com --gaps         # hardening gap analysis
-recon northwindtraders.com --explain      # show why each signal fired
-recon batch domains.txt --json            # batch mode (default 5 concurrent)
-recon batch domains.txt --csv             # batch CSV for spreadsheets
-recon batch domains.txt --json -c 10      # batch with 10 concurrent
-recon doctor                              # connectivity check
-recon doctor --fix                        # scaffold custom config templates
-recon mcp                                 # start MCP server (stdio)
+recon contoso.com                      # default panel
+recon contoso.com --explain            # show why each signal fired
+recon contoso.com --full               # everything (services + domains + posture)
+recon contoso.com --json               # structured JSON for piping
+recon batch domains.txt --json         # batch lookup
+recon mcp                              # start MCP server (stdio)
 ```
 
-Input is normalized automatically — URLs, schemes, `www.` prefixes, paths, and whitespace are all stripped.
-
-## What you get
-
-| Signal | Source |
-|--------|--------|
-| Company name, tenant ID, auth type | Microsoft OIDC + GetUserRealm |
-| Google Workspace auth type, modules | Google login flow + CNAME probing + BIMI VMC |
-| Email provider | MX records |
-| Email security score (0–5) | DMARC + DKIM + SPF + MTA-STS + BIMI |
-| 208 SaaS services | TXT, SPF, MX, CNAME, NS, CAA, SRV, DKIM selectors, DMARC RUA |
-| Signal intelligence (45 rules) | YAML-based correlation rules with cross-reference conditions |
-| Certificate intelligence | crt.sh + CertSpotter: issuance velocity, issuer diversity |
-| Posture observations | Neutral factual analysis across email, identity, infrastructure |
-| Related domains | CNAME breadcrumbs + certificate transparency |
-| Delta / change detection | Compare current vs. previous JSON export |
-| Security posture assessment | Exposure scoring, hardening gaps, comparative analysis |
-
-All from public sources. Zero authentication. Results vary by domain — sparse DNS means sparse output.
+See [docs/](docs/) for the full CLI reference, fingerprint and signal documentation, and MCP setup.
 
 ## MCP Server
 
-recon runs as an MCP server for Claude, Cursor, VS Code, ChatGPT, or any MCP client:
+recon runs as an MCP server for Claude, Cursor, VS Code, ChatGPT, or any MCP client. The Model Context Protocol lets AI agents call tools like recon directly from your chat.
 
 ```json
 {
@@ -146,41 +91,20 @@ recon runs as an MCP server for Claude, Cursor, VS Code, ChatGPT, or any MCP cli
 }
 ```
 
-Then ask your AI: "Run a recon lookup on northwindtraders.com and analyze the posture."
+Then ask your AI: *"Run a recon lookup on contoso.com and tell me what's running."*
 
-For deeper analysis, try: "Look up contoso.com with explain=true, then assess_exposure and find_hardening_gaps. Simulate hardening with DMARC reject and MTA-STS enforce, and tell me the new posture score."
-
-16 MCP tools available: `lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `compare_postures`, `chain_lookup`, `reload_data`, `get_fingerprints`, `get_signals`, `explain_signal`, `test_hypothesis`, `simulate_hardening`, `inject_ephemeral_fingerprint`, `reevaluate_domain`, `list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`.
-
-All tools are read-only and idempotent. The agentic tools (`test_hypothesis`, `simulate_hardening`, `explain_signal`) operate on cached data with zero additional network calls. The ephemeral fingerprint tools (`inject_ephemeral_fingerprint`, `reevaluate_domain`, `list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`) let AI agents inject temporary detection patterns and re-evaluate cached data.
-
-See [docs/mcp.md](docs/mcp.md) for setup details, available tools, and config file locations per client.
-
-## Documentation
-
-| Doc | Contents |
-|-----|----------|
-| [Fingerprints](docs/fingerprints.md) | Detection types, custom fingerprints, email security scoring |
-| [Signals](docs/signals.md) | Signal rules, layers, metadata conditions, custom signals |
-| [MCP Server](docs/mcp.md) | AI agent integration setup, tools, config locations |
-| [Roadmap](docs/roadmap.md) | What's planned, what's not, and why |
-| [Legal](docs/legal.md) | Disclaimer, accuracy, fictional examples |
-| [Contributing](CONTRIBUTING.md) | How to add fingerprints, signals, and code |
-| [Changelog](CHANGELOG.md) | Version history |
+See [docs/mcp.md](docs/mcp.md) for the full tool list, advanced agentic workflows, and per-client config locations.
 
 ## Limitations
 
-- **Coverage depends on public DNS.** Organizations behind Cloudflare, with minimal DNS records, or that don't publish SaaS verification tokens will return near-empty results. This is a fundamental constraint of passive-only collection — there's no workaround.
-- **Fingerprints will go stale.** SaaS providers rebrand, change DNS patterns, and get acquired. 208 fingerprints maintained by a solo developer will fall behind. Community contributions are the only way this scales.
-- **Signal rules are heuristic.** The 44 YAML rules produce useful indicators, not definitive assessments. False positives happen. Missed signals happen. Don't make business decisions based solely on this output.
-- **No accuracy benchmarks yet.** There's no published precision/recall data. The tool can produce confident-looking output that's wrong. Treat it as a starting point for investigation, not a source of truth.
-- **Early-stage project.** This is a solo developer effort. It works, but it hasn't been battle-tested by a community yet. Expect rough edges and breaking changes.
+- **Coverage depends on public DNS.** Organizations behind heavy proxies, with minimal DNS records, or that don't publish SaaS verification tokens will return sparse results. This is fundamental to passive-only collection. When sources transiently fail, the CLI tells you which one and why so you can retry or accept the partial answer.
+- **Heuristic, not ground truth.** The fingerprint database and signal rules are rule-based and solo-maintained. Confident-looking output can still be wrong. Treat results as indicators for investigation, not as definitive assessments. Don't make business decisions based solely on this output.
 
 ## Development
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/                          # 1165 tests
+pytest tests/                          # 1344 tests, 89% coverage
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 ```

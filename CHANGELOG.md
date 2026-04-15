@@ -7,7 +7,199 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.1] — 2026-04-14
+## [0.9.2] — 2026-04-14
+
+This release is a reliability and honesty pass driven by real-world batch
+runs across 15 diverse enterprise domains. v0.9.1 was catastrophically
+unreliable on CT-heavy targets (27–93% batch failure rate depending on
+upstream CT provider state). v0.9.2 raises that to 100% on the same
+corpus while surfacing per-source failure reasons so users can see
+exactly what went wrong when a lookup is incomplete.
+
+### Breaking (for JSON / signal-name consumers)
+
+- The signal **"Legacy Provider Residue"** has been renamed to
+  **"Secondary Email Provider Observed"**. The detection logic and
+  `exclude_matches_in_primary` guard are unchanged — only the surface
+  name and description differ. Any downstream tool matching on the old
+  signal name (in `--json` output's `signals[].name`, in MCP tool
+  responses, or in `signals.yaml` overrides) needs to update its
+  reference. The rename is described under the Fixed section below.
+
+### Fixed
+
+- **Catastrophic batch timeout rate on CT-heavy domains.** The 60-second
+  aggregate resolver timeout cancelled the entire pipeline when crt.sh
+  and CertSpotter both exhausted retries, producing 27–93% failure rates
+  on enterprise targets depending on upstream CT state. Raised default
+  `RESOLVE_TIMEOUT` to 120 seconds and made it configurable via the
+  `--timeout` CLI flag.
+- **"No information found" hid real errors.** When every source
+  transiently failed, the CLI rendered a single generic message with no
+  indication of which source failed or why. `ReconLookupError` now
+  carries a `source_errors` tuple of `(source_name, reason)` pairs, and
+  the CLI renders each one as a dim second line so users can tell
+  whether the domain is genuinely empty or whether a transient failure
+  hid real data.
+- **No source-level retry for transient network failures.** The HTTP
+  transport layer retried 429/503 status codes, but timeouts and
+  connection resets caused individual sources to return immediately
+  with an error — cascading up to a false "no information" verdict on
+  domains that would have resolved fine on a retry. A new
+  `retry_on_transient` decorator in `recon_tool/retry.py` retries up to
+  two times on `httpx.TimeoutException`, `ConnectError`, `ConnectTimeout`,
+  `ReadError`, `WriteError`, `RemoteProtocolError`, `asyncio.TimeoutError`,
+  and `OSError`, with 0.5s and 1.5s backoff. Applied to `OIDCSource`
+  and `GoogleIdentitySource` — the two single-point-of-failure sources
+  most sensitive to transient failures. UserRealm and DNS already have
+  internal fallback paths.
+- **CertSpotter pagination missing.** The provider sent a single GET
+  with no `after=` cursor, returning only the first page of issuances.
+  Large enterprise domains silently truncated to a fraction of their CT
+  footprint, and the caller had no idea the response was partial. Added
+  a pagination loop capped at 4 pages (controlled by `_MAX_PAGES`) with
+  graceful handling of HTTP 429 — on rate limit, the provider returns
+  what's been collected rather than raising.
+- **CT provider attribution invisible.** When crt.sh was degraded and
+  CertSpotter picked up the fallback, users saw the same generic
+  "Some sources unavailable (crt.sh)" note regardless of whether the
+  fallback produced 0 or 100 subdomains. New `ct_provider_used` and
+  `ct_subdomain_count` fields on `SourceResult` and `TenantInfo` track
+  which provider actually contributed, and the panel bottom Note line
+  now reads e.g. *"Some sources unavailable (crt.sh) — CT data via
+  certspotter (87 subdomains)"*. Plumbed through the disk cache too.
+- **"Legacy Provider Residue" mislabeled active dual-use.** On a major
+  dev platform owned by a major tech company (M365 primary + Google
+  Workspace secondary via DKIM), the signal fired as "Legacy Provider
+  Residue: google-workspace". But in that case, both providers are
+  actively used — not legacy residue at all. Renamed to **"Secondary
+  Email Provider Observed"** with neutral two-sided wording that
+  describes the observation without asserting whether it's active dual
+  use, migration residue, or a legacy tenant.
+- **Provider field silent when MX patterns don't match.** On
+  custom/self-hosted email setups, `primary_email_provider` came back
+  as `None` and the Provider line said just "Unknown". Rewrote the
+  fallback to "Unknown (no known provider pattern matched)" so users
+  understand that the tool looked and came up empty rather than
+  silently skipping MX analysis.
+- **`compute_inference_confidence` missed non-Microsoft corroboration.**
+  The corroboration check required `m365_detected`, `display_name`, or
+  `auth_type` on a non-OIDC source — fields that only populate for
+  Microsoft-side sources. A domain with a tenant_id from OIDC and
+  Google Workspace auth confirmation couldn't reach HIGH inference
+  confidence because the Google-side fields weren't recognized as
+  corroboration. Expanded the check to include `google_auth_type` and
+  `tenant_domains` as valid signals.
+- **Related-domains list indent regression.** (Carried over from
+  v0.9.1 — not a v0.9.2 change, but the bank-run validation exposed a
+  latent edge case where the footer line's text was slightly too long
+  for the panel, causing Rich to wrap the last word to the panel
+  margin. Shortened the footer text.)
+
+### Added
+
+- **`--timeout` CLI flag** — configurable per-lookup aggregate timeout,
+  defaults to 120s (was 60s hardcoded). The batch pipeline and every
+  resolve path honors the override.
+- **`retry_on_transient` decorator** (`recon_tool/retry.py`) — shared
+  async retry helper for source-level transient failures. Narrow
+  exception list, short backoff, bounded attempts. 12 unit tests
+  covering every transient exception class and the non-retry path.
+- **CertSpotter pagination loop** — `CertSpotterProvider.query` now
+  iterates up to `_MAX_PAGES` pages via the `after=<id>` cursor,
+  accumulating subdomains and cert metadata across the full response.
+  Stops early on 429, empty page, or missing issuance id.
+- **CT provider attribution fields** on `SourceResult` and `TenantInfo`:
+  `ct_provider_used` (which CT provider actually succeeded) and
+  `ct_subdomain_count` (how many came back after filtering). The count
+  is the **filtered** subdomain count — what's left after the wildcard
+  removal, noise-prefix skip, and `MAX_SUBDOMAINS` cap in
+  `filter_subdomains` — not the raw issuance count returned by the API.
+  Surfaced in the JSON output, the disk cache, and the panel bottom
+  Note (panel only when degraded sources are also present, so clean
+  runs aren't cluttered with reassurance text).
+- **`render_source_status_panel()`** in `formatter.py` — compact
+  per-source status panel (✓/✗ with brief reason) rendered under
+  `--explain` so users can see which sources succeeded and which
+  failed without needing `--verbose`. Previously only available in
+  the verbose status-line stream during resolution.
+- **Partial-success rendering at the merger boundary.** `merge_results`
+  already returned a partial `TenantInfo` when `tenant_id` was `None`
+  but any source produced services — v0.9.2 tightens the rejection
+  path so that when every source returns zero services AND zero
+  tenant_id, the raised `ReconLookupError` carries the concrete
+  per-source reasons instead of a generic message.
+- **18 new tests in `tests/test_retry.py`** covering the retry decorator
+  against every supported transient exception class, the non-retry
+  semantic-failure path, and instance-method binding.
+- **23 new tests in `tests/test_cache_roundtrip.py`** covering every
+  `TenantInfo` field including v0.9.1 topology fields and v0.9.2 CT
+  provider attribution. Fully exercises the serialize/deserialize
+  round-trip and the cache_put/cache_get disk operations in isolated
+  temp directories.
+- **23 new tests in `tests/test_posture_validation.py`** covering the
+  posture rule YAML validator (malformed rules, custom rule loading,
+  metadata condition edge cases).
+- **21 new tests in `tests/test_formatter_coverage.py`** covering panel
+  render edge cases (empty services, degraded + no CT, truncation,
+  single-source annotation, M365 classification).
+- **30 new tests in `tests/test_cli_coverage_extra.py`** covering
+  version and debug callbacks, doctor --fix scaffold, batch
+  validation and JSON/CSV modes, exposure/gaps/posture/explain/full/md
+  flag combinations, and mutually-exclusive output flag rejection.
+- **25 new tests in `tests/test_explanation_coverage.py`** covering
+  explanation insight classification branches, `explain_confidence`,
+  `explain_observations`, and `serialize_explanation` round-trip.
+- **4 new tests in `tests/test_merger_error_surfacing.py`** — R2
+  regression guards: source errors carried on the exception, partial
+  success when any source produced services, neutral message when
+  sources returned empty without errors.
+- **13 new tests in `tests/test_cert_providers.py`** covering the
+  CertSpotter pagination loop (cursor advance, 429 handling, empty
+  pages, missing id, MAX_PAGES cap).
+- **1310 total tests** (was 1165 on v0.9.1), 100% passing,
+  **88% total coverage** (was 84%), every core logic file ≥80%.
+
+### Changed
+
+- `ReconLookupError` — added `source_errors: tuple[tuple[str, str], ...]`
+  field carrying per-source failure reasons. Backward compatible
+  (defaults to empty tuple).
+- `TenantInfo` — added `ct_provider_used: str | None` and
+  `ct_subdomain_count: int` fields. Backward compatible.
+- `SourceResult` — added matching `ct_provider_used` and
+  `ct_subdomain_count` fields.
+- `detect_provider()` in `formatter.py` — when nothing matches, returns
+  *"Unknown (no known provider pattern matched)"* instead of the bare
+  "Unknown" label, so users know the tool looked and came up empty.
+- `compute_inference_confidence()` in `merger.py` — corroboration check
+  now accepts `google_auth_type` and `tenant_domains` as valid signals
+  in addition to the existing Microsoft-side fields. Raises HIGH
+  inference confidence on domains where tenant_id comes from OIDC and
+  corroboration comes from Google Identity.
+- `OIDCSource.lookup` and `GoogleIdentitySource.lookup` — refactored to
+  use a `_fetch` inner coroutine decorated with `retry_on_transient`.
+  External API is unchanged (still never raises; always returns a
+  `SourceResult`).
+- Signal rename in `data/signals.yaml`: "Legacy Provider Residue" →
+  "Secondary Email Provider Observed". Logic and `exclude_matches_in_primary`
+  guard unchanged; only the surface name and description are different.
+  All tests referencing the old name updated.
+- `docs/signals.md` and `tests/test_v090_provider.py` updated for the
+  rename.
+- `render_warning(domain, error=None)` in `formatter.py` — accepts an
+  optional `ReconLookupError` argument and renders its `source_errors`
+  as dim second lines. All CLI call sites updated.
+- Console initialization: `get_console()` now uses `cast(Any, ...)` on
+  `sys.stdout` / `sys.stderr` before calling `reconfigure()` so pyright
+  accepts the optional-method access pattern while still working
+  correctly on Windows where the Python 3.7+ `reconfigure` method
+  exists on `_io.TextIOWrapper`.
+
+### Removed
+
+- Nothing. v0.9.2 is purely additive + bug fixes.
+
 
 This release is a correctness and honesty pass driven by real-world runs
 against heavily-proxied enterprise targets. Several v0.9.0 outputs were

@@ -30,6 +30,7 @@ from recon_tool.models import (
     ExplanationRecord,
     MergeConflicts,
     Observation,
+    ReconLookupError,
     SourceResult,
     TenantInfo,
 )
@@ -68,6 +69,7 @@ __all__ = [
     "render_posture_panel",
     "render_sources_detail",
     "render_tenant_panel",
+    "render_source_status_panel",
     "render_verbose_sources",
     "render_warning",
     "set_console",
@@ -94,11 +96,14 @@ def get_console() -> Console:
     global _console  # noqa: PLW0603
     if _console is None:
         import sys
+        from typing import cast
         try:
-            if hasattr(sys.stdout, "reconfigure"):
-                sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
-            if hasattr(sys.stderr, "reconfigure"):
-                sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+            stdout_any: Any = cast(Any, sys.stdout)
+            if hasattr(stdout_any, "reconfigure"):
+                stdout_any.reconfigure(encoding="utf-8", errors="replace")
+            stderr_any: Any = cast(Any, sys.stderr)
+            if hasattr(stderr_any, "reconfigure"):
+                stderr_any.reconfigure(encoding="utf-8", errors="replace")
         except Exception as exc:  # noqa: BLE001
             logger.debug("stdout UTF-8 reconfigure failed: %s", exc)
         _console = Console()
@@ -278,7 +283,11 @@ def detect_provider(
             sec_str = ", ".join(secondary)
             parts.append(f"{sec_str} (no MX-based primary detected)")
 
-        return "; ".join(parts) if parts else "Unknown"
+        if parts:
+            return "; ".join(parts)
+        # Topology fields were provided but everything was None — still
+        # worth telling the user why the provider field is empty.
+        return "Unknown (no known provider pattern matched)"
 
     # Fallback: existing slug-based detection (backward compatible)
     slug_set = set(slugs)
@@ -293,7 +302,15 @@ def detect_provider(
         providers.append("ProtonMail")
     if not providers and "aws-ses" in slug_set:
         providers.append("AWS SES")
-    return " + ".join(providers) if providers else "Unknown"
+    if providers:
+        return " + ".join(providers)
+    # C2: when nothing matches any known provider, distinguish "we have no
+    # idea" from "MX observed but custom/self-hosted" when possible. The
+    # caller only has slugs here, so the best we can do is return a hint
+    # that invites the user to run --explain to see what was actually
+    # queried. "Unknown" stays as the word so the existing panel colour
+    # and alignment aren't disturbed.
+    return "Unknown (no known provider pattern matched)"
 
 
 def _wrap_service_list(
@@ -669,14 +686,27 @@ def render_tenant_panel(
                 text.append(indent)
                 text.append(line, style="dim italic")
 
-    # Degraded sources notice — subtle hint that results may be partial
+    # Degraded sources notice — surfaced ONLY when something needs flagging.
+    # On a clean run with no degraded sources and crt.sh succeeding, no Note
+    # line appears (Phase 2d: the happy-path footer was reassurance noise
+    # that didn't earn its space). When degradation occurs, the note also
+    # tells the user which CT provider actually ran via the fallback chain
+    # so they can distinguish "crt.sh was down, certspotter gave us 87" from
+    # "both CT providers failed completely". The CT provenance is also
+    # available in --json and --verbose for users who want it on every run.
     if info.degraded_sources:
         text.append("\n\n")
         text.append("  Note:       ", style="dim")
         note_max_width = 80 - 2 - 4 - 14
         note_indent = " " * 14
-        sources_list = ", ".join(info.degraded_sources)
-        note_text = f"Some sources unavailable ({sources_list}) — results may be incomplete."
+        note_parts: list[str] = [
+            f"Some sources unavailable ({', '.join(info.degraded_sources)})"
+        ]
+        if info.ct_provider_used:
+            note_parts.append(
+                f"CT data via {info.ct_provider_used} ({info.ct_subdomain_count} subdomains)"
+            )
+        note_text = " — ".join(note_parts) + "."
         for j, line in enumerate(_wrap_text(note_text, note_max_width)):
             if j > 0:
                 text.append("\n")
@@ -767,9 +797,20 @@ def render_sources_detail(results: list[SourceResult]) -> Table:
     return table
 
 
-def render_warning(domain: str) -> None:
-    """Print a yellow warning for not-found domains."""
-    get_console().print(f"[yellow]No information found for {domain}[/yellow]")
+def render_warning(domain: str, error: ReconLookupError | None = None) -> None:
+    """Print a yellow warning for not-found domains.
+
+    When ``error`` is provided and carries per-source failure reasons, the
+    concrete reasons are rendered as a dim second line so the user can tell
+    whether the domain is genuinely empty or whether a transient failure
+    hid real data. Without ``error`` (or when no source_errors are
+    populated), the original one-liner is used.
+    """
+    console = get_console()
+    console.print(f"[yellow]No information found for {domain}[/yellow]")
+    if error is not None and getattr(error, "source_errors", ()):
+        for name, reason in error.source_errors:
+            console.print(f"  [dim]{name}: {reason}[/dim]")
 
 
 def render_error(message: str) -> None:
@@ -814,6 +855,8 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "likely_primary_email_provider": info.likely_primary_email_provider,
         "email_gateway": info.email_gateway,
         "dmarc_pct": info.dmarc_pct,
+        "ct_provider_used": info.ct_provider_used,
+        "ct_subdomain_count": info.ct_subdomain_count,
     }
     if info.cert_summary is not None:
         d["cert_summary"] = {
@@ -1557,6 +1600,43 @@ def format_comparison_json(comparison: PostureComparison) -> str:
 
 
 # ── Explanation rendering ────────────────────────────────────────────────
+
+
+def render_source_status_panel(results: list[SourceResult]) -> Panel | None:
+    """Render a compact per-source status panel for ``--explain`` output.
+
+    Shows which sources were queried, which succeeded, what each one
+    returned (brief description), and what each failed one's error
+    was. This is the lighter-weight counterpart to ``render_verbose_sources``
+    which prints line-by-line status during resolution. The panel appears
+    once the resolve has completed and is intended to explain low-coverage
+    domains ("why is this panel mostly empty?").
+
+    Returns None when ``results`` is empty (nothing to render).
+    """
+    if not results:
+        return None
+    text = Text()
+    for i, result in enumerate(results):
+        if i > 0:
+            text.append("\n")
+        if result.is_success:
+            description = _source_success_description(result)
+            text.append("  ✓ ", style="#a3d9a5")
+            text.append(f"{result.source_name}", style="bold")
+            text.append(f" — {description}", style="dim")
+        else:
+            error_msg = result.error or "no data returned"
+            text.append("  ✗ ", style="#e07a5f")
+            text.append(f"{result.source_name}", style="bold")
+            text.append(f" — {error_msg}", style="dim")
+    return Panel(
+        text,
+        title="Source Status",
+        width=80,
+        padding=(1, 2),
+        border_style="dim",
+    )
 
 
 def render_explanations_panel(explanations: list[ExplanationRecord]) -> Panel:

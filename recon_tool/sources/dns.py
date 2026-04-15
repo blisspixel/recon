@@ -177,6 +177,8 @@ class _DetectionCtx:
         "_matched_fp_detections",
         "dmarc_pct",
         "raw_dns_records",
+        "ct_provider_used",
+        "ct_subdomain_count",
     )
 
     def __init__(self) -> None:
@@ -199,6 +201,12 @@ class _DetectionCtx:
         self._matched_fp_detections: set[tuple[str, str, str]] = set()
         self.dmarc_pct: int | None = None
         self.raw_dns_records: dict[str, list[str]] = {}
+        # R4 (v0.9.2): which CT provider actually contributed subdomains,
+        # and how many came back. Surfaced in the panel bottom Note so
+        # users can distinguish "crt.sh unavailable" from "certspotter
+        # pagination returned 87 entries". None until a provider succeeds.
+        self.ct_provider_used: str | None = None
+        self.ct_subdomain_count: int = 0
 
     def add(self, svc_name: str, slug: str | None = None, source_type: str = "", raw_value: str = "") -> None:
         """Register a detected service, optionally with its slug and evidence.
@@ -902,7 +910,13 @@ async def _detect_srv(ctx: _DetectionCtx, domain: str) -> None:
 
 
 async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
-    """Try CrtshProvider, fall back to CertSpotterProvider, mark degraded if both fail."""
+    """Try CrtshProvider, fall back to CertSpotterProvider, mark degraded if both fail.
+
+    On first successful provider, record the provider name and subdomain
+    count on the context so the panel can surface which provider actually
+    ran ("crt.sh (142 subdomains)" vs "certspotter (8 subdomains)"). This
+    makes enrichment asymmetry between runs visible instead of silent.
+    """
     providers: list[CertIntelProvider] = [CrtshProvider(), CertSpotterProvider()]
     for provider in providers:
         try:
@@ -910,6 +924,8 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
             ctx.related_domains.update(subdomains)
             if cert_summary is not None:
                 ctx.cert_summary = cert_summary
+            ctx.ct_provider_used = provider.name
+            ctx.ct_subdomain_count = len(subdomains)
             logger.debug("cert intel from %s for %s: %d subdomains", provider.name, domain, len(subdomains))
             return
         except Exception as exc:
@@ -1072,6 +1088,8 @@ class DNSSource:
                 site_verification_tokens=tuple(sorted(ctx.site_verification_tokens)),
                 mta_sts_mode=ctx.mta_sts_mode,
                 dmarc_pct=ctx.dmarc_pct,
+                ct_provider_used=ctx.ct_provider_used,
+                ct_subdomain_count=ctx.ct_subdomain_count,
                 raw_dns_records=tuple(
                     (rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals
                 ),
@@ -1089,6 +1107,8 @@ class DNSSource:
             site_verification_tokens=tuple(sorted(ctx.site_verification_tokens)),
             mta_sts_mode=ctx.mta_sts_mode,
             dmarc_pct=ctx.dmarc_pct,
+            ct_provider_used=ctx.ct_provider_used,
+            ct_subdomain_count=ctx.ct_subdomain_count,
             raw_dns_records=tuple((rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals),
         )
 

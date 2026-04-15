@@ -167,10 +167,10 @@ def lookup(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Per-source resolution status"),
     sources: bool = typer.Option(False, "--sources", help="Detailed source breakdown table"),
     timeout: float = typer.Option(
-        60.0,
+        120.0,
         "--timeout",
         "-t",
-        help="Max seconds for resolution (default: 60)",
+        help="Max seconds for the full resolve pipeline (default: 120)",
     ),
     posture: bool = typer.Option(False, "--posture", "-p", help="Show posture observations"),
     compare: str | None = typer.Option(None, "--compare", help="Compare against previous JSON export"),
@@ -570,7 +570,7 @@ async def _lookup(
     show_domains: bool,
     full: bool,
     show_sources: bool,
-    timeout: float = 60.0,
+    timeout: float = 120.0,
     show_posture: bool = False,
     compare_file: str | None = None,
     chain_mode: bool = False,
@@ -659,8 +659,8 @@ async def _lookup(
                     info, results = await resolve_tenant(validated, timeout=timeout)
             else:
                 info, results = await resolve_tenant(validated, timeout=timeout)
-        except ReconLookupError:
-            render_warning(domain)
+        except ReconLookupError as exc:
+            render_warning(domain, exc)
             raise typer.Exit(code=EXIT_NO_DATA) from None
         except Exception as exc:
             render_error(str(exc))
@@ -753,8 +753,8 @@ async def _lookup(
                 typer.echo(format_exposure_json(assessment))
             else:
                 console.print(render_exposure_panel(assessment))
-        except ReconLookupError:
-            render_warning(domain)
+        except ReconLookupError as exc:
+            render_warning(domain, exc)
             raise typer.Exit(code=EXIT_NO_DATA) from None
         except Exception as exc:
             render_error(str(exc))
@@ -796,8 +796,8 @@ async def _lookup(
                 typer.echo(format_gaps_json(report))
             else:
                 console.print(render_gaps_panel(report))
-        except ReconLookupError:
-            render_warning(domain)
+        except ReconLookupError as exc:
+            render_warning(domain, exc)
             raise typer.Exit(code=EXIT_NO_DATA) from None
         except Exception as exc:
             render_error(str(exc))
@@ -898,14 +898,51 @@ async def _lookup(
 
         # Explanations panel after posture
         if show_explain:
-            from recon_tool.formatter import render_explanations_panel
+            from recon_tool.formatter import (
+                render_explanations_panel,
+                render_source_status_panel,
+            )
+            from recon_tool.models import SourceResult
+
+            # U1 (v0.9.2): always render per-source status under --explain
+            # so users can see which sources succeeded, which failed, and
+            # why. Previously this was only available via --verbose.
+            #
+            # On cache hit, the original SourceResult list isn't available
+            # (cache stores TenantInfo, not raw source results). Reconstruct
+            # minimal SourceResults from info.sources (successes) and
+            # info.degraded_sources (failures) so the panel still renders
+            # something useful for cached lookups.
+            status_results: list[SourceResult] = results
+            if not status_results and info is not None:
+                _m365_sources = {"oidc_discovery", "user_realm", "dns_records"}
+                synthetic: list[SourceResult] = []
+                for src_name in info.sources:
+                    synthetic.append(SourceResult(
+                        source_name=src_name,
+                        tenant_id=info.tenant_id if src_name == "oidc_discovery" else None,
+                        display_name=info.display_name if src_name == "user_realm" else None,
+                        auth_type=info.auth_type if src_name == "user_realm" else None,
+                        m365_detected=bool(info.tenant_id) and src_name in _m365_sources,
+                        dmarc_policy=info.dmarc_policy if src_name == "dns_records" else None,
+                    ))
+                for deg in info.degraded_sources:
+                    synthetic.append(SourceResult(
+                        source_name=deg,
+                        error="unavailable during original lookup",
+                    ))
+                status_results = synthetic
+
+            status_panel = render_source_status_panel(status_results)
+            if status_panel:
+                console.print(status_panel)
 
             explanations = _build_explanations(info, results)
             if explanations:
                 console.print(render_explanations_panel(explanations))
 
-    except ReconLookupError:
-        render_warning(domain)
+    except ReconLookupError as exc:
+        render_warning(domain, exc)
         raise typer.Exit(code=EXIT_NO_DATA) from None
     except Exception as exc:
         render_error(str(exc))

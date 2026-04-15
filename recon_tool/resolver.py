@@ -37,7 +37,15 @@ logger = logging.getLogger("recon")
 # Maximum wall-clock time for the entire resolve_tenant pipeline, including
 # all source queries and related domain enrichment. Prevents runaway lookups
 # from blocking the CLI or MCP server indefinitely.
-RESOLVE_TIMEOUT = 60.0
+# Default aggregate wall-clock timeout for a full resolve (all sources +
+# related-domain enrichment). Raised from 60s to 120s in v0.9.2 after
+# observing that CT-heavy domains with degraded crt.sh fell back to
+# CertSpotter pagination, then ran related-domain enrichment, and
+# consistently blew past 60s — producing catastrophic 25–93% batch
+# failure rates. 120s gives a realistic ceiling while still catching
+# runaway lookups. Override per call via resolve_tenant(timeout=...)
+# or CLI --timeout.
+RESOLVE_TIMEOUT = 120.0
 
 
 class SourcePool:

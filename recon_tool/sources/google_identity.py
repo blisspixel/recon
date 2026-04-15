@@ -23,6 +23,7 @@ import httpx
 
 from recon_tool.http import http_client
 from recon_tool.models import EvidenceRecord, SourceResult
+from recon_tool.retry import retry_on_transient
 
 logger = logging.getLogger("recon")
 
@@ -80,6 +81,18 @@ class GoogleIdentitySource:
         """Unique string identifier for this source."""
         return "google_identity"
 
+    @retry_on_transient()
+    async def _fetch(self, domain: str, client: httpx.AsyncClient | None) -> SourceResult:
+        """Inner fetch that raises on transient failures so the retry
+        decorator can re-attempt."""
+        async with http_client(client, timeout=_IDENTITY_TIMEOUT) as c:
+            resp = await c.get(
+                _GOOGLE_LOGIN_URL,
+                params={"hd": domain},
+                follow_redirects=True,
+            )
+            return self._classify_response(resp, domain)
+
     async def lookup(self, domain: str, **kwargs: Any) -> SourceResult:
         """Query Google's login flow to detect Workspace auth routing.
 
@@ -91,7 +104,9 @@ class GoogleIdentitySource:
         5. If generic login page / error → not a Google Workspace domain
 
         Returns SourceResult with google-workspace + auth type slugs.
-        Never raises — always returns a SourceResult.
+        Never raises — always returns a SourceResult. Transient network
+        failures are retried via the ``retry_on_transient`` decorator on
+        ``_fetch``.
         """
         if "/" in domain or "\\" in domain or ".." in domain:
             return SourceResult(
@@ -99,24 +114,16 @@ class GoogleIdentitySource:
                 error=f"Invalid domain format: {domain!r}",
             )
 
-        async with http_client(kwargs.get("client"), timeout=_IDENTITY_TIMEOUT) as client:
-            try:
-                resp = await client.get(
-                    _GOOGLE_LOGIN_URL,
-                    params={"hd": domain},
-                    follow_redirects=True,
-                )
-
-                return self._classify_response(resp, domain)
-
-            except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout) as exc:
-                return SourceResult(
-                    source_name="google_identity",
-                    error=f"Network error querying Google identity: {exc}",
-                )
-            except Exception as exc:
-                logger.debug("Google identity probe failed for %s: %s", domain, exc)
-                return SourceResult(
+        try:
+            return await self._fetch(domain, kwargs.get("client"))
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            return SourceResult(
+                source_name="google_identity",
+                error=f"Network error querying Google identity after retries: {exc}",
+            )
+        except Exception as exc:
+            logger.debug("Google identity probe failed for %s: %s", domain, exc)
+            return SourceResult(
                     source_name="google_identity",
                     error=f"Unexpected error: {exc}",
                 )

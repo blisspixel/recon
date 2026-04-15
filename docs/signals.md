@@ -49,7 +49,7 @@ Signals are evaluated in two passes: non-meta signals first, then meta-signals (
 | Shadow IT Risk | 3+ consumer-grade SaaS tools |
 | File Collaboration Sprawl | 2+ enterprise file-sharing platforms |
 | Dual Email Provider | Both Microsoft 365 and Google Workspace detected |
-| Legacy Provider Residue | Provider detected via TXT/DKIM alongside a different MX-based primary provider (migration residue) |
+| Secondary Email Provider Observed | Provider detected via TXT/DKIM alongside a different MX-based primary provider (migration residue) |
 
 ## Layer 4 — Contradiction, metadata-aware, and meta-signals
 

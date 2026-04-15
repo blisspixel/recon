@@ -113,6 +113,8 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "email_gateway": info.email_gateway,
         "dmarc_pct": info.dmarc_pct,
         "likely_primary_email_provider": info.likely_primary_email_provider,
+        "ct_provider_used": info.ct_provider_used,
+        "ct_subdomain_count": info.ct_subdomain_count,
     }
 
     # CertSummary → nested dict or None
@@ -278,4 +280,6 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         email_gateway=data.get("email_gateway"),
         dmarc_pct=data.get("dmarc_pct"),
         likely_primary_email_provider=data.get("likely_primary_email_provider"),
+        ct_provider_used=data.get("ct_provider_used"),
+        ct_subdomain_count=int(data.get("ct_subdomain_count", 0) or 0),
     )
