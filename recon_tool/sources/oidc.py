@@ -9,6 +9,7 @@ import httpx
 
 from recon_tool.http import http_client
 from recon_tool.models import EvidenceRecord, ReconLookupError, SourceResult
+from recon_tool.retry import retry_on_transient
 from recon_tool.validator import UUID_RE
 
 DISCOVERY_URL_TEMPLATE = "https://login.microsoftonline.com/{domain}/.well-known/openid-configuration"
@@ -74,11 +75,36 @@ class OIDCSource:
         """Unique string identifier for this source."""
         return "oidc_discovery"
 
+    @retry_on_transient()
+    async def _fetch(self, domain: str, client: httpx.AsyncClient | None) -> SourceResult:
+        """Inner fetch that raises on transient failures so the retry
+        decorator can re-attempt. Semantic failures (HTTP 4xx other than
+        429/503 — which the transport layer handles — and parse errors)
+        are returned as SourceResult so they don't retry."""
+        url = DISCOVERY_URL_TEMPLATE.format(domain=domain)
+        async with http_client(client) as c:
+            try:
+                response = await c.get(url)
+                response.raise_for_status()
+                data = response.json()
+            except httpx.HTTPStatusError as exc:
+                return SourceResult(
+                    source_name="oidc_discovery",
+                    error=f"HTTP {exc.response.status_code} from OIDC discovery endpoint",
+                )
+        try:
+            return parse_tenant_info_from_oidc(data)
+        except ReconLookupError as exc:
+            return SourceResult(source_name="oidc_discovery", error=exc.message)
+
     async def lookup(self, domain: str, **kwargs: Any) -> SourceResult:
         """Queries the OIDC discovery endpoint and extracts tenant information.
 
         Returns SourceResult with tenant_id, and optionally region.
         Never raises exceptions — always returns a SourceResult.
+
+        Transient network failures (timeout, connection reset) are retried
+        automatically via the ``retry_on_transient`` decorator on ``_fetch``.
         """
         # Guard: reject domains that would produce malformed URLs.
         # The validator catches this upstream, but defend in depth for
@@ -89,31 +115,15 @@ class OIDCSource:
                 error=f"Invalid domain format: {domain!r}",
             )
 
-        url = DISCOVERY_URL_TEMPLATE.format(domain=domain)
-
-        async with http_client(kwargs.get("client")) as client:
-            try:
-                response = await client.get(url)
-                response.raise_for_status()
-                data = response.json()
-                return parse_tenant_info_from_oidc(data)
-            except httpx.HTTPStatusError as exc:
-                return SourceResult(
-                    source_name="oidc_discovery",
-                    error=f"HTTP {exc.response.status_code} from OIDC discovery endpoint",
-                )
-            except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout) as exc:
-                return SourceResult(
-                    source_name="oidc_discovery",
-                    error=f"Network error querying OIDC discovery endpoint: {exc}",
-                )
-            except ReconLookupError as exc:
-                return SourceResult(
-                    source_name="oidc_discovery",
-                    error=exc.message,
-                )
-            except Exception as exc:
-                return SourceResult(
-                    source_name="oidc_discovery",
-                    error=f"Unexpected error: {exc}",
-                )
+        try:
+            return await self._fetch(domain, kwargs.get("client"))
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            return SourceResult(
+                source_name="oidc_discovery",
+                error=f"Network error querying OIDC discovery endpoint after retries: {exc}",
+            )
+        except Exception as exc:
+            return SourceResult(
+                source_name="oidc_discovery",
+                error=f"Unexpected error: {exc}",
+            )

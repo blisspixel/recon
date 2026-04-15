@@ -189,10 +189,25 @@ def compute_inference_confidence(results: list[SourceResult]) -> ConfidenceLevel
     record types confirm the same provider.
     LOW when single record type with no corroboration.
     MEDIUM otherwise.
+
+    Corroboration (v0.9.2): now accepts Google Workspace auth type as a
+    valid signal in addition to Microsoft-side fields. A domain with an
+    OIDC tenant_id AND a Google identity endpoint response is fully
+    corroborated from two independent providers — the previous check
+    missed this case and gave such domains MEDIUM inference instead of
+    HIGH.
     """
     has_tenant_id = any(r.tenant_id is not None for r in results)
     has_corroboration = any(
-        r.is_success and r.source_name != "oidc_discovery" and (r.m365_detected or r.display_name or r.auth_type)
+        r.is_success
+        and r.source_name != "oidc_discovery"
+        and (
+            r.m365_detected
+            or r.display_name
+            or r.auth_type
+            or r.google_auth_type
+            or len(r.tenant_domains) > 0
+        )
         for r in results
     )
 
@@ -501,10 +516,32 @@ def merge_results(
         for result in results:
             all_services_check.update(result.detected_services)
         if not all_services_check:
+            # R2: surface per-source errors so the user can see which source
+            # failed and why, instead of a single generic "no information"
+            # message. Distinguishes "domain truly empty" from "every source
+            # had a transient failure" which used to look identical.
+            source_errors: tuple[tuple[str, str], ...] = tuple(
+                (r.source_name, r.error)
+                for r in results
+                if r.error is not None
+            )
+            if source_errors:
+                reasons = "; ".join(f"{n}: {e}" for n, e in source_errors)
+                msg = (
+                    f"No information could be resolved for {queried_domain}. "
+                    f"Source errors: {reasons}"
+                )
+            else:
+                msg = (
+                    f"No information could be resolved for {queried_domain}. "
+                    f"All sources returned empty results — the domain may "
+                    f"have no public DNS records matching any fingerprint."
+                )
             raise ReconLookupError(
                 domain=queried_domain,
-                message=(f"No information could be resolved for {queried_domain} from any source"),
+                message=msg,
                 error_type="all_sources_failed",
+                source_errors=source_errors,
             )
 
     if display_name is None:
@@ -559,6 +596,15 @@ def merge_results(
 
     if cert_summary is not None:
         issuance_velocity = cert_summary.issuance_velocity
+
+    # Propagate CT provider attribution from any source (v0.9.2)
+    ct_provider_used: str | None = None
+    ct_subdomain_count: int = 0
+    for result in results:
+        if result.ct_provider_used:
+            ct_provider_used = result.ct_provider_used
+            ct_subdomain_count = result.ct_subdomain_count
+            break
 
     # Propagate evidence from all sources (needed before insights for topology)
     all_evidence: list[EvidenceRecord] = []
@@ -652,4 +698,6 @@ def merge_results(
         email_gateway=email_gateway,
         dmarc_pct=dmarc_pct,
         likely_primary_email_provider=likely_primary_email_provider,
+        ct_provider_used=ct_provider_used,
+        ct_subdomain_count=ct_subdomain_count,
     )

@@ -359,3 +359,256 @@ class TestCertSpotterRequestShape:
         headers = call_kwargs.get("headers", {})
         assert "Authorization" not in headers
         assert "authorization" not in headers
+
+
+# ── R4 (v0.9.2): Pagination + rate-limit handling ───────────────────────
+
+
+def _issuance(idx: int, dns_name: str) -> dict:
+    """Build a minimal CertSpotter issuance record for tests."""
+    return {
+        "id": str(idx),
+        "dns_names": [dns_name],
+        "issuer": {"friendly_name": "Test CA"},
+        "not_before": "2026-01-01T00:00:00Z",
+        "not_after": "2027-01-01T00:00:00Z",
+    }
+
+
+class TestCertSpotterPagination:
+    """v0.9.2 R4: CertSpotter pagination follows the after= cursor."""
+
+    @pytest.mark.asyncio
+    async def test_single_page_no_pagination_when_empty_next_page(self):
+        """A full first page followed by an empty second page stops at 2 requests."""
+        provider = CertSpotterProvider()
+        page1 = [_issuance(i, f"host{i}.example.com") for i in range(5)]
+        page2: list[dict] = []
+
+        responses = [
+            MagicMock(status_code=200, json=MagicMock(return_value=page1)),
+            MagicMock(status_code=200, json=MagicMock(return_value=page2)),
+        ]
+        client = AsyncMock()
+        client.get = AsyncMock(side_effect=responses)
+
+        with patch(
+            "recon_tool.sources.cert_providers.http_client",
+            return_value=_mock_http_context(client),
+        ):
+            subs, _summary = await provider.query("example.com")
+
+        assert client.get.call_count == 2
+        assert len(subs) == 5
+
+    @pytest.mark.asyncio
+    async def test_pagination_advances_after_cursor(self):
+        """Second request includes after=<last id from page 1>."""
+        provider = CertSpotterProvider()
+        page1 = [_issuance(i, f"host{i}.example.com") for i in range(3)]
+        page2 = [_issuance(i, f"api{i}.example.com") for i in range(3, 6)]
+        page3: list[dict] = []
+
+        responses = [
+            MagicMock(status_code=200, json=MagicMock(return_value=page1)),
+            MagicMock(status_code=200, json=MagicMock(return_value=page2)),
+            MagicMock(status_code=200, json=MagicMock(return_value=page3)),
+        ]
+        client = AsyncMock()
+        client.get = AsyncMock(side_effect=responses)
+
+        with patch(
+            "recon_tool.sources.cert_providers.http_client",
+            return_value=_mock_http_context(client),
+        ):
+            subs, _summary = await provider.query("example.com")
+
+        assert client.get.call_count == 3
+        # First call has no after=
+        first_params = client.get.call_args_list[0][1]["params"]
+        assert "after" not in first_params
+        # Second call uses last id from page 1 ("2")
+        second_params = client.get.call_args_list[1][1]["params"]
+        assert second_params["after"] == "2"
+        # Third call uses last id from page 2 ("5")
+        third_params = client.get.call_args_list[2][1]["params"]
+        assert third_params["after"] == "5"
+        # All 6 subdomains collected
+        assert len(subs) == 6
+
+    @pytest.mark.asyncio
+    async def test_pagination_respects_max_pages_cap(self):
+        """Never fetches more than _MAX_PAGES pages even with endless data."""
+        provider = CertSpotterProvider()
+        # Each page returns 3 unique subdomains; _MAX_PAGES cap should stop us.
+        calls = {"n": 0}
+
+        def make_response(*args, **kwargs):
+            calls["n"] += 1
+            idx = calls["n"]
+            page = [_issuance(idx * 10 + j, f"host-p{idx}-{j}.example.com") for j in range(3)]
+            return MagicMock(status_code=200, json=MagicMock(return_value=page))
+
+        client = AsyncMock()
+        client.get = AsyncMock(side_effect=make_response)
+
+        with patch(
+            "recon_tool.sources.cert_providers.http_client",
+            return_value=_mock_http_context(client),
+        ):
+            subs, _summary = await provider.query("example.com")
+
+        assert client.get.call_count == provider._MAX_PAGES
+        assert len(subs) == provider._MAX_PAGES * 3
+
+    @pytest.mark.asyncio
+    async def test_429_stops_pagination_returns_partial_data(self):
+        """A 429 response stops pagination and returns what's been collected."""
+        provider = CertSpotterProvider()
+        page1 = [_issuance(i, f"host{i}.example.com") for i in range(4)]
+        page2_rate_limited = MagicMock(status_code=429)
+
+        responses = [
+            MagicMock(status_code=200, json=MagicMock(return_value=page1)),
+            page2_rate_limited,
+        ]
+        client = AsyncMock()
+        client.get = AsyncMock(side_effect=responses)
+
+        with patch(
+            "recon_tool.sources.cert_providers.http_client",
+            return_value=_mock_http_context(client),
+        ):
+            subs, _summary = await provider.query("example.com")
+
+        # Pagination stopped at 429, but page 1 data is still returned
+        assert client.get.call_count == 2
+        assert len(subs) == 4  # from page 1
+
+    @pytest.mark.asyncio
+    async def test_non_429_error_still_raises(self):
+        """A 500 on the second page raises — only 429 is handled gracefully."""
+        provider = CertSpotterProvider()
+        page1 = [_issuance(i, f"host{i}.example.com") for i in range(3)]
+        page2_server_error = MagicMock(status_code=500, request=MagicMock())
+
+        responses = [
+            MagicMock(status_code=200, json=MagicMock(return_value=page1)),
+            page2_server_error,
+        ]
+        client = AsyncMock()
+        client.get = AsyncMock(side_effect=responses)
+
+        with (
+            patch(
+                "recon_tool.sources.cert_providers.http_client",
+                return_value=_mock_http_context(client),
+            ),
+            pytest.raises(httpx.HTTPStatusError),
+        ):
+            await provider.query("example.com")
+
+    @pytest.mark.asyncio
+    async def test_empty_first_page_returns_empty(self):
+        """When the first page is empty, pagination stops immediately."""
+        provider = CertSpotterProvider()
+        client = AsyncMock()
+        client.get = AsyncMock(
+            return_value=MagicMock(status_code=200, json=MagicMock(return_value=[]))
+        )
+
+        with patch(
+            "recon_tool.sources.cert_providers.http_client",
+            return_value=_mock_http_context(client),
+        ):
+            subs, summary = await provider.query("example.com")
+
+        assert client.get.call_count == 1
+        assert subs == []
+        assert summary is None
+
+    @pytest.mark.asyncio
+    async def test_missing_issuance_id_stops_pagination(self):
+        """If an issuance lacks an id field, we can't advance — stop cleanly."""
+        provider = CertSpotterProvider()
+        page1 = [
+            {
+                "dns_names": ["host.example.com"],
+                "issuer": {"friendly_name": "Test CA"},
+                "not_before": "2026-01-01T00:00:00Z",
+                "not_after": "2027-01-01T00:00:00Z",
+            }
+        ]
+        client = AsyncMock()
+        client.get = AsyncMock(
+            return_value=MagicMock(status_code=200, json=MagicMock(return_value=page1))
+        )
+
+        with patch(
+            "recon_tool.sources.cert_providers.http_client",
+            return_value=_mock_http_context(client),
+        ):
+            subs, _summary = await provider.query("example.com")
+
+        # Without an id, we cannot advance the cursor — so only one call.
+        assert client.get.call_count == 1
+        assert len(subs) == 1
+
+    @pytest.mark.asyncio
+    async def test_transient_failure_retries_inside_pagination(self):
+        """Phase 2a regression guard: a transient httpx error on a page
+        fetch is retried via the retry_on_transient decorator on _fetch_page,
+        so a single flaky page doesn't kill the entire pagination."""
+        provider = CertSpotterProvider()
+        page1 = [_issuance(i, f"a{i}.example.com") for i in range(3)]
+        page2 = [_issuance(i, f"b{i}.example.com") for i in range(3, 6)]
+        page3: list[dict] = []  # empty → end of pagination
+
+        # First call to page2 fails transiently, second succeeds.
+        # Sequence: page1 ok, page2 ConnectError (retry), page2 ok, page3 empty.
+        responses = [
+            MagicMock(status_code=200, json=MagicMock(return_value=page1)),
+            httpx.ConnectError("transient"),
+            MagicMock(status_code=200, json=MagicMock(return_value=page2)),
+            MagicMock(status_code=200, json=MagicMock(return_value=page3)),
+        ]
+        client = AsyncMock()
+        client.get = AsyncMock(side_effect=responses)
+
+        with patch(
+            "recon_tool.sources.cert_providers.http_client",
+            return_value=_mock_http_context(client),
+        ):
+            subs, _summary = await provider.query("example.com")
+
+        # Should have made 4 calls: 3 successful pages + 1 transient retry
+        assert client.get.call_count == 4
+        # All 6 subdomains from pages 1 and 2 collected
+        assert len(subs) == 6
+
+    @pytest.mark.asyncio
+    async def test_persistent_transient_failure_eventually_propagates(self):
+        """When transient failures persist past the retry budget, the error
+        propagates out so the fallback chain can record the failure. Used
+        by _detect_cert_intel to mark the provider as degraded."""
+        provider = CertSpotterProvider()
+        page1 = [_issuance(i, f"a{i}.example.com") for i in range(3)]
+
+        # Page 1 ok, page 2 fails 3 times in a row (initial + 2 retries)
+        responses = [
+            MagicMock(status_code=200, json=MagicMock(return_value=page1)),
+            httpx.ConnectError("persistent"),
+            httpx.ConnectError("persistent"),
+            httpx.ConnectError("persistent"),
+        ]
+        client = AsyncMock()
+        client.get = AsyncMock(side_effect=responses)
+
+        with (
+            patch(
+                "recon_tool.sources.cert_providers.http_client",
+                return_value=_mock_http_context(client),
+            ),
+            pytest.raises(httpx.ConnectError),
+        ):
+            await provider.query("example.com")

@@ -272,8 +272,12 @@ class TestBackwardCompatDetectProvider:
         assert result == "AWS SES"
 
     def test_no_slugs_returns_unknown(self) -> None:
+        """v0.9.2 extended the bare "Unknown" fallback to include a short
+        explanation of why nothing matched. Still starts with "Unknown" so
+        existing string-contains checks keep working."""
         result = detect_provider(services=(), slugs=())
-        assert result == "Unknown"
+        assert result.startswith("Unknown")
+        assert "no known provider pattern matched" in result
 
     def test_no_topology_fields_uses_slug_fallback(self) -> None:
         """When primary_email_provider and email_gateway are both None, use slug-based detection."""

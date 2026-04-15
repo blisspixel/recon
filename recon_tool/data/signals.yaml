@@ -439,11 +439,11 @@ signals:
         operator: neq
         value: ""
 
-  - name: Legacy Provider Residue
+  - name: Secondary Email Provider Observed
     category: Consistency
     confidence: medium
-    description: Provider detected only via TXT/DKIM records alongside a different MX-based primary — possible migration residue
-    explain: "When a provider is detected via TXT or DKIM verification records but a different provider handles MX-based email delivery, it may indicate residual DNS records from a previous provider. These records are often left behind after email migrations and may represent cleanup opportunities."
+    description: A second email provider is detected via TXT/DKIM records alongside a different MX-based primary — consistent with deliberate dual-provider coexistence, migration residue, or an inactive legacy tenant
+    explain: "When a provider is detected via TXT or DKIM verification records but a different provider handles MX-based email delivery, the secondary provider may be actively used (dual coexistence), may be residual DNS from a past migration, or may be an inactive legacy tenant. The signal is neutral — it surfaces the observation without asserting which case applies. Users can distinguish active dual-use from residue by checking whether the secondary provider receives mail (DMARC reports, Authentication-Results headers) or is only present in verification records."
     requires:
       any: [microsoft365, google-workspace]
     min_matches: 1

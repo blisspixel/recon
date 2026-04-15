@@ -215,6 +215,13 @@ class SourceResult:
     dmarc_pct: int | None = None  # DMARC pct= value (0-100)
     raw_dns_records: tuple[tuple[str, str], ...] = ()  # (record_type, value) pairs for reevaluation cache
 
+    # --- v0.9.2: CT provider attribution ---
+    # Name of the CT provider ("crt.sh" or "certspotter") that actually
+    # returned results for this lookup, and how many subdomains came back
+    # after filtering. None when no CT provider was queried or all failed.
+    ct_provider_used: str | None = None
+    ct_subdomain_count: int = 0
+
     @property
     def crtsh_degraded(self) -> bool:
         """Backward-compatible: True when crt.sh was unreachable."""
@@ -280,6 +287,14 @@ class TenantInfo:
     # direct provider appears there. Hedged: "likely" in the name is
     # load-bearing. Never set when primary_email_provider is also set.
     likely_primary_email_provider: str | None = None
+
+    # --- v0.9.2: CT provider attribution ---
+    # Which CT provider actually contributed subdomain data for this
+    # lookup ("crt.sh" or "certspotter") and how many came back. Surfaced
+    # in the panel bottom Note so enrichment asymmetry between runs is
+    # visible. None when no CT provider succeeded.
+    ct_provider_used: str | None = None
+    ct_subdomain_count: int = 0
 
     # --- Conflict-aware merge (v0.7.0) ---
     merge_conflicts: MergeConflicts | None = None
@@ -349,11 +364,18 @@ class ReconLookupError(Exception):
     Extends Exception via dataclass. Note: dataclass doesn't set Exception.args,
     so str() returns self.message (via __str__) while repr() shows all fields.
     This is intentional — str() is user-facing, repr() is for debugging.
+
+    ``source_errors`` carries per-source failure reasons as a tuple of
+    ``(source_name, error_message)`` pairs so CLI output can surface
+    concrete causes ("oidc_discovery: HTTP 429; dns_records: no records
+    found") instead of a single generic "no information found" message.
+    Empty when the error isn't source-specific (e.g. timeout).
     """
 
     domain: str
     message: str
     error_type: str
+    source_errors: tuple[tuple[str, str], ...] = ()
 
     def __str__(self) -> str:
         return self.message

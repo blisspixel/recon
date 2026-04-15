@@ -32,7 +32,7 @@ recon doctor                            # connectivity check
   - `http.py` — SSRF-safe HTTP client with retry/backoff
   - `validator.py` — domain input validation
   - `models.py` — frozen dataclasses (TenantInfo, SourceResult)
-- `tests/` — 1165 tests, pytest + hypothesis
+- `tests/` — 1310 tests, pytest + hypothesis
 - `data/fingerprints.yaml` — 208 SaaS fingerprints
 - `data/signals.yaml` — 4-layer signal definitions (45 signals, two-pass evaluation + absence detection)
 
