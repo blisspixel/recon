@@ -92,12 +92,14 @@ class TestDetectProviderEdgeCases:
             email_gateway="Proofpoint",
             likely_primary_email_provider=None,
         )
+        # v0.9.3 format: "{gateway} gateway (no inferable downstream)"
         assert "Proofpoint" in result
-        assert "email gateway" in result
+        assert "gateway" in result
+        assert "no inferable downstream" in result
 
     def test_likely_only_no_primary_no_gateway(self) -> None:
         """When only likely_primary is set (weird but possible), render it
-        with an 'inferred' qualifier."""
+        with the '(likely primary)' v0.9.3 qualifier."""
         result = detect_provider(
             services=(),
             slugs=(),
@@ -106,7 +108,7 @@ class TestDetectProviderEdgeCases:
             likely_primary_email_provider="Google Workspace",
         )
         assert "Google Workspace" in result
-        assert "inferred" in result
+        assert "likely primary" in result
 
     def test_secondary_providers_from_slugs_when_primary_set(self) -> None:
         result = detect_provider(
@@ -131,16 +133,20 @@ class TestDetectProviderEdgeCases:
         assert "Microsoft 365" in result
 
     def test_zoho_slug_fallback(self) -> None:
+        # v0.9.3 (second revision): default has_mx_records=True —
+        # assumes custom MX unless the caller explicitly passes
+        # has_mx_records=False. See TestBackwardCompatDetectProvider
+        # for the full rationale.
         result = detect_provider(services=(), slugs=("zoho",))
-        assert result == "Zoho Mail"
+        assert result == "Zoho Mail (account detected, custom MX)"
 
     def test_protonmail_slug_fallback(self) -> None:
         result = detect_provider(services=(), slugs=("protonmail",))
-        assert result == "ProtonMail"
+        assert result == "ProtonMail (account detected, custom MX)"
 
     def test_aws_ses_only_slug(self) -> None:
         result = detect_provider(services=(), slugs=("aws-ses",))
-        assert result == "AWS SES"
+        assert result == "AWS SES (account detected, custom MX)"
 
 
 class TestRenderTenantPanelEdgeCases:
@@ -168,9 +174,11 @@ class TestRenderTenantPanelEdgeCases:
             ),
         )
         from recon_tool.formatter import get_console
-        get_console().print(render_tenant_panel(info))
+        # v0.9.3: Certs section is shown only under --verbose to keep
+        # the default view tight. Pass verbose=True to exercise it.
+        get_console().print(render_tenant_panel(info, verbose=True))
         out = _strip(buf.getvalue())
-        assert "Certs:" in out
+        assert "Certs" in out
         assert "20 total" in out
         assert "DigiCert" in out
 
@@ -183,7 +191,8 @@ class TestRenderTenantPanelEdgeCases:
         from recon_tool.formatter import get_console
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
-        assert "Note:" in out
+        # v0.9.3 format: "Note" header + "Some sources unavailable (...)"
+        assert "Note" in out
         assert "crt.sh" in out
         assert "unavailable" in out
 
@@ -219,7 +228,8 @@ class TestRenderTenantPanelEdgeCases:
         assert "87" in out
 
     def test_related_domains_truncation(self) -> None:
-        """More than 10 related domains shows the '...and N more' footer."""
+        """v0.9.3: more than 8 related domains shows a compact
+        '(N total — M more, use --full to see all)' footer."""
         _, buf = _make_console()
         info = _minimal_info(
             services=("DMARC",),
@@ -229,7 +239,8 @@ class TestRenderTenantPanelEdgeCases:
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
         assert "sub0.contoso.com" in out
-        assert "and 15 more" in out
+        assert "25 total" in out
+        assert "more" in out
         assert "--full" in out
 
     def test_related_domains_full_list_when_show_domains(self) -> None:
@@ -257,7 +268,9 @@ class TestRenderTenantPanelEdgeCases:
         from recon_tool.formatter import get_console
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
-        assert "Tenant ID:" in out
+        # v0.9.3 format: the label is "Tenant" (no " ID:" suffix) and
+        # the tenant UUID appears on the same line.
+        assert "Tenant" in out
         assert "a1b2c3d4" in out
 
     def test_explain_flag_renders_classification(self) -> None:
@@ -271,7 +284,11 @@ class TestRenderTenantPanelEdgeCases:
         from recon_tool.formatter import get_console
         get_console().print(render_tenant_panel(info, explain=True))
         out = _strip(buf.getvalue())
-        assert "Primary (MX)" in out or "Gateway (MX)" in out
+        # v0.9.3 format: the Provider line carries the primary/gateway
+        # classification inline. No separate "[Primary (MX): …]"
+        # classification block.
+        assert "Microsoft 365 (primary)" in out
+        assert "Proofpoint gateway" in out
 
 
 class TestRenderSourceStatusPanel:

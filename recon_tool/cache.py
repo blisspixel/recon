@@ -115,6 +115,13 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "likely_primary_email_provider": info.likely_primary_email_provider,
         "ct_provider_used": info.ct_provider_used,
         "ct_subdomain_count": info.ct_subdomain_count,
+        "cloud_instance": info.cloud_instance,
+        "tenant_region_sub_scope": info.tenant_region_sub_scope,
+        "msgraph_host": info.msgraph_host,
+        "lexical_observations": list(info.lexical_observations),
+        # shared_verification_tokens is intentionally NOT cached — it is
+        # batch-scope only and a per-domain lookup should never inherit
+        # peers from a previous batch run.
     }
 
     # CertSummary → nested dict or None
@@ -189,8 +196,8 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
     Handles: string → ConfidenceLevel (fallback MEDIUM), nested dicts → frozen
     dataclasses, lists → tuples, dict → tuple-of-tuples for detection_scores.
     """
-    if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
-        msg = "Cache data must be a dict"
+    if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance, reportUnreachable]
+        msg = "Cache data must be a dict"  # pyright: ignore[reportUnreachable]
         raise ValueError(msg)
 
     # Required string fields
@@ -282,4 +289,8 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         likely_primary_email_provider=data.get("likely_primary_email_provider"),
         ct_provider_used=data.get("ct_provider_used"),
         ct_subdomain_count=int(data.get("ct_subdomain_count", 0) or 0),
+        cloud_instance=data.get("cloud_instance"),
+        tenant_region_sub_scope=data.get("tenant_region_sub_scope"),
+        msgraph_host=data.get("msgraph_host"),
+        lexical_observations=tuple(data.get("lexical_observations", [])),
     )

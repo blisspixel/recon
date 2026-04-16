@@ -1,0 +1,35 @@
+# High-value-target profile — lens for organisations likely to be
+# targeted by sophisticated adversaries (F100, critical
+# infrastructure, government contractors, journalists, defence
+# supply chain). Prioritises edge hardening, identity rigor,
+# layered email security, and any hedged "hardening observed"
+# signal that surfaces when the positive_when_absent engine fires.
+name: high-value-target
+description: Organisations with elevated targeting risk — prioritises hardening indicators
+category_boost:
+  identity: 1.6
+  email: 1.5
+  infrastructure: 1.5
+  consistency: 1.4
+  certificate: 1.3
+  saas_footprint: 0.7
+signal_boost:
+  "Edge Layering": 1.8
+  "Edge Layering — Hardening Pattern Observed": 2.0
+  "Enterprise Security Stack": 1.6
+  "Enterprise Security Stack — Hardening Pattern Observed": 2.0
+  "Zero Trust Posture": 1.8
+  "DMARC Governance Investment": 1.6
+  "Software Supply Chain Maturity": 1.5
+  "High-Security Posture (CSE)": 1.6
+  "Security Gap — Gateway Without DMARC Enforcement": 1.8
+  "Security Stack Without Governance": 1.7
+exclude_signals:
+  - "Startup Tool Mix"
+  - "Product-Led Growth"
+  - "Shadow IT Risk"
+prepend_note: |
+  High-value-target profile applied. Edge hardening, identity
+  rigor, layered email security, and hardening-pattern
+  observations are prioritised. Sparse-data targets are expected —
+  the absence of consumer SaaS is itself a signal at this level.

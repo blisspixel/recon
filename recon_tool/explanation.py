@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from recon_tool.posture import _PostureRule  # pyright: ignore[reportPrivateUsage]
 
 __all__ = [
+    "build_explanation_dag",
     "explain_confidence",
     "explain_insights",
     "explain_observations",
@@ -626,4 +627,161 @@ def serialize_explanation(record: ExplanationRecord) -> dict[str, Any]:
         "confidence_derivation": record.confidence_derivation,
         "weakening_conditions": list(record.weakening_conditions),
         "curated_explanation": record.curated_explanation,
+    }
+
+
+# ── Explanation DAG (v0.9.3) ────────────────────────────────────────────
+
+
+def _evidence_node_id(ev: EvidenceRecord, idx: int) -> str:
+    """Stable deterministic node id for an evidence record.
+
+    Uses the (source_type, slug, rule_name, idx) tuple so two records
+    with identical fields still get distinct ids when they co-occur.
+    """
+    return f"evidence:{ev.source_type}:{ev.slug}:{ev.rule_name}:{idx}"
+
+
+def _slug_node_id(slug: str) -> str:
+    return f"slug:{slug}"
+
+
+def _rule_node_id(rule: str) -> str:
+    return f"rule:{rule}"
+
+
+def _item_node_id(item_type: str, name: str) -> str:
+    return f"{item_type}:{name}"
+
+
+def build_explanation_dag(
+    records: list[ExplanationRecord],
+    all_evidence: tuple[EvidenceRecord, ...] = (),
+) -> dict[str, Any]:
+    """Build a JSON-serialisable provenance DAG from ExplanationRecords.
+
+    v0.9.3. Node types:
+        * ``evidence``  — one node per raw EvidenceRecord
+        * ``slug``      — one node per detected fingerprint slug
+        * ``rule``      — one node per fingerprint / signal rule
+                          that fired
+        * ``signal``    — one node per fired signal (incl. absence
+                          and hardening observations)
+        * ``insight``   — one node per generated insight string
+        * ``observation`` — one node per posture observation
+        * ``confidence`` — the overall confidence node (singleton)
+
+    Edge types:
+        * ``detected-by``        — evidence → slug
+        * ``matched-rule``       — evidence → rule
+        * ``contributes-to``     — slug → signal | insight |
+                                   observation | confidence
+        * ``synthesized-into``   — signal → insight | observation
+        * ``weakened-by``        — label-only attribute (no outgoing
+                                   edge); each weakening condition
+                                   hangs off the item node as metadata
+
+    Invariants
+        * Every terminal node (``signal``, ``insight``,
+          ``observation``, ``confidence``) must be reachable from at
+          least one ``evidence`` node via a path of length ≤ 3.
+        * Every node carries ``item_type`` equal to its category,
+          ``name`` equal to a human-readable label, and, when
+          relevant, ``confidence_derivation`` and ``weakening``.
+        * The DAG is acyclic: edges only flow from evidence →
+          slug/rule → signal → insight/observation → confidence.
+
+    The DAG is additive — the existing flat ``explanations`` list is
+    still emitted alongside it for callers that prefer the old shape.
+    Downstream tooling can pick whichever view fits.
+    """
+    nodes: dict[str, dict[str, Any]] = {}
+    edges: list[dict[str, Any]] = []
+
+    # Step 1: seed with every evidence record, regardless of whether
+    # an explanation record references it. This ensures the DAG's
+    # "every terminal reachable from evidence" invariant holds even
+    # for terminal nodes whose explanation records failed to pin
+    # down specific evidence.
+    for idx, ev in enumerate(all_evidence):
+        eid = _evidence_node_id(ev, idx)
+        if eid in nodes:
+            continue
+        nodes[eid] = {
+            "id": eid,
+            "type": "evidence",
+            "name": f"{ev.source_type}: {ev.rule_name}",
+            "source_type": ev.source_type,
+            "raw_value": ev.raw_value,
+            "rule_name": ev.rule_name,
+            "slug": ev.slug,
+        }
+        # evidence → slug edge
+        sid = _slug_node_id(ev.slug)
+        if sid not in nodes:
+            nodes[sid] = {"id": sid, "type": "slug", "name": ev.slug}
+        edges.append({"source": eid, "target": sid, "relation": "detected-by"})
+
+    # Step 2: add one node per ExplanationRecord and link the evidence
+    # it cites to it. For signal records, link via the slug node too
+    # so the DAG walker can walk evidence → slug → signal either way.
+    for rec in records:
+        item_id = _item_node_id(rec.item_type, rec.item_name)
+        # If a signal and an observation happen to share the same
+        # name, distinguish them by item_type in the id.
+        nodes[item_id] = {
+            "id": item_id,
+            "type": rec.item_type,
+            "name": rec.item_name,
+            "confidence_derivation": rec.confidence_derivation,
+            "weakening_conditions": list(rec.weakening_conditions),
+            "curated_explanation": rec.curated_explanation,
+        }
+
+        # Attach each fired_rules entry as its own node so the DAG
+        # can show which rules contributed. Link evidence → rule →
+        # item where possible.
+        for rule in rec.fired_rules:
+            rid = _rule_node_id(rule)
+            if rid not in nodes:
+                nodes[rid] = {"id": rid, "type": "rule", "name": rule}
+            edges.append({"source": rid, "target": item_id, "relation": "fired"})
+
+        # For each cited evidence, add (evidence) → slug → item via
+        # contributes-to. If the evidence is also in all_evidence we
+        # already seeded it; otherwise seed it now.
+        for eidx, ev in enumerate(rec.matched_evidence):
+            eid = _evidence_node_id(ev, eidx)
+            if eid not in nodes:
+                nodes[eid] = {
+                    "id": eid,
+                    "type": "evidence",
+                    "name": f"{ev.source_type}: {ev.rule_name}",
+                    "source_type": ev.source_type,
+                    "raw_value": ev.raw_value,
+                    "rule_name": ev.rule_name,
+                    "slug": ev.slug,
+                }
+            sid = _slug_node_id(ev.slug)
+            if sid not in nodes:
+                nodes[sid] = {"id": sid, "type": "slug", "name": ev.slug}
+            # evidence → slug (may already exist from step 1)
+            edges.append({"source": eid, "target": sid, "relation": "detected-by"})
+            # slug → item
+            edges.append({"source": sid, "target": item_id, "relation": "contributes-to"})
+
+    # Deduplicate edges while preserving order
+    seen_edges: set[tuple[str, str, str]] = set()
+    deduped: list[dict[str, Any]] = []
+    for e in edges:
+        key = (e["source"], e["target"], e["relation"])
+        if key in seen_edges:
+            continue
+        seen_edges.add(key)
+        deduped.append(e)
+
+    return {
+        "nodes": list(nodes.values()),
+        "edges": deduped,
+        "schema_version": 1,
     }

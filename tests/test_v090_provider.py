@@ -156,24 +156,25 @@ class TestDetectProviderFormatting:
     """Verify detect_provider() topology-aware formatting for all 5 cases."""
 
     def test_primary_plus_gateway(self) -> None:
-        """Primary + gateway → '{primary} (primary email via {gateway} gateway)'."""
+        """v0.9.3 format: '{primary} (primary) via {gateway} gateway'."""
         result = detect_provider(
             services=(),
             slugs=("microsoft365",),
             primary_email_provider="Microsoft 365",
             email_gateway="Proofpoint",
         )
-        assert result == "Microsoft 365 (primary email via Proofpoint gateway)"
+        assert result == "Microsoft 365 (primary) via Proofpoint gateway"
 
     def test_gateway_only(self) -> None:
-        """Gateway only (no primary) → '{gateway} (email gateway)'."""
+        """v0.9.3 format: '{gateway} gateway (no inferable downstream)' when
+        no primary can be inferred."""
         result = detect_provider(
             services=(),
             slugs=(),
             primary_email_provider=None,
             email_gateway="Mimecast",
         )
-        assert result == "Mimecast (email gateway)"
+        assert result == "Mimecast gateway (no inferable downstream)"
 
     def test_primary_plus_secondary(self) -> None:
         """Primary + secondary slug → primary prominent, secondary annotated."""
@@ -201,32 +202,38 @@ class TestDetectProviderFormatting:
         assert "Microsoft 365" in result
 
     def test_secondary_only_with_gateway(self) -> None:
-        """Gateway + secondary slug (no primary) → gateway shown, secondary annotated."""
+        """v0.9.3 format: gateway shown as 'gateway (no inferable downstream)'
+        and a slug-detected provider becomes '(secondary)'."""
         result = detect_provider(
             services=(),
             slugs=("microsoft365",),
             primary_email_provider=None,
             email_gateway="Proofpoint",
         )
-        assert "Proofpoint (email gateway)" in result
+        assert "Proofpoint gateway" in result
         assert "Microsoft 365" in result
-        assert "(no MX-based primary detected)" in result
+        assert "(secondary)" in result
 
     def test_backward_compat_no_topology_fields(self) -> None:
-        """No topology fields → existing slug-based output (backward compatible)."""
+        """v0.9.3 (second revision): slug-only fallback uses
+        "(account detected, custom MX)" by default — assuming MX
+        records exist but point to an unrecognized host. This is
+        the common real-world case (Apache / Debian / Python all
+        self-host mail). The "no MX" label only fires when the
+        caller explicitly passes has_mx_records=False."""
         result = detect_provider(
             services=(),
             slugs=("microsoft365",),
         )
-        assert result == "Microsoft 365"
+        assert result == "Microsoft 365 (account detected, custom MX)"
 
     def test_backward_compat_google_workspace(self) -> None:
-        """Backward compat: Google Workspace slug → 'Google Workspace'."""
+        """v0.9.3 (second revision): same rationale as above."""
         result = detect_provider(
             services=(),
             slugs=("google-workspace",),
         )
-        assert result == "Google Workspace"
+        assert result == "Google Workspace (account detected, custom MX)"
 
     def test_backward_compat_dual_provider(self) -> None:
         """Backward compat: Both M365 + GWS slugs → 'Microsoft 365 + Google Workspace'."""
@@ -248,14 +255,16 @@ class TestDetectProviderFormatting:
         assert "no known provider pattern matched" in result
 
     def test_primary_only_no_gateway_no_secondary(self) -> None:
-        """Primary only, no gateway, no secondary → just the provider name."""
+        """v0.9.3 format: '{primary} (primary)' — the ``(primary)``
+        label is always present when topology fields were supplied,
+        so users can tell whether the label is strict or inferred."""
         result = detect_provider(
             services=(),
             slugs=("microsoft365",),
             primary_email_provider="Microsoft 365",
             email_gateway=None,
         )
-        assert result == "Microsoft 365"
+        assert result == "Microsoft 365 (primary)"
 
     def test_primary_does_not_duplicate_in_secondary(self) -> None:
         """Primary provider slug should not appear in secondary list."""
@@ -266,6 +275,51 @@ class TestDetectProviderFormatting:
             email_gateway="Proofpoint",
         )
         assert "(secondary)" not in result
+
+    # v0.9.3: multi-likely primary disambiguation ──────────────────────
+
+    def test_multi_likely_promoted_to_single_primary(self) -> None:
+        """v0.9.3: when likely_primary_email_provider lists multiple
+        providers, one is promoted to '(likely primary)' and the rest
+        become '(secondary)' — never '(dual)'."""
+        result = detect_provider(
+            services=(),
+            slugs=("microsoft365", "google-workspace"),
+            primary_email_provider=None,
+            email_gateway="Trend Micro",
+            likely_primary_email_provider="Google Workspace + Microsoft 365",
+        )
+        # Microsoft 365 is preferred as primary per the selection rule
+        assert "Microsoft 365 (likely primary)" in result
+        assert "via Trend Micro gateway" in result
+        assert "Google Workspace (secondary)" in result
+        # Must NOT contain the old ambiguous "(dual)" wording
+        assert "(dual)" not in result
+
+    def test_multi_likely_preference_order(self) -> None:
+        """Preference rule: Microsoft 365 first, then Google Workspace,
+        then order-preserved fallback."""
+        result = detect_provider(
+            services=(),
+            slugs=(),
+            primary_email_provider=None,
+            email_gateway=None,
+            likely_primary_email_provider="Zoho Mail + ProtonMail",
+        )
+        # Zoho comes first in the input — falls through to order-preserved
+        assert "Zoho Mail (likely primary)" in result
+        assert "ProtonMail (secondary)" in result
+
+    def test_strict_primary_plus_gateway_plus_slug_secondary(self) -> None:
+        """The target format from the v0.9.3 UX feedback:
+        'Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)'."""
+        result = detect_provider(
+            services=(),
+            slugs=("microsoft365", "google-workspace"),
+            primary_email_provider="Microsoft 365",
+            email_gateway="Trend Micro",
+        )
+        assert result == "Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)"
 
 
 # ── 11.3: Email topology insights ────────────────────────────────────

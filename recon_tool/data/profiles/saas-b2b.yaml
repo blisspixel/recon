@@ -1,0 +1,24 @@
+# SaaS B2B profile — lens for cloud-native B2B software companies.
+# Weights DevOps maturity, observability, identity federation,
+# and go-to-market tooling higher. Expects modern collaboration
+# stack and product-led growth signals as baseline.
+name: saas-b2b
+description: SaaS / B2B cloud-native software company lens
+category_boost:
+  identity: 1.4
+  saas_footprint: 1.3
+  infrastructure: 1.2
+  email: 1.2
+signal_boost:
+  "Observability & SRE": 1.5
+  "Dev & Engineering Heavy": 1.4
+  "Software Supply Chain Maturity": 1.5
+  "Product-Led Growth": 1.3
+  "Sales-Led Growth": 1.3
+  "Modern Collaboration": 1.2
+  "Edge-Native Architecture": 1.3
+  "Zero Trust Posture": 1.5
+prepend_note: |
+  SaaS / B2B profile applied. DevOps maturity, observability,
+  identity federation, and go-to-market signals are prioritised
+  for cloud-native software companies.

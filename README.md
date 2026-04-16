@@ -9,43 +9,32 @@ recon contoso.com
 ```
 
 ```
-┌──────────────────────────────── Contoso Ltd ────────────────────────────────┐
-│                                                                             │
-│    Company:    Contoso Ltd                                                  │
-│    Domain:     contoso.onmicrosoft.com                                      │
-│    Provider:   Microsoft 365 (primary email via Proofpoint gateway);        │
-│                Google Workspace (secondary)                                 │
-│    Tenant ID:  a1b2c3d4-e5f6-7890-abcd-ef1234567890                         │
-│    Region:     NA                                                           │
-│    Auth:       Federated                                                    │
-│    GWS Auth:   Managed                                                      │
-│    Confidence: ●●● High (4 sources)                                         │
-│    Services:   AWS Route 53, Atlassian (Jira/Confluence)*, BIMI,            │
-│                CAA: DigiCert, Cloudflare, DocuSign*, Google Workspace,      │
-│                Microsoft 365, Okta, Proofpoint, Salesforce*, Slack          │
-│                * single-source — --explain to see evidence                  │
-│                                                                             │
-│    Insights:   Federated identity indicators (likely ADFS/Okta/Ping —       │
-│                enterprise SSO)                                              │
-│                Email security 4/5 strong (DMARC reject, DKIM, SPF strict,   │
-│                BIMI)                                                        │
-│                Email gateway: Proofpoint in front of Exchange               │
-│                Email delivery path: Proofpoint gateway → Microsoft 365 +    │
-│                Google Workspace                                             │
-│                Security stack: Okta (identity), Wiz (cloud security)        │
-│                Edge Layering: cloudflare, akamai                            │
-│                Dual Email Provider: microsoft365, google-workspace          │
-│                                                                             │
-│    Certs:      280 total, 10 in last 90d, 3 issuers (DigiCert, Entrust,     │
-│                Sectigo)                                                     │
-│                                                                             │
-│    Related:    api.contoso.com, cdn.contoso.com, dev.contoso.com,           │
-│                login.contoso.com, portal.contoso.com, shop.contoso.com,     │
-│                sso.contoso.com, staging.contoso.com, status.contoso.com,    │
-│                support.contoso.com                                          │
-│                …and 47 more — use --full for the complete list              │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+Contoso Ltd
+contoso.com
+──────────────────────────────────────────────────────────────────────────────
+  Provider     Microsoft 365 (primary) via Proofpoint gateway + Google Workspace (secondary)
+  Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
+  Auth         Federated (Entra ID + Google Workspace)
+  Confidence   ●●● High (4 sources)
+
+Services
+  Email          Microsoft 365, Google Workspace, Proofpoint, DMARC, DKIM,
+                 SPF: strict (-all), BIMI
+  Identity       Okta, Google Workspace (managed identity)
+  Cloud          Cloudflare (CDN), AWS Route 53 (DNS)
+  Security       Wiz, CAA: 3 issuers restricted
+  Collaboration  Slack, Atlassian (Jira/Confluence)
+
+High-signal related domains
+  api.contoso.com, login.contoso.com, portal.contoso.com, sso.contoso.com,
+  admin.contoso.com, status.contoso.com, support.contoso.com
+  (57 total — 50 more, use --full to see all)
+
+Insights
+  Federated identity indicators observed (likely Okta — enterprise SSO)
+  Email security 4/5 strong (DMARC reject, DKIM, SPF strict, BIMI)
+  Email gateway: Proofpoint in front of Exchange
+  Dual provider: Google + Microsoft coexistence
 ```
 
 > Examples use [Microsoft's fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam). Tenant IDs, services, and domains are fabricated. No real company is depicted.
@@ -65,13 +54,16 @@ recon doctor                           # verify connectivity
 ## Usage
 
 ```bash
-recon contoso.com                      # default panel
-recon contoso.com --explain            # show why each signal fired
-recon contoso.com --full               # everything (services + domains + posture)
-recon contoso.com --json               # structured JSON for piping
-recon batch domains.txt --json         # batch lookup
-recon mcp                              # start MCP server (stdio)
+recon contoso.com                              # default panel
+recon contoso.com --explain                    # full reasoning + provenance DAG
+recon contoso.com --full                       # everything (services + domains + posture)
+recon contoso.com --profile fintech            # apply a posture lens (v0.9.3)
+recon contoso.com --json                       # structured JSON for piping
+recon batch domains.txt --json                 # batch (cross-domain token clustering)
+recon mcp                                      # start MCP server (stdio)
 ```
+
+Built-in profiles: `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`. Custom profiles live in `~/.recon/profiles/*.yaml`.
 
 See [docs/](docs/) for the full CLI reference, fingerprint and signal documentation, and MCP setup.
 
@@ -104,7 +96,7 @@ See [docs/mcp.md](docs/mcp.md) for the full tool list, advanced agentic workflow
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/                          # 1344 tests, 89% coverage
+pytest tests/                          # 1479 tests, 88% coverage
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 ```

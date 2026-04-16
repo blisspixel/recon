@@ -222,6 +222,15 @@ class SourceResult:
     ct_provider_used: str | None = None
     ct_subdomain_count: int = 0
 
+    # --- v0.9.3: OIDC tenant metadata enrichment ---
+    # Extracted from the Microsoft OIDC discovery document when present.
+    # Distinguish commercial M365, Government Community Cloud / GCC High,
+    # Azure China 21Vianet, Azure B2C, and Azure External ID tenancies.
+    # All three are None for non-Microsoft sources.
+    cloud_instance: str | None = None  # e.g. "microsoftonline.com", "microsoftonline.us"
+    tenant_region_sub_scope: str | None = None  # e.g. "GCC", "DOD", "USGov"
+    msgraph_host: str | None = None  # e.g. "graph.microsoft.com", "graph.microsoft.us"
+
     @property
     def crtsh_degraded(self) -> bool:
         """Backward-compatible: True when crt.sh was unreachable."""
@@ -295,6 +304,32 @@ class TenantInfo:
     # visible. None when no CT provider succeeded.
     ct_provider_used: str | None = None
     ct_subdomain_count: int = 0
+
+    # --- v0.9.3: OIDC tenant metadata enrichment ---
+    # Sovereignty / cloud instance information extracted from the
+    # Microsoft OIDC discovery document. None for non-Microsoft tenants.
+    # cloud_instance distinguishes commercial (microsoftonline.com) from
+    # gov cloud (microsoftonline.us) and China 21Vianet
+    # (partner.microsoftonline.cn). tenant_region_sub_scope is a
+    # Microsoft extension that further disambiguates gov deployments
+    # (e.g. "GCC", "DOD", "USGov"). msgraph_host surfaces the
+    # authoritative Graph host for the tenant.
+    cloud_instance: str | None = None
+    tenant_region_sub_scope: str | None = None
+    msgraph_host: str | None = None
+
+    # --- v0.9.3: Shared verification token clustering (batch scope) ---
+    # Populated only when a batch run observes the same site-verification
+    # token on multiple domains. Each entry is a (token, peer_domain)
+    # pair — one entry per peer that shares this token. Empty on single
+    # lookups. Never persisted to disk cache (batch scope only).
+    shared_verification_tokens: tuple[tuple[str, str], ...] = ()
+
+    # --- v0.9.3: CT lexical taxonomy (pure rule-based) ---
+    # Hedged observations derived from recognised environment / region /
+    # tenancy-shard prefixes on CT-discovered subdomains. Empty when
+    # fewer than the minimum number of matching subdomains are observed.
+    lexical_observations: tuple[str, ...] = ()
 
     # --- Conflict-aware merge (v0.7.0) ---
     merge_conflicts: MergeConflicts | None = None

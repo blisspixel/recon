@@ -120,14 +120,14 @@ def _debug_callback(value: bool) -> None:
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
-    version: bool | None = typer.Option(
+    version: bool | None = typer.Option(  # noqa: ARG001
         None,
         "--version",
         callback=version_callback,
         is_eager=True,
         help="Show version and exit.",
     ),
-    debug: bool = typer.Option(
+    debug: bool = typer.Option(  # noqa: ARG001
         False,
         "--debug",
         callback=_debug_callback,
@@ -141,19 +141,50 @@ def main(
     Give it any domain. Get back company name, email provider, tenant ID,
     tech stack, email security score, and signal intelligence.
     All from public sources. No credentials needed.
-
-    [dim]Usage:[/dim]
-      recon contoso.com
-      recon northwindtraders.com --services
-      recon fabrikam.com --full
-      recon contoso.com --md > report.md
-      recon batch domains.txt --json
-      recon doctor
-      recon mcp
     """
     if ctx.invoked_subcommand is None:
-        typer.echo(ctx.get_help())
+        _print_welcome_banner()
         raise typer.Exit()
+
+
+def _print_welcome_banner() -> None:
+    """Print the curated onboarding banner shown when ``recon`` is run
+    with no arguments. Replaces the raw Typer help dump that was
+    shown prior to v0.9.3.
+
+    Kept tight — fits on ~15 lines — with a one-line value prop, the
+    recommended first command, progressive disclosure, three real
+    examples, and a doctor hint. No emojis, no hype, no wall of
+    flags. Users who want the full flag list can run
+    ``recon lookup --help`` or ``recon --help <subcommand>``.
+    """
+    from recon_tool import __version__
+
+    console = get_console()
+    # Subtle cyan for the header and section labels — matches the
+    # panel redesign tone. No red, no yellow, no alarmism.
+    console.print(f"[bold cyan]recon {__version__}[/bold cyan] — Passive domain intelligence")
+    console.print()
+    console.print(
+        "Tell me what technology stack an organization is running — from public DNS\n"
+        "and identity endpoints only. Zero credentials. Zero scanning."
+    )
+    console.print()
+    console.print("[bold cyan]Usage[/bold cyan]")
+    console.print("  recon <domain>                    → clean summary (recommended)")
+    console.print("  recon <domain> --verbose          → + posture analysis")
+    console.print("  recon <domain> --full             → everything")
+    console.print("  recon <domain> --explain          → full reasoning and evidence")
+    console.print("  recon batch domains.txt           → process multiple domains")
+    console.print("  recon doctor                      → check connectivity")
+    console.print("  recon mcp                         → start the MCP server")
+    console.print()
+    console.print("[bold cyan]Common examples[/bold cyan]")
+    console.print("  recon contoso.com")
+    console.print("  recon northwindtraders.com --verbose")
+    console.print("  recon fabrikam.com --full --json")
+    console.print()
+    console.print('[dim]Run "recon doctor" first if you see degraded sources or partial results.[/dim]')
 
 
 @app.command()
@@ -181,6 +212,11 @@ def lookup(
     exposure: bool = typer.Option(False, "--exposure", help="Show exposure assessment"),
     gaps: bool = typer.Option(False, "--gaps", help="Show hardening gap analysis"),
     explain: bool = typer.Option(False, "--explain", help="Show why each insight and signal was produced"),
+    profile: str | None = typer.Option(
+        None,
+        "--profile",
+        help="Apply a profile lens to posture observations (e.g. fintech, healthcare, high-value-target)",
+    ),
 ) -> None:
     """
     Look up a domain. This is the default command.
@@ -207,6 +243,7 @@ def lookup(
             show_exposure=exposure,
             show_gaps=gaps,
             show_explain=explain,
+            profile_name=profile,
         )
     )
 
@@ -497,7 +534,7 @@ def _build_explanations(
 
     Generates explanations for signals, insights, confidence, and observations.
     """
-    from recon_tool.absence import evaluate_absence_signals
+    from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
     from recon_tool.explanation import (
         explain_confidence,
         explain_insights,
@@ -520,9 +557,10 @@ def _build_explanations(
     signals = load_signals()
     signal_matches = evaluate_signals(context)
 
-    # Third pass: absence signals
+    # Third pass: absence signals + positive hardening observations (v0.9.3)
     absence_matches = evaluate_absence_signals(signal_matches, signals, frozenset(info.slugs))
-    all_signal_matches = signal_matches + absence_matches
+    positive_matches = evaluate_positive_absence(signal_matches, signals, frozenset(info.slugs))
+    all_signal_matches = signal_matches + absence_matches + positive_matches
 
     # Signal explanations
     signal_recs = explain_signals(
@@ -580,6 +618,7 @@ async def _lookup(
     show_exposure: bool = False,
     show_gaps: bool = False,
     show_explain: bool = False,
+    profile_name: str | None = None,
 ) -> None:
     """Async lookup implementation."""
     # Lazy imports: formatter, resolver, validator are imported here (not at module
@@ -836,11 +875,26 @@ async def _lookup(
             render_verbose_sources(results)
 
         # Compute posture observations if requested
-        observations = ()
+        observations: tuple[Any, ...] = ()
+        profile = None
+        if profile_name:
+            from recon_tool.profiles import load_profile
+
+            profile = load_profile(profile_name)
+            if profile is None:
+                from recon_tool.profiles import list_profiles
+
+                names = ", ".join(p.name for p in list_profiles())
+                render_error(
+                    f"Unknown profile {profile_name!r}. Available profiles: {names or '(none)'}"
+                )
+                raise typer.Exit(code=EXIT_VALIDATION) from None
         if show_posture:
             from recon_tool.posture import analyze_posture
+            from recon_tool.profiles import apply_profile
 
-            observations = analyze_posture(info)
+            raw_observations = analyze_posture(info)
+            observations = apply_profile(tuple(raw_observations), profile)
 
         if json_output:
             from recon_tool.formatter import format_posture_observations
@@ -849,11 +903,18 @@ async def _lookup(
             if show_posture:
                 tenant_dict["posture"] = format_posture_observations(observations)
             if show_explain:
+                from recon_tool.explanation import build_explanation_dag
                 from recon_tool.formatter import format_explanations_list
                 from recon_tool.models import serialize_conflicts
 
                 explanations = _build_explanations(info, results)
                 tenant_dict["explanations"] = format_explanations_list(explanations)
+                # v0.9.3: structured provenance DAG for programmatic
+                # consumers. Lives alongside the flat list — both are
+                # emitted so existing tooling doesn't break.
+                tenant_dict["explanation_dag"] = build_explanation_dag(
+                    explanations, info.evidence
+                )
                 if info.merge_conflicts and info.merge_conflicts.has_conflicts:
                     tenant_dict["conflicts"] = serialize_conflicts(info.merge_conflicts)
             typer.echo(json.dumps(tenant_dict, indent=2))
@@ -1017,6 +1078,13 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int,
 
     semaphore = asyncio.Semaphore(concurrency)
 
+    # v0.9.3: batch-scope token clustering. Each successful resolution
+    # stashes its TenantInfo here keyed by the *input* domain string,
+    # so the post-processing pass can compute `shared_verification_tokens`
+    # across every domain in the batch. Scoped to this batch run — never
+    # persisted to disk cache, never shared between batch invocations.
+    batch_infos: dict[str, _TenantInfo] = {}
+
     # Sentinel prefix for error messages returned from _process_one.
     # Errors are collected as strings and printed in order after all tasks complete,
     # preventing interleaved output from concurrent coroutines.
@@ -1051,6 +1119,12 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int,
                 # concurrency, but without a delay all N domains fire at once.
                 await asyncio.sleep(0.1)
                 info, _results = await resolve_tenant(validated)
+
+                # v0.9.3: capture TenantInfo for post-batch token clustering.
+                # Keyed by queried_domain so the post-processing pass can
+                # correlate back to tenant dict entries using the same key
+                # that format_tenant_dict emits.
+                batch_infos[info.queried_domain] = info
 
                 if json_output:
                     return format_tenant_dict(info)
@@ -1091,6 +1165,28 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int,
 
     if json_output:
         json_results: list[dict[str, Any]] = [r for r in results if r is not None]  # type: ignore[misc]
+
+        # v0.9.3: attach shared_verification_tokens to each entry when
+        # at least two domains in the batch share the same token. Keyed
+        # by queried_domain which is the canonical normalized form.
+        if batch_infos:
+            from recon_tool.clustering import compute_shared_tokens
+
+            domain_tokens = {
+                d: info.site_verification_tokens for d, info in batch_infos.items()
+            }
+            clusters = compute_shared_tokens(domain_tokens)
+            if clusters:
+                for entry in json_results:
+                    key = entry.get("queried_domain")
+                    if not isinstance(key, str):
+                        continue
+                    peers = clusters.get(key)
+                    if peers:
+                        entry["shared_verification_tokens"] = [
+                            {"token": e.token, "peer": e.peer} for e in peers
+                        ]
+
         typer.echo(json_mod.dumps(json_results, indent=2))
     elif csv_output:
         from recon_tool.formatter import format_batch_csv

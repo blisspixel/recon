@@ -318,7 +318,11 @@ async def lookup_tenant(
         openWorldHint=True,
     ),
 )
-async def analyze_posture(domain: str, explain: bool = False) -> str:
+async def analyze_posture(
+    domain: str,
+    explain: bool = False,
+    profile: str | None = None,
+) -> str:
     """Analyze a domain's configuration posture and return neutral observations.
 
     Returns factual observations about the domain's email security, identity,
@@ -329,6 +333,10 @@ async def analyze_posture(domain: str, explain: bool = False) -> str:
     Args:
         domain: A domain name to analyze (e.g., "northwindtraders.com")
         explain: When true, include explanation data for each posture observation.
+        profile: Optional profile name (e.g. "fintech", "healthcare",
+            "saas-b2b", "high-value-target", "public-sector"). Reweights
+            and filters observations to the profile's lens without
+            adding new intelligence. Added in v0.9.3.
 
     Returns:
         JSON array of observations, each with category, salience, statement,
@@ -389,8 +397,24 @@ async def analyze_posture(domain: str, explain: bool = False) -> str:
 
     from recon_tool.formatter import format_posture_observations
     from recon_tool.posture import analyze_posture as _analyze_posture
+    from recon_tool.profiles import apply_profile, list_profiles, load_profile
 
     observations = _analyze_posture(info)
+
+    # v0.9.3: apply profile lens if requested
+    profile_note: str | None = None
+    if profile:
+        prof = load_profile(profile)
+        if prof is None:
+            available = ", ".join(p.name for p in list_profiles()) or "(none)"
+            return json_mod.dumps(
+                {
+                    "error": f"Unknown profile {profile!r}",
+                    "available_profiles": available,
+                }
+            )
+        observations = apply_profile(tuple(observations), prof)
+        profile_note = prof.prepend_note or prof.description
 
     elapsed = time.monotonic() - start_time
     _log_structured(
@@ -411,8 +435,13 @@ async def analyze_posture(domain: str, explain: bool = False) -> str:
         posture_rules = load_posture_rules()
         explanation_records = explain_observations(observations, posture_rules, info.evidence, info.detection_scores)
         explanations = [serialize_explanation(rec) for rec in explanation_records]
-        return json_mod.dumps({"observations": result_list, "explanations": explanations}, indent=2)
+        payload: dict[str, object] = {"observations": result_list, "explanations": explanations}
+        if profile_note:
+            payload["profile_note"] = profile_note
+        return json_mod.dumps(payload, indent=2)
 
+    if profile_note:
+        return json_mod.dumps({"observations": result_list, "profile_note": profile_note}, indent=2)
     return json_mod.dumps(result_list, indent=2)
 
 
@@ -828,7 +857,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
 
     Includes explanations for insights, signals, confidence, and conflicts.
     """
-    from recon_tool.absence import evaluate_absence_signals
+    from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
     from recon_tool.explanation import (
         explain_confidence,
         explain_insights,
@@ -863,9 +892,10 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
     signal_matches = evaluate_signals(context)
     signals = load_signals()
 
-    # Third pass: absence signals
+    # Third pass: absence signals + positive hardening observations (v0.9.3)
     absence_matches = evaluate_absence_signals(signal_matches, signals, context.detected_slugs)
-    all_signal_matches = signal_matches + absence_matches
+    positive_matches = evaluate_positive_absence(signal_matches, signals, context.detected_slugs)
+    all_signal_matches = signal_matches + absence_matches + positive_matches
 
     context_metadata: dict[str, object] = {
         "dmarc_policy": info.dmarc_policy,
@@ -892,6 +922,13 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
     all_explanations.append(serialize_explanation(conf_rec))
 
     base["explanations"] = all_explanations
+
+    # v0.9.3: structured provenance DAG in parallel with the flat list.
+    # Both views are emitted so existing tooling keeps working.
+    from recon_tool.explanation import build_explanation_dag
+
+    all_records = [*signal_recs, *insight_recs, conf_rec]
+    base["explanation_dag"] = build_explanation_dag(all_records, info.evidence)
 
     # Include conflicts when present
     if info.merge_conflicts and info.merge_conflicts.has_conflicts:
@@ -1663,6 +1700,84 @@ async def reevaluate_domain(domain: str) -> str:
     return format_tenant_json(new_info)
 
 
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def cluster_verification_tokens(domains: list[str]) -> str:
+    """Cluster a list of domains by shared site-verification tokens.
+
+    For defensive OSINT and vendor due-diligence only.
+
+    Looks up each domain (using the TTL cache when available) and
+    computes a map of shared TXT verification tokens across the input
+    set. When two domains share a ``google-site-verification=``,
+    ``MS=``, Atlassian, Zoom, or similar token, it surfaces a hedged
+    "possible relationship" observation — not a verdict.
+
+    A reused token implies a shared operator scope: the same SaaS
+    account provisioned the verification on both domains. Common
+    interpretations include shared infrastructure, acquisition history,
+    subsidiary relationships, managed-services providers, or
+    historical residue. The tool does NOT commit to any of these —
+    it reports the observation and leaves synthesis to the caller.
+
+    Zero additional network calls beyond whatever initial resolves are
+    required to populate the cache. Every result is computed from
+    cached TenantInfo.
+
+    Args:
+        domains: List of domain names to cluster. Must contain at
+            least two distinct domains to be useful. Invalid domains
+            are skipped with an error entry in the response.
+
+    Returns:
+        JSON object with ``clusters`` (a map from each domain to its
+        peers via shared tokens) and ``errors`` (a list of domains
+        that could not be resolved). Empty ``clusters`` means no
+        shared tokens were observed — not an error.
+    """
+    from recon_tool.clustering import compute_shared_tokens
+
+    if not domains:
+        return json_mod.dumps({"error": "At least one domain is required"})
+
+    domain_tokens: dict[str, tuple[str, ...]] = {}
+    errors: list[dict[str, str]] = []
+
+    for raw in domains:
+        resolved = await _resolve_or_cache(raw)
+        if isinstance(resolved, str):
+            errors.append({"domain": raw, "error": resolved})
+            continue
+        info, _results = resolved
+        domain_tokens[info.queried_domain] = info.site_verification_tokens
+
+    clusters = compute_shared_tokens(domain_tokens)
+
+    # Serialize: domain → list of {token, peer}
+    serialized: dict[str, list[dict[str, str]]] = {}
+    for d, entries in clusters.items():
+        serialized[d] = [{"token": e.token, "peer": e.peer} for e in entries]
+
+    payload: dict[str, object] = {
+        "clusters": serialized,
+        "errors": errors,
+        "disclaimer": (
+            "Shared verification tokens imply operator-scoped credential "
+            "reuse across domains. This is consistent with shared "
+            "infrastructure, subsidiary relationships, or managed-services "
+            "providers — it is not a corporate-identity verdict. Observation, "
+            "not a verdict."
+        ),
+    }
+    return json_mod.dumps(payload, indent=2)
+
+
 @mcp.prompt()
 def domain_report(domain: str) -> str:
     """Generate a domain intelligence report.
@@ -1673,9 +1788,88 @@ def domain_report(domain: str) -> str:
     return f"Look up {domain} using the lookup_tenant tool with format='markdown', then summarize the key findings."
 
 
+def _print_mcp_banner() -> None:
+    """Write the MCP server startup banner to stderr.
+
+    stderr is used deliberately: the stdio transport owns stdout for
+    JSON-RPC message framing, and any bytes written to stdout before
+    or during server execution will corrupt that framing. stderr is
+    safe — MCP clients either display it or discard it, but never
+    parse it.
+    """
+    import sys
+
+    from recon_tool import __version__
+
+    try:
+        from recon_tool.fingerprints import load_fingerprints
+        from recon_tool.signals import load_signals
+
+        fp_count = len(load_fingerprints())
+        sig_count = len(load_signals())
+    except Exception:
+        fp_count = 0
+        sig_count = 0
+
+    lines = [
+        f"recon MCP Server v{__version__} — ready for AI clients",
+        "",
+        "Listening on stdio transport.",
+        f"Loaded {fp_count} fingerprints, {sig_count} signals.",
+        "",
+        "Available tools (17 total):",
+        "  lookup_tenant               Full domain intelligence + tenant details",
+        "  analyze_posture             Neutral posture observations (accepts --profile)",
+        "  assess_exposure             Security posture score (0–100)",
+        "  find_hardening_gaps         Categorized gaps + recommendations",
+        "  simulate_hardening          What-if hardening simulation",
+        "  compare_postures            Side-by-side posture comparison",
+        "  chain_lookup                Recursive related-domain discovery",
+        "  explain_signal              Signal trigger conditions + evidence",
+        "  test_hypothesis             Evaluate a theory against cached data",
+        "  cluster_verification_tokens Cluster domains by shared TXT tokens",
+        "",
+        "MCP server is running and waiting for tool calls from your AI client.",
+        "Press Ctrl+C to stop.",
+        "",
+        "Tip: configure this in Claude Desktop, Cursor, or VS Code using the",
+        "     instructions in docs/mcp.md",
+        "",
+    ]
+    sys.stderr.write("\n".join(lines))
+    sys.stderr.flush()
+
+
 def main() -> None:
-    """Run the MCP server with stdio transport."""
-    mcp.run()
+    """Run the MCP server with stdio transport.
+
+    v0.9.3: prints a professional startup banner to stderr before
+    handing control to the FastMCP loop, and handles Ctrl+C /
+    CancelledError / BrokenPipe cleanly so the user sees
+    ``"MCP server stopped"`` instead of a raw traceback. The stdio
+    transport is still owned by stdout — the banner and shutdown
+    message both go to stderr so JSON-RPC framing stays clean.
+    """
+    import sys
+
+    _print_mcp_banner()
+
+    try:
+        mcp.run()
+    except KeyboardInterrupt:
+        sys.stderr.write("\nMCP server stopped.\n")
+        sys.stderr.flush()
+    except (BrokenPipeError, ConnectionResetError):
+        # Client disconnected — this is a clean shutdown from the
+        # stdio transport's perspective, not an error worth raising.
+        sys.stderr.write("\nMCP client disconnected — server stopped.\n")
+        sys.stderr.flush()
+    except Exception as exc:  # noqa: BLE001
+        # Any other unexpected failure: log a one-line summary, not
+        # a traceback. Users see a calm error, not a Python scream.
+        sys.stderr.write(f"\nMCP server exited unexpectedly: {exc}\n")
+        sys.stderr.flush()
+        raise SystemExit(1) from exc
 
 
 if __name__ == "__main__":

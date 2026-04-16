@@ -237,6 +237,9 @@ async def _enrich_from_related(
         google_idp_name=info.google_idp_name,
         primary_email_provider=info.primary_email_provider,
         likely_primary_email_provider=info.likely_primary_email_provider,
+        cloud_instance=info.cloud_instance,
+        tenant_region_sub_scope=info.tenant_region_sub_scope,
+        msgraph_host=info.msgraph_host,
     )
 
     # Build enriched TenantInfo — keep identity fields, update services/slugs/insights
