@@ -341,11 +341,84 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
                 ctx.services.add(SVC_SPF_STRICT)
             elif txt_lower.rstrip().endswith("~all"):
                 ctx.services.add(SVC_SPF_SOFTFAIL)
+            # v0.9.3: follow SPF redirect= chains. A record like
+            # "v=spf1 redirect=_spf.mail.umich.edu" means "use that
+            # domain's SPF as mine" — RFC 7208 §6.1. Higher-ed and
+            # enterprise domains commonly use redirect to point at
+            # a shared SPF zone they manage separately. Without
+            # following the chain, we score the redirected domain
+            # as having no SPF strict even when the redirect target
+            # does end in -all. Follow up to 3 chain hops to prevent
+            # loops, mark each redirect target for SPF fingerprint
+            # scanning too.
+            if "redirect=" in txt_lower and not txt_lower.rstrip().endswith(("-all", "~all")):
+                await _follow_spf_redirect(ctx, txt_lower, depth=0, max_depth=3)
 
+    # SPF complexity summary — runs once per domain after the TXT
+    # record scan, regardless of how many SPF variants the loop saw.
+    # This block belongs to _detect_txt, not _follow_spf_redirect.
     if ctx.spf_include_count >= 8:
         ctx.services.add(f"SPF complexity: {ctx.spf_include_count} includes (large)")
     elif ctx.spf_include_count >= 4:
         ctx.services.add(f"SPF complexity: {ctx.spf_include_count} includes")
+
+
+async def _follow_spf_redirect(
+    ctx: _DetectionCtx, spf_text: str, depth: int, max_depth: int
+) -> None:
+    """Follow SPF redirect= chain up to ``max_depth`` hops.
+
+    When a domain's SPF is ``v=spf1 redirect=<other>``, we need to
+    query the redirected domain's SPF to know whether the chain
+    ultimately ends in ``-all`` (strict) or ``~all`` (softfail).
+    Without following the chain, recon scores 0 on SPF strict for
+    every domain that uses the redirect pattern — and that pattern
+    is extremely common in higher-ed and enterprise deployments
+    where SPF is managed as a single zone across many brand
+    domains.
+
+    Any failure (network error, parse error, missing pattern)
+    silently no-ops — this is an enrichment path, not a critical
+    detection, and it must never break the parent DNS source.
+    """
+    if depth >= max_depth:
+        return
+    try:
+        import re
+        match = re.search(r"redirect=([^\s]+)", spf_text)
+        if not match:
+            return
+        target = match.group(1).strip().rstrip(".")
+        if not target or "." not in target:
+            return
+        target_records = await _safe_resolve(target, "TXT")
+        patterns = get_spf_patterns()
+        for record in target_records:
+            rec_lower = record.strip().lower()
+            if not rec_lower.startswith("v=spf1"):
+                continue
+            # Run the same fingerprint pass on the target's SPF
+            for det in patterns:
+                if det.pattern.lower() in rec_lower:
+                    ctx.add(det.name, det.slug)
+                    ctx.record_fp_match(det.slug, "spf", det.pattern)
+            # Propagate the policy qualifier from the redirect
+            # target up to the origin — if _spf.mail.umich.edu
+            # ends in -all, then umich.edu's SPF effectively ends
+            # in -all via the redirect, and we credit the origin
+            # with SPF strict.
+            if rec_lower.rstrip().endswith("-all"):
+                ctx.services.add(SVC_SPF_STRICT)
+                return
+            if rec_lower.rstrip().endswith("~all"):
+                ctx.services.add(SVC_SPF_SOFTFAIL)
+                return
+            # Chain continues: recurse one more hop.
+            if "redirect=" in rec_lower:
+                await _follow_spf_redirect(ctx, rec_lower, depth + 1, max_depth)
+                return
+    except Exception as exc:
+        logger.debug("SPF redirect chain follow failed: %s", exc)
 
 
 async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
@@ -355,17 +428,44 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
     created — the email topology computation in merger.py filters evidence
     by source_type == "MX" to distinguish true primary providers (direct
     MX) from secondary residue (DKIM/TXT/identity endpoint).
+
+    v0.9.3 refinement: emit a generic EvidenceRecord for EVERY MX host
+    found, whether or not a fingerprint pattern matched. This lets
+    downstream code distinguish "no MX records at all" (domain has no
+    email) from "MX records exist but the host isn't in our fingerprint
+    set" (domain has custom / self-hosted email like Apache's own mail
+    servers). Previously, apache.org looked identical to
+    balcaninnovations.com from the evidence perspective — both had
+    zero MX evidence records even though apache.org has three real
+    MX hosts. The "generic MX evidence" carries an empty slug so it
+    doesn't pollute the detected_slugs set.
     """
     mx_records = await _safe_resolve(domain, "MX")
     ctx.raw_dns_records.setdefault("MX", []).extend(mx_records)
 
     for mx in mx_records:
         mx_lower = mx.lower()
+        matched = False
         for det in get_mx_patterns():
             if det.pattern in mx_lower:
                 ctx.add(det.name, det.slug, source_type="MX", raw_value=mx)
                 ctx.record_fp_match(det.slug, "mx", det.pattern)
+                matched = True
                 break
+        if not matched:
+            # Emit a generic MX evidence record so downstream code can
+            # tell that MX records exist, even though this host doesn't
+            # match any provider fingerprint. Empty slug keeps it out
+            # of the slug set; source_type="MX" is what the email
+            # topology + has_mx_records check looks at.
+            ctx.evidence.append(
+                EvidenceRecord(
+                    source_type="MX",
+                    raw_value=mx,
+                    rule_name="Custom MX host",
+                    slug="",
+                )
+            )
 
 
 async def _detect_m365_cnames(ctx: _DetectionCtx, domain: str) -> None:
@@ -821,6 +921,118 @@ async def _detect_domain_connect(ctx: _DetectionCtx, domain: str) -> None:
             ctx.services.add("Domain Connect (GoDaddy)")
 
 
+# v0.9.3: hosting provider detection from A record → reverse DNS
+# (PTR) → hostname pattern match. This fills a major detection gap:
+# on web-only domains with minimal DNS signal (a single A record
+# and a couple of NS entries), the A record IS the primary signal
+# and we were completely ignoring it. Public cloud providers
+# publish predictable PTR records for their IP ranges that encode
+# both the provider and (for AWS / Azure / GCP) the region.
+#
+# Pattern table — checked in order, first match wins. Each entry is
+# a substring matched against the PTR hostname's lowercased form.
+# The region extractor is an optional regex that runs against the
+# full PTR hostname to pull a region token; when present and
+# matched, the region is appended to the service name.
+_HOSTING_PTR_PATTERNS: tuple[tuple[str, str, str, str | None], ...] = (
+    # (ptr substring, service name, slug, region regex or None)
+    ("compute.amazonaws.com", "AWS EC2", "aws-ec2", r"[a-z]{2}-[a-z]+-\d+"),
+    ("ec2.internal", "AWS EC2", "aws-ec2", None),
+    ("elb.amazonaws.com", "AWS ELB", "aws-elb", r"[a-z]{2}-[a-z]+-\d+"),
+    ("elb.amazonaws.com.cn", "AWS ELB (China)", "aws-elb", None),
+    ("amazonaws.com", "AWS", "aws-compute", None),
+    ("cloudapp.azure.com", "Azure VM", "azure-vm", r"(?:eastus|westus|centralus|northeurope|westeurope|"
+        r"eastasia|southeastasia|japaneast|japanwest|brazilsouth|australiaeast|canadacentral)[a-z0-9]*"),
+    ("cloudapp.net", "Azure VM (legacy)", "azure-vm", None),
+    ("bc.googleusercontent.com", "GCP Compute Engine", "gcp-compute", None),
+    ("googleusercontent.com", "GCP Compute Engine", "gcp-compute", None),
+    ("linode.com", "Linode", "linode", None),
+    ("linodeusercontent.com", "Linode", "linode", None),
+    ("digitalocean.com", "DigitalOcean", "digitalocean", None),
+    ("droplets.digitalocean.com", "DigitalOcean", "digitalocean", None),
+    ("hetzner.com", "Hetzner", "hetzner", None),
+    ("your-server.de", "Hetzner", "hetzner", None),
+    ("ovh.net", "OVH", "ovh", None),
+    ("ovh.ca", "OVH", "ovh", None),
+    ("vultr.com", "Vultr", "vultr", None),
+    ("vultrusercontent.com", "Vultr", "vultr", None),
+    ("cloudflare.com", "Cloudflare", "cloudflare", None),
+    ("fastly.net", "Fastly", "fastly", None),
+    ("cdn77.com", "CDN77", "cdn77", None),
+    ("bunnycdn.com", "Bunny CDN", "bunnycdn", None),
+    ("akamaitechnologies.com", "Akamai", "akamai", None),
+    ("akamaiedge.net", "Akamai", "akamai", None),
+    ("edgekey.net", "Akamai", "akamai", None),
+    ("edgesuite.net", "Akamai", "akamai", None),
+)
+
+
+async def _detect_hosting_from_a_record(ctx: _DetectionCtx, domain: str) -> None:
+    """Reverse-resolve the apex A record and match the PTR hostname
+    against known cloud-provider patterns.
+
+    On web-only domains this is the primary detection signal — the
+    domain may have no MX, no DMARC, no TXT verification tokens,
+    but the A record still points somewhere and the hosting
+    provider's PTR tells us where. All work is passive DNS:
+    resolve A, reverse-lookup the IP, pattern-match the PTR.
+    No active probing of the hosting infrastructure.
+
+    The function tolerates every failure mode (no A record,
+    PTR missing, PTR matches no known pattern) and simply exits
+    without adding a service. Never raises.
+    """
+    import ipaddress
+    import re
+
+    a_records = await _safe_resolve(domain, "A")
+    if not a_records:
+        return
+    ctx.raw_dns_records.setdefault("A", []).extend(a_records)
+
+    # Use the first IP only — multi-A domains are usually
+    # load-balanced within the same provider, so one PTR is enough.
+    try:
+        ip = ipaddress.ip_address(a_records[0])
+    except (ValueError, TypeError):
+        return
+
+    # Build PTR query: reverse octets + .in-addr.arpa (IPv4) or
+    # reverse nibbles + .ip6.arpa (IPv6). dns.reversename handles
+    # both, but import locally to keep the hot path clean.
+    try:
+        import dns.reversename  # pyright: ignore[reportMissingTypeStubs]
+        ptr_name = dns.reversename.from_address(str(ip))
+        ptr_results = await _safe_resolve(str(ptr_name), "PTR")
+    except Exception:
+        return
+    if not ptr_results:
+        return
+
+    ptr_lower = ptr_results[0].rstrip(".").lower()
+    for substring, name, slug, region_regex in _HOSTING_PTR_PATTERNS:
+        if substring not in ptr_lower:
+            continue
+        # The display name is always the bare provider. The region
+        # (when extractable) goes into the raw_value of the
+        # evidence record so --explain and --json still carry it,
+        # but the default panel stays compact — it'd get noisy if
+        # every Cloud row grew a free-form region parenthetical.
+        region_note = ""
+        if region_regex:
+            match = re.search(region_regex, ptr_lower)
+            if match:
+                region_note = f" ({match.group(0)})"
+        ctx.add(
+            name,
+            slug,
+            source_type="A",
+            raw_value=f"{ip} -> {ptr_lower}{region_note}",
+        )
+        ctx.record_fp_match(slug, "a_ptr", substring)
+        break
+
+
 async def _detect_subdomain_txt(ctx: _DetectionCtx, domain: str) -> None:
     """Query TXT records at specific subdomains for vendor-specific verification.
 
@@ -1023,6 +1235,190 @@ async def _detect_common_subdomains(ctx: _DetectionCtx, domain: str) -> None:
         ctx.related_domains.update(found)
 
 
+# v0.9.3: identity-hub subdomain prefixes that are strong SSO / IdP
+# signals when they exist. These are probed separately from the
+# generic common-subdomain list because:
+#
+#   1. They're specifically about detecting federated identity, a
+#      single high-value signal rather than arbitrary SaaS noise.
+#   2. They resolve via A records, not CNAMEs (Shibboleth IdPs are
+#      often self-hosted on a university's own infrastructure with
+#      a direct A record, never a CNAME to a vendor). The generic
+#      common-subdomain probe only checks CNAMEs and misses these.
+#   3. The detection emits a dedicated insight + slug so downstream
+#      code can reason about "this org uses federated SSO" without
+#      having to infer it from related_domains.
+_IDP_SUBDOMAIN_PREFIXES: tuple[str, ...] = (
+    # Shibboleth / SAML family
+    "shibboleth",
+    "weblogin",
+    "idp",
+    "wayf",
+    "sp",
+    "sso",
+    "saml",
+    "federation",
+    # Vendor IdPs
+    "okta",
+    "adfs",
+    # CAS (Central Authentication Service — common in higher ed)
+    "cas",
+    # University-specific SSO names (Raven=Cambridge, WebAuth=Oxford,
+    # HarvardKey=Harvard, Kerberos=MIT-style). These are visible as
+    # subdomains on many of their academic customers via
+    # CNAME-delegation from the parent university's zone.
+    "raven",
+    "webauth",
+    "harvardkey",
+    "kerberos",
+)
+
+
+async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
+    """Detect on-prem / hybrid Microsoft Exchange deployments via
+    OWA subdomain probing.
+
+    When ``owa.<domain>``, ``mail.<domain>``, or similar Exchange-
+    specific endpoints resolve, it's a strong signal that the org
+    runs on-prem / hybrid Exchange (not Exchange Online). These
+    orgs often self-host mail while still having an Entra ID /
+    Azure AD tenant for identity — a very common higher-ed and
+    institutional-nonprofit pattern.
+
+    Without this detection, a domain with custom MX records and an
+    OWA endpoint looks sparse to recon even though the actual
+    answer ("runs Exchange on-prem") is observable from DNS alone.
+    This fills that gap.
+
+    Accepts A or CNAME resolution — on-prem Exchange typically
+    resolves via A to an internal-facing IP or via CNAME to a
+    load-balanced frontend. Checks a narrow set of strictly-
+    Exchange subdomain prefixes to avoid false positives on
+    generic `mail.` hostnames that could be anything.
+    """
+    # Only these prefixes are specifically Exchange-related. We
+    # deliberately exclude generic "mail" since many orgs point
+    # mail. at a CDN, a web frontend, or a third-party mail
+    # provider. The prefixes here only mean Exchange.
+    exchange_prefixes = (
+        "owa",           # Outlook Web Access
+        "outlook",       # Outlook anywhere
+        "exchange",      # Named Exchange endpoint
+        "mail-ex",       # Less common but unambiguous
+        "webmail",       # Often Exchange but could be Horde / Roundcube
+        "autodiscover",  # Exchange autodiscover — standard Exchange
+                         # protocol, returned as CNAME for M365
+                         # (already detected) or as A for on-prem.
+    )
+
+    # Two-part probe: (a) A-record only for prefixes that should
+    # only match on-prem (autodiscover). On M365 domains
+    # autodiscover.<apex> is a CNAME to autodiscover.outlook.com
+    # — that's Exchange Online, not on-prem, and is already
+    # detected by _detect_m365_cnames. We deliberately skip the
+    # CNAME check for autodiscover so M365 domains don't false-
+    # positive into the on-prem detector. (b) A-or-CNAME for
+    # owa / outlook / exchange / mail-ex / webmail — those
+    # prefixes are used by both deployments but any of them
+    # existing is a strong Exchange signal regardless.
+    a_only_prefixes = {"autodiscover"}
+
+    async def _probe(prefix: str) -> str | None:
+        fqdn = f"{prefix}.{domain}"
+        a_results = await _safe_resolve(fqdn, "A")
+        if a_results:
+            return fqdn
+        if prefix in a_only_prefixes:
+            return None
+        cname_results = await _safe_resolve(fqdn, "CNAME")
+        if cname_results:
+            return fqdn
+        return None
+
+    probes = await asyncio.gather(*(_probe(p) for p in exchange_prefixes))
+    found = [fqdn for fqdn in probes if fqdn is not None]
+    if not found:
+        return
+
+    # The strongest signals are owa / outlook / exchange /
+    # autodiscover (A-only) — any of them means on-prem or
+    # hybrid Exchange. `webmail` alone is too weak (could be
+    # Roundcube / Horde / SquirrelMail) — skip when only it
+    # is present.
+    found_prefixes = {f.split(".", 1)[0] for f in found}
+    strong_signals = {"owa", "outlook", "exchange", "mail-ex", "autodiscover"}
+    has_strong_signal = bool(found_prefixes & strong_signals)
+    if not has_strong_signal:
+        return
+
+    ctx.add(
+        "Exchange Server (on-prem / hybrid)",
+        "exchange-onprem",
+        source_type="A",
+        raw_value=", ".join(sorted(found)),
+    )
+    ctx.related_domains.update(found)
+
+
+async def _detect_idp_hub(ctx: _DetectionCtx, domain: str) -> None:
+    """Probe common identity-hub subdomain prefixes.
+
+    Unlike the generic common-subdomain probe, this one accepts A
+    records (not just CNAME) because self-hosted Shibboleth / ADFS
+    IdPs typically point at an internal server via A, not via a
+    CNAME to a SaaS vendor. When any of these subdomains resolves,
+    it's a strong passive signal that the org runs federated SSO.
+
+    The result is emitted as a ``federated-sso-hub`` slug and
+    surfaces as an insight line via a new generator in
+    ``insights.py``.
+    """
+
+    async def _probe(prefix: str) -> str | None:
+        fqdn = f"{prefix}.{domain}"
+        # Try A first (self-hosted IdPs), then CNAME (SaaS vendors)
+        a_results = await _safe_resolve(fqdn, "A")
+        if a_results:
+            return fqdn
+        cname_results = await _safe_resolve(fqdn, "CNAME")
+        if cname_results:
+            return fqdn
+        return None
+
+    probes = await asyncio.gather(*(_probe(p) for p in _IDP_SUBDOMAIN_PREFIXES))
+    found = [fqdn for fqdn in probes if fqdn is not None]
+    if not found:
+        return
+
+    ctx.related_domains.update(found)
+    # Classify: shibboleth / idp / wayf / sp are Shibboleth / SAML
+    # family; okta is the Okta SaaS IdP; adfs is Microsoft.
+    # v0.9.3: emit the service name using the same friendly form
+    # that _SLUG_DISPLAY_OVERRIDES maps the slug to, so pass 1 and
+    # pass 2 of the categorizer agree on the display name and
+    # don't produce a duplicate entry in the "Other" row.
+    shib_family = {"shibboleth", "weblogin", "idp", "wayf", "sp", "saml"}
+    found_prefixes = {f.split(".", 1)[0] for f in found}
+    if found_prefixes & shib_family:
+        service_name = "Shibboleth / SAML SSO hub"
+        slug = "federated-sso-hub"
+    elif "okta" in found_prefixes:
+        service_name = "Okta SSO hub"
+        slug = "okta-sso-hub"
+    elif "adfs" in found_prefixes:
+        service_name = "ADFS SSO hub"
+        slug = "adfs-sso-hub"
+    else:
+        service_name = "Shibboleth / SAML SSO hub"
+        slug = "federated-sso-hub"
+    ctx.add(
+        service_name,
+        slug,
+        source_type="A",
+        raw_value=", ".join(sorted(found)),
+    )
+
+
 # ── Public lightweight lookup for subdomain enrichment ─────────────────
 
 
@@ -1139,6 +1535,9 @@ class DNSSource:
             _detect_srv(ctx, domain),
             _detect_cert_intel(ctx, domain),
             _detect_common_subdomains(ctx, domain),
+            _detect_hosting_from_a_record(ctx, domain),
+            _detect_idp_hub(ctx, domain),
+            _detect_exchange_onprem(ctx, domain),
         )
 
         # Remove the queried domain itself from related_domains

@@ -76,6 +76,27 @@ signals:
     requires:
       any: [cloudflare, akamai, fastly, imperva]
     min_matches: 2
+    # v0.9.3: when edge layering fires AND none of the listed consumer
+    # SaaS fingerprints are observed, emit a hedged two-sided hardening
+    # observation. The same evidence fits a deliberately hardened target,
+    # a dormant / parked domain behind a proxy, or a small shop with a
+    # CDN in front of very little — the observation surfaces the pattern
+    # without asserting which reading applies.
+    positive_when_absent:
+      - slack
+      - notion
+      - atlassian
+      - dropbox
+      - canva
+      - hubspot
+      - salesforce
+      - zoom
+      - miro
+      - airtable
+      - intercom
+      - mailchimp
+      - monday
+      - clickup
 
   - name: Observability & SRE
     category: Engineering
@@ -419,9 +440,9 @@ signals:
     category: Email
     confidence: high
     description: Paid DMARC report aggregation vendor detected — indicates dedicated email governance investment
-    explain: "DMARC RUA (aggregate report) addresses pointing to a paid vendor (Agari, Proofpoint EFD, dmarcian, Valimail, EasyDMARC, Red Sift/OnDMARC) indicate the organization has invested in professional DMARC monitoring and enforcement tooling. This is a strong signal of email security maturity."
+    explain: "DMARC RUA (aggregate report) addresses pointing to a paid vendor (Agari, Proofpoint EFD, dmarcian, Valimail, EasyDMARC, Red Sift/OnDMARC, URIports, DMARC Advisor, PowerDMARC, Mimecast DMARC Analyzer) indicate the organization has invested in professional DMARC monitoring and enforcement tooling. This is a strong signal of email security maturity."
     requires:
-      any: [agari, proofpoint-efd, ondmarc, dmarcian, valimail, easydmarc]
+      any: [agari, proofpoint-efd, ondmarc, dmarcian, valimail, easydmarc, uriports, dmarc-advisor, powerdmarc, mimecast-dmarc-analyzer]
     min_matches: 1
 
   # ── v0.9.0: Primary Email Provider Detection signals ──────────────────

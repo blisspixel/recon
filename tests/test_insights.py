@@ -51,9 +51,20 @@ class TestInsightGeneration:
         assert any("not enforced" in i for i in insights)
 
     def test_no_dmarc_with_exchange(self):
+        """v0.9.3: a domain with MX-backed M365 (primary_email_provider
+        set from MX evidence) but no DMARC record should emit the
+        "No DMARC" gap insight. Passing primary_email_provider here
+        represents "MX actually points to Microsoft 365" — without
+        it the email-security scorer refuses to score, to avoid the
+        bug where a dormant Google Workspace account registration
+        produced an "Email security 0/5 weak" line on a domain with
+        zero email infrastructure."""
         services = {"Exchange Online"}
         slugs = {"microsoft365"}
-        insights = generate_insights(services, slugs, None, None, 0)
+        insights = generate_insights(
+            services, slugs, None, None, 0,
+            primary_email_provider="Microsoft 365",
+        )
         assert any("No DMARC" in i for i in insights)
 
     def test_large_enterprise_domains(self):

@@ -1,0 +1,28 @@
+# Fintech profile — lens for payments, banking, and regulated
+# financial services organisations. Reweights observations to
+# prioritise identity, email authentication, and supply-chain
+# signals — the controls auditors scrutinise first.
+name: fintech
+description: Fintech / payments / regulated financial services lens
+category_boost:
+  email: 1.6
+  identity: 1.5
+  consistency: 1.3
+  certificate: 1.2
+  infrastructure: 0.9
+  saas_footprint: 0.8
+signal_boost:
+  "DMARC Governance Investment": 2.0
+  "Enterprise Security Stack": 1.5
+  "Zero Trust Posture": 1.6
+  "Software Supply Chain Maturity": 1.4
+  "Incomplete Identity Migration": 1.4
+  "Security Gap — Gateway Without DMARC Enforcement": 1.8
+  "Active Email Sending with Minimal Security": 1.8
+exclude_signals:
+  - "Startup Tool Mix"
+  - "File Collaboration Sprawl"
+prepend_note: |
+  Fintech profile applied. Email authentication, identity federation,
+  and supply-chain controls are weighted higher than infrastructure
+  footprint. Use --explain to see why each signal fired.

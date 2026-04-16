@@ -1,0 +1,31 @@
+# Higher-education profile — lens for universities, colleges,
+# research institutions, and academic computing environments.
+# Prioritises federated identity (Shibboleth/CAS/SAML), LMS
+# detection, email governance, and the infrastructure patterns
+# common to academic computing.
+name: higher-ed
+description: Universities, colleges, research institutions, academic computing
+category_boost:
+  identity: 1.6
+  email: 1.5
+  infrastructure: 1.3
+  consistency: 1.3
+  saas_footprint: 0.9
+signal_boost:
+  "DMARC Governance Investment": 1.7
+  "Enterprise Email Deliverability": 1.5
+  "Zero Trust Posture": 1.5
+  "Enterprise Security Stack": 1.4
+  "Enterprise IT Maturity": 1.4
+  "Security Gap — Gateway Without DMARC Enforcement": 1.6
+  "Incomplete Identity Migration": 1.3
+exclude_signals:
+  - "Startup Tool Mix"
+  - "Product-Led Growth"
+  - "Sales-Led Growth"
+  - "High GTM Maturity"
+prepend_note: |
+  Higher-education profile applied. Federated identity
+  (Shibboleth / CAS / SAML), LMS detection, email governance,
+  and academic-computing patterns are prioritised. Go-to-market
+  signals are de-prioritised — they don't apply to universities.

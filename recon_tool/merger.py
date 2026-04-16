@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import contextlib
 
-from recon_tool.absence import evaluate_absence_signals
+from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
 from recon_tool.constants import (
     SVC_BIMI,
     SVC_DKIM,
@@ -14,6 +14,7 @@ from recon_tool.constants import (
     SVC_SPF_STRICT,
 )
 from recon_tool.insights import generate_insights
+from recon_tool.lexical import lexical_observations
 from recon_tool.models import (
     BIMIIdentity,
     CandidateValue,
@@ -94,6 +95,191 @@ _LIKELY_PROVIDER_SLUG_NAMES: dict[str, str] = {
     "zoho": "Zoho Mail",
     "protonmail": "ProtonMail",
 }
+
+
+# v0.9.3: humanize raw slugs for insight text. Without this, insight
+# strings leak identifiers like "google-managed", "crewai-aid",
+# "cosign-attestation" that read as developer jargon to users. Map
+# known technical slugs to user-friendly display names; everything
+# else falls back to a title-cased version of the slug with dashes
+# replaced by spaces.
+_SLUG_HUMAN_NAMES: dict[str, str] = {
+    "microsoft365": "Microsoft 365",
+    "google-workspace": "Google Workspace",
+    "google-federated": "Google Workspace (federated)",
+    "google-managed": "Google Workspace (managed)",
+    "google-site": "Google Search Console",
+    "google-trust": "Google Trust Services",
+    "google-workspace-modules": "Google Workspace modules",
+    "google-cse": "Google Workspace CSE",
+    "aws-ses": "AWS SES",
+    "aws-route53": "Route 53",
+    "aws-cloudfront": "CloudFront",
+    "aws-s3": "S3",
+    "aws-elb": "ELB",
+    "aws-eb": "Elastic Beanstalk",
+    "aws-acm": "AWS ACM",
+    "azure-dns": "Azure DNS",
+    "azure-appservice": "Azure App Service",
+    "azure-cdn": "Azure CDN",
+    "azure-fd": "Azure Front Door",
+    "azure-tm": "Azure Traffic Manager",
+    "gcp-dns": "GCP Cloud DNS",
+    "gcp-app": "GCP App Engine",
+    "mta-sts-enforce": "MTA-STS enforce",
+    "mta-sts-testing": "MTA-STS testing",
+    "tls-rpt": "TLS-RPT",
+    "proofpoint-efd": "Proofpoint EFD",
+    "dmarc-advisor": "DMARC Advisor",
+    "mimecast-dmarc-analyzer": "Mimecast DMARC Analyzer",
+    "1password": "1Password",
+    "ping-identity": "Ping Identity",
+    "beyond-identity": "Beyond Identity",
+    "github-advanced-security": "GitHub Advanced Security",
+    "cosign-attestation": "Cosign attestation",
+    "crewai-aid": "CrewAI",
+    "mcp-discovery": "MCP discovery",
+    "langsmith": "LangSmith",
+    "cisco-ironport": "Cisco IronPort",
+    "cisco-email": "Cisco Secure Email",
+    "cisco-identity": "Cisco Identity",
+    "knowbe4": "KnowBe4",
+    "sentinelone": "SentinelOne",
+    "crowdstrike": "CrowdStrike",
+    "paloalto": "Palo Alto",
+    "letsencrypt": "Let's Encrypt",
+    # v0.9.3 refinement: proper-case brand names so insight text
+    # doesn't title-case them into wrong forms like "Sendgrid" or
+    # "Cloudflare" when they have distinctive casing.
+    "sendgrid": "SendGrid",
+    "mailgun": "Mailgun",
+    "mailchimp": "Mailchimp",
+    "postmark": "Postmark",
+    "sparkpost": "SparkPost",
+    "brevo": "Brevo",
+    "protonmail": "ProtonMail",
+    "cloudflare": "Cloudflare",
+    "akamai": "Akamai",
+    "fastly": "Fastly",
+    "onelogin": "OneLogin",
+    "auth0": "Auth0",
+    "openai": "OpenAI",
+    "anthropic": "Anthropic",
+    "mistral": "Mistral",
+    "perplexity": "Perplexity",
+    "autospf": "AutoSPF",
+    "ondmarc": "OnDMARC (Red Sift)",
+    "dmarcian": "dmarcian",
+    "easydmarc": "EasyDMARC",
+    "valimail": "Valimail",
+    "uriports": "URIports",
+    "powerdmarc": "PowerDMARC",
+    "agari": "Agari",
+    "lakera": "Lakera",
+    "cyberark": "CyberArk",
+    "okta": "Okta",
+    "auth": "Auth0",
+    "duo": "Duo Security",
+    "vercel": "Vercel",
+    "netlify": "Netlify",
+    "flyio": "Fly.io",
+    "railway": "Railway",
+    "github": "GitHub",
+    "gitlab": "GitLab",
+    "atlassian": "Atlassian",
+    "slack": "Slack",
+    "notion": "Notion",
+    "figma": "Figma",
+    "miro": "Miro",
+    "dropbox": "Dropbox",
+    "zoom": "Zoom",
+    "salesforce": "Salesforce",
+    "salesforce-mc": "Salesforce Marketing Cloud",
+    "hubspot": "HubSpot",
+    "servicenow": "ServiceNow",
+    "docusign": "DocuSign",
+    "imperva": "Imperva",
+    "wiz": "Wiz",
+    "snyk": "Snyk",
+    "zscaler": "Zscaler",
+    "netskope": "Netskope",
+    "proofpoint": "Proofpoint",
+    "mimecast": "Mimecast",
+    "barracuda": "Barracuda",
+    "sophos": "Sophos",
+    "sectigo": "Sectigo",
+    "digicert": "DigiCert",
+    "globalsign": "GlobalSign",
+    "trendmicro": "Trend Micro",
+    "trellix": "Trellix",
+    "symantec": "Symantec",
+}
+
+
+# Known short acronyms that should stay uppercase in the slug
+# fallback. This is intentionally narrow — random 2-3 char words
+# like "new" or "old" should title-case, not shout.
+_SLUG_ACRONYMS: frozenset[str] = frozenset(
+    {"sso", "idp", "waf", "mfa", "cdn", "dns", "vpn", "mdm", "iam", "api", "cse", "pki"}
+)
+
+
+def _humanize_slug(slug: str) -> str:
+    """Map a raw slug to a user-friendly display name.
+
+    Used by insight text formatting so strings like
+    ``"Google-Native Identity: google-workspace, google-managed"``
+    render as ``"Google-Native Identity: Google Workspace, Google
+    Workspace (managed)"`` instead of leaking raw identifiers.
+
+    Fallback for unmapped slugs: title-case with dashes replaced
+    by spaces. A narrow set of known acronyms (sso, idp, waf, …)
+    stays uppercase; everything else title-cases.
+    """
+    if slug in _SLUG_HUMAN_NAMES:
+        return _SLUG_HUMAN_NAMES[slug]
+    parts = slug.replace("_", "-").split("-")
+    out: list[str] = []
+    for part in parts:
+        if part.lower() in _SLUG_ACRONYMS:
+            out.append(part.upper())
+        else:
+            out.append(part.capitalize())
+    return " ".join(out)
+
+
+# v0.9.3: when a signal's matched-slug list contains both a base
+# slug (``google-workspace``) and a variant slug (``google-managed``,
+# ``google-federated``) that represents the same product with an
+# identity-mode qualifier, collapse the variant into the base. Without
+# this, insight text read as ``"Google Workspace, Google Workspace
+# (managed)"`` — same product listed twice with different qualifiers.
+# The variant is dropped only when the base is present; on a signal
+# that fires only on the variant, the variant stays so the user
+# still sees the identity-mode distinction.
+_VARIANT_SLUG_PARENTS: dict[str, str] = {
+    "google-managed": "google-workspace",
+    "google-federated": "google-workspace",
+    "google-site": "google-workspace",
+    "google-workspace-modules": "google-workspace",
+}
+
+
+def _dedup_variant_slugs(slugs: tuple[str, ...]) -> tuple[str, ...]:
+    """Drop variant slugs from ``slugs`` when their parent is also
+    present. Preserves input order."""
+    slug_set = set(slugs)
+    out: list[str] = []
+    seen: set[str] = set()
+    for slug in slugs:
+        parent = _VARIANT_SLUG_PARENTS.get(slug)
+        if parent and parent in slug_set:
+            continue
+        if slug in seen:
+            continue
+        out.append(slug)
+        seen.add(slug)
+    return tuple(out)
 
 
 def _compute_email_topology(
@@ -315,6 +501,10 @@ def build_insights_with_signals(
     dmarc_pct: int | None = None,
     primary_email_provider: str | None = None,
     likely_primary_email_provider: str | None = None,
+    cloud_instance: str | None = None,
+    tenant_region_sub_scope: str | None = None,
+    msgraph_host: str | None = None,
+    has_mx_records: bool = False,
 ) -> list[str]:
     """Generate insights and append signal intelligence.
 
@@ -330,6 +520,12 @@ def build_insights_with_signals(
         domain_count,
         google_auth_type=google_auth_type,
         google_idp_name=google_idp_name,
+        cloud_instance=cloud_instance,
+        tenant_region_sub_scope=tenant_region_sub_scope,
+        msgraph_host=msgraph_host,
+        primary_email_provider=primary_email_provider,
+        likely_primary_email_provider=likely_primary_email_provider,
+        has_mx_records=has_mx_records,
     )
     context = SignalContext(
         detected_slugs=frozenset(slugs),
@@ -344,15 +540,39 @@ def build_insights_with_signals(
     )
     active_signals = evaluate_signals(context)
     for sig in active_signals:
-        matched_names = ", ".join(sig.matched)
-        insights.append(f"{sig.name}: {matched_names}")
+        # v0.9.3 hardening: meta-signals (requires_signals only, no
+        # candidates) have empty sig.matched. Emit a bare name instead
+        # of a "Name: " dead-end that used to render with no value.
+        # Also humanize known slugs and dedup variant slugs so
+        # insight text doesn't leak raw identifiers like
+        # "google-managed" to users.
+        if sig.matched:
+            deduped = _dedup_variant_slugs(tuple(sig.matched))
+            matched_names = ", ".join(_humanize_slug(s) for s in deduped)
+            insights.append(f"{sig.name}: {matched_names}")
+        else:
+            insights.append(sig.name)
 
-    # Third pass: absence evaluation
+    # Third pass: absence evaluation (missing counterparts)
     all_signal_defs = load_signals()
     absence_signals = evaluate_absence_signals(active_signals, all_signal_defs, context.detected_slugs)
     for sig in absence_signals:
-        matched_names = ", ".join(sig.matched)
-        insights.append(f"{sig.name}: {matched_names}")
+        if sig.matched:
+            deduped = _dedup_variant_slugs(tuple(sig.matched))
+            matched_names = ", ".join(_humanize_slug(s) for s in deduped)
+            insights.append(f"{sig.name}: {matched_names}")
+        else:
+            insights.append(sig.name)
+
+    # v0.9.3: positive-when-absent pass — hedged hardening observations.
+    # Runs on the *base* fired set (not including absence signals) so a
+    # hardening observation only fires from a genuine positive signal
+    # match, never from an absence signal firing.
+    positive_observations = evaluate_positive_absence(
+        active_signals, all_signal_defs, context.detected_slugs
+    )
+    for sig in positive_observations:
+        insights.append(f"{sig.name}: {sig.description}")
 
     return insights
 
@@ -606,6 +826,21 @@ def merge_results(
             ct_subdomain_count = result.ct_subdomain_count
             break
 
+    # v0.9.3: propagate OIDC tenant metadata (first non-None wins).
+    # These fields only populate on OIDCSource results.
+    cloud_instance: str | None = None
+    tenant_region_sub_scope: str | None = None
+    msgraph_host: str | None = None
+    for result in results:
+        if cloud_instance is None and result.cloud_instance is not None:
+            cloud_instance = result.cloud_instance
+        if tenant_region_sub_scope is None and result.tenant_region_sub_scope is not None:
+            tenant_region_sub_scope = result.tenant_region_sub_scope
+        if msgraph_host is None and result.msgraph_host is not None:
+            msgraph_host = result.msgraph_host
+        if cloud_instance and tenant_region_sub_scope and msgraph_host:
+            break
+
     # Propagate evidence from all sources (needed before insights for topology)
     all_evidence: list[EvidenceRecord] = []
     for result in results:
@@ -622,6 +857,14 @@ def merge_results(
             dmarc_pct = result.dmarc_pct
             break
 
+    # v0.9.3: has_mx_records is True if ANY MX evidence record
+    # exists, regardless of whether the host matched a known
+    # provider slug. Used by downstream insight generators to
+    # distinguish "no email at all" from "custom / self-hosted
+    # email" — both cases have primary_email_provider None but
+    # very different user-facing meanings.
+    has_mx_records = any(e.source_type == "MX" for e in evidence_tuple)
+
     # Build insights list, then append signal intelligence.
     insights = build_insights_with_signals(
         all_services,
@@ -637,6 +880,10 @@ def merge_results(
         dmarc_pct=dmarc_pct,
         primary_email_provider=primary_email_provider,
         likely_primary_email_provider=likely_primary_email_provider,
+        cloud_instance=cloud_instance,
+        tenant_region_sub_scope=tenant_region_sub_scope,
+        msgraph_host=msgraph_host,
+        has_mx_records=has_mx_records,
     )
 
     # Surface conflicting tenant IDs — this is high-value intel that explains
@@ -656,15 +903,39 @@ def merge_results(
     # Backward-compatible confidence: min of the two dimensions
     confidence = _min_confidence(confidence, _min_confidence(evidence_confidence, inference_confidence))
 
-    # A7: if any source is degraded, downgrade both the headline confidence
-    # and evidence_confidence by one rung. The picture is incomplete even if
-    # the sources that did respond agree, so "High" overclaims in that state.
-    if all_degraded:
+    # A7: downgrade confidence when a degraded source genuinely
+    # impairs the picture.
+    #
+    # v0.9.3 refinement: skip the downgrade when the ONLY degraded
+    # sources are CT providers AND a CT fallback successfully
+    # returned data. In that case the fallback recovered the
+    # information; penalising confidence for a successful recovery
+    # undersells the actual quality of the result. The fallback
+    # chain only recovers if at least one CT provider answered
+    # (ct_provider_used is set).
+    ct_only_degradation = bool(all_degraded) and all(
+        s in ("crt.sh", "certspotter") for s in all_degraded
+    )
+    ct_fallback_recovered = ct_only_degradation and ct_provider_used is not None
+    if all_degraded and not ct_fallback_recovered:
         confidence = _downgrade_confidence(confidence)
         evidence_confidence = _downgrade_confidence(evidence_confidence)
 
     # Compute per-detection corroboration scores
     detection_scores = compute_detection_scores(evidence_tuple)
+
+    # v0.9.3: lexical taxonomy observations from CT-discovered subdomains.
+    # Pure re-projection of related_domains through a rule-based parser —
+    # no new network calls, no generated candidates. Observations are
+    # exposed on TenantInfo.lexical_observations AND appended to insights
+    # for the default panel display.
+    lex_obs = lexical_observations(
+        [d for d in all_related if "*" not in d],
+        base_domain=queried_domain,
+    )
+    lexical_observation_statements: tuple[str, ...] = tuple(o.statement for o in lex_obs)
+    for obs in lex_obs:
+        insights.append(f"{obs.category}: {obs.statement}")
 
     return TenantInfo(
         tenant_id=tenant_id,
@@ -700,4 +971,8 @@ def merge_results(
         likely_primary_email_provider=likely_primary_email_provider,
         ct_provider_used=ct_provider_used,
         ct_subdomain_count=ct_subdomain_count,
+        cloud_instance=cloud_instance,
+        tenant_region_sub_scope=tenant_region_sub_scope,
+        msgraph_host=msgraph_host,
+        lexical_observations=lexical_observation_statements,
     )

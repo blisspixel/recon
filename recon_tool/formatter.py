@@ -210,57 +210,419 @@ def _is_m365_service(svc: str) -> bool:
     return any(kw in svc_lower for kw in _M365_KEYWORDS)
 
 
-def _is_compact_noise(svc: str) -> bool:
-    """Check if a service should be hidden from compact view.
+# ── v0.9.3 panel constants ─────────────────────────────────────────────
 
-    Uses prefix matching for category-style labels (DNS:, CDN:, etc.)
-    and exact matching for specific tokens to avoid false positives.
+_PANEL_WIDTH = 78  # One char narrower than an 80-col terminal to avoid
+                   # wrap-to-next-line artefacts when the last cell is
+                   # filled. The v0.9.3 layout has no border, so the
+                   # effective content width equals the panel width.
+_LABEL_WIDTH = 13  # columns for Provider/Tenant/Auth/Confidence labels
+_CATEGORY_WIDTH = 15  # columns for Services sub-category labels
+
+# Category display order. Each service is classified into exactly one
+# of these by _categorize_service; "Other" is the fallback.
+_SERVICE_CATEGORIES_ORDER: tuple[str, ...] = (
+    "Email",
+    "Identity",
+    "Cloud",
+    "Security",
+    "AI",
+    "Collaboration",
+    "Other",
+)
+
+# Service → display-category classification. Checked in order; the first
+# matcher wins. Prefer slug lookups over service-name substring matches
+# so two services with similar names don't both fall into Other.
+_CATEGORY_BY_SLUG: dict[str, str] = {
+    # Email providers / gateways / deliverability
+    "microsoft365": "Email",
+    "google-workspace": "Email",
+    "zoho": "Email",
+    "protonmail": "Email",
+    "proofpoint": "Email",
+    "mimecast": "Email",
+    "barracuda": "Email",
+    "trendmicro": "Email",
+    "symantec": "Email",
+    "trellix": "Email",
+    "cisco-ironport": "Email",
+    "cisco-email": "Email",
+    "sendgrid": "Email",
+    "mailgun": "Email",
+    "postmark": "Email",
+    "sparkpost": "Email",
+    "brevo": "Email",
+    "mailchimp": "Email",
+    "aws-ses": "Email",
+    "autospf": "Email",
+    "ondmarc": "Email",
+    "dmarcian": "Email",
+    "easydmarc": "Email",
+    "valimail": "Email",
+    "agari": "Email",
+    "proofpoint-efd": "Email",
+    "uriports": "Email",
+    "dmarc-advisor": "Email",
+    "powerdmarc": "Email",
+    "mimecast-dmarc-analyzer": "Email",
+    # Identity
+    "okta": "Identity",
+    "auth0": "Identity",
+    "onelogin": "Identity",
+    "duo": "Identity",
+    "ping-identity": "Identity",
+    "cyberark": "Identity",
+    "beyond-identity": "Identity",
+    "1password": "Identity",
+    "google-federated": "Identity",
+    "google-managed": "Identity",
+    "cisco-identity": "Identity",
+    # v0.9.3: identity-hub slugs emitted by _detect_idp_hub when
+    # shibboleth.example.edu / weblogin.example.edu / idp.example.edu
+    # resolve. Strong signal that the org runs federated SSO.
+    "federated-sso-hub": "Identity",
+    "okta-sso-hub": "Identity",
+    "adfs-sso-hub": "Identity",
+    # v0.9.3: Exchange on-prem / hybrid slug emitted by
+    # _detect_exchange_onprem when owa./outlook./exchange.
+    # subdomains resolve. Indicates self-hosted or hybrid
+    # Exchange deployment rather than Exchange Online.
+    "exchange-onprem": "Email",
+    # Cloud / Infrastructure
+    "aws-route53": "Cloud",
+    "aws-cloudfront": "Cloud",
+    "aws-elb": "Cloud",
+    "aws-s3": "Cloud",
+    "aws-eb": "Cloud",
+    "aws-acm": "Cloud",
+    "azure-dns": "Cloud",
+    "azure-cdn": "Cloud",
+    "azure-appservice": "Cloud",
+    "azure-fd": "Cloud",
+    "azure-tm": "Cloud",
+    "gcp-dns": "Cloud",
+    "gcp-app": "Cloud",
+    "cloudflare": "Cloud",
+    "akamai": "Cloud",
+    "fastly": "Cloud",
+    "imperva": "Cloud",
+    "vercel": "Cloud",
+    "netlify": "Cloud",
+    "flyio": "Cloud",
+    "railway": "Cloud",
+    "render": "Cloud",
+    # v0.9.3: hosting-provider detection from A → PTR
+    "aws-ec2": "Cloud",
+    "aws-compute": "Cloud",
+    "azure-vm": "Cloud",
+    "gcp-compute": "Cloud",
+    "linode": "Cloud",
+    "digitalocean": "Cloud",
+    "hetzner": "Cloud",
+    "ovh": "Cloud",
+    "vultr": "Cloud",
+    "cdn77": "Cloud",
+    "bunnycdn": "Cloud",
+    # Security
+    "crowdstrike": "Security",
+    "sentinelone": "Security",
+    "sophos": "Security",
+    "knowbe4": "Security",
+    "zscaler": "Security",
+    "netskope": "Security",
+    "paloalto": "Security",
+    "cato": "Security",
+    "wiz": "Security",
+    "snyk": "Security",
+    "github-advanced-security": "Security",
+    "sonatype": "Security",
+    "cosign-attestation": "Security",
+    "lakera": "Security",
+    "letsencrypt": "Security",
+    "digicert": "Security",
+    "sectigo": "Security",
+    "globalsign": "Security",
+    "google-trust": "Security",
+    # AI
+    "openai": "AI",
+    "anthropic": "AI",
+    "mistral": "AI",
+    "perplexity": "AI",
+    "crewai-aid": "AI",
+    "langsmith": "AI",
+    "mcp-discovery": "AI",
+    "dify": "AI",
+    "n8n": "AI",
+    "autogen": "AI",
+    # Collaboration / Productivity
+    "slack": "Collaboration",
+    "notion": "Collaboration",
+    "miro": "Collaboration",
+    "atlassian": "Collaboration",
+    "figma": "Collaboration",
+    "dropbox": "Collaboration",
+    "box": "Collaboration",
+    "egnyte": "Collaboration",
+    "clickup": "Collaboration",
+    "asana": "Collaboration",
+    "monday": "Collaboration",
+    "loom": "Collaboration",
+    "canva": "Collaboration",
+    "zoom": "Collaboration",
+    "airtable": "Collaboration",
+    "github": "Collaboration",
+    "gitlab": "Collaboration",
+    "linear": "Collaboration",
+    # v0.9.3: higher-ed LMS / SIS / student-facing platforms
+    "canvas-lms": "Collaboration",
+    "blackboard": "Collaboration",
+    "moodle": "Collaboration",
+    "ellucian-banner": "Other",
+    "handshake": "Other",
+    "tophat": "Collaboration",
+    # v0.9.3: sales & marketing platforms missed in earlier passes
+    "d365-marketing": "Other",
+    "sfmc": "Other",
+    "emma": "Email",
+    "icontact": "Email",
+    "mailerlite": "Email",
+    # v0.9.3: infrastructure verification tokens (netlify already
+    # mapped in Cloud above via the main fingerprint block; wpengine
+    # is new; vmware-cloud is new)
+    "wpengine": "Cloud",
+    "vmware-cloud": "Cloud",
+    # v0.9.3: nonprofit platforms
+    "salesforce-npsp": "Other",
+    "blackbaud": "Other",
+    "classy": "Other",
+}
+
+# Email service-name prefixes that bypass slug lookup. These catch
+# DNS-derived service labels like "DMARC", "DKIM", "SPF: strict (-all)",
+# "MTA-STS", "BIMI" which don't have a matching fingerprint slug.
+_EMAIL_SERVICE_PREFIXES: tuple[str, ...] = (
+    "DMARC",
+    "DKIM",
+    "SPF",
+    "MTA-STS",
+    "BIMI",
+    "TLS-RPT",
+    "Exchange Autodiscover",  # v0.9.3: M365 autodiscover infrastructure
+    "Autodiscover",
+)
+
+# v0.9.3 refinement: service entries that are verification receipts,
+# domain-ownership tokens, or registrar artefacts rather than deployed
+# products. These get filtered out of the categorized Services block
+# because showing "Google (site verified)" alongside "Google Workspace"
+# reads as if the org uses two Google products when actually it's the
+# same Search Console verification token counted twice.
+_FILTERED_SERVICE_SUFFIXES: tuple[str, ...] = (
+    "(site verified)",
+    "(domain verified)",
+    "(verification)",
+)
+_FILTERED_SERVICE_PREFIXES: tuple[str, ...] = (
+    "Domain Connect",  # registrar handoff metadata, not a deployed product
+)
+
+# v0.9.3 refinement: qualifier map for Cloud-category services. Without
+# this, "AWS Route 53" under "Cloud" reads as "primary cloud = AWS",
+# which is almost always wrong — Route 53 is authoritative DNS, not
+# compute. The qualifier makes the service type explicit so a CISO
+# scanning the output can't accidentally confuse DNS hosting with a
+# cloud compute / storage platform.
+#
+# Values:
+#   "DNS"   — authoritative DNS hosting only
+#   "CDN"   — content delivery / edge network
+#   "WAF"   — web application firewall
+#   "edge"  — edge compute / JAMstack platforms
+_CLOUD_SLUG_QUALIFIERS: dict[str, str] = {
+    # DNS hosting
+    "aws-route53": "DNS",
+    "azure-dns": "DNS",
+    "gcp-dns": "DNS",
+    # CDN
+    "aws-cloudfront": "CDN",
+    "azure-cdn": "CDN",
+    "akamai": "CDN",
+    "fastly": "CDN",
+    "cloudflare": "CDN",
+    "cdn77": "CDN",
+    "bunnycdn": "CDN",
+    # WAF
+    "imperva": "WAF",
+    # Edge / serverless / JAMstack
+    "vercel": "edge",
+    "netlify": "edge",
+    "flyio": "edge",
+    "railway": "edge",
+    "render": "edge",
+    # v0.9.3: hosting provider detected via A → PTR reverse DNS.
+    # The "(hosting)" qualifier disambiguates from CDN / DNS
+    # entries so a CISO reading the Cloud row can tell at a glance
+    # which services are delivering compute vs which are just
+    # fronting traffic.
+    "aws-ec2": "hosting",
+    "aws-compute": "hosting",
+    "azure-vm": "hosting",
+    "gcp-compute": "hosting",
+    "linode": "hosting",
+    "digitalocean": "hosting",
+    "hetzner": "hosting",
+    "ovh": "hosting",
+    "vultr": "hosting",
+    # Non-DNS AWS / Azure / GCP — these ARE compute/storage so no suffix
+    # (the raw name is enough — "AWS S3", "Azure App Service", …).
+}
+
+# v0.9.3 refinement: explicit display names for slugs whose
+# corresponding fingerprint name is different, OR whose slug has no
+# fingerprint entry at all. Without this, slugs like "google-managed"
+# render as raw strings in the categorized services block.
+_SLUG_DISPLAY_OVERRIDES: dict[str, str] = {
+    "google-managed": "Google Workspace (managed identity)",
+    "google-federated": "Google Workspace (federated identity)",
+    # v0.9.3: hosting-provider slugs emitted by dns._detect_hosting_from_a_record.
+    # These come from A → PTR reverse-DNS matching, not from the
+    # regular fingerprints.yaml pipeline, so there's no fingerprint
+    # name to fall back to. Give them explicit user-facing names
+    # here. The per-run region (e.g. "ca-central-1") is preserved
+    # in the evidence record's raw_value, visible via --explain /
+    # --json. The default panel shows the provider only, to keep
+    # the Cloud row compact.
+    "aws-ec2": "AWS EC2",
+    "aws-compute": "AWS",
+    "aws-elb": "AWS ELB",
+    "azure-vm": "Azure VM",
+    "gcp-compute": "GCP Compute Engine",
+    "linode": "Linode",
+    "digitalocean": "DigitalOcean",
+    "hetzner": "Hetzner",
+    "ovh": "OVH",
+    "vultr": "Vultr",
+    # v0.9.3: identity-hub slugs emitted by
+    # dns._detect_idp_hub. These don't have fingerprint entries
+    # so the raw slug would leak into the Identity row without
+    # an explicit override.
+    "federated-sso-hub": "Shibboleth / SAML SSO hub",
+    "okta-sso-hub": "Okta SSO hub",
+    "adfs-sso-hub": "ADFS SSO hub",
+    # v0.9.3: Exchange on-prem / hybrid slug emitted by
+    # dns._detect_exchange_onprem. No fingerprint backs it —
+    # the display override is how the Email-row entry gets a
+    # human-readable name.
+    "exchange-onprem": "Exchange Server (on-prem / hybrid)",
+}
+
+
+def _pick_single_primary(joined: str) -> tuple[str, list[str]]:
+    """Split a ``" + "``-joined provider string into one primary and
+    one or more secondaries.
+
+    When ``likely_primary_email_provider`` carries multiple names
+    (e.g. ``"Google Workspace + Microsoft 365"`` because DKIM
+    selectors for both were observed), the panel previously read as
+    ambiguous "dual" email. That was overclaim — the same DNS
+    footprint fits a single primary with legacy selectors just as
+    well. This helper picks one primary and demotes the others to
+    secondary so the panel reads unambiguously.
+
+    Selection rule: prefer Microsoft 365 first (the most common
+    enterprise primary in practice), then Google Workspace, then the
+    original list order. Deterministic and documented so users can
+    re-derive it.
     """
-    svc_lower = svc.lower()
-    if svc_lower.startswith(_SKIP_COMPACT_PREFIXES):
-        return True
-    return svc in _SKIP_COMPACT_EXACT
+    if " + " not in joined:
+        return joined, []
+    parts = [p.strip() for p in joined.split(" + ") if p.strip()]
+    if not parts:
+        return joined, []
+    preference = ["Microsoft 365", "Google Workspace", "Zoho Mail", "ProtonMail"]
+    for pref in preference:
+        if pref in parts:
+            secondaries = [p for p in parts if p != pref]
+            return pref, secondaries
+    return parts[0], parts[1:]
 
 
 def detect_provider(
-    services: tuple[str, ...] | set[str],
+    services: tuple[str, ...] | set[str],  # noqa: ARG001
     slugs: tuple[str, ...] | set[str] = (),
     primary_email_provider: str | None = None,
     email_gateway: str | None = None,
     likely_primary_email_provider: str | None = None,
+    has_mx_records: bool = True,
 ) -> str:
     """Detect and format the provider line with email topology awareness.
 
-    When primary_email_provider and email_gateway are provided (from TenantInfo),
-    produces topology-aware output:
-      - "Microsoft 365 (primary email via Proofpoint gateway)" — strict primary
-      - "Symantec/Broadcom (email gateway, likely delivering to Google Workspace)" — inferred downstream
-      - "Proofpoint (email gateway)" — gateway with no inferable downstream
-      - "Microsoft 365; Google Workspace (secondary)"
+    Target format (v0.9.3 rewrite):
+      - ``Microsoft 365 (primary) via Proofpoint gateway`` — strict primary + gateway
+      - ``Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)``
+        — primary + gateway + a separately detected secondary
+      - ``Microsoft 365 (primary)`` — strict primary, no gateway
+      - ``Microsoft 365 (likely primary) via Trend Micro gateway`` — inferred primary
+      - ``Proofpoint gateway (no inferable downstream)`` — gateway only, unknown downstream
+      - ``Microsoft 365; Google Workspace`` — slug-only fallback
 
-    Falls back to existing slug-based detection when topology fields are None
-    (backward compatible).
+    The critical change from pre-v0.9.3: when
+    ``likely_primary_email_provider`` lists multiple providers (e.g.
+    ``"Google Workspace + Microsoft 365"``), one is promoted to the
+    single primary and the rest become ``"(secondary)"`` — never
+    ``"(dual)"``. The old format implied ambiguous active dual-use
+    which is usually wrong on enterprise targets. See
+    ``_pick_single_primary`` for the selection rule.
+
+    Falls back to slug-based detection when topology fields are all
+    None (backward compatible).
     """
+    # v0.9.3: Exchange on-prem / hybrid detection is a strong
+    # signal that the domain's email goes to a self-hosted
+    # Exchange cluster, regardless of what the identity-endpoint
+    # sources say about dormant Google / Microsoft 365 accounts.
+    # When the exchange-onprem slug is present AND there's no
+    # MX-backed primary provider, surface "Exchange Server
+    # (on-prem / hybrid)" as the primary and treat any
+    # slug-based M365 / Google signals as secondary account
+    # registrations. This catches cases like vatican.va where
+    # the real answer is "runs Exchange on their own servers"
+    # but the tool was labelling it "Google Workspace".
+    slug_set_early = set(slugs)
+    if "exchange-onprem" in slug_set_early and not primary_email_provider:
+        other_accounts: list[str] = []
+        for slug, name in [
+            ("microsoft365", "Microsoft 365"),
+            ("google-workspace", "Google Workspace"),
+        ]:
+            if slug in slug_set_early:
+                other_accounts.append(name)
+        primary_segment = "Exchange Server (on-prem / hybrid)"
+        if email_gateway:
+            primary_segment = f"{primary_segment} behind {email_gateway} gateway"
+        segments = [primary_segment]
+        for acct in other_accounts:
+            segments.append(f"{acct} (account detected)")
+        return " + ".join(segments)
+
     # If we have topology data, use it
     if primary_email_provider or email_gateway or likely_primary_email_provider:
-        parts: list[str] = []
+        primary_name: str | None = None
+        primary_label: str = ""
+        inferred_secondaries: list[str] = []
 
-        if primary_email_provider and email_gateway:
-            parts.append(f"{primary_email_provider} (primary email via {email_gateway} gateway)")
-        elif primary_email_provider:
-            parts.append(primary_email_provider)
-        elif email_gateway and likely_primary_email_provider:
-            parts.append(
-                f"{email_gateway} (email gateway, likely delivering to {likely_primary_email_provider})"
-            )
-        elif email_gateway:
-            parts.append(f"{email_gateway} (email gateway)")
+        if primary_email_provider:
+            primary_name, inferred_secondaries = _pick_single_primary(primary_email_provider)
+            primary_label = "(primary)"
         elif likely_primary_email_provider:
-            parts.append(f"{likely_primary_email_provider} (inferred)")
+            primary_name, inferred_secondaries = _pick_single_primary(likely_primary_email_provider)
+            primary_label = "(likely primary)"
 
-        # Detect secondary providers (slug-detected but not MX-based)
+        # Collect slug-based secondaries — providers detected via TXT
+        # or DKIM but not already in the primary line.
         slug_set = set(slugs)
-        secondary = []
+        slug_secondaries: list[str] = []
         for slug, name in [
             ("microsoft365", "Microsoft 365"),
             ("google-workspace", "Google Workspace"),
@@ -268,28 +630,63 @@ def detect_provider(
             ("protonmail", "ProtonMail"),
         ]:
             if slug in slug_set:
-                # Check if this provider is already in the primary or
-                # likely-primary line
-                if primary_email_provider and name in primary_email_provider:
+                if primary_name and name == primary_name:
                     continue
-                if likely_primary_email_provider and name in likely_primary_email_provider:
+                if name in inferred_secondaries:
                     continue
-                secondary.append(name)
+                slug_secondaries.append(name)
 
-        if secondary and (primary_email_provider or likely_primary_email_provider):
-            sec_str = ", ".join(secondary)
-            parts.append(f"{sec_str} (secondary)")
-        elif secondary and not primary_email_provider and not likely_primary_email_provider:
-            sec_str = ", ".join(secondary)
-            parts.append(f"{sec_str} (no MX-based primary detected)")
+        # Full secondary list combines the two sources, deduped.
+        all_secondaries: list[str] = []
+        for n in inferred_secondaries + slug_secondaries:
+            if n not in all_secondaries:
+                all_secondaries.append(n)
 
-        if parts:
-            return "; ".join(parts)
-        # Topology fields were provided but everything was None — still
-        # worth telling the user why the provider field is empty.
+        segments: list[str] = []
+        if primary_name:
+            head = f"{primary_name} {primary_label}".strip()
+            if email_gateway:
+                head = f"{head} via {email_gateway} gateway"
+            segments.append(head)
+        elif email_gateway:
+            segments.append(f"{email_gateway} gateway (no inferable downstream)")
+
+        for sec in all_secondaries:
+            segments.append(f"{sec} (secondary)")
+
+        if segments:
+            return " + ".join(segments)
         return "Unknown (no known provider pattern matched)"
 
-    # Fallback: existing slug-based detection (backward compatible)
+    # Fallback: slug-based detection with v0.9.3 honesty constraint.
+    #
+    # This path runs when primary_email_provider, email_gateway,
+    # and likely_primary_email_provider are ALL None — which means
+    # the merge pipeline didn't find an MX record matching a known
+    # provider slug. Two very different situations land here:
+    #
+    #   (a) The domain has NO MX records at all. The provider slug
+    #       was added by a non-MX source (Google Identity Routing
+    #       endpoint, Microsoft OIDC discovery, TXT verification
+    #       tokens). Calling this "(primary)" was the v0.9.2 bug —
+    #       a dormant Google Workspace account registration was
+    #       rendered as "Google Workspace (primary)" on a domain
+    #       with zero MX records. The honest label here is
+    #       "(account detected, no MX)".
+    #
+    #   (b) The domain HAS MX records but they point to a host
+    #       recon doesn't recognize — Apache's own mail servers,
+    #       a custom self-hosted Postfix, a niche provider not in
+    #       the fingerprint set. Calling this "(account detected,
+    #       no MX)" is ALSO a lie — MX records exist, email IS
+    #       being received, the tool just can't name the host.
+    #       The honest label here is "(account detected, custom
+    #       MX)".
+    #
+    # Callers that know whether MX records exist pass
+    # has_mx_records accordingly; the default is True (the
+    # conservative choice — avoids over-promising "no MX" when
+    # we don't know).
     slug_set = set(slugs)
     providers = []
     if "microsoft365" in slug_set:
@@ -303,7 +700,8 @@ def detect_provider(
     if not providers and "aws-ses" in slug_set:
         providers.append("AWS SES")
     if providers:
-        return " + ".join(providers)
+        qualifier = "account detected, no MX" if not has_mx_records else "account detected, custom MX"
+        return " + ".join(f"{p} ({qualifier})" for p in providers)
     # C2: when nothing matches any known provider, distinguish "we have no
     # idea" from "MX observed but custom/self-hosted" when possible. The
     # caller only has slugs here, so the best we can do is return a hint
@@ -376,374 +774,840 @@ def _wrap_text(text: str, max_width: int) -> list[str]:
     return lines or [text]
 
 
-def _low_scored_service_names(info: TenantInfo) -> frozenset[str]:
-    """Return the display names of services whose only evidence is a single
-    weak detection (detection_scores score == "low").
 
-    Used to annotate single-source detections in the panel so a high-signal
-    service name (e.g. a security tool detected from one TXT verification
-    record) is not rendered with the same weight as a multi-source match.
+
+def _slug_for_service(service: str, fp_slug_map: dict[str, str]) -> str | None:
+    """Look up the slug for a service name, if any.
+
+    Uses the fingerprint name → slug map. Prefix-stripped variants
+    (``"Google Workspace: Gmail"`` → ``"google-workspace"``) are also
+    tried so module-suffixed services classify with their parent.
     """
-    if not info.detection_scores:
-        return frozenset()
-    low_slugs = {slug for slug, score in info.detection_scores if score == "low"}
-    if not low_slugs:
-        return frozenset()
+    if service in fp_slug_map:
+        return fp_slug_map[service]
+    # Strip "Google Workspace: " and similar module prefixes
+    for prefix in ("Google Workspace: ", "Microsoft 365: "):
+        if service.startswith(prefix):
+            return fp_slug_map.get(service[: len(prefix) - 2])
+    return None
+
+
+def _categorize_service(service: str, slug: str | None) -> str:
+    """Classify a service into one of _SERVICE_CATEGORIES_ORDER.
+
+    Classification rules (first match wins):
+        1. Slug lookup via _CATEGORY_BY_SLUG
+        2. Email prefix match (DMARC, DKIM, SPF, …)
+        3. Category-name substring match (for services whose name
+           carries a category hint like "DNS: Cloudflare")
+        4. Fallback: "Other"
+    """
+    if slug and slug in _CATEGORY_BY_SLUG:
+        return _CATEGORY_BY_SLUG[slug]
+    for prefix in _EMAIL_SERVICE_PREFIXES:
+        if service.startswith(prefix):
+            return "Email"
+    lower = service.lower()
+    # Structural hints baked into service names by the DNS parser
+    if lower.startswith(("dns:", "cdn:", "hosting:", "waf:")):
+        return "Cloud"
+    if "google workspace" in lower or "microsoft 365" in lower:
+        return "Email"
+    if "identity" in lower or "idp" in lower:
+        return "Identity"
+    if "security" in lower or "endpoint" in lower:
+        return "Security"
+    return "Other"
+
+
+def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:
+    """Group TenantInfo services into display categories.
+
+    Two-pass classification:
+        1. For each detected slug with a known category, resolve the
+           slug to its fingerprint display name and file it under
+           that category. This is the authoritative path — a slug's
+           category is pinned in ``_CATEGORY_BY_SLUG``.
+        2. For each remaining service (not yet filed via slug — e.g.
+           DNS-derived labels like "DMARC", "DKIM", "SPF: strict"),
+           classify by prefix / name pattern via
+           ``_categorize_service``.
+
+    Preserves input ordering within each category. Categories with
+    no services are omitted from the returned dict.
+    """
     try:
-        from recon_tool.fingerprints import load_fingerprints
-        slug_to_name = {fp.slug: fp.name for fp in load_fingerprints()}
+        fps = load_fingerprints()
+        slug_to_name: dict[str, str] = {fp.slug: fp.name for fp in fps}
+        name_to_slug: dict[str, str] = {fp.name: fp.slug for fp in fps}
     except Exception:
-        return frozenset()
-    return frozenset(
-        slug_to_name[slug] for slug in low_slugs if slug in slug_to_name
-    )
+        slug_to_name = {}
+        name_to_slug = {}
+
+    def _is_artifact(name: str) -> bool:
+        """Verification tokens and registrar handoffs — filtered out."""
+        return any(name.endswith(suf) for suf in _FILTERED_SERVICE_SUFFIXES) or any(
+            name.startswith(pfx) for pfx in _FILTERED_SERVICE_PREFIXES
+        )
+
+    by_cat: dict[str, list[str]] = {c: [] for c in _SERVICE_CATEGORIES_ORDER}
+    seen_services: set[str] = set()
+    slugs_filed: set[str] = set()  # slugs pass 1 has already filed
+
+    # Pass 1: slug-authoritative classification. A detected slug with
+    # a known category pulls in its canonical fingerprint display name.
+    # v0.9.3 refinement: an explicit override in _SLUG_DISPLAY_OVERRIDES
+    # wins over the fingerprint display name — this covers slugs like
+    # "google-managed" that don't have a fingerprint entry. Cloud
+    # services get a type qualifier ("(DNS)", "(CDN)", "(edge)") so
+    # Route 53 doesn't read as a cloud-compute claim.
+    for slug in info.slugs:
+        cat = _CATEGORY_BY_SLUG.get(slug)
+        if not cat:
+            continue
+        name = _SLUG_DISPLAY_OVERRIDES.get(slug) or slug_to_name.get(slug, slug)
+        # Filter verification/registrar artefacts — these aren't
+        # deployed products, they're ownership tokens.
+        if _is_artifact(name):
+            continue
+        # v0.9.3 refinement: strip the "CAA: " prefix when rendering
+        # a CAA-derived fingerprint under a non-Security category.
+        # In Security the CAA consolidation collapses these into a
+        # single "CAA: N issuers restricted" line; in Cloud / Email /
+        # other categories the "CAA: " prefix leaks into the row
+        # ("CAA: AWS Certificate Manager" in the Cloud row reads as
+        # a products-detected claim). The actual detection mechanism
+        # (CAA record → slug) belongs in --explain, not the name.
+        if cat != "Security" and name.startswith("CAA: "):
+            name = name[len("CAA: "):]
+        if cat == "Cloud":
+            qualifier = _CLOUD_SLUG_QUALIFIERS.get(slug)
+            if qualifier:
+                name = f"{name} ({qualifier})"
+        if name in seen_services:
+            continue
+        by_cat[cat].append(name)
+        seen_services.add(name)
+        slugs_filed.add(slug)
+
+    # Pass 2: service names without a slug match — use prefix / name
+    # classification. Skip services whose slug has already been filed
+    # in pass 1 so we don't double-count the same detection under two
+    # different display names (e.g. "Atlassian" and
+    # "Atlassian (Jira/Confluence)" both mapping to slug "atlassian").
+    # Defensive substring check covers the case where TenantInfo was
+    # hand-built with abbreviated service names that don't round-trip
+    # through name_to_slug.
+    seen_lower_prefixes = {s.lower().split(" (")[0] for s in seen_services}
+    for svc in info.services:
+        if svc in seen_services:
+            continue
+        if _is_artifact(svc):
+            continue
+        svc_prefix = svc.lower().split(" (")[0]
+        if svc_prefix in seen_lower_prefixes:
+            continue
+        slug = _slug_for_service(svc, name_to_slug)
+        if slug and slug in slugs_filed:
+            # Already covered under its canonical display name in pass 1
+            continue
+        cat = _categorize_service(svc, slug)
+        by_cat.setdefault(cat, []).append(svc)
+        seen_services.add(svc)
+        seen_lower_prefixes.add(svc_prefix)
+
+    # v0.9.3 refinement: drop Identity row entries that just echo an
+    # Email provider. On a Google-only domain the Identity row
+    # shows "Google Workspace (managed identity)" alongside the
+    # Email row's "Google Workspace" — same fact in two places. The
+    # Auth line already says "Managed (Google Workspace)", so the
+    # Identity row adds nothing. Keep Identity entries that
+    # represent a DISTINCT identity provider (Okta, Duo, CyberArk,
+    # Ping) — only drop pure echoes of the email-provider family.
+    email_provider_names = {n for n in by_cat.get("Email", []) if n}
+    identity = by_cat.get("Identity", [])
+    filtered_identity: list[str] = []
+    for ident in identity:
+        # Strip the "(managed identity)" / "(federated identity)"
+        # suffix to compare with the email-provider name.
+        ident_core = ident
+        for suffix in (" (managed identity)", " (federated identity)"):
+            if ident.endswith(suffix):
+                ident_core = ident[: -len(suffix)]
+                break
+        # Drop when the core name is already in the Email row
+        if ident_core in email_provider_names:
+            continue
+        filtered_identity.append(ident)
+    by_cat["Identity"] = filtered_identity
+
+    # v0.9.3 refinement: consolidate CAA issuer fingerprints.
+    # Each "CAA: <issuer>" fingerprint fires as its own Security
+    # entry, so a domain with four CAA record issuers ends up showing
+    # "CAA: DigiCert, CAA: Google Trust Services, CAA: Let's Encrypt,
+    # CAA: Sectigo" under Security — which overwhelms the row AND
+    # misrepresents CAA records as deployed security tools. Collapse
+    # them into one compact "CAA: N issuers restricted" entry. The
+    # full issuer list is still available via --full / --verbose and
+    # in the --json output; the default panel just shows the count so
+    # the Security row's visual budget goes to actually-deployed
+    # security tools first.
+    security = by_cat.get("Security", [])
+    caa_entries: list[str] = [s for s in security if s.startswith("CAA:")]
+    if len(caa_entries) >= 1:
+        non_caa = [s for s in security if not s.startswith("CAA:")]
+        count = len(caa_entries)
+        consolidated = f"CAA: {count} issuer{'s' if count != 1 else ''} restricted"
+        by_cat["Security"] = non_caa + [consolidated]
+
+    return {c: svcs for c in _SERVICE_CATEGORIES_ORDER if (svcs := by_cat.get(c))}
 
 
-def _annotate_single_source(services: list[str], low_names: frozenset[str]) -> tuple[list[str], bool]:
-    """Append a dim asterisk to services whose names appear in low_names.
+# High-signal subdomain prefixes for compact related-domain display.
+# Tuned to match the v0.9.3 UI goal: the related line should fit in 1-2
+# lines and show the names a security analyst cares about first.
+_HIGH_SIGNAL_RELATED_PREFIXES: tuple[str, ...] = (
+    "login.",
+    "sso.",
+    "auth.",
+    "idp.",
+    "api.",
+    "admin.",
+    "portal.",
+    "dashboard.",
+    "support.",
+    "status.",
+    "app.",
+    "cdn.",
+)
 
-    Returns (annotated_list, any_annotated).
+
+def _pick_high_signal_related(
+    related: tuple[str, ...],
+    limit: int = 8,
+) -> tuple[list[str], int]:
+    """Pick the top ``limit`` high-signal related domains.
+
+    High-signal = matches one of the ``_HIGH_SIGNAL_RELATED_PREFIXES``.
+    Falls back to the first ``limit`` non-wildcard entries when too
+    few high-signal names are present. Returns a tuple of
+    ``(picked, total_count)`` so callers can emit the "N total" footer.
+
+    v0.9.3 refinement: ``*.onmicrosoft.com`` entries are filtered out.
+    These are Microsoft 365 tenant artefacts — they appear in the
+    related list because the user realm / autodiscover path surfaces
+    them, but they carry no "related brand" signal. A CISO reading
+    "high-signal related domains" doesn't want to see the tenant's
+    own internal domain listed as if it were a separate discovery.
     """
-    if not low_names:
-        return services, False
-    out: list[str] = []
-    any_annotated = False
-    for svc in services:
-        if svc in low_names:
-            out.append(f"{svc}*")
-            any_annotated = True
-        else:
-            out.append(svc)
-    return out, any_annotated
+    def _is_high_signal_candidate(d: str) -> bool:
+        # Filter out tenant artefacts and wildcards
+        if "*" in d:
+            return False
+        # .onmicrosoft.com and .onmicrosoft.us are M365 tenant
+        # artefacts, not brand-related domains worth surfacing.
+        return not d.endswith((".onmicrosoft.com", ".onmicrosoft.us"))
+
+    non_wild = [d for d in related if _is_high_signal_candidate(d)]
+    total = len(non_wild)
+    high: list[str] = []
+    for d in non_wild:
+        first_label = d.split(".", 1)[0] + "."
+        if any(d.startswith(pfx) or first_label == pfx for pfx in _HIGH_SIGNAL_RELATED_PREFIXES):
+            high.append(d)
+        if len(high) >= limit:
+            break
+    if len(high) < limit:
+        for d in non_wild:
+            if d in high:
+                continue
+            high.append(d)
+            if len(high) >= limit:
+                break
+    return high, total
+
+
+def _confidence_is_high(level: ConfidenceLevel) -> bool:
+    """True only for HIGH — used by the disciplined color palette so
+    Medium / Low never trigger alarmist coloring."""
+    return level == ConfidenceLevel.HIGH
 
 
 def render_tenant_panel(
     info: TenantInfo,
-    show_services: bool = False,
+    show_services: bool = False,  # noqa: ARG001 — kept for backward-compat; v0.9.3 always shows services
     show_domains: bool = False,
     verbose: bool = False,
     explain: bool = False,
-) -> Panel:
-    """Render TenantInfo as a rich Panel — adapts to provider."""
-    color = CONFIDENCE_COLORS[info.confidence]
-    dots = CONFIDENCE_DOTS[info.confidence]
-    source_count = len(info.sources)
-    provider = detect_provider(
+):  # -> rich renderable
+    """Render TenantInfo as a plain-text hero layout (v0.9.3 redesign).
+
+    Replaces the old bordered Panel with a flat, professional layout
+    that foregrounds Services, keeps Related domains compact, and
+    uses color sparingly and intelligently.
+
+    Layout (default mode)
+        Company name (bold, full width)
+        apex.domain.com (dim)
+        ──────────────────────────────── (dim horizontal rule)
+
+        Provider     <detect_provider output>
+        Tenant       <tenant_id> • <region>          (only if present)
+        Auth         <auth_type> + <GWS auth>        (only if present)
+        Confidence   ●●○ Medium (N sources)          (green only on High)
+
+        Services                                     (bold cyan header)
+          Email          svc, svc, svc
+          Identity       svc, svc
+          …
+
+        High-signal related domains                  (bold cyan header)
+          login.x, sso.x, api.x … (N total — use --full to see all)
+
+        Note: …                                     (yellow only when degraded)
+
+    --verbose, --explain, --domains add additional sections after the
+    core layout without breaking its structure. The function name is
+    preserved for backward compatibility — callers still pass its
+    return value to ``console.print``.
+    """
+    from rich.console import Group
+
+    # Core layout blocks are accumulated into a list and wrapped in a
+    # Rich Group at the end. Each block is a Text instance so we can
+    # style per-segment without fighting markup.
+    blocks: list[Any] = []
+
+    def _spacer() -> None:
+        """Insert a blank line between sections to separate them visually."""
+        blocks.append(Text(""))
+
+    # ── Hero header ────────────────────────────────────────────────
+    # v0.9.3 refinement: when display_name falls back to the raw
+    # domain (no company name extractable), render it once as bold
+    # instead of showing the same string twice.
+    header = Text()
+    header.append(info.display_name, style="bold")
+    if info.default_domain and info.default_domain != info.display_name:
+        header.append("\n")
+        header.append(info.default_domain, style="dim")
+    blocks.append(header)
+    rule = Text("─" * _PANEL_WIDTH, style="dim")
+    blocks.append(rule)
+
+    # ── Key facts block ────────────────────────────────────────────
+    facts = Text()
+
+    def _field(label: str, value: str, value_style: str = "") -> None:
+        """Emit one "  Label    value\\n" row, wrapping the value at
+        the panel width with a continuation indent matching the
+        label column. Without the explicit wrap, Rich auto-breaks
+        long values mid-line and the continuation lands at column 0
+        — which is what produced the ugly "Google \\nWorkspace" wrap
+        on long Provider strings before v0.9.3."""
+        indent_width = 2 + _LABEL_WIDTH  # "  " + label column
+        max_width = _PANEL_WIDTH - indent_width
+        lines = _wrap_text(value, max_width)
+        for i, line in enumerate(lines):
+            if i == 0:
+                facts.append("  ")
+                facts.append(label.ljust(_LABEL_WIDTH), style="dim")
+            else:
+                facts.append(" " * indent_width)
+            facts.append(line, style=value_style)
+            facts.append("\n")
+
+    has_mx_records = any(e.source_type == "MX" for e in info.evidence)
+    provider_line = detect_provider(
         info.services,
         info.slugs,
         primary_email_provider=info.primary_email_provider,
         email_gateway=info.email_gateway,
         likely_primary_email_provider=info.likely_primary_email_provider,
+        has_mx_records=has_mx_records,
     )
-    is_m365 = "Microsoft" in provider
+    _field("Provider", provider_line)
 
-    # Precompute conflict annotations when explain is active
-    conflicts = info.merge_conflicts if explain and info.merge_conflicts else None
+    if info.tenant_id:
+        tenant_line = info.tenant_id
+        if info.region:
+            tenant_line += f" • {info.region}"
+        _field("Tenant", tenant_line)
+    elif info.region:
+        _field("Region", info.region)
 
-    text = Text()
-    text.append("  Company:    ", style="dim")
-    text.append(f"{info.display_name}")
-    if conflicts:
-        ann = render_conflict_annotation("display_name", conflicts, verbose=verbose)
-        if ann:
-            text.append(ann, style="dim")
-    text.append("\n")
-    text.append("  Domain:     ", style="dim")
-    text.append(f"{info.default_domain}\n")
-    text.append("  Provider:   ", style="dim")
-    text.append(f"{provider}\n")
+    # Auth — combine M365 and GWS auth labels when both are present.
+    # v0.9.3 refinement: when both auth_type and google_auth_type are
+    # the same value (e.g. both "Managed"), collapse to one label with
+    # the providers named in parentheses instead of repeating the word.
+    # "Managed (Entra ID + Google Workspace)" reads cleaner than
+    # "Managed + Managed (GWS)".
+    #
+    # v0.9.3 hardening: GetUserRealm returns NameSpaceType=Unknown for
+    # domains that aren't real M365 tenants. That gets parsed into
+    # auth_type="Unknown" which then leaked as "Unknown + Managed (GWS)"
+    # on Google-only targets. Treat "Unknown" as effectively no auth
+    # info at the display layer so the panel doesn't surface a
+    # meaningless token.
+    effective_auth: str | None = info.auth_type
+    if effective_auth and effective_auth.strip().lower() == "unknown":
+        effective_auth = None
 
-    # When --explain is active, show provider classification reasoning
-    if explain and (info.primary_email_provider or info.email_gateway):
-        classification_parts: list[str] = []
-        if info.primary_email_provider:
-            classification_parts.append(f"Primary (MX): {info.primary_email_provider}")
-        if info.email_gateway:
-            classification_parts.append(f"Gateway (MX): {info.email_gateway}")
-        # Detect secondary providers (slug-detected but not MX-based)
-        _secondary_names = []
-        for _slug, _name in [
-            ("microsoft365", "Microsoft 365"),
-            ("google-workspace", "Google Workspace"),
-            ("zoho", "Zoho Mail"),
-            ("protonmail", "ProtonMail"),
-        ]:
-            if _slug in info.slugs and (not info.primary_email_provider or _name not in info.primary_email_provider):
-                _secondary_names.append(_name)
-        if _secondary_names:
-            classification_parts.append(f"Secondary (TXT/DKIM): {', '.join(_secondary_names)}")
-        if classification_parts:
-            text.append("              ", style="dim")
-            text.append(f"[{'; '.join(classification_parts)}]", style="dim italic")
-            text.append("\n")
-
-    # M365-specific fields — only shown when provider is Microsoft
-    if is_m365 and info.tenant_id:
-        text.append("  Tenant ID:  ", style="dim")
-        text.append(f"{info.tenant_id}")
-        if conflicts:
-            ann = render_conflict_annotation("tenant_id", conflicts, verbose=verbose)
-            if ann:
-                text.append(ann, style="dim")
-        text.append("\n")
-    if info.region:
-        text.append("  Region:     ", style="dim")
-        text.append(f"{info.region}")
-        if conflicts:
-            ann = render_conflict_annotation("region", conflicts, verbose=verbose)
-            if ann:
-                text.append(ann, style="dim")
-        text.append("\n")
-    if info.auth_type:
-        text.append("  Auth:       ", style="dim")
-        text.append(f"{info.auth_type}")
-        if conflicts:
-            ann = render_conflict_annotation("auth_type", conflicts, verbose=verbose)
-            if ann:
-                text.append(ann, style="dim")
-        text.append("\n")
-
-    # Google Workspace identity — shown when GWS is detected
-    gws_slugs = set(info.slugs)
-    is_gws = any(_is_gws_service(s) for s in info.services) or "google-workspace" in gws_slugs
-    if is_gws:
-        if info.google_auth_type:
-            text.append("  GWS Auth:   ", style="dim")
-            auth_label = info.google_auth_type
+    auth_parts: list[str] = []
+    if effective_auth and info.google_auth_type:
+        if effective_auth == info.google_auth_type:
+            providers: list[str] = []
+            # v0.9.3 hardening: only claim "Entra ID" when the
+            # microsoft365 slug is actually detected. A tenant_id
+            # from OIDC discovery is sometimes set on domains that
+            # registered an Entra ID tenant but don't actively use
+            # M365 as their identity / email provider (seen on a
+            # Google-primary domain with a dormant MS tenant).
+            # Saying "Entra ID" in that case is a confident-wrong
+            # claim. Without the slug, fall back to the neutral
+            # "Microsoft" label.
+            if "microsoft365" in info.slugs:
+                providers.append("Entra ID")
+            else:
+                providers.append("Microsoft")
+            gws = "Google Workspace"
             if info.google_idp_name:
-                auth_label += f" ({info.google_idp_name})"
-            text.append(f"{auth_label}\n")
-        gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
-        if gws_modules:
-            text.append("  GWS Modules:", style="dim")
-            text.append(f" {', '.join(gws_modules)}\n")
-
-    text.append("  Confidence: ", style="dim")
-    text.append(f"{dots} {info.confidence.value.capitalize()} ({source_count} sources)", style=color)
-
-    # Verbose: dual confidence breakdown
-    if verbose:
-        ev_color = CONFIDENCE_COLORS[info.evidence_confidence]
-        inf_color = CONFIDENCE_COLORS[info.inference_confidence]
-        text.append("\n")
-        text.append("  Evidence:   ", style="dim")
-        text.append(f"{info.evidence_confidence.value.capitalize()}", style=ev_color)
-        text.append("\n")
-        text.append("  Inference:  ", style="dim")
-        text.append(f"{info.inference_confidence.value.capitalize()}", style=inf_color)
-
-    # Always show services — compact by default, split into provider groups with --services
-    low_names = _low_scored_service_names(info)
-    any_single_source = False
-    if info.services:
-        if show_services:
-            m365_svcs = [svc for svc in info.services if _is_m365_service(svc)]
-            gws_svcs = [svc for svc in info.services if _is_gws_service(svc)]
-            other_svcs = [svc for svc in info.services if not _is_m365_service(svc) and not _is_gws_service(svc)]
-            m365_svcs, a1 = _annotate_single_source(m365_svcs, low_names)
-            gws_svcs, a2 = _annotate_single_source(gws_svcs, low_names)
-            other_svcs, a3 = _annotate_single_source(other_svcs, low_names)
-            any_single_source = a1 or a2 or a3
-            if m365_svcs:
-                text.append("\n")
-                text.append("  M365:       ", style="dim")
-                text.append(_wrap_service_list(m365_svcs, label_width=14, panel_width=80, panel_pad=2))
-            if gws_svcs:
-                text.append("\n")
-                text.append("  GWS:        ", style="dim")
-                text.append(_wrap_service_list(gws_svcs, label_width=14, panel_width=80, panel_pad=2))
-            if other_svcs:
-                text.append("\n")
-                text.append("  Tech Stack: ", style="dim")
-                text.append(_wrap_service_list(other_svcs, label_width=14, panel_pad=2))
+                gws += f" via {info.google_idp_name}"
+            providers.append(gws)
+            auth_parts.append(f"{effective_auth} ({' + '.join(providers)})")
         else:
-            compact = [svc for svc in info.services if not _is_compact_noise(svc)]
-            compact, any_single_source = _annotate_single_source(compact, low_names)
-            if compact:
-                text.append("\n")
-                text.append("  Services:   ", style="dim")
-                text.append(_wrap_service_list(compact, label_width=14, panel_width=80, panel_pad=2))
+            auth_parts.append(effective_auth)
+            gws_label = info.google_auth_type
+            if info.google_idp_name:
+                gws_label += f" via {info.google_idp_name}"
+            # v0.9.3 refinement: spell out "(Google Workspace)" so
+            # the Auth line reads as natural language instead of
+            # terminal shorthand. Previously this branch emitted
+            # "(GWS)" while the same-auth collapsed branch emitted
+            # the full name — inconsistent depending on whether
+            # the two auth types happened to match.
+            auth_parts.append(f"{gws_label} (Google Workspace)")
+    elif effective_auth:
+        auth_parts.append(effective_auth)
+    elif info.google_auth_type:
+        gws_label = info.google_auth_type
+        if info.google_idp_name:
+            gws_label += f" via {info.google_idp_name}"
+        auth_parts.append(f"{gws_label} (Google Workspace)")
+    if auth_parts:
+        _field("Auth", " + ".join(auth_parts))
 
-    # B1: footnote explaining the asterisk marker on single-source detections
-    if any_single_source:
-        footnote = "* single-source — --explain to see evidence"
-        text.append("\n")
-        text.append("              ", style="dim")
-        text.append(footnote, style="dim italic")
+    # Sovereignty — only when cloud_instance indicates non-commercial
+    if info.cloud_instance and "microsoftonline.com" not in info.cloud_instance.lower():
+        sov_label = info.cloud_instance
+        if info.tenant_region_sub_scope:
+            sov_label += f" ({info.tenant_region_sub_scope})"
+        _field("Cloud", sov_label)
 
-    # Insights — separated by a blank line, same label:value alignment as
-    # other fields. B3: neutral insights render in dim so they read as a
-    # scannable secondary column below the services. Warnings (gaps, hedges)
-    # punch through in terracotta; transitions (hybrid, migration) in amber.
-    # Category labels ("Label: value") get a bold+dim treatment that keeps
-    # them gray but slightly heavier so the eye can align on the column.
-    if info.insights:
-        indent = " " * 14  # align with value column
-        max_width = 80 - 2 - 4 - 14  # panel - borders - padding - label
-        for i, insight in enumerate(info.insights):
-            if i == 0:
-                text.append("\n\n")
-                text.append("  Insights:   ", style="dim")
-            else:
-                text.append("\n")
-                text.append(indent)
+    # Confidence — green only for High, default otherwise.
+    dots = CONFIDENCE_DOTS[info.confidence]
+    conf_value = f"{dots} {info.confidence.value.capitalize()} ({len(info.sources)} sources)"
+    _field("Confidence", conf_value, value_style="green" if _confidence_is_high(info.confidence) else "")
 
-            lower = insight.lower()
-            is_warning = (
-                "gap" in lower
-                or "not enforced" in lower
-                or "status unknown" in lower
+    blocks.append(facts)
+
+    # ── Services section ──────────────────────────────────────────
+    if info.services:
+        _spacer()
+        svc_block = Text()
+        svc_block.append("Services", style="bold cyan")
+        svc_block.append("\n")
+        categorized = _categorize_services(info)
+        # Compute the widest category label actually rendered to keep
+        # alignment tight when only a subset of categories fire.
+        max_width = _CATEGORY_WIDTH
+        for cat, svcs in categorized.items():
+            svc_block.append("  ")
+            svc_block.append(cat.ljust(max_width), style="dim")
+            wrapped = _wrap_service_list(
+                svcs,
+                label_width=2 + max_width,
+                panel_width=_PANEL_WIDTH,
+                panel_pad=0,
             )
-            is_transition = "hybrid" in lower or "migration" in lower
-            if is_warning:
-                content_style: str = "#e07a5f"  # warm terracotta
-            elif is_transition:
-                content_style = "#e6c07b"  # soft amber
-            else:
-                content_style = "dim"  # neutral insights read as secondary
+            svc_block.append(wrapped)
+            svc_block.append("\n")
+        blocks.append(svc_block)
 
-            # Try to split a "Label: value" prefix when the label is short.
-            # Only applied to neutral insights. When split, the label gets a
-            # slightly heavier dim weight so the eye can still pick out the
-            # column structure without the value jumping to full white.
-            label: str | None = None
-            value: str = insight
-            if not is_warning and not is_transition:
-                colon_idx = insight.find(": ")
-                if 0 < colon_idx <= 32 and "(" not in insight[:colon_idx]:
-                    label = insight[: colon_idx + 2]  # include ": "
-                    value = insight[colon_idx + 2 :]
+    # ── Related domains (compact) ─────────────────────────────────
+    if info.related_domains and not show_domains:
+        picked, total = _pick_high_signal_related(tuple(info.related_domains))
+        if picked:
+            _spacer()
+            rel = Text()
+            rel.append("High-signal related domains", style="bold cyan")
+            rel.append("\n")
+            rel.append("  ")
+            # Render as wrapped comma-list within the panel width
+            joined = ", ".join(picked)
+            max_width = _PANEL_WIDTH - 2
+            for j, line in enumerate(_wrap_text(joined, max_width)):
+                if j > 0:
+                    rel.append("\n  ")
+                rel.append(line, style="dim")
+            if total > len(picked):
+                remaining = total - len(picked)
+                rel.append(
+                    f"\n  ({total} total — {remaining} more, use --full to see all)",
+                    style="dim italic",
+                )
+            blocks.append(rel)
 
-            label_style = "bold dim"
+    # ── Full tenant_domains listing (only with --domains / --full) ─
+    if show_domains and info.tenant_domains:
+        _spacer()
+        dom = Text()
+        dom.append(f"Domains ({info.domain_count})", style="bold cyan")
+        dom.append("\n")
+        for d in info.tenant_domains:
+            dom.append(f"  {d}\n", style="dim")
+        blocks.append(dom)
 
-            if len(insight) <= max_width:
-                if label is not None:
-                    text.append(label, style=label_style)
-                    text.append(value, style=content_style)
-                else:
-                    text.append(insight, style=content_style)
-            else:
-                wrapped = _wrap_text(insight, max_width)
-                for j, line in enumerate(wrapped):
-                    if j > 0:
-                        text.append("\n")
-                        text.append(indent)
-                        text.append(line, style=content_style)
-                        continue
-                    if label is not None and line.startswith(label):
-                        text.append(label, style=label_style)
-                        text.append(line[len(label) :], style=content_style)
-                    else:
-                        text.append(line, style=content_style)
+    # Full related list when --domains / --full
+    if show_domains and info.related_domains:
+        _spacer()
+        rel = Text()
+        rel.append("Related domains", style="bold cyan")
+        rel.append("\n")
+        rel.append("  ")
+        joined = ", ".join(info.related_domains)
+        for j, line in enumerate(_wrap_text(joined, _PANEL_WIDTH - 2)):
+            if j > 0:
+                rel.append("\n  ")
+            rel.append(line, style="dim")
+        blocks.append(rel)
 
-    # Certificate summary — after insights, before domains
-    if info.cert_summary is not None:
+    # ── Insights (curated) ────────────────────────────────────────
+    if info.insights:
+        # Spacer is added conditionally inside the block after
+        # curation so empty insight sections don't leave a gap.
+        # Filter: drop repetitive / low-signal entries that the old
+        # panel dumped verbatim. Kept: anything with a "Label: value"
+        # shape (signal fires), hardening observations, sovereignty
+        # hints, email-security scores, and topology notes. Dropped:
+        # generic security-stack laundry lists that already appear
+        # in the Services block.
+        curated: list[str] = _curate_insights(info.insights, info.services, info.slugs)
+        if curated:
+            _spacer()
+            ins = Text()
+            ins.append("Insights", style="bold cyan")
+            ins.append("\n")
+            max_width = _PANEL_WIDTH - 2
+            for insight in curated:
+                for j, line in enumerate(_wrap_text(insight, max_width)):
+                    ins.append("  " if j == 0 else "\n  ")
+                    ins.append(line, style="dim")
+                ins.append("\n")
+            blocks.append(ins)
+
+    # ── Certificate summary (only with --verbose or --full) ───────
+    if verbose and info.cert_summary is not None:
+        _spacer()
         cs = info.cert_summary
         issuer_list = ", ".join(cs.top_issuers) if cs.top_issuers else "unknown"
-        text.append("\n\n")
-        text.append("  Certs:      ", style="dim")
-        text.append(
-            f"{cs.cert_count} total, {cs.issuance_velocity} in last 90d, {cs.issuer_diversity} issuers ({issuer_list})"
+        certs = Text()
+        certs.append("Certs", style="bold cyan")
+        certs.append("\n  ")
+        certs.append(
+            f"{cs.cert_count} total, {cs.issuance_velocity} in last 90d, "
+            f"{cs.issuer_diversity} issuers ({issuer_list})",
+            style="dim",
+        )
+        blocks.append(certs)
+
+    # ── Degraded-sources note (subtle color) ─────────────────────
+    # Two tiers of framing:
+    #
+    # (1) **Info tone** (default, no color) — when only CT sources
+    #     are degraded AND the fallback chain successfully reached
+    #     another provider. The user should see that a fallback
+    #     happened and which provider answered, but it reads as a
+    #     routine event, not a warning. Previously this case was
+    #     painted yellow and framed as "Some sources unavailable",
+    #     which made successful fallback runs look broken.
+    #
+    # (2) **Warning tone** (yellow) — when a non-CT source is
+    #     unavailable OR when every CT provider failed (no
+    #     fallback recovery). This is the case where the user's
+    #     data is actually incomplete.
+    if info.degraded_sources:
+        non_ct_degraded = [
+            s for s in info.degraded_sources
+            if s not in ("crt.sh", "certspotter")
+        ]
+        ct_in_degraded = [
+            s for s in info.degraded_sources
+            if s in ("crt.sh", "certspotter")
+        ]
+        ct_fallback_succeeded = (
+            bool(ct_in_degraded) and info.ct_provider_used is not None
+        )
+        ct_fallback_failed = bool(ct_in_degraded) and info.ct_provider_used is None
+        # v0.9.3 refinement: suppress the "CT fallback: … → … (0
+        # subdomains)" line entirely. When the fallback succeeded
+        # but returned zero subdomains, the outcome is identical
+        # to what the user would see on a clean run of a domain
+        # with no related CT data. Mentioning the fallback on
+        # every such run is noise — it turns crt.sh's current
+        # flakiness into a persistent footer. We only surface
+        # the fallback when it actually changed the answer
+        # (returned at least one subdomain). If the user needs
+        # per-run CT provenance they have --json which always
+        # carries ct_provider_used and ct_subdomain_count.
+        ct_fallback_informative = (
+            ct_fallback_succeeded and info.ct_subdomain_count > 0
         )
 
-    # Domains (opt-in via --domains or --full)
-    if show_domains and info.tenant_domains:
-        text.append("\n\n")
-        text.append(f"  Domains ({info.domain_count}):", style="dim")
-        for d in info.tenant_domains:
-            text.append(f"\n    {d}", style="dim")
+        is_warning = bool(non_ct_degraded) or ct_fallback_failed
+        label_style = "yellow" if is_warning else "dim"
+        body_style = "yellow" if is_warning else "dim"
 
-    # Related domains — supplementary, shown dim. Truncated by default (banks
-    # and other heavily proxied enterprise domains often surface 100+ entries,
-    # which overwhelms the panel). Full list rendered when --domains / --full.
-    # Manual wrapping keeps continuation lines aligned with the value column
-    # at 14 chars — Rich's auto-wrap would collapse them to the panel margin.
-    if info.related_domains:
-        text.append("\n\n")
-        text.append("  Related:    ", style="dim")
-        total = len(info.related_domains)
-        RELATED_TRUNCATE = 10
-        max_width = 80 - 2 - 4 - 14  # panel - borders - padding - label
-        indent = " " * 14
-
-        def _emit_wrapped(items: tuple[str, ...]) -> None:
-            joined = ", ".join(items)
-            lines = _wrap_text(joined, max_width)
-            for j, line in enumerate(lines):
-                if j > 0:
-                    text.append("\n")
-                    text.append(indent)
-                text.append(line, style="dim")
-
-        if show_domains or total <= RELATED_TRUNCATE:
-            _emit_wrapped(info.related_domains)
-        else:
-            _emit_wrapped(info.related_domains[:RELATED_TRUNCATE])
-            remaining = total - RELATED_TRUNCATE
-            footer = f"…and {remaining} more — use --full for the complete list"
-            for line in _wrap_text(footer, max_width):
-                text.append("\n")
-                text.append(indent)
-                text.append(line, style="dim italic")
-
-    # Degraded sources notice — surfaced ONLY when something needs flagging.
-    # On a clean run with no degraded sources and crt.sh succeeding, no Note
-    # line appears (Phase 2d: the happy-path footer was reassurance noise
-    # that didn't earn its space). When degradation occurs, the note also
-    # tells the user which CT provider actually ran via the fallback chain
-    # so they can distinguish "crt.sh was down, certspotter gave us 87" from
-    # "both CT providers failed completely". The CT provenance is also
-    # available in --json and --verbose for users who want it on every run.
-    if info.degraded_sources:
-        text.append("\n\n")
-        text.append("  Note:       ", style="dim")
-        note_max_width = 80 - 2 - 4 - 14
-        note_indent = " " * 14
-        note_parts: list[str] = [
-            f"Some sources unavailable ({', '.join(info.degraded_sources)})"
-        ]
-        if info.ct_provider_used:
+        note_parts: list[str] = []
+        if non_ct_degraded:
             note_parts.append(
-                f"CT data via {info.ct_provider_used} ({info.ct_subdomain_count} subdomains)"
+                f"Some sources unavailable ({', '.join(non_ct_degraded)})"
             )
-        note_text = " — ".join(note_parts) + "."
-        for j, line in enumerate(_wrap_text(note_text, note_max_width)):
-            if j > 0:
-                text.append("\n")
-                text.append(note_indent)
-            text.append(line, style="dim italic")
+        if ct_fallback_failed:
+            note_parts.append(
+                f"All CT providers unavailable ({', '.join(ct_in_degraded)})"
+            )
+        elif ct_fallback_informative:
+            note_parts.append(
+                f"CT fallback: {', '.join(ct_in_degraded)} → "
+                f"{info.ct_provider_used} "
+                f"({info.ct_subdomain_count} subdomains)"
+            )
 
-    # Verbose: detection scores
-    if verbose and info.detection_scores:
-        text.append("\n\n")
-        text.append("  Detection Scores:\n", style="bold")
-        for slug, score in info.detection_scores:
-            score_style = {
-                "high": "#a3d9a5",
-                "medium": "#7ec8e3",
-                "low": "#e07a5f",
-            }.get(score, "dim")
-            text.append(f"    {slug}: ", style="dim")
-            text.append(f"{score}", style=score_style)
-            text.append("\n")
+        if note_parts:
+            _spacer()
+            note = Text()
+            note.append("Note", style=label_style)
+            note.append("\n  ")
+            note_text = " — ".join(note_parts) + "."
+            for j, line in enumerate(_wrap_text(note_text, _PANEL_WIDTH - 2)):
+                if j > 0:
+                    note.append("\n  ")
+                note.append(line, style=body_style)
+            blocks.append(note)
 
-    # Verbose: evidence chains
-    if verbose and info.evidence:
-        text.append("\n")
-        text.append("  Evidence Chain:\n", style="bold")
-        for ev in info.evidence:
-            text.append(f"    [{ev.source_type}] ", style="dim")
-            text.append(f"{ev.rule_name}")
-            text.append(f" → {ev.slug}", style="dim")
-            text.append("\n")
+    # ── Verbose sections: dual confidence + detection scores + chain
+    if verbose:
+        _spacer()
+        v = Text()
+        v.append("Evidence Detail", style="bold cyan")
+        v.append("\n")
+        v.append(
+            f"  Evidence confidence:  {info.evidence_confidence.value.capitalize()}\n",
+            style="dim",
+        )
+        v.append(
+            f"  Inference confidence: {info.inference_confidence.value.capitalize()}\n",
+            style="dim",
+        )
+        if info.detection_scores:
+            v.append("  Detection scores:\n", style="dim")
+            for slug, score in info.detection_scores:
+                v.append(f"    {slug}: {score}\n", style="dim")
+        if info.evidence:
+            v.append("  Evidence chain:\n", style="dim")
+            for ev in info.evidence:
+                v.append(f"    [{ev.source_type}] {ev.rule_name} -> {ev.slug}\n", style="dim")
+        blocks.append(v)
 
-    return Panel(
-        text,
-        title=info.display_name,
-        width=80,
-        padding=(1, 2),
-        border_style="dim",
+    # ── Explain mode: conflict annotations ────────────────────────
+    if explain and info.merge_conflicts and info.merge_conflicts.has_conflicts:
+        _spacer()
+        conf_block = Text()
+        conf_block.append("Conflicts", style="bold cyan")
+        conf_block.append("\n")
+        for field_name in ("display_name", "auth_type", "region", "tenant_id", "dmarc_policy"):
+            ann = render_conflict_annotation(field_name, info.merge_conflicts, verbose=verbose)
+            if ann:
+                conf_block.append(f"  {field_name}: {ann}\n", style="dim")
+        blocks.append(conf_block)
+
+    return Group(*blocks)
+
+
+def _curate_insights(
+    insights: tuple[str, ...],
+    services: tuple[str, ...],
+    slugs: tuple[str, ...],
+) -> list[str]:
+    """Filter and deduplicate insights for the v0.9.3 default panel.
+
+    Two kinds of cleanup:
+
+    1. **Drop laundry-list dumps.** Prefixes like ``"Security stack:"``,
+       ``"Infrastructure:"``, ``"PKI:"``, and
+       ``"Google Workspace modules:"`` all duplicate information that
+       the Services block already shows in a categorized, deduped
+       form. Low-signal organizational-size hints
+       (``"mid-size organization"``, ``"domains in tenant"``) read as
+       padding and add nothing.
+
+    2. **Collapse overlapping signal families.** Real runs often
+       trigger three or four signals about the same underlying pattern
+       because `signals.yaml` has multiple rules covering it from
+       different angles. On a dual-provider run (M365 tenant + Google
+       Workspace via DKIM) the Insights block used to show:
+
+           Dual provider: Google + Microsoft coexistence
+           Dual Email Provider: microsoft365, google-workspace
+           Dual Email Delivery Path: microsoft365, google-workspace
+           Secondary Email Provider Observed: google-workspace
+
+       Four different wordings of the same fact. v0.9.3 collapses
+       these into a single canonical line — keeping the highest-
+       signal wording and dropping the rest. Same treatment for the
+       AI Adoption / AI Adoption Without Governance /
+       AI Adoption — Missing Counterparts triple.
+
+    The collapse rules are intentionally narrow: only overlapping
+    signals that describe the same underlying pattern. Real distinct
+    signals ("Edge Layering" vs "Zero Trust Posture") never collapse
+    into each other.
+    """
+    _ = services, slugs  # reserved for future tuning
+    drop_prefixes = (
+        "Security stack:",
+        "Infrastructure:",
+        "PKI:",
+        "Google Workspace modules:",  # module list also belongs in Services
     )
+    curated: list[str] = []
+    for line in insights:
+        if any(line.startswith(pfx) for pfx in drop_prefixes):
+            continue
+        lower = line.lower()
+        if "mid-size organization" in lower or "domains in tenant" in lower:
+            # Low-signal sizing hint
+            continue
+        curated.append(line)
+
+    # ── Collapse overlapping signal families ──────────────────────────
+
+    # Dual-provider family: four overlapping signals all describing
+    # "both Microsoft 365 and Google Workspace detected". We keep the
+    # most informative wording ("Dual provider: Google + Microsoft
+    # coexistence") and drop the rest.
+    dual_family_prefixes = (
+        "Dual Email Provider:",
+        "Dual Email Delivery Path:",
+        "Secondary Email Provider Observed:",
+    )
+    has_canonical_dual = any(
+        line.startswith("Dual provider:") or "Google + Microsoft coexistence" in line
+        for line in curated
+    )
+    if has_canonical_dual:
+        curated = [
+            line for line in curated
+            if not any(line.startswith(pfx) for pfx in dual_family_prefixes)
+        ]
+    else:
+        # No canonical line — keep at most one of the family as a
+        # promoted representative. "Dual Email Delivery Path" is the
+        # most information-dense wording of the three, so prefer it.
+        family_lines = [
+            line for line in curated
+            if any(line.startswith(pfx) for pfx in dual_family_prefixes)
+        ]
+        if len(family_lines) >= 2:
+            # Preference order for promotion
+            pref_order = (
+                "Dual Email Delivery Path:",
+                "Dual Email Provider:",
+                "Secondary Email Provider Observed:",
+            )
+            chosen: str | None = None
+            for pfx in pref_order:
+                for line in family_lines:
+                    if line.startswith(pfx):
+                        chosen = line
+                        break
+                if chosen:
+                    break
+            curated = [
+                line for line in curated
+                if line not in family_lines or line == chosen
+            ]
+
+    # AI Adoption family: "AI Adoption: …" +
+    # "AI Adoption Without Governance: …" +
+    # "AI Adoption — Missing Counterparts: …". The "Without
+    # Governance" wording is the most information-dense; drop the
+    # other two when it fires.
+    has_without_governance = any(
+        line.startswith("AI Adoption Without Governance:") for line in curated
+    )
+    if has_without_governance:
+        curated = [
+            line for line in curated
+            if not line.startswith("AI Adoption:")
+            and not line.startswith("AI Adoption \u2014 Missing Counterparts:")
+            and not line.startswith("AI Adoption — Missing Counterparts:")
+        ]
+
+    # "Dual Email Provider" signal family overlap with the older
+    # "Dual provider: Google + Microsoft coexistence" insight line:
+    # when BOTH the canonical insight and the newer "Dual Email
+    # Provider" signal fire, keep only the canonical (human-readable)
+    # one. Already handled above via has_canonical_dual; this comment
+    # just documents the precedence for future maintainers.
+
+    # ── Email security score dedup ─────────────────────────────────
+    # When the tool fires "Email security 0/5 weak" on a sparse
+    # domain, it also fires multiple separate lines that restate
+    # the same fact: "No DMARC record", "No DKIM selectors
+    # observed", "DMARC: none — email spoofing protection not
+    # enforced". All three are the same observation. Keep the
+    # compact score line and drop the redundant specifics when the
+    # score is already low — users don't need four lines explaining
+    # the same zero.
+    score_line_present = any(
+        line.startswith("Email security 0/5")
+        or line.startswith("Email security 1/5")
+        or line.startswith("Email security 2/5")
+        for line in curated
+    )
+    if score_line_present:
+        curated = [
+            line for line in curated
+            if not line.startswith("No DMARC record")
+            and not line.startswith("No DKIM selectors observed")
+            and not line.startswith("DMARC: none")
+        ]
+
+    # ── Google Workspace identity echo dedup ───────────────────────
+    # The insight "Google Workspace: Managed identity (Google-native)"
+    # restates the Auth line AND the Identity row in the Services
+    # block. On domains with minimal signal this is the third time
+    # the same fact appears in the panel. Drop it — the Auth line
+    # already says "Managed (Google Workspace)" and the Services
+    # block carries the slug detection.
+    curated = [
+        line for line in curated
+        if line != "Google Workspace: Managed identity (Google-native)"
+        and not line.startswith("Google Workspace: Managed identity")
+    ]
+
+    # Note on the "Cloud-managed identity indicators" insight: the
+    # dedup for dual-provider targets happens upstream in
+    # insights._auth_insights, which refuses to emit the line when
+    # google_auth_type is set (the Auth line's compound format
+    # "Managed (Entra ID + Google Workspace)" already carries the
+    # same fact). On pure M365 targets the insight DOES fire and
+    # the Auth line just says "Managed", so both surfaces carry
+    # distinct information — no dedup needed here.
+
+    return curated
 
 
 def render_verbose_sources(results: list[SourceResult]) -> None:
@@ -820,12 +1684,14 @@ def render_error(message: str) -> None:
 
 def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
     """Build a dict representation of TenantInfo (shared by JSON and batch)."""
+    has_mx_records = any(e.source_type == "MX" for e in info.evidence)
     provider = detect_provider(
         info.services,
         info.slugs,
         primary_email_provider=info.primary_email_provider,
         email_gateway=info.email_gateway,
         likely_primary_email_provider=info.likely_primary_email_provider,
+        has_mx_records=has_mx_records,
     )
     d: dict[str, Any] = {
         "tenant_id": info.tenant_id,
@@ -842,6 +1708,11 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "domain_count": info.domain_count,
         "sources": list(info.sources),
         "services": list(info.services),
+        # v0.9.3: emit slugs explicitly. TenantInfo.slugs is the
+        # canonical detected-fact identifier set — downstream
+        # tooling matching on specific slugs had to read them out
+        # of `detection_scores` before, which was awkward.
+        "slugs": list(info.slugs),
         "insights": list(info.insights),
         "tenant_domains": list(info.tenant_domains),
         "related_domains": list(info.related_domains),
@@ -857,6 +1728,11 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "dmarc_pct": info.dmarc_pct,
         "ct_provider_used": info.ct_provider_used,
         "ct_subdomain_count": info.ct_subdomain_count,
+        # v0.9.3: sovereignty + lexical fields
+        "cloud_instance": info.cloud_instance,
+        "tenant_region_sub_scope": info.tenant_region_sub_scope,
+        "msgraph_host": info.msgraph_host,
+        "lexical_observations": list(info.lexical_observations),
     }
     if info.cert_summary is not None:
         d["cert_summary"] = {

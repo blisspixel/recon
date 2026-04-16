@@ -7,6 +7,539 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.3] — 2026-04-15
+
+This release is the *Sparse-Target Amplification + UX Refinement* pass.
+Themes: (1) extract more hedged signal from the same passive sources —
+especially on heavily-proxied, minimal-DNS, managed-auth targets where
+older releases went silent; (2) redesign the default CLI output so
+professional users never feel like they're looking at hobbyist-grade dump
+output; (3) validation-driven fixes from real-world runs against EDU,
+nonprofit, religious, and sparse commercial targets. Everything stays
+within the passive / zero-creds / zero-additional-network invariants.
+
+### Validation-driven refinements
+
+- **Categorized Services refinements**:
+  - `"AWS Route 53"` renders as `"AWS Route 53 (DNS)"` under Cloud so
+    the row can't be misread as "primary cloud = AWS". Same treatment
+    for `azure-dns`, `gcp-dns`, CDN providers (`(CDN)`),
+    edge/serverless platforms (`(edge)`), and WAFs (`(WAF)`).
+  - `google-managed` / `google-federated` slugs render as
+    `"Google Workspace (managed identity)"` / `"(federated identity)"`
+    instead of the raw slug.
+  - CAA issuer fingerprints collapse to one `"CAA: N issuers
+    restricted"` entry instead of four separate rows overwhelming
+    Security.
+  - `"CAA: "` prefix stripped when a CAA-derived fingerprint is
+    classified in a non-Security category (e.g.
+    `"CAA: AWS Certificate Manager"` → `"AWS Certificate Manager"`
+    in Cloud).
+  - Exchange Autodiscover classified as Email instead of Other.
+  - Verification-token artefacts (`"(site verified)"`,
+    `"(domain verified)"`, `"Domain Connect (…)"`) filtered from
+    the categorized Services block — they're ownership receipts,
+    not deployed products.
+  - Identity row dropped when its only entry is a
+    `"<provider> (managed identity)"` echo of an Email row.
+- **Insights dedup and curation**:
+  - Four overlapping dual-provider signals (`Dual provider`,
+    `Dual Email Provider`, `Dual Email Delivery Path`,
+    `Secondary Email Provider Observed`) collapse to one canonical
+    line.
+  - Three overlapping AI-adoption signals collapse to one
+    `"AI Adoption Without Governance"` line when the governance
+    version fires.
+  - On sparse targets (`Email security 0/5` / `1/5` / `2/5`), the
+    subsequent `"No DMARC record"`, `"No DKIM selectors"`, and
+    `"DMARC: none"` lines are dropped as redundant — the score
+    line already says it.
+  - `"Cloud-managed identity indicators (Entra ID native)"` only
+    fires on pure M365 targets (no Google Workspace present) —
+    on dual-provider targets the Auth line already says
+    `"Managed (Entra ID + Google Workspace)"` so the insight
+    would be pure restatement.
+  - Meta-signals (`requires_signals` only, no candidates) that
+    fire with an empty `matched` list — for example
+    `"Complex Migration Window"` — render as a bare name instead
+    of a `"Name: "` dead-end with nothing after the colon.
+  - Raw slugs in signal insight text now humanize through a
+    ~90-entry map: `"sendgrid, mailchimp"` → `"SendGrid, Mailchimp"`,
+    `"crewai-aid"` → `"CrewAI"`, `"google-managed"` →
+    `"Google Workspace (managed)"`, etc.
+  - Variant-slug dedup: when a signal's matched list carries both
+    `"google-workspace"` and `"google-managed"`, the variant
+    collapses into the parent so the insight doesn't read
+    `"Google Workspace, Google Workspace (managed)"`.
+- **Sparse-signal observation**: new hedged two-sided insight that
+  fires when service density is low and the target isn't an M365
+  tenant. States explicitly: *"Sparse public signal — few
+  observable records beyond MX and identity. Consistent with a
+  small organization, a parked or dormant domain, or a
+  heavily-proxied target. Observation, not a verdict."* This is
+  the explicit answer to "why is this panel thin" that the
+  previous output left the user guessing about.
+- **Provider line / Auth line consistency**:
+  - Slug-only fallback in `detect_provider` always adds the
+    `"(primary)"` qualifier now (was inconsistent before —
+    topology path labelled, fallback path didn't). Multi-provider
+    fallback follows the same `"primary + secondary"` format as
+    the topology path.
+  - Auth line `"Unknown + Managed (GWS)"` bug: `GetUserRealm`
+    returns `NameSpaceType=Unknown` for non-M365 domains; that
+    value now gets filtered at display time so Google-only
+    domains read `"Managed (Google Workspace)"` instead of
+    leaking the "Unknown" token.
+  - Auth line `"(GWS)"` abbreviation replaced with
+    `"(Google Workspace)"` in the mismatched-auth branch (the
+    same-auth compound branch already used the full name —
+    inconsistent before).
+  - Auth line `"Entra ID"` claim only fires when `microsoft365`
+    is in `slugs`, not just when `tenant_id` is set. A domain
+    with a registered but inactive M365 tenant no longer gets
+    a false "Entra ID" label on the Auth line.
+- **Panel layout**:
+  - Hero header shows `display_name` once — when it falls back to
+    the raw domain (no company name extractable), the duplicated
+    hostname line that looked like a bug is gone.
+  - Long Provider-line values wrap with an explicit continuation
+    indent matching the label column, instead of Rich's default
+    column-0 wrap that made `"…Google \\nWorkspace"` ugly.
+  - Panel width reduced from 80 → 78 to avoid terminal
+    wrap-to-next-line artefacts at the 80-char boundary.
+  - Confidence line single-space between dots and label (was
+    double-space).
+- **Degraded-sources Note reframing**:
+  - Two tiers now: **info tone** (default color) when only CT
+    sources were degraded AND a CT fallback successfully reached
+    another provider (reads as a routine fallback event, not a
+    warning); **warning tone** (yellow) when a non-CT source is
+    down or every CT provider failed.
+  - When CT fallback succeeded with zero subdomains, the Note
+    line is suppressed entirely — the outcome is identical to a
+    clean run on a domain with no related CT data, so mentioning
+    the fallback every time was persistent noise.
+  - Wording changed from `"Some sources unavailable"` (false
+    alarm when fallback recovered) to `"CT fallback: crt.sh →
+    certspotter (N subdomains)"` in the recovered-but-informative
+    case, and `"All CT providers unavailable"` when genuinely
+    failed.
+- **Confidence downgrade logic**:
+  - v0.9.2 auto-downgraded confidence on any `degraded_sources`.
+    v0.9.3 skips the downgrade when the ONLY degraded sources
+    are CT providers AND a CT fallback successfully recovered
+    data. Previously, every domain looked up while crt.sh was
+    flaking got stuck at `medium` even when the fallback chain
+    fully recovered.
+- **JSON schema hole fixed**: `format_tenant_dict` now emits the
+  `slugs` field explicitly. Downstream tooling used to have to
+  reconstruct slug sets from the `detection_scores` field because
+  the top-level `slugs` field was missing from the output.
+  Also added `cloud_instance`, `tenant_region_sub_scope`,
+  `msgraph_host`, and `lexical_observations` to the emitted
+  dict — they were on `TenantInfo` but not surfaced in
+  `--json`.
+
+### Docs and roadmap
+
+- **Roadmap rewritten** (`docs/roadmap.md`): collapsed from the
+  original 191-line, four-release (`v0.9.3 → v0.9.4 → v0.9.5 →
+  v1.0`) gold-plated plan into a tighter ~150-line priority-
+  ordered list. CT source resilience promoted from "Later/maybe"
+  to `What's next #1` — three-provider fallback chain + local
+  per-domain JSON cache with 7-day TTL. Community fingerprint
+  pipeline elevated from "Later/maybe" to 1.0 scope.
+  `--confidence-mode strict` flag added as a future item for the
+  hedging-on-dense-evidence complaint. Bayesian evidence fusion,
+  property-graph core, counterfactual simulation, temporal CT
+  all demoted to "Post-1.0 ideas". Forward dates and version-
+  number sequencing removed per feedback. 1.0 metrics made
+  explicit (≥80% signal coverage, zero unhedged assertions on
+  sparse-evidence fixtures, MCP idempotent/cache-aware, stability
+  tags on every public surface).
+- **README example panel updated** to the v0.9.3 hero layout. The
+  old bordered-panel example no longer matched reality — a new
+  user reading the README would see an example format the tool
+  doesn't produce anymore.
+
+### Added — Sparse-target inference
+
+- **`positive_when_absent` absence-engine extension + hedged
+  hardening observations.** The `Signal` schema gains a new
+  `positive_when_absent` field. When a parent signal fires AND none
+  of the listed adversary-friendly / consumer-SaaS slugs are
+  detected, the absence engine emits a hedged two-sided positive
+  observation: *"Edge Layering — Hardening Pattern Observed: fits a
+  deliberately hardened target, a dormant / parked domain, or a
+  small shop behind an edge proxy. Hedged observation, not a
+  verdict."* The v0.9.3 `Edge Layering` signal carries a 14-slug
+  exclusion set (`slack`, `notion`, `atlassian`, `dropbox`, `canva`,
+  `hubspot`, `salesforce`, `zoom`, `miro`, `airtable`, `intercom`,
+  `mailchimp`, `monday`, `clickup`) so a hardened-enterprise proxy
+  target finally gets a positive reading without any confident
+  verdict. Wired through `merger.build_insights_with_signals`,
+  `cli._build_explanations`, and `server._lookup_tenant_json_with_explain`
+  so the hardening observation shows up in every `--explain` output
+  path. 14 unit tests pin the invariant.
+- **CT subdomain lexical taxonomy** (`recon_tool/lexical.py`). A
+  pure-Python rule parser that classifies CT-discovered subdomains
+  into environment (`dev-`, `stg-`, `uat-`, `prd-`, `sbx-`), region
+  (`us-east`, `eu-west`, `ap-southeast`, `apne1`), and tenancy-shard
+  (`t-1234`, `org-acme`, `tenant-xyz`) taxonomies. No ML, no bundled
+  embeddings, no generated candidates. Emits hedged
+  ``LexicalObservation`` entries on the standard insights list:
+  "Mature environment separation pattern observed (3 env-prefixed
+  subdomains e.g. dev, stg, prod) — consistent with multi-environment
+  deployment pipelines. Observation, not a verdict." A threshold of
+  `MIN_MATCHES=2` prevents single-subdomain coincidences from firing
+  the signal; sample labels are capped at 3 so `--explain` shows
+  evidence without flooding. 30 unit tests cover env/region/shard
+  classification, label boundary rules, and observation hedging.
+- **OIDC tenant metadata enrichment** (`sources/oidc.py`). The
+  `parse_tenant_info_from_oidc` parser now extracts the Microsoft
+  extensions `cloud_instance_name`, `tenant_region_sub_scope`, and
+  `msgraph_host` from the discovery response — fields that were
+  already in the JSON we fetched but silently discarded. These
+  distinguish commercial M365 (`microsoftonline.com`), US Government
+  Community Cloud (`microsoftonline.us` + `GCC`), GCC High / DoD
+  (`microsoftonline.us` + `DOD`), Azure China 21Vianet
+  (`partner.microsoftonline.cn`), and Azure B2C (`*.b2clogin.com`)
+  tenancies. Surfaced in `TenantInfo.cloud_instance`,
+  `TenantInfo.tenant_region_sub_scope`, and `TenantInfo.msgraph_host`;
+  rendered by a new `_sovereignty_insights` generator in
+  `insights.py` as a hedged insight line ("Likely US Government
+  Community Cloud (GCC) tenant (observed
+  cloud_instance=microsoftonline.us)"). 13 unit tests pin the
+  detection rules and the hedging invariants.
+- **Shared verification token clustering**
+  (`recon_tool/clustering.py`, new module). In-memory, batch-scope,
+  never persisted. When two or more domains in a single `recon batch`
+  run share the same `google-site-verification`, `MS=`,
+  `atlassian-domain-verification`, Zoom, or similar TXT token, each
+  domain's JSON output gains a `shared_verification_tokens` array
+  with per-token peer attribution. Exposed programmatically via a
+  new read-only `cluster_verification_tokens` MCP tool that accepts
+  a list of domains and returns the cluster map from cached
+  `TenantInfo` — zero extra network calls. Shared tokens are
+  **hedged "possible relationship (observed)"** signals, never
+  acquisition verdicts — a reused token implies a shared SaaS
+  account operator, not corporate identity. 21 unit tests cover
+  normalization, symmetry, multi-peer clusters, and deterministic
+  ordering.
+- **Custom profile templates + `--profile` flag**
+  (`recon_tool/profiles.py`, new module). YAML files in
+  `~/.recon/profiles/*.yaml` (or the built-in `data/profiles/`
+  directory) define a lens: `category_boost` multipliers,
+  `signal_boost` per-signal multipliers, `focus_categories` filters,
+  `exclude_signals` blocklists, and a `prepend_note` header.
+  Profiles are additive-only — they reweight and reorder existing
+  observations, never add new intelligence. Six built-in profiles
+  ship in `data/profiles/`: `fintech`, `healthcare`, `saas-b2b`,
+  `high-value-target`, `public-sector`, `higher-ed`. The CLI gains `--profile
+  <name>` on the lookup command; the MCP `analyze_posture` tool
+  gains an optional `profile` argument. Custom profiles override
+  built-ins when the name matches — one of the few exceptions to
+  the usual additive-only invariant, on the grounds that profiles
+  are explicitly user-facing lenses and explicit override is the
+  expected mode. 25 unit tests cover built-in discovery, custom
+  profile loading, invalid YAML handling, boost multipliers,
+  category filtering, and deterministic ordering.
+- **DMARC aggregator fingerprinting** — four new vendors added to
+  the existing `dmarc_rua` detection pipeline: URIports,
+  DMARC Advisor, PowerDMARC, Mimecast DMARC Analyzer. Total
+  fingerprint count now **227** (was 208). The `DMARC Governance
+  Investment` signal's `requires.any` list was expanded to cover
+  the new slugs, so RUA addresses pointing to these vendors now
+  fire the governance-maturity signal end-to-end.
+- **EDU / nonprofit / marketing fingerprints** — 15 new
+  fingerprints: Canvas LMS, Blackboard, Moodle, Ellucian
+  Banner, Handshake, Top Hat (higher-ed LMS/SIS), Dynamics 365
+  Marketing, Salesforce Marketing Cloud (SFMC), Emma, iContact,
+  MailerLite (marketing automation), VMware Cloud, Salesforce
+  NPSP, Blackbaud, Classy (nonprofit CRM/fundraising).
+  TXT-verification detection merged into existing Netlify and
+  WP Engine entries.
+- **Exchange on-prem / hybrid detection**
+  (`dns._detect_exchange_onprem`). Probes `owa.`, `outlook.`,
+  `exchange.`, `mail-ex.`, `webmail.`, `autodiscover.` subdomains.
+  `autodiscover` uses A-only resolution (not CNAME) to avoid
+  M365 false-positives — M365 autodiscover is CNAME to
+  `outlook.com`. Emits `exchange-onprem` slug. Wired into the
+  parallel `asyncio.gather` detector set.
+- **Federated SSO hub detection** (`dns._detect_idp_hub`).
+  Probes 15 identity-provider subdomain prefixes (`shibboleth`,
+  `weblogin`, `idp`, `wayf`, `sp`, `sso`, `saml`, `cas`,
+  `raven`, `webauth`, `harvardkey`, `kerberos`, `okta`, `adfs`,
+  `federation`) for A records. Emits `federated-sso-hub`,
+  `okta-sso-hub`, or `adfs-sso-hub` slugs depending on match.
+- **SPF redirect chain following** (`dns._follow_spf_redirect`).
+  Follows `redirect=` directives in SPF records up to 3 hops,
+  collecting additional SaaS fingerprint matches from the
+  redirect targets. Silent failure via try/except.
+- **A → PTR cloud hosting detection**
+  (`dns._detect_hosting_from_a_record`). Resolves the apex A
+  record, then performs a PTR lookup on the resulting IP.
+  Pattern table covers AWS EC2/ELB, Azure VM, GCP Compute,
+  Linode, DigitalOcean, Hetzner, OVH, and Vultr.
+- **Higher-ed profile** (`data/profiles/higher-ed.yaml`). Sixth
+  built-in posture profile for universities, colleges, research
+  institutions, and academic computing. Boosts identity (1.6×),
+  email (1.5×), infrastructure (1.3×). Prioritises federated
+  identity, LMS detection, email governance. Excludes GTM
+  signals that don't apply to universities.
+- **MX always-emit for `has_mx_records` plumbing**. `_detect_mx`
+  now emits an `EvidenceRecord` for every MX host even when no
+  fingerprint matches, so the downstream `has_mx_records` check
+  works regardless of fingerprint coverage.
+- **Email security scoring honesty**. The email security score
+  now requires MX-backed evidence (`primary_email_provider`,
+  `likely_primary_email_provider`, `dmarc_policy`, or
+  outbound-email slug) before scoring. Domains with zero email
+  infrastructure no longer get a misleading `0/5 weak` label.
+  Score `0` with monitoring records reads "DMARC monitoring
+  mode, SPF soft/neutral — no strict controls" instead of
+  "no protections detected".
+- **Provider "account detected" variants**. When identity
+  endpoints show a registered account but MX records don't
+  confirm active email delivery, the provider line now reads
+  `"(account detected, no MX)"` or `"(account detected,
+  custom MX)"` instead of claiming the provider as primary.
+- **Explanation DAG serialization** (`explanation.build_explanation_dag`).
+  Produces a JSON-serializable provenance DAG from any list of
+  `ExplanationRecord` instances: node types `evidence`, `slug`,
+  `rule`, `signal`, `insight`, `observation`, `confidence`; edge
+  types `detected-by`, `contributes-to`, `fired`. Every terminal
+  node is reachable from at least one evidence node via a short
+  path (asserted by the v0.9.3 property-based harness). `--explain
+  --json` on the CLI and the MCP `lookup_tenant` with `explain=true`
+  both emit the DAG under a new `explanation_dag` key alongside
+  the existing flat `explanations` list — old consumers stay
+  working, new consumers get the structured view. 17 unit tests
+  pin the shape, the node types, the edge semantics, and
+  determinism.
+- **Property-based hedging regression harness**
+  (`tests/test_v093_hedging_invariants.py`). Hypothesis-driven
+  fuzz testing that asserts five hedging invariants against
+  random slug subsets and random OIDC metadata: (1) every
+  `positive_when_absent` output is hedged and two-sided; (2) the
+  emitted SignalMatch name carries the `"Hardening Pattern
+  Observed"` suffix; (3) sovereignty insights never claim
+  certainty; (4) the signal pipeline never raises or emits
+  duplicate names; (5) every absence signal references a
+  legitimately-firing parent. Plus a static pass over every
+  loaded signal to reject forbidden confident-verdict language
+  (`definitely`, `proven`, `confirmed `, `guaranteed`). Runs in
+  under 5 seconds on default settings so it's always on. This is
+  the mechanical floor that makes every other v0.9.3 item safe to
+  ship — a future PR that reintroduces confident-wrong language
+  fails CI before merge.
+
+### Added — UI/X refinements
+
+- **Default panel redesign** (`formatter.render_tenant_panel`).
+  Complete visual rewrite of the lookup output. The old bordered
+  Rich Panel with an 80-column frame is replaced by a plain-text
+  hero layout: company name in bold, apex domain on a dim second
+  line, a horizontal rule, then a 13-column label / value fact
+  block (Provider, Tenant, Auth, Cloud, Confidence), then a
+  hierarchical Services section broken into seven display
+  categories (Email, Identity, Cloud, Security, AI, Collaboration,
+  Other), then a compact 1–2 line High-Signal Related Domains
+  section, then curated Insights, and — only when sources are
+  actually degraded — a subtle yellow Note line. `--full`,
+  `--verbose`, `--explain`, and `--domains` add additional
+  sections (full tenant_domains list, evidence chain, conflict
+  annotations, cert summary) after the core layout without
+  breaking its structure.
+- **Disciplined color palette**: subtle cyan/teal for section
+  headers (`Services`, `High-signal related domains`, `Insights`),
+  green **only** when confidence is `High`, default text for
+  Medium/Low confidence (no alarmist yellow, no red, no
+  high-chroma anywhere), subtle yellow for the degraded-sources
+  Note line (only when it appears). Graceful monochrome fallback
+  — terminals without color support still render the full layout
+  as plain text.
+- **Categorized services classifier**. A 120+ slug → category
+  lookup table (`_CATEGORY_BY_SLUG`) gives every detected slug a
+  deterministic home in one of the seven display categories.
+  Services whose slug isn't in the table fall through to a
+  prefix-based classifier (`DMARC`/`DKIM`/`SPF` → Email,
+  `DNS:`/`CDN:`/`Hosting:` → Cloud, etc.). Pass-2 dedup via
+  lowercase-prefix matching prevents the same detection from
+  appearing twice under two different display names (e.g.
+  `"Atlassian"` + `"Atlassian (Jira/Confluence)"`).
+- **Curated Insights filter** (`formatter._curate_insights`).
+  Drops the repetitive laundry-list entries the old panel dumped
+  verbatim (`Security stack: …`, `Infrastructure: …`,
+  `PKI: …`, `Google Workspace modules: …`, mid-size org-size
+  hints). Kept: signal firings, hardening observations,
+  sovereignty hints, email security scores, topology notes.
+- **Compact related-domains block**. Picks up to 8 high-signal
+  subdomains (prefixes `login.`, `sso.`, `auth.`, `idp.`, `api.`,
+  `admin.`, `portal.`, `dashboard.`, `support.`, `status.`,
+  `app.`, `cdn.`) and displays them as a wrapped 1–2 line comma
+  list with a `(N total — M more, use --full to see all)`
+  footer. The old panel's 10-entry vertical list is replaced
+  entirely — it was the single biggest consumer of vertical
+  space on enterprise targets.
+- **Fixed misleading Provider line** (`formatter.detect_provider`
+  + new `_pick_single_primary` helper). The old format
+  `"{gateway} (email gateway, likely delivering to X + Y)"`
+  read as ambiguous dual email; the new format promotes ONE
+  primary and demotes the rest to `"(secondary)"`. Selection
+  rule: Microsoft 365 first (most common enterprise primary),
+  then Google Workspace, then list-order fallback. Target
+  output: `"Microsoft 365 (primary) via Trend Micro gateway +
+  Google Workspace (secondary)"`. The word `(dual)` never
+  appears anywhere in provider output — and the v0.9.3 property
+  tests assert this.
+- **Elevated bare `recon` command**. Running `recon` with no
+  arguments no longer dumps the raw Typer help. Instead it
+  prints a curated 15-line banner: version + one-line value
+  prop, the recommended first command, progressive disclosure
+  (`--verbose`, `--full`, `--explain`), three worked examples,
+  and a gentle hint about `recon doctor`. Calm, professional,
+  no emojis. Subtle cyan accents on the version label and
+  section headers.
+- **Elevated `recon mcp` startup + shutdown UX**
+  (`server._print_mcp_banner`, `server.main`). Running `recon
+  mcp` no longer hangs silently. The MCP server now prints a
+  professional banner to stderr before handing control to the
+  FastMCP loop: version, transport (`stdio`), loaded fingerprint
+  and signal counts, a curated list of the top 10 tools with
+  one-line descriptions, a config hint pointing at
+  `docs/mcp.md`. Ctrl+C produces a clean `"MCP server stopped."`
+  line, never a raw `asyncio.CancelledError` traceback.
+  `BrokenPipeError` / `ConnectionResetError` are caught as clean
+  client-disconnect events. Any other exception is rendered as a
+  one-line summary, not a Python scream. The banner goes to
+  **stderr** so `stdout` stays clean for the stdio transport's
+  JSON-RPC framing.
+
+### Added — Models / storage plumbing
+
+- `SourceResult` gains `cloud_instance`, `tenant_region_sub_scope`,
+  `msgraph_host` (all `str | None`, default `None`).
+- `TenantInfo` gains `cloud_instance`, `tenant_region_sub_scope`,
+  `msgraph_host`, `shared_verification_tokens` (tuple of
+  `(token, peer_domain)` pairs — batch-scope only, not cached),
+  and `lexical_observations` (tuple of hedged observation
+  statements).
+- `Signal` gains `positive_when_absent: tuple[str, ...]`.
+- `cache.py` round-trips every new field except
+  `shared_verification_tokens` — that one is intentionally
+  batch-scope-only to prevent a single-domain lookup from
+  inheriting peers from a previous batch run.
+- New `recon_tool/clustering.py` — `ClusterEntry` frozen
+  dataclass + `cluster_tokens` + `compute_shared_tokens` pure
+  functions.
+- New `recon_tool/lexical.py` — `LexicalObservation` frozen
+  dataclass + `classify_subdomains` + `lexical_observations`
+  pure functions.
+- New `recon_tool/profiles.py` — `Profile` frozen dataclass +
+  `load_profile` / `list_profiles` / `reload_profiles` /
+  `apply_profile`.
+
+### Changed
+
+- **Fingerprint count: 208 → 227**. Added URIports, DMARC
+  Advisor, PowerDMARC, Mimecast DMARC Analyzer, Canvas LMS,
+  Blackboard, Moodle, Ellucian Banner, Handshake, Top Hat,
+  Dynamics 365 Marketing, Salesforce Marketing Cloud (SFMC),
+  Emma, iContact, MailerLite, VMware Cloud, Salesforce NPSP,
+  Blackbaud, Classy. Merged TXT-verification detection into
+  existing Netlify and WP Engine entries.
+- **Signal schema: `positive_when_absent` field added** (opt-in,
+  defaults to empty tuple, fully backward compatible with
+  pre-v0.9.3 signals.yaml).
+- **Default panel layout**: the v0.9.2 bordered Rich Panel with
+  80-char width is gone. See UI/X section above. The
+  `render_tenant_panel` function signature is unchanged; callers
+  still pass its return value to `console.print`.
+- **Provider line format**: the v0.9.2
+  `"{primary} (primary email via {gateway} gateway)"` format is
+  gone. The v0.9.3 format is
+  `"{primary} (primary) via {gateway} gateway"`. Same
+  information, half the parentheses. When `primary` is inferred
+  from non-MX evidence the label becomes `"(likely primary)"`.
+- **Gateway-only format**: the v0.9.2 `"{gateway} (email
+  gateway)"` is replaced with `"{gateway} gateway (no
+  inferable downstream)"` — more explicit about why no primary
+  is shown.
+- **Insights curation**: the v0.9.2 panel dumped every generated
+  insight verbatim. v0.9.3 curates out repetitive laundry lists
+  (Security stack, Infrastructure, PKI, Google Workspace
+  modules, low-signal org-size hints) that duplicated data
+  already visible in the Services block.
+
+### Fixed
+
+- **Provider line ambiguity on dual-DKIM domains.** The old
+  `detect_provider` concatenated every likely-primary-email
+  provider name with ` + `, producing "Trend Micro gateway
+  (likely delivering to Google Workspace + Microsoft 365)" on
+  targets where DKIM selectors for both providers existed. The
+  new `_pick_single_primary` helper promotes one primary and
+  demotes the rest, eliminating the ambiguous "dual" reading.
+- **Bare `recon` UX failure**. Running `recon` with no arguments
+  used to dump the raw Typer help — ~30 lines of
+  machine-generated flag documentation with no value
+  proposition, no examples, no suggested first command. Now
+  emits a curated banner that tells users what the tool does
+  and gives them the exact command to run next.
+- **`recon mcp` silent-start failure**. Running `recon mcp`
+  used to produce no output at all — just a silent hang on
+  stdio. First-time users reported thinking the command had
+  crashed. Now prints a professional startup banner to stderr
+  with the tool list and config hint, and catches `KeyboardInterrupt`
+  cleanly so Ctrl+C produces a `"MCP server stopped."` message
+  instead of a raw `asyncio.CancelledError` traceback.
+- **Categorized Services double-counting.** In edge cases where
+  a service name matched a slug via fingerprint display-name
+  lookup AND the raw service name didn't round-trip back
+  through the `name_to_slug` map, the categorizer could file
+  the same detection under two display names. The new
+  lowercase-prefix dedup in pass 2 of `_categorize_services`
+  catches both cases.
+
+### Internal
+
+- **Test count**: 1479 passing (1483 total, 4 integration tests
+  deselected by default). 123 net new tests across v0.9.3 — 14
+  for positive-absence, 30 for lexical, 21 for clustering, 13
+  for OIDC enrichment, 25 for profiles, 17 for explanation DAG,
+  1 compound test class (TestHardeningObservationIsHedged et
+  al.) with ~10 individual tests for the property-based
+  hedging harness.
+- **Coverage**: 88% package-wide (up from 89% baseline; the
+  small dip is because new modules start at high coverage and
+  pull the weighted average slightly toward the larger existing
+  surfaces). New v0.9.3 modules: `clustering.py` 100%,
+  `lexical.py` 98%, `profiles.py` 90%, `absence.py` 100%.
+- **Dead code removed**: ~320 lines of v0.9.2 panel body in
+  `formatter.py`, plus three unused helper functions
+  (`_is_compact_noise`, `_low_scored_service_names`,
+  `_annotate_single_source`) that only existed to support the
+  old panel. Net formatter change: +~700 lines of new v0.9.3
+  layout code minus ~600 lines of deleted old code.
+- **Ruff clean**: all checks pass.
+- **Pyright clean**: 0 errors, 0 warnings on the package.
+
+### Breaking (for JSON / CLI consumers)
+
+- **Panel output format**. If your tooling parses the default
+  `recon <domain>` terminal output (text scraping), it will
+  break — the layout is entirely redesigned. Use `--json` for
+  programmatic consumers; the `--json` shape is unchanged
+  except for the new additive fields (`cloud_instance`,
+  `tenant_region_sub_scope`, `msgraph_host`,
+  `shared_verification_tokens`, `lexical_observations`, and
+  the new `explanation_dag` key under `--explain --json`).
+- **Provider string format** in `--json` output follows the new
+  `"(primary) via gateway + (secondary)"` convention described
+  above. Consumers matching on the exact v0.9.2 string
+  `"(primary email via X gateway)"` need to update.
+
 ## [0.9.2] — 2026-04-14
 
 This release is a reliability and honesty pass driven by real-world batch

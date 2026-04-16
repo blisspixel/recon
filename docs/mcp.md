@@ -38,8 +38,9 @@ Example multi-step prompt for deeper analysis:
 
 | Tool | What it does | Parameters |
 |------|-------------|------------|
-| `lookup_tenant` | Full domain intelligence — tenant details, email score, SaaS fingerprints, signals | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
-| `analyze_posture` | Neutral posture observations across email, identity, infrastructure | `domain`, `explain`: bool |
+| `lookup_tenant` | Full domain intelligence — tenant details, email score, SaaS fingerprints, signals. When `explain=true`, the response includes a JSON-serialisable `explanation_dag` with `evidence → slug → rule → signal → insight` provenance alongside the flat explanations list. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
+| `analyze_posture` | Neutral posture observations across email, identity, infrastructure. Accepts an optional `profile` argument (v0.9.3) — one of `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, or a custom name from `~/.recon/profiles/`. | `domain`, `explain`: bool, `profile`: str (optional) |
+| `cluster_verification_tokens` | Cluster a list of domains by shared TXT site-verification tokens (v0.9.3). Reveals hedged "possible relationship" signals — operator-scoped credential reuse — without any additional network calls beyond the per-domain cache warm-up. | `domains`: array of domain strings |
 | `assess_exposure` | Security posture score (0–100) with email, identity, infrastructure sections | `domain` |
 | `find_hardening_gaps` | Categorized hardening gaps with severity and "Consider" recommendations | `domain` |
 | `compare_postures` | Side-by-side posture comparison of two domains | `domain_a`, `domain_b` |

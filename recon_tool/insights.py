@@ -35,6 +35,27 @@ class InsightContext:
     domain_count: int
     google_auth_type: str | None = None
     google_idp_name: str | None = None
+    # v0.9.3: OIDC tenant metadata enrichment
+    cloud_instance: str | None = None
+    tenant_region_sub_scope: str | None = None
+    msgraph_host: str | None = None
+    # v0.9.3: MX-backed email topology. These are populated only
+    # from actual MX evidence, so "primary_email_provider is not
+    # None" is the honest test for "does this domain receive
+    # email via the named provider". Used by _email_security_insights
+    # to refuse scoring on no-MX domains and by
+    # _no_email_insights to emit the explicit "no email"
+    # observation.
+    primary_email_provider: str | None = None
+    likely_primary_email_provider: str | None = None
+    email_gateway: str | None = None
+    # v0.9.3: True when ANY MX records exist, even if they point
+    # to a host recon doesn't recognize (Apache's own mail servers,
+    # custom Postfix, etc.). Distinguishes "no email at all" from
+    # "custom email we can't name." Used by
+    # _no_email_infrastructure_insights to avoid claiming "no
+    # email" on domains with custom self-hosted mail servers.
+    has_mx_records: bool = False
 
     @classmethod
     def from_sets(
@@ -46,6 +67,13 @@ class InsightContext:
         domain_count: int,
         google_auth_type: str | None = None,
         google_idp_name: str | None = None,
+        cloud_instance: str | None = None,
+        tenant_region_sub_scope: str | None = None,
+        msgraph_host: str | None = None,
+        primary_email_provider: str | None = None,
+        likely_primary_email_provider: str | None = None,
+        email_gateway: str | None = None,
+        has_mx_records: bool = False,
     ) -> InsightContext:
         """Convenience constructor that converts mutable sets to frozensets."""
         return cls(
@@ -56,6 +84,13 @@ class InsightContext:
             domain_count=domain_count,
             google_auth_type=google_auth_type,
             google_idp_name=google_idp_name,
+            cloud_instance=cloud_instance,
+            tenant_region_sub_scope=tenant_region_sub_scope,
+            msgraph_host=msgraph_host,
+            primary_email_provider=primary_email_provider,
+            likely_primary_email_provider=likely_primary_email_provider,
+            email_gateway=email_gateway,
+            has_mx_records=has_mx_records,
         )
 
 
@@ -139,21 +174,54 @@ def _auth_insights(ctx: InsightContext) -> list[str]:
         # GetUserRealm returns "Managed" for non-Microsoft domains too —
         # it just means "not federated" from Microsoft's perspective.
         has_m365 = bool(ctx.slugs & _EXCHANGE_SLUGS)
-        if has_m365:
-            return ["Cloud-managed identity indicators (Entra ID native)"]
-        return []
+        if not has_m365:
+            return []
+        # v0.9.3 refinement: on dual-provider targets (M365 + Google
+        # Workspace both present), the Auth line compound format
+        # already reads "Managed (Entra ID + Google Workspace)" so
+        # this insight would be pure restatement. Drop it then. On
+        # pure M365 targets the Auth line is just "Managed" — keep
+        # the insight there so the user sees the "Entra ID native"
+        # distinction vs. ADFS federation.
+        if ctx.google_auth_type:
+            return []
+        return ["Cloud-managed identity indicators (Entra ID native)"]
     return []
 
 
 def _email_security_insights(ctx: InsightContext) -> list[str]:
     has_exchange = bool(ctx.slugs & _EXCHANGE_SLUGS)
     has_google = bool(ctx.slugs & _GOOGLE_SLUGS)
+    # v0.9.3 honesty fix: a bare Exchange/Google-Workspace slug can
+    # come from a non-MX source (Google Identity Routing endpoint
+    # reporting a registered account, Microsoft OIDC reporting a
+    # tenant). Those don't prove the domain actually RECEIVES email
+    # via that provider. On a domain with zero MX records and no
+    # DMARC, the "Email security 0/5 weak" score reads as "email is
+    # configured but badly secured" when the truth is "there is no
+    # email configured to score."
+    #
+    # The `primary_email_provider` context field is populated only
+    # from MX evidence. When it's None AND the slug was matched via
+    # a non-MX identity source, we can't honestly score email
+    # security — there's no email to score. Require at least one of:
+    #   - primary_email_provider (strict MX-backed primary)
+    #   - likely_primary_email_provider (inferred MX downstream)
+    #   - dmarc_policy (a real DMARC record)
+    #   - a dedicated outbound-email slug (sendgrid, mailgun, etc.)
+    # before scoring.
+    has_mx_signal = bool(
+        ctx.primary_email_provider
+        or ctx.likely_primary_email_provider
+        or ctx.dmarc_policy is not None
+        or bool(ctx.slugs & _EMAIL_SLUGS)
+    )
     # Email detection: fire the score when we see any email provider, email
     # gateway, email sending service, or DMARC record. If you have DMARC
     # configured, you have email worth scoring.
     has_email = (
-        has_exchange
-        or has_google
+        (has_exchange and has_mx_signal)
+        or (has_google and has_mx_signal)
         or bool(ctx.slugs & _EMAIL_SLUGS)
         or any("Email" in s for s in ctx.services)
         or ctx.dmarc_policy is not None  # has DMARC record = has email
@@ -189,7 +257,26 @@ def _email_security_insights(ctx: InsightContext) -> list[str]:
         score_parts.append("BIMI")
 
     labels = {0: "weak", 1: "basic", 2: "moderate", 3: "good", 4: "strong", 5: "excellent"}
-    parts_str = ", ".join(score_parts) if score_parts else "no protections detected"
+
+    # v0.9.3 honesty fix: when the score is 0 but DMARC *does* exist
+    # in monitoring mode (p=none), saying "no protections detected"
+    # is a lie — a DMARC record IS configured, it's just set to
+    # monitoring. Same for SPF redirect= chains we don't follow —
+    # the record exists. Build the parts list to reflect what's
+    # actually observed, even if it doesn't earn a score point.
+    if not score_parts:
+        observed_non_scoring: list[str] = []
+        if ctx.dmarc_policy == "none":
+            observed_non_scoring.append("DMARC monitoring mode")
+        if any(s.startswith("SPF:") for s in ctx.services) and not has_spf_strict:
+            observed_non_scoring.append("SPF soft/neutral")
+        if observed_non_scoring:
+            parts_str = ", ".join(observed_non_scoring) + " — no strict controls"
+        else:
+            parts_str = "no protections detected"
+    else:
+        parts_str = ", ".join(score_parts)
+
     insights.append(f"Email security {score}/5 {labels.get(score, 'excellent')} ({parts_str})")
 
     if ctx.dmarc_policy == "none":
@@ -350,6 +437,151 @@ def _google_modules_insights(ctx: InsightContext) -> list[str]:
     return []
 
 
+def _no_email_infrastructure_insights(ctx: InsightContext) -> list[str]:
+    """v0.9.3: emit an explicit hedged observation when a domain has
+    no observable email infrastructure at all.
+
+    The decisive signal is ``has_mx_records``: when True, the domain
+    has at least one MX record (even if the host isn't a recognized
+    provider like Apache's own mail server or a custom Postfix), so
+    email IS configured and this insight must not fire. When False,
+    we additionally check that no DMARC record exists, no DKIM
+    selectors were seen, and no outbound-email service slug was
+    detected — only then can we honestly say "no email
+    infrastructure observed."
+
+    Getting this wrong in either direction is bad: firing on a
+    custom-MX domain like apache.org would falsely claim the
+    Apache Software Foundation has no email, which is obviously
+    wrong. Not firing on a dormant-Google-Workspace-account
+    domain like balcaninnovations.com would let the user reach
+    the wrong conclusion that email is going to Gmail.
+
+    The wording is two-sided: no email can mean web-only
+    presence, parked domain, staging property, or email handled
+    on a different apex. Observation, not a verdict.
+    """
+    # Most important check: if MX records exist at all, there IS
+    # email. Don't fire the "no email" insight on custom/self-
+    # hosted mail servers.
+    if ctx.has_mx_records:
+        return []
+    if ctx.primary_email_provider or ctx.likely_primary_email_provider or ctx.email_gateway:
+        return []
+    if ctx.dmarc_policy is not None:
+        return []
+    if ctx.slugs & _EMAIL_SLUGS:
+        return []
+    if any(s.startswith("SPF") for s in ctx.services):
+        return []
+    return [
+        "No email infrastructure observed — no MX records and no "
+        "SPF/DMARC/DKIM. Consistent with a web-only presence, a "
+        "parked domain, a staging property, or email handled on "
+        "a different domain. Observation, not a verdict."
+    ]
+
+
+def _sparse_signal_insights(ctx: InsightContext) -> list[str]:
+    """v0.9.3: emit a hedged multi-sided observation when a domain's
+    public signal is thin.
+
+    On a legitimate small-business domain, a parked / dormant
+    domain, a heavily-proxied target, or a holding / portfolio
+    company landing page, recon can only report what's observable
+    — and without this explanation a user looking at a panel with
+    three service entries and a low confidence can reasonably
+    think the tool is broken. Saying explicitly "sparse public
+    signal — few observable records" frames the situation
+    honestly: this is what's knowable from passive DNS alone, and
+    it's not a tool failure.
+
+    The observation is followed by a concrete next-step hint
+    pointing at `recon chain` and `recon batch` — the two
+    workflows that can actually reveal structure beyond a single
+    apex (CT-driven recursive discovery, and cross-batch token /
+    display-name clustering). Single-domain passive lookups
+    genuinely can't do portfolio / subsidiary detection — be
+    honest about it and suggest the right workflow.
+
+    Fires only when service count is low. The threshold is
+    deliberately generous — anything above 5 services is rich
+    enough that the user can see the picture on their own.
+    """
+    # Count only "substantive" services — drop DNS meta-labels like
+    # SPF complexity: 3 includes that don't represent a deployed
+    # product.
+    substantive = [
+        s for s in ctx.services
+        if not s.startswith(("SPF complexity:", "SPF: softfail", "SPF: strict"))
+    ]
+    if len(substantive) >= 5:
+        return []
+    # Suppress on domains where we still got a tenant_id — that's
+    # not really "sparse", it's "M365 tenant only". The existing
+    # auth/provider lines already carry the signal.
+    if ctx.auth_type in ("Federated", "Managed") and any(
+        "microsoft 365" in s.lower() for s in ctx.services
+    ):
+        return []
+    return [
+        "Sparse public signal — few observable records beyond MX and "
+        "identity. Consistent with a small organization, a parked or "
+        "dormant domain, a heavily-proxied target, or a holding / "
+        "portfolio company landing page. Observation, not a verdict.",
+        "Next step — if this looks like a parent / portfolio apex, "
+        "subsidiary brands typically sit on their own apex domains "
+        "with richer signal. Run `recon batch <candidates.txt>` or "
+        "`recon chain <domain> --depth 2` to correlate with related "
+        "brand domains. Single-domain passive lookups cannot "
+        "reliably detect portfolio or subsidiary structure from DNS "
+        "alone.",
+    ]
+
+
+def _sovereignty_insights(ctx: InsightContext) -> list[str]:
+    """v0.9.3: surface Microsoft tenant sovereignty / cloud-instance info.
+
+    Distinguishes commercial M365, US Government Community Cloud (GCC),
+    GCC High / DoD, and Azure China 21Vianet tenants based on the
+    OIDC discovery response's cloud_instance_name extension. All
+    insights are hedged with "(observed)" so they don't read as
+    confident verdicts about regulatory regime.
+    """
+    ci = (ctx.cloud_instance or "").lower()
+    sub = (ctx.tenant_region_sub_scope or "").strip()
+    mh = (ctx.msgraph_host or "").lower()
+
+    if not ci and not sub and not mh:
+        return []
+
+    results: list[str] = []
+
+    if "microsoftonline.us" in ci or "graph.microsoft.us" in mh:
+        if sub and sub.upper() in ("DOD", "GCCH"):
+            results.append(
+                f"Likely US Government GCC High / DoD tenant (observed cloud_instance={ci or 'microsoftonline.us'}, "
+                f"tenant_region_sub_scope={sub})"
+            )
+        else:
+            results.append(
+                f"Likely US Government Community Cloud (GCC) tenant "
+                f"(observed cloud_instance={ci or 'microsoftonline.us'})"
+            )
+    elif "partner.microsoftonline.cn" in ci or "microsoftgraphchina.cn" in mh:
+        results.append(
+            f"Likely Azure China 21Vianet tenant (observed cloud_instance={ci or 'partner.microsoftonline.cn'})"
+        )
+    elif "b2clogin.com" in ci or ci.endswith("b2clogin.com"):
+        results.append(f"Azure AD B2C tenant (observed cloud_instance={ci})")
+    elif ci and "microsoftonline.com" not in ci:
+        # Non-commercial cloud_instance we don't specifically recognize —
+        # surface it verbatim so users can investigate.
+        results.append(f"Non-commercial Microsoft cloud instance observed: {ci}")
+
+    return results
+
+
 def _email_topology_insights(ctx: InsightContext) -> list[str]:
     """Surface email gateway topology and secondary provider detection."""
     insights: list[str] = []
@@ -377,6 +609,7 @@ def _email_topology_insights(ctx: InsightContext) -> list[str]:
 
 _INSIGHT_GENERATORS = [
     _auth_insights,
+    _sovereignty_insights,
     _google_auth_insights,
     _email_security_insights,
     _org_size_insights,
@@ -390,6 +623,8 @@ _INSIGHT_GENERATORS = [
     _pki_insights,
     _google_modules_insights,
     _infrastructure_insights,
+    _no_email_infrastructure_insights,
+    _sparse_signal_insights,
 ]
 
 
@@ -401,6 +636,13 @@ def generate_insights(
     domain_count: int,
     google_auth_type: str | None = None,
     google_idp_name: str | None = None,
+    cloud_instance: str | None = None,
+    tenant_region_sub_scope: str | None = None,
+    msgraph_host: str | None = None,
+    primary_email_provider: str | None = None,
+    likely_primary_email_provider: str | None = None,
+    email_gateway: str | None = None,
+    has_mx_records: bool = False,
 ) -> list[str]:
     """Derive intelligence signals from collected data.
 
@@ -415,6 +657,13 @@ def generate_insights(
         domain_count,
         google_auth_type=google_auth_type,
         google_idp_name=google_idp_name,
+        cloud_instance=cloud_instance,
+        tenant_region_sub_scope=tenant_region_sub_scope,
+        msgraph_host=msgraph_host,
+        primary_email_provider=primary_email_provider,
+        likely_primary_email_provider=likely_primary_email_provider,
+        email_gateway=email_gateway,
+        has_mx_records=has_mx_records,
     )
     insights: list[str] = []
     for generator in _INSIGHT_GENERATORS:

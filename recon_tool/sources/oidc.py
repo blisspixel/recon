@@ -19,8 +19,18 @@ def parse_tenant_info_from_oidc(response_json: dict[str, Any]) -> SourceResult:
     """
     Pure function: extracts tenant data from a discovery endpoint JSON response.
 
-    Extracts tenant_id from the authorization_endpoint URL path.
-    Extracts region from tenant_region_scope if available.
+    Extracts:
+    - tenant_id from the authorization_endpoint URL path
+    - region from tenant_region_scope
+    - cloud_instance from cloud_instance_name (Microsoft extension) —
+      distinguishes commercial (microsoftonline.com), US Government
+      (microsoftonline.us), and China 21Vianet
+      (partner.microsoftonline.cn) tenants. Added in v0.9.3.
+    - tenant_region_sub_scope from the same-named Microsoft extension
+      (GCC, DOD, USGov, etc.) when present. Added in v0.9.3.
+    - msgraph_host from msgraph_host (Microsoft extension) — the
+      authoritative Graph API host for the tenant, which sometimes
+      reveals a sovereign cloud. Added in v0.9.3.
 
     Args:
         response_json: Parsed JSON dict from the discovery endpoint.
@@ -52,10 +62,34 @@ def parse_tenant_info_from_oidc(response_json: dict[str, Any]) -> SourceResult:
 
     region = response_json.get("tenant_region_scope") or None
 
+    # v0.9.3: tenant metadata enrichment — parse the Microsoft-specific
+    # OIDC extensions that disambiguate sovereign clouds. All three are
+    # optional in the response; None when the discovery doc doesn't
+    # carry them.
+    cloud_instance_raw = response_json.get("cloud_instance_name")
+    cloud_instance: str | None = (
+        str(cloud_instance_raw).strip() or None
+        if cloud_instance_raw is not None
+        else None
+    )
+
+    sub_scope_raw = response_json.get("tenant_region_sub_scope")
+    tenant_region_sub_scope: str | None = (
+        str(sub_scope_raw).strip() or None if sub_scope_raw is not None else None
+    )
+
+    msgraph_raw = response_json.get("msgraph_host")
+    msgraph_host: str | None = (
+        str(msgraph_raw).strip() or None if msgraph_raw is not None else None
+    )
+
     return SourceResult(
         source_name="oidc_discovery",
         tenant_id=tenant_id,
         region=region,
+        cloud_instance=cloud_instance,
+        tenant_region_sub_scope=tenant_region_sub_scope,
+        msgraph_host=msgraph_host,
         evidence=(
             EvidenceRecord(
                 source_type="HTTP",

@@ -57,6 +57,13 @@ class Signal:
     explain: str = ""
     expected_counterparts: tuple[str, ...] = ()  # slugs expected to co-occur
     exclude_matches_in_primary: bool = False  # filter matches already in primary_email_provider
+    # v0.9.3: hedged positive observations when an adversary-friendly slug set
+    # is absent. The absence engine reads this and emits a two-sided positive
+    # observation when this signal fires AND none of these slugs are detected.
+    # Example: "Edge Layering" fires, consumer SaaS slugs are absent → emit
+    # "High-maturity hardening pattern (observed) — fits deliberate hardening
+    #  or a dormant/parked target".
+    positive_when_absent: tuple[str, ...] = ()
 
 
 # Display names for provider slugs that can appear in primary_email_provider.
@@ -116,8 +123,8 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
     Logs warnings and returns None for invalid entries.
     Does NOT mutate the input dict.
     """
-    if not isinstance(signal, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
-        logger.warning("Signal at index %d is not a dict — skipped", index)
+    if not isinstance(signal, dict):  # pyright: ignore[reportUnnecessaryIsInstance, reportUnreachable]
+        logger.warning("Signal at index %d is not a dict — skipped", index)  # pyright: ignore[reportUnreachable]
         return None
     name = signal.get("name")
     if not name or not isinstance(name, str):
@@ -229,6 +236,30 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
         )
         raw_exclude_primary = False
 
+    # Parse optional positive_when_absent field (v0.9.3). Same shape as
+    # expected_counterparts: a list of slug strings. An empty or invalid
+    # list falls back to an empty tuple.
+    positive_when_absent: tuple[str, ...] = ()
+    raw_positive_absent = signal.get("positive_when_absent")
+    if raw_positive_absent is not None:
+        if not isinstance(raw_positive_absent, list):
+            logger.warning(
+                "Signal %r has invalid 'positive_when_absent' (not a list) — defaulting to empty",
+                name,
+            )
+        else:
+            valid_absent: list[str] = []
+            for entry in raw_positive_absent:
+                if not isinstance(entry, str) or not entry.strip():
+                    logger.warning(
+                        "Signal %r has invalid entry in 'positive_when_absent' — defaulting to empty tuple",
+                        name,
+                    )
+                    valid_absent = []
+                    break
+                valid_absent.append(entry)
+            positive_when_absent = tuple(valid_absent)
+
     return Signal(
         name=name,
         category=signal.get("category", ""),
@@ -242,6 +273,7 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
         explain=explain,
         expected_counterparts=expected_counterparts,
         exclude_matches_in_primary=raw_exclude_primary,
+        positive_when_absent=positive_when_absent,
     )
 
 

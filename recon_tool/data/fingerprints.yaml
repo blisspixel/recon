@@ -1026,6 +1026,9 @@ fingerprints:
     detections:
       - type: txt
         pattern: "^netlify="
+      - type: txt
+        pattern: "^verified-for-netlify="
+        description: Netlify site ownership verification token
       - type: cname
         pattern: "netlify.app"
 
@@ -1281,6 +1284,9 @@ fingerprints:
     detections:
       - type: cname
         pattern: "wpengine.com"
+      - type: txt
+        pattern: "^wpe-verification="
+        description: WP Engine WordPress hosting domain verification
 
   - name: Pantheon
     slug: pantheon
@@ -1964,3 +1970,207 @@ fingerprints:
       - type: dmarc_rua
         pattern: "emaildefense.proofpoint.com"
         description: Proofpoint Email Fraud Defense DMARC report receiving domain
+
+  # v0.9.3 additions — four DMARC aggregate-report vendors that were
+  # missing from the earlier set. All detected via the rua=mailto: host
+  # on the DMARC record; no SPF include detection because these vendors
+  # don't appear in SPF chains.
+
+  - name: URIports
+    slug: uriports
+    category: Email Governance
+    confidence: high
+    detections:
+      - type: dmarc_rua
+        pattern: "uriports.com"
+        description: URIports DMARC aggregate report receiving domain
+
+  - name: DMARC Advisor
+    slug: dmarc-advisor
+    category: Email Governance
+    confidence: high
+    detections:
+      - type: dmarc_rua
+        pattern: "dmarcadvisor.com"
+        description: DMARC Advisor aggregate report receiving domain
+
+  - name: PowerDMARC
+    slug: powerdmarc
+    category: Email Governance
+    confidence: high
+    detections:
+      - type: dmarc_rua
+        pattern: "powerdmarc.com"
+        description: PowerDMARC aggregate report receiving domain
+
+  - name: Mimecast DMARC Analyzer
+    slug: mimecast-dmarc-analyzer
+    category: Email Governance
+    confidence: high
+    detections:
+      - type: dmarc_rua
+        pattern: "dmarc-analyzer.com"
+        description: Mimecast DMARC Analyzer aggregate report receiving domain
+
+  # v0.9.3: higher-ed and nonprofit SaaS additions. Driven by
+  # real-domain validation runs against universities and nonprofits
+  # where these platforms were clearly in use but not being
+  # detected.
+
+  - name: Canvas LMS (Instructure)
+    slug: canvas-lms
+    category: Education
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "instructure.com"
+        description: Canvas LMS by Instructure — dominant higher-ed learning management system
+      - type: txt
+        pattern: "^canvas-site-verification="
+        description: Canvas LMS domain verification token
+
+  - name: Blackboard Learn
+    slug: blackboard
+    category: Education
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "blackboard.com"
+        description: Blackboard Learn LMS
+      - type: cname
+        pattern: "bbcollab.com"
+        description: Blackboard Collaborate (live classrooms)
+
+  - name: Moodle
+    slug: moodle
+    category: Education
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "moodle.com"
+        description: Moodle LMS hosting
+      - type: cname
+        pattern: "moodlecloud.com"
+        description: MoodleCloud hosted LMS
+
+  - name: Ellucian Banner
+    slug: ellucian-banner
+    category: Education
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "ellucian.com"
+        description: Ellucian Banner Student Information System
+      - type: cname
+        pattern: "ellucianworkflow.com"
+        description: Ellucian Workflow
+
+  - name: Handshake (careers)
+    slug: handshake
+    category: Education
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "joinhandshake.com"
+        description: Handshake student career services platform
+
+  - name: Top Hat
+    slug: tophat
+    category: Education
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "tophat.com"
+        description: Top Hat student engagement / course engagement platform
+
+  - name: Dynamics 365 Marketing
+    slug: d365-marketing
+    category: Sales & Marketing
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^d365mktkey="
+        description: Microsoft Dynamics 365 Marketing domain verification
+
+  - name: Salesforce Marketing Cloud (SFMC)
+    slug: sfmc
+    category: Sales & Marketing
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^SFMC-"
+        description: Salesforce Marketing Cloud domain verification (SFMC)
+
+  - name: Emma Email Marketing
+    slug: emma
+    category: Sales & Marketing
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^e2ma-verification="
+        description: Emma (myemma) email marketing domain verification
+
+  - name: iContact Email Marketing
+    slug: icontact
+    category: Sales & Marketing
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^iContact"
+        description: iContact email marketing domain verification
+
+  - name: MailerLite
+    slug: mailerlite
+    category: Sales & Marketing
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^mailerlite-domain-verification="
+        description: MailerLite email marketing domain verification
+
+  # (WP Engine and Netlify TXT-verification detection merged into
+  # the existing entries higher up in this file — they already
+  # have CNAME-based detection and the new TXT detection is just
+  # an additional detection type on the same fingerprint.)
+
+  - name: VMware Cloud
+    slug: vmware-cloud
+    category: Infrastructure
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^vmware-cloud-verification-"
+        description: VMware Cloud domain verification
+
+  - name: Salesforce NPSP (Nonprofit)
+    slug: salesforce-npsp
+    category: Nonprofit
+    confidence: high
+    detections:
+      - type: txt
+        pattern: "^salesforce-npsp-verification="
+        description: Salesforce Nonprofit Success Pack domain verification
+      - type: cname
+        pattern: "salesforce-communities.com"
+        description: Salesforce Communities / Experience Cloud (commonly used by nonprofits)
+
+  - name: Blackbaud
+    slug: blackbaud
+    category: Nonprofit
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "blackbaud.com"
+        description: Blackbaud CRM / Raiser's Edge / fundraising tools
+      - type: cname
+        pattern: "blackbaudhosting.com"
+        description: Blackbaud hosted services
+
+  - name: Classy (GoFundMe)
+    slug: classy
+    category: Nonprofit
+    confidence: high
+    detections:
+      - type: cname
+        pattern: "classy.org"
+        description: Classy nonprofit fundraising platform (owned by GoFundMe)

@@ -245,31 +245,76 @@ class TestBackwardCompatDefaults:
 
 
 class TestBackwardCompatDetectProvider:
-    """Verify detect_provider() without topology fields produces pre-v0.9.0 output."""
+    """Verify detect_provider() slug-only fallback output.
 
-    def test_microsoft365_slug_only(self) -> None:
+    v0.9.3 (second refinement): the fallback path now distinguishes
+    two distinct scenarios when primary_email_provider is None:
+
+    (a) ``has_mx_records=False`` — the domain has literally no MX
+        records. The provider slug came from a non-MX identity
+        endpoint. Label: "(account detected, no MX)".
+
+    (b) ``has_mx_records=True`` (the default) — MX records exist
+        but point to a host recon doesn't recognize (custom
+        self-hosted, niche provider, Apache's own servers).
+        Label: "(account detected, custom MX)".
+
+    Previously, both cases produced the same label, which meant
+    domains with custom self-hosted email (apache.org, debian.org,
+    python.org) were falsely reported as having "no MX".
+    """
+
+    def test_microsoft365_slug_only_no_mx(self) -> None:
+        """No MX records — honest "(account detected, no MX)" label."""
+        result = detect_provider(
+            services=(), slugs=("microsoft365",), has_mx_records=False
+        )
+        assert result == "Microsoft 365 (account detected, no MX)"
+
+    def test_microsoft365_slug_only_custom_mx(self) -> None:
+        """MX records exist but aren't recognized — custom MX label."""
+        result = detect_provider(
+            services=(), slugs=("microsoft365",), has_mx_records=True
+        )
+        assert result == "Microsoft 365 (account detected, custom MX)"
+
+    def test_microsoft365_slug_only_default(self) -> None:
+        """Default has_mx_records=True — most common real-world case."""
         result = detect_provider(services=(), slugs=("microsoft365",))
-        assert result == "Microsoft 365"
+        assert result == "Microsoft 365 (account detected, custom MX)"
 
     def test_google_workspace_slug_only(self) -> None:
-        result = detect_provider(services=(), slugs=("google-workspace",))
-        assert result == "Google Workspace"
+        result = detect_provider(
+            services=(), slugs=("google-workspace",), has_mx_records=False
+        )
+        assert result == "Google Workspace (account detected, no MX)"
 
-    def test_dual_provider_slugs(self) -> None:
-        result = detect_provider(services=(), slugs=("microsoft365", "google-workspace"))
-        assert result == "Microsoft 365 + Google Workspace"
+    def test_dual_provider_slugs_no_mx(self) -> None:
+        result = detect_provider(
+            services=(),
+            slugs=("microsoft365", "google-workspace"),
+            has_mx_records=False,
+        )
+        assert result == (
+            "Microsoft 365 (account detected, no MX) + "
+            "Google Workspace (account detected, no MX)"
+        )
 
     def test_zoho_slug_only(self) -> None:
-        result = detect_provider(services=(), slugs=("zoho",))
-        assert result == "Zoho Mail"
+        result = detect_provider(services=(), slugs=("zoho",), has_mx_records=False)
+        assert result == "Zoho Mail (account detected, no MX)"
 
     def test_protonmail_slug_only(self) -> None:
-        result = detect_provider(services=(), slugs=("protonmail",))
-        assert result == "ProtonMail"
+        result = detect_provider(
+            services=(), slugs=("protonmail",), has_mx_records=False
+        )
+        assert result == "ProtonMail (account detected, no MX)"
 
     def test_aws_ses_slug_only(self) -> None:
-        result = detect_provider(services=(), slugs=("aws-ses",))
-        assert result == "AWS SES"
+        result = detect_provider(
+            services=(), slugs=("aws-ses",), has_mx_records=False
+        )
+        assert result == "AWS SES (account detected, no MX)"
 
     def test_no_slugs_returns_unknown(self) -> None:
         """v0.9.2 extended the bare "Unknown" fallback to include a short
@@ -280,14 +325,18 @@ class TestBackwardCompatDetectProvider:
         assert "no known provider pattern matched" in result
 
     def test_no_topology_fields_uses_slug_fallback(self) -> None:
-        """When primary_email_provider and email_gateway are both None, use slug-based detection."""
+        """When primary_email_provider / email_gateway /
+        likely_primary_email_provider are all None, the slug-only
+        fallback fires with an honest qualifier that distinguishes
+        "no MX" from "custom MX"."""
         result = detect_provider(
             services=(),
             slugs=("microsoft365",),
             primary_email_provider=None,
             email_gateway=None,
+            has_mx_records=False,
         )
-        assert result == "Microsoft 365"
+        assert result == "Microsoft 365 (account detected, no MX)"
 
     def test_aws_ses_only_when_no_other_providers(self) -> None:
         """AWS SES should only appear when no other provider slugs are present."""

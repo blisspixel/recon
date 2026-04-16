@@ -89,7 +89,13 @@ class TestLookupJson:
         result = await lookup_tenant("contoso.com", format="json")
         data = json.loads(result)
         assert data["display_name"] == "Contoso Ltd"
-        assert data["provider"] == "Microsoft 365"
+        # v0.9.3 (revised): slug-only fallback uses
+        # "(account detected, no MX)" because the fallback runs
+        # only when no MX evidence exists, so the slug match came
+        # from a non-MX identity source. See
+        # test_v090_backward_compat.TestBackwardCompatDetectProvider
+        # for the full rationale.
+        assert data["provider"] == "Microsoft 365 (account detected, no MX)"
         assert data["tenant_id"] == "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
         assert data["confidence"] == "high"
 
