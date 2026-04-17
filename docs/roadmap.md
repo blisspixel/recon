@@ -502,6 +502,25 @@ Feature additions must earn their place against this bar. A feature
 that makes the default output noisier, slower, less honest, or less
 stable is not a feature — it's a regression.
 
+### Data-file expansion is NOT feature bloat
+
+An important distinction. Growing the YAML data files —
+`data/fingerprints.yaml`, `data/signals.yaml`, `data/profiles/*.yaml`
+— is ordinary maintenance, not new surface. These are *data*, not
+*code*:
+
+- Schema is stable at 1.0 (see [`stability.md`](stability.md)).
+- Validation pipeline catches malformed entries at PR time
+  (`scripts/validate_fingerprint.py`, CI job).
+- No behavior change in the engine — the same detection code reads
+  the same shape.
+- Community contributions land here (see [`CONTRIBUTING.md`](../CONTRIBUTING.md)).
+
+New fingerprints, refined patterns, broader signal coverage, new
+profiles — all of this is good. The thing to avoid is growing the
+*engine* (new CLI commands, new output formats, new subsystems, new
+config surfaces). The engine stays lean; the data grows.
+
 ## Post-1.0 ideas (not commitments)
 
 Any of these could turn into a minor release. None of them should
