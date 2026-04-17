@@ -317,6 +317,12 @@ class TenantInfo:
     # panel as "from local cache, N days old".
     ct_cache_age_days: int | None = None
 
+    # --- v0.11: Bayesian fusion (experimental) ---
+    # Per-slug posterior mean in [0, 1] from the Bayesian fusion layer.
+    # Populated only when `--fusion` is passed. Empty otherwise.
+    # Tagged EXPERIMENTAL — field shape may evolve in minor releases.
+    slug_confidences: tuple[tuple[str, float], ...] = ()
+
     # --- v0.9.3: OIDC tenant metadata enrichment ---
     # Sovereignty / cloud instance information extracted from the
     # Microsoft OIDC discovery document. None for non-Microsoft tenants.

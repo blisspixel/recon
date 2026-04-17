@@ -46,8 +46,8 @@ recon cache clear --all                 # clear all CT cache
   - `retry.py` — transient-failure retry decorator for sources
   - `validator.py` — domain input validation
   - `models.py` — frozen dataclasses (TenantInfo, SourceResult, Signal, …)
-- `tests/` — 1504 tests, pytest + hypothesis
-- `data/fingerprints.yaml` — 227 SaaS fingerprints
+- `tests/` — 1543 tests, pytest + hypothesis
+- `data/fingerprints.yaml` — 235 SaaS fingerprints
 - `data/profiles/` — 6 built-in posture profiles (fintech, healthcare, saas-b2b, high-value-target, public-sector, higher-ed)
 - `data/signals.yaml` — 4-layer signal definitions (45 signals, two-pass + absence + positive-when-absent evaluation)
 

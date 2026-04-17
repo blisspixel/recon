@@ -217,6 +217,19 @@ def lookup(
         "--profile",
         help="Apply a profile lens to posture observations (e.g. fintech, healthcare, high-value-target)",
     ),
+    confidence_mode: str = typer.Option(
+        "hedged",
+        "--confidence-mode",
+        help=(
+            "Language style: 'hedged' (default) or 'strict' "
+            "(drops hedging qualifiers on dense-evidence targets)"
+        ),
+    ),
+    fusion: bool = typer.Option(
+        False,
+        "--fusion",
+        help="[EXPERIMENTAL] Compute Bayesian per-slug posteriors from evidence",
+    ),
 ) -> None:
     """
     Look up a domain. This is the default command.
@@ -244,6 +257,8 @@ def lookup(
             show_gaps=gaps,
             show_explain=explain,
             profile_name=profile,
+            confidence_mode=confidence_mode,
+            fusion=fusion,
         )
     )
 
@@ -858,6 +873,8 @@ async def _lookup(
     show_gaps: bool = False,
     show_explain: bool = False,
     profile_name: str | None = None,
+    confidence_mode: str = "hedged",
+    fusion: bool = False,
 ) -> None:
     """Async lookup implementation."""
     # Lazy imports: formatter, resolver, validator are imported here (not at module
@@ -1104,6 +1121,15 @@ async def _lookup(
             else:
                 info, results = await resolve_tenant(validated, timeout=timeout)
 
+            # v0.11: apply Bayesian fusion when opted in. Computes per-slug
+            # posteriors from the existing evidence chain — no network calls.
+            if fusion:
+                from dataclasses import replace
+
+                from recon_tool.fusion import compute_slug_posteriors
+
+                info = replace(info, slug_confidences=compute_slug_posteriors(info.evidence))
+
             # Write to cache after fresh lookup
             if not no_cache:
                 from recon_tool.cache import cache_put
@@ -1182,6 +1208,7 @@ async def _lookup(
                 show_domains=show_domains,
                 verbose=verbose,
                 explain=show_explain,
+                confidence_mode=confidence_mode,
             )
         )
 
