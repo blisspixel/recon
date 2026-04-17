@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/blisspixel/recon/security/advisories/new
+    about: Use GitHub's private vulnerability reporting (see SECURITY.md) — do NOT open a public issue for security bugs.
+  - name: Read the limitations doc
+    url: https://github.com/blisspixel/recon/blob/main/docs/limitations.md
+    about: Before filing a bug about missing detection, check if it's a known limitation (bundled services, proxies, internal-only services).
+  - name: Read the roadmap
+    url: https://github.com/blisspixel/recon/blob/main/docs/roadmap.md
+    about: Many ideas are already on the roadmap or explicitly out of scope. Check before filing.
