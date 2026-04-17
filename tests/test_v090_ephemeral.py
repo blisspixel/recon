@@ -16,6 +16,9 @@ from __future__ import annotations
 import json
 
 import pytest
+
+pytest.importorskip("mcp")
+
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 

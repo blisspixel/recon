@@ -222,6 +222,12 @@ class SourceResult:
     ct_provider_used: str | None = None
     ct_subdomain_count: int = 0
 
+    # --- v0.10: CT cache fallback ---
+    # When all live CT providers fail, the per-domain CT cache serves as
+    # a fallback. ct_cache_age_days is set to the cache age when cached
+    # data was used; None when data came from a live provider.
+    ct_cache_age_days: int | None = None
+
     # --- v0.9.3: OIDC tenant metadata enrichment ---
     # Extracted from the Microsoft OIDC discovery document when present.
     # Distinguish commercial M365, Government Community Cloud / GCC High,
@@ -304,6 +310,12 @@ class TenantInfo:
     # visible. None when no CT provider succeeded.
     ct_provider_used: str | None = None
     ct_subdomain_count: int = 0
+
+    # --- v0.10: CT cache fallback ---
+    # Age of the CT cache entry in days when cached data was used as a
+    # fallback. None when data came from a live provider. Surfaced in the
+    # panel as "from local cache, N days old".
+    ct_cache_age_days: int | None = None
 
     # --- v0.9.3: OIDC tenant metadata enrichment ---
     # Sovereignty / cloud instance information extracted from the

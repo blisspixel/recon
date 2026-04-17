@@ -7,8 +7,9 @@ Thanks for your interest in contributing to recon.
 ```bash
 git clone https://github.com/blisspixel/recon.git
 cd recon
-pip install -e ".[dev]"
-pytest tests/
+uv sync --extra dev                    # or: pip install -e ".[dev]"
+pre-commit install                     # activate pre-commit hooks
+uv run pytest tests/                   # or: pytest tests/
 ```
 
 ## Adding Fingerprints
@@ -45,8 +46,8 @@ signals:
 
 ## Code Changes
 
-- Run `ruff check recon_tool/` and `pyright recon_tool/` before submitting.
-- Run `pytest tests/` to verify nothing breaks.
+- Run `pre-commit run --all-files` or `ruff check recon_tool/` and `pyright recon_tool/` before submitting.
+- Run `pytest tests/` to verify nothing breaks. Coverage must stay above 80%.
 - Integration tests (`pytest -m integration`) require network access and are skipped by default.
 
 ## Pull Requests

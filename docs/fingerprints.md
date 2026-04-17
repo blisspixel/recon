@@ -54,11 +54,15 @@ A domain with DMARC `none` + DKIM + SPF `~all` scores 1/5 (only DKIM counts).
 
 ## Related Domain Auto-Enrichment
 
-Related domains are discovered from three sources:
+Related domains are discovered via multiple techniques:
 
 1. **CNAME breadcrumbs** — when autodiscover or DKIM delegation points to a different domain (e.g., `autodiscover.northwindtraders.com` → `northwind-internal.com`).
 2. **Certificate transparency** — crt.sh discovers subdomains from public CT logs.
-3. **Common subdomain probing** — ~35 high-signal prefixes (auth, login, sso, shop, api, status, cdn, etc.) are probed directly via DNS CNAME lookups. This works even when crt.sh is down.
+3. **Common subdomain probing** — ~45 high-signal prefixes (auth, login, sso, shop, api, status, cdn, staging, etc.) are probed directly via DNS CNAME lookups. This works even when crt.sh is down.
+4. **Exchange on-prem detection** — OWA/autodiscover subdomain probing detects on-prem or hybrid Exchange deployments.
+5. **SSO hub detection** — 15 identity-provider subdomain prefixes (Shibboleth, CAS, ADFS, Okta, SAML, university-specific SSO names) are probed via A-record resolution to detect federated identity hubs.
+6. **A → PTR hosting detection** — apex A-record reverse DNS reveals cloud hosting providers (AWS, Azure, GCP, etc.).
+7. **SPF redirect chain following** — SPF `redirect=` directives are followed up to 3 hops to discover the ultimate email policy domain.
 
 Enrichment uses two tiers for efficiency:
 - **Subdomains** of the queried domain get lightweight CNAME+TXT-only lookups (fast, ~2 DNS queries each).

@@ -20,6 +20,8 @@ from unittest.mock import patch
 
 import pytest
 
+pytest.importorskip("mcp")
+
 from recon_tool.models import (
     ConfidenceLevel,
     SourceResult,

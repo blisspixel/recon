@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("mcp")
+
 from recon_tool.models import ConfidenceLevel, TenantInfo
 from recon_tool.server import (
     CACHE_MAX_SIZE,

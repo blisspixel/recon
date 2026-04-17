@@ -18,19 +18,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv sync --extra dev
 
       - name: Run tests
-        run: pytest tests/ -q
+        run: uv run pytest tests/ -q --cov=recon_tool --cov-fail-under=80
 
       - name: Lint
-        run: ruff check recon_tool/
+        run: uv run ruff check recon_tool/
+
+      - name: Audit dependencies
+        run: uv run pip-audit
 
   build:
     needs: test
@@ -38,16 +44,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install build tools
-        run: pip install build
-
       - name: Build package
-        run: python -m build
+        run: uv build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

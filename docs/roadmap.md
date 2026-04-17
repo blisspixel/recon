@@ -1,10 +1,8 @@
 # Roadmap
 
-recon is a passive domain-intelligence CLI and MCP server. The
-roadmap below is what comes next, in priority order, from where the
-tool is now. Shipped work lives in [CHANGELOG.md](../CHANGELOG.md) —
-this file is about the *next* release and the path to 1.0, not a
-retrospective.
+recon is a passive domain-intelligence CLI and MCP server. This
+roadmap tracks the path from v0.10 to 1.0. Shipped work lives in
+[CHANGELOG.md](../CHANGELOG.md).
 
 ## Invariants (non-negotiable)
 
@@ -29,37 +27,153 @@ ship.
 Correctness → reliability → explainability → composability → new
 features. A feature that compromises reliability waits.
 
-## What's next
+## Version plan
 
-Four items, in priority order. The first is the single biggest
-reliability weak spot recon has right now.
+```
+v0.9.3 (shipped) → v0.9.4 (shipped) → v0.10 (shipped) → v0.10.1 → v0.11 → v1.0
+```
 
-### 1. CT source resilience
+Each release is independently shippable. The sequence is priority
+order — if something slips, it pushes right, it doesn't block
+what came before it.
 
-Today recon leans on `crt.sh` with a `CertSpotter` fallback for
-certificate-transparency data — and CT data is roughly 40% of what
-gives the tool its value (related domains, subdomain taxonomy,
-temporal evidence). Both providers flake together often enough that
-this is a first-day pain point, not a "later" problem.
+| Release  | Theme                        | Key deliverable                                               |
+|----------|------------------------------|---------------------------------------------------------------|
+| v0.9.4   | Toolchain & release hygiene  | CI pipeline, pre-commit, MCP optional extra, SECURITY.md      |
+| v0.10    | CT resilience + UX overhaul  | CT cache fallback, insight curation, provider accuracy        |
+| v0.10.1  | Provider accuracy + UX depth | Primary email detection, category rethink, DKIM expansion     |
+| v0.11    | Community & confidence       | Fingerprint contribution pipeline + `--confidence-mode strict` |
+| v1.0     | Stability commitment         | Frozen surfaces, security/limitations docs, release process   |
 
-- *Files:* `sources/cert_providers.py`, new `recon_tool/ct_cache.py`,
-  `resolver.py`.
-- *Change:* Add a third zero-creds CT provider behind the existing
-  `CertIntelProvider` protocol (candidates: Merklemap, Google's CT
-  log viewer, or the raw CT API via `certificatetransparency.dev` if
-  its API stays unauthenticated). Add a per-domain JSON cache at
-  `~/.recon/ct-cache/{domain}.json` with a seven-day default TTL —
-  one file per domain, no aggregated store. On a degraded-source
-  path, fall back to the cache before returning an empty result.
-- *Done when:* A three-provider fallback chain is wired up, the
-  per-domain cache round-trips through the same `tenant_info_to_dict`
-  path the main cache uses, and a simulated triple-provider outage
-  still returns the last known subdomain set with an explicit "from
-  local cache (age N days)" note on the panel.
+---
 
-### 2. Community fingerprint pipeline
+### v0.9.4 — Toolchain & release hygiene (shipped 2026-04-16)
 
-The fingerprint database is 212 entries maintained by one person.
+Infrastructure-only release. No feature changes.
+
+- ~~CI pipeline (GitHub Actions)~~ — Ruff → Pyright → pytest +
+  coverage gate (80%) → pip-audit. Required on every PR.
+- ~~pre-commit hooks~~ — `.pre-commit-config.yaml` with Ruff +
+  Pyright.
+- ~~MCP as optional extra~~ — `pip install recon-tool[mcp]`. Core
+  install no longer pulls in the MCP dependency tree.
+- ~~pip-audit in CI~~ — dependency vulnerability scanning on every
+  PR and release build.
+- ~~Root `SECURITY.md`~~ — vulnerability reporting policy.
+- ~~Trusted Publisher on PyPI~~ — OIDC-based publishing (already in
+  place since v0.9.3, formalized).
+- ~~uv migration~~ — `uv.lock` for reproducible builds, CI uses
+  `uv sync`.
+
+---
+
+### v0.10 — CT source resilience (shipped 2026-04-16)
+
+- ~~Per-domain CT cache~~ — `~/.recon/ct-cache/{domain}.json`,
+  seven-day TTL, one file per domain. Successful provider queries
+  auto-populate.
+- ~~Cache fallback chain~~ — crt.sh → CertSpotter → per-domain
+  cache. On total provider outage, returns cached subdomain set
+  with explicit "from local cache, N days old" annotation.
+- ~~Cache CLI~~ — `recon cache show [domain]` and
+  `recon cache clear [--all]`.
+- ~~Cache age in panel~~ — info-tone note distinguishes live
+  fallback from cache fallback.
+- Third zero-creds CT provider deferred — all candidates
+  (Merklemap, Google CT, certificatetransparency.dev) now require
+  authentication. The `CertIntelProvider` protocol is ready when
+  a viable zero-creds provider surfaces.
+- ~~UX overhaul~~ — aggressive insight curation (drop restatements
+  of Services/Provider), cap at 5 in default mode, strip protocol
+  config from Email row (score covers it), strip provider-line
+  services from Email (no duplication), suppress info-tone CT notes,
+  remove decorative color (bold-only section headers).
+- ~~Provider accuracy~~ — exchange-onprem + M365 tenant now
+  correctly renders as "Microsoft 365 via [gateway]" instead of
+  "Exchange Server (on-prem / hybrid)". On-prem only leads when
+  no M365 tenant is found.
+- ~~Bundled AI inference~~ — M365 → Microsoft Copilot (likely),
+  Google Workspace → Google Gemini (likely) in Services > AI.
+
+---
+
+### v0.10.1 — Provider accuracy + UX depth
+
+The v0.10 UX pass exposed deeper issues in provider classification
+and category architecture. This release addresses the structural
+problems that need careful work with test coverage.
+
+#### Primary email detection overhaul
+
+*Files:* `formatter.py` (`detect_provider`), `merger.py`,
+`models.py`, `sources/dns.py`.
+
+The "everyone has both providers" problem: most companies have
+ONE primary email platform, but the tool shows dual because
+a dormant account registration (OIDC discovery responds, TXT
+token exists) looks identical to an active platform. The fix:
+
+- **Evidence-weighted provider classification.** Distinguish
+  "confirmed email platform" (MX points here, or MX → gateway +
+  DKIM for this provider) from "account registered" (tenant ID
+  exists but no email routing evidence). Show confirmed platforms
+  as primary; show account-only detections as "(account)" only
+  in `--full`.
+- **Gateway → backend inference.** When MX points to a known
+  gateway (Proofpoint, Trend Micro, Mimecast, Barracuda,
+  Symantec) AND M365 DKIM selectors are found, infer M365 as
+  the backend. Same for Google Workspace DKIM behind a gateway.
+  This eliminates "Exchange Server (on-prem / hybrid)" false
+  positives for cloud M365 behind a gateway.
+
+#### DKIM selector expansion
+
+*Files:* `sources/dns.py`.
+
+The email security score undercounts DKIM because it only checks
+common selector names (`selector1`, `selector2`, `google`). Large
+enterprises use non-standard selectors. Expand the selector
+probing set with enterprise-common names (`s1`, `s2`, `dkim`,
+`mail`, `k1`, `k2`, `default`) to reduce false "No DKIM"
+findings on Fortune 500 targets.
+
+#### Service category rethink
+
+*Files:* `formatter.py` (`_SERVICE_CATEGORIES_ORDER`,
+`_CATEGORY_BY_SLUG`).
+
+- Rename and reorder: Identity → Cloud → Security → AI →
+  Collaboration → Email → Other.
+- Move misclassified services: Intune → Identity (not Other),
+  Microsoft Teams → Collaboration (not Other).
+- Consider splitting "Other" into "Business Apps" (Salesforce,
+  ServiceNow, DocuSign) vs true Other.
+
+#### Conditional insights
+
+*Files:* `formatter.py`, `insights.py`.
+
+Not every domain needs the same insight set. The email security
+score should render differently based on what it means for the
+target:
+
+- Fortune 500 / enterprise: 3/5 with missing DKIM is notable
+  → show it.
+- Small org with DMARC + DKIM: 2/5 is normal → less emphasis.
+- No email infrastructure at all: don't show a score (currently
+  handled, keep it).
+
+---
+
+### v0.11 — Community fingerprints + confidence mode
+
+Two features that both gate on 1.0 but are independent of each
+other. Ship them together or separately within v0.11.x — ordering
+between them doesn't matter.
+
+#### Community fingerprint pipeline
+
+The fingerprint database is 227 entries maintained by one person.
 That scales for now. It won't scale for long. A community
 contribution path has to exist before 1.0, not after.
 
@@ -79,7 +193,7 @@ contribution path has to exist before 1.0, not after.
   additive-only invariant (custom fingerprints extend, never
   override built-ins).
 
-### 3. `--confidence-mode strict`
+#### `--confidence-mode strict`
 
 The hedging language is correct on sparse data and too noisy on
 dense data. A CISO looking at a Fortune-100 target with four
@@ -104,11 +218,11 @@ on every line — the evidence density already carries the confidence.
   default mode (no change); the hedging harness passes against both
   modes.
 
-### 4. Bayesian evidence fusion (experimental, not blocking 1.0)
+#### Bayesian evidence fusion (experimental, not blocking 1.0)
 
-The probabilistic fusion layer that was originally in the old
-roadmap. It's still a good idea, but not a 1.0 blocker. Ship it as
-**experimental** in 1.0 if the math is ready; otherwise push to 1.1.
+The probabilistic fusion layer. Good idea, but not a 1.0 blocker.
+Ship it as **experimental** in v0.11 if the math is ready;
+otherwise push to post-1.0.
 
 - *Files:* `merger.py`, new `recon_tool/fusion.py`, `models.py`.
 - *Change:* Per-source reliability priors + Beta conjugate update
@@ -121,16 +235,12 @@ roadmap. It's still a good idea, but not a 1.0 blocker. Ship it as
   asserts that two corroborating sources always yield a strictly
   higher posterior than either alone.
 
-## 1.0 — stability commitment
+---
 
-Ship 1.0 when the four items above are stable, not when every item
-on the old roadmap is done. The old roadmap stacked property-graph
-core, counterfactual DAGs, temporal CT, synthesis-module collapse,
-and more all as 1.0 blockers. That's gold-plating. Most of those
-are refactoring or experimental features that should ship as 1.x
-minor releases *after* 1.0 proves the contract surfaces hold.
+### v1.0 — Stability commitment
 
-The 1.0 commitment is small and concrete:
+Ship 1.0 when the items above are stable, not when every idea on
+this page is done. The 1.0 commitment is small and concrete:
 
 1. **Frozen public surfaces.** CLI flags, `--json` output field
    names and types, MCP tool names and parameter shapes, YAML
@@ -140,29 +250,53 @@ The 1.0 commitment is small and concrete:
    requires a 2.0 and a deprecation window.
 2. **SemVer + Python support policy.** Documented. Python version
    support window matches CPython's own N-2 policy.
-3. **Security threat model.** One page in `docs/security.md`
+3. **Security threat model** in `docs/security.md`. One page
    covering trust boundaries, attack surface, mitigations,
-   out-of-scope.
-4. **Known limitations.** One page in `docs/limitations.md`
-   covering what the tool doesn't see, what it underclaims on,
-   and when to reach for something else.
-5. **Release process.** Documented checklist, a simple
-   `scripts/release.py` with confirmation prompts at each
-   destructive step, complete PyPI metadata.
-6. **Community fingerprint pipeline** (from "What's next" item 2
-   above).
-7. **CT resilience** (from item 1).
+   out-of-scope. (The root `SECURITY.md` for vulnerability
+   reporting ships in v0.9.4 — this is the deeper document.)
+4. **Known limitations** in `docs/limitations.md`. What the tool
+   doesn't see, what it underclaims on, and when to reach for
+   something else.
+5. **Release process.** Documented checklist. GitHub Actions handles
+   the build-test-publish pipeline (established in v0.9.4);
+   `scripts/release.py` handles the human steps — version bump,
+   changelog finalization, tag creation — with confirmation prompts
+   at each destructive step. Both halves documented in one place.
+6. **Community fingerprint pipeline** (from v0.11).
+7. **CT resilience + cache visibility** (from v0.10).
+8. **`--confidence-mode strict`** (from v0.11).
 
 **Metrics that matter for 1.0:**
-- ≥80% signal coverage on the hardened enterprise test corpus.
+- >=80% signal coverage on the hardened enterprise test corpus.
 - Zero unhedged assertions on sparse-evidence fixtures (enforced
   by the property-based harness).
-- Every MCP tool is read-only and idempotent and cache-aware.
-- Every public surface has a stability tag documented in
-  `docs/stability.md`.
+- Every MCP tool is read-only, idempotent, and cache-aware.
+- Every public surface has a stability tag in `docs/stability.md`.
+- CI pipeline enforced on every PR (lint, types, tests, coverage,
+  audit).
 
 Anything that doesn't move one of these metrics is a nice-to-have
 for post-1.0.
+
+---
+
+## Large-file refactoring (opportunistic, not blocking any release)
+
+Three files carry disproportionate maintenance burden:
+`formatter.py` (2,635 lines), `server.py` (1,876 lines), and
+`cli.py` (1,225 lines). These are where future changes will get
+slower, harder to review, and more bug-prone.
+
+Refactoring them into submodules (e.g., `formatter/` with
+`panel.py`, `json.py`, `markdown.py`; `server/` with per-tool
+modules) is the right move, but it's not gated on any release.
+Do it opportunistically when a feature change in one of these
+files makes the split natural, not as a standalone refactoring
+milestone. The priority order (correctness → reliability →
+explainability → composability → new features) means refactoring
+waits until it unblocks something else.
+
+---
 
 ## Portfolio / subsidiary detection — genuinely hard, post-1.0 only
 
@@ -238,11 +372,17 @@ ASN / GeoIP data. A plugin system that runs user code.
 
 **Not this tool.** HTML output, web dashboard, `recon serve`,
 interactive REPL, STIX2 / Maltego exports, Pydantic models,
-Prometheus metrics, SBOM / signed releases / Sigstore attestations,
-JSONL streaming, formal machine-validated JSON Schema files,
-llms.txt, A2A cards. recon is a CLI plus an MCP server; pipe
-`--json` into whatever format or tool you need. If you want a
+Prometheus metrics, SBOM / Sigstore attestations, JSONL streaming,
+formal machine-validated JSON Schema files, llms.txt, A2A cards,
+Homebrew tap, Docker image. recon is a CLI plus an MCP server;
+pipe `--json` into whatever format or tool you need. If you want a
 rendered graph, pipe the node-link JSON into Mermaid or Cytoscape.
+
+Note: **Trusted Publisher on PyPI is not Sigstore attestation.**
+Trusted Publisher is OIDC-based publish-path integrity — it
+verifies *who published*, not *what was published*. It's planned
+for v0.9.4. Sigstore attestation (artifact signing, provenance
+chains, SBOM) is a different system and remains out of scope.
 
 **Design choices that stay.**
 

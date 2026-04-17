@@ -43,7 +43,7 @@ EXIT_INTERNAL = 4
 
 # Known subcommands — used by the callback to distinguish domains from commands.
 # UPDATE THIS SET when adding new subcommands.
-_SUBCOMMANDS = frozenset({"doctor", "batch", "lookup", "mcp"})
+_SUBCOMMANDS = frozenset({"doctor", "batch", "lookup", "mcp", "cache"})
 
 # Maximum number of domains in a batch file to prevent OOM from huge files.
 _MAX_BATCH_DOMAINS = 10000
@@ -373,10 +373,84 @@ def _doctor_fix() -> None:
 
 @app.command()
 def mcp() -> None:
-    """Start the MCP server (stdio transport)."""
-    from recon_tool.server import main as server_main
+    """Start the MCP server (stdio transport). Requires: pip install recon-tool[mcp]"""
+    try:
+        from recon_tool.server import main as server_main
+    except ImportError as exc:
+        get_console().print(
+            "[red]MCP dependencies not installed.[/red]\n"
+            "  Install with: [bold]pip install recon-tool\\[mcp][/bold]"
+        )
+        raise SystemExit(1) from exc
 
     server_main()
+
+
+# ── Cache CLI ─────────────────────────────────────────────────────────
+
+cache_app = typer.Typer(help="Manage the CT subdomain cache.")
+app.add_typer(cache_app, name="cache")
+
+
+@cache_app.command("show")
+def cache_show(
+    domain: str = typer.Argument(None, help="Domain to inspect (omit to list all)"),
+) -> None:
+    """Show CT cache state for a domain, or list all cached domains."""
+    from recon_tool.ct_cache import ct_cache_list, ct_cache_show
+
+    console = get_console()
+
+    if domain:
+        info = ct_cache_show(domain)
+        if info is None:
+            console.print(f"  No CT cache entry for [bold]{domain}[/bold]")
+            return
+        age_str = "today" if info.age_days == 0 else f"{info.age_days} day{'s' if info.age_days != 1 else ''} old"
+        console.print()
+        console.print(f"  [bold]{info.domain}[/bold]")
+        console.print(f"    Provider:   {info.provider_used}")
+        console.print(f"    Subdomains: {info.subdomain_count}")
+        console.print(f"    Cached:     {info.cached_at}")
+        console.print(f"    Age:        {age_str}")
+        console.print(f"    Size:       {info.file_size_bytes:,} bytes")
+        console.print()
+    else:
+        entries = ct_cache_list()
+        if not entries:
+            console.print("  CT cache is empty.")
+            return
+        console.print()
+        console.print(f"  [bold]{len(entries)} cached domain{'s' if len(entries) != 1 else ''}[/bold]")
+        console.print()
+        for e in entries:
+            age_str = "today" if e.age_days == 0 else f"{e.age_days}d"
+            console.print(f"    {e.domain:<30s}  {e.subdomain_count:>4d} subs  {age_str:>5s}  {e.provider_used}")
+        console.print()
+
+
+@cache_app.command("clear")
+def cache_clear(
+    domain: str = typer.Argument(None, help="Domain to clear (omit with --all for everything)"),
+    all_domains: bool = typer.Option(False, "--all", help="Clear all cached CT data"),
+) -> None:
+    """Clear CT cache for a domain or all domains."""
+    from recon_tool.ct_cache import ct_cache_clear, ct_cache_clear_all
+
+    console = get_console()
+
+    if all_domains:
+        count = ct_cache_clear_all()
+        console.print(f"  Cleared {count} cached domain{'s' if count != 1 else ''}.")
+    elif domain:
+        removed = ct_cache_clear(domain)
+        if removed:
+            console.print(f"  Cleared CT cache for [bold]{domain}[/bold].")
+        else:
+            console.print(f"  No CT cache entry for [bold]{domain}[/bold].")
+    else:
+        console.print("  Specify a domain or use --all.")
+        raise typer.Exit(code=2)
 
 
 async def _doctor() -> None:
