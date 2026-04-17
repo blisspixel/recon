@@ -32,7 +32,7 @@ features. A feature that compromises reliability waits.
 ```
 v0.9.3 (shipped) → v0.9.4 (shipped) → v0.10 (shipped) →
 v0.10.1 (shipped) → v0.10.2 (shipped) → v0.10.3 (shipped) →
-v0.11 → v1.0
+v0.11 (shipped) → v1.0
 ```
 
 Each release is independently shippable. The sequence is priority
@@ -302,7 +302,7 @@ tool working in their chosen client inside 60 seconds.
 
 ---
 
-### v0.11 — Community fingerprints + confidence mode
+### v0.11 — Community fingerprints + confidence mode (shipped 2026-04-17)
 
 Two features that both gate on 1.0 but are independent of each
 other. Ship them together or separately within v0.11.x — ordering

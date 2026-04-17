@@ -688,10 +688,24 @@ def merge_results(
         "google_auth_type": [],
     }
 
+    # v0.11: placeholder tenant display names that are meaningless to a
+    # user. "Default Directory" is what Microsoft shows when a tenant
+    # owner never set a custom name — it's a placeholder, not the
+    # organization's name. Fall through to better signals (BIMI, domain).
+    _PLACEHOLDER_DISPLAY_NAMES: frozenset[str] = frozenset({
+        "default directory",
+        "directory",
+    })
+
+    def _is_placeholder(name: str | None) -> bool:
+        if not name:
+            return True
+        return name.strip().lower() in _PLACEHOLDER_DISPLAY_NAMES
+
     for result in results:
         if tenant_id is None and result.tenant_id is not None:
             tenant_id = result.tenant_id
-        if display_name is None and result.display_name is not None:
+        if _is_placeholder(display_name) and not _is_placeholder(result.display_name):
             display_name = result.display_name
         if default_domain is None and result.default_domain is not None:
             default_domain = result.default_domain
@@ -785,12 +799,15 @@ def merge_results(
                 source_errors=source_errors,
             )
 
-    if display_name is None:
-        # BIMI VMC organization name as fallback
-        if bimi_identity is not None:
+    if display_name is None or _is_placeholder(display_name):
+        # BIMI VMC organization name as fallback — always preferred if present
+        if bimi_identity is not None and bimi_identity.organization:
             display_name = bimi_identity.organization
         else:
-            display_name = tenant_id if tenant_id else queried_domain
+            # Prefer the queried domain over the tenant_id UUID for display.
+            # A raw UUID reads as debugging output; the domain reads as
+            # the company identifier.
+            display_name = queried_domain
     if default_domain is None:
         default_domain = queried_domain
 

@@ -116,6 +116,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "ct_provider_used": info.ct_provider_used,
         "ct_subdomain_count": info.ct_subdomain_count,
         "ct_cache_age_days": info.ct_cache_age_days,
+        "slug_confidences": [[slug, score] for slug, score in info.slug_confidences],
         "cloud_instance": info.cloud_instance,
         "tenant_region_sub_scope": info.tenant_region_sub_scope,
         "msgraph_host": info.msgraph_host,
@@ -291,6 +292,11 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         ct_provider_used=data.get("ct_provider_used"),
         ct_subdomain_count=int(data.get("ct_subdomain_count", 0) or 0),
         ct_cache_age_days=data.get("ct_cache_age_days"),
+        slug_confidences=tuple(
+            (str(entry[0]), float(entry[1]))
+            for entry in data.get("slug_confidences", [])
+            if isinstance(entry, (list, tuple)) and len(entry) == 2
+        ),
         cloud_instance=data.get("cloud_instance"),
         tenant_region_sub_scope=data.get("tenant_region_sub_scope"),
         msgraph_host=data.get("msgraph_host"),

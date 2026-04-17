@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-04-17
+
+Community & confidence. The biggest build yet. Three themes:
+(1) `--confidence-mode strict` drops hedging qualifiers when evidence
+is dense. (2) Community fingerprint pipeline enables outside
+contributions without drowning in bad YAML. (3) Bayesian fusion
+(experimental) replaces the three-bucket detection-score threshold
+with a principled per-slug posterior.
+
+### Added
+
+- **`--confidence-mode {hedged,strict}`** CLI flag. Default `hedged`
+  (unchanged). `strict` drops hedging qualifiers ("observed",
+  "likely", "indicators") on dense-evidence targets (High confidence
+  + 3+ corroborating sources). Sparse-data output is never touched —
+  the "never overclaim when evidence is thin" invariant stays
+  load-bearing. New module `recon_tool/strict_mode.py`.
+- **Community fingerprint pipeline.**
+  - `scripts/validate_fingerprint.py` — local validator that runs the
+    same checks recon uses at runtime (regex safety, required fields,
+    detection types, weight range, `match_mode`). Exits 0/1 with
+    per-entry error messages.
+  - `CONTRIBUTING.md` — new fingerprint submission section with
+    validate command, chained-pattern guidance, PR checklist.
+  - `.github/ISSUE_TEMPLATE/fingerprint_request.md` — structured
+    template for requesting new fingerprints.
+  - `.github/PULL_REQUEST_TEMPLATE/fingerprint.md` — structured
+    template for fingerprint PRs.
+  - `.github/workflows/ci.yml` — new `validate-fingerprints` job that
+    runs on every PR.
+- **Bayesian fusion (experimental).** New module `recon_tool/fusion.py`.
+  Pure-Python Beta conjugate update. Per-source priors ranked by
+  informational content (OIDC > DKIM > MX > TXT > A/CNAME). Opt-in
+  via `--fusion`. Emits `slug_confidences` tuple on TenantInfo and
+  in `--json` output. Tagged **experimental** — algorithm and field
+  shape may evolve.
+- **`docs/stability.md`** — stability policy for 1.0. Lists stable
+  vs experimental surfaces. Documents what "stable" means
+  (backward-compat guarantee between patch and minor releases).
+
+### Changed
+
+- No behavior change by default. Strict mode, fusion, and the
+  community pipeline are all opt-in or additive.
+
 ## [0.10.3] — 2026-04-17
 
 MCP agent ergonomics. The server now self-documents so AI clients

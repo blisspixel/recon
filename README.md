@@ -58,9 +58,11 @@ recon doctor                           # verify connectivity
 recon contoso.com                              # default panel
 recon contoso.com --explain                    # full reasoning + provenance DAG
 recon contoso.com --full                       # everything (services + domains + posture)
-recon contoso.com --profile fintech            # apply a posture lens (v0.9.3)
+recon contoso.com --profile fintech            # apply a posture lens
+recon contoso.com --confidence-mode strict     # drop hedging on dense-evidence targets (v0.11)
 recon contoso.com --json                       # structured JSON for piping
 recon batch domains.txt --json                 # batch (cross-domain token clustering)
+recon delta contoso.com                        # diff against last cached snapshot
 recon mcp                                      # start MCP server (stdio)
 ```
 
@@ -97,7 +99,7 @@ See [docs/mcp.md](docs/mcp.md) for the full tool list, advanced agentic workflow
 
 ```bash
 pip install -e ".[dev]"               # or: uv sync --extra dev
-pytest tests/                          # 1504 tests, 87% coverage
+pytest tests/                          # 1543 tests, 87% coverage
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 pre-commit install                     # activate pre-commit hooks

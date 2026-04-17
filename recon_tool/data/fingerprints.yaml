@@ -2174,3 +2174,83 @@ fingerprints:
       - type: cname
         pattern: "classy.org"
         description: Classy nonprofit fundraising platform (owned by GoFundMe)
+
+  # ── v0.11 additions: observability + developer tools ─────────────────
+
+  - name: Sentry
+    slug: sentry
+    category: DevTools & Infrastructure
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^sentry-verification="
+        description: Sentry error tracking domain verification token
+
+  - name: Grafana Cloud
+    slug: grafana-cloud
+    category: DevTools & Infrastructure
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^grafana-site-verification="
+        description: Grafana Cloud observability domain verification
+
+  - name: Sumo Logic
+    slug: sumologic
+    category: DevTools & Infrastructure
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^sumologic-site-verification="
+        description: Sumo Logic log analytics domain verification
+
+  - name: Honeycomb
+    slug: honeycomb
+    category: DevTools & Infrastructure
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^honeycomb-io-site-verification="
+        description: Honeycomb.io observability domain verification
+
+  - name: Statsig
+    slug: statsig
+    category: DevTools & Infrastructure
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^statsig-domain-verification="
+        description: Statsig feature flagging domain verification
+
+  - name: Split.io
+    slug: splitio
+    category: DevTools & Infrastructure
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^split-domain-verification="
+        description: Split.io feature flags domain verification
+
+  - name: Splunk
+    slug: splunk
+    category: DevTools & Infrastructure
+    confidence: medium
+    detections:
+      - type: txt
+        pattern: "^splunk-verification="
+        description: Splunk Observability / Cloud domain verification
+      - type: cname
+        pattern: "signalfx\\.com$"
+        description: SignalFx (Splunk Observability) CNAME
+
+  - name: VMware Workspace ONE
+    slug: workspace-one
+    category: Identity
+    confidence: medium
+    detections:
+      - type: cname
+        pattern: "workspaceoneaccess\\.com$"
+        description: VMware Workspace ONE Access CNAME
+      - type: cname
+        pattern: "vmwareidentity\\.com$"
+        description: VMware Identity Manager CNAME

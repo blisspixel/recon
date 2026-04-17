@@ -1069,6 +1069,7 @@ def render_tenant_panel(
     show_domains: bool = False,
     verbose: bool = False,
     explain: bool = False,
+    confidence_mode: str = "hedged",
 ):  # -> rich renderable
     """Render TenantInfo as a plain-text hero layout (v0.9.3 redesign).
 
@@ -1345,6 +1346,14 @@ def render_tenant_panel(
     # ── Insights (curated) ────────────────────────────────────────
     if info.insights:
         curated: list[str] = _curate_insights(info.insights, info.services, info.slugs)
+        # v0.11: strict confidence mode drops hedging qualifiers when the
+        # evidence is dense (High confidence + 3+ sources). Sparse-data
+        # output is never touched — the "never overclaim on thin evidence"
+        # invariant stays load-bearing.
+        from recon_tool.strict_mode import apply_strict_mode, should_apply_strict
+
+        if should_apply_strict(info, confidence_mode):
+            curated = list(apply_strict_mode(tuple(curated)))
         if curated:
             _spacer()
             ins = Text()
@@ -1856,6 +1865,10 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "ct_provider_used": info.ct_provider_used,
         "ct_subdomain_count": info.ct_subdomain_count,
         "ct_cache_age_days": info.ct_cache_age_days,
+        "slug_confidences": [[slug, score] for slug, score in info.slug_confidences],
+        # v0.11: surface email_security_score at the top level of --json
+        # (previously only available inside the insights string).
+        "email_security_score": _compute_email_security_score(info),
         # v0.9.3: sovereignty + lexical fields
         "cloud_instance": info.cloud_instance,
         "tenant_region_sub_scope": info.tenant_region_sub_scope,
