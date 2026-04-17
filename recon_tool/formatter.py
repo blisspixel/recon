@@ -220,7 +220,7 @@ _LABEL_WIDTH = 13  # columns for Provider/Tenant/Auth/Confidence labels
 _CATEGORY_WIDTH = 15  # columns for Services sub-category labels
 
 # Category display order. Each service is classified into exactly one
-# of these by _categorize_service; "Other" is the fallback.
+# of these by _categorize_service; "Business Apps" is the fallback.
 _SERVICE_CATEGORIES_ORDER: tuple[str, ...] = (
     "Email",
     "Identity",
@@ -228,7 +228,7 @@ _SERVICE_CATEGORIES_ORDER: tuple[str, ...] = (
     "Security",
     "AI",
     "Collaboration",
-    "Other",
+    "Business Apps",
 )
 
 # Service → display-category classification. Checked in order; the first
@@ -378,12 +378,12 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "canvas-lms": "Collaboration",
     "blackboard": "Collaboration",
     "moodle": "Collaboration",
-    "ellucian-banner": "Other",
-    "handshake": "Other",
+    "ellucian-banner": "Business Apps",
+    "handshake": "Business Apps",
     "tophat": "Collaboration",
     # v0.9.3: sales & marketing platforms missed in earlier passes
-    "d365-marketing": "Other",
-    "sfmc": "Other",
+    "d365-marketing": "Business Apps",
+    "sfmc": "Business Apps",
     "emma": "Email",
     "icontact": "Email",
     "mailerlite": "Email",
@@ -393,9 +393,9 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "wpengine": "Cloud",
     "vmware-cloud": "Cloud",
     # v0.9.3: nonprofit platforms
-    "salesforce-npsp": "Other",
-    "blackbaud": "Other",
-    "classy": "Other",
+    "salesforce-npsp": "Business Apps",
+    "blackbaud": "Business Apps",
+    "classy": "Business Apps",
 }
 
 # Email service-name prefixes that bypass slug lookup. These catch
@@ -507,7 +507,7 @@ _SLUG_DISPLAY_OVERRIDES: dict[str, str] = {
     # dns._detect_idp_hub. These don't have fingerprint entries
     # so the raw slug would leak into the Identity row without
     # an explicit override.
-    "federated-sso-hub": "Shibboleth / SAML SSO hub",
+    "federated-sso-hub": "SSO hub",
     "okta-sso-hub": "Okta SSO hub",
     "adfs-sso-hub": "ADFS SSO hub",
     # v0.9.3: Exchange on-prem / hybrid slug emitted by
@@ -555,6 +555,7 @@ def detect_provider(
     email_gateway: str | None = None,
     likely_primary_email_provider: str | None = None,
     has_mx_records: bool = True,
+    email_confirmed_slugs: frozenset[str] | None = None,
 ) -> str:
     """Detect and format the provider line with email topology awareness.
 
@@ -641,6 +642,11 @@ def detect_provider(
                 if primary_name and name == primary_name:
                     continue
                 if name in inferred_secondaries:
+                    continue
+                # v0.10.1: only show slug-based secondary if confirmed
+                # via email routing (MX or DKIM). Account-only detections
+                # (OIDC, TXT tokens) are noise in the Provider line.
+                if email_confirmed_slugs is not None and slug not in email_confirmed_slugs:
                     continue
                 slug_secondaries.append(name)
 
@@ -808,7 +814,7 @@ def _categorize_service(service: str, slug: str | None) -> str:
         2. Email prefix match (DMARC, DKIM, SPF, …)
         3. Category-name substring match (for services whose name
            carries a category hint like "DNS: Cloudflare")
-        4. Fallback: "Other"
+        4. Fallback: "Business Apps"
     """
     if slug and slug in _CATEGORY_BY_SLUG:
         return _CATEGORY_BY_SLUG[slug]
@@ -825,7 +831,11 @@ def _categorize_service(service: str, slug: str | None) -> str:
         return "Identity"
     if "security" in lower or "endpoint" in lower:
         return "Security"
-    return "Other"
+    if "teams" in lower or "xmpp" in lower or "jabber" in lower or "slack" in lower:
+        return "Collaboration"
+    if "intune" in lower or "mdm" in lower:
+        return "Identity"
+    return "Business Apps"
 
 
 def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:
@@ -1138,6 +1148,10 @@ def render_tenant_panel(
             facts.append("\n")
 
     has_mx_records = any(e.source_type == "MX" for e in info.evidence)
+    # v0.10.1: only show secondary providers confirmed via email routing
+    email_confirmed_slugs = frozenset(
+        e.slug for e in info.evidence if e.source_type in ("MX", "DKIM")
+    )
     provider_line = detect_provider(
         info.services,
         info.slugs,
@@ -1145,6 +1159,7 @@ def render_tenant_panel(
         email_gateway=info.email_gateway,
         likely_primary_email_provider=info.likely_primary_email_provider,
         has_mx_records=has_mx_records,
+        email_confirmed_slugs=email_confirmed_slugs,
     )
     _field("Provider", provider_line)
 

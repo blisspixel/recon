@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] — 2026-04-16
+
+Provider accuracy + UX depth. Follow-up to v0.10 that addresses
+structural detection issues exposed during real-world validation:
+SSO hub mislabeling, DKIM undercount on Fortune 500 targets,
+service miscategorization, and the "everyone has both providers"
+noise problem.
+
+### Added
+
+- **Generic DKIM selector probing.** dns.py now probes `s2`,
+  `dkim`, `mail`, `k2` as TXT records on top of the existing
+  Exchange (`selector1`/`selector2`), Google (`google`), and ESP
+  selectors. Large enterprises using non-standard selectors now
+  get DKIM credit on the email security score instead of
+  "No DKIM selectors observed" false negatives.
+- **`email_confirmed_slugs` parameter** in `detect_provider()`.
+  Filters slug-based secondary providers to only those with MX
+  or DKIM evidence — dormant account registrations no longer
+  clutter the Provider line.
+
+### Changed
+
+- **SSO hub label.** `federated-sso-hub` slug display changed
+  from "Shibboleth / SAML SSO hub" to "SSO hub". A DNS A record
+  at `sso.domain.com` can't distinguish Entra ID from Okta from
+  Shibboleth — the previous label overstated what the tool
+  knows. Okta and ADFS specific detections (via `okta.*` /
+  `adfs.*` subdomains) keep their specific labels.
+- **Service categories rethink.**
+  - `"Other"` renamed to `"Business Apps"` across
+    `_SERVICE_CATEGORIES_ORDER`, `_CATEGORY_BY_SLUG`, and
+    `_categorize_service()`.
+  - Microsoft Teams, XMPP/Jabber, Slack → Collaboration (was
+    Business Apps / Other).
+  - Intune / MDM → Identity (was Business Apps / Other).
+- **Gateway + DKIM → confirmed primary.** `_compute_email_topology`
+  now promotes gateway+DKIM evidence to `primary_email_provider`
+  (confirmed) instead of `likely_primary_email_provider`
+  (inferred). DKIM proves the provider signs mail for this
+  domain — that's not inference, it's confirmation. Weaker non-MX
+  evidence (TXT, OIDC, UserRealm) still sets `likely_primary`.
+- **Provider-line secondaries filtered.** Dormant account
+  detections (M365 tenant exists but no DKIM or MX evidence) no
+  longer show as "(secondary)" in the default Provider line.
+  They still appear in `--full` and `--json` output.
+
+### Example diffs
+
+Softchoice before: `Provider     Exchange Server (on-prem / hybrid) behind Trend Micro gateway + Microsoft 365 (account detected) + Google Workspace (account detected)`
+
+Softchoice after: `Provider     Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)` — M365 confirmed via DKIM, GWS confirmed via DKIM too.
+
+Stripe before: `Provider     Google Workspace (primary) + Microsoft 365 (secondary)`
+
+Stripe after: `Provider     Google Workspace (primary)` — M365 tenant exists but has no MX/DKIM evidence, so it's not shown in the default Provider line.
+
 ## [0.10.0] — 2026-04-16
 
 CT resilience + UX overhaul. Two themes: (1) when live CT providers

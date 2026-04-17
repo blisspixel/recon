@@ -30,7 +30,7 @@ features. A feature that compromises reliability waits.
 ## Version plan
 
 ```
-v0.9.3 (shipped) → v0.9.4 (shipped) → v0.10 (shipped) → v0.10.1 → v0.11 → v1.0
+v0.9.3 (shipped) → v0.9.4 (shipped) → v0.10 (shipped) → v0.10.1 → v0.10.2 → v0.11 → v1.0
 ```
 
 Each release is independently shippable. The sequence is priority
@@ -42,6 +42,7 @@ what came before it.
 | v0.9.4   | Toolchain & release hygiene  | CI pipeline, pre-commit, MCP optional extra, SECURITY.md      |
 | v0.10    | CT resilience + UX overhaul  | CT cache fallback, insight curation, provider accuracy        |
 | v0.10.1  | Provider accuracy + UX depth | Primary email detection, category rethink, DKIM expansion     |
+| v0.10.2  | Passive coverage depth       | Chained fingerprints, deeper subdomain DNS, delta mode        |
 | v0.11    | Community & confidence       | Fingerprint contribution pipeline + `--confidence-mode strict` |
 | v1.0     | Stability commitment         | Frozen surfaces, security/limitations docs, release process   |
 
@@ -162,6 +163,76 @@ target:
 - Small org with DMARC + DKIM: 2/5 is normal → less emphasis.
 - No email infrastructure at all: don't show a score (currently
   handled, keep it).
+
+---
+
+### v0.10.2 — Passive coverage depth
+
+The v0.10.1 work fixed provider accuracy and category hygiene.
+v0.10.2 goes after detection coverage — still 100% passive, still
+zero credentials, still per-domain storage. Three targeted
+expansions that stay inside the project invariants:
+
+#### Chained fingerprint patterns
+
+*Files:* `recon_tool/fingerprints.py`, `data/fingerprints.yaml`.
+
+Today each fingerprint is a single regex against one DNS record
+type. Real SaaS signatures often span records: Service X publishes
+a TXT verification token AND needs a specific CNAME AND uses a
+particular MX. Single-record fingerprints miss correlated patterns
+and also produce false positives on domains that happen to have
+one matching record.
+
+- *Change:* Add an optional `match_mode: all` + multi-detection
+  structure to the fingerprint YAML schema. When present, all
+  listed detections (possibly across record types) must match
+  before the slug fires. Partially already supported via
+  `_matched_fp_detections` in `_DetectionCtx` — formalize and
+  document for contributors.
+- *Done when:* At least 20 fingerprints use chained patterns,
+  false-positive rate on the hardened corpus is measurably
+  lower, and the YAML schema doc describes the chaining syntax.
+
+#### Deeper DNS enrichment on CT-discovered subdomains
+
+*Files:* `resolver.py`, `sources/dns.py` (`lightweight_subdomain_lookup`).
+
+Today CT-discovered subdomains get a lightweight CNAME+TXT
+lookup. Deeper passive enrichment — MX check, DKIM selector
+probe on the subdomain, SPF parse — would catch SaaS that
+publish verification records on non-apex names (common for
+staging / regional / tenant-specific deployments).
+
+- *Change:* Add a middle-tier `medium_subdomain_lookup` that
+  adds MX + `selector1/2/google._domainkey` TXT probes on top
+  of CNAME+TXT. Cap at high-signal subdomains only (auth.*,
+  login.*, sso.*, api.*) so we don't fan out the DNS budget.
+- *Done when:* Subdomain-only fingerprint hits exist for at
+  least three SaaS that currently go undetected when their
+  verification lives on a subdomain only.
+
+#### Per-domain delta mode
+
+*Files:* new `recon_tool/delta.py` (existing file),
+`recon_tool/ct_cache.py`, `cli.py`.
+
+Stateless today: every run is fresh. But CT data is already
+cached per-domain. A `recon delta contoso.com` that compares
+the current lookup against the cached CT subdomain set +
+cached TenantInfo surfaces what changed — new subdomains,
+new services, removed DMARC, changed auth type. Uses only
+already-cached data; still per-domain JSON; no aggregated
+store.
+
+- *Change:* Extend the existing delta module (`delta.py`
+  already exists) to read the cached CT entry and previous
+  TenantInfo cache, diff against the current run, emit a
+  `Changes since {cached_at}` block.
+- *Done when:* `recon delta <domain>` returns a structured
+  diff (services added/removed, subdomains added/removed,
+  posture-score delta). Batch mode can use the same machinery
+  to show churn across a peer set.
 
 ---
 

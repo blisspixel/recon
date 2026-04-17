@@ -605,19 +605,28 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
     # Also fire ESP selector queries concurrently
     esp_tasks = [_safe_resolve(f"{sel}._domainkey.{domain}", "CNAME") for sel, _, _, _ in _ESP_SELECTORS]
 
+    # v0.10.1: generic enterprise DKIM selectors — large enterprises use
+    # non-standard selector names. These TXT probes confirm DKIM exists
+    # even when we can't attribute it to a specific provider.
+    _GENERIC_DKIM_SELECTORS: tuple[str, ...] = ("s2", "dkim", "mail", "k2")
+    generic_dkim_tasks = [_safe_resolve(f"{sel}._domainkey.{domain}", "TXT") for sel in _GENERIC_DKIM_SELECTORS]
+
     all_results = await asyncio.gather(
         sel1_task,
         sel2_task,
         google_txt_task,
         google_cname_task,
         *esp_tasks,
+        *generic_dkim_tasks,
     )
 
     sel1_results = all_results[0]
     sel2_results = all_results[1]
     google_txt_results = all_results[2]
     google_cname_results = all_results[3]
-    esp_results = all_results[4:]
+    esp_end = 4 + len(_ESP_SELECTORS)
+    esp_results = all_results[4:esp_end]
+    generic_dkim_results = all_results[esp_end:]
 
     # Exchange DKIM selectors
     for selector_results in (sel1_results, sel2_results):
@@ -669,6 +678,19 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
             if hint in cname.lower():
                 ctx.add(svc_name, slug, source_type="DKIM", raw_value=cname)
                 ctx.services.add(SVC_DKIM)
+                break
+
+    # v0.10.1: generic enterprise DKIM — if no provider-specific DKIM was
+    # found above, check generic selectors for inline TXT DKIM keys. This
+    # only confirms DKIM exists (feeds the email security score) without
+    # attributing it to a specific provider.
+    if SVC_DKIM not in ctx.services:
+        for txt_records in generic_dkim_results:
+            for record in txt_records:
+                if "v=dkim1" in record.lower():
+                    ctx.services.add(SVC_DKIM)
+                    break
+            if SVC_DKIM in ctx.services:
                 break
 
 
@@ -1424,19 +1446,17 @@ async def _detect_idp_hub(ctx: _DetectionCtx, domain: str) -> None:
     # that _SLUG_DISPLAY_OVERRIDES maps the slug to, so pass 1 and
     # pass 2 of the categorizer agree on the display name and
     # don't produce a duplicate entry in the "Other" row.
-    shib_family = {"shibboleth", "weblogin", "idp", "wayf", "sp", "saml"}
     found_prefixes = {f.split(".", 1)[0] for f in found}
-    if found_prefixes & shib_family:
-        service_name = "Shibboleth / SAML SSO hub"
-        slug = "federated-sso-hub"
-    elif "okta" in found_prefixes:
+    if "okta" in found_prefixes:
         service_name = "Okta SSO hub"
         slug = "okta-sso-hub"
     elif "adfs" in found_prefixes:
         service_name = "ADFS SSO hub"
         slug = "adfs-sso-hub"
     else:
-        service_name = "Shibboleth / SAML SSO hub"
+        # Generic SSO hub — could be Entra ID, Okta, Shibboleth, CAS, or
+        # anything else. A DNS A record can't distinguish the product.
+        service_name = "SSO hub"
         slug = "federated-sso-hub"
     ctx.add(
         service_name,

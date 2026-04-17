@@ -320,22 +320,43 @@ def _compute_email_topology(
     primary_email_provider = " + ".join(provider_names) if provider_names else None
 
     # Inference: when a gateway is present but no MX-based primary, look at
-    # non-MX evidence for provider slugs. Only fires if an actual gateway
-    # is in MX — without that anchor we can't distinguish legacy residue
-    # from a missed primary.
+    # non-MX evidence for provider slugs. Two tiers:
+    #
+    # (1) DKIM evidence — strong. DKIM selectors prove the provider handles
+    #     email signing for this domain. Promotes to primary_email_provider.
+    #
+    # (2) Other non-MX evidence (TXT tokens, OIDC, UserRealm) — weaker.
+    #     Sets likely_primary_email_provider (hedged).
+    #
+    # Only fires if an actual gateway is in MX — without that anchor we
+    # can't distinguish legacy residue from a missed primary.
     likely_primary_email_provider: str | None = None
     if email_gateway and primary_email_provider is None:
-        non_mx_provider_slugs = {
+        # Tier 1: DKIM-confirmed providers (strong signal)
+        dkim_provider_slugs = {
             e.slug
             for e in evidence
-            if e.source_type in _PROVIDER_INFERENCE_SOURCES
+            if e.source_type == "DKIM"
             and e.slug in _LIKELY_PROVIDER_SLUG_NAMES
         }
-        if non_mx_provider_slugs:
-            likely_names = sorted(
-                _LIKELY_PROVIDER_SLUG_NAMES[s] for s in non_mx_provider_slugs
+        if dkim_provider_slugs:
+            dkim_names = sorted(
+                _LIKELY_PROVIDER_SLUG_NAMES[s] for s in dkim_provider_slugs
             )
-            likely_primary_email_provider = " + ".join(likely_names)
+            primary_email_provider = " + ".join(dkim_names)
+        else:
+            # Tier 2: weaker non-MX evidence
+            non_mx_provider_slugs = {
+                e.slug
+                for e in evidence
+                if e.source_type in _PROVIDER_INFERENCE_SOURCES
+                and e.slug in _LIKELY_PROVIDER_SLUG_NAMES
+            }
+            if non_mx_provider_slugs:
+                likely_names = sorted(
+                    _LIKELY_PROVIDER_SLUG_NAMES[s] for s in non_mx_provider_slugs
+                )
+                likely_primary_email_provider = " + ".join(likely_names)
 
     return primary_email_provider, email_gateway, likely_primary_email_provider
 
