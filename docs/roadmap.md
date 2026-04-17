@@ -27,6 +27,13 @@ ship.
 Correctness → reliability → explainability → composability → new
 features. A feature that compromises reliability waits.
 
+**Post-1.0 this rule gets stricter, not looser.** Hardening what
+exists (tighter fingerprints, deeper tests on sparse / adversarial
+inputs, cleaner hot-path code) beats adding new surface. Every
+new feature earns its place against that bar or it doesn't ship.
+See the [Post-1.0 ethos](#post-10-ethos-bulletproof-over-bloat)
+section below.
+
 ## Version plan
 
 ```
@@ -470,11 +477,37 @@ the sparse-signal observation now explicitly points users at
 `recon batch` and `recon chain` when the panel suggests a
 portfolio / holding-company apex is a plausible reading.
 
+## Post-1.0 ethos: bulletproof over bloat
+
+The priority order established pre-1.0 gets stricter after 1.0, not
+looser:
+
+> **Correctness → reliability → explainability → composability →
+> new features.**
+
+At 1.0 the public surface is frozen. Post-1.0 effort prefers
+*hardening what exists* over *adding what's new*:
+
+- Tighter fingerprints (fewer false positives, more chained patterns)
+  beat new fingerprint slugs.
+- Better evidence for existing claims (DKIM selector expansion, gateway
+  inference, schema conformance) beats new inference types.
+- Deeper test coverage on sparse / adversarial / malformed inputs beats
+  higher target counts.
+- Cleaner code in hot paths (`detect_provider`, `_curate_insights`,
+  `_compute_email_topology`) beats new code paths.
+- Doc and positioning polish beats new commands.
+
+Feature additions must earn their place against this bar. A feature
+that makes the default output noisier, slower, less honest, or less
+stable is not a feature — it's a regression.
+
 ## Post-1.0 ideas (not commitments)
 
 Any of these could turn into a minor release. None of them should
-block 1.0. The ordering here is rough — real prioritization happens
-when there's actual usage data to point at.
+block 1.0. Each one stays below the "bulletproof over bloat" bar —
+if it compromises correctness, reliability, or the invariants, it
+doesn't ship.
 
 - **NetworkX property-graph core** as the single synthesis
   structure. Good refactor, not urgent until the current dataclass
@@ -496,6 +529,27 @@ when there's actual usage data to point at.
 - **Dynamic agent-driven fingerprint injection via MCP.** The
   ephemeral fingerprint tools already cover most of this. Only
   worth expanding if a specific workflow demands it.
+- **Wayback Machine historical snapshots.** The Internet Archive
+  publishes a zero-creds public API (`web.archive.org/cdx/search`)
+  that returns historical URLs for a domain. A passive temporal
+  enrichment — "this subdomain existed at time T" — without any
+  HTTP probe against the target. Fits the invariants, adds a
+  temporal dimension the current CT pipeline doesn't have on its
+  own. Would surface decommissioned services and service-migration
+  signals.
+- **Chained-pattern fingerprint reference set.** The
+  `match_mode: all` infrastructure shipped in v0.10.2 but no
+  built-in fingerprints use it yet. A committed set of 20–30
+  chained-pattern examples (e.g. "Microsoft 365 hybrid = M365 TXT
+  + Exchange autodiscover CNAME + DKIM selector1") would both
+  tighten false-positive rates on ambiguous services and give
+  community contributors concrete examples to model from.
+- **README positioning / competitive orientation.** The project's
+  differentiators (strict passive + zero-creds, M365 depth,
+  MCP-native, hedged output) are buried in feature lists. A
+  "When to use recon vs. theHarvester / Amass / SpiderFoot"
+  section in the README would make the positioning obvious to
+  first-time readers without inflating scope.
 
 ## Intentionally not doing
 
@@ -504,13 +558,21 @@ access. Bundled ML models, GloVe/fastText/transformer weights,
 paid embedding services. Aggregated local databases. Bundled
 ASN / GeoIP data. A plugin system that runs user code.
 
-**Not this tool.** HTML output, web dashboard, `recon serve`,
-interactive REPL, STIX2 / Maltego exports, Pydantic models,
-Prometheus metrics, SBOM / Sigstore attestations, JSONL streaming,
-formal machine-validated JSON Schema files, llms.txt, A2A cards,
-Homebrew tap, Docker image. recon is a CLI plus an MCP server;
-pipe `--json` into whatever format or tool you need. If you want a
-rendered graph, pipe the node-link JSON into Mermaid or Cytoscape.
+**Not this tool.** HTML output, web dashboard, TUI, `recon serve`,
+interactive REPL, scheduled/daemon mode with alerts, STIX2 /
+Maltego / MISP exports, Pydantic models, Prometheus metrics,
+SBOM / Sigstore attestations, JSONL streaming, formal
+machine-validated JSON Schema files, llms.txt, A2A cards,
+Homebrew tap, Docker image, PDF reports, executive-summary
+generators. recon is a CLI plus a local-stdio MCP server;
+`--json` output is the integration surface. If you want a
+rendered graph, pipe the node-link JSON into Mermaid or
+Cytoscape. If you want PDF reports, pipe `--md` into pandoc.
+If you want SIEM ingestion, pipe `--json` into your SIEM.
+
+Scope guard: every surface we add multiplies maintenance cost.
+"recon is a CLI + MCP server" is a deliberate ceiling, not a
+starting point.
 
 Note: **Trusted Publisher on PyPI is not Sigstore attestation.**
 Trusted Publisher is OIDC-based publish-path integrity — it
