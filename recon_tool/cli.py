@@ -273,12 +273,16 @@ def batch(
 @app.command()
 def doctor(
     fix: bool = typer.Option(False, "--fix", help="Scaffold template config files"),
+    mcp: bool = typer.Option(False, "--mcp", help="Validate MCP server setup and emit copy-pasteable client config"),
 ) -> None:
     """
     Check connectivity to all data sources.
     """
     if fix:
         _doctor_fix()
+        return
+    if mcp:
+        _doctor_mcp()
         return
     asyncio.run(_doctor())
 
@@ -337,6 +341,109 @@ _SIGNALS_TEMPLATE = """\
 
 signals: []
 """
+
+
+def _doctor_mcp() -> None:
+    """Validate MCP server setup and emit copy-pasteable client config."""
+    import shutil
+    import sys
+
+    console = get_console()
+    console.print()
+
+    checks: list[tuple[str, bool, str]] = []
+
+    # 1. MCP package importable
+    import importlib
+
+    try:
+        importlib.import_module("mcp")
+        importlib.import_module("mcp.server.fastmcp")
+        checks.append(("MCP package", True, "mcp>=1.0 installed"))
+    except ImportError as exc:
+        checks.append(("MCP package", False, f"not installed: {exc}"))
+        checks.append(("Install hint", False, "pip install recon-tool[mcp]"))
+        _render_mcp_checks(checks)
+        return
+
+    # 2. Server module imports cleanly
+    try:
+        from recon_tool.server import mcp as server_mcp
+
+        checks.append(("Server module", True, "loaded"))
+    except Exception as exc:
+        checks.append(("Server module", False, f"import failed: {exc}"))
+        _render_mcp_checks(checks)
+        return
+
+    # 3. FastMCP has instructions
+    instructions = getattr(server_mcp, "instructions", None)
+    if instructions:
+        checks.append(("Server Instructions", True, f"{len(instructions)} chars"))
+    else:
+        checks.append(("Server Instructions", False, "missing — agents may misuse tools"))
+
+    # 4. Enumerate tools (via the internal tool manager)
+    try:
+        tool_mgr = server_mcp._tool_manager  # pyright: ignore[reportPrivateUsage]
+        tools = list(tool_mgr.list_tools())
+        if tools:
+            checks.append(("Tools enumerated", True, f"{len(tools)} tools registered"))
+        else:
+            checks.append(("Tools enumerated", False, "no tools registered"))
+    except Exception as exc:
+        checks.append(("Tools enumerated", False, f"{exc}"))
+
+    # 5. recon executable on PATH (important for GUI clients)
+    recon_path = shutil.which("recon")
+    if recon_path:
+        checks.append(("recon on PATH", True, recon_path))
+    else:
+        checks.append(("recon on PATH", False, "not found — GUI clients will fail"))
+
+    _render_mcp_checks(checks)
+
+    # Emit copy-pasteable config
+    cmd = recon_path if recon_path else "recon"
+    console.print()
+    console.print("  [bold]Copy-paste config for your AI client[/bold]")
+    console.print()
+    console.print("  [dim]# Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
+    console.print("  [dim]# Cursor: ~/.cursor/mcp.json or <project>/.cursor/mcp.json[/dim]")
+    console.print("  [dim]# VS Code + Copilot: <project>/.vscode/mcp.json[/dim]")
+    console.print("  [dim]# Windsurf: ~/.codeium/windsurf/mcp_config.json[/dim]")
+    console.print()
+    snippet = (
+        '  {\n'
+        '    "mcpServers": {\n'
+        '      "recon": {\n'
+        f'        "command": "{cmd}",\n'
+        '        "args": ["mcp"],\n'
+        '        "autoApprove": ["lookup_tenant", "analyze_posture",\n'
+        '                        "assess_exposure", "find_hardening_gaps"]\n'
+        '      }\n'
+        '    }\n'
+        '  }'
+    )
+    console.print(snippet)
+    console.print()
+    if not recon_path:
+        console.print(
+            "  [yellow]Tip:[/yellow] GUI clients (Claude Desktop, Windsurf) often don't\n"
+            "  inherit your shell PATH. If the client can't find `recon`, replace\n"
+            "  the command above with the absolute path printed by `which recon`\n"
+            f"  (or `python -m recon_tool.server` via `{sys.executable}`)."
+        )
+        console.print()
+
+
+def _render_mcp_checks(checks: list[tuple[str, bool, str]]) -> None:
+    """Render MCP check results with ok/FAIL labels."""
+    console = get_console()
+    for name, ok, detail in checks:
+        mark = "ok" if ok else "FAIL"
+        style = "green" if ok else "red"
+        console.print(f"  [{style}]{mark:>4}[/{style}]  {name} — {detail}")
 
 
 def _doctor_fix() -> None:

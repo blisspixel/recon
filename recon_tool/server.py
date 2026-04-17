@@ -36,7 +36,78 @@ if not logger.handlers:
 
 _VALID_FORMATS = frozenset({"text", "json", "markdown"})
 
-mcp = FastMCP("recon-tool")
+# Server Instructions — injected into the model's context each session so the
+# agent knows how to compose recon's tools without requiring the user to
+# explain. Keep this focused: what the server is, the passive-only invariant,
+# the tool composition patterns, and what the confidence levels mean. Avoid
+# duplicating individual tool docstrings — those speak for themselves.
+_SERVER_INSTRUCTIONS = """\
+recon is a passive domain-intelligence MCP server. It queries public DNS
+records, Microsoft/Google identity endpoints, and certificate-transparency
+logs. It performs zero active scanning, requires zero credentials, and never
+touches a target's own HTTP infrastructure.
+
+## When to use which tool
+
+- `lookup_tenant(domain)` — start here for any question about a domain. Returns
+  the full TenantInfo: company name, provider, tenant ID, auth type, email
+  security score, services, related domains, insights. Use `format="json"` for
+  structured output, `explain=True` for the provenance DAG.
+- `analyze_posture(domain)` — neutral configuration observations. Accepts a
+  `profile` argument (fintech, healthcare, saas-b2b, high-value-target,
+  public-sector, higher-ed) to apply a posture lens.
+- `assess_exposure(domain)` / `find_hardening_gaps(domain)` — defensive-review
+  framing with a posture score (0–100) and categorized gap list.
+- `compare_postures(domain_a, domain_b)` — side-by-side comparison for peer /
+  acquisition / vendor analysis.
+- `simulate_hardening(domain, fixes=[...])` — what-if: re-computes the posture
+  score with hypothetical fixes applied. Zero network calls (operates on cached
+  pipeline data).
+- `test_hypothesis(domain, hypothesis)` — test a theory ("this org is
+  mid-migration to Entra ID") against evidence. Returns likelihood + evidence.
+- `chain_lookup(domain, depth)` — recursively resolve related domains up to
+  depth 1–3. Good for portfolio / subsidiary surfacing.
+- `cluster_verification_tokens(domains=[...])` — batch-scope clustering that
+  surfaces hedged "possible relationship" signals from shared TXT tokens.
+
+## Composition patterns
+
+Typical agentic flow for a defensive review:
+1. `lookup_tenant(domain, explain=True)` — establish the baseline.
+2. `analyze_posture(domain)` with the relevant `profile` — posture lens.
+3. `find_hardening_gaps(domain)` — categorized gaps with severity.
+4. `simulate_hardening(domain, fixes=[...])` — quantify the improvement.
+
+For introspection / hypothesis work:
+- `get_fingerprints()` / `get_signals()` — inspect what the tool knows how to
+  detect.
+- `explain_signal(signal_name, domain)` — understand why a signal did or did
+  not fire for this domain.
+- `inject_ephemeral_fingerprint(...)` + `reevaluate_domain(domain)` — test new
+  detection patterns against cached DNS data without any network calls.
+
+## Invariants (important for agent behavior)
+
+- Passive only. No active scanning, no credentialed access. All tools are
+  read-only and idempotent. The server has a 120 s TTL cache and per-domain
+  rate limiting — repeated `lookup_tenant` calls for the same domain are cheap.
+- Output is hedged. Confidence levels: High (3+ corroborating sources),
+  Medium (2 sources, partial), Low (1 source or indirect). Insights marked
+  "(likely)" are inferences, not DNS-confirmed detections — treat them as
+  hypotheses the user can investigate, not verdicts.
+- The fingerprint database is rule-based and solo-maintained. A match means
+  "evidence fits this service's DNS signature", not "this service is in use".
+  Always flag uncertainty when confidence is Low.
+
+## Explaining results
+
+Prefer `explain=True` on `lookup_tenant` and `analyze_posture` when the user
+asks "why" or "how do you know". The returned `explanation_dag` carries
+`evidence → slug → rule → signal → insight` provenance and is the authoritative
+answer to traceability questions.
+"""
+
+mcp = FastMCP("recon-tool", instructions=_SERVER_INSTRUCTIONS)
 
 
 # ── Bounded TTL cache for resolved results ──────────────────────────────
