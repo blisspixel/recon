@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 
 import hypothesis.strategies as st
+import pytest
 from hypothesis import HealthCheck, given, settings
 
 from recon_tool.constants import (
@@ -670,6 +671,7 @@ class TestBannedTermsIntegration:
         'hardening' matching 'harden' — 'hardening' is the approved
         replacement vocabulary per the design doc.
         """
+        pytest.importorskip("mcp")
         from recon_tool.server import assess_exposure as ae
         from recon_tool.server import compare_postures as cp
         from recon_tool.server import find_hardening_gaps as fhg

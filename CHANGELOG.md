@@ -7,6 +7,110 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-04-16
+
+CT resilience + UX overhaul. Two themes: (1) when live CT providers
+both fail, a per-domain cache serves as fallback; (2) the default
+panel output is now tight enough for a CEO glance — zero redundancy
+between header, services, and insights.
+
+### Added
+
+- **Per-domain CT cache.** New `recon_tool/ct_cache.py` stores CT
+  provider results as JSON files in `~/.recon/ct-cache/{domain}.json`.
+  Seven-day default TTL, one file per domain, no aggregated store.
+  Successful provider queries automatically populate the cache.
+- **CT cache fallback.** When both crt.sh and CertSpotter are
+  degraded, the fallback chain now checks the per-domain CT cache
+  before returning an empty subdomain set. The panel shows "CT: from
+  local cache, N days old" so users know they're seeing cached data.
+- **Cache CLI commands.**
+  - `recon cache show [domain]` — inspect cache state for a domain
+    or list all cached domains with subdomain counts and age.
+  - `recon cache clear [domain]` — remove cache for a specific domain.
+  - `recon cache clear --all` — remove all cached CT data.
+- **Cache age in panel output.** When CT data comes from cache, the
+  Note section shows "CT: from local cache, N days old (M subdomains)"
+  in info tone (not warning) so it reads as a recovery event, not an
+  error.
+- **`ct_cache_age_days` field** in JSON output — `null` when data
+  comes from a live provider, integer when from cache.
+
+### Changed
+
+- **`_detect_cert_intel()` now caches on success.** Every successful
+  CT provider query writes to the per-domain cache, so future
+  degraded runs have fresh fallback data.
+- **Degraded-source rendering** updated to distinguish live fallback
+  ("CT fallback: crt.sh → certspotter") from cache fallback ("CT:
+  from local cache, 3 days old").
+- **UX overhaul — insight curation.** Aggressive dedup: 18
+  restatement prefixes dropped (insights that just re-list services
+  already visible in the categorized block). Default mode caps at 5
+  insights + email score; `--full` shows all. Vague labels like
+  "Complex Migration Window" and "Governance Sprawl" cut entirely.
+- **UX — Email row cleanup.** Protocol config (DKIM, DMARC, SPF,
+  MTA-STS, BIMI, TLS-RPT, Exchange Autodiscover) removed from the
+  default Email services row — the email security score insight
+  already covers these. Provider-line services (M365, Google
+  Workspace, gateway) also stripped from Email to eliminate
+  duplication. `--full` still shows everything.
+- **UX — no decorative color.** Section headers changed from
+  `bold cyan` to `bold`. Color reserved for functional meaning
+  (green=high confidence, yellow=warning) per modern CLI norms.
+- **UX — CT note suppressed.** Routine "CT fallback: crt.sh →
+  certspotter" notes suppressed in default output — infrastructure
+  plumbing that added noise on nearly every run. Cache fallback
+  and actual warnings still surface.
+- **Provider accuracy.** When Exchange Autodiscover AND an M365
+  tenant are both detected, the Provider line now reads "Microsoft
+  365 via [gateway]" instead of "Exchange Server (on-prem / hybrid)".
+  On-prem only leads when no M365 tenant is found (e.g. vatican.va).
+- **Bundled AI inference.** M365 presence → "Microsoft Copilot
+  (likely)" in Services > AI. Google Workspace → "Google Gemini
+  (likely)". Hedged with "(likely)" to distinguish from DNS-
+  confirmed detections like Anthropic.
+
+## [0.9.4] — 2026-04-16
+
+Infrastructure-only release. No feature changes. Toolchain and release
+hygiene to make the 1.0 stability commitment credible.
+
+### Added
+
+- **`SECURITY.md`** — vulnerability reporting policy at the repo root
+  (GitHub's standard location). Separate from the `docs/security.md`
+  threat model planned for 1.0.
+- **Pre-commit hooks** — `.pre-commit-config.yaml` with Ruff (lint +
+  format) and Pyright. Prevents bad code from reaching CI.
+- **`pip-audit` in CI** — dependency vulnerability scanning runs on
+  every PR and every release build.
+- **Coverage gate** — CI now fails if test coverage drops below 80%.
+  Current coverage: 87%.
+- **`uv.lock`** — reproducible builds via uv lockfile. Development
+  workflow uses `uv sync --extra dev`; end-user install instructions
+  (`pip install recon-tool`) are unchanged.
+
+### Changed
+
+- **MCP is now an optional extra.** `pip install recon-tool` no longer
+  pulls in the MCP dependency tree. Users who want the MCP server
+  install with `pip install recon-tool[mcp]`. The `recon mcp` command
+  gives a clear error message if MCP dependencies are missing. All MCP
+  tests gracefully skip when the `mcp` package is not installed.
+- **CI migrated from pip to uv.** Both `ci.yml` and `release.yml` now
+  use `astral-sh/setup-uv@v5` for faster, reproducible installs.
+- **Trusted Publisher on PyPI** — release pipeline already uses
+  OIDC-based publishing via `pypa/gh-action-pypi-publish`; no static
+  API tokens.
+
+### Developer notes
+
+- `pip install -e ".[dev]"` still works but `uv sync --extra dev` is
+  now the recommended development workflow.
+- Pre-commit can be activated with `pre-commit install` after cloning.
+- `pip-audit` is included in the `[dev]` extra for local use.
+
 ## [0.9.3] — 2026-04-15
 
 This release is the *Sparse-Target Amplification + UX Refinement* pass.

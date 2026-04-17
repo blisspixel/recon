@@ -7,6 +7,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+pytest.importorskip("mcp")
+
 from recon_tool.models import (
     ConfidenceLevel,
     ReconLookupError,

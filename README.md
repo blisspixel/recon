@@ -39,14 +39,15 @@ Insights
 
 > Examples use [Microsoft's fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam). Tenant IDs, services, and domains are fabricated. No real company is depicted.
 
-Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP server](docs/mcp.md) for AI agents.
+Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP server](docs/mcp.md) for AI agents (`pip install recon-tool[mcp]`).
 
 ## Install
 
 Requires Python 3.10+.
 
 ```bash
-pip install recon-tool                 # from PyPI
+pip install recon-tool                 # from PyPI (CLI only)
+pip install recon-tool[mcp]            # with MCP server support
 pip install -U recon-tool              # upgrade an existing install
 recon doctor                           # verify connectivity
 ```
@@ -95,10 +96,11 @@ See [docs/mcp.md](docs/mcp.md) for the full tool list, advanced agentic workflow
 ## Development
 
 ```bash
-pip install -e ".[dev]"
-pytest tests/                          # 1479 tests, 88% coverage
+pip install -e ".[dev]"               # or: uv sync --extra dev
+pytest tests/                          # 1504 tests, 87% coverage
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
+pre-commit install                     # activate pre-commit hooks
 ```
 
 ## License

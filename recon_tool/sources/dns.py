@@ -179,6 +179,7 @@ class _DetectionCtx:
         "raw_dns_records",
         "ct_provider_used",
         "ct_subdomain_count",
+        "ct_cache_age_days",
     )
 
     def __init__(self) -> None:
@@ -207,6 +208,8 @@ class _DetectionCtx:
         # pagination returned 87 entries". None until a provider succeeds.
         self.ct_provider_used: str | None = None
         self.ct_subdomain_count: int = 0
+        # v0.10: CT cache age in days when cached data used as fallback
+        self.ct_cache_age_days: int | None = None
 
     def add(self, svc_name: str, slug: str | None = None, source_type: str = "", raw_value: str = "") -> None:
         """Register a detected service, optionally with its slug and evidence.
@@ -1122,13 +1125,20 @@ async def _detect_srv(ctx: _DetectionCtx, domain: str) -> None:
 
 
 async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
-    """Try CrtshProvider, fall back to CertSpotterProvider, mark degraded if both fail.
+    """Try CrtshProvider, fall back to CertSpotterProvider, fall back to CT cache.
 
     On first successful provider, record the provider name and subdomain
     count on the context so the panel can surface which provider actually
     ran ("crt.sh (142 subdomains)" vs "certspotter (8 subdomains)"). This
     makes enrichment asymmetry between runs visible instead of silent.
+
+    When all live providers fail, the per-domain CT cache serves as a
+    final fallback — returning the last known subdomain set with an
+    explicit cache age annotation so the panel can show "from local
+    cache, N days old".
     """
+    from recon_tool.ct_cache import ct_cache_get, ct_cache_put
+
     providers: list[CertIntelProvider] = [CrtshProvider(), CertSpotterProvider()]
     for provider in providers:
         try:
@@ -1139,11 +1149,28 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
             ctx.ct_provider_used = provider.name
             ctx.ct_subdomain_count = len(subdomains)
             logger.debug("cert intel from %s for %s: %d subdomains", provider.name, domain, len(subdomains))
+            # Cache successful result for future fallback
+            ct_cache_put(domain, subdomains, cert_summary, provider.name)
             return
         except Exception as exc:
             logger.debug("cert intel provider %s failed for %s: %s", provider.name, domain, exc)
             ctx.degraded_sources.add(provider.name)
-    # Both failed — all provider names already in degraded_sources
+
+    # All live providers failed — try per-domain CT cache as final fallback
+    cached = ct_cache_get(domain)
+    if cached is not None and cached.subdomains:
+        ctx.related_domains.update(cached.subdomains)
+        if cached.cert_summary is not None:
+            ctx.cert_summary = cached.cert_summary
+        ctx.ct_provider_used = f"{cached.provider_used} (cached)"
+        ctx.ct_subdomain_count = len(cached.subdomains)
+        ctx.ct_cache_age_days = cached.age_days
+        logger.debug(
+            "cert intel from CT cache for %s: %d subdomains, %d days old",
+            domain,
+            len(cached.subdomains),
+            cached.age_days,
+        )
 
 
 # ── Common subdomain probing ───────────────────────────────────────────
@@ -1486,6 +1513,7 @@ class DNSSource:
                 dmarc_pct=ctx.dmarc_pct,
                 ct_provider_used=ctx.ct_provider_used,
                 ct_subdomain_count=ctx.ct_subdomain_count,
+                ct_cache_age_days=ctx.ct_cache_age_days,
                 raw_dns_records=tuple(
                     (rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals
                 ),
@@ -1505,6 +1533,7 @@ class DNSSource:
             dmarc_pct=ctx.dmarc_pct,
             ct_provider_used=ctx.ct_provider_used,
             ct_subdomain_count=ctx.ct_subdomain_count,
+            ct_cache_age_days=ctx.ct_cache_age_days,
             raw_dns_records=tuple((rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals),
         )
 

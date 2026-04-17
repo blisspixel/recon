@@ -591,13 +591,21 @@ def detect_provider(
     # but the tool was labelling it "Google Workspace".
     slug_set_early = set(slugs)
     if "exchange-onprem" in slug_set_early and not primary_email_provider:
+        if "microsoft365" in slug_set_early:
+            # Exchange autodiscover + M365 tenant = Microsoft 365 (cloud
+            # or hybrid). M365 is the platform; autodiscover is just an
+            # endpoint. Don't lead with "Exchange Server (on-prem)".
+            primary_segment = "Microsoft 365"
+            if email_gateway:
+                primary_segment = f"{primary_segment} via {email_gateway} gateway"
+            segments = [primary_segment]
+            if "google-workspace" in slug_set_early:
+                segments.append("Google Workspace (account detected)")
+            return " + ".join(segments)
+        # Genuinely on-prem Exchange — no M365 tenant found
         other_accounts: list[str] = []
-        for slug, name in [
-            ("microsoft365", "Microsoft 365"),
-            ("google-workspace", "Google Workspace"),
-        ]:
-            if slug in slug_set_early:
-                other_accounts.append(name)
+        if "google-workspace" in slug_set_early:
+            other_accounts.append("Google Workspace")
         primary_segment = "Exchange Server (on-prem / hybrid)"
         if email_gateway:
             primary_segment = f"{primary_segment} behind {email_gateway} gateway"
@@ -960,6 +968,18 @@ def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:
         consolidated = f"CAA: {count} issuer{'s' if count != 1 else ''} restricted"
         by_cat["Security"] = non_caa + [consolidated]
 
+    # v0.10: infer bundled AI services from platform presence.
+    # Copilot is bundled into M365, Gemini into Google Workspace.
+    # These have no DNS fingerprint — they're invisible to passive
+    # detection. But if the platform is present, the AI tool is
+    # likely available. Hedge with "(likely)" to distinguish from
+    # DNS-confirmed detections like Anthropic.
+    ai_names = {n.lower() for n in by_cat.get("AI", [])}
+    if "microsoft365" in info.slugs and "microsoft copilot" not in ai_names:
+        by_cat.setdefault("AI", []).append("Microsoft Copilot (likely)")
+    if "google-workspace" in info.slugs and "google gemini" not in ai_names:
+        by_cat.setdefault("AI", []).append("Google Gemini (likely)")
+
     return {c: svcs for c in _SERVICE_CATEGORIES_ORDER if (svcs := by_cat.get(c))}
 
 
@@ -1215,11 +1235,36 @@ def render_tenant_panel(
     if info.services:
         _spacer()
         svc_block = Text()
-        svc_block.append("Services", style="bold cyan")
+        svc_block.append("Services", style="bold")
         svc_block.append("\n")
         categorized = _categorize_services(info)
-        # Compute the widest category label actually rendered to keep
-        # alignment tight when only a subset of categories fire.
+        # v0.10: in default mode, strip noise from Email row.
+        # (1) Protocol/config entries (DKIM, DMARC, SPF, etc.) — the
+        #     email security score insight already covers these.
+        # (2) Provider-line services (Exchange, M365, Google Workspace,
+        #     gateway) — already in the header. Repeating them in Email
+        #     is saying the same thing twice.
+        # In --full mode, show everything.
+        if not verbose and "Email" in categorized:
+            _email_noise = {
+                "DKIM", "DKIM (Exchange Online)", "DMARC", "MTA-STS",
+                "BIMI", "TLS-RPT", "Exchange Autodiscover",
+                "Microsoft 365", "Google Workspace",
+                "Exchange Server (on-prem / hybrid)",
+            }
+            # Also strip the gateway — already in Provider line
+            _gateway_names = {
+                "Proofpoint", "Trend Micro Email Security",
+                "Mimecast", "Barracuda Email Security",
+            }
+            _all_noise = _email_noise | _gateway_names
+            categorized["Email"] = [
+                s for s in categorized["Email"]
+                if s not in _all_noise
+                and not s.startswith("SPF")
+            ]
+            if not categorized["Email"]:
+                del categorized["Email"]
         max_width = _CATEGORY_WIDTH
         for cat, svcs in categorized.items():
             svc_block.append("  ")
@@ -1240,7 +1285,7 @@ def render_tenant_panel(
         if picked:
             _spacer()
             rel = Text()
-            rel.append("High-signal related domains", style="bold cyan")
+            rel.append("High-signal related domains", style="bold")
             rel.append("\n")
             rel.append("  ")
             # Render as wrapped comma-list within the panel width
@@ -1262,7 +1307,7 @@ def render_tenant_panel(
     if show_domains and info.tenant_domains:
         _spacer()
         dom = Text()
-        dom.append(f"Domains ({info.domain_count})", style="bold cyan")
+        dom.append(f"Domains ({info.domain_count})", style="bold")
         dom.append("\n")
         for d in info.tenant_domains:
             dom.append(f"  {d}\n", style="dim")
@@ -1272,7 +1317,7 @@ def render_tenant_panel(
     if show_domains and info.related_domains:
         _spacer()
         rel = Text()
-        rel.append("Related domains", style="bold cyan")
+        rel.append("Related domains", style="bold")
         rel.append("\n")
         rel.append("  ")
         joined = ", ".join(info.related_domains)
@@ -1284,26 +1329,50 @@ def render_tenant_panel(
 
     # ── Insights (curated) ────────────────────────────────────────
     if info.insights:
-        # Spacer is added conditionally inside the block after
-        # curation so empty insight sections don't leave a gap.
-        # Filter: drop repetitive / low-signal entries that the old
-        # panel dumped verbatim. Kept: anything with a "Label: value"
-        # shape (signal fires), hardening observations, sovereignty
-        # hints, email-security scores, and topology notes. Dropped:
-        # generic security-stack laundry lists that already appear
-        # in the Services block.
         curated: list[str] = _curate_insights(info.insights, info.services, info.slugs)
         if curated:
             _spacer()
             ins = Text()
-            ins.append("Insights", style="bold cyan")
+            ins.append("Insights", style="bold")
             ins.append("\n")
             max_width = _PANEL_WIDTH - 2
-            for insight in curated:
+
+            # Promote the email security score to first position (bold).
+            score_line: str | None = None
+            other_insights: list[str] = []
+            for c in curated:
+                if c.startswith("Email security ") and score_line is None:
+                    score_line = c
+                else:
+                    other_insights.append(c)
+
+            if score_line is not None:
+                for j, line in enumerate(_wrap_text(score_line, max_width)):
+                    ins.append("  " if j == 0 else "\n  ")
+                    ins.append(line, style="bold")
+                ins.append("\n")
+
+            # Cap at 5 insights in default mode; --full/--verbose shows all
+            display_insights = other_insights
+            overflow_count = 0
+            if not verbose and len(other_insights) > 5:
+                display_insights = other_insights[:5]
+                overflow_count = len(other_insights) - 5
+
+            for insight in display_insights:
                 for j, line in enumerate(_wrap_text(insight, max_width)):
                     ins.append("  " if j == 0 else "\n  ")
                     ins.append(line, style="dim")
                 ins.append("\n")
+
+            if overflow_count > 0:
+                ins.append("  ")
+                ins.append(
+                    f"{overflow_count} more — use --full to see all",
+                    style="dim italic",
+                )
+                ins.append("\n")
+
             blocks.append(ins)
 
     # ── Certificate summary (only with --verbose or --full) ───────
@@ -1312,7 +1381,7 @@ def render_tenant_panel(
         cs = info.cert_summary
         issuer_list = ", ".join(cs.top_issuers) if cs.top_issuers else "unknown"
         certs = Text()
-        certs.append("Certs", style="bold cyan")
+        certs.append("Certs", style="bold")
         certs.append("\n  ")
         certs.append(
             f"{cs.cert_count} total, {cs.issuance_velocity} in last 90d, "
@@ -1349,6 +1418,7 @@ def render_tenant_panel(
             bool(ct_in_degraded) and info.ct_provider_used is not None
         )
         ct_fallback_failed = bool(ct_in_degraded) and info.ct_provider_used is None
+        ct_from_cache = info.ct_cache_age_days is not None
         # v0.9.3 refinement: suppress the "CT fallback: … → … (0
         # subdomains)" line entirely. When the fallback succeeded
         # but returned zero subdomains, the outcome is identical
@@ -1377,12 +1447,17 @@ def render_tenant_panel(
             note_parts.append(
                 f"All CT providers unavailable ({', '.join(ct_in_degraded)})"
             )
-        elif ct_fallback_informative:
+        elif ct_from_cache and ct_fallback_informative:
+            # Cache fallback is worth surfacing — the user is seeing stale data
+            age = info.ct_cache_age_days
+            age_str = "today" if age == 0 else f"{age} day{'s' if age != 1 else ''} old"
             note_parts.append(
-                f"CT fallback: {', '.join(ct_in_degraded)} → "
-                f"{info.ct_provider_used} "
+                f"CT: from local cache, {age_str} "
                 f"({info.ct_subdomain_count} subdomains)"
             )
+        # Suppress routine CT fallback notes (crt.sh → certspotter) —
+        # infrastructure plumbing that adds noise on nearly every run.
+        # CT provenance is always available in --json output.
 
         if note_parts:
             _spacer()
@@ -1400,7 +1475,7 @@ def render_tenant_panel(
     if verbose:
         _spacer()
         v = Text()
-        v.append("Evidence Detail", style="bold cyan")
+        v.append("Evidence Detail", style="bold")
         v.append("\n")
         v.append(
             f"  Evidence confidence:  {info.evidence_confidence.value.capitalize()}\n",
@@ -1424,7 +1499,7 @@ def render_tenant_panel(
     if explain and info.merge_conflicts and info.merge_conflicts.has_conflicts:
         _spacer()
         conf_block = Text()
-        conf_block.append("Conflicts", style="bold cyan")
+        conf_block.append("Conflicts", style="bold")
         conf_block.append("\n")
         for field_name in ("display_name", "auth_type", "region", "tenant_id", "dmarc_policy"):
             ann = render_conflict_annotation(field_name, info.merge_conflicts, verbose=verbose)
@@ -1481,13 +1556,50 @@ def _curate_insights(
         "PKI:",
         "Google Workspace modules:",  # module list also belongs in Services
     )
+    # v0.10: aggressively drop insights that restate what the Services
+    # block or header already shows. These follow a "Label: slug1, slug2"
+    # pattern where the slugs are visible in the categorized Services
+    # section. They add zero interpretation — just a differently-worded
+    # service list. Keep insights that synthesize (scores, topology,
+    # tier inference, migration patterns, security observations).
+    restatement_prefixes = (
+        # These all follow the "Label: slug1, slug2" pattern where the
+        # slugs are already visible in the categorized Services section.
+        # They add zero interpretation — just a differently-worded list.
+        "Multi-Cloud:",
+        "Dev & Engineering Heavy:",
+        "Heavy Outbound Stack:",
+        "Modern Collaboration:",
+        "Shadow IT Risk:",
+        "Google Cloud Investment:",
+        "Google-Native Identity:",
+        "Dual provider:",
+        "Dual Email Provider:",
+        "Dual Email Delivery Path:",
+        "Google MTA-STS Enforcing:",
+        "AI Platform Diversity:",
+        "AI Adoption:",  # bare form; "Without Governance" variant kept (security context)
+        "Enterprise Security Stack:",
+        "Digital Transformation:",
+        "Email gateway:",  # already in Provider line
+        "Email Gateway Topology:",
+        "Email delivery path:",
+        "Secondary Email Provider Observed:",
+        "Agentic AI Infrastructure \u2014 Missing Counterparts:",  # vendor recommendations are presumptuous
+        "AI Adoption \u2014 Missing Counterparts:",
+        "Agentic AI Infrastructure — Missing Counterparts:",
+        "AI Adoption — Missing Counterparts:",
+    )
     curated: list[str] = []
     for line in insights:
         if any(line.startswith(pfx) for pfx in drop_prefixes):
             continue
+        if any(line.startswith(pfx) for pfx in restatement_prefixes):
+            continue
         lower = line.lower()
         if "mid-size organization" in lower or "domains in tenant" in lower:
-            # Low-signal sizing hint
+            continue
+        if lower in ("governance sprawl", "complex migration window"):
             continue
         curated.append(line)
 
@@ -1728,6 +1840,7 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "dmarc_pct": info.dmarc_pct,
         "ct_provider_used": info.ct_provider_used,
         "ct_subdomain_count": info.ct_subdomain_count,
+        "ct_cache_age_days": info.ct_cache_age_days,
         # v0.9.3: sovereignty + lexical fields
         "cloud_instance": info.cloud_instance,
         "tenant_region_sub_scope": info.tenant_region_sub_scope,

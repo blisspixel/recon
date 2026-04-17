@@ -213,6 +213,8 @@ class TestRenderTenantPanelEdgeCases:
         assert "Note:" not in out
 
     def test_degraded_plus_ct_provider_fallback(self) -> None:
+        """v0.10: routine CT fallback notes are suppressed in panel output.
+        CT provenance is still available in --json."""
         _, buf = _make_console()
         info = _minimal_info(
             services=("DMARC",),
@@ -223,9 +225,8 @@ class TestRenderTenantPanelEdgeCases:
         from recon_tool.formatter import get_console
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
-        assert "crt.sh" in out
-        assert "certspotter" in out
-        assert "87" in out
+        # Routine CT fallback is suppressed — infrastructure noise
+        assert "Note" not in out
 
     def test_related_domains_truncation(self) -> None:
         """v0.9.3: more than 8 related domains shows a compact

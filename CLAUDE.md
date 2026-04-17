@@ -18,6 +18,10 @@ recon northwindtraders.com --profile fintech   # apply a posture lens
 recon batch domains.txt --json          # batch mode (cross-domain token clustering)
 recon doctor                            # connectivity check
 recon mcp                               # start MCP server (stdio)
+recon cache show                        # list all cached CT data
+recon cache show contoso.com            # inspect cache for a domain
+recon cache clear contoso.com           # clear cache for a domain
+recon cache clear --all                 # clear all CT cache
 ```
 
 ## Project structure
@@ -36,12 +40,13 @@ recon mcp                               # start MCP server (stdio)
   - `merger.py` — result merging, confidence scoring
   - `explanation.py` — explanation records + JSON-serializable provenance DAG
   - `formatter.py` — Rich terminal output (v0.9.3 redesigned panel), JSON, markdown
-  - `server.py` — MCP server (FastMCP, stdio transport), with startup banner
+  - `ct_cache.py` — per-domain CT subdomain cache (`~/.recon/ct-cache/`, 7-day TTL)
+  - `server.py` — MCP server (FastMCP, stdio transport), requires `pip install recon-tool[mcp]`
   - `http.py` — SSRF-safe HTTP client with retry/backoff
   - `retry.py` — transient-failure retry decorator for sources
   - `validator.py` — domain input validation
   - `models.py` — frozen dataclasses (TenantInfo, SourceResult, Signal, …)
-- `tests/` — 1479 tests, pytest + hypothesis
+- `tests/` — 1504 tests, pytest + hypothesis
 - `data/fingerprints.yaml` — 227 SaaS fingerprints
 - `data/profiles/` — 6 built-in posture profiles (fintech, healthcare, saas-b2b, high-value-target, public-sector, higher-ed)
 - `data/signals.yaml` — 4-layer signal definitions (45 signals, two-pass + absence + positive-when-absent evaluation)
@@ -49,8 +54,9 @@ recon mcp                               # start MCP server (stdio)
 ## Development
 
 ```bash
-pip install -e ".[dev]"
-pytest tests/                    # run tests
+uv sync --extra dev              # or: pip install -e ".[dev]"
+pre-commit install               # activate pre-commit hooks
+pytest tests/                    # run tests (coverage must stay >=80%)
 ruff check recon_tool/           # lint
 pyright recon_tool/              # type check
 ```

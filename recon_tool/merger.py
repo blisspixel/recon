@@ -820,10 +820,12 @@ def merge_results(
     # Propagate CT provider attribution from any source (v0.9.2)
     ct_provider_used: str | None = None
     ct_subdomain_count: int = 0
+    ct_cache_age_days: int | None = None
     for result in results:
         if result.ct_provider_used:
             ct_provider_used = result.ct_provider_used
             ct_subdomain_count = result.ct_subdomain_count
+            ct_cache_age_days = result.ct_cache_age_days
             break
 
     # v0.9.3: propagate OIDC tenant metadata (first non-None wins).
@@ -971,6 +973,7 @@ def merge_results(
         likely_primary_email_provider=likely_primary_email_provider,
         ct_provider_used=ct_provider_used,
         ct_subdomain_count=ct_subdomain_count,
+        ct_cache_age_days=ct_cache_age_days,
         cloud_instance=cloud_instance,
         tenant_region_sub_scope=tenant_region_sub_scope,
         msgraph_host=msgraph_host,

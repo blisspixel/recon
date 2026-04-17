@@ -17,6 +17,9 @@ from dataclasses import replace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
+pytest.importorskip("mcp")
+
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
