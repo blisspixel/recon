@@ -109,3 +109,23 @@ Agent: "Now re-evaluate contoso.com to see if they use Fabrikam Platform."
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
 | Cursor | `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally |
 | VS Code + Copilot | `.vscode/mcp.json` in your project |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json` |
+
+### PATH gotcha for GUI clients
+
+GUI MCP clients (Claude Desktop, Windsurf) typically don't inherit your shell's PATH. If a client can't find `recon`, replace `"command": "recon"` with the absolute path (run `which recon` / `where recon` to find it), or use the Python module form:
+
+```json
+{
+  "mcpServers": {
+    "recon": {
+      "command": "/absolute/path/to/python",
+      "args": ["-m", "recon_tool.server"]
+    }
+  }
+}
+```
+
+### Verify your setup
+
+Run `recon doctor --mcp` to confirm the MCP dependencies are installed, the server loads, all tools enumerate, and `recon` is on your PATH. The output includes a copy-pasteable JSON snippet for every supported client.

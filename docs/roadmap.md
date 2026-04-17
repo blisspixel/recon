@@ -31,7 +31,8 @@ features. A feature that compromises reliability waits.
 
 ```
 v0.9.3 (shipped) → v0.9.4 (shipped) → v0.10 (shipped) →
-v0.10.1 (shipped) → v0.10.2 (shipped) → v0.10.3 → v0.11 → v1.0
+v0.10.1 (shipped) → v0.10.2 (shipped) → v0.10.3 (shipped) →
+v0.11 → v1.0
 ```
 
 Each release is independently shippable. The sequence is priority
@@ -238,7 +239,7 @@ store.
 
 ---
 
-### v0.10.3 — MCP agent ergonomics
+### v0.10.3 — MCP agent ergonomics (shipped 2026-04-17)
 
 MCP is how AI agents actually use recon. v0.10.3 makes the server
 self-documenting so agents call tools correctly without prompt

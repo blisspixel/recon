@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.3] — 2026-04-17
+
+MCP agent ergonomics. The server now self-documents so AI clients
+call tools correctly without prompt babysitting. All changes stay
+inside the local-stdio-only invariant — no HTTP transport, no
+hosted mode, no server mode.
+
+### Added
+
+- **Rich Server Instructions.** FastMCP is now initialized with a
+  3400-character instructions block that injects a user manual
+  into the model's context every session. Covers: when to use
+  which tool, composition patterns (`lookup_tenant` → `analyze_posture`
+  → `simulate_hardening`), the passive-only invariant, confidence
+  semantics, and when to use `explain=True`.
+- **`recon doctor --mcp`** flag. Validates the MCP server setup:
+  mcp package installed, server module imports cleanly, Server
+  Instructions present, tools enumerate, `recon` on PATH. Emits
+  copy-pasteable JSON config for Claude Desktop, Cursor, VS Code +
+  Copilot, and Windsurf.
+- **Windsurf config** documented in `docs/mcp.md`
+  (`~/.codeium/windsurf/mcp_config.json`).
+- **PATH gotcha note** for GUI MCP clients (Claude Desktop,
+  Windsurf) that don't inherit the shell PATH. Includes the
+  `python -m recon_tool.server` fallback pattern.
+
+### Changed
+
+- No behavior change in the MCP tools themselves. Just better
+  agent ergonomics on top of the existing surface.
+
 ## [0.10.2] — 2026-04-17
 
 Passive coverage depth. Three targeted expansions to detection
