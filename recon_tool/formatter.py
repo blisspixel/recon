@@ -1875,6 +1875,7 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "msgraph_host": info.msgraph_host,
         "lexical_observations": list(info.lexical_observations),
     }
+    # v1.0 schema contract: always present (null when unavailable).
     if info.cert_summary is not None:
         d["cert_summary"] = {
             "cert_count": info.cert_summary.cert_count,
@@ -1884,6 +1885,8 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
             "oldest_cert_age_days": info.cert_summary.oldest_cert_age_days,
             "top_issuers": list(info.cert_summary.top_issuers),
         }
+    else:
+        d["cert_summary"] = None
     if info.bimi_identity is not None:
         d["bimi_identity"] = {
             "organization": info.bimi_identity.organization,
@@ -1892,6 +1895,8 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
             "locality": info.bimi_identity.locality,
             "trademark": info.bimi_identity.trademark,
         }
+    else:
+        d["bimi_identity"] = None
     if info.evidence:
         d["evidence"] = [
             {
@@ -1902,8 +1907,8 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
             }
             for ev in info.evidence
         ]
-    if info.detection_scores:
-        d["detection_scores"] = {slug: score for slug, score in info.detection_scores}
+    # v1.0 schema contract: always present (empty dict when no detections).
+    d["detection_scores"] = {slug: score for slug, score in info.detection_scores}
     return d
 
 

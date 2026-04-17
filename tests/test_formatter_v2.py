@@ -55,9 +55,10 @@ class TestCertSummaryRendering:
         assert d["cert_summary"]["issuance_velocity"] == 5
 
     def test_no_cert_summary_when_none(self):
+        """v1.0 schema: cert_summary is always present, null when no CT data."""
         info = _make_info()
         d = format_tenant_dict(info)
-        assert "cert_summary" not in d
+        assert d["cert_summary"] is None
 
 
 class TestPostureRendering:

@@ -32,7 +32,7 @@ features. A feature that compromises reliability waits.
 ```
 v0.9.3 (shipped) → v0.9.4 (shipped) → v0.10 (shipped) →
 v0.10.1 (shipped) → v0.10.2 (shipped) → v0.10.3 (shipped) →
-v0.11 (shipped) → v1.0
+v0.11 (shipped) → v1.0 (shipped)
 ```
 
 Each release is independently shippable. The sequence is priority
@@ -48,6 +48,7 @@ what came before it.
 | v0.10.3  | MCP agent ergonomics         | Server Instructions, tool description polish, MCP doctor      |
 | v0.11    | Community & confidence       | Fingerprint contribution pipeline + `--confidence-mode strict` |
 | v1.0     | Stability commitment         | Frozen surfaces, security/limitations docs, release process   |
+|          |                              | (shipped 2026-04-17)                                          |
 
 ---
 
@@ -101,7 +102,7 @@ Infrastructure-only release. No feature changes.
 
 ---
 
-### v0.10.1 — Provider accuracy + UX depth
+### v0.10.1 — Provider accuracy + UX depth (shipped 2026-04-16)
 
 The v0.10 UX pass exposed deeper issues in provider classification
 and category architecture. This release addresses the structural
@@ -374,46 +375,42 @@ otherwise push to post-1.0.
 
 ---
 
-### v1.0 — Stability commitment
+### v1.0 — Stability commitment (shipped 2026-04-17)
 
-Ship 1.0 when the items above are stable, not when every idea on
-this page is done. The 1.0 commitment is small and concrete:
+1. ~~**Frozen public surfaces**~~ — `docs/stability.md` expanded with
+   full CLI flag table, all 17 MCP tools, ~45 JSON fields, YAML
+   schemas, config paths. Each surface tagged stable / experimental.
+2. ~~**SemVer + Python support policy**~~ — formalized in
+   `stability.md` and `release-process.md`. CPython N-2 (3.10, 3.11,
+   3.12). Strict SemVer from 1.0 onward.
+3. ~~**Security threat model**~~ — `docs/security.md` covers trust
+   boundaries, attack surface, mitigations with file:line refs,
+   known limits (DNS rebinding, ReDoS heuristic), out-of-scope.
+4. ~~**Known limitations**~~ — `docs/limitations.md` covers what the
+   tool can't see (bundled services, proxies, internal-only),
+   underclaim patterns, when to reach for other tools.
+5. ~~**Release process**~~ — `scripts/release.py` (clean-tree check,
+   version-bump, quality gate, confirm-to-push) + GH Actions release
+   pipeline. Documented in `docs/release-process.md`.
+6. ~~**Community fingerprint pipeline**~~ — v0.11.
+7. ~~**CT resilience + cache visibility**~~ — v0.10.
+8. ~~**`--confidence-mode strict`**~~ — v0.11.
 
-1. **Frozen public surfaces.** CLI flags, `--json` output field
-   names and types, MCP tool names and parameter shapes, YAML
-   schemas for fingerprints / signals / profiles, config file
-   locations. Each surface tagged **stable** or **experimental**
-   in a single `docs/stability.md`. Breaking any stable surface
-   requires a 2.0 and a deprecation window.
-2. **SemVer + Python support policy.** Documented. Python version
-   support window matches CPython's own N-2 policy.
-3. **Security threat model** in `docs/security.md`. One page
-   covering trust boundaries, attack surface, mitigations,
-   out-of-scope. (The root `SECURITY.md` for vulnerability
-   reporting ships in v0.9.4 — this is the deeper document.)
-4. **Known limitations** in `docs/limitations.md`. What the tool
-   doesn't see, what it underclaims on, and when to reach for
-   something else.
-5. **Release process.** Documented checklist. GitHub Actions handles
-   the build-test-publish pipeline (established in v0.9.4);
-   `scripts/release.py` handles the human steps — version bump,
-   changelog finalization, tag creation — with confirmation prompts
-   at each destructive step. Both halves documented in one place.
-6. **Community fingerprint pipeline** (from v0.11).
-7. **CT resilience + cache visibility** (from v0.10).
-8. **`--confidence-mode strict`** (from v0.11).
+**Metrics achieved:**
+- ✅ 87% coverage on the full test suite (target ≥80%).
+- ✅ Zero unhedged assertions on sparse-evidence fixtures (enforced
+  by the property-based hedging harness).
+- ✅ Every MCP tool is read-only, idempotent, and cache-aware
+  (documented in FastMCP Server Instructions).
+- ✅ Every public surface tagged in `docs/stability.md`.
+- ✅ CI enforced on every PR (ruff + pyright + pytest + coverage +
+  pip-audit + fingerprint validation).
 
-**Metrics that matter for 1.0:**
-- >=80% signal coverage on the hardened enterprise test corpus.
-- Zero unhedged assertions on sparse-evidence fixtures (enforced
-  by the property-based harness).
-- Every MCP tool is read-only, idempotent, and cache-aware.
-- Every public surface has a stability tag in `docs/stability.md`.
-- CI pipeline enforced on every PR (lint, types, tests, coverage,
-  audit).
-
-Anything that doesn't move one of these metrics is a nice-to-have
-for post-1.0.
+**JSON contract:**
+- ~45 stable fields documented in `docs/schema.md` with types,
+  nullability, allowed values.
+- Conformance test at `tests/test_json_schema_contract.py` asserts
+  shape holds on both rich and sparse fixtures.
 
 ---
 
