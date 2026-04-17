@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.2] — 2026-04-17
+
+Passive coverage depth. Three targeted expansions to detection
+coverage and run-over-run intelligence, all staying inside the
+passive / zero-creds / per-domain-storage invariants.
+
+### Added
+
+- **Medium-tier subdomain enrichment.** New `medium_subdomain_lookup`
+  in `sources/dns.py` adds MX + DKIM probing on top of the lightweight
+  CNAME + TXT tier for the highest-signal subdomain prefixes (`auth`,
+  `sso`, `login`, `idp`, `api`, `mail`). Catches SaaS and email tenants
+  that publish verification records on subdomains distinct from the
+  apex. Capped at 6 subdomains per lookup to stay within the DNS budget.
+- **`recon delta <domain>`** CLI command. Reads the previous cached
+  `TenantInfo` from `~/.recon/cache/`, runs a fresh lookup, diffs
+  services / slugs / auth / DMARC / confidence / email-security-score,
+  and updates the cache with the new snapshot. No manual export file
+  required. The existing `--compare previous.json` flag still works
+  for explicit baselines.
+- **Chained fingerprint pattern documentation.** Added a `match_mode: all`
+  section to `docs/fingerprints.md` explaining how to require multiple
+  detections (across record types) before a fingerprint fires.
+  Infrastructure has been in place since earlier versions; now documented
+  for contributors.
+
+### Changed
+
+- **Resolver enrichment pipeline.** `_enrich_from_related` now splits
+  capped subdomains into medium-tier (top-signal prefixes, MX + DKIM)
+  and lightweight (everything else, CNAME + TXT only). Separate domains
+  continue to get the full DNS lookup.
+
+### Roadmap
+
+- Added **v0.10.3 — MCP agent ergonomics** (Server Instructions, tool
+  docstring polish, `recon doctor --mcp`).
+
 ## [0.10.1] — 2026-04-16
 
 Provider accuracy + UX depth. Follow-up to v0.10 that addresses

@@ -21,6 +21,39 @@ fingerprints:
         description: Internal SSO portal CNAME delegation
 ```
 
+## Chained Patterns (`match_mode: all`)
+
+By default, a fingerprint fires when **any** of its detections matches. For high-confidence attribution where a single record could be a false positive, use `match_mode: all` — the fingerprint only fires when **every** listed detection matches.
+
+```yaml
+fingerprints:
+  - name: Corp Okta Tenant
+    slug: corp-okta-confirmed
+    category: Identity & Access
+    confidence: high
+    match_mode: all               # ALL detections must match
+    detections:
+      - type: cname
+        pattern: "okta\\.com$"
+        description: Okta SaaS CNAME
+      - type: txt
+        pattern: "^okta-verification="
+        description: Okta domain verification TXT
+```
+
+**When to use chained patterns:**
+
+- A single detection has a known false-positive pattern (e.g., a TXT token that shows up on dormant accounts).
+- You want to require proof of both ownership (verification token) *and* active routing (MX/CNAME) before attributing the service.
+- A pattern is too generic alone but diagnostic when combined with another record type.
+
+**When NOT to use chained patterns:**
+
+- A single unique TXT token (e.g., a service-specific prefix that no other service uses) is already diagnostic.
+- Adding an `all` constraint would reject legitimate detections on domains that only have partial evidence (e.g., a registered M365 tenant without DKIM).
+
+Chained patterns can cross record types — a `txt` + `cname` + `mx` combination is valid and only fires when all three records match on the same domain.
+
 ## Detection Types
 
 | Type | What it queries | Matching | Best for |

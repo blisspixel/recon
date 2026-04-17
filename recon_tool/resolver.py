@@ -117,9 +117,17 @@ async def _enrich_from_related(
 
     Caps at MAX_RELATED_ENRICHMENTS total to prevent runaway lookups.
     """
-    from recon_tool.sources.dns import DNSSource, lightweight_subdomain_lookup
+    from recon_tool.sources.dns import DNSSource, lightweight_subdomain_lookup, medium_subdomain_lookup
 
     MAX_RELATED_ENRICHMENTS = 25
+    # v0.10.2: top-signal subdomain prefixes get deeper DNS enrichment
+    # (adds MX + DKIM probing). Capped small so we don't blow the DNS
+    # budget — only the prefixes most likely to publish their own
+    # verification records distinct from the apex.
+    _MEDIUM_TIER_PREFIXES: frozenset[str] = frozenset({
+        "auth", "sso", "login", "idp", "api", "mail",
+    })
+    MAX_MEDIUM_TIER = 6
 
     # Filter to actionable related domains (skip onmicrosoft — they're just
     # the tenant's internal M365 domain with no SaaS verification records)
@@ -200,10 +208,23 @@ async def _enrich_from_related(
         ", ".join((capped_subs + capped_separate)[:5]) + ("..." if len(capped_subs) + len(capped_separate) > 5 else ""),
     )
 
-    # Run both tiers concurrently
+    # v0.10.2: split capped subdomains into medium-tier (MX + DKIM) and
+    # lightweight (CNAME + TXT only). Medium tier gets the top-signal
+    # prefixes most likely to publish their own verification records.
+    def _is_medium_tier(name: str) -> bool:
+        prefix = name.split(f".{base_domain}", 1)[0] if base_domain else name
+        head = prefix.split(".")[0].split("-")[0]
+        return head in _MEDIUM_TIER_PREFIXES
+
+    medium_subs = [s for s in capped_subs if _is_medium_tier(s)][:MAX_MEDIUM_TIER]
+    medium_set = set(medium_subs)
+    lightweight_subs = [s for s in capped_subs if s not in medium_set]
+
+    # Run all tiers concurrently
     dns_source = DNSSource()
     all_tasks = [
-        *(lightweight_subdomain_lookup(d) for d in capped_subs),
+        *(medium_subdomain_lookup(d) for d in medium_subs),
+        *(lightweight_subdomain_lookup(d) for d in lightweight_subs),
         *(_safe_lookup(dns_source, d) for d in capped_separate),
     ]
     related_results = await asyncio.gather(*all_tasks)

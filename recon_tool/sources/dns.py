@@ -1491,6 +1491,35 @@ async def lightweight_subdomain_lookup(subdomain: str) -> SourceResult:
     )
 
 
+async def medium_subdomain_lookup(subdomain: str) -> SourceResult:
+    """Extended subdomain probe for top-signal prefixes.
+
+    Adds MX + DKIM probing on top of the lightweight CNAME + TXT. Used for
+    the handful of subdomains that are most likely to publish their own
+    email / SaaS verification records distinct from the apex: `auth.*`,
+    `sso.*`, `login.*`, `idp.*`, `api.*`, `mail.*`. v0.10.2 tier between
+    lightweight (everything else) and full lookup (separate domains).
+
+    Still passive, still zero-creds — just probes more record types on a
+    small cap of subdomains that reliably publish verification data.
+    """
+    ctx = _DetectionCtx()
+    try:
+        await asyncio.gather(
+            _detect_cname_infra(ctx, subdomain),
+            _detect_txt(ctx, subdomain),
+            _detect_mx(ctx, subdomain),
+            _detect_dkim(ctx, subdomain),
+        )
+    except Exception as exc:
+        return SourceResult(source_name="dns_records", error=str(exc))
+    return SourceResult(
+        source_name="dns_records",
+        detected_services=tuple(sorted(ctx.services)),
+        detected_slugs=tuple(sorted(ctx.slugs)),
+    )
+
+
 # ── Main source class ──────────────────────────────────────────────────
 
 

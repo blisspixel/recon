@@ -43,7 +43,7 @@ EXIT_INTERNAL = 4
 
 # Known subcommands — used by the callback to distinguish domains from commands.
 # UPDATE THIS SET when adding new subcommands.
-_SUBCOMMANDS = frozenset({"doctor", "batch", "lookup", "mcp", "cache"})
+_SUBCOMMANDS = frozenset({"doctor", "batch", "lookup", "mcp", "cache", "delta"})
 
 # Maximum number of domains in a batch file to prevent OOM from huge files.
 _MAX_BATCH_DOMAINS = 10000
@@ -451,6 +451,64 @@ def cache_clear(
     else:
         console.print("  Specify a domain or use --all.")
         raise typer.Exit(code=2)
+
+
+# ── Delta CLI ─────────────────────────────────────────────────────────
+
+
+@app.command()
+def delta(
+    domain: str = typer.Argument(..., help="Domain to diff against cached snapshot"),
+    json_output: bool = typer.Option(False, "--json", help="Output structured JSON"),
+    timeout: float = typer.Option(120.0, "--timeout", help="Resolution timeout (seconds)"),
+) -> None:
+    """Compare the current lookup against the last cached TenantInfo.
+
+    Surfaces what changed since the previous run — new services, removed
+    services, auth/DMARC/confidence changes. Uses the main TenantInfo cache
+    (~/.recon/cache/) automatically; no manual export file required.
+    """
+    from recon_tool.cache import cache_get, cache_put, tenant_info_to_dict
+    from recon_tool.delta import compute_delta
+    from recon_tool.formatter import format_delta_json, render_delta_panel
+    from recon_tool.resolver import resolve_tenant
+    from recon_tool.validator import validate_domain
+
+    console = get_console()
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=EXIT_VALIDATION) from exc
+
+    cached = cache_get(validated, ttl=30 * 86400)
+    if cached is None:
+        console.print(
+            f"  No cached snapshot for [bold]{validated}[/bold].\n"
+            f"  Run `recon {validated}` first — the next `recon delta` "
+            f"call will compare against that baseline."
+        )
+        raise typer.Exit(code=EXIT_NO_DATA)
+
+    previous_dict = tenant_info_to_dict(cached)
+
+    async def _run() -> None:
+        try:
+            info, _results = await resolve_tenant(validated, timeout=timeout)
+        except Exception as exc:
+            console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(code=EXIT_INTERNAL) from exc
+
+        diff = compute_delta(previous_dict, info)
+        if json_output:
+            typer.echo(format_delta_json(diff))
+        else:
+            console.print(render_delta_panel(diff))
+        # Update cache with fresh snapshot so the next delta compares
+        # against today's state, not the baseline from two runs ago.
+        cache_put(validated, info)
+
+    asyncio.run(_run())
 
 
 async def _doctor() -> None:

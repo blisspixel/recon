@@ -30,7 +30,8 @@ features. A feature that compromises reliability waits.
 ## Version plan
 
 ```
-v0.9.3 (shipped) → v0.9.4 (shipped) → v0.10 (shipped) → v0.10.1 → v0.10.2 → v0.11 → v1.0
+v0.9.3 (shipped) → v0.9.4 (shipped) → v0.10 (shipped) →
+v0.10.1 (shipped) → v0.10.2 (shipped) → v0.10.3 → v0.11 → v1.0
 ```
 
 Each release is independently shippable. The sequence is priority
@@ -43,6 +44,7 @@ what came before it.
 | v0.10    | CT resilience + UX overhaul  | CT cache fallback, insight curation, provider accuracy        |
 | v0.10.1  | Provider accuracy + UX depth | Primary email detection, category rethink, DKIM expansion     |
 | v0.10.2  | Passive coverage depth       | Chained fingerprints, deeper subdomain DNS, delta mode        |
+| v0.10.3  | MCP agent ergonomics         | Server Instructions, tool description polish, MCP doctor      |
 | v0.11    | Community & confidence       | Fingerprint contribution pipeline + `--confidence-mode strict` |
 | v1.0     | Stability commitment         | Frozen surfaces, security/limitations docs, release process   |
 
@@ -166,7 +168,7 @@ target:
 
 ---
 
-### v0.10.2 — Passive coverage depth
+### v0.10.2 — Passive coverage depth (shipped 2026-04-17)
 
 The v0.10.1 work fixed provider accuracy and category hygiene.
 v0.10.2 goes after detection coverage — still 100% passive, still
@@ -233,6 +235,69 @@ store.
   diff (services added/removed, subdomains added/removed,
   posture-score delta). Batch mode can use the same machinery
   to show churn across a peer set.
+
+---
+
+### v0.10.3 — MCP agent ergonomics
+
+MCP is how AI agents actually use recon. v0.10.3 makes the server
+self-documenting so agents call tools correctly without prompt
+babysitting. No architecture change, no new transport — just
+tighten the surface we already have.
+
+#### Rich Server Instructions
+
+*Files:* `recon_tool/server.py`.
+
+FastMCP supports a `instructions` parameter on server init that
+injects a prose manual directly into the model's context every
+session. Top 2026 MCP servers are judged on the quality of this
+field. Ship a focused 1–2 page guide covering: when to use which
+tool, how to compose tool calls (e.g. `lookup_tenant` →
+`analyze_posture` → `simulate_hardening`), what the confidence
+levels mean, the passive-only invariant, and the `--explain`
+output format.
+
+#### Tool docstring polish
+
+*Files:* `recon_tool/server.py`.
+
+Each `@mcp.tool()` docstring is the model's instruction for that
+tool. Review all 15 tools and tighten: lead with what the tool
+does, list parameters with types and valid ranges, give 1
+example invocation, note any idempotency / caching guarantees.
+
+#### `recon doctor --mcp`
+
+*Files:* `recon_tool/cli.py` (extend existing doctor).
+
+Add an `--mcp` flag to the doctor command that validates the MCP
+server can start cleanly: imports succeed, FastMCP initializes,
+all tools enumerate, the stdio transport is functional. Emit a
+copy-pasteable config snippet for Claude Desktop / Cursor /
+VS Code / Windsurf at the end.
+
+#### Per-client config snippets
+
+*Files:* `docs/mcp.md`.
+
+Already have Claude Desktop, Cursor, and VS Code. Add Windsurf
+(`~/.codeium/windsurf/mcp_config.json`) and note the PATH gotcha
+for GUI clients (use absolute path to `recon` when the client
+doesn't inherit the shell environment).
+
+*Done when:* `recon doctor --mcp` succeeds on a fresh install,
+the server instructions load correctly in Claude Desktop, and a
+new user can copy one JSON snippet from docs/mcp.md and have the
+tool working in their chosen client inside 60 seconds.
+
+#### Intentionally out of scope
+
+- HTTP + OAuth transport / hosted MCP — local stdio only
+  (already in "Not this tool").
+- Marketplace / one-click installers — requires third-party
+  listings, not a code change we control.
+- Docker image for MCP — already rejected.
 
 ---
 
