@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-04-17
+
+**Stability commitment.** recon is now 1.0. From this release forward,
+all surfaces tagged **stable** in `docs/stability.md` will not break
+between patch or minor releases. Breaking changes require a major
+version bump and a deprecation window.
+
+### Added
+
+- **`docs/security.md`** — engineering-level threat model. Trust
+  boundaries, attack surface, mitigations with file:line refs
+  (validator.py domain regex, http.py SSRF protections, fingerprints.py
+  ReDoS heuristic, ct_cache.py path-traversal guard), known limitations
+  (DNS rebinding with sub-second TTLs), out-of-scope.
+- **`docs/limitations.md`** — honest inventory. What recon can't see
+  (Copilot/Gemini, heavily proxied domains, internal services,
+  network-level facts), what it underclaims on (bundled AI, dormant
+  dual-provider, sovereignty when OIDC is silent), known noise
+  patterns, when to reach for something else.
+- **`docs/schema.md`** — JSON output contract. ~45 stable fields
+  documented with types, nullability, allowed values. Nested object
+  shapes for `cert_summary` and `bimi_identity`. Experimental fields
+  (`slug_confidences`) separately tagged.
+- **`tests/test_json_schema_contract.py`** — conformance tests that
+  assert every stable field is present and correctly typed on both
+  rich and sparse fixtures.
+- **`scripts/release.py`** — semi-automated release flow. Clean-tree
+  check, version-bump consistency, CHANGELOG entry check, quality gate
+  (ruff + pyright + pytest + coverage), git commit + tag, confirm-to-push.
+  `--dry-run` flag for testing.
+- **`docs/release-process.md`** — full release documentation. Human
+  half (`scripts/release.py`), automated half (GH Actions), pre-release
+  checklist, hotfix workflow, yanking a broken release, SemVer
+  commitment, Python support policy.
+
+### Changed
+
+- **`docs/stability.md`** — fully expanded. Full CLI flag table, all 17
+  MCP tools (stable), full list of stable JSON fields, CLI exit codes,
+  YAML schema commitments, Python support policy (CPython N-2 = 3.10,
+  3.11, 3.12).
+- **JSON output — always-present fields.** `detection_scores`,
+  `cert_summary`, and `bimi_identity` are now always present in
+  `--json` output (null when unavailable) rather than conditionally
+  emitted. Backward compatible for consumers that check
+  `field is not None`; slight breaking change for consumers that
+  relied on `field in payload` as a presence check. This was a
+  schema-conformance fix for 1.0.
+- **Dev Status classifier** — `pyproject.toml` updated from
+  `Development Status :: 4 - Beta` to
+  `Development Status :: 5 - Production/Stable`.
+
+### Roadmap
+
+- All v1.0 deliverables shipped. `docs/roadmap.md` updated accordingly.
+- Post-1.0 ideas (NetworkX graph, portfolio detection, temporal CT
+  evidence, feedback-driven posterior tuning) remain in the roadmap as
+  non-commitments.
+
 ## [0.11.0] — 2026-04-17
 
 Community & confidence. The biggest build yet. Three themes:
