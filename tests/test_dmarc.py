@@ -1,4 +1,4 @@
-"""v0.9.0 — QA Round 2: DMARC Intelligence.
+"""DMARC intelligence tests.
 
 Validates:
 - pct= parsing (valid 0-100, absent, non-integer, out-of-range) (6.1)
@@ -14,6 +14,7 @@ Validates:
 from __future__ import annotations
 
 import logging
+from typing import ClassVar
 from unittest.mock import patch
 
 import pytest
@@ -213,7 +214,7 @@ class TestDmarcRuaExtraction:
 class TestDmarcVendorFingerprints:
     """Verify all 6 DMARC vendor fingerprints load correctly."""
 
-    _EXPECTED_VENDORS: dict[str, str] = {
+    _EXPECTED_VENDORS: ClassVar[dict[str, str]] = {
         "agari": "agari.com",
         "proofpoint-efd": "emaildefense.proofpoint.com",
         "ondmarc": "ondmarc.com",

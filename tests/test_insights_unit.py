@@ -20,7 +20,7 @@ from recon_tool.insights import (
 
 
 def _ctx(**kwargs) -> InsightContext:
-    defaults = dict(services=set(), slugs=set(), auth_type=None, dmarc_policy=None, domain_count=0)
+    defaults = {"services": set(), "slugs": set(), "auth_type": None, "dmarc_policy": None, "domain_count": 0}
     defaults.update(kwargs)
     return InsightContext.from_sets(**defaults)
 
@@ -43,14 +43,19 @@ class TestAuthInsights:
 
 
 class TestEmailSecurityInsights:
-    def test_full_score(self):
+    def test_full_inventory(self):
+        # v1.0.2: score line is inventory, not fraction. All five controls
+        # should appear in a single "Email security: ..." line when present.
         ctx = _ctx(
             services={"DKIM (Exchange Online)", "SPF: strict (-all)", "MTA-STS", "BIMI"},
             slugs={"microsoft365"},
             dmarc_policy="reject",
         )
         insights = _email_security_insights(ctx)
-        assert any("5/5" in i for i in insights)
+        score_line = next((i for i in insights if i.startswith("Email security:")), None)
+        assert score_line is not None
+        for expected in ("DMARC reject", "DKIM", "SPF strict", "MTA-STS", "BIMI"):
+            assert expected in score_line, f"expected {expected!r} in {score_line!r}"
 
     def test_no_email_no_insights(self):
         assert _email_security_insights(_ctx()) == []

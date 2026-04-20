@@ -5,13 +5,13 @@ from recon_tool.posture import BANNED_TERMS, analyze_posture
 
 
 def _make_info(**overrides) -> TenantInfo:
-    defaults = dict(
-        tenant_id=None,
-        display_name="Test",
-        default_domain="test.com",
-        queried_domain="test.com",
-        confidence=ConfidenceLevel.MEDIUM,
-    )
+    defaults = {
+        "tenant_id": None,
+        "display_name": "Test",
+        "default_domain": "test.com",
+        "queried_domain": "test.com",
+        "confidence": ConfidenceLevel.MEDIUM,
+    }
     defaults.update(overrides)
     return TenantInfo(**defaults)
 

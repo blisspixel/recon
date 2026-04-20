@@ -18,12 +18,11 @@ signal_boost:
   "Edge Layering — Hardening Pattern Observed": 2.0
   "Enterprise Security Stack": 1.6
   "Enterprise Security Stack — Hardening Pattern Observed": 2.0
-  "Zero Trust Posture": 1.8
+  "Zero Trust Pattern Observed": 1.8
   "DMARC Governance Investment": 1.6
   "Software Supply Chain Maturity": 1.5
   "High-Security Posture (CSE)": 1.6
   "Security Gap — Gateway Without DMARC Enforcement": 1.8
-  "Security Stack Without Governance": 1.7
 exclude_signals:
   - "Startup Tool Mix"
   - "Product-Led Growth"

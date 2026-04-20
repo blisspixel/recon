@@ -102,17 +102,11 @@ class TestHardenedEdgeArchetype:
 
     def test_a2_enterprise_security_stack_emits_no_missing_counterparts(self) -> None:
         abs_names = _absence_names(self._fixture())
-        assert not any(
-            "Enterprise Security Stack" in name and "Missing Counterparts" in name
-            for name in abs_names
-        )
+        assert not any("Enterprise Security Stack" in name and "Missing Counterparts" in name for name in abs_names)
 
-    def test_a2_enterprise_it_maturity_emits_no_missing_counterparts(self) -> None:
+    def test_a2_multi_layer_security_tooling_emits_no_missing_counterparts(self) -> None:
         abs_names = _absence_names(self._fixture())
-        assert not any(
-            "Enterprise IT Maturity" in name and "Missing Counterparts" in name
-            for name in abs_names
-        )
+        assert not any("Multi-Layer Security Tooling" in name and "Missing Counterparts" in name for name in abs_names)
 
 
 class TestDmarcGovernanceMissingCounterpartsRemoved:
@@ -133,10 +127,7 @@ class TestDmarcGovernanceMissingCounterpartsRemoved:
         )
         assert "DMARC Governance Investment" in _names(ctx)
         abs_names = _absence_names(ctx)
-        assert not any(
-            "DMARC Governance Investment" in name and "Missing Counterparts" in name
-            for name in abs_names
-        )
+        assert not any("DMARC Governance Investment" in name and "Missing Counterparts" in name for name in abs_names)
 
 
 class TestDualProviderBaseline:
@@ -199,10 +190,7 @@ class TestDormantParkedNegative:
             email_security_score=2,
         )
         names = _names(ctx)
-        forbidden = [
-            n for n in names
-            if "Maturity" in n or "Zero Trust" in n or "Hardening" in n
-        ]
+        forbidden = [n for n in names if "Maturity" in n or "Zero Trust" in n or "Hardening" in n]
         assert forbidden == [], f"Unexpected maturity verdict on dormant fixture: {forbidden}"
 
 
@@ -236,6 +224,7 @@ class TestLikelyPrimaryInference:
 
     def _ev(self, source_type: str, slug: str):
         from recon_tool.models import EvidenceRecord
+
         return EvidenceRecord(
             source_type=source_type,
             raw_value=f"fixture/{slug}",
@@ -246,6 +235,7 @@ class TestLikelyPrimaryInference:
     def test_gateway_with_dkim_downstream_confirms_google(self) -> None:
         """v0.10.1: DKIM behind a gateway promotes to primary (confirmed)."""
         from recon_tool.merger import _compute_email_topology
+
         evidence = (
             self._ev("MX", "symantec"),
             self._ev("DKIM", "google-workspace"),
@@ -257,6 +247,7 @@ class TestLikelyPrimaryInference:
 
     def test_gateway_with_microsoft_oidc_infers_m365(self) -> None:
         from recon_tool.merger import _compute_email_topology
+
         evidence = (
             self._ev("MX", "proofpoint"),
             self._ev("OIDC", "microsoft365"),
@@ -270,6 +261,7 @@ class TestLikelyPrimaryInference:
         """When MX directly names a provider, likely stays None to avoid
         duplication between the strict and inferred fields."""
         from recon_tool.merger import _compute_email_topology
+
         evidence = (
             self._ev("MX", "microsoft365"),
             self._ev("MX", "proofpoint"),
@@ -283,6 +275,7 @@ class TestLikelyPrimaryInference:
     def test_gateway_alone_no_likely(self) -> None:
         """Gateway with no downstream evidence → no likely inference."""
         from recon_tool.merger import _compute_email_topology
+
         evidence = (self._ev("MX", "proofpoint"),)
         _, gateway, likely = _compute_email_topology(evidence)
         assert gateway == "Proofpoint"
@@ -293,6 +286,7 @@ class TestLikelyPrimaryInference:
         likely-primary inference — the field is reserved for the specific
         case of gateway-fronted domains."""
         from recon_tool.merger import _compute_email_topology
+
         evidence = (
             self._ev("DKIM", "google-workspace"),
             self._ev("TXT", "microsoft365"),

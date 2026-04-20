@@ -220,6 +220,7 @@ class TestProperty6TenantIDUUIDFormatInvariant:
             "authorization_endpoint": f"https://login.microsoftonline.com/{uuid_str}/oauth2/v2.0/authorize",
         }
         result = parse_tenant_info_from_oidc(response_json)
+        assert result.tenant_id is not None
         assert _UUID_PATTERN.match(result.tenant_id), f"tenant_id '{result.tenant_id}' does not match UUID format"
 
 

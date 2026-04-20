@@ -279,7 +279,10 @@ class TestTechStackFingerprinting:
         )
         result = await DNSSource().lookup("example.com")
         assert result.m365_detected is False
-        assert result.detected_services == ()
+        # An unrecognized MX host now synthesizes a ``Self-hosted mail``
+        # detection so the provider line has a concrete label instead of
+        # falling through to weaker signals. No other services should fire.
+        assert result.detected_services == ("Self-hosted mail",)
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")

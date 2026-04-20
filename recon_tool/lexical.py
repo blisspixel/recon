@@ -128,11 +128,11 @@ REGION_PREFIXES: tuple[str, ...] = (
 # These are regexes, not prefixes; they tolerate a leading letter
 # followed by digits or a namespaced identifier.
 TENANCY_SHARD_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"^t-?\d{3,}", re.IGNORECASE),        # t-1234, t1234
+    re.compile(r"^t-?\d{3,}", re.IGNORECASE),  # t-1234, t1234
     re.compile(r"^org-?[a-z0-9]{3,}", re.IGNORECASE),  # org-abc123, org-acme
     re.compile(r"^tenant-?[a-z0-9]{3,}", re.IGNORECASE),  # tenant-xyz
     re.compile(r"^cust(?:omer)?-?[a-z0-9]{3,}", re.IGNORECASE),  # cust-abc, customer-xyz
-    re.compile(r"^c\d{4,}", re.IGNORECASE),          # c12345
+    re.compile(r"^c\d{4,}", re.IGNORECASE),  # c12345
 )
 
 # Separator characters for environment/region matching. Digits act

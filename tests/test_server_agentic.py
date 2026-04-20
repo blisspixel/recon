@@ -31,20 +31,20 @@ from recon_tool.models import (
 
 def _info(**overrides: object) -> TenantInfo:
     """Synthetic TenantInfo for agentic tool tests. No real company names."""
-    defaults: dict[str, object] = dict(
-        tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        display_name="Contoso Ltd",
-        default_domain="contoso.onmicrosoft.com",
-        queried_domain="contoso.com",
-        confidence=ConfidenceLevel.HIGH,
-        region="NA",
-        sources=("oidc_discovery", "user_realm", "dns_records"),
-        services=("Microsoft 365", "DMARC", "DKIM (Exchange Online)"),
-        slugs=("microsoft365", "dmarc", "dkim-exchange"),
-        auth_type="Federated",
-        dmarc_policy="reject",
-        domain_count=1,
-    )
+    defaults: dict[str, object] = {
+        "tenant_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "display_name": "Contoso Ltd",
+        "default_domain": "contoso.onmicrosoft.com",
+        "queried_domain": "contoso.com",
+        "confidence": ConfidenceLevel.HIGH,
+        "region": "NA",
+        "sources": ("oidc_discovery", "user_realm", "dns_records"),
+        "services": ("Microsoft 365", "DMARC", "DKIM (Exchange Online)"),
+        "slugs": ("microsoft365", "dmarc", "dkim-exchange"),
+        "auth_type": "Federated",
+        "dmarc_policy": "reject",
+        "domain_count": 1,
+    }
     defaults.update(overrides)
     return TenantInfo(**defaults)  # type: ignore[arg-type]
 
@@ -76,6 +76,7 @@ def _results() -> list[SourceResult]:
 def fresh_server_cache() -> Iterator[None]:
     """Wipe the server's in-memory cache between tests."""
     from recon_tool.server import _cache
+
     _cache.clear()
     yield
     _cache.clear()
@@ -205,9 +206,7 @@ class TestHypothesis:
     async def test_returns_structured_assessment(self, mocked_resolve) -> None:
         from recon_tool.server import test_hypothesis
 
-        result = json.loads(
-            await test_hypothesis("contoso.com", "they are doing email migration")
-        )
+        result = json.loads(await test_hypothesis("contoso.com", "they are doing email migration"))
         # Required keys
         for key in (
             "domain",
@@ -228,9 +227,7 @@ class TestHypothesis:
     async def test_unsupported_when_no_relevant_signals(self, mocked_resolve) -> None:
         from recon_tool.server import test_hypothesis
 
-        result = json.loads(
-            await test_hypothesis("contoso.com", "this organization is using a quantum SaaS")
-        )
+        result = json.loads(await test_hypothesis("contoso.com", "this organization is using a quantum SaaS"))
         # No matching signals → unsupported
         assert result["likelihood"] == "unsupported"
 
@@ -250,9 +247,7 @@ class TestSimulateHardening:
     async def test_returns_score_delta(self, mocked_resolve) -> None:
         from recon_tool.server import simulate_hardening
 
-        result = json.loads(
-            await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
-        )
+        result = json.loads(await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"]))
         assert "current_score" in result
         assert "simulated_score" in result
         assert "score_delta" in result
@@ -262,9 +257,7 @@ class TestSimulateHardening:
     async def test_applies_known_fixes(self, mocked_resolve) -> None:
         from recon_tool.server import simulate_hardening
 
-        result = json.loads(
-            await simulate_hardening("contoso.com", ["DKIM", "BIMI", "SPF strict"])
-        )
+        result = json.loads(await simulate_hardening("contoso.com", ["DKIM", "BIMI", "SPF strict"]))
         applied = result["applied_fixes"]
         # All three should be recognized
         assert any("DKIM" in a for a in applied)
@@ -275,9 +268,7 @@ class TestSimulateHardening:
     async def test_unrecognized_fix_noted(self, mocked_resolve) -> None:
         from recon_tool.server import simulate_hardening
 
-        result = json.loads(
-            await simulate_hardening("contoso.com", ["something completely made up"])
-        )
+        result = json.loads(await simulate_hardening("contoso.com", ["something completely made up"]))
         applied = result["applied_fixes"]
         assert any("Unrecognized" in a for a in applied)
 
@@ -292,9 +283,7 @@ class TestSimulateHardening:
             return _info(dmarc_policy="none"), _results()
 
         with patch("recon_tool.server._resolve_or_cache", side_effect=fake):
-            result = json.loads(
-                await simulate_hardening("contoso.com", ["DMARC reject"])
-            )
+            result = json.loads(await simulate_hardening("contoso.com", ["DMARC reject"]))
         assert result["score_delta"] >= 0
 
 
@@ -306,6 +295,7 @@ class TestEphemeralFingerprints:
     def _clean_ephemeral(self) -> Iterator[None]:
         """Clear ephemerals before and after each test."""
         from recon_tool.fingerprints import clear_ephemeral
+
         clear_ephemeral()
         yield
         clear_ephemeral()

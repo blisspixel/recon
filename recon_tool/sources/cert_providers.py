@@ -380,7 +380,7 @@ class CertSpotterProvider:
         after_cursor: str | None = None
 
         async with http_client(timeout=_CT_TIMEOUT, retry_transient=False) as client:
-            for _page_idx in range(self._MAX_PAGES):
+            for _ in range(self._MAX_PAGES):
                 resp = await self._fetch_page(client, domain, after_cursor)
                 if resp.status_code == 429:
                     # Rate-limited — stop and return what we have so far.

@@ -509,9 +509,7 @@ class TestCertSpotterPagination:
         """When the first page is empty, pagination stops immediately."""
         provider = CertSpotterProvider()
         client = AsyncMock()
-        client.get = AsyncMock(
-            return_value=MagicMock(status_code=200, json=MagicMock(return_value=[]))
-        )
+        client.get = AsyncMock(return_value=MagicMock(status_code=200, json=MagicMock(return_value=[])))
 
         with patch(
             "recon_tool.sources.cert_providers.http_client",
@@ -536,9 +534,7 @@ class TestCertSpotterPagination:
             }
         ]
         client = AsyncMock()
-        client.get = AsyncMock(
-            return_value=MagicMock(status_code=200, json=MagicMock(return_value=page1))
-        )
+        client.get = AsyncMock(return_value=MagicMock(status_code=200, json=MagicMock(return_value=page1)))
 
         with patch(
             "recon_tool.sources.cert_providers.http_client",
@@ -569,10 +565,13 @@ class TestCertSpotterPagination:
         client = AsyncMock()
         client.get = AsyncMock(side_effect=responses)
 
-        with patch(
-            "recon_tool.sources.cert_providers.http_client",
-            return_value=_mock_http_context(client),
-        ), pytest.raises(httpx.ConnectError):
+        with (
+            patch(
+                "recon_tool.sources.cert_providers.http_client",
+                return_value=_mock_http_context(client),
+            ),
+            pytest.raises(httpx.ConnectError),
+        ):
             await provider.query("example.com")
 
         # Exactly 2 calls: page 1 ok, page 2 raised, no retry.

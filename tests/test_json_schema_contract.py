@@ -164,17 +164,13 @@ class TestJSONSchemaContract:
         payload = json.loads(format_tenant_json(info))
         for field, expected in _EXPERIMENTAL_FIELDS.items():
             assert field in payload, f"Experimental field {field} missing"
-            assert isinstance(payload[field], expected), (
-                f"{field} should be {expected.__name__}"
-            )
+            assert isinstance(payload[field], expected), f"{field} should be {expected.__name__}"
 
     def test_confidence_values_allowed(self) -> None:
         info = _build_fixture()
         payload = json.loads(format_tenant_json(info))
         for field in ("confidence", "evidence_confidence", "inference_confidence"):
-            assert payload[field] in {"high", "medium", "low"}, (
-                f"{field} outside allowed values"
-            )
+            assert payload[field] in {"high", "medium", "low"}, f"{field} outside allowed values"
 
     def test_email_security_score_range(self) -> None:
         info = _build_fixture()

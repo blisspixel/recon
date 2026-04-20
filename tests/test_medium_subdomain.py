@@ -39,16 +39,16 @@ async def test_medium_subdomain_lookup_runs_all_four_detectors() -> None:
 
     calls: dict[str, int] = {"cname": 0, "txt": 0, "mx": 0, "dkim": 0}
 
-    async def _cname(ctx, d):  # noqa: ANN001
+    async def _cname(ctx, d):
         calls["cname"] += 1
 
-    async def _txt(ctx, d):  # noqa: ANN001
+    async def _txt(ctx, d):
         calls["txt"] += 1
 
-    async def _mx(ctx, d):  # noqa: ANN001
+    async def _mx(ctx, d):
         calls["mx"] += 1
 
-    async def _dkim(ctx, d):  # noqa: ANN001
+    async def _dkim(ctx, d):
         calls["dkim"] += 1
 
     with (
@@ -67,7 +67,7 @@ async def test_medium_subdomain_lookup_handles_exception() -> None:
     """Detector exceptions should surface as SourceResult.error, not crash."""
     from recon_tool.sources.dns import medium_subdomain_lookup
 
-    async def _boom(ctx, d):  # noqa: ANN001
+    async def _boom(ctx, d):
         raise RuntimeError("DNS explosion")
 
     with (

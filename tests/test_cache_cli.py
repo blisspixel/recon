@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,7 +17,7 @@ runner = CliRunner()
 
 
 @pytest.fixture
-def tmp_cache(tmp_path: Path) -> Path:
+def tmp_cache(tmp_path: Path) -> Iterator[Path]:
     """Point CT cache at a temp directory."""
     cache_path = tmp_path / "ct-cache"
     with patch.dict(os.environ, {"RECON_CONFIG_DIR": str(tmp_path)}):
@@ -62,14 +63,14 @@ class TestCacheClear:
     def test_clear_domain_missing(self, tmp_cache: Path) -> None:
         result = runner.invoke(app, ["cache", "clear", "nope.com"])
         assert result.exit_code == 0
-        assert "No CT cache entry" in result.output
+        assert "No cache entry" in result.output
 
     def test_clear_all(self, tmp_cache: Path) -> None:
         ct_cache_put("a.com", ["x.a.com"], None, "crt.sh")
         ct_cache_put("b.com", ["x.b.com"], None, "crt.sh")
         result = runner.invoke(app, ["cache", "clear", "--all"])
         assert result.exit_code == 0
-        assert "Cleared 2" in result.output
+        assert "Cleared 2 CT cache" in result.output
 
     def test_clear_no_args(self, tmp_cache: Path) -> None:
         result = runner.invoke(app, ["cache", "clear"])

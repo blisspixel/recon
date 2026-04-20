@@ -33,7 +33,7 @@ class TestEnrichFromRelated:
             queried_domain="test.com",
             related_domains=(),
         )
-        enriched, results = await _enrich_from_related(info, [])
+        enriched, _results = await _enrich_from_related(info, [])
         assert enriched is info  # same object, no change
 
     @pytest.mark.asyncio
@@ -45,13 +45,14 @@ class TestEnrichFromRelated:
             queried_domain="test.com",
             related_domains=("contoso.onmicrosoft.com",),
         )
-        enriched, results = await _enrich_from_related(info, [])
+        enriched, _results = await _enrich_from_related(info, [])
         assert enriched is info  # onmicrosoft filtered out, no enrichment
 
     @pytest.mark.asyncio
     async def test_cap_limits_enrichment_candidates(self):
         """More than MAX_RELATED_ENRICHMENTS candidates should be capped."""
-        # Create 30 related domains — only first 25 should be looked up
+        # MAX_RELATED_ENRICHMENTS is 15 (tightened from 25 in v1.0.1). Submit
+        # 30 candidates and assert the cap holds.
         related = tuple(f"related{i}.com" for i in range(30))
         info = TenantInfo(
             tenant_id="aaa",
@@ -60,11 +61,10 @@ class TestEnrichFromRelated:
             queried_domain="test.com",
             related_domains=related,
         )
-        # This will attempt real DNS lookups on the fake domains, which will
-        # fail gracefully. The point is it doesn't try all 30.
-        enriched, results = await _enrich_from_related(info, [])
-        # At most 25 additional results from enrichment
-        assert len(results) <= 25
+        # Real DNS lookups on the fake domains fail gracefully — the point
+        # is we don't try all 30.
+        _enriched, results = await _enrich_from_related(info, [])
+        assert len(results) <= 15
 
 
 class TestEnrichmentIntegration:
@@ -81,5 +81,5 @@ class TestEnrichmentIntegration:
             related_domains=(),  # no related domains = no enrichment
         )
         pool = SourcePool([FakeSource("s1", primary)])
-        info, results = await resolve_tenant("example.com", pool=pool)
+        info, _results = await resolve_tenant("example.com", pool=pool)
         assert info.tenant_id == "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"

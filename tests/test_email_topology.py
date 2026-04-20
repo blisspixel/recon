@@ -1,4 +1,4 @@
-"""v0.9.0 — QA Round 3: Primary Email Provider Detection.
+"""Primary email provider detection and topology classification tests.
 
 Validates:
 - _compute_email_topology() classification (11.1)
@@ -96,7 +96,7 @@ class TestComputeEmailTopology:
             _ev("MX", "microsoft365"),
             _ev("MX", "google-workspace"),
         )
-        primary, gateway, _likely = _compute_email_topology(evidence)
+        primary, _gateway, _likely = _compute_email_topology(evidence)
         assert primary is not None
         assert "Google Workspace" in primary
         assert "Microsoft 365" in primary

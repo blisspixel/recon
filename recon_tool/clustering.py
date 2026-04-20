@@ -142,7 +142,4 @@ def compute_shared_tokens(
                 per_domain[d].append(ClusterEntry(token=token, peer=peer))
 
     # Sort each entry list for deterministic output and freeze to tuples
-    return {
-        d: tuple(sorted(entries, key=lambda e: (e.token, e.peer)))
-        for d, entries in per_domain.items()
-    }
+    return {d: tuple(sorted(entries, key=lambda e: (e.token, e.peer))) for d, entries in per_domain.items()}

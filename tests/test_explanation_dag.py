@@ -1,4 +1,4 @@
-"""Tests for v0.9.3 explanation DAG serialization."""
+"""Tests for explanation DAG serialization."""
 
 from __future__ import annotations
 
@@ -127,10 +127,9 @@ class TestEdges:
         out = build_explanation_dag([rec], (ev1, ev2))
         # Only one "slug:microsoft365 → signal:S" edge
         contribs = [
-            e for e in out["edges"]
-            if e["source"] == "slug:microsoft365"
-            and e["target"] == "signal:S"
-            and e["relation"] == "contributes-to"
+            e
+            for e in out["edges"]
+            if e["source"] == "slug:microsoft365" and e["target"] == "signal:S" and e["relation"] == "contributes-to"
         ]
         assert len(contribs) == 1
 

@@ -104,10 +104,10 @@ class TestEvaluateSignals:
         names = {r.name for r in results}
         assert "Product-Led Growth" in names
 
-    def test_enterprise_it_maturity(self):
+    def test_multi_layer_security_tooling(self):
         results = evaluate_signals(_ctx({"okta", "crowdstrike", "proofpoint", "jamf"}))
         names = {r.name for r in results}
-        assert "Enterprise IT Maturity" in names
+        assert "Multi-Layer Security Tooling" in names
 
     def test_heavy_outbound_stack(self):
         results = evaluate_signals(_ctx({"sendgrid", "mailchimp"}))

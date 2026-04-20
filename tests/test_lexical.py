@@ -1,4 +1,4 @@
-"""Tests for v0.9.3 CT subdomain lexical taxonomy (recon_tool.lexical).
+"""Tests for CT subdomain lexical taxonomy (recon_tool.lexical).
 
 Covers:
 - Environment prefix recognition (dev, staging, prod, uat, …)
@@ -220,6 +220,6 @@ class TestLexicalObservationDataclass:
         try:
             obs.category = "Z"  # pyright: ignore[reportAttributeAccessIssue]
         except AttributeError:
-            pass  # noqa: S110 — frozen dataclass raises here, which is the test assertion
+            pass
         else:
             raise AssertionError("LexicalObservation should be frozen")

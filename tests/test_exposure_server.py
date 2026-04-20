@@ -286,7 +286,7 @@ class TestToolAnnotations:
     def _get_tool(self, name: str):
         from recon_tool.server import mcp as server_mcp
 
-        return server_mcp._tool_manager.get_tool(name)  # noqa: SLF001
+        return server_mcp._tool_manager.get_tool(name)
 
     def test_assess_exposure_annotations(self) -> None:
         tool = self._get_tool("assess_exposure")

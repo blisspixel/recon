@@ -28,15 +28,15 @@ from recon_tool.posture import (
 
 
 def _minimal_info(**overrides: object) -> TenantInfo:
-    defaults: dict[str, object] = dict(
-        tenant_id=None,
-        display_name="Contoso",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
-        confidence=ConfidenceLevel.MEDIUM,
-        region="NA",
-        sources=("dns_records",),
-    )
+    defaults: dict[str, object] = {
+        "tenant_id": None,
+        "display_name": "Contoso",
+        "default_domain": "contoso.com",
+        "queried_domain": "contoso.com",
+        "confidence": ConfidenceLevel.MEDIUM,
+        "region": "NA",
+        "sources": ("dns_records",),
+    }
     defaults.update(overrides)
     return TenantInfo(**defaults)  # type: ignore[arg-type]
 

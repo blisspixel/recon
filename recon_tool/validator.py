@@ -14,11 +14,15 @@ UUID_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Regex: valid domain has labels separated by dots, TLD at least 2 chars, no spaces
+# Regex: valid domain has labels separated by dots. TLD rules follow labels
+# (alphanumeric + hyphens, no leading/trailing hyphen), minimum two chars.
+# This accepts Punycode / IDN TLDs like ``xn--p1ai`` (Russian) and
+# ``xn--fiqs8s`` (Chinese); the old ``[a-z]{2,}`` TLD pattern rejected
+# every IDN as ``Invalid domain format``.
 _DOMAIN_RE = re.compile(
     r"^(?!-)"  # label must not start with hyphen
     r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+"  # one or more labels followed by dot
-    r"[a-z]{2,}$"  # TLD: at least 2 alpha chars
+    r"[a-z][a-z0-9-]*[a-z0-9]$"  # TLD: alpha-first (no numeric TLDs), alnum-last, min 2 chars
 )
 
 _SCHEME_RE = re.compile(r"^https?://", re.IGNORECASE)

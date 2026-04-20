@@ -239,7 +239,7 @@ class TestMetaSignalEvaluation:
             min_matches=2,
         )
         meta = Signal(
-            name="Complex Migration Window",
+            name="Test Meta Signal",
             category="Composite",
             confidence="medium",
             description="Complex migration in progress",
@@ -258,7 +258,7 @@ class TestMetaSignalEvaluation:
             results = evaluate_signals(context)
 
         names = {r.name for r in results}
-        assert "Complex Migration Window" in names
+        assert "Test Meta Signal" in names
 
     def test_meta_signal_does_not_fire_when_ref_missing(self) -> None:
         """Meta-signal does not fire when a referenced signal is missing."""
@@ -271,7 +271,7 @@ class TestMetaSignalEvaluation:
 
         names = {r.name for r in results}
         assert "Enterprise Security Stack" in names
-        assert "Complex Migration Window" not in names
+        assert "Test Meta Signal" not in names
 
     def test_meta_signal_with_additional_conditions(self) -> None:
         """Meta-signal with additional slug/metadata conditions — all must hold."""
@@ -774,8 +774,9 @@ class TestPBTDetectionWeightMonotonicity:
         next_idx = len(base_evidence)
         if next_idx < len(source_types):
             new_st = source_types[next_idx]
-            extended_evidence = base_evidence + [
-                EvidenceRecord(source_type=new_st, raw_value="extra", rule_name="R", slug=slug)
+            extended_evidence = [
+                *base_evidence,
+                EvidenceRecord(source_type=new_st, raw_value="extra", rule_name="R", slug=slug),
             ]
             extended_weights = dict(base_weight_map)
             extended_weights[(slug, new_st)] = extra_weight
@@ -849,7 +850,7 @@ class TestPBTMetaSignalBiconditional:
             partial_slugs = set(list(all_slugs)[:-1]) if len(all_slugs) > 1 else set()
             context = _ctx(partial_slugs)
 
-        all_signals = tuple(required_signals) + (meta,)
+        all_signals = (*tuple(required_signals), meta)
         with patch("recon_tool.signals.load_signals", return_value=all_signals):
             results = evaluate_signals(context)
 

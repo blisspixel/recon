@@ -55,20 +55,20 @@ def _make_console() -> tuple[Console, io.StringIO]:
 
 
 def _minimal_info(**overrides: object) -> TenantInfo:
-    defaults: dict[str, object] = dict(
-        tenant_id=None,
-        display_name="Contoso",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
-        confidence=ConfidenceLevel.MEDIUM,
-        region="NA",
-        sources=("dns_records",),
-        services=(),
-        slugs=(),
-        auth_type=None,
-        dmarc_policy=None,
-        domain_count=1,
-    )
+    defaults: dict[str, object] = {
+        "tenant_id": None,
+        "display_name": "Contoso",
+        "default_domain": "contoso.com",
+        "queried_domain": "contoso.com",
+        "confidence": ConfidenceLevel.MEDIUM,
+        "region": "NA",
+        "sources": ("dns_records",),
+        "services": (),
+        "slugs": (),
+        "auth_type": None,
+        "dmarc_policy": None,
+        "domain_count": 1,
+    }
     defaults.update(overrides)
     return TenantInfo(**defaults)  # type: ignore[arg-type]
 
@@ -156,6 +156,7 @@ class TestRenderTenantPanelEdgeCases:
         _, buf = _make_console()
         info = _minimal_info()
         from recon_tool.formatter import get_console
+
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
         assert "Contoso" in out
@@ -174,6 +175,7 @@ class TestRenderTenantPanelEdgeCases:
             ),
         )
         from recon_tool.formatter import get_console
+
         # v0.9.3: Certs section is shown only under --verbose to keep
         # the default view tight. Pass verbose=True to exercise it.
         get_console().print(render_tenant_panel(info, verbose=True))
@@ -189,6 +191,7 @@ class TestRenderTenantPanelEdgeCases:
             degraded_sources=("crt.sh", "certspotter"),
         )
         from recon_tool.formatter import get_console
+
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
         # v0.9.3 format: "Note" header + "Some sources unavailable (...)"
@@ -208,6 +211,7 @@ class TestRenderTenantPanelEdgeCases:
             ct_subdomain_count=42,
         )
         from recon_tool.formatter import get_console
+
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
         assert "Note:" not in out
@@ -223,6 +227,7 @@ class TestRenderTenantPanelEdgeCases:
             ct_subdomain_count=87,
         )
         from recon_tool.formatter import get_console
+
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
         # Routine CT fallback is suppressed — infrastructure noise
@@ -237,6 +242,7 @@ class TestRenderTenantPanelEdgeCases:
             related_domains=tuple(f"sub{i}.contoso.com" for i in range(25)),
         )
         from recon_tool.formatter import get_console
+
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
         assert "sub0.contoso.com" in out
@@ -252,6 +258,7 @@ class TestRenderTenantPanelEdgeCases:
             related_domains=tuple(f"sub{i}.contoso.com" for i in range(15)),
         )
         from recon_tool.formatter import get_console
+
         get_console().print(render_tenant_panel(info, show_domains=True))
         out = _strip(buf.getvalue())
         assert "sub14.contoso.com" in out
@@ -267,6 +274,7 @@ class TestRenderTenantPanelEdgeCases:
             auth_type="Federated",
         )
         from recon_tool.formatter import get_console
+
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
         # v0.9.3 format: the label is "Tenant" (no " ID:" suffix) and
@@ -283,6 +291,7 @@ class TestRenderTenantPanelEdgeCases:
             email_gateway="Proofpoint",
         )
         from recon_tool.formatter import get_console
+
         get_console().print(render_tenant_panel(info, explain=True))
         out = _strip(buf.getvalue())
         # v0.9.3 format: the Provider line carries the primary/gateway
@@ -312,6 +321,7 @@ class TestRenderSourceStatusPanel:
         panel = render_source_status_panel(results)
         assert panel is not None
         from recon_tool.formatter import get_console
+
         get_console().print(panel)
         out = _strip(buf.getvalue())
         assert "oidc_discovery" in out

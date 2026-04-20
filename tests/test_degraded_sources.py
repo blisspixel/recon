@@ -26,15 +26,15 @@ from recon_tool.models import ConfidenceLevel, SourceResult, TenantInfo
 
 def _make_tenant_info(**overrides) -> TenantInfo:
     """Build a minimal TenantInfo with sensible defaults."""
-    defaults = dict(
-        tenant_id="test-id",
-        display_name="Test Corp",
-        default_domain="test.com",
-        queried_domain="test.com",
-        confidence=ConfidenceLevel.MEDIUM,
-        sources=("dns_records",),
-        services=("DMARC",),
-    )
+    defaults = {
+        "tenant_id": "test-id",
+        "display_name": "Test Corp",
+        "default_domain": "test.com",
+        "queried_domain": "test.com",
+        "confidence": ConfidenceLevel.MEDIUM,
+        "sources": ("dns_records",),
+        "services": ("DMARC",),
+    }
     defaults.update(overrides)
     return TenantInfo(**defaults)
 
@@ -156,8 +156,17 @@ class TestFormatterDegradedOutput:
         d = format_tenant_dict(ti)
         assert d["degraded_sources"] == ["crt.sh"]
 
-    def test_json_partial_true_when_degraded(self):
+    def test_json_partial_ignores_ct_provider_degradation(self):
+        # `partial` is reserved for core-source degradation. crt.sh and
+        # CertSpotter are chronically flaky and the CT pipeline handles
+        # their degradation gracefully via fallback + cache, so they must
+        # NOT flip `partial` on their own.
         ti = _make_tenant_info(degraded_sources=("crt.sh",))
+        d = format_tenant_dict(ti)
+        assert d["partial"] is False
+
+    def test_json_partial_true_when_core_source_degraded(self):
+        ti = _make_tenant_info(degraded_sources=("oidc_discovery",))
         d = format_tenant_dict(ti)
         assert d["partial"] is True
 

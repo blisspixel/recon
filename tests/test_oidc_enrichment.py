@@ -1,4 +1,4 @@
-"""Tests for v0.9.3 OIDC tenant metadata enrichment.
+"""Tests for OIDC tenant metadata enrichment.
 
 Covers:
 - parse_tenant_info_from_oidc extracts cloud_instance_name,
@@ -147,12 +147,7 @@ class TestSovereigntyInsights:
         """Every sovereignty insight must be hedged."""
         for ci in ("microsoftonline.us", "partner.microsoftonline.cn"):
             out = _insights(cloud_instance=ci)
-            gov_lines = [
-                i for i in out
-                if "government" in i.lower()
-                or "china" in i.lower()
-                or "gcc" in i.lower()
-            ]
+            gov_lines = [i for i in out if "government" in i.lower() or "china" in i.lower() or "gcc" in i.lower()]
             for line in gov_lines:
                 lower = line.lower()
                 # No confident "IS a X tenant" claims

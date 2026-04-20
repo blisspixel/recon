@@ -67,21 +67,13 @@ def parse_tenant_info_from_oidc(response_json: dict[str, Any]) -> SourceResult:
     # optional in the response; None when the discovery doc doesn't
     # carry them.
     cloud_instance_raw = response_json.get("cloud_instance_name")
-    cloud_instance: str | None = (
-        str(cloud_instance_raw).strip() or None
-        if cloud_instance_raw is not None
-        else None
-    )
+    cloud_instance: str | None = str(cloud_instance_raw).strip() or None if cloud_instance_raw is not None else None
 
     sub_scope_raw = response_json.get("tenant_region_sub_scope")
-    tenant_region_sub_scope: str | None = (
-        str(sub_scope_raw).strip() or None if sub_scope_raw is not None else None
-    )
+    tenant_region_sub_scope: str | None = str(sub_scope_raw).strip() or None if sub_scope_raw is not None else None
 
     msgraph_raw = response_json.get("msgraph_host")
-    msgraph_host: str | None = (
-        str(msgraph_raw).strip() or None if msgraph_raw is not None else None
-    )
+    msgraph_host: str | None = str(msgraph_raw).strip() or None if msgraph_raw is not None else None
 
     return SourceResult(
         source_name="oidc_discovery",

@@ -7,6 +7,201 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] — 2026-04-20
+
+**Polish pass.** Toolchain current, test suite pyright-clean, dead code
+removed, seven bug fixes surfaced by CLI edge-path audits, provider
+attribution improved for self-hosted mail, "we looked and found nothing"
+now returns a sparse result instead of an error. Validated against
+450 domains across eight corpora (international banking, pharma,
+mining, telecom, logistics, government agencies, UN / NGO bodies, EDU /
+state gov, DTC startups, plus a 50-domain diverse-industry sweep
+covering big tech, automotive, luxury, fast food, Chinese giants,
+aerospace, and retail) with zero errors and zero regressions.
+
+### Added
+
+- **Python 3.13** added to the CI test matrix and the package
+  classifiers. Supported runtimes are now 3.10 / 3.11 / 3.12 / 3.13.
+- **Dependabot** configured for GitHub Actions and Python dependencies
+  with weekly cadence and patch/minor grouping.
+- **README badges** — CI status, PyPI version, supported Python
+  versions, license.
+- **CI pyright scope now covers `tests/`** so type-annotation drift
+  can't re-accumulate the way it did (652 errors pre-polish → 0 now).
+
+### Changed
+
+- **Email security score is now an inventory, not a grade.** The
+  score line went from `Email security 3/5 good (DMARC reject, DKIM,
+  SPF strict)` → `Email security 3/5: DMARC reject, DKIM, SPF strict`
+  → `Email security: DMARC reject, DKIM, SPF strict`. The verdict
+  adjectives (`weak` / `basic` / `moderate` / `good` / `strong` /
+  `excellent`) came out first — we see apex DNS, not the full posture,
+  so a graded assertion is more than the tool can honestly make. The
+  `N/5` fraction came out next: even without the adjective, `3/5` was
+  read as "mediocre" and the controls aren't equally weighted anyway
+  (DMARC `reject` is load-bearing, BIMI is decorative). The machine-
+  readable `email_security_score` field stays in `--json` for
+  consumers that genuinely need to sort or filter. The same `/5`
+  stripping now extends to `--posture` and `--exposure` panels and
+  to `compare_postures` assessment summaries so the format stays
+  consistent everywhere.
+- **Provider attribution no longer over-credits on-prem Exchange.**
+  Large orgs with self-operated mail infrastructure used to fall
+  through to `Exchange Server (on-prem / hybrid)` as the primary
+  provider whenever `owa.<apex>` / `autodiscover.<apex>` resolved,
+  even when their public MX clearly routed through their own
+  infrastructure (e.g. `mx5.huawei.com`, `mx.baidu.com`,
+  `cloudmx.qq.com` for Tencent, `mx01.mail.alibaba.com`). A synthetic
+  `self-hosted-mail` slug now fires when MX records exist and none of
+  them match a recognized cloud provider or gateway fingerprint, and
+  that slug is recognized as a primary email provider in the topology
+  computation. The Exchange on-prem detection still fires as a
+  secondary service signal in the same output, so the hybrid-identity
+  reality of these orgs is still visible — it's just no longer
+  promoted to the Provider line. 18 of 50 domains in the latest
+  validation corpus got more accurate Provider lines as a result
+  (Huawei, Baidu, Tencent, Alibaba, Boeing, Amazon, Samsung, Ikea,
+  Hyundai, McDonald's, Siemens, Intel, Visa, Apple, Airbus, LVMH,
+  Volkswagen, Coca-Cola).
+- **DKIM inference behind commercial gateway.** When MX points to a
+  commercial email gateway (Proofpoint, Mimecast, Cisco IronPort,
+  Barracuda, Trend Micro, Trellix, Symantec) AND DMARC is enforcing
+  (`quarantine` or `reject`), the score now credits DKIM with the
+  annotation `DKIM (inferred via Proofpoint)` (etc.). Fortune-500
+  orgs with enforcing DMARC almost always DO sign with DKIM — just at
+  custom selectors the tool can't enumerate. Without this inference
+  the apex score penalized orgs for a control they effectively have.
+  The inference chain is visible in the score string so the user can
+  audit it.
+- **`partial=True` semantic tightened.** The JSON `partial` flag now
+  fires only when a core source (OIDC, UserRealm, Google Identity,
+  DNS) is degraded — not when a CT provider (crt.sh, CertSpotter) is
+  degraded. CT pipelines are chronically flaky and the code handles
+  their degradation gracefully via fallback + cache, so they shouldn't
+  flip the global `partial` bit. The per-source status is still
+  surfaced in the `degraded_sources` list for consumers who want the
+  detail.
+- **GitHub Actions bumped to current majors** — `checkout v4 → v6`,
+  `setup-python v5 → v6`, `setup-node v4 → v6`, `upload-artifact v4 →
+  v7`, `download-artifact v4 → v8`, `setup-uv v5 → v8`,
+  `action-gh-release v2 → v3`. Node 20 deprecation warnings are now
+  gone; `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` workaround removed since
+  all pinned actions target Node 24 natively.
+- **"All sources empty, no errors" returns a sparse `TenantInfo`**
+  instead of raising `ReconLookupError`. "We looked and found nothing"
+  is a valid observation, not a failure. Previously, a domain with
+  no detectable patterns would get a hard error in single-domain
+  lookups and an `error` entry in batch output; now both paths emit
+  a clean result with `provider = "Unknown (no known provider
+  pattern matched)"`. Raising is reserved for the case where every
+  source actually failed.
+
+### Removed
+
+- **Three more narrative-judgment signals** in the same class as
+  Shadow IT Risk / Complex Migration Window / Governance Sprawl
+  (retired in v1.0.1). None were observation — they stitched two
+  observable facts into a critique that only DNS can't actually make.
+  - `Security Stack Without Governance` — "security investment may
+    lack email-layer controls" is opinion; the two underlying
+    observations (security tools + DMARC not enforcing) are already
+    visible on their own lines.
+  - `AI Adoption Without Governance` — inferred "shadow AI
+    deployment" from absence of specific IDPs; speculative.
+  - `DevSecOps Investment Without Email Governance` — inferred that
+    engineering security investment "hasn't extended to email";
+    pure narrative.
+- **Dead code in `sources/dns.py`** — `_safe_resolve_sync` and
+  `_set_resolver` had no callers (including tests). The sync resolver
+  helper was for a testing pattern that's no longer in use; the
+  resolver override was never wired up.
+
+### Docs
+
+- **`docs/roadmap.md` trimmed from 631 → 207 lines.** The historical
+  per-release detail now points to CHANGELOG.md (source of truth);
+  the post-1.0 ethos and "intentionally out of scope" sections kept
+  but tightened. Invariants and priority order stay front and center.
+  Added a concrete v1.1 target describing the planned split of
+  `fingerprints.yaml` into per-category files — design sketch, scope
+  breakdown, non-goals, and the reason it waits for v1.1 (coherent
+  with the community-contribution pipeline).
+- **`docs/signals.md` trimmed from 130 → 74 lines.** Large
+  auto-generated signal table removed (signals.yaml itself is the
+  source of truth and shorter). Design rules section added listing
+  retired signals and the invariant each violated, so contributors
+  can see why something wouldn't be accepted before proposing it.
+- **`docs/fingerprints.md` tightened.** Detection-types table kept.
+  Added a concrete "Testing a new fingerprint" recipe. Email security
+  score table updated for the gateway-inferred DKIM path. Removed
+  implementation-detail notes about enrichment tiers that belonged in
+  code comments, not user docs.
+
+### Fixed
+
+- **Test suite pyright-clean.** 652 errors → 0. `tests/` execution
+  environment relaxes `reportPrivateUsage` (tests legitimately
+  white-box private APIs) and parameter-type rules (pytest fixtures
+  inject by name), but keeps structural checks on. Fixture generators
+  get proper `Iterator[T]` return types; test assertions now
+  null-guard before calling `re.match`; unused destructured variables
+  are prefixed with `_`.
+- **`recon cache clear` now actually clears everything for a domain.**
+  Previously it only cleared the CT subdomain cache at
+  `~/.recon/ct-cache/`; the TenantInfo result cache at
+  `~/.recon/cache/` was left untouched and silently served stale
+  JSON on subsequent runs. This surfaced during validation — after
+  updating recon, a cached result for `microsoft.com` kept showing
+  retired signals like "AI Adoption Without Governance" even after
+  a `cache clear microsoft.com`. The command now clears both caches
+  and reports each count separately; `cache_clear` / `cache_clear_all`
+  helpers added to `cache.py`.
+- **`recon doctor` no longer emits empty error messages.** Many
+  `httpx` exception classes (`ReadTimeout`, `ConnectTimeout`) raise
+  with an empty message string, so `str(exc)` rendered as
+  `FAIL  crt.sh (cert transparency) — ` with nothing after the em-
+  dash. A module-level `_fmt_exc(exc)` helper falls back to
+  `type(exc).__name__` when the message is empty; applied
+  everywhere in `cli.py` that previously did `render_error(str(exc))`
+  on a catch-all `Exception`.
+- **Wildcard-DNS guard on Exchange-on-prem detection.** Domains that
+  point `*.<domain>` at a single IP (e.g. `in-n-out.com` → every
+  subdomain resolves to `64.58.191.70`) used to trigger every
+  probed prefix in `_detect_exchange_onprem` and get mislabelled
+  as running Exchange Server. The detector now probes a nonsense
+  prefix and bails when it also resolves — an unambiguous wildcard
+  signature.
+- **IDN / Punycode domains accepted.** The validator regex anchored
+  the TLD at `[a-z]{2,}`, which rejected every `xn--`-prefixed TLD
+  (e.g. `xn--p1ai` for Russian, `xn--fiqs8s` for Chinese). The
+  pattern now allows letters, digits, and internal hyphens in the
+  TLD (letter-first, alphanumeric-last, min two chars) so IDN
+  domains are accepted while numeric and hyphen-bracketed TLDs
+  still reject.
+- **`--profile` no longer a no-op without `--posture`.** Profile
+  lenses only apply to posture observations, so running
+  `recon <domain> --profile fintech` without a posture-enabling
+  flag silently produced identical output to `recon <domain>`.
+  Passing `--profile` now auto-enables posture rendering.
+- **Hardening Controls panel renders colored check marks.** The
+  `--exposure` panel built its ✓/✗ line with f-string Rich markup
+  (`[green]✓[/green]`) appended to a `Text` object. `Text.append`
+  does not parse markup, so those tags rendered as literal text.
+  Style is now passed via the `style=` kwarg.
+
+### Refactor
+
+- **Test file names de-versioned.** Fourteen test files named after
+  the QA round or release when they were written (e.g.
+  `test_v090_absence.py`, `test_v093_clustering.py`) renamed to
+  their subject matter (`test_absence_engine.py`,
+  `test_clustering.py`, etc.) via `git mv` so history is preserved.
+  Docstring leading lines also stripped of the `v0.9.x — QA Round
+  N:` preamble. Post-1.0 the version of introduction is no longer
+  meaningful context for where tests live.
+
 ## [1.0.1] — 2026-04-20
 
 **Accuracy & reliability pass** driven by a 150-domain validation sweep
@@ -100,6 +295,21 @@ industries. All fixes stayed inside the project invariants
   `expected_counterparts` mechanism itself remains available for
   user-customised signals in `~/.recon/signals.yaml`; no built-in
   signal currently uses it.
+
+### Note on exit codes
+
+Sparse-evidence domains (zero slugs, zero services, no provider pattern
+matched) previously raised `ReconLookupError` in the CLI path, printed
+"No information found for {domain}", and exited with code 3
+(`EXIT_NO_DATA`). They now render a clean `Unknown` panel and exit 0.
+
+- Scripting consumers that relied on exit code 3 as "no data found"
+  must switch to checking the JSON output's `provider` field for
+  `"Unknown (no known provider pattern matched)"` or the empty
+  `services` / `slugs` lists.
+- Exit code 3 still fires when the resolver genuinely can't get a
+  clean result from *any* source (all sources errored). That's rare.
+- Exit code 4 (`EXIT_INTERNAL`) is unchanged.
 
 ### Note on upgrade
 

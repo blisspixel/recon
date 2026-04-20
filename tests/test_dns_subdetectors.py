@@ -526,9 +526,7 @@ class TestExchangeOnpremAutodiscover:
             {
                 "example.com/TXT": [],
                 "example.com/MX": [],
-                "autodiscover.example.com/CNAME": [
-                    "example-com.mail.protection.outlook.com"
-                ],
+                "autodiscover.example.com/CNAME": ["example-com.mail.protection.outlook.com"],
             }
         )
         result = await DNSSource().lookup("example.com")

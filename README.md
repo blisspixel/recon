@@ -1,5 +1,10 @@
 # recon
 
+[![CI](https://github.com/blisspixel/recon/actions/workflows/ci.yml/badge.svg)](https://github.com/blisspixel/recon/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/recon-tool.svg)](https://pypi.org/project/recon-tool/)
+[![Python](https://img.shields.io/pypi/pyversions/recon-tool.svg)](https://pypi.org/project/recon-tool/)
+[![License](https://img.shields.io/pypi/l/recon-tool.svg)](LICENSE)
+
 Passive domain intelligence from public sources. Queries DNS records, Microsoft/Google identity endpoints, and certificate transparency logs to build a picture of an organization's technology stack — no credentials, no API keys, no active scanning.
 
 > **Defensive use only.** recon is designed for legitimate security posture assessment, IT architecture review, vendor due diligence, and defensive hardening. It performs zero active scanning and zero credentialed access. See [docs/legal.md](docs/legal.md) for the full intended-use policy.
@@ -32,7 +37,7 @@ High-signal related domains
 
 Insights
   Federated identity indicators observed (likely Okta — enterprise SSO)
-  Email security 4/5 strong (DMARC reject, DKIM, SPF strict, BIMI)
+  Email security 4/5: DMARC reject, DKIM, SPF strict, BIMI
   Email gateway: Proofpoint in front of Exchange
   Dual provider: Google + Microsoft coexistence
 ```

@@ -11,38 +11,38 @@ from recon_tool.models import ConfidenceLevel, DeltaReport, TenantInfo
 
 def _make_info(**overrides) -> TenantInfo:
     """Create a minimal TenantInfo with overrides."""
-    defaults = dict(
-        tenant_id="test-id",
-        display_name="Test Corp",
-        default_domain="test.com",
-        queried_domain="test.com",
-        confidence=ConfidenceLevel.HIGH,
-        services=("ServiceA", "ServiceB"),
-        slugs=("slug-a", "slug-b"),
-        insights=("Signal One: slug-a, slug-b",),
-        auth_type="Federated",
-        dmarc_policy="reject",
-        domain_count=5,
-    )
+    defaults = {
+        "tenant_id": "test-id",
+        "display_name": "Test Corp",
+        "default_domain": "test.com",
+        "queried_domain": "test.com",
+        "confidence": ConfidenceLevel.HIGH,
+        "services": ("ServiceA", "ServiceB"),
+        "slugs": ("slug-a", "slug-b"),
+        "insights": ("Signal One: slug-a, slug-b",),
+        "auth_type": "Federated",
+        "dmarc_policy": "reject",
+        "domain_count": 5,
+    }
     defaults.update(overrides)
     return TenantInfo(**defaults)
 
 
 def _make_previous(**overrides) -> dict:
     """Create a minimal previous JSON dict with overrides."""
-    defaults = dict(
-        tenant_id="test-id",
-        display_name="Test Corp",
-        default_domain="test.com",
-        queried_domain="test.com",
-        confidence="high",
-        services=["ServiceA", "ServiceB"],
-        slugs=["slug-a", "slug-b"],
-        insights=["Signal One: slug-a, slug-b"],
-        auth_type="Federated",
-        dmarc_policy="reject",
-        domain_count=5,
-    )
+    defaults = {
+        "tenant_id": "test-id",
+        "display_name": "Test Corp",
+        "default_domain": "test.com",
+        "queried_domain": "test.com",
+        "confidence": "high",
+        "services": ["ServiceA", "ServiceB"],
+        "slugs": ["slug-a", "slug-b"],
+        "insights": ["Signal One: slug-a, slug-b"],
+        "auth_type": "Federated",
+        "dmarc_policy": "reject",
+        "domain_count": 5,
+    }
     defaults.update(overrides)
     return defaults
 

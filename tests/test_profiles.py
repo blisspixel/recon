@@ -1,4 +1,4 @@
-"""Tests for v0.9.3 custom profile templates."""
+"""Tests for custom profile templates."""
 
 from __future__ import annotations
 
@@ -79,9 +79,7 @@ class TestBuiltinProfiles:
 class TestCustomProfiles:
     def test_custom_profile_loads_from_config_dir(self, tmp_path: Path):
         (tmp_path / "profiles").mkdir(parents=True, exist_ok=True)
-        (tmp_path / "profiles" / "custom.yaml").write_text(
-            "name: custom\ndescription: Test custom\n", encoding="utf-8"
-        )
+        (tmp_path / "profiles" / "custom.yaml").write_text("name: custom\ndescription: Test custom\n", encoding="utf-8")
         reload_profiles()
         p = load_profile("custom")
         assert p is not None
@@ -100,9 +98,7 @@ class TestCustomProfiles:
 
     def test_invalid_yaml_skipped(self, tmp_path: Path):
         (tmp_path / "profiles").mkdir(parents=True, exist_ok=True)
-        (tmp_path / "profiles" / "bad.yaml").write_text(
-            "name: bad\ncategory_boost: not-a-dict\n", encoding="utf-8"
-        )
+        (tmp_path / "profiles" / "bad.yaml").write_text("name: bad\ncategory_boost: not-a-dict\n", encoding="utf-8")
         reload_profiles()
         p = load_profile("bad")
         # Profile loads but invalid field defaults to empty
@@ -111,9 +107,7 @@ class TestCustomProfiles:
 
     def test_missing_name_skipped(self, tmp_path: Path):
         (tmp_path / "profiles").mkdir(parents=True, exist_ok=True)
-        (tmp_path / "profiles" / "noname.yaml").write_text(
-            "description: no name here\n", encoding="utf-8"
-        )
+        (tmp_path / "profiles" / "noname.yaml").write_text("description: no name here\n", encoding="utf-8")
         reload_profiles()
         # No profile loads
         names = {p.name for p in list_profiles()}

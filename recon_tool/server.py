@@ -236,7 +236,7 @@ def _log_structured(level: int, msg: str, **fields: object) -> None:
 )
 async def lookup_tenant(
     domain: str,
-    format: str = "text",  # noqa: A002 — shadows builtin, but is the public MCP parameter name
+    format: str = "text",
     explain: bool = False,
 ) -> str:
     """Look up domain intelligence — company name, email provider, tenant ID,
@@ -1935,7 +1935,7 @@ def main() -> None:
         # stdio transport's perspective, not an error worth raising.
         sys.stderr.write("\nMCP client disconnected — server stopped.\n")
         sys.stderr.flush()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         # Any other unexpected failure: log a one-line summary, not
         # a traceback. Users see a calm error, not a Python scream.
         sys.stderr.write(f"\nMCP server exited unexpectedly: {exc}\n")

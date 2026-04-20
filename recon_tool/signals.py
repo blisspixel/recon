@@ -446,7 +446,8 @@ def _evaluate_single_signal(signal: Signal, context: SignalContext) -> SignalMat
     # requires a known primary to be residue against.
     if signal.exclude_matches_in_primary:
         combined_primary = " | ".join(
-            p for p in (
+            p
+            for p in (
                 context.primary_email_provider,
                 context.likely_primary_email_provider,
             )
@@ -456,8 +457,7 @@ def _evaluate_single_signal(signal: Signal, context: SignalContext) -> SignalMat
             return None
         combined_primary_lower = combined_primary.lower()
         matched = [
-            slug for slug in matched
-            if _PROVIDER_SLUG_DISPLAY_NAMES.get(slug, "").lower() not in combined_primary_lower
+            slug for slug in matched if _PROVIDER_SLUG_DISPLAY_NAMES.get(slug, "").lower() not in combined_primary_lower
         ]
 
     slug_satisfied = len(matched) >= signal.min_matches

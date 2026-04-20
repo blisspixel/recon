@@ -135,21 +135,21 @@ signals:
       any: [mixpanel, amplitude, heap, pendo, hotjar, segment, intercom, zendesk, freshdesk, optimizely, walkme, customerio, braze]
     min_matches: 3
 
-  - name: Enterprise IT Maturity
+  - name: Multi-Layer Security Tooling
     category: Composite
     confidence: high
-    description: Identity + endpoint + email security + MDM — suggests mature IT governance
+    description: Four or more security tooling slugs observed across identity, endpoint, email security, and MDM categories
     requires:
       any: [okta, auth0, onelogin, duo, ping-identity, crowdstrike, sophos, sentinelone, jamf, kandji, proofpoint, mimecast, zscaler, netskope, paloalto, cato, wiz, 1password, cyberark, knowbe4, imperva]
     min_matches: 4
 
-  - name: AI Security Posture
-    category: Composite
-    confidence: high
-    description: Enterprise AI tooling + dedicated LLM guardrails or advanced SASE — suggests mature AI governance
-    requires:
-      any: [openai, anthropic, mistral, perplexity, lakera, zscaler, netskope, crowdstrike]
-    min_matches: 3
+  # AI Security Posture retired in v1.0.2 — the slug list mixed AI
+  # platforms (openai/anthropic/mistral/perplexity) with security tools
+  # (lakera/zscaler/netskope/crowdstrike) with min_matches: 3, which
+  # meant the signal named "AI Security Posture" could fire on three
+  # AI platforms alone, with zero security tooling observed. That's a
+  # false claim. Use AI Platform Diversity + Multi-Layer Security
+  # Tooling together for the equivalent composition.
 
   # ── Layer 3: Cross-signal consistency checks ──────────────────────────
   # Inspired by the research's core thesis: "penalize contradictions
@@ -188,10 +188,10 @@ signals:
       any: [dropbox, box, egnyte]
     min_matches: 2
 
-  - name: Zero Trust Posture
+  - name: Zero Trust Pattern Observed
     category: Composite
     confidence: high
-    description: Identity provider + SASE/ZTNA + endpoint security — Zero Trust architecture signals
+    description: Three or more slugs matching the Zero Trust architecture pattern (identity provider + SASE/ZTNA + endpoint) observed on this apex
     requires:
       any: [okta, auth0, onelogin, duo, ping-identity, zscaler, netskope, paloalto, cato, crowdstrike, sentinelone, 1password, cyberark, imperva]
     min_matches: 3
@@ -324,19 +324,6 @@ signals:
     min_matches: 2
     contradicts: [mta-sts-enforce]
 
-  - name: Security Stack Without Governance
-    category: Consistency
-    confidence: medium
-    description: Enterprise security tooling detected without strong email governance — security investment may lack email-layer controls
-    explain: "When multiple enterprise security tools are present but DMARC is not set to reject, it may indicate that email governance has not kept pace with endpoint and network security investment. Strong DMARC enforcement would suppress this signal."
-    requires:
-      any: [crowdstrike, sentinelone, zscaler, paloalto, netskope, cato, wiz]
-    min_matches: 2
-    metadata:
-      - field: dmarc_policy
-        operator: neq
-        value: reject
-
   # ── v0.8.0: Agentic AI & supply chain signals ────────────────────────
 
   - name: Agentic AI Infrastructure
@@ -347,16 +334,6 @@ signals:
     requires:
       any: [crewai-aid, langsmith, mcp-discovery, openai, anthropic, mistral, perplexity, dify, n8n, autogen]
     min_matches: 2
-
-  - name: AI Adoption Without Governance
-    category: Consistency
-    confidence: medium
-    description: AI platform adoption detected without enterprise identity governance — possible shadow AI deployment
-    explain: "AI platform verification records are detected but no enterprise identity provider (Okta, CyberArk, Beyond Identity, Ping Identity) is present. The absence of centralized identity governance alongside AI adoption may indicate shadow AI deployment or early-stage adoption without security review."
-    requires:
-      any: [openai, anthropic, mistral, perplexity, crewai-aid, langsmith, mcp-discovery, dify, n8n, autogen]
-    min_matches: 1
-    contradicts: [okta, cyberark, beyond-identity, ping-identity]
 
   - name: AI Platform Diversity
     category: AI
@@ -375,19 +352,6 @@ signals:
     requires:
       any: [github-advanced-security, sonatype, snyk, cosign-attestation, github]
     min_matches: 2
-
-  - name: DevSecOps Investment Without Email Governance
-    category: Consistency
-    confidence: medium
-    description: Supply chain security tooling detected with weak email security — engineering security investment may not extend to email governance
-    explain: "Supply chain security tools (Snyk, Sonatype, GitHub Advanced Security) are present but email security score is below 3/5. This may indicate that engineering-focused security investment has not extended to email-layer controls."
-    requires:
-      any: [github-advanced-security, sonatype, snyk, cosign-attestation]
-    min_matches: 1
-    metadata:
-      - field: email_security_score
-        operator: lte
-        value: 2
 
   - name: Edge-Native Architecture
     category: Infrastructure

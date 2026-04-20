@@ -84,7 +84,7 @@ class Profile:
     name: str
     description: str = ""
     category_boost: tuple[tuple[str, float], ...] = ()  # (category, multiplier)
-    signal_boost: tuple[tuple[str, float], ...] = ()    # (signal_name, multiplier)
+    signal_boost: tuple[tuple[str, float], ...] = ()  # (signal_name, multiplier)
     focus_categories: tuple[str, ...] = ()
     exclude_signals: tuple[str, ...] = ()
     prepend_note: str = ""

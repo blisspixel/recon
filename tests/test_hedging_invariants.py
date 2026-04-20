@@ -1,6 +1,6 @@
-"""Property-based hedging regression harness (v0.9.3 item 8).
+"""Property-based hedging regression harness.
 
-This is the mechanical floor that makes every other v0.9.3 item safe to
+This is the mechanical floor that makes other hedging work safe to
 ship: it asserts hedging invariants on synthetic sparse-data fixtures so
 a PR that accidentally reintroduces confident-wrong language on a
 proxy-fronted / minimal-DNS / managed-auth target gets caught before
@@ -60,7 +60,7 @@ _HEDGE_MARKERS: tuple[str, ...] = (
     "fits",
     "consistent with",
     "suggests",
-    "may ",            # "may indicate", "may not be fully effective", …
+    "may ",  # "may indicate", "may not be fully effective", …
     "indicator",
     "not a verdict",
     "appears",
@@ -78,10 +78,10 @@ _HEDGE_MARKERS: tuple[str, ...] = (
     "possible ",
     "potential ",
     "configuration residue",
-    "gap ",            # "Security gap", "…has a gap"
-    "in progress",     # "migration in progress"
-    "coexistence",     # "dual provider coexistence"
-    "incomplete",      # "Incomplete Identity Migration"
+    "gap ",  # "Security gap", "…has a gap"
+    "in progress",  # "migration in progress"
+    "coexistence",  # "dual provider coexistence"
+    "incomplete",  # "Incomplete Identity Migration"
 )
 
 # Confident absolute markers that must NEVER appear in hedged output.
@@ -228,9 +228,7 @@ class TestSparseDataInsightsHedged:
 
     @settings(max_examples=150, suppress_health_check=[HealthCheck.too_slow])
     @given(dmarc=dmarc_policy_st, slugs=slug_subset_st)
-    def test_email_security_insights_hedged(
-        self, dmarc: str | None, slugs: list[str]
-    ):
+    def test_email_security_insights_hedged(self, dmarc: str | None, slugs: list[str]):
         """Email security score and DKIM observations must use hedged
         language — a score like '4/5 strong' is a factual observation
         of the score, not a confident claim about actual security."""
@@ -261,7 +259,7 @@ class TestSignalPipelineRobustness:
         sigs = load_signals()
         absence = evaluate_absence_signals(fired, sigs, ctx.detected_slugs)
         positive = evaluate_positive_absence(fired, sigs, ctx.detected_slugs)
-        all_matches: list[SignalMatch] = [*fired, *absence, *positive]
+        all_matches = list(fired) + list(absence) + list(positive)
         assert all(isinstance(m, SignalMatch) for m in all_matches)
 
     @settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
@@ -285,9 +283,7 @@ class TestSignalPipelineRobustness:
         fired_names = {m.name for m in fired}
         for m in absence:
             parent = m.name.split(" —", 1)[0]
-            assert parent in fired_names, (
-                f"Absence signal {m.name!r} references non-firing parent {parent!r}"
-            )
+            assert parent in fired_names, f"Absence signal {m.name!r} references non-firing parent {parent!r}"
 
 
 # ── Invariant 4: TenantInfo serialization preserves hedging ───────────
@@ -322,6 +318,7 @@ class TestHedgedInfoRenders:
         buf = StringIO()
         console = Console(file=buf, width=120, force_terminal=True, no_color=True)
         from recon_tool.formatter import set_console
+
         set_console(console)
         try:
             console.print(render_tenant_panel(_hedged_info()))
@@ -369,6 +366,5 @@ class TestSignalDefinitionsValid:
             lower = sig.description.lower() + " " + sig.explain.lower()
             for pat in absolute_patterns:
                 assert pat not in lower, (
-                    f"Signal {sig.name!r} has absolute certainty language {pat!r}: "
-                    f"{sig.description!r}"
+                    f"Signal {sig.name!r} has absolute certainty language {pat!r}: {sig.description!r}"
                 )

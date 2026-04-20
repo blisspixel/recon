@@ -19,8 +19,8 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from recon_tool.models import ReconLookupError  # noqa: E402
-from recon_tool.resolver import resolve_tenant  # noqa: E402
+from recon_tool.models import ReconLookupError
+from recon_tool.resolver import resolve_tenant
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures"
 _OUTPUT_PATH = _PROJECT_ROOT / "docs" / "accuracy.md"

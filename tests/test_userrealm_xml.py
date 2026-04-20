@@ -22,13 +22,13 @@ VALID_XML = """<?xml version="1.0" encoding="utf-8"?>
 
 class TestParseAutodiscoverDomains:
     def test_extracts_all_domains(self):
-        domains, default = _parse_autodiscover_domains(VALID_XML)
+        domains, _default = _parse_autodiscover_domains(VALID_XML)
         assert "contoso.com" in domains
         assert "contoso.onmicrosoft.com" in domains
         assert "contosoltd.onmicrosoft.com" in domains
 
     def test_extracts_default_onmicrosoft_domain(self):
-        domains, default = _parse_autodiscover_domains(VALID_XML)
+        _domains, default = _parse_autodiscover_domains(VALID_XML)
         assert default is not None
         assert default.endswith(".onmicrosoft.com")
 
