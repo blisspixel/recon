@@ -171,6 +171,17 @@ class TestAuthInsightsWithIdP:
         insights = _auth_insights(ctx)
         assert any("likely" in i for i in insights)
 
+    def test_federated_with_cisco_identity_does_not_claim_cisco_idp(self):
+        # cisco-identity matches any TXT of the form cisco-ci-domain-verification=*.
+        # That token is used by many Cisco products (Duo, Customer Identity,
+        # Secure Email, Intersight), not specifically the org's SSO IdP.
+        # The federated-auth insight must fall back to the generic line, not
+        # name Cisco as the likely IdP.
+        ctx = _ctx(auth_type="Federated", slugs={"cisco-identity"})
+        insights = _auth_insights(ctx)
+        assert not any("Cisco" in i for i in insights)
+        assert any("ADFS/Okta/Ping" in i for i in insights)
+
 
 class TestSaseInsights:
     def test_zscaler_detected(self):

@@ -19,7 +19,6 @@ signals:
     requires:
       any: [openai, anthropic, mistral, perplexity, crewai-aid, langsmith, mcp-discovery]
     min_matches: 1
-    expected_counterparts: [lakera, okta, cyberark, beyond-identity]
 
   - name: High GTM Maturity
     category: Go-to-Market
@@ -181,14 +180,6 @@ signals:
       any: [sendgrid, mailgun, postmark, sparkpost, brevo, mailchimp, aws-ses]
     min_matches: 2
 
-  - name: Shadow IT Risk
-    category: Consistency
-    confidence: medium
-    description: Consumer-grade SaaS alongside weak email security — possible unmanaged tool sprawl
-    requires:
-      any: [canva, dropbox, mailchimp, zoom, airtable, notion, monday, clickup, loom]
-    min_matches: 3
-
   - name: File Collaboration Sprawl
     category: Consistency
     confidence: medium
@@ -346,25 +337,6 @@ signals:
         operator: neq
         value: reject
 
-  # ── Layer 4 (continued): Meta-signals ─────────────────────────────────
-  # These use `requires_signals` to fire only when other named signals
-  # are already active. They represent higher-order organizational
-  # patterns that emerge from the combination of simpler signals.
-
-  - name: Complex Migration Window
-    category: Composite
-    confidence: medium
-    description: Enterprise security stack and dual email provider both active — indicators suggest a complex infrastructure migration in progress
-    explain: "When both a mature security stack and dual email providers are detected simultaneously, it typically indicates a complex migration window where the organization is transitioning between providers while maintaining security controls across both environments."
-    requires_signals: [Enterprise Security Stack, Dual Email Provider]
-
-  - name: Governance Sprawl
-    category: Composite
-    confidence: medium
-    description: AI adoption alongside shadow IT risk indicators — possible governance gap across emerging and unmanaged tooling
-    explain: "When enterprise AI adoption signals coincide with shadow IT risk indicators, it may suggest that governance frameworks have not expanded to cover the full range of tools in use. This combination often appears in organizations rapidly adopting AI while consumer-grade SaaS usage remains unmanaged."
-    requires_signals: [AI Adoption, Shadow IT Risk]
-
   # ── v0.8.0: Agentic AI & supply chain signals ────────────────────────
 
   - name: Agentic AI Infrastructure
@@ -375,7 +347,6 @@ signals:
     requires:
       any: [crewai-aid, langsmith, mcp-discovery, openai, anthropic, mistral, perplexity, dify, n8n, autogen]
     min_matches: 2
-    expected_counterparts: [cosign-attestation, snyk]
 
   - name: AI Adoption Without Governance
     category: Consistency

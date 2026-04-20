@@ -174,65 +174,29 @@ class TestNewSignalsEvaluate:
         names = {r.name for r in results}
         assert "Security Stack Without Governance" in names
 
-    # -- Complex Migration Window (meta-signal) --
+    # Removed signals (no longer emitted):
+    # - Complex Migration Window — narrative synthesis, violates
+    #   "no timeline narrative generation" invariant.
+    # - Shadow IT Risk — judgmental framing on sanctioned enterprise
+    #   tools (Canva/Mailchimp/Airtable at Fortune-500 scale are not
+    #   "shadow IT"); violates "observable facts in neutral language".
+    # - Governance Sprawl — depended on Shadow IT Risk.
+    # - expected_counterparts on AI Adoption / Agentic AI Infrastructure
+    #   — produced "Missing Counterparts" vendor-recommendation absence
+    #   insights with no diagnostic value.
+    # These removals were validated against a 50-domain corpus where
+    # they fired indiscriminately without adding information.
 
-    def test_complex_migration_window_fires_when_both_signals_active(self) -> None:
-        """Meta-signal fires when Enterprise Security Stack AND Dual Email Provider both fire."""
-        # Enterprise Security Stack needs 2+ from its candidates
-        # Dual Email Provider needs microsoft365 + google-workspace
-        slugs = {"crowdstrike", "okta", "microsoft365", "google-workspace"}
+    def test_removed_signals_do_not_fire(self) -> None:
+        slugs = {
+            "openai", "anthropic",
+            "canva", "dropbox", "zoom", "airtable", "notion",
+            "crowdstrike", "okta",
+            "microsoft365", "google-workspace",
+        }
         results = evaluate_signals(_ctx(slugs))
         names = {r.name for r in results}
-        assert "Enterprise Security Stack" in names, "Prerequisite signal should fire"
-        assert "Dual Email Provider" in names, "Prerequisite signal should fire"
-        assert "Complex Migration Window" in names
-
-    def test_complex_migration_window_does_not_fire_without_security_stack(self) -> None:
-        """Meta-signal does not fire when Enterprise Security Stack is missing."""
-        slugs = {"microsoft365", "google-workspace"}
-        results = evaluate_signals(_ctx(slugs))
-        names = {r.name for r in results}
-        assert "Dual Email Provider" in names
-        assert "Enterprise Security Stack" not in names
         assert "Complex Migration Window" not in names
-
-    def test_complex_migration_window_does_not_fire_without_dual_email(self) -> None:
-        """Meta-signal does not fire when Dual Email Provider is missing."""
-        slugs = {"crowdstrike", "okta"}
-        results = evaluate_signals(_ctx(slugs))
-        names = {r.name for r in results}
-        assert "Enterprise Security Stack" in names
-        assert "Dual Email Provider" not in names
-        assert "Complex Migration Window" not in names
-
-    # -- Governance Sprawl (meta-signal) --
-
-    def test_governance_sprawl_fires_when_both_signals_active(self) -> None:
-        """Meta-signal fires when AI Adoption AND Shadow IT Risk both fire."""
-        # AI Adoption needs 1+ from [openai, anthropic, mistral, perplexity]
-        # Shadow IT Risk needs 3+ from [canva, dropbox, mailchimp, zoom, airtable, notion, monday, clickup, loom]
-        slugs = {"openai", "canva", "dropbox", "zoom"}
-        results = evaluate_signals(_ctx(slugs))
-        names = {r.name for r in results}
-        assert "AI Adoption" in names, "Prerequisite signal should fire"
-        assert "Shadow IT Risk" in names, "Prerequisite signal should fire"
-        assert "Governance Sprawl" in names
-
-    def test_governance_sprawl_does_not_fire_without_ai_adoption(self) -> None:
-        """Meta-signal does not fire when AI Adoption is missing."""
-        slugs = {"canva", "dropbox", "zoom"}
-        results = evaluate_signals(_ctx(slugs))
-        names = {r.name for r in results}
-        assert "Shadow IT Risk" in names
-        assert "AI Adoption" not in names
-        assert "Governance Sprawl" not in names
-
-    def test_governance_sprawl_does_not_fire_without_shadow_it(self) -> None:
-        """Meta-signal does not fire when Shadow IT Risk is missing."""
-        slugs = {"openai"}
-        results = evaluate_signals(_ctx(slugs))
-        names = {r.name for r in results}
-        assert "AI Adoption" in names
         assert "Shadow IT Risk" not in names
         assert "Governance Sprawl" not in names
 

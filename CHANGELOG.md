@@ -7,6 +7,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-04-20
+
+**Accuracy & reliability pass** driven by a 150-domain validation sweep
+across large, mid-size, and regional targets in multiple regions and
+industries. All fixes stayed inside the project invariants
+(passive-only, zero credentials, no engine expansion, hedged output).
+
+### Fixed
+
+- **`autodiscover.<apex>` no longer false-positives `exchange-onprem`
+  on Microsoft 365 cloud tenants.** The detector queried type A and
+  relied on dnspython returning empty when the name was a CNAME to
+  `autodiscover.outlook.com`. dnspython chases CNAMEs on type-A
+  queries, so M365 domains were flagging as on-prem. The detector now
+  queries CNAME first for `autodiscover` and suppresses when the
+  immediate target is in the M365 cloud zone
+  (`*.outlook.com` / `*.office.com` / `*.cloud.microsoft` /
+  `*.mail.protection.outlook.com` / `*.office365.com`). Genuine
+  hybrid Exchange (CNAME to org-owned infra, or direct A) still
+  fires. Other prefixes (`owa`, `outlook`, `exchange`, `mail-ex`,
+  `webmail`) keep the A-or-CNAME path — those names are on-prem-only
+  when they resolve. See `sources/dns.py::_detect_exchange_onprem`,
+  regression tests in `test_dns_subdetectors.py::TestExchangeOnpremAutodiscover`.
+
+- **`GoogleIdentitySource` no longer claims "Managed" Workspace on
+  every domain.** The `_is_workspace_domain` heuristic searched the
+  `accounts.google.com/ServiceLogin` response body for the `hd=`
+  parameter and the word `"identifier"`. Both are always present in
+  Google's sign-in page (the URL parameter is echoed verbatim into
+  the body, and the page is an identifier-capture form), so the
+  check returned `True` for every queryable domain — including
+  fabricated ones. The body heuristic is removed. Managed Workspace
+  customers are still detected via the DNS fingerprint path (MX
+  `aspmx.l.google.com`, SPF `_spf.google.com`, DKIM
+  `google._domainkey`, GWS module CNAMEs to `ghs.googlehosted.com`).
+  A federated IdP redirect still triggers the `Federated` detection.
+  This removes the cascade of phantom "Dual Email Provider",
+  "Google-Native Identity", and "Google Cloud Investment" insights
+  from M365-primary targets.
+
+- **`cisco-identity` TXT no longer mis-attributed as the SSO IdP.**
+  The slug fires on the `cisco-ci-domain-verification=` TXT token,
+  used by many Cisco products (Duo, Customer Identity, Secure Email,
+  Intersight) — not specifically the org's SSO IdP. Removed from
+  `_IDP_SLUG_MAP` in `insights.py`; the federated-auth insight now
+  correctly falls back to the generic `ADFS/Okta/Ping` line when
+  no dedicated IdP evidence is present. The slug still emits the
+  `Cisco (Identity)` service fact.
+
+- **12% of big-enterprise lookups timed out at the 120s aggregate
+  budget — now 0%.** Root cause: when CertSpotter rate-limited with
+  HTTP 429, `_RetryTransport` slept **30s × 3 retries = 90s** per
+  query while CertSpotter's own application code already handled 429
+  by breaking the pagination loop. HTTP-layer retry was fighting
+  application-layer handling and burning the aggregate budget.
+  `http_client(retry_transient=False)` is a new flag that skips
+  `_RetryTransport`; CertSpotter opts in. Page-level
+  `@retry_on_transient` on `_fetch_page` also removed for the same
+  reason (3 × 8s = ~25s of accumulated delay on slow-CT targets).
+  Single-domain lookup time on the worst-case targets went from 120s
+  (timeout) to 2-12s.
+
+### Changed
+
+- **`CertSpotter _MAX_PAGES` 4 → 2, `_CT_TIMEOUT` 8 → 6,
+  `MAX_RELATED_ENRICHMENTS` 25 → 15.** Budget tightening to reduce
+  per-domain fan-out under batch concurrency. Two CertSpotter pages
+  still cover ~500 certs, and the enrichment cap is prioritised so
+  high-signal subdomain prefixes (auth, login, sso, api, …) survive.
+
+### Removed
+
+- **`Shadow IT Risk` signal.** Framed sanctioned enterprise SaaS
+  (Canva / Mailchimp / Airtable) as "shadow IT risk" at any scale.
+  Violated the "observable facts in neutral language" invariant and
+  misread the common-case consumer-brand SaaS footprint of a large
+  org as a defect.
+- **`Complex Migration Window` signal.** Narrative synthesis on top
+  of "security stack + dual-provider email" observations. The tool
+  can observe the two inputs; it cannot observe that a migration is
+  in progress. Violated the "no timeline narrative generation"
+  invariant.
+- **`Governance Sprawl` signal.** Depended on `Shadow IT Risk`.
+- **`expected_counterparts` on `AI Adoption` and
+  `Agentic AI Infrastructure`.** Produced "Missing Counterparts"
+  absence insights like `AI Adoption — Missing Counterparts: Lakera,
+  Okta, CyberArk, Beyond Identity` on nearly every AI-adopting
+  target. The listed slugs were vendor recommendations, not
+  observable co-occurrence relationships — their absence does not
+  constitute a defect observable from DNS. The
+  `expected_counterparts` mechanism itself remains available for
+  user-customised signals in `~/.recon/signals.yaml`; no built-in
+  signal currently uses it.
+
+### Note on upgrade
+
+- `google_auth_type` is now `None` more often: the source only
+  populates it on a genuine federated redirect. Any consumer that
+  depended on the previous "Managed" default on every domain was
+  consuming a bogus signal — switch to the DNS-backed
+  `primary_email_provider` / slug set instead.
+- Consumers relying on `Shadow IT Risk`, `Complex Migration Window`,
+  or `Governance Sprawl` in the signals output will no longer see
+  those names. No replacement — the underlying observations (consumer
+  SaaS slugs, dual-provider detection, security stack) are still
+  present in the slug/service set.
+
 ## [1.0.0] — 2026-04-17
 
 **Stability commitment.** recon is now 1.0. From this release forward,

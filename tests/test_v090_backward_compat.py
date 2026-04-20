@@ -101,12 +101,15 @@ class TestBackwardCompatSignals:
         reload_signals()
 
     def test_all_signals_load_without_warnings(self, caplog: pytest.LogCaptureFixture) -> None:
-        """All 44+ signals should load without any warnings."""
+        """All signals should load without any warnings."""
         with caplog.at_level(logging.WARNING, logger="recon"):
             sigs = load_signals()
         sig_warnings = [r for r in caplog.records if r.name == "recon"]
         assert len(sig_warnings) == 0, f"Unexpected warnings: {[r.message for r in sig_warnings]}"
-        assert len(sigs) >= 44, f"Expected 44+ signals, got {len(sigs)}"
+        # Signal count is not a stability surface — individual signals can
+        # be added or retired as validation reveals noise or missing
+        # coverage. This test only guards that the YAML loads cleanly.
+        assert len(sigs) > 0
 
     def test_signals_without_expected_counterparts_default_empty(self) -> None:
         """Signals without expected_counterparts default to empty tuple."""
