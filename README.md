@@ -99,7 +99,7 @@ See [docs/mcp.md](docs/mcp.md) for the full tool list, advanced agentic workflow
 
 ```bash
 pip install -e ".[dev]"               # or: uv sync --extra dev
-pytest tests/                          # 1553 tests, 87% coverage
+pytest tests/                          # 1547 tests, 87% coverage
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 pre-commit install                     # activate pre-commit hooks
