@@ -142,10 +142,15 @@ _SEC_TOOL_SLUG_MAP: dict[str, str] = {
 
 # Identity providers — used to refine the generic "Federated" auth insight
 # into a specific "Federated via Okta" when we can see the IdP in DNS.
+# Only slugs that are actually evidence of the org's SSO IdP belong here.
+# `cisco-identity` is deliberately excluded: its only trigger is the TXT
+# token `cisco-ci-domain-verification=`, which is used by many Cisco
+# products (Duo, Customer Identity, Secure Email, Intersight) and is not
+# evidence of the SSO provider — it just means the org registered with
+# Cisco for something.
 _IDP_SLUG_MAP: dict[str, str] = {
     "okta": "Okta",
     "duo": "Duo",
-    "cisco-identity": "Cisco (Duo/Identity)",
 }
 
 

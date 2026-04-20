@@ -27,7 +27,6 @@ signal_boost:
 exclude_signals:
   - "Startup Tool Mix"
   - "Product-Led Growth"
-  - "Shadow IT Risk"
 prepend_note: |
   High-value-target profile applied. Edge hardening, identity
   rigor, layered email security, and hardening-pattern

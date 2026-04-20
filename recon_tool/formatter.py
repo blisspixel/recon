@@ -1594,7 +1594,6 @@ def _curate_insights(
         "Dev & Engineering Heavy:",
         "Heavy Outbound Stack:",
         "Modern Collaboration:",
-        "Shadow IT Risk:",
         "Google Cloud Investment:",
         "Google-Native Identity:",
         "Dual provider:",
@@ -1609,10 +1608,6 @@ def _curate_insights(
         "Email Gateway Topology:",
         "Email delivery path:",
         "Secondary Email Provider Observed:",
-        "Agentic AI Infrastructure \u2014 Missing Counterparts:",  # vendor recommendations are presumptuous
-        "AI Adoption \u2014 Missing Counterparts:",
-        "Agentic AI Infrastructure — Missing Counterparts:",
-        "AI Adoption — Missing Counterparts:",
     )
     curated: list[str] = []
     for line in insights:
@@ -1622,8 +1617,6 @@ def _curate_insights(
             continue
         lower = line.lower()
         if "mid-size organization" in lower or "domains in tenant" in lower:
-            continue
-        if lower in ("governance sprawl", "complex migration window"):
             continue
         curated.append(line)
 
@@ -1675,11 +1668,9 @@ def _curate_insights(
                 if line not in family_lines or line == chosen
             ]
 
-    # AI Adoption family: "AI Adoption: …" +
-    # "AI Adoption Without Governance: …" +
-    # "AI Adoption — Missing Counterparts: …". The "Without
-    # Governance" wording is the most information-dense; drop the
-    # other two when it fires.
+    # AI Adoption family: "AI Adoption: …" + "AI Adoption Without
+    # Governance: …". The "Without Governance" wording is the most
+    # information-dense; drop the bare form when it fires.
     has_without_governance = any(
         line.startswith("AI Adoption Without Governance:") for line in curated
     )
@@ -1687,8 +1678,6 @@ def _curate_insights(
         curated = [
             line for line in curated
             if not line.startswith("AI Adoption:")
-            and not line.startswith("AI Adoption \u2014 Missing Counterparts:")
-            and not line.startswith("AI Adoption — Missing Counterparts:")
         ]
 
     # "Dual Email Provider" signal family overlap with the older

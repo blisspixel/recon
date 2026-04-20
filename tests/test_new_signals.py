@@ -11,13 +11,11 @@ def _ctx(slugs: set[str]) -> SignalContext:
 
 
 class TestNewSignals:
-    def test_shadow_it_risk(self):
+    def test_shadow_it_risk_removed(self):
+        # Removed: this signal framed sanctioned enterprise tools
+        # (Canva / Mailchimp / Airtable at F500 scale) as "risk",
+        # violating the "observable facts in neutral language" invariant.
         results = evaluate_signals(_ctx({"canva", "dropbox", "zoom"}))
-        names = {r.name for r in results}
-        assert "Shadow IT Risk" in names
-
-    def test_shadow_it_risk_needs_three(self):
-        results = evaluate_signals(_ctx({"canva", "dropbox"}))
         names = {r.name for r in results}
         assert "Shadow IT Risk" not in names
 

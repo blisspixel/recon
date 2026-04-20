@@ -407,12 +407,10 @@ class TestCertSpotterPagination:
         provider = CertSpotterProvider()
         page1 = [_issuance(i, f"host{i}.example.com") for i in range(3)]
         page2 = [_issuance(i, f"api{i}.example.com") for i in range(3, 6)]
-        page3: list[dict] = []
 
         responses = [
             MagicMock(status_code=200, json=MagicMock(return_value=page1)),
             MagicMock(status_code=200, json=MagicMock(return_value=page2)),
-            MagicMock(status_code=200, json=MagicMock(return_value=page3)),
         ]
         client = AsyncMock()
         client.get = AsyncMock(side_effect=responses)
@@ -423,17 +421,15 @@ class TestCertSpotterPagination:
         ):
             subs, _summary = await provider.query("example.com")
 
-        assert client.get.call_count == 3
+        # _MAX_PAGES=2 — we stop after page 2; no third call.
+        assert client.get.call_count == 2
         # First call has no after=
         first_params = client.get.call_args_list[0][1]["params"]
         assert "after" not in first_params
         # Second call uses last id from page 1 ("2")
         second_params = client.get.call_args_list[1][1]["params"]
         assert second_params["after"] == "2"
-        # Third call uses last id from page 2 ("5")
-        third_params = client.get.call_args_list[2][1]["params"]
-        assert third_params["after"] == "5"
-        # All 6 subdomains collected
+        # All 6 subdomains from pages 1 and 2 collected
         assert len(subs) == 6
 
     @pytest.mark.asyncio
@@ -555,22 +551,20 @@ class TestCertSpotterPagination:
         assert len(subs) == 1
 
     @pytest.mark.asyncio
-    async def test_transient_failure_retries_inside_pagination(self):
-        """Phase 2a regression guard: a transient httpx error on a page
-        fetch is retried via the retry_on_transient decorator on _fetch_page,
-        so a single flaky page doesn't kill the entire pagination."""
+    async def test_transient_failure_propagates_without_retry(self):
+        """Page-level retries on transient httpx errors were removed: three 8s
+        ReadTimeouts per page accumulated >25s of pure delay on slow-CT targets,
+        blowing the aggregate resolve budget. On a transient failure, the
+        exception now propagates out of query() so the fallback chain can
+        mark the provider degraded and move on."""
         provider = CertSpotterProvider()
         page1 = [_issuance(i, f"a{i}.example.com") for i in range(3)]
-        page2 = [_issuance(i, f"b{i}.example.com") for i in range(3, 6)]
-        page3: list[dict] = []  # empty → end of pagination
 
-        # First call to page2 fails transiently, second succeeds.
-        # Sequence: page1 ok, page2 ConnectError (retry), page2 ok, page3 empty.
+        # Page 1 succeeds; page 2 hits a ConnectError. With retry removed,
+        # the exception propagates — caller sees the failure, NOT partial data.
         responses = [
             MagicMock(status_code=200, json=MagicMock(return_value=page1)),
             httpx.ConnectError("transient"),
-            MagicMock(status_code=200, json=MagicMock(return_value=page2)),
-            MagicMock(status_code=200, json=MagicMock(return_value=page3)),
         ]
         client = AsyncMock()
         client.get = AsyncMock(side_effect=responses)
@@ -578,13 +572,11 @@ class TestCertSpotterPagination:
         with patch(
             "recon_tool.sources.cert_providers.http_client",
             return_value=_mock_http_context(client),
-        ):
-            subs, _summary = await provider.query("example.com")
+        ), pytest.raises(httpx.ConnectError):
+            await provider.query("example.com")
 
-        # Should have made 4 calls: 3 successful pages + 1 transient retry
-        assert client.get.call_count == 4
-        # All 6 subdomains from pages 1 and 2 collected
-        assert len(subs) == 6
+        # Exactly 2 calls: page 1 ok, page 2 raised, no retry.
+        assert client.get.call_count == 2
 
     @pytest.mark.asyncio
     async def test_persistent_transient_failure_eventually_propagates(self):

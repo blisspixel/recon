@@ -1,7 +1,11 @@
 """Tests for GoogleIdentitySource — Google Workspace identity routing detection.
 
 Covers: lookup(), _classify_response(), _is_federated_redirect(),
-_is_workspace_domain(), _extract_idp_name().
+_extract_idp_name(). The managed-body heuristic was removed because
+Google's ServiceLogin page false-positively matches every queryable
+domain (the `hd=` URL parameter is echoed verbatim into the response
+body); managed-auth customers are detected via DNS fingerprint rules
+instead.
 """
 
 from __future__ import annotations
@@ -83,35 +87,6 @@ class TestIsFederatedRedirect:
         assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/adfs/ls") is True
 
 
-# ── _is_workspace_domain unit tests ────────────────────────────────────
-
-
-class TestIsWorkspaceDomain:
-    def test_hd_json_match(self):
-        body = 'some content "hd":"example.com" more content'
-        assert GoogleIdentitySource._is_workspace_domain(body, "example.com") is True
-
-    def test_hd_param_match(self):
-        body = "some content hd=example.com more content"
-        assert GoogleIdentitySource._is_workspace_domain(body, "example.com") is True
-
-    def test_identifier_with_domain(self):
-        body = "identifier flow page for example.com login"
-        assert GoogleIdentitySource._is_workspace_domain(body, "example.com") is True
-
-    def test_identifier_without_domain(self):
-        body = "identifier flow page for other.com login"
-        assert GoogleIdentitySource._is_workspace_domain(body, "example.com") is False
-
-    def test_no_markers(self):
-        body = "generic google login page with no domain info"
-        assert GoogleIdentitySource._is_workspace_domain(body, "example.com") is False
-
-    def test_case_insensitive(self):
-        body = '"hd":"EXAMPLE.COM" content'
-        assert GoogleIdentitySource._is_workspace_domain(body, "Example.Com") is True
-
-
 # ── _classify_response unit tests ──────────────────────────────────────
 
 
@@ -137,26 +112,31 @@ class TestClassifyResponse:
         assert "google-workspace" in result.detected_slugs
         assert "Google Workspace" in result.detected_services
 
-    def test_managed_workspace_domain(self):
+    def test_no_federated_redirect_returns_error(self):
+        # When we stay on accounts.google.com with no SSO indicators, the
+        # source now returns an error. Managed-Workspace detection via the
+        # response body was removed because it false-positived on every
+        # queryable domain (the `hd=` URL param is embedded in the page).
         resp = self._make_response(
             "https://accounts.google.com/ServiceLogin",
             'page content "hd":"example.com" identifier shown',
         )
         source = GoogleIdentitySource()
         result = source._classify_response(resp, "example.com")
-        assert result.google_auth_type == "Managed"
-        assert "google-managed" in result.detected_slugs
-        assert "google-workspace" in result.detected_slugs
+        assert result.google_auth_type is None
+        assert result.detected_slugs == ()
+        assert result.detected_services == ()
+        assert "No federated IdP redirect" in (result.error or "")
 
-    def test_not_workspace_domain(self):
+    def test_generic_login_page_returns_error(self):
         resp = self._make_response(
             "https://accounts.google.com/ServiceLogin",
             "<html>Generic Google login page</html>",
         )
         source = GoogleIdentitySource()
         result = source._classify_response(resp, "example.com")
-        assert result.error == "Not a Google Workspace domain"
         assert result.google_auth_type is None
+        assert "No federated IdP redirect" in (result.error or "")
 
 
 # ── GoogleIdentitySource.lookup integration tests ──────────────────────
@@ -203,7 +183,9 @@ class TestGoogleIdentityLookup:
         assert result.google_idp_name == "Okta"
 
     @pytest.mark.asyncio
-    async def test_managed_lookup(self):
+    async def test_no_federated_redirect_lookup(self):
+        # Response stays on accounts.google.com with no SSO indicators →
+        # the source returns an error (no Workspace claim without DNS evidence).
         mock_resp = httpx.Response(
             status_code=200,
             request=httpx.Request("GET", "https://accounts.google.com/ServiceLogin"),
@@ -220,7 +202,8 @@ class TestGoogleIdentityLookup:
             source = GoogleIdentitySource()
             result = await source.lookup("example.com")
 
-        assert result.google_auth_type == "Managed"
+        assert result.google_auth_type is None
+        assert result.detected_slugs == ()
 
     @pytest.mark.asyncio
     async def test_timeout_error(self):

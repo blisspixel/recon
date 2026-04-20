@@ -119,7 +119,14 @@ async def _enrich_from_related(
     """
     from recon_tool.sources.dns import DNSSource, lightweight_subdomain_lookup, medium_subdomain_lookup
 
-    MAX_RELATED_ENRICHMENTS = 25
+    # Total concurrent subdomain-enrichment lookups per primary resolve.
+    # Each lightweight lookup fires ~2 DNS queries and each medium-tier
+    # lookup fires ~6. At batch concurrency (-c 5) the combined fan-out
+    # was contributing to 120s aggregate-timeout failures on big
+    # enterprises. Dropped from 25 → 15 after validation on a 100-domain
+    # corpus. The prioritization (high-signal prefixes first) ensures
+    # the most useful subdomains still make the cap.
+    MAX_RELATED_ENRICHMENTS = 15
     # v0.10.2: top-signal subdomain prefixes get deeper DNS enrichment
     # (adds MX + DKIM probing). Capped small so we don't blow the DNS
     # budget — only the prefixes most likely to publish their own

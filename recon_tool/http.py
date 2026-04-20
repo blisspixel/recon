@@ -224,17 +224,27 @@ def _user_agent() -> str:
 async def http_client(
     provided: httpx.AsyncClient | None = None,
     timeout: float = DEFAULT_TIMEOUT,
+    retry_transient: bool = True,
 ) -> AsyncIterator[httpx.AsyncClient]:
     """Yield an httpx.AsyncClient — reuses the provided one or creates a new one.
 
     If a client is provided, it is yielded as-is (caller owns lifecycle).
     If no client is provided, a new one is created with SSRF-safe defaults and closed on exit.
+
+    When ``retry_transient`` is False, the _RetryTransport wrapper is skipped.
+    Use this for callers whose own application code handles 429 / 503 — the
+    CT providers (CertSpotter) are the primary example: they break the
+    pagination loop on 429 and return partial data, so the transport-level
+    retry (3 × 30s backoff = 90s) only adds pure latency and burns the
+    aggregate resolve budget on rate-limited targets.
     """
     if provided is not None:
         yield provided
     else:
-        base_transport = _SSRFSafeTransport()
-        transport = _RetryTransport(wrapped=base_transport)
+        base_transport: httpx.AsyncHTTPTransport = _SSRFSafeTransport()
+        transport: httpx.AsyncHTTPTransport = (
+            _RetryTransport(wrapped=base_transport) if retry_transient else base_transport
+        )
         client = httpx.AsyncClient(
             transport=transport,
             timeout=timeout,

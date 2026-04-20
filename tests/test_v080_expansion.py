@@ -436,19 +436,20 @@ class TestBackwardCompatibilityV080:
         names = _signal_names(_ctx({"okta", "microsoft365"}))
         assert "Incomplete Identity Migration" not in names
 
-    def test_existing_meta_signal_still_fires(self) -> None:
-        """Complex Migration Window should still fire when both required signals are active."""
+    def test_removed_meta_signals_do_not_fire(self) -> None:
+        # Complex Migration Window removed — narrative synthesis, not
+        # observable from DNS.
         names = _signal_names(
             _ctx(
                 {
                     "crowdstrike",
-                    "okta",  # Enterprise Security Stack (2 matches)
+                    "okta",
                     "microsoft365",
-                    "google-workspace",  # Dual Email Provider (2 matches)
+                    "google-workspace",
                 }
             )
         )
-        assert "Complex Migration Window" in names
+        assert "Complex Migration Window" not in names
 
     def test_all_signal_names_unique(self) -> None:
         signals = load_signals()

@@ -18,7 +18,7 @@ from recon_tool.absence import evaluate_absence_signals
 from recon_tool.explanation import explain_signals
 from recon_tool.fingerprints import load_fingerprints, reload_fingerprints
 from recon_tool.models import ExplanationRecord, SignalContext
-from recon_tool.signals import Signal, SignalMatch, evaluate_signals, load_signals, reload_signals
+from recon_tool.signals import Signal, SignalMatch, load_signals, reload_signals
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
@@ -181,21 +181,26 @@ class TestBuiltInExpectedCounterparts:
         reload_signals()
         reload_fingerprints()
 
-    def test_at_least_two_signals_have_counterparts(self) -> None:
-        """At least 2 signals have expected_counterparts populated.
+    def test_no_builtin_counterparts(self) -> None:
+        """No built-in signals use expected_counterparts.
 
-        Counterparts should be limited to signals where the listed slugs are
-        truly complementary (expected to co-occur), not competing alternatives.
-        See A2 audit: Enterprise Security Stack, Enterprise IT Maturity, and
-        DMARC Governance Investment had counterparts pointing at competing
-        vendors; those entries were removed to avoid false-positive absence
-        gaps.
+        The mechanism remains available for user-customised signals in
+        ~/.recon/signals.yaml, but every built-in counterpart list has
+        been retired. History:
+        - A2 audit removed Enterprise Security Stack, Enterprise IT
+          Maturity, and DMARC Governance Investment — those lists named
+          competing vendors, producing false-positive absence gaps.
+        - Validation-driven audit removed AI Adoption and Agentic AI
+          Infrastructure — those lists were vendor recommendations
+          (Lakera, Okta, CyberArk, Cosign, Snyk) whose absence does not
+          constitute a defect. They fired on every AI-adopting target
+          as presumptuous "you should also have…" commentary.
         """
         signals = load_signals()
         with_counterparts = [s for s in signals if s.expected_counterparts]
-        assert len(with_counterparts) >= 2, (
-            f"Expected 2+ signals with expected_counterparts, found {len(with_counterparts)}: "
-            f"{[s.name for s in with_counterparts]}"
+        assert with_counterparts == [], (
+            f"No built-in signals should declare expected_counterparts; "
+            f"found {[s.name for s in with_counterparts]}"
         )
 
     def test_all_referenced_slugs_exist_in_fingerprints(self) -> None:
@@ -227,23 +232,21 @@ class TestBuiltInExpectedCounterparts:
         assert len(eit) == 1
         assert eit[0].expected_counterparts == ()
 
-    def test_ai_adoption_counterparts(self) -> None:
-        """AI Adoption lists governance and identity slugs."""
+    def test_ai_adoption_has_no_counterparts(self) -> None:
+        # Removed: the list (lakera/okta/cyberark/beyond-identity) was a
+        # vendor recommendation, not an observable counterpart relationship.
         signals = load_signals()
         ai = [s for s in signals if s.name == "AI Adoption"]
         assert len(ai) == 1
-        counterparts = set(ai[0].expected_counterparts)
-        assert "lakera" in counterparts
-        assert "okta" in counterparts
+        assert ai[0].expected_counterparts == ()
 
-    def test_agentic_ai_infrastructure_counterparts(self) -> None:
-        """Agentic AI Infrastructure lists supply-chain slugs."""
+    def test_agentic_ai_infrastructure_has_no_counterparts(self) -> None:
+        # Removed: cosign-attestation/snyk absence does not constitute a
+        # defect observable from DNS.
         signals = load_signals()
         agentic = [s for s in signals if s.name == "Agentic AI Infrastructure"]
         assert len(agentic) == 1
-        counterparts = set(agentic[0].expected_counterparts)
-        assert "cosign-attestation" in counterparts
-        assert "snyk" in counterparts
+        assert agentic[0].expected_counterparts == ()
 
     def test_enterprise_security_stack_no_competing_gateway_counterparts(self) -> None:
         """Enterprise Security Stack should not list competing gateways as counterparts.
@@ -263,57 +266,64 @@ class TestBuiltInExpectedCounterparts:
 
 
 class TestAbsenceSignalMergerIntegration:
-    """Verify absence signals appear in merger pipeline output."""
+    """Verify the absence-signal mechanism works end-to-end.
+
+    No built-in signals currently declare expected_counterparts (see
+    TestBuiltInExpectedCounterparts), so these tests drive the
+    mechanism with a custom Signal fixture rather than production YAML.
+    That keeps the tests validating behavior of the evaluator instead
+    of the contents of signals.yaml.
+    """
 
     def setup_method(self) -> None:
         reload_signals()
         reload_fingerprints()
 
-    def test_absence_signals_in_output(self) -> None:
-        """Absence signals appear in final signals output alongside standard signals."""
-        # Simulate AI Adoption firing (openai detected) but no governance slugs
+    def test_absence_signals_fire_on_signal_with_counterparts(self) -> None:
+        parent = _make_signal(
+            "Test Parent",
+            candidates=("openai",),
+            min_matches=1,
+            expected_counterparts=("lakera", "okta"),
+        )
         ctx = SignalContext(detected_slugs=frozenset({"openai"}))
-        standard_signals = evaluate_signals(ctx)
+        parent_match = _make_match("Test Parent", matched=("openai",))
+        absence_signals = evaluate_absence_signals([parent_match], (parent,), ctx.detected_slugs)
 
-        # Verify AI Adoption fired
-        ai_adoption = [s for s in standard_signals if s.name == "AI Adoption"]
-        assert len(ai_adoption) == 1
+        absences = [s for s in absence_signals if "Test Parent" in s.name]
+        assert len(absences) == 1
+        assert absences[0].category == "Absence"
 
-        # Run absence evaluation
-        all_signal_defs = load_signals()
-        absence_signals = evaluate_absence_signals(standard_signals, all_signal_defs, ctx.detected_slugs)
+    def test_no_absence_when_all_counterparts_present(self) -> None:
+        parent = _make_signal(
+            "Test Parent",
+            candidates=("openai",),
+            min_matches=1,
+            expected_counterparts=("lakera", "okta"),
+        )
+        ctx = SignalContext(detected_slugs=frozenset({"openai", "lakera", "okta"}))
+        parent_match = _make_match("Test Parent", matched=("openai",))
+        absence_signals = evaluate_absence_signals([parent_match], (parent,), ctx.detected_slugs)
 
-        # Absence signal should fire for AI Adoption missing counterparts
-        ai_absence = [s for s in absence_signals if "AI Adoption" in s.name]
-        assert len(ai_absence) == 1
-        assert ai_absence[0].category == "Absence"
+        absences = [s for s in absence_signals if "Test Parent" in s.name]
+        assert len(absences) == 0
 
-    def test_absence_insights_generated(self) -> None:
-        """Absence insights generated for missing counterparts via build_insights_with_signals."""
+    def test_builtin_signals_produce_no_absence_insights(self) -> None:
+        # Regression guard: because no built-in signals declare
+        # expected_counterparts, build_insights_with_signals must never
+        # produce "Missing Counterparts" lines on production data.
         from recon_tool.merger import build_insights_with_signals
 
         insights = build_insights_with_signals(
             services=set(),
-            slugs={"openai"},
+            slugs={"openai", "anthropic", "crewai-aid"},
             auth_type=None,
             dmarc_policy=None,
             domain_count=0,
         )
 
-        # Should contain an absence insight mentioning missing counterparts
         absence_insights = [i for i in insights if "Missing Counterparts" in i]
-        assert len(absence_insights) >= 1
-
-    def test_no_absence_when_all_counterparts_present(self) -> None:
-        """No absence signals when all counterparts are present."""
-        # AI Adoption with all counterparts present
-        ctx = SignalContext(detected_slugs=frozenset({"openai", "lakera", "okta", "cyberark", "beyond-identity"}))
-        standard_signals = evaluate_signals(ctx)
-        all_signal_defs = load_signals()
-        absence_signals = evaluate_absence_signals(standard_signals, all_signal_defs, ctx.detected_slugs)
-
-        ai_absence = [s for s in absence_signals if "AI Adoption" in s.name]
-        assert len(ai_absence) == 0
+        assert absence_insights == []
 
 
 # ── 14.4: Absence explanation records ─────────────────────────────────
@@ -327,51 +337,57 @@ class TestAbsenceExplanationRecords:
         reload_fingerprints()
 
     def test_explain_produces_explanation_record(self) -> None:
-        """--explain with absence signal produces ExplanationRecord with parent signal info."""
-        # Fire AI Adoption (openai detected, no governance slugs)
+        # Uses a fixture signal with counterparts since no built-in signal
+        # declares expected_counterparts.
+        parent = _make_signal(
+            "Test Parent",
+            candidates=("openai",),
+            min_matches=1,
+            expected_counterparts=("lakera", "okta"),
+        )
         ctx = SignalContext(detected_slugs=frozenset({"openai"}))
-        standard_signals = evaluate_signals(ctx)
-        all_signal_defs = load_signals()
-        absence_signals = evaluate_absence_signals(standard_signals, all_signal_defs, ctx.detected_slugs)
+        parent_match = _make_match("Test Parent", matched=("openai",))
+        absence_signals = evaluate_absence_signals([parent_match], (parent,), ctx.detected_slugs)
 
-        all_matches = standard_signals + absence_signals
+        all_matches = [parent_match] + absence_signals
 
-        # Generate explanations
         records = explain_signals(
             signal_matches=all_matches,
-            signals=all_signal_defs,
+            signals=(parent,),
             context_detected_slugs=ctx.detected_slugs,
             context_metadata={},
             evidence=(),
             detection_scores=(),
         )
 
-        # Find the absence explanation
         absence_recs = [r for r in records if "Missing Counterparts" in r.item_name]
         assert len(absence_recs) >= 1
 
         rec = absence_recs[0]
         assert isinstance(rec, ExplanationRecord)
         assert rec.item_type == "signal"
-        # fired_rules should reference the parent signal
-        assert any("AI Adoption" in rule for rule in rec.fired_rules)
-        # confidence_derivation should mention absence
+        assert any("Test Parent" in rule for rule in rec.fired_rules)
         assert "absence" in rec.confidence_derivation.lower() or "Absence" in rec.confidence_derivation
-        # weakening_conditions should mention detecting the missing slugs
         assert len(rec.weakening_conditions) > 0
         assert any("slug" in w.lower() or "suppress" in w.lower() for w in rec.weakening_conditions)
 
     def test_explain_absence_has_curated_explanation(self) -> None:
-        """Absence explanation record has curated_explanation from the absence signal description."""
+        # Uses a fixture signal with counterparts since no built-in signal
+        # declares expected_counterparts.
+        parent = _make_signal(
+            "Test Parent",
+            candidates=("openai",),
+            min_matches=1,
+            expected_counterparts=("lakera", "okta"),
+        )
         ctx = SignalContext(detected_slugs=frozenset({"openai"}))
-        standard_signals = evaluate_signals(ctx)
-        all_signal_defs = load_signals()
-        absence_signals = evaluate_absence_signals(standard_signals, all_signal_defs, ctx.detected_slugs)
-        all_matches = standard_signals + absence_signals
+        parent_match = _make_match("Test Parent", matched=("openai",))
+        absence_signals = evaluate_absence_signals([parent_match], (parent,), ctx.detected_slugs)
+        all_matches = [parent_match] + absence_signals
 
         records = explain_signals(
             signal_matches=all_matches,
-            signals=all_signal_defs,
+            signals=(parent,),
             context_detected_slugs=ctx.detected_slugs,
             context_metadata={},
             evidence=(),
@@ -380,7 +396,6 @@ class TestAbsenceExplanationRecords:
 
         absence_recs = [r for r in records if "Missing Counterparts" in r.item_name]
         assert len(absence_recs) >= 1
-        # curated_explanation should contain the hedged description
         assert "not observed" in absence_recs[0].curated_explanation
 
 

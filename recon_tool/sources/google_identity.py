@@ -158,35 +158,19 @@ class GoogleIdentitySource:
                 ),
             )
 
-        # Check for Google Workspace domain recognition in the response
-        # Google includes the hd parameter and domain-specific elements
-        # when the domain is a recognized Workspace domain
-        if self._is_workspace_domain(body, domain):
-            return SourceResult(
-                source_name="google_identity",
-                detected_services=("Google Workspace",),
-                detected_slugs=("google-managed", "google-workspace"),
-                google_auth_type="Managed",
-                evidence=(
-                    EvidenceRecord(
-                        source_type="HTTP",
-                        raw_value="Google Workspace managed auth detected",
-                        rule_name="Google Identity Routing",
-                        slug="google-managed",
-                    ),
-                    EvidenceRecord(
-                        source_type="HTTP",
-                        raw_value="Google Workspace tenant recognized at accounts.google.com",
-                        rule_name="Google Identity Routing",
-                        slug="google-workspace",
-                    ),
-                ),
-            )
-
-        # Not a Google Workspace domain
+        # No managed-domain detection via response body. Google's ServiceLogin
+        # page embeds the `hd=` URL parameter and always contains the word
+        # "identifier" (it's a sign-in identifier form), so body-text heuristics
+        # false-positive on every queryable domain — including fabricated ones.
+        # Workspace-managed customers are still detected via the DNS fingerprint
+        # path (MX aspmx.l.google.com, SPF _spf.google.com, DKIM google._domainkey,
+        # GWS module CNAMEs to ghs.googlehosted.com). Those paths are
+        # evidence-based; this source now only claims Workspace when a genuine
+        # third-party IdP redirect is observed.
+        _ = body, domain  # kept for future use if a reliable marker is found
         return SourceResult(
             source_name="google_identity",
-            error="Not a Google Workspace domain",
+            error="No federated IdP redirect observed (managed detection requires DNS evidence)",
         )
 
     @staticmethod
@@ -200,25 +184,3 @@ class GoogleIdentitySource:
         sso_indicators = ("saml", "sso", "adfs", "okta", "pingone", "auth0")
         return any(indicator in final_url for indicator in sso_indicators)
 
-    @staticmethod
-    def _is_workspace_domain(body: str, domain: str) -> bool:
-        """Check if Google recognizes this as a Workspace domain.
-
-        Google's login page includes domain-specific markers when the
-        domain is a recognized Workspace customer. We look for:
-        - The hd (hosted domain) parameter being echoed back
-        - Domain-specific branding elements
-        - The "identifier-shown" page (domain is recognized)
-        """
-        body_lower = body.lower()
-        domain_lower = domain.lower()
-
-        # Google echoes the hosted domain in the page for recognized domains
-        if f'"hd":"{domain_lower}"' in body_lower:
-            return True
-        if f"hd={domain_lower}" in body_lower:
-            return True
-
-        # Google shows a domain-specific login page with the org name
-        # The "identifier" flow indicates domain recognition
-        return "identifier" in body_lower and domain_lower in body_lower

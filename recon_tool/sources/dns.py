@@ -1360,25 +1360,46 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
                          # (already detected) or as A for on-prem.
     )
 
-    # Two-part probe: (a) A-record only for prefixes that should
-    # only match on-prem (autodiscover). On M365 domains
-    # autodiscover.<apex> is a CNAME to autodiscover.outlook.com
-    # — that's Exchange Online, not on-prem, and is already
-    # detected by _detect_m365_cnames. We deliberately skip the
-    # CNAME check for autodiscover so M365 domains don't false-
-    # positive into the on-prem detector. (b) A-or-CNAME for
-    # owa / outlook / exchange / mail-ex / webmail — those
-    # prefixes are used by both deployments but any of them
-    # existing is a strong Exchange signal regardless.
-    a_only_prefixes = {"autodiscover"}
+    # Probe strategy:
+    # - For `autodiscover`: query CNAME first. If the immediate CNAME
+    #   target points to the M365 cloud (autodiscover.outlook.com or an
+    #   outlook.com / office.com / cloud.microsoft suffix), suppress —
+    #   that's Exchange Online, not on-prem. Only fall through to A when
+    #   there's no CNAME (self-hosted autodiscover responder). Note that
+    #   a plain A query chases CNAMEs through dnspython, so an A query
+    #   alone returns IPs even for M365 cloud endpoints — that's why the
+    #   CNAME check has to come first.
+    # - For other prefixes (owa / outlook / exchange / mail-ex / webmail):
+    #   A-or-CNAME. Those names are typically on-prem-only when they
+    #   resolve at all.
+    _M365_CLOUD_SUFFIXES = (
+        "autodiscover.outlook.com",
+        "outlook.com",
+        "mail.protection.outlook.com",
+        "office.com",
+        "office365.com",
+        "cloud.microsoft",
+    )
+
+    def _is_m365_cloud_target(target: str) -> bool:
+        t = target.lower().rstrip(".")
+        return any(t == s or t.endswith("." + s) for s in _M365_CLOUD_SUFFIXES)
 
     async def _probe(prefix: str) -> str | None:
         fqdn = f"{prefix}.{domain}"
+        if prefix == "autodiscover":
+            cname_results = await _safe_resolve(fqdn, "CNAME")
+            if cname_results:
+                if _is_m365_cloud_target(cname_results[0]):
+                    return None  # M365 cloud autodiscover, not on-prem
+                return fqdn  # CNAME to non-Microsoft target — self-operated
+            a_results = await _safe_resolve(fqdn, "A")
+            if a_results:
+                return fqdn  # direct A — self-operated on-prem autodiscover
+            return None
         a_results = await _safe_resolve(fqdn, "A")
         if a_results:
             return fqdn
-        if prefix in a_only_prefixes:
-            return None
         cname_results = await _safe_resolve(fqdn, "CNAME")
         if cname_results:
             return fqdn
