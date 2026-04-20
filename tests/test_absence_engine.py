@@ -1,4 +1,4 @@
-"""v0.9.0 — QA Round 4: Negative-Space Analysis.
+"""Negative-space (absence engine) analysis tests.
 
 Validates:
 - evaluate_absence_signals() core logic (14.1)
@@ -199,8 +199,7 @@ class TestBuiltInExpectedCounterparts:
         signals = load_signals()
         with_counterparts = [s for s in signals if s.expected_counterparts]
         assert with_counterparts == [], (
-            f"No built-in signals should declare expected_counterparts; "
-            f"found {[s.name for s in with_counterparts]}"
+            f"No built-in signals should declare expected_counterparts; found {[s.name for s in with_counterparts]}"
         )
 
     def test_all_referenced_slugs_exist_in_fingerprints(self) -> None:
@@ -217,20 +216,22 @@ class TestBuiltInExpectedCounterparts:
 
         assert len(missing) == 0, f"Signals reference non-existent fingerprint slugs: {missing}"
 
-    def test_enterprise_it_maturity_no_competing_vendor_counterparts(self) -> None:
-        """Enterprise IT Maturity should not list competing vendors as counterparts.
+    def test_multi_layer_security_tooling_no_competing_vendor_counterparts(self) -> None:
+        """Multi-Layer Security Tooling (formerly Enterprise IT Maturity)
+        should not list competing vendors as counterparts.
 
         Regression guard for A2: the previous design listed jamf/kandji,
         crowdstrike/sentinelone, and proofpoint/mimecast as expected
         counterparts, which generated false-positive "Missing Counterparts"
         signals when the org picked one of each pair. Those are alternatives,
         not complements, so the entire expected_counterparts entry was
-        removed.
+        removed. The signal was also renamed in v1.0.2 to drop the
+        judgmental "maturity" framing.
         """
         signals = load_signals()
-        eit = [s for s in signals if s.name == "Enterprise IT Maturity"]
-        assert len(eit) == 1
-        assert eit[0].expected_counterparts == ()
+        mlst = [s for s in signals if s.name == "Multi-Layer Security Tooling"]
+        assert len(mlst) == 1
+        assert mlst[0].expected_counterparts == ()
 
     def test_ai_adoption_has_no_counterparts(self) -> None:
         # Removed: the list (lakera/okta/cyberark/beyond-identity) was a
@@ -349,7 +350,7 @@ class TestAbsenceExplanationRecords:
         parent_match = _make_match("Test Parent", matched=("openai",))
         absence_signals = evaluate_absence_signals([parent_match], (parent,), ctx.detected_slugs)
 
-        all_matches = [parent_match] + absence_signals
+        all_matches = [parent_match, *absence_signals]
 
         records = explain_signals(
             signal_matches=all_matches,
@@ -383,7 +384,7 @@ class TestAbsenceExplanationRecords:
         ctx = SignalContext(detected_slugs=frozenset({"openai"}))
         parent_match = _make_match("Test Parent", matched=("openai",))
         absence_signals = evaluate_absence_signals([parent_match], (parent,), ctx.detected_slugs)
-        all_matches = [parent_match] + absence_signals
+        all_matches = [parent_match, *absence_signals]
 
         records = explain_signals(
             signal_matches=all_matches,

@@ -41,6 +41,7 @@ def _reset_global_console():
     test framework has captured.
     """
     import recon_tool.formatter as _formatter
+
     _formatter._console = None
     yield
     _formatter._console = None

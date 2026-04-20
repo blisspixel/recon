@@ -48,6 +48,16 @@ _SUBCOMMANDS = frozenset({"doctor", "batch", "lookup", "mcp", "cache", "delta"})
 # Maximum number of domains in a batch file to prevent OOM from huge files.
 _MAX_BATCH_DOMAINS = 10000
 
+
+def _fmt_exc(exc: BaseException) -> str:
+    """Render an exception for user display, falling back to the type name.
+
+    httpx.ReadTimeout and similar raise with an empty message, which used
+    to render as ``FAIL  crt.sh — `` with nothing after the em-dash.
+    """
+    return str(exc) or type(exc).__name__
+
+
 # Spinner messages — one is picked at random for each lookup.
 # Keeps the CLI feeling alive without being gimmicky.
 _STATUS_MESSAGES = (
@@ -83,7 +93,7 @@ class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseC
         except click.UsageError:
             # If the first arg looks like a domain, route to lookup
             if args and "." in args[0] and args[0] not in _SUBCOMMANDS and not args[0].startswith("-"):
-                return super().resolve_command(ctx, ["lookup"] + args)
+                return super().resolve_command(ctx, ["lookup", *args])
             raise
 
 
@@ -120,14 +130,14 @@ def _debug_callback(value: bool) -> None:
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
-    version: bool | None = typer.Option(  # noqa: ARG001
+    version: bool | None = typer.Option(
         None,
         "--version",
         callback=version_callback,
         is_eager=True,
         help="Show version and exit.",
     ),
-    debug: bool = typer.Option(  # noqa: ARG001
+    debug: bool = typer.Option(
         False,
         "--debug",
         callback=_debug_callback,
@@ -220,10 +230,7 @@ def lookup(
     confidence_mode: str = typer.Option(
         "hedged",
         "--confidence-mode",
-        help=(
-            "Language style: 'hedged' (default) or 'strict' "
-            "(drops hedging qualifiers on dense-evidence targets)"
-        ),
+        help=("Language style: 'hedged' (default) or 'strict' (drops hedging qualifiers on dense-evidence targets)"),
     ),
     fusion: bool = typer.Option(
         False,
@@ -429,16 +436,16 @@ def _doctor_mcp() -> None:
     console.print("  [dim]# Windsurf: ~/.codeium/windsurf/mcp_config.json[/dim]")
     console.print()
     snippet = (
-        '  {\n'
+        "  {\n"
         '    "mcpServers": {\n'
         '      "recon": {\n'
         f'        "command": "{cmd}",\n'
         '        "args": ["mcp"],\n'
         '        "autoApprove": ["lookup_tenant", "analyze_posture",\n'
         '                        "assess_exposure", "find_hardening_gaps"]\n'
-        '      }\n'
-        '    }\n'
-        '  }'
+        "      }\n"
+        "    }\n"
+        "  }"
     )
     console.print(snippet)
     console.print()
@@ -500,8 +507,7 @@ def mcp() -> None:
         from recon_tool.server import main as server_main
     except ImportError as exc:
         get_console().print(
-            "[red]MCP dependencies not installed.[/red]\n"
-            "  Install with: [bold]pip install recon-tool\\[mcp][/bold]"
+            "[red]MCP dependencies not installed.[/red]\n  Install with: [bold]pip install recon-tool\\[mcp][/bold]"
         )
         raise SystemExit(1) from exc
 
@@ -510,7 +516,7 @@ def mcp() -> None:
 
 # ── Cache CLI ─────────────────────────────────────────────────────────
 
-cache_app = typer.Typer(help="Manage the CT subdomain cache.")
+cache_app = typer.Typer(help="Manage the CT subdomain cache and TenantInfo result cache.")
 app.add_typer(cache_app, name="cache")
 
 
@@ -518,7 +524,11 @@ app.add_typer(cache_app, name="cache")
 def cache_show(
     domain: str = typer.Argument(None, help="Domain to inspect (omit to list all)"),
 ) -> None:
-    """Show CT cache state for a domain, or list all cached domains."""
+    """Show CT cache state for a domain, or list all cached domains.
+
+    Only surfaces the CT subdomain cache. The TenantInfo result cache
+    under ``~/.recon/cache/`` is managed opaquely.
+    """
     from recon_tool.ct_cache import ct_cache_list, ct_cache_show
 
     console = get_console()
@@ -554,22 +564,37 @@ def cache_show(
 @cache_app.command("clear")
 def cache_clear(
     domain: str = typer.Argument(None, help="Domain to clear (omit with --all for everything)"),
-    all_domains: bool = typer.Option(False, "--all", help="Clear all cached CT data"),
+    all_domains: bool = typer.Option(False, "--all", help="Clear all cached data"),
 ) -> None:
-    """Clear CT cache for a domain or all domains."""
+    """Clear both CT subdomain cache and TenantInfo result cache.
+
+    Prior to v1.0.3 this only cleared the CT cache, which left stale
+    TenantInfo results silently served from ``~/.recon/cache/`` even
+    after a ``recon cache clear``.
+    """
+    from recon_tool.cache import cache_clear as result_cache_clear
+    from recon_tool.cache import cache_clear_all as result_cache_clear_all
     from recon_tool.ct_cache import ct_cache_clear, ct_cache_clear_all
 
     console = get_console()
 
     if all_domains:
-        count = ct_cache_clear_all()
-        console.print(f"  Cleared {count} cached domain{'s' if count != 1 else ''}.")
+        ct_count = ct_cache_clear_all()
+        result_count = result_cache_clear_all()
+        console.print(f"  Cleared {ct_count} CT cache entr{'ies' if ct_count != 1 else 'y'}.")
+        console.print(f"  Cleared {result_count} result cache entr{'ies' if result_count != 1 else 'y'}.")
     elif domain:
-        removed = ct_cache_clear(domain)
-        if removed:
-            console.print(f"  Cleared CT cache for [bold]{domain}[/bold].")
+        ct_removed = ct_cache_clear(domain)
+        result_removed = result_cache_clear(domain)
+        if ct_removed or result_removed:
+            parts: list[str] = []
+            if ct_removed:
+                parts.append("CT cache")
+            if result_removed:
+                parts.append("result cache")
+            console.print(f"  Cleared {' and '.join(parts)} for [bold]{domain}[/bold].")
         else:
-            console.print(f"  No CT cache entry for [bold]{domain}[/bold].")
+            console.print(f"  No cache entry for [bold]{domain}[/bold].")
     else:
         console.print("  Specify a domain or use --all.")
         raise typer.Exit(code=2)
@@ -654,7 +679,7 @@ async def _doctor() -> None:
             resp = await client.get("https://login.microsoftonline.com/common/.well-known/openid-configuration")
             checks.append(("OIDC discovery", resp.status_code == 200, f"HTTP {resp.status_code}"))
         except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
-            checks.append(("OIDC discovery", False, str(exc)))
+            checks.append(("OIDC discovery", False, _fmt_exc(exc)))
 
         # Synthetic non-existent address — avoids probing a real account.
         try:
@@ -664,7 +689,7 @@ async def _doctor() -> None:
             )
             checks.append(("GetUserRealm", resp.status_code == 200, f"HTTP {resp.status_code}"))
         except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
-            checks.append(("GetUserRealm", False, str(exc)))
+            checks.append(("GetUserRealm", False, _fmt_exc(exc)))
 
         try:
             resp = await client.post(
@@ -674,7 +699,7 @@ async def _doctor() -> None:
             )
             checks.append(("Autodiscover", True, f"HTTP {resp.status_code} (reachable)"))
         except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
-            checks.append(("Autodiscover", False, str(exc)))
+            checks.append(("Autodiscover", False, _fmt_exc(exc)))
 
     try:
         answers = dns.resolver.resolve("example.com", "TXT")
@@ -686,21 +711,21 @@ async def _doctor() -> None:
         dns.exception.Timeout,
         OSError,
     ) as exc:
-        checks.append(("DNS resolution", False, str(exc)))
+        checks.append(("DNS resolution", False, _fmt_exc(exc)))
 
     # Check crt.sh connectivity (certificate transparency)
     try:
         resp = await httpx.AsyncClient(timeout=8.0).get("https://crt.sh/?q=%.example.com&output=json")
         checks.append(("crt.sh (cert transparency)", resp.status_code == 200, f"HTTP {resp.status_code}"))
     except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
-        checks.append(("crt.sh (cert transparency)", False, str(exc)))
+        checks.append(("crt.sh (cert transparency)", False, _fmt_exc(exc)))
 
     try:
         from recon_tool.server import mcp  # noqa: F401  # pyright: ignore[reportUnusedImport]
 
         checks.append(("MCP server module", True, "loaded"))
     except Exception as exc:
-        checks.append(("MCP server module", False, str(exc)))
+        checks.append(("MCP server module", False, _fmt_exc(exc)))
 
     # Check fingerprint database loading
     try:
@@ -712,7 +737,7 @@ async def _doctor() -> None:
         else:
             checks.append(("Fingerprint database", False, "no fingerprints loaded — detection will not work"))
     except Exception as exc:
-        checks.append(("Fingerprint database", False, str(exc)))
+        checks.append(("Fingerprint database", False, _fmt_exc(exc)))
 
     # Check custom fingerprint path
     import os
@@ -732,7 +757,7 @@ async def _doctor() -> None:
                 count = len(data)
             checks.append(("Custom fingerprints", True, f"{count} entries in {custom_path}"))
         except Exception as exc:
-            checks.append(("Custom fingerprints", False, str(exc)))
+            checks.append(("Custom fingerprints", False, _fmt_exc(exc)))
     else:
         checks.append(("Custom fingerprints", True, f"none ({custom_path} not found)"))
 
@@ -746,7 +771,7 @@ async def _doctor() -> None:
         else:
             checks.append(("Signal database", False, "no signals loaded — signal intelligence will not work"))
     except Exception as exc:
-        checks.append(("Signal database", False, str(exc)))
+        checks.append(("Signal database", False, _fmt_exc(exc)))
 
     # Check custom signals path
     custom_signals_path = Path(custom_dir) / "signals.yaml" if custom_dir else Path.home() / ".recon" / "signals.yaml"
@@ -760,7 +785,7 @@ async def _doctor() -> None:
                 count = len(data["signals"])
             checks.append(("Custom signals", True, f"{count} entries in {custom_signals_path}"))
         except Exception as exc:
-            checks.append(("Custom signals", False, str(exc)))
+            checks.append(("Custom signals", False, _fmt_exc(exc)))
     else:
         checks.append(("Custom signals", True, f"none ({custom_signals_path} not found)"))
 
@@ -902,6 +927,13 @@ async def _lookup(
         verbose = True
         show_posture = True
 
+    # ``--profile`` is a no-op unless posture output is shown. If the user
+    # specified a profile, they want to see the profile-filtered posture
+    # observations — turn on posture automatically rather than silently
+    # dropping the flag.
+    if profile_name and not show_posture:
+        show_posture = True
+
     # Mutual exclusion: --chain and --compare cannot be used together
     if chain_mode and compare_file:
         render_error("--chain and --compare are mutually exclusive")
@@ -929,7 +961,7 @@ async def _lookup(
     try:
         validated = validate_domain(domain)
     except ValueError as exc:
-        render_error(str(exc))
+        render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
     # ── Compare mode ─────────────────────────────────────────────────
@@ -942,7 +974,7 @@ async def _lookup(
         try:
             previous = load_previous(Path(compare_file))
         except (FileNotFoundError, ValueError) as exc:
-            render_error(str(exc))
+            render_error(_fmt_exc(exc))
             raise typer.Exit(code=EXIT_VALIDATION) from None
 
         try:
@@ -958,7 +990,7 @@ async def _lookup(
             render_warning(domain, exc)
             raise typer.Exit(code=EXIT_NO_DATA) from None
         except Exception as exc:
-            render_error(str(exc))
+            render_error(_fmt_exc(exc))
             raise typer.Exit(code=EXIT_INTERNAL) from None
 
         delta = compute_delta(previous, info)
@@ -984,7 +1016,7 @@ async def _lookup(
             else:
                 report = await chain_resolve(validated, depth=chain_depth)
         except Exception as exc:
-            render_error(str(exc))
+            render_error(_fmt_exc(exc))
             raise typer.Exit(code=EXIT_INTERNAL) from None
 
         if json_output:
@@ -1052,7 +1084,7 @@ async def _lookup(
             render_warning(domain, exc)
             raise typer.Exit(code=EXIT_NO_DATA) from None
         except Exception as exc:
-            render_error(str(exc))
+            render_error(_fmt_exc(exc))
             raise typer.Exit(code=EXIT_INTERNAL) from None
         return
 
@@ -1095,7 +1127,7 @@ async def _lookup(
             render_warning(domain, exc)
             raise typer.Exit(code=EXIT_NO_DATA) from None
         except Exception as exc:
-            render_error(str(exc))
+            render_error(_fmt_exc(exc))
             raise typer.Exit(code=EXIT_INTERNAL) from None
         return
 
@@ -1150,9 +1182,7 @@ async def _lookup(
                 from recon_tool.profiles import list_profiles
 
                 names = ", ".join(p.name for p in list_profiles())
-                render_error(
-                    f"Unknown profile {profile_name!r}. Available profiles: {names or '(none)'}"
-                )
+                render_error(f"Unknown profile {profile_name!r}. Available profiles: {names or '(none)'}")
                 raise typer.Exit(code=EXIT_VALIDATION) from None
         if show_posture:
             from recon_tool.posture import analyze_posture
@@ -1177,9 +1207,7 @@ async def _lookup(
                 # v0.9.3: structured provenance DAG for programmatic
                 # consumers. Lives alongside the flat list — both are
                 # emitted so existing tooling doesn't break.
-                tenant_dict["explanation_dag"] = build_explanation_dag(
-                    explanations, info.evidence
-                )
+                tenant_dict["explanation_dag"] = build_explanation_dag(explanations, info.evidence)
                 if info.merge_conflicts and info.merge_conflicts.has_conflicts:
                     tenant_dict["conflicts"] = serialize_conflicts(info.merge_conflicts)
             typer.echo(json.dumps(tenant_dict, indent=2))
@@ -1245,19 +1273,23 @@ async def _lookup(
                 _m365_sources = {"oidc_discovery", "user_realm", "dns_records"}
                 synthetic: list[SourceResult] = []
                 for src_name in info.sources:
-                    synthetic.append(SourceResult(
-                        source_name=src_name,
-                        tenant_id=info.tenant_id if src_name == "oidc_discovery" else None,
-                        display_name=info.display_name if src_name == "user_realm" else None,
-                        auth_type=info.auth_type if src_name == "user_realm" else None,
-                        m365_detected=bool(info.tenant_id) and src_name in _m365_sources,
-                        dmarc_policy=info.dmarc_policy if src_name == "dns_records" else None,
-                    ))
+                    synthetic.append(
+                        SourceResult(
+                            source_name=src_name,
+                            tenant_id=info.tenant_id if src_name == "oidc_discovery" else None,
+                            display_name=info.display_name if src_name == "user_realm" else None,
+                            auth_type=info.auth_type if src_name == "user_realm" else None,
+                            m365_detected=bool(info.tenant_id) and src_name in _m365_sources,
+                            dmarc_policy=info.dmarc_policy if src_name == "dns_records" else None,
+                        )
+                    )
                 for deg in info.degraded_sources:
-                    synthetic.append(SourceResult(
-                        source_name=deg,
-                        error="unavailable during original lookup",
-                    ))
+                    synthetic.append(
+                        SourceResult(
+                            source_name=deg,
+                            error="unavailable during original lookup",
+                        )
+                    )
                 status_results = synthetic
 
             status_panel = render_source_status_panel(status_results)
@@ -1272,7 +1304,7 @@ async def _lookup(
         render_warning(domain, exc)
         raise typer.Exit(code=EXIT_NO_DATA) from None
     except Exception as exc:
-        render_error(str(exc))
+        render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_INTERNAL) from None
 
 
@@ -1294,7 +1326,7 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int,
         render_tenant_panel,
     )
     from recon_tool.models import ReconLookupError
-    from recon_tool.models import TenantInfo as _TenantInfo  # noqa: F811
+    from recon_tool.models import TenantInfo as _TenantInfo
     from recon_tool.resolver import resolve_tenant
     from recon_tool.validator import validate_domain
 
@@ -1438,9 +1470,7 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int,
         if batch_infos:
             from recon_tool.clustering import compute_shared_tokens
 
-            domain_tokens = {
-                d: info.site_verification_tokens for d, info in batch_infos.items()
-            }
+            domain_tokens = {d: info.site_verification_tokens for d, info in batch_infos.items()}
             clusters = compute_shared_tokens(domain_tokens)
             if clusters:
                 for entry in json_results:
@@ -1449,9 +1479,7 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int,
                         continue
                     peers = clusters.get(key)
                     if peers:
-                        entry["shared_verification_tokens"] = [
-                            {"token": e.token, "peer": e.peer} for e in peers
-                        ]
+                        entry["shared_verification_tokens"] = [{"token": e.token, "peer": e.peer} for e in peers]
 
         typer.echo(json_mod.dumps(json_results, indent=2))
     elif csv_output:

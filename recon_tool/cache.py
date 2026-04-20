@@ -25,6 +25,8 @@ from recon_tool.models import (
 
 __all__ = [
     "DEFAULT_TTL",
+    "cache_clear",
+    "cache_clear_all",
     "cache_dir",
     "cache_get",
     "cache_put",
@@ -74,6 +76,38 @@ def cache_put(domain: str, info: TenantInfo) -> None:
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
     except Exception:
         logger.debug("Cache write failed for %s", domain, exc_info=True)
+
+
+def cache_clear(domain: str) -> bool:
+    """Remove the cached TenantInfo for domain. Returns True if a file was deleted."""
+    try:
+        path = cache_dir() / f"{domain}.json"
+        if path.exists():
+            path.unlink()
+            return True
+        return False
+    except Exception:
+        logger.debug("Cache clear failed for %s", domain, exc_info=True)
+        return False
+
+
+def cache_clear_all() -> int:
+    """Remove all cached TenantInfo files. Returns the count deleted."""
+    try:
+        d = cache_dir()
+        if not d.exists():
+            return 0
+        count = 0
+        for path in d.glob("*.json"):
+            try:
+                path.unlink()
+                count += 1
+            except OSError:
+                logger.debug("Cache entry unlink failed: %s", path, exc_info=True)
+        return count
+    except Exception:
+        logger.debug("Cache clear-all failed", exc_info=True)
+        return 0
 
 
 def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
@@ -165,7 +199,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
     ]
 
     # detection_scores tuple-of-tuples → dict
-    d["detection_scores"] = {slug: score for slug, score in info.detection_scores}
+    d["detection_scores"] = dict(info.detection_scores)
 
     return d
 

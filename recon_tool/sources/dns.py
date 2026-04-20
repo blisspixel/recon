@@ -65,14 +65,7 @@ def _get_resolver() -> dns.asyncresolver.Resolver:
 
 
 # Default async resolver instance — reused across queries within a lookup.
-# Override via _set_resolver() in tests to inject custom nameservers.
 _default_resolver = dns.asyncresolver.Resolver()
-
-
-def _set_resolver(resolver: dns.asyncresolver.Resolver) -> None:  # pyright: ignore[reportUnusedFunction]
-    """Replace the default resolver — for testing or custom nameserver config."""
-    global _default_resolver  # noqa: PLW0603
-    _default_resolver = resolver
 
 
 def _parse_rdata(raw: str) -> str:
@@ -90,8 +83,7 @@ def _parse_rdata(raw: str) -> str:
         # TXT record — join multi-part chunks, don't strip trailing dots
         # (dots can be meaningful in TXT values like SPF includes)
         parts = raw.split('" "')
-        joined = "".join(p.strip('"') for p in parts)
-        return joined
+        return "".join(p.strip('"') for p in parts)
     # Non-TXT (CNAME, MX, NS, etc.) — strip trailing FQDN dot
     return raw.strip('"').rstrip(".")
 
@@ -110,23 +102,6 @@ async def _safe_resolve(domain: str, rdtype: str, timeout: float = DNS_QUERY_TIM
     try:
         resolver = _get_resolver()
         answers = await resolver.resolve(domain, rdtype, lifetime=timeout)
-        return [_parse_rdata(rdata.to_text()) for rdata in answers]  # pyright: ignore[reportGeneralTypeIssues]
-    except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers):
-        return []
-    except dns.exception.Timeout:
-        logger.debug("DNS %s lookup timed out for %s (%.1fs)", rdtype, domain, timeout)
-        return []
-    except Exception as exc:
-        logger.debug("DNS %s lookup failed for %s: %s", rdtype, domain, exc)
-        return []
-
-
-# Keep a synchronous version for tests that mock _safe_resolve at the module level.
-# This is the same logic but using the blocking resolver.
-def _safe_resolve_sync(domain: str, rdtype: str, timeout: float = DNS_QUERY_TIMEOUT) -> list[str]:  # pyright: ignore[reportUnusedFunction]
-    """Synchronous DNS resolution — used only by tests that need blocking behavior."""
-    try:
-        answers = dns.resolver.resolve(domain, rdtype, lifetime=timeout)
         return [_parse_rdata(rdata.to_text()) for rdata in answers]  # pyright: ignore[reportGeneralTypeIssues]
     except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers):
         return []
@@ -161,25 +136,25 @@ class _DetectionCtx:
     """
 
     __slots__ = (
-        "services",
-        "slugs",
-        "m365",
-        "dmarc_policy",
-        "spf_include_count",
         "_m365_slugs",
-        "related_domains",
-        "degraded_sources",
-        "cert_summary",
-        "evidence",
-        "bimi_identity",
-        "site_verification_tokens",
-        "mta_sts_mode",
         "_matched_fp_detections",
-        "dmarc_pct",
-        "raw_dns_records",
+        "bimi_identity",
+        "cert_summary",
+        "ct_cache_age_days",
         "ct_provider_used",
         "ct_subdomain_count",
-        "ct_cache_age_days",
+        "degraded_sources",
+        "dmarc_pct",
+        "dmarc_policy",
+        "evidence",
+        "m365",
+        "mta_sts_mode",
+        "raw_dns_records",
+        "related_domains",
+        "services",
+        "site_verification_tokens",
+        "slugs",
+        "spf_include_count",
     )
 
     def __init__(self) -> None:
@@ -366,9 +341,7 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
         ctx.services.add(f"SPF complexity: {ctx.spf_include_count} includes")
 
 
-async def _follow_spf_redirect(
-    ctx: _DetectionCtx, spf_text: str, depth: int, max_depth: int
-) -> None:
+async def _follow_spf_redirect(ctx: _DetectionCtx, spf_text: str, depth: int, max_depth: int) -> None:
     """Follow SPF redirect= chain up to ``max_depth`` hops.
 
     When a domain's SPF is ``v=spf1 redirect=<other>``, we need to
@@ -388,6 +361,7 @@ async def _follow_spf_redirect(
         return
     try:
         import re
+
         match = re.search(r"redirect=([^\s]+)", spf_text)
         if not match:
             return
@@ -446,6 +420,8 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
     mx_records = await _safe_resolve(domain, "MX")
     ctx.raw_dns_records.setdefault("MX", []).extend(mx_records)
 
+    unmatched_hosts: list[str] = []
+    any_matched = False
     for mx in mx_records:
         mx_lower = mx.lower()
         matched = False
@@ -454,6 +430,7 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
                 ctx.add(det.name, det.slug, source_type="MX", raw_value=mx)
                 ctx.record_fp_match(det.slug, "mx", det.pattern)
                 matched = True
+                any_matched = True
                 break
         if not matched:
             # Emit a generic MX evidence record so downstream code can
@@ -469,6 +446,30 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
                     slug="",
                 )
             )
+            # Track unmatched MX hosts for self-hosted-mail inference.
+            # MX record format is ``<priority> <host>`` — extract host.
+            parts = mx.strip().split()
+            if len(parts) >= 2:
+                unmatched_hosts.append(parts[-1].rstrip(".").lower())
+
+    # Self-hosted-mail inference. When MX records exist and none of
+    # them match a known cloud provider or gateway, attribute the
+    # primary provider as "Self-hosted mail". This rescues orgs like
+    # huawei.com (MX → ``mx5.huawei.com``), baidu.com (MX → ``mx.baidu.com``),
+    # and tencent.com (MX → ``cloudmx.qq.com`` — a sibling domain owned
+    # by the same operator) that otherwise fall through to the weaker
+    # ``exchange-onprem`` attribution driven by ``owa.`` / ``autodiscover.``
+    # probes. ``Self-hosted`` is a conservative label that may in rare
+    # cases cover obscure cloud providers we don't yet fingerprint — in
+    # both cases the MX hosts are surfaced in the evidence so the user
+    # can see what's actually being used.
+    if unmatched_hosts and not any_matched:
+        ctx.add(
+            "Self-hosted mail",
+            "self-hosted-mail",
+            source_type="MX",
+            raw_value=", ".join(sorted(set(unmatched_hosts))),
+        )
 
 
 async def _detect_m365_cnames(ctx: _DetectionCtx, domain: str) -> None:
@@ -966,8 +967,13 @@ _HOSTING_PTR_PATTERNS: tuple[tuple[str, str, str, str | None], ...] = (
     ("elb.amazonaws.com", "AWS ELB", "aws-elb", r"[a-z]{2}-[a-z]+-\d+"),
     ("elb.amazonaws.com.cn", "AWS ELB (China)", "aws-elb", None),
     ("amazonaws.com", "AWS", "aws-compute", None),
-    ("cloudapp.azure.com", "Azure VM", "azure-vm", r"(?:eastus|westus|centralus|northeurope|westeurope|"
-        r"eastasia|southeastasia|japaneast|japanwest|brazilsouth|australiaeast|canadacentral)[a-z0-9]*"),
+    (
+        "cloudapp.azure.com",
+        "Azure VM",
+        "azure-vm",
+        r"(?:eastus|westus|centralus|northeurope|westeurope|"
+        r"eastasia|southeastasia|japaneast|japanwest|brazilsouth|australiaeast|canadacentral)[a-z0-9]*",
+    ),
     ("cloudapp.net", "Azure VM (legacy)", "azure-vm", None),
     ("bc.googleusercontent.com", "GCP Compute Engine", "gcp-compute", None),
     ("googleusercontent.com", "GCP Compute Engine", "gcp-compute", None),
@@ -1027,6 +1033,7 @@ async def _detect_hosting_from_a_record(ctx: _DetectionCtx, domain: str) -> None
     # both, but import locally to keep the hot path clean.
     try:
         import dns.reversename  # pyright: ignore[reportMissingTypeStubs]
+
         ptr_name = dns.reversename.from_address(str(ip))
         ptr_results = await _safe_resolve(str(ptr_name), "PTR")
     except Exception:
@@ -1350,14 +1357,14 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
     # mail. at a CDN, a web frontend, or a third-party mail
     # provider. The prefixes here only mean Exchange.
     exchange_prefixes = (
-        "owa",           # Outlook Web Access
-        "outlook",       # Outlook anywhere
-        "exchange",      # Named Exchange endpoint
-        "mail-ex",       # Less common but unambiguous
-        "webmail",       # Often Exchange but could be Horde / Roundcube
+        "owa",  # Outlook Web Access
+        "outlook",  # Outlook anywhere
+        "exchange",  # Named Exchange endpoint
+        "mail-ex",  # Less common but unambiguous
+        "webmail",  # Often Exchange but could be Horde / Roundcube
         "autodiscover",  # Exchange autodiscover — standard Exchange
-                         # protocol, returned as CNAME for M365
-                         # (already detected) or as A for on-prem.
+        # protocol, returned as CNAME for M365
+        # (already detected) or as A for on-prem.
     )
 
     # Probe strategy:
@@ -1419,6 +1426,18 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
     strong_signals = {"owa", "outlook", "exchange", "mail-ex", "autodiscover"}
     has_strong_signal = bool(found_prefixes & strong_signals)
     if not has_strong_signal:
+        return
+
+    # Wildcard-DNS guard. Some domains (in-n-out.com was the canary)
+    # point ``*.<domain>`` at a single IP, which causes every Exchange
+    # prefix above to resolve to the same address. That's not Exchange —
+    # it's wildcard DNS, and firing on it mislabels a web-only domain
+    # as running Exchange Server. Probe a nonsense prefix: if it also
+    # resolves, assume wildcard and suppress the detection.
+    nonsense = f"this-is-not-a-real-host-xyz123.{domain}"
+    wildcard_a = await _safe_resolve(nonsense, "A")
+    wildcard_cname = await _safe_resolve(nonsense, "CNAME") if not wildcard_a else ()
+    if wildcard_a or wildcard_cname:
         return
 
     ctx.add(

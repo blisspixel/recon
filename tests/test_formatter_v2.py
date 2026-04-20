@@ -25,15 +25,15 @@ from recon_tool.models import (
 
 
 def _make_info(**overrides) -> TenantInfo:
-    defaults = dict(
-        tenant_id="tid",
-        display_name="Test",
-        default_domain="test.com",
-        queried_domain="test.com",
-        confidence=ConfidenceLevel.HIGH,
-        services=("Svc",),
-        sources=("dns_records",),
-    )
+    defaults = {
+        "tenant_id": "tid",
+        "display_name": "Test",
+        "default_domain": "test.com",
+        "queried_domain": "test.com",
+        "confidence": ConfidenceLevel.HIGH,
+        "services": ("Svc",),
+        "sources": ("dns_records",),
+    }
     defaults.update(overrides)
     return TenantInfo(**defaults)
 

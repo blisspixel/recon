@@ -1,12 +1,16 @@
-# Fingerprint Database
+# Fingerprints
 
-Fingerprints are loaded from `data/fingerprints.yaml` and validated on startup (schema, regex safety, required fields). Add new services by editing the YAML — no code changes needed.
+Fingerprints are DNS pattern rules in `recon_tool/data/fingerprints.yaml`.
+235 built-in as of v1.0.2. Add new services by editing the YAML — no code
+changes needed.
 
-## Custom Fingerprints
+## Custom fingerprints
 
-Drop a `fingerprints.yaml` in `~/.recon/` to add your own. Custom patterns are validated the same way — invalid regex or missing fields are skipped with a warning. Custom fingerprints are **additive only** — you cannot override or disable built-in fingerprints from the custom file.
-
-Set `RECON_CONFIG_DIR` to override the custom fingerprint directory (default: `~/.recon/`).
+Drop `~/.recon/fingerprints.yaml`. Custom entries are validated on
+startup; invalid regex or missing fields are skipped with a warning.
+Custom fingerprints are **additive only** — you cannot override built-in
+slugs from the custom file. Set `RECON_CONFIG_DIR` to override the
+search directory.
 
 ```yaml
 # ~/.recon/fingerprints.yaml
@@ -18,87 +22,87 @@ fingerprints:
     detections:
       - type: cname
         pattern: "sso\\.internal\\.example\\.com$"
-        description: Internal SSO portal CNAME delegation
 ```
 
-## Chained Patterns (`match_mode: all`)
+## Detection types
 
-By default, a fingerprint fires when **any** of its detections matches. For high-confidence attribution where a single record could be a false positive, use `match_mode: all` — the fingerprint only fires when **every** listed detection matches.
+| Type | Queries | Matching | Best for |
+|------|---------|----------|----------|
+| `txt` | TXT at zone apex | Regex | Verification tokens (`^service-verify=`) |
+| `spf` | SPF includes | Substring | Email sending (`sendgrid.net`) |
+| `mx` | MX hostnames | Substring | Email providers and gateways |
+| `ns` | NS hostnames | Substring | DNS hosting |
+| `cname` | CNAME targets | Regex | CDN / WAF / SaaS infrastructure |
+| `subdomain_txt` | TXT at a specific subdomain | Regex | Challenge records (`_github-challenge-`) |
+| `caa` | CAA values | Substring | CA restrictions |
+| `srv` | SRV targets | Substring | Service discovery (Teams, XMPP) |
+
+## Chained patterns (`match_mode: all`)
+
+By default a fingerprint fires when *any* detection matches. Use
+`match_mode: all` to require *every* detection — useful when a single
+TXT or CNAME alone is ambiguous but the combination is diagnostic.
 
 ```yaml
-fingerprints:
-  - name: Corp Okta Tenant
-    slug: corp-okta-confirmed
-    category: Identity & Access
-    confidence: high
-    match_mode: all               # ALL detections must match
-    detections:
-      - type: cname
-        pattern: "okta\\.com$"
-        description: Okta SaaS CNAME
-      - type: txt
-        pattern: "^okta-verification="
-        description: Okta domain verification TXT
+- name: Corp Okta Tenant
+  slug: corp-okta-confirmed
+  category: Identity & Access
+  confidence: high
+  match_mode: all
+  detections:
+    - type: cname
+      pattern: "okta\\.com$"
+    - type: txt
+      pattern: "^okta-verification="
 ```
 
-**When to use chained patterns:**
+**Use it when** a single detection false-positives on dormant accounts
+or common-name TXT tokens, and you want both ownership evidence *and*
+active routing before attributing the service.
 
-- A single detection has a known false-positive pattern (e.g., a TXT token that shows up on dormant accounts).
-- You want to require proof of both ownership (verification token) *and* active routing (MX/CNAME) before attributing the service.
-- A pattern is too generic alone but diagnostic when combined with another record type.
+**Skip it when** a unique service-specific TXT prefix already makes the
+match diagnostic on its own. Forcing `all` can reject legitimate
+detections on domains with partial evidence.
 
-**When NOT to use chained patterns:**
+## Testing a new fingerprint
 
-- A single unique TXT token (e.g., a service-specific prefix that no other service uses) is already diagnostic.
-- Adding an `all` constraint would reject legitimate detections on domains that only have partial evidence (e.g., a registered M365 tenant without DKIM).
+Before committing a new fingerprint to the built-in set:
 
-Chained patterns can cross record types — a `txt` + `cname` + `mx` combination is valid and only fires when all three records match on the same domain.
+1. Validate: `python scripts/validate_fingerprint.py ~/.recon/fingerprints.yaml`
+2. Dry-run against a real domain that should match:
+   `recon <domain> --explain --no-cache` — verify the slug fires and
+   the evidence is what you expected.
+3. Dry-run against 10-15 domains that should *not* match — especially
+   parked / dormant / proxy-fronted domains. If your fingerprint fires
+   on any of them, tighten the pattern or switch to `match_mode: all`.
+4. Keep regexes anchored (`^`, `$`) where possible. Unanchored substring
+   matches in TXT are the #1 source of false positives.
 
-## Detection Types
+## Email security score
 
-| Type | What it queries | Matching | Best for |
-|------|----------------|----------|----------|
-| `txt` | TXT records at zone apex | Regex | Domain verification tokens (`^service-verify=`) |
-| `spf` | SPF include directives | Substring | Email sending services (`sendgrid.net`) |
-| `mx` | MX record hostnames | Substring | Email providers and gateways |
-| `ns` | NS record hostnames | Substring | DNS hosting providers |
-| `cname` | CNAME targets (www, root, subdomains) | Regex | CDN, WAF, and SaaS infrastructure |
-| `subdomain_txt` | TXT at a specific subdomain | Regex | Site verification challenges (`_github-challenge-`) |
-| `caa` | CAA record values | Substring | Certificate authority restrictions |
-| `srv` | SRV record targets | Substring | Service discovery (Teams, XMPP) |
-
-## Categories
-
-AI & Generative, Productivity & Collaboration, CRM & Marketing, Security & Compliance, Support & Helpdesk, Email & Communication, DevTools & Infrastructure, Data & Analytics, HR & Operations, Payments & Finance, Sales Intelligence, Social & Advertising, Infrastructure, Misc.
-
-## Email Security Score
-
-The score counts five specific protections (1 point each):
+The score counts five apex-observable controls (1 point each):
 
 | Points | Requires |
 |--------|----------|
 | 1 | DMARC policy is `reject` or `quarantine` (not `none`) |
-| 1 | DKIM selectors found (Exchange or Google selectors) |
+| 1 | DKIM observed at common selectors, **or** inferred from a commercial email gateway (Proofpoint, Mimecast, Cisco IronPort, Barracuda, Trend Micro, Trellix, Symantec) with enforcing DMARC |
 | 1 | SPF with `-all` (hard fail, not `~all` softfail) |
 | 1 | MTA-STS record present |
 | 1 | BIMI record present |
 
-A domain with DMARC `none` + DKIM + SPF `~all` scores 1/5 (only DKIM counts).
+Score is an observation, not a verdict — we see apex DNS, not the full
+posture. A domain with custom DKIM selectors we can't enumerate will
+read low here even if DKIM is actually deployed; the gateway-inferred
+DKIM path mitigates this for commercial-gateway deployments.
 
-## Related Domain Auto-Enrichment
+## Related-domain enrichment
 
-Related domains are discovered via multiple techniques:
+When a primary lookup discovers related domains (from CNAME breadcrumbs
+or certificate transparency), they get lightweight DNS probes and their
+matched services fold back into the primary result. Prioritisation:
+high-signal prefixes (`auth`, `login`, `sso`, `api`, `shop`) first,
+capped at 15 enrichments per lookup to bound DNS fan-out.
 
-1. **CNAME breadcrumbs** — when autodiscover or DKIM delegation points to a different domain (e.g., `autodiscover.northwindtraders.com` → `northwind-internal.com`).
-2. **Certificate transparency** — crt.sh discovers subdomains from public CT logs.
-3. **Common subdomain probing** — ~45 high-signal prefixes (auth, login, sso, shop, api, status, cdn, staging, etc.) are probed directly via DNS CNAME lookups. This works even when crt.sh is down.
-4. **Exchange on-prem detection** — OWA/autodiscover subdomain probing detects on-prem or hybrid Exchange deployments.
-5. **SSO hub detection** — 15 identity-provider subdomain prefixes (Shibboleth, CAS, ADFS, Okta, SAML, university-specific SSO names) are probed via A-record resolution to detect federated identity hubs.
-6. **A → PTR hosting detection** — apex A-record reverse DNS reveals cloud hosting providers (AWS, Azure, GCP, etc.).
-7. **SPF redirect chain following** — SPF `redirect=` directives are followed up to 3 hops to discover the ultimate email policy domain.
-
-Enrichment uses two tiers for efficiency:
-- **Subdomains** of the queried domain get lightweight CNAME+TXT-only lookups (fast, ~2 DNS queries each).
-- **Separate domains** (from CNAME breadcrumbs) get full DNS fingerprinting.
-
-Subdomains are prioritized by signal value before the enrichment cap (25) is applied — auth/login/shop/api subdomains are enriched first, deep internal subdomains last. When crt.sh is unreachable, a note is shown in the output.
+CT providers (crt.sh, CertSpotter) fail open — if both are unreachable,
+the per-domain CT cache serves as a fallback. See `docs/limitations.md`
+for what CT degradation means for accuracy.

@@ -292,15 +292,22 @@ class TestProperty5DegradedInAllOutputs:
 
 
 class TestProperty6JsonPartialKey:
-    """Property 6: JSON partial key reflects degraded state.
+    """Property 6: JSON partial key reflects core-source degradation only.
+
+    As of v1.0.2, `partial` is reserved for core-source failures (OIDC,
+    UserRealm, Google Identity, DNS). CT-provider degradation (crt.sh,
+    CertSpotter) is handled gracefully by the fallback + cache pipeline
+    and must not flip the global `partial` bit on its own.
 
     **Validates: Requirements 7.4, 11.3**
     """
 
+    _CT_PROVIDERS = frozenset({"crt.sh", "certspotter"})
+
     @given(degraded=_degraded_sources_tuple)
     @settings(max_examples=100)
-    def test_partial_equals_bool_degraded(self, degraded):
-        """format_tenant_dict['partial'] == bool(degraded_sources)."""
+    def test_partial_matches_non_ct_degradation(self, degraded):
+        """format_tenant_dict['partial'] iff a non-CT source is degraded."""
         ti = TenantInfo(
             tenant_id="t1",
             display_name="Test",
@@ -312,4 +319,5 @@ class TestProperty6JsonPartialKey:
             degraded_sources=degraded,
         )
         d = format_tenant_dict(ti)
-        assert d["partial"] == bool(degraded)
+        expected = any(src not in self._CT_PROVIDERS for src in degraded)
+        assert d["partial"] == expected

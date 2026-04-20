@@ -12,11 +12,10 @@ category_boost:
   saas_footprint: 0.9
 signal_boost:
   "DMARC Governance Investment": 1.8
-  "Enterprise IT Maturity": 1.5
-  "Zero Trust Posture": 1.6
+  "Multi-Layer Security Tooling": 1.5
+  "Zero Trust Pattern Observed": 1.6
   "High-Security Posture (CSE)": 1.8
   "Security Gap — Gateway Without DMARC Enforcement": 1.9
-  "Security Stack Without Governance": 1.7
 exclude_signals:
   - "Startup Tool Mix"
   - "Product-Led Growth"

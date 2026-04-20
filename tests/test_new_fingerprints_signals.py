@@ -51,13 +51,12 @@ class TestNewSignals:
         names = {r.name for r in results}
         assert "Observability & SRE" not in names
 
-    def test_ai_security_posture(self):
+    def test_ai_security_posture_retired(self):
+        # Retired in v1.0.2 — the slug list mixed AI platforms with
+        # security tools with min_matches: 3, so the signal named "AI
+        # Security Posture" could fire on three AI platforms alone.
+        # That's a false claim.
         results = evaluate_signals(_ctx({"openai", "lakera", "zscaler"}))
-        names = {r.name for r in results}
-        assert "AI Security Posture" in names
-
-    def test_ai_security_posture_needs_three(self):
-        results = evaluate_signals(_ctx({"openai", "lakera"}))
         names = {r.name for r in results}
         assert "AI Security Posture" not in names
 
@@ -72,7 +71,7 @@ class TestNewSignals:
         assert "File Collaboration Sprawl" not in names
 
     def test_zero_trust_includes_new_slugs(self):
-        """Zero Trust should fire with new security slugs."""
+        """Zero Trust Pattern Observed should fire with new security slugs."""
         results = evaluate_signals(_ctx({"ping-identity", "cato", "cyberark"}))
         names = {r.name for r in results}
-        assert "Zero Trust Posture" in names
+        assert "Zero Trust Pattern Observed" in names

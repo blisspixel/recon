@@ -1,4 +1,4 @@
-"""v0.9.0 — QA Round 5: Ephemeral Fingerprints.
+"""Ephemeral fingerprint injection tests (in-memory, session-scoped).
 
 Validates:
 - inject_ephemeral(), get_ephemeral(), clear_ephemeral() core logic (18.1)

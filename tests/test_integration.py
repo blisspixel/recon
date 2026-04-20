@@ -19,17 +19,17 @@ pytestmark = pytest.mark.integration
 async def test_resolve_reserved_domain_pipeline_runs():
     """Smoke test: resolver completes end-to-end against a reserved domain.
 
-    example.com is an IANA-reserved domain with basic DNS records but no
-    Microsoft 365 tenant and no SaaS footprint. This test verifies the
-    full pipeline runs without crashing and returns source results; it
-    does not assert any specific services or tenant data.
+    example.com is an IANA-reserved domain. This test verifies the full
+    pipeline runs without crashing and returns source results; it does
+    not assert tenant presence or absence — third parties have been
+    observed registering M365 tenants against example.com, so the
+    state of that specific field is outside our control.
     """
     from recon_tool.resolver import resolve_tenant
 
     info, results = await resolve_tenant("example.com")
     assert info is not None
     assert len(results) > 0
-    assert info.tenant_id is None
 
 
 @pytest.mark.asyncio
@@ -45,14 +45,20 @@ async def test_resolve_second_reserved_domain():
     info, results = await resolve_tenant("example.org")
     assert info is not None
     assert len(results) > 0
-    assert info.tenant_id is None
 
 
 @pytest.mark.asyncio
-async def test_resolve_nonexistent_domain():
-    """Smoke test: a domain with no data should raise."""
-    from recon_tool.models import ReconLookupError
+async def test_resolve_nonexistent_domain_returns_sparse_result():
+    """Smoke test: a nonexistent domain returns a sparse result, not an error.
+
+    v1.0.2 changed this behavior: when every source errors out and no
+    tenant can be resolved, the resolver returns a TenantInfo with
+    tenant_id=None rather than raising ReconLookupError. This keeps
+    batch mode non-fatal on dead domains.
+    """
     from recon_tool.resolver import resolve_tenant
 
-    with pytest.raises(ReconLookupError):
-        await resolve_tenant("thisdomain-definitely-does-not-exist-12345.com")
+    info, results = await resolve_tenant("thisdomain-definitely-does-not-exist-12345.com")
+    assert info is not None
+    assert info.tenant_id is None
+    assert len(results) > 0

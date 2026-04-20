@@ -83,14 +83,12 @@ class TestApplyStrictMode:
 
     def test_preserves_direct_insights(self) -> None:
         """Already-direct insights pass through unchanged."""
-        text = "AI Adoption Without Governance: OpenAI, Anthropic"
+        text = "AI Adoption: OpenAI, Anthropic"
         result = apply_strict_mode((text,))
         assert result == (text,)
 
     def test_transforms_likely_azure_china(self) -> None:
-        result = apply_strict_mode(
-            ("Likely Azure China 21Vianet tenant (cloud_instance=partner.microsoftonline.cn)",)
-        )
+        result = apply_strict_mode(("Likely Azure China 21Vianet tenant (cloud_instance=partner.microsoftonline.cn)",))
         assert "Likely" not in result[0]
         assert "Azure China 21Vianet tenant" in result[0]
 

@@ -1,4 +1,4 @@
-"""v0.9.0 — Backward Compatibility and Cross-Pillar Integration Tests.
+"""Backward-compatibility and cross-pillar integration tests.
 
 Validates:
 - All existing fingerprints load without warnings (20.1)
@@ -269,16 +269,12 @@ class TestBackwardCompatDetectProvider:
 
     def test_microsoft365_slug_only_no_mx(self) -> None:
         """No MX records — honest "(account detected, no MX)" label."""
-        result = detect_provider(
-            services=(), slugs=("microsoft365",), has_mx_records=False
-        )
+        result = detect_provider(services=(), slugs=("microsoft365",), has_mx_records=False)
         assert result == "Microsoft 365 (account detected, no MX)"
 
     def test_microsoft365_slug_only_custom_mx(self) -> None:
         """MX records exist but aren't recognized — custom MX label."""
-        result = detect_provider(
-            services=(), slugs=("microsoft365",), has_mx_records=True
-        )
+        result = detect_provider(services=(), slugs=("microsoft365",), has_mx_records=True)
         assert result == "Microsoft 365 (account detected, custom MX)"
 
     def test_microsoft365_slug_only_default(self) -> None:
@@ -287,9 +283,7 @@ class TestBackwardCompatDetectProvider:
         assert result == "Microsoft 365 (account detected, custom MX)"
 
     def test_google_workspace_slug_only(self) -> None:
-        result = detect_provider(
-            services=(), slugs=("google-workspace",), has_mx_records=False
-        )
+        result = detect_provider(services=(), slugs=("google-workspace",), has_mx_records=False)
         assert result == "Google Workspace (account detected, no MX)"
 
     def test_dual_provider_slugs_no_mx(self) -> None:
@@ -298,25 +292,18 @@ class TestBackwardCompatDetectProvider:
             slugs=("microsoft365", "google-workspace"),
             has_mx_records=False,
         )
-        assert result == (
-            "Microsoft 365 (account detected, no MX) + "
-            "Google Workspace (account detected, no MX)"
-        )
+        assert result == ("Microsoft 365 (account detected, no MX) + Google Workspace (account detected, no MX)")
 
     def test_zoho_slug_only(self) -> None:
         result = detect_provider(services=(), slugs=("zoho",), has_mx_records=False)
         assert result == "Zoho Mail (account detected, no MX)"
 
     def test_protonmail_slug_only(self) -> None:
-        result = detect_provider(
-            services=(), slugs=("protonmail",), has_mx_records=False
-        )
+        result = detect_provider(services=(), slugs=("protonmail",), has_mx_records=False)
         assert result == "ProtonMail (account detected, no MX)"
 
     def test_aws_ses_slug_only(self) -> None:
-        result = detect_provider(
-            services=(), slugs=("aws-ses",), has_mx_records=False
-        )
+        result = detect_provider(services=(), slugs=("aws-ses",), has_mx_records=False)
         assert result == "AWS SES (account detected, no MX)"
 
     def test_no_slugs_returns_unknown(self) -> None:

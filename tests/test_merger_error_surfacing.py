@@ -57,19 +57,23 @@ class TestReconLookupErrorSourceErrors:
         assert "oidc_discovery: HTTP 429" in msg
         assert "dns_records: no records found" in msg
 
-    def test_all_sources_empty_no_errors_uses_generic_message(self) -> None:
-        """When sources returned without errors but nothing detected, the
-        exception uses a neutral message saying the domain looks empty."""
+    def test_all_sources_empty_no_errors_returns_sparse_tenant_info(self) -> None:
+        """When every source returned cleanly but nothing was detected, we
+        return a sparse TenantInfo rather than raising. 'We looked and found
+        nothing' is a valid observation, not an error — this keeps batch
+        runs uniform instead of mixing successes with error entries.
+
+        Raising is reserved for the case where every source actually
+        failed (see test_all_sources_failed_surface).
+        """
         results = [
             SourceResult(source_name="oidc_discovery"),
             SourceResult(source_name="dns_records"),
         ]
-        with pytest.raises(ReconLookupError) as excinfo:
-            merge_results(results, "example.com")
-
-        msg = str(excinfo.value)
-        assert "no public DNS records matching any fingerprint" in msg
-        assert excinfo.value.source_errors == ()
+        info = merge_results(results, "example.com")
+        assert info.tenant_id is None
+        assert info.services == ()
+        assert info.slugs == ()
 
 
 class TestPartialSuccessStillRenders:

@@ -92,12 +92,11 @@ class TestIsFederatedRedirect:
 
 class TestClassifyResponse:
     def _make_response(self, url: str, body: str, status_code: int = 200) -> httpx.Response:
-        resp = httpx.Response(
+        return httpx.Response(
             status_code=status_code,
             request=httpx.Request("GET", url),
             content=body.encode(),
         )
-        return resp
 
     def test_federated_redirect_to_okta(self):
         resp = self._make_response(

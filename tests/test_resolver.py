@@ -71,7 +71,7 @@ class TestSourcePool:
         s = FakeSource("x", SourceResult(source_name="x"))
         pool.register(s)
         assert len(pool) == 1
-        assert list(pool)[0] is s
+        assert next(iter(pool)) is s
 
     def test_iteration_order(self) -> None:
         sources = [FakeSource(f"s{i}", SourceResult(source_name=f"s{i}")) for i in range(5)]
@@ -182,7 +182,7 @@ class TestResolveTenant:
         s2 = FakeSource("metadata", second_result)
         pool = SourcePool([s1, s2])
 
-        info, results = await resolve_tenant("example.com", pool=pool)
+        info, _results = await resolve_tenant("example.com", pool=pool)
 
         # In parallel mode, tenant_id is NOT forwarded between sources
         assert "tenant_id" not in s2.call_kwargs
@@ -218,7 +218,7 @@ class TestResolveTenant:
             ]
         )
 
-        info, results = await resolve_tenant("example.com", pool=pool)
+        _info, results = await resolve_tenant("example.com", pool=pool)
         assert len(results) == 3
         assert results[0].error == "timeout"
         assert results[1].tenant_id is not None
@@ -375,7 +375,7 @@ class TestPropertySourceFailureIsolation:
                 sources.append(FakeSource(f"source_{i}", result))
 
         pool = SourcePool(sources)
-        info, results = await resolve_tenant("example.com", pool=pool)
+        _info, results = await resolve_tenant("example.com", pool=pool)
 
         # All N sources should have been queried (N results returned)
         assert len(results) == n

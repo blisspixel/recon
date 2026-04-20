@@ -166,14 +166,6 @@ class TestNewSignalsEvaluate:
         names = {r.name for r in results}
         assert "Dual Email Delivery Path" not in names
 
-    # -- Security Stack Without Governance (contradicts via metadata) --
-
-    def test_security_stack_without_governance_fires(self) -> None:
-        """Signal fires with security tools and non-reject DMARC."""
-        results = evaluate_signals(_ctx({"crowdstrike", "sentinelone"}, dmarc_policy="none"))
-        names = {r.name for r in results}
-        assert "Security Stack Without Governance" in names
-
     # Removed signals (no longer emitted):
     # - Complex Migration Window — narrative synthesis, violates
     #   "no timeline narrative generation" invariant.
@@ -181,6 +173,12 @@ class TestNewSignalsEvaluate:
     #   tools (Canva/Mailchimp/Airtable at Fortune-500 scale are not
     #   "shadow IT"); violates "observable facts in neutral language".
     # - Governance Sprawl — depended on Shadow IT Risk.
+    # - Security Stack Without Governance — same narrative-judgment
+    #   pattern; inferring that an org's email posture doesn't "keep
+    #   pace" with their endpoint security is opinion, not observation.
+    # - AI Adoption Without Governance — inferred "shadow AI deployment"
+    #   from absence of specific IDPs; speculative.
+    # - DevSecOps Investment Without Email Governance — pure narrative.
     # - expected_counterparts on AI Adoption / Agentic AI Infrastructure
     #   — produced "Missing Counterparts" vendor-recommendation absence
     #   insights with no diagnostic value.
@@ -189,10 +187,17 @@ class TestNewSignalsEvaluate:
 
     def test_removed_signals_do_not_fire(self) -> None:
         slugs = {
-            "openai", "anthropic",
-            "canva", "dropbox", "zoom", "airtable", "notion",
-            "crowdstrike", "okta",
-            "microsoft365", "google-workspace",
+            "openai",
+            "anthropic",
+            "canva",
+            "dropbox",
+            "zoom",
+            "airtable",
+            "notion",
+            "crowdstrike",
+            "okta",
+            "microsoft365",
+            "google-workspace",
         }
         results = evaluate_signals(_ctx(slugs))
         names = {r.name for r in results}

@@ -40,7 +40,7 @@ observations:
         - field: email_security_score
           operator: gte
           value: 4
-    template: "Email security score is {email_security_score}/5 — DMARC, DKIM, SPF, and additional controls are in place"
+    template: "DMARC, DKIM, SPF, and additional controls are all in place"
 
   - name: weak_email_security
     category: email
@@ -50,7 +50,7 @@ observations:
         - field: email_security_score
           operator: lte
           value: 1
-    template: "Email security score is {email_security_score}/5 — minimal email authentication controls detected"
+    template: "Minimal email authentication controls detected (DMARC/DKIM/SPF largely missing or weak)"
 
   - name: heavy_outbound_email
     category: email

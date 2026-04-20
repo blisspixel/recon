@@ -743,9 +743,7 @@ def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="email",
                 severity="medium",
-                observation=_enforce_banned_terms(
-                    "No DKIM selectors observed at common names for this domain"
-                ),
+                observation=_enforce_banned_terms("No DKIM selectors observed at common names for this domain"),
                 recommendation=_enforce_banned_terms(
                     "Consider verifying DKIM configuration and, if missing, "
                     "deploying signing with a common selector name"
@@ -1033,11 +1031,13 @@ def _build_relative_assessment(info_a: TenantInfo, info_b: TenantInfo) -> tuple[
     score_a = _compute_email_security_score(info_a)
     score_b = _compute_email_security_score(info_b)
     if score_a > score_b:
-        summary = f"{info_a.queried_domain} has stronger email security (score {score_a}/5 vs {score_b}/5)"
+        summary = f"{info_a.queried_domain} has more email-security controls observed than {info_b.queried_domain}"
     elif score_b > score_a:
-        summary = f"{info_b.queried_domain} has stronger email security (score {score_b}/5 vs {score_a}/5)"
+        summary = f"{info_b.queried_domain} has more email-security controls observed than {info_a.queried_domain}"
     else:
-        summary = f"Both domains have comparable email security (score {score_a}/5)"
+        summary = (
+            f"{info_a.queried_domain} and {info_b.queried_domain} have a comparable set of email-security controls"
+        )
     assessments.append(RelativeAssessment(dimension="email_security", summary=_enforce_banned_terms(summary)))
 
     # Identity maturity

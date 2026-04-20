@@ -102,11 +102,11 @@ async def _is_private_ip_async(host: str) -> bool:
 def _is_private_ip(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
     """Synchronous check if a host resolves to a blocked IP address.
 
-    Exists as a test-facing API for the SSRF blocklist logic. The async
-    variant (_is_private_ip_async) is used in production by _SSRFSafeTransport,
-    but tests need a sync version to validate the blocklist without running
-    an event loop. Keeping this here (rather than in tests/) ensures it stays
-    in sync with _BLOCKED_NETWORKS and _is_blocked_ip.
+    Called only by tests/test_http.py (which is why pyright flags it unused
+    from the production scan). Production uses the async variant via
+    _SSRFSafeTransport; tests need a sync form to exercise the blocklist
+    without an event loop. Kept colocated with _BLOCKED_NETWORKS so the two
+    can't drift apart.
     """
     # Layer 1: literal IP check (fast path)
     try:

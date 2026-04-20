@@ -1,0 +1,29 @@
+version: 2
+
+updates:
+  # GitHub Actions — weekly bumps so we never fall behind on Node deprecations
+  # or transitive CVEs in the pinned actions.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  # Python runtime + dev dependencies via pip/uv. Weekly cadence keeps the
+  # surface current without drowning the repo in PR noise. Major-version
+  # bumps are split out so we can review any breaking runtime changes
+  # (httpx, dnspython, typer, Rich) separately from routine patch bumps.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      python-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"

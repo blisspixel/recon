@@ -19,15 +19,15 @@ class TestNewSignals:
         names = {r.name for r in results}
         assert "Shadow IT Risk" not in names
 
-    def test_zero_trust_posture(self):
+    def test_zero_trust_pattern_observed(self):
         results = evaluate_signals(_ctx({"okta", "zscaler", "crowdstrike"}))
         names = {r.name for r in results}
-        assert "Zero Trust Posture" in names
+        assert "Zero Trust Pattern Observed" in names
 
-    def test_zero_trust_posture_needs_three(self):
+    def test_zero_trust_pattern_needs_three(self):
         results = evaluate_signals(_ctx({"okta", "zscaler"}))
         names = {r.name for r in results}
-        assert "Zero Trust Posture" not in names
+        assert "Zero Trust Pattern Observed" not in names
 
     def test_startup_tool_mix(self):
         results = evaluate_signals(_ctx({"vercel", "github", "slack", "figma"}))

@@ -64,6 +64,7 @@ class TestDebugCallback:
 
     def test_debug_true_configures_logger(self) -> None:
         import logging
+
         _debug_callback(True)
         logger = logging.getLogger("recon")
         assert logger.level == logging.DEBUG
@@ -178,9 +179,7 @@ class TestCliSourcesFlag:
 
 class TestBatchValidation:
     def test_batch_missing_file_exits(self) -> None:
-        result = runner.invoke(
-            app, ["batch", "/definitely-not-a-real-path/domains.txt"]
-        )
+        result = runner.invoke(app, ["batch", "/definitely-not-a-real-path/domains.txt"])
         assert result.exit_code == 2
 
     def test_batch_empty_file_exits(self, tmp_path: Path) -> None:
@@ -215,6 +214,7 @@ class TestBatchJsonMode:
         assert result.exit_code == 0
         # Output should be valid JSON
         import json
+
         parsed = json.loads(result.stdout)
         assert isinstance(parsed, list)
         assert len(parsed) == 2
@@ -241,9 +241,7 @@ class TestCliExposureMode:
             return info, results
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(
-                app, ["lookup", "contoso.com", "--no-cache", "--exposure"]
-            )
+            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--exposure"])
         assert result.exit_code == 0
 
     def test_exposure_mode_json(self) -> None:
@@ -251,9 +249,7 @@ class TestCliExposureMode:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(
-                app, ["lookup", "contoso.com", "--no-cache", "--exposure", "--json"]
-            )
+            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--exposure", "--json"])
         assert result.exit_code == 0
 
 
@@ -263,9 +259,7 @@ class TestCliGapsMode:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(
-                app, ["lookup", "contoso.com", "--no-cache", "--gaps"]
-            )
+            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--gaps"])
         assert result.exit_code == 0
 
     def test_gaps_mode_json(self) -> None:
@@ -273,9 +267,7 @@ class TestCliGapsMode:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(
-                app, ["lookup", "contoso.com", "--no-cache", "--gaps", "--json"]
-            )
+            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--gaps", "--json"])
         assert result.exit_code == 0
 
 
@@ -285,9 +277,7 @@ class TestCliPostureAndExplainFlags:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(
-                app, ["lookup", "contoso.com", "--no-cache", "--posture"]
-            )
+            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--posture"])
         assert result.exit_code == 0
 
     def test_explain_renders_source_status_panel(self) -> None:
@@ -295,13 +285,12 @@ class TestCliPostureAndExplainFlags:
         Status panel above the Explanations panel. Caught a v0.9.2 bug
         where the cache-hit path produced an empty results list and
         nothing rendered."""
+
         async def fake_resolve(*args: object, **kwargs: object):
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(
-                app, ["lookup", "contoso.com", "--no-cache", "--explain"]
-            )
+            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--explain"])
         assert result.exit_code == 0
         assert "Source Status" in result.stdout
         assert "oidc_discovery" in result.stdout
@@ -322,11 +311,10 @@ class TestCliPostureAndExplainFlags:
             cache_put("contoso.com", _fake_info())
             # Resolver should NOT be called — cache hit
             from unittest.mock import MagicMock
+
             unused_mock = MagicMock(side_effect=AssertionError("resolver should not be called on cache hit"))
             with patch("recon_tool.resolver.resolve_tenant", unused_mock):
-                result = runner.invoke(
-                    app, ["lookup", "contoso.com", "--explain"]
-                )
+                result = runner.invoke(app, ["lookup", "contoso.com", "--explain"])
             assert result.exit_code == 0
             # Source Status panel must appear with synthesized entries
             assert "Source Status" in result.stdout
@@ -343,9 +331,7 @@ class TestCliPostureAndExplainFlags:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(
-                app, ["lookup", "contoso.com", "--no-cache", "--explain"]
-            )
+            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--explain"])
         assert result.exit_code == 0
 
     def test_full_flag(self) -> None:
@@ -353,9 +339,7 @@ class TestCliPostureAndExplainFlags:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(
-                app, ["lookup", "contoso.com", "--no-cache", "--full"]
-            )
+            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--full"])
         assert result.exit_code == 0
 
     def test_md_flag(self) -> None:
@@ -363,16 +347,12 @@ class TestCliPostureAndExplainFlags:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(
-                app, ["lookup", "contoso.com", "--no-cache", "--md"]
-            )
+            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--md"])
         assert result.exit_code == 0
         assert "#" in result.stdout  # markdown header
 
     def test_mutually_exclusive_output_flags_rejected(self) -> None:
-        result = runner.invoke(
-            app, ["lookup", "contoso.com", "--json", "--md"]
-        )
+        result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--md"])
         assert result.exit_code != 0
 
 

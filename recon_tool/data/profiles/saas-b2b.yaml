@@ -17,7 +17,7 @@ signal_boost:
   "Sales-Led Growth": 1.3
   "Modern Collaboration": 1.2
   "Edge-Native Architecture": 1.3
-  "Zero Trust Posture": 1.5
+  "Zero Trust Pattern Observed": 1.5
 prepend_note: |
   SaaS / B2B profile applied. DevOps maturity, observability,
   identity federation, and go-to-market signals are prioritised

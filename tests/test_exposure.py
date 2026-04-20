@@ -528,14 +528,20 @@ class TestProperty12RelativeAssessmentConsistency:
         )
         assert email_assessment is not None
 
+        # v1.0.2 retired ``stronger``/``comparable`` verdict words and the
+        # ``score {n}/5 vs {n}/5`` form in favor of describing how the
+        # observed-control sets differ. Both apex domains now appear in
+        # every assessment summary, and the count direction is conveyed
+        # via ``more … than`` / ``a comparable set``.
+        summary_lower = email_assessment.summary.lower()
         if score_a > score_b:
             assert info_a.queried_domain in email_assessment.summary
-            assert "stronger" in email_assessment.summary.lower()
+            assert "more" in summary_lower
         elif score_b > score_a:
             assert info_b.queried_domain in email_assessment.summary
-            assert "stronger" in email_assessment.summary.lower()
+            assert "more" in summary_lower
         else:
-            assert "comparable" in email_assessment.summary.lower()
+            assert "comparable" in summary_lower
 
 
 # ── Task 6.1: Import safety test ─────────────────────────────────────
@@ -571,19 +577,19 @@ class TestBannedTermsIntegration:
 
     def _make_info(self, **overrides) -> TenantInfo:
         """Create a TenantInfo with sensible defaults, allowing overrides."""
-        defaults = dict(
-            tenant_id="tid-test",
-            display_name="Test Corp",
-            default_domain="test.onmicrosoft.com",
-            queried_domain="test.com",
-            confidence=ConfidenceLevel.HIGH,
-            sources=("test_source",),
-            services=(),
-            slugs=(),
-            dmarc_policy=None,
-            auth_type=None,
-            mta_sts_mode=None,
-        )
+        defaults = {
+            "tenant_id": "tid-test",
+            "display_name": "Test Corp",
+            "default_domain": "test.onmicrosoft.com",
+            "queried_domain": "test.com",
+            "confidence": ConfidenceLevel.HIGH,
+            "sources": ("test_source",),
+            "services": (),
+            "slugs": (),
+            "dmarc_policy": None,
+            "auth_type": None,
+            "mta_sts_mode": None,
+        }
         defaults.update(overrides)
         return TenantInfo(**defaults)
 

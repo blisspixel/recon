@@ -62,7 +62,11 @@ class TestInsightGeneration:
         services = {"Exchange Online"}
         slugs = {"microsoft365"}
         insights = generate_insights(
-            services, slugs, None, None, 0,
+            services,
+            slugs,
+            None,
+            None,
+            0,
             primary_email_provider="Microsoft 365",
         )
         assert any("No DMARC" in i for i in insights)
@@ -164,21 +168,21 @@ class TestInsightGeneration:
 
 class TestTieredOutput:
     def _make_info(self, **kwargs) -> TenantInfo:
-        defaults = dict(
-            tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-            display_name="TestCo",
-            default_domain="testco.com",
-            queried_domain="testco.com",
-            confidence=ConfidenceLevel.HIGH,
-            region="NA",
-            auth_type="Federated",
-            dmarc_policy="reject",
-            domain_count=5,
-            sources=("oidc_discovery", "user_realm"),
-            services=("Exchange Online", "Google Workspace", "Slack"),
-            insights=("Federated identity", "DMARC: reject"),
-            tenant_domains=("testco.com", "testco.onmicrosoft.com"),
-        )
+        defaults = {
+            "tenant_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            "display_name": "TestCo",
+            "default_domain": "testco.com",
+            "queried_domain": "testco.com",
+            "confidence": ConfidenceLevel.HIGH,
+            "region": "NA",
+            "auth_type": "Federated",
+            "dmarc_policy": "reject",
+            "domain_count": 5,
+            "sources": ("oidc_discovery", "user_realm"),
+            "services": ("Exchange Online", "Google Workspace", "Slack"),
+            "insights": ("Federated identity", "DMARC: reject"),
+            "tenant_domains": ("testco.com", "testco.onmicrosoft.com"),
+        }
         defaults.update(kwargs)
         return TenantInfo(**defaults)
 

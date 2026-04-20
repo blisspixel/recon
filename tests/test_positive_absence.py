@@ -1,4 +1,4 @@
-"""Tests for v0.9.3 positive_when_absent hardening observation engine.
+"""Tests for the positive_when_absent hardening observation engine.
 
 Covers:
 - Signal schema parses positive_when_absent correctly.
@@ -203,9 +203,7 @@ class TestEdgeLayeringIntegration:
 
 
 class TestYamlValidation:
-    def test_non_list_positive_when_absent_falls_back_to_empty(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ):
+    def test_non_list_positive_when_absent_falls_back_to_empty(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         """A non-list value for positive_when_absent should log a warning
         and fall back to empty tuple, not crash the loader."""
         cfg = tmp_path / "signals.yaml"

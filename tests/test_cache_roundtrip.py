@@ -203,6 +203,7 @@ class TestRoundTripAllFields:
         """Symmetric check: when likely_primary is populated and primary
         is None (gateway-fronted domain), round-trip preserves both."""
         from dataclasses import replace
+
         base = _complete_info()
         info = replace(
             base,
@@ -262,6 +263,7 @@ class TestCacheDiskOperations:
         """cache_put should create the cache directory on first write."""
         # Remove the cache dir if it already exists from an earlier call
         import shutil
+
         if cache_dir().exists():
             shutil.rmtree(cache_dir())
         assert not cache_dir().exists()
@@ -271,9 +273,7 @@ class TestCacheDiskOperations:
 
 
 class TestCacheDirRespectsEnvVar:
-    def test_env_var_overrides_default(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_env_var_overrides_default(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
         assert cache_dir() == tmp_path / "cache"
 
@@ -330,4 +330,4 @@ class TestDictShape:
 
 
 # Needed for os.utime in test_get_stale_returns_none
-import time  # noqa: E402
+import time

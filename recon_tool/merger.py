@@ -60,6 +60,12 @@ _EMAIL_PROVIDER_SLUG_NAMES: dict[str, str] = {
     "zoho": "Zoho Mail",
     "protonmail": "ProtonMail",
     "aws-ses": "AWS SES",
+    # Synthetic slug emitted by dns._detect_mx when every MX host lives
+    # under the queried apex (e.g. ``mx.baidu.com`` for ``baidu.com``).
+    # Gives large orgs with self-operated mail infrastructure a concrete
+    # primary-provider label instead of falling through to the weaker
+    # "Exchange Server (on-prem / hybrid)" attribution.
+    "self-hosted-mail": "Self-hosted mail",
 }
 
 _GATEWAY_SLUG_NAMES: dict[str, str] = {
@@ -78,11 +84,11 @@ _GATEWAY_SLUG_NAMES: dict[str, str] = {
 # provider even when MX points to a gateway. Ordered by strength of signal.
 _PROVIDER_INFERENCE_SOURCES: frozenset[str] = frozenset(
     {
-        "TXT",           # SPF includes, site-verification tokens
-        "DKIM",          # google._domainkey, selector1._domainkey
-        "HTTP",          # Google identity endpoint responses, Microsoft OIDC
-        "OIDC",          # Microsoft OIDC discovery
-        "USERREALM",     # Microsoft GetUserRealm
+        "TXT",  # SPF includes, site-verification tokens
+        "DKIM",  # google._domainkey, selector1._domainkey
+        "HTTP",  # Google identity endpoint responses, Microsoft OIDC
+        "OIDC",  # Microsoft OIDC discovery
+        "USERREALM",  # Microsoft GetUserRealm
     }
 )
 
@@ -334,28 +340,20 @@ def _compute_email_topology(
     if email_gateway and primary_email_provider is None:
         # Tier 1: DKIM-confirmed providers (strong signal)
         dkim_provider_slugs = {
-            e.slug
-            for e in evidence
-            if e.source_type == "DKIM"
-            and e.slug in _LIKELY_PROVIDER_SLUG_NAMES
+            e.slug for e in evidence if e.source_type == "DKIM" and e.slug in _LIKELY_PROVIDER_SLUG_NAMES
         }
         if dkim_provider_slugs:
-            dkim_names = sorted(
-                _LIKELY_PROVIDER_SLUG_NAMES[s] for s in dkim_provider_slugs
-            )
+            dkim_names = sorted(_LIKELY_PROVIDER_SLUG_NAMES[s] for s in dkim_provider_slugs)
             primary_email_provider = " + ".join(dkim_names)
         else:
             # Tier 2: weaker non-MX evidence
             non_mx_provider_slugs = {
                 e.slug
                 for e in evidence
-                if e.source_type in _PROVIDER_INFERENCE_SOURCES
-                and e.slug in _LIKELY_PROVIDER_SLUG_NAMES
+                if e.source_type in _PROVIDER_INFERENCE_SOURCES and e.slug in _LIKELY_PROVIDER_SLUG_NAMES
             }
             if non_mx_provider_slugs:
-                likely_names = sorted(
-                    _LIKELY_PROVIDER_SLUG_NAMES[s] for s in non_mx_provider_slugs
-                )
+                likely_names = sorted(_LIKELY_PROVIDER_SLUG_NAMES[s] for s in non_mx_provider_slugs)
                 likely_primary_email_provider = " + ".join(likely_names)
 
     return primary_email_provider, email_gateway, likely_primary_email_provider
@@ -408,13 +406,7 @@ def compute_inference_confidence(results: list[SourceResult]) -> ConfidenceLevel
     has_corroboration = any(
         r.is_success
         and r.source_name != "oidc_discovery"
-        and (
-            r.m365_detected
-            or r.display_name
-            or r.auth_type
-            or r.google_auth_type
-            or len(r.tenant_domains) > 0
-        )
+        and (r.m365_detected or r.display_name or r.auth_type or r.google_auth_type or len(r.tenant_domains) > 0)
         for r in results
     )
 
@@ -522,6 +514,7 @@ def build_insights_with_signals(
     dmarc_pct: int | None = None,
     primary_email_provider: str | None = None,
     likely_primary_email_provider: str | None = None,
+    email_gateway: str | None = None,
     cloud_instance: str | None = None,
     tenant_region_sub_scope: str | None = None,
     msgraph_host: str | None = None,
@@ -546,6 +539,7 @@ def build_insights_with_signals(
         msgraph_host=msgraph_host,
         primary_email_provider=primary_email_provider,
         likely_primary_email_provider=likely_primary_email_provider,
+        email_gateway=email_gateway,
         has_mx_records=has_mx_records,
     )
     context = SignalContext(
@@ -589,9 +583,7 @@ def build_insights_with_signals(
     # Runs on the *base* fired set (not including absence signals) so a
     # hardening observation only fires from a genuine positive signal
     # match, never from an absence signal firing.
-    positive_observations = evaluate_positive_absence(
-        active_signals, all_signal_defs, context.detected_slugs
-    )
+    positive_observations = evaluate_positive_absence(active_signals, all_signal_defs, context.detected_slugs)
     for sig in positive_observations:
         insights.append(f"{sig.name}: {sig.description}")
 
@@ -692,10 +684,12 @@ def merge_results(
     # user. "Default Directory" is what Microsoft shows when a tenant
     # owner never set a custom name — it's a placeholder, not the
     # organization's name. Fall through to better signals (BIMI, domain).
-    _PLACEHOLDER_DISPLAY_NAMES: frozenset[str] = frozenset({
-        "default directory",
-        "directory",
-    })
+    _PLACEHOLDER_DISPLAY_NAMES: frozenset[str] = frozenset(
+        {
+            "default directory",
+            "directory",
+        }
+    )
 
     def _is_placeholder(name: str | None) -> bool:
         if not name:
@@ -764,40 +758,24 @@ def merge_results(
     if _conflict_fields:
         merge_conflicts = MergeConflicts(**_conflict_fields)
 
-    # If no tenant_id found, check if we at least have DNS services.
-    # tenant_id stays None when no M365 tenant exists.
-    if tenant_id is None:
-        all_services_check: set[str] = set()
-        for result in results:
-            all_services_check.update(result.detected_services)
-        if not all_services_check:
-            # R2: surface per-source errors so the user can see which source
-            # failed and why, instead of a single generic "no information"
-            # message. Distinguishes "domain truly empty" from "every source
-            # had a transient failure" which used to look identical.
-            source_errors: tuple[tuple[str, str], ...] = tuple(
-                (r.source_name, r.error)
-                for r in results
-                if r.error is not None
-            )
-            if source_errors:
-                reasons = "; ".join(f"{n}: {e}" for n, e in source_errors)
-                msg = (
-                    f"No information could be resolved for {queried_domain}. "
-                    f"Source errors: {reasons}"
-                )
-            else:
-                msg = (
-                    f"No information could be resolved for {queried_domain}. "
-                    f"All sources returned empty results — the domain may "
-                    f"have no public DNS records matching any fingerprint."
-                )
-            raise ReconLookupError(
-                domain=queried_domain,
-                message=msg,
-                error_type="all_sources_failed",
-                source_errors=source_errors,
-            )
+    # Only raise `all_sources_failed` when EVERY source returned an error.
+    # If any source produced a clean result (even with empty services/slugs),
+    # we honor the successful lookup by emitting a sparse TenantInfo with
+    # `provider = "Unknown (no known provider pattern matched)"` downstream.
+    # This keeps batch runs uniform (sparse domains don't mix errors with
+    # successes) and matches the hedged-observation invariant: "we looked
+    # and found nothing" is a valid, honest answer — not an error.
+    if tenant_id is None and all(r.error is not None for r in results):
+        source_errors: tuple[tuple[str, str], ...] = tuple(
+            (r.source_name, r.error) for r in results if r.error is not None
+        )
+        reasons = "; ".join(f"{n}: {e}" for n, e in source_errors)
+        raise ReconLookupError(
+            domain=queried_domain,
+            message=(f"No information could be resolved for {queried_domain}. All sources returned errors: {reasons}"),
+            error_type="all_sources_failed",
+            source_errors=source_errors,
+        )
 
     if display_name is None or _is_placeholder(display_name):
         # BIMI VMC organization name as fallback — always preferred if present
@@ -920,6 +898,7 @@ def merge_results(
         dmarc_pct=dmarc_pct,
         primary_email_provider=primary_email_provider,
         likely_primary_email_provider=likely_primary_email_provider,
+        email_gateway=email_gateway,
         cloud_instance=cloud_instance,
         tenant_region_sub_scope=tenant_region_sub_scope,
         msgraph_host=msgraph_host,
@@ -953,9 +932,7 @@ def merge_results(
     # undersells the actual quality of the result. The fallback
     # chain only recovers if at least one CT provider answered
     # (ct_provider_used is set).
-    ct_only_degradation = bool(all_degraded) and all(
-        s in ("crt.sh", "certspotter") for s in all_degraded
-    )
+    ct_only_degradation = bool(all_degraded) and all(s in ("crt.sh", "certspotter") for s in all_degraded)
     ct_fallback_recovered = ct_only_degradation and ct_provider_used is not None
     if all_degraded and not ct_fallback_recovered:
         confidence = _downgrade_confidence(confidence)

@@ -46,17 +46,13 @@ class TestComputeSlugPosteriors:
     def test_corroboration_strictly_increases_posterior(self) -> None:
         """Two MX observations should beat one MX observation."""
         one = compute_slug_posteriors((_ev("MX", "google-workspace"),))
-        two = compute_slug_posteriors(
-            (_ev("MX", "google-workspace"), _ev("MX", "google-workspace"))
-        )
+        two = compute_slug_posteriors((_ev("MX", "google-workspace"), _ev("MX", "google-workspace")))
         assert two[0][1] > one[0][1]
 
     def test_multi_source_corroboration_beats_single_source(self) -> None:
         """MX + DKIM for the same slug should beat MX alone."""
         mx_only = compute_slug_posteriors((_ev("MX", "google-workspace"),))
-        mx_and_dkim = compute_slug_posteriors(
-            (_ev("MX", "google-workspace"), _ev("DKIM", "google-workspace"))
-        )
+        mx_and_dkim = compute_slug_posteriors((_ev("MX", "google-workspace"), _ev("DKIM", "google-workspace")))
         assert mx_and_dkim[0][1] > mx_only[0][1]
 
     def test_multiple_slugs_all_present(self) -> None:

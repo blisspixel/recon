@@ -7,6 +7,7 @@ The delta command reads the last cached TenantInfo from the main cache
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -21,7 +22,7 @@ runner = CliRunner()
 
 
 @pytest.fixture
-def tmp_recon_home(tmp_path: Path) -> Path:
+def tmp_recon_home(tmp_path: Path) -> Iterator[Path]:
     """Point RECON_CONFIG_DIR at a temp directory for isolated caching."""
     with patch.dict(os.environ, {"RECON_CONFIG_DIR": str(tmp_path)}):
         yield tmp_path

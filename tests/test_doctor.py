@@ -59,11 +59,13 @@ class TestDoctorCommandHappyPath:
 
     def test_doctor_shows_version(self, patched_doctor_environment) -> None:
         from recon_tool import __version__
+
         result = runner.invoke(app, ["doctor"])
         assert __version__ in result.stdout
 
     def test_doctor_shows_python_version(self, patched_doctor_environment) -> None:
         import sys
+
         result = runner.invoke(app, ["doctor"])
         assert sys.version.split()[0] in result.stdout
 

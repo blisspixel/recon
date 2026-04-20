@@ -29,14 +29,30 @@ docs/accuracy.md
 # Fabrikam — validation artifacts use real targets and stay local.
 /validation/
 
-# Linting
+# Linting / Type checking
 .ruff_cache/
+.mypy_cache/
+.pyre/
+.pytype/
+.pyright/
 
-# IDE
+# IDE / editors
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+
+# Merge / rebase artifacts
+*.orig
+*.rej
+
+# Jupyter
+.ipynb_checkpoints/
+
+# direnv
+.envrc
+.direnv/
 
 # Claude Code local settings
 .claude/

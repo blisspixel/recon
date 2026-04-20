@@ -100,9 +100,7 @@ def retry_on_transient(
     if attempts < 0:
         raise ValueError("attempts must be >= 0")
     if len(delays) < attempts:
-        raise ValueError(
-            f"delays tuple ({len(delays)} entries) shorter than attempts ({attempts})"
-        )
+        raise ValueError(f"delays tuple ({len(delays)} entries) shorter than attempts ({attempts})")
 
     def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @wraps(func)
@@ -138,4 +136,4 @@ def retry_on_transient(
     return decorator
 
 
-__all__ = ["retry_on_transient", "RETRY_ATTEMPTS", "RETRY_DELAYS"]
+__all__ = ["RETRY_ATTEMPTS", "RETRY_DELAYS", "retry_on_transient"]

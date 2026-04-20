@@ -4,7 +4,7 @@ Passive domain intelligence CLI and MCP server. Queries public DNS records and u
 
 ## What it does
 
-`recon <domain>` returns: company name, email provider, tenant ID, auth type, email security score (0-5), 227 SaaS service fingerprints, security stack detection, signal intelligence (AI adoption, GTM maturity, org size hints, hedged hardening observations), categorized services (Email / Identity / Cloud / Security / AI / Collaboration / Other), lexical taxonomy observations from CT-discovered subdomains, sovereignty hints (GCC / GCC High / China 21Vianet / B2C) from OIDC metadata, and related domains (via CNAME breadcrumbs + certificate transparency + common subdomain probing).
+`recon <domain>` returns: company name, email provider, tenant ID, auth type, email security score (0-5), 235 SaaS service fingerprints, security stack detection, signal intelligence (AI adoption, GTM maturity, org size hints, hedged hardening observations), categorized services (Email / Identity / Cloud / Security / AI / Collaboration / Other), lexical taxonomy observations from CT-discovered subdomains, sovereignty hints (GCC / GCC High / China 21Vianet / B2C) from OIDC metadata, and related domains (via CNAME breadcrumbs + certificate transparency + common subdomain probing).
 
 ## Commands
 
@@ -49,7 +49,7 @@ recon cache clear --all                 # clear all CT cache
 - `tests/` — 1547 tests, pytest + hypothesis
 - `data/fingerprints.yaml` — 235 SaaS fingerprints
 - `data/profiles/` — 6 built-in posture profiles (fintech, healthcare, saas-b2b, high-value-target, public-sector, higher-ed)
-- `data/signals.yaml` — 4-layer signal definitions (45 signals, two-pass + absence + positive-when-absent evaluation)
+- `data/signals.yaml` — 4-layer signal definitions (42 signals, two-pass + absence + positive-when-absent evaluation)
 
 ## Development
 

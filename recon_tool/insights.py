@@ -243,6 +243,17 @@ def _email_security_insights(ctx: InsightContext) -> list[str]:
     has_mta_sts = SVC_MTA_STS in ctx.services
     has_spf_strict = SVC_SPF_STRICT in ctx.services
 
+    # Gateway-inferred DKIM: Fortune-500-scale orgs with a commercial gateway
+    # (Proofpoint / Mimecast / Cisco IronPort / Barracuda / Trend / Trellix /
+    # Symantec) AND an enforcing DMARC policy almost always DO sign with DKIM
+    # — the gateway handles it automatically using custom selectors we can't
+    # enumerate. Without this inference, the apex score penalized these
+    # orgs for a control they effectively have. The annotation stays hedged
+    # ("via gateway") so the user can see the inference chain.
+    dkim_inferred_via_gateway = (
+        not has_dkim and ctx.email_gateway is not None and ctx.dmarc_policy in ("quarantine", "reject")
+    )
+
     score = 0
     score_parts: list[str] = []
     if ctx.dmarc_policy in ("reject", "quarantine"):
@@ -251,6 +262,9 @@ def _email_security_insights(ctx: InsightContext) -> list[str]:
     if has_dkim:
         score += 1
         score_parts.append("DKIM")
+    elif dkim_inferred_via_gateway:
+        score += 1
+        score_parts.append(f"DKIM (inferred via {ctx.email_gateway})")
     if has_spf_strict:
         score += 1
         score_parts.append("SPF strict")
@@ -261,35 +275,43 @@ def _email_security_insights(ctx: InsightContext) -> list[str]:
         score += 1
         score_parts.append("BIMI")
 
-    labels = {0: "weak", 1: "basic", 2: "moderate", 3: "good", 4: "strong", 5: "excellent"}
-
-    # v0.9.3 honesty fix: when the score is 0 but DMARC *does* exist
-    # in monitoring mode (p=none), saying "no protections detected"
-    # is a lie — a DMARC record IS configured, it's just set to
-    # monitoring. Same for SPF redirect= chains we don't follow —
-    # the record exists. Build the parts list to reflect what's
-    # actually observed, even if it doesn't earn a score point.
+    # When DMARC is in monitoring mode (p=none) or SPF is soft/neutral,
+    # something IS configured — it's just not enforcing. Surface that
+    # explicitly rather than saying "no protections detected" which
+    # misreads monitoring-mode deployment as absence.
     if not score_parts:
         observed_non_scoring: list[str] = []
         if ctx.dmarc_policy == "none":
-            observed_non_scoring.append("DMARC monitoring mode")
+            observed_non_scoring.append("DMARC monitoring only")
         if any(s.startswith("SPF:") for s in ctx.services) and not has_spf_strict:
             observed_non_scoring.append("SPF soft/neutral")
         if observed_non_scoring:
             parts_str = ", ".join(observed_non_scoring) + " — no strict controls"
         else:
-            parts_str = "no protections detected"
+            parts_str = "no strict controls observed"
     else:
         parts_str = ", ".join(score_parts)
 
-    insights.append(f"Email security {score}/5 {labels.get(score, 'excellent')} ({parts_str})")
+    # Panel line: inventory of observed controls, no fraction or grade.
+    # The N/5 form that v1.0.2 introduced was still read as a grade
+    # (3/5 → "mediocre") even without the verdict word. The individual
+    # controls aren't equally weighted either (DMARC reject is load-
+    # bearing, BIMI is decorative), so an equal-count fraction misled.
+    # The machine-readable email_security_score field stays in --json
+    # for consumers that genuinely need to sort/filter batch output —
+    # see `email_security_score` in docs/schema.md.
+    _ = score  # used only to choose between score_parts and fallback branch above
+    insights.append(f"Email security: {parts_str}")
 
+    # Auxiliary notes — score line captures the parts; these name the
+    # consequence. "DMARC monitoring" in the score line is the configured
+    # mode; "not enforced" in the aux line is the user-facing takeaway.
     if ctx.dmarc_policy == "none":
-        insights.append("DMARC: none — email spoofing protection not enforced")
+        insights.append("DMARC: none — monitoring mode, not enforced")
     elif ctx.dmarc_policy is None:
-        insights.append("No DMARC record — potential email security gap")
-    if not has_dkim:
-        insights.append("No DKIM selectors observed at common names — actual DKIM status unknown")
+        insights.append("No DMARC record at apex")
+    if not has_dkim and not dkim_inferred_via_gateway:
+        insights.append("No DKIM at common selectors (custom selectors possible)")
 
     return insights
 
@@ -516,18 +538,13 @@ def _sparse_signal_insights(ctx: InsightContext) -> list[str]:
     # Count only "substantive" services — drop DNS meta-labels like
     # SPF complexity: 3 includes that don't represent a deployed
     # product.
-    substantive = [
-        s for s in ctx.services
-        if not s.startswith(("SPF complexity:", "SPF: softfail", "SPF: strict"))
-    ]
+    substantive = [s for s in ctx.services if not s.startswith(("SPF complexity:", "SPF: softfail", "SPF: strict"))]
     if len(substantive) >= 5:
         return []
     # Suppress on domains where we still got a tenant_id — that's
     # not really "sparse", it's "M365 tenant only". The existing
     # auth/provider lines already carry the signal.
-    if ctx.auth_type in ("Federated", "Managed") and any(
-        "microsoft 365" in s.lower() for s in ctx.services
-    ):
+    if ctx.auth_type in ("Federated", "Managed") and any("microsoft 365" in s.lower() for s in ctx.services):
         return []
     return [
         "Sparse public signal — few observable records beyond MX and "

@@ -1,4 +1,4 @@
-"""Tests for v0.9.3 shared verification token clustering.
+"""Tests for shared verification token clustering.
 
 Covers the pure clustering API in recon_tool.clustering:
 - Token normalization

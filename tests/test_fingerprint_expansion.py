@@ -1,4 +1,4 @@
-"""v0.8.0 — Fingerprint Coverage Expansion QA.
+"""Fingerprint coverage expansion QA.
 
 Validates:
 - 12 new fingerprints load without warnings (9.1)
@@ -207,25 +207,12 @@ class TestNewSignals:
         names = _signal_names(_ctx({"crewai-aid"}))
         assert "Agentic AI Infrastructure" not in names
 
-    # AI Adoption Without Governance — contradiction signal
-    def test_ai_without_governance_fires_with_ai_slug(self) -> None:
+    # AI Adoption Without Governance was removed in v1.0.2. Same class as
+    # Shadow IT Risk / Complex Migration Window — narrative-judgment
+    # synthesis inferring "shadow AI deployment" from absence of specific
+    # identity providers. Speculative, not observational.
+    def test_ai_without_governance_removed(self) -> None:
         names = _signal_names(_ctx({"openai"}))
-        assert "AI Adoption Without Governance" in names
-
-    def test_ai_without_governance_suppressed_by_okta(self) -> None:
-        names = _signal_names(_ctx({"openai", "okta"}))
-        assert "AI Adoption Without Governance" not in names
-
-    def test_ai_without_governance_suppressed_by_cyberark(self) -> None:
-        names = _signal_names(_ctx({"anthropic", "cyberark"}))
-        assert "AI Adoption Without Governance" not in names
-
-    def test_ai_without_governance_suppressed_by_beyond_identity(self) -> None:
-        names = _signal_names(_ctx({"mistral", "beyond-identity"}))
-        assert "AI Adoption Without Governance" not in names
-
-    def test_ai_without_governance_suppressed_by_ping_identity(self) -> None:
-        names = _signal_names(_ctx({"perplexity", "ping-identity"}))
         assert "AI Adoption Without Governance" not in names
 
     # AI Platform Diversity — needs 2+ AI provider slugs
@@ -246,21 +233,13 @@ class TestNewSignals:
         names = _signal_names(_ctx({"snyk"}))
         assert "Software Supply Chain Maturity" not in names
 
-    # DevSecOps Without Email Governance — contradiction + metadata
-    def test_devsecops_without_email_fires_with_low_score(self) -> None:
+    # DevSecOps Investment Without Email Governance was removed in v1.0.2.
+    # Pure narrative synthesis — inferring that engineering security
+    # investment doesn't extend to email-layer controls is opinion, not
+    # observation. Both underlying facts are already visible in the
+    # services list.
+    def test_devsecops_without_email_removed(self) -> None:
         names = _signal_names(_ctx({"snyk"}, email_security_score=1))
-        assert "DevSecOps Investment Without Email Governance" in names
-
-    def test_devsecops_without_email_fires_with_score_2(self) -> None:
-        names = _signal_names(_ctx({"sonatype"}, email_security_score=2))
-        assert "DevSecOps Investment Without Email Governance" in names
-
-    def test_devsecops_without_email_does_not_fire_with_score_3(self) -> None:
-        names = _signal_names(_ctx({"snyk"}, email_security_score=3))
-        assert "DevSecOps Investment Without Email Governance" not in names
-
-    def test_devsecops_without_email_does_not_fire_with_score_5(self) -> None:
-        names = _signal_names(_ctx({"github-advanced-security"}, email_security_score=5))
         assert "DevSecOps Investment Without Email Governance" not in names
 
     # Edge-Native Architecture — needs 2+ edge slugs
@@ -423,8 +402,15 @@ class TestBackwardCompatibilityV080:
 
     def test_all_existing_signals_load(self) -> None:
         signals = load_signals()
-        # v0.7.0 had 34 signals; we added 7 → at least 41
-        assert len(signals) >= 41
+        # Signal count floats with curation. Signals that violated the
+        # "observable facts in neutral language" or "no narrative
+        # synthesis" invariants have been retired (Shadow IT Risk,
+        # Complex Migration Window, Governance Sprawl, Security Stack
+        # Without Governance, AI Adoption Without Governance, DevSecOps
+        # Investment Without Email Governance). We keep a floor high
+        # enough to catch accidental mass-deletion, not a moving target
+        # that breaks on intentional curation.
+        assert len(signals) >= 35
 
     def test_existing_signal_still_fires(self) -> None:
         """Enterprise Security Stack should still fire with original slugs."""

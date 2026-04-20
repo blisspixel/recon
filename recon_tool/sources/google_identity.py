@@ -124,9 +124,9 @@ class GoogleIdentitySource:
         except Exception as exc:
             logger.debug("Google identity probe failed for %s: %s", domain, exc)
             return SourceResult(
-                    source_name="google_identity",
-                    error=f"Unexpected error: {exc}",
-                )
+                source_name="google_identity",
+                error=f"Unexpected error: {exc}",
+            )
 
     def _classify_response(self, resp: httpx.Response, domain: str) -> SourceResult:
         """Classify the Google login response to determine auth routing."""
@@ -183,4 +183,3 @@ class GoogleIdentitySource:
         # Check for SAML/SSO redirect indicators in the URL
         sso_indicators = ("saml", "sso", "adfs", "okta", "pingone", "auth0")
         return any(indicator in final_url for indicator in sso_indicators)
-

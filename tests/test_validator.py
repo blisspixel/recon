@@ -136,7 +136,7 @@ class TestWhitespaceDomainRejection:
     )
     @settings(max_examples=100)
     def test_whitespace_only_raises_value_error(self, s: str):
-        with pytest.raises(ValueError, match="(valid domain|Invalid domain)"):
+        with pytest.raises(ValueError, match=r"(valid domain|Invalid domain)"):
             validate_domain(s)
 
 

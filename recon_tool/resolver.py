@@ -131,9 +131,16 @@ async def _enrich_from_related(
     # (adds MX + DKIM probing). Capped small so we don't blow the DNS
     # budget — only the prefixes most likely to publish their own
     # verification records distinct from the apex.
-    _MEDIUM_TIER_PREFIXES: frozenset[str] = frozenset({
-        "auth", "sso", "login", "idp", "api", "mail",
-    })
+    _MEDIUM_TIER_PREFIXES: frozenset[str] = frozenset(
+        {
+            "auth",
+            "sso",
+            "login",
+            "idp",
+            "api",
+            "mail",
+        }
+    )
     MAX_MEDIUM_TIER = 6
 
     # Filter to actionable related domains (skip onmicrosoft — they're just
@@ -188,13 +195,7 @@ async def _enrich_from_related(
 
     def _enrich_priority(name: str) -> tuple[int, int, str]:
         prefix = name.split(f".{base_domain}")[0] if base_domain else name
-        is_high = (
-            0
-            if any(
-                prefix == p or prefix.startswith(p + ".") or prefix.startswith(p + "-") for p in _HIGH_SIGNAL_PREFIXES
-            )
-            else 1
-        )
+        is_high = 0 if any(prefix == p or prefix.startswith((p + ".", p + "-")) for p in _HIGH_SIGNAL_PREFIXES) else 1
         depth = prefix.count(".")
         return (is_high, depth, name)
 
@@ -265,6 +266,7 @@ async def _enrich_from_related(
         google_idp_name=info.google_idp_name,
         primary_email_provider=info.primary_email_provider,
         likely_primary_email_provider=info.likely_primary_email_provider,
+        email_gateway=info.email_gateway,
         cloud_instance=info.cloud_instance,
         tenant_region_sub_scope=info.tenant_region_sub_scope,
         msgraph_host=info.msgraph_host,

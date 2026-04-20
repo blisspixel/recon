@@ -1,4 +1,4 @@
-"""v0.9.0 — QA Round 1: Data Model Extensions.
+"""Data model extension tests (TenantInfo, SignalContext, Signal, SourceResult).
 
 Validates:
 - New TenantInfo fields (primary_email_provider, email_gateway, dmarc_pct) (2.1)

@@ -71,10 +71,7 @@ class TestExplainInsightsReachableBranches:
         records = _call("M365 E3/E5 indicators (Intune + federated auth)")
         assert records[0].fired_rules
         # Either auth or license classification is acceptable
-        assert any(
-            keyword in records[0].fired_rules[0]
-            for keyword in ("auth_insights", "license_insights")
-        )
+        assert any(keyword in records[0].fired_rules[0] for keyword in ("auth_insights", "license_insights"))
 
     def test_license_m365_standalone(self) -> None:
         """An insight without 'federated' and without a colon reaches the
@@ -271,6 +268,7 @@ class TestSerializeExplanation:
         assert records
         d = serialize_explanation(records[0])
         import json
+
         json.dumps(d)
         assert "item_name" in d
         assert "item_type" in d
@@ -287,6 +285,7 @@ class TestSerializeExplanation:
         )
         d = serialize_explanation(rec)
         import json
+
         json.dumps(d)
         assert d["item_type"] == "confidence"
 

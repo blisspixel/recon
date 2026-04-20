@@ -67,9 +67,9 @@ __all__ = [
     "render_exposure_panel",
     "render_gaps_panel",
     "render_posture_panel",
+    "render_source_status_panel",
     "render_sources_detail",
     "render_tenant_panel",
-    "render_source_status_panel",
     "render_verbose_sources",
     "render_warning",
     "set_console",
@@ -97,6 +97,7 @@ def get_console() -> Console:
     if _console is None:
         import sys
         from typing import cast
+
         try:
             stdout_any: Any = cast(Any, sys.stdout)
             if hasattr(stdout_any, "reconfigure"):
@@ -104,7 +105,7 @@ def get_console() -> Console:
             stderr_any: Any = cast(Any, sys.stderr)
             if hasattr(stderr_any, "reconfigure"):
                 stderr_any.reconfigure(encoding="utf-8", errors="replace")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("stdout UTF-8 reconfigure failed: %s", exc)
         _console = Console()
     return _console
@@ -213,9 +214,9 @@ def _is_m365_service(svc: str) -> bool:
 # ── v0.9.3 panel constants ─────────────────────────────────────────────
 
 _PANEL_WIDTH = 78  # One char narrower than an 80-col terminal to avoid
-                   # wrap-to-next-line artefacts when the last cell is
-                   # filled. The v0.9.3 layout has no border, so the
-                   # effective content width equals the panel width.
+# wrap-to-next-line artefacts when the last cell is
+# filled. The v0.9.3 layout has no border, so the
+# effective content width equals the panel width.
 _LABEL_WIDTH = 13  # columns for Provider/Tenant/Auth/Confidence labels
 _CATEGORY_WIDTH = 15  # columns for Services sub-category labels
 
@@ -289,6 +290,10 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     # subdomains resolve. Indicates self-hosted or hybrid
     # Exchange deployment rather than Exchange Online.
     "exchange-onprem": "Email",
+    # Synthetic slug for orgs running their own mail infrastructure
+    # (MX hosts under the queried apex or otherwise not matching any
+    # recognized cloud / gateway fingerprint).
+    "self-hosted-mail": "Email",
     # Cloud / Infrastructure
     "aws-route53": "Cloud",
     "aws-cloudfront": "Cloud",
@@ -549,7 +554,7 @@ def _pick_single_primary(joined: str) -> tuple[str, list[str]]:
 
 
 def detect_provider(
-    services: tuple[str, ...] | set[str],  # noqa: ARG001
+    services: tuple[str, ...] | set[str],
     slugs: tuple[str, ...] | set[str] = (),
     primary_email_provider: str | None = None,
     email_gateway: str | None = None,
@@ -788,8 +793,6 @@ def _wrap_text(text: str, max_width: int) -> list[str]:
     return lines or [text]
 
 
-
-
 def _slug_for_service(service: str, fp_slug_map: dict[str, str]) -> str | None:
     """Look up the slug for a service name, if any.
 
@@ -897,7 +900,7 @@ def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:
         # a products-detected claim). The actual detection mechanism
         # (CAA record → slug) belongs in --explain, not the name.
         if cat != "Security" and name.startswith("CAA: "):
-            name = name[len("CAA: "):]
+            name = name[len("CAA: ") :]
         if cat == "Cloud":
             qualifier = _CLOUD_SLUG_QUALIFIERS.get(slug)
             if qualifier:
@@ -976,7 +979,7 @@ def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:
         non_caa = [s for s in security if not s.startswith("CAA:")]
         count = len(caa_entries)
         consolidated = f"CAA: {count} issuer{'s' if count != 1 else ''} restricted"
-        by_cat["Security"] = non_caa + [consolidated]
+        by_cat["Security"] = [*non_caa, consolidated]
 
     # v0.10: infer bundled AI services from platform presence.
     # Copilot is bundled into M365, Gemini into Google Workspace.
@@ -1030,6 +1033,7 @@ def _pick_high_signal_related(
     "high-signal related domains" doesn't want to see the tenant's
     own internal domain listed as if it were a separate discovery.
     """
+
     def _is_high_signal_candidate(d: str) -> bool:
         # Filter out tenant artefacts and wildcards
         if "*" in d:
@@ -1065,7 +1069,7 @@ def _confidence_is_high(level: ConfidenceLevel) -> bool:
 
 def render_tenant_panel(
     info: TenantInfo,
-    show_services: bool = False,  # noqa: ARG001 — kept for backward-compat; v0.9.3 always shows services
+    show_services: bool = False,
     show_domains: bool = False,
     verbose: bool = False,
     explain: bool = False,
@@ -1150,9 +1154,7 @@ def render_tenant_panel(
 
     has_mx_records = any(e.source_type == "MX" for e in info.evidence)
     # v0.10.1: only show secondary providers confirmed via email routing
-    email_confirmed_slugs = frozenset(
-        e.slug for e in info.evidence if e.source_type in ("MX", "DKIM")
-    )
+    email_confirmed_slugs = frozenset(e.slug for e in info.evidence if e.source_type in ("MX", "DKIM"))
     provider_line = detect_provider(
         info.services,
         info.slugs,
@@ -1263,22 +1265,26 @@ def render_tenant_panel(
         # In --full mode, show everything.
         if not verbose and "Email" in categorized:
             _email_noise = {
-                "DKIM", "DKIM (Exchange Online)", "DMARC", "MTA-STS",
-                "BIMI", "TLS-RPT", "Exchange Autodiscover",
-                "Microsoft 365", "Google Workspace",
+                "DKIM",
+                "DKIM (Exchange Online)",
+                "DMARC",
+                "MTA-STS",
+                "BIMI",
+                "TLS-RPT",
+                "Exchange Autodiscover",
+                "Microsoft 365",
+                "Google Workspace",
                 "Exchange Server (on-prem / hybrid)",
             }
             # Also strip the gateway — already in Provider line
             _gateway_names = {
-                "Proofpoint", "Trend Micro Email Security",
-                "Mimecast", "Barracuda Email Security",
+                "Proofpoint",
+                "Trend Micro Email Security",
+                "Mimecast",
+                "Barracuda Email Security",
             }
             _all_noise = _email_noise | _gateway_names
-            categorized["Email"] = [
-                s for s in categorized["Email"]
-                if s not in _all_noise
-                and not s.startswith("SPF")
-            ]
+            categorized["Email"] = [s for s in categorized["Email"] if s not in _all_noise and not s.startswith("SPF")]
             if not categorized["Email"]:
                 del categorized["Email"]
         max_width = _CATEGORY_WIDTH
@@ -1408,8 +1414,7 @@ def render_tenant_panel(
         certs.append("Certs", style="bold")
         certs.append("\n  ")
         certs.append(
-            f"{cs.cert_count} total, {cs.issuance_velocity} in last 90d, "
-            f"{cs.issuer_diversity} issuers ({issuer_list})",
+            f"{cs.cert_count} total, {cs.issuance_velocity} in last 90d, {cs.issuer_diversity} issuers ({issuer_list})",
             style="dim",
         )
         blocks.append(certs)
@@ -1430,17 +1435,9 @@ def render_tenant_panel(
     #     fallback recovery). This is the case where the user's
     #     data is actually incomplete.
     if info.degraded_sources:
-        non_ct_degraded = [
-            s for s in info.degraded_sources
-            if s not in ("crt.sh", "certspotter")
-        ]
-        ct_in_degraded = [
-            s for s in info.degraded_sources
-            if s in ("crt.sh", "certspotter")
-        ]
-        ct_fallback_succeeded = (
-            bool(ct_in_degraded) and info.ct_provider_used is not None
-        )
+        non_ct_degraded = [s for s in info.degraded_sources if s not in ("crt.sh", "certspotter")]
+        ct_in_degraded = [s for s in info.degraded_sources if s in ("crt.sh", "certspotter")]
+        ct_fallback_succeeded = bool(ct_in_degraded) and info.ct_provider_used is not None
         ct_fallback_failed = bool(ct_in_degraded) and info.ct_provider_used is None
         ct_from_cache = info.ct_cache_age_days is not None
         # v0.9.3 refinement: suppress the "CT fallback: … → … (0
@@ -1454,9 +1451,7 @@ def render_tenant_panel(
         # (returned at least one subdomain). If the user needs
         # per-run CT provenance they have --json which always
         # carries ct_provider_used and ct_subdomain_count.
-        ct_fallback_informative = (
-            ct_fallback_succeeded and info.ct_subdomain_count > 0
-        )
+        ct_fallback_informative = ct_fallback_succeeded and info.ct_subdomain_count > 0
 
         is_warning = bool(non_ct_degraded) or ct_fallback_failed
         label_style = "yellow" if is_warning else "dim"
@@ -1464,21 +1459,14 @@ def render_tenant_panel(
 
         note_parts: list[str] = []
         if non_ct_degraded:
-            note_parts.append(
-                f"Some sources unavailable ({', '.join(non_ct_degraded)})"
-            )
+            note_parts.append(f"Some sources unavailable ({', '.join(non_ct_degraded)})")
         if ct_fallback_failed:
-            note_parts.append(
-                f"All CT providers unavailable ({', '.join(ct_in_degraded)})"
-            )
+            note_parts.append(f"All CT providers unavailable ({', '.join(ct_in_degraded)})")
         elif ct_from_cache and ct_fallback_informative:
             # Cache fallback is worth surfacing — the user is seeing stale data
             age = info.ct_cache_age_days
             age_str = "today" if age == 0 else f"{age} day{'s' if age != 1 else ''} old"
-            note_parts.append(
-                f"CT: from local cache, {age_str} "
-                f"({info.ct_subdomain_count} subdomains)"
-            )
+            note_parts.append(f"CT: from local cache, {age_str} ({info.ct_subdomain_count} subdomains)")
         # Suppress routine CT fallback notes (crt.sh → certspotter) —
         # infrastructure plumbing that adds noise on nearly every run.
         # CT provenance is always available in --json output.
@@ -1564,13 +1552,11 @@ def _curate_insights(
 
        Four different wordings of the same fact. v0.9.3 collapses
        these into a single canonical line — keeping the highest-
-       signal wording and dropping the rest. Same treatment for the
-       AI Adoption / AI Adoption Without Governance /
-       AI Adoption — Missing Counterparts triple.
+       signal wording and dropping the rest.
 
     The collapse rules are intentionally narrow: only overlapping
     signals that describe the same underlying pattern. Real distinct
-    signals ("Edge Layering" vs "Zero Trust Posture") never collapse
+    signals ("Edge Layering" vs "Zero Trust Pattern Observed") never collapse
     into each other.
     """
     _ = services, slugs  # reserved for future tuning
@@ -1632,22 +1618,15 @@ def _curate_insights(
         "Secondary Email Provider Observed:",
     )
     has_canonical_dual = any(
-        line.startswith("Dual provider:") or "Google + Microsoft coexistence" in line
-        for line in curated
+        line.startswith("Dual provider:") or "Google + Microsoft coexistence" in line for line in curated
     )
     if has_canonical_dual:
-        curated = [
-            line for line in curated
-            if not any(line.startswith(pfx) for pfx in dual_family_prefixes)
-        ]
+        curated = [line for line in curated if not any(line.startswith(pfx) for pfx in dual_family_prefixes)]
     else:
         # No canonical line — keep at most one of the family as a
         # promoted representative. "Dual Email Delivery Path" is the
         # most information-dense wording of the three, so prefer it.
-        family_lines = [
-            line for line in curated
-            if any(line.startswith(pfx) for pfx in dual_family_prefixes)
-        ]
+        family_lines = [line for line in curated if any(line.startswith(pfx) for pfx in dual_family_prefixes)]
         if len(family_lines) >= 2:
             # Preference order for promotion
             pref_order = (
@@ -1663,22 +1642,7 @@ def _curate_insights(
                         break
                 if chosen:
                     break
-            curated = [
-                line for line in curated
-                if line not in family_lines or line == chosen
-            ]
-
-    # AI Adoption family: "AI Adoption: …" + "AI Adoption Without
-    # Governance: …". The "Without Governance" wording is the most
-    # information-dense; drop the bare form when it fires.
-    has_without_governance = any(
-        line.startswith("AI Adoption Without Governance:") for line in curated
-    )
-    if has_without_governance:
-        curated = [
-            line for line in curated
-            if not line.startswith("AI Adoption:")
-        ]
+            curated = [line for line in curated if line not in family_lines or line == chosen]
 
     # "Dual Email Provider" signal family overlap with the older
     # "Dual provider: Google + Microsoft coexistence" insight line:
@@ -1687,26 +1651,22 @@ def _curate_insights(
     # one. Already handled above via has_canonical_dual; this comment
     # just documents the precedence for future maintainers.
 
-    # ── Email security score dedup ─────────────────────────────────
-    # When the tool fires "Email security 0/5 weak" on a sparse
-    # domain, it also fires multiple separate lines that restate
-    # the same fact: "No DMARC record", "No DKIM selectors
-    # observed", "DMARC: none — email spoofing protection not
-    # enforced". All three are the same observation. Keep the
-    # compact score line and drop the redundant specifics when the
-    # score is already low — users don't need four lines explaining
-    # the same zero.
-    score_line_present = any(
-        line.startswith("Email security 0/5")
-        or line.startswith("Email security 1/5")
-        or line.startswith("Email security 2/5")
-        for line in curated
-    )
-    if score_line_present:
+    # ── Email security aux-note dedup ──────────────────────────────
+    # The score line (v1.0.2+: "Email security: <inventory>") already
+    # names what's present/absent. The auxiliary "DMARC: none", "No
+    # DMARC record at apex", "No DKIM at common selectors" insights
+    # restate the same observation in prose. Keep the score line on
+    # the default panel; the aux notes stay in the raw `insights`
+    # JSON field for consumers that want them.
+    has_score_line = any(line.startswith("Email security:") for line in curated)
+    if has_score_line:
         curated = [
-            line for line in curated
+            line
+            for line in curated
             if not line.startswith("No DMARC record")
+            and not line.startswith("No DKIM at common selectors")
             and not line.startswith("No DKIM selectors observed")
+            and not line.startswith("DKIM not observed")
             and not line.startswith("DMARC: none")
         ]
 
@@ -1717,8 +1677,9 @@ def _curate_insights(
     # the same fact appears in the panel. Drop it — the Auth line
     # already says "Managed (Google Workspace)" and the Services
     # block carries the slug detection.
-    curated = [
-        line for line in curated
+    return [
+        line
+        for line in curated
         if line != "Google Workspace: Managed identity (Google-native)"
         and not line.startswith("Google Workspace: Managed identity")
     ]
@@ -1731,8 +1692,6 @@ def _curate_insights(
     # same fact). On pure M365 targets the insight DOES fire and
     # the Auth line just says "Managed", so both surfaces carry
     # distinct information — no dedup needed here.
-
-    return curated
 
 
 def render_verbose_sources(results: list[SourceResult]) -> None:
@@ -1841,7 +1800,14 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         "insights": list(info.insights),
         "tenant_domains": list(info.tenant_domains),
         "related_domains": list(info.related_domains),
-        "partial": bool(info.degraded_sources),
+        # `partial` means "result is meaningfully incomplete" — reserve it for
+        # core-source failures (OIDC, UserRealm, Google Identity, DNS), not
+        # CT-provider degradation. crt.sh is chronically flaky and CertSpotter
+        # rate-limits frequently; the CT pipeline handles both gracefully via
+        # fallback + cache, so their degradation should NOT flip the global
+        # `partial` flag. The per-source status is still surfaced in the
+        # `degraded_sources` list for consumers who want the detail.
+        "partial": any(src not in {"crt.sh", "certspotter"} for src in info.degraded_sources),
         "degraded_sources": list(info.degraded_sources),
         "google_auth_type": info.google_auth_type,
         "google_idp_name": info.google_idp_name,
@@ -1897,7 +1863,7 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
             for ev in info.evidence
         ]
     # v1.0 schema contract: always present (empty dict when no detections).
-    d["detection_scores"] = {slug: score for slug, score in info.detection_scores}
+    d["detection_scores"] = dict(info.detection_scores)
     return d
 
 
@@ -2442,7 +2408,6 @@ def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
     text.append(f"    BIMI:      {'configured' if ep.bimi_configured else 'not configured'}\n")
     if ep.email_gateway:
         text.append(f"    Gateway:   {ep.email_gateway}\n")
-    text.append(f"    Score:     {ep.email_security_score}/5\n")
 
     # Identity posture
     ip = assessment.identity_posture
@@ -2474,12 +2439,16 @@ def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
         for obs in assessment.consistency_observations:
             text.append(f"    ◐ {obs.observation}\n", style="#e6c07b")
 
-    # Hardening status
+    # Hardening status. ``Text.append`` does not parse Rich markup — the
+    # style must be passed as the ``style`` kwarg. Writing ``[green]✓[/green]``
+    # directly into the string rendered it as literal tags.
     text.append("\n  Hardening Controls\n", style="bold")
     for ctrl in assessment.hardening_status.controls:
         mark = "✓" if ctrl.present else "✗"
         style = "green" if ctrl.present else "red"
-        text.append(f"    [{style}]{mark}[/{style}] {ctrl.name}: {ctrl.detail}\n")
+        text.append("    ")
+        text.append(mark, style=style)
+        text.append(f" {ctrl.name}: {ctrl.detail}\n")
 
     return Panel(
         text,
@@ -2613,22 +2582,64 @@ def format_comparison_json(comparison: PostureComparison) -> str:
 # ── Explanation rendering ────────────────────────────────────────────────
 
 
+# Substrings that mark a SourceResult error as a "soft miss" — the source
+# ran cleanly and determined the target isn't theirs — rather than a
+# transport/transient failure. Rendering these with `✗` in red misreads
+# a legitimate "not a customer" answer as if the tool had broken.
+_SOFT_MISS_MARKERS: tuple[str, ...] = (
+    "No Google Workspace",
+    "No federated IdP redirect",
+    "Not a Google Workspace",
+    "No M365 tenant",
+    "Not a registered M365",
+    "HTTP 400 from OIDC discovery",
+    "No information could be resolved",
+    "no data returned",
+)
+
+
+def _is_soft_miss(error: str | None) -> bool:
+    if not error:
+        return True  # empty error but is_success False = soft miss
+    return any(marker in error for marker in _SOFT_MISS_MARKERS)
+
+
 def render_source_status_panel(results: list[SourceResult]) -> Panel | None:
     """Render a compact per-source status panel for ``--explain`` output.
 
-    Shows which sources were queried, which succeeded, what each one
-    returned (brief description), and what each failed one's error
-    was. This is the lighter-weight counterpart to ``render_verbose_sources``
-    which prints line-by-line status during resolution. The panel appears
-    once the resolve has completed and is intended to explain low-coverage
-    domains ("why is this panel mostly empty?").
+    Three states:
 
-    Returns None when ``results`` is empty (nothing to render).
+    - ``✓`` (green) — source ran and produced a match.
+    - ``–`` (dim) — source ran cleanly but the target isn't their
+      customer ("not a Workspace domain", "HTTP 400 from OIDC" = not
+      an M365 tenant, "no federated IdP redirect", etc.). Previously
+      rendered as ``✗`` which misread a legitimate "not a match"
+      answer as if the tool had broken.
+    - ``✗`` (red) — transport/HTTP failure, timeout, or other genuine
+      problem with the source.
+
+    Duplicate rows from enrichment passes (multiple ``dns_records``
+    entries from subdomain lookups) are collapsed into one summary
+    line per source to keep the panel focused on the primary lookup.
     """
     if not results:
         return None
+
+    # Collapse duplicate source_name rows from enrichment — only keep
+    # the first (primary) result per source. Enrichment subdomain
+    # lookups appear as additional SourceResults with source_name
+    # "dns_records" and their success/failure status is an internal
+    # detail, not a primary-source observation.
+    seen: set[str] = set()
+    primary: list[SourceResult] = []
+    for r in results:
+        if r.source_name in seen:
+            continue
+        seen.add(r.source_name)
+        primary.append(r)
+
     text = Text()
-    for i, result in enumerate(results):
+    for i, result in enumerate(primary):
         if i > 0:
             text.append("\n")
         if result.is_success:
@@ -2636,11 +2647,14 @@ def render_source_status_panel(results: list[SourceResult]) -> Panel | None:
             text.append("  ✓ ", style="#a3d9a5")
             text.append(f"{result.source_name}", style="bold")
             text.append(f" — {description}", style="dim")
+        elif _is_soft_miss(result.error):
+            text.append("  – ", style="dim")
+            text.append(f"{result.source_name}", style="bold")
+            text.append(f" — {result.error or 'no match'}", style="dim")
         else:
-            error_msg = result.error or "no data returned"
             text.append("  ✗ ", style="#e07a5f")
             text.append(f"{result.source_name}", style="bold")
-            text.append(f" — {error_msg}", style="dim")
+            text.append(f" — {result.error}", style="dim")
     return Panel(
         text,
         title="Source Status",

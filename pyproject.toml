@@ -1,6 +1,6 @@
 [project]
 name = "recon-tool"
-version = "1.0.1"
+version = "1.0.2"
 description = "Domain intelligence CLI and MCP server — tech stack, email security, and signal intelligence from DNS."
 requires-python = ">=3.10"
 readme = "README.md"
@@ -17,6 +17,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Security",
     "Topic :: System :: Networking",
     "Typing :: Typed",
@@ -74,7 +75,26 @@ target-version = "py310"
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B", "SIM", "S", "PT", "PLW"]
+# Rule selection rationale:
+#   E, F, W — pycodestyle / pyflakes baseline
+#   I       — import sorting (isort)
+#   UP      — pyupgrade; keeps syntax current to target-version
+#   B       — flake8-bugbear; real-bug patterns (mutable defaults, unused
+#             loop vars, raise-without-from, etc.)
+#   SIM     — flake8-simplify; collapses verbose idioms
+#   S       — bandit-via-ruff; security-adjacent lints
+#   PT      — pytest style
+#   PLW    — pylint warnings
+#   RUF     — ruff-native rules; small quality wins
+#   C4      — comprehension improvements
+#   PIE     — misc improvements (no-self-assign, unused-star, etc.)
+#   RET     — return-statement cleanup
+#   G       — logging-format sanity
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "S", "PT", "PLW", "RUF", "C4", "PIE", "RET", "G"]
+# We deliberately use em-dashes (—) and smart quotes in docstrings and
+# user-facing strings; ruff's ambiguous-unicode warnings are noise in
+# our prose-heavy comments.
+ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["E402", "S101"]  # allow assert in tests
@@ -93,3 +113,20 @@ reportUnknownMemberType = false
 reportUnknownArgumentType = false
 reportUnknownVariableType = false
 reportUnknownParameterType = false
+
+# Test-only relaxations. Tests legitimately reach into private APIs for
+# white-box behavior verification, omit parameter annotations on fixtures
+# that pytest injects by name (`mock_resolve`, `tmp_path`, etc.), and use
+# untyped test-helper `_fixture` methods. Production code stays strict.
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+reportPrivateUsage = "none"
+reportMissingParameterType = "none"
+reportUnusedFunction = "none"
+reportMissingTypeArgument = "none"
+reportArgumentType = "none"
+reportOperatorIssue = "none"
+reportIndexIssue = "none"
+reportGeneralTypeIssues = "none"
+reportOptionalMemberAccess = "none"
+reportAttributeAccessIssue = "none"

@@ -152,7 +152,7 @@ starting point.
 
 ## Signal coverage and false positives
 
-The fingerprint database (235 entries as of v0.11) is solo-maintained and
+The fingerprint database (235 entries as of v1.0.2) is solo-maintained and
 rule-based. A fingerprint match means "evidence fits this service's DNS
 signature", not "this service is in use". Confident-looking output can still
 be wrong.

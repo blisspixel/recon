@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import patch
 
@@ -29,7 +30,7 @@ from recon_tool.models import CertSummary
 
 
 @pytest.fixture
-def tmp_cache(tmp_path: Path) -> Path:
+def tmp_cache(tmp_path: Path) -> Iterator[Path]:
     """Point CT cache at a temp directory."""
     cache_path = tmp_path / "ct-cache"
     with patch.dict(os.environ, {"RECON_CONFIG_DIR": str(tmp_path)}):
