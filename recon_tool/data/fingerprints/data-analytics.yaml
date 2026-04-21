@@ -1,0 +1,97 @@
+# Data and analytics fingerprints. Warehouses, BI tools, product analytics, observability.
+#
+# Loaded by recon_tool.fingerprints.load_fingerprints.
+# Custom overrides: ~/.recon/fingerprints.yaml (additive only).
+
+fingerprints:
+- name: Databricks
+  slug: databricks
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^databricks-domain-verification=
+- name: Snowflake
+  slug: snowflake
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^snowflake-domain-verification=
+- name: MongoDB Atlas
+  slug: mongodb
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^mongodb-site-verification=
+- name: Dynatrace
+  slug: dynatrace
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^dynatrace-site-verification=
+- name: Datadog
+  slug: datadog
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^datadog-domain-verification=
+- name: New Relic
+  slug: newrelic
+  category: Data & Analytics
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^newrelic-domain-verification=
+- name: WalkMe
+  slug: walkme
+  category: Data & Analytics
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: walkme.com
+- name: Optimizely
+  slug: optimizely
+  category: Data & Analytics
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: optimizely.com
+- name: Mixpanel
+  slug: mixpanel
+  category: Data & Analytics
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: mixpanel.com
+- name: Amplitude
+  slug: amplitude
+  category: Data & Analytics
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^amplitude-domain-verification=
+- name: Heap Analytics
+  slug: heap
+  category: Data & Analytics
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: heapanalytics.com
+- name: Pendo
+  slug: pendo
+  category: Data & Analytics
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: pendo.io
+- name: Hotjar
+  slug: hotjar
+  category: Data & Analytics
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^hotjar-domain-verification=

@@ -1,0 +1,268 @@
+# Productivity and collaboration fingerprints. Suite tooling, helpdesk, HR platforms, knowledge management.
+#
+# Loaded by recon_tool.fingerprints.load_fingerprints.
+# Custom overrides: ~/.recon/fingerprints.yaml (additive only).
+
+fingerprints:
+- name: Atlassian (Jira/Confluence)
+  slug: atlassian
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^atlassian-domain-verification=
+    description: Atlassian Cloud organization domain verification (SSO, Guard)
+- name: Slack
+  slug: slack
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^slack-domain-verification=
+    description: Slack workspace domain claim (Enterprise Grid)
+    reference: https://slack.com/help/articles/5513043606547
+  - type: subdomain_txt
+    pattern: _slack-challenge:.
+    description: Slack Enterprise Grid verification — proves Enterprise tier (not Pro/Business)
+- name: Notion
+  slug: notion
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^notion-domain-verification=
+  - type: txt
+    pattern: ^notion-verification-code
+- name: Miro
+  slug: miro
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^miro-verification=
+- name: Asana
+  slug: asana
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^asana-domain-verification=
+- name: Monday.com
+  slug: monday
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^monday-domain-verification=
+  - type: txt
+    pattern: ^monday-verification
+- name: Wrike
+  slug: wrike
+  category: Productivity & Collaboration
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^wrike-verification=
+- name: Smartsheet
+  slug: smartsheet
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^smartsheet-site-validation=
+- name: Airtable
+  slug: airtable
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^airtable-domain-verification=
+  - type: txt
+    pattern: ^airtable-verification=
+- name: ClickUp
+  slug: clickup
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^clickup-domain-verification=
+- name: Loom
+  slug: loom
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^loom-site-verification=
+- name: Canva
+  slug: canva
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^canva-site-verification=
+- name: Beautiful.ai
+  slug: beautifulai
+  category: Productivity & Collaboration
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^beautifulai-site-verification=
+- name: Zoom
+  slug: zoom
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^ZOOM_verify_
+- name: Dropbox
+  slug: dropbox
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^dropbox-domain-verification=
+- name: Workplace (Meta)
+  slug: workplace-meta
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^workplace-domain-verification=
+- name: LucidLink
+  slug: lucidlink
+  category: Productivity & Collaboration
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^lucidlink-verification=
+- name: Adobe (IDP)
+  slug: adobe-idp
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^adobe-idp-site-verification=
+- name: Adobe Sign
+  slug: adobe-sign
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^adobe-sign-verification=
+- name: Apple Business
+  slug: apple
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^apple-domain-verification=
+- name: Box
+  slug: box
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^box-domain-verification=
+- name: Egnyte
+  slug: egnyte
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^egnyte-domain-verification=
+- name: Glean (Enterprise AI Search)
+  slug: glean
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^glean-domain-verification=
+- name: Zendesk
+  slug: zendesk
+  category: Support & Helpdesk
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^zendesk-domain-verification=
+  - type: spf
+    pattern: zendesk.com
+  - type: spf
+    pattern: mail.zendesk.com
+  - type: cname
+    pattern: zendesk.com
+- name: Freshdesk
+  slug: freshdesk
+  category: Support & Helpdesk
+  confidence: high
+  detections:
+  - type: spf
+    pattern: freshdesk.com
+  - type: cname
+    pattern: freshdesk.com
+- name: ServiceNow
+  slug: servicenow
+  category: Support & Helpdesk
+  confidence: high
+  detections:
+  - type: spf
+    pattern: service-now.com
+- name: Statuspage (Atlassian)
+  slug: statuspage
+  category: Support & Helpdesk
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^statuspage-domain-verification=
+  - type: cname
+    pattern: statuspage.io
+- name: Workday
+  slug: workday
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^workday-domain-verification=
+- name: SAP
+  slug: sap
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^sap-domain-verification=
+- name: UKG (UltiPro)
+  slug: ukg
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: spf
+    pattern: _spf.ultipro.com
+- name: Qualtrics
+  slug: qualtrics
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: spf
+    pattern: _spf.qualtrics.com
+- name: Rippling
+  slug: rippling
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^rippling-domain-verification=
+- name: Deel
+  slug: deel
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^deel-domain-verification=
+- name: Figma
+  slug: figma
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^figma-domain-verification=
+  - type: txt
+    pattern: ^figma-verification

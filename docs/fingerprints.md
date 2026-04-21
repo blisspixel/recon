@@ -1,8 +1,12 @@
 # Fingerprints
 
-Fingerprints are DNS pattern rules in `recon_tool/data/fingerprints.yaml`.
-235 built-in as of v1.0.2. Add new services by editing the YAML — no code
-changes needed.
+Fingerprints are DNS pattern rules in `recon_tool/data/fingerprints/`,
+one YAML file per category (`ai.yaml`, `email.yaml`, `security.yaml`,
+`infrastructure.yaml`, `productivity.yaml`, `crm-marketing.yaml`,
+`data-analytics.yaml`, `verticals.yaml`). 227 built-in as of v1.1.0.
+Add new services by editing the matching category file — no code
+changes needed. Use `recon fingerprints list` / `search` / `show` to
+inspect the catalog without opening YAML.
 
 ## Custom fingerprints
 

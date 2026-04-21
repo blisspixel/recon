@@ -1,0 +1,363 @@
+# Security and identity fingerprints. EDR, SIEM, IdP, zero-trust access, credential-hygiene tooling.
+#
+# Loaded by recon_tool.fingerprints.load_fingerprints.
+# Custom overrides: ~/.recon/fingerprints.yaml (additive only).
+
+fingerprints:
+- name: CrowdStrike Falcon
+  slug: crowdstrike
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^crowdstrike-falcon-site-verification=
+  - type: txt
+    pattern: crowdstrike
+- name: KnowBe4
+  slug: knowbe4
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^knowbe4-site-verification=
+  - type: spf
+    pattern: _spf.psm.knowbe4.com
+- name: Proofpoint
+  slug: proofpoint
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^proofpoint-domain-verification=
+  - type: txt
+    pattern: ^proofpoint-
+  - type: mx
+    pattern: pphosted.com
+  - type: spf
+    pattern: spf.pphosted.com
+  - type: spf
+    pattern: _spf.proofpoint.com
+- name: Mimecast
+  slug: mimecast
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^mimecast
+  - type: mx
+    pattern: mimecast.com
+  - type: spf
+    pattern: _netblocks.mimecast.com
+- name: Barracuda
+  slug: barracuda
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: mx
+    pattern: barracudanetworks.com
+- name: Trend Micro Email Security
+  slug: trendmicro
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: mx
+    pattern: tmes.trendmicro.com
+  - type: spf
+    pattern: spf.tmes.trendmicro.com
+- name: Sophos
+  slug: sophos
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^sophos-domain-verification=
+- name: Palo Alto Networks
+  slug: paloalto
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^paloaltonetworks-domain-verification=
+- name: Zscaler
+  slug: zscaler
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^zscaler-domain-verification=
+  - type: txt
+    pattern: zscaler
+- name: Wiz Security
+  slug: wiz
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^wiz-domain-verification=
+- name: OneTrust
+  slug: onetrust
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^onetrust-domain-verification=
+- name: Have I Been Pwned
+  slug: hibp
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^have-i-been-pwned-verification=
+    description: Troy Hunt's breach notification service — domain-level monitoring
+- name: Duo Security
+  slug: duo
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^duo_sso_verification=
+- name: Okta
+  slug: okta
+  category: Security & Compliance
+  confidence: high
+  display_group: Security & Compliance
+  detections:
+  - type: txt
+    pattern: ^_oktaverification=
+  - type: txt
+    pattern: ^okta-domain-verification
+  - type: cname
+    pattern: okta.com
+    description: Okta custom domain CNAME delegation (login/SSO pages)
+  - type: cname
+    pattern: oktapreview.com
+    description: Okta preview/staging environment CNAME
+- name: 1Password
+  slug: 1password
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^1password-site-verification=
+- name: Jamf
+  slug: jamf
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^jamf-site-verification=
+- name: GlobalSign (SSL)
+  slug: globalsign
+  category: Security & Compliance
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^_globalsign-domain-verification=
+  - type: txt
+    pattern: ^globalsign-domain-verification
+- name: Imperva (Incapsula)
+  slug: imperva
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: cname
+    pattern: incapdns.net
+- name: Sucuri WAF
+  slug: sucuri
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: cname
+    pattern: sucuri.net
+- name: Symantec Email Security
+  slug: symantec
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: mx
+    pattern: messagelabs.com
+  - type: spf
+    pattern: spf.messagelabs.com
+- name: Cisco IronPort
+  slug: cisco-ironport
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: mx
+    pattern: iphmx.com
+- name: Cisco Secure Email
+  slug: cisco-email
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: mx
+    pattern: ess.cisco.com
+- name: Cisco Webex
+  slug: webex
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^webexdomainverification
+- name: Cisco (Identity)
+  slug: cisco-identity
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^cisco-ci-domain-verification=
+  - type: txt
+    pattern: ^ciscocidomainverification=
+- name: Trellix (FireEye)
+  slug: trellix
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: mx
+    pattern: fireeyecloud.com
+- name: SentinelOne
+  slug: sentinelone
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^sentinelone-domain-verification=
+    description: SentinelOne Singularity endpoint protection domain claim
+- name: Netskope
+  slug: netskope
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^netskope-domain-verification=
+    description: Netskope SASE/SSE platform domain verification
+- name: Kandji
+  slug: kandji
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^kandji-domain-verification=
+    description: Kandji Apple device management domain verification
+- name: Ping Identity (PingOne)
+  slug: ping-identity
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^pingone-domain-verification=
+  - type: cname
+    pattern: ping-ccd.com
+    description: PingOne custom domain CNAME delegation for SSO/MFA pages
+  - type: txt
+    pattern: pingoneemail=
+    weight: 0.6
+    description: PingOne email trust verification — authorizes PingOne to send email on behalf of the domain
+    reference: https://docs.pingidentity.com/pingone/settings/p1_set_up_trusted_email_domain.html
+- name: CyberArk
+  slug: cyberark
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^cyberark-domain-verification=
+  - type: cname
+    pattern: \.idaptive\.(?:com|app)$
+    weight: 0.7
+    description: CyberArk Identity (legacy Idaptive) CNAME delegation for identity portal
+- name: Lakera (LLM Guardrails)
+  slug: lakera
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^lakera-domain-verification=
+- name: Cato Networks (SASE)
+  slug: cato
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^cato-domain-verification=
+- name: Auth0 (Okta)
+  slug: auth0
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: cname
+    pattern: auth0.com
+    description: Auth0 custom domain CNAME for login/identity pages
+- name: OneLogin
+  slug: onelogin
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^onelogin-domain-verification=
+  - type: cname
+    pattern: onelogin.com
+- name: Snyk
+  slug: snyk
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^snyk-domain-verification=
+    description: Snyk software composition analysis domain verification
+  - type: txt
+    pattern: snyk-site-verification=
+    description: Snyk alternate site verification pattern for web asset scanning authorization
+- name: GitHub Advanced Security
+  slug: github-advanced-security
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: subdomain_txt
+    pattern: ^_github-challenge-
+    description: GitHub Enterprise domain challenge — proves GitHub Enterprise Cloud with Advanced Security
+- name: Sonatype
+  slug: sonatype
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^sonatype-domain-verification=
+    description: Sonatype Nexus supply chain security domain verification
+  - type: txt
+    pattern: ^OSSRH-\d+$
+    weight: 0.8
+    description: Sonatype OSSRH Maven Central namespace verification — proves active Java/JVM artifact publishing
+    reference: https://central.sonatype.org/faq/verify-ownership/
+- name: Container Signing Attestation (Cosign)
+  slug: cosign-attestation
+  category: Security & Compliance
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^cosign\.pub=|cosign-verification=
+    description: Cosign container image signing public key or verification record — indicates supply chain attestation
+    reference: https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/
+- name: Beyond Identity
+  slug: beyond-identity
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^beyondidentity-domain-verification=
+    description: Beyond Identity passwordless MFA domain verification
+  - type: cname
+    pattern: authenticator\.beyondidentity\.com
+    weight: 0.5
+    description: Beyond Identity platform authenticator CNAME — indicates passwordless MFA deployment
+    reference: https://docs.beyondidentity.com/docs/resources/proxy-end-user
+- name: VMware Workspace ONE
+  slug: workspace-one
+  category: Identity
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: workspaceoneaccess\.com$
+    description: VMware Workspace ONE Access CNAME
+  - type: cname
+    pattern: vmwareidentity\.com$
+    description: VMware Identity Manager CNAME

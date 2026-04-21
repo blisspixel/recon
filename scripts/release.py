@@ -122,6 +122,7 @@ def _validate_new_version(new: str, current: str) -> None:
     if new == current:
         msg = f"New version {new!r} is the same as current"
         raise ReleaseError(msg)
+
     # crude but sufficient lexical check — semver ordering via tuple compare
     def _parts(v: str) -> tuple[int, ...]:
         base = v.split("-", 1)[0]
@@ -153,7 +154,10 @@ def _run_quality_gate() -> None:
         (
             "pytest",
             [
-                "uv", "run", "pytest", "tests/",
+                "uv",
+                "run",
+                "pytest",
+                "tests/",
                 "--cov=recon_tool",
                 "--cov-fail-under=80",
                 "-q",
@@ -200,9 +204,7 @@ def _bump_lockfile(dry_run: bool) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Cut a recon release (version bump + commit + tag + push prompt)."
-    )
+    parser = argparse.ArgumentParser(description="Cut a recon release (version bump + commit + tag + push prompt).")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -253,8 +255,12 @@ def main(argv: list[str] | None = None) -> int:
         print("->Committing...")
         _run(
             [
-                "git", "add",
-                "pyproject.toml", "recon_tool/__init__.py", "uv.lock", "CHANGELOG.md",
+                "git",
+                "add",
+                "pyproject.toml",
+                "recon_tool/__init__.py",
+                "uv.lock",
+                "CHANGELOG.md",
             ],
             capture=False,
         )

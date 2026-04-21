@@ -1,0 +1,90 @@
+# AI & generative tooling fingerprints. LLM providers, enterprise AI platforms, agent-framework discovery.
+#
+# Loaded by recon_tool.fingerprints.load_fingerprints.
+# Custom overrides: ~/.recon/fingerprints.yaml (additive only).
+
+fingerprints:
+- name: OpenAI Enterprise
+  slug: openai
+  category: AI & Generative
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^openai-domain-verification=
+    description: OpenAI enterprise domain verification for ChatGPT Team/Enterprise
+    reference: https://help.openai.com/en/articles/8871611-domain-verification
+- name: Anthropic (Claude)
+  slug: anthropic
+  category: AI & Generative
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^anthropic-domain-verification
+    description: Anthropic Claude enterprise domain claim
+- name: Mistral AI
+  slug: mistral
+  category: AI & Generative
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^mistral-domain-verification=
+    description: Mistral AI enterprise domain verification for SAML SSO
+- name: Perplexity Enterprise
+  slug: perplexity
+  category: AI & Generative
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^perplexity-domain-verification=
+    description: Perplexity AI Enterprise Pro domain verification
+- name: n8n (Workflow Automation)
+  slug: n8n
+  category: AI & Generative
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^n8n-domain-verification=
+    description: n8n workflow automation platform domain verification
+- name: Dify (AI App Builder)
+  slug: dify
+  category: AI & Generative
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^dify-domain-verification=
+    description: Dify AI application builder domain verification
+- name: AutoGen (Microsoft)
+  slug: autogen
+  category: AI & Generative
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^autogen-domain-verification=
+    description: Microsoft AutoGen agentic framework domain verification
+- name: CrewAI Agent Interface Discovery (AID)
+  slug: crewai-aid
+  category: AI & Generative
+  confidence: high
+  detections:
+  - type: subdomain_txt
+    pattern: v=aid1;.*(?:src=|uri=)
+    description: CrewAI AID TXT record at _agent.<domain> advertising autonomous agent MCP endpoints
+    reference: https://github.com/crewAIInc/crewAI/discussions/3164
+- name: LangSmith Enterprise
+  slug: langsmith
+  category: AI & Generative
+  confidence: high
+  detections:
+  - type: cname
+    pattern: \.p\.api\.smith\.langchain\.com$
+    description: CNAME delegation to LangSmith managed GCP infrastructure for AI observability
+    reference: https://docs.langchain.com/langsmith/cloud
+- name: MCP DNS Discovery
+  slug: mcp-discovery
+  category: AI & Generative
+  confidence: medium
+  detections:
+  - type: subdomain_txt
+    pattern: ^v=mcp1;
+    description: MCP DNS-native discovery record at _mcp.<domain> advertising Model Context Protocol endpoints
+    reference: https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/2368

@@ -7,6 +7,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-04-21
+
+**Contribution-ready.** The fingerprint catalog is now one file per
+category, new CLI inspect commands let contributors audit the data
+without opening YAML, and CI gained an `actionlint` gate so the kind
+of unresolvable-action-ref regression that broke the first v1.0.2 tag
+can't reach `main` again. No user-visible detection or output changes
+in this release — this is infrastructure for everything that comes
+next.
+
+### Added
+
+- **Per-category fingerprint layout** — ``recon_tool/data/fingerprints.yaml``
+  (one 60KB file, 235 entries, 8 duplicate slugs) is now
+  ``recon_tool/data/fingerprints/`` (8 per-category files, 227 unique
+  slugs, zero duplicates). The eight files:
+  - ``ai.yaml`` — AI / LLM providers, agent frameworks.
+  - ``email.yaml`` — email platforms, gateways, DMARC / DKIM tooling.
+  - ``security.yaml`` — EDR, SIEM, IdP, zero-trust, credential hygiene.
+  - ``infrastructure.yaml`` — cloud, CDN, DNS, CAs, CI/CD.
+  - ``productivity.yaml`` — suites, helpdesk, HR, knowledge.
+  - ``crm-marketing.yaml`` — CRM, sales intel, ad platforms.
+  - ``data-analytics.yaml`` — warehouses, BI, observability.
+  - ``verticals.yaml`` — education, nonprofit, payments, misc.
+  The loader globs ``data/fingerprints/*.yaml`` in sorted order; custom
+  ``~/.recon/fingerprints.yaml`` still works as a single file and a
+  new ``~/.recon/fingerprints/`` directory is also accepted for users
+  who want per-category organization of their overrides. Slug order
+  after load is deterministic and identical to the monolith except
+  for the 8 duplicates, which are now collapsed into single entries
+  with their detection rules merged.
+- **``recon fingerprints list`` / ``show`` / ``check``** — contributor
+  and user inspection commands for the fingerprint catalog.
+  - ``list`` supports ``--category`` substring and ``--type`` exact
+    filters, plus ``--json`` for scripting.
+  - ``show`` renders the full definition (detection rules, patterns,
+    descriptions, references) for a single slug. Synthetic slugs
+    (``exchange-onprem``, ``self-hosted-mail``) that are emitted by
+    source-layer probes rather than loaded from YAML are documented
+    here too — users who see those slugs in their output can always
+    find provenance without grepping code.
+  - ``check`` validates the catalog against the runtime schema and
+    surfaces cross-file duplicate slugs. Wraps
+    ``scripts/validate_fingerprint.py`` with sane defaults.
+- **``recon signals list`` / ``show``** — same pattern for the signal
+  catalog. ``show`` surfaces candidates, metadata conditions,
+  contradictions, requires-signals chains, expected-counterparts,
+  and positive-when-absent lists — everything the absence and
+  two-pass evaluators look at.
+- **``actionlint`` in pre-commit and CI.** Catches unresolved action
+  refs, bad shell in ``run:`` blocks, and deprecated expressions at
+  commit time and in a dedicated ``workflow-lint`` CI job. The
+  v1.0.2 release regressed because ``astral-sh/setup-uv@v8`` isn't a
+  real floating tag; ``actionlint`` catches that class of error
+  locally and in CI. Pinned to ``actionlint@v1.7.12``.
+- **``scripts/split_fingerprints.py``** — the one-shot migration
+  script that produced the split, kept in the repo for audit. A
+  reviewer can re-run it against the pre-split monolith to verify
+  the split is reproducible.
+
+### Changed
+
+- **``scripts/validate_fingerprint.py`` now accepts a directory** and
+  pools slugs across files for a cross-file duplicate-slug check.
+  Single-file invocation is unchanged — directories are an additive
+  capability for the split-catalog layout.
+
+### Docs
+
+- **CONTRIBUTING.md** updated for the split-catalog layout —
+  "find the right file" step added, PR template checklist swapped to
+  the new ``recon fingerprints check`` command, fingerprint-add
+  recipe now shows ``recon fingerprints show <slug>`` as the
+  post-add verification step.
+- **CLAUDE.md** reflects 227-fingerprint count (down from 235) and
+  the new ``data/fingerprints/`` directory layout.
+
+### Process guards
+
+The first v1.0.2 tag push failed because ``astral-sh/setup-uv@v8``
+isn't a published floating tag — only ``v8.0.0`` and ``v8.1.0`` exist.
+Two guards now prevent that class of regression:
+
+1. ``actionlint`` runs in pre-commit on every commit touching
+   ``.github/workflows/``.
+2. ``actionlint`` runs as the first job in CI so PRs with unresolved
+   action refs fail at the workflow-lint stage, before any Python
+   work executes.
+
+Before future tag pushes, verify each bumped action ref exists with
+``gh api repos/<owner>/<repo>/git/refs/tags/<ref>`` — especially for
+actions that don't publish floating majors.
+
 ## [1.0.2] — 2026-04-20
 
 **Polish pass.** Toolchain current, test suite pyright-clean, dead code

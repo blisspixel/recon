@@ -1,6 +1,6 @@
 [project]
 name = "recon-tool"
-version = "1.0.2"
+version = "1.1.0"
 description = "Domain intelligence CLI and MCP server — tech stack, email security, and signal intelligence from DNS."
 requires-python = ">=3.10"
 readme = "README.md"
@@ -98,6 +98,32 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["E402", "S101"]  # allow assert in tests
+
+[tool.bandit]
+# Bandit duplicates ruff's S-rules. We keep bandit available for
+# defense-in-depth (it catches a few niche patterns ruff doesn't) but
+# skip the three IDs we've already reviewed and suppressed at the
+# ruff level with ``# noqa: S...`` annotations — otherwise every run
+# shows the same nine already-handled findings.
+#
+# B311 — ``random.choice(_STATUS_MESSAGES)`` for spinner text. Not
+#        cryptographic; the Python doc itself says ``random`` is fine
+#        for non-security uses.
+# B404 — ``import subprocess`` in cli.py for the ``fingerprints check``
+#        wrapper. Used only to invoke our own validator script with a
+#        Path object argument.
+# B603 — ``subprocess.run(cmd, check=False)`` — same call site as B404.
+#        No shell, no user-controlled command parts, Path is validated
+#        with ``.exists()`` before invocation.
+# B405 — ``import xml.etree.ElementTree as ET`` in userrealm.py. Only
+#        referenced for the ``ET.ParseError`` exception class; actual
+#        parsing uses ``defusedxml.ElementTree.fromstring`` one line
+#        above the ``except`` clause.
+# B406 — ``from xml.sax.saxutils import escape`` in userrealm.py. Used
+#        for escaping OUTGOING request bodies (we're writing XML, not
+#        parsing untrusted XML).
+exclude_dirs = ["tests", ".venv", "dist", "build"]
+skips = ["B311", "B404", "B603", "B405", "B406"]
 
 [tool.pyright]
 pythonVersion = "3.10"
