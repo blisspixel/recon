@@ -278,6 +278,16 @@ def synthetic_corpus(detection_type: str) -> list[str]:
     return PATTERN_TYPE_CORPORA.get(detection_type.lower(), _generic_corpus())
 
 
+# Hard cap on regex length. Mirrors ``_MAX_PATTERN_LENGTH`` in
+# ``fingerprints.py`` — we don't want a malicious PR or MCP caller
+# to hand the specificity gate a megabyte of regex that pegs CPU
+# before the schema validator can reject it. Schema validation
+# already enforces this cap; duplicating it here keeps the gate
+# safe even when called directly (e.g. from the MCP
+# ``inject_ephemeral_fingerprint`` path).
+_MAX_PATTERN_LENGTH: int = 500
+
+
 def evaluate_pattern(
     pattern: str,
     detection_type: str,
@@ -287,12 +297,29 @@ def evaluate_pattern(
     """Match ``pattern`` against the synthetic corpus for ``detection_type``.
 
     Returns a ``SpecificityVerdict`` with match count and a flag for
-    whether the threshold was exceeded. Compile errors yield a verdict
-    with ``matches=0`` and ``threshold_exceeded=False`` — the runtime
-    schema validator already rejects uncompilable regexes, so this gate
-    stays focused on *over-specific* compilable patterns.
+    whether the threshold was exceeded. Uncompilable or oversized
+    patterns yield a verdict with ``matches=0`` and
+    ``threshold_exceeded=False`` — the runtime schema validator
+    already rejects them. A length guard here prevents a pathological
+    regex (catastrophic backtracking, megabyte-scale pattern) from
+    hanging the validator even when this function is called directly
+    without first going through ``_validate_fingerprint``.
     """
     corpus = synthetic_corpus(detection_type)
+
+    # Length guard — cheap, and matches the schema validator's cap.
+    # Without it, a contributor PR or an MCP client could hand the
+    # specificity gate a pathological pattern that pegs CPU before
+    # the schema check runs.
+    if len(pattern) > _MAX_PATTERN_LENGTH:
+        return SpecificityVerdict(
+            pattern=pattern,
+            detection_type=detection_type,
+            matches=0,
+            corpus_size=len(corpus),
+            threshold_exceeded=False,
+        )
+
     try:
         compiled = re.compile(pattern)
     except re.error:

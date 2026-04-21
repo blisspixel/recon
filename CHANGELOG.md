@@ -7,6 +7,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] — 2026-04-21
+
+**Security patch — six findings resolved.** External static-analysis
+pass surfaced a cluster of low-to-medium issues, mostly reachable only
+via local CLI or MCP stdio, but all worth closing. No behavior changes
+for legitimate use; each fix tightens a containment boundary that was
+previously relying on trust rather than enforcement.
+
+### Fixed
+
+- **Unbounded ephemeral fingerprint injection (MCP DoS)** — Medium.
+  ``inject_ephemeral_fingerprint`` had no cap; a long-running MCP
+  server could be driven into unbounded memory growth by a
+  prompt-injected client calling the tool in a loop. Added a
+  ``_MAX_EPHEMERAL_FINGERPRINTS = 100`` cap in
+  ``recon_tool.fingerprints``; the MCP tool surfaces capacity
+  errors as clean JSON rejections (``EphemeralCapacityError``).
+- **Release workflow OIDC scope** — Medium. ``id-token: write`` was
+  granted at the workflow level, meaning ``test`` and ``build`` jobs
+  (which install and execute dependency code) could mint PyPI
+  trusted-publisher tokens. Compromised dependency = publishing
+  artifact under our identity. Workflow default is now
+  ``contents: read``; each job opts into the scope it actually needs.
+  Only ``publish-pypi`` and ``github-release`` request elevated
+  permissions.
+- **CSV formula injection** — Medium. ``display_name`` originates
+  from the attacker-influencable ``FederationBrandName`` response
+  and was written verbatim to CSV cells. A value starting with ``=``
+  / ``+`` / ``-`` / ``@`` / ``\t`` / ``\r`` would execute as a
+  formula when the CSV is opened in a spreadsheet. Added
+  ``_csv_safe`` which prefixes unsafe leading characters with a
+  single quote; applied to every textual field in
+  ``format_tenant_csv_row``.
+- **Specificity gate unbounded regex** — Low. ``evaluate_pattern``
+  compiled and searched regexes against the synthetic corpus
+  without the length cap that ``_validate_regex`` enforces at
+  schema-validation time. A pathological regex submitted via PR,
+  MCP ephemeral injection, or ``recon fingerprints new`` could
+  hang CI or the local wizard. Added a 500-char length guard in
+  ``evaluate_pattern`` itself so the gate is safe even when called
+  outside the schema validator.
+- **Cache clear path traversal** — Low. ``recon cache clear
+  <domain>`` forwarded the raw domain to ``cache.cache_clear``
+  which built a path directly from it. A crafted argument like
+  ``../../.config/settings`` escaped the cache directory and
+  unlinked whatever ``.json`` file the user could touch. Added
+  ``_safe_cache_path`` using ``Path.is_relative_to`` plus an input
+  character guard; traversal attempts now return ``False``
+  (nothing deleted) rather than following the path.
+- **CT cache ``_safe_path`` prefix-bypass** — Low. The containment
+  check used ``str(path).startswith(str(cache_dir.resolve()))`` —
+  path-prefix rather than path-aware. A crafted domain like
+  ``../ct-cache-malice/evil`` resolved to a sibling directory whose
+  path string still matched the prefix. Replaced with
+  ``Path.is_relative_to`` and added a character-level input guard.
+  Same class of bug as the cache-clear traversal; same fix shape.
+- **PTR lookup on private IPs** — Low. ``_detect_hosting_from_a_record``
+  unconditionally reverse-resolved the apex A-record IP, including
+  RFC1918 / loopback / link-local addresses. A malicious domain
+  could publish an A record pointing to an internal IP and the
+  tool would ask the operator's resolver for the internal PTR —
+  leaking internal DNS names into recon's output. Added
+  ``ip.is_private or ip.is_loopback or ip.is_link_local or
+  ip.is_reserved or ip.is_multicast`` check before the PTR query.
+- **crt.sh unbounded accumulation** — Low. ``filter_subdomains``
+  added every matching name into a set, then sorted the full set
+  before slicing to ``MAX_SUBDOMAINS``. A domain with a very large
+  CT history (tens of thousands of entries) would force the whole
+  set into memory and sort it. Added a ``hard_cap = max_count * 10``
+  break during accumulation — enough headroom to still prioritize
+  high-signal subdomains correctly, bounded enough that no single
+  domain can spike CPU.
+
+### Validation
+
+- Full quality gate: ruff check + format clean, pyright 0 errors,
+  bandit 0 issues, actionlint clean.
+- Pytest: 1550 pass (prior count).
+- Each fix is targeted at a reported finding; none of them change
+  observable behavior for legitimate input (no CHANGELOG entries
+  needed in user-facing docs beyond this one).
+
 ## [1.3.0] — 2026-04-21
 
 **Portfolio discovery in batch mode.** When ``recon batch`` resolves

@@ -43,6 +43,7 @@ surface. See the Post-1.0 ethos section below.
 | v1.2.0  | 2026-04-21 | Contribution trust — specificity gate, `fingerprints new`/`test`, weak-areas + perf docs |
 | v1.2.1  | 2026-04-21 | Security patch — specificity gate wired into MCP `inject_ephemeral_fingerprint` |
 | v1.3.0  | 2026-04-21 | Portfolio discovery — batch-mode tenant-ID + display-name clustering |
+| v1.3.1  | 2026-04-21 | Security patch — 6 static-analysis findings resolved |
 
 See `CHANGELOG.md` for per-release detail.
 

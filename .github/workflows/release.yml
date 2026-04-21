@@ -5,13 +5,21 @@ on:
     tags:
       - "v*"
 
+# Workflow-level default: read-only. Each job explicitly opts into any
+# elevated scope it actually needs. The prior ``id-token: write`` here
+# granted OIDC-token minting to every job — including ``test`` and
+# ``build`` which install and execute dependency code. A compromised
+# dependency could mint a token and publish to PyPI under our trusted-
+# publisher identity. Scoping to ``publish-pypi`` / ``github-release``
+# respects least-privilege.
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -38,6 +46,8 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
 

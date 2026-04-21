@@ -1647,7 +1647,11 @@ async def inject_ephemeral_fingerprint(
     Returns:
         Confirmation message or validation error.
     """
-    from recon_tool.fingerprints import _validate_fingerprint, inject_ephemeral  # pyright: ignore[reportPrivateUsage]
+    from recon_tool.fingerprints import (
+        EphemeralCapacityError,
+        _validate_fingerprint,  # pyright: ignore[reportPrivateUsage]
+        inject_ephemeral,
+    )
     from recon_tool.specificity import evaluate_pattern
 
     fp_dict: dict[str, object] = {
@@ -1685,7 +1689,10 @@ async def inject_ephemeral_fingerprint(
                 }
             )
 
-    inject_ephemeral(validated)
+    try:
+        inject_ephemeral(validated)
+    except EphemeralCapacityError as exc:
+        return json_mod.dumps({"error": str(exc)})
     return json_mod.dumps(
         {
             "status": "ok",
