@@ -146,6 +146,15 @@ def filter_subdomains(
     domain_lower = domain.lower()
     seen: set[str] = set()
 
+    # Hard ceiling on accumulation to bound worst-case memory and sort
+    # cost. A domain with an enormous CT history (tens of thousands of
+    # distinct subdomains) would otherwise force the whole set into
+    # memory and sort it — when recon is exposed via MCP to an untrusted
+    # caller, that's an easy CPU-spike vector. Capping at ``max_count *
+    # 10`` keeps enough headroom to still prioritize high-signal
+    # subdomains correctly while bounding the work.
+    hard_cap = max_count * 10
+
     for raw_name in raw_names:
         name = raw_name.lower().strip()
         if not name or name == domain_lower:
@@ -155,6 +164,8 @@ def filter_subdomains(
         if not name.endswith(f".{domain_lower}"):
             continue
         seen.add(name)
+        if len(seen) >= hard_cap:
+            break
 
     if not seen:
         return []

@@ -78,10 +78,42 @@ def cache_put(domain: str, info: TenantInfo) -> None:
         logger.debug("Cache write failed for %s", domain, exc_info=True)
 
 
-def cache_clear(domain: str) -> bool:
-    """Remove the cached TenantInfo for domain. Returns True if a file was deleted."""
+def _safe_cache_path(domain: str) -> Path | None:
+    """Resolve a cache file path for ``domain``, rejecting traversal.
+
+    Returns None (rather than raising) when the domain is malformed or
+    would escape the cache directory. Callers treat None as "no entry
+    to operate on" — this keeps ``cache_clear("../../etc/passwd")``
+    from deleting files outside ``~/.recon/cache/``. Uses
+    ``Path.is_relative_to`` instead of string-prefix matching so
+    sibling directories sharing the cache-dir prefix cannot be
+    reached via a crafted traversal string.
+    """
+    if not domain or "/" in domain or "\\" in domain or ".." in domain:
+        return None
+    d = cache_dir().resolve()
+    path = (d / f"{domain}.json").resolve()
     try:
-        path = cache_dir() / f"{domain}.json"
+        if not path.is_relative_to(d):
+            return None
+    except (ValueError, OSError):
+        return None
+    return path
+
+
+def cache_clear(domain: str) -> bool:
+    """Remove the cached TenantInfo for domain. Returns True if a file was deleted.
+
+    Input is sanitised via ``_safe_cache_path`` — crafted traversal
+    strings like ``../settings`` are rejected and the function
+    returns ``False`` rather than deleting a file outside the cache
+    directory.
+    """
+    try:
+        path = _safe_cache_path(domain)
+        if path is None:
+            logger.debug("Cache clear rejected invalid domain: %r", domain)
+            return False
         if path.exists():
             path.unlink()
             return True

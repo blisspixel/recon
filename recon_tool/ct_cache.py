@@ -72,12 +72,29 @@ def ct_cache_dir() -> Path:
 
 
 def _safe_path(domain: str) -> Path:
-    """Resolve a cache file path, rejecting path traversal attempts."""
-    d = ct_cache_dir()
-    path = (d / f"{domain}.json").resolve()
-    if not str(path).startswith(str(d.resolve())):
+    """Resolve a cache file path, rejecting path traversal attempts.
+
+    The prior ``str(path).startswith(str(d.resolve()))`` check was
+    path-prefix rather than path-aware: a crafted domain like
+    ``../ct-cache-malice/evil`` could resolve to a sibling directory
+    whose path string still started with the ``ct-cache`` prefix and
+    slip through. ``Path.is_relative_to`` is the correct containment
+    check — it compares path components, so siblings don't pass.
+    A light-weight input guard also rejects the most common traversal
+    characters before resolution, giving defense in depth.
+    """
+    if not domain or "/" in domain or "\\" in domain or ".." in domain:
         msg = f"Invalid domain for cache path: {domain}"
         raise ValueError(msg)
+    d = ct_cache_dir().resolve()
+    path = (d / f"{domain}.json").resolve()
+    try:
+        if not path.is_relative_to(d):
+            msg = f"Invalid domain for cache path: {domain}"
+            raise ValueError(msg)
+    except (ValueError, OSError) as exc:
+        msg = f"Invalid domain for cache path: {domain}"
+        raise ValueError(msg) from exc
     return path
 
 

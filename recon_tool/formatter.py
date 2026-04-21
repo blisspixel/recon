@@ -2265,21 +2265,50 @@ def _compute_email_security_score(info: TenantInfo) -> int:
     return score
 
 
+def _csv_safe(value: str) -> str:
+    """Neutralize CSV formula-injection prefixes.
+
+    Spreadsheet applications (Excel, LibreOffice, Google Sheets)
+    interpret cells starting with ``=``, ``+``, ``-``, ``@``, ``\\t``,
+    or ``\\r`` as formulas. ``display_name`` comes from the
+    GetUserRealm ``FederationBrandName`` response, which is
+    attacker-controllable for any domain the user chooses to
+    look up. A tenant name like ``=HYPERLINK("http://...")`` would
+    execute on open.
+
+    Neutralization strategy: prefix the value with a single quote so
+    the spreadsheet treats the cell as literal text. The quote is
+    visible in the cell but not in the underlying data consumers
+    doing machine parsing — those should use the ``--json`` output
+    anyway; ``--csv`` is explicitly the human-spreadsheet path.
+    """
+    if not value:
+        return value
+    if value[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + value
+    return value
+
+
 def format_tenant_csv_row(info: TenantInfo) -> dict[str, str]:
-    """Build a dict of CSV column values for a single TenantInfo."""
+    """Build a dict of CSV column values for a single TenantInfo.
+
+    Every textual field passes through ``_csv_safe`` so a malicious
+    ``FederationBrandName`` (or any other attacker-influenced field)
+    can't execute as a formula when the CSV is opened in a spreadsheet.
+    """
     provider = detect_provider(info.services, info.slugs)
     return {
-        "domain": info.queried_domain,
-        "provider": provider,
-        "display_name": info.display_name,
-        "tenant_id": info.tenant_id or "",
-        "auth_type": info.auth_type or "",
+        "domain": _csv_safe(info.queried_domain),
+        "provider": _csv_safe(provider),
+        "display_name": _csv_safe(info.display_name),
+        "tenant_id": _csv_safe(info.tenant_id or ""),
+        "auth_type": _csv_safe(info.auth_type or ""),
         "confidence": info.confidence.value,
         "email_security_score": str(_compute_email_security_score(info)),
         "service_count": str(len(info.services)),
-        "dmarc_policy": info.dmarc_policy or "",
-        "mta_sts_mode": info.mta_sts_mode or "",
-        "google_auth_type": info.google_auth_type or "",
+        "dmarc_policy": _csv_safe(info.dmarc_policy or ""),
+        "mta_sts_mode": _csv_safe(info.mta_sts_mode or ""),
+        "google_auth_type": _csv_safe(info.google_auth_type or ""),
     }
 
 

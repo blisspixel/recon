@@ -32,6 +32,7 @@ logger = logging.getLogger("recon")
 __all__ = [
     "Detection",
     "DetectionRule",
+    "EphemeralCapacityError",
     "Fingerprint",
     "clear_ephemeral",
     "get_caa_patterns",
@@ -302,14 +303,38 @@ def _load_from_path(path: Path) -> list[Fingerprint]:
 _ephemeral_lock = threading.Lock()
 _ephemeral_fingerprints: list[Fingerprint] = []
 
+# Hard cap on session-scoped ephemeral fingerprints. Without this,
+# a long-running MCP server exposing ``inject_ephemeral_fingerprint``
+# could be driven into unbounded memory growth by a malicious or
+# prompt-injected client calling the tool in a loop. 100 is generous
+# for legitimate session extension (users typically inject a handful
+# of custom rules) and well below any memory-growth concern. Callers
+# who need more can restart the server or rely on built-in fingerprints.
+_MAX_EPHEMERAL_FINGERPRINTS: int = 100
+
+
+class EphemeralCapacityError(RuntimeError):
+    """Raised when the ephemeral-fingerprint cap is reached."""
+
 
 def inject_ephemeral(fp: Fingerprint) -> None:
     """Add a validated Fingerprint to the ephemeral collection.
 
     Clears pattern caches so subsequent calls to load_fingerprints()
     and get_*_patterns() include the new fingerprint.
+
+    Raises:
+        EphemeralCapacityError: when the per-process cap of
+            ``_MAX_EPHEMERAL_FINGERPRINTS`` is reached. Callers (the
+            MCP tool in particular) surface this as a user-facing
+            rejection rather than letting the list grow unbounded.
     """
     with _ephemeral_lock:
+        if len(_ephemeral_fingerprints) >= _MAX_EPHEMERAL_FINGERPRINTS:
+            raise EphemeralCapacityError(
+                f"Ephemeral fingerprint cap reached ({_MAX_EPHEMERAL_FINGERPRINTS}). "
+                "Clear the collection with clear_ephemeral() or restart the server."
+            )
         _ephemeral_fingerprints.append(fp)
     # Invalidate caches
     load_fingerprints.cache_clear()
