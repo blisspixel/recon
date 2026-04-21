@@ -131,4 +131,8 @@ jobs:
         run: uv sync --extra dev
 
       - name: Validate built-in fingerprints
-        run: uv run python scripts/validate_fingerprint.py recon_tool/data/fingerprints.yaml --quiet
+        # Validates every ``*.yaml`` under ``data/fingerprints/`` and
+        # pools slugs across files for a cross-file duplicate-slug check.
+        # The validator accepts a directory as of v1.1 (same CLI, different
+        # argument shape).
+        run: uv run python scripts/validate_fingerprint.py recon_tool/data/fingerprints/ --quiet

@@ -39,6 +39,7 @@ surface. See the Post-1.0 ethos section below.
 | v1.0.0  | 2026-04-17 | Stability commitment |
 | v1.0.1  | 2026-04-20 | Accuracy + reliability from 150-domain validation |
 | v1.0.2  | 2026-04-20 | Polish — observation-not-verdict, gateway-inferred DKIM, CI bumps |
+| v1.1.0  | 2026-04-21 | Contribution-ready — per-category YAML split, inspect CLI, actionlint gate |
 
 See `CHANGELOG.md` for per-release detail.
 
@@ -76,7 +77,35 @@ list` / `search` / `show` and validate candidate files with `recon
 fingerprints check`. `signals.yaml` and `posture.yaml` stay single
 files — they're smaller and more interdependent.
 
-## Post-1.0 ideas (not commitments)
+## What's next — watch, then decide
+
+Nothing is committed for v1.2. v1.1 was about *enabling* external
+fingerprint contributions; what v1.2 should be depends on signal we
+don't have yet.
+
+**Watch for 2–4 weeks after v1.1.0:**
+
+- Does the first external fingerprint PR arrive? If yes, the v1.1
+  premise was right. If no by mid-May, the YAML split was theater
+  and we should ask why (discovery? doc quality? demand didn't exist?).
+- What bugs surface against the split in real use? Those become
+  v1.1.1 patch material.
+- Which of the "ideas worth prototyping" below does anyone actually
+  ask for?
+
+**Worth doing immediately (low-risk, evidence-neutral):**
+
+- **Chained-pattern fingerprint reference set.** `match_mode: all`
+  infrastructure shipped in v0.10.2 but few built-in fingerprints use
+  it. A curated set of 20–30 chained examples gives contributors
+  concrete patterns to model from and tests the v1.1 contribution
+  pipeline end-to-end before strangers do. Pure data. Zero engine
+  changes.
+- **Contributor walkthrough.** One-page "your first fingerprint PR"
+  with a real before/after example, linked from CONTRIBUTING
+  quick-start. Pairs with the reference set.
+
+## Ideas worth prototyping (not commitments)
 
 Any of these could turn into a minor release. None are blocking.
 Each has to stay below the "bulletproof over bloat" bar — if it
@@ -85,16 +114,19 @@ ship.
 
 - **CT-organization search.** Use `crt.sh`'s subject `O=` field to
   find related certs issued to the same organization. Portfolio
-  discovery signal; prototype post-1.0.
+  discovery signal; adds a new network surface — let v1.1 settle
+  first.
 - **Tenant display-name clustering across batch.** If `balcan.com`
   has tenant display name "Balcan Innovations Inc." and
   `balcaninnovations.com` matches that substring, they're almost
-  certainly the same entity. Uses data we already collect.
+  certainly the same entity. Uses data we already collect — no new
+  network surface. Good first post-v1.1 feature candidate.
 - **BIMI VMC legal-name clustering.** Strictly-verified legal names
   in BIMI VMCs are the strongest passive signal for corporate
   ownership clustering. Low false-positive rate, low coverage.
 - **Counterfactual hardening simulation.** Valuable for red-team and
-  M&A due diligence. Read-only on cached evidence.
+  M&A due diligence. Read-only on cached evidence. Large feature —
+  needs demand evidence before scoping.
 - **Temporal evidence from CT metadata.** Use `not_before` /
   `not_after` to surface "legacy configuration residue".
 - **Feedback-driven posterior tuning.** Opt-in local
@@ -104,13 +136,9 @@ ship.
 - **Wayback Machine historical snapshots.** Zero-creds public API
   returns historical URLs for a domain; a passive temporal
   enrichment.
-- **Chained-pattern fingerprint reference set.** `match_mode: all`
-  infrastructure shipped in v0.10.2 but few built-in fingerprints
-  use it. A curated set of 20–30 chained examples would give
-  contributors concrete patterns to model from.
-- **Bayesian evidence fusion.** Per-source reliability priors +
-  Beta conjugate update for per-slug confidence. Output a
-  `slug_confidences` field, tagged experimental.
+- **Bayesian evidence fusion refinements.** Experimental flag landed
+  in v0.11; refine per-source reliability priors based on
+  accumulated validation feedback.
 
 ## Opportunistic refactoring
 
