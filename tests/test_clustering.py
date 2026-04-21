@@ -199,3 +199,134 @@ class TestClusterEntry:
         e = ClusterEntry(token="google-site-verification=abc", peer="fabrikam.com")  # noqa: S106
         assert e.token == "google-site-verification=abc"  # noqa: S105
         assert e.peer == "fabrikam.com"
+
+
+# ── v1.3: tenant-ID clustering ─────────────────────────────────────────
+
+
+class TestTenantClusters:
+    def test_clusters_shared_tenant(self):
+        from recon_tool.clustering import compute_tenant_clusters
+
+        clusters = compute_tenant_clusters(
+            {
+                "a.com": "tenant-abc",
+                "b.com": "tenant-abc",
+                "c.com": "tenant-xyz",
+            }
+        )
+        assert len(clusters) == 1
+        assert clusters[0].tenant_id == "tenant-abc"
+        assert clusters[0].domains == ("a.com", "b.com")
+
+    def test_skips_singletons(self):
+        from recon_tool.clustering import compute_tenant_clusters
+
+        clusters = compute_tenant_clusters(
+            {
+                "a.com": "tenant-abc",
+                "b.com": "tenant-xyz",
+            }
+        )
+        assert clusters == ()
+
+    def test_skips_none_tenant(self):
+        from recon_tool.clustering import compute_tenant_clusters
+
+        clusters = compute_tenant_clusters(
+            {
+                "a.com": None,
+                "b.com": None,
+                "c.com": "tenant-abc",
+            }
+        )
+        assert clusters == ()
+
+    def test_deterministic_ordering(self):
+        from recon_tool.clustering import compute_tenant_clusters
+
+        clusters = compute_tenant_clusters(
+            {
+                "b.com": "zzz",
+                "c.com": "aaa",
+                "a.com": "zzz",
+                "d.com": "aaa",
+            }
+        )
+        # Sorted by tenant_id; domains within each cluster sorted alphabetically.
+        assert [c.tenant_id for c in clusters] == ["aaa", "zzz"]
+        assert clusters[0].domains == ("c.com", "d.com")
+        assert clusters[1].domains == ("a.com", "b.com")
+
+
+# ── v1.3: display-name clustering ──────────────────────────────────────
+
+
+class TestDisplayNameClusters:
+    def test_clusters_shared_name(self):
+        from recon_tool.clustering import compute_display_name_clusters
+
+        clusters = compute_display_name_clusters(
+            {
+                "a.com": "Acme Corp",
+                "b.com": "Acme Corp",
+                "c.com": "Different Org",
+            }
+        )
+        assert len(clusters) == 1
+        assert clusters[0].normalized_name == "acme"
+        assert clusters[0].domains == ("a.com", "b.com")
+
+    def test_corporate_suffix_stripped(self):
+        from recon_tool.clustering import compute_display_name_clusters
+
+        # "Acme Corp" and "Acme Corp." both strip to "acme".
+        # "Acme Inc" also strips to "acme" and joins the cluster.
+        clusters = compute_display_name_clusters(
+            {
+                "a.com": "Acme Corp",
+                "b.com": "Acme Corp.",
+                "c.com": "Acme Inc",
+            }
+        )
+        assert len(clusters) == 1
+        assert clusters[0].normalized_name == "acme"
+        assert set(clusters[0].domains) == {"a.com", "b.com", "c.com"}
+
+    def test_conservative_no_substring(self):
+        from recon_tool.clustering import compute_display_name_clusters
+
+        # "Acme" vs "Acme Holdings" do NOT cluster (exact normalized
+        # match required; we don't do substring containment).
+        clusters = compute_display_name_clusters(
+            {
+                "a.com": "Acme",
+                "b.com": "Acme Holdings",
+            }
+        )
+        assert clusters == ()
+
+    def test_skips_none_name(self):
+        from recon_tool.clustering import compute_display_name_clusters
+
+        clusters = compute_display_name_clusters(
+            {
+                "a.com": None,
+                "b.com": None,
+            }
+        )
+        assert clusters == ()
+
+    def test_preserves_raw_names(self):
+        from recon_tool.clustering import compute_display_name_clusters
+
+        # raw_names should preserve the verbatim display names for audit,
+        # not the normalized form.
+        clusters = compute_display_name_clusters(
+            {
+                "a.com": "Acme Corp",
+                "b.com": "Acme Corp.",
+            }
+        )
+        assert len(clusters) == 1
+        assert set(clusters[0].raw_names) == {"Acme Corp", "Acme Corp."}

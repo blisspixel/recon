@@ -2237,7 +2237,11 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int,
         # at least two domains in the batch share the same token. Keyed
         # by queried_domain which is the canonical normalized form.
         if batch_infos:
-            from recon_tool.clustering import compute_shared_tokens
+            from recon_tool.clustering import (
+                compute_display_name_clusters,
+                compute_shared_tokens,
+                compute_tenant_clusters,
+            )
 
             domain_tokens = {d: info.site_verification_tokens for d, info in batch_infos.items()}
             clusters = compute_shared_tokens(domain_tokens)
@@ -2249,6 +2253,49 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int,
                     peers = clusters.get(key)
                     if peers:
                         entry["shared_verification_tokens"] = [{"token": e.token, "peer": e.peer} for e in peers]
+
+            # v1.3: tenant-ID + display-name clustering across the batch.
+            # Tenant-ID sharing is cryptographically strong (same M365
+            # customer account); display-name overlap is hedged (same
+            # brand / likely related, but customer-supplied so not
+            # cryptographic). Both surface the same way — as a peer
+            # list keyed to each domain — so batch consumers can pull
+            # related apexes without re-resolving them.
+            domain_tenants = {d: info.tenant_id for d, info in batch_infos.items()}
+            domain_names = {d: info.display_name for d, info in batch_infos.items()}
+            tenant_clusters = compute_tenant_clusters(domain_tenants)
+            display_clusters = compute_display_name_clusters(domain_names)
+
+            # Build per-domain peer indexes for quick lookup.
+            tenant_peers: dict[str, list[dict[str, object]]] = {}
+            for tc in tenant_clusters:
+                for d in tc.domains:
+                    tenant_peers.setdefault(d, []).append(
+                        {
+                            "tenant_id": tc.tenant_id,
+                            "peers": [p for p in tc.domains if p != d],
+                        }
+                    )
+            display_peers: dict[str, list[dict[str, object]]] = {}
+            for dc in display_clusters:
+                for d, raw in zip(dc.domains, dc.raw_names, strict=True):
+                    display_peers.setdefault(d, []).append(
+                        {
+                            "display_name": raw,
+                            "normalized_name": dc.normalized_name,
+                            "peers": [p for p in dc.domains if p != d],
+                        }
+                    )
+
+            if tenant_peers or display_peers:
+                for entry in json_results:
+                    key = entry.get("queried_domain")
+                    if not isinstance(key, str):
+                        continue
+                    if key in tenant_peers:
+                        entry["shared_tenant"] = tenant_peers[key]
+                    if key in display_peers:
+                        entry["shared_display_name"] = display_peers[key]
 
         typer.echo(json_mod.dumps(json_results, indent=2))
     elif csv_output:
