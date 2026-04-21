@@ -7,7 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0] — 2026-04-21
+## [1.2.0] — 2026-04-21
+
+**Contribution trust.** v1.1 gave contributors the plumbing; v1.2 adds
+the guards that make contributions *safe to merge*. A
+pattern-specificity gate rejects over-broad regexes before review; a
+scaffolding wizard runs every check before emitting YAML; a test
+command resolves a new fingerprint against a public domain corpus so
+contributors can see what it actually matches. No engine changes, no
+new detections — the point is that the next wave of detections
+(community or solo) can't accidentally poison the catalog.
+
+### Added
+
+- **Pattern-specificity gate** (`recon_tool/specificity.py`). Every
+  detection regex is now matched against a synthetic adversarial
+  corpus of ~1500 strings spanning TXT / SPF / MX / CNAME / NS. If a
+  pattern matches more than 1% of the corpus, `recon fingerprints
+  check` rejects it as over-broad. The threshold is calibrated so all
+  227 built-in entries pass, while a deliberately-broad pattern like
+  `cname:\.com$` fails with a clear diagnostic. Off by default with
+  `--skip-specificity` for debugging; on by default for PRs and CI.
+- **`recon fingerprints new <slug>`** — scaffolding wizard. Prompts
+  for name, category, detection type, pattern, optional description
+  and reference. Runs three guards before emitting YAML: (1) slug
+  uniqueness against the built-in catalog, (2) schema validity,
+  (3) specificity. Prints a paste-ready entry or writes to a file
+  via `--output`.
+- **`recon fingerprints test <slug>`** — runs one fingerprint against
+  a domain corpus and reports which match. Defaults to the bundled
+  public corpus at `tests/fixtures/corpus-public.txt` (40 well-known
+  apex domains); contributors can point at their own with
+  `--corpus path/to/file`. Helps answer "is my regex too loose or
+  too tight" without hand-resolving DNS.
+- **`tests/fixtures/corpus-public.txt`** — 40 public apex domains
+  committed to the repo so `recon fingerprints test` works out of
+  the box. Covers big tech, major SaaS, retail, automotive, finance,
+  media, pharma, and international orgs. Kept stable so fixture
+  pinning works in tests.
+- **`docs/weak-areas.md`** — honest list of deployment shapes where
+  recon looks sparse by design (heavy-CDN orgs, Chinese / APAC tech
+  stacks, regulated verticals behind web proxies, fully self-hosted
+  shops, parked / portfolio apexes). Names what the sparse result
+  actually means and what to do instead of over-interpreting it.
+  Linked from limitations.md.
+- **`docs/performance.md`** — published batch wall-clock and memory
+  numbers (50 / 100 / 500 domains), methodology for reproducing,
+  per-step time budget. Stops users from guessing where the latency
+  goes.
+
+### Changed
+
+- **`scripts/validate_fingerprint.py`** — now runs the specificity
+  gate on every pattern in addition to the runtime schema check and
+  cross-file duplicate-slug check. `--skip-specificity` opts out
+  when debugging.
+- **CONTRIBUTING.md** — fingerprint PR section updated for the new
+  `fingerprints new` / `test` / `check` workflow. New "engine changes
+  go through a design doc" heads-up before the signals section —
+  fingerprints are data and can iterate freely; signal / fusion /
+  absence engines are inference code and bad changes affect every
+  domain recon analyses.
+
+### Deferred to post-1.2
+
+- **Bulk fingerprint additions.** Each QA round during v1.2 planning
+  suggested 20-100 new fingerprints, mostly based on pattern-matching
+  `<vendor>-domain-verification=` by analogy. Spot-checks showed
+  most of those patterns don't exist — the SaaS in question uses
+  account-based verification or API-key auth rather than DNS.
+  Catalog growth is welcome but each entry needs vendor-doc
+  verification, which is proper v1.2+ work. The infrastructure in
+  this release makes each new entry a small PR going forward.
 
 **Contribution-ready.** The fingerprint catalog is now one file per
 category, new CLI inspect commands let contributors audit the data

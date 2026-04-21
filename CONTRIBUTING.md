@@ -185,6 +185,22 @@ Use the fingerprint PR template — GitHub surfaces it automatically.
 
 ## Adding signals and profiles
 
+> **Heads up — engine changes go through a design doc.** Fingerprints
+> are data; contributors can iterate on them freely. The signal,
+> fusion, and absence engines are inference code — bad changes there
+> affect every domain recon analyses, not just the one you tested.
+> Before PRing a change to `recon_tool/signals.py`, `merger.py`,
+> `absence.py`, `fusion.py`, or the two-pass evaluator, please open
+> an issue with:
+>
+> 1. What inference pattern you want to add or change.
+> 2. Which domains in the validation corpus would fire differently.
+> 3. How you'd guard against false positives on sparse-signal domains.
+>
+> Data-only contributions (new signals in `signals.yaml` that reuse
+> the existing engine) don't need this — they follow the fingerprint
+> PR workflow.
+
 ### Signals
 
 Custom signal rules derive insights from fingerprint matches. Go in
