@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] — 2026-04-21
+
+**Security patch.** The MCP ``inject_ephemeral_fingerprint`` tool
+validated schema but bypassed the v1.2 specificity gate. A caller
+could inject a pattern like ``cname:\.com$`` and poison every
+subsequent lookup in that session with false positives. Blast radius
+was small (in-memory, per-session, could not persist), but the gate
+is cheap and worth enforcing everywhere the catalog accepts input.
+
+### Fixed
+
+- ``inject_ephemeral_fingerprint`` now runs every detection pattern
+  through ``recon_tool.specificity.evaluate_pattern`` and rejects the
+  injection with a clear diagnostic when any pattern exceeds the 1%
+  synthetic-corpus match threshold. Same gate as
+  ``recon fingerprints check`` and ``recon fingerprints new``, so
+  the three ingress paths are now consistent.
+
+### Validation
+
+- Expanded validation sweep against a 31-domain weak-area corpus
+  (heavy-Cloudflare, higher-ed, Chinese/APAC, regulated verticals,
+  EU fintech, self-hosted, IDN). All 31 resolve without error;
+  sparse results on thin-signal domains are honest, not empty.
+- Security audit pass on userrealm.py (defusedxml + xml_escape both
+  confirmed in use), the ``recon fingerprints check`` subprocess
+  path (list form, sys.executable, no shell), and the MCP rate
+  limiter (monotonic clock, soft cap, no bypass via table-flood).
+  No other findings.
+
 ## [1.2.0] — 2026-04-21
 
 **Contribution trust.** v1.1 gave contributors the plumbing; v1.2 adds
