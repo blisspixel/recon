@@ -336,6 +336,23 @@ def get_ephemeral() -> tuple[Fingerprint, ...]:
         return tuple(_ephemeral_fingerprints)
 
 
+def _load_from_dir(directory: Path) -> list[Fingerprint]:
+    """Load every ``*.yaml`` file in ``directory`` in sorted order.
+
+    Deterministic ordering makes detection semantics reproducible: when
+    two entries produce the same pattern, the winner is the one from the
+    alphabetically-first file. File sort order is stable across platforms
+    because ``Path.glob`` returns lexicographic ordering after
+    ``sorted()``.
+    """
+    if not directory.is_dir():
+        return []
+    entries: list[Fingerprint] = []
+    for path in sorted(directory.glob("*.yaml")):
+        entries.extend(_load_from_path(path))
+    return entries
+
+
 @lru_cache(maxsize=1)
 def load_fingerprints() -> tuple[Fingerprint, ...]:
     """Load fingerprints from YAML data files (built-in + custom).
@@ -347,14 +364,36 @@ def load_fingerprints() -> tuple[Fingerprint, ...]:
     Results are cached for the process lifetime. In the CLI this is fine
     (short-lived process). In the MCP server (long-lived), call
     reload_fingerprints() to pick up changes to custom fingerprints.
+
+    Built-in catalog layout (v1.1+): ``data/fingerprints/<category>.yaml``.
+    The pre-split monolith at ``data/fingerprints.yaml`` is still accepted
+    as a fallback so a bisect against an old tree doesn't break. Custom
+    fingerprints (``~/.recon/fingerprints.yaml``) are still a single file
+    — contributors adding in bulk can point ``RECON_CONFIG_DIR`` at a
+    directory containing ``fingerprints.yaml`` OR a ``fingerprints/``
+    subdirectory of split files.
     """
-    data_path = Path(__file__).parent / "data" / "fingerprints.yaml"
-    custom_dir = os.environ.get("RECON_CONFIG_DIR")
-    custom_path = Path(custom_dir) / "fingerprints.yaml" if custom_dir else Path.home() / ".recon" / "fingerprints.yaml"
+    base = Path(__file__).parent / "data"
+    data_dir = base / "fingerprints"
+    data_file = base / "fingerprints.yaml"
+
+    custom_dir_env = os.environ.get("RECON_CONFIG_DIR")
+    custom_base = Path(custom_dir_env) if custom_dir_env else Path.home() / ".recon"
+    custom_file = custom_base / "fingerprints.yaml"
+    custom_dir = custom_base / "fingerprints"
 
     entries: list[Fingerprint] = []
-    entries.extend(_load_from_path(data_path))
-    entries.extend(_load_from_path(custom_path))
+    # Built-in: prefer the split directory when present; fall back to the
+    # monolith only if the directory doesn't exist. Avoiding both-load
+    # keeps slug uniqueness tractable during the migration window.
+    if data_dir.is_dir():
+        entries.extend(_load_from_dir(data_dir))
+    else:
+        entries.extend(_load_from_path(data_file))
+    # Custom: file and directory are both valid (additive). A user might
+    # keep their legacy single-file override even after the built-in split.
+    entries.extend(_load_from_path(custom_file))
+    entries.extend(_load_from_dir(custom_dir))
     # Append ephemeral fingerprints (not cached separately — cache is
     # invalidated on inject/clear so this always reflects current state)
     with _ephemeral_lock:

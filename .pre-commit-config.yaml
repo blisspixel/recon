@@ -15,3 +15,15 @@ repos:
         types: [python]
         pass_filenames: false
         args: [recon_tool/]
+
+  # Static lint for GitHub Actions workflow YAML. Catches:
+  #   - unresolved action refs (the ``setup-uv@v8`` non-tag that broke
+  #     the first v1.0.2 release),
+  #   - shell-syntax errors in ``run:`` blocks,
+  #   - expression-syntax errors (``${{ ... }}``),
+  #   - deprecated ``::set-output::`` and friends.
+  # Runs against every ``.yml`` / ``.yaml`` file under ``.github/workflows/``.
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint

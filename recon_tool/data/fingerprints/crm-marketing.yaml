@@ -1,0 +1,254 @@
+# CRM, sales, marketing, and advertising fingerprints. Marketing automation, sales intelligence, ad platforms.
+#
+# Loaded by recon_tool.fingerprints.load_fingerprints.
+# Custom overrides: ~/.recon/fingerprints.yaml (additive only).
+
+fingerprints:
+- name: Salesforce
+  slug: salesforce
+  category: CRM & Marketing
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^salesforce-domain-verification=
+  - type: txt
+    pattern: ^00D[A-Za-z0-9]{12,15}=
+    description: Salesforce OrgID (00D prefix) — unique tenant identifier, proves CRM relationship
+  - type: spf
+    pattern: salesforce.com
+  - type: spf
+    pattern: _spf.salesforce.com
+- name: Salesforce Marketing Cloud
+  slug: salesforce-mc
+  category: CRM & Marketing
+  confidence: high
+  detections:
+  - type: cname
+    pattern: sfmc-marketing.com
+    description: Salesforce Marketing Cloud click/view tracking CNAME
+  - type: cname
+    pattern: sfmc-content.com
+    description: Salesforce Marketing Cloud image/content hosting CNAME
+  - type: cname
+    pattern: exacttarget.com
+    description: Salesforce Marketing Cloud (legacy ExactTarget) CNAME
+- name: HubSpot
+  slug: hubspot
+  category: CRM & Marketing
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^hubspot-domain-verification=
+  - type: txt
+    pattern: ^hubspot-developer-verification=
+    description: HubSpot developer portal / sandbox domain verification
+  - type: spf
+    pattern: hubspotemail.net
+  - type: cname
+    pattern: hubspot.net
+- name: Marketo (Adobe)
+  slug: marketo
+  category: CRM & Marketing
+  confidence: high
+  detections:
+  - type: spf
+    pattern: mktomail.com
+  - type: cname
+    pattern: mktosvc.com
+  - type: cname
+    pattern: mkto-
+- name: Klaviyo
+  slug: klaviyo
+  category: CRM & Marketing
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^klaviyo-site-verification=
+- name: LiveRamp
+  slug: liveramp
+  category: CRM & Marketing
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^liveramp-site-verification=
+- name: Segment (Twilio)
+  slug: segment
+  category: CRM & Marketing
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^segment-site-verification=
+  - type: cname
+    pattern: segment.com
+  - type: cname
+    pattern: segment.io
+- name: Meta Business Suite
+  slug: meta
+  category: Social & Advertising
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^facebook-domain-verification=
+- name: Yandex
+  slug: yandex
+  category: Social & Advertising
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: '^yandex-verification:'
+- name: Unbounce
+  slug: unbounce
+  category: CRM & Marketing
+  confidence: high
+  detections:
+  - type: cname
+    pattern: unbounce.com
+- name: Pardot Landing Pages
+  slug: pardot
+  category: Sales Intelligence
+  confidence: high
+  detections:
+  - type: cname
+    pattern: pardot.com
+- name: Drift Chat
+  slug: drift
+  category: Sales Intelligence
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: drift.com
+- name: Braze
+  slug: braze
+  category: CRM & Marketing
+  confidence: high
+  detections:
+  - type: cname
+    pattern: braze.com
+    description: Braze customer engagement platform CNAME
+- name: Iterable
+  slug: iterable
+  category: CRM & Marketing
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: iterable.com
+- name: Customer.io
+  slug: customerio
+  category: CRM & Marketing
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: customer.io
+- name: 6sense
+  slug: 6sense
+  category: Sales Intelligence
+  confidence: high
+  detections:
+  - type: cname
+    pattern: 6sense.com
+  - type: cname
+    pattern: 6sense.io
+  - type: txt
+    pattern: ^6sense
+- name: Demandbase
+  slug: demandbase
+  category: Sales Intelligence
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: demandbase.com
+- name: Eloqua (Oracle)
+  slug: eloqua
+  category: Sales Intelligence
+  confidence: high
+  detections:
+  - type: cname
+    pattern: eloqua.com
+- name: Clearbit
+  slug: clearbit
+  category: Sales Intelligence
+  confidence: high
+  detections:
+  - type: cname
+    pattern: clearbit.com
+- name: Outreach
+  slug: outreach
+  category: Sales Intelligence
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^outreach
+  - type: spf
+    pattern: outreach.io
+- name: Salesloft
+  slug: salesloft
+  category: Sales Intelligence
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^salesloft
+  - type: spf
+    pattern: salesloft.com
+- name: Apollo.io
+  slug: apollo
+  category: Sales Intelligence
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^apollo-domain-verification=
+- name: Gong
+  slug: gong
+  category: Sales Intelligence
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^gong-domain-verification=
+- name: Intercom
+  slug: intercom
+  category: Sales Intelligence
+  confidence: high
+  detections:
+  - type: cname
+    pattern: intercom.io
+  - type: txt
+    pattern: ^intercom-domain-verification=
+- name: Dynamics 365 Marketing
+  slug: d365-marketing
+  category: Sales & Marketing
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^d365mktkey=
+    description: Microsoft Dynamics 365 Marketing domain verification
+- name: Salesforce Marketing Cloud (SFMC)
+  slug: sfmc
+  category: Sales & Marketing
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^SFMC-
+    description: Salesforce Marketing Cloud domain verification (SFMC)
+- name: Emma Email Marketing
+  slug: emma
+  category: Sales & Marketing
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^e2ma-verification=
+    description: Emma (myemma) email marketing domain verification
+- name: iContact Email Marketing
+  slug: icontact
+  category: Sales & Marketing
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^iContact
+    description: iContact email marketing domain verification
+- name: MailerLite
+  slug: mailerlite
+  category: Sales & Marketing
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^mailerlite-domain-verification=
+    description: MailerLite email marketing domain verification

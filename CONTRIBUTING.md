@@ -105,11 +105,39 @@ internal naming should stay local.
 
 ## Adding fingerprints
 
-The most common contribution. Edit `recon_tool/data/fingerprints.yaml`:
+The most common contribution. From v1.1 onward, fingerprints live under
+`recon_tool/data/fingerprints/` — one YAML file per category.
+
+### 1. Find the right file
+
+```bash
+recon fingerprints list --category ai       # where do AI tools live?
+recon fingerprints show openai              # what does the existing pattern look like?
+```
+
+Current layout:
+
+```
+recon_tool/data/fingerprints/
+├── ai.yaml             AI / LLM providers, agent frameworks
+├── email.yaml          Email providers, gateways, DMARC / DKIM tooling
+├── security.yaml       EDR, SIEM, IdP, zero-trust access
+├── infrastructure.yaml Cloud, CDN, DNS, CAs, CI/CD
+├── productivity.yaml   Suite tools, helpdesk, HR
+├── crm-marketing.yaml  CRM, sales intel, ad platforms
+├── data-analytics.yaml Warehouses, BI, observability
+└── verticals.yaml      Education, nonprofit, payments
+```
+
+Pick the file that matches your service's primary category. If nothing
+fits, open an issue before adding a new category file — the split is
+intentionally coarse.
+
+### 2. Add your entry
 
 ```yaml
 - name: Service Name
-  slug: service-slug          # lowercase, unique identifier
+  slug: service-slug          # lowercase, unique across ALL files
   category: Category Name     # use an existing category if possible
   confidence: high             # high, medium, or low
   detections:
@@ -118,16 +146,21 @@ The most common contribution. Edit `recon_tool/data/fingerprints.yaml`:
       description: What this record means
 ```
 
-### Validate locally before opening a PR
+### 3. Validate locally before opening a PR
 
 ```bash
-uv run python scripts/validate_fingerprint.py recon_tool/data/fingerprints.yaml
+recon fingerprints check                    # validates the built-in catalog
+recon fingerprints check path/to/custom.yaml  # validate a candidate file
 ```
 
-The script runs the same validation recon uses at runtime — regex safety
-(ReDoS heuristic), required fields, known detection types, weight range
-(0.0–1.0), `match_mode` value. Exits 0 on success, 1 on failure with
-per-entry error messages.
+The `check` command runs the same validation recon uses at runtime —
+regex safety (ReDoS heuristic), required fields, known detection types,
+weight range (0.0–1.0), `match_mode` value — **plus** a cross-file
+duplicate-slug check. Exits 0 on success, 1 on failure with per-entry
+error messages.
+
+Under the hood this wraps `scripts/validate_fingerprint.py`; contributors
+who prefer invoking the script directly can still do so.
 
 ### Chained patterns (`match_mode: all`)
 
@@ -137,7 +170,9 @@ listed detection matches. See [docs/fingerprints.md](docs/fingerprints.md#chaine
 
 ### Fingerprint PR checklist
 
-- [ ] Validates locally with `scripts/validate_fingerprint.py`
+- [ ] Validates locally with `recon fingerprints check`
+- [ ] `recon fingerprints show <slug>` displays your new entry after load
+- [ ] Slug does not collide with an existing one (`recon fingerprints list | grep <slug>`)
 - [ ] At least one detection pattern uses a service-specific token (not a generic substring)
 - [ ] Tested against a real public domain you know uses the service
 - [ ] The service's DNS footprint is documented or publicly-observable (not leaked from a customer engagement)

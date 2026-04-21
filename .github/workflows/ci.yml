@@ -7,6 +7,21 @@ on:
     branches: [main]
 
 jobs:
+  workflow-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Catches unresolved action refs, bad shell in `run:` blocks, and
+      # deprecated expressions before any Python job spins up. The v1.0.2
+      # release regressed because `astral-sh/setup-uv@v8` isn't a real
+      # floating tag; actionlint catches that class of error locally and
+      # in CI.
+      - name: Run actionlint
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12
+          ./actionlint -color
+
   lint:
     runs-on: ubuntu-latest
     steps:

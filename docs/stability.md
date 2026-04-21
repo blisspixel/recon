@@ -101,8 +101,8 @@ patch and minor releases without modification.
 
 | Surface | Stable guarantee |
 |---|---|
-| `data/fingerprints.yaml` schema | Stable — fields: name, slug, category, confidence, detections, match_mode, weight, m365, provider_group, display_group. |
-| `~/.recon/fingerprints.yaml` schema | Same. Custom entries are **additive only** — cannot override built-ins. |
+| `data/fingerprints/*.yaml` schema | Stable — fields: name, slug, category, confidence, detections, match_mode, weight, m365, provider_group, display_group. v1.1 split the monolith into per-category files; file boundaries are a repo-organization detail, not part of the schema contract. |
+| `~/.recon/fingerprints.yaml` schema | Same. Custom entries are **additive only** — cannot override built-ins. A `~/.recon/fingerprints/` directory is also accepted (v1.1+). |
 | `data/signals.yaml` schema | Stable — fields: name, category, confidence, description, requires, metadata, contradicts, requires_signals, expected_counterparts, positive_when_absent. |
 | `~/.recon/signals.yaml` schema | Same. Additive only. |
 | `data/profiles/*.yaml` schema | Stable — fields: name, description, category_boost, signal_boost, focus_categories, exclude_signals, prepend_note. |

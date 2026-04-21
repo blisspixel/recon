@@ -43,7 +43,7 @@ EXIT_INTERNAL = 4
 
 # Known subcommands — used by the callback to distinguish domains from commands.
 # UPDATE THIS SET when adding new subcommands.
-_SUBCOMMANDS = frozenset({"doctor", "batch", "lookup", "mcp", "cache", "delta"})
+_SUBCOMMANDS = frozenset({"doctor", "batch", "lookup", "mcp", "cache", "delta", "fingerprints", "signals"})
 
 # Maximum number of domains in a batch file to prevent OOM from huge files.
 _MAX_BATCH_DOMAINS = 10000
@@ -598,6 +598,563 @@ def cache_clear(
     else:
         console.print("  Specify a domain or use --all.")
         raise typer.Exit(code=2)
+
+
+# ── Fingerprints CLI ──────────────────────────────────────────────────
+
+fingerprints_app = typer.Typer(help="Inspect the built-in fingerprint catalog.")
+app.add_typer(fingerprints_app, name="fingerprints")
+
+
+@fingerprints_app.command("list")
+def fingerprints_list(
+    category: str | None = typer.Option(
+        None, "--category", "-c", help="Filter by category (substring, case-insensitive)"
+    ),
+    detection_type: str | None = typer.Option(
+        None,
+        "--type",
+        "-t",
+        help="Filter by detection type (txt, mx, spf, cname, srv, caa, ns, subdomain_txt, dkim)",
+    ),
+    all_entries: bool = typer.Option(False, "--all", "-a", help="Print the full table even with no filters (227 rows)"),
+    json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
+) -> None:
+    """List built-in fingerprints.
+
+    With no filters, shows a per-category summary — 227 fingerprints is
+    too much to dump at a prompt. Use ``--category`` to scope to one
+    file (e.g. ``-c ai``, ``-c security``) or ``--all`` to force the
+    full table. For free-text lookups (slug / name / pattern), prefer
+    ``recon fingerprints search <query>``.
+    """
+    from recon_tool.fingerprints import load_fingerprints
+
+    fps = load_fingerprints()
+    had_filter = category is not None or detection_type is not None
+    if category:
+        needle = category.lower()
+
+        # Word-prefix matching instead of raw substring — ``-c ai`` should
+        # match "AI & Generative" but not "Email" (which contains the
+        # substring ``ai``). Split the category into alpha-word tokens
+        # and match against the start of each token. Falls back to a
+        # full substring match for multi-word queries (``-c "data &"``).
+        def _match(cat: str) -> bool:
+            cat_lower = cat.lower()
+            if " " in needle:
+                return needle in cat_lower
+            import re
+
+            return any(word.startswith(needle) for word in re.findall(r"[a-z0-9]+", cat_lower))
+
+        fps = tuple(fp for fp in fps if _match(fp.category))
+    if detection_type:
+        dtype = detection_type.lower()
+        fps = tuple(fp for fp in fps if any(d.type.lower() == dtype for d in fp.detections))
+
+    if json_output:
+        payload = [
+            {
+                "slug": fp.slug,
+                "name": fp.name,
+                "category": fp.category,
+                "confidence": fp.confidence,
+                "detection_types": sorted({d.type for d in fp.detections}),
+                "detection_count": len(fp.detections),
+            }
+            for fp in fps
+        ]
+        typer.echo(json.dumps(payload, indent=2))
+        return
+
+    console = get_console()
+    if not fps:
+        console.print("  No fingerprints match those filters.")
+        return
+
+    # Compact summary when the user asked for the full catalog — 227
+    # rows of table is not a useful answer to "what's in here". A
+    # category breakdown with counts plus a filter hint is.
+    if not had_filter and not all_entries:
+        from collections import Counter
+
+        by_cat = Counter(fp.category for fp in fps)
+        console.print()
+        console.print(f"  [bold]{len(fps)} fingerprints across {len(by_cat)} categories[/bold]")
+        console.print()
+        width = max(len(cat) for cat in by_cat)
+        for cat, n in sorted(by_cat.items(), key=lambda x: (-x[1], x[0])):
+            console.print(f"    {cat:<{width}s}  {n:>4d}")
+        console.print()
+        console.print(
+            "  [dim]Next:[/dim]  recon fingerprints list --category <name>     "
+            "recon fingerprints search <query>     recon fingerprints show <slug>"
+        )
+        console.print()
+        return
+
+    console.print()
+    console.print(f"  [bold]{len(fps)} fingerprint{'s' if len(fps) != 1 else ''}[/bold]")
+    console.print()
+    slug_w = max(len(fp.slug) for fp in fps)
+    cat_w = max(len(fp.category) for fp in fps)
+    for fp in sorted(fps, key=lambda f: (f.category, f.slug)):
+        types = ",".join(sorted({d.type for d in fp.detections}))
+        console.print(f"    {fp.slug:<{slug_w}s}  {fp.category:<{cat_w}s}  {types:<18s}  {fp.name}")
+    console.print()
+
+
+@fingerprints_app.command("search")
+def fingerprints_search(
+    query: str = typer.Argument(..., help="Search term — matched against slug, name, category, and detection patterns"),
+    json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
+) -> None:
+    """Search fingerprints by slug, name, category, or detection pattern.
+
+    Case-insensitive substring across four fields simultaneously —
+    the primary discovery command for "does this exist" / "what does
+    recon know about X". Results are ranked: slug-prefix matches
+    first, then slug/name substring matches, then pattern matches.
+
+    Examples::
+
+        recon fingerprints search okta          # slug + name hits
+        recon fingerprints search "verification" # matches all *-verification= TXT tokens
+        recon fingerprints search pardot         # what slug does Pardot live under
+    """
+    from recon_tool.fingerprints import load_fingerprints
+
+    fps = load_fingerprints()
+    needle = query.lower().strip()
+    if not needle:
+        from recon_tool.formatter import render_error
+
+        render_error("Empty search query.")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    # Rank each fingerprint by how strong the match is. Slug-prefix is
+    # the strongest signal ("they know exactly what they're looking
+    # for"); a hit only in a detection pattern is weakest. We don't use
+    # fuzzy matching — substring is enough for the 227-entry catalog
+    # and doesn't pull in a dependency.
+    ranked: list[tuple[int, Any]] = []
+    for fp in fps:
+        rank: int | None = None
+        if fp.slug.lower().startswith(needle):
+            rank = 0
+        elif needle in fp.slug.lower():
+            rank = 1
+        elif needle in fp.name.lower():
+            rank = 2
+        elif needle in fp.category.lower():
+            rank = 3
+        else:
+            for d in fp.detections:
+                if needle in d.pattern.lower() or needle in d.description.lower():
+                    rank = 4
+                    break
+        if rank is not None:
+            ranked.append((rank, fp))
+
+    ranked.sort(key=lambda x: (x[0], x[1].slug))
+    matches = [fp for _, fp in ranked]
+
+    if json_output:
+        payload = [
+            {
+                "slug": fp.slug,
+                "name": fp.name,
+                "category": fp.category,
+                "confidence": fp.confidence,
+                "detection_types": sorted({d.type for d in fp.detections}),
+                "detection_count": len(fp.detections),
+            }
+            for fp in matches
+        ]
+        typer.echo(json.dumps(payload, indent=2))
+        return
+
+    console = get_console()
+    if not matches:
+        console.print(f"  No fingerprints match {query!r}.")
+        console.print("  [dim]Try a shorter or differently-spelled query, or browse by category:[/dim]")
+        console.print("  [dim]  recon fingerprints list[/dim]")
+        return
+
+    console.print()
+    console.print(f"  [bold]{len(matches)} match{'es' if len(matches) != 1 else ''} for {query!r}[/bold]")
+    console.print()
+    slug_w = max(len(fp.slug) for fp in matches)
+    cat_w = max(len(fp.category) for fp in matches)
+    for fp in matches:
+        types = ",".join(sorted({d.type for d in fp.detections}))
+        console.print(f"    {fp.slug:<{slug_w}s}  {fp.category:<{cat_w}s}  {types:<18s}  {fp.name}")
+    console.print()
+    console.print("  [dim]Next:[/dim]  recon fingerprints show <slug>")
+    console.print()
+
+
+@fingerprints_app.command("show")
+def fingerprints_show(
+    slug: str = typer.Argument(..., help="Slug to inspect (e.g. `cloudflare`, `exchange-onprem`)"),
+    json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
+) -> None:
+    """Show the full definition of a single fingerprint.
+
+    Some slugs in recon output are *synthetic* — they're emitted by the
+    source layer rather than loaded from YAML (e.g. ``exchange-onprem``
+    from the OWA/autodiscover probe, ``self-hosted-mail`` from the MX
+    fallback). Those are documented here too so users who see a slug
+    in their output can always find its provenance.
+    """
+    # Synthetic slugs aren't in fingerprints.yaml — they're emitted
+    # by source-layer probes. Document provenance so users aren't left
+    # grepping the code.
+    _SYNTHETIC_SLUGS: dict[str, tuple[str, str]] = {
+        "exchange-onprem": (
+            "Exchange Server (on-prem / hybrid)",
+            "Emitted by recon_tool.sources.dns._detect_exchange_onprem when "
+            "owa./outlook./exchange./mail-ex./autodiscover. subdomains resolve "
+            "(wildcard-guarded). Indicates self-hosted or hybrid Exchange — "
+            "not Exchange Online.",
+        ),
+        "self-hosted-mail": (
+            "Self-hosted mail",
+            "Emitted by recon_tool.sources.dns._detect_mx when MX records "
+            "exist and no known cloud-provider or gateway fingerprint matched. "
+            "The raw_value field carries the actual MX hosts so the user can "
+            "see the underlying infrastructure.",
+        ),
+    }
+
+    from recon_tool.fingerprints import load_fingerprints
+
+    fps = load_fingerprints()
+    match = next((fp for fp in fps if fp.slug == slug), None)
+    if match is None and slug in _SYNTHETIC_SLUGS:
+        name, note = _SYNTHETIC_SLUGS[slug]
+        if json_output:
+            typer.echo(json.dumps({"slug": slug, "name": name, "synthetic": True, "note": note}, indent=2))
+            return
+        console = get_console()
+        console.print()
+        console.print(f"  [bold]{name}[/bold]  ({slug})")
+        console.print("    [dim]synthetic slug — emitted by source probe, not in fingerprints.yaml[/dim]")
+        console.print()
+        console.print(f"  {note}")
+        console.print()
+        return
+    if match is None:
+        from recon_tool.formatter import render_error
+
+        candidates = [fp.slug for fp in fps if slug.lower() in fp.slug.lower()][:5]
+        render_error(f"No fingerprint with slug {slug!r}.")
+        if candidates:
+            get_console().print(f"  Did you mean: {', '.join(candidates)}?")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    if json_output:
+        payload = {
+            "slug": match.slug,
+            "name": match.name,
+            "category": match.category,
+            "confidence": match.confidence,
+            "m365": match.m365,
+            "provider_group": match.provider_group,
+            "display_group": match.display_group,
+            "match_mode": match.match_mode,
+            "detections": [
+                {
+                    "type": d.type,
+                    "pattern": d.pattern,
+                    "description": d.description,
+                    "reference": d.reference,
+                    "weight": d.weight,
+                }
+                for d in match.detections
+            ],
+        }
+        typer.echo(json.dumps(payload, indent=2))
+        return
+
+    console = get_console()
+    console.print()
+    console.print(f"  [bold]{match.name}[/bold]  ({match.slug})")
+    console.print(f"    Category:    {match.category}")
+    console.print(f"    Confidence:  {match.confidence}")
+    if match.m365:
+        console.print("    M365 tenant: yes")
+    if match.provider_group:
+        console.print(f"    Provider group: {match.provider_group}")
+    if match.match_mode != "any":
+        console.print(f"    Match mode:  {match.match_mode} (all rules must match)")
+    console.print()
+    console.print(f"  [bold]Detection rules ({len(match.detections)})[/bold]")
+    for i, d in enumerate(match.detections, 1):
+        console.print(f"    {i}. [{d.type}] {d.pattern}")
+        if d.description:
+            console.print(f"         {d.description}")
+        if d.reference:
+            console.print(f"         ref: {d.reference}")
+    console.print()
+
+
+@fingerprints_app.command("check")
+def fingerprints_check(
+    path: str | None = typer.Argument(
+        None,
+        help="Path to a fingerprints YAML file or directory (default: the built-in data).",
+    ),
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Only print failures and the summary"),
+) -> None:
+    """Validate fingerprint YAML files and flag duplicate slugs.
+
+    Contributor utility: run this before opening a PR to confirm your new
+    fingerprint validates against the same schema recon uses at runtime
+    (regex safety, required fields, allowed detection types, weight
+    range, match_mode) and doesn't collide with an existing slug.
+
+    Without an argument, validates the built-in catalog at
+    ``recon_tool/data/fingerprints.yaml`` (or ``recon_tool/data/fingerprints/``
+    once the split lands). Pass a path to validate a candidate file
+    before committing it.
+    """
+    import subprocess
+    from pathlib import Path as _Path
+
+    if path is None:
+        # Prefer the directory layout if it exists (v1.1+); fall back to
+        # the monolith while both coexist.
+        base = _Path(__file__).parent / "data"
+        split_dir = base / "fingerprints"
+        target = split_dir if split_dir.is_dir() else base / "fingerprints.yaml"
+    else:
+        target = _Path(path)
+
+    if not target.exists():
+        from recon_tool.formatter import render_error
+
+        render_error(f"Path not found: {target}")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    script = _Path(__file__).parent.parent / "scripts" / "validate_fingerprint.py"
+    if not script.exists():
+        from recon_tool.formatter import render_error
+
+        render_error(f"Validator script missing: {script}")
+        raise typer.Exit(code=EXIT_INTERNAL) from None
+
+    cmd = [sys.executable, str(script), str(target)]
+    if quiet:
+        cmd.append("--quiet")
+    result = subprocess.run(cmd, check=False)  # noqa: S603
+    raise typer.Exit(code=result.returncode)
+
+
+# ── Signals CLI ───────────────────────────────────────────────────────
+
+signals_app = typer.Typer(help="Inspect the built-in signal catalog.")
+app.add_typer(signals_app, name="signals")
+
+
+@signals_app.command("list")
+def signals_list(
+    category: str | None = typer.Option(None, "--category", "-c", help="Filter by category (substring)"),
+    json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
+) -> None:
+    """List every built-in signal, grouped by category."""
+    from recon_tool.signals import load_signals
+
+    sigs = load_signals()
+    if category:
+        needle = category.lower()
+        import re
+
+        def _match_cat(cat: str) -> bool:
+            cat_lower = cat.lower()
+            if " " in needle:
+                return needle in cat_lower
+            return any(word.startswith(needle) for word in re.findall(r"[a-z0-9]+", cat_lower))
+
+        sigs = tuple(s for s in sigs if _match_cat(s.category))
+
+    if json_output:
+        payload = [
+            {
+                "name": s.name,
+                "category": s.category,
+                "confidence": s.confidence,
+                "candidate_count": len(s.candidates),
+                "min_matches": s.min_matches,
+                "description": s.description,
+            }
+            for s in sigs
+        ]
+        typer.echo(json.dumps(payload, indent=2))
+        return
+
+    console = get_console()
+    if not sigs:
+        console.print("  No signals match those filters.")
+        return
+    console.print()
+    console.print(f"  [bold]{len(sigs)} signal{'s' if len(sigs) != 1 else ''}[/bold]")
+    console.print()
+    name_w = max(len(s.name) for s in sigs)
+    for s in sorted(sigs, key=lambda x: (x.category, x.name)):
+        console.print(f"    {s.name:<{name_w}s}  {s.category:<20s}  {s.confidence}")
+    console.print()
+
+
+@signals_app.command("search")
+def signals_search(
+    query: str = typer.Argument(
+        ..., help="Search term — matched against signal name, category, description, and candidate slugs"
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
+) -> None:
+    """Search signals by name, category, description, or candidate slug.
+
+    Case-insensitive substring. Useful for "which signals look at my
+    new slug?" (``search <slug>``) and "what signals fire on email
+    posture?" (``search email``).
+    """
+    from recon_tool.signals import load_signals
+
+    sigs = load_signals()
+    needle = query.lower().strip()
+    if not needle:
+        from recon_tool.formatter import render_error
+
+        render_error("Empty search query.")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    ranked: list[tuple[int, Any]] = []
+    for s in sigs:
+        rank: int | None = None
+        if needle in s.name.lower():
+            rank = 0
+        elif needle in s.category.lower():
+            rank = 1
+        elif any(needle in c.lower() for c in s.candidates):
+            rank = 2
+        elif needle in s.description.lower():
+            rank = 3
+        if rank is not None:
+            ranked.append((rank, s))
+
+    ranked.sort(key=lambda x: (x[0], x[1].name))
+    matches = [s for _, s in ranked]
+
+    if json_output:
+        payload = [
+            {
+                "name": s.name,
+                "category": s.category,
+                "confidence": s.confidence,
+                "candidate_count": len(s.candidates),
+                "description": s.description,
+            }
+            for s in matches
+        ]
+        typer.echo(json.dumps(payload, indent=2))
+        return
+
+    console = get_console()
+    if not matches:
+        console.print(f"  No signals match {query!r}.")
+        return
+    console.print()
+    console.print(f"  [bold]{len(matches)} match{'es' if len(matches) != 1 else ''} for {query!r}[/bold]")
+    console.print()
+    name_w = max(len(s.name) for s in matches)
+    for s in matches:
+        console.print(f"    {s.name:<{name_w}s}  {s.category:<20s}  {s.confidence}")
+    console.print()
+
+
+@signals_app.command("show")
+def signals_show(
+    name: str = typer.Argument(..., help="Signal name (quote if it contains spaces)"),
+    json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
+) -> None:
+    """Show the full definition of a single signal."""
+    from recon_tool.signals import load_signals
+
+    sigs = load_signals()
+    match = next((s for s in sigs if s.name == name), None)
+    if match is None:
+        from recon_tool.formatter import render_error
+
+        needle = name.lower()
+        candidates = [s.name for s in sigs if needle in s.name.lower()][:5]
+        render_error(f"No signal named {name!r}.")
+        if candidates:
+            get_console().print(f"  Did you mean: {', '.join(repr(c) for c in candidates)}?")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    if json_output:
+        payload = {
+            "name": match.name,
+            "category": match.category,
+            "confidence": match.confidence,
+            "description": match.description,
+            "candidates": list(match.candidates),
+            "min_matches": match.min_matches,
+            "metadata_conditions": [
+                {"field": m.field, "operator": m.operator, "value": m.value} for m in match.metadata
+            ],
+            "contradicts": list(match.contradicts),
+            "requires_signals": list(match.requires_signals),
+            "expected_counterparts": list(match.expected_counterparts),
+            "positive_when_absent": list(match.positive_when_absent),
+            "explain": match.explain,
+        }
+        typer.echo(json.dumps(payload, indent=2))
+        return
+
+    console = get_console()
+    console.print()
+    console.print(f"  [bold]{match.name}[/bold]")
+    console.print(f"    Category:    {match.category}")
+    console.print(f"    Confidence:  {match.confidence}")
+    if match.description:
+        console.print(f"    Description: {match.description}")
+    if match.candidates:
+        console.print()
+        console.print(f"  [bold]Candidate slugs ({len(match.candidates)}, min_matches={match.min_matches})[/bold]")
+        for c in match.candidates:
+            console.print(f"    - {c}")
+    if match.metadata:
+        console.print()
+        console.print("  [bold]Metadata conditions[/bold]")
+        for m in match.metadata:
+            console.print(f"    - {m.field} {m.operator} {m.value!r}")
+    if match.contradicts:
+        console.print()
+        console.print("  [bold]Contradicts[/bold]")
+        for c in match.contradicts:
+            console.print(f"    - {c}")
+    if match.requires_signals:
+        console.print()
+        console.print("  [bold]Requires other signals[/bold]")
+        for r in match.requires_signals:
+            console.print(f"    - {r}")
+    if match.expected_counterparts:
+        console.print()
+        console.print("  [bold]Expected counterparts (absence engine)[/bold]")
+        for c in match.expected_counterparts:
+            console.print(f"    - {c}")
+    if match.positive_when_absent:
+        console.print()
+        console.print("  [bold]Positive-when-absent (hedged hardening observation)[/bold]")
+        for c in match.positive_when_absent:
+            console.print(f"    - {c}")
+    if match.explain:
+        console.print()
+        console.print(f"  [bold]Explain[/bold] {match.explain}")
+    console.print()
 
 
 # ── Delta CLI ─────────────────────────────────────────────────────────

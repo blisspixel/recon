@@ -1,0 +1,230 @@
+# Email platform and deliverability fingerprints. Cloud email providers, gateways, DMARC / DKIM / SPF ecosystem tooling.
+#
+# Loaded by recon_tool.fingerprints.load_fingerprints.
+# Custom overrides: ~/.recon/fingerprints.yaml (additive only).
+
+fingerprints:
+- name: Microsoft 365
+  slug: microsoft365
+  category: Email & Communication
+  confidence: high
+  m365: true
+  provider_group: microsoft365
+  display_group: Microsoft 365
+  detections:
+  - type: txt
+    pattern: ^MS=ms
+    description: Microsoft 365 domain verification
+  - type: txt
+    pattern: ^ms-domain-verification=
+  - type: mx
+    pattern: mail.protection.outlook.com
+  - type: spf
+    pattern: spf.protection.outlook.com
+- name: Google Workspace
+  slug: google-workspace
+  category: Email & Communication
+  confidence: high
+  provider_group: google-workspace
+  display_group: Google Workspace
+  detections:
+  - type: mx
+    pattern: aspmx.l.google.com
+  - type: spf
+    pattern: _spf.google.com
+- name: Zoho Mail
+  slug: zoho
+  category: Email & Communication
+  confidence: high
+  display_group: Email & Communication
+  detections:
+  - type: txt
+    pattern: ^zoho-verification=
+  - type: mx
+    pattern: zoho.com
+- name: ProtonMail
+  slug: protonmail
+  category: Email & Communication
+  confidence: high
+  display_group: Email & Communication
+  detections:
+  - type: txt
+    pattern: ^protonmail-verification=
+- name: AWS SES
+  slug: aws-ses
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: txt
+    pattern: '^amazonses:'
+  - type: spf
+    pattern: amazonses.com
+- name: SendGrid
+  slug: sendgrid
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: sendgrid.net
+- name: Mailgun
+  slug: mailgun
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: mailgun.org
+- name: SendCloud
+  slug: sendcloud
+  category: Email & Communication
+  confidence: medium
+  detections:
+  - type: spf
+    pattern: spf1.sendcloud.org
+  - type: spf
+    pattern: spf2.sendcloud.org
+- name: Postmark
+  slug: postmark
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: postmarkapp.com
+- name: SparkPost
+  slug: sparkpost
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: sparkpostmail.com
+- name: Brevo (Sendinblue)
+  slug: brevo
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^Sendinblue-code
+  - type: txt
+    pattern: ^brevo-code
+- name: Mailchimp
+  slug: mailchimp
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: servers.mcsv.net
+  - type: spf
+    pattern: spf.mandrillapp.com
+- name: TLS-RPT
+  slug: tls-rpt
+  category: Email & Communication
+  confidence: high
+  display_group: Email Security
+  detections:
+  - type: txt
+    pattern: ^v=TLSRPTv1
+    description: SMTP TLS Reporting — domain receives TLS failure reports
+- name: AutoSPF
+  slug: autospf
+  category: Email & Communication
+  confidence: high
+  display_group: Email Deliverability
+  detections:
+  - type: spf
+    pattern: autospf.com
+    description: AutoSPF flattening service — indicates enterprise SPF management
+- name: OnDMARC (Red Sift)
+  slug: ondmarc
+  category: Email & Communication
+  confidence: high
+  display_group: Email Deliverability
+  detections:
+  - type: spf
+    pattern: ondmarc.com
+    description: OnDMARC (Red Sift) email authentication management
+  - type: dmarc_rua
+    pattern: ondmarc.com
+    description: Red Sift OnDMARC DMARC aggregate report receiving domain
+- name: dmarcian
+  slug: dmarcian
+  category: Email & Communication
+  confidence: high
+  display_group: Email Deliverability
+  detections:
+  - type: spf
+    pattern: dmarcian
+    description: dmarcian DMARC management and SPF optimization
+  - type: dmarc_rua
+    pattern: dmarcian.com
+    description: dmarcian DMARC aggregate report receiving domain
+- name: EasyDMARC
+  slug: easydmarc
+  category: Email & Communication
+  confidence: high
+  display_group: Email Deliverability
+  detections:
+  - type: spf
+    pattern: easydmarc
+    description: EasyDMARC email authentication management
+  - type: dmarc_rua
+    pattern: easydmarc.com
+    description: EasyDMARC DMARC aggregate report receiving domain
+- name: Valimail
+  slug: valimail
+  category: Email & Communication
+  confidence: high
+  display_group: Email Deliverability
+  detections:
+  - type: spf
+    pattern: valimail.com
+    description: Valimail email authentication automation and SPF management
+  - type: dmarc_rua
+    pattern: valimail.com
+    description: Valimail DMARC aggregate report receiving domain
+- name: Agari (DMARC)
+  slug: agari
+  category: Email Governance
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: agari.com
+    description: Agari DMARC aggregate report receiving domain
+- name: Proofpoint EFD
+  slug: proofpoint-efd
+  category: Email Governance
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: emaildefense.proofpoint.com
+    description: Proofpoint Email Fraud Defense DMARC report receiving domain
+- name: URIports
+  slug: uriports
+  category: Email Governance
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: uriports.com
+    description: URIports DMARC aggregate report receiving domain
+- name: DMARC Advisor
+  slug: dmarc-advisor
+  category: Email Governance
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: dmarcadvisor.com
+    description: DMARC Advisor aggregate report receiving domain
+- name: PowerDMARC
+  slug: powerdmarc
+  category: Email Governance
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: powerdmarc.com
+    description: PowerDMARC aggregate report receiving domain
+- name: Mimecast DMARC Analyzer
+  slug: mimecast-dmarc-analyzer
+  category: Email Governance
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: dmarc-analyzer.com
+    description: Mimecast DMARC Analyzer aggregate report receiving domain

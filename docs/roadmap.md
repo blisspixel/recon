@@ -63,75 +63,18 @@ The thing to avoid is growing the *engine* (new CLI commands, new
 output formats, new subsystems, new config surfaces). Engine stays
 lean; data grows.
 
-## v1.1 target: split `fingerprints.yaml` into per-category files
+## Shipped in v1.1: per-category fingerprint catalog
 
-**Problem.** `recon_tool/data/fingerprints.yaml` is 235 entries and ~60KB
-in one file. That's manageable today, but it scales poorly for
-community contributions: every new fingerprint touches the same file,
-producing wide diffs, merge conflicts between parallel PRs, and
-review fatigue. Mature rule-engine projects (Nuclei, Sigma, YARA)
-keep rules in per-category or per-rule files for exactly this reason.
-
-**Proposed shape.**
-
-```
-recon_tool/data/fingerprints/
-├── ai.yaml
-├── email.yaml
-├── security.yaml
-├── infrastructure.yaml
-├── payments.yaml
-├── productivity.yaml
-├── crm-marketing.yaml
-└── verticals/
-    ├── healthcare.yaml
-    ├── higher-ed.yaml
-    ├── fintech.yaml
-    └── nonprofit.yaml
-```
-
-`signals.yaml` and `posture.yaml` stay single files — they're smaller
-and more interdependent.
-
-**Scope.** Not the "tiny change" it looks like. The loader
-(`fingerprints.py::load_fingerprints`) validates schema, tracks source
-file for error messages, handles `RECON_CONFIG_DIR` for custom
-overrides, and is reload-aware for tests. Splitting touches:
-
-- `fingerprints.py` — glob + merge across the directory, with
-  deterministic load order, duplicate-slug policy (first-wins vs
-  error), and source-file attribution for validation warnings.
-- Package data paths — hatch recursively includes the entire
-  `recon_tool` package in the wheel, so `data/fingerprints/*.yaml`
-  would be shipped automatically (the existing `data/profiles/*.yaml`
-  layout already proves this works). The current loader uses
-  `Path(__file__).parent / "data" / "fingerprints.yaml"` which extends
-  naturally to a directory glob; no `importlib.resources` migration
-  required unless we later move to a zip-safe distribution model.
-- `scripts/validate_fingerprint.py` — validate each file
-  independently and aggregate errors.
-- Tests that mock or reload fingerprints — verify they don't pin the
-  old path layout.
-- `CONTRIBUTING.md` — "new fingerprint? add it to
-  `data/fingerprints/<category>.yaml`".
-- `~/.recon/fingerprints/` — accept either a single file
-  (backward-compat) OR a directory of per-category files.
-
-**Why v1.1 not v1.0.2.** v1.0.2 is a polish release — observable
-output quality, not repo restructure. The monolithic-file pain is
-theoretical at 235 entries and solo maintenance; it becomes real when
-the community fingerprint pipeline starts taking PRs. Pairing the
-split with v1.1's "community contributions enabled" posture keeps the
-change coherent instead of merging a refactor for its own sake.
-
-**Non-goals for the split:**
-
-- Not a schema change. Each file is a list of `fingerprints:` entries
-  exactly as today.
-- Not a breaking change for custom fingerprint users. Existing
-  `~/.recon/fingerprints.yaml` keeps working; a new directory layout
-  is additive.
-- Not a performance optimisation. Load time is already <1s.
+The monolithic `recon_tool/data/fingerprints.yaml` (235 entries, 8
+duplicate slugs) is now `recon_tool/data/fingerprints/{ai,email,
+security,infrastructure,productivity,crm-marketing,data-analytics,
+verticals}.yaml` (227 unique slugs). The loader globs the directory
+in sorted order; custom `~/.recon/fingerprints.yaml` still works as a
+single file and a new `~/.recon/fingerprints/` directory is also
+accepted. Contributors inspect the catalog with `recon fingerprints
+list` / `search` / `show` and validate candidate files with `recon
+fingerprints check`. `signals.yaml` and `posture.yaml` stay single
+files — they're smaller and more interdependent.
 
 ## Post-1.0 ideas (not commitments)
 

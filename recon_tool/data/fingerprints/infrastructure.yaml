@@ -1,0 +1,522 @@
+# Infrastructure fingerprints. Cloud providers, CDNs, DNS, CAs, container and CI/CD platforms.
+#
+# Loaded by recon_tool.fingerprints.load_fingerprints.
+# Custom overrides: ~/.recon/fingerprints.yaml (additive only).
+
+fingerprints:
+- name: GitHub
+  slug: github
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^github-site-verification=
+  - type: txt
+    pattern: ^_github-pages-challenge
+- name: GitLab
+  slug: gitlab
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^gitlab-pages-verification-code=
+    description: GitLab SaaS / Pages domain verification at zone apex
+  - type: subdomain_txt
+    pattern: _gitlab-pages-verification-code:.
+    description: GitLab Pages verification at designated subdomain
+- name: Postman
+  slug: postman
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^postman-domain-verification=
+- name: Linear
+  slug: linear
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^linear-domain-verification=
+- name: Autodesk
+  slug: autodesk
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^autodesk-domain-verification=
+- name: Grammarly
+  slug: grammarly
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^grammarly-domain-verification=
+- name: Vercel
+  slug: vercel
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^vercel-domain-verification=
+  - type: cname
+    pattern: vercel-dns.com
+- name: Webflow
+  slug: webflow
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^webflow-domain-verification=
+- name: Netlify
+  slug: netlify
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^netlify=
+  - type: txt
+    pattern: ^verified-for-netlify=
+    description: Netlify site ownership verification token
+  - type: cname
+    pattern: netlify.app
+- name: Twilio
+  slug: twilio
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^twilio-domain-verification=
+- name: Citrix
+  slug: citrix
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^citrix-verification-code=
+- name: Dell Technologies
+  slug: dell
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^dell-technologies-domain-verification=
+- name: CloudHealth (VMware)
+  slug: cloudhealth
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^cloudhealth=
+- name: Unity
+  slug: unity
+  category: DevTools & Infrastructure
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^unity-sso-verification=
+- name: PagerDuty
+  slug: pagerduty
+  category: DevTools & Infrastructure
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^pagerduty-domain-verification=
+- name: Render
+  slug: render
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: onrender.com
+  - type: txt
+    pattern: ^render-domain-verification=
+- name: Cloudflare
+  slug: cloudflare
+  category: Infrastructure
+  confidence: high
+  display_group: Infrastructure
+  detections:
+  - type: txt
+    pattern: ^cloudflare-verify=
+  - type: ns
+    pattern: cloudflare.com
+  - type: cname
+    pattern: cloudflare
+- name: AWS Route 53
+  slug: aws-route53
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: awsdns
+- name: Azure DNS
+  slug: azure-dns
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: azure-dns
+- name: Google Cloud DNS
+  slug: gcp-dns
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: google.com
+- name: UltraDNS (Neustar)
+  slug: ultradns
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: ultradns
+- name: Dyn (Oracle)
+  slug: dyn
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: dynect.net
+- name: Akamai
+  slug: akamai
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: akamai
+  - type: cname
+    pattern: akamaiedge.net
+  - type: cname
+    pattern: edgekey.net
+  - type: cname
+    pattern: edgesuite.net
+    description: Akamai EdgeSuite CDN/WAF CNAME delegation
+- name: NS1 (IBM)
+  slug: ns1
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: nsone.net
+- name: GoDaddy
+  slug: godaddy
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: domaincontrol.com
+- name: AWS CloudFront
+  slug: aws-cloudfront
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: cloudfront.net
+- name: Azure CDN
+  slug: azure-cdn
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: azureedge.net
+- name: Azure App Service
+  slug: azure-appservice
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: azurewebsites.net
+- name: Azure Traffic Manager
+  slug: azure-tm
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: trafficmanager.net
+- name: Fastly
+  slug: fastly
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: fastly.net
+  - type: cname
+    pattern: fastly\.net$|fastlylb\.net$
+    description: Fastly CDN/edge compute CNAME delegation
+- name: Shopify
+  slug: shopify
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: myshopify.com
+- name: Wix
+  slug: wix
+  category: Infrastructure
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: wixdns.net
+- name: Squarespace
+  slug: squarespace
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: squarespace.com
+- name: Heroku
+  slug: heroku
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: herokuapp.com
+- name: WP Engine
+  slug: wpengine
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: wpengine.com
+  - type: txt
+    pattern: ^wpe-verification=
+    description: WP Engine WordPress hosting domain verification
+- name: Pantheon
+  slug: pantheon
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: pantheon.io
+- name: AWS Elastic Load Balancer
+  slug: aws-elb
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: elb.amazonaws.com
+    description: AWS Application/Network Load Balancer CNAME
+  - type: cname
+    pattern: elasticloadbalancing
+- name: AWS S3
+  slug: aws-s3
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: s3.amazonaws.com
+  - type: cname
+    pattern: s3-website
+- name: AWS Elastic Beanstalk
+  slug: aws-eb
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: elasticbeanstalk.com
+- name: Google Cloud (App Engine / Cloud Run)
+  slug: gcp-app
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: appspot.com
+  - type: cname
+    pattern: run.app
+- name: Azure Front Door
+  slug: azure-fd
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: azurefd.net
+  - type: cname
+    pattern: afd.ms
+- name: Contentful
+  slug: contentful
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: contentful.com
+- name: Sanity.io
+  slug: sanity
+  category: DevTools & Infrastructure
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: sanity.io
+- name: Prismic
+  slug: prismic
+  category: DevTools & Infrastructure
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: prismic.io
+- name: LaunchDarkly
+  slug: launchdarkly
+  category: DevTools & Infrastructure
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: launchdarkly.com
+- name: Cloudinary
+  slug: cloudinary
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: cloudinary.com
+- name: Imgix
+  slug: imgix
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: imgix.net
+- name: KeyCDN
+  slug: keycdn
+  category: Infrastructure
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: keycdn.com
+  - type: cname
+    pattern: kxcdn.com
+- name: StackPath / MaxCDN
+  slug: stackpath
+  category: Infrastructure
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: stackpathdns.com
+- name: Ghost (CMS)
+  slug: ghost
+  category: Infrastructure
+  confidence: medium
+  detections:
+  - type: cname
+    pattern: ghost.io
+- name: 'CAA: Let''s Encrypt'
+  slug: letsencrypt
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: caa
+    pattern: letsencrypt.org
+- name: 'CAA: DigiCert'
+  slug: digicert
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: caa
+    pattern: digicert.com
+- name: 'CAA: Sectigo'
+  slug: sectigo
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: caa
+    pattern: sectigo.com
+  - type: caa
+    pattern: comodoca.com
+- name: 'CAA: AWS Certificate Manager'
+  slug: aws-acm
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: caa
+    pattern: amazon.com
+  - type: caa
+    pattern: amazontrust.com
+- name: 'CAA: Google Trust Services'
+  slug: google-trust
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: caa
+    pattern: pki.goog
+- name: Fly.io
+  slug: flyio
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: fly\.dev$|edgeapp\.net$
+    description: Fly.io edge compute CNAME delegation
+- name: Railway
+  slug: railway
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname
+    pattern: railway\.app$
+    description: Railway deployment platform CNAME delegation
+- name: VMware Cloud
+  slug: vmware-cloud
+  category: Infrastructure
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^vmware-cloud-verification-
+    description: VMware Cloud domain verification
+- name: Sentry
+  slug: sentry
+  category: DevTools & Infrastructure
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^sentry-verification=
+    description: Sentry error tracking domain verification token
+- name: Grafana Cloud
+  slug: grafana-cloud
+  category: DevTools & Infrastructure
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^grafana-site-verification=
+    description: Grafana Cloud observability domain verification
+- name: Sumo Logic
+  slug: sumologic
+  category: DevTools & Infrastructure
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^sumologic-site-verification=
+    description: Sumo Logic log analytics domain verification
+- name: Honeycomb
+  slug: honeycomb
+  category: DevTools & Infrastructure
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^honeycomb-io-site-verification=
+    description: Honeycomb.io observability domain verification
+- name: Statsig
+  slug: statsig
+  category: DevTools & Infrastructure
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^statsig-domain-verification=
+    description: Statsig feature flagging domain verification
+- name: Split.io
+  slug: splitio
+  category: DevTools & Infrastructure
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^split-domain-verification=
+    description: Split.io feature flags domain verification
+- name: Splunk
+  slug: splunk
+  category: DevTools & Infrastructure
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^splunk-verification=
+    description: Splunk Observability / Cloud domain verification
+  - type: cname
+    pattern: signalfx\.com$
+    description: SignalFx (Splunk Observability) CNAME
