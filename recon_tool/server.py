@@ -1648,6 +1648,7 @@ async def inject_ephemeral_fingerprint(
         Confirmation message or validation error.
     """
     from recon_tool.fingerprints import _validate_fingerprint, inject_ephemeral  # pyright: ignore[reportPrivateUsage]
+    from recon_tool.specificity import evaluate_pattern
 
     fp_dict: dict[str, object] = {
         "name": name,
@@ -1664,6 +1665,25 @@ async def inject_ephemeral_fingerprint(
                 "Check detection types, patterns, and confidence level."
             }
         )
+
+    # v1.2+: ephemeral injection goes through the same specificity gate
+    # as ``recon fingerprints check``. Schema-valid but over-broad
+    # patterns (``cname:\.com$``) would false-positive on every
+    # subsequent lookup in the session. Blast radius is small
+    # (in-memory, per-session) but the gate is cheap and worth enforcing.
+    for det in validated.detections:
+        verdict = evaluate_pattern(det.pattern, det.type)
+        if verdict.threshold_exceeded:
+            return json_mod.dumps(
+                {
+                    "error": (
+                        f"Pattern too broad — {det.type}:{det.pattern!r} matched "
+                        f"{verdict.matches}/{verdict.corpus_size} "
+                        f"({verdict.match_rate:.1%}) of the synthetic adversarial "
+                        f"corpus (>1% threshold). Tighten the regex before injecting."
+                    )
+                }
+            )
 
     inject_ephemeral(validated)
     return json_mod.dumps(
