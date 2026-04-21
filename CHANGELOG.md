@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-04-21
+
+**Portfolio discovery in batch mode.** When ``recon batch`` resolves
+multiple domains, the JSON output now surfaces two new correlation
+signals: cryptographically-strong tenant-ID sharing (same M365
+customer account) and hedged display-name overlap (same brand after
+normalization). Uses data already collected — zero new network
+calls, zero new sources.
+
+### Added
+
+- **Tenant-ID clustering (``shared_tenant``)**: When 2+ domains in a
+  batch share the same Microsoft 365 tenant ID, each domain's JSON
+  entry carries a ``shared_tenant`` list naming the other peers.
+  Cryptographically strong — same tenant ID = same M365 customer
+  account. Not hedged; this is provable via OIDC discovery.
+  Canonical example: ``recon batch {microsoft,xbox,bing}.com``
+  correctly clusters all three as peers of tenant
+  ``72f988bf-86f1-41af-91ab-2d7cd011db47``.
+- **Display-name clustering (``shared_display_name``)**: When 2+
+  domains' tenant display names normalize to the same key,
+  each entry carries a ``shared_display_name`` list with the raw
+  display names (for audit), the normalized key, and the peer
+  domains. Conservative match — exact normalized equality only
+  (``Acme Corp`` + ``Acme Corp.`` cluster; ``Acme`` + ``Acme Holdings``
+  do not). Normalization strips one trailing corporate suffix
+  (``inc`` / ``llc`` / ``gmbh`` / etc.) and collapses whitespace /
+  punctuation.
+- ``recon_tool.clustering.compute_tenant_clusters`` and
+  ``compute_display_name_clusters`` — pure functions exposed for
+  the MCP server and external consumers who want to run the
+  clustering on their own ``TenantInfo`` lists. 11 new unit tests
+  covering the tenant / display-name paths.
+
+### Use case
+
+Portfolio discovery on a candidate domain list. An IT reseller or
+M&A analyst runs ``recon batch portfolio.txt --json`` and the output
+names which apexes belong to the same corporate group, without any
+additional lookups. Pairs well with the existing
+``shared_verification_tokens`` clustering for a three-tiered signal:
+
+- **Tenant-ID match** — provable, same customer account.
+- **Display-name match** — hedged, same brand text.
+- **Verification-token match** — hedged, same operator-scoped
+  credential.
+
+The JSON fields are independent — a pair can appear in one, two, or
+all three. Downstream consumers rank them however they like.
+
+### Validation
+
+- Microsoft portfolio smoke test: microsoft.com, xbox.com, bing.com
+  all share tenant ``72f988bf-…`` and display name "Microsoft".
+  All three fields populate correctly with symmetric peer lists.
+- Full test suite: 1550 pass (1539 + 11 new clustering tests).
+- Static gate: ruff + format + pyright + bandit + actionlint all
+  clean.
+
 ## [1.2.1] — 2026-04-21
 
 **Security patch.** The MCP ``inject_ephemeral_fingerprint`` tool
