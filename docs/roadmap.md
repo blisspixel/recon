@@ -77,33 +77,86 @@ list` / `search` / `show` and validate candidate files with `recon
 fingerprints check`. `signals.yaml` and `posture.yaml` stay single
 files — they're smaller and more interdependent.
 
-## What's next — watch, then decide
+## v1.2 targets — detection quality and contributor trust
 
-Nothing is committed for v1.2. v1.1 was about *enabling* external
-fingerprint contributions; what v1.2 should be depends on signal we
-don't have yet.
+**Theme.** v1.1 shipped the *plumbing* for external contributions. v1.2
+is the first release where the plumbing has to prove it was worth
+shipping: tighter built-in detections, validator guards that catch
+semantic problems (not just syntax), UX that makes sparse results
+honest, and docs that set accurate expectations for what recon does
+and doesn't find.
 
-**Watch for 2–4 weeks after v1.1.0:**
+**Scope (six items, each with an acceptance test):**
 
-- Does the first external fingerprint PR arrive? If yes, the v1.1
-  premise was right. If no by mid-May, the YAML split was theater
-  and we should ask why (discovery? doc quality? demand didn't exist?).
-- What bugs surface against the split in real use? Those become
-  v1.1.1 patch material.
-- Which of the "ideas worth prototyping" below does anyone actually
-  ask for?
+1. **Chained-pattern fingerprint reference set.** Curate 20–30
+   high-confidence vendors using `match_mode: all` (e.g. Datadog,
+   Snowflake, Figma, Notion, Linear, Asana). The `match_mode: all`
+   infrastructure shipped in v0.10.2 but few built-in fingerprints
+   use it. The reference set both reduces existing false positives
+   and gives contributors concrete patterns to model from.
+   *Acceptance:* ≥20 chained entries merged; each has a regression
+   test domain in the validation corpus.
 
-**Worth doing immediately (low-risk, evidence-neutral):**
+2. **`recon fingerprints test <slug>`.** Run one fingerprint (built-in
+   or candidate) against the validation corpus and print which
+   domains match. Lets contributors test a pattern before PRing and
+   lets maintainers triage reported false positives without editing
+   test files.
+   *Acceptance:* Command exists; ships with a bundled 50-domain
+   corpus covering the major detection classes.
 
-- **Chained-pattern fingerprint reference set.** `match_mode: all`
-  infrastructure shipped in v0.10.2 but few built-in fingerprints use
-  it. A curated set of 20–30 chained examples gives contributors
-  concrete patterns to model from and tests the v1.1 contribution
-  pipeline end-to-end before strangers do. Pure data. Zero engine
-  changes.
-- **Contributor walkthrough.** One-page "your first fingerprint PR"
-  with a real before/after example, linked from CONTRIBUTING
-  quick-start. Pairs with the reference set.
+3. **Pattern-specificity gate in the validator.** Fail
+   `recon fingerprints check` when a regex matches a suspicious
+   share of a synthetic-domain corpus — catches the class of
+   "valid YAML, would match 30% of the internet" that the current
+   schema validator can't see.
+   *Acceptance:* A deliberately-broad regex (`cname:\.com$`) is
+   rejected; real existing fingerprints all pass.
+
+4. **Sparse-result UX + `docs/weak-areas.md`.** When recon resolves
+   to few services, the output should *actionably* say so ("domain
+   is heavily Cloudflare-proxied — passive signals are thin; try
+   `recon chain` or check related apexes") instead of looking like a
+   bad run. Pair with a `docs/weak-areas.md` naming the categories
+   recon is honest about being thin on: heavy-Cloudflare orgs,
+   China-region tech stacks, regulated verticals behind web proxies,
+   fully self-hosted shops.
+   *Acceptance:* A run against a known-sparse target produces output
+   the user can reason from; the weak-areas doc exists and is linked
+   from README + limitations.
+
+5. **Batch performance numbers.** One real published table:
+   50 / 100 / 500 domains, wall-clock and memory. Goes in
+   `docs/performance.md` or similar. Stops users from guessing.
+   *Acceptance:* Table committed, reproducible via a scripted run.
+
+6. **CONTRIBUTING signal-engine caveat.** Fingerprint PRs are
+   welcome; changes to the signal / fusion / absence engines need
+   a one-page design doc first. Closes the "solo-maintained
+   inference logic" gap that no amount of contributor docs fixes
+   by itself.
+   *Acceptance:* CONTRIBUTING updated with the design-doc template
+   link.
+
+**Explicitly NOT in v1.2:**
+
+- Ballooning the fingerprint count to 1000+. Quality > count. Growth
+  is welcome but gated by the specificity check above.
+- Paid-API or credentialed integrations (VirusTotal, Censys paid,
+  passive-DNS services). Violates the zero-creds invariant.
+- Active scanning, plugin runtimes, bundled ML. Hard no.
+- File splits for `formatter.py` / `server.py` / `cli.py`. Still
+  "only when a feature forces it."
+
+**"We shouldn't have done this" signals for v1.2 itself:**
+
+- If the specificity gate trips on more than a handful of existing
+  fingerprints, it's too strict — recalibrate.
+- If the chained-pattern set takes more than 2 weeks of solo work,
+  we're over-engineering — ship what's ready, defer the rest.
+- If no external PR has landed by the v1.2 ship date *despite* both
+  the v1.1 plumbing and the v1.2 quality gates being in place, pause
+  on contributor-facing work and talk to users instead.
 
 ## Ideas worth prototyping (not commitments)
 
