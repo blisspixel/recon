@@ -1,9 +1,9 @@
 # recon
 
 [![CI](https://github.com/blisspixel/recon/actions/workflows/ci.yml/badge.svg)](https://github.com/blisspixel/recon/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/recon-tool.svg)](https://pypi.org/project/recon-tool/)
-[![Python](https://img.shields.io/pypi/pyversions/recon-tool.svg)](https://pypi.org/project/recon-tool/)
-[![License](https://img.shields.io/pypi/l/recon-tool.svg)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/recon-tool.svg?cacheSeconds=300)](https://pypi.org/project/recon-tool/)
+[![Python](https://img.shields.io/pypi/pyversions/recon-tool.svg?cacheSeconds=300)](https://pypi.org/project/recon-tool/)
+[![License](https://img.shields.io/pypi/l/recon-tool.svg?cacheSeconds=300)](LICENSE)
 
 Passive domain intelligence from public sources. Queries DNS records, Microsoft/Google identity endpoints, and certificate transparency logs to build a picture of an organization's technology stack — no credentials, no API keys, no active scanning.
 
