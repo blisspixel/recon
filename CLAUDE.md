@@ -23,9 +23,13 @@ recon cache show contoso.com            # inspect cache for a domain
 recon cache clear contoso.com           # clear cache for a domain
 recon cache clear --all                 # clear all CT cache
 recon fingerprints list                 # list all built-in fingerprints
+recon fingerprints search <query>       # search by slug / name / pattern
 recon fingerprints show <slug>          # inspect one fingerprint
-recon fingerprints check                # validate the catalog + dupe-check
+recon fingerprints check                # validate the catalog + dupe-check + specificity
+recon fingerprints new <slug>           # scaffold a new entry with all three gates
+recon fingerprints test <slug>          # run one fingerprint against the public corpus
 recon signals list                      # list all signals
+recon signals search <query>            # search signals
 recon signals show "<name>"             # inspect one signal
 ```
 

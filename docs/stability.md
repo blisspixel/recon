@@ -23,7 +23,14 @@ For the JSON output contract in full field-by-field detail, see
 | `recon mcp` | Stable | stdio transport only. |
 | `recon delta <domain>` | Stable | Auto-cache diff (v0.10.2). Diff panel + `--json`. |
 | `recon cache show [domain]` | Stable | Per-domain CT cache inspection. |
-| `recon cache clear [domain \| --all]` | Stable | CT cache eviction. |
+| `recon cache clear [domain \| --all]` | Stable | Clears both CT subdomain cache and TenantInfo result cache (v1.0.2+). |
+| `recon fingerprints list` | Stable | v1.1+. Per-category summary by default; `--category`, `--type`, `--all`, `--json`. |
+| `recon fingerprints search <query>` | Stable | v1.1+. Search slug / name / category / detection pattern. |
+| `recon fingerprints show <slug>` | Stable | v1.1+. Full entry definition, including synthetic-slug provenance. |
+| `recon fingerprints check [path]` | Stable | v1.1+. Runtime schema, duplicate-slug, and specificity (v1.2+) checks. |
+| `recon fingerprints new <slug>` | Stable | v1.2+. Scaffolding wizard — slug / schema / specificity gates then emits YAML. |
+| `recon fingerprints test <slug>` | Stable | v1.2+. Runs one fingerprint against the bundled public corpus. |
+| `recon signals list` / `search` / `show` | Stable | v1.1+. Same shape as the fingerprints inspect commands. |
 
 ### CLI flags (on `recon <domain>`)
 

@@ -40,6 +40,7 @@ surface. See the Post-1.0 ethos section below.
 | v1.0.1  | 2026-04-20 | Accuracy + reliability from 150-domain validation |
 | v1.0.2  | 2026-04-20 | Polish — observation-not-verdict, gateway-inferred DKIM, CI bumps |
 | v1.1.0  | 2026-04-21 | Contribution-ready — per-category YAML split, inspect CLI, actionlint gate |
+| v1.2.0  | 2026-04-21 | Contribution trust — specificity gate, `fingerprints new`/`test`, weak-areas + perf docs |
 
 See `CHANGELOG.md` for per-release detail.
 

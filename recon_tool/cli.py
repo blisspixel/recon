@@ -900,6 +900,218 @@ def fingerprints_show(
     console.print()
 
 
+@fingerprints_app.command("new")
+def fingerprints_new(
+    slug: str = typer.Argument(..., help="Unique slug for the new fingerprint (lowercase, hyphen-separated)"),
+    name: str = typer.Option(..., "--name", "-n", help="Human-readable service name (e.g. 'Acme Security')"),
+    category: str = typer.Option(
+        "Misc",
+        "--category",
+        "-c",
+        help="Category — must match an existing one (use `fingerprints list` to see options)",
+    ),
+    detection_type: str = typer.Option(
+        "txt",
+        "--type",
+        "-t",
+        help="Detection type: txt, spf, mx, cname, srv, caa, ns, subdomain_txt, dmarc_rua",
+    ),
+    pattern: str = typer.Option(..., "--pattern", "-p", help="Regex pattern to match"),
+    description: str = typer.Option("", "--description", help="One-line description of what this record means"),
+    reference: str = typer.Option("", "--reference", help="URL to the vendor's verification docs"),
+    confidence: str = typer.Option("high", "--confidence", help="high, medium, or low"),
+    output: str | None = typer.Option(
+        None, "--output", "-o", help="Write YAML to this file (default: print to stdout)"
+    ),
+) -> None:
+    """Scaffold a new fingerprint entry, run checks, print YAML.
+
+    Contributor onramp. Runs three guards before emitting:
+    1. Slug uniqueness against the built-in catalog.
+    2. Schema validation (same one the loader uses at runtime).
+    3. Specificity gate — rejects regexes matching >1% of the
+       synthetic adversarial corpus.
+
+    If all three pass, prints the entry as YAML you can paste into the
+    appropriate ``data/fingerprints/<category>.yaml``. Use ``--output``
+    to write it to a file for review.
+    """
+    from recon_tool.fingerprints import _validate_fingerprint, load_fingerprints  # pyright: ignore[reportPrivateUsage]
+    from recon_tool.formatter import render_error
+    from recon_tool.specificity import evaluate_pattern
+
+    console = get_console()
+
+    # 1. Slug uniqueness
+    existing = load_fingerprints()
+    if any(fp.slug == slug for fp in existing):
+        render_error(
+            f"Slug {slug!r} already exists in the built-in catalog. "
+            f"Use `recon fingerprints show {slug}` to inspect the existing entry."
+        )
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    # 2. Specificity
+    verdict = evaluate_pattern(pattern, detection_type)
+    if verdict.threshold_exceeded:
+        render_error(
+            f"Pattern too broad — matched {verdict.matches}/{verdict.corpus_size} "
+            f"({verdict.match_rate:.1%}) of the synthetic adversarial corpus. "
+            f"Tighten the regex (anchor to ^, add vendor-specific tokens, use word "
+            "boundaries) before submitting."
+        )
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    # 3. Schema — build the entry dict and run the runtime validator
+    entry: dict[str, object] = {
+        "name": name,
+        "slug": slug,
+        "category": category,
+        "confidence": confidence,
+        "detections": [
+            {
+                "type": detection_type,
+                "pattern": pattern,
+                **({"description": description} if description else {}),
+                **({"reference": reference} if reference else {}),
+            }
+        ],
+    }
+    validated = _validate_fingerprint(entry, "<wizard>")  # pyright: ignore[reportPrivateUsage]
+    if validated is None:
+        render_error("Schema validation failed — see warnings above.")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    # Emit YAML
+    import yaml as _yaml
+
+    snippet = _yaml.safe_dump(
+        {"fingerprints": [entry]},
+        sort_keys=False,
+        allow_unicode=True,
+        default_flow_style=False,
+        width=120,
+    )
+
+    if output:
+        from pathlib import Path as _Path
+
+        _Path(output).write_text(snippet, encoding="utf-8")
+        console.print(f"  Wrote {output}")
+        console.print(
+            "  [dim]Next:[/dim]  merge into the matching data/fingerprints/<category>.yaml, "
+            "then run [bold]recon fingerprints check[/bold]"
+        )
+    else:
+        console.print()
+        console.print("  [green]OK[/green]  Slug, schema, and specificity all pass.")
+        console.print()
+        console.print("  [dim]Paste into data/fingerprints/<category>.yaml:[/dim]")
+        console.print()
+        for line in snippet.rstrip().splitlines():
+            console.print(f"    {line}")
+        console.print()
+
+
+@fingerprints_app.command("test")
+def fingerprints_test(
+    slug: str = typer.Argument(..., help="Slug to test against the public validation corpus"),
+    corpus: str | None = typer.Option(
+        None,
+        "--corpus",
+        help=(
+            "Path to a newline-delimited file of domains to test against. "
+            "Defaults to the bundled public corpus at tests/fixtures/corpus-public.txt."
+        ),
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
+) -> None:
+    """Run one fingerprint against a domain corpus and report which match.
+
+    Contributor utility: after editing a fingerprint (or before PRing a
+    new one), run ``recon fingerprints test <slug>`` to see which
+    domains in the corpus it matches. Helps answer "is my regex too
+    loose (matches noise) or too tight (misses known customers)"
+    without hand-resolving DNS.
+
+    The bundled public corpus contains well-known apex domains chosen
+    to give high-confidence fingerprints a reasonable chance of firing.
+    Contributors can override with ``--corpus path/to/file``.
+    """
+    import asyncio
+    from pathlib import Path as _Path
+
+    from recon_tool.fingerprints import load_fingerprints
+    from recon_tool.resolver import resolve_tenant
+
+    fps = load_fingerprints()
+    if not any(fp.slug == slug for fp in fps):
+        from recon_tool.formatter import render_error
+
+        render_error(f"No fingerprint with slug {slug!r} in the built-in catalog.")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    if corpus is None:
+        default = _Path(__file__).parent.parent / "tests" / "fixtures" / "corpus-public.txt"
+        if not default.exists():
+            from recon_tool.formatter import render_error
+
+            render_error(f"No corpus specified and bundled corpus not found at {default}. Pass --corpus path/to/file.")
+            raise typer.Exit(code=EXIT_VALIDATION) from None
+        corpus_path = default
+    else:
+        corpus_path = _Path(corpus)
+        if not corpus_path.exists():
+            from recon_tool.formatter import render_error
+
+            render_error(f"Corpus file not found: {corpus_path}")
+            raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    domains = [
+        line.strip()
+        for line in corpus_path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
+
+    async def _resolve_all() -> list[tuple[str, bool, str]]:
+        out: list[tuple[str, bool, str]] = []
+        for domain in domains:
+            try:
+                info, _ = await resolve_tenant(domain, timeout=60.0)
+                matched = slug in info.slugs
+                detail = ""
+                if matched:
+                    detail = ", ".join(f"{e.source_type}:{e.raw_value[:40]}" for e in info.evidence if e.slug == slug)[
+                        :120
+                    ]
+                out.append((domain, matched, detail))
+            except Exception as exc:
+                out.append((domain, False, f"error: {_fmt_exc(exc)}"))
+        return out
+
+    console = get_console()
+    console.print()
+    console.print(f"  [bold]Testing {slug!r} against {len(domains)} domain{'s' if len(domains) != 1 else ''}[/bold]")
+    console.print()
+    with console.status(f"Resolving {len(domains)} domains..."):
+        results = asyncio.run(_resolve_all())
+
+    if json_output:
+        payload = [{"domain": d, "matched": m, "detail": detail} for d, m, detail in results]
+        typer.echo(json.dumps(payload, indent=2))
+        return
+
+    hits = [(d, detail) for d, m, detail in results if m]
+    misses = [d for d, m, _ in results if not m]
+    for d, detail in hits:
+        console.print(f"    [green]MATCH[/green]  {d}    {detail}")
+    console.print()
+    console.print(f"  [bold]{len(hits)} of {len(domains)} matched[/bold]  ({len(misses)} did not)")
+    if hits:
+        console.print(f"  [dim]Next:[/dim]  recon fingerprints show {slug}")
+    console.print()
+
+
 @fingerprints_app.command("check")
 def fingerprints_check(
     path: str | None = typer.Argument(
