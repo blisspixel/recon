@@ -1,15 +1,25 @@
 # MCP Server (AI Agent Integration)
 
-recon runs as an MCP server so any MCP-compatible AI tool can call it directly — no API keys, no glue code.
+recon runs as a local stdio MCP server so MCP-compatible AI tools can call it
+directly — no API keys, no glue code. The default `pip install recon-tool`
+includes the MCP server.
 
-Works with Claude Desktop, Cursor, VS Code + Copilot, ChatGPT, or any other [MCP client](https://modelcontextprotocol.io/).
+Works with Claude Desktop, Cursor, VS Code + Copilot, ChatGPT, or any other
+[MCP client](https://modelcontextprotocol.io/).
+
+> [!WARNING]
+> `recon mcp` runs with the privileges of the calling user or editor process.
+> Treat connected AI agents as untrusted input: prompt injection, tool
+> poisoning, and parameter tampering are possible. Start with manual approvals,
+> keep `autoApprove` empty by default, and prefer an isolated workspace or
+> container for production agent use.
 
 ## Setup
 
-1. Install recon with MCP support:
+1. Install recon:
 
 ```bash
-pip install recon-tool[mcp]               # from PyPI, with MCP server
+pip install recon-tool
 ```
 
 2. Add this to your AI client's MCP config:
@@ -20,19 +30,44 @@ pip install recon-tool[mcp]               # from PyPI, with MCP server
     "recon": {
       "command": "recon",
       "args": ["mcp"],
-      "autoApprove": ["lookup_tenant", "analyze_posture", "assess_exposure", "find_hardening_gaps"]
+      "autoApprove": []
     }
   }
 }
 ```
 
-> Alternative: use `"command": "python", "args": ["-m", "recon_tool.server"]` if `recon` isn't on your PATH.
+> Alternative: use `"command": "python", "args": ["-m", "recon_tool.server"]`
+> if `recon` is not on your PATH.
 
-3. Ask your AI tool something like: "Run a recon lookup on northwindtraders.com and summarize the security posture."
+3. Ask your AI tool something like: "Run a recon lookup on
+northwindtraders.com and summarize the security posture."
 
 Example multi-step prompt for deeper analysis:
 
-> "Look up contoso.com with explain=true. Then run assess_exposure and find_hardening_gaps. Finally, simulate_hardening with DMARC reject and MTA-STS enforce applied, and tell me the new posture score."
+> "Look up contoso.com with explain=true. Then run assess_exposure and
+> find_hardening_gaps. Finally, simulate_hardening with DMARC reject and
+> MTA-STS enforce applied, and tell me the new posture score."
+
+## Startup warning
+
+`recon mcp` prints a warning banner to `stderr` before the stdio transport
+starts so JSON-RPC framing stays clean on `stdout`. The entrypoint warns about
+the server's local privilege level and the need for manual approvals:
+
+```text
+================================================================================
+recon MCP Server vX.Y.Z
+
+WARNING: This server runs with the privileges of the calling user.
+Treat connected AI agents as untrusted input.
+Start with manual approvals; only enable auto-approval for tools you
+deliberately trust.
+================================================================================
+```
+
+recon intentionally does not add a separate "safe mode" or "full auto" CLI
+flag here. Approval policy belongs in the MCP client config, and the safest
+default is an empty `autoApprove` list.
 
 ## Available Tools
 
@@ -56,7 +91,35 @@ Example multi-step prompt for deeper analysis:
 | `list_ephemeral_fingerprints` | List all currently loaded ephemeral fingerprints | none |
 | `clear_ephemeral_fingerprints` | Remove all ephemeral fingerprints from the session | none |
 
-All tools are read-only and idempotent. Tools marked with `explain` parameter support structured provenance output. The agentic tools (`test_hypothesis`, `simulate_hardening`, `get_fingerprints`, `get_signals`, `explain_signal`) operate on cached pipeline data with zero additional network calls. The ephemeral fingerprint tools (`inject_ephemeral_fingerprint`, `reevaluate_domain`, `list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`) let AI agents inject temporary detection patterns and re-evaluate cached data without new network calls. The server includes a bounded TTL cache (120s) and per-domain rate limiting.
+The lookup and analysis tools are read-only. The ephemeral fingerprint tools
+mutate only in-memory session state for the current server process; they do not
+write to disk and do not trigger new network calls on their own. Tools marked
+with `explain` support structured provenance output. The agentic tools
+(`test_hypothesis`, `simulate_hardening`, `get_fingerprints`, `get_signals`,
+`explain_signal`) operate on cached pipeline data with zero additional network
+calls. The server includes a bounded TTL cache (120s) and per-domain rate
+limiting.
+
+## Catalog Resources
+
+recon exposes three MCP resources so agents can browse "what can this tool detect?" without spending a tool invocation on introspection:
+
+| URI | Content |
+|---|---|
+| `recon://fingerprints` | Full SaaS fingerprint catalog (slug, name, category, confidence, match_mode, detection_count, ...) |
+| `recon://signals` | Derived intelligence signals with candidate slugs, min_matches, contradicts/requires relationships, and positive-when-absent inversions |
+| `recon://profiles` | Built-in posture profile lenses (category boosts, signal boosts, focus categories) |
+
+Each resource returns deterministic JSON sourced from the already-loaded YAML catalogs. No network calls. Changes to custom `~/.recon/fingerprints/` or `~/.recon/signals.yaml` require calling `reload_data` to take effect.
+
+## Staleness Timestamps
+
+Every `TenantInfo` result carries two ISO-8601 UTC fields:
+
+- `resolved_at` — when the live resolution produced this result. Always set.
+- `cached_at` — when the on-disk cache entry was written. Set only when the result was served from `~/.recon/cache/`.
+
+Agents can compare the two to decide whether to re-resolve. On a fresh lookup, `cached_at` is `null`. On a cache hit, `resolved_at` is preserved from the original resolution so it reflects *when the data was produced*, not just when the cache entry was last written.
 
 ## Ephemeral Fingerprints
 

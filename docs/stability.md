@@ -88,8 +88,11 @@ New optional parameters may be added.
 | `reevaluate_domain` | `domain` |
 | `cluster_verification_tokens` | `domains` (list[str]) |
 
-All MCP tools are read-only and idempotent (documented in the FastMCP
-Server Instructions injected into every session).
+All MCP tools are stability-covered, but not all are read-only. The
+lookup/analysis tools are read-only; `reload_data`,
+`inject_ephemeral_fingerprint`, and `clear_ephemeral_fingerprints`
+modify only local session state for the running process. The FastMCP
+Server Instructions document those boundaries for agents each session.
 
 ### JSON output fields
 

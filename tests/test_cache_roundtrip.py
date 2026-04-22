@@ -199,6 +199,13 @@ class TestRoundTripAllFields:
         assert restored.google_idp_name == "Google"
         assert restored.mta_sts_mode == "enforce"
 
+    def test_empty_display_name_roundtrip(self) -> None:
+        from dataclasses import replace
+
+        info = replace(_complete_info(), display_name="")
+        restored = tenant_info_from_dict(tenant_info_to_dict(info))
+        assert restored.display_name == ""
+
     def test_likely_primary_roundtrip_when_set(self) -> None:
         """Symmetric check: when likely_primary is populated and primary
         is None (gateway-fronted domain), round-trip preserves both."""
@@ -237,6 +244,9 @@ class TestCacheDiskOperations:
     def test_get_missing_returns_none(self) -> None:
         assert cache_get("does-not-exist.com") is None
 
+    def test_get_rejects_traversal_domain(self) -> None:
+        assert cache_get("..\\secrets") is None
+
     def test_get_corrupt_json_returns_none(self) -> None:
         cache_dir().mkdir(parents=True, exist_ok=True)
         (cache_dir() / "bad.com.json").write_text("not valid json{{{", encoding="utf-8")
@@ -270,6 +280,11 @@ class TestCacheDiskOperations:
         cache_put("contoso.com", _complete_info())
         assert cache_dir().exists()
         assert (cache_dir() / "contoso.com.json").exists()
+
+    def test_put_rejects_traversal_domain(self) -> None:
+        cache_put("..\\escape", _complete_info())
+        if cache_dir().exists():
+            assert list(cache_dir().glob("*.json")) == []
 
 
 class TestCacheDirRespectsEnvVar:

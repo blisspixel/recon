@@ -44,16 +44,15 @@ Insights
 
 > Examples use [Microsoft's fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam). Tenant IDs, services, and domains are fabricated. No real company is depicted.
 
-Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP server](docs/mcp.md) for AI agents (`pip install recon-tool[mcp]`).
+Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP server](docs/mcp.md) for AI agents; the default `pip install recon-tool` includes MCP support.
 
 ## Install
 
 Requires Python 3.10+.
 
 ```bash
-pip install recon-tool                 # from PyPI (CLI only)
-pip install recon-tool[mcp]            # with MCP server support
-pip install -U recon-tool              # upgrade an existing install
+pip install recon-tool                 # includes MCP server
+pip install -U recon-tool              # upgrade
 recon doctor                           # verify connectivity
 ```
 
@@ -77,6 +76,12 @@ See [docs/](docs/) for the full CLI reference, fingerprint and signal documentat
 
 ## MCP Server
 
+> [!WARNING]
+> `recon mcp` runs with the privileges of the calling user or editor process.
+> Treat connected AI agents as untrusted input. Start with manual approvals,
+> keep `autoApprove` empty by default, and prefer an isolated workspace or
+> container for production agent use.
+
 recon runs as an MCP server for Claude, Cursor, VS Code, ChatGPT, or any MCP client. The Model Context Protocol lets AI agents call tools like recon directly from your chat.
 
 ```json
@@ -85,11 +90,13 @@ recon runs as an MCP server for Claude, Cursor, VS Code, ChatGPT, or any MCP cli
     "recon": {
       "command": "recon",
       "args": ["mcp"],
-      "autoApprove": ["lookup_tenant", "analyze_posture"]
+      "autoApprove": []
     }
   }
 }
 ```
+
+The default install already includes the MCP server. Keep approvals manual until you've decided which tools, if any, you want to trust automatically.
 
 Then ask your AI: *"Run a recon lookup on contoso.com and tell me what's running."*
 
@@ -104,7 +111,7 @@ See [docs/mcp.md](docs/mcp.md) for the full tool list, advanced agentic workflow
 
 ```bash
 pip install -e ".[dev]"               # or: uv sync --extra dev
-pytest tests/                          # 1547 tests, 87% coverage
+pytest tests/                          # 1585 tests, 87% coverage
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 pre-commit install                     # activate pre-commit hooks

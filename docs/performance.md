@@ -23,17 +23,23 @@ faster because CT lookups short-circuit.
 
 ## Methodology
 
-Reproduce with:
+Reproduce with any newline-delimited list of real apex domains saved
+locally (one per line). The project ships only a fictional example
+corpus, so you supply your own list — the shape of the corpus matters
+far more than the specific names. A representative 40-domain list
+covers big-tech, major SaaS, retail, automotive, finance, media,
+pharma, and a few international apexes so the built-in fingerprint
+catalog has a fair chance of firing.
 
 ```bash
 recon cache clear --all                                # start cold
-time recon batch tests/fixtures/corpus-public.txt --json > /dev/null
+time recon batch path/to/your-corpus.txt --json > /dev/null
 ```
 
-The `corpus-public.txt` fixture is 40 public apex domains committed
-to the repo — use it (or any of the validation-sweep corpora) rather
-than a private list if you want your numbers to match published
-figures.
+See [CONTRIBUTING.md](../CONTRIBUTING.md#fictional-example-policy) for
+why the project does not commit a real-company corpus. Local corpora
+conventionally live at `~/.recon/corpus.txt`; they are never
+transmitted anywhere recon does not already query.
 
 ## Budget knobs
 

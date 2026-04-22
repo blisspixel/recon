@@ -118,6 +118,16 @@ class OIDCSource:
                     source_name="oidc_discovery",
                     error=f"HTTP {exc.response.status_code} from OIDC discovery endpoint",
                 )
+            except ValueError:
+                return SourceResult(
+                    source_name="oidc_discovery",
+                    error="Invalid JSON from OIDC discovery endpoint",
+                )
+        if not isinstance(data, dict):
+            return SourceResult(
+                source_name="oidc_discovery",
+                error="Invalid JSON response shape from OIDC discovery endpoint",
+            )
         try:
             return parse_tenant_info_from_oidc(data)
         except ReconLookupError as exc:
@@ -143,13 +153,8 @@ class OIDCSource:
 
         try:
             return await self._fetch(domain, kwargs.get("client"))
-        except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout) as exc:
+        except httpx.HTTPError as exc:
             return SourceResult(
                 source_name="oidc_discovery",
                 error=f"Network error querying OIDC discovery endpoint after retries: {exc}",
-            )
-        except Exception as exc:
-            return SourceResult(
-                source_name="oidc_discovery",
-                error=f"Unexpected error: {exc}",
             )

@@ -44,8 +44,15 @@ surface. See the Post-1.0 ethos section below.
 | v1.2.1  | 2026-04-21 | Security patch — specificity gate wired into MCP `inject_ephemeral_fingerprint` |
 | v1.3.0  | 2026-04-21 | Portfolio discovery — batch-mode tenant-ID + display-name clustering |
 | v1.3.1  | 2026-04-21 | Security patch — 6 static-analysis findings resolved |
+| v1.4.0  | 2026-04-21 | Hardening — parser/cache/MCP coherence, live-validation tooling, MCP bundled by default |
 
 See `CHANGELOG.md` for per-release detail.
+
+Main-branch work since v1.4.0 stays in the same lane: rerun the
+50-company validation corpus with `validation/run_corpus.py`, feed
+findings back into tighter detections, and keep the product surface
+stable. New decisions should come from live validation output, not
+from widening scope.
 
 ## Post-1.0 ethos: bulletproof over bloat
 
@@ -81,14 +88,13 @@ list` / `search` / `show` and validate candidate files with `recon
 fingerprints check`. `signals.yaml` and `posture.yaml` stay single
 files — they're smaller and more interdependent.
 
-## v1.2 targets — detection quality and contributor trust
+## Historical v1.2 targets (largely shipped)
 
-**Theme.** v1.1 shipped the *plumbing* for external contributions. v1.2
-is the first release where the plumbing has to prove it was worth
-shipping: tighter built-in detections, validator guards that catch
-semantic problems (not just syntax), UX that makes sparse results
-honest, and docs that set accurate expectations for what recon does
-and doesn't find.
+**Status.** Most of this work landed across v1.2.x through v1.3.1:
+specificity gating, contributor tooling, sparse-result docs, and wider
+validation practice are in place. The remaining active thread is
+repeatable live validation plus targeted fixes from what that corpus
+still exposes.
 
 **Scope (six items, each with an acceptance test):**
 
@@ -162,6 +168,16 @@ and doesn't find.
   the v1.1 plumbing and the v1.2 quality gates being in place, pause
   on contributor-facing work and talk to users instead.
 
+## Current focus
+
+- Re-run the diverse 50-domain corpus on networked machines with
+  `validation/run_corpus.py` and keep comparison artifacts when
+  regressions appear.
+- Use live findings to tighten existing detections and trim false
+  positives and false negatives before adding any new surface.
+- Keep hardening MCP, cache, and server hot paths when real defects are
+  found, especially under adversarial local-agent inputs.
+
 ## Ideas worth prototyping (not commitments)
 
 Any of these could turn into a minor release. None are blocking.
@@ -204,19 +220,41 @@ Three files carry disproportionate maintenance burden:
 (1,200 lines). Splitting them is the right move *when* a feature
 change forces the split; not as a standalone milestone.
 
+## What recon is (and what it isn't)
+
+recon is the **passive-DNS primitive**. One job: take an apex, return
+hedged observations about the tech stack and identity posture using
+only public DNS, certificate transparency, and unauthenticated
+identity-discovery endpoints. It's designed to be the layer that
+other tools — active scanners, company-research enrichers, GTM
+pipelines — *consume*, not the layer that does those jobs itself.
+
+Active scanning, credentialed enrichment, company research, news /
+funding / hiring signals, organisational graph discovery, and any
+kind of "structured AI briefing" synthesis live in sister tooling
+(e.g. primr). recon stays narrow on purpose so those tools have a
+solid, honest, passive foundation to build on. Humility over
+completeness — the features recon doesn't ship are usually the ones
+that would quietly make its hedging less trustworthy.
+
 ## Intentionally out of scope
 
 **Hard no.** Active scanning. Paid APIs. Credentialed access.
 Bundled ML / embedding weights. Aggregated local databases. Bundled
-ASN / GeoIP data. A plugin system that runs user code.
+ASN / GeoIP data. A plugin system that runs user code. Remote / HTTP
+MCP transport (local stdio only; if you want a shared team service,
+that's a different tool wrapping recon, not recon itself).
 
-**Not this tool.** HTML output, web dashboard, TUI, `recon serve`,
-interactive REPL, scheduled/daemon mode, STIX2 / Maltego / MISP
-exports, Prometheus metrics, Homebrew tap, Docker image, PDF
-reports. recon is a CLI plus a local-stdio MCP server; `--json` is
-the integration surface. Want a rendered graph? Pipe node-link
-JSON into Mermaid. Want PDF reports? Pipe `--md` into pandoc. Want
-SIEM ingestion? Pipe `--json` into your SIEM.
+**Not this tool.** Company research, firmographic enrichment, news /
+funding / hiring feeds, GTM briefing generation, contact data,
+verdicted "maturity scores". HTML output, web dashboard, TUI,
+`recon serve`, interactive REPL, scheduled/daemon mode, STIX2 /
+Maltego / MISP exports, Prometheus metrics, Homebrew tap, Docker
+image, PDF reports. recon is a CLI plus a local-stdio MCP server;
+`--json` is the integration surface. Want a rendered graph? Pipe
+node-link JSON into Mermaid. Want PDF reports? Pipe `--md` into
+pandoc. Want SIEM ingestion? Pipe `--json` into your SIEM. Want
+company research? That's a separate tool's job.
 
 **Design choices that stay.**
 

@@ -5,7 +5,115 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.0] — 2026-04-21
+
+**Hardening release — parser, cache, MCP server coherence, and a
+sharper sense of scope.** Targets the three hot paths that real
+validation runs have stressed most (malformed upstream responses,
+cache round-trips under adversarial inputs, MCP server state
+transitions), rebundles the MCP server into the default install,
+exposes the fingerprint / signal / profile catalogs as MCP
+resources, adds staleness timestamps to every result, and uses the
+roadmap to state plainly what recon is — and what it deliberately
+leaves to sister tooling.
+
+### Changed
+
+- **MCP is bundled in the default install again.** `pip install
+  recon-tool` now installs the `mcp` runtime dependency directly; the
+  `recon-tool[mcp]` extra is no longer required. Users who had been
+  installing the extra keep working unchanged; users who had avoided
+  MCP on purpose can still choose not to run `recon mcp`. No public
+  API or CLI surface changed.
+- Documentation (`README.md`, `SECURITY.md`, `docs/mcp.md`,
+  `docs/security.md`, `docs/stability.md`) updated to reflect the
+  bundled-MCP default and the expanded MCP threat model.
+- **Fictional-example policy codified and enforced across the tree.**
+  The project no longer commits real-company apex domains as examples,
+  targets, test corpora, or regression fixtures. Rationale: no upside
+  from naming real orgs in a passive-recon tool's public materials;
+  accumulating reputational, trademark, and defamation exposure over
+  the lifetime of the repository and its forks. See the new
+  "Fictional-example policy" section in `CONTRIBUTING.md` for the
+  full rule and carve-outs (vendor/product detection names and the
+  upstream service hostnames recon itself queries are unaffected).
+- **`tests/fixtures/corpus-public.txt` removed.** The 40 real-apex
+  corpus previously bundled for `recon fingerprints test <slug>` is
+  no longer in-tree. The command now looks for `~/.recon/corpus.txt`
+  first, falls back to a new fictional-only `tests/fixtures/
+  corpus-example.txt`, and prints a banner when the example file is
+  in use so operators know zero matches are expected. Supply your own
+  corpus with `--corpus path/to/file` to exercise real detections.
+  `docs/performance.md` rewritten to describe methodology without
+  naming specific targets.
+- **Historical CHANGELOG entries sanitized.** v1.3.0 and v1.2.0
+  narrative prose that named specific real apexes has been rewritten
+  to describe the behavior in neutral terms. No functional content
+  was lost; dated release facts remain intact.
+- **`/validation/` gitignore carve-outs.** The directory remains
+  ignored for local corpora and result artifacts, with three tracked
+  exceptions: `validation/run_corpus.py` (the runner, no company
+  names), `validation/corpus-example.txt` (fictional format demo),
+  and `validation/README.md` (policy + usage).
+
+### Added
+
+- **MCP resources — `recon://fingerprints`, `recon://signals`,
+  `recon://profiles`.** Agents can browse the three catalogs as
+  read-only JSON without spending a tool invocation on introspection.
+  Each resource is a deterministic projection over the already-loaded
+  YAML catalogs (no network calls) — the same data that powers
+  `recon fingerprints list` / `recon signals list` / `recon profiles
+  list` in the CLI. Changes require `reload_data` to take effect.
+- **Staleness timestamps — `resolved_at` and `cached_at` on every
+  `TenantInfo`.** `resolved_at` is stamped when live resolution
+  produces the result; `cached_at` is populated only by the on-disk
+  cache read path. Both flow through the JSON serializer so agents
+  can tell at a glance whether they are looking at fresh data or a
+  2-minute-old cache hit, and decide whether to re-resolve. Cache
+  round-trips preserve `resolved_at` — it reflects when the data was
+  first produced, not when the cache entry was last written.
+- Reusable live-validation tooling around the existing diverse 50-domain
+  corpus. `recon_tool.validation_runner` now summarizes batch JSON,
+  compares runs, renders markdown summaries, and
+  `validation/run_corpus.py` executes a corpus run through the public
+  CLI entrypoint and writes `results.json`, `summary.json`, and
+  `summary.md`.
+- `docs/roadmap.md` now opens with an explicit "What recon is (and
+  what it isn't)" section naming recon as the passive-DNS primitive
+  and pointing active scanning, credentialed enrichment, company
+  research, and GTM briefing generation at sister tooling. The
+  "Intentionally out of scope" list grew accordingly (remote / HTTP
+  MCP transport, firmographic enrichment, news / funding / hiring
+  feeds, verdicted maturity scores) so external contributors know
+  what will be declined up front.
+
+### Fixed
+
+- Hardened malformed-upstream handling for `crt.sh`, CertSpotter, Azure
+  metadata, OIDC discovery, and GetUserRealm so invalid or unexpected
+  JSON shapes fail explicitly instead of collapsing into generic error
+  paths.
+- Tightened cache safety and correctness: cache and CT cache now use
+  path containment on read/write paths, reject traversal consistently,
+  preserve empty `display_name` values on round-trip, and narrow
+  filesystem/JSON exception handling.
+- Closed MCP server state gaps: cache reload now clears rate-limiter
+  state, re-evaluation refreshes cached tenant info, ephemeral
+  fingerprint clearing re-merges cached detections, and in-flight tenant
+  lookups reserve and release rate-limit slots atomically.
+- Reworked fingerprint derived caches into a lock-coherent typed cache
+  state so ephemeral inject/clear/reload operations keep detection and
+  M365-derived views consistent.
+
+### Validation
+
+- Added regression coverage for malformed upstream bodies, cache
+  traversal and round-trip edge cases, server in-flight lookup
+  semantics, ephemeral fingerprint cache invalidation, and
+  validation-runner summaries.
+- Quality gate green on release prep: `pytest tests` (1585 passed, 4
+  deselected), `ruff check .`, and `pyright recon_tool tests`.
 
 ## [1.3.1] — 2026-04-21
 
@@ -104,10 +212,9 @@ calls, zero new sources.
   batch share the same Microsoft 365 tenant ID, each domain's JSON
   entry carries a ``shared_tenant`` list naming the other peers.
   Cryptographically strong — same tenant ID = same M365 customer
-  account. Not hedged; this is provable via OIDC discovery.
-  Canonical example: ``recon batch {microsoft,xbox,bing}.com``
-  correctly clusters all three as peers of tenant
-  ``72f988bf-86f1-41af-91ab-2d7cd011db47``.
+  account. Not hedged; this is provable via OIDC discovery. Three
+  sibling apexes belonging to the same corporate group collapse to a
+  shared peer set in the batch output.
 - **Display-name clustering (``shared_display_name``)**: When 2+
   domains' tenant display names normalize to the same key,
   each entry carries a ``shared_display_name`` list with the raw
@@ -141,9 +248,9 @@ all three. Downstream consumers rank them however they like.
 
 ### Validation
 
-- Microsoft portfolio smoke test: microsoft.com, xbox.com, bing.com
-  all share tenant ``72f988bf-…`` and display name "Microsoft".
-  All three fields populate correctly with symmetric peer lists.
+- Portfolio smoke test on a three-apex group sharing a single M365
+  tenant and display name: all three fields populate correctly with
+  symmetric peer lists.
 - Full test suite: 1550 pass (1539 + 11 new clustering tests).
 - Static gate: ruff + format + pyright + bandit + actionlint all
   clean.
@@ -206,16 +313,15 @@ new detections — the point is that the next wave of detections
   (3) specificity. Prints a paste-ready entry or writes to a file
   via `--output`.
 - **`recon fingerprints test <slug>`** — runs one fingerprint against
-  a domain corpus and reports which match. Defaults to the bundled
-  public corpus at `tests/fixtures/corpus-public.txt` (40 well-known
-  apex domains); contributors can point at their own with
-  `--corpus path/to/file`. Helps answer "is my regex too loose or
-  too tight" without hand-resolving DNS.
-- **`tests/fixtures/corpus-public.txt`** — 40 public apex domains
-  committed to the repo so `recon fingerprints test` works out of
-  the box. Covers big tech, major SaaS, retail, automotive, finance,
-  media, pharma, and international orgs. Kept stable so fixture
-  pinning works in tests.
+  a domain corpus and reports which match. Contributors point at their
+  own corpus with `--corpus path/to/file` or drop a list at
+  `~/.recon/corpus.txt`. Helps answer "is my regex too loose or too
+  tight" without hand-resolving DNS.
+- **`tests/fixtures/corpus-example.txt`** — fictional-company example
+  corpus showing the expected file format. Real-company corpora are
+  never committed; see CONTRIBUTING.md for the rationale. (Note:
+  earlier point releases bundled a public-companies corpus; it was
+  removed in v1.4.0.)
 - **`docs/weak-areas.md`** — honest list of deployment shapes where
   recon looks sparse by design (heavy-CDN orgs, Chinese / APAC tech
   stacks, regulated verticals behind web proxies, fully self-hosted
@@ -386,20 +492,17 @@ aerospace, and retail) with zero errors and zero regressions.
   Large orgs with self-operated mail infrastructure used to fall
   through to `Exchange Server (on-prem / hybrid)` as the primary
   provider whenever `owa.<apex>` / `autodiscover.<apex>` resolved,
-  even when their public MX clearly routed through their own
-  infrastructure (e.g. `mx5.huawei.com`, `mx.baidu.com`,
-  `cloudmx.qq.com` for Tencent, `mx01.mail.alibaba.com`). A synthetic
-  `self-hosted-mail` slug now fires when MX records exist and none of
-  them match a recognized cloud provider or gateway fingerprint, and
-  that slug is recognized as a primary email provider in the topology
-  computation. The Exchange on-prem detection still fires as a
-  secondary service signal in the same output, so the hybrid-identity
-  reality of these orgs is still visible — it's just no longer
-  promoted to the Provider line. 18 of 50 domains in the latest
-  validation corpus got more accurate Provider lines as a result
-  (Huawei, Baidu, Tencent, Alibaba, Boeing, Amazon, Samsung, Ikea,
-  Hyundai, McDonald's, Siemens, Intel, Visa, Apple, Airbus, LVMH,
-  Volkswagen, Coca-Cola).
+  even when the public MX clearly routed through their own
+  operator-owned mail hostnames. A synthetic `self-hosted-mail`
+  slug now fires when MX records exist and none of them match a
+  recognized cloud provider or gateway fingerprint, and that slug is
+  recognized as a primary email provider in the topology computation.
+  The Exchange on-prem detection still fires as a secondary service
+  signal in the same output, so the hybrid-identity reality of these
+  orgs is still visible — it's just no longer promoted to the
+  Provider line. Roughly a third of the diverse 50-domain validation
+  corpus got more accurate Provider lines as a result, most of them
+  large industrial and APAC orgs running self-operated mail.
 - **DKIM inference behind commercial gateway.** When MX points to a
   commercial email gateway (Proofpoint, Mimecast, Cisco IronPort,
   Barracuda, Trend Micro, Trellix, Symantec) AND DMARC is enforcing
@@ -488,10 +591,10 @@ aerospace, and retail) with zero errors and zero regressions.
   `~/.recon/ct-cache/`; the TenantInfo result cache at
   `~/.recon/cache/` was left untouched and silently served stale
   JSON on subsequent runs. This surfaced during validation — after
-  updating recon, a cached result for `microsoft.com` kept showing
-  retired signals like "AI Adoption Without Governance" even after
-  a `cache clear microsoft.com`. The command now clears both caches
-  and reports each count separately; `cache_clear` / `cache_clear_all`
+  updating recon, a cached TenantInfo result kept showing retired
+  signals like "AI Adoption Without Governance" even after a
+  `cache clear <apex>`. The command now clears both caches and
+  reports each count separately; `cache_clear` / `cache_clear_all`
   helpers added to `cache.py`.
 - **`recon doctor` no longer emits empty error messages.** Many
   `httpx` exception classes (`ReadTimeout`, `ConnectTimeout`) raise
@@ -502,12 +605,11 @@ aerospace, and retail) with zero errors and zero regressions.
   everywhere in `cli.py` that previously did `render_error(str(exc))`
   on a catch-all `Exception`.
 - **Wildcard-DNS guard on Exchange-on-prem detection.** Domains that
-  point `*.<domain>` at a single IP (e.g. `in-n-out.com` → every
-  subdomain resolves to `64.58.191.70`) used to trigger every
-  probed prefix in `_detect_exchange_onprem` and get mislabelled
-  as running Exchange Server. The detector now probes a nonsense
-  prefix and bails when it also resolves — an unambiguous wildcard
-  signature.
+  point `*.<apex>` at a single IP (so every subdomain resolves to
+  the same address) used to trigger every probed prefix in
+  `_detect_exchange_onprem` and get mislabelled as running Exchange
+  Server. The detector now probes a nonsense prefix and bails when
+  it also resolves — an unambiguous wildcard signature.
 - **IDN / Punycode domains accepted.** The validator regex anchored
   the TLD at `[a-z]{2,}`, which rejected every `xn--`-prefixed TLD
   (e.g. `xn--p1ai` for Russian, `xn--fiqs8s` for Chinese). The
@@ -975,11 +1077,10 @@ hygiene to make the 1.0 stability commitment credible.
 
 ### Changed
 
-- **MCP is now an optional extra.** `pip install recon-tool` no longer
-  pulls in the MCP dependency tree. Users who want the MCP server
-  install with `pip install recon-tool[mcp]`. The `recon mcp` command
-  gives a clear error message if MCP dependencies are missing. All MCP
-  tests gracefully skip when the `mcp` package is not installed.
+- **MCP packaging changed in this release.** At the time, `pip install
+  recon-tool` no longer pulled in the MCP dependency tree. Current
+  releases ship the MCP server in the default install; see the README
+  for up-to-date packaging guidance.
 - **CI migrated from pip to uv.** Both `ci.yml` and `release.yml` now
   use `astral-sh/setup-uv@v5` for faster, reproducible installs.
 - **Trusted Publisher on PyPI** — release pipeline already uses
@@ -1855,10 +1956,10 @@ changing the core architecture.
   `google-managed`) so the inference path can see Google as a
   downstream provider on gateway-fronted domains.
 - `tests/test_integration.py` — replaced real corporate apex
-  references (`microsoft.com`, `google.com`) with RFC-2606 reserved
-  `example.com` and `example.org`. Repo is now clean of real
-  company names outside of fingerprint detection targets and the
-  Contoso/Northwind/Fabrikam fictional-example convention.
+  references with RFC-2606 reserved `example.com` / `example.org`.
+  Repo is now clean of real company names outside of fingerprint
+  detection targets and the Contoso/Northwind/Fabrikam fictional-
+  example convention.
 - Refined roadmap with a tight "Now / Soon / Later" plan driven by
   real-world findings from hardened enterprise targets.
 

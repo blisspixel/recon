@@ -120,6 +120,25 @@ class TestOIDCSource:
         assert result.tenant_id is None
 
     @pytest.mark.asyncio
+    async def test_invalid_json_returns_error(self):
+        request = httpx.Request("GET", DISCOVERY_URL_TEMPLATE.format(domain="example.com"))
+        transport = httpx.MockTransport(lambda _: httpx.Response(200, request=request, content=b"{not json"))
+        async with httpx.AsyncClient(transport=transport) as client:
+            source = OIDCSource()
+            result = await source.lookup("example.com", client=client)
+        assert result.error == "Invalid JSON from OIDC discovery endpoint"
+        assert result.tenant_id is None
+
+    @pytest.mark.asyncio
+    async def test_non_object_json_returns_error(self):
+        transport = httpx.MockTransport(lambda _: httpx.Response(200, json=["not", "an", "object"]))
+        async with httpx.AsyncClient(transport=transport) as client:
+            source = OIDCSource()
+            result = await source.lookup("example.com", client=client)
+        assert result.error == "Invalid JSON response shape from OIDC discovery endpoint"
+        assert result.tenant_id is None
+
+    @pytest.mark.asyncio
     async def test_constructs_correct_url(self):
         """Verify the source hits the correct discovery URL."""
         captured_url = None

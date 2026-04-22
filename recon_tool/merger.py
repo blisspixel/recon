@@ -61,10 +61,10 @@ _EMAIL_PROVIDER_SLUG_NAMES: dict[str, str] = {
     "protonmail": "ProtonMail",
     "aws-ses": "AWS SES",
     # Synthetic slug emitted by dns._detect_mx when every MX host lives
-    # under the queried apex (e.g. ``mx.baidu.com`` for ``baidu.com``).
-    # Gives large orgs with self-operated mail infrastructure a concrete
-    # primary-provider label instead of falling through to the weaker
-    # "Exchange Server (on-prem / hybrid)" attribution.
+    # under the queried apex (i.e. operator-owned mail infrastructure).
+    # Gives large orgs with self-operated mail a concrete primary-provider
+    # label instead of falling through to the weaker "Exchange Server
+    # (on-prem / hybrid)" attribution.
     "self-hosted-mail": "Self-hosted mail",
 }
 

@@ -8,10 +8,11 @@ __pycache__/
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Build
+# Build / distribution
 dist/
 build/
 *.whl
+*.tar.gz
 
 # Test / Coverage
 .pytest_cache/
@@ -20,6 +21,11 @@ build/
 .coverage.*
 coverage.xml
 htmlcov/
+.tox/
+.nox/
+junit.xml
+pytest-report.xml
+test-results/
 tests/validation/fixtures/
 docs/accuracy.md
 
@@ -27,17 +33,24 @@ docs/accuracy.md
 # live here during accuracy work; never committed. Fictional-example
 # discipline requires anything committed to use Contoso / Northwind /
 # Fabrikam — validation artifacts use real targets and stay local.
-/validation/
+# Three carve-outs: the runner script (no company names), a fictional
+# example corpus, and a README describing the policy.
+/validation/*
+!/validation/run_corpus.py
+!/validation/corpus-example.txt
+!/validation/README.md
 
 # Linting / Type checking
 .ruff_cache/
 .mypy_cache/
+.dmypy.json
 .pyre/
 .pytype/
 .pyright/
 
 # IDE / editors
 .vscode/
+.vs/
 .idea/
 *.swp
 *.swo
@@ -62,12 +75,36 @@ CLAUDE.local.md
 .DS_Store
 Thumbs.db
 Desktop.ini
+$RECYCLE.BIN/
+*.stackdump
 
 # Env
 .env
+.env.local
+.env.*.local
 .venv/
 venv/
 env/
+
+# Credentials — defensive rules. A passive-recon tool should never
+# commit keys or credentials, even local test ones. Prefer
+# RECON_CONFIG_DIR or a secrets manager over dropping files in-tree.
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+id_rsa
+id_rsa.*
+id_dsa
+id_dsa.*
+id_ecdsa
+id_ecdsa.*
+id_ed25519
+id_ed25519.*
+credentials.json
+secrets.yaml
+secrets.yml
 
 # Logs
 *.log

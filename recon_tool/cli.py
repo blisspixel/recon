@@ -384,7 +384,7 @@ def _doctor_mcp() -> None:
         checks.append(("MCP package", True, "mcp>=1.0 installed"))
     except ImportError as exc:
         checks.append(("MCP package", False, f"not installed: {exc}"))
-        checks.append(("Install hint", False, "pip install recon-tool[mcp]"))
+        checks.append(("Install hint", False, "pip install -U recon-tool"))
         _render_mcp_checks(checks)
         return
 
@@ -428,6 +428,12 @@ def _doctor_mcp() -> None:
     # Emit copy-pasteable config
     cmd = recon_path if recon_path else "recon"
     console.print()
+    console.print(
+        "  [yellow]Security note:[/yellow] `recon mcp` runs with the privileges of\n"
+        "  the calling user. Start with manual approvals and only expand\n"
+        "  `autoApprove` if you fully understand the risk."
+    )
+    console.print()
     console.print("  [bold]Copy-paste config for your AI client[/bold]")
     console.print()
     console.print("  [dim]# Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
@@ -441,8 +447,7 @@ def _doctor_mcp() -> None:
         '      "recon": {\n'
         f'        "command": "{cmd}",\n'
         '        "args": ["mcp"],\n'
-        '        "autoApprove": ["lookup_tenant", "analyze_posture",\n'
-        '                        "assess_exposure", "find_hardening_gaps"]\n'
+        '        "autoApprove": []\n'
         "      }\n"
         "    }\n"
         "  }"
@@ -502,12 +507,13 @@ def _doctor_fix() -> None:
 
 @app.command()
 def mcp() -> None:
-    """Start the MCP server (stdio transport). Requires: pip install recon-tool[mcp]"""
+    """Start the MCP server (stdio transport)."""
     try:
         from recon_tool.server import main as server_main
     except ImportError as exc:
         get_console().print(
-            "[red]MCP dependencies not installed.[/red]\n  Install with: [bold]pip install recon-tool\\[mcp][/bold]"
+            "[red]MCP dependency unavailable in this environment.[/red]\n"
+            "  Reinstall with: [bold]pip install -U recon-tool[/bold]"
         )
         raise SystemExit(1) from exc
 
@@ -1020,8 +1026,10 @@ def fingerprints_test(
         None,
         "--corpus",
         help=(
-            "Path to a newline-delimited file of domains to test against. "
-            "Defaults to the bundled public corpus at tests/fixtures/corpus-public.txt."
+            "Path to a newline-delimited file of apex domains. If omitted, "
+            "recon looks for ~/.recon/corpus.txt; otherwise falls back to the "
+            "fictional-company example at tests/fixtures/corpus-example.txt "
+            "(format demo only — no real matches)."
         ),
     ),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
@@ -1034,9 +1042,10 @@ def fingerprints_test(
     loose (matches noise) or too tight (misses known customers)"
     without hand-resolving DNS.
 
-    The bundled public corpus contains well-known apex domains chosen
-    to give high-confidence fingerprints a reasonable chance of firing.
-    Contributors can override with ``--corpus path/to/file``.
+    The project ships a fictional example corpus only. To get real
+    matches, either point at your own list with ``--corpus path/to/file``
+    or drop a newline-delimited apex list at ``~/.recon/corpus.txt``.
+    See CONTRIBUTING.md for why real-company corpora stay local.
     """
     import asyncio
     from pathlib import Path as _Path
@@ -1051,14 +1060,23 @@ def fingerprints_test(
         render_error(f"No fingerprint with slug {slug!r} in the built-in catalog.")
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
+    using_example_corpus = False
     if corpus is None:
-        default = _Path(__file__).parent.parent / "tests" / "fixtures" / "corpus-public.txt"
-        if not default.exists():
+        user_corpus = _Path.home() / ".recon" / "corpus.txt"
+        example = _Path(__file__).parent.parent / "tests" / "fixtures" / "corpus-example.txt"
+        if user_corpus.exists():
+            corpus_path = user_corpus
+        elif example.exists():
+            corpus_path = example
+            using_example_corpus = True
+        else:
             from recon_tool.formatter import render_error
 
-            render_error(f"No corpus specified and bundled corpus not found at {default}. Pass --corpus path/to/file.")
+            render_error(
+                "No corpus specified. Pass --corpus path/to/file or drop a "
+                "newline-delimited apex list at ~/.recon/corpus.txt."
+            )
             raise typer.Exit(code=EXIT_VALIDATION) from None
-        corpus_path = default
     else:
         corpus_path = _Path(corpus)
         if not corpus_path.exists():
@@ -1092,6 +1110,13 @@ def fingerprints_test(
     console = get_console()
     console.print()
     console.print(f"  [bold]Testing {slug!r} against {len(domains)} domain{'s' if len(domains) != 1 else ''}[/bold]")
+    if using_example_corpus:
+        console.print(
+            "  [yellow]Using the fictional-company example corpus (no real matches expected).[/yellow]"
+        )
+        console.print(
+            "  [dim]Supply --corpus path/to/file or drop ~/.recon/corpus.txt to test against real apexes.[/dim]"
+        )
     console.print()
     with console.status(f"Resolving {len(domains)} domains..."):
         results = asyncio.run(_resolve_all())
@@ -1483,11 +1508,12 @@ async def _doctor() -> None:
         checks.append(("DNS resolution", False, _fmt_exc(exc)))
 
     # Check crt.sh connectivity (certificate transparency)
-    try:
-        resp = await httpx.AsyncClient(timeout=8.0).get("https://crt.sh/?q=%.example.com&output=json")
-        checks.append(("crt.sh (cert transparency)", resp.status_code == 200, f"HTTP {resp.status_code}"))
-    except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
-        checks.append(("crt.sh (cert transparency)", False, _fmt_exc(exc)))
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        try:
+            resp = await client.get("https://crt.sh/?q=%.example.com&output=json")
+            checks.append(("crt.sh (cert transparency)", resp.status_code == 200, f"HTTP {resp.status_code}"))
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
+            checks.append(("crt.sh (cert transparency)", False, _fmt_exc(exc)))
 
     try:
         from recon_tool.server import mcp  # noqa: F401  # pyright: ignore[reportUnusedImport]

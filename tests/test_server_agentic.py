@@ -302,7 +302,10 @@ class TestEphemeralFingerprints:
 
     @pytest.mark.asyncio
     async def test_inject_then_list_then_clear(self) -> None:
+        import time
+
         from recon_tool.server import (
+            _cache,
             clear_ephemeral_fingerprints,
             inject_ephemeral_fingerprint,
             list_ephemeral_fingerprints,
@@ -326,14 +329,19 @@ class TestEphemeralFingerprints:
         listed = json.loads(await list_ephemeral_fingerprints())
         assert any(fp["slug"] == "test-platform" for fp in listed)
 
+        _cache["contoso.com"] = (time.monotonic(), _info(display_name="Before Clear"), tuple(_results()))
+
         # Clear removes it
-        cleared = json.loads(await clear_ephemeral_fingerprints())
+        refreshed_info = _info(display_name="After Clear")
+        with patch("recon_tool.merger.merge_results", return_value=refreshed_info):
+            cleared = json.loads(await clear_ephemeral_fingerprints())
         assert cleared["status"] == "ok"
         assert cleared["removed"] >= 1
 
         # List is now empty (or doesn't have our slug)
         listed_after = json.loads(await list_ephemeral_fingerprints())
         assert not any(fp["slug"] == "test-platform" for fp in listed_after)
+        assert _cache["contoso.com"][1].display_name == "After Clear"
 
     @pytest.mark.asyncio
     async def test_inject_invalid_returns_error(self) -> None:
@@ -402,3 +410,40 @@ class TestReevaluateDomain:
         # Should NOT be an error — should be a tenant-info dict
         assert "error" not in result
         assert result.get("display_name") == "Contoso Ltd"
+
+    @pytest.mark.asyncio
+    async def test_reevaluate_updates_cached_info(self, fresh_server_cache: None) -> None:
+        import time
+
+        from recon_tool.server import _cache, _cache_get, reevaluate_domain
+
+        original = _info(display_name="Original")
+        refreshed = _info(display_name="Refreshed")
+        results = _results()
+        _cache["contoso.com"] = (time.monotonic(), original, tuple(results))
+
+        with patch("recon_tool.merger.merge_results", return_value=refreshed):
+            result = json.loads(await reevaluate_domain("contoso.com"))
+
+        assert result["display_name"] == "Refreshed"
+        cached = _cache_get("contoso.com")
+        assert cached is not None
+        assert cached[0].display_name == "Refreshed"
+
+
+class TestReloadData:
+    @pytest.mark.asyncio
+    async def test_reload_clears_cache_and_rate_limiter(self, fresh_server_cache: None) -> None:
+        import time
+
+        from recon_tool.server import _cache, _rate_limit, reload_data
+
+        _cache["contoso.com"] = (time.monotonic(), _info(), tuple(_results()))
+        _rate_limit["contoso.com"] = time.monotonic()
+
+        result = await reload_data()
+
+        assert result.startswith("Reloaded:")
+        assert "Cache and rate limiter cleared" in result
+        assert _cache == {}
+        assert _rate_limit == {}

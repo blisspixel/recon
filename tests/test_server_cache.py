@@ -17,6 +17,8 @@ from recon_tool.server import (
     _rate_limit_check,
     _rate_limit_clear,
     _rate_limit_record,
+    _rate_limit_release,
+    _rate_limit_try_acquire,
 )
 
 
@@ -91,11 +93,19 @@ class TestBoundedRateLimiter:
         _rate_limit_record("a.com")
         assert _rate_limit_check("b.com") is True
 
+    def test_try_acquire_records_immediately(self):
+        assert _rate_limit_try_acquire("test.com") is True
+        assert _rate_limit_check("test.com") is False
+
+    def test_release_clears_inflight_token(self):
+        assert _rate_limit_try_acquire("test.com") is True
+        _rate_limit_release("test.com")
+        assert _rate_limit_check("test.com") is True
+
     def test_rate_limit_bounded_size(self):
         """Rate limiter should not grow unbounded."""
         from recon_tool.server import _RATE_LIMIT_MAX_SIZE
 
         for i in range(_RATE_LIMIT_MAX_SIZE + 100):
             _rate_limit_record(f"domain-{i}.com")
-        # After eviction, should be at or below max
-        assert len(_rate_limit) <= _RATE_LIMIT_MAX_SIZE + 100  # some may not be expired yet
+        assert len(_rate_limit) <= _RATE_LIMIT_MAX_SIZE

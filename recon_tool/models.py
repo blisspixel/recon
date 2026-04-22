@@ -317,6 +317,15 @@ class TenantInfo:
     # panel as "from local cache, N days old".
     ct_cache_age_days: int | None = None
 
+    # --- v1.4: staleness timestamps (ISO-8601 UTC) ---
+    # resolved_at is when the live resolution produced this TenantInfo.
+    # cached_at is when the on-disk cache entry was written; it is None
+    # on a fresh resolve and set only when the result was served from
+    # ``~/.recon/cache/``. Agents reading --json can compare the two to
+    # decide whether to re-resolve.
+    resolved_at: str | None = None
+    cached_at: str | None = None
+
     # --- v0.11: Bayesian fusion (experimental) ---
     # Per-slug posterior mean in [0, 1] from the Bayesian fusion layer.
     # Populated only when `--fusion` is passed. Empty otherwise.

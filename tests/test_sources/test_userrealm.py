@@ -130,6 +130,24 @@ class TestUserRealmSourceLookup:
         assert result.display_name is None
 
     @pytest.mark.asyncio
+    async def test_invalid_getuserrealm_json_falls_back_to_autodiscover(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            if "GetUserRealm" in str(request.url):
+                return httpx.Response(200, content=b"{not json")
+            if "autodiscover" in str(request.url):
+                return httpx.Response(200, text=AUTODISCOVER_XML)
+            return httpx.Response(404)
+
+        transport = httpx.MockTransport(handler)
+        async with httpx.AsyncClient(transport=transport) as client:
+            source = UserRealmSource()
+            result = await source.lookup("contoso.com", client=client)
+
+        assert result.display_name is None
+        assert result.default_domain == "contoso.onmicrosoft.com"
+        assert result.m365_detected is True
+
+    @pytest.mark.asyncio
     async def test_network_error_returns_error_result(self):
         def raise_error(request: httpx.Request):
             raise httpx.ConnectTimeout("timeout")

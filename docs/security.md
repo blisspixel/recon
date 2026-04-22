@@ -103,7 +103,10 @@ no inbound network listeners, no user-code execution.
 **Surface:** The MCP server is a local subprocess communicating with the user's AI client over stdio. The client controls what tools are called.
 
 **Mitigation:**
-- All 17 MCP tools are documented as read-only and idempotent (verified in `recon_tool/server.py` Server Instructions)
+- The lookup and analysis tools are read-only; `reload_data` and the
+  ephemeral fingerprint tools only modify in-memory or local process
+  state (verified in `recon_tool/server.py` ToolAnnotations and Server
+  Instructions)
 - Tools accept domain strings that go through the same `validator.py` pipeline
 - `inject_ephemeral_fingerprint` only persists in the current process memory; no on-disk writes to built-in paths
 - 120-second TTL cache and per-domain rate limiter prevent repeated-lookup abuse

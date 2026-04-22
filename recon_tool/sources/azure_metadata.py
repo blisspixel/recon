@@ -58,25 +58,30 @@ class AzureMetadataSource:
                 response = await client.get(url)
                 response.raise_for_status()
                 data = response.json()
-                region = data.get("tenant_region_scope") or None
-
-                return SourceResult(
-                    source_name="azure_ad_metadata",
-                    tenant_id=tenant_id,
-                    region=region,
-                )
             except httpx.HTTPStatusError as exc:
                 return SourceResult(
                     source_name="azure_ad_metadata",
                     error=f"HTTP {exc.response.status_code} from Azure AD metadata endpoint",
                 )
-            except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            except ValueError:
+                return SourceResult(
+                    source_name="azure_ad_metadata",
+                    error="Invalid JSON from Azure AD metadata endpoint",
+                )
+            except httpx.HTTPError as exc:
                 return SourceResult(
                     source_name="azure_ad_metadata",
                     error=f"Network error querying Azure AD metadata endpoint: {exc}",
                 )
-            except Exception as exc:
+            if not isinstance(data, dict):
                 return SourceResult(
                     source_name="azure_ad_metadata",
-                    error=f"Unexpected error: {exc}",
+                    error="Invalid JSON response shape from Azure AD metadata endpoint",
                 )
+            region = data.get("tenant_region_scope") or None
+
+            return SourceResult(
+                source_name="azure_ad_metadata",
+                tenant_id=tenant_id,
+                region=region,
+            )

@@ -110,8 +110,10 @@ def ct_cache_get(domain: str, ttl: int = CT_CACHE_TTL) -> CTCacheEntry | None:
             logger.debug("CT cache stale for %s (age %.0f s > %d s)", domain, age_seconds, ttl)
             return None
         data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("CT cache payload must be a JSON object")
         return _entry_from_dict(data, age_seconds)
-    except Exception:
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
         logger.debug("CT cache read failed for %s", domain, exc_info=True)
         return None
 
@@ -130,7 +132,7 @@ def ct_cache_put(
         data = _entry_to_dict(subdomains, cert_summary, provider_used)
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         logger.debug("CT cache written for %s (%d subdomains)", domain, len(subdomains))
-    except Exception:
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
         logger.debug("CT cache write failed for %s", domain, exc_info=True)
 
 
@@ -142,7 +144,7 @@ def ct_cache_clear(domain: str) -> bool:
             path.unlink()
             return True
         return False
-    except Exception:
+    except (OSError, ValueError):
         logger.debug("CT cache clear failed for %s", domain, exc_info=True)
         return False
 
@@ -158,9 +160,9 @@ def ct_cache_clear_all() -> int:
             try:
                 f.unlink()
                 count += 1
-            except Exception:
+            except OSError:
                 logger.debug("Failed to remove %s", f, exc_info=True)
-    except Exception:
+    except OSError:
         logger.debug("CT cache clear-all failed", exc_info=True)
     return count
 
@@ -174,6 +176,8 @@ def ct_cache_show(domain: str) -> CTCacheInfo | None:
         stat = path.stat()
         age_seconds = time.time() - stat.st_mtime
         data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("CT cache payload must be a JSON object")
         return CTCacheInfo(
             domain=domain,
             provider_used=data.get("provider_used", "unknown"),
@@ -182,7 +186,7 @@ def ct_cache_show(domain: str) -> CTCacheInfo | None:
             age_days=int(age_seconds / 86400),
             file_size_bytes=stat.st_size,
         )
-    except Exception:
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
         logger.debug("CT cache show failed for %s", domain, exc_info=True)
         return None
 
@@ -199,7 +203,7 @@ def ct_cache_list() -> list[CTCacheInfo]:
             info = ct_cache_show(domain)
             if info is not None:
                 entries.append(info)
-    except Exception:
+    except OSError:
         logger.debug("CT cache list failed", exc_info=True)
     return entries
 
