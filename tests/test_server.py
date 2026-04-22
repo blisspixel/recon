@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from unittest.mock import AsyncMock, patch
 
@@ -15,7 +16,7 @@ from recon_tool.models import (
     SourceResult,
     TenantInfo,
 )
-from recon_tool.server import _cache_clear, _rate_limit, lookup_tenant
+from recon_tool.server import _cache_clear, _print_mcp_banner, _rate_limit, lookup_tenant
 
 RESOLVE_PATH = "recon_tool.server.resolve_tenant"
 
@@ -147,6 +148,46 @@ class TestErrors:
         assert "Error looking up example.com" in result
         assert "internal error" in result
 
+    @pytest.mark.asyncio
+    async def test_concurrent_miss_only_one_lookup_reaches_upstream(self) -> None:
+        started = asyncio.Event()
+        release = asyncio.Event()
+        calls = 0
+
+        async def fake_resolve(_domain: str):
+            nonlocal calls
+            calls += 1
+            started.set()
+            await release.wait()
+            return SAMPLE_INFO, SAMPLE_RESULTS
+
+        with patch(RESOLVE_PATH, side_effect=fake_resolve):
+            first = asyncio.create_task(lookup_tenant("contoso.com"))
+            await started.wait()
+            second = await lookup_tenant("contoso.com")
+            release.set()
+            first_result = await first
+
+        assert calls == 1
+        assert "Company: Contoso Ltd" in first_result
+        assert "Rate limited:" in second
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_failed_lookup_releases_inflight_rate_limit(self, mock_resolve: AsyncMock) -> None:
+        mock_resolve.side_effect = ReconLookupError(
+            domain="unknown.com",
+            message="No data",
+            error_type="all_sources_failed",
+        )
+
+        first = await lookup_tenant("unknown.com")
+        second = await lookup_tenant("unknown.com")
+
+        assert "No information found for unknown.com" in first
+        assert "No information found for unknown.com" in second
+        assert mock_resolve.await_count == 2
+
 
 class TestMCPMetadata:
     def test_server_name(self) -> None:
@@ -165,3 +206,11 @@ class TestMCPMetadata:
         result = domain_report("contoso.com")
         assert "contoso.com" in result
         assert "lookup_tenant" in result
+
+    def test_startup_banner_warns_and_uses_stderr(self, capsys: pytest.CaptureFixture[str]) -> None:
+        _print_mcp_banner()
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert "WARNING" in captured.err
+        assert "privileges of the calling user" in captured.err
+        assert "auto-approval" in captured.err

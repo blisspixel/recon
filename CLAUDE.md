@@ -50,12 +50,12 @@ recon signals show "<name>"             # inspect one signal
   - `explanation.py` — explanation records + JSON-serializable provenance DAG
   - `formatter.py` — Rich terminal output (v0.9.3 redesigned panel), JSON, markdown
   - `ct_cache.py` — per-domain CT subdomain cache (`~/.recon/ct-cache/`, 7-day TTL)
-  - `server.py` — MCP server (FastMCP, stdio transport), requires `pip install recon-tool[mcp]`
+  - `server.py` — MCP server (FastMCP, stdio transport), included in the default `pip install recon-tool`
   - `http.py` — SSRF-safe HTTP client with retry/backoff
   - `retry.py` — transient-failure retry decorator for sources
   - `validator.py` — domain input validation
   - `models.py` — frozen dataclasses (TenantInfo, SourceResult, Signal, …)
-- `tests/` — 1547 tests, pytest + hypothesis
+- `tests/` — 1585 tests, pytest + hypothesis
 - `data/fingerprints/` — 227 SaaS fingerprints across 8 per-category YAML files
 - `data/profiles/` — 6 built-in posture profiles (fintech, healthcare, saas-b2b, high-value-target, public-sector, higher-ed)
 - `data/signals.yaml` — 4-layer signal definitions (42 signals, two-pass + absence + positive-when-absent evaluation)

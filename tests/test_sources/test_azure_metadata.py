@@ -99,3 +99,24 @@ class TestAzureMetadataSourceLookup:
 
         assert result.error is not None
         assert result.tenant_id is None
+
+    @pytest.mark.asyncio
+    async def test_invalid_json_returns_error(self):
+        request = httpx.Request("GET", METADATA_URL_TEMPLATE.format(tenant_id=SAMPLE_TENANT_ID))
+        transport = httpx.MockTransport(lambda _: httpx.Response(200, request=request, content=b"{not json"))
+        async with httpx.AsyncClient(transport=transport) as client:
+            source = AzureMetadataSource()
+            result = await source.lookup("example.com", tenant_id=SAMPLE_TENANT_ID, client=client)
+
+        assert result.error == "Invalid JSON from Azure AD metadata endpoint"
+        assert result.tenant_id is None
+
+    @pytest.mark.asyncio
+    async def test_non_object_json_returns_error(self):
+        transport = httpx.MockTransport(lambda _: httpx.Response(200, json=["not", "an", "object"]))
+        async with httpx.AsyncClient(transport=transport) as client:
+            source = AzureMetadataSource()
+            result = await source.lookup("example.com", tenant_id=SAMPLE_TENANT_ID, client=client)
+
+        assert result.error == "Invalid JSON response shape from Azure AD metadata endpoint"
+        assert result.tenant_id is None

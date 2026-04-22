@@ -16,9 +16,6 @@ from __future__ import annotations
 import json
 
 import pytest
-
-pytest.importorskip("mcp")
-
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -27,10 +24,14 @@ from recon_tool.fingerprints import (
     Fingerprint,
     clear_ephemeral,
     get_ephemeral,
+    get_m365_names,
+    get_m365_slugs,
     inject_ephemeral,
     load_fingerprints,
     reload_fingerprints,
 )
+
+pytest.importorskip("mcp")
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
@@ -42,6 +43,7 @@ def _make_fingerprint(
     confidence: str = "high",
     det_type: str = "txt",
     pattern: str = "^contoso-verification=",
+    m365: bool = False,
 ) -> Fingerprint:
     """Create a minimal valid Fingerprint for testing."""
     return Fingerprint(
@@ -49,7 +51,7 @@ def _make_fingerprint(
         slug=slug,
         category=category,
         confidence=confidence,
-        m365=False,
+        m365=m365,
         detections=(DetectionRule(type=det_type, pattern=pattern),),
     )
 
@@ -132,6 +134,19 @@ class TestEphemeralCoreFunctions:
         clear_ephemeral()
         without_ephemeral = load_fingerprints()
         assert len(without_ephemeral) == len(with_ephemeral) - 1
+
+    def test_m365_views_invalidate_on_inject_and_clear(self) -> None:
+        before_names = get_m365_names()
+        before_slugs = get_m365_slugs()
+        fp = _make_fingerprint(name="Contoso M365", slug="contoso-m365", m365=True)
+
+        inject_ephemeral(fp)
+        assert "Contoso M365" in get_m365_names()
+        assert "contoso-m365" in get_m365_slugs()
+
+        clear_ephemeral()
+        assert get_m365_names() == before_names
+        assert get_m365_slugs() == before_slugs
 
     def test_multiple_inject_all_present(self) -> None:
         """Multiple injections → all fingerprints present in get_ephemeral()."""

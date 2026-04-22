@@ -35,7 +35,7 @@ are always welcome:
 | **New signals** | Must derive from existing evidence. Hedged language. | "AI Governance Gap" signal from AI slugs + absence of DLP fingerprints |
 | **New profiles** | Must reweight existing observations; cannot invent new ones. | "Retail / e-commerce" profile |
 | **Bug reports** | Reproducible + output of `recon <domain> --json --explain`. | Wrong provider classification, insight wording, display glitch |
-| **Accuracy reports** | Domain you know ground truth for, plus what recon got wrong. | "Softchoice uses M365 primary; recon says Exchange on-prem" |
+| **Accuracy reports** | Domain you know ground truth for, plus what recon got wrong. | "Our org uses M365 primary; recon says Exchange on-prem" (omit real names in public reports) |
 | **Documentation fixes** | Typos, clarifications, better examples. | README, CONTRIBUTING, docs/* |
 | **Performance improvements** | With before/after measurement. Hot paths: `detect_provider`, `_curate_insights`, DNS query batching. | Reducing average lookup time, eliminating redundant DNS queries |
 | **Test additions** | Sparse-data fixtures, adversarial inputs, corner cases. | Domain with zero MX + no tenant, IDN / punycode, wildcard DNS |
@@ -99,7 +99,45 @@ internal naming should stay local.
 **Upstream contribution** (shared with everyone via a PR):
 - Detections that apply to at least one publicly-known service
 - At least one real customer domain you can point to as evidence
+  (kept locally and described in the PR body — not committed)
 - General-purpose (not a specific org's internal pattern)
+
+---
+
+## Fictional-example policy
+
+**Never commit real-company apex domains as examples, targets, test
+corpora, or regression fixtures.** Use Microsoft's fictional-company
+names — `contoso.com`, `northwindtraders.com`, `fabrikam.com`,
+`tailspintoys.com`, `wingtiptoys.com`, `adventure-works.com`,
+`wideworldimporters.com` — or IETF reserved placeholders
+(`example.com`, `example.org`, `example.net`).
+
+This applies to:
+
+- README, CHANGELOG, and docs examples
+- YAML fingerprint / signal / profile files
+- Test fixtures, golden files, snapshots, and corpus files
+- Issue / PR templates and comments
+- Code comments and docstrings
+
+It does **not** apply to:
+
+- Vendor / product names recon detects as part of a tech stack
+  (Cloudflare, Okta, Microsoft 365, Google Workspace, etc.) —
+  these are detection classes, not targeting examples.
+- Upstream service hostnames recon itself queries
+  (`login.microsoftonline.com`, `crt.sh`, `api.certspotter.com`,
+  `dns.google`, etc.).
+
+Accuracy reports and live-validation work use real apexes locally;
+that's why `/validation/` is gitignored except for the runner script,
+a fictional example corpus, and a README. If you're writing a bug
+report that needs a real domain to reproduce, file it privately or
+describe the behavior in terms of the fictional examples whenever the
+real name isn't load-bearing. The rationale is in the v1.4.0
+CHANGELOG entry: no upside, accumulating reputational and legal
+downside over the lifetime of the repository.
 
 ---
 

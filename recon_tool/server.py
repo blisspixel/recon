@@ -14,6 +14,7 @@ import json as json_mod
 import logging
 import time
 import uuid
+from dataclasses import dataclass, field
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
@@ -88,9 +89,12 @@ For introspection / hypothesis work:
 
 ## Invariants (important for agent behavior)
 
-- Passive only. No active scanning, no credentialed access. All tools are
-  read-only and idempotent. The server has a 120 s TTL cache and per-domain
-  rate limiting — repeated `lookup_tenant` calls for the same domain are cheap.
+- Passive only. No active scanning, no credentialed access. Network-facing
+  lookup tools are read-only. The ephemeral fingerprint tools only mutate
+  in-memory session state for the current server process; they do not write to
+  disk or trigger new network calls on their own. The server has a 120 s TTL
+  cache and per-domain rate limiting — repeated `lookup_tenant` calls for the
+  same domain are cheap.
 - Output is hedged. Confidence levels: High (3+ corroborating sources),
   Medium (2 sources, partial), Low (1 source or indirect). Insights marked
   "(likely)" are inferences, not DNS-confirmed detections — treat them as
@@ -98,6 +102,9 @@ For introspection / hypothesis work:
 - The fingerprint database is rule-based and solo-maintained. A match means
   "evidence fits this service's DNS signature", not "this service is in use".
   Always flag uncertainty when confidence is Low.
+- Treat the connected AI agent as untrusted input. Prompt injection, tool
+  poisoning, and parameter tampering are possible. Prefer manual approvals or a
+  tightly scoped allowlist for any client-side auto-approval.
 
 ## Explaining results
 
@@ -115,56 +122,134 @@ mcp = FastMCP("recon-tool", instructions=_SERVER_INSTRUCTIONS)
 # repeatedly for the same domain. Cache entries expire after CACHE_TTL seconds.
 # Max size prevents unbounded memory growth from unique domain lookups.
 #
-# Module-level mutable dicts are used intentionally here. The MCP server runs
-# as a single-process stdio transport, so there are no concurrency issues.
-# If this ever moves to a multi-worker model, these should be replaced with
-# a shared cache (e.g., Redis) or wrapped in a class with proper locking.
+# The MCP server currently runs as a single-process stdio transport, so a small
+# in-process state container is enough. Keeping cache and rate-limiter behavior
+# together in one typed object makes the bounded-size and lifetime invariants
+# easier to reason about and test.
 
 CACHE_TTL = 120.0  # seconds
 CACHE_MAX_SIZE = 1000
 
-_cache: dict[str, tuple[float, TenantInfo, tuple[SourceResult, ...]]] = {}
+_CacheEntry = tuple[float, TenantInfo, tuple[SourceResult, ...]]
 
 
-def _cache_evict_expired() -> None:
-    """Remove all expired entries from the cache."""
-    now = time.monotonic()
-    expired = [k for k, (ts, _, _) in _cache.items() if now - ts > CACHE_TTL]
-    for k in expired:
-        del _cache[k]
+@dataclass(slots=True)
+class _ServerRuntimeState:
+    cache: dict[str, _CacheEntry] = field(default_factory=dict)
+    rate_limit: dict[str, float] = field(default_factory=dict)
+
+    def cache_evict_expired(self) -> None:
+        now = time.monotonic()
+        expired = [k for k, (ts, _, _) in self.cache.items() if now - ts > CACHE_TTL]
+        for key in expired:
+            del self.cache[key]
+
+    def cache_get(self, domain: str) -> tuple[TenantInfo, tuple[SourceResult, ...]] | None:
+        entry = self.cache.get(domain)
+        if entry is None:
+            return None
+        ts, info, results = entry
+        if time.monotonic() - ts > CACHE_TTL:
+            del self.cache[domain]
+            return None
+        return info, results
+
+    def cache_set(self, domain: str, info: TenantInfo, results: list[SourceResult]) -> None:
+        if len(self.cache) >= CACHE_MAX_SIZE:
+            self.cache_evict_expired()
+        if len(self.cache) >= CACHE_MAX_SIZE:
+            oldest_key = min(self.cache.items(), key=lambda item: item[1][0])[0]
+            del self.cache[oldest_key]
+        self.cache[domain] = (time.monotonic(), info, tuple(results))
+
+    def cache_clear(self) -> None:
+        self.cache.clear()
+
+    def cache_refresh_info(
+        self,
+        domain: str,
+        info: TenantInfo,
+        results: tuple[SourceResult, ...],
+    ) -> None:
+        self.cache[domain] = (time.monotonic(), info, results)
+
+    def remerge_cached_infos(self) -> None:
+        from recon_tool.merger import merge_results
+
+        for domain, (_ts, _info, results) in list(self.cache.items()):
+            try:
+                refreshed = merge_results(list(results), domain)
+            except Exception:
+                logger.exception("Failed to refresh cached TenantInfo for %s", domain)
+                self.cache.pop(domain, None)
+                continue
+            self.cache_refresh_info(domain, refreshed, results)
+
+    def rate_limit_evict_expired(self) -> None:
+        now = time.monotonic()
+        expired = [k for k, ts in self.rate_limit.items() if now - ts >= RATE_LIMIT_WINDOW]
+        for key in expired:
+            del self.rate_limit[key]
+
+    def rate_limit_check(self, domain: str) -> bool:
+        now = time.monotonic()
+        last = self.rate_limit.get(domain, 0.0)
+        return now - last >= RATE_LIMIT_WINDOW
+
+    def rate_limit_record(self, domain: str) -> None:
+        if len(self.rate_limit) >= _RATE_LIMIT_MAX_SIZE:
+            self.rate_limit_evict_expired()
+        if len(self.rate_limit) >= _RATE_LIMIT_MAX_SIZE:
+            oldest_key = min(self.rate_limit.items(), key=lambda item: item[1])[0]
+            del self.rate_limit[oldest_key]
+        self.rate_limit[domain] = time.monotonic()
+
+    def rate_limit_try_acquire(self, domain: str) -> bool:
+        now = time.monotonic()
+        last = self.rate_limit.get(domain)
+        if last is not None and now - last < RATE_LIMIT_WINDOW:
+            return False
+        if len(self.rate_limit) >= _RATE_LIMIT_MAX_SIZE and domain not in self.rate_limit:
+            self.rate_limit_evict_expired()
+        if len(self.rate_limit) >= _RATE_LIMIT_MAX_SIZE and domain not in self.rate_limit:
+            oldest_key = min(self.rate_limit.items(), key=lambda item: item[1])[0]
+            del self.rate_limit[oldest_key]
+        self.rate_limit[domain] = now
+        return True
+
+    def rate_limit_release(self, domain: str) -> None:
+        self.rate_limit.pop(domain, None)
+
+    def rate_limit_clear(self) -> None:
+        self.rate_limit.clear()
+
+
+_STATE = _ServerRuntimeState()
+_cache = _STATE.cache
+
+
+def _cache_evict_expired() -> None:  # pyright: ignore[reportUnusedFunction]
+    _STATE.cache_evict_expired()
 
 
 def _cache_get(domain: str) -> tuple[TenantInfo, tuple[SourceResult, ...]] | None:
-    """Return cached result if present and not expired."""
-    entry = _cache.get(domain)
-    if entry is None:
-        return None
-    ts, info, results = entry
-    if time.monotonic() - ts > CACHE_TTL:
-        del _cache[domain]
-        return None
-    return info, results
+    return _STATE.cache_get(domain)
 
 
 def _cache_set(domain: str, info: TenantInfo, results: list[SourceResult]) -> None:
-    """Store a result in the cache with current timestamp.
-
-    Converts the results list to a tuple for immutability.
-    Evicts expired entries first. If still at capacity, evicts the oldest entry.
-    """
-    # Periodic eviction of expired entries
-    if len(_cache) >= CACHE_MAX_SIZE:
-        _cache_evict_expired()
-    # If still at capacity after eviction, drop the oldest entry
-    if len(_cache) >= CACHE_MAX_SIZE:
-        oldest_key = min(_cache, key=lambda k: _cache[k][0])
-        del _cache[oldest_key]
-    _cache[domain] = (time.monotonic(), info, tuple(results))
+    _STATE.cache_set(domain, info, results)
 
 
 def _cache_clear() -> None:
-    """Clear the entire cache — used by reload_data and tests."""
-    _cache.clear()
+    _STATE.cache_clear()
+
+
+def _cache_refresh_info(domain: str, info: TenantInfo, results: tuple[SourceResult, ...]) -> None:
+    _STATE.cache_refresh_info(domain, info, results)
+
+
+def _remerge_cached_infos() -> None:
+    _STATE.remerge_cached_infos()
 
 
 # ── Bounded per-domain rate limiter ─────────────────────────────────────
@@ -175,43 +260,36 @@ def _cache_clear() -> None:
 RATE_LIMIT_WINDOW = 5.0  # seconds between lookups for the same domain
 _RATE_LIMIT_MAX_SIZE = 5000
 
-_rate_limit: dict[str, float] = {}
+_rate_limit = _STATE.rate_limit
 
 
-def _rate_limit_evict_expired() -> None:
-    """Remove all expired entries from the rate limiter."""
-    now = time.monotonic()
-    expired = [k for k, ts in _rate_limit.items() if now - ts >= RATE_LIMIT_WINDOW]
-    for k in expired:
-        del _rate_limit[k]
+def _rate_limit_evict_expired() -> None:  # pyright: ignore[reportUnusedFunction]
+    _STATE.rate_limit_evict_expired()
 
 
-def _rate_limit_check(domain: str) -> bool:
+def _rate_limit_check(domain: str) -> bool:  # pyright: ignore[reportUnusedFunction]
     """Return True if the domain lookup should be allowed.
 
     Does NOT record the timestamp — call _rate_limit_record() after a
     successful lookup so transient failures don't block retries.
     """
-    now = time.monotonic()
-    last = _rate_limit.get(domain, 0.0)
-    return now - last >= RATE_LIMIT_WINDOW
+    return _STATE.rate_limit_check(domain)
 
 
-def _rate_limit_record(domain: str) -> None:
-    """Record that a lookup was performed for rate limiting purposes.
+def _rate_limit_record(domain: str) -> None:  # pyright: ignore[reportUnusedFunction]
+    _STATE.rate_limit_record(domain)
 
-    Called after a successful lookup (or cache-miss attempt) so that
-    transient errors don't prevent immediate retries.
-    """
-    # Periodic eviction to prevent unbounded growth
-    if len(_rate_limit) >= _RATE_LIMIT_MAX_SIZE:
-        _rate_limit_evict_expired()
-    _rate_limit[domain] = time.monotonic()
+
+def _rate_limit_try_acquire(domain: str) -> bool:
+    return _STATE.rate_limit_try_acquire(domain)
+
+
+def _rate_limit_release(domain: str) -> None:
+    _STATE.rate_limit_release(domain)
 
 
 def _rate_limit_clear() -> None:  # pyright: ignore[reportUnusedFunction]
-    """Clear the rate limiter — for testing."""
-    _rate_limit.clear()
+    _STATE.rate_limit_clear()
 
 
 def _log_structured(level: int, msg: str, **fields: object) -> None:
@@ -224,6 +302,118 @@ def _log_structured(level: int, msg: str, **fields: object) -> None:
         logger.log(level, json_mod.dumps(entry))
     except (TypeError, ValueError):
         logger.log(level, msg, extra=fields)
+
+
+# ── MCP resources ────────────────────────────────────────────────────
+# Catalog resources let agents browse "what can recon detect?" without
+# spending a tool invocation on introspection. Read-only. The content
+# is a deterministic projection over the already-loaded YAML catalogs;
+# changes require reload_data to take effect. No network calls.
+
+
+@mcp.resource(
+    "recon://fingerprints",
+    name="Fingerprint catalog",
+    description=(
+        "Full SaaS fingerprint catalog as JSON. Each entry carries slug, name, "
+        "category, confidence tier, M365 flag, match_mode, provider/display "
+        "group, detection count, and a compact detection summary. Use to "
+        "answer 'what services can recon identify?'."
+    ),
+    mime_type="application/json",
+)
+def _resource_fingerprints() -> str:  # pyright: ignore[reportUnusedFunction]
+    from recon_tool.fingerprints import load_fingerprints
+
+    payload = [
+        {
+            "slug": fp.slug,
+            "name": fp.name,
+            "category": fp.category,
+            "confidence": fp.confidence,
+            "m365": fp.m365,
+            "match_mode": fp.match_mode,
+            "provider_group": fp.provider_group,
+            "display_group": fp.display_group,
+            "detection_count": len(fp.detections),
+            "detection_types": sorted({d.type for d in fp.detections}),
+        }
+        for fp in load_fingerprints()
+    ]
+    return json_mod.dumps(
+        {"count": len(payload), "fingerprints": payload},
+        indent=2,
+    )
+
+
+@mcp.resource(
+    "recon://signals",
+    name="Signal catalog",
+    description=(
+        "Derived intelligence signals recon can emit, as JSON. Each entry "
+        "carries name, category, confidence, description, min_matches, "
+        "candidate slugs, contradicts/requires relationships, and the "
+        "positive-when-absent inversion set. Use to answer 'what higher-"
+        "order observations can recon derive from fingerprint matches?'."
+    ),
+    mime_type="application/json",
+)
+def _resource_signals() -> str:  # pyright: ignore[reportUnusedFunction]
+    from recon_tool.signals import load_signals
+
+    payload = [
+        {
+            "name": sig.name,
+            "category": sig.category,
+            "confidence": sig.confidence,
+            "description": sig.description,
+            "candidates": list(sig.candidates),
+            "min_matches": sig.min_matches,
+            "contradicts": list(sig.contradicts),
+            "requires_signals": list(sig.requires_signals),
+            "expected_counterparts": list(sig.expected_counterparts),
+            "positive_when_absent": list(sig.positive_when_absent),
+            "explain": sig.explain,
+        }
+        for sig in load_signals()
+    ]
+    return json_mod.dumps(
+        {"count": len(payload), "signals": payload},
+        indent=2,
+    )
+
+
+@mcp.resource(
+    "recon://profiles",
+    name="Posture profile catalog",
+    description=(
+        "Built-in posture profile lenses as JSON. Each entry carries name, "
+        "description, focus categories, category/signal boost multipliers, "
+        "excluded signals, and any profile-specific note. Use to answer "
+        "'which posture lens fits this target?' before calling "
+        "analyze_posture with a profile argument."
+    ),
+    mime_type="application/json",
+)
+def _resource_profiles() -> str:  # pyright: ignore[reportUnusedFunction]
+    from recon_tool.profiles import list_profiles
+
+    payload = [
+        {
+            "name": prof.name,
+            "description": prof.description,
+            "focus_categories": list(prof.focus_categories),
+            "category_boost": dict(prof.category_boost),
+            "signal_boost": dict(prof.signal_boost),
+            "exclude_signals": list(prof.exclude_signals),
+            "prepend_note": prof.prepend_note,
+        }
+        for prof in list_profiles()
+    ]
+    return json_mod.dumps(
+        {"count": len(payload), "profiles": payload},
+        indent=2,
+    )
 
 
 @mcp.tool(
@@ -289,34 +479,37 @@ async def lookup_tenant(
         )
     else:
         # Rate limit check — only for cache misses (actual network calls)
-        if not _rate_limit_check(validated):
-            return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+        if not _rate_limit_try_acquire(validated):
+            cached = _cache_get(validated)
+            if cached is None:
+                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+            info, results = cached
+        else:
+            try:
+                info, results = await resolve_tenant(validated)
+            except ReconLookupError as exc:
+                _rate_limit_release(validated)
+                elapsed = time.monotonic() - start_time
+                _log_structured(
+                    logging.INFO,
+                    "no_data",
+                    request_id=request_id,
+                    domain=domain,
+                    elapsed_s=round(elapsed, 2),
+                    error=exc.message,
+                )
+                return f"No information found for {domain}"
+            except Exception:
+                _rate_limit_release(validated)
+                elapsed = time.monotonic() - start_time
+                logger.exception(
+                    "Unexpected error looking up %s (request_id=%s)",
+                    domain,
+                    request_id,
+                )
+                return f"Error looking up {domain}: an internal error occurred"
 
-        try:
-            info, results = await resolve_tenant(validated)
-        except ReconLookupError as exc:
-            elapsed = time.monotonic() - start_time
-            _log_structured(
-                logging.INFO,
-                "no_data",
-                request_id=request_id,
-                domain=domain,
-                elapsed_s=round(elapsed, 2),
-                error=exc.message,
-            )
-            return f"No information found for {domain}"
-        except Exception:
-            elapsed = time.monotonic() - start_time
-            logger.exception(
-                "Unexpected error looking up %s (request_id=%s)",
-                domain,
-                request_id,
-            )
-            return f"Error looking up {domain}: an internal error occurred"
-
-        # Cache the successful result and record rate limit
-        _cache_set(validated, info, results)
-        _rate_limit_record(validated)
+            _cache_set(validated, info, results)
 
     elapsed = time.monotonic() - start_time
     _log_structured(
@@ -439,32 +632,36 @@ async def analyze_posture(
             domain=validated,
         )
     else:
-        if not _rate_limit_check(validated):
-            return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+        if not _rate_limit_try_acquire(validated):
+            cached = _cache_get(validated)
+            if cached is None:
+                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+            info, _results = cached
+        else:
+            try:
+                info, results = await resolve_tenant(validated)
+            except ReconLookupError as exc:
+                _rate_limit_release(validated)
+                elapsed = time.monotonic() - start_time
+                _log_structured(
+                    logging.INFO,
+                    "no_data",
+                    request_id=request_id,
+                    domain=domain,
+                    elapsed_s=round(elapsed, 2),
+                    error=exc.message,
+                )
+                return f"No information found for {domain}"
+            except Exception:
+                _rate_limit_release(validated)
+                logger.exception(
+                    "Unexpected error looking up %s (request_id=%s)",
+                    domain,
+                    request_id,
+                )
+                return f"Error looking up {domain}: an internal error occurred"
 
-        try:
-            info, results = await resolve_tenant(validated)
-        except ReconLookupError as exc:
-            elapsed = time.monotonic() - start_time
-            _log_structured(
-                logging.INFO,
-                "no_data",
-                request_id=request_id,
-                domain=domain,
-                elapsed_s=round(elapsed, 2),
-                error=exc.message,
-            )
-            return f"No information found for {domain}"
-        except Exception:
-            logger.exception(
-                "Unexpected error looking up %s (request_id=%s)",
-                domain,
-                request_id,
-            )
-            return f"Error looking up {domain}: an internal error occurred"
-
-        _cache_set(validated, info, results)
-        _rate_limit_record(validated)
+            _cache_set(validated, info, results)
 
     from recon_tool.formatter import format_posture_observations
     from recon_tool.posture import analyze_posture as _analyze_posture
@@ -607,6 +804,7 @@ async def reload_data() -> str:
     reload_signals()
     reload_posture()
     _cache_clear()
+    _rate_limit_clear()
 
     from recon_tool.fingerprints import load_fingerprints
     from recon_tool.posture import load_posture_rules
@@ -623,7 +821,10 @@ async def reload_data() -> str:
         signals=sig_count,
         posture_rules=posture_count,
     )
-    return f"Reloaded: {fp_count} fingerprints, {sig_count} signals, {posture_count} posture rules. Cache cleared."
+    return (
+        f"Reloaded: {fp_count} fingerprints, {sig_count} signals, {posture_count} posture rules. "
+        "Cache and rate limiter cleared."
+    )
 
 
 @mcp.tool(
@@ -676,31 +877,35 @@ async def assess_exposure(domain: str) -> str:
             domain=validated,
         )
     else:
-        if not _rate_limit_check(validated):
-            return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+        if not _rate_limit_try_acquire(validated):
+            cached = _cache_get(validated)
+            if cached is None:
+                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+            info, _results = cached
+        else:
+            try:
+                info, results = await resolve_tenant(validated)
+            except ReconLookupError:
+                _rate_limit_release(validated)
+                elapsed = time.monotonic() - start_time
+                _log_structured(
+                    logging.INFO,
+                    "no_data",
+                    request_id=request_id,
+                    domain=domain,
+                    elapsed_s=round(elapsed, 2),
+                )
+                return f"No information found for {domain}"
+            except Exception:
+                _rate_limit_release(validated)
+                logger.exception(
+                    "Unexpected error looking up %s (request_id=%s)",
+                    domain,
+                    request_id,
+                )
+                return f"Error looking up {domain}: an internal error occurred"
 
-        try:
-            info, results = await resolve_tenant(validated)
-        except ReconLookupError:
-            elapsed = time.monotonic() - start_time
-            _log_structured(
-                logging.INFO,
-                "no_data",
-                request_id=request_id,
-                domain=domain,
-                elapsed_s=round(elapsed, 2),
-            )
-            return f"No information found for {domain}"
-        except Exception:
-            logger.exception(
-                "Unexpected error looking up %s (request_id=%s)",
-                domain,
-                request_id,
-            )
-            return f"Error looking up {domain}: an internal error occurred"
-
-        _cache_set(validated, info, results)
-        _rate_limit_record(validated)
+            _cache_set(validated, info, results)
 
     from recon_tool.exposure import assess_exposure_from_info
     from recon_tool.formatter import format_exposure_json
@@ -768,31 +973,35 @@ async def find_hardening_gaps(domain: str) -> str:
             domain=validated,
         )
     else:
-        if not _rate_limit_check(validated):
-            return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+        if not _rate_limit_try_acquire(validated):
+            cached = _cache_get(validated)
+            if cached is None:
+                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+            info, _results = cached
+        else:
+            try:
+                info, results = await resolve_tenant(validated)
+            except ReconLookupError:
+                _rate_limit_release(validated)
+                elapsed = time.monotonic() - start_time
+                _log_structured(
+                    logging.INFO,
+                    "no_data",
+                    request_id=request_id,
+                    domain=domain,
+                    elapsed_s=round(elapsed, 2),
+                )
+                return f"No information found for {domain}"
+            except Exception:
+                _rate_limit_release(validated)
+                logger.exception(
+                    "Unexpected error looking up %s (request_id=%s)",
+                    domain,
+                    request_id,
+                )
+                return f"Error looking up {domain}: an internal error occurred"
 
-        try:
-            info, results = await resolve_tenant(validated)
-        except ReconLookupError:
-            elapsed = time.monotonic() - start_time
-            _log_structured(
-                logging.INFO,
-                "no_data",
-                request_id=request_id,
-                domain=domain,
-                elapsed_s=round(elapsed, 2),
-            )
-            return f"No information found for {domain}"
-        except Exception:
-            logger.exception(
-                "Unexpected error looking up %s (request_id=%s)",
-                domain,
-                request_id,
-            )
-            return f"Error looking up {domain}: an internal error occurred"
-
-        _cache_set(validated, info, results)
-        _rate_limit_record(validated)
+            _cache_set(validated, info, results)
 
     from recon_tool.exposure import find_gaps_from_info
     from recon_tool.formatter import format_gaps_json
@@ -868,42 +1077,52 @@ async def compare_postures(domain_a: str, domain_b: str) -> str:
     if cached_a is not None:
         info_a, _ = cached_a
     else:
-        if not _rate_limit_check(validated_a):
-            return f"Rate limited: {domain_a} was looked up recently. Try again in a few seconds."
-        try:
-            info_a, results_a = await resolve_tenant(validated_a)
-        except ReconLookupError:
-            return f"Could not resolve domain_a: {domain_a}. The comparison requires both domains to be resolvable."
-        except Exception:
-            logger.exception(
-                "Unexpected error looking up %s (request_id=%s)",
-                domain_a,
-                request_id,
-            )
-            return f"Error looking up {domain_a}: an internal error occurred"
-        _cache_set(validated_a, info_a, results_a)
-        _rate_limit_record(validated_a)
+        if not _rate_limit_try_acquire(validated_a):
+            cached_a = _cache_get(validated_a)
+            if cached_a is None:
+                return f"Rate limited: {domain_a} was looked up recently. Try again in a few seconds."
+            info_a, _ = cached_a
+        else:
+            try:
+                info_a, results_a = await resolve_tenant(validated_a)
+            except ReconLookupError:
+                _rate_limit_release(validated_a)
+                return f"Could not resolve domain_a: {domain_a}. The comparison requires both domains to be resolvable."
+            except Exception:
+                _rate_limit_release(validated_a)
+                logger.exception(
+                    "Unexpected error looking up %s (request_id=%s)",
+                    domain_a,
+                    request_id,
+                )
+                return f"Error looking up {domain_a}: an internal error occurred"
+            _cache_set(validated_a, info_a, results_a)
 
     # Resolve domain_b
     cached_b = _cache_get(validated_b)
     if cached_b is not None:
         info_b, _ = cached_b
     else:
-        if not _rate_limit_check(validated_b):
-            return f"Rate limited: {domain_b} was looked up recently. Try again in a few seconds."
-        try:
-            info_b, results_b = await resolve_tenant(validated_b)
-        except ReconLookupError:
-            return f"Could not resolve domain_b: {domain_b}. The comparison requires both domains to be resolvable."
-        except Exception:
-            logger.exception(
-                "Unexpected error looking up %s (request_id=%s)",
-                domain_b,
-                request_id,
-            )
-            return f"Error looking up {domain_b}: an internal error occurred"
-        _cache_set(validated_b, info_b, results_b)
-        _rate_limit_record(validated_b)
+        if not _rate_limit_try_acquire(validated_b):
+            cached_b = _cache_get(validated_b)
+            if cached_b is None:
+                return f"Rate limited: {domain_b} was looked up recently. Try again in a few seconds."
+            info_b, _ = cached_b
+        else:
+            try:
+                info_b, results_b = await resolve_tenant(validated_b)
+            except ReconLookupError:
+                _rate_limit_release(validated_b)
+                return f"Could not resolve domain_b: {domain_b}. The comparison requires both domains to be resolvable."
+            except Exception:
+                _rate_limit_release(validated_b)
+                logger.exception(
+                    "Unexpected error looking up %s (request_id=%s)",
+                    domain_b,
+                    request_id,
+                )
+                return f"Error looking up {domain_b}: an internal error occurred"
+            _cache_set(validated_b, info_b, results_b)
 
     from recon_tool.exposure import compare_postures_from_infos
     from recon_tool.formatter import format_comparison_json
@@ -1023,19 +1242,24 @@ async def _resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]
         info, results = cached
         return info, list(results)
 
-    if not _rate_limit_check(validated):
+    if not _rate_limit_try_acquire(validated):
+        cached = _cache_get(validated)
+        if cached is not None:
+            info, results = cached
+            return info, list(results)
         return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
 
     try:
         info, results = await resolve_tenant(validated)
     except ReconLookupError:
+        _rate_limit_release(validated)
         return f"No information found for {domain}"
     except Exception:
+        _rate_limit_release(validated)
         logger.exception("Unexpected error looking up %s", domain)
         return f"Error looking up {domain}: an internal error occurred"
 
     _cache_set(validated, info, results)
-    _rate_limit_record(validated)
     return info, list(results)
 
 
@@ -1748,6 +1972,8 @@ async def clear_ephemeral_fingerprints() -> str:
     from recon_tool.fingerprints import clear_ephemeral
 
     count = clear_ephemeral()
+    if count > 0 and _cache:
+        _remerge_cached_infos()
     return json_mod.dumps(
         {
             "status": "ok",
@@ -1795,6 +2021,7 @@ async def reevaluate_domain(domain: str) -> str:
     except Exception as exc:
         return json_mod.dumps({"error": f"Re-evaluation failed: {exc}"})
 
+    _cache_refresh_info(validated, new_info, results)
     return format_tenant_json(new_info)
 
 
@@ -1910,7 +2137,15 @@ def _print_mcp_banner() -> None:
         sig_count = 0
 
     lines = [
-        f"recon MCP Server v{__version__} — ready for AI clients",
+        "=" * 80,
+        f"recon MCP Server v{__version__}",
+        "",
+        "WARNING: This server runs with the privileges of the calling user.",
+        "Treat connected AI agents as untrusted input.",
+        "Start with manual approvals; only enable auto-approval for tools you",
+        "deliberately trust. For production agent use, prefer an isolated",
+        "workspace or container with filesystem and network restrictions.",
+        "=" * 80,
         "",
         "Listening on stdio transport.",
         f"Loaded {fp_count} fingerprints, {sig_count} signals.",

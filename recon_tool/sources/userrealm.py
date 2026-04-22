@@ -13,6 +13,7 @@ from typing import Any
 from xml.sax.saxutils import escape as xml_escape
 
 import defusedxml.ElementTree as DefusedET
+import httpx
 
 from recon_tool.http import http_client
 from recon_tool.models import EvidenceRecord, SourceResult
@@ -113,13 +114,20 @@ class UserRealmSource:
                 )
                 if resp.status_code == 200:
                     data = resp.json()
-                    brand = data.get("FederationBrandName")
-                    if brand and isinstance(brand, str) and brand.strip():
-                        display_name = brand.strip()
-                    ns_type = data.get("NameSpaceType")
-                    if ns_type and isinstance(ns_type, str):
-                        auth_type = ns_type
-            except Exception as exc:
+                    if isinstance(data, dict):
+                        brand = data.get("FederationBrandName")
+                        if brand and isinstance(brand, str) and brand.strip():
+                            display_name = brand.strip()
+                        ns_type = data.get("NameSpaceType")
+                        if ns_type and isinstance(ns_type, str):
+                            auth_type = ns_type
+                    else:
+                        logger.debug(
+                            "GetUserRealm returned invalid JSON shape for %s: %s",
+                            domain,
+                            type(data).__name__,
+                        )
+            except (httpx.HTTPError, ValueError) as exc:
                 logger.debug("GetUserRealm failed for %s: %s", domain, exc)
 
             # 2. Autodiscover for domains — proper XML parsing via ElementTree
@@ -136,7 +144,7 @@ class UserRealmSource:
                 )
                 if resp.status_code == 200:
                     tenant_domains, default_domain = _parse_autodiscover_domains(resp.text)
-            except Exception as exc:
+            except httpx.HTTPError as exc:
                 logger.debug("Autodiscover failed for %s: %s", domain, exc)
 
             has_data = display_name or default_domain or auth_type or tenant_domains

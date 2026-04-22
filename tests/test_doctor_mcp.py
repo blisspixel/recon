@@ -27,7 +27,8 @@ class TestDoctorMcp:
         # Copy-paste config block
         assert "mcpServers" in out
         assert "recon" in out
-        assert "autoApprove" in out
+        assert '"autoApprove": []' in out
+        assert "Security note" in out
         # Per-client comments
         assert "Claude Desktop" in out
         assert "Cursor" in out

@@ -20,8 +20,7 @@ import logging
 import os
 import re
 import threading
-from dataclasses import dataclass
-from functools import lru_cache
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -297,11 +296,23 @@ def _load_from_path(path: Path) -> list[Fingerprint]:
 
 
 # ── Ephemeral fingerprint storage ───────────────────────────────────────
-# Session-scoped, in-memory only. Protected by a lock for thread safety
-# in async contexts (asyncio.to_thread, etc.).
+# Session-scoped, in-memory only. Protected by a re-entrant lock so the
+# cached catalog views and ephemeral collection stay coherent across
+# inject/clear/load operations, including when callers use asyncio.to_thread().
 
-_ephemeral_lock = threading.Lock()
+_ephemeral_lock = threading.RLock()
 _ephemeral_fingerprints: list[Fingerprint] = []
+
+
+@dataclass(slots=True)
+class _FingerprintCacheState:
+    fingerprints: tuple[Fingerprint, ...] | None = None
+    detections: dict[str, tuple[Detection, ...]] = field(default_factory=dict)
+    m365_names: frozenset[str] | None = None
+    m365_slugs: frozenset[str] | None = None
+
+
+_cache_state = _FingerprintCacheState()
 
 # Hard cap on session-scoped ephemeral fingerprints. Without this,
 # a long-running MCP server exposing ``inject_ephemeral_fingerprint``
@@ -315,6 +326,14 @@ _MAX_EPHEMERAL_FINGERPRINTS: int = 100
 
 class EphemeralCapacityError(RuntimeError):
     """Raised when the ephemeral-fingerprint cap is reached."""
+
+
+def _invalidate_caches_locked() -> None:
+    """Clear derived fingerprint caches while holding ``_ephemeral_lock``."""
+    _cache_state.fingerprints = None
+    _cache_state.detections.clear()
+    _cache_state.m365_names = None
+    _cache_state.m365_slugs = None
 
 
 def inject_ephemeral(fp: Fingerprint) -> None:
@@ -336,9 +355,7 @@ def inject_ephemeral(fp: Fingerprint) -> None:
                 "Clear the collection with clear_ephemeral() or restart the server."
             )
         _ephemeral_fingerprints.append(fp)
-    # Invalidate caches
-    load_fingerprints.cache_clear()
-    _get_detections.cache_clear()
+        _invalidate_caches_locked()
 
 
 def clear_ephemeral() -> int:
@@ -349,9 +366,7 @@ def clear_ephemeral() -> int:
     with _ephemeral_lock:
         count = len(_ephemeral_fingerprints)
         _ephemeral_fingerprints.clear()
-    # Invalidate caches
-    load_fingerprints.cache_clear()
-    _get_detections.cache_clear()
+        _invalidate_caches_locked()
     return count
 
 
@@ -378,7 +393,6 @@ def _load_from_dir(directory: Path) -> list[Fingerprint]:
     return entries
 
 
-@lru_cache(maxsize=1)
 def load_fingerprints() -> tuple[Fingerprint, ...]:
     """Load fingerprints from YAML data files (built-in + custom).
 
@@ -398,32 +412,36 @@ def load_fingerprints() -> tuple[Fingerprint, ...]:
     directory containing ``fingerprints.yaml`` OR a ``fingerprints/``
     subdirectory of split files.
     """
-    base = Path(__file__).parent / "data"
-    data_dir = base / "fingerprints"
-    data_file = base / "fingerprints.yaml"
-
-    custom_dir_env = os.environ.get("RECON_CONFIG_DIR")
-    custom_base = Path(custom_dir_env) if custom_dir_env else Path.home() / ".recon"
-    custom_file = custom_base / "fingerprints.yaml"
-    custom_dir = custom_base / "fingerprints"
-
-    entries: list[Fingerprint] = []
-    # Built-in: prefer the split directory when present; fall back to the
-    # monolith only if the directory doesn't exist. Avoiding both-load
-    # keeps slug uniqueness tractable during the migration window.
-    if data_dir.is_dir():
-        entries.extend(_load_from_dir(data_dir))
-    else:
-        entries.extend(_load_from_path(data_file))
-    # Custom: file and directory are both valid (additive). A user might
-    # keep their legacy single-file override even after the built-in split.
-    entries.extend(_load_from_path(custom_file))
-    entries.extend(_load_from_dir(custom_dir))
-    # Append ephemeral fingerprints (not cached separately — cache is
-    # invalidated on inject/clear so this always reflects current state)
     with _ephemeral_lock:
+        if _cache_state.fingerprints is not None:
+            return _cache_state.fingerprints
+
+        base = Path(__file__).parent / "data"
+        data_dir = base / "fingerprints"
+        data_file = base / "fingerprints.yaml"
+
+        custom_dir_env = os.environ.get("RECON_CONFIG_DIR")
+        custom_base = Path(custom_dir_env) if custom_dir_env else Path.home() / ".recon"
+        custom_file = custom_base / "fingerprints.yaml"
+        custom_dir = custom_base / "fingerprints"
+
+        entries: list[Fingerprint] = []
+        # Built-in: prefer the split directory when present; fall back to the
+        # monolith only if the directory doesn't exist. Avoiding both-load
+        # keeps slug uniqueness tractable during the migration window.
+        if data_dir.is_dir():
+            entries.extend(_load_from_dir(data_dir))
+        else:
+            entries.extend(_load_from_path(data_file))
+        # Custom: file and directory are both valid (additive). A user might
+        # keep their legacy single-file override even after the built-in split.
+        entries.extend(_load_from_path(custom_file))
+        entries.extend(_load_from_dir(custom_dir))
         entries.extend(_ephemeral_fingerprints)
-    return tuple(entries)
+
+        result = tuple(entries)
+        _cache_state.fingerprints = result
+        return result
 
 
 def reload_fingerprints() -> None:
@@ -431,24 +449,29 @@ def reload_fingerprints() -> None:
 
     Useful for long-lived processes (MCP server) when custom fingerprints change.
     """
-    load_fingerprints.cache_clear()
-    _get_detections.cache_clear()
-    get_m365_names.cache_clear()
-    get_m365_slugs.cache_clear()
+    with _ephemeral_lock:
+        _invalidate_caches_locked()
 
 
-@lru_cache(maxsize=8)
 def _get_detections(det_type: str) -> tuple[Detection, ...]:
     """Flatten fingerprints into Detection tuples for a given detection type.
 
     Returns a tuple (immutable) to prevent cache corruption.
     """
-    results: list[Detection] = []
-    for fp in load_fingerprints():
-        for det in fp.detections:
-            if det.type == det_type and det.pattern:
-                results.append(Detection(det.pattern, fp.name, fp.slug, fp.category, fp.confidence))
-    return tuple(results)
+    with _ephemeral_lock:
+        cached = _cache_state.detections.get(det_type)
+        if cached is not None:
+            return cached
+
+        results: list[Detection] = []
+        for fp in load_fingerprints():
+            for det in fp.detections:
+                if det.type == det_type and det.pattern:
+                    results.append(Detection(det.pattern, fp.name, fp.slug, fp.category, fp.confidence))
+
+        result = tuple(results)
+        _cache_state.detections[det_type] = result
+        return result
 
 
 # Public accessors — thin wrappers over _get_detections for readability.
@@ -509,20 +532,24 @@ def get_srv_patterns() -> tuple[Detection, ...]:
     return _get_detections("srv")
 
 
-@lru_cache(maxsize=1)
 def get_m365_names() -> frozenset[str]:
     """Return names of fingerprints that indicate M365."""
-    return frozenset(fp.name for fp in load_fingerprints() if fp.m365)
+    with _ephemeral_lock:
+        if _cache_state.m365_names is None:
+            _cache_state.m365_names = frozenset(fp.name for fp in load_fingerprints() if fp.m365)
+        return _cache_state.m365_names
 
 
-@lru_cache(maxsize=1)
 def get_m365_slugs() -> frozenset[str]:
     """Return slugs of fingerprints that indicate M365.
 
     Slug-based detection is more stable than name-based — renaming a
     fingerprint's display name won't break M365 detection.
     """
-    return frozenset(fp.slug for fp in load_fingerprints() if fp.m365)
+    with _ephemeral_lock:
+        if _cache_state.m365_slugs is None:
+            _cache_state.m365_slugs = frozenset(fp.slug for fp in load_fingerprints() if fp.m365)
+        return _cache_state.m365_slugs
 
 
 # Maximum TXT record length to match against. DNS TXT records are limited to

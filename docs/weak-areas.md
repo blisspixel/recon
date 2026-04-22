@@ -26,17 +26,17 @@ CNAME targets and surfaces related infrastructure.
 
 ## Chinese / APAC tech stacks
 
-Symptoms: `recon <domain>` on `tencent.com`, `baidu.com`, `alibaba.com`
-etc. shows `Self-hosted mail` as primary and little else matching the
-built-in fingerprint catalog.
+Symptoms: large domestic-Chinese and some APAC apexes commonly show
+`Self-hosted mail` as primary with little else matching the built-in
+fingerprint catalog.
 
-Why: domestic Chinese tech stacks use their own mail infrastructure
-(`cloudmx.qq.com` for Tencent, `mx.baidu.com` for Baidu) and domestic
-SaaS (DingTalk, WeCom, Aliyun services) that don't ship with
-verifiable public DNS tokens the same way Western SaaS does.
+Why: these stacks use in-house mail infrastructure (provider-hosted
+domestic MX patterns) and domestic SaaS (DingTalk, WeCom, Aliyun
+services) that don't publish verifiable public DNS tokens the same
+way Western SaaS does.
 
 What to do: take the `Self-hosted mail` + MX records as a signal
-ceiling — these orgs are observably running their own stack, the
+ceiling — these orgs are observably running their own stack, and the
 absence of Western-SaaS fingerprints is an accurate reading, not a
 gap in recon's coverage.
 

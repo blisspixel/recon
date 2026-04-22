@@ -125,6 +125,20 @@ class TestCrtshHttpErrors:
         ):
             await provider.query("example.com")
 
+    @pytest.mark.asyncio
+    async def test_raises_on_invalid_json(self):
+        provider = CrtshProvider()
+        resp = MagicMock(status_code=200, request=MagicMock())
+        resp.json.side_effect = ValueError("malformed json")
+        client = AsyncMock()
+        client.get = AsyncMock(return_value=resp)
+
+        with (
+            patch("recon_tool.sources.cert_providers.http_client", return_value=_mock_http_context(client)),
+            pytest.raises(httpx.HTTPError, match="invalid JSON"),
+        ):
+            await provider.query("example.com")
+
 
 @pytest.mark.usefixtures("_enable_crtsh")
 class TestCertSpotterHttpErrors:
@@ -179,6 +193,20 @@ class TestCertSpotterHttpErrors:
         with (
             patch("recon_tool.sources.cert_providers.http_client", return_value=_mock_http_context(client)),
             pytest.raises(httpx.ConnectError),
+        ):
+            await provider.query("example.com")
+
+    @pytest.mark.asyncio
+    async def test_raises_on_invalid_json(self):
+        provider = CertSpotterProvider()
+        resp = MagicMock(status_code=200, request=MagicMock())
+        resp.json.side_effect = ValueError("malformed json")
+        client = AsyncMock()
+        client.get = AsyncMock(return_value=resp)
+
+        with (
+            patch("recon_tool.sources.cert_providers.http_client", return_value=_mock_http_context(client)),
+            pytest.raises(httpx.HTTPError, match="invalid JSON"),
         ):
             await provider.query("example.com")
 

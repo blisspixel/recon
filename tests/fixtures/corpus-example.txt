@@ -1,0 +1,18 @@
+# Example corpus format for `recon fingerprints test <slug>`.
+#
+# This file demonstrates the expected format only. The domains below
+# are Microsoft's fictional-company examples — they will not produce
+# real DNS or CT matches. To actually exercise a fingerprint, supply
+# your own corpus with `--corpus path/to/your-file.txt` or place one
+# at `~/.recon/corpus.txt` (picked up automatically).
+#
+# Format: one apex per line. Blank lines and `# ...` comments are
+# ignored. See CONTRIBUTING.md ("Fictional-example policy") for why
+# the project does not ship a real-company corpus.
+
+contoso.com
+northwindtraders.com
+fabrikam.com
+tailspintoys.com
+wingtiptoys.com
+adventure-works.com

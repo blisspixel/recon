@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import replace
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -349,7 +350,7 @@ async def resolve_tenant(
         pool = default_pool()
 
     try:
-        return await asyncio.wait_for(
+        info, all_results = await asyncio.wait_for(
             _resolve_tenant_inner(domain, pool, client),
             timeout=timeout,
         )
@@ -359,3 +360,9 @@ async def resolve_tenant(
             message=f"Resolution timed out after {timeout:.0f}s for {domain}",
             error_type="timeout",
         ) from None
+
+    # Stamp the fresh-resolution timestamp so downstream consumers (CLI,
+    # MCP, cache serializer) can distinguish a live-resolved result from
+    # a cache hit. cached_at is set only by the cache read path.
+    info = replace(info, resolved_at=datetime.now(timezone.utc).isoformat())
+    return info, all_results

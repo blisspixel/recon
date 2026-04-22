@@ -268,7 +268,11 @@ class CrtshProvider:
             if resp.status_code != 200:
                 msg = f"crt.sh returned HTTP {resp.status_code} for {domain}"
                 raise httpx.HTTPStatusError(msg, request=resp.request, response=resp)
-            data = resp.json()
+            try:
+                data = resp.json()
+            except ValueError as exc:
+                msg = f"crt.sh returned invalid JSON for {domain}"
+                raise httpx.HTTPError(msg) from exc
 
         if not isinstance(data, list):
             return [], None
@@ -402,7 +406,11 @@ class CertSpotterProvider:
                     msg = f"CertSpotter returned HTTP {resp.status_code} for {domain}"
                     raise httpx.HTTPStatusError(msg, request=resp.request, response=resp)
 
-                data = resp.json()
+                try:
+                    data = resp.json()
+                except ValueError as exc:
+                    msg = f"CertSpotter returned invalid JSON for {domain}"
+                    raise httpx.HTTPError(msg) from exc
                 if not isinstance(data, list) or not data:
                     # Empty page — we've reached the end of the issuance list.
                     break

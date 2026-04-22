@@ -1,0 +1,14 @@
+# Example corpus format for validation/run_corpus.py.
+#
+# The domains below are Microsoft's fictional-company examples. They
+# will not produce real DNS / CT / identity-endpoint matches and are
+# included only to show the file format. Maintainers keep real-apex
+# corpora locally under this directory (gitignored) and never commit
+# them. See CONTRIBUTING.md ("Fictional-example policy") for rationale.
+
+contoso.com
+northwindtraders.com
+fabrikam.com
+tailspintoys.com
+wingtiptoys.com
+adventure-works.com

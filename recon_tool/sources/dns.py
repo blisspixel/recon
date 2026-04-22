@@ -454,10 +454,9 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
 
     # Self-hosted-mail inference. When MX records exist and none of
     # them match a known cloud provider or gateway, attribute the
-    # primary provider as "Self-hosted mail". This rescues orgs like
-    # huawei.com (MX → ``mx5.huawei.com``), baidu.com (MX → ``mx.baidu.com``),
-    # and tencent.com (MX → ``cloudmx.qq.com`` — a sibling domain owned
-    # by the same operator) that otherwise fall through to the weaker
+    # primary provider as "Self-hosted mail". This rescues orgs whose
+    # MX targets live under the queried apex or under an operator-owned
+    # sibling domain — they otherwise fall through to the weaker
     # ``exchange-onprem`` attribution driven by ``owa.`` / ``autodiscover.``
     # probes. ``Self-hosted`` is a conservative label that may in rare
     # cases cover obscure cloud providers we don't yet fingerprint — in
@@ -1438,11 +1437,11 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
     if not has_strong_signal:
         return
 
-    # Wildcard-DNS guard. Some domains (in-n-out.com was the canary)
-    # point ``*.<domain>`` at a single IP, which causes every Exchange
-    # prefix above to resolve to the same address. That's not Exchange —
-    # it's wildcard DNS, and firing on it mislabels a web-only domain
-    # as running Exchange Server. Probe a nonsense prefix: if it also
+    # Wildcard-DNS guard. Some apexes point ``*.<apex>`` at a single IP,
+    # which causes every Exchange prefix above to resolve to the same
+    # address. That's not Exchange — it's wildcard DNS, and firing on
+    # it mislabels a web-only domain as running Exchange Server. Probe
+    # a nonsense prefix: if it also
     # resolves, assume wildcard and suppress the detection.
     nonsense = f"this-is-not-a-real-host-xyz123.{domain}"
     wildcard_a = await _safe_resolve(nonsense, "A")

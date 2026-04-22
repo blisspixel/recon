@@ -7,6 +7,7 @@ All I/O wrapped in try/except with debug logging, never raises to caller.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
 import os
@@ -49,9 +50,18 @@ def cache_dir() -> Path:
 
 
 def cache_get(domain: str, ttl: int = DEFAULT_TTL) -> TenantInfo | None:
-    """Read cached TenantInfo for domain. Returns None if missing/stale/corrupt."""
+    """Read cached TenantInfo for domain. Returns None if missing/stale/corrupt.
+
+    The returned ``TenantInfo`` carries ``cached_at`` set from the
+    on-disk ``_cached_at`` field so downstream can distinguish a
+    cache-served result from a freshly-resolved one. ``resolved_at``
+    is preserved from the time the result was first produced.
+    """
     try:
-        path = cache_dir() / f"{domain}.json"
+        path = _safe_cache_path(domain)
+        if path is None:
+            logger.debug("Cache read rejected invalid domain: %r", domain)
+            return None
         if not path.exists():
             return None
         # Lazy eviction: check mtime against TTL
@@ -60,8 +70,12 @@ def cache_get(domain: str, ttl: int = DEFAULT_TTL) -> TenantInfo | None:
             logger.debug("Cache stale for %s (age > %d s)", domain, ttl)
             return None
         data = json.loads(path.read_text(encoding="utf-8"))
-        return tenant_info_from_dict(data)
-    except Exception:
+        info = tenant_info_from_dict(data)
+        cached_at = data.get("_cached_at")
+        if isinstance(cached_at, str) and cached_at:
+            info = dataclasses.replace(info, cached_at=cached_at)
+        return info
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
         logger.debug("Cache read failed for %s", domain, exc_info=True)
         return None
 
@@ -71,10 +85,13 @@ def cache_put(domain: str, info: TenantInfo) -> None:
     try:
         d = cache_dir()
         d.mkdir(parents=True, exist_ok=True)
-        path = d / f"{domain}.json"
+        path = _safe_cache_path(domain)
+        if path is None:
+            logger.debug("Cache write rejected invalid domain: %r", domain)
+            return
         data = tenant_info_to_dict(info)
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    except Exception:
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
         logger.debug("Cache write failed for %s", domain, exc_info=True)
 
 
@@ -118,7 +135,7 @@ def cache_clear(domain: str) -> bool:
             path.unlink()
             return True
         return False
-    except Exception:
+    except OSError:
         logger.debug("Cache clear failed for %s", domain, exc_info=True)
         return False
 
@@ -137,7 +154,7 @@ def cache_clear_all() -> int:
             except OSError:
                 logger.debug("Cache entry unlink failed: %s", path, exc_info=True)
         return count
-    except Exception:
+    except OSError:
         logger.debug("Cache clear-all failed", exc_info=True)
         return 0
 
@@ -149,9 +166,14 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
     EvidenceRecord tuple → list of dicts, detection_scores tuple-of-tuples → dict,
     all tuple fields → lists.
     """
+    now_iso = datetime.now(timezone.utc).isoformat()
     d: dict[str, Any] = {
-        "_cached_at": datetime.now(timezone.utc).isoformat(),
+        "_cached_at": now_iso,
         "_cache_version": _CACHE_VERSION,
+        # resolved_at is the original resolution timestamp. Preserve it
+        # across cache round-trips so agents can tell when the data was
+        # first produced, not just when it was last written to disk.
+        "resolved_at": info.resolved_at or now_iso,
         "tenant_id": info.tenant_id,
         "display_name": info.display_name,
         "default_domain": info.default_domain,
@@ -272,7 +294,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
     display_name = data.get("display_name")
     default_domain = data.get("default_domain")
     queried_domain = data.get("queried_domain")
-    if not display_name or not default_domain or not queried_domain:
+    if display_name is None or not default_domain or not queried_domain:
         msg = "Missing required fields: display_name, default_domain, queried_domain"
         raise ValueError(msg)
 
@@ -367,4 +389,8 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         tenant_region_sub_scope=data.get("tenant_region_sub_scope"),
         msgraph_host=data.get("msgraph_host"),
         lexical_observations=tuple(data.get("lexical_observations", [])),
+        resolved_at=data.get("resolved_at"),
+        # cached_at is stamped by cache_get from _cached_at; not populated
+        # from arbitrary dict input so round-tripping an uncached dict
+        # does not spuriously mark the result as cache-served.
     )
