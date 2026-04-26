@@ -1,9 +1,10 @@
 # validation/
 
-Local live-validation workspace. Only three files from this directory
+Local live-validation workspace. Only four files from this directory
 are committed:
 
 - `run_corpus.py` — the batch runner (no company names)
+- `audit_fingerprints.py` — catalog audit runner (no company names)
 - `corpus-example.txt` — fictional-company example showing the format
 - `README.md` — this file
 
