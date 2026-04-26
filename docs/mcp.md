@@ -71,34 +71,34 @@ default is an empty `autoApprove` list.
 
 ## Available Tools
 
-| Tool | What it does | Parameters |
-|------|-------------|------------|
-| `lookup_tenant` | Full domain intelligence — tenant details, email score, SaaS fingerprints, signals. When `explain=true`, the response includes a JSON-serialisable `explanation_dag` with `evidence → slug → rule → signal → insight` provenance alongside the flat explanations list. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
-| `analyze_posture` | Neutral posture observations across email, identity, infrastructure. Accepts an optional `profile` argument (v0.9.3) — one of `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`, or a custom name from `~/.recon/profiles/`. | `domain`, `explain`: bool, `profile`: str (optional) |
-| `cluster_verification_tokens` | Cluster a list of domains by shared TXT site-verification tokens (v0.9.3). Reveals hedged "possible relationship" signals — operator-scoped credential reuse — without any additional network calls beyond the per-domain cache warm-up. | `domains`: array of domain strings |
-| `assess_exposure` | Security posture score (0–100) with email, identity, infrastructure sections | `domain` |
-| `find_hardening_gaps` | Categorized hardening gaps with severity and "Consider" recommendations | `domain` |
-| `compare_postures` | Side-by-side posture comparison of two domains | `domain_a`, `domain_b` |
-| `chain_lookup` | Recursive domain discovery via CNAME/CT breadcrumbs | `domain`, `depth` (1–3) |
-| `reload_data` | Reload fingerprints, signals, and posture rules from disk | none |
-| `get_fingerprints` | List all loaded fingerprints with slugs, categories, detection types | `category` (optional filter) |
-| `get_signals` | List all loaded signals with rules, layers, conditions | `category`, `layer` (optional filters) |
-| `explain_signal` | Query a signal's trigger conditions and current state for a domain | `signal_name`, `domain` (optional) |
-| `test_hypothesis` | Test a theory against signals and evidence — returns likelihood + evidence | `domain`, `hypothesis` |
-| `simulate_hardening` | What-if: re-compute exposure score with hypothetical fixes applied | `domain`, `fixes` (array) |
-| `inject_ephemeral_fingerprint` | Inject a temporary fingerprint for the current session | `name`, `slug`, `category`, `confidence`, `detections` (array) |
-| `reevaluate_domain` | Re-evaluate cached domain data against current fingerprints (including ephemeral) | `domain` |
-| `list_ephemeral_fingerprints` | List all currently loaded ephemeral fingerprints | none |
-| `clear_ephemeral_fingerprints` | Remove all ephemeral fingerprints from the session | none |
+| Tool | Network calls? | What it does | Parameters |
+|------|----------------|-------------|------------|
+| `lookup_tenant` | Cache first; may resolve | Full domain intelligence — tenant details, email score, SaaS fingerprints, signals. When `explain=true`, the response includes a JSON-serialisable `explanation_dag` with `evidence → slug → rule → signal → insight` provenance alongside the flat explanations list. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
+| `analyze_posture` | Cache first; may resolve | Neutral posture observations across email, identity, infrastructure. Accepts an optional `profile` argument — one of `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`, or a custom name from `~/.recon/profiles/`. | `domain`, `explain`: bool, `profile`: str (optional) |
+| `cluster_verification_tokens` | Cache first; may resolve each domain | Cluster a list of domains by shared TXT site-verification tokens. Reveals hedged "possible relationship" signals — operator-scoped credential reuse. | `domains`: array of domain strings |
+| `assess_exposure` | Cache first; may resolve | Security posture score (0–100) with email, identity, infrastructure sections | `domain` |
+| `find_hardening_gaps` | Cache first; may resolve | Categorized hardening gaps with severity and "Consider" recommendations | `domain` |
+| `compare_postures` | Cache first; may resolve both domains | Side-by-side posture comparison of two domains | `domain_a`, `domain_b` |
+| `chain_lookup` | Yes | Recursive domain discovery via CNAME/CT breadcrumbs | `domain`, `depth` (1–3) |
+| `reload_data` | No | Reload fingerprints, signals, and posture rules from disk | none |
+| `get_fingerprints` | No | List all loaded fingerprints with slugs, categories, detection types | `category` (optional filter) |
+| `get_signals` | No | List all loaded signals with rules, layers, conditions | `category`, `layer` (optional filters) |
+| `explain_signal` | No unless `domain` is provided | Query a signal's trigger conditions and current state for a domain | `signal_name`, `domain` (optional) |
+| `test_hypothesis` | Cache first; may resolve | Test a theory against signals and evidence — returns likelihood + evidence | `domain`, `hypothesis` |
+| `simulate_hardening` | Cache first; may resolve | What-if: re-compute exposure score with hypothetical fixes applied | `domain`, `fixes` (array) |
+| `inject_ephemeral_fingerprint` | No | Inject a temporary fingerprint for the current session | `name`, `slug`, `category`, `confidence`, `detections` (array) |
+| `reevaluate_domain` | No | Re-evaluate cached domain data against current fingerprints (including ephemeral) | `domain` |
+| `list_ephemeral_fingerprints` | No | List all currently loaded ephemeral fingerprints | none |
+| `clear_ephemeral_fingerprints` | No | Remove all ephemeral fingerprints from the session | none |
 
 The lookup and analysis tools are read-only. The ephemeral fingerprint tools
 mutate only in-memory session state for the current server process; they do not
 write to disk and do not trigger new network calls on their own. Tools marked
-with `explain` support structured provenance output. The agentic tools
-(`test_hypothesis`, `simulate_hardening`, `get_fingerprints`, `get_signals`,
-`explain_signal`) operate on cached pipeline data with zero additional network
-calls. The server includes a bounded TTL cache (120s) and per-domain rate
-limiting.
+with `explain` support structured provenance output. Catalog tools
+(`get_fingerprints`, `get_signals`, and MCP resources) do not call the network.
+Domain-analysis tools are cache-first and may resolve the domain when no fresh
+cache entry exists. The server includes a bounded TTL cache (120s) and
+per-domain rate limiting.
 
 ## Catalog Resources
 

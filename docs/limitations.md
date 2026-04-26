@@ -28,7 +28,7 @@ gap as a known unknown.
   provider is invisible.
 - **Email security gateways** — when MX is Proofpoint / Mimecast / Trend
   Micro / Symantec, the actual email platform behind the gateway is only
-  visible when DKIM also leaks it (recon does exactly this in v0.10.1).
+  visible when DKIM or other public records leak it.
 - **Cloud-hosted landing pages** — when the entire domain is one A record
   pointing to a shared CDN and no SaaS verification tokens are published,
   there is nothing to detect.
@@ -41,6 +41,18 @@ gap as a known unknown.
   public CNAME)
 - **Corporate file shares, intranet portals, internal ticketing** — all
   zero public DNS footprint by design.
+
+### Regional and domestic SaaS ecosystems
+
+- **Domestic provider stacks** — some APAC and China-focused organizations use
+  domestic mail, collaboration, cloud, and identity providers whose public DNS
+  patterns are not as well represented in the built-in catalog.
+- **Localized verification schemes** — regional SaaS products may publish TXT
+  or CNAME proofs that are stable but not yet fingerprinted.
+
+When this happens, recon may correctly show a self-hosted or low-signal result
+even though a rich domestic stack exists behind the scenes. Treat those results
+as coverage gaps unless the DNS evidence directly supports a stronger claim.
 
 ### Network-level and host-level facts
 
@@ -74,9 +86,9 @@ load-bearing honesty, not cowardice.
 
 **Current:** A domain with M365 tenant + MX → Trend Micro gateway + DKIM for
 M365 correctly reads as "Microsoft 365 via Trend Micro gateway". But if M365
-is the only detected slug and Google Workspace slug fires only from a TXT
-token (no DKIM, no MX), Google Workspace is **not shown** in the default
-Provider line in v0.11 (see `--full` for account-only detections).
+is the only detected slug and Google Workspace fires only from a TXT token
+(no DKIM, no MX), Google Workspace is treated as a weaker secondary/account
+signal. Use `--full` when account-only detections matter.
 
 **Why underclaimed:** An M365 tenant with a dormant Google Workspace
 registration is wildly common and doesn't mean active dual-platform email.
@@ -109,17 +121,18 @@ reliably extractable from DNS alone.
 Times recon has been wrong in empirically verified ways:
 
 - **crt.sh returning stale certs.** Cached certs for decommissioned subdomains
-  can inflate the related-domain count. v0.10's per-domain CT cache means
-  stale data is bounded, but a single crt.sh query can surface certs from
+  can inflate the related-domain count. The per-domain CT cache bounds repeat
+  exposure to flaky providers, but a single CT query can surface certs from
   years ago.
 - **CertSpotter rate limits.** When crt.sh is down, CertSpotter is the
   fallback, but it rate-limits aggressively on larger domains. recon handles
   429 responses by returning partial data (documented in degraded-sources
   note) rather than crashing.
-- **DKIM selector blind spots.** v0.10.1 expanded the probed selector set
-  (`s1`, `s2`, `dkim`, `mail`, `k1`, `k2`, `default`). Services using
-  non-standard selectors (e.g., `mcsv1._domainkey.` for some Mailchimp
-  subaccounts) still produce "No DKIM observed" false negatives.
+- **DKIM selector blind spots.** recon probes common selectors such as `s1`,
+  `s2`, `dkim`, `mail`, `k1`, `k2`, and `default`. Services using
+  non-standard or per-account selectors (for example some Mailchimp, SendGrid,
+  Salesforce Marketing Cloud, and regional providers) can still produce "No
+  DKIM observed" false negatives.
 - **Domain homograph / Punycode.** recon normalizes to lowercase but does not
   attempt IDN → ASCII round-tripping. Punycode domains are handled, but the
   display name may not match what a user sees in a browser.
@@ -152,10 +165,9 @@ starting point.
 
 ## Signal coverage and false positives
 
-The fingerprint database (235 entries as of v1.0.2) is solo-maintained and
-rule-based. A fingerprint match means "evidence fits this service's DNS
-signature", not "this service is in use". Confident-looking output can still
-be wrong.
+The fingerprint database is rule-based. A fingerprint match means "evidence
+fits this service's DNS signature", not "this service is in use".
+Confident-looking output can still be wrong.
 
 Best practices:
 
@@ -174,9 +186,8 @@ Best practices:
 ## Release & maintenance caveats
 
 - **Solo maintainer.** The fingerprint database, signals, and profiles are
-  maintained by one person. The community pipeline (v0.11) is the path to
-  sharing that load; until then, coverage is constrained by one person's
-  attention.
+  maintained by one person. Fingerprint and signal PRs are the path to sharing
+  that load; until then, coverage is constrained by one person's attention.
 - **Upstream flakiness.** crt.sh, CertSpotter, and Microsoft / Google
   identity endpoints are not operated by the recon project. Outages
   propagate directly to recon output (documented via `degraded_sources`).

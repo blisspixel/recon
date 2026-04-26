@@ -3,10 +3,10 @@
 Fingerprints are DNS pattern rules in `recon_tool/data/fingerprints/`,
 one YAML file per category (`ai.yaml`, `email.yaml`, `security.yaml`,
 `infrastructure.yaml`, `productivity.yaml`, `crm-marketing.yaml`,
-`data-analytics.yaml`, `verticals.yaml`). 227 built-in as of v1.1.0.
-Add new services by editing the matching category file — no code
-changes needed. Use `recon fingerprints list` / `search` / `show` to
-inspect the catalog without opening YAML.
+`data-analytics.yaml`, `verticals.yaml`). Add new services by editing
+the matching category file — no code changes needed. Use
+`recon fingerprints list` / `search` / `show` to inspect the current
+catalog without opening YAML.
 
 ## Custom fingerprints
 
@@ -81,6 +81,20 @@ Before committing a new fingerprint to the built-in set:
    on any of them, tighten the pattern or switch to `match_mode: all`.
 4. Keep regexes anchored (`^`, `$`) where possible. Unanchored substring
    matches in TXT are the #1 source of false positives.
+
+## False positives we avoid
+
+Patterns that have caused bad detections and should not be repeated:
+
+- **Unanchored TXT regexes.** Prefer service-specific prefixes and anchors.
+- **Dormant ownership tokens.** A lone verification TXT can mean an abandoned
+  trial account; use `match_mode: all` when routing evidence is available.
+- **Wildcard A/CNAME zones.** Do not infer a service from a subdomain name
+  alone when wildcard DNS can manufacture every prefix.
+- **Generic product subdomains.** `grafana.example.com` or `n8n.example.com`
+  is not enough; recon intentionally avoids generic service-name matching.
+- **Shared CDN hostnames.** A CDN edge proves the edge provider, not the app
+  running behind it.
 
 ## Email security score
 

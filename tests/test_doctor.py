@@ -102,6 +102,31 @@ class TestDoctorCommandFailures:
 
         assert "recon" in result.stdout.lower()
 
+    def test_doctor_treats_crtsh_http_error_as_warning(self, fake_httpx_client) -> None:
+        """crt.sh is optional enrichment; outage should not fail doctor."""
+        fake_dns = MagicMock()
+        fake_dns.resolve.return_value = [MagicMock(), MagicMock()]
+        fake_httpx_client.get = AsyncMock(
+            side_effect=[
+                _ok_response(200),  # OIDC discovery
+                _ok_response(200),  # GetUserRealm
+                _ok_response(502),  # crt.sh
+            ]
+        )
+        fake_httpx_client.post = AsyncMock(return_value=_ok_response(503))
+
+        with (
+            patch("httpx.AsyncClient", return_value=fake_httpx_client),
+            patch("dns.resolver.resolve", fake_dns.resolve),
+        ):
+            result = runner.invoke(app, ["doctor"])
+
+        assert result.exit_code == 0
+        assert "WARN  crt.sh (cert transparency) — HTTP 502" in result.output
+        assert "FAIL  crt.sh" not in result.output
+        assert "Core checks passed. Optional enrichment sources are degraded." in result.output
+        assert "Some checks failed" not in result.output
+
 
 class TestDoctorFixSubcommand:
     """`recon doctor --fix` scaffolds template config files."""

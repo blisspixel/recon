@@ -21,8 +21,22 @@ the org uses subdomain-scoped SaaS rather than apex-rooted integrations.
 
 What to do: try the zone-apex of the subsidiary or product-specific
 subdomains. CNAME breadcrumbs for M365 / Workspace are often visible
-on `mail.` or `login.` prefixes. `recon chain <apex> --depth 2` walks
+on `mail.` or `login.` prefixes. `recon <apex> --chain --depth 2` walks
 CNAME targets and surfaces related infrastructure.
+
+## Wildcard-heavy DNS zones
+
+Symptoms: many guessed prefixes resolve, but the services list stays thin or
+looks repetitive. Related domains may include generic names that all point to
+the same edge.
+
+Why: wildcard DNS makes every prefix appear valid, including names that are
+not actual services. A passive tool cannot safely distinguish all wildcard
+responses from intentionally configured subdomains without active HTTP checks.
+
+What to do: trust CNAME/TXT/MX evidence more than the presence of a resolving
+subdomain name. If you contribute fingerprints, never rely on a generic
+subdomain label alone.
 
 ## Chinese / APAC tech stacks
 

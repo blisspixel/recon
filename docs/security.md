@@ -16,7 +16,7 @@ no inbound network listeners, no user-code execution.
 | The user's configured DNS resolver | recon inherits the OS resolver. A compromised resolver is a compromise of the whole machine. |
 | Public OIDC / UserRealm / Google identity / CT endpoints | These are Microsoft, Google, and Sectigo-operated services. recon validates response shapes but cannot out-verify the underlying TLS-authenticated origin. |
 | `recon_tool/data/*.yaml` (built-in fingerprints, signals, profiles) | Ships with the package, loaded via `yaml.safe_load`. Same trust level as Python source. |
-| Python stdlib + pinned dependencies in `uv.lock` | Standard supply-chain trust. `pip-audit` in CI surfaces known vulnerabilities on every build. |
+| Python stdlib + pinned dependencies in `uv.lock` | Standard supply-chain trust. CI and release jobs audit locked runtime dependencies on every build. |
 
 | What recon does NOT trust | Mitigation location |
 |---|---|
@@ -60,7 +60,10 @@ no inbound network listeners, no user-code execution.
 **Mitigation:** [`recon_tool/fingerprints.py`](../recon_tool/fingerprints.py):
 - `yaml.safe_load` (not `yaml.load`) — no arbitrary constructor execution
 - Pattern length capped at 500 chars (line 56)
-- ReDoS heuristic (`_REDOS_RE` line 68–74) rejects nested quantifiers like `(a+)+`, `(a*)+`, `(\w+)+` and polynomial backtracking
+- ReDoS heuristic (`_REDOS_RE` line 68–74) rejects nested quantifiers like
+  `(a+)+`, `(a*)+`, and `(\w+)+`, plus polynomial-backtracking shapes such as
+  repeated wildcard groups. This is a heuristic guardrail, not a formal regex
+  verifier.
 - All patterns compile-validated via `re.compile` before use
 - Same checks run on `~/.recon/signals.yaml` via `_validate_signal` in `signals.py`
 - Custom entries are **additive only** — cannot override built-ins (design invariant)
@@ -108,7 +111,8 @@ no inbound network listeners, no user-code execution.
   state (verified in `recon_tool/server.py` ToolAnnotations and Server
   Instructions)
 - Tools accept domain strings that go through the same `validator.py` pipeline
-- `inject_ephemeral_fingerprint` only persists in the current process memory; no on-disk writes to built-in paths
+- `inject_ephemeral_fingerprint` only persists in current process memory; it
+  never writes to built-in files, custom config files, or the cache.
 - 120-second TTL cache and per-domain rate limiter prevent repeated-lookup abuse
 - No HTTP / OAuth transport, no network listener
 
@@ -122,7 +126,7 @@ recon does **not** defend against:
 - **Credential theft.** recon handles zero credentials. There is nothing to steal.
 - **DNS cache poisoning at the OS level.** If the user's resolver is compromised, the entire threat model is compromised regardless of what recon does.
 - **Supply-chain compromise of transitive dependencies.** Detected by `pip-audit` in CI (advisory-only) but not in-process.
-- **Side-channel timing attacks against the user's identity.** Every query recon makes is visible to the intermediary services (OIDC endpoints, CT providers, the user's DNS resolver). See [`docs/legal.md`](legal.md#what-sees-your-queries) for the exposure inventory.
+- **Side-channel timing attacks against the user's identity.** Every query recon makes is visible to the intermediary services (OIDC endpoints, CT providers, the user's DNS resolver). See [`legal.md`](legal.md#what-sees-your-queries) for the exposure inventory.
 - **Logging / telemetry exfiltration.** recon emits no telemetry. All output goes to the user's terminal or files they own.
 - **Malicious plugin systems.** recon has no plugin system and executes no user code.
 

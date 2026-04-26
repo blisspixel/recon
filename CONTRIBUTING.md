@@ -132,12 +132,12 @@ It does **not** apply to:
 
 Accuracy reports and live-validation work use real apexes locally;
 that's why `/validation/` is gitignored except for the runner script,
-a fictional example corpus, and a README. If you're writing a bug
-report that needs a real domain to reproduce, file it privately or
-describe the behavior in terms of the fictional examples whenever the
-real name isn't load-bearing. The rationale is in the v1.4.0
-CHANGELOG entry: no upside, accumulating reputational and legal
-downside over the lifetime of the repository.
+the fingerprint audit helper, a fictional example corpus, and a README.
+If you're writing a bug report that needs a real domain to reproduce, file
+it privately or describe the behavior in terms of the fictional examples
+whenever the real name isn't load-bearing. The rationale is simple: no
+upside, accumulating reputational and legal downside over the lifetime of
+the repository.
 
 ---
 
