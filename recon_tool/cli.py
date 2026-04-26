@@ -16,12 +16,16 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from typing import Any
+from typing import Any, Literal, TypeAlias
 
 import click
 import typer
 
 from recon_tool.formatter import get_console
+
+McpCheck: TypeAlias = tuple[str, bool, str]
+DoctorStatus: TypeAlias = Literal["ok", "warn", "fail"]
+DoctorCheck: TypeAlias = tuple[str, DoctorStatus, str]
 
 __all__ = [
     "EXIT_INTERNAL",
@@ -373,7 +377,7 @@ def _doctor_mcp() -> None:
     console = get_console()
     console.print()
 
-    checks: list[tuple[str, str, str]] = []
+    checks: list[McpCheck] = []
 
     # 1. MCP package importable
     import importlib
@@ -1466,7 +1470,7 @@ async def _doctor() -> None:
     console.print(f"  Python [bold]{sys.version.split()[0]}[/bold]")
     console.print()
 
-    checks: list[tuple[str, bool, str]] = []
+    checks: list[DoctorCheck] = []
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:

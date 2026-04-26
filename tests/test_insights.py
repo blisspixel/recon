@@ -274,8 +274,10 @@ class TestTieredOutput:
         info = self._make_info(
             insights=(
                 "Operational note",
-                "Sparse public signal — edge-heavy footprint. Cloudflare sits in front of the apex, which can hide origin and SaaS detail from passive DNS-only collection. Observation, not a verdict.",
-                "Next step — see docs/weak-areas.md for passive-only blind spots. If this looks like a parent or portfolio apex, run `recon batch <candidates.txt>` or `recon chain <domain> --depth 2`.",
+                "Sparse public signal — edge-heavy footprint. Cloudflare sits in front of the apex, "
+                "which can hide origin and SaaS detail from passive DNS-only collection. Observation, not a verdict.",
+                "Next step — see docs/weak-areas.md for passive-only blind spots. If this looks like a parent "
+                "or portfolio apex, run `recon batch <candidates.txt>` or `recon chain <domain> --depth 2`.",
             )
         )
         output = self._render(render_tenant_panel(info))

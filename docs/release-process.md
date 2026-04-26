@@ -81,8 +81,7 @@ Before running `scripts/release.py`:
       duplicate `CHANGELOG.md`.
 - [ ] `docs/stability.md` has been updated if any public surface changed.
 - [ ] `docs/schema.md` has been updated if any top-level JSON field changed.
-- [ ] Test count + fingerprint count in `README.md` and `CLAUDE.md` are
-      refreshed (not strictly required but nice).
+- [ ] README examples and docs references still match the shipped CLI behavior.
 
 ---
 

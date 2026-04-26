@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] — 2026-04-26
+
+**Patch release — doctor status calibration and documentation cleanup.**
+Keeps runtime behavior stable while making optional enrichment outages less
+alarming and tightening public documentation organization.
+
+### Changed
+
+- `recon doctor` now reports `crt.sh` outages as `WARN` optional enrichment
+  degradation instead of a hard `FAIL`. Core source failures still render as
+  `FAIL`.
+- Documentation is now organized from `docs/README.md`; `docs/roadmap.md` is
+  forward-looking and no longer duplicates `CHANGELOG.md`.
+- MCP, release, stability, limitations, fingerprint, signal, and weak-area docs
+  were refreshed to remove stale counts, stale version wording, and outdated
+  command references.
+
+### Removed
+
+- Removed tracked `CLAUDE.md` and added it to `.gitignore`; agent-local guidance
+  should stay local instead of shipping in the public repository.
+
 ## [1.4.1] — 2026-04-26
 
 **Quality release — sparse-result diagnosis and validation-driven
