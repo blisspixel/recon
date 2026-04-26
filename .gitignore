@@ -71,6 +71,7 @@ docs/accuracy.md
 
 # Claude Code local settings
 .claude/
+CLAUDE.md
 CLAUDE.local.md
 
 # OS

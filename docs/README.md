@@ -2,8 +2,7 @@
 
 Project docs live here. Repository-root files stay at the root only when
 tooling expects them there: `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
-`SECURITY.md`, `LICENSE`, and tool-specific agent guidance such as
-`CLAUDE.md`.
+`SECURITY.md`, and `LICENSE`.
 
 ## Start Here
 
