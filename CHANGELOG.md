@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] — 2026-04-26
+
+**Quality release — sparse-result diagnosis and validation-driven
+hardening.** Keeps the public product surface stable while improving how
+thin passive evidence is explained, compared, and audited.
+
+### Added
+
+- **Sparse-result diagnosis.** Thin default-panel output now distinguishes
+  edge-heavy footprints, custom or self-hosted mail, minimal public DNS, and
+  generic sparse public signal cases. The wording remains hedged and points
+  users at the passive-only weak-area guidance.
+- **Semantic validation comparisons.** Live corpus runs now compare
+  per-domain provider, confidence, partial/degraded state, services, slugs,
+  and sparse diagnoses. Comparison artifacts classify changes by severity and
+  by type (`regression`, `improvement`, `mixed`, `review`, `neutral`).
+- **Fingerprint match-mode audit tooling.** New validation helpers audit
+  multi-detection fingerprints and classify them as alternate evidence,
+  corroborating evidence that needs review, or broad patterns that should be
+  tightened before any `match_mode: all` change.
+
+### Changed
+
+- Validation summaries now include sparse-diagnosis rollups so weak-area
+  trends are visible across a corpus run.
+- Sparse-diagnosis insights are promoted earlier in the default panel so a
+  thin run reads as an explained passive result.
+
+### Fixed
+
+- Version metadata fallback and `uv.lock` now track the package version
+  consistently.
+
 ## [1.4.0] — 2026-04-21
 
 **Hardening release — parser, cache, MCP server coherence, and a
