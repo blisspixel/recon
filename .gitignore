@@ -28,12 +28,13 @@ pytest-report.xml
 test-results/
 tests/validation/fixtures/
 docs/accuracy.md
+.ci-audit-requirements.txt
 
 # Local validation sweeps. Real company names and per-domain JSON output
 # live here during accuracy work; never committed. Fictional-example
 # discipline requires anything committed to use Contoso / Northwind /
 # Fabrikam — validation artifacts use real targets and stay local.
-# Three carve-outs: the runner script (no company names), a fictional
+# Four carve-outs: the runner script, fingerprint auditor, fictional
 # example corpus, and a README describing the policy.
 /validation/*
 !/validation/audit_fingerprints.py

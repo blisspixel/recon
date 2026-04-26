@@ -604,7 +604,13 @@ def _sparse_signal_insights(ctx: InsightContext) -> list[str]:
             _SPARSE_DOC_HINT,
         ]
 
-    if not ctx.has_mx_records and ctx.auth_type is None and ctx.google_auth_type is None and not edge and len(substantive) <= 2:
+    if (
+        not ctx.has_mx_records
+        and ctx.auth_type is None
+        and ctx.google_auth_type is None
+        and not edge
+        and len(substantive) <= 2
+    ):
         return [
             "Sparse public signal — minimal public DNS footprint. Very little is "
             "exposed beyond basic records, which is consistent with a small "
