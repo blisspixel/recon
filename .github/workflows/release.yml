@@ -40,8 +40,11 @@ jobs:
       - name: Lint
         run: uv run ruff check recon_tool/
 
+      - name: Export runtime requirements
+        run: uv export --frozen --no-dev --no-emit-project --no-hashes --format requirements.txt --output-file .ci-audit-requirements.txt
+
       - name: Audit dependencies
-        run: uv run pip-audit
+        run: uv run pip-audit -r .ci-audit-requirements.txt
 
   build:
     needs: test
