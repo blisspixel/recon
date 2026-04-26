@@ -15,6 +15,7 @@ from recon_tool.insights import (
     _pki_insights,
     _sase_insights,
     _security_stack_insights,
+    _sparse_signal_insights,
     generate_insights,
 )
 
@@ -143,6 +144,42 @@ class TestInfrastructureInsights:
         ctx = _ctx(services={"DNS: Cloudflare", "CDN: Akamai"})
         insights = _infrastructure_insights(ctx)
         assert any("Cloudflare" in i for i in insights)
+
+
+class TestSparseSignalInsights:
+    def test_edge_heavy_sparse_domain_gets_specific_diagnosis(self):
+        ctx = _ctx(services={"DNS: Cloudflare", "CDN: Cloudflare", "DMARC"})
+        insights = _sparse_signal_insights(ctx)
+        assert any("edge-heavy footprint" in i for i in insights)
+        assert any("docs/weak-areas.md" in i for i in insights)
+
+    def test_custom_mail_sparse_domain_gets_self_hosted_diagnosis(self):
+        ctx = _ctx(
+            services={"Self-hosted mail", "DMARC"},
+            slugs={"self-hosted-mail"},
+            has_mx_records=True,
+        )
+        insights = _sparse_signal_insights(ctx)
+        assert any("self-hosted mail infrastructure" in i for i in insights)
+
+    def test_minimal_public_dns_domain_gets_minimal_dns_diagnosis(self):
+        ctx = _ctx(services={"DMARC"})
+        insights = _sparse_signal_insights(ctx)
+        assert any("minimal public DNS footprint" in i for i in insights)
+
+    def test_dense_domain_does_not_get_sparse_diagnosis(self):
+        ctx = _ctx(
+            services={
+                "Exchange Online",
+                "Slack",
+                "Atlassian",
+                "Okta",
+                "DNS: Cloudflare",
+            },
+            slugs={"microsoft365", "okta"},
+            auth_type="Federated",
+        )
+        assert _sparse_signal_insights(ctx) == []
 
 
 class TestGenerateInsightsIntegration:

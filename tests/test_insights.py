@@ -165,6 +165,28 @@ class TestInsightGeneration:
         insights = generate_insights(set(), slugs, None, None, 0)
         assert any("Proofpoint" in i for i in insights)
 
+    def test_sparse_edge_heavy_run_gets_specific_guidance(self):
+        insights = generate_insights(
+            {"DNS: Cloudflare", "CDN: Cloudflare", "DMARC"},
+            set(),
+            None,
+            "reject",
+            0,
+        )
+        assert any("edge-heavy footprint" in i for i in insights)
+        assert any("docs/weak-areas.md" in i for i in insights)
+
+    def test_sparse_self_hosted_mail_run_gets_specific_guidance(self):
+        insights = generate_insights(
+            {"Self-hosted mail", "DMARC"},
+            {"self-hosted-mail"},
+            None,
+            "reject",
+            0,
+            has_mx_records=True,
+        )
+        assert any("self-hosted mail infrastructure" in i for i in insights)
+
 
 class TestTieredOutput:
     def _make_info(self, **kwargs) -> TenantInfo:
@@ -247,3 +269,19 @@ class TestTieredOutput:
         info = self._make_info(insights=("No DMARC record — potential email security gap",))
         output = self._render(render_tenant_panel(info))
         assert "email security gap" in output
+
+    def test_sparse_diagnosis_is_rendered_early(self):
+        info = self._make_info(
+            insights=(
+                "Operational note",
+                "Sparse public signal — edge-heavy footprint. Cloudflare sits in front of the apex, which can hide origin and SaaS detail from passive DNS-only collection. Observation, not a verdict.",
+                "Next step — see docs/weak-areas.md for passive-only blind spots. If this looks like a parent or portfolio apex, run `recon batch <candidates.txt>` or `recon chain <domain> --depth 2`.",
+            )
+        )
+        output = self._render(render_tenant_panel(info))
+        sparse_pos = output.find("Sparse public signal")
+        note_pos = output.find("Operational note")
+        assert sparse_pos != -1
+        assert note_pos != -1
+        assert sparse_pos < note_pos
+        assert "docs/weak-areas.md" in output

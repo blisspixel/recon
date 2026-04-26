@@ -36,6 +36,7 @@ docs/accuracy.md
 # Three carve-outs: the runner script (no company names), a fictional
 # example corpus, and a README describing the policy.
 /validation/*
+!/validation/audit_fingerprints.py
 !/validation/run_corpus.py
 !/validation/corpus-example.txt
 !/validation/README.md

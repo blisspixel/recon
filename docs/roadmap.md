@@ -75,108 +75,60 @@ The thing to avoid is growing the *engine* (new CLI commands, new
 output formats, new subsystems, new config surfaces). Engine stays
 lean; data grows.
 
-## Shipped in v1.1: per-category fingerprint catalog
+## Next: post-v1.4
 
-The monolithic `recon_tool/data/fingerprints.yaml` (235 entries, 8
-duplicate slugs) is now `recon_tool/data/fingerprints/{ai,email,
-security,infrastructure,productivity,crm-marketing,data-analytics,
-verticals}.yaml` (227 unique slugs). The loader globs the directory
-in sorted order; custom `~/.recon/fingerprints.yaml` still works as a
-single file and a new `~/.recon/fingerprints/` directory is also
-accepted. Contributors inspect the catalog with `recon fingerprints
-list` / `search` / `show` and validate candidate files with `recon
-fingerprints check`. `signals.yaml` and `posture.yaml` stay single
-files — they're smaller and more interdependent.
+v1.4.0 is the current release. The shipped releases table and
+`CHANGELOG.md` cover what landed; this section is the active
+forward lane. No commitment on ordering or ship date — new work
+comes from live validation findings, not scope expansion.
 
-## Historical v1.2 targets (largely shipped)
-
-**Status.** Most of this work landed across v1.2.x through v1.3.1:
-specificity gating, contributor tooling, sparse-result docs, and wider
-validation practice are in place. The remaining active thread is
-repeatable live validation plus targeted fixes from what that corpus
-still exposes.
-
-**Scope (six items, each with an acceptance test):**
-
-1. **Chained-pattern fingerprint reference set.** Curate 20–30
-   high-confidence vendors using `match_mode: all` (e.g. Datadog,
-   Snowflake, Figma, Notion, Linear, Asana). The `match_mode: all`
-   infrastructure shipped in v0.10.2 but few built-in fingerprints
-   use it. The reference set both reduces existing false positives
-   and gives contributors concrete patterns to model from.
-   *Acceptance:* ≥20 chained entries merged; each has a regression
-   test domain in the validation corpus.
-
-2. **`recon fingerprints test <slug>`.** Run one fingerprint (built-in
-   or candidate) against the validation corpus and print which
-   domains match. Lets contributors test a pattern before PRing and
-   lets maintainers triage reported false positives without editing
-   test files.
-   *Acceptance:* Command exists; ships with a bundled 50-domain
-   corpus covering the major detection classes.
-
-3. **Pattern-specificity gate in the validator.** Fail
-   `recon fingerprints check` when a regex matches a suspicious
-   share of a synthetic-domain corpus — catches the class of
-   "valid YAML, would match 30% of the internet" that the current
-   schema validator can't see.
-   *Acceptance:* A deliberately-broad regex (`cname:\.com$`) is
-   rejected; real existing fingerprints all pass.
-
-4. **Sparse-result UX + `docs/weak-areas.md`.** When recon resolves
-   to few services, the output should *actionably* say so ("domain
-   is heavily Cloudflare-proxied — passive signals are thin; try
-   `recon chain` or check related apexes") instead of looking like a
-   bad run. Pair with a `docs/weak-areas.md` naming the categories
-   recon is honest about being thin on: heavy-Cloudflare orgs,
-   China-region tech stacks, regulated verticals behind web proxies,
-   fully self-hosted shops.
-   *Acceptance:* A run against a known-sparse target produces output
-   the user can reason from; the weak-areas doc exists and is linked
-   from README + limitations.
-
-5. **Batch performance numbers.** One real published table:
-   50 / 100 / 500 domains, wall-clock and memory. Goes in
-   `docs/performance.md` or similar. Stops users from guessing.
-   *Acceptance:* Table committed, reproducible via a scripted run.
-
-6. **CONTRIBUTING signal-engine caveat.** Fingerprint PRs are
-   welcome; changes to the signal / fusion / absence engines need
-   a one-page design doc first. Closes the "solo-maintained
-   inference logic" gap that no amount of contributor docs fixes
-   by itself.
-   *Acceptance:* CONTRIBUTING updated with the design-doc template
-   link.
-
-**Explicitly NOT in v1.2:**
-
-- Ballooning the fingerprint count to 1000+. Quality > count. Growth
-  is welcome but gated by the specificity check above.
-- Paid-API or credentialed integrations (VirusTotal, Censys paid,
-  passive-DNS services). Violates the zero-creds invariant.
-- Active scanning, plugin runtimes, bundled ML. Hard no.
-- File splits for `formatter.py` / `server.py` / `cli.py`. Still
-  "only when a feature forces it."
-
-**"We shouldn't have done this" signals for v1.2 itself:**
-
-- If the specificity gate trips on more than a handful of existing
-  fingerprints, it's too strict — recalibrate.
-- If the chained-pattern set takes more than 2 weeks of solo work,
-  we're over-engineering — ship what's ready, defer the rest.
-- If no external PR has landed by the v1.2 ship date *despite* both
-  the v1.1 plumbing and the v1.2 quality gates being in place, pause
-  on contributor-facing work and talk to users instead.
-
-## Current focus
+### Live-validation lane (always on)
 
 - Re-run the diverse 50-domain corpus on networked machines with
   `validation/run_corpus.py` and keep comparison artifacts when
   regressions appear.
 - Use live findings to tighten existing detections and trim false
   positives and false negatives before adding any new surface.
-- Keep hardening MCP, cache, and server hot paths when real defects are
-  found, especially under adversarial local-agent inputs.
+- Keep hardening MCP, cache, and server hot paths when real defects
+  are found, especially under adversarial local-agent inputs.
+
+### Detection work
+
+- **`match_mode: all` coverage audit.** The chained-pattern
+  infrastructure shipped in v0.10.2 and the specificity gate in
+  v1.2.0; the open question is how many built-in fingerprints
+  actually use chained patterns. Audit the catalog, identify
+  high-value vendors still on single-pattern matches (Datadog,
+  Snowflake, Figma, Notion, Linear, Asana, and similar), and
+  convert the ones where evidence supports it. Each conversion
+  needs a regression domain in the validation corpus.
+- **Sparse-result CLI polish.** `docs/weak-areas.md` exists but a
+  thin run doesn't yet point users at it. When the resolver returns
+  few services, the panel should name the likely reason (heavy
+  Cloudflare, minimal DNS, self-hosted) and link the doc — so a
+  sparse result reads as a diagnosed answer, not a bad run.
+
+### Doc polish backlog
+
+Small, additive, no engine change. Good single-PR sweep when time allows:
+
+- `docs/limitations.md`: add an APAC / China domestic-stack row;
+  enumerate known DKIM selector blind spots.
+- `docs/weak-areas.md`: add "wildcard-heavy DNS zones" as a named
+  weak area.
+- `docs/security.md`: name the ReDoS heuristic classes we guard
+  against; state explicitly that ephemeral fingerprints are
+  memory-only and never touch disk; acknowledge the
+  sub-second-TTL DNS-rebinding limitation as accepted.
+- `docs/schema.md`: concrete `added_services` / `removed_services`
+  example in the Delta section.
+- `docs/mcp.md`: tighten the `autoApprove` warning banner; add a
+  "Network calls?" column to the tools table; add a second
+  ephemeral-fingerprint example using `match_mode: all`.
+- `docs/fingerprints.md`: short "false positives we've killed"
+  subsection (unanchored regexes, dormant TXT, wildcard A) so new
+  contributors see the failure modes before they recreate them.
+- `docs/signals.md`: one custom-signal worked example.
 
 ## Ideas worth prototyping (not commitments)
 
@@ -187,16 +139,13 @@ ship.
 
 - **CT-organization search.** Use `crt.sh`'s subject `O=` field to
   find related certs issued to the same organization. Portfolio
-  discovery signal; adds a new network surface — let v1.1 settle
-  first.
-- **Tenant display-name clustering across batch.** If `balcan.com`
-  has tenant display name "Balcan Innovations Inc." and
-  `balcaninnovations.com` matches that substring, they're almost
-  certainly the same entity. Uses data we already collect — no new
-  network surface. Good first post-v1.1 feature candidate.
+  discovery signal; adds a new network surface, so weigh the
+  reliability cost against the clustering value before scoping.
 - **BIMI VMC legal-name clustering.** Strictly-verified legal names
   in BIMI VMCs are the strongest passive signal for corporate
   ownership clustering. Low false-positive rate, low coverage.
+  Natural follow-on to the tenant display-name clustering that
+  shipped in v1.3.0.
 - **Counterfactual hardening simulation.** Valuable for red-team and
   M&A due diligence. Read-only on cached evidence. Large feature —
   needs demand evidence before scoping.
