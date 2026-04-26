@@ -198,6 +198,11 @@ _SKIP_COMPACT_PREFIXES = (
 # Exact substrings that must appear as standalone tokens in the service name.
 _SKIP_COMPACT_EXACT = frozenset({"(SPF)", "(site verified)"})
 
+_SPARSE_INSIGHT_PREFIXES = (
+    "Sparse public signal —",
+    "Next step — see docs/weak-areas.md",
+)
+
 
 def _is_m365_service(svc: str) -> bool:
     """Check if a service name should be categorized as M365.
@@ -209,6 +214,11 @@ def _is_m365_service(svc: str) -> bool:
         return pg == "microsoft365"
     svc_lower = svc.lower()
     return any(kw in svc_lower for kw in _M365_KEYWORDS)
+
+
+def _is_sparse_insight(line: str) -> bool:
+    """Return True when an insight line is part of sparse-result diagnosis."""
+    return line.startswith(_SPARSE_INSIGHT_PREFIXES)
 
 
 # ── v0.9.3 panel constants ─────────────────────────────────────────────
@@ -1369,10 +1379,13 @@ def render_tenant_panel(
 
             # Promote the email security score to first position (bold).
             score_line: str | None = None
+            sparse_insights: list[str] = []
             other_insights: list[str] = []
             for c in curated:
                 if c.startswith("Email security ") and score_line is None:
                     score_line = c
+                elif _is_sparse_insight(c):
+                    sparse_insights.append(c)
                 else:
                     other_insights.append(c)
 
@@ -1382,12 +1395,14 @@ def render_tenant_panel(
                     ins.append(line, style="bold")
                 ins.append("\n")
 
+            ordered_insights = sparse_insights + other_insights
+
             # Cap at 5 insights in default mode; --full/--verbose shows all
-            display_insights = other_insights
+            display_insights = ordered_insights
             overflow_count = 0
-            if not verbose and len(other_insights) > 5:
-                display_insights = other_insights[:5]
-                overflow_count = len(other_insights) - 5
+            if not verbose and len(ordered_insights) > 5:
+                display_insights = ordered_insights[:5]
+                overflow_count = len(ordered_insights) - 5
 
             for insight in display_insights:
                 for j, line in enumerate(_wrap_text(insight, max_width)):

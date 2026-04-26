@@ -153,6 +153,35 @@ _IDP_SLUG_MAP: dict[str, str] = {
     "duo": "Duo",
 }
 
+_SPARSE_NON_SUBSTANTIVE_PREFIXES = (
+    "SPF complexity:",
+)
+
+_EDGE_SERVICE_PREFIXES = ("DNS:", "CDN:", "WAF:")
+
+_SPARSE_DOC_HINT = (
+    "Next step — see docs/weak-areas.md for passive-only blind spots. "
+    "If this looks like a parent or portfolio apex, run "
+    "`recon batch <candidates.txt>` or `recon chain <domain> --depth 2`."
+)
+
+
+def _substantive_services(ctx: InsightContext) -> list[str]:
+    """Return services that count toward signal richness for sparse heuristics."""
+    return [svc for svc in ctx.services if not svc.startswith(_SPARSE_NON_SUBSTANTIVE_PREFIXES)]
+
+
+def _edge_services(ctx: InsightContext) -> list[str]:
+    """Return distinct edge-layer services visible in the service list."""
+    found: list[str] = []
+    for svc in sorted(ctx.services):
+        if not svc.startswith(_EDGE_SERVICE_PREFIXES):
+            continue
+        _, _, provider = svc.partition(": ")
+        if provider and provider not in found:
+            found.append(provider)
+    return found
+
 
 # ── Individual insight generators ───────────────────────────────────────
 # Each returns a list of insight strings. Pure functions, easy to test.
@@ -535,10 +564,7 @@ def _sparse_signal_insights(ctx: InsightContext) -> list[str]:
     deliberately generous — anything above 5 services is rich
     enough that the user can see the picture on their own.
     """
-    # Count only "substantive" services — drop DNS meta-labels like
-    # SPF complexity: 3 includes that don't represent a deployed
-    # product.
-    substantive = [s for s in ctx.services if not s.startswith(("SPF complexity:", "SPF: softfail", "SPF: strict"))]
+    substantive = _substantive_services(ctx)
     if len(substantive) >= 5:
         return []
     # Suppress on domains where we still got a tenant_id — that's
@@ -546,18 +572,53 @@ def _sparse_signal_insights(ctx: InsightContext) -> list[str]:
     # auth/provider lines already carry the signal.
     if ctx.auth_type in ("Federated", "Managed") and any("microsoft 365" in s.lower() for s in ctx.services):
         return []
+
+    edge = _edge_services(ctx)
+    has_custom_mail = ctx.has_mx_records and (
+        "self-hosted-mail" in ctx.slugs
+        or "exchange-onprem" in ctx.slugs
+        or (
+            ctx.primary_email_provider is None
+            and ctx.likely_primary_email_provider is None
+            and ctx.email_gateway is None
+        )
+    )
+
+    if has_custom_mail:
+        return [
+            "Sparse public signal — custom or self-hosted mail infrastructure. "
+            "MX records exist, but the visible evidence points to a self-hosted "
+            "or hybrid delivery path rather than a richly fingerprinted SaaS "
+            "tenant. Observation, not a verdict.",
+            _SPARSE_DOC_HINT,
+        ]
+
+    if edge and len(substantive) <= 3:
+        visible_edge = ", ".join(edge[:2])
+        if len(edge) > 2:
+            visible_edge = f"{visible_edge}, and other edge services"
+        return [
+            f"Sparse public signal — edge-heavy footprint. {visible_edge} sits "
+            "in front of the apex, which can hide origin and SaaS detail from "
+            "passive DNS-only collection. Observation, not a verdict.",
+            _SPARSE_DOC_HINT,
+        ]
+
+    if not ctx.has_mx_records and ctx.auth_type is None and ctx.google_auth_type is None and not edge and len(substantive) <= 2:
+        return [
+            "Sparse public signal — minimal public DNS footprint. Very little is "
+            "exposed beyond basic records, which is consistent with a small "
+            "web-only property, a parked or dormant domain, or services hosted "
+            "on a different apex. Observation, not a verdict.",
+            _SPARSE_DOC_HINT,
+        ]
+
     return [
         "Sparse public signal — few observable records beyond MX and "
         "identity. Consistent with a small organization, a parked or "
         "dormant domain, a heavily-proxied target, or a holding / "
         "portfolio company landing page. Observation, not a verdict.",
-        "Next step — if this looks like a parent / portfolio apex, "
-        "subsidiary brands typically sit on their own apex domains "
-        "with richer signal. Run `recon batch <candidates.txt>` or "
-        "`recon chain <domain> --depth 2` to correlate with related "
-        "brand domains. Single-domain passive lookups cannot "
-        "reliably detect portfolio or subsidiary structure from DNS "
-        "alone.",
+        _SPARSE_DOC_HINT,
     ]
 
 
