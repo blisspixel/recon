@@ -12,8 +12,8 @@ pre-push steps, and a GitHub Actions workflow that handles build + publish.
 # 2. Run the release script.
 uv run python scripts/release.py
 
-# 3. Confirm the push when prompted. The Actions pipeline takes over:
-#    test → build wheel → publish to PyPI (OIDC) → GitHub release.
+# 3. Confirm the push when prompted. Pushing the vX.Y.Z tag triggers:
+#    test → build wheel/sdist → publish to PyPI (OIDC) → GitHub release.
 ```
 
 ---
@@ -57,8 +57,8 @@ quality gate passes before cutting an actual release.
 
 Triggered by any tag matching `v*` pushed to the repo. The workflow:
 
-1. **test** — installs deps, runs `pytest --cov-fail-under=80` and
-   `ruff check` and `pip-audit`.
+1. **test** — installs deps, runs `pytest --cov-fail-under=80`, `ruff check`,
+   exports locked runtime requirements, and audits those with `pip-audit`.
 2. **build** — `uv build` produces the sdist and wheel under `dist/`.
 3. **publish-pypi** — uses `pypa/gh-action-pypi-publish@release/v1` with
    OIDC (Trusted Publisher) to upload to PyPI. No static API tokens.
@@ -77,8 +77,8 @@ Before running `scripts/release.py`:
 
 - [ ] All planned changes for this version are merged to `main`.
 - [ ] `CHANGELOG.md` has a finalized `## [X.Y.Z] — YYYY-MM-DD` section.
-- [ ] `docs/roadmap.md` has the section for this release marked `(shipped YYYY-MM-DD)`
-      if it was a planned release.
+- [ ] `docs/roadmap.md` still describes the next work accurately and does not
+      duplicate `CHANGELOG.md`.
 - [ ] `docs/stability.md` has been updated if any public surface changed.
 - [ ] `docs/schema.md` has been updated if any top-level JSON field changed.
 - [ ] Test count + fingerprint count in `README.md` and `CLAUDE.md` are
@@ -108,7 +108,7 @@ installs but leaves the version available for reproducibility of systems
 that already pinned it.
 
 ```bash
-# Using pip-audit or twine:
+# Using twine:
 twine yank recon-tool --version X.Y.Z
 ```
 
@@ -144,13 +144,10 @@ is enforced.
 
 ## Python support policy
 
-CPython N-2: the project supports the three most recent stable CPython
-minor versions. When a new CPython minor is released and the oldest
-supported version reaches EOL per [PEP 602](https://peps.python.org/pep-0602/),
-the project drops support.
+The supported range is the set advertised in `pyproject.toml` classifiers and
+tested in CI.
 
-Current: Python 3.10, 3.11, 3.12. Python 3.10 support ends when CPython
-3.13 reaches its own EOL.
+Current tested range: **Python 3.10 through 3.13**.
 
-A minor version release will warn (via a `DeprecationWarning` on import)
-one release before removal of the oldest supported Python.
+Dropping a Python version is a compatibility change and should be called out in
+`CHANGELOG.md`. A minor release should warn first when practical.

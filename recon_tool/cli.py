@@ -373,7 +373,7 @@ def _doctor_mcp() -> None:
     console = get_console()
     console.print()
 
-    checks: list[tuple[str, bool, str]] = []
+    checks: list[tuple[str, str, str]] = []
 
     # 1. MCP package importable
     import importlib
@@ -1471,9 +1471,9 @@ async def _doctor() -> None:
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             resp = await client.get("https://login.microsoftonline.com/common/.well-known/openid-configuration")
-            checks.append(("OIDC discovery", resp.status_code == 200, f"HTTP {resp.status_code}"))
+            checks.append(("OIDC discovery", "ok" if resp.status_code == 200 else "fail", f"HTTP {resp.status_code}"))
         except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
-            checks.append(("OIDC discovery", False, _fmt_exc(exc)))
+            checks.append(("OIDC discovery", "fail", _fmt_exc(exc)))
 
         # Synthetic non-existent address — avoids probing a real account.
         try:
@@ -1481,9 +1481,9 @@ async def _doctor() -> None:
                 "https://login.microsoftonline.com/GetUserRealm.srf",
                 params={"login": "recon-connectivity-check@example.com", "json": "1"},
             )
-            checks.append(("GetUserRealm", resp.status_code == 200, f"HTTP {resp.status_code}"))
+            checks.append(("GetUserRealm", "ok" if resp.status_code == 200 else "fail", f"HTTP {resp.status_code}"))
         except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
-            checks.append(("GetUserRealm", False, _fmt_exc(exc)))
+            checks.append(("GetUserRealm", "fail", _fmt_exc(exc)))
 
         try:
             resp = await client.post(
@@ -1491,13 +1491,13 @@ async def _doctor() -> None:
                 content="<test/>",
                 headers={"Content-Type": "text/xml"},
             )
-            checks.append(("Autodiscover", True, f"HTTP {resp.status_code} (reachable)"))
+            checks.append(("Autodiscover", "ok", f"HTTP {resp.status_code} (reachable)"))
         except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
-            checks.append(("Autodiscover", False, _fmt_exc(exc)))
+            checks.append(("Autodiscover", "fail", _fmt_exc(exc)))
 
     try:
         answers = dns.resolver.resolve("example.com", "TXT")
-        checks.append(("DNS resolution", True, f"{len(list(answers))} TXT records"))  # pyright: ignore[reportArgumentType]
+        checks.append(("DNS resolution", "ok", f"{len(list(answers))} TXT records"))  # pyright: ignore[reportArgumentType]
     except (
         dns.resolver.NXDOMAIN,
         dns.resolver.NoAnswer,
@@ -1505,22 +1505,31 @@ async def _doctor() -> None:
         dns.exception.Timeout,
         OSError,
     ) as exc:
-        checks.append(("DNS resolution", False, _fmt_exc(exc)))
+        checks.append(("DNS resolution", "fail", _fmt_exc(exc)))
 
     # Check crt.sh connectivity (certificate transparency)
     async with httpx.AsyncClient(timeout=8.0) as client:
         try:
             resp = await client.get("https://crt.sh/?q=%.example.com&output=json")
-            checks.append(("crt.sh (cert transparency)", resp.status_code == 200, f"HTTP {resp.status_code}"))
+            if resp.status_code == 200:
+                checks.append(("crt.sh (cert transparency)", "ok", "HTTP 200"))
+            else:
+                checks.append(
+                    (
+                        "crt.sh (cert transparency)",
+                        "warn",
+                        f"HTTP {resp.status_code} (optional enrichment degraded)",
+                    )
+                )
         except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
-            checks.append(("crt.sh (cert transparency)", False, _fmt_exc(exc)))
+            checks.append(("crt.sh (cert transparency)", "warn", f"{_fmt_exc(exc)} (optional enrichment degraded)"))
 
     try:
         from recon_tool.server import mcp  # noqa: F401  # pyright: ignore[reportUnusedImport]
 
-        checks.append(("MCP server module", True, "loaded"))
+        checks.append(("MCP server module", "ok", "loaded"))
     except Exception as exc:
-        checks.append(("MCP server module", False, _fmt_exc(exc)))
+        checks.append(("MCP server module", "fail", _fmt_exc(exc)))
 
     # Check fingerprint database loading
     try:
@@ -1528,11 +1537,11 @@ async def _doctor() -> None:
 
         fps = load_fingerprints()
         if fps:
-            checks.append(("Fingerprint database", True, f"{len(fps)} fingerprints loaded"))
+            checks.append(("Fingerprint database", "ok", f"{len(fps)} fingerprints loaded"))
         else:
-            checks.append(("Fingerprint database", False, "no fingerprints loaded — detection will not work"))
+            checks.append(("Fingerprint database", "fail", "no fingerprints loaded — detection will not work"))
     except Exception as exc:
-        checks.append(("Fingerprint database", False, _fmt_exc(exc)))
+        checks.append(("Fingerprint database", "fail", _fmt_exc(exc)))
 
     # Check custom fingerprint path
     import os
@@ -1550,11 +1559,11 @@ async def _doctor() -> None:
                 count = len(data["fingerprints"])
             elif isinstance(data, list):
                 count = len(data)
-            checks.append(("Custom fingerprints", True, f"{count} entries in {custom_path}"))
+            checks.append(("Custom fingerprints", "ok", f"{count} entries in {custom_path}"))
         except Exception as exc:
-            checks.append(("Custom fingerprints", False, _fmt_exc(exc)))
+            checks.append(("Custom fingerprints", "fail", _fmt_exc(exc)))
     else:
-        checks.append(("Custom fingerprints", True, f"none ({custom_path} not found)"))
+        checks.append(("Custom fingerprints", "ok", f"none ({custom_path} not found)"))
 
     # Check signal database loading
     try:
@@ -1562,11 +1571,11 @@ async def _doctor() -> None:
 
         sigs = load_signals()
         if sigs:
-            checks.append(("Signal database", True, f"{len(sigs)} signals loaded"))
+            checks.append(("Signal database", "ok", f"{len(sigs)} signals loaded"))
         else:
-            checks.append(("Signal database", False, "no signals loaded — signal intelligence will not work"))
+            checks.append(("Signal database", "fail", "no signals loaded — signal intelligence will not work"))
     except Exception as exc:
-        checks.append(("Signal database", False, _fmt_exc(exc)))
+        checks.append(("Signal database", "fail", _fmt_exc(exc)))
 
     # Check custom signals path
     custom_signals_path = Path(custom_dir) / "signals.yaml" if custom_dir else Path.home() / ".recon" / "signals.yaml"
@@ -1578,25 +1587,30 @@ async def _doctor() -> None:
             count = 0
             if isinstance(data, dict) and "signals" in data:
                 count = len(data["signals"])
-            checks.append(("Custom signals", True, f"{count} entries in {custom_signals_path}"))
+            checks.append(("Custom signals", "ok", f"{count} entries in {custom_signals_path}"))
         except Exception as exc:
-            checks.append(("Custom signals", False, _fmt_exc(exc)))
+            checks.append(("Custom signals", "fail", _fmt_exc(exc)))
     else:
-        checks.append(("Custom signals", True, f"none ({custom_signals_path} not found)"))
+        checks.append(("Custom signals", "ok", f"none ({custom_signals_path} not found)"))
 
-    all_ok = True
-    for name, ok, detail in checks:
-        mark = "ok" if ok else "FAIL"
-        style = "green" if ok else "red"
+    has_failures = False
+    has_warnings = False
+    for name, status, detail in checks:
+        mark = {"ok": "ok", "warn": "WARN", "fail": "FAIL"}[status]
+        style = {"ok": "green", "warn": "yellow", "fail": "red"}[status]
         console.print(f"  [{style}]{mark:>4}[/{style}]  {name} — {detail}")
-        if not ok:
-            all_ok = False
+        if status == "fail":
+            has_failures = True
+        elif status == "warn":
+            has_warnings = True
 
     console.print()
-    if all_ok:
-        console.print("  [green]All checks passed.[/green]")
-    else:
+    if has_failures:
         console.print("  [yellow]Some checks failed. Lookups may be incomplete.[/yellow]")
+    elif has_warnings:
+        console.print("  [yellow]Core checks passed. Optional enrichment sources are degraded.[/yellow]")
+    else:
+        console.print("  [green]All checks passed.[/green]")
     console.print()
 
 

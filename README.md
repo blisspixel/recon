@@ -46,6 +46,14 @@ Insights
 
 Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP server](docs/mcp.md) for AI agents; the default `pip install recon-tool` includes MCP support.
 
+## Why recon?
+
+| If you need... | Use recon for... | Reach for something heavier when... |
+|---|---|---|
+| Fast external stack context | Passive DNS, identity-endpoint, CT, SaaS, and posture indicators with no credentials | You need authenticated tenant inventory or asset-management truth |
+| Defensive review or vendor diligence | Hedged observations and evidence traces you can verify | You need vulnerability scanning, exploit checks, or host-level facts |
+| Automation-friendly output | Stable `--json`, batch mode, delta mode, and local MCP tools | You need dashboards, scheduled monitoring, or report generation |
+
 ## Install
 
 Requires Python 3.10+.
@@ -66,13 +74,14 @@ recon contoso.com --profile fintech            # apply a posture lens
 recon contoso.com --confidence-mode strict     # drop hedging on dense-evidence targets (v0.11)
 recon contoso.com --json                       # structured JSON for piping
 recon batch domains.txt --json                 # batch (cross-domain token clustering)
+recon contoso.com --chain --depth 2            # follow related-domain breadcrumbs
 recon delta contoso.com                        # diff against last cached snapshot
 recon mcp                                      # start MCP server (stdio)
 ```
 
 Built-in profiles: `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`. Custom profiles live in `~/.recon/profiles/*.yaml`.
 
-See [docs/](docs/) for the full CLI reference, fingerprint and signal documentation, and MCP setup.
+See [docs/README.md](docs/README.md) for the organized documentation index.
 
 ## MCP Server
 
@@ -111,7 +120,7 @@ See [docs/mcp.md](docs/mcp.md) for the full tool list, advanced agentic workflow
 
 ```bash
 pip install -e ".[dev]"               # or: uv sync --extra dev
-pytest tests/                          # 1585 tests, 87% coverage
+pytest tests/                          # full test suite
 ruff check recon_tool/                 # lint
 pyright recon_tool/                    # type check
 pre-commit install                     # activate pre-commit hooks

@@ -3,7 +3,7 @@
 Signals are derived observations: "when these slugs show up together, emit this
 line". They're defined in `recon_tool/data/signals.yaml`.
 
-- **39 built-in signals** as of v1.0.2.
+- Use `recon signals list` to inspect the current built-in signal catalog.
 - **Two evaluation passes** — simple signals first, then meta-signals that
   depend on other signals firing (`requires_signals`). No third pass, no
   absence engine firing by default: `expected_counterparts` is available for
@@ -46,6 +46,27 @@ signals:
 
 Run `recon <your-domain> --explain` after adding to see whether it fires
 and what evidence backed it.
+
+### Worked example
+
+Goal: emit a local observation when at least three healthcare-adjacent
+controls appear together.
+
+```yaml
+signals:
+  - name: Healthcare Compliance Stack
+    category: Vertical
+    confidence: medium
+    description: Healthcare-adjacent security and identity controls observed
+    requires:
+      any: [okta, crowdstrike, proofpoint, knowbe4, 1password]
+    min_matches: 3
+```
+
+If a domain matches `okta`, `proofpoint`, and `crowdstrike`, the signal can
+appear in `insights` and in `--explain` with the matched slugs. If only one or
+two slugs match, it stays silent. Keep custom signal descriptions factual; do
+not turn them into maturity or risk verdicts.
 
 ## Expected counterparts (absence detection)
 

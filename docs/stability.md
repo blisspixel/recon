@@ -174,17 +174,14 @@ consumer was relying on the default.
 
 ## Python support policy
 
-recon supports **CPython N-2**: the three most recent stable CPython
-minor versions. When a new CPython minor is released and the oldest
-supported version reaches EOL per
-[PEP 602](https://peps.python.org/pep-0602/), recon drops support.
+The stable Python surface is the range advertised in `pyproject.toml` and
+tested in CI.
 
-- **Currently supported:** Python 3.10, 3.11, 3.12.
-- **Drop schedule:** Python 3.10 support ends when CPython 3.13 reaches
-  end-of-life (per PEP 602 schedule).
-- **Deprecation signal:** One minor version before removing support for
-  a Python version, recon emits a `DeprecationWarning` on import when
-  run under that Python.
+- **Currently tested:** Python 3.10, 3.11, 3.12, and 3.13.
+- **Adding a Python version:** update CI, classifiers, and this section in the
+  same change.
+- **Dropping a Python version:** treat as a compatibility change, document it
+  in `CHANGELOG.md`, and warn one minor release ahead when practical.
 
 ---
 
