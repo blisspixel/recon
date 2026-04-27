@@ -53,10 +53,13 @@ fingerprints:
   detections:
   - type: spf
     pattern: mktomail.com
+    description: Marketo email sending SPF include
   - type: cname
     pattern: mktosvc.com
+    description: Marketo hosted service CNAME
   - type: cname
-    pattern: mkto-
+    pattern: mktoweb.com
+    description: Marketo landing page CNAME
 - name: Klaviyo
   slug: klaviyo
   category: CRM & Marketing

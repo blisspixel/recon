@@ -151,7 +151,7 @@ fingerprints:
   display_group: Email Deliverability
   detections:
   - type: spf
-    pattern: dmarcian
+    pattern: dmarcian.com
     description: dmarcian DMARC management and SPF optimization
   - type: dmarc_rua
     pattern: dmarcian.com
@@ -163,7 +163,7 @@ fingerprints:
   display_group: Email Deliverability
   detections:
   - type: spf
-    pattern: easydmarc
+    pattern: easydmarc.com
     description: EasyDMARC email authentication management
   - type: dmarc_rua
     pattern: easydmarc.com

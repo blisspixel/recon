@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import asdict, dataclass
-from typing import Literal
+from typing import Literal, cast
 
 from recon_tool.fingerprints import DetectionRule, Fingerprint, load_fingerprints
 
@@ -23,6 +23,7 @@ __all__ = [
     "audit_multi_detection_fingerprints",
     "format_fingerprint_audit_dict",
     "render_fingerprint_audit_markdown",
+    "summarize_fingerprint_catalog",
 ]
 
 _VERIFICATION_WORDS = (
@@ -52,6 +53,33 @@ class FingerprintAuditEntry:
     recommendation: AuditRecommendation
     reasons: tuple[str, ...]
     patterns: tuple[str, ...]
+
+
+def summarize_fingerprint_catalog(
+    fingerprints: tuple[Fingerprint, ...] | None = None,
+) -> dict[str, object]:
+    """Return no-network catalog health metrics for validation reports."""
+    fps = fingerprints if fingerprints is not None else load_fingerprints()
+    detections = [rule for fp in fps for rule in fp.detections]
+    category_counts = Counter(fp.category for fp in fps)
+    match_modes = Counter(fp.match_mode for fp in fps)
+
+    return {
+        "total_fingerprints": len(fps),
+        "total_detections": len(detections),
+        "multi_detection_fingerprints": sum(1 for fp in fps if len(fp.detections) > 1),
+        "match_modes": dict(sorted(match_modes.items())),
+        "category_counts": dict(sorted(category_counts.items())),
+        "fingerprints_with_detection_descriptions": sum(
+            1 for fp in fps if any(rule.description for rule in fp.detections)
+        ),
+        "fingerprints_with_detection_references": sum(
+            1 for fp in fps if any(rule.reference for rule in fp.detections)
+        ),
+        "detections_with_description": sum(1 for rule in detections if rule.description),
+        "detections_with_reference": sum(1 for rule in detections if rule.reference),
+        "weighted_detections": sum(1 for rule in detections if rule.weight != 1.0),
+    }
 
 
 def _is_verification_rule(rule: DetectionRule) -> bool:
@@ -153,11 +181,15 @@ def audit_multi_detection_fingerprints(
     return tuple(sorted(entries, key=lambda entry: (entry.recommendation, entry.category, entry.slug)))
 
 
-def format_fingerprint_audit_dict(entries: tuple[FingerprintAuditEntry, ...]) -> dict[str, object]:
+def format_fingerprint_audit_dict(
+    entries: tuple[FingerprintAuditEntry, ...],
+    fingerprints: tuple[Fingerprint, ...] | None = None,
+) -> dict[str, object]:
     """Return a JSON-safe audit summary."""
     classifications = Counter(entry.classification for entry in entries)
     recommendations = Counter(entry.recommendation for entry in entries)
     return {
+        "catalog_summary": summarize_fingerprint_catalog(fingerprints),
         "total_multi_detection_fingerprints": len(entries),
         "classifications": dict(sorted(classifications.items())),
         "recommendations": dict(sorted(recommendations.items())),
@@ -165,11 +197,31 @@ def format_fingerprint_audit_dict(entries: tuple[FingerprintAuditEntry, ...]) ->
     }
 
 
-def render_fingerprint_audit_markdown(entries: tuple[FingerprintAuditEntry, ...]) -> str:
+def render_fingerprint_audit_markdown(
+    entries: tuple[FingerprintAuditEntry, ...],
+    fingerprints: tuple[Fingerprint, ...] | None = None,
+) -> str:
     """Render a compact Markdown audit report."""
-    data = format_fingerprint_audit_dict(entries)
+    data = format_fingerprint_audit_dict(entries, fingerprints)
+    summary = cast(dict[str, object], data["catalog_summary"])
     lines = [
         "# Fingerprint Match-Mode Audit",
+        "",
+        "## Catalog Summary",
+        "",
+        f"- fingerprints: {summary['total_fingerprints']}",
+        f"- detection rules: {summary['total_detections']}",
+        f"- multi-detection fingerprints: {summary['multi_detection_fingerprints']}",
+        f"- match modes: {_format_counter(summary['match_modes'])}",
+        (
+            "- detection descriptions: "
+            f"{summary['detections_with_description']}/{summary['total_detections']}"
+        ),
+        (
+            "- detection references: "
+            f"{summary['detections_with_reference']}/{summary['total_detections']}"
+        ),
+        f"- weighted detections: {summary['weighted_detections']}/{summary['total_detections']}",
         "",
         "## Summary",
         "",
@@ -194,3 +246,9 @@ def render_fingerprint_audit_markdown(entries: tuple[FingerprintAuditEntry, ...]
             lines.append(f"  reason: {'; '.join(entry.reasons)}")
 
     return "\n".join(lines) + "\n"
+
+
+def _format_counter(value: object) -> str:
+    if not isinstance(value, dict) or not value:
+        return "none"
+    return ", ".join(f"{name}={count}" for name, count in value.items())

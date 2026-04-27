@@ -4,6 +4,7 @@ from recon_tool.fingerprint_audit import (
     audit_multi_detection_fingerprints,
     format_fingerprint_audit_dict,
     render_fingerprint_audit_markdown,
+    summarize_fingerprint_catalog,
 )
 from recon_tool.fingerprints import DetectionRule, Fingerprint
 
@@ -95,22 +96,54 @@ def test_audit_marks_existing_all_mode_as_already_all() -> None:
 
 
 def test_audit_output_formats_summary_and_entries() -> None:
+    fp = _fp(
+        "notion-like",
+        (
+            DetectionRule(type="txt", pattern="^notion-domain-verification="),
+            DetectionRule(type="txt", pattern="^notion-verification-code"),
+        ),
+    )
     entries = audit_multi_detection_fingerprints(
         (
-            _fp(
-                "notion-like",
-                (
-                    DetectionRule(type="txt", pattern="^notion-domain-verification="),
-                    DetectionRule(type="txt", pattern="^notion-verification-code"),
-                ),
-            ),
+            fp,
         )
     )
 
     payload = format_fingerprint_audit_dict(entries)
     rendered = render_fingerprint_audit_markdown(entries)
 
+    catalog_summary = payload["catalog_summary"]
+    assert isinstance(catalog_summary, dict)
+    assert catalog_summary["total_fingerprints"] >= 1
     assert payload["total_multi_detection_fingerprints"] == 1
     assert payload["classifications"] == {"alternative": 1}
+    assert "## Catalog Summary" in rendered
     assert "`notion-like`" in rendered
     assert "keep_any" in rendered
+
+
+def test_catalog_summary_counts_metadata_coverage() -> None:
+    fp = _fp(
+        "metadata-rich",
+        (
+            DetectionRule(
+                type="txt",
+                pattern="^service-domain-verification=",
+                description="Domain ownership verification",
+                reference="https://example.com/docs",
+            ),
+            DetectionRule(type="cname", pattern="service.example.com", weight=0.6),
+        ),
+    )
+
+    summary = summarize_fingerprint_catalog((fp,))
+
+    assert summary["total_fingerprints"] == 1
+    assert summary["total_detections"] == 2
+    assert summary["multi_detection_fingerprints"] == 1
+    assert summary["match_modes"] == {"any": 1}
+    assert summary["fingerprints_with_detection_descriptions"] == 1
+    assert summary["fingerprints_with_detection_references"] == 1
+    assert summary["detections_with_description"] == 1
+    assert summary["detections_with_reference"] == 1
+    assert summary["weighted_detections"] == 1

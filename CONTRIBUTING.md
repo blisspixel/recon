@@ -32,7 +32,7 @@ are always welcome:
 |---|---|---|
 | **New fingerprints** | Must use public DNS/CT only. Specific pattern, not generic substring. Tested against a real customer domain. | "Add Statsig TXT verification", "Add Workspace ONE CNAME" |
 | **Refined fingerprints** | `match_mode: all` to eliminate false positives, improved regex, broader selector coverage. | Converting ambiguous slug to a chained pattern |
-| **New signals** | Must derive from existing evidence. Hedged language. | "AI Governance Gap" signal from AI slugs + absence of DLP fingerprints |
+| **New signals** | Must derive from existing evidence. Hedged language. | "AI tooling indicators observed alongside identity-provider signals" |
 | **New profiles** | Must reweight existing observations; cannot invent new ones. | "Retail / e-commerce" profile |
 | **Bug reports** | Reproducible + output of `recon <domain> --json --explain`. | Wrong provider classification, insight wording, display glitch |
 | **Accuracy reports** | Domain you know ground truth for, plus what recon got wrong. | "Our org uses M365 primary; recon says Exchange on-prem" (omit real names in public reports) |
@@ -173,6 +173,14 @@ intentionally coarse.
 
 ### 2. Add your entry
 
+Use the scaffolding command when possible:
+
+```bash
+recon fingerprints new service-slug
+```
+
+It walks through the stable schema and specificity checks before emitting YAML.
+
 ```yaml
 - name: Service Name
   slug: service-slug          # lowercase, unique across ALL files
@@ -182,7 +190,13 @@ intentionally coarse.
     - type: txt                # txt, spf, mx, ns, cname, subdomain_txt, caa, srv, dmarc_rua
       pattern: "^service-domain-verification="
       description: What this record means
+      reference: https://vendor.example/docs/domain-verification
 ```
+
+`description` should explain the observable record. `reference` is optional,
+but preferred when public vendor documentation exists. Do not add fields that
+are not in the stable data-file schema unless a separate schema change has
+already been accepted.
 
 ### 3. Validate locally before opening a PR
 
@@ -197,8 +211,10 @@ weight range (0.0–1.0), `match_mode` value — **plus** a cross-file
 duplicate-slug check. Exits 0 on success, 1 on failure with per-entry
 error messages.
 
-Under the hood this wraps `scripts/validate_fingerprint.py`; contributors
-who prefer invoking the script directly can still do so.
+Under the hood this uses the packaged `recon_tool.fingerprint_validator`
+module, so it works from installed wheels as well as source checkouts.
+Contributors who prefer invoking the wrapper script directly can still run
+`python scripts/validate_fingerprint.py <path>`.
 
 ### Chained patterns (`match_mode: all`)
 
@@ -206,14 +222,26 @@ For high-confidence attribution where a single record could be a false
 positive, use `match_mode: all` — the fingerprint only fires when every
 listed detection matches. See [docs/fingerprints.md](docs/fingerprints.md#chained-patterns-match_mode-all) for details.
 
+For multi-detection changes, run:
+
+```bash
+python -m validation.audit_fingerprints
+```
+
+The audit is advisory. Use it to document whether the entry should remain
+`any`, move to `all`, or be tightened before changing behavior.
+
 ### Fingerprint PR checklist
 
 - [ ] Validates locally with `recon fingerprints check`
 - [ ] `recon fingerprints show <slug>` displays your new entry after load
 - [ ] Slug does not collide with an existing one (`recon fingerprints list | grep <slug>`)
 - [ ] At least one detection pattern uses a service-specific token (not a generic substring)
+- [ ] Detection metadata includes `description`, plus `reference` when public vendor docs exist
 - [ ] Tested against a real public domain you know uses the service
 - [ ] The service's DNS footprint is documented or publicly-observable (not leaked from a customer engagement)
+- [ ] Multi-detection entries include a `match_mode` rationale from the audit output or PR notes
+- [ ] Common legitimate false-negative cases are captured in the PR body, or in `docs/weak-areas.md` when broadly useful
 - [ ] `pytest tests/` passes — property tests must still hold on the sparse-data corpus
 - [ ] If the service could trip false positives on domains that merely *visited* the vendor's marketing site, used `match_mode: all`
 

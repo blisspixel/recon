@@ -15,6 +15,7 @@ from recon_tool.fingerprint_audit import (
     format_fingerprint_audit_dict,
     render_fingerprint_audit_markdown,
 )
+from recon_tool.fingerprints import load_fingerprints
 
 
 def main() -> None:
@@ -23,9 +24,10 @@ def main() -> None:
     parser.add_argument("--markdown-output", type=Path, default=None, help="Optional path for Markdown audit output.")
     args = parser.parse_args()
 
-    entries = audit_multi_detection_fingerprints()
-    json_payload = json.dumps(format_fingerprint_audit_dict(entries), indent=2)
-    markdown = render_fingerprint_audit_markdown(entries)
+    fingerprints = load_fingerprints()
+    entries = audit_multi_detection_fingerprints(fingerprints)
+    json_payload = json.dumps(format_fingerprint_audit_dict(entries, fingerprints), indent=2)
+    markdown = render_fingerprint_audit_markdown(entries, fingerprints)
 
     if args.json_output is not None:
         args.json_output.parent.mkdir(parents=True, exist_ok=True)
