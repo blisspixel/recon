@@ -184,11 +184,17 @@ fingerprints:
   confidence: high
   detections:
   - type: ns
-    pattern: akamai
+    pattern: akamai.net
+    description: Akamai authoritative DNS hostname
+  - type: ns
+    pattern: akam.net
+    description: Akamai authoritative DNS hostname
   - type: cname
     pattern: akamaiedge.net
+    description: Akamai edge CNAME delegation
   - type: cname
     pattern: edgekey.net
+    description: Akamai edge key CNAME delegation
   - type: cname
     pattern: edgesuite.net
     description: Akamai EdgeSuite CDN/WAF CNAME delegation
@@ -298,7 +304,8 @@ fingerprints:
     pattern: elb.amazonaws.com
     description: AWS Application/Network Load Balancer CNAME
   - type: cname
-    pattern: elasticloadbalancing
+    pattern: .elb.
+    description: AWS Elastic Load Balancer regional CNAME
 - name: AWS S3
   slug: aws-s3
   category: Infrastructure
@@ -306,8 +313,13 @@ fingerprints:
   detections:
   - type: cname
     pattern: s3.amazonaws.com
+    description: AWS S3 REST endpoint CNAME
   - type: cname
-    pattern: s3-website
+    pattern: .s3-website-
+    description: AWS S3 static website endpoint CNAME
+  - type: cname
+    pattern: .s3-website.
+    description: AWS S3 static website endpoint CNAME
 - name: AWS Elastic Beanstalk
   slug: aws-eb
   category: Infrastructure

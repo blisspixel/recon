@@ -358,9 +358,12 @@ class TestCliPostureAndExplainFlags:
 
 class TestVersionFlag:
     def test_version_flag_prints_and_exits(self) -> None:
+        from recon_tool import __version__
+
         result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
         assert "recon" in result.stdout
+        assert __version__ in result.stdout
 
 
 class TestHelpOutput:

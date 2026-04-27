@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4] - 2026-04-27
+
+**Patch release - fingerprint hardening and packaged validator reliability.**
+Keeps the public surface stable while tightening broad built-in fingerprint
+patterns, making catalog validation work from installed wheels, and grounding
+the next roadmap work in validation metrics.
+
+### Added
+
+- Fingerprint match-mode audit reports now include catalog health metrics:
+  total fingerprints, detection-rule count, match-mode distribution, metadata
+  coverage, and weighted-detection count.
+- Roadmap and contributor docs now call out measured fingerprint-library
+  priorities, metadata expectations, weak-area notes, and MCP/catalog
+  consumption guidance.
+
+### Changed
+
+- Broad Marketo, dmarcian, EasyDMARC, Akamai, AWS ELB, and AWS S3 fingerprint
+  substrings were tightened and documented with detection descriptions.
+- The 50-domain live validation pass completed with 50 successes, no errors,
+  no partial results, no low-confidence results, and only optional `crt.sh`
+  degradation observed by `recon doctor`.
+
+### Fixed
+
+- `recon fingerprints check` now uses a packaged validator module instead of
+  shelling out to a repo-local `scripts/validate_fingerprint.py` path, so the
+  stable command works from installed distributions.
+
 ## [1.4.3] - 2026-04-27
 
 **Patch release - validation-driven reliability and local-safety hardening.**

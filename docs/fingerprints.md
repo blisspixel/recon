@@ -41,6 +41,28 @@ fingerprints:
 | `caa` | CAA values | Substring | CA restrictions |
 | `srv` | SRV targets | Substring | Service discovery (Teams, XMPP) |
 
+## Metadata fields
+
+Detection rules can include optional metadata:
+
+```yaml
+detections:
+  - type: txt
+    pattern: "^service-domain-verification="
+    description: Vendor domain-ownership verification token
+    reference: https://vendor.example/docs/domain-verification
+    weight: 0.8
+```
+
+Use `description` for the observable meaning of the record, not a maturity or
+risk judgment. Add `reference` when the vendor has public verification docs.
+Use non-default `weight` sparingly, when a detection is useful but weaker than
+the rest of the fingerprint.
+
+Metadata feeds `recon fingerprints show`, MCP catalog resources, explanation
+output, and validation reports. Improving descriptions and references is a
+safe way to increase explainability without changing detection behavior.
+
 ## Chained patterns (`match_mode: all`)
 
 By default a fingerprint fires when *any* detection matches. Use
@@ -81,6 +103,14 @@ Before committing a new fingerprint to the built-in set:
    on any of them, tighten the pattern or switch to `match_mode: all`.
 4. Keep regexes anchored (`^`, `$`) where possible. Unanchored substring
    matches in TXT are the #1 source of false positives.
+5. Add `description` and, when public vendor docs exist, `reference` metadata
+   so `--explain` and MCP consumers can show why the record mattered.
+6. If you add or change multiple detections on one fingerprint, run
+   `python -m validation.audit_fingerprints` and record whether the entry
+   should stay `any`, move to `match_mode: all`, or be tightened first.
+7. If the service has common legitimate configurations that publish little or
+   no DNS evidence, add a short PR note or weak-area doc update rather than
+   making the fingerprint broader.
 
 ## False positives we avoid
 

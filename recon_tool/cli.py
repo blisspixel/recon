@@ -1178,7 +1178,6 @@ def fingerprints_check(
     once the split lands). Pass a path to validate a candidate file
     before committing it.
     """
-    import subprocess
     from pathlib import Path as _Path
 
     if path is None:
@@ -1196,18 +1195,9 @@ def fingerprints_check(
         render_error(f"Path not found: {target}")
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
-    script = _Path(__file__).parent.parent / "scripts" / "validate_fingerprint.py"
-    if not script.exists():
-        from recon_tool.formatter import render_error
+    from recon_tool.fingerprint_validator import validate_path
 
-        render_error(f"Validator script missing: {script}")
-        raise typer.Exit(code=EXIT_INTERNAL) from None
-
-    cmd = [sys.executable, str(script), str(target)]
-    if quiet:
-        cmd.append("--quiet")
-    result = subprocess.run(cmd, check=False)  # noqa: S603
-    raise typer.Exit(code=result.returncode)
+    raise typer.Exit(code=validate_path(target, quiet=quiet))
 
 
 # ── Signals CLI ───────────────────────────────────────────────────────

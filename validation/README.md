@@ -25,6 +25,18 @@ Artifacts (`results.json`, `summary.json`, `summary.md`) land under
 to override and `--compare-to <prior results.json>` to emit a headline
 delta against an earlier run.
 
+Run the fingerprint catalog audit alongside live validation when changing
+YAML:
+
+```bash
+python -m validation.audit_fingerprints \
+  --markdown-output validation/live_runs/<UTC-stamp>/fingerprint_audit.md
+```
+
+The audit is no-network. It reports catalog metadata coverage and classifies
+multi-detection fingerprints as `keep_any`, `review_for_all`, or
+`tighten_patterns` so match-mode changes stay evidence-driven.
+
 ## Policy
 
 Real apex domains never get committed here, not as corpus files and
