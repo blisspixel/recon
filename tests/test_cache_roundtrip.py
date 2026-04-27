@@ -22,6 +22,7 @@ import pytest
 
 from recon_tool.cache import (
     DEFAULT_TTL,
+    cache_clear,
     cache_dir,
     cache_get,
     cache_put,
@@ -285,6 +286,29 @@ class TestCacheDiskOperations:
         cache_put("..\\escape", _complete_info())
         if cache_dir().exists():
             assert list(cache_dir().glob("*.json")) == []
+
+    def test_clear_deletes_valid_cache_entry(self) -> None:
+        cache_put("contoso.com", _complete_info())
+
+        assert cache_clear("contoso.com") is True
+        assert not (cache_dir() / "contoso.com.json").exists()
+
+    def test_clear_rejects_traversal_and_preserves_sibling_json(self) -> None:
+        outside = cache_dir().parent / "outside.json"
+        outside.write_text('{"keep": true}', encoding="utf-8")
+
+        assert cache_clear("../outside") is False
+        assert outside.exists()
+        assert outside.read_text(encoding="utf-8") == '{"keep": true}'
+
+    def test_clear_rejects_sibling_prefix_traversal(self) -> None:
+        sibling_dir = cache_dir().parent / "cache-evil"
+        sibling_dir.mkdir(parents=True)
+        outside = sibling_dir / "settings.json"
+        outside.write_text('{"keep": true}', encoding="utf-8")
+
+        assert cache_clear("../cache-evil/settings") is False
+        assert outside.exists()
 
 
 class TestCacheDirRespectsEnvVar:

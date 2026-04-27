@@ -5,11 +5,12 @@ posture views for defensive review, vendor due diligence, and security
 architecture planning. All functions are pure (no I/O, no network calls)
 and operate exclusively on frozen dataclasses from the existing pipeline.
 
-All output uses neutral, defensive language. The extended BANNED_TERMS set
-is enforced at construction time to prevent offensive or prescriptive
-language from appearing in any output field. Observations describe what
-IS configured, not what SHOULD be configured. Gaps use "Consider ..."
-language rather than imperative directives.
+All recon-authored prose uses neutral, defensive language: observable facts,
+hedged assessments, and "Consider ..." phrasing rather than imperative
+directives. The terminology guard below is a copy-style lint for generated
+phrasing, not an input blocklist; domain names, evidence strings, and caller
+phrasing are data and must not be rejected because they contain a word from
+the style list.
 
 This module imports only from recon_tool.models and recon_tool.constants —
 never from httpx, dns.resolver, or any LookupSource.
@@ -30,13 +31,13 @@ from recon_tool.constants import (
     SVC_SPF_STRICT,
 )
 from recon_tool.models import TenantInfo
-from recon_tool.posture import BANNED_TERMS
+from recon_tool.posture import DISCOURAGED_COPY_TERMS
 
 logger = logging.getLogger(__name__)
 
-# ── Banned terms ────────────────────────────────────────────────────────
+# ── Neutral-language copy terms ─────────────────────────────────────────
 
-EXPOSURE_BANNED_TERMS: frozenset[str] = BANNED_TERMS | frozenset(
+EXPOSURE_DISCOURAGED_COPY_TERMS: frozenset[str] = DISCOURAGED_COPY_TERMS | frozenset(
     {
         "target",
         "attack surface",
@@ -46,9 +47,10 @@ EXPOSURE_BANNED_TERMS: frozenset[str] = BANNED_TERMS | frozenset(
     }
 )
 
-# Module-level strict mode flag — True by default (raises ValueError).
-# Production code can set this to False for graceful degradation.
-_STRICT_MODE: bool = True
+# Backward-compatible alias for older tests or callers that imported the old
+# internal name. These terms guide recon-authored copy only; they are not an
+# input blocklist and never cause runtime rejection.
+EXPOSURE_BANNED_TERMS = EXPOSURE_DISCOURAGED_COPY_TERMS
 
 
 # ── Slug classification maps ───────────────────────────────────────────
@@ -299,19 +301,12 @@ class PostureComparison:
 # ── Helper functions ───────────────────────────────────────────────────
 
 
-def _enforce_banned_terms(text: str) -> str:
-    """Validate that text contains no banned terms.
-
-    In strict mode (tests), raises ValueError on violation.
-    In production mode, logs a warning and returns the text unchanged.
-    """
+def _check_neutral_copy(text: str) -> str:
+    """Log discouraged generated-copy terms without blocking the output."""
     lower = text.lower()
-    for term in EXPOSURE_BANNED_TERMS:
+    for term in EXPOSURE_DISCOURAGED_COPY_TERMS:
         if term in lower:
-            if _STRICT_MODE:
-                msg = f"Banned term '{term}' found in output: {text!r}"
-                raise ValueError(msg)
-            logger.warning("Banned term '%s' found in output: %s", term, text)
+            logger.warning("Discouraged copy term '%s' found in generated prose: %s", term, text)
     return text
 
 
@@ -479,7 +474,7 @@ def _compute_consistency_observations(info: TenantInfo) -> tuple[ConsistencyObse
     has_exchange = "microsoft365" in slugs_set
     has_google = "google-workspace" in slugs_set
     if has_exchange and has_google:
-        obs = _enforce_banned_terms("Both Microsoft 365 and Google Workspace email services detected")
+        obs = _check_neutral_copy("Both Microsoft 365 and Google Workspace email services detected")
         evidence = _build_evidence_refs(info, {"microsoft365", "google-workspace"})
         observations.append(ConsistencyObservation(observation=obs, category="dual_provider", evidence=evidence))
 
@@ -488,7 +483,7 @@ def _compute_consistency_observations(info: TenantInfo) -> tuple[ConsistencyObse
     security_present = slugs_set & _SECURITY_TOOL_SLUGS
     if consumer_present and not security_present:
         consumer_names = sorted(consumer_present)
-        obs = _enforce_banned_terms(
+        obs = _check_neutral_copy(
             f"Consumer-grade SaaS detected ({', '.join(consumer_names)}) without enterprise security controls"
         )
         evidence = _build_evidence_refs(info, consumer_present)
@@ -681,8 +676,8 @@ def assess_exposure_from_info(info: TenantInfo) -> ExposureAssessment:
         consistency_observations=consistency,
         hardening_status=hardening,
         posture_score=score,
-        posture_score_label=_enforce_banned_terms("based on publicly observable controls"),
-        disclaimer=_enforce_banned_terms(_ASSESSMENT_DISCLAIMER),
+        posture_score_label=_check_neutral_copy("based on publicly observable controls"),
+        disclaimer=_check_neutral_copy(_ASSESSMENT_DISCLAIMER),
         evidence=tuple(all_evidence),
     )
 
@@ -702,8 +697,8 @@ def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="email",
                 severity="high",
-                observation=_enforce_banned_terms("No DMARC record detected for this domain"),
-                recommendation=_enforce_banned_terms(
+                observation=_check_neutral_copy("No DMARC record detected for this domain"),
+                recommendation=_check_neutral_copy(
                     "Consider configuring a DMARC record to protect against email spoofing"
                 ),
                 evidence=(),
@@ -716,8 +711,8 @@ def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="email",
                 severity="high",
-                observation=_enforce_banned_terms("DMARC policy is set to 'none' (monitoring only)"),
-                recommendation=_enforce_banned_terms("Consider setting DMARC policy to quarantine or reject"),
+                observation=_check_neutral_copy("DMARC policy is set to 'none' (monitoring only)"),
+                recommendation=_check_neutral_copy("Consider setting DMARC policy to quarantine or reject"),
                 evidence=_build_evidence_refs(info, {"dmarc"} & slugs_set),
             )
         )
@@ -728,8 +723,8 @@ def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="email",
                 severity="medium",
-                observation=_enforce_banned_terms("DMARC policy is set to quarantine, not reject"),
-                recommendation=_enforce_banned_terms(
+                observation=_check_neutral_copy("DMARC policy is set to quarantine, not reject"),
+                recommendation=_check_neutral_copy(
                     "Consider upgrading DMARC policy from quarantine to reject for stronger enforcement"
                 ),
                 evidence=_build_evidence_refs(info, {"dmarc"} & slugs_set),
@@ -743,8 +738,8 @@ def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="email",
                 severity="medium",
-                observation=_enforce_banned_terms("No DKIM selectors observed at common names for this domain"),
-                recommendation=_enforce_banned_terms(
+                observation=_check_neutral_copy("No DKIM selectors observed at common names for this domain"),
+                recommendation=_check_neutral_copy(
                     "Consider verifying DKIM configuration and, if missing, "
                     "deploying signing with a common selector name"
                 ),
@@ -758,8 +753,8 @@ def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="email",
                 severity="medium",
-                observation=_enforce_banned_terms("No MTA-STS policy detected for this domain"),
-                recommendation=_enforce_banned_terms("Consider deploying MTA-STS to enforce encrypted email transport"),
+                observation=_check_neutral_copy("No MTA-STS policy detected for this domain"),
+                recommendation=_check_neutral_copy("Consider deploying MTA-STS to enforce encrypted email transport"),
                 evidence=(),
             )
         )
@@ -770,8 +765,8 @@ def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="email",
                 severity="low",
-                observation=_enforce_banned_terms("No TLS-RPT record detected for this domain"),
-                recommendation=_enforce_banned_terms(
+                observation=_check_neutral_copy("No TLS-RPT record detected for this domain"),
+                recommendation=_check_neutral_copy(
                     "Consider configuring TLS-RPT to receive email transport failure reports"
                 ),
                 evidence=(),
@@ -784,8 +779,8 @@ def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="infrastructure",
                 severity="low",
-                observation=_enforce_banned_terms("No CAA records detected for this domain"),
-                recommendation=_enforce_banned_terms(
+                observation=_check_neutral_copy("No CAA records detected for this domain"),
+                recommendation=_check_neutral_copy(
                     "Consider adding CAA records to restrict which certificate authorities can issue certificates"
                 ),
                 evidence=(),
@@ -809,8 +804,8 @@ def _detect_weak_configs(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="email",
                 severity="medium",
-                observation=_enforce_banned_terms("SPF policy uses softfail (~all) instead of hardfail (-all)"),
-                recommendation=_enforce_banned_terms(
+                observation=_check_neutral_copy("SPF policy uses softfail (~all) instead of hardfail (-all)"),
+                recommendation=_check_neutral_copy(
                     "Consider changing SPF policy from ~all (softfail) to -all (hardfail)"
                 ),
                 evidence=_build_evidence_refs(info, {"spf-softfail"} & slugs_set),
@@ -823,8 +818,8 @@ def _detect_weak_configs(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="email",
                 severity="low",
-                observation=_enforce_banned_terms("MTA-STS policy is in testing mode, not enforce"),
-                recommendation=_enforce_banned_terms("Consider upgrading MTA-STS policy from testing to enforce"),
+                observation=_check_neutral_copy("MTA-STS policy is in testing mode, not enforce"),
+                recommendation=_check_neutral_copy("Consider upgrading MTA-STS policy from testing to enforce"),
                 evidence=_build_evidence_refs(info, {"mta-sts", "mta-sts-enforce"} & slugs_set),
             )
         )
@@ -845,10 +840,10 @@ def _detect_inconsistencies(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="consistency",
                 severity="high",
-                observation=_enforce_banned_terms(
+                observation=_check_neutral_copy(
                     f"Email gateway ({', '.join(gateway_names)}) detected without DMARC reject enforcement"
                 ),
-                recommendation=_enforce_banned_terms(
+                recommendation=_check_neutral_copy(
                     "Consider enforcing DMARC alongside the email gateway for comprehensive email protection"
                 ),
                 evidence=_build_evidence_refs(info, gateway_slugs),
@@ -864,10 +859,10 @@ def _detect_inconsistencies(info: TenantInfo) -> list[HardeningGap]:
             HardeningGap(
                 category="consistency",
                 severity="medium",
-                observation=_enforce_banned_terms(
+                observation=_check_neutral_copy(
                     f"Consumer-grade SaaS detected ({', '.join(consumer_names)}) without enterprise security controls"
                 ),
-                recommendation=_enforce_banned_terms(
+                recommendation=_check_neutral_copy(
                     "Consider reviewing consumer-grade SaaS usage alongside enterprise security controls"
                 ),
                 evidence=_build_evidence_refs(info, consumer_present),
@@ -910,10 +905,10 @@ def _detect_stale_indicators(info: TenantInfo) -> list[HardeningGap]:
                     HardeningGap(
                         category="infrastructure",
                         severity="low",
-                        observation=_enforce_banned_terms(
+                        observation=_check_neutral_copy(
                             f"Single-record detection for '{slug}' — may indicate an orphaned configuration"
                         ),
-                        recommendation=_enforce_banned_terms(
+                        recommendation=_check_neutral_copy(
                             "Consider reviewing DNS records for potentially orphaned service configurations"
                         ),
                         evidence=_build_evidence_refs(info, {slug}),
@@ -946,7 +941,7 @@ def find_gaps_from_info(info: TenantInfo) -> GapReport:
     return GapReport(
         domain=info.queried_domain,
         gaps=tuple(gaps),
-        disclaimer=_enforce_banned_terms(_GAPS_DISCLAIMER),
+        disclaimer=_check_neutral_copy(_GAPS_DISCLAIMER),
     )
 
 
@@ -1014,7 +1009,7 @@ def _build_differences(info_a: TenantInfo, info_b: TenantInfo) -> tuple[PostureD
                 desc = f"{ctrl_a.name} present in {info_b.queried_domain} but absent in {info_a.queried_domain}"
             diffs.append(
                 PostureDifference(
-                    description=_enforce_banned_terms(desc),
+                    description=desc,
                     domain_a_has=ctrl_a.present,
                     domain_b_has=ctrl_b.present,
                 )
@@ -1038,7 +1033,7 @@ def _build_relative_assessment(info_a: TenantInfo, info_b: TenantInfo) -> tuple[
         summary = (
             f"{info_a.queried_domain} and {info_b.queried_domain} have a comparable set of email-security controls"
         )
-    assessments.append(RelativeAssessment(dimension="email_security", summary=_enforce_banned_terms(summary)))
+    assessments.append(RelativeAssessment(dimension="email_security", summary=summary))
 
     # Identity maturity
     a_federated = info_a.auth_type == "Federated"
@@ -1051,7 +1046,7 @@ def _build_relative_assessment(info_a: TenantInfo, info_b: TenantInfo) -> tuple[
         summary = "Both domains use federated identity"
     else:
         summary = "Neither domain uses federated identity"
-    assessments.append(RelativeAssessment(dimension="identity_maturity", summary=_enforce_banned_terms(summary)))
+    assessments.append(RelativeAssessment(dimension="identity_maturity", summary=summary))
 
     # Security tooling
     slugs_a = set(info_a.slugs)
@@ -1064,7 +1059,7 @@ def _build_relative_assessment(info_a: TenantInfo, info_b: TenantInfo) -> tuple[
         summary = f"{info_b.queried_domain} has broader security tooling ({tools_b} vs {tools_a} detected)"
     else:
         summary = f"Both domains have comparable security tooling ({tools_a} detected)"
-    assessments.append(RelativeAssessment(dimension="security_tooling", summary=_enforce_banned_terms(summary)))
+    assessments.append(RelativeAssessment(dimension="security_tooling", summary=summary))
 
     return tuple(assessments)
 
@@ -1080,5 +1075,5 @@ def compare_postures_from_infos(info_a: TenantInfo, info_b: TenantInfo) -> Postu
         metrics=_build_metrics(info_a, info_b),
         differences=_build_differences(info_a, info_b),
         relative_assessment=_build_relative_assessment(info_a, info_b),
-        disclaimer=_enforce_banned_terms(_COMPARISON_DISCLAIMER),
+        disclaimer=_check_neutral_copy(_COMPARISON_DISCLAIMER),
     )

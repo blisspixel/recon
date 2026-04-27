@@ -37,7 +37,7 @@ fingerprints:
 | `mx` | MX hostnames | Substring | Email providers and gateways |
 | `ns` | NS hostnames | Substring | DNS hosting |
 | `cname` | CNAME targets | Regex | CDN / WAF / SaaS infrastructure |
-| `subdomain_txt` | TXT at a specific subdomain | Regex | Challenge records (`_github-challenge-`) |
+| `subdomain_txt` | TXT at a specific subdomain | `subdomain:regex` | Challenge records (`_vendor-challenge:.+`) |
 | `caa` | CAA values | Substring | CA restrictions |
 | `srv` | SRV targets | Substring | Service discovery (Teams, XMPP) |
 

@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from recon_tool.models import CertSummary
+from recon_tool.validator import validate_domain
 
 __all__ = [
     "CT_CACHE_TTL",
@@ -80,14 +81,17 @@ def _safe_path(domain: str) -> Path:
     whose path string still started with the ``ct-cache`` prefix and
     slip through. ``Path.is_relative_to`` is the correct containment
     check — it compares path components, so siblings don't pass.
-    A light-weight input guard also rejects the most common traversal
-    characters before resolution, giving defense in depth.
+    Domain validation rejects malformed and traversal-shaped input
+    before resolution; the path-aware containment check stays in place
+    as defense in depth.
     """
-    if not domain or "/" in domain or "\\" in domain or ".." in domain:
+    try:
+        normalized = validate_domain(domain)
+    except ValueError as exc:
         msg = f"Invalid domain for cache path: {domain}"
-        raise ValueError(msg)
+        raise ValueError(msg) from exc
     d = ct_cache_dir().resolve()
-    path = (d / f"{domain}.json").resolve()
+    path = (d / f"{normalized}.json").resolve()
     try:
         if not path.is_relative_to(d):
             msg = f"Invalid domain for cache path: {domain}"

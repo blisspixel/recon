@@ -313,7 +313,7 @@ fingerprints:
   confidence: high
   detections:
   - type: subdomain_txt
-    pattern: ^_github-challenge-
+    pattern: _github-challenge:.+
     description: GitHub Enterprise domain challenge — proves GitHub Enterprise Cloud with Advanced Security
 - name: Sonatype
   slug: sonatype

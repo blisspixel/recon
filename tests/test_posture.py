@@ -1,7 +1,7 @@
 """Tests for the posture analyzer."""
 
 from recon_tool.models import CertSummary, ConfidenceLevel, TenantInfo
-from recon_tool.posture import BANNED_TERMS, analyze_posture
+from recon_tool.posture import DISCOURAGED_COPY_TERMS, analyze_posture
 
 
 def _make_info(**overrides) -> TenantInfo:
@@ -58,8 +58,8 @@ class TestAnalyzePosture:
         statements = [o.statement for o in result]
         assert any("certificate" in s.lower() or "25" in s for s in statements)
 
-    def test_no_banned_terms_in_observations(self):
-        """No observation should ever contain banned terms."""
+    def test_no_discouraged_copy_terms_in_observations(self):
+        """Built-in posture observations keep neutral generated copy."""
         info = _make_info(
             slugs=("proofpoint", "okta", "crowdstrike", "slack", "anthropic"),
             services=("Proofpoint", "Okta", "CrowdStrike", "Slack", "Anthropic"),
@@ -77,8 +77,8 @@ class TestAnalyzePosture:
         result = analyze_posture(info)
         for obs in result:
             lower = obs.statement.lower()
-            for term in BANNED_TERMS:
-                assert term not in lower, f"Banned term '{term}' found in: {obs.statement}"
+            for term in DISCOURAGED_COPY_TERMS:
+                assert term not in lower, f"Discouraged copy term '{term}' found in: {obs.statement}"
 
     def test_valid_categories(self):
         info = _make_info(

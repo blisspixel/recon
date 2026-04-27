@@ -69,6 +69,10 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
 Each job is gated on the previous. If any of test/lint/audit fails, the
 publish and release jobs never run.
 
+Workflow permissions are least-privilege: `test` and `build` run with
+`contents: read`, `publish-pypi` is the only job with `id-token: write`, and
+`github-release` is the only job with `contents: write`.
+
 ---
 
 ## Pre-release checklist

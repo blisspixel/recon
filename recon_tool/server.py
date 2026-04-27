@@ -1875,8 +1875,20 @@ async def inject_ephemeral_fingerprint(
         EphemeralCapacityError,
         _validate_fingerprint,  # pyright: ignore[reportPrivateUsage]
         inject_ephemeral,
+        validate_ephemeral_input_size,
     )
     from recon_tool.specificity import evaluate_pattern
+
+    try:
+        validate_ephemeral_input_size(
+            name=name,
+            slug=slug,
+            category=category,
+            confidence=confidence,
+            detection_count=len(detections),
+        )
+    except EphemeralCapacityError as exc:
+        return json_mod.dumps({"error": str(exc)})
 
     fp_dict: dict[str, object] = {
         "name": name,

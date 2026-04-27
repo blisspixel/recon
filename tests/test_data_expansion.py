@@ -102,6 +102,11 @@ class TestNewFingerprintsLoad:
             for det in fp.detections:
                 assert det.type in {"txt", "spf", "mx", "ns", "cname", "subdomain_txt", "caa", "srv", "dmarc_rua"}
                 assert det.pattern, f"Fingerprint '{fp.name}' has empty pattern"
+                if det.type == "subdomain_txt":
+                    assert ":" in det.pattern, f"Fingerprint '{fp.name}' subdomain_txt pattern missing ':'"
+                    subdomain, regex = det.pattern.split(":", 1)
+                    assert subdomain, f"Fingerprint '{fp.name}' subdomain_txt pattern has empty subdomain"
+                    assert regex, f"Fingerprint '{fp.name}' subdomain_txt pattern has empty regex"
 
     def test_all_fingerprints_have_valid_confidence(self) -> None:
         fps = load_fingerprints()

@@ -8,6 +8,7 @@ detect_provider edge cases, etc. No real company names.
 
 from __future__ import annotations
 
+import csv
 import io
 import re
 
@@ -16,6 +17,8 @@ from rich.console import Console
 
 from recon_tool.formatter import (
     detect_provider,
+    format_batch_csv,
+    format_tenant_csv_row,
     get_console,
     render_source_status_panel,
     render_tenant_panel,
@@ -71,6 +74,60 @@ def _minimal_info(**overrides: object) -> TenantInfo:
     }
     defaults.update(overrides)
     return TenantInfo(**defaults)  # type: ignore[arg-type]
+
+
+class TestCsvFormulaNeutralization:
+    @pytest.mark.parametrize(
+        "value",
+        [
+            '=HYPERLINK("https://example.invalid")',
+            "+SUM(1,1)",
+            "-SUM(1,1)",
+            "@SUM(1,1)",
+            "\t=SUM(1,1)",
+            "\r=SUM(1,1)",
+            "\n=SUM(1,1)",
+            " =SUM(1,1)",
+            " \t=SUM(1,1)",
+        ],
+    )
+    def test_tenant_csv_row_neutralizes_formula_prefixes(self, value: str) -> None:
+        row = format_tenant_csv_row(_minimal_info(display_name=value))
+
+        assert row["display_name"] == "'" + value
+
+    def test_tenant_csv_row_leaves_safe_text_unchanged(self) -> None:
+        row = format_tenant_csv_row(_minimal_info(display_name="Contoso Ltd"))
+
+        assert row["display_name"] == "Contoso Ltd"
+
+    def test_batch_csv_sanitizes_success_and_error_rows(self) -> None:
+        info = _minimal_info(
+            queried_domain="=tenant.example",
+            display_name='=HYPERLINK("https://example.invalid")',
+            tenant_id="+tenant-id",
+            auth_type="@Managed",
+            dmarc_policy="-reject",
+            mta_sts_mode=" enforce",
+            google_auth_type="\tmanaged",
+        )
+
+        text = format_batch_csv(
+            [
+                ("ignored.example", info, None),
+                ("=error.example", None, "lookup failed"),
+            ]
+        )
+        rows = list(csv.DictReader(io.StringIO(text)))
+
+        assert rows[0]["domain"] == "'=tenant.example"
+        assert rows[0]["display_name"].startswith("'=HYPERLINK")
+        assert rows[0]["tenant_id"] == "'+tenant-id"
+        assert rows[0]["auth_type"] == "'@Managed"
+        assert rows[0]["dmarc_policy"] == "'-reject"
+        assert rows[0]["mta_sts_mode"] == " enforce"
+        assert rows[0]["google_auth_type"] == "'\tmanaged"
+        assert rows[1]["domain"] == "'=error.example"
 
 
 class TestDetectProviderEdgeCases:

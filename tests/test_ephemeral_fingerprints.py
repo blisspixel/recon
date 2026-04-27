@@ -21,6 +21,7 @@ from hypothesis import strategies as st
 
 from recon_tool.fingerprints import (
     DetectionRule,
+    EphemeralCapacityError,
     Fingerprint,
     clear_ephemeral,
     get_ephemeral,
@@ -159,6 +160,45 @@ class TestEphemeralCoreFunctions:
         assert fp2 in result
         assert len(result) == 2
 
+    def test_inject_rejects_too_many_detections_per_fingerprint(self) -> None:
+        """Oversized single ephemeral fingerprint is rejected before storage."""
+        detections = tuple(DetectionRule(type="txt", pattern=f"^quota-{idx}=") for idx in range(21))
+        fp = Fingerprint(
+            name="Contoso Quota",
+            slug="contoso-quota",
+            category="SaaS",
+            confidence="high",
+            m365=False,
+            detections=detections,
+        )
+
+        with pytest.raises(EphemeralCapacityError, match="detection cap"):
+            inject_ephemeral(fp)
+
+        assert get_ephemeral() == ()
+
+    def test_inject_rejects_total_detection_quota(self) -> None:
+        """Total ephemeral detections are capped so lookup work stays bounded."""
+        for fp_idx in range(25):
+            detections = tuple(
+                DetectionRule(type="txt", pattern=f"^quota-{fp_idx}-{det_idx}=") for det_idx in range(20)
+            )
+            inject_ephemeral(
+                Fingerprint(
+                    name=f"Contoso Quota {fp_idx}",
+                    slug=f"contoso-quota-{fp_idx}",
+                    category="SaaS",
+                    confidence="high",
+                    m365=False,
+                    detections=detections,
+                )
+            )
+
+        assert len(get_ephemeral()) == 25
+        with pytest.raises(EphemeralCapacityError, match="Ephemeral detection cap"):
+            inject_ephemeral(_make_fingerprint(slug="contoso-overflow", pattern="^contoso-overflow="))
+        assert len(get_ephemeral()) == 25
+
 
 # ── 18.2: inject_ephemeral_fingerprint MCP tool ──────────────────────
 
@@ -263,6 +303,23 @@ class TestInjectEphemeralFingerprintMCP:
         data = json.loads(result)
         assert data["status"] == "ok"
         assert data["detections_accepted"] == 2
+
+    @pytest.mark.asyncio
+    async def test_oversized_detection_list_returns_error(self) -> None:
+        """MCP injection rejects oversized detection arrays before validation."""
+        from recon_tool.server import inject_ephemeral_fingerprint
+
+        result = await inject_ephemeral_fingerprint(
+            name="Contoso Oversized",
+            slug="contoso-oversized",
+            category="SaaS",
+            confidence="high",
+            detections=[{"type": "invalid_type", "pattern": f"^contoso-{idx}="} for idx in range(21)],
+        )
+        data = json.loads(result)
+        assert "error" in data
+        assert "detection cap" in data["error"]
+        assert get_ephemeral() == ()
 
 
 # ── 18.3: list_ephemeral_fingerprints MCP tool ───────────────────────

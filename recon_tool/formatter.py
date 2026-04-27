@@ -2280,12 +2280,16 @@ def _compute_email_security_score(info: TenantInfo) -> int:
     return score
 
 
+_CSV_FORMULA_PREFIXES = frozenset(("=", "+", "-", "@", "\t", "\r", "\n"))
+
+
 def _csv_safe(value: str) -> str:
     """Neutralize CSV formula-injection prefixes.
 
     Spreadsheet applications (Excel, LibreOffice, Google Sheets)
     interpret cells starting with ``=``, ``+``, ``-``, ``@``, ``\\t``,
-    or ``\\r`` as formulas. ``display_name`` comes from the
+    ``\\r``, or ``\\n`` as formulas. Some import paths also trim
+    leading spaces before formula detection. ``display_name`` comes from the
     GetUserRealm ``FederationBrandName`` response, which is
     attacker-controllable for any domain the user chooses to
     look up. A tenant name like ``=HYPERLINK("http://...")`` would
@@ -2299,7 +2303,8 @@ def _csv_safe(value: str) -> str:
     """
     if not value:
         return value
-    if value[0] in ("=", "+", "-", "@", "\t", "\r"):
+    candidate = value.lstrip(" ")
+    if candidate and candidate[0] in _CSV_FORMULA_PREFIXES:
         return "'" + value
     return value
 
@@ -2342,10 +2347,10 @@ def format_batch_csv(infos: list[tuple[str, TenantInfo | None, str | None]]) -> 
     for domain, info, _error in infos:
         if info is not None:
             row_dict = format_tenant_csv_row(info)
-            writer.writerow([row_dict[col] for col in CSV_COLUMNS])
+            writer.writerow([_csv_safe(row_dict[col]) for col in CSV_COLUMNS])
         else:
             # Error row: domain + empty fields
-            row = [domain] + [""] * (len(CSV_COLUMNS) - 1)
+            row = [_csv_safe(domain)] + [""] * (len(CSV_COLUMNS) - 1)
             writer.writerow(row)
 
     return buf.getvalue()

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from recon_tool.sources.cert_providers import CrtshProvider, filter_subdomains
+from recon_tool.sources.cert_providers import MAX_SUBDOMAINS, CrtshProvider, filter_subdomains
 
 
 @pytest.fixture
@@ -129,6 +129,37 @@ class TestCrtshProvider:
             subdomains, _ = await provider.query("example.com")
 
         assert len(subdomains) <= 100
+
+    @pytest.mark.asyncio
+    async def test_large_response_is_bounded_before_filtering(self):
+        """Large crt.sh payloads should not force unbounded local parsing."""
+        provider = CrtshProvider()
+        entries = [
+            {
+                "name_value": f"sub{i}.example.com",
+                "issuer_ca_id": i,
+                "issuer_name": "Example CA",
+                "not_before": "2024-01-01T00:00:00",
+                "not_after": "2025-01-01T00:00:00",
+            }
+            for i in range(MAX_SUBDOMAINS * 30)
+        ]
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = entries
+
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(return_value=mock_response)
+
+        with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
+            mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
+            subdomains, cert_summary = await provider.query("example.com")
+
+        assert len(subdomains) <= MAX_SUBDOMAINS
+        assert "sub2500.example.com" not in subdomains
+        assert cert_summary is not None
+        assert cert_summary.cert_count == MAX_SUBDOMAINS * 10
 
     @pytest.mark.asyncio
     async def test_handles_http_error(self):

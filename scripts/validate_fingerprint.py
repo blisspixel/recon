@@ -95,22 +95,18 @@ def _validate_file(
         result = _validate_fingerprint(entry if isinstance(entry, dict) else {}, str(path))
         warnings_this_entry = captured[before:]
 
-        # Specificity check — independent of schema validation. A pattern
-        # can pass the schema and still be catastrophically broad.
+        # Specificity check runs only on schema-validated DetectionRule
+        # objects. Invalid/unsafe raw patterns are rejected by
+        # _validate_fingerprint first; do not hand them to the regex
+        # specificity runner.
         specificity_fails: list[str] = []
-        if not skip_specificity and isinstance(entry, dict):
-            for det in entry.get("detections", []) or []:
-                if not isinstance(det, dict):
-                    continue
-                pattern = det.get("pattern")
-                det_type = det.get("type")
-                if not isinstance(pattern, str) or not isinstance(det_type, str):
-                    continue
-                verdict = evaluate_pattern(pattern, det_type)
+        if not skip_specificity and result is not None:
+            for det in result.detections:
+                verdict = evaluate_pattern(det.pattern, det.type)
                 if verdict.threshold_exceeded:
                     msg = (
-                        f"over-broad pattern: type={det_type!r} "
-                        f"pattern={pattern!r} matched {verdict.matches}/"
+                        f"over-broad pattern: type={det.type!r} "
+                        f"pattern={det.pattern!r} matched {verdict.matches}/"
                         f"{verdict.corpus_size} of the synthetic corpus "
                         f"({verdict.match_rate:.1%} > "
                         f"{0.01:.0%} threshold)"

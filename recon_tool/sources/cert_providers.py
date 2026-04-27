@@ -49,6 +49,15 @@ SKIP_PREFIXES = (
 # Maximum number of unique subdomains to extract from CT results.
 MAX_SUBDOMAINS = 100
 
+# Bound local processing of CT provider responses. The HTTP client still
+# receives a provider response as a whole, but parsing every certificate
+# entry and every name from a very large crt.sh JSON payload can create
+# avoidable CPU/memory spikes before the public ``MAX_SUBDOMAINS`` cap is
+# applied. These limits keep extraction proportional to the output cap.
+_MAX_CRTSH_ENTRIES = MAX_SUBDOMAINS * 20
+_MAX_CRTSH_RAW_NAMES = MAX_SUBDOMAINS * 10
+_MAX_CRTSH_CERT_SUMMARY_ENTRIES = MAX_SUBDOMAINS * 10
+
 # High-signal subdomain prefixes that commonly CNAME to SaaS providers.
 HIGH_SIGNAL_PREFIXES = (
     "auth",
@@ -277,33 +286,38 @@ class CrtshProvider:
         if not isinstance(data, list):
             return [], None
 
-        # Extract subdomain names from name_value fields
+        # Extract a bounded candidate set from name_value fields. Do
+        # not build raw/cert lists from the entire crt.sh payload:
+        # large CT histories can contain tens of thousands of names,
+        # and only MAX_SUBDOMAINS are ever returned.
         raw_names: list[str] = []
-        for entry in data:
+        cert_entries: list[dict[str, str | int | None]] = []
+        for entry in data[:_MAX_CRTSH_ENTRIES]:
             if not isinstance(entry, dict):
+                continue
+
+            if len(cert_entries) < _MAX_CRTSH_CERT_SUMMARY_ENTRIES:
+                cert_entries.append(
+                    {
+                        "issuer_ca_id": entry.get("issuer_ca_id"),
+                        "issuer_id": entry.get("issuer_ca_id"),
+                        "issuer_name": entry.get("issuer_name"),
+                        "not_before": entry.get("not_before"),
+                        "not_after": entry.get("not_after"),
+                    }
+                )
+
+            if len(raw_names) >= _MAX_CRTSH_RAW_NAMES:
                 continue
             name_value = entry.get("name_value", "")
             if not isinstance(name_value, str):
                 continue
             for raw_name in name_value.strip().split("\n"):
                 raw_names.append(raw_name.strip())
+                if len(raw_names) >= _MAX_CRTSH_RAW_NAMES:
+                    break
 
         subdomains = filter_subdomains(raw_names, domain)
-
-        # Build cert metadata entries for CertSummary
-        cert_entries: list[dict[str, str | int | None]] = []
-        for entry in data:
-            if not isinstance(entry, dict):
-                continue
-            cert_entries.append(
-                {
-                    "issuer_ca_id": entry.get("issuer_ca_id"),
-                    "issuer_id": entry.get("issuer_ca_id"),
-                    "issuer_name": entry.get("issuer_name"),
-                    "not_before": entry.get("not_before"),
-                    "not_after": entry.get("not_after"),
-                }
-            )
 
         now = datetime.now(timezone.utc)
         cert_summary = build_cert_summary(cert_entries, now)
