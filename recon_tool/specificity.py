@@ -27,6 +27,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from recon_tool.fingerprints import _validate_regex  # pyright: ignore[reportPrivateUsage]
+
 __all__ = [
     "DEFAULT_MATCH_THRESHOLD",
     "PATTERN_TYPE_CORPORA",
@@ -278,16 +280,6 @@ def synthetic_corpus(detection_type: str) -> list[str]:
     return PATTERN_TYPE_CORPORA.get(detection_type.lower(), _generic_corpus())
 
 
-# Hard cap on regex length. Mirrors ``_MAX_PATTERN_LENGTH`` in
-# ``fingerprints.py`` — we don't want a malicious PR or MCP caller
-# to hand the specificity gate a megabyte of regex that pegs CPU
-# before the schema validator can reject it. Schema validation
-# already enforces this cap; duplicating it here keeps the gate
-# safe even when called directly (e.g. from the MCP
-# ``inject_ephemeral_fingerprint`` path).
-_MAX_PATTERN_LENGTH: int = 500
-
-
 def evaluate_pattern(
     pattern: str,
     detection_type: str,
@@ -297,21 +289,20 @@ def evaluate_pattern(
     """Match ``pattern`` against the synthetic corpus for ``detection_type``.
 
     Returns a ``SpecificityVerdict`` with match count and a flag for
-    whether the threshold was exceeded. Uncompilable or oversized
-    patterns yield a verdict with ``matches=0`` and
+    whether the threshold was exceeded. Uncompilable, oversized, or
+    ReDoS-shaped patterns yield a verdict with ``matches=0`` and
     ``threshold_exceeded=False`` — the runtime schema validator
-    already rejects them. A length guard here prevents a pathological
-    regex (catastrophic backtracking, megabyte-scale pattern) from
-    hanging the validator even when this function is called directly
-    without first going through ``_validate_fingerprint``.
+    already rejects them. Running the same regex safety guard here
+    prevents a pathological regex (catastrophic backtracking,
+    megabyte-scale pattern) from hanging the validator even when this
+    function is called directly without first going through
+    ``_validate_fingerprint``.
     """
     corpus = synthetic_corpus(detection_type)
 
-    # Length guard — cheap, and matches the schema validator's cap.
-    # Without it, a contributor PR or an MCP client could hand the
-    # specificity gate a pathological pattern that pegs CPU before
-    # the schema check runs.
-    if len(pattern) > _MAX_PATTERN_LENGTH:
+    # Reuse the runtime schema guard so direct callers get the same
+    # length cap, ReDoS heuristic, and compile validation as YAML load.
+    if not _validate_regex(pattern, "specificity gate"):
         return SpecificityVerdict(
             pattern=pattern,
             detection_type=detection_type,

@@ -23,6 +23,7 @@ from recon_tool.models import (
     EvidenceRecord,
     TenantInfo,
 )
+from recon_tool.validator import validate_domain
 
 __all__ = [
     "DEFAULT_TTL",
@@ -101,15 +102,17 @@ def _safe_cache_path(domain: str) -> Path | None:
     Returns None (rather than raising) when the domain is malformed or
     would escape the cache directory. Callers treat None as "no entry
     to operate on" — this keeps ``cache_clear("../../etc/passwd")``
-    from deleting files outside ``~/.recon/cache/``. Uses
-    ``Path.is_relative_to`` instead of string-prefix matching so
-    sibling directories sharing the cache-dir prefix cannot be
-    reached via a crafted traversal string.
+    from deleting files outside ``~/.recon/cache/``. Domain validation
+    normalizes the cache key; the path-aware containment check is
+    retained as defense in depth so sibling directories sharing the
+    cache-dir prefix cannot be reached via a crafted traversal string.
     """
-    if not domain or "/" in domain or "\\" in domain or ".." in domain:
+    try:
+        normalized = validate_domain(domain)
+    except ValueError:
         return None
     d = cache_dir().resolve()
-    path = (d / f"{domain}.json").resolve()
+    path = (d / f"{normalized}.json").resolve()
     try:
         if not path.is_relative_to(d):
             return None

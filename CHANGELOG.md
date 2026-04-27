@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] - 2026-04-27
+
+**Patch release - validation-driven reliability and local-safety hardening.**
+Keeps the public surface stable while bounding long-running MCP state,
+tightening local cache paths, and fixing passive DNS/fingerprint edge cases
+found during review.
+
+### Changed
+
+- The exposure terminology guard now acts as neutral-copy guidance for
+  recon-authored prose, not as a runtime blocklist for domain names, evidence
+  strings, or caller phrasing.
+- Certificate-transparency ingestion now bounds response processing before
+  filtering and sorting, reducing CPU and memory spikes from very large
+  provider responses.
+- Release workflow OIDC permission tests now pin least-privilege publishing
+  scope to the publish job.
+
+### Fixed
+
+- Ephemeral MCP fingerprints now have per-session, per-fingerprint, and total
+  detection caps to prevent unbounded process growth.
+- CSV batch output now neutralizes spreadsheet formula prefixes in exported
+  cells.
+- Fingerprint specificity validation now reuses regex safety checks and skips
+  specificity evaluation when schema validation already failed.
+- Result-cache and CT-cache domain operations now validate and normalize
+  domain input before constructing paths, blocking traversal outside cache
+  directories.
+- Reverse DNS hosting detection now skips non-global A records before issuing
+  PTR lookups.
+- Subdomain TXT fingerprints now require `subdomain:regex` format, and the
+  affected built-in records use explicit subdomain prefixes.
+
 ## [1.4.2] — 2026-04-26
 
 **Patch release — doctor status calibration and documentation cleanup.**

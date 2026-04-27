@@ -540,13 +540,21 @@ def cache_show(
     under ``~/.recon/cache/`` is managed opaquely.
     """
     from recon_tool.ct_cache import ct_cache_list, ct_cache_show
+    from recon_tool.formatter import render_error
+    from recon_tool.validator import validate_domain
 
     console = get_console()
 
     if domain:
-        info = ct_cache_show(domain)
+        try:
+            validated = validate_domain(domain)
+        except ValueError as exc:
+            render_error(str(exc))
+            raise typer.Exit(code=EXIT_VALIDATION) from None
+
+        info = ct_cache_show(validated)
         if info is None:
-            console.print(f"  No CT cache entry for [bold]{domain}[/bold]")
+            console.print(f"  No CT cache entry for [bold]{validated}[/bold]")
             return
         age_str = "today" if info.age_days == 0 else f"{info.age_days} day{'s' if info.age_days != 1 else ''} old"
         console.print()
@@ -585,6 +593,8 @@ def cache_clear(
     from recon_tool.cache import cache_clear as result_cache_clear
     from recon_tool.cache import cache_clear_all as result_cache_clear_all
     from recon_tool.ct_cache import ct_cache_clear, ct_cache_clear_all
+    from recon_tool.formatter import render_error
+    from recon_tool.validator import validate_domain
 
     console = get_console()
 
@@ -594,17 +604,23 @@ def cache_clear(
         console.print(f"  Cleared {ct_count} CT cache entr{'ies' if ct_count != 1 else 'y'}.")
         console.print(f"  Cleared {result_count} result cache entr{'ies' if result_count != 1 else 'y'}.")
     elif domain:
-        ct_removed = ct_cache_clear(domain)
-        result_removed = result_cache_clear(domain)
+        try:
+            validated = validate_domain(domain)
+        except ValueError as exc:
+            render_error(str(exc))
+            raise typer.Exit(code=EXIT_VALIDATION) from None
+
+        ct_removed = ct_cache_clear(validated)
+        result_removed = result_cache_clear(validated)
         if ct_removed or result_removed:
             parts: list[str] = []
             if ct_removed:
                 parts.append("CT cache")
             if result_removed:
                 parts.append("result cache")
-            console.print(f"  Cleared {' and '.join(parts)} for [bold]{domain}[/bold].")
+            console.print(f"  Cleared {' and '.join(parts)} for [bold]{validated}[/bold].")
         else:
-            console.print(f"  No cache entry for [bold]{domain}[/bold].")
+            console.print(f"  No cache entry for [bold]{validated}[/bold].")
     else:
         console.print("  Specify a domain or use --all.")
         raise typer.Exit(code=2)
@@ -961,18 +977,7 @@ def fingerprints_new(
         )
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
-    # 2. Specificity
-    verdict = evaluate_pattern(pattern, detection_type)
-    if verdict.threshold_exceeded:
-        render_error(
-            f"Pattern too broad — matched {verdict.matches}/{verdict.corpus_size} "
-            f"({verdict.match_rate:.1%}) of the synthetic adversarial corpus. "
-            f"Tighten the regex (anchor to ^, add vendor-specific tokens, use word "
-            "boundaries) before submitting."
-        )
-        raise typer.Exit(code=EXIT_VALIDATION) from None
-
-    # 3. Schema — build the entry dict and run the runtime validator
+    # 2. Schema — build the entry dict and run the runtime validator
     entry: dict[str, object] = {
         "name": name,
         "slug": slug,
@@ -991,6 +996,18 @@ def fingerprints_new(
     if validated is None:
         render_error("Schema validation failed — see warnings above.")
         raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    # 3. Specificity — only run against schema-validated detection rules.
+    for det in validated.detections:
+        verdict = evaluate_pattern(det.pattern, det.type)
+        if verdict.threshold_exceeded:
+            render_error(
+                f"Pattern too broad — matched {verdict.matches}/{verdict.corpus_size} "
+                f"({verdict.match_rate:.1%}) of the synthetic adversarial corpus. "
+                f"Tighten the regex (anchor to ^, add vendor-specific tokens, use word "
+                "boundaries) before submitting."
+            )
+            raise typer.Exit(code=EXIT_VALIDATION) from None
 
     # Emit YAML
     import yaml as _yaml

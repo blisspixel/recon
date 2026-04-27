@@ -179,14 +179,14 @@ class TestGHASPatternCorrection:
     def test_corrected_pattern_matches_expected_format(self) -> None:
         fp = self.fps["github-advanced-security"]
         pattern = fp.detections[0].pattern
-        assert re.match(pattern, "_github-challenge-ContosoCorp"), (
-            f"Pattern '{pattern}' should match '_github-challenge-ContosoCorp'"
-        )
+        subdomain, regex = pattern.split(":", 1)
+        assert subdomain == "_github-challenge"
+        assert re.match(regex, "github-domain-verification=abc123")
 
-    def test_old_pattern_not_present(self) -> None:
+    def test_subdomain_txt_delimiter_present(self) -> None:
         fp = self.fps["github-advanced-security"]
         for det in fp.detections:
-            assert ":" not in det.pattern, f"Old colon-based pattern still present: '{det.pattern}'"
+            assert ":" in det.pattern, f"subdomain_txt pattern missing delimiter: '{det.pattern}'"
 
 
 # ── 9.4: New signals evaluate correctly ───────────────────────────────

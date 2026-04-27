@@ -67,7 +67,7 @@ fingerprints:
   confidence: high
   detections:
   - type: subdomain_txt
-    pattern: v=aid1;.*(?:src=|uri=)
+    pattern: _agent:v=aid1;.*(?:src=|uri=)
     description: CrewAI AID TXT record at _agent.<domain> advertising autonomous agent MCP endpoints
     reference: https://github.com/crewAIInc/crewAI/discussions/3164
 - name: LangSmith Enterprise
@@ -85,6 +85,6 @@ fingerprints:
   confidence: medium
   detections:
   - type: subdomain_txt
-    pattern: ^v=mcp1;
+    pattern: _mcp:^v=mcp1;
     description: MCP DNS-native discovery record at _mcp.<domain> advertising Model Context Protocol endpoints
     reference: https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/2368

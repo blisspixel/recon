@@ -22,7 +22,7 @@ no inbound network listeners, no user-code execution.
 |---|---|
 | User-supplied domain strings | `recon_tool/validator.py` — regex + length cap + scheme stripping |
 | Raw DNS responses (TXT values, MX hostnames, CNAME targets) | Length caps + structured parsing in `recon_tool/sources/dns.py` |
-| Environment variables (`RECON_CONFIG_DIR`) | Treated as arbitrary user input — `ct_cache._safe_path` validates resolved paths stay inside the cache dir |
+| Environment variables (`RECON_CONFIG_DIR`) | Treated as arbitrary user input — CT and result cache path helpers validate resolved paths stay inside their cache dirs |
 | Custom YAML at `~/.recon/fingerprints.yaml` and friends | Validated by `_validate_fingerprint`, `_validate_signal`, `_validate_profile` — regex compilation + ReDoS heuristic + required-field checks. Additive-only (cannot override built-ins). |
 | CT provider response bodies | Size-capped, filtered for wildcards and malformed entries in `sources/cert_providers.py` |
 | Malicious HTTP redirect targets / private-IP redirects | `recon_tool/http.py` `_SSRFSafeTransport` validates every hop |
@@ -49,6 +49,9 @@ no inbound network listeners, no user-code execution.
 
 **Mitigation:**
 - Length caps on all DNS string values (`sources/dns.py`)
+- A-to-PTR hosting detection only reverse-resolves globally routable unicast
+  A-record IPs; private, loopback, link-local, reserved, multicast,
+  unspecified, and other non-global addresses are skipped before PTR lookup.
 - Rich-text rendering uses `Text.append(value, style=...)` which escapes Rich markup in the user-controlled portion
 - JSON output uses `json.dumps` (escapes)
 - No DNS value is interpolated into shell, SQL, or exec contexts anywhere in the codebase
@@ -81,25 +84,29 @@ no inbound network listeners, no user-code execution.
 
 **Known limitation:** DNS rebinding with sub-second TTLs is not fully defeated (`http.py:9–16`). The check happens before the request, and `httpx` resolves the hostname again for the actual connection. For typical attacker TTLs (minutes) this is safe; for millisecond-TTL rebinding it is not. An attacker who controls both a public hostname and can flip its DNS within the connection window could bypass the check. This is documented in-code as a known tradeoff.
 
-### Path traversal in CT cache
+### Path traversal in local caches
 
-**Surface:** `recon cache show ../../etc/passwd` or a crafted `RECON_CONFIG_DIR` could cause the CT cache layer to read or write outside its intended directory.
+**Surface:** `recon cache show ../../etc/passwd`, `recon cache clear ../../settings`, or a crafted `RECON_CONFIG_DIR` could cause a cache layer to read, write, or delete outside its intended directory.
 
-**Mitigation:** [`recon_tool/ct_cache.py`](../recon_tool/ct_cache.py) `_safe_path`:
+**Mitigation:** [`recon_tool/ct_cache.py`](../recon_tool/ct_cache.py) `_safe_path` and [`recon_tool/cache.py`](../recon_tool/cache.py) `_safe_cache_path`:
 - Resolves the target path
 - Asserts the resolved path starts with the resolved cache directory
-- Raises `ValueError` on violation (test: `tests/test_ct_cache.py`)
+- Rejects traversal separators and malformed domains before filesystem access
+- Rejects or ignores invalid paths on violation (tests: `tests/test_ct_cache.py`, `tests/test_cache_roundtrip.py`, `tests/test_cache_cli.py`)
 
 ### Malicious CT provider responses
 
 **Surface:** A compromised crt.sh / CertSpotter could return extremely large subdomain sets or adversarially crafted names attempting to amplify downstream work.
 
 **Mitigation:** `recon_tool/sources/cert_providers.py`:
-- Size cap on raw subdomain count (`MAX_SUBDOMAINS * 2` early termination)
+- Bounded crt.sh extraction before filtering/sorting: at most
+  `MAX_SUBDOMAINS * 20` JSON entries inspected, `MAX_SUBDOMAINS * 10`
+  raw names collected, and `MAX_SUBDOMAINS * 10` cert-summary entries retained
+- CertSpotter pagination stops early after enough raw names are collected
 - Filtering of wildcards, duplicates, and noise prefixes
 - Final cap at `MAX_SUBDOMAINS = 100` after prioritization
 - 8-second timeout per provider
-- Pagination capped at 4 pages on CertSpotter
+- Pagination capped at 2 pages on CertSpotter
 
 ### MCP server exposure
 
@@ -113,6 +120,10 @@ no inbound network listeners, no user-code execution.
 - Tools accept domain strings that go through the same `validator.py` pipeline
 - `inject_ephemeral_fingerprint` only persists in current process memory; it
   never writes to built-in files, custom config files, or the cache.
+- Ephemeral fingerprint injection is quota-bounded in-process: 100 fingerprints,
+  20 detections per injected fingerprint, and 500 total ephemeral detections.
+  Rejected injections return JSON errors instead of growing memory or lookup
+  work without bound.
 - 120-second TTL cache and per-domain rate limiter prevent repeated-lookup abuse
 - No HTTP / OAuth transport, no network listener
 

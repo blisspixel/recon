@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from recon_tool.fingerprints import (
     _validate_fingerprint,
     _validate_regex,
@@ -135,6 +137,39 @@ class TestFingerprintValidation:
             "name": "Test",
             "match_mode": "first",
             "detections": [{"type": "txt", "pattern": "^test="}],
+        }
+        assert _validate_fingerprint(fp, "test") is None
+
+    def test_valid_subdomain_txt_pattern_accepted(self):
+        fp = {
+            "name": "MCP DNS Discovery",
+            "slug": "mcp-discovery",
+            "category": "AI & Generative",
+            "confidence": "medium",
+            "detections": [{"type": "subdomain_txt", "pattern": "_mcp:^v=mcp1;"}],
+        }
+        result = _validate_fingerprint(fp, "test")
+        assert result is not None
+        assert result.detections[0].pattern == "_mcp:^v=mcp1;"
+
+    def test_subdomain_txt_missing_delimiter_rejected(self):
+        fp = {
+            "name": "MCP DNS Discovery",
+            "slug": "mcp-discovery",
+            "category": "AI & Generative",
+            "confidence": "medium",
+            "detections": [{"type": "subdomain_txt", "pattern": "^v=mcp1;"}],
+        }
+        assert _validate_fingerprint(fp, "test") is None
+
+    @pytest.mark.parametrize("pattern", [":^v=mcp1;", "_mcp:"])
+    def test_subdomain_txt_requires_non_empty_subdomain_and_regex(self, pattern: str):
+        fp = {
+            "name": "MCP DNS Discovery",
+            "slug": "mcp-discovery",
+            "category": "AI & Generative",
+            "confidence": "medium",
+            "detections": [{"type": "subdomain_txt", "pattern": pattern}],
         }
         assert _validate_fingerprint(fp, "test") is None
 

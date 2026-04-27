@@ -50,6 +50,7 @@ __all__ = [
     "load_fingerprints",
     "match_txt",
     "reload_fingerprints",
+    "validate_ephemeral_input_size",
 ]
 
 # Hard cap on pattern length. Not a ReDoS fix by itself — see _validate_regex.
@@ -149,6 +150,28 @@ def _validate_regex(pattern: str, source: str) -> bool:
     return True
 
 
+def _validate_subdomain_txt_pattern(pattern: str, source: str, name: str) -> bool:
+    """Validate ``subdomain_txt`` uses ``subdomain:regex`` format."""
+    if ":" not in pattern:
+        logger.warning(
+            "Fingerprint %r subdomain_txt pattern %r in %s is missing 'subdomain:regex' delimiter - skipped",
+            name,
+            pattern,
+            source,
+        )
+        return False
+    subdomain, regex = pattern.split(":", 1)
+    if not subdomain or not regex:
+        logger.warning(
+            "Fingerprint %r subdomain_txt pattern %r in %s must include non-empty subdomain and regex - skipped",
+            name,
+            pattern,
+            source,
+        )
+        return False
+    return _validate_regex(regex, f"{source}:{name}")
+
+
 def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None:
     """Validate a single fingerprint entry and return a frozen Fingerprint, or None.
 
@@ -192,7 +215,18 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
             )
             continue
         pattern = det.get("pattern", "")
-        if not _validate_regex(pattern, f"{source}:{name}"):
+        if not isinstance(pattern, str):
+            logger.warning(
+                "Fingerprint %r has non-string pattern %r in %s — skipped",
+                name,
+                pattern,
+                source,
+            )
+            continue
+        if det_type == "subdomain_txt":
+            if not _validate_subdomain_txt_pattern(pattern, source, name):
+                continue
+        elif not _validate_regex(pattern, f"{source}:{name}"):
             continue
         # Parse and validate detection weight
         weight = 1.0
@@ -314,18 +348,49 @@ class _FingerprintCacheState:
 
 _cache_state = _FingerprintCacheState()
 
-# Hard cap on session-scoped ephemeral fingerprints. Without this,
+# Hard caps on session-scoped ephemeral fingerprints. Without these,
 # a long-running MCP server exposing ``inject_ephemeral_fingerprint``
-# could be driven into unbounded memory growth by a malicious or
-# prompt-injected client calling the tool in a loop. 100 is generous
-# for legitimate session extension (users typically inject a handful
-# of custom rules) and well below any memory-growth concern. Callers
-# who need more can restart the server or rely on built-in fingerprints.
+# could be driven into unbounded memory growth or lookup slowdown by a
+# malicious or prompt-injected client calling the tool in a loop. The
+# caps are intentionally generous for legitimate session extension
+# (users typically inject a handful of custom rules) while keeping
+# memory and per-lookup pattern work bounded.
 _MAX_EPHEMERAL_FINGERPRINTS: int = 100
+_MAX_EPHEMERAL_DETECTIONS_PER_FINGERPRINT: int = 20
+_MAX_EPHEMERAL_DETECTIONS_TOTAL: int = 500
+_MAX_EPHEMERAL_TEXT_FIELD_LENGTH: int = 200
 
 
 class EphemeralCapacityError(RuntimeError):
     """Raised when the ephemeral-fingerprint cap is reached."""
+
+
+def validate_ephemeral_input_size(
+    *,
+    name: str,
+    slug: str,
+    category: str,
+    confidence: str,
+    detection_count: int,
+) -> None:
+    """Reject oversized ephemeral inputs before expensive validation work."""
+    text_fields = {
+        "name": name,
+        "slug": slug,
+        "category": category,
+        "confidence": confidence,
+    }
+    for field_name, value in text_fields.items():
+        if len(value) > _MAX_EPHEMERAL_TEXT_FIELD_LENGTH:
+            raise EphemeralCapacityError(
+                f"Ephemeral fingerprint {field_name} is too long "
+                f"({len(value)} > {_MAX_EPHEMERAL_TEXT_FIELD_LENGTH})."
+            )
+    if detection_count > _MAX_EPHEMERAL_DETECTIONS_PER_FINGERPRINT:
+        raise EphemeralCapacityError(
+            "Ephemeral fingerprint detection cap exceeded "
+            f"({detection_count} > {_MAX_EPHEMERAL_DETECTIONS_PER_FINGERPRINT})."
+        )
 
 
 def _invalidate_caches_locked() -> None:
@@ -344,14 +409,31 @@ def inject_ephemeral(fp: Fingerprint) -> None:
 
     Raises:
         EphemeralCapacityError: when the per-process cap of
-            ``_MAX_EPHEMERAL_FINGERPRINTS`` is reached. Callers (the
-            MCP tool in particular) surface this as a user-facing
-            rejection rather than letting the list grow unbounded.
+            ``_MAX_EPHEMERAL_FINGERPRINTS`` or
+            ``_MAX_EPHEMERAL_DETECTIONS_TOTAL`` is reached, or when
+            the candidate fingerprint is oversized. Callers (the MCP
+            tool in particular) surface this as a user-facing rejection
+            rather than letting in-memory state grow unbounded.
     """
+    validate_ephemeral_input_size(
+        name=fp.name,
+        slug=fp.slug,
+        category=fp.category,
+        confidence=fp.confidence,
+        detection_count=len(fp.detections),
+    )
     with _ephemeral_lock:
         if len(_ephemeral_fingerprints) >= _MAX_EPHEMERAL_FINGERPRINTS:
             raise EphemeralCapacityError(
                 f"Ephemeral fingerprint cap reached ({_MAX_EPHEMERAL_FINGERPRINTS}). "
+                "Clear the collection with clear_ephemeral() or restart the server."
+            )
+        current_detections = sum(len(existing.detections) for existing in _ephemeral_fingerprints)
+        requested_detections = current_detections + len(fp.detections)
+        if requested_detections > _MAX_EPHEMERAL_DETECTIONS_TOTAL:
+            raise EphemeralCapacityError(
+                "Ephemeral detection cap reached "
+                f"({_MAX_EPHEMERAL_DETECTIONS_TOTAL}). "
                 "Clear the collection with clear_ephemeral() or restart the server."
             )
         _ephemeral_fingerprints.append(fp)

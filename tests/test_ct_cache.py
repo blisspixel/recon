@@ -109,6 +109,25 @@ class TestCTCachePutGet:
         (d / "corrupt.com.json").write_text("NOT JSON", encoding="utf-8")
         assert ct_cache_get("corrupt.com") is None
 
+    def test_get_rejects_sibling_prefix_traversal(self, tmp_cache: Path) -> None:
+        sibling = tmp_cache.parent / "ct-cache-malice"
+        sibling.mkdir()
+        outside = sibling / "evil.json"
+        outside.write_text(
+            json.dumps(
+                {
+                    "cached_at": "2026-01-01T00:00:00+00:00",
+                    "provider_used": "malice",
+                    "subdomains": ["evil.example.com"],
+                    "cert_summary": None,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        assert ct_cache_get("../ct-cache-malice/evil") is None
+        assert outside.exists()
+
     def test_custom_ttl(self, tmp_cache: Path) -> None:
         ct_cache_put("ttl.com", ["a.ttl.com"], None, "crt.sh")
         path = tmp_cache / "ttl.com.json"
@@ -129,6 +148,15 @@ class TestCTCacheClear:
 
     def test_clear_nonexistent(self, tmp_cache: Path) -> None:
         assert ct_cache_clear("nope.com") is False
+
+    def test_clear_rejects_sibling_prefix_traversal(self, tmp_cache: Path) -> None:
+        sibling = tmp_cache.parent / "ct-cache-malice"
+        sibling.mkdir()
+        outside = sibling / "evil.json"
+        outside.write_text('{"keep": true}', encoding="utf-8")
+
+        assert ct_cache_clear("../ct-cache-malice/evil") is False
+        assert outside.exists()
 
     def test_clear_all(self, tmp_cache: Path) -> None:
         ct_cache_put("a.com", ["x.a.com"], None, "crt.sh")
@@ -155,6 +183,25 @@ class TestCTCacheShow:
 
     def test_show_missing(self, tmp_cache: Path) -> None:
         assert ct_cache_show("nope.com") is None
+
+    def test_show_rejects_sibling_prefix_traversal(self, tmp_cache: Path) -> None:
+        sibling = tmp_cache.parent / "ct-cache-malice"
+        sibling.mkdir()
+        outside = sibling / "evil.json"
+        outside.write_text(
+            json.dumps(
+                {
+                    "cached_at": "2026-01-01T00:00:00+00:00",
+                    "provider_used": "malice",
+                    "subdomains": ["evil.example.com"],
+                    "cert_summary": None,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        assert ct_cache_show("../ct-cache-malice/evil") is None
+        assert outside.exists()
 
 
 class TestCTCacheList:

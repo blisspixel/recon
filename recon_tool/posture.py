@@ -38,7 +38,7 @@ __all__ = [
     "reload_posture",
 ]
 
-BANNED_TERMS = frozenset(
+DISCOURAGED_COPY_TERMS = frozenset(
     {
         "vulnerability",
         "attack",
@@ -53,6 +53,10 @@ BANNED_TERMS = frozenset(
         "harden",
     }
 )
+
+# Backward-compatible alias for callers that imported the old internal name.
+# These terms guide recon-authored prose; they are not an input blocklist.
+BANNED_TERMS = DISCOURAGED_COPY_TERMS
 
 _VALID_CATEGORIES = frozenset(
     {
@@ -327,18 +331,18 @@ def _evaluate_metadata_condition(condition: _MetadataCondition, info: TenantInfo
     return False
 
 
-def _contains_banned_term(text: str) -> bool:
-    """Check if text contains any banned term (case-insensitive)."""
+def _find_discouraged_copy_terms(text: str) -> tuple[str, ...]:
+    """Return discouraged generated-copy terms present in text."""
     lower = text.lower()
-    return any(term in lower for term in BANNED_TERMS)
+    return tuple(term for term in DISCOURAGED_COPY_TERMS if term in lower)
 
 
 def analyze_posture(info: TenantInfo) -> tuple[Observation, ...]:
     """Produce neutral observations from resolved domain data.
 
-    Evaluates posture rules against the TenantInfo, renders templates,
-    and enforces the BANNED_TERMS list. Returns a tuple of frozen
-    Observation instances.
+    Evaluates posture rules against the TenantInfo and renders templates.
+    The neutral-language term list is advisory: it logs copy drift but never
+    blocks user-supplied data or drops observations at runtime.
     """
     slugs_set = set(info.slugs)
     results: list[Observation] = []
@@ -375,13 +379,13 @@ def analyze_posture(info: TenantInfo) -> tuple[Observation, ...]:
             dmarc_pct = _compute_metadata_value("dmarc_pct", info)
             statement = statement.replace("{dmarc_pct}", str(dmarc_pct if dmarc_pct is not None else 0))
 
-        # Enforce banned terms
-        if _contains_banned_term(statement):
+        discouraged_terms = _find_discouraged_copy_terms(statement)
+        if discouraged_terms:
             logger.warning(
-                "Posture observation %r contains banned term — dropped",
+                "Posture observation %r contains discouraged copy term(s): %s",
                 rule.name,
+                ", ".join(discouraged_terms),
             )
-            continue
 
         results.append(
             Observation(

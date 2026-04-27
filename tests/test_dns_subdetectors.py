@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
+from recon_tool.sources import dns as dns_source
 from recon_tool.sources.dns import DNSSource, _parse_rdata
 
 
@@ -357,6 +358,51 @@ class TestSubdomainTxtDetection:
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
+    async def test_crewai_aid_via_agent_subdomain(self, mock_resolve):
+        """_agent subdomain TXT should detect CrewAI AID."""
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "_agent.example.com/TXT": ["v=aid1; uri=https://agents.example.com/mcp"],
+            }
+        )
+        result = await DNSSource().lookup("example.com")
+        assert "CrewAI Agent Interface Discovery (AID)" in result.detected_services
+        assert "crewai-aid" in result.detected_slugs
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns._safe_resolve")
+    async def test_mcp_discovery_via_mcp_subdomain(self, mock_resolve):
+        """_mcp subdomain TXT should detect MCP DNS Discovery."""
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "_mcp.example.com/TXT": ["v=mcp1; endpoint=https://mcp.example.com"],
+            }
+        )
+        result = await DNSSource().lookup("example.com")
+        assert "MCP DNS Discovery" in result.detected_services
+        assert "mcp-discovery" in result.detected_slugs
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns._safe_resolve")
+    async def test_github_advanced_security_via_challenge_subdomain(self, mock_resolve):
+        """_github-challenge subdomain TXT should detect GitHub Advanced Security."""
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "_github-challenge.example.com/TXT": ["github-domain-verification=abc123"],
+            }
+        )
+        result = await DNSSource().lookup("example.com")
+        assert "GitHub Advanced Security" in result.detected_services
+        assert "github-advanced-security" in result.detected_slugs
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns._safe_resolve")
     async def test_no_subdomain_txt_no_match(self, mock_resolve):
         """No subdomain TXT records should not produce false positives."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -545,3 +591,67 @@ class TestExchangeOnpremAutodiscover:
         )
         result = await DNSSource().lookup("example.com")
         assert "Exchange Server (on-prem / hybrid)" in (result.detected_services or ())
+
+
+class TestHostingPtrDetection:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "ip",
+        [
+            "10.0.0.1",
+            "172.16.0.1",
+            "192.168.0.1",
+            "127.0.0.1",
+            "169.254.0.1",
+            "100.64.0.1",
+            "0.0.0.0",  # noqa: S104 - test fixture for unspecified A records
+            "224.0.0.1",
+            "198.51.100.1",
+        ],
+    )
+    @patch("recon_tool.sources.dns._safe_resolve")
+    async def test_non_global_a_record_skips_ptr_lookup(self, mock_resolve, ip: str):
+        calls: list[tuple[str, str]] = []
+
+        async def mock_safe_resolve(domain: str, rdtype: str, **kwargs):
+            calls.append((domain, rdtype))
+            if domain == "example.com" and rdtype == "A":
+                return [ip]
+            if rdtype == "PTR":
+                return ["ip-10-0-0-1.ec2.internal"]
+            return []
+
+        mock_resolve.side_effect = mock_safe_resolve
+        ctx = dns_source._DetectionCtx()
+
+        await dns_source._detect_hosting_from_a_record(ctx, "example.com")
+
+        assert calls == [("example.com", "A")]
+        assert ctx.services == set()
+        assert ctx.evidence == []
+        assert ctx.raw_dns_records["A"] == [ip]
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns._safe_resolve")
+    async def test_global_a_record_allows_ptr_hosting_detection(self, mock_resolve):
+        calls: list[tuple[str, str]] = []
+
+        async def mock_safe_resolve(domain: str, rdtype: str, **kwargs):
+            calls.append((domain, rdtype))
+            if domain == "example.com" and rdtype == "A":
+                return ["3.5.140.1"]
+            if rdtype == "PTR":
+                return ["ec2-3-5-140-1.us-east-2.compute.amazonaws.com."]
+            return []
+
+        mock_resolve.side_effect = mock_safe_resolve
+        ctx = dns_source._DetectionCtx()
+
+        await dns_source._detect_hosting_from_a_record(ctx, "example.com")
+
+        assert calls[0] == ("example.com", "A")
+        assert calls[1][1] == "PTR"
+        assert "AWS EC2" in ctx.services
+        assert "aws-ec2" in ctx.slugs
+        assert ctx.evidence
+        assert ctx.evidence[0].raw_value.startswith("3.5.140.1 -> ec2-3-5-140-1")

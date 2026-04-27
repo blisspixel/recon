@@ -1027,14 +1027,22 @@ async def _detect_hosting_from_a_record(ctx: _DetectionCtx, domain: str) -> None
     except (ValueError, TypeError):
         return
 
-    # Skip private, loopback, link-local, and reserved address ranges
-    # before issuing a PTR query. A domain whose A record points to an
-    # internal IP (10.x, 192.168.x, 127.x, 169.254.x, ::1, fc00::/7)
+    # Only issue PTR lookups for globally-routable unicast addresses.
+    # A domain whose A record points to an internal or special-use IP
+    # (10.x, 192.168.x, 127.x, 169.254.x, 100.64.x, 0.0.0.0, etc.)
     # would otherwise cause the operator's resolver to answer with
-    # internal PTR names that end up in the evidence output. When recon
-    # is exposed via MCP to an untrusted caller, that's an internal-DNS
+    # internal PTR names that end up in evidence output. When recon is
+    # exposed via MCP to an untrusted caller, that's an internal-DNS
     # information-disclosure path.
-    if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+    if (
+        not ip.is_global
+        or ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_reserved
+        or ip.is_multicast
+        or ip.is_unspecified
+    ):
         return
 
     # Build PTR query: reverse octets + .in-addr.arpa (IPv4) or

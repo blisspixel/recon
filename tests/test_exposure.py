@@ -24,7 +24,7 @@ from recon_tool.constants import (
     SVC_SPF_STRICT,
 )
 from recon_tool.exposure import (
-    EXPOSURE_BANNED_TERMS,
+    EXPOSURE_DISCOURAGED_COPY_TERMS,
     ExposureAssessment,
     _compute_email_security_score,
     assess_exposure_from_info,
@@ -386,8 +386,8 @@ class TestProperty7GapStructureValidity:
             assert gap.recommendation, "Recommendation must be non-empty"
 
 
-# ── Property 8: No banned terms ──────────────────────────────────────
-# Feature: defensive-security-tools, Property 8: No banned terms
+# ── Property 8: Neutral generated copy ────────────────────────────────
+# Feature: defensive-security-tools, Property 8: Neutral generated copy
 
 
 def _collect_string_fields(obj: object) -> list[str]:
@@ -404,41 +404,41 @@ def _collect_string_fields(obj: object) -> list[str]:
     return strings
 
 
-class TestProperty8NoBannedTerms:
+class TestProperty8NeutralGeneratedCopy:
     """**Validates: Requirements 7.1, 7.2, 7.5, 2.12, 3.9**"""
 
     @given(info=tenant_info_strategy())
     @_PBT_SETTINGS
-    def test_no_banned_terms_in_exposure_assessment(self, info: TenantInfo) -> None:
-        """No banned term appears in any string field of ExposureAssessment."""
+    def test_no_discouraged_terms_in_exposure_assessment_copy(self, info: TenantInfo) -> None:
+        """Generated ExposureAssessment copy stays neutral for normal inputs."""
         result = assess_exposure_from_info(info)
         all_strings = _collect_string_fields(result)
         for s in all_strings:
             lower = s.lower()
-            for term in EXPOSURE_BANNED_TERMS:
-                assert term not in lower, f"Banned term '{term}' found in: {s!r}"
+            for term in EXPOSURE_DISCOURAGED_COPY_TERMS:
+                assert term not in lower, f"Discouraged copy term '{term}' found in: {s!r}"
 
     @given(info=tenant_info_strategy())
     @_PBT_SETTINGS
-    def test_no_banned_terms_in_gap_report(self, info: TenantInfo) -> None:
-        """No banned term appears in any string field of GapReport."""
+    def test_no_discouraged_terms_in_gap_report_copy(self, info: TenantInfo) -> None:
+        """Generated GapReport copy stays neutral for normal inputs."""
         result = find_gaps_from_info(info)
         all_strings = _collect_string_fields(result)
         for s in all_strings:
             lower = s.lower()
-            for term in EXPOSURE_BANNED_TERMS:
-                assert term not in lower, f"Banned term '{term}' found in: {s!r}"
+            for term in EXPOSURE_DISCOURAGED_COPY_TERMS:
+                assert term not in lower, f"Discouraged copy term '{term}' found in: {s!r}"
 
     @given(info_a=tenant_info_strategy(), info_b=tenant_info_strategy())
     @_PBT_SETTINGS
-    def test_no_banned_terms_in_comparison(self, info_a: TenantInfo, info_b: TenantInfo) -> None:
-        """No banned term appears in any string field of PostureComparison."""
+    def test_no_discouraged_terms_in_comparison_copy(self, info_a: TenantInfo, info_b: TenantInfo) -> None:
+        """Generated PostureComparison copy stays neutral for normal inputs."""
         result = compare_postures_from_infos(info_a, info_b)
         all_strings = _collect_string_fields(result)
         for s in all_strings:
             lower = s.lower()
-            for term in EXPOSURE_BANNED_TERMS:
-                assert term not in lower, f"Banned term '{term}' found in: {s!r}"
+            for term in EXPOSURE_DISCOURAGED_COPY_TERMS:
+                assert term not in lower, f"Discouraged copy term '{term}' found in: {s!r}"
 
 
 # ── Property 9: "Consider" language ──────────────────────────────────
@@ -564,15 +564,15 @@ class TestImportSafety:
             elif isinstance(node, ast.ImportFrom) and node.module:
                 imports.add(node.module)
 
-        banned_imports = {"httpx", "dns", "dns.resolver", "recon_tool.sources"}
-        violations = imports & banned_imports
-        assert not violations, f"Banned imports found in exposure.py: {violations}"
+        disallowed_network_imports = {"httpx", "dns", "dns.resolver", "recon_tool.sources"}
+        violations = imports & disallowed_network_imports
+        assert not violations, f"Network-facing imports found in exposure.py: {violations}"
 
 
-# ── Task 6.2: Banned-terms integration test ──────────────────────────
+# ── Task 6.2: Neutral-copy integration test ──────────────────────────
 
 
-class TestBannedTermsIntegration:
+class TestNeutralCopyIntegration:
     """**Validates: Requirements 7.1, 7.2, 7.4, 7.5**"""
 
     def _make_info(self, **overrides) -> TenantInfo:
@@ -593,18 +593,18 @@ class TestBannedTermsIntegration:
         defaults.update(overrides)
         return TenantInfo(**defaults)
 
-    def _scan_for_banned_terms(self, strings: list[str]) -> list[tuple[str, str]]:
-        """Return list of (banned_term, containing_string) violations."""
+    def _scan_for_discouraged_copy_terms(self, strings: list[str]) -> list[tuple[str, str]]:
+        """Return list of (discouraged_term, containing_string) violations."""
         violations = []
         for s in strings:
             lower = s.lower()
-            for term in EXPOSURE_BANNED_TERMS:
+            for term in EXPOSURE_DISCOURAGED_COPY_TERMS:
                 if term in lower:
                     violations.append((term, s))
         return violations
 
-    def test_no_banned_terms_in_exposure_output_variants(self) -> None:
-        """Generate multiple TenantInfo variants, run assess_exposure, scan for banned terms."""
+    def test_no_discouraged_terms_in_exposure_output_variants(self) -> None:
+        """Generate multiple TenantInfo variants and scan generated exposure copy."""
         infos = [
             self._make_info(),  # empty
             self._make_info(
@@ -629,11 +629,11 @@ class TestBannedTermsIntegration:
         for info in infos:
             result = assess_exposure_from_info(info)
             all_strings = _collect_string_fields(result)
-            violations = self._scan_for_banned_terms(all_strings)
-            assert not violations, f"Banned terms in exposure output: {violations}"
+            violations = self._scan_for_discouraged_copy_terms(all_strings)
+            assert not violations, f"Discouraged copy terms in exposure output: {violations}"
 
-    def test_no_banned_terms_in_gaps_output_variants(self) -> None:
-        """Generate multiple TenantInfo variants, run find_gaps, scan for banned terms."""
+    def test_no_discouraged_terms_in_gaps_output_variants(self) -> None:
+        """Generate multiple TenantInfo variants and scan generated gaps copy."""
         infos = [
             self._make_info(),
             self._make_info(
@@ -650,11 +650,11 @@ class TestBannedTermsIntegration:
         for info in infos:
             result = find_gaps_from_info(info)
             all_strings = _collect_string_fields(result)
-            violations = self._scan_for_banned_terms(all_strings)
-            assert not violations, f"Banned terms in gaps output: {violations}"
+            violations = self._scan_for_discouraged_copy_terms(all_strings)
+            assert not violations, f"Discouraged copy terms in gaps output: {violations}"
 
-    def test_no_banned_terms_in_comparison_output(self) -> None:
-        """Run compare_postures, scan for banned terms."""
+    def test_no_discouraged_terms_in_comparison_output(self) -> None:
+        """Run compare_postures and scan generated comparison copy."""
         info_a = self._make_info(
             queried_domain="a.com",
             dmarc_policy="reject",
@@ -667,11 +667,25 @@ class TestBannedTermsIntegration:
         )
         result = compare_postures_from_infos(info_a, info_b)
         all_strings = _collect_string_fields(result)
-        violations = self._scan_for_banned_terms(all_strings)
-        assert not violations, f"Banned terms in comparison output: {violations}"
+        violations = self._scan_for_discouraged_copy_terms(all_strings)
+        assert not violations, f"Discouraged copy terms in comparison output: {violations}"
 
-    def test_no_banned_terms_in_tool_docstrings(self) -> None:
-        """Verify no banned terms in the MCP tool docstrings.
+    def test_comparison_allows_discouraged_term_inside_input_domain(self) -> None:
+        """Style guidance must not block legitimate reserved/example domains."""
+        info_a = self._make_info(
+            queried_domain="retargeting.example.com",
+            dmarc_policy="reject",
+            services=(SVC_DKIM, SVC_SPF_STRICT, SVC_DMARC),
+        )
+        info_b = self._make_info(queried_domain="baseline.example.com")
+
+        result = compare_postures_from_infos(info_a, info_b)
+
+        assert result.domain_a == "retargeting.example.com"
+        assert any("retargeting.example.com" in item.summary for item in result.relative_assessment)
+
+    def test_no_discouraged_terms_in_tool_docstrings(self) -> None:
+        """Verify neutral language in the MCP tool docstrings.
 
         Uses word-boundary matching to avoid false positives like
         'hardening' matching 'harden' — 'hardening' is the approved
@@ -685,7 +699,9 @@ class TestBannedTermsIntegration:
         for func in (ae, fhg, cp):
             doc = func.__doc__ or ""
             lower = doc.lower()
-            for term in EXPOSURE_BANNED_TERMS:
+            for term in EXPOSURE_DISCOURAGED_COPY_TERMS:
                 # Use word boundary to avoid false positives (e.g. "hardening" vs "harden")
                 pattern = rf"\b{re.escape(term)}\b"
-                assert not re.search(pattern, lower), f"Banned term '{term}' in docstring of {func.__name__}"
+                assert not re.search(pattern, lower), (
+                    f"Discouraged copy term '{term}' in docstring of {func.__name__}"
+                )

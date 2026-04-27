@@ -125,6 +125,13 @@ Agents can compare the two to decide whether to re-resolve. On a fresh lookup, `
 
 Ephemeral fingerprints let AI agents inject temporary detection patterns at runtime. They live in memory only, are scoped to the current server session, and are validated through the same regex/ReDoS checks as built-in fingerprints.
 
+To keep long-running MCP sessions available under prompt injection or abusive
+tool calls, ephemeral storage is quota-bounded: at most 100 ephemeral
+fingerprints, at most 20 detections on a single injected fingerprint, and at
+most 500 total ephemeral detections per process. Oversized injections return a
+JSON error; use `clear_ephemeral_fingerprints` or restart the server to reset
+the session quota.
+
 ### Workflow
 
 1. Look up a domain with `lookup_tenant` (caches DNS data).
