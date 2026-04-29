@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.8] - 2026-04-29
+
+**Patch release - skill refinements from running it in anger.** Docs-only.
+Seven friction points surfaced from real skill use against the v1.4.7
+artifact have been smoothed in `claude-code/skills/recon/SKILL.md` and
+`AGENTS.md`. No behavior, schema, or fingerprint changes.
+
+### Changed
+
+- MCP-vs-CLI decision is now explicit: agents look at their available-tools
+  list for `recon:*` tools rather than calling speculatively to test
+  connectivity.
+- "Picking a profile" now shows both CLI (`--profile <name>`) and MCP
+  (`analyze_posture(domain, profile="<name>")`) invocation syntax.
+- `recon delta` section calls out the cache location (`~/.recon/cache/`)
+  and the first-run empty-diff case so agents do not report "no changes"
+  when there is no baseline to compare against.
+- Default mode includes a collapsed sample panel so a cold reader of the
+  skill knows what "relay verbatim" actually delivers.
+- New "Explain mode" section documents `--explain` and the MCP
+  `explanation_dag` field with guidance on summarising the provenance
+  chain rather than dumping it.
+- Full-mode headline template cites `docs/recon-schema.json` v1.0 so
+  future skill editors know where the field-name contract lives.
+- Output-size guidance is concrete ("3–10 KB depending on org size")
+  instead of "several KB".
+
 ## [1.4.7] - 2026-04-29
 
 **Patch release - machine-readable JSON schema.** Adds the v1.0 stable
