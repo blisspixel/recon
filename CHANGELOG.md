@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.7] - 2026-04-29
+
+**Patch release - machine-readable JSON schema.** Adds the v1.0 stable
+contract as a committed JSON Schema artifact so downstream consumers
+(agents, CI pipelines, SDKs in other languages) can validate
+`recon <domain> --json` output without re-deriving the shape from sample
+runs. No behavior, fingerprint, or formatter changes.
+
+### Added
+
+- `docs/recon-schema.json` — JSON Schema 2020-12 description of the
+  `recon <domain> --json` v1.0 contract, including a `$defs/DeltaReport`
+  entry consumers can target for `recon delta` validation.
+- `tests/test_json_schema_file.py` — drift guard that fails CI when the
+  emitted JSON output and the committed schema fall out of sync in
+  either direction (extra output key not declared, or required schema
+  field not emitted).
+- README — agent-driven install snippet ("paste this prompt to your AI"
+  with the stable raw.githubusercontent.com SKILL.md URL) so users with
+  AI clients that have file-write tools can wire up the skill in one
+  exchange. Pointer to the new schema artifact for downstream
+  validators.
+
+### Changed
+
+- `tests/conftest.py` — promoted the fully-populated `TenantInfo`
+  fixture from `test_json_schema_contract.py` to a shared pytest
+  fixture so the new drift-guard tests use the same object without
+  cross-test imports.
+
 ## [1.4.6] - 2026-04-29
 
 **Patch release - skill best-practices alignment.** Docs-only change. No

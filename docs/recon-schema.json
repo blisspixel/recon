@@ -1,0 +1,403 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/blisspixel/recon/main/docs/recon-schema.json",
+  "title": "recon JSON output",
+  "description": "Stable v1.0 contract for `recon <domain> --json` output. Mirrors docs/schema.md; the dataclass in recon_tool.models.TenantInfo and the formatter in recon_tool.formatter.format_tenant_dict are the implementation source of truth. Consumers should ignore unknown properties — additive changes are non-breaking within 1.x. See tests/test_json_schema_contract.py for the executable contract.",
+  "type": "object",
+  "required": [
+    "tenant_id",
+    "display_name",
+    "default_domain",
+    "queried_domain",
+    "provider",
+    "confidence",
+    "evidence_confidence",
+    "inference_confidence",
+    "region",
+    "auth_type",
+    "google_auth_type",
+    "google_idp_name",
+    "primary_email_provider",
+    "likely_primary_email_provider",
+    "email_gateway",
+    "sources",
+    "partial",
+    "degraded_sources",
+    "services",
+    "slugs",
+    "detection_scores",
+    "insights",
+    "domain_count",
+    "tenant_domains",
+    "related_domains",
+    "email_security_score",
+    "dmarc_policy",
+    "dmarc_pct",
+    "mta_sts_mode",
+    "site_verification_tokens",
+    "ct_provider_used",
+    "ct_subdomain_count",
+    "ct_cache_age_days",
+    "cert_summary",
+    "cloud_instance",
+    "tenant_region_sub_scope",
+    "msgraph_host",
+    "lexical_observations",
+    "bimi_identity",
+    "slug_confidences"
+  ],
+  "properties": {
+    "tenant_id": {
+      "description": "Microsoft 365 tenant UUID. Null for non-M365 domains.",
+      "type": ["string", "null"]
+    },
+    "display_name": {
+      "description": "Organization display name. Falls back to the queried domain when no better signal is available.",
+      "type": "string"
+    },
+    "default_domain": {
+      "description": "Primary domain within the tenant. Falls back to the queried domain when no tenant was detected.",
+      "type": "string"
+    },
+    "queried_domain": {
+      "description": "The domain the user passed (after validation and lowercasing).",
+      "type": "string"
+    },
+    "provider": {
+      "description": "One-line provider summary (e.g. 'Microsoft 365 (primary) via Proofpoint gateway + Google Workspace (secondary)').",
+      "type": "string"
+    },
+    "confidence": {
+      "description": "Overall confidence in the merged result.",
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "evidence_confidence": {
+      "description": "Confidence in detected fingerprint slugs.",
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "inference_confidence": {
+      "description": "Confidence in derived insights.",
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "region": {
+      "description": "Geographic region when detectable via OIDC (e.g. 'NA', 'EU', 'WW').",
+      "type": ["string", "null"]
+    },
+    "auth_type": {
+      "description": "M365 authentication style.",
+      "type": ["string", "null"],
+      "enum": ["Federated", "Managed", null]
+    },
+    "google_auth_type": {
+      "description": "Google Workspace authentication style.",
+      "type": ["string", "null"],
+      "enum": ["Federated", "Managed", null]
+    },
+    "google_idp_name": {
+      "description": "Third-party IdP name for Google Workspace when detectable.",
+      "type": ["string", "null"]
+    },
+    "primary_email_provider": {
+      "description": "MX-confirmed primary email provider.",
+      "type": ["string", "null"]
+    },
+    "likely_primary_email_provider": {
+      "description": "Inferred primary (hedged) when MX is a gateway and DKIM/TXT/OIDC points to a specific downstream.",
+      "type": ["string", "null"]
+    },
+    "email_gateway": {
+      "description": "MX-detected email security gateway (Proofpoint, Mimecast, etc.).",
+      "type": ["string", "null"]
+    },
+    "sources": {
+      "description": "Source names that successfully contributed to the result.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "partial": {
+      "description": "True when any core source is in degraded_sources (CT-only degradation does not flip this flag).",
+      "type": "boolean"
+    },
+    "degraded_sources": {
+      "description": "Source names that failed or were unavailable.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "services": {
+      "description": "Human-readable service names ('Microsoft 365', 'Slack', etc.).",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "slugs": {
+      "description": "Stable fingerprint slugs for programmatic matching.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "detection_scores": {
+      "description": "Per-slug detection score level aggregated from evidence.",
+      "type": "object",
+      "additionalProperties": {"type": "string", "enum": ["low", "medium", "high"]}
+    },
+    "insights": {
+      "description": "Derived intelligence lines. Exact wording may evolve; presence and signal types are stable.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "domain_count": {
+      "description": "Number of domains in the tenant.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "tenant_domains": {
+      "description": "All domains found in the tenant.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "related_domains": {
+      "description": "Domains inferred from CNAME breadcrumbs, CT logs, or autodiscover delegation.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "email_security_score": {
+      "description": "Count of the 5 email controls present: DMARC reject/quarantine, DKIM selectors, SPF strict (-all), MTA-STS, BIMI.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "dmarc_policy": {
+      "description": "DMARC policy when a DMARC record is present.",
+      "type": ["string", "null"],
+      "enum": ["reject", "quarantine", "none", null]
+    },
+    "dmarc_pct": {
+      "description": "DMARC pct= parameter.",
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "mta_sts_mode": {
+      "description": "MTA-STS policy mode.",
+      "type": ["string", "null"],
+      "enum": ["enforce", "testing", "none", null]
+    },
+    "site_verification_tokens": {
+      "description": "TXT tokens observed on the apex (e.g. 'google-site-verification=', 'MS=').",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "ct_provider_used": {
+      "description": "Which CT provider answered, or '(cached)' suffix when data came from the per-domain CT cache.",
+      "type": ["string", "null"]
+    },
+    "ct_subdomain_count": {
+      "description": "Number of subdomains returned after filtering.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "ct_cache_age_days": {
+      "description": "Age of the CT cache entry in days when cached data was used. Null when data came from a live provider.",
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "cert_summary": {
+      "description": "Certificate transparency summary. Null when no CT data was obtained.",
+      "oneOf": [
+        {"$ref": "#/$defs/CertSummary"},
+        {"type": "null"}
+      ]
+    },
+    "cloud_instance": {
+      "description": "Microsoft cloud sovereignty from M365 OIDC discovery.",
+      "type": ["string", "null"],
+      "enum": ["microsoftonline.com", "microsoftonline.us", "partner.microsoftonline.cn", null]
+    },
+    "tenant_region_sub_scope": {
+      "description": "Gov-cloud disambiguation from M365 OIDC.",
+      "type": ["string", "null"],
+      "enum": ["GCC", "DOD", "USGov", null]
+    },
+    "msgraph_host": {
+      "description": "Authoritative Microsoft Graph host.",
+      "type": ["string", "null"],
+      "enum": ["graph.microsoft.com", "graph.microsoft.us", null]
+    },
+    "lexical_observations": {
+      "description": "Hedged observations from CT subdomain lexical taxonomy.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "bimi_identity": {
+      "description": "BIMI VMC identity. Null when no BIMI VMC was observed.",
+      "oneOf": [
+        {"$ref": "#/$defs/BIMIIdentity"},
+        {"type": "null"}
+      ]
+    },
+    "slug_confidences": {
+      "description": "EXPERIMENTAL — Bayesian per-slug posterior means. Field shape may evolve in minor releases. Each entry is a [slug, posterior] pair with posterior in [0, 1]. Populated only when --fusion is passed.",
+      "type": "array",
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "prefixItems": [
+          {"type": "string"},
+          {"type": "number", "minimum": 0, "maximum": 1}
+        ]
+      }
+    },
+    "evidence": {
+      "description": "Present with --explain. Per-detection evidence trace.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/EvidenceRecord"}
+    },
+    "explanation_dag": {
+      "description": "Present with --explain on the lookup_tenant MCP tool. Top-level keys: evidence, slugs, rules, signals, insights — each a list of records with id and references.",
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "CertSummary": {
+      "type": "object",
+      "required": [
+        "cert_count",
+        "issuer_diversity",
+        "issuance_velocity",
+        "newest_cert_age_days",
+        "oldest_cert_age_days",
+        "top_issuers"
+      ],
+      "properties": {
+        "cert_count": {"type": "integer", "minimum": 0},
+        "issuer_diversity": {"type": "integer", "minimum": 0},
+        "issuance_velocity": {"type": "integer", "minimum": 0, "description": "Certs issued in last 90 days."},
+        "newest_cert_age_days": {"type": "integer", "minimum": 0},
+        "oldest_cert_age_days": {"type": "integer", "minimum": 0},
+        "top_issuers": {
+          "type": "array",
+          "items": {"type": "string"},
+          "maxItems": 3
+        }
+      }
+    },
+    "BIMIIdentity": {
+      "type": "object",
+      "required": ["organization", "country", "state", "locality", "trademark"],
+      "properties": {
+        "organization": {"type": "string"},
+        "country": {"type": ["string", "null"]},
+        "state": {"type": ["string", "null"]},
+        "locality": {"type": ["string", "null"]},
+        "trademark": {"type": ["string", "null"]}
+      }
+    },
+    "EvidenceRecord": {
+      "type": "object",
+      "required": ["source_type", "raw_value", "rule_name", "slug"],
+      "properties": {
+        "source_type": {
+          "type": "string",
+          "description": "DNS or HTTP source class (TXT, MX, CNAME, NS, SRV, CAA, SPF, HTTP)."
+        },
+        "raw_value": {"type": "string"},
+        "rule_name": {"type": "string"},
+        "slug": {"type": "string"}
+      }
+    },
+    "DeltaReport": {
+      "description": "Output shape of `recon delta <domain>` and `recon <domain> --compare <file>`. Stable.",
+      "type": "object",
+      "required": [
+        "domain",
+        "added_services",
+        "removed_services",
+        "added_slugs",
+        "removed_slugs",
+        "added_signals",
+        "removed_signals",
+        "changed_auth_type",
+        "changed_dmarc_policy",
+        "changed_email_security_score",
+        "changed_confidence",
+        "changed_domain_count"
+      ],
+      "properties": {
+        "domain": {"type": "string"},
+        "added_services": {"type": "array", "items": {"type": "string"}},
+        "removed_services": {"type": "array", "items": {"type": "string"}},
+        "added_slugs": {"type": "array", "items": {"type": "string"}},
+        "removed_slugs": {"type": "array", "items": {"type": "string"}},
+        "added_signals": {"type": "array", "items": {"type": "string"}},
+        "removed_signals": {"type": "array", "items": {"type": "string"}},
+        "changed_auth_type": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["from", "to"],
+              "properties": {
+                "from": {"type": ["string", "null"]},
+                "to": {"type": ["string", "null"]}
+              }
+            }
+          ]
+        },
+        "changed_dmarc_policy": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["from", "to"],
+              "properties": {
+                "from": {"type": ["string", "null"]},
+                "to": {"type": ["string", "null"]}
+              }
+            }
+          ]
+        },
+        "changed_email_security_score": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["from", "to"],
+              "properties": {
+                "from": {"type": ["integer", "null"]},
+                "to": {"type": ["integer", "null"]}
+              }
+            }
+          ]
+        },
+        "changed_confidence": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["from", "to"],
+              "properties": {
+                "from": {"type": "string"},
+                "to": {"type": "string"}
+              }
+            }
+          ]
+        },
+        "changed_domain_count": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["from", "to"],
+              "properties": {
+                "from": {"type": "integer"},
+                "to": {"type": "integer"}
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
