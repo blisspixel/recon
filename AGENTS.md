@@ -27,13 +27,60 @@ Do not use recon for:
 
 If the user wants a verdict like "is this company secure," recon is not that tool. It surfaces observations; the user supplies the judgment.
 
-## How to invoke
+## Before first invocation
 
-Prefer the MCP server tools when the `recon` MCP is connected — they return structured data directly. Common starting points:
+Confirm recon is installed before the first call in a session:
+
+```bash
+recon --version
+```
+
+If the command is not found:
+
+> "`recon-tool` is not installed. It's a Python CLI from github.com/blisspixel/recon that reads public DNS, identity endpoints, and certificate transparency — no credentials needed. Install with `pip install recon-tool`? (Python 3.10+ required.)"
+
+Wait for explicit approval, then `pip install recon-tool` followed by `recon doctor` to verify connectivity. If `recon --version` succeeds, continue immediately.
+
+## Two invocation modes
+
+### Default mode — panel output
+
+Use this when the user asks recon-shaped questions conversationally — "recon contoso.com", "what does pokemon.com run on" — without explicitly requesting full or structured data.
+
+Prefer the MCP server tools when the `recon` MCP is connected; otherwise:
+
+```bash
+recon <domain>
+```
+
+**Relay the CLI panel output verbatim.** Do not reformat it into Markdown bullets, tables, or headers. The panel is purpose-built and tighter than anything reformatted. End with a single short pointer such as *"Run with `--full` for everything, or ask me to `--explain` the reasoning."* Then stop. No interpretation, no commentary.
+
+### Full / structured mode — `--full --json`
+
+Trigger this mode when the user explicitly says "full", "max details", "give me everything", or when downstream automation needs structured data:
+
+```bash
+recon <domain> --full --json > recon-<domain>.json
+```
+
+In this mode, **do not dump the JSON inline.** It is several KB and consumes context for no benefit. Instead:
+
+1. Save the JSON to a file in the current working directory (or a path the user specifies).
+2. Reply with a 3-line headline only:
+   > **{display_name}** — {provider}, confidence {confidence}.
+   > {N services detected, {ct_subdomain_count} CT subdomains, email security {email_security_score}/5}.
+   > Full JSON saved to `recon-{domain}.json`. Ready for the next ask.
+3. Stop. Wait for the user.
+
+If the user later asks for a structured summary of the JSON, follow the output-voice rules below.
+
+## Preferring MCP over CLI
+
+When the `recon` MCP server is connected, use it instead of shelling out — it returns parsed objects directly. Common starting points:
 
 - `lookup_tenant(domain, format="json", explain=true)` — full domain intelligence with provenance.
 - `analyze_posture(domain, profile=...)` — posture observations, optionally biased by a profile lens.
-- `assess_exposure(domain)` — posture score (0–100) with section breakdowns. Operates on already-collected data; no extra network calls.
+- `assess_exposure(domain)` — posture score (0–100). Operates on already-collected data; no extra network calls.
 - `find_hardening_gaps(domain)` — categorized gaps with neutral "Consider" notes.
 - `simulate_hardening(domain, fixes=[...])` — what-if scoring with hypothetical fixes applied.
 - `compare_postures(domain_a, domain_b)` — side-by-side posture comparison.
@@ -42,13 +89,12 @@ Prefer the MCP server tools when the `recon` MCP is connected — they return st
 
 Browse `recon://fingerprints`, `recon://signals`, and `recon://profiles` resources before guessing what recon can detect — they're free (no network) and return the live catalog.
 
-If the MCP server is not connected, fall back to the CLI:
+CLI fallbacks when the MCP server is not connected:
 
-- `recon <domain> --json` — structured output you can parse.
+- `recon <domain> --json` — structured output.
 - `recon <domain> --explain` — full reasoning and provenance DAG.
-- `recon <domain> --full` — services, domains, and posture together.
 - `recon batch <file> --json` — list of domains with cross-domain token clustering.
-- `recon delta <domain>` — diff against the last cached snapshot.
+- `recon delta <domain>` — diff against the last cached snapshot. Relay verbatim like the default panel.
 
 ## Workflow patterns
 
@@ -89,6 +135,7 @@ recon's voice is **hedged observation**, not verdict. Mirror that voice when rep
 - Say "Microsoft 365 tenant observed; identity is federated" — not "they use Okta" unless the IdP is explicitly named in the output (`google_idp_name` or evidence-backed insight).
 - Say "passive observation only — there may be additional controls not visible in DNS" when summarizing posture, especially on sparse results.
 - Surface the `confidence` field. `low` confidence with thin sources means "DNS is sparse for this org," not "this org is suspicious."
+- Cite the evidence type when stating a fingerprint — MX, TXT, CNAME, NS, SRV, CAA, SPF, certificate SAN. Don't just assert.
 - Never claim a vulnerability is *confirmed*. recon does not test exploitability. A missing DMARC record is a missing record; what it implies is a separate conversation.
 
 When summarizing a `lookup_tenant` response, lead with what carries signal:
@@ -103,7 +150,7 @@ Don't paste the raw JSON unless asked. Offer it.
 
 ## Sparse results
 
-Recon will sometimes return very little — a domain behind heavy proxies, with minimal published records, or one that doesn't expose SaaS verification tokens. This is expected. When it happens:
+recon will sometimes return very little — a domain behind heavy proxies, with minimal published records, or one that doesn't expose SaaS verification tokens. This is expected. When it happens:
 
 - Report what *was* observed, name the empty fields explicitly, and explain that passive collection has a ceiling for this kind of target.
 - Check `degraded_sources` and `partial` — if a source failed transiently, suggest a re-run.
