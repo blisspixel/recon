@@ -111,6 +111,8 @@ Then ask your AI: *"Run a recon lookup on contoso.com and tell me what's running
 
 See [docs/mcp.md](docs/mcp.md) for the full tool list, advanced agentic workflows, and per-client config locations.
 
+**Claude Code, Kiro, Windsurf, Cursor, VS Code:** drop-in install snippets and agent guidance live under [`clients/`](clients/). Claude Code users get a full plugin (MCP + skill in one install) at [`claude-code/`](claude-code/). The portable [`AGENTS.md`](AGENTS.md) at the repo root is auto-detected by Kiro and other agents.md-aware tools.
+
 ## Limitations
 
 - **Coverage depends on public DNS.** Organizations behind heavy proxies, with minimal DNS records, or that don't publish SaaS verification tokens will return sparse results. This is fundamental to passive-only collection. When sources transiently fail, the CLI tells you which one and why so you can retry or accept the partial answer.

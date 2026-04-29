@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "recon": {
+      "command": "recon",
+      "args": ["mcp"],
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}

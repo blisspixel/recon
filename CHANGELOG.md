@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.5] - 2026-04-29
+
+**Patch release - multi-client integration assets.** Docs-only change. No
+behavior, schema, or fingerprint changes. Adds drop-in install assets so
+Claude Code, Kiro, Windsurf, Cursor, and VS Code users can wire up the recon
+MCP server and pick up agent guidance without re-deriving it per session.
+
+### Added
+
+- `claude-code/` — full Claude Code plugin scaffold with `.claude-plugin/plugin.json`,
+  `.mcp.json` MCP server registration, and a `skills/recon/SKILL.md` skill that
+  teaches Claude when and how to use recon in recon's neutral-observation voice.
+- `clients/` — copy-pasteable MCP config snippets for Kiro and Windsurf, plus a
+  client-by-client install matrix covering Cursor and VS Code + Copilot.
+- `AGENTS.md` at repo root — portable agent guidance in the
+  [agents.md](https://agents.md) format. Auto-detected by Kiro and other
+  agents.md-aware tools; can be referenced from `.windsurfrules`,
+  `.cursor/rules/`, or `.github/copilot-instructions.md`.
+- `docs/mcp.md` — Kiro added to the per-client config table; PATH gotcha
+  expanded to cover all GUI Electron clients.
+
+### Changed
+
+- README links the new `claude-code/` plugin, `clients/` snippets, and
+  `AGENTS.md` so users of any supported AI client can find their install path.
+
 ## [1.4.4] - 2026-04-27
 
 **Patch release - fingerprint hardening and packaged validator reliability.**

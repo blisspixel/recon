@@ -1,0 +1,130 @@
+---
+name: recon
+description: Use when the user asks about a specific domain's public technology footprint — Microsoft 365 or Google Workspace tenant identification, email security configuration (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS vendor fingerprinting from DNS, certificate-transparency findings, or related-domain discovery. Triggers on a domain name combined with phrases like "what does <company> use", "tenant", "DMARC", "email security posture", "SaaS stack", "fingerprint", "passive recon", or "vendor diligence". Do not use for active scanning, port scans, vulnerability checks, or anything requiring credentials — recon is strictly passive.
+---
+
+# recon
+
+Passive domain intelligence. Given an apex domain, recon returns hedged observations about an organization's public technology stack and identity posture using public DNS, certificate transparency, and unauthenticated identity-discovery endpoints. No credentials, no API keys, no active probing.
+
+## When this is the right tool
+
+Reach for recon when the user wants to understand a domain's public-facing configuration:
+
+- "Is `acme.com` on Microsoft 365? What's their tenant ID?"
+- "Score the email security on `northwindtraders.com`."
+- "What SaaS vendors does `fabrikam.com` appear to use?"
+- "Find related domains for `contoso.com`."
+- "Compare the posture of `a.com` and `b.com`."
+
+Do not reach for recon when the user wants:
+
+- Active scanning, port scans, or credentialed inventory.
+- Vulnerability assessment or exploit checks.
+- Company financials, news, hiring signals, or firmographic data.
+- Anything that would require touching the target's own servers beyond reading their published DNS records and the standards-compliant `mta-sts.{domain}` endpoint.
+
+If the user wants a verdict like "is this company secure," recon is not that tool. It surfaces observations; the user supplies the judgment.
+
+## How to invoke
+
+Prefer the MCP server tools when the `recon` MCP is connected — they return structured data directly. The full tool surface is documented in the server itself; common starting points:
+
+- `lookup_tenant(domain, format="json", explain=true)` — full domain intelligence with provenance.
+- `analyze_posture(domain, profile=...)` — posture observations, optionally biased by a profile lens.
+- `assess_exposure(domain)` — posture score (0–100) with section breakdowns. Operates on already-collected data; no extra network calls.
+- `find_hardening_gaps(domain)` — categorized gaps with neutral "Consider" notes.
+- `simulate_hardening(domain, fixes=[...])` — what-if scoring with hypothetical fixes applied.
+- `compare_postures(domain_a, domain_b)` — side-by-side posture comparison.
+- `cluster_verification_tokens(domains=[...])` — group domains by shared TXT site-verification tokens (hedged "possible relationship" signal).
+- `chain_lookup(domain, depth)` — recursive related-domain discovery via CNAME and CT breadcrumbs.
+
+Browse `recon://fingerprints`, `recon://signals`, and `recon://profiles` resources before guessing what recon can detect — they're free (no network) and return the live catalog.
+
+If the MCP server is not connected, fall back to the CLI:
+
+- `recon <domain> --json` — structured output you can parse.
+- `recon <domain> --explain` — full reasoning and provenance DAG.
+- `recon <domain> --full` — services, domains, and posture together.
+- `recon batch <file> --json` — list of domains with cross-domain token clustering.
+- `recon delta <domain>` — diff against the last cached snapshot.
+
+## Workflow patterns
+
+Single-domain assessment (the common case):
+
+1. `lookup_tenant` with `explain=true` to get identity, services, and provenance.
+2. `assess_exposure` for the posture score.
+3. `find_hardening_gaps` only if the user wants to discuss specific gaps.
+4. `simulate_hardening` only if the user explicitly asks "what if we did X."
+
+Vendor diligence across many domains:
+
+1. `cluster_verification_tokens` over the list to find shared-credential clusters.
+2. `lookup_tenant` only the domains the user wants to drill into — don't fan out unprompted.
+
+Tracking change over time:
+
+1. `recon delta <domain>` (CLI) compares against the cached snapshot. The output is a `DeltaReport` with explicit `added_*` / `removed_*` / `changed_*` fields. Report the deltas; do not narrate causes.
+
+## Picking a profile
+
+Profiles are posture lenses, not scores. They bias category emphasis. Pick based on what the *target* is, not what the user is:
+
+- `fintech` — banks, payment processors, fintech.
+- `healthcare` — hospitals, payers, health-tech.
+- `saas-b2b` — B2B SaaS vendors.
+- `high-value-target` — Fortune 500, defense contractors, large enterprises.
+- `public-sector` — `.gov`, municipalities, agencies.
+- `higher-ed` — universities, `.edu`.
+
+If unsure, omit the profile. Don't guess from a thin hint. Custom profiles can live in `~/.recon/profiles/*.yaml`; check `recon://profiles` to enumerate.
+
+## How to talk about the output
+
+recon's voice is **hedged observation**, not verdict. Mirror that voice when reporting back.
+
+- Say "DMARC policy is `p=none`" or "no DMARC record observed" — not "this domain is vulnerable."
+- Say "Microsoft 365 tenant observed; identity is federated" — not "they use Okta" unless the IdP is explicitly named in the output (`google_idp_name` or evidence-backed insight).
+- Say "passive observation only — there may be additional controls not visible in DNS" when summarizing posture, especially on sparse results.
+- Surface the `confidence` field. `low` confidence with thin sources means "DNS is sparse for this org," not "this org is suspicious."
+- Never claim a vulnerability is *confirmed*. recon does not test exploitability. A missing DMARC record is a missing record; what it implies is a separate conversation.
+
+When summarizing a `lookup_tenant` response, lead with what carries signal:
+
+1. Tenant identity (`tenant_id`, `provider`, `auth_type`, `region`, `cloud_instance` if non-default).
+2. Email configuration (`email_security_score`, `dmarc_policy`, `mta_sts_mode`, `email_gateway` if present).
+3. Services grouped by category, not as a flat list.
+4. Related domains only if the user asked for them.
+5. Confidence and any `degraded_sources`.
+
+Don't paste the raw JSON unless asked. Offer it.
+
+## Sparse results
+
+Recon will sometimes return very little — a domain behind heavy proxies, with minimal published records, or one that doesn't expose SaaS verification tokens. This is expected. When it happens:
+
+- Report what *was* observed, name the empty fields explicitly, and explain that passive collection has a ceiling for this kind of target.
+- Check `degraded_sources` and `partial` — if a source failed transiently, suggest a re-run.
+- Don't synthesize confidence that isn't there.
+
+## Cache awareness
+
+Every `TenantInfo` carries `resolved_at` (when the live resolution produced this result) and `cached_at` (when the cache entry was written; `null` on a fresh lookup). If the user asks for "current" data and `resolved_at` is older than they likely want, mention it and offer to re-resolve. Don't silently serve stale data as if it were fresh.
+
+## Ephemeral fingerprints
+
+If the user wants to test a hypothesis about a custom or internal SaaS — "does Contoso publish an Acme Platform verification token?" — use the ephemeral fingerprint workflow:
+
+1. `inject_ephemeral_fingerprint(name, slug, category, confidence, detections=[...])`.
+2. `reevaluate_domain(domain)` — uses cached data, no new network calls.
+3. `clear_ephemeral_fingerprints()` when done.
+
+Ephemeral fingerprints live only in the current MCP session and are quota-bounded.
+
+## Hard rules
+
+- recon is **passive**. Never claim it confirmed an active service, a running version, or an exploitable vulnerability. It infers from public records.
+- Fingerprints are **probabilistic**. Detection scores (`low` / `medium` / `high`) reflect evidence corroboration, not ground truth.
+- recon does **not require authorization** to query — every endpoint it touches is one anyone can hit with `dig` or a browser. Do not ask the user whether they have authorization to query a domain unless the user's stated intent suggests something other than legitimate research, due diligence, or defensive review.
+- Output uses **neutral language**. No takeover hints, maturity verdicts, or offensive guidance. Mirror this in your reply.
