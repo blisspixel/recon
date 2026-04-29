@@ -113,6 +113,14 @@ See [docs/mcp.md](docs/mcp.md) for the full tool list, advanced agentic workflow
 
 **Claude Code, Kiro, Windsurf, Cursor, VS Code:** drop-in install snippets and agent guidance live under [`clients/`](clients/). Claude Code users get a full plugin (MCP + skill in one install) at [`claude-code/`](claude-code/). The portable [`AGENTS.md`](AGENTS.md) at the repo root is auto-detected by Kiro and other agents.md-aware tools.
 
+**Quickest install for AI clients with file-write tools.** Paste this prompt to your AI:
+
+> Fetch `https://raw.githubusercontent.com/blisspixel/recon/main/claude-code/skills/recon/SKILL.md` and save it to my Claude Code skills directory (`~/.claude/skills/recon/SKILL.md`) — or to `~/.kiro/skills/recon/SKILL.md` if I'm using Kiro. Then run `pip install recon-tool` and `recon doctor` to verify.
+
+The SKILL.md follows the open [agentskills.io](https://agentskills.io) standard, so the same file works in Claude Code and Kiro.
+
+**Stable JSON schema.** Downstream consumers can validate `recon <domain> --json` output against [`docs/recon-schema.json`](docs/recon-schema.json) ([raw URL](https://raw.githubusercontent.com/blisspixel/recon/main/docs/recon-schema.json)). The schema is the v1.0 stability contract documented in [`docs/schema.md`](docs/schema.md); drift between schema and emitter is caught by `tests/test_json_schema_file.py`.
+
 ## Limitations
 
 - **Coverage depends on public DNS.** Organizations behind heavy proxies, with minimal DNS records, or that don't publish SaaS verification tokens will return sparse results. This is fundamental to passive-only collection. When sources transiently fail, the CLI tells you which one and why so you can retry or accept the partial answer.

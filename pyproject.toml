@@ -1,6 +1,6 @@
 [project]
 name = "recon-tool"
-version = "1.4.6"
+version = "1.4.7"
 description = "Domain intelligence CLI and MCP server — tech stack, email security, and signal intelligence from DNS."
 requires-python = ">=3.10"
 readme = "README.md"
