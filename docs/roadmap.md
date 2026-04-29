@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.4.7**. Current theme: keep the public surface stable,
+Current release: **v1.4.8**. Current theme: keep the public surface stable,
 raise evidence quality, and let live-validation findings drive changes.
 
 ## What recon is

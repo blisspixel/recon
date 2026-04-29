@@ -41,19 +41,53 @@ If the command is not found:
 
 Wait for explicit approval, then `pip install recon-tool` followed by `recon doctor` to verify connectivity. If `recon --version` succeeds, continue immediately.
 
+## Detecting whether MCP is connected
+
+Before choosing CLI vs MCP, look at your own available-tools list. If you see `recon:*` tools (e.g. `mcp__recon__lookup_tenant`, `mcp__recon__analyze_posture`), the MCP server is connected — prefer those. If you do not, fall back to the CLI. Do not call an MCP tool speculatively to test connectivity.
+
 ## Two invocation modes
 
 ### Default mode — panel output
 
 Use this when the user asks recon-shaped questions conversationally — "recon contoso.com", "what does pokemon.com run on" — without explicitly requesting full or structured data.
 
-Prefer the MCP server tools when the `recon` MCP is connected; otherwise:
+When MCP is connected, call `lookup_tenant(domain)` and reformat to a panel-equivalent summary. Otherwise shell out:
 
 ```bash
 recon <domain>
 ```
 
 **Relay the CLI panel output verbatim.** Do not reformat it into Markdown bullets, tables, or headers. The panel is purpose-built and tighter than anything reformatted. End with a single short pointer such as *"Run with `--full` for everything, or ask me to `--explain` the reasoning."* Then stop. No interpretation, no commentary.
+
+<details>
+<summary>Sample panel (collapsed)</summary>
+
+```
+Contoso Ltd
+contoso.com
+──────────────────────────────────────────────────────────────────────────────
+  Provider     Microsoft 365 (primary) via Proofpoint gateway + Google Workspace (secondary)
+  Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
+  Auth         Federated (Entra ID + Google Workspace)
+  Confidence   ●●● High (4 sources)
+
+Services
+  Email          Microsoft 365, Google Workspace, Proofpoint, DMARC, DKIM,
+                 SPF: strict (-all), BIMI
+  Identity       Okta, Google Workspace (managed identity)
+  Cloud          Cloudflare (CDN), AWS Route 53 (DNS)
+  Security       Wiz, CAA: 3 issuers restricted
+  Collaboration  Slack, Atlassian (Jira/Confluence)
+
+Insights
+  Federated identity indicators observed (likely Okta — enterprise SSO)
+  Email security 4/5: DMARC reject, DKIM, SPF strict, BIMI
+  Email gateway: Proofpoint in front of Exchange
+```
+
+That is the shape recon emits. Pass it through unchanged.
+
+</details>
 
 ### Full / structured mode — `--full --json`
 
@@ -63,16 +97,22 @@ Trigger this mode when the user explicitly says "full", "max details", "give me 
 recon <domain> --full --json > recon-<domain>.json
 ```
 
-In this mode, **do not dump the JSON inline.** It is several KB and consumes context for no benefit. Instead:
+In this mode, **do not dump the JSON inline.** Output is typically 3–10 KB depending on org size and consumes context for no benefit. Instead:
 
 1. Save the JSON to a file in the current working directory (or a path the user specifies).
-2. Reply with a 3-line headline only:
+2. Reply with a 3-line headline only (field names per [`docs/recon-schema.json`](docs/recon-schema.json) v1.0 contract):
    > **{display_name}** — {provider}, confidence {confidence}.
    > {N services detected, {ct_subdomain_count} CT subdomains, email security {email_security_score}/5}.
    > Full JSON saved to `recon-{domain}.json`. Ready for the next ask.
 3. Stop. Wait for the user.
 
 If the user later asks for a structured summary of the JSON, follow the output-voice rules below.
+
+### Explain mode — `--explain`
+
+Use when the user asks "why", "how do you know", or "show your reasoning". The CLI emits the panel plus a provenance DAG (`evidence → slug → rule → signal → insight`). The MCP `lookup_tenant(domain, explain=true)` returns the same chain as a structured `explanation_dag` field for programmatic consumption.
+
+Surface the *summary* of the chain — which evidence drove which insight — rather than dumping the full DAG. Offer the full DAG on follow-up.
 
 ## Preferring MCP over CLI
 
@@ -112,7 +152,8 @@ Vendor diligence across many domains:
 
 Tracking change over time:
 
-1. `recon delta <domain>` (CLI) compares against the cached snapshot. The output is a `DeltaReport` with explicit `added_*` / `removed_*` / `changed_*` fields. Report the deltas; do not narrate causes.
+1. `recon delta <domain>` (CLI) compares the current resolution against the cached snapshot at `~/.recon/cache/`. The output is a `DeltaReport` (see `$defs/DeltaReport` in `docs/recon-schema.json`) with explicit `added_*` / `removed_*` / `changed_*` fields. Report the deltas; do not narrate causes.
+2. **First-run case.** A domain that has never been resolved on this machine has no baseline. `recon delta` returns an empty diff in that case — surface this explicitly ("no prior snapshot — this is the first lookup, so nothing to compare against") rather than reporting "no changes" as if change had been ruled out.
 
 ## Picking a profile
 
@@ -126,6 +167,11 @@ Profiles are posture lenses, not scores. They bias category emphasis. Pick based
 - `higher-ed` — universities, `.edu`.
 
 If unsure, omit the profile. Don't guess from a thin hint. Custom profiles can live in `~/.recon/profiles/*.yaml`; check `recon://profiles` to enumerate.
+
+Invocation:
+
+- CLI: `recon <domain> --profile <name>` (also accepted by `recon <domain> --full --profile <name>`).
+- MCP: `analyze_posture(domain, profile="<name>")` — profile is the second argument.
 
 ## How to talk about the output
 
