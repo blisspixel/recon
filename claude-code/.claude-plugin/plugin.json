@@ -1,0 +1,22 @@
+{
+  "name": "recon",
+  "version": "1.4.5",
+  "description": "Passive domain intelligence — Microsoft 365 / Google Workspace tenant identification, email security observation (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting, certificate-transparency findings, and posture analysis. Bundles the recon MCP server and a skill that teaches Claude when and how to use it.",
+  "author": {
+    "name": "blisspixel",
+    "url": "https://github.com/blisspixel"
+  },
+  "homepage": "https://github.com/blisspixel/recon",
+  "repository": "https://github.com/blisspixel/recon",
+  "license": "MIT",
+  "keywords": [
+    "recon",
+    "osint",
+    "dns",
+    "passive-recon",
+    "m365",
+    "google-workspace",
+    "dmarc",
+    "saas-fingerprinting"
+  ]
+}
