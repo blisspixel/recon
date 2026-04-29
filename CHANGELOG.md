@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.6] - 2026-04-29
+
+**Patch release - skill best-practices alignment.** Docs-only change. No
+behavior, schema, or fingerprint changes. Refines the Claude Code skill
+and portable AGENTS.md against the official Anthropic skill-authoring
+guidance and the `anthropics/skills` reference repo.
+
+### Added
+
+- `claude-code/skills/recon/SKILL.md`: `argument-hint` and `allowed-tools`
+  fields in skill frontmatter (per Claude Code skill spec).
+- "Before first invocation" section: install probe via `recon --version`
+  with explicit user approval before `pip install` — useful when the skill
+  is loaded outside the bundled plugin (e.g., copied into Kiro skills).
+- "Two invocation modes" section: default mode relays the CLI panel
+  verbatim; `--full --json` mode writes to disk and replies with a 3-line
+  headline so structured output never floods the conversation context.
+- Evidence-citation guidance in the output-voice rules — fingerprint
+  claims should reference the record type (MX, TXT, CNAME, etc.).
+
+### Changed
+
+- Tightened skill description; trigger phrases and exclusions still
+  surface for skill auto-loading.
+- AGENTS.md mirrors the SKILL.md body so Kiro / agents.md-aware tools
+  pick up the same install-probe and two-mode invocation patterns.
+
 ## [1.4.5] - 2026-04-29
 
 **Patch release - multi-client integration assets.** Docs-only change. No
