@@ -339,6 +339,39 @@ class TestRenderTenantPanelEdgeCases:
         assert "Tenant" in out
         assert "a1b2c3d4" in out
 
+    def test_default_panel_keeps_compact_email_summary(self) -> None:
+        """When Email dedupe would remove every email entry, keep a compact
+        summary so the Services block does not look sparse."""
+        _, buf = _make_console()
+        info = _minimal_info(
+            services=(
+                "Apple Business",
+                "DKIM",
+                "DKIM (Exchange Online)",
+                "DMARC",
+                "Exchange Autodiscover",
+                "Microsoft 365",
+                "Mimecast",
+                "SPF complexity: 4 includes",
+                "SPF: softfail (~all)",
+            ),
+            slugs=("apple", "microsoft365", "mimecast"),
+            dmarc_policy="quarantine",
+            primary_email_provider="Microsoft 365",
+            email_gateway="Mimecast",
+        )
+        from recon_tool.formatter import get_console
+
+        get_console().print(render_tenant_panel(info))
+        out = _strip(buf.getvalue())
+        assert "Email" in out
+        assert "Microsoft 365" in out
+        assert "Mimecast" in out
+        assert "DMARC quarantine" in out
+        assert "DKIM" in out
+        assert "SPF softfail" in out
+        assert "SPF complexity" not in out
+
     def test_explain_flag_renders_classification(self) -> None:
         _, buf = _make_console()
         info = _minimal_info(
