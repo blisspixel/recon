@@ -199,6 +199,8 @@ _SLUG_HUMAN_NAMES: dict[str, str] = {
     "miro": "Miro",
     "dropbox": "Dropbox",
     "zoom": "Zoom",
+    "disciple-media": "Disciple Media",
+    "kartra": "Kartra",
     "salesforce": "Salesforce",
     "salesforce-mc": "Salesforce Marketing Cloud",
     "hubspot": "HubSpot",

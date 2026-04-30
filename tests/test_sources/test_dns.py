@@ -232,6 +232,36 @@ class TestTechStackFingerprinting:
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns._safe_resolve")
+    async def test_kartra_via_cname(self, mock_resolve):
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/CNAME": ["example.kartra.com"],
+                "example.com/TXT": [],
+                "example.com/MX": [],
+            }
+        )
+        result = await DNSSource().lookup("example.com")
+        assert "Kartra" in result.detected_services
+        assert "kartra" in result.detected_slugs
+        assert any(e.source_type == "CNAME" and e.slug == "kartra" for e in result.evidence)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns._safe_resolve")
+    async def test_disciple_media_via_cname(self, mock_resolve):
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "www.example.com/CNAME": ["tenant.custom.disciplemedia.com"],
+                "example.com/TXT": [],
+                "example.com/MX": [],
+            }
+        )
+        result = await DNSSource().lookup("example.com")
+        assert "Disciple Media" in result.detected_services
+        assert "disciple-media" in result.detected_slugs
+        assert any(e.source_type == "CNAME" and e.slug == "disciple-media" for e in result.evidence)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns._safe_resolve")
     async def test_sendgrid_and_aws_ses(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {

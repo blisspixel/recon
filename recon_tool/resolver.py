@@ -241,6 +241,8 @@ async def _enrich_from_related(
     # Collect additional services and slugs from related domains
     extra_services: set[str] = set(info.services)
     extra_slugs: set[str] = set(info.slugs)
+    extra_evidence = [*info.evidence]
+    seen_evidence = {(ev.source_type, ev.raw_value, ev.rule_name, ev.slug) for ev in info.evidence}
     found_new = False
 
     for result in related_results:
@@ -250,12 +252,18 @@ async def _enrich_from_related(
             found_new = True
             extra_services.update(result.detected_services)
             extra_slugs.update(result.detected_slugs)
+            for ev in result.evidence:
+                ev_key = (ev.source_type, ev.raw_value, ev.rule_name, ev.slug)
+                if ev_key in seen_evidence:
+                    continue
+                extra_evidence.append(ev)
+                seen_evidence.add(ev_key)
 
     if not found_new:
         return info, all_results
 
     # Re-run insight generation with the enriched data to get updated signals
-    from recon_tool.merger import build_insights_with_signals
+    from recon_tool.merger import build_insights_with_signals, compute_detection_scores
 
     enriched_insights = build_insights_with_signals(
         extra_services,
@@ -279,6 +287,8 @@ async def _enrich_from_related(
         services=tuple(sorted(extra_services)),
         slugs=tuple(sorted(extra_slugs)),
         insights=tuple(enriched_insights),
+        evidence=tuple(extra_evidence),
+        detection_scores=compute_detection_scores(tuple(extra_evidence)),
     )
 
     return enriched, all_results + list(related_results)

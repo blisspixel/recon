@@ -107,6 +107,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^beautifulai-site-verification=
+- name: Disciple Media
+  slug: disciple-media
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname
+    pattern: disciplemedia.com
+    description: Disciple Media branded community platform CNAME
 - name: Zoom
   slug: zoom
   category: Productivity & Collaboration
