@@ -931,7 +931,7 @@ async def _detect_cname_infra(ctx: _DetectionCtx, domain: str) -> None:
             cl = cname.lower()
             for det in get_cname_patterns():
                 if det.pattern in cl:
-                    ctx.add(det.name, det.slug)
+                    ctx.add(det.name, det.slug, source_type="CNAME", raw_value=cname)
                     ctx.record_fp_match(det.slug, "cname", det.pattern)
                     break
 
@@ -1545,6 +1545,7 @@ async def lightweight_subdomain_lookup(subdomain: str) -> SourceResult:
         source_name="dns_records",
         detected_services=tuple(sorted(ctx.services)),
         detected_slugs=tuple(sorted(ctx.slugs)),
+        evidence=tuple(ctx.evidence),
     )
 
 
@@ -1574,6 +1575,7 @@ async def medium_subdomain_lookup(subdomain: str) -> SourceResult:
         source_name="dns_records",
         detected_services=tuple(sorted(ctx.services)),
         detected_slugs=tuple(sorted(ctx.slugs)),
+        evidence=tuple(ctx.evidence),
     )
 
 

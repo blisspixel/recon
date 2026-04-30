@@ -389,6 +389,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "github": "Collaboration",
     "gitlab": "Collaboration",
     "linear": "Collaboration",
+    "disciple-media": "Collaboration",
     # v0.9.3: higher-ed LMS / SIS / student-facing platforms
     "canvas-lms": "Collaboration",
     "blackboard": "Collaboration",
@@ -399,6 +400,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     # v0.9.3: sales & marketing platforms missed in earlier passes
     "d365-marketing": "Business Apps",
     "sfmc": "Business Apps",
+    "kartra": "Business Apps",
     "emma": "Email",
     "icontact": "Email",
     "mailerlite": "Email",

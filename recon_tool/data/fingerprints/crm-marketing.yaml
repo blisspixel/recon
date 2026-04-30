@@ -67,6 +67,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^klaviyo-site-verification=
+- name: Kartra
+  slug: kartra
+  category: CRM & Marketing
+  confidence: high
+  detections:
+  - type: cname
+    pattern: kartra.com
+    description: Kartra hosted marketing / learning portal CNAME
 - name: LiveRamp
   slug: liveramp
   category: CRM & Marketing

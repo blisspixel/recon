@@ -643,12 +643,12 @@ def fingerprints_list(
         "-t",
         help="Filter by detection type (txt, mx, spf, cname, srv, caa, ns, subdomain_txt, dkim)",
     ),
-    all_entries: bool = typer.Option(False, "--all", "-a", help="Print the full table even with no filters (227 rows)"),
+    all_entries: bool = typer.Option(False, "--all", "-a", help="Print the full table even with no filters"),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
 ) -> None:
     """List built-in fingerprints.
 
-    With no filters, shows a per-category summary — 227 fingerprints is
+    With no filters, shows a per-category summary — the full catalog is
     too much to dump at a prompt. Use ``--category`` to scope to one
     file (e.g. ``-c ai``, ``-c security``) or ``--all`` to force the
     full table. For free-text lookups (slug / name / pattern), prefer
@@ -699,8 +699,8 @@ def fingerprints_list(
         console.print("  No fingerprints match those filters.")
         return
 
-    # Compact summary when the user asked for the full catalog — 227
-    # rows of table is not a useful answer to "what's in here". A
+    # Compact summary when the user asked for the full catalog. A table
+    # with hundreds of rows is not a useful answer to "what's in here". A
     # category breakdown with counts plus a filter hint is.
     if not had_filter and not all_entries:
         from collections import Counter
@@ -762,7 +762,7 @@ def fingerprints_search(
     # Rank each fingerprint by how strong the match is. Slug-prefix is
     # the strongest signal ("they know exactly what they're looking
     # for"); a hit only in a detection pattern is weakest. We don't use
-    # fuzzy matching — substring is enough for the 227-entry catalog
+    # fuzzy matching — substring is enough for the built-in catalog
     # and doesn't pull in a dependency.
     ranked: list[tuple[int, Any]] = []
     for fp in fps:

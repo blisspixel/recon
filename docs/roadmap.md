@@ -33,7 +33,7 @@ As of v1.4.4, built-in fingerprints live in eight categorized YAML files:
 
 Current no-network catalog audit:
 
-- 227 fingerprints and 320 detection rules.
+- 229 fingerprints and 322 detection rules.
 - 68 multi-detection fingerprints.
 - All built-ins currently use `match_mode: any`.
 - Match-mode audit queue: 45 `keep_any`, 23 `review_for_all`, and 0

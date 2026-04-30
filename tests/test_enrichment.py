@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from recon_tool.models import SourceResult, TenantInfo
+from recon_tool.models import EvidenceRecord, SourceResult, TenantInfo
 from recon_tool.resolver import SourcePool, _enrich_from_related, resolve_tenant
 
 
@@ -65,6 +65,38 @@ class TestEnrichFromRelated:
         # is we don't try all 30.
         _enriched, results = await _enrich_from_related(info, [])
         assert len(results) <= 15
+
+    @pytest.mark.asyncio
+    async def test_related_subdomain_evidence_is_merged(self, monkeypatch):
+        """Subdomain enrichment should preserve evidence for added services."""
+
+        async def fake_lightweight_lookup(_domain: str) -> SourceResult:
+            return SourceResult(
+                source_name="dns_records",
+                detected_services=("Kartra",),
+                detected_slugs=("kartra",),
+                evidence=(
+                    EvidenceRecord(
+                        source_type="CNAME",
+                        raw_value="example.kartra.com",
+                        rule_name="Kartra",
+                        slug="kartra",
+                    ),
+                ),
+            )
+
+        monkeypatch.setattr("recon_tool.sources.dns.lightweight_subdomain_lookup", fake_lightweight_lookup)
+        info = TenantInfo(
+            tenant_id="aaa",
+            display_name="Test",
+            default_domain="example.com",
+            queried_domain="example.com",
+            related_domains=("learn.example.com",),
+        )
+        enriched, _results = await _enrich_from_related(info, [])
+        assert "Kartra" in enriched.services
+        assert any(e.source_type == "CNAME" and e.slug == "kartra" for e in enriched.evidence)
+        assert ("kartra", "low") in enriched.detection_scores
 
 
 class TestEnrichmentIntegration:

@@ -41,7 +41,7 @@ __all__ = [
 # for patterns that legitimately match a vendor's multiple variants
 # (e.g. ``.atlassian\.net$`` matching ``foo.atlassian.net`` and
 # ``bar.atlassian.net``) while still catching ``\.com$``-grade
-# disasters. Tuned on the built-in catalog: all 227 entries pass.
+# disasters. Tuned on the built-in catalog.
 DEFAULT_MATCH_THRESHOLD: float = 0.01
 
 
