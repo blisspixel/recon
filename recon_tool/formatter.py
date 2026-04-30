@@ -1006,6 +1006,61 @@ def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:
     return {c: svcs for c in _SERVICE_CATEGORIES_ORDER if (svcs := by_cat.get(c))}
 
 
+def _compact_email_summary(info: TenantInfo, email_services: list[str]) -> list[str]:
+    """Build a short Email row when default deduplication removes everything.
+
+    The default panel intentionally avoids a full protocol laundry list, but an
+    empty Email row makes Microsoft/Google mail targets look sparse even when
+    the lookup found solid email evidence. Keep one compact line with provider,
+    gateway, and the main hardening controls.
+    """
+    service_set = set(email_services)
+    summary: list[str] = []
+
+    def _add(value: str | None) -> None:
+        if value and value not in summary:
+            summary.append(value)
+
+    def _add_provider_list(value: str | None) -> None:
+        if not value:
+            return
+        for part in value.split(" + "):
+            _add(part.strip())
+
+    _add_provider_list(info.primary_email_provider)
+    if not summary:
+        _add_provider_list(info.likely_primary_email_provider)
+    if not summary:
+        for provider in ("Microsoft 365", "Google Workspace", "Zoho Mail", "ProtonMail", "AWS SES"):
+            if provider in service_set:
+                _add(provider)
+
+    _add(info.email_gateway)
+
+    if info.dmarc_policy:
+        _add(f"DMARC {info.dmarc_policy}")
+    elif "DMARC" in service_set:
+        _add("DMARC")
+
+    if any(s.startswith("DKIM") for s in email_services):
+        _add("DKIM")
+
+    if any(s.startswith("SPF: strict") for s in email_services):
+        _add("SPF strict")
+    elif any(s.startswith("SPF: softfail") for s in email_services):
+        _add("SPF softfail")
+
+    if info.mta_sts_mode and info.mta_sts_mode != "none":
+        _add(f"MTA-STS {info.mta_sts_mode}")
+    elif "MTA-STS" in service_set:
+        _add("MTA-STS")
+
+    if "BIMI" in service_set:
+        _add("BIMI")
+
+    return summary
+
+
 # High-signal subdomain prefixes for compact related-domain display.
 # Tuned to match the v0.9.3 UI goal: the related line should fit in 1-2
 # lines and show the names a security analyst cares about first.
@@ -1272,8 +1327,11 @@ def render_tenant_panel(
         # (2) Provider-line services (Exchange, M365, Google Workspace,
         #     gateway) — already in the header. Repeating them in Email
         #     is saying the same thing twice.
+        # If this would erase the entire Email row, keep a compact summary
+        # instead so dense email evidence does not render as a sparse panel.
         # In --full mode, show everything.
         if not verbose and "Email" in categorized:
+            original_email = list(categorized["Email"])
             _email_noise = {
                 "DKIM",
                 "DKIM (Exchange Online)",
@@ -1296,7 +1354,11 @@ def render_tenant_panel(
             _all_noise = _email_noise | _gateway_names
             categorized["Email"] = [s for s in categorized["Email"] if s not in _all_noise and not s.startswith("SPF")]
             if not categorized["Email"]:
-                del categorized["Email"]
+                email_summary = _compact_email_summary(info, original_email)
+                if email_summary:
+                    categorized["Email"] = email_summary
+                else:
+                    del categorized["Email"]
         max_width = _CATEGORY_WIDTH
         for cat, svcs in categorized.items():
             svc_block.append("  ")
