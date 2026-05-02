@@ -353,6 +353,110 @@ fingerprints:
     pattern: workosdns.com
     tier: application
     description: WorkOS B2B SSO custom domain CNAME
+  - type: cname_target
+    pattern: workos-dns.com
+    tier: application
+    description: WorkOS custom-domain CNAME (newer hyphenated zone)
+
+- name: Ping Identity (PingOne)
+  slug: ping-identity
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: pingone.com
+    tier: application
+    description: PingOne identity-as-a-service tenant CNAME
+
+- name: Salesloft
+  slug: salesloft
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: salesloft.com
+    tier: application
+    description: Salesloft custom-tracking subdomain delegation
+
+- name: Pendo
+  slug: pendo
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: pendo.io
+    tier: application
+    description: Pendo product-analytics customer endpoint
+
+- name: Docebo
+  slug: docebo
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: docebopaas.com
+    tier: application
+    description: Docebo learning-management system tenant
+
+- name: Skilljar
+  slug: skilljar
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: skilljarapp.com
+    tier: application
+    description: Skilljar customer-education platform
+
+- name: Bizzabo
+  slug: bizzabo
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: bizzabo.com
+    tier: application
+    description: Bizzabo events platform custom domain
+
+- name: Instatus
+  slug: instatus
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: instatus.com
+    tier: application
+    description: Instatus hosted status page
+
+- name: Frontify
+  slug: frontify
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: frontify.com
+    tier: application
+    description: Frontify brand-asset management custom domain
+
+- name: ReadMe
+  slug: readme
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: readmessl.com
+    tier: application
+    description: ReadMe documentation hub custom domain
+
+- name: WP Engine
+  slug: wpengine
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: wpeproxy.com
+    tier: application
+    description: WP Engine WordPress hosting proxy CNAME (variant)
 
 - name: Fly.io
   slug: flyio

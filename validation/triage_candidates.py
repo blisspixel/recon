@@ -82,28 +82,28 @@ def is_already_covered(suffix: str, patterns: set[str]) -> bool:
 def looks_intra_org(suffix: str, samples: list[dict[str, Any]]) -> bool:
     """True when the chains all stay inside the queried domain's brand zone.
 
-    Heuristic: the apex is the rightmost two labels of the subdomain in the
-    sample (e.g. ``foo.example.com`` → ``example.com``). If the suffix shares
-    at least one of those labels, the chain is likely intra-org.
-
-    This is intentionally a coarse filter — the apex domain isn't always the
-    rightmost two labels (``foo.bbc.co.uk``) — so over-matches are accepted
-    in exchange for catching the common case (corporate self-CDN).
+    Delegates to ``recon_tool.discovery`` so both this script and the
+    ``recon discover`` subcommand share the same heuristic. The brand-label
+    check correctly handles multi-part TLDs (``bbc.co.uk`` → ``bbc``) by
+    skipping the second-level public suffix.
     """
     if not samples:
         return False
-    suffix_lower = suffix.lower()
-    for sample in samples:
-        sub = str(sample.get("subdomain", "")).lower()
-        # Pick the rightmost two labels as the apex approximation.
-        apex_labels = sub.split(".")[-2:]
-        apex = ".".join(apex_labels)
-        if apex and apex in suffix_lower:
-            return True
-        # Also catch single-label brand sharing for things like
-        # gslb.<brand>.com → <brand>.com terminal — same brand.
-        for label in apex_labels:
-            if label and len(label) >= 4 and label in suffix_lower:
+    # Reconstruct the apex from a sample subdomain — same approximation as
+    # before, but with TLD-aware brand-label extraction.
+    sample = samples[0]
+    sub = str(sample.get("subdomain", "")).lower()
+    parts = sub.split(".")
+    # For multi-part TLDs (foo.bbc.co.uk), the apex is the rightmost three
+    # labels; for foo.example.com it's the rightmost two. Use the brand-label
+    # extractor to drive the decision: pick whichever right-anchored slice
+    # produces a non-empty brand label.
+    from recon_tool.discovery import looks_intra_org_brand
+
+    for n in (3, 2):
+        if len(parts) >= n:
+            apex_candidate = ".".join(parts[-n:])
+            if looks_intra_org_brand(apex_candidate, suffix, samples):
                 return True
     return False
 

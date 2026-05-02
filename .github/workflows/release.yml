@@ -40,6 +40,13 @@ jobs:
       - name: Lint
         run: uv run ruff check recon_tool/
 
+      - name: Validate built-in fingerprints
+        # Mirrors ci.yml so a YAML schema or duplicate-slug regression
+        # cannot reach PyPI just because release.yml's test job missed it.
+        # This check pools slugs across files and rejects same-slug entries
+        # whose display names disagree.
+        run: uv run python scripts/validate_fingerprint.py recon_tool/data/fingerprints/ --quiet
+
       - name: Export runtime requirements
         run: uv export --frozen --no-dev --no-emit-project --no-hashes --format requirements.txt --output-file .ci-audit-requirements.txt
 

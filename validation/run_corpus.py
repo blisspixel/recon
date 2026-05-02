@@ -58,12 +58,35 @@ def main() -> None:
         default=None,
         help="Optional prior results.json file to compare headline counts against.",
     )
+    parser.add_argument(
+        "--include-unclassified",
+        action="store_true",
+        help=(
+            "Include unclassified CNAME chains in each domain's JSON output. "
+            "Feeds the fingerprint-discovery loop (validation/find_gaps.py + "
+            "the /recon-fingerprint-triage skill)."
+        ),
+    )
+    parser.add_argument(
+        "--no-ct",
+        action="store_true",
+        help=(
+            "Skip cert-transparency providers (crt.sh, CertSpotter) for every "
+            "domain in the corpus. Recommended for runs of 1000+ domains "
+            "where you want zero load on public CT services."
+        ),
+    )
     args = parser.parse_args()
 
     output_dir = args.output_dir or _default_output_dir(base)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    results = run_batch_validation_sync(args.corpus, concurrency=max(1, min(20, args.concurrency)))
+    results = run_batch_validation_sync(
+        args.corpus,
+        concurrency=max(1, min(20, args.concurrency)),
+        include_unclassified=args.include_unclassified,
+        skip_ct=args.no_ct,
+    )
     summary = summarize_batch_results(results)
 
     comparison: dict[str, int] | None = None

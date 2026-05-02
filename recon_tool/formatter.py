@@ -443,6 +443,12 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "wordpress-vip": "Cloud",
     "workos": "Identity",
     "beehiiv": "Business Apps",
+    "docebo": "Collaboration",
+    "skilljar": "Collaboration",
+    "bizzabo": "Business Apps",
+    "instatus": "Collaboration",
+    "frontify": "Business Apps",
+    "readme": "Collaboration",
 }
 
 # Email service-name prefixes that bypass slug lookup. These catch
@@ -1597,6 +1603,21 @@ def render_tenant_panel(
                     surf.append("    ")
                     surf.append(line, style="dim")
                     surf.append("\n")
+
+        # Discovery-loop hint: when there are unclassified CNAME chains the
+        # surface classifier resolved but couldn't attribute, surface a
+        # one-liner inviting the user into the catalog-growth loop. Default
+        # panel doesn't get this — only --full / --domains, where the user
+        # is already engaged with the surface map.
+        if info.unclassified_cname_chains:
+            n = len(info.unclassified_cname_chains)
+            noun = "subdomain" if n == 1 else "subdomains"
+            surf.append("\n  ")
+            surf.append(
+                f"{n} unclassified {noun} — `recon discover {info.queried_domain}` to surface fingerprint candidates",
+                style="dim italic",
+            )
+            surf.append("\n")
 
         blocks.append(surf)
 

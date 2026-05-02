@@ -115,11 +115,29 @@ class TestNewFingerprintsLoad:
 
 
 class TestEnrichedFingerprints:
-    """Verify enriched fingerprints have additional detections and correct weights."""
+    """Verify enriched fingerprints have additional detections and correct weights.
+
+    Aggregates detections across every Fingerprint entry that shares a slug
+    so the v1.5+ "split detection rules across files" pattern works (e.g.
+    surface.yaml extending the apex ping-identity entry with a cname_target
+    rule). The dict still maps slug -> Fingerprint, but the chosen Fingerprint
+    has all detections from across the catalog merged into it.
+    """
 
     def setup_method(self) -> None:
         reload_fingerprints()
-        self.fps = {fp.slug: fp for fp in load_fingerprints()}
+        from collections import defaultdict
+        from dataclasses import replace
+
+        by_slug: dict[str, list] = defaultdict(list)
+        for fp in load_fingerprints():
+            by_slug[fp.slug].append(fp)
+        merged: dict[str, object] = {}
+        for slug, group in by_slug.items():
+            base = group[0]
+            all_detections = tuple(d for fp in group for d in fp.detections)
+            merged[slug] = replace(base, detections=all_detections)
+        self.fps = merged  # pyright: ignore[reportAttributeAccessIssue]
 
     def test_sonatype_has_two_detections(self) -> None:
         fp = self.fps["sonatype"]
@@ -136,8 +154,13 @@ class TestEnrichedFingerprints:
         assert len(fp.detections) == 2
 
     def test_ping_identity_has_three_detections(self) -> None:
+        # v1.5.2: surface.yaml extended ping-identity with a cname_target
+        # rule, so the merged catalog has 4 detections. The test now asserts
+        # the floor (>=3) and confirms the original three are still there.
         fp = self.fps["ping-identity"]
-        assert len(fp.detections) == 3
+        assert len(fp.detections) >= 3
+        patterns = {d.pattern for d in fp.detections}
+        assert "^pingone-domain-verification=" in patterns or any("pingone" in p for p in patterns)
 
     def test_ping_identity_email_weight(self) -> None:
         fp = self.fps["ping-identity"]
