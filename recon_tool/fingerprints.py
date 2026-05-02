@@ -36,6 +36,8 @@ __all__ = [
     "clear_ephemeral",
     "get_caa_patterns",
     "get_cname_patterns",
+    "get_cname_target_patterns",
+    "get_cname_target_rules",
     "get_dmarc_rua_patterns",
     "get_ephemeral",
     "get_m365_names",
@@ -56,7 +58,14 @@ __all__ = [
 # Hard cap on pattern length. Not a ReDoS fix by itself — see _validate_regex.
 _MAX_PATTERN_LENGTH = 500
 
-_VALID_DETECTION_TYPES = frozenset({"txt", "spf", "mx", "ns", "cname", "subdomain_txt", "caa", "srv", "dmarc_rua"})
+_VALID_DETECTION_TYPES = frozenset(
+    {"txt", "spf", "mx", "ns", "cname", "cname_target", "subdomain_txt", "caa", "srv", "dmarc_rua"}
+)
+# cname_target tier classifies the matched service. Application-tier wins over
+# infrastructure-tier when both match in the same CNAME chain (e.g., Auth0
+# fronted by Cloudflare attributes the subdomain to Auth0). Default tier when
+# the YAML field is absent is "application".
+_VALID_CNAME_TARGET_TIERS = frozenset({"application", "infrastructure"})
 _VALID_CONFIDENCE_LEVELS = frozenset({"high", "medium", "low"})
 _VALID_MATCH_MODES = frozenset({"any", "all"})
 
@@ -94,6 +103,12 @@ class DetectionRule:
     description: str = ""
     reference: str = ""
     weight: float = 1.0
+    # Only meaningful for type == "cname_target". One of "application" or
+    # "infrastructure". When a CNAME chain matches both tiers, the application
+    # match is the primary attribution and the infrastructure match is kept
+    # as supplementary evidence. For other detection types this field is
+    # ignored.
+    tier: str = "application"
 
 
 @dataclass(frozen=True)
@@ -252,6 +267,19 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
                     )
                     weight = 1.0
 
+        tier = "application"
+        if det_type == "cname_target":
+            raw_tier = det.get("tier", "application")
+            if raw_tier in _VALID_CNAME_TARGET_TIERS:
+                tier = raw_tier
+            else:
+                logger.warning(
+                    "Fingerprint %r cname_target detection has invalid tier %r in %s — defaulting to application",
+                    name,
+                    raw_tier,
+                    source,
+                )
+
         valid_detections.append(
             DetectionRule(
                 type=det_type,
@@ -259,6 +287,7 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
                 description=det.get("description", ""),
                 reference=det.get("reference", ""),
                 weight=weight,
+                tier=tier,
             )
         )
 
@@ -583,6 +612,71 @@ def get_ns_patterns() -> tuple[Detection, ...]:
 def get_cname_patterns() -> tuple[Detection, ...]:
     """Return Detection tuples for CNAME record matching."""
     return _get_detections("cname")
+
+
+@dataclass(frozen=True)
+class CnameTargetDetection:
+    """A cname_target detection enriched with tier information.
+
+    Distinct from Detection because cname_target carries a tier field that
+    Detection does not — application vs infrastructure governs which slug
+    becomes the primary attribution for a subdomain whose CNAME chain
+    matches both tiers.
+    """
+
+    pattern: str
+    name: str
+    slug: str
+    category: str
+    confidence: str
+    tier: str
+
+
+def get_cname_target_rules() -> tuple[CnameTargetDetection, ...]:
+    """Return tier-aware detections for CNAME-target classification.
+
+    Used by the surface-attribution pipeline to walk CNAME chains for
+    every related domain and attribute each subdomain to a specific
+    SaaS or infrastructure provider.
+    """
+    with _ephemeral_lock:
+        cached = _cache_state.detections.get("cname_target")
+        if cached is not None:
+            # We stored CnameTargetDetection under the same dict — see below.
+            return cached  # type: ignore[return-value]
+
+        results: list[CnameTargetDetection] = []
+        for fp in load_fingerprints():
+            for det in fp.detections:
+                if det.type == "cname_target" and det.pattern:
+                    results.append(
+                        CnameTargetDetection(
+                            pattern=det.pattern,
+                            name=fp.name,
+                            slug=fp.slug,
+                            category=fp.category,
+                            confidence=fp.confidence,
+                            tier=det.tier,
+                        )
+                    )
+
+        result = tuple(results)
+        # Stored in the same cache as Detection; the public accessor for
+        # cname_target uses CnameTargetDetection, so type-confused callers
+        # would self-correct on first access.
+        _cache_state.detections["cname_target"] = result  # type: ignore[assignment]
+        return result
+
+
+def get_cname_target_patterns() -> tuple[Detection, ...]:
+    """Return Detection tuples for cname_target rules.
+
+    Backwards-compatibility shim returning the lighter Detection shape
+    (without tier). Callers needing tier should use
+    get_cname_target_rules().
+    """
+    rules = get_cname_target_rules()
+    return tuple(Detection(r.pattern, r.name, r.slug, r.category, r.confidence) for r in rules)
 
 
 def get_subdomain_txt_patterns() -> tuple[Detection, ...]:

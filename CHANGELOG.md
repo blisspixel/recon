@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-05-01
+
+**Minor release - external surface attribution.** Per-subdomain
+classification of related domains via CNAME chain walks, surfacing
+SaaS and infrastructure providers that don't publish apex DNS
+verification tokens. The default panel surfaces newly-attributed
+slugs through the existing `Services` block; `--full` adds an
+`External surface` section that lists each subdomain alongside its
+primary service.
+
+The classifier walks the CNAME chain (cap 5 hops, 30 concurrent
+queries, 100 hosts max) for each related domain collected from
+crt.sh, CertSpotter, and the common-subdomain probe. Application-tier
+matches (Auth0, Shopify, Zendesk, Mailgun, Apigee, ...) take
+precedence over infrastructure-tier matches (Fastly, CloudFront,
+Akamai, Cloudflare, ...) when both appear in the same chain. The
+full chain stays in the JSON `evidence` array for `--explain`
+consumers.
+
+### Added
+
+- New `cname_target` detection type in the fingerprint YAML schema,
+  with a `tier: application | infrastructure` field that governs
+  attribution precedence when a chain matches both.
+- New `surface.yaml` fingerprint file seeding 50+ application and
+  infrastructure CNAME-target patterns drawn from live validation
+  against pepsi.com, stripe.com, allbirds.com, notion.so,
+  nytimes.com, and huckberry.com.
+- `surface_attributions` field on `TenantInfo` and the JSON output;
+  see `docs/recon-schema.json` for the schema definition.
+- `External surface` section in `--full` panel output: two-column
+  subdomain → service map, sorted alphabetically.
+- New AWS slugs: `aws-app-runner`, `aws-global-accelerator`. New
+  third-party slugs: `apigee`, `mulesoft`, `submittable`,
+  `loop-returns`, `attentive`, `iterable`, `intercom`, `hubspot`,
+  `cloudflare-pages`, `github-pages`.
+
+### Changed
+
+- `_VALID_DETECTION_TYPES` extended with `cname_target`. Existing
+  `cname` rules continue to fire on the apex / common-subdomain
+  probes; the new type fires on every related domain's CNAME chain.
+- Several surface-attribution slugs categorize as Cloud rather than
+  the Business Apps fallback: `aws-app-runner`,
+  `aws-global-accelerator`, `mulesoft`, `cloudinary`, `apigee`,
+  `heroku`, `webflow`, `cloudflare-pages`, `github-pages`.
+- Test `test_all_fingerprint_slugs_unique` now allows duplicate
+  fingerprint names when the slug also matches (same logical
+  service split across YAML files); name collisions on different
+  slugs are still a failure.
+
+### Notes
+
+- A-only related domains (no CNAME) remain unclassified. Recovering
+  those requires ASN/IP intelligence, which the project's invariants
+  exclude.
+- The classifier adds at most 100 CNAME queries per lookup, run with
+  concurrency 30 — roughly a 2-5x increase in DNS volume on domains
+  with sprawling CT footprints. Observed wall-clock impact on the
+  validation corpus was under 1s per domain.
+
 ## [1.4.8] - 2026-04-29
 
 **Patch release - skill refinements from running it in anger.** Docs-only.

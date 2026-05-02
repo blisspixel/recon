@@ -413,6 +413,36 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "salesforce-npsp": "Business Apps",
     "blackbaud": "Business Apps",
     "classy": "Business Apps",
+    # v1.5: surface-attribution slugs that should bucket as Cloud rather
+    # than landing in the Business Apps fallback. AWS App Runner and
+    # MuleSoft Anypoint are PaaS / iPaaS infrastructure; Cloudinary is a
+    # media CDN; Apigee is an API gateway; AWS Global Accelerator is an
+    # AWS networking service; Heroku and GitHub Pages are PaaS.
+    "aws-app-runner": "Cloud",
+    "aws-global-accelerator": "Cloud",
+    "mulesoft": "Cloud",
+    "cloudinary": "Cloud",
+    "apigee": "Cloud",
+    "cloudflare-pages": "Cloud",
+    "github-pages": "Cloud",
+    "heroku": "Cloud",
+    "webflow": "Cloud",
+    "sucuri": "Security",
+    # Surface-attribution slugs that should bucket beyond Business Apps fallback.
+    "intercom": "Collaboration",
+    "submittable": "Collaboration",
+    "pagerduty": "Security",
+    "statuspage": "Collaboration",
+    "betteruptime": "Collaboration",
+    "bitly": "Business Apps",
+    "shortio": "Business Apps",
+    "unbounce": "Business Apps",
+    "adobe-marketing": "Business Apps",
+    "eloqua": "Business Apps",
+    "pardot": "Business Apps",
+    "wordpress-vip": "Cloud",
+    "workos": "Identity",
+    "beehiiv": "Business Apps",
 }
 
 # Email service-name prefixes that bypass slug lookup. These catch
@@ -1373,6 +1403,63 @@ def render_tenant_panel(
             )
             svc_block.append(wrapped)
             svc_block.append("\n")
+
+        # Default-mode-only: one extra line summarising services that the
+        # CNAME-chain classifier attributed to subdomains. These are kept
+        # separate from the apex Services categories above because apex
+        # DNS evidence and subdomain CNAME-chain evidence answer different
+        # questions and conflating them double-counts. --full users see
+        # the full per-subdomain table further down the panel, so we
+        # suppress the summary there to avoid redundancy.
+        if info.surface_attributions and not show_domains:
+            # Apex-evidenced slugs = anything not from a surface CNAME chain.
+            # Surface CNAME evidence carries the marker "host: target" with a
+            # colon in raw_value; apex CNAME evidence is a bare target.
+            apex_evidenced_slugs: set[str] = set()
+            for ev in info.evidence:
+                if ev.source_type == "CNAME" and ": " in ev.raw_value:
+                    continue
+                if ev.slug:
+                    apex_evidenced_slugs.add(ev.slug)
+
+            seen_names: set[str] = set()
+            surface_names: list[str] = []
+            for sa in info.surface_attributions:
+                for slug, name in ((sa.primary_slug, sa.primary_name), (sa.infra_slug, sa.infra_name)):
+                    if not slug or not name:
+                        continue
+                    if slug in apex_evidenced_slugs:
+                        continue  # already in apex Services categories above
+                    if name in seen_names:
+                        continue
+                    seen_names.add(name)
+                    surface_names.append(name)
+
+            if surface_names:
+                budget = _PANEL_WIDTH - (2 + max_width) - 2
+                joined = ", ".join(surface_names)
+                if len(joined) > budget:
+                    # Pack as many names as fit, reserving room for a
+                    # "+N more" suffix so the line stays single-row.
+                    kept: list[str] = []
+                    running = 0
+                    for n in surface_names:
+                        gap = 2 if kept else 0
+                        if running + gap + len(n) > budget - 12:
+                            break
+                        kept.append(n)
+                        running += gap + len(n)
+                    remaining = len(surface_names) - len(kept)
+                    joined = (
+                        ", ".join(kept) + f", +{remaining} more"
+                        if remaining > 0
+                        else ", ".join(kept)
+                    )
+                svc_block.append("  ")
+                svc_block.append("Subdomain".ljust(max_width), style="dim")
+                svc_block.append(joined)
+                svc_block.append("\n")
+
         blocks.append(svc_block)
 
     # ── Related domains (compact) ─────────────────────────────────
@@ -1422,6 +1509,96 @@ def render_tenant_panel(
                 rel.append("\n  ")
             rel.append(line, style="dim")
         blocks.append(rel)
+
+    # External surface section: per-subdomain attributions from CNAME chains.
+    # Two-column layout (subdomain, primary service name) sorted alphabetically
+    # by subdomain. No arrows or decorative characters — the gutter does the
+    # separating. Default panel hides this; --full / --domains shows it because
+    # only operators investigating the external footprint care about the map.
+    if show_domains and info.surface_attributions:
+        _spacer()
+        surf = Text()
+        surf.append(f"External surface ({len(info.surface_attributions)})", style="bold")
+        surf.append("\n")
+
+        # Group attributions by primary service. Services with many
+        # attributions (typically an apex's primary CDN — Fastly fronts 54 of
+        # kayak.com's subdomains, Cloudflare 51 of bamboohr.com's) are
+        # collapsed to a single block to keep the section scannable. Services
+        # with only a handful are shown one-per-line, which preserves the
+        # "what is this URL serving" answer for low-frequency findings.
+        _COLLAPSE_THRESHOLD = 5
+        from collections import defaultdict as _dd
+
+        groups: dict[str, list[Any]] = _dd(list)
+        for sa in info.surface_attributions:
+            groups[sa.primary_name].append(sa)
+
+        individuals: list[Any] = []
+        collapsed: list[tuple[str, list[Any]]] = []
+        for service_name, sas in groups.items():
+            if len(sas) >= _COLLAPSE_THRESHOLD:
+                collapsed.append((service_name, sorted(sas, key=lambda s: s.subdomain)))
+            else:
+                individuals.extend(sas)
+
+        individuals.sort(key=lambda s: s.subdomain)
+        # Largest collapse blocks first — most important to know about.
+        collapsed.sort(key=lambda t: -len(t[1]))
+
+        # Column width derived from longest individual subdomain. Min 24
+        # so short panels don't crowd; max _PANEL_WIDTH - 30 so long ones
+        # don't push the service column off-screen.
+        if individuals:
+            ind_max = max(len(s.subdomain) for s in individuals)
+            col_width = max(24, min(ind_max, _PANEL_WIDTH - 30))
+        else:
+            col_width = 24
+
+        for sa in individuals:
+            sub = sa.subdomain
+            if len(sub) > col_width:
+                sub = sub[: col_width - 2] + ".."
+            # Layered display: when the CNAME chain matched both an
+            # application-tier and an infrastructure-tier service (e.g.,
+            # Auth0 fronted by Cloudflare), list both.
+            services_label = sa.primary_name
+            if sa.infra_name:
+                services_label = f"{sa.primary_name}, {sa.infra_name}"
+            surf.append("  ")
+            surf.append(f"{sub:<{col_width}}", style="dim")
+            surf.append("  ")
+            surf.append(services_label)
+            surf.append("\n")
+
+        # Collapsed groups appear after individual rows. One header line per
+        # service, followed by the wrapped list of subdomains (with apex
+        # stripped to the short label so the wrap fits more per line).
+        if collapsed:
+            if individuals:
+                surf.append("\n")
+            apex = info.queried_domain
+            for service_name, sas in collapsed:
+                surf.append("  ")
+                surf.append(f"{service_name} ({len(sas)})", style="bold")
+                surf.append("\n")
+                short_names: list[str] = []
+                for s in sas:
+                    sub = s.subdomain
+                    # Strip the apex suffix to a bare label (``app`` instead of
+                    # ``app.nytimes.com``) so the wrapped line fits more.
+                    if sub.endswith("." + apex):
+                        sub = sub[: -(len(apex) + 1)]
+                    elif sub == apex:
+                        sub = "(apex)"
+                    short_names.append(sub)
+                joined = ", ".join(short_names)
+                for line in _wrap_text(joined, _PANEL_WIDTH - 4):
+                    surf.append("    ")
+                    surf.append(line, style="dim")
+                    surf.append("\n")
+
+        blocks.append(surf)
 
     # ── Insights (curated) ────────────────────────────────────────
     if info.insights:
@@ -1943,6 +2120,19 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         ]
     # v1.0 schema contract: always present (empty dict when no detections).
     d["detection_scores"] = dict(info.detection_scores)
+    # v1.5: External surface attributions — per-subdomain SaaS attribution
+    # from CNAME chain classification. Always emitted (empty list when none).
+    d["surface_attributions"] = [
+        {
+            "subdomain": sa.subdomain,
+            "primary_slug": sa.primary_slug,
+            "primary_name": sa.primary_name,
+            "primary_tier": sa.primary_tier,
+            "infra_slug": sa.infra_slug,
+            "infra_name": sa.infra_name,
+        }
+        for sa in info.surface_attributions
+    ]
     return d
 
 

@@ -100,7 +100,18 @@ class TestNewFingerprintsLoad:
         for fp in fps:
             assert len(fp.detections) > 0, f"Fingerprint '{fp.name}' has no detections"
             for det in fp.detections:
-                assert det.type in {"txt", "spf", "mx", "ns", "cname", "subdomain_txt", "caa", "srv", "dmarc_rua"}
+                assert det.type in {
+                    "txt",
+                    "spf",
+                    "mx",
+                    "ns",
+                    "cname",
+                    "cname_target",
+                    "subdomain_txt",
+                    "caa",
+                    "srv",
+                    "dmarc_rua",
+                }
                 assert det.pattern, f"Fingerprint '{fp.name}' has empty pattern"
                 if det.type == "subdomain_txt":
                     assert ":" in det.pattern, f"Fingerprint '{fp.name}' subdomain_txt pattern missing ':'"

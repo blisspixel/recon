@@ -44,7 +44,8 @@
     "msgraph_host",
     "lexical_observations",
     "bimi_identity",
-    "slug_confidences"
+    "slug_confidences",
+    "surface_attributions"
   ],
   "properties": {
     "tenant_id": {
@@ -249,6 +250,11 @@
         ]
       }
     },
+    "surface_attributions": {
+      "description": "Per-subdomain attribution to a SaaS or infrastructure provider, derived from CNAME-chain classification of related_domains. Each entry maps one subdomain to its primary service. Application-tier matches (Auth0, Shopify, Zendesk, ...) take precedence over infrastructure-tier matches (Cloudflare, Fastly, CloudFront, ...) when a chain produces both — the infrastructure layer is recorded in infra_slug / infra_name as supplementary context. Empty array when no related domains classified.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/SurfaceAttribution"}
+    },
     "evidence": {
       "description": "Present with --explain. Per-detection evidence trace.",
       "type": "array",
@@ -305,6 +311,19 @@
         "raw_value": {"type": "string"},
         "rule_name": {"type": "string"},
         "slug": {"type": "string"}
+      }
+    },
+    "SurfaceAttribution": {
+      "description": "Maps one subdomain to its primary service from CNAME chain classification. primary_* fields are the application-tier match when present, else the most specific infrastructure-tier match. infra_* fields are populated only when both an application and an infrastructure tier matched — they record the CDN or load balancer fronting the application service.",
+      "type": "object",
+      "required": ["subdomain", "primary_slug", "primary_name", "primary_tier", "infra_slug", "infra_name"],
+      "properties": {
+        "subdomain": {"type": "string"},
+        "primary_slug": {"type": "string"},
+        "primary_name": {"type": "string"},
+        "primary_tier": {"type": "string", "enum": ["application", "infrastructure"]},
+        "infra_slug": {"type": ["string", "null"]},
+        "infra_name": {"type": ["string", "null"]}
       }
     },
     "DeltaReport": {
