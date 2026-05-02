@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import time
 from typing import Any
 
 import dns.asyncresolver
@@ -34,6 +35,7 @@ from recon_tool.constants import (
 from recon_tool.fingerprints import (
     get_caa_patterns,
     get_cname_patterns,
+    get_cname_target_rules,
     get_mx_patterns,
     get_ns_patterns,
     get_spf_patterns,
@@ -46,7 +48,7 @@ from recon_tool.fingerprints import (
     get_m365_slugs as _get_m365_slugs,
 )
 from recon_tool.http import http_client as _http_client
-from recon_tool.models import BIMIIdentity, CertSummary, EvidenceRecord, SourceResult
+from recon_tool.models import BIMIIdentity, CertSummary, EvidenceRecord, SourceResult, SurfaceAttribution
 from recon_tool.sources.cert_providers import CertIntelProvider, CertSpotterProvider, CrtshProvider
 
 logger = logging.getLogger("recon")
@@ -155,6 +157,7 @@ class _DetectionCtx:
         "site_verification_tokens",
         "slugs",
         "spf_include_count",
+        "surface_attributions",
     )
 
     def __init__(self) -> None:
@@ -185,6 +188,10 @@ class _DetectionCtx:
         self.ct_subdomain_count: int = 0
         # v0.10: CT cache age in days when cached data used as fallback
         self.ct_cache_age_days: int | None = None
+        # v1.5: per-subdomain attributions from CNAME-chain classification.
+        # Populated after the main detector gather, since classification
+        # depends on related_domains being collected first.
+        self.surface_attributions: list[SurfaceAttribution] = []
 
     def add(self, svc_name: str, slug: str | None = None, source_type: str = "", raw_value: str = "") -> None:
         """Register a detected service, optionally with its slug and evidence.
@@ -1579,6 +1586,190 @@ async def medium_subdomain_lookup(subdomain: str) -> SourceResult:
     )
 
 
+# ── CNAME chain classifier (surface-attribution pipeline) ──────────────
+
+# Hard caps for surface-attribution work. The DNS classifier is cheap (one
+# CNAME query per related domain, 1-3 hops typical) but unbounded inputs
+# warrant ceilings:
+#   _SURFACE_MAX_HOSTS — most lookups stay under this; pathological CT
+#     responses with thousands of subdomains get truncated rather than
+#     paying full DNS cost.
+#   _SURFACE_MAX_HOPS  — defends against CNAME chains that loop or stall
+#     by giving up after a small number of hops.
+#   _SURFACE_CONCURRENCY — bounds simultaneous DNS in flight so a large
+#     related-domain set does not exhaust file descriptors or trip
+#     resolver rate limits.
+_SURFACE_MAX_HOSTS = 100
+_SURFACE_MAX_HOPS = 5
+_SURFACE_CONCURRENCY = 30
+
+
+async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> list[str]:
+    """Walk the CNAME chain for *host*, returning the list of targets.
+
+    Returns an empty list when the host has no CNAME (typical for hosts
+    with direct A records, or for stale CT entries that no longer
+    resolve). Stops at *max_hops* to defend against pathological loops.
+    """
+    chain: list[str] = []
+    cur = host
+    for _ in range(max_hops):
+        results = await _safe_resolve(cur, "CNAME")
+        if not results:
+            break
+        target = results[0].lower().rstrip(".")
+        if not target or target == cur:
+            break
+        chain.append(target)
+        cur = target
+    return chain
+
+
+def _classify_chain(
+    chain: list[str],
+    rules: tuple[Any, ...],
+) -> tuple[Any | None, Any | None]:
+    """Pick the primary application match and the fronting infrastructure match.
+
+    Walks every hop in *chain* and matches each against every rule (rules
+    are pre-sorted longest-pattern-first by the caller). Returns
+    ``(application_match, infrastructure_match)`` where each is the most
+    specific matched rule of its tier, or None when no rule of that tier
+    matched. The pair lets downstream code render
+    "sso.example.com  Auth0" while still recording that Cloudflare
+    fronted it for --explain consumers.
+    """
+    application: Any | None = None
+    infrastructure: Any | None = None
+    for hop in chain:
+        for rule in rules:
+            if rule.pattern in hop:
+                if rule.tier == "application" and application is None:
+                    application = rule
+                elif rule.tier == "infrastructure" and infrastructure is None:
+                    infrastructure = rule
+        if application is not None and infrastructure is not None:
+            break
+    return application, infrastructure
+
+
+async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> None:
+    """Resolve CNAME chains for related domains and attribute services.
+
+    Runs after the main detector gather populates ``ctx.related_domains``.
+    For each related host (capped at ``_SURFACE_MAX_HOSTS``), walks the
+    CNAME chain and matches every hop against the cname_target fingerprint
+    catalog. Each successful classification:
+
+      * appends a SurfaceAttribution (subdomain → primary service, plus
+        the fronting infrastructure when both tiers matched);
+      * unions the primary slug into ctx.slugs and the primary service
+        name into ctx.services so the default panel surfaces the
+        attribution without a new section;
+      * emits an EvidenceRecord with the full chain for --explain.
+
+    Application-tier matches always beat infrastructure-tier matches when
+    a chain produces both — the primary attribution is the meaningful
+    layer, and CDNs / load balancers fall to the supplementary slot.
+    """
+    rules = get_cname_target_rules()
+    if not rules:
+        return
+
+    # Sort longest-pattern-first so specific matches (e.g. ``cname.vercel-dns.com``)
+    # win over substrings (``vercel.com``) when both would match the same hop.
+    sorted_rules: tuple[Any, ...] = tuple(sorted(rules, key=lambda r: -len(r.pattern)))
+
+    # Wildcard-DNS guard. Some apexes (kayak.com, certain higher-ed orgs)
+    # answer every ``*.<apex>`` query with the same CNAME — typically a
+    # CDN. Without this guard the common-subdomain and IDP-hub probes
+    # generate dozens of fake "subdomains" that all CNAME to the same
+    # target, and we mis-attribute every probed prefix as if the
+    # subdomain genuinely existed and were intentionally pointed at a
+    # SaaS. Probe a deliberately-bogus prefix; if it resolves and any
+    # target's chain matches its terminal, that target is a wildcard
+    # echo, not real evidence.
+    wildcard_terminal: str | None = None
+    nonsense_host = f"nonsense-classifier-guard-{int(time.time()) % 100000}.{queried_domain.lower()}"
+    wildcard_chain = await _resolve_cname_chain(nonsense_host)
+    if wildcard_chain:
+        wildcard_terminal = wildcard_chain[-1]
+        logger.debug(
+            "Surface classifier: wildcard DNS detected on %s (terminal=%s) — filtering",
+            queried_domain,
+            wildcard_terminal,
+        )
+
+    targets = sorted(h for h in ctx.related_domains if h and "*" not in h and h != queried_domain.lower())
+    if len(targets) > _SURFACE_MAX_HOSTS:
+        logger.debug(
+            "Surface classifier: %d related domains exceeds cap %d — truncating",
+            len(targets),
+            _SURFACE_MAX_HOSTS,
+        )
+        targets = targets[:_SURFACE_MAX_HOSTS]
+
+    sem = asyncio.Semaphore(_SURFACE_CONCURRENCY)
+
+    async def _process(host: str) -> tuple[str, list[str]] | None:
+        async with sem:
+            chain = await _resolve_cname_chain(host)
+            if not chain:
+                return None
+            # Filter wildcard echoes: when a host's terminal matches the
+            # wildcard probe's terminal, the host is not genuinely
+            # delegated — it just got the wildcard answer. Skip.
+            if wildcard_terminal is not None and chain[-1] == wildcard_terminal:
+                return None
+            return host, chain
+
+    results = await asyncio.gather(*(_process(h) for h in targets))
+
+    for item in results:
+        if item is None:
+            continue
+        host, chain = item
+        application, infrastructure = _classify_chain(chain, sorted_rules)
+        if application is None and infrastructure is None:
+            continue
+
+        primary = application if application is not None else infrastructure
+        if primary is None:
+            # Defensive: control flow above guarantees at least one match,
+            # but the type checker can't prove it. Skip rather than crash.
+            continue
+        infra = infrastructure if (application is not None and infrastructure is not None) else None
+
+        ctx.surface_attributions.append(
+            SurfaceAttribution(
+                subdomain=host,
+                primary_slug=primary.slug,
+                primary_name=primary.name,
+                primary_tier=primary.tier,
+                infra_slug=infra.slug if infra is not None else None,
+                infra_name=infra.name if infra is not None else None,
+            )
+        )
+
+        # Emit an EvidenceRecord so --explain and JSON consumers can trace
+        # the resolution path. We deliberately do NOT union the slug or
+        # service name into ctx.services / ctx.slugs: apex DNS evidence
+        # and subdomain CNAME-chain evidence answer different questions
+        # ("what does the org use" vs "what is each subdomain hosting"),
+        # and conflating them in the apex Services block makes the default
+        # panel double-count items that already show up under the
+        # Subdomain summary line.
+        chain_repr = f"{host}: " + " -> ".join(chain)
+        ctx.evidence.append(
+            EvidenceRecord(
+                source_type="CNAME",
+                raw_value=chain_repr,
+                rule_name=primary.name,
+                slug=primary.slug,
+            )
+        )
+
+
 # ── Main source class ──────────────────────────────────────────────────
 
 
@@ -1604,6 +1795,8 @@ class DNSSource:
                 error=f"DNS error for {domain}: {exc}",
             )
 
+        surface_tuple = tuple(sorted(ctx.surface_attributions, key=lambda s: s.subdomain))
+
         if ctx.services:
             return SourceResult(
                 source_name="dns_records",
@@ -1625,6 +1818,7 @@ class DNSSource:
                 raw_dns_records=tuple(
                     (rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals
                 ),
+                surface_attributions=surface_tuple,
             )
 
         return SourceResult(
@@ -1643,6 +1837,7 @@ class DNSSource:
             ct_subdomain_count=ctx.ct_subdomain_count,
             ct_cache_age_days=ctx.ct_cache_age_days,
             raw_dns_records=tuple((rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals),
+            surface_attributions=surface_tuple,
         )
 
     @staticmethod
@@ -1679,6 +1874,11 @@ class DNSSource:
 
         # Remove the queried domain itself from related_domains
         ctx.related_domains.discard(domain.lower())
+
+        # Surface-attribution pass. Runs after the main gather because it
+        # depends on related_domains being fully populated by CT and the
+        # common-subdomain probe.
+        await _classify_related_surface(ctx, domain)
 
         # Post-process: enforce match_mode: all — remove partial matches
         ctx.enforce_match_mode_all()

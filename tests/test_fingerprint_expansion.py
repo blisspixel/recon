@@ -443,6 +443,20 @@ class TestBackwardCompatibilityV080:
         assert len(names) == len(set(names)), "Duplicate signal names found"
 
     def test_all_fingerprint_slugs_unique(self) -> None:
+        """Each (name, slug) pair must appear at most once.
+
+        Multiple YAML entries may legitimately share both name and slug — for
+        example, surface.yaml extends apex fingerprints with a separate file
+        of cname_target rules so the catalog's seed evidence and its
+        CNAME-chain classification stay independently reviewable. The
+        invariant we actually care about is that there is never a name
+        collision on *different* services (two fingerprints both named
+        "Shopify" but with different slugs would be a bug).
+        """
         fps = load_fingerprints()
-        names = [fp.name for fp in fps]
-        assert len(names) == len(set(names)), "Duplicate fingerprint names found"
+        # Build name -> set of slugs. Each name should map to exactly one slug.
+        by_name: dict[str, set[str]] = {}
+        for fp in fps:
+            by_name.setdefault(fp.name, set()).add(fp.slug)
+        collisions = {name: slugs for name, slugs in by_name.items() if len(slugs) > 1}
+        assert not collisions, f"Names mapping to multiple slugs (different services share a display name): {collisions}"

@@ -22,6 +22,7 @@ __all__ = [
     "ReconLookupError",
     "SignalContext",
     "SourceResult",
+    "SurfaceAttribution",
     "TenantInfo",
     "serialize_conflicts",
 ]
@@ -160,6 +161,30 @@ def serialize_conflicts(conflicts: MergeConflicts) -> dict[str, Any]:
 
 
 @dataclass(frozen=True)
+class SurfaceAttribution:
+    """A subdomain's attribution to a SaaS or infrastructure provider via CNAME chain.
+
+    Each instance maps one related subdomain to its primary service. ``primary_*``
+    fields hold the application-tier match (Auth0, Shopify, Zendesk, ...) when one
+    exists in the chain; otherwise they hold the most-specific infrastructure-tier
+    match (Fastly, CloudFront, Akamai, ...). ``infra_slug`` and ``infra_name`` are
+    populated only when both an application and an infrastructure tier matched —
+    they record which CDN or load balancer fronts the application service.
+
+    The full CNAME chain (every hop) is preserved on the corresponding
+    EvidenceRecord, so --explain output can show the resolution path while the
+    default panel and --full surface section show only the primary attribution.
+    """
+
+    subdomain: str
+    primary_slug: str
+    primary_name: str
+    primary_tier: str  # "application" | "infrastructure"
+    infra_slug: str | None = None
+    infra_name: str | None = None
+
+
+@dataclass(frozen=True)
 class ExplanationRecord:
     """Structured explanation for a single insight, signal, or observation.
 
@@ -236,6 +261,13 @@ class SourceResult:
     cloud_instance: str | None = None  # e.g. "microsoftonline.com", "microsoftonline.us"
     tenant_region_sub_scope: str | None = None  # e.g. "GCC", "DOD", "USGov"
     msgraph_host: str | None = None  # e.g. "graph.microsoft.com", "graph.microsoft.us"
+
+    # --- v1.5: External surface attribution ---
+    # Per-subdomain attribution from CNAME-chain classification of related
+    # domains. Populated by the DNS source after CT and common-subdomain
+    # discovery. Drives both the default-panel slug union and the --full
+    # External surface section.
+    surface_attributions: tuple[SurfaceAttribution, ...] = ()
 
     @property
     def crtsh_degraded(self) -> bool:
@@ -360,6 +392,15 @@ class TenantInfo:
 
     # --- Conflict-aware merge (v0.7.0) ---
     merge_conflicts: MergeConflicts | None = None
+
+    # --- v1.5: External surface attribution ---
+    # Per-subdomain attribution to SaaS or infrastructure providers, derived
+    # from CNAME chains of related_domains. Populated alongside related_domains
+    # but addresses a different question: not "what subdomains exist?" but
+    # "what is each subdomain hosting?". Each entry is a SurfaceAttribution
+    # with the subdomain and its primary service (application tier preferred
+    # over infrastructure tier when a chain matches both).
+    surface_attributions: tuple[SurfaceAttribution, ...] = ()
 
     @property
     def crtsh_degraded(self) -> bool:

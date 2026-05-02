@@ -1,0 +1,764 @@
+# CNAME-target classifications for the surface-attribution pipeline.
+#
+# Rules in this file fire when any related domain's CNAME chain (the targets
+# discovered via crt.sh / CertSpotter and the common-subdomain probe) contains
+# the substring pattern. This is a different code path from `cname` rules,
+# which match on CNAMEs returned for hardcoded apex queries (autodiscover.,
+# selector1._domainkey., etc.).
+#
+# Display names match the existing apex fingerprints exactly — the merger
+# dedupes services by name, so listing "Shopify" both from the apex SPF rule
+# and from a subdomain CNAME-target rule produces a single "Shopify" entry
+# in the panel rather than two near-duplicates.
+#
+# Tier semantics:
+#   application    — a SaaS or product layer. Wins as the primary attribution
+#                    when a chain produces both an application and an
+#                    infrastructure match. Examples: Shopify, Auth0, Zendesk.
+#   infrastructure — a CDN, load balancer, or edge layer. Falls back when no
+#                    application tier matched the chain. Examples: Fastly,
+#                    CloudFront, Cloudflare, Akamai.
+#
+# Patterns are substrings, case-insensitive. Be specific — a generic
+# `amazonaws.com` would mis-attribute every AWS-hosted subdomain. Prefer the
+# zone- or service-specific suffix (`elb.amazonaws.com`,
+# `awsglobalaccelerator.com`).
+
+fingerprints:
+
+# ── Application tier ─────────────────────────────────────────────────────
+
+- name: Shopify
+  slug: shopify
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: myshopify.com
+    tier: application
+    description: Subdomain CNAMEs to a Shopify storefront (shops.myshopify.com)
+  - type: cname_target
+    pattern: shopifycdn.com
+    tier: application
+    description: Shopify CDN endpoint
+
+- name: Zendesk
+  slug: zendesk
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: zendesk.com
+    tier: application
+    description: Custom subdomain CNAMEd to a Zendesk help portal
+
+- name: Auth0
+  slug: auth0
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: auth0.com
+    tier: application
+    description: Custom subdomain delegated to an Auth0 tenant
+
+- name: Okta
+  slug: okta
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: customdomains.okta.com
+    tier: application
+    description: Okta custom-domain delegation
+
+- name: Mailgun
+  slug: mailgun
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: mailgun.org
+    tier: application
+
+- name: SendGrid
+  slug: sendgrid
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: sendgrid.net
+    tier: application
+
+- name: Mandrill
+  slug: mailchimp
+  category: Email & Communication
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: mandrillapp.com
+    tier: application
+
+- name: Postmark
+  slug: postmark
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: postmarkapp.com
+    tier: application
+  - type: cname_target
+    pattern: pstmrk.com
+    tier: application
+
+- name: SparkPost
+  slug: sparkpost
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: sparkpostmail.com
+    tier: application
+
+- name: Klaviyo
+  slug: klaviyo
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: klaviyo.com
+    tier: application
+
+- name: HubSpot
+  slug: hubspot
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: hubspotpagebuilder.com
+    tier: application
+  - type: cname_target
+    pattern: hs-sites.com
+    tier: application
+  - type: cname_target
+    pattern: hubspot.net
+    tier: application
+  - type: cname_target
+    pattern: hsforms.net
+    tier: application
+
+- name: Intercom
+  slug: intercom
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: intercom.help
+    tier: application
+  - type: cname_target
+    pattern: intercomcdn.com
+    tier: application
+  - type: cname_target
+    pattern: intercomhelpcenter.com
+    tier: application
+    description: Intercom Help Center hosted endpoint variant
+
+- name: Marketo
+  slug: marketo
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: mktoresp.com
+    tier: application
+  - type: cname_target
+    pattern: marketo.com
+    tier: application
+  - type: cname_target
+    pattern: mktoweb.com
+    tier: application
+  - type: cname_target
+    pattern: mktossl.com
+    tier: application
+    description: Marketo SSL landing-page CNAME
+
+- name: Oracle Eloqua
+  slug: eloqua
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: hs.eloqua.com
+    tier: application
+  - type: cname_target
+    pattern: en25.com
+    tier: application
+    description: Eloqua hosted landing pages
+
+- name: Salesforce
+  slug: salesforce
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: edge2.salesforce.com
+    tier: application
+    description: Salesforce Experience Cloud / SFDC edge endpoint
+  - type: cname_target
+    pattern: force.com
+    tier: application
+
+- name: Pardot
+  slug: pardot
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: fe.pardot.com
+    tier: application
+  - type: cname_target
+    pattern: pardot.com
+    tier: application
+
+- name: Adobe Marketing Cloud
+  slug: adobe-marketing
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: campaign.adobe.com
+    tier: application
+    description: Adobe Campaign hosted endpoint
+  - type: cname_target
+    pattern: cjm.adobe.com
+    tier: application
+    description: Adobe Customer Journey Management
+
+- name: ServiceNow
+  slug: servicenow
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: service-now.com
+    tier: application
+
+- name: Wix
+  slug: wix
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: wixsite.com
+    tier: application
+  - type: cname_target
+    pattern: wixdns.net
+    tier: application
+
+- name: Bitly
+  slug: bitly
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cname.bitly.com
+    tier: application
+    description: Bitly branded short-link domain
+
+- name: Short.io
+  slug: shortio
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cname.short.io
+    tier: application
+
+- name: Better Uptime
+  slug: betteruptime
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: statuspage.betteruptime.com
+    tier: application
+    description: Better Stack / Better Uptime status page hosted endpoint
+
+- name: Unbounce
+  slug: unbounce
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: unbouncepages.com
+    tier: application
+
+- name: Microsoft 365 Office
+  slug: microsoft365
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: tm-3.office.com
+    tier: application
+    description: M365 traffic-manager office.com zone (autodiscover / Teams routing)
+  - type: cname_target
+    pattern: sharepoint.com
+    tier: application
+
+- name: WP Engine
+  slug: wpengine
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: wpenginepowered.com
+    tier: application
+
+- name: Netlify CDN
+  slug: netlify
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: netlifyglobalcdn.com
+    tier: application
+
+- name: Bunny CDN
+  slug: bunnycdn
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: b-cdn.net
+    tier: infrastructure
+
+- name: WordPress VIP
+  slug: wordpress-vip
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: go-vip.net
+    tier: application
+    description: WordPress VIP (Automattic) managed hosting
+
+- name: WorkOS
+  slug: workos
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: workosdns.com
+    tier: application
+    description: WorkOS B2B SSO custom domain CNAME
+
+- name: Fly.io
+  slug: flyio
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: fly.dev
+    tier: application
+    description: Fly.io app platform CNAME endpoint
+
+- name: Beehiiv
+  slug: beehiiv
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: beehiiv.com
+    tier: application
+    description: Beehiiv newsletter platform branded CNAME
+
+- name: Salesforce Marketing Cloud
+  slug: salesforce-mc
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: sfmc-marketing.com
+    tier: application
+  - type: cname_target
+    pattern: marketingcloudapis.com
+    tier: application
+  - type: cname_target
+    pattern: exct.net
+    tier: application
+
+- name: Atlassian Statuspage
+  slug: statuspage
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: statuspage.io
+    tier: application
+  - type: cname_target
+    pattern: statuspageio.com
+    tier: application
+  - type: cname_target
+    pattern: stspg-customer.com
+    tier: application
+    description: Atlassian Statuspage customer CNAME endpoint (status.*.com delegations)
+
+- name: Atlassian (Jira/Confluence)
+  slug: atlassian
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: atlassian.net
+    tier: application
+  - type: cname_target
+    pattern: saas.atlassian.com
+    tier: application
+    description: Atlassian-hosted status pages and SaaS endpoints
+
+- name: PagerDuty
+  slug: pagerduty
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: pagerduty.com
+    tier: application
+
+- name: DocuSign
+  slug: docusign
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: docusign.net
+    tier: application
+
+- name: Cloudinary
+  slug: cloudinary
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cloudinary.com
+    tier: application
+
+- name: Stripe
+  slug: stripe
+  category: Commerce
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: stripecdn.com
+    tier: application
+
+- name: Apigee
+  slug: apigee
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: apigee.net
+    tier: application
+  - type: cname_target
+    pattern: apigee.com
+    tier: application
+
+- name: MuleSoft Anypoint
+  slug: mulesoft
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: anypointdns.net
+    tier: application
+
+- name: Submittable
+  slug: submittable
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: submittable.com
+    tier: application
+
+- name: Loop Returns
+  slug: loop-returns
+  category: Commerce
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: loopreturns.com
+    tier: application
+
+- name: Attentive
+  slug: attentive
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: attentivemobile.com
+    tier: application
+  - type: cname_target
+    pattern: attntags.com
+    tier: application
+
+- name: Iterable
+  slug: iterable
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: iterable.com
+    tier: application
+
+- name: Customer.io
+  slug: customerio
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: customer.io
+    tier: application
+
+- name: Branch.io
+  slug: branchio
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: bnc.lt
+    tier: application
+    description: Branch.io mobile deep-linking custom domain
+
+- name: Heroku
+  slug: heroku
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: herokudns.com
+    tier: application
+  - type: cname_target
+    pattern: herokuapp.com
+    tier: application
+
+- name: GitHub Pages
+  slug: github-pages
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: github.io
+    tier: application
+
+- name: Webflow
+  slug: webflow
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: webflow.io
+    tier: application
+  - type: cname_target
+    pattern: cdn.webflow.com
+    tier: application
+
+- name: Vercel
+  slug: vercel
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cname.vercel-dns.com
+    tier: application
+  - type: cname_target
+    pattern: vercel.app
+    tier: application
+  - type: cname_target
+    pattern: vercel-dns-
+    tier: application
+
+- name: Netlify
+  slug: netlify
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: netlify.app
+    tier: application
+
+- name: Squarespace
+  slug: squarespace
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: squarespace-cdn.com
+    tier: application
+
+# ── Infrastructure tier ─────────────────────────────────────────────────
+
+- name: Fastly
+  slug: fastly
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: fastly.net
+    tier: infrastructure
+  - type: cname_target
+    pattern: fastlylb.net
+    tier: infrastructure
+
+- name: AWS CloudFront
+  slug: aws-cloudfront
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cloudfront.net
+    tier: infrastructure
+
+- name: AWS Elastic Load Balancer
+  slug: aws-elb
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: elb.amazonaws.com
+    tier: infrastructure
+
+- name: AWS Global Accelerator
+  slug: aws-global-accelerator
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: awsglobalaccelerator.com
+    tier: infrastructure
+
+- name: AWS App Runner
+  slug: aws-app-runner
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: awsapprunner.com
+    tier: infrastructure
+
+- name: AWS Elastic Beanstalk
+  slug: aws-eb
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: elasticbeanstalk.com
+    tier: infrastructure
+
+- name: Akamai
+  slug: akamai
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: akamaiedge.net
+    tier: infrastructure
+  - type: cname_target
+    pattern: akamaized.net
+    tier: infrastructure
+  - type: cname_target
+    pattern: edgekey.net
+    tier: infrastructure
+  - type: cname_target
+    pattern: edgesuite.net
+    tier: infrastructure
+  - type: cname_target
+    pattern: akadns.net
+    tier: infrastructure
+    description: Akamai Edge DNS / Global Traffic Management
+
+- name: Cloudflare
+  slug: cloudflare
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cloudflare.net
+    tier: infrastructure
+
+- name: Cloudflare Pages
+  slug: cloudflare-pages
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: pages.dev
+    tier: infrastructure
+
+- name: Imperva
+  slug: imperva
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: incapdns.net
+    tier: infrastructure
+  - type: cname_target
+    pattern: impervadns.net
+    tier: infrastructure
+    description: Imperva newer DNS zone variant
+
+- name: Azure CDN
+  slug: azure-cdn
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: azureedge.net
+    tier: infrastructure
+  - type: cname_target
+    pattern: azurefd.net
+    tier: infrastructure
+
+- name: Azure Traffic Manager
+  slug: azure-tm
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: trafficmanager.net
+    tier: infrastructure
+
+- name: Google Workspace
+  slug: google-workspace
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: ghs.googlehosted.com
+    tier: application
+  - type: cname_target
+    pattern: ghs.google.com
+    tier: application
+    description: Google Workspace Sites / module CNAME on the newer ghs.google.com zone
+
+- name: Sucuri
+  slug: sucuri
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: sucuri.net
+    tier: infrastructure
+
+- name: Microsoft 365
+  slug: microsoft365
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: svc.cloud.microsoft
+    tier: application
+    description: Microsoft 365 cloud autodiscover / Mira service zone

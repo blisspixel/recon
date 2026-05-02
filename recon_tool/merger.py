@@ -25,6 +25,7 @@ from recon_tool.models import (
     ReconLookupError,
     SignalContext,
     SourceResult,
+    SurfaceAttribution,
     TenantInfo,
 )
 from recon_tool.signals import evaluate_signals, load_signals
@@ -956,6 +957,19 @@ def merge_results(
     for obs in lex_obs:
         insights.append(f"{obs.category}: {obs.statement}")
 
+    # Collect surface_attributions across sources. dns_records is currently
+    # the only source that emits these, but propagating through the merger
+    # keeps the shape future-proof if another source ever produces them.
+    seen_subdomains: set[str] = set()
+    merged_surface: list[SurfaceAttribution] = []
+    for result in results:
+        for sa in result.surface_attributions:
+            if sa.subdomain in seen_subdomains:
+                continue
+            seen_subdomains.add(sa.subdomain)
+            merged_surface.append(sa)
+    surface_tuple: tuple[SurfaceAttribution, ...] = tuple(sorted(merged_surface, key=lambda s: s.subdomain))
+
     return TenantInfo(
         tenant_id=tenant_id,
         display_name=display_name,
@@ -995,4 +1009,5 @@ def merge_results(
         tenant_region_sub_scope=tenant_region_sub_scope,
         msgraph_host=msgraph_host,
         lexical_observations=lexical_observation_statements,
+        surface_attributions=surface_tuple,
     )

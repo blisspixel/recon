@@ -21,6 +21,7 @@ from recon_tool.models import (
     CertSummary,
     ConfidenceLevel,
     EvidenceRecord,
+    SurfaceAttribution,
     TenantInfo,
 )
 from recon_tool.validator import validate_domain
@@ -258,6 +259,19 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
     # detection_scores tuple-of-tuples → dict
     d["detection_scores"] = dict(info.detection_scores)
 
+    # SurfaceAttribution tuple → list of dicts
+    d["surface_attributions"] = [
+        {
+            "subdomain": sa.subdomain,
+            "primary_slug": sa.primary_slug,
+            "primary_name": sa.primary_name,
+            "primary_tier": sa.primary_tier,
+            "infra_slug": sa.infra_slug,
+            "infra_name": sa.infra_name,
+        }
+        for sa in info.surface_attributions
+    ]
+
     return d
 
 
@@ -349,6 +363,32 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
     if isinstance(ds_data, dict):
         detection_scores = tuple((str(k), str(v)) for k, v in ds_data.items())
 
+    # SurfaceAttribution list → tuple
+    surface_list = data.get("surface_attributions", [])
+    surface_attributions: tuple[SurfaceAttribution, ...] = ()
+    if isinstance(surface_list, list):
+        sa_records: list[SurfaceAttribution] = []
+        for item in surface_list:
+            if not isinstance(item, dict):
+                continue
+            subdomain = item.get("subdomain")
+            primary_slug = item.get("primary_slug")
+            primary_name = item.get("primary_name")
+            primary_tier = item.get("primary_tier", "application")
+            if not subdomain or not primary_slug or not primary_name:
+                continue
+            sa_records.append(
+                SurfaceAttribution(
+                    subdomain=str(subdomain),
+                    primary_slug=str(primary_slug),
+                    primary_name=str(primary_name),
+                    primary_tier=str(primary_tier),
+                    infra_slug=item.get("infra_slug"),
+                    infra_name=item.get("infra_name"),
+                )
+            )
+        surface_attributions = tuple(sa_records)
+
     return TenantInfo(
         tenant_id=data.get("tenant_id"),
         display_name=display_name,
@@ -392,6 +432,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         tenant_region_sub_scope=data.get("tenant_region_sub_scope"),
         msgraph_host=data.get("msgraph_host"),
         lexical_observations=tuple(data.get("lexical_observations", [])),
+        surface_attributions=surface_attributions,
         resolved_at=data.get("resolved_at"),
         # cached_at is stamped by cache_get from _cached_at; not populated
         # from arbitrary dict input so round-tripping an uncached dict
