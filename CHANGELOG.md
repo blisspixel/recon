@@ -5,6 +5,64 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-05-02
+
+**Minor release - discovery loop in production.** Closes the gaps that
+showed up the first time we used the v1.5.1 loop end-to-end on real
+domains: batch / corpus runners couldn't opt into the discovery hooks,
+the three-step pipeline was clunky for single-domain users, the
+intra-org heuristic mis-handled multi-part TLDs, and CI's
+validate-fingerprints check wasn't gating PyPI deploys. Also adds 11
+new fingerprints surfaced from the first discovery-loop runs.
+
+### Added
+
+- New `recon discover <domain>` subcommand. Single-shot pipeline that
+  resolves the domain with `--include-unclassified`, applies the
+  intra-org and already-covered filters, and emits a candidate JSON
+  consumable by the `/recon-fingerprint-triage` Claude skill. Replaces
+  the three-command incantation for single-domain discovery.
+- New `recon_tool/discovery.py` library: `find_candidates`,
+  `extract_brand_label`, `looks_intra_org_brand`,
+  `load_existing_patterns`. Shared between the `discover` command and
+  the standalone `validation/` scripts.
+- `recon batch` accepts `--include-unclassified` and `--no-ct`,
+  matching the single-domain flags. Threaded through the resolver to
+  the DNS source and into `format_tenant_dict`.
+- `validation/run_corpus.py` plumbs the same two flags through to
+  `run_batch_validation_sync`. Big corpus runs can now use the
+  discovery hook and the polite-mode knob.
+- Discovery-loop hint in `--full` panel: when `unclassified_cname_chains`
+  is non-empty, a subtle dim-italic line invites the user into the
+  catalogue-growth loop with the exact `recon discover <domain>`
+  command. Default panel unchanged.
+- 11 new fingerprints from the first production discovery runs:
+  PingOne (`pingone.com`), Salesloft (`salesloft.com`), Pendo
+  (`pendo.io`), Docebo (`docebopaas.com`), Skilljar (`skilljarapp.com`),
+  Bizzabo (`bizzabo.com`), Instatus (`instatus.com`), Frontify
+  (`frontify.com`), ReadMe (`readmessl.com`), WP Engine variant
+  (`wpeproxy.com`), WorkOS variant (`workos-dns.com`).
+
+### Changed
+
+- Intra-org heuristic now skips second-level public suffixes (`co`,
+  `ac`, `org`, `net`, `gov`, `edu`, ...) when extracting the apex's
+  brand label. `bbc.co.uk` correctly resolves to brand `bbc` instead
+  of `co`. Same brand-label extractor used by the `recon discover`
+  subcommand and `validation/triage_candidates.py`.
+- `release.yml` test job now runs the same `validate-fingerprints`
+  check as `ci.yml`. Closes the gap where a duplicate-slug regression
+  could reach PyPI through release.yml even though ci.yml caught it.
+
+### Notes
+
+- The discovery loop is now usable end-to-end with one command.
+  `recon discover pingidentity.com` produces a candidate list, the
+  Claude skill turns it into YAML stanzas, the user applies the diff
+  and re-runs. Validated on this release: 11 new fingerprints came
+  from running the loop on 10 fresh domains.
+- No schema changes. v1.0 contract intact.
+
 ## [1.5.1] - 2026-05-02
 
 **Minor release - fingerprint discovery loop.** Wires up the

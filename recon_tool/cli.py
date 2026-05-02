@@ -307,6 +307,22 @@ def batch(
         "-c",
         help="Max concurrent lookups (1-20)",
     ),
+    include_unclassified: bool = typer.Option(
+        False,
+        "--include-unclassified",
+        help=(
+            "Include unclassified CNAME chains in JSON output for the "
+            "fingerprint-discovery loop. Off by default."
+        ),
+    ),
+    no_ct: bool = typer.Option(
+        False,
+        "--no-ct",
+        help=(
+            "Skip cert-transparency providers (crt.sh, CertSpotter) for every "
+            "domain in the batch. For high-volume corpus runs."
+        ),
+    ),
 ) -> None:
     """
     Look up multiple domains from a file.
@@ -314,7 +330,59 @@ def batch(
     [dim]One domain per line. Lines starting with # are skipped.[/dim]
     """
     concurrency = max(1, min(20, concurrency))
-    asyncio.run(_batch(file, json_output, markdown, concurrency, csv_output=csv_output))
+    asyncio.run(
+        _batch(
+            file,
+            json_output,
+            markdown,
+            concurrency,
+            csv_output=csv_output,
+            include_unclassified=include_unclassified,
+            skip_ct=no_ct,
+        )
+    )
+
+
+@app.command()
+def discover(
+    domain: str = typer.Argument(help="Domain to mine for fingerprint candidates"),
+    output: str | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Write candidates JSON here. Default: stdout.",
+    ),
+    no_ct: bool = typer.Option(False, "--no-ct", help="Skip cert-transparency providers."),
+    timeout: float = typer.Option(120.0, "--timeout", "-t", help="Resolve timeout in seconds."),
+    keep_intra_org: bool = typer.Option(
+        False,
+        "--keep-intra-org",
+        help="Don't filter chains that look intra-organizational (false-positive prone but more inclusive).",
+    ),
+    min_count: int = typer.Option(
+        1,
+        "--min-count",
+        help="Drop suffixes seen fewer than N times. Default 1 — single domain runs, every distinct chain matters.",
+    ),
+) -> None:
+    """
+    Mine a single domain for fingerprint candidates in one shot.
+
+    Bundles ``recon <domain> --json --include-unclassified`` with the
+    bucket / intra-org / already-covered filters. Output is the same shape
+    consumed by the ``/recon-fingerprint-triage`` Claude Code skill, ready
+    for human or LLM judgment.
+    """
+    asyncio.run(
+        _discover(
+            domain,
+            output_path=output,
+            skip_ct=no_ct,
+            timeout=timeout,
+            drop_intra_org=not keep_intra_org,
+            min_count=min_count,
+        )
+    )
 
 
 @app.command()
@@ -2151,7 +2219,80 @@ async def _lookup(
         raise typer.Exit(code=EXIT_INTERNAL) from None
 
 
-async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int, csv_output: bool = False) -> None:
+async def _discover(
+    domain: str,
+    *,
+    output_path: str | None,
+    skip_ct: bool,
+    timeout: float,
+    drop_intra_org: bool,
+    min_count: int,
+) -> None:
+    """Single-domain fingerprint-discovery pipeline.
+
+    Resolves the domain, walks the unclassified CNAME chains the surface
+    classifier captured, applies the intra-org and already-covered filters,
+    and emits the candidate list in the same shape as the corpus-scale
+    ``triage_candidates.py``. Output is consumable by the
+    ``/recon-fingerprint-triage`` Claude Code skill.
+    """
+    import json as json_mod
+    from pathlib import Path
+
+    from recon_tool.discovery import find_candidates
+    from recon_tool.formatter import render_error
+    from recon_tool.models import ReconLookupError
+    from recon_tool.resolver import resolve_tenant
+    from recon_tool.validator import validate_domain
+
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        render_error(str(exc))
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    try:
+        info, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
+    except ReconLookupError as exc:
+        render_error(str(exc))
+        raise typer.Exit(code=EXIT_NO_DATA) from None
+    except Exception as exc:
+        render_error(_fmt_exc(exc))
+        raise typer.Exit(code=EXIT_INTERNAL) from None
+
+    # Convert TenantInfo's unclassified_cname_chains into the (apex, [{subdomain, chain}])
+    # shape ``find_candidates`` consumes. Same data, different transport.
+    unclassified_records = [
+        {"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains
+    ]
+    fingerprints_dir = Path(__file__).resolve().parent / "data" / "fingerprints"
+    candidates = find_candidates(
+        [(info.queried_domain, unclassified_records)],
+        fingerprints_dir=fingerprints_dir,
+        min_count=min_count,
+        drop_intra_org=drop_intra_org,
+    )
+
+    payload = json_mod.dumps(candidates, indent=2)
+    if output_path is None:
+        typer.echo(payload)
+    else:
+        out = Path(output_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(payload, encoding="utf-8")
+        typer.echo(f"wrote {out} ({len(candidates)} candidates)", err=True)
+
+
+async def _batch(
+    file: str,
+    json_output: bool,
+    markdown: bool,
+    concurrency: int,
+    csv_output: bool = False,
+    *,
+    include_unclassified: bool = False,
+    skip_ct: bool = False,
+) -> None:
     """Process multiple domains from a file with controlled concurrency.
 
     Rate limiting: Each domain hits 3+ external endpoints concurrently.
@@ -2259,7 +2400,7 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int,
                 # upstream endpoints (Microsoft, DNS). The semaphore limits
                 # concurrency, but without a delay all N domains fire at once.
                 await asyncio.sleep(0.1)
-                info, _results = await resolve_tenant(validated)
+                info, _results = await resolve_tenant(validated, skip_ct=skip_ct)
 
                 # v0.9.3: capture TenantInfo for post-batch token clustering.
                 # Keyed by queried_domain so the post-processing pass can
@@ -2268,7 +2409,7 @@ async def _batch(file: str, json_output: bool, markdown: bool, concurrency: int,
                 batch_infos[info.queried_domain] = info
 
                 if json_output:
-                    return format_tenant_dict(info)
+                    return format_tenant_dict(info, include_unclassified=include_unclassified)
                 if csv_output:
                     return (domain, info, None)
                 if markdown:

@@ -431,17 +431,30 @@ def render_summary_markdown(
     return "\n".join(lines) + "\n"
 
 
-def run_batch_validation_sync(corpus_path: Path, concurrency: int = 5) -> list[dict[str, Any]]:
-    """Run the public batch CLI in-process and return its JSON payload."""
+def run_batch_validation_sync(
+    corpus_path: Path,
+    concurrency: int = 5,
+    *,
+    include_unclassified: bool = False,
+    skip_ct: bool = False,
+) -> list[dict[str, Any]]:
+    """Run the public batch CLI in-process and return its JSON payload.
+
+    ``include_unclassified`` and ``skip_ct`` mirror the corresponding ``recon
+    batch`` flags so corpus runs can opt into the discovery loop or run with
+    zero CT load.
+    """
     from typer.testing import CliRunner
 
     from recon_tool.cli import app
 
     runner = CliRunner()
-    result = runner.invoke(
-        app,
-        ["batch", str(corpus_path), "--json", "--concurrency", str(concurrency)],
-    )
+    args = ["batch", str(corpus_path), "--json", "--concurrency", str(concurrency)]
+    if include_unclassified:
+        args.append("--include-unclassified")
+    if skip_ct:
+        args.append("--no-ct")
+    result = runner.invoke(app, args)
     if result.exit_code != 0:
         msg = result.output.strip() or f"Batch validation failed for {corpus_path}"
         raise RuntimeError(msg)

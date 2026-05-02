@@ -354,6 +354,62 @@ async def test_skip_ct_omits_cert_intel_probe(mock_resolve):
     assert "certspotter" not in result.degraded_sources
 
 
+def test_extract_brand_label() -> None:
+    """Brand-label extraction skips TLDs and second-level public suffixes."""
+    from recon_tool.discovery import extract_brand_label
+
+    assert extract_brand_label("bbc.co.uk") == "bbc"
+    assert extract_brand_label("nytimes.com") == "nytimes"
+    assert extract_brand_label("yahoo.co.jp") == "yahoo"
+    assert extract_brand_label("deutsche-bank.de") == "deutsche-bank"
+    assert extract_brand_label("softchoice.com") == "softchoice"
+    assert extract_brand_label("gov.uk") == ""  # nothing distinctive
+    assert extract_brand_label("a.b") == ""  # too short
+    assert extract_brand_label("") == ""
+
+
+def test_looks_intra_org_brand_handles_multi_part_tld() -> None:
+    """Multi-part TLDs like .co.uk used to mis-identify 'co' as the brand."""
+    from recon_tool.discovery import looks_intra_org_brand
+
+    samples = [{"subdomain": "test.bbc.co.uk", "terminal": "edge.bbc.co.uk"}]
+    assert looks_intra_org_brand("bbc.co.uk", "edge.bbc.co.uk", samples) is True
+    # Different brand should not falsely match.
+    samples2 = [{"subdomain": "test.bbc.co.uk", "terminal": "edge.fastly.net"}]
+    assert looks_intra_org_brand("bbc.co.uk", "fastly.net", samples2) is False
+
+
+def test_find_candidates_filters_intra_org_and_covered() -> None:
+    """End-to-end: only genuinely-novel suffixes survive the filters."""
+    from pathlib import Path as _Path
+
+    from recon_tool.discovery import find_candidates
+
+    runs = [
+        (
+            "example.com",
+            [
+                # Intra-org — should drop
+                {"subdomain": "static.example.com", "chain": ["cdn.example.com"]},
+                # Already covered — should drop (cloudfront.net is a built-in pattern)
+                {"subdomain": "app.example.com", "chain": ["abc123.cloudfront.net"]},
+                # Genuine candidate — should survive
+                {
+                    "subdomain": "auth.example.com",
+                    "chain": ["edge.totally-new-saas-co.io"],
+                },
+            ],
+        )
+    ]
+    fingerprints = _Path("recon_tool/data/fingerprints").resolve()
+    candidates = find_candidates(runs, fingerprints_dir=fingerprints)
+    suffixes = {c["suffix"] for c in candidates}
+    # The 3-label suffix bucket includes the parent label of "edge.".
+    assert any("totally-new-saas-co.io" in s for s in suffixes)
+    assert not any("cloudfront" in s for s in suffixes)
+    assert not any("example.com" in s for s in suffixes)
+
+
 def test_unclassified_cache_round_trip() -> None:
     """Unclassified chains survive the cache write/read cycle."""
     from recon_tool.cache import tenant_info_from_dict, tenant_info_to_dict
