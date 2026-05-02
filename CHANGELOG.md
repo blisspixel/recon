@@ -5,6 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-05-02
+
+**Minor release - fingerprint discovery loop.** Wires up the
+machinery for growing the fingerprint catalog from real-world DNS
+data: a JSON hook for unclassified CNAME chains, polite-mode knobs
+for big runs, validation tooling that surfaces gap candidates, and
+a Claude Code skill that turns those candidates into ready-to-apply
+YAML stanzas.
+
+### Added
+
+- New `--include-unclassified` flag on `recon <domain>`. Adds an
+  `unclassified_cname_chains` array to `--json` output: every CNAME
+  chain the surface classifier resolved but couldn't attribute to a
+  fingerprint. Wildcard echoes are filtered before this list is
+  populated. Off by default (keeps the v1.0 schema narrow); on for
+  the discovery loop.
+- New `--no-ct` flag on `recon <domain>`. Skips crt.sh and
+  CertSpotter entirely; discovery falls back to common-subdomain
+  probes + apex CNAME walks. For high-volume validation runs where
+  you want zero load on public CT services. Threaded through the
+  resolver to the DNS source.
+- New `validation/find_gaps.py` — reads a run (single JSON file or
+  directory) and surfaces unclassified terminal hostname suffixes
+  ranked by frequency. Filters intra-org chains.
+- New `validation/diff_runs.py` — compares two run directories.
+  Reports new attributions, lost slugs, aggregate slug-frequency
+  changes. Use after adding fingerprints to confirm uplift.
+- New `validation/triage_candidates.py` — programmatic filter on
+  `gaps.json`: drops already-fingerprinted patterns (substring
+  match against the catalog), intra-org chains, and one-off noise
+  below `--min-count`. Output is the LLM-triage-ready candidate
+  list.
+- New Claude Code skill `claude-code/skills/recon-fingerprint-triage/`
+  that consumes either a single recon JSON or a `candidates.json`
+  and proposes `cname_target` YAML stanzas with tier and category.
+- New `UnclassifiedCnameChain` model + `unclassified_cname_chains`
+  property on the v1.0 JSON schema (optional, surfaced only with
+  `--include-unclassified`).
+- `.gitignore` carve-outs: `validation/corpus-private/`,
+  `validation/runs-private/`, `validation/local/`. Users can curate
+  private corpora without risk of leaking targets.
+
+### Changed
+
+- `recon_tool/fingerprint_validator.py` cross-file duplicate-slug
+  check is now name-aware. A slug appearing in multiple files is a
+  duplicate only when display names disagree; same-slug, same-name
+  across files is the legitimate "split detection rules across
+  files" pattern that `surface.yaml` uses to extend apex
+  fingerprints with cname_target rules. (This also unblocked the
+  v1.5.0 CI regression.)
+- `validation/README.md` rewritten to document the discovery loop,
+  the polite-mode knobs, the gitignored corpus convention, and how
+  to contribute back generic patterns.
+
+### Notes
+
+- The discovery loop is opt-in. Default `recon <domain>` output is
+  unchanged; the JSON contract is unchanged unless
+  `--include-unclassified` is passed.
+- Programmatic vs LLM split is intentional: deterministic noise
+  filtering happens in `triage_candidates.py`, judgment calls
+  (real SaaS vs intra-org, tier, category, slug canonicalization)
+  happen in the skill.
+
 ## [1.5.0] - 2026-05-01
 
 **Minor release - external surface attribution.** Per-subdomain

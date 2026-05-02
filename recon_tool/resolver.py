@@ -298,6 +298,7 @@ async def _resolve_tenant_inner(
     domain: str,
     pool: SourcePool,
     client: httpx.AsyncClient | None = None,
+    skip_ct: bool = False,
 ) -> tuple[TenantInfo, list[SourceResult]]:
     """Inner resolution logic — no timeout wrapper."""
     sources = list(pool)
@@ -309,9 +310,12 @@ async def _resolve_tenant_inner(
             error_type="not_found",
         )
 
-    kwargs: dict[str, httpx.AsyncClient] = {}
+    kwargs: dict[str, Any] = {}
     if client is not None:
         kwargs["client"] = client
+    if skip_ct:
+        # Threaded through to DNSSource.lookup; other sources ignore the kwarg.
+        kwargs["skip_ct"] = True
 
     # Run all sources concurrently
     results = await asyncio.gather(*(_safe_lookup(source, domain, **kwargs) for source in sources))
@@ -330,6 +334,7 @@ async def resolve_tenant(
     pool: SourcePool | None = None,
     client: httpx.AsyncClient | None = None,
     timeout: float = RESOLVE_TIMEOUT,
+    skip_ct: bool = False,
 ) -> tuple[TenantInfo, list[SourceResult]]:
     """Orchestrates tenant lookup across the SourcePool.
 
@@ -361,7 +366,7 @@ async def resolve_tenant(
 
     try:
         info, all_results = await asyncio.wait_for(
-            _resolve_tenant_inner(domain, pool, client),
+            _resolve_tenant_inner(domain, pool, client, skip_ct=skip_ct),
             timeout=timeout,
         )
     except asyncio.TimeoutError:

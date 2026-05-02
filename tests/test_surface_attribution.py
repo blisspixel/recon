@@ -27,7 +27,7 @@ from recon_tool.fingerprints import (
     inject_ephemeral,
     reload_fingerprints,
 )
-from recon_tool.models import SurfaceAttribution
+from recon_tool.models import SurfaceAttribution, UnclassifiedCnameChain
 from recon_tool.sources import dns as dns_source
 from recon_tool.sources.dns import DNSSource, _classify_chain
 
@@ -258,3 +258,119 @@ def test_dns_module_classifier_present() -> None:
     assert hasattr(dns_source, "_classify_related_surface")
     assert hasattr(dns_source, "_resolve_cname_chain")
     assert hasattr(dns_source, "_classify_chain")
+
+
+# ── Unclassified-chain capture (fingerprint-discovery hook) ────────────
+
+
+@pytest.mark.asyncio
+@patch("recon_tool.sources.dns._safe_resolve")
+async def test_unclassified_cname_chain_captured(mock_resolve):
+    """Chains that don't match any cname_target rule populate
+    unclassified_cname_chains so the discovery loop can surface them.
+
+    Uses ``app`` as the probed prefix (it's in the common-subdomain probe
+    list) and points the CNAME at a hostname no fingerprint covers.
+    """
+    mock_resolve.side_effect = _resolve_factory(
+        {
+            "example.com/TXT": [],
+            "example.com/MX": ["1 example-com.mail.protection.outlook.com."],
+            "app.example.com/CNAME": ["edge.totally-new-saas-co.io"],
+            "edge.totally-new-saas-co.io/CNAME": [],
+        }
+    )
+    result = await DNSSource().lookup("example.com")
+    weird = [
+        uc for uc in result.unclassified_cname_chains if uc.subdomain == "app.example.com"
+    ]
+    assert weird, "expected unclassified chain for app.example.com"
+    assert weird[0].chain == ("edge.totally-new-saas-co.io",)
+
+
+def test_format_tenant_dict_omits_unclassified_by_default() -> None:
+    """Default JSON output stays narrow — no unclassified_cname_chains key."""
+    from recon_tool.formatter import format_tenant_dict
+    from recon_tool.models import ConfidenceLevel, TenantInfo
+
+    info = TenantInfo(
+        tenant_id=None,
+        display_name="Example",
+        default_domain="example.com",
+        queried_domain="example.com",
+        confidence=ConfidenceLevel.HIGH,
+        unclassified_cname_chains=(
+            UnclassifiedCnameChain(subdomain="x.example.com", chain=("y.example.io",)),
+        ),
+    )
+    d = format_tenant_dict(info)
+    assert "unclassified_cname_chains" not in d
+
+
+def test_format_tenant_dict_emits_unclassified_when_opted_in() -> None:
+    """Passing include_unclassified=True surfaces the field for the
+    discovery loop."""
+    from recon_tool.formatter import format_tenant_dict
+    from recon_tool.models import ConfidenceLevel, TenantInfo
+
+    info = TenantInfo(
+        tenant_id=None,
+        display_name="Example",
+        default_domain="example.com",
+        queried_domain="example.com",
+        confidence=ConfidenceLevel.HIGH,
+        unclassified_cname_chains=(
+            UnclassifiedCnameChain(
+                subdomain="x.example.com",
+                chain=("intermediate.example.io", "edge.totally-new.io"),
+            ),
+        ),
+    )
+    d = format_tenant_dict(info, include_unclassified=True)
+    assert "unclassified_cname_chains" in d
+    assert d["unclassified_cname_chains"][0]["subdomain"] == "x.example.com"
+    assert d["unclassified_cname_chains"][0]["chain"] == [
+        "intermediate.example.io",
+        "edge.totally-new.io",
+    ]
+
+
+@pytest.mark.asyncio
+@patch("recon_tool.sources.dns._safe_resolve")
+async def test_skip_ct_omits_cert_intel_probe(mock_resolve):
+    """When skip_ct=True is passed, the CT-provider probe does not run.
+
+    Verifies via the absence of ct_provider_used in the result. With CT
+    enabled (default) this would be set to 'crt.sh' or 'certspotter' on
+    success, or the source would appear in degraded_sources on failure.
+    With skip_ct, neither happens — no CT-related state at all.
+    """
+    mock_resolve.side_effect = _resolve_factory(
+        {"example.com/TXT": [], "example.com/MX": []}
+    )
+    result = await DNSSource().lookup("example.com", skip_ct=True)
+    assert result.ct_provider_used is None
+    assert "crt.sh" not in result.degraded_sources
+    assert "certspotter" not in result.degraded_sources
+
+
+def test_unclassified_cache_round_trip() -> None:
+    """Unclassified chains survive the cache write/read cycle."""
+    from recon_tool.cache import tenant_info_from_dict, tenant_info_to_dict
+    from recon_tool.models import ConfidenceLevel, TenantInfo
+
+    info = TenantInfo(
+        tenant_id=None,
+        display_name="Example",
+        default_domain="example.com",
+        queried_domain="example.com",
+        confidence=ConfidenceLevel.HIGH,
+        unclassified_cname_chains=(
+            UnclassifiedCnameChain(
+                subdomain="x.example.com",
+                chain=("a.example.io", "b.example.io"),
+            ),
+        ),
+    )
+    restored = tenant_info_from_dict(tenant_info_to_dict(info))
+    assert restored.unclassified_cname_chains == info.unclassified_cname_chains

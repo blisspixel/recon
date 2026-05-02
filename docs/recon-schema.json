@@ -255,6 +255,11 @@
       "type": "array",
       "items": {"$ref": "#/$defs/SurfaceAttribution"}
     },
+    "unclassified_cname_chains": {
+      "description": "OPTIONAL — present only when ``--include-unclassified`` is passed. CNAME chains the surface classifier resolved but couldn't attribute to any cname_target fingerprint. Each entry: {subdomain, chain: [hop1, hop2, terminal]}. Wildcard-DNS echoes are filtered out before this list is populated. Feeds the fingerprint-discovery loop in validation/find_gaps.py and the /recon-fingerprint-triage Claude skill.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/UnclassifiedCnameChain"}
+    },
     "evidence": {
       "description": "Present with --explain. Per-detection evidence trace.",
       "type": "array",
@@ -324,6 +329,19 @@
         "primary_tier": {"type": "string", "enum": ["application", "infrastructure"]},
         "infra_slug": {"type": ["string", "null"]},
         "infra_name": {"type": ["string", "null"]}
+      }
+    },
+    "UnclassifiedCnameChain": {
+      "description": "A CNAME chain captured during surface classification that did not match any cname_target fingerprint. Surfaced only with ``--include-unclassified``. ``chain`` is ordered: each hop is a CNAME target, terminal last. Useful for proposing new fingerprints — the terminal hostname is usually a third-party SaaS endpoint we don't yet recognize, an intra-org CDN, or noise.",
+      "type": "object",
+      "required": ["subdomain", "chain"],
+      "properties": {
+        "subdomain": {"type": "string"},
+        "chain": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 1
+        }
       }
     },
     "DeltaReport": {

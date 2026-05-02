@@ -2022,8 +2022,15 @@ def render_error(message: str) -> None:
     get_console().print(f"[red]{message}[/red]")
 
 
-def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
-    """Build a dict representation of TenantInfo (shared by JSON and batch)."""
+def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) -> dict[str, Any]:
+    """Build a dict representation of TenantInfo (shared by JSON and batch).
+
+    When ``include_unclassified`` is True, the resulting dict adds an
+    ``unclassified_cname_chains`` array of ``{subdomain, chain}`` records
+    for CNAME chains the surface classifier resolved but couldn't attribute.
+    Off by default to keep the v1.0 schema contract narrow; opt-in for the
+    fingerprint-discovery loop.
+    """
     has_mx_records = any(e.source_type == "MX" for e in info.evidence)
     provider = detect_provider(
         info.services,
@@ -2133,12 +2140,19 @@ def format_tenant_dict(info: TenantInfo) -> dict[str, Any]:
         }
         for sa in info.surface_attributions
     ]
+    # v1.5: opt-in unclassified-chain emission. Off by default keeps the v1.0
+    # schema narrow; on for the fingerprint-discovery loop.
+    if include_unclassified:
+        d["unclassified_cname_chains"] = [
+            {"subdomain": uc.subdomain, "chain": list(uc.chain)}
+            for uc in info.unclassified_cname_chains
+        ]
     return d
 
 
-def format_tenant_json(info: TenantInfo) -> str:
+def format_tenant_json(info: TenantInfo, *, include_unclassified: bool = False) -> str:
     """Format TenantInfo as a JSON string."""
-    return json.dumps(format_tenant_dict(info), indent=2)
+    return json.dumps(format_tenant_dict(info, include_unclassified=include_unclassified), indent=2)
 
 
 def format_tenant_markdown(info: TenantInfo) -> str:
