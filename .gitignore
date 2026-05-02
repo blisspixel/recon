@@ -43,6 +43,7 @@ docs/accuracy.md
 !/validation/find_gaps.py
 !/validation/diff_runs.py
 !/validation/triage_candidates.py
+!/validation/scan.py
 !/validation/corpus-example.txt
 !/validation/README.md
 # User-curated private corpus + run outputs — never commit.

@@ -449,6 +449,17 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "instatus": "Collaboration",
     "frontify": "Business Apps",
     "readme": "Collaboration",
+    "swoogo": "Business Apps",
+    "uptimerobot": "Collaboration",
+    "blink": "Business Apps",
+    "godaddy-email": "Email",
+    "cloud-gov": "Cloud",
+    "jobs2web": "Business Apps",
+    "presspage": "Business Apps",
+    "localist": "Collaboration",
+    "rainfocus": "Business Apps",
+    "aws-api-gateway": "Cloud",
+    "aws-nlb": "Cloud",
 }
 
 # Email service-name prefixes that bypass slug lookup. These catch

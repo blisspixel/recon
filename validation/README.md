@@ -108,6 +108,38 @@ Both `recon` and `run_corpus.py` accept these:
   parallel. Default is 5; drop to 2 for large runs to stay polite to CT and
   DNS.
 
+### Monthly cadence with `scan.py`
+
+When you want to track catalog drift over time (e.g. "is recon's coverage
+of our regional banks decaying?"), use the `scan.py` wrapper. It bundles
+`recon batch` + `find_gaps` + `triage_candidates` + `diff_runs` into a
+single timestamped invocation:
+
+```bash
+# First run of the month (writes to validation/runs-private/<UTC-stamp>/)
+python validation/scan.py \
+    --corpus validation/corpus-private/consolidated.txt \
+    --label monthly-2026-05 \
+    --concurrency 4
+
+# Next month — auto-diffs against the most recent prior scan
+python validation/scan.py \
+    --corpus validation/corpus-private/consolidated.txt \
+    --label monthly-2026-06
+```
+
+Each run directory ends up with `results.json`, `gaps.json`,
+`candidates.json`, `diff.json` (when comparing to a prior run), and
+`meta.json` capturing the scan timestamp, label, corpus size, and
+candidate counts. Reading `meta.json` from any run answers "when was
+this scanned, what was found?" without re-running.
+
+For 2500-domain monthly cadence: ~30-50 minutes wall-clock at
+`--concurrency 4` with `--no-ct` (the `scan.py` default). Real-company
+corpora live entirely under `validation/corpus-private/` and never leave
+your machine; only the generic patterns surfaced for triage become
+candidate PRs.
+
 ## The fingerprint catalog audit
 
 Run alongside live validation when changing fingerprint YAMLs:

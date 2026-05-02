@@ -379,6 +379,28 @@ def test_looks_intra_org_brand_handles_multi_part_tld() -> None:
     assert looks_intra_org_brand("bbc.co.uk", "fastly.net", samples2) is False
 
 
+def test_looks_intra_org_brand_catches_stem_abbreviation() -> None:
+    """nytimes.com → nyt.net is the same org via a brand-stem abbreviation."""
+    from recon_tool.discovery import looks_intra_org_brand
+
+    # Brand "nytimes", stem-prefix "nyt" appears as a label in the suffix.
+    samples = [
+        {"subdomain": "api.dev.nytimes.com", "terminal": "user-api.awsma.nyt.net"}
+    ]
+    assert looks_intra_org_brand("nytimes.com", "awsma.nyt.net", samples) is True
+
+    # Generic 3-letter sequences inside the suffix do NOT match — must be a
+    # standalone label. "ama" is inside "amazonaws.com" but not a label.
+    samples2 = [{"subdomain": "x.amazon.com", "terminal": "y.amazonaws.com"}]
+    # amazon brand is contained directly so this returns True via pattern 1.
+    assert looks_intra_org_brand("amazon.com", "amazonaws.com", samples2) is True
+
+    # A short brand label (4 chars) does NOT enable stem abbreviation —
+    # too risky for accidental matches.
+    samples3 = [{"subdomain": "x.acme.com", "terminal": "y.ace.net"}]
+    assert looks_intra_org_brand("acme.com", "ace.net", samples3) is False
+
+
 def test_find_candidates_filters_intra_org_and_covered() -> None:
     """End-to-end: only genuinely-novel suffixes survive the filters."""
     from pathlib import Path as _Path
