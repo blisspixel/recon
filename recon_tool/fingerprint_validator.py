@@ -41,6 +41,7 @@ def _validate_file(
     skip_specificity: bool,
     captured: list[logging.LogRecord],
     slug_sources: dict[str, list[Path]],
+    slug_names: dict[str, set[str]],
     specificity_warnings: list[str],
 ) -> tuple[int, int, list[str]]:
     """Validate one file. Returns (total, passed, failed_names)."""
@@ -67,6 +68,8 @@ def _validate_file(
             slug = entry.get("slug")
             if isinstance(slug, str) and slug:
                 slug_sources.setdefault(slug, []).append(path)
+                if isinstance(name, str):
+                    slug_names.setdefault(slug, set()).add(name)
         result = _validate_fingerprint(entry if isinstance(entry, dict) else {}, str(path))
         warnings_this_entry = captured[before:]
 
@@ -141,6 +144,7 @@ def _validate_path_with_capture(
     captured: list[logging.LogRecord],
 ) -> int:
     slug_sources: dict[str, list[Path]] = {}
+    slug_names: dict[str, set[str]] = {}
     specificity_warnings: list[str] = []
     total = 0
     passed = 0
@@ -158,6 +162,7 @@ def _validate_path_with_capture(
                 skip_specificity=skip_specificity,
                 captured=captured,
                 slug_sources=slug_sources,
+                slug_names=slug_names,
                 specificity_warnings=specificity_warnings,
             )
             total += file_total
@@ -170,18 +175,29 @@ def _validate_path_with_capture(
             skip_specificity=skip_specificity,
             captured=captured,
             slug_sources=slug_sources,
+            slug_names=slug_names,
             specificity_warnings=specificity_warnings,
         )
 
-    duplicates = {slug: paths for slug, paths in slug_sources.items() if len(paths) > 1}
+    # A slug appearing in multiple files is a *real* duplicate only when the
+    # display names disagree. Same slug + same name across files is the
+    # legitimate "split detection rules across files" pattern (e.g. surface.yaml
+    # extends an apex fingerprint with cname_target rules under the same slug
+    # and name). Real duplicates flag two distinct services colliding on a slug.
+    duplicates = {
+        slug: paths
+        for slug, paths in slug_sources.items()
+        if len(paths) > 1 and len(slug_names.get(slug, set())) > 1
+    }
 
     print()
     print(f"Validated {total} entries: {passed} passed, {len(failed_names)} failed")
     if duplicates:
         print(f"Duplicate slugs: {len(duplicates)}", file=sys.stderr)
         for slug, paths in sorted(duplicates.items()):
+            names = ", ".join(sorted(slug_names.get(slug, set())))
             locations = ", ".join(str(path_item) for path_item in paths)
-            print(f"  {slug}: {locations}", file=sys.stderr)
+            print(f"  {slug}: names=[{names}] in {locations}", file=sys.stderr)
 
     if specificity_warnings and not quiet:
         print()

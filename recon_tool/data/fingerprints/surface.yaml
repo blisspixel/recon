@@ -52,7 +52,7 @@ fingerprints:
     tier: application
     description: Custom subdomain CNAMEd to a Zendesk help portal
 
-- name: Auth0
+- name: Auth0 (Okta)
   slug: auth0
   category: Identity
   confidence: high
@@ -90,7 +90,7 @@ fingerprints:
     pattern: sendgrid.net
     tier: application
 
-- name: Mandrill
+- name: Mailchimp
   slug: mailchimp
   category: Email & Communication
   confidence: medium
@@ -98,6 +98,7 @@ fingerprints:
   - type: cname_target
     pattern: mandrillapp.com
     tier: application
+    description: Mailchimp Transactional (formerly Mandrill) hosted CNAME
 
 - name: Postmark
   slug: postmark
@@ -163,7 +164,7 @@ fingerprints:
     tier: application
     description: Intercom Help Center hosted endpoint variant
 
-- name: Marketo
+- name: Marketo (Adobe)
   slug: marketo
   category: Marketing
   confidence: high
@@ -182,7 +183,7 @@ fingerprints:
     tier: application
     description: Marketo SSL landing-page CNAME
 
-- name: Oracle Eloqua
+- name: Eloqua (Oracle)
   slug: eloqua
   category: Marketing
   confidence: high
@@ -208,7 +209,7 @@ fingerprints:
     pattern: force.com
     tier: application
 
-- name: Pardot
+- name: Pardot Landing Pages
   slug: pardot
   category: Marketing
   confidence: high
@@ -293,7 +294,7 @@ fingerprints:
     pattern: unbouncepages.com
     tier: application
 
-- name: Microsoft 365 Office
+- name: Microsoft 365
   slug: microsoft365
   category: Email & Communication
   confidence: high
@@ -315,7 +316,7 @@ fingerprints:
     pattern: wpenginepowered.com
     tier: application
 
-- name: Netlify CDN
+- name: Netlify
   slug: netlify
   category: Infrastructure
   confidence: high
@@ -388,7 +389,7 @@ fingerprints:
     pattern: exct.net
     tier: application
 
-- name: Atlassian Statuspage
+- name: Statuspage (Atlassian)
   slug: statuspage
   category: Productivity & Collaboration
   confidence: high
@@ -697,7 +698,7 @@ fingerprints:
     pattern: pages.dev
     tier: infrastructure
 
-- name: Imperva
+- name: Imperva (Incapsula)
   slug: imperva
   category: Security
   confidence: high
@@ -744,7 +745,7 @@ fingerprints:
     tier: application
     description: Google Workspace Sites / module CNAME on the newer ghs.google.com zone
 
-- name: Sucuri
+- name: Sucuri WAF
   slug: sucuri
   category: Security
   confidence: high
