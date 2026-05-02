@@ -27,6 +27,7 @@ from recon_tool.models import (
     SourceResult,
     SurfaceAttribution,
     TenantInfo,
+    UnclassifiedCnameChain,
 )
 from recon_tool.signals import evaluate_signals, load_signals
 
@@ -970,6 +971,18 @@ def merge_results(
             merged_surface.append(sa)
     surface_tuple: tuple[SurfaceAttribution, ...] = tuple(sorted(merged_surface, key=lambda s: s.subdomain))
 
+    seen_unclassified: set[str] = set()
+    merged_unclassified: list[UnclassifiedCnameChain] = []
+    for result in results:
+        for uc in result.unclassified_cname_chains:
+            if uc.subdomain in seen_unclassified:
+                continue
+            seen_unclassified.add(uc.subdomain)
+            merged_unclassified.append(uc)
+    unclassified_tuple: tuple[UnclassifiedCnameChain, ...] = tuple(
+        sorted(merged_unclassified, key=lambda u: u.subdomain)
+    )
+
     return TenantInfo(
         tenant_id=tenant_id,
         display_name=display_name,
@@ -1010,4 +1023,5 @@ def merge_results(
         msgraph_host=msgraph_host,
         lexical_observations=lexical_observation_statements,
         surface_attributions=surface_tuple,
+        unclassified_cname_chains=unclassified_tuple,
     )

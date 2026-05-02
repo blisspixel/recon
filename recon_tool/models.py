@@ -24,6 +24,7 @@ __all__ = [
     "SourceResult",
     "SurfaceAttribution",
     "TenantInfo",
+    "UnclassifiedCnameChain",
     "serialize_conflicts",
 ]
 
@@ -161,6 +162,22 @@ def serialize_conflicts(conflicts: MergeConflicts) -> dict[str, Any]:
 
 
 @dataclass(frozen=True)
+class UnclassifiedCnameChain:
+    """A CNAME chain from a related subdomain that did NOT match any
+    cname_target fingerprint.
+
+    Surfaced only in JSON output when ``--include-unclassified`` is passed.
+    Feeds the fingerprint-discovery loop: gap analysis and the
+    ``/recon-fingerprint-triage`` skill use these to suggest new fingerprint
+    candidates. Wildcard-DNS echoes are filtered before this list is
+    populated, so every entry is a genuinely-distinct chain.
+    """
+
+    subdomain: str
+    chain: tuple[str, ...]  # ordered hops, terminal last
+
+
+@dataclass(frozen=True)
 class SurfaceAttribution:
     """A subdomain's attribution to a SaaS or infrastructure provider via CNAME chain.
 
@@ -268,6 +285,11 @@ class SourceResult:
     # discovery. Drives both the default-panel slug union and the --full
     # External surface section.
     surface_attributions: tuple[SurfaceAttribution, ...] = ()
+    # CNAME chains resolved during surface classification that did not match
+    # any cname_target rule. Always populated; surfaced in JSON only when
+    # ``--include-unclassified`` is passed. Feeds the fingerprint-discovery
+    # loop (validation/find_gaps.py and the triage skill).
+    unclassified_cname_chains: tuple[UnclassifiedCnameChain, ...] = ()
 
     @property
     def crtsh_degraded(self) -> bool:
@@ -401,6 +423,11 @@ class TenantInfo:
     # with the subdomain and its primary service (application tier preferred
     # over infrastructure tier when a chain matches both).
     surface_attributions: tuple[SurfaceAttribution, ...] = ()
+    # CNAME chains resolved during surface classification that did not match
+    # any cname_target rule. Always populated; surfaced in JSON only when
+    # ``--include-unclassified`` is passed. Feeds the fingerprint-discovery
+    # loop (validation/find_gaps.py and the triage skill).
+    unclassified_cname_chains: tuple[UnclassifiedCnameChain, ...] = ()
 
     @property
     def crtsh_degraded(self) -> bool:

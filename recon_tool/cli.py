@@ -241,6 +241,25 @@ def lookup(
         "--fusion",
         help="[EXPERIMENTAL] Compute Bayesian per-slug posteriors from evidence",
     ),
+    include_unclassified: bool = typer.Option(
+        False,
+        "--include-unclassified",
+        help=(
+            "Include unclassified CNAME chains in --json output. Surfaces "
+            "candidates for new fingerprints. Feeds the discovery loop in "
+            "validation/ and the /recon-fingerprint-triage Claude skill."
+        ),
+    ),
+    no_ct: bool = typer.Option(
+        False,
+        "--no-ct",
+        help=(
+            "Skip cert-transparency providers (crt.sh, CertSpotter). "
+            "Discovery falls back to common-subdomain probes + apex CNAME "
+            "walks. Use for high-volume validation runs where you want "
+            "zero load on public CT services."
+        ),
+    ),
 ) -> None:
     """
     Look up a domain. This is the default command.
@@ -270,6 +289,8 @@ def lookup(
             profile_name=profile,
             confidence_mode=confidence_mode,
             fusion=fusion,
+            include_unclassified=include_unclassified,
+            skip_ct=no_ct,
         )
     )
 
@@ -1720,6 +1741,8 @@ async def _lookup(
     profile_name: str | None = None,
     confidence_mode: str = "hedged",
     fusion: bool = False,
+    include_unclassified: bool = False,
+    skip_ct: bool = False,
 ) -> None:
     """Async lookup implementation."""
     # Lazy imports: formatter, resolver, validator are imported here (not at module
@@ -1969,9 +1992,9 @@ async def _lookup(
 
                 msg = random.choice(_STATUS_MESSAGES)  # noqa: S311 — not security-sensitive
                 with console.status(msg):
-                    info, results = await resolve_tenant(validated, timeout=timeout)
+                    info, results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
             else:
-                info, results = await resolve_tenant(validated, timeout=timeout)
+                info, results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
 
             # v0.11: apply Bayesian fusion when opted in. Computes per-slug
             # posteriors from the existing evidence chain — no network calls.
@@ -2014,7 +2037,7 @@ async def _lookup(
         if json_output:
             from recon_tool.formatter import format_posture_observations
 
-            tenant_dict = format_tenant_dict(info)
+            tenant_dict = format_tenant_dict(info, include_unclassified=include_unclassified)
             if show_posture:
                 tenant_dict["posture"] = format_posture_observations(observations)
             if show_explain:

@@ -48,7 +48,14 @@ from recon_tool.fingerprints import (
     get_m365_slugs as _get_m365_slugs,
 )
 from recon_tool.http import http_client as _http_client
-from recon_tool.models import BIMIIdentity, CertSummary, EvidenceRecord, SourceResult, SurfaceAttribution
+from recon_tool.models import (
+    BIMIIdentity,
+    CertSummary,
+    EvidenceRecord,
+    SourceResult,
+    SurfaceAttribution,
+    UnclassifiedCnameChain,
+)
 from recon_tool.sources.cert_providers import CertIntelProvider, CertSpotterProvider, CrtshProvider
 
 logger = logging.getLogger("recon")
@@ -158,6 +165,7 @@ class _DetectionCtx:
         "slugs",
         "spf_include_count",
         "surface_attributions",
+        "unclassified_cname_chains",
     )
 
     def __init__(self) -> None:
@@ -192,6 +200,12 @@ class _DetectionCtx:
         # Populated after the main detector gather, since classification
         # depends on related_domains being collected first.
         self.surface_attributions: list[SurfaceAttribution] = []
+        # v1.5: CNAME chains resolved during surface classification that
+        # didn't match any cname_target rule. Always captured; surfaced
+        # only when --include-unclassified is set. Feeds fingerprint-
+        # discovery tooling. Wildcard echoes are filtered before this list
+        # is populated.
+        self.unclassified_cname_chains: list[UnclassifiedCnameChain] = []
 
     def add(self, svc_name: str, slug: str | None = None, source_type: str = "", raw_value: str = "") -> None:
         """Register a detected service, optionally with its slug and evidence.
@@ -1731,6 +1745,13 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
         host, chain = item
         application, infrastructure = _classify_chain(chain, sorted_rules)
         if application is None and infrastructure is None:
+            # Genuinely unclassified — preserve for the fingerprint-discovery
+            # loop. The chain is real (wildcard echoes were filtered upstream)
+            # and didn't match any cname_target rule, so it is a candidate
+            # for a new fingerprint.
+            ctx.unclassified_cname_chains.append(
+                UnclassifiedCnameChain(subdomain=host, chain=tuple(chain))
+            )
             continue
 
         primary = application if application is not None else infrastructure
@@ -1786,9 +1807,16 @@ class DNSSource:
         All sub-detectors run concurrently via asyncio.gather for maximum
         throughput. A single domain lookup fires ~15-20 DNS queries in parallel
         instead of sequentially.
+
+        Recognized kwargs:
+          * ``skip_ct`` — when True, skip the cert-transparency providers
+            (crt.sh, CertSpotter). Discovery still runs the common-subdomain
+            probe and apex CNAME walks. Useful for high-volume validation
+            runs where users want zero CT load.
         """
+        skip_ct = bool(kwargs.get("skip_ct", False))
         try:
-            ctx = await self._detect_services(domain)
+            ctx = await self._detect_services(domain, skip_ct=skip_ct)
         except Exception as exc:
             return SourceResult(
                 source_name="dns_records",
@@ -1796,6 +1824,9 @@ class DNSSource:
             )
 
         surface_tuple = tuple(sorted(ctx.surface_attributions, key=lambda s: s.subdomain))
+        unclassified_tuple = tuple(
+            sorted(ctx.unclassified_cname_chains, key=lambda u: u.subdomain)
+        )
 
         if ctx.services:
             return SourceResult(
@@ -1819,6 +1850,7 @@ class DNSSource:
                     (rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals
                 ),
                 surface_attributions=surface_tuple,
+                unclassified_cname_chains=unclassified_tuple,
             )
 
         return SourceResult(
@@ -1838,21 +1870,27 @@ class DNSSource:
             ct_cache_age_days=ctx.ct_cache_age_days,
             raw_dns_records=tuple((rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals),
             surface_attributions=surface_tuple,
+            unclassified_cname_chains=unclassified_tuple,
         )
 
     @staticmethod
-    async def _detect_services(domain: str) -> _DetectionCtx:
+    async def _detect_services(domain: str, skip_ct: bool = False) -> _DetectionCtx:
         """Async service detection — runs all sub-detectors concurrently.
 
         Each sub-detector handles one DNS record type and writes results
         into the shared _DetectionCtx. Since all coroutines run on the
         same event loop (no threads), there are no race conditions on ctx.
+
+        When ``skip_ct`` is True, the cert-transparency probe is omitted.
+        Surface attribution still runs against the common-subdomain probe
+        and any other CNAME-discovered hosts; only the CT-fed contributions
+        are absent from related_domains.
         """
         ctx = _DetectionCtx()
 
-        # Run all independent sub-detectors concurrently.
-        # Each one does its own DNS queries internally (also concurrent).
-        await asyncio.gather(
+        # Build the detector list. _detect_cert_intel is skipped when
+        # skip_ct is True; the other sub-detectors run unchanged.
+        detectors = [
             _detect_txt(ctx, domain),
             _detect_mx(ctx, domain),
             _detect_m365_cnames(ctx, domain),
@@ -1865,12 +1903,15 @@ class DNSSource:
             _detect_subdomain_txt(ctx, domain),
             _detect_caa(ctx, domain),
             _detect_srv(ctx, domain),
-            _detect_cert_intel(ctx, domain),
             _detect_common_subdomains(ctx, domain),
             _detect_hosting_from_a_record(ctx, domain),
             _detect_idp_hub(ctx, domain),
             _detect_exchange_onprem(ctx, domain),
-        )
+        ]
+        if not skip_ct:
+            detectors.append(_detect_cert_intel(ctx, domain))
+
+        await asyncio.gather(*detectors)
 
         # Remove the queried domain itself from related_domains
         ctx.related_domains.discard(domain.lower())

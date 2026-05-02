@@ -23,6 +23,7 @@ from recon_tool.models import (
     EvidenceRecord,
     SurfaceAttribution,
     TenantInfo,
+    UnclassifiedCnameChain,
 )
 from recon_tool.validator import validate_domain
 
@@ -272,6 +273,14 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         for sa in info.surface_attributions
     ]
 
+    # UnclassifiedCnameChain tuple → list of dicts. Always cached so
+    # subsequent runs of validation/find_gaps.py can read from cache
+    # without re-resolving DNS.
+    d["unclassified_cname_chains"] = [
+        {"subdomain": uc.subdomain, "chain": list(uc.chain)}
+        for uc in info.unclassified_cname_chains
+    ]
+
     return d
 
 
@@ -389,6 +398,26 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
             )
         surface_attributions = tuple(sa_records)
 
+    # UnclassifiedCnameChain list → tuple
+    unclass_list = data.get("unclassified_cname_chains", [])
+    unclassified_cname_chains: tuple[UnclassifiedCnameChain, ...] = ()
+    if isinstance(unclass_list, list):
+        uc_records: list[UnclassifiedCnameChain] = []
+        for item in unclass_list:
+            if not isinstance(item, dict):
+                continue
+            subdomain = item.get("subdomain")
+            chain_raw = item.get("chain", [])
+            if not subdomain or not isinstance(chain_raw, list):
+                continue
+            uc_records.append(
+                UnclassifiedCnameChain(
+                    subdomain=str(subdomain),
+                    chain=tuple(str(h) for h in chain_raw),
+                )
+            )
+        unclassified_cname_chains = tuple(uc_records)
+
     return TenantInfo(
         tenant_id=data.get("tenant_id"),
         display_name=display_name,
@@ -433,6 +462,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         msgraph_host=data.get("msgraph_host"),
         lexical_observations=tuple(data.get("lexical_observations", [])),
         surface_attributions=surface_attributions,
+        unclassified_cname_chains=unclassified_cname_chains,
         resolved_at=data.get("resolved_at"),
         # cached_at is stamped by cache_get from _cached_at; not populated
         # from arbitrary dict input so round-tripping an uncached dict
