@@ -41,6 +41,7 @@ def test_validate_file_skips_specificity_for_schema_rejected_pattern(
         skip_specificity=False,
         captured=[],
         slug_sources={},
+        slug_names={},
         specificity_warnings=[],
     )
 
