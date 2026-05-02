@@ -458,6 +458,192 @@ fingerprints:
     tier: application
     description: WP Engine WordPress hosting proxy CNAME (variant)
 
+# ── New candidates from the v1.6.0 corpus run ───────────────────────────
+
+- name: Swoogo
+  slug: swoogo
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: swoogo.net
+    tier: application
+    description: Swoogo events platform custom domain
+
+- name: UptimeRobot
+  slug: uptimerobot
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: uptimerobot.com
+    tier: application
+    description: UptimeRobot hosted public status page
+
+- name: bl.ink
+  slug: blink
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: dns.bl.ink
+    tier: application
+    description: bl.ink branded URL shortener custom domain
+
+- name: GoDaddy Workspace Email
+  slug: godaddy-email
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: email.secureserver.net
+    tier: application
+    description: GoDaddy Workspace Email hosted endpoint
+
+- name: cloud.gov
+  slug: cloud-gov
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: external-domains-production.cloud.gov
+    tier: application
+    description: cloud.gov FedRAMP-authorized PaaS for US federal agencies
+
+- name: Pantheon
+  slug: pantheon
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: edge.pantheon.io
+    tier: application
+    description: Pantheon Drupal/WordPress hosting edge endpoint
+
+- name: jobs2web
+  slug: jobs2web
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: jobs2web.com
+    tier: application
+    description: Symphony Talent / SAP SuccessFactors recruiting custom domain
+
+- name: Presspage
+  slug: presspage
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: presspage.com
+    tier: application
+    description: Presspage PR/newsroom hosted custom domain
+
+- name: Localist
+  slug: localist
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: enterprise.localist.com
+    tier: application
+    description: Localist event-calendar platform for institutions
+
+- name: RainFocus
+  slug: rainfocus
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: prd.rainfocus.com
+    tier: application
+    description: RainFocus event-management platform custom domain
+
+- name: Squarespace
+  slug: squarespace
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: ext-cust.squarespace.com
+    tier: application
+    description: Squarespace external-customer custom-domain CNAME
+
+- name: HubSpot
+  slug: hubspot
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: hscoscdn-eu1.net
+    tier: application
+    description: HubSpot CMS EU CDN
+
+- name: Akamai
+  slug: akamai
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: akamaiedge-staging.net
+    tier: infrastructure
+    description: Akamai Edge staging zone
+
+- name: Azure App Service
+  slug: azure-appservice
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cloudapp.azure.com
+    tier: infrastructure
+    description: Azure Cloud Services / VM web role hostnames
+
+- name: AWS API Gateway
+  slug: aws-api-gateway
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: execute-api.us-east-1.amazonaws.com
+    tier: infrastructure
+  - type: cname_target
+    pattern: execute-api.us-west-2.amazonaws.com
+    tier: infrastructure
+  - type: cname_target
+    pattern: execute-api.eu-west-1.amazonaws.com
+    tier: infrastructure
+  - type: cname_target
+    pattern: execute-api.eu-central-1.amazonaws.com
+    tier: infrastructure
+  - type: cname_target
+    pattern: execute-api.ap-southeast-1.amazonaws.com
+    tier: infrastructure
+    description: AWS API Gateway custom domain endpoints (regional)
+
+- name: AWS Network Load Balancer
+  slug: aws-nlb
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: elb.us-east-1.amazonaws.com
+    tier: infrastructure
+  - type: cname_target
+    pattern: elb.us-west-2.amazonaws.com
+    tier: infrastructure
+  - type: cname_target
+    pattern: elb.eu-west-1.amazonaws.com
+    tier: infrastructure
+  - type: cname_target
+    pattern: elb.eu-central-1.amazonaws.com
+    tier: infrastructure
+  - type: cname_target
+    pattern: elb.ap-southeast-1.amazonaws.com
+    tier: infrastructure
+    description: AWS Network/Application Load Balancer regional endpoints
+
 - name: Fly.io
   slug: flyio
   category: Infrastructure

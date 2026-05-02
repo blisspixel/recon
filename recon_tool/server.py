@@ -783,6 +783,107 @@ async def chain_lookup(domain: str, depth: int = 1) -> str:
 
 @mcp.tool(
     annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def discover_fingerprint_candidates(
+    domain: str,
+    skip_ct: bool = False,
+    keep_intra_org: bool = False,
+    min_count: int = 1,
+) -> str:
+    """Mine a single domain for new-fingerprint candidates.
+
+    Bundles ``recon discover`` into one tool call: resolves the domain with
+    unclassified-CNAME-chain capture, applies intra-org and already-covered
+    filters, and returns a ranked candidate list ready for triage. Each
+    surviving entry is a real third-party SaaS or infrastructure pattern
+    that recon does not yet recognize — propose it as a new ``cname_target``
+    fingerprint or an extension of an existing one.
+
+    Use after a regular ``lookup_tenant`` call when you notice unclassified
+    subdomains in the result, or proactively on any domain where you want
+    to grow the catalogue. Pair with the ``/recon-fingerprint-triage``
+    Claude Code skill (or apply the same triage rubric inline) to turn the
+    output into YAML stanzas for ``recon_tool/data/fingerprints/surface.yaml``.
+
+    Args:
+        domain: A domain name to mine (e.g., ``stripe.com``).
+        skip_ct: When true, skip cert-transparency providers (crt.sh,
+            CertSpotter). Discovery falls back to common-subdomain probes
+            and apex CNAME walks. Use for high-volume runs.
+        keep_intra_org: When true, retain CNAME chains that look intra-
+            organizational. Default ``false`` — false-positive prone but
+            more inclusive when ``true``.
+        min_count: Drop suffixes seen fewer than N times. Default 1 — for
+            single-domain runs, every distinct chain matters.
+
+    Returns:
+        JSON array of candidate dicts: ``[{suffix, count, samples: [{subdomain,
+        terminal, chain}]}, ...]``. Sorted by count desc, then suffix.
+    """
+    import json as json_mod
+    from pathlib import Path
+
+    from recon_tool.discovery import find_candidates
+
+    request_id = uuid.uuid4().hex[:12]
+    start_time = time.monotonic()
+
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        _log_structured(
+            logging.WARNING,
+            "validation_failed",
+            request_id=request_id,
+            domain=domain,
+            error=str(exc),
+        )
+        return f"Error: {exc}"
+
+    try:
+        info, _results = await resolve_tenant(validated, skip_ct=skip_ct)
+    except ReconLookupError as exc:
+        return f"Error: {exc}"
+    except Exception:
+        logger.exception(
+            "Unexpected error in discover for %s (request_id=%s)",
+            domain,
+            request_id,
+        )
+        return f"Error mining {domain}: an internal error occurred"
+
+    unclassified = [
+        {"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains
+    ]
+    fingerprints_dir = Path(__file__).resolve().parent / "data" / "fingerprints"
+    candidates = find_candidates(
+        [(info.queried_domain, unclassified)],
+        fingerprints_dir=fingerprints_dir,
+        min_count=min_count,
+        drop_intra_org=not keep_intra_org,
+    )
+
+    elapsed = time.monotonic() - start_time
+    _log_structured(
+        logging.INFO,
+        "discover_completed",
+        request_id=request_id,
+        domain=domain,
+        unclassified_total=len(unclassified),
+        candidate_count=len(candidates),
+        elapsed_s=round(elapsed, 2),
+    )
+
+    return json_mod.dumps(candidates, indent=2)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
         readOnlyHint=False,
         destructiveHint=False,
         idempotentHint=True,

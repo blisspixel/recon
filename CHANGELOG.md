@@ -5,6 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-05-03
+
+**Minor release - catalog grown from real validation.** Used the
+v1.5.2 discovery loop on a curated 986-domain corpus spanning F500
+US, US SMB, EU, APAC, LATAM, Africa/ME, government/edu/nonprofit,
+B2B SaaS, and dev tools. Mined 548 unclassified terminal suffixes,
+triaged to 46 high-quality candidates, added 17 new
+``cname_target`` fingerprints. Adds an MCP discovery tool so AI
+agents can mine candidates inline. Brand-stem heuristic catches
+cross-zone same-brand abbreviations. Adds a ``scan.py`` wrapper
+that bundles the four-step loop into a single timestamped
+invocation suitable for monthly-cadence runs.
+
+### Added
+
+- 17 new ``cname_target`` fingerprints from the v1.6.0 corpus run:
+  Swoogo (events), UptimeRobot (status), bl.ink (URL shortener),
+  GoDaddy Workspace Email, cloud.gov (US federal PaaS), Pantheon
+  (Drupal/WordPress hosting), jobs2web (recruiting),
+  Presspage (PR), Localist (event calendar), RainFocus (event
+  management), Squarespace external customer, HubSpot CMS EU CDN,
+  Akamai staging zone, Azure App Service / Cloud Services VM
+  pattern, AWS API Gateway (5 regions), AWS Network Load Balancer
+  (5 regions). Catalog now has 137 cname_target rules across
+  ~80 unique slugs.
+- New MCP tool ``discover_fingerprint_candidates``. Wraps the
+  ``recon discover`` pipeline so AI agents can mine fingerprint
+  candidates without shelling out. Same input/output shape as the
+  CLI subcommand.
+- New ``validation/scan.py`` — bundles
+  ``recon batch`` + ``find_gaps`` + ``triage_candidates`` +
+  ``diff_runs`` into one timestamped invocation. Each scan writes
+  ``results.json``, ``gaps.json``, ``candidates.json``, optional
+  ``diff.json``, and ``meta.json`` capturing the run metadata.
+  Designed for monthly-cadence drift detection on private corpora.
+- Brand-stem abbreviation detection in
+  ``recon_tool.discovery.looks_intra_org_brand``. Catches cases
+  where a sibling zone uses an abbreviated brand label
+  (``nytimes.com`` → ``nyt.net``). The 3-character prefix must
+  appear as a standalone DNS label in the suffix; the 5-char
+  brand-label floor avoids matching incidental short sequences.
+- ``validation/README.md`` documents the monthly cadence with
+  ``scan.py`` and the gitignored ``corpus-private`` /
+  ``runs-private`` workspace convention.
+
+### Changed
+
+- Brand-label extractor now skips 5+ second-level public
+  suffixes (``co``, ``ac``, ``com``, ``net``, ``gov``, ``edu``,
+  ``ne``, ``or``, ``go``, ``mil``, ``biz``) when extracting the
+  brand stem from a multi-part TLD apex.
+
+### Notes
+
+- The corpus run wasn't shipped to GitHub — only the framework is
+  generic and committed; real corpora and run outputs stay local
+  under ``validation/corpus-private/`` and ``validation/runs-private/``
+  (gitignored).
+- ``scan.py`` is the recommended entry point for recurring
+  validation. Run monthly (or whatever cadence works) with
+  ``--label`` to tag the run; subsequent runs auto-diff against
+  the most recent prior unless ``--no-compare`` is passed.
+
 ## [1.5.2] - 2026-05-02
 
 **Minor release - discovery loop in production.** Closes the gaps that

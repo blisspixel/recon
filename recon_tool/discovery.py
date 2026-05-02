@@ -89,20 +89,38 @@ def looks_intra_org_brand(apex: str, suffix: str, samples: list[dict[str, Any]])
     The strict ``is_intra_org`` check only catches chains that stay within
     the apex's own zone. Many enterprises route through a sibling brand
     domain (gslbjpmchase.com from chase.com, bbcnewslabs.co.uk from bbc.com).
-    Heuristic: the apex's brand label appears in the suffix.
+    Two patterns are caught here:
 
-    Best-effort. Brand stems with a different prefix (nytimes.com → nyt.net)
-    won't match — those need the LLM step to recognize the relationship.
+    1. **Full brand label substring** — ``softchoice`` appears anywhere in
+       the suffix.
+    2. **Brand-stem abbreviation** — the brand's first 3+ characters appear
+       as a standalone label in the suffix. Catches the nytimes.com → nyt.net
+       case (brand="nytimes", abbreviation="nyt") without over-matching on
+       arbitrary 3-char substrings.
+
+    Best-effort. Genuine acronym abbreviations (generalmotors → gm,
+    internationalbusinessmachines → ibm) won't match — those need the LLM
+    step to recognize the relationship.
     """
     if not samples:
         return False
     brand_label = extract_brand_label(apex)
     if not brand_label:
         return False
-    # 3+ char brand labels are common (bbc, att, ibm, lg, hp); anchor on those.
-    # 2-char would over-match too easily, so the extractor's >= 3 floor is the
-    # effective threshold here.
-    return brand_label in suffix.lower()
+    suffix_lower = suffix.lower()
+    # Pattern 1: full brand label appears as substring.
+    if brand_label in suffix_lower:
+        return True
+    # Pattern 2: brand-stem prefix appears as a standalone suffix label.
+    # The 3-char floor avoids matching incidental letter sequences ("am" in
+    # ".amazonaws.com" because of "amazon"); the standalone-label check
+    # requires the prefix to be a whole DNS label, not a substring of one.
+    if len(brand_label) >= 5:
+        prefix = brand_label[:3]
+        suffix_labels = suffix_lower.split(".")
+        if prefix in suffix_labels:
+            return True
+    return False
 
 
 def load_existing_patterns(fingerprints_dir: Path) -> set[str]:
