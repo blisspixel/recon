@@ -47,7 +47,9 @@
     "slug_confidences",
     "surface_attributions",
     "evidence_conflicts",
-    "chain_motifs"
+    "chain_motifs",
+    "infrastructure_clusters",
+    "fingerprint_metadata"
   ],
   "properties": {
     "tenant_id": {
@@ -267,6 +269,15 @@
       "type": "array",
       "items": {"$ref": "#/$defs/ChainMotif"}
     },
+    "infrastructure_clusters": {
+      "description": "Per-domain CT co-occurrence community detection report (v1.8+). Always emitted. ``algorithm`` records which path produced the partition (``louvain`` for small graphs, ``connected_components`` when the graph exceeds the size cap, ``skipped`` when no graph could be built). Modularity is 0.0 in the fallback / skipped paths. Members within each cluster are sorted; clusters are sorted by size descending. Observable structure only — clusters describe co-issuance, not ownership.",
+      "$ref": "#/$defs/InfrastructureClusterReport"
+    },
+    "fingerprint_metadata": {
+      "description": "Per-slug relationship metadata (v1.8+). Object keyed by detected fingerprint slug. Each value is `{product_family, parent_vendor, bimi_org}` — descriptive hints sourced from the fingerprint YAML. Slugs without any populated metadata are omitted entirely. Empty object when no detected slug carries metadata. Drives the v1.8 ecosystem hypergraph; never an ownership assertion.",
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/FingerprintMetadata"}
+    },
     "unclassified_cname_chains": {
       "description": "OPTIONAL — present only when ``--include-unclassified`` is passed. CNAME chains the surface classifier resolved but couldn't attribute to any cname_target fingerprint. Each entry: {subdomain, chain: [hop1, hop2, terminal]}. Wildcard-DNS echoes are filtered out before this list is populated. Feeds the fingerprint-discovery loop in validation/find_gaps.py and the /recon-fingerprint-triage Claude skill.",
       "type": "array",
@@ -386,6 +397,72 @@
           "items": {"type": "string"},
           "description": "Matched hops in order, one per motif marker."
         }
+      }
+    },
+    "InfrastructureClusterReport": {
+      "description": "Stable v1.8+. Wraps the cluster list with the algorithm path and the underlying graph metrics so downstream tools can interpret the partition correctly.",
+      "type": "object",
+      "required": ["algorithm", "modularity", "node_count", "edge_count", "clusters"],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": ["louvain", "connected_components", "skipped"],
+          "description": "Path that produced the partition. ``connected_components`` is the deterministic fallback used when the graph exceeds the v1.8 node cap; ``skipped`` means no graph was built (no CT entries, fewer than two nodes, or no edges)."
+        },
+        "modularity": {
+          "type": "number",
+          "description": "Newman-Girvan modularity for the Louvain partition. 0.0 in the fallback / skipped paths."
+        },
+        "node_count": {"type": "integer", "minimum": 0, "description": "Distinct non-wildcard SAN hostnames observed across the cert entries."},
+        "edge_count": {"type": "integer", "minimum": 0, "description": "Edges in the co-occurrence graph (each edge weights co-issuance count)."},
+        "clusters": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/InfrastructureCluster"}
+        }
+      }
+    },
+    "EcosystemHyperedge": {
+      "description": "One observed multi-domain signature in a ``recon batch --json --include-ecosystem`` run (v1.8+). Surfaced as the top-level ``ecosystem_hyperedges`` array of the batch wrapper, where the per-domain entries appear under ``domains``. Not emitted in single-domain ``--json`` output.",
+      "type": "object",
+      "required": ["edge_type", "key", "members"],
+      "properties": {
+        "edge_type": {
+          "type": "string",
+          "enum": ["top_issuer", "bimi_org", "parent_vendor", "shared_slugs"],
+          "description": "Rule that produced the edge: shared CT top issuer, shared BIMI VMC organization, shared fingerprint parent_vendor, or shared fingerprint-slug pair (≥2 overlap)."
+        },
+        "key": {
+          "type": "string",
+          "description": "Value the rule fired on. Issuer name, BIMI org, parent vendor, or — for ``shared_slugs`` — the comma-joined intersection of overlapping slug names."
+        },
+        "members": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 2,
+          "description": "Sorted apex domains that share the signature."
+        }
+      }
+    },
+    "FingerprintMetadata": {
+      "description": "Relationship hints for one fingerprint slug. Stable v1.8+. Each field is optional — at least one will be non-null when this record appears.",
+      "type": "object",
+      "required": ["product_family", "parent_vendor", "bimi_org"],
+      "properties": {
+        "product_family": {"type": ["string", "null"], "description": "Vendor-internal product line (e.g. \"Microsoft 365\", \"Google Workspace\", \"AWS\")."},
+        "parent_vendor": {"type": ["string", "null"], "description": "Corporate parent the product rolls up to (e.g. \"Microsoft\", \"Salesforce\" for Slack)."},
+        "bimi_org": {"type": ["string", "null"], "description": "Exact organization name expected on a BIMI VMC for domains under this product."}
+      }
+    },
+    "InfrastructureCluster": {
+      "description": "One community in the per-domain SAN co-occurrence graph. Stable v1.8+.",
+      "type": "object",
+      "required": ["cluster_id", "size", "members", "shared_cert_count", "dominant_issuer"],
+      "properties": {
+        "cluster_id": {"type": "integer", "minimum": 0, "description": "Stable id within this report (largest cluster is 0)."},
+        "size": {"type": "integer", "minimum": 2},
+        "members": {"type": "array", "items": {"type": "string"}, "description": "SAN hostnames in this cluster, sorted."},
+        "shared_cert_count": {"type": "integer", "minimum": 0, "description": "Number of cert-entry contributions across edges fully inside this cluster (not unique certs)."},
+        "dominant_issuer": {"type": ["string", "null"], "description": "Most common issuer name across contributing certs."}
       }
     },
     "EvidenceConflict": {

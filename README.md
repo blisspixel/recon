@@ -90,6 +90,7 @@ recon contoso.com --profile fintech            # apply a posture lens
 recon contoso.com --confidence-mode strict     # drop hedging on dense-evidence targets (v0.11)
 recon contoso.com --json                       # structured JSON for piping
 recon batch domains.txt --json                 # batch (cross-domain token clustering)
+recon batch domains.txt --json --include-ecosystem  # add v1.8 ecosystem hypergraph
 recon contoso.com --chain --depth 2            # follow related-domain breadcrumbs
 recon delta contoso.com                        # diff against last cached snapshot
 recon mcp                                      # start MCP server (stdio)
@@ -121,11 +122,11 @@ Then ask your AI: *"Run a recon lookup on contoso.com and tell me what's running
 
 See [docs/mcp.md](docs/mcp.md) for the full tool list, advanced agentic workflows, and per-client config locations.
 
-**Claude Code, Kiro, Windsurf, Cursor, VS Code:** drop-in install snippets and agent guidance live under [`clients/`](clients/). Claude Code users get a full plugin (MCP + skill in one install) at [`claude-code/`](claude-code/). The portable [`AGENTS.md`](AGENTS.md) at the repo root is auto-detected by Kiro and other agents.md-aware tools.
+**Claude Code, Kiro, Windsurf, Cursor, VS Code:** per-agent install scaffolds live under [`agents/`](agents/) — one folder per client with its MCP config and guidance template. Claude Code users get a full plugin (MCP + skill in one install) at [`agents/claude-code/`](agents/claude-code/). The portable [`AGENTS.md`](AGENTS.md) at the repo root is auto-detected by Kiro and other agents.md-aware tools.
 
 **Quickest install for AI clients with file-write tools.** Paste this prompt to your AI:
 
-> Fetch `https://raw.githubusercontent.com/blisspixel/recon/main/claude-code/skills/recon/SKILL.md` and save it to my Claude Code skills directory (`~/.claude/skills/recon/SKILL.md`) — or to `~/.kiro/skills/recon/SKILL.md` if I'm using Kiro. Then run `pip install recon-tool` and `recon doctor` to verify.
+> Fetch `https://raw.githubusercontent.com/blisspixel/recon/main/agents/claude-code/skills/recon/SKILL.md` and save it to my Claude Code skills directory (`~/.claude/skills/recon/SKILL.md`) — or to `~/.kiro/skills/recon/SKILL.md` if I'm using Kiro. Then run `pip install recon-tool` and `recon doctor` to verify.
 
 The SKILL.md follows the open [agentskills.io](https://agentskills.io) standard, so the same file works in Claude Code and Kiro.
 

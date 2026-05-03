@@ -26,3 +26,13 @@ prepend_note: |
   Fintech profile applied. Email authentication, identity federation,
   and supply-chain controls are weighted higher than infrastructure
   footprint. Use --explain to see why each signal fired.
+# v1.8: vertical-baseline anomaly rules. Each entry is a fingerprint
+# CATEGORY (matched against the slug's category, not the slug name) or
+# a chain-motif name. Absence becomes a hedged "absence is observable"
+# observation — never a verdict. Drop or extend in
+# ~/.recon/profiles/fintech.yaml as appropriate to your environment.
+expected_categories:
+  - Identity & Auth
+  - Security
+expected_motifs:
+  - cloudflare_to_aws

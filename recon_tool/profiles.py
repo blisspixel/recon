@@ -68,6 +68,7 @@ logger = logging.getLogger("recon")
 __all__ = [
     "Profile",
     "apply_profile",
+    "compute_baseline_anomalies",
     "list_profiles",
     "load_profile",
     "reload_profiles",
@@ -88,6 +89,16 @@ class Profile:
     focus_categories: tuple[str, ...] = ()
     exclude_signals: tuple[str, ...] = ()
     prepend_note: str = ""
+    # v1.8 vertical-baseline anomaly rules. Each expected_categories
+    # entry is a fingerprint *category* (e.g. ``Security``) that the
+    # vertical typically uses; absence of any matching detected slug
+    # surfaces a hedged "absence is observable" observation. Each
+    # expected_motifs entry is a chain-motif name (from
+    # data/motifs.yaml); absence on every related subdomain surfaces
+    # the same kind of observation. Both are descriptive — they never
+    # imply a verdict.
+    expected_categories: tuple[str, ...] = ()
+    expected_motifs: tuple[str, ...] = ()
 
     def boost_for_category(self, category: str) -> float:
         """Return the multiplier for this category, defaulting to 1.0."""
@@ -203,6 +214,8 @@ def _build_profile(data: dict[str, Any], source: str) -> Profile | None:
         focus_categories=_parse_string_list(data.get("focus_categories"), name, "focus_categories"),
         exclude_signals=_parse_string_list(data.get("exclude_signals"), name, "exclude_signals"),
         prepend_note=prepend,
+        expected_categories=_parse_string_list(data.get("expected_categories"), name, "expected_categories"),
+        expected_motifs=_parse_string_list(data.get("expected_motifs"), name, "expected_motifs"),
     )
 
 
@@ -291,6 +304,74 @@ def _salience_for_score(score: float) -> str:
     if score >= 1.5:
         return "medium"
     return "low"
+
+
+def compute_baseline_anomalies(
+    profile: Profile | None,
+    detected_slugs: tuple[str, ...],
+    chain_motif_names: tuple[str, ...],
+) -> tuple[Observation, ...]:
+    """Surface vertical-baseline anomalies as hedged observations (v1.8+).
+
+    Compares the profile's ``expected_categories`` against the
+    fingerprint categories implied by ``detected_slugs``, and the
+    profile's ``expected_motifs`` against ``chain_motif_names``. Each
+    expected item with no observed match becomes one Observation.
+
+    Output is never a verdict — language is "absence is observable",
+    salience is at most ``medium``, and category is ``consistency`` so
+    the existing posture lens treats it like a hygiene check rather
+    than a security finding. Returns an empty tuple when ``profile``
+    is None or when no expected item is missing.
+    """
+    if profile is None:
+        return ()
+    if not profile.expected_categories and not profile.expected_motifs:
+        return ()
+
+    # Build a slug → category lookup once. Pulled lazily here to keep
+    # the import out of the module top — profiles is loaded by
+    # broader tooling that may not need fingerprints.
+    from recon_tool.fingerprints import load_fingerprints
+
+    slug_to_category: dict[str, str] = {fp.slug: fp.category for fp in load_fingerprints()}
+    detected_categories = {
+        slug_to_category[slug].lower() for slug in detected_slugs if slug in slug_to_category
+    }
+    detected_motifs = {name.lower() for name in chain_motif_names}
+
+    out: list[Observation] = []
+    for expected_cat in profile.expected_categories:
+        if expected_cat.lower() in detected_categories:
+            continue
+        out.append(
+            Observation(
+                category="consistency",
+                salience="medium",
+                statement=(
+                    f"{profile.name} profile expects fingerprint category "
+                    f"'{expected_cat}'; not observed for this apex (absence "
+                    f"is observable, not a verdict)."
+                ),
+                related_slugs=(),
+            )
+        )
+    for expected_motif in profile.expected_motifs:
+        if expected_motif.lower() in detected_motifs:
+            continue
+        out.append(
+            Observation(
+                category="consistency",
+                salience="medium",
+                statement=(
+                    f"{profile.name} profile expects chain motif "
+                    f"'{expected_motif}'; not observed on any related "
+                    f"subdomain (absence is observable, not a verdict)."
+                ),
+                related_slugs=(),
+            )
+        )
+    return tuple(out)
 
 
 def apply_profile(

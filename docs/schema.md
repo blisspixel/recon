@@ -102,6 +102,8 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | `bimi_identity` | object | yes | — | stable | BIMI VMC identity: `{organization, country, state, locality, trademark}`. |
 | `evidence_conflicts` | `list[EvidenceConflict]` | no | — | stable (v1.7+) | Cross-source disagreements: each entry names a merged field where 2+ sources gave different values, with all candidates preserved. Empty array when sources agreed. |
 | `chain_motifs` | `list[ChainMotif]` | no | — | stable (v1.7+) | CNAME chain motifs that fired on related subdomains — e.g. Cloudflare → AWS origin, Akamai → Azure origin. Observable proxy/origin shape only; never an ownership claim. Catalog at `recon_tool/data/motifs.yaml`. |
+| `infrastructure_clusters` | `InfrastructureClusterReport` | no | always | stable (v1.8+) | CT co-occurrence community detection report. `algorithm` ∈ {`louvain`, `connected_components`, `skipped`}; `modularity` is 0.0 in fallback / skipped paths. Members sorted; clusters sorted by size desc. |
+| `fingerprint_metadata` | `dict[string, FingerprintMetadata]` | no | always | stable (v1.8+) | Per-slug `{product_family, parent_vendor, bimi_org}` for detected slugs that carry relationship hints in their fingerprint YAML. Slugs without metadata are omitted. Empty object when nothing applies. Drives the v1.8 ecosystem hypergraph; never an ownership assertion. |
 
 ### Experimental
 
@@ -186,6 +188,74 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 ```
 
 `chain` is the matched subsequence of hops, not the full original CNAME chain. Each motif fires on observable structure only — never an ownership claim. The motif catalog is shipped in `recon_tool/data/motifs.yaml` and can be extended via `~/.recon/motifs.yaml` (additive only).
+
+### `InfrastructureClusterReport` (v1.8+)
+
+```json
+{
+  "algorithm": "louvain",
+  "modularity": 0.42,
+  "node_count": 18,
+  "edge_count": 31,
+  "clusters": [
+    {
+      "cluster_id": 0,
+      "size": 5,
+      "members": ["api.example.com", "auth.example.com", "id.example.com",
+                  "login.example.com", "sso.example.com"],
+      "shared_cert_count": 12,
+      "dominant_issuer": "Let's Encrypt"
+    }
+  ]
+}
+```
+
+`algorithm` is the detection path that produced the partition:
+
+- `louvain` — graph fits inside the 500-node cap; partition is meaningful.
+- `connected_components` — graph above cap; deterministic fallback. `modularity` is 0.0.
+- `skipped` — empty graph or no edges. `clusters` is empty.
+
+Each cluster member is a SAN hostname. Clusters describe **observed
+co-issuance** — names that show up on the same certificates — never
+ownership. Raw edge data is not emitted in the default `--json`
+envelope; use the `export_graph` MCP tool when you need it.
+
+### `FingerprintMetadata` (v1.8+)
+
+```json
+{
+  "product_family": "Microsoft 365",
+  "parent_vendor": "Microsoft",
+  "bimi_org": null
+}
+```
+
+All three fields are optional. At least one is non-null in every
+emitted record. Surfaced under the top-level `fingerprint_metadata`
+object, keyed by detected slug.
+
+### `EcosystemHyperedge` (v1.8+, batch-only)
+
+```json
+{
+  "edge_type": "top_issuer",
+  "key": "Let's Encrypt",
+  "members": ["a.example.com", "b.example.com"]
+}
+```
+
+`edge_type` is one of:
+
+- `top_issuer` — domains share their CT top-issuer name.
+- `bimi_org` — domains share an exact BIMI VMC organization (light-normalised).
+- `parent_vendor` — domains have ≥1 detected slug carrying the same `parent_vendor` metadata.
+- `shared_slugs` — pairwise overlap of ≥2 detected slugs. `key` is the comma-joined intersection.
+
+Surfaced under the top-level `ecosystem_hyperedges` array of the batch
+JSON wrapper when `recon batch --json --include-ecosystem` is run. The
+batch wrapper shape is `{ecosystem_hyperedges: [...], domains: [...]}`
+in that mode; otherwise the batch JSON is just the per-domain array.
 
 ### `bimi_identity`
 

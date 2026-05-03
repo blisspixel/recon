@@ -351,6 +351,39 @@ class TestBuildCertSummary:
         assert cs.wildcard_sibling_clusters == ()
         assert cs.deployment_bursts == ()
 
+    def test_certspotter_z_suffix_dates_parse(self):
+        """Regression — Python 3.10's fromisoformat rejects 'Z' UTC marker.
+
+        CertSpotter (and many CT log emitters) end timestamps in 'Z'.
+        Without normalisation, every entry was silently skipped and
+        cert_summary returned None — surfaced during the v1.8 validation
+        run on a 105-domain corpus (0/105 had cert_summary populated
+        before the fix).
+        """
+        now = datetime(2026, 6, 1, tzinfo=timezone.utc)
+        entries = [
+            {
+                "issuer_id": "DigiCert",
+                "issuer_name": "DigiCert",
+                "not_before": "2025-04-03T00:00:00Z",
+                "not_after": "2026-05-04T23:59:59Z",
+                "dns_names": ["a.example.com", "b.example.com"],
+            },
+            {
+                "issuer_id": "LE",
+                "issuer_name": "Let's Encrypt",
+                "not_before": "2025-12-15T12:34:56.789Z",
+                "not_after": "2026-03-15T12:34:56.789Z",
+                "dns_names": ["c.example.com"],
+            },
+        ]
+        cs = build_cert_summary(entries, now)
+        assert cs is not None
+        assert cs.cert_count == 2
+        assert cs.issuer_diversity == 2
+        assert "DigiCert" in cs.top_issuers
+        assert "Let's Encrypt" in cs.top_issuers
+
 
 # ── Wildcard SAN sibling clusters (v1.7) ─────────────────────────────────
 
@@ -570,7 +603,7 @@ class TestCertSpotterPagination:
             "recon_tool.sources.cert_providers.http_client",
             return_value=_mock_http_context(client),
         ):
-            subs, _summary = await provider.query("example.com")
+            subs, _summary, _clusters = await provider.query("example.com")
 
         assert client.get.call_count == 2
         assert len(subs) == 5
@@ -593,7 +626,7 @@ class TestCertSpotterPagination:
             "recon_tool.sources.cert_providers.http_client",
             return_value=_mock_http_context(client),
         ):
-            subs, _summary = await provider.query("example.com")
+            subs, _summary, _clusters = await provider.query("example.com")
 
         # _MAX_PAGES=2 — we stop after page 2; no third call.
         assert client.get.call_count == 2
@@ -626,7 +659,7 @@ class TestCertSpotterPagination:
             "recon_tool.sources.cert_providers.http_client",
             return_value=_mock_http_context(client),
         ):
-            subs, _summary = await provider.query("example.com")
+            subs, _summary, _clusters = await provider.query("example.com")
 
         assert client.get.call_count == provider._MAX_PAGES
         assert len(subs) == provider._MAX_PAGES * 3
@@ -649,7 +682,7 @@ class TestCertSpotterPagination:
             "recon_tool.sources.cert_providers.http_client",
             return_value=_mock_http_context(client),
         ):
-            subs, _summary = await provider.query("example.com")
+            subs, _summary, _clusters = await provider.query("example.com")
 
         # Pagination stopped at 429, but page 1 data is still returned
         assert client.get.call_count == 2
@@ -689,11 +722,12 @@ class TestCertSpotterPagination:
             "recon_tool.sources.cert_providers.http_client",
             return_value=_mock_http_context(client),
         ):
-            subs, summary = await provider.query("example.com")
+            subs, summary, clusters = await provider.query("example.com")
 
         assert client.get.call_count == 1
         assert subs == []
         assert summary is None
+        assert clusters is None
 
     @pytest.mark.asyncio
     async def test_missing_issuance_id_stops_pagination(self):
@@ -714,7 +748,7 @@ class TestCertSpotterPagination:
             "recon_tool.sources.cert_providers.http_client",
             return_value=_mock_http_context(client),
         ):
-            subs, _summary = await provider.query("example.com")
+            subs, _summary, _clusters = await provider.query("example.com")
 
         # Without an id, we cannot advance the cursor — so only one call.
         assert client.get.call_count == 1

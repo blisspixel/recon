@@ -17,7 +17,8 @@ from typing import Protocol, runtime_checkable
 import httpx
 
 from recon_tool.http import http_client
-from recon_tool.models import CertBurst, CertSummary
+from recon_tool.infra_graph import build_infrastructure_clusters
+from recon_tool.models import CertBurst, CertSummary, InfrastructureClusterReport
 
 # ── v1.7 caps for derived cert intelligence ──────────────────────────────
 # Wildcard SAN sibling clusters: each cert that contains ≥1 wildcard SAN
@@ -37,6 +38,19 @@ _BURST_WINDOW_SECONDS = 60
 _MIN_BURST_NAMES = 3
 _MAX_BURSTS = 8
 _MAX_NAMES_PER_BURST = 25
+
+
+def _parse_iso_datetime(value: str) -> datetime:
+    """Parse an ISO-8601 timestamp tolerating a trailing ``Z``.
+
+    Python 3.10's ``datetime.fromisoformat`` rejects the ``Z`` UTC
+    suffix that CertSpotter and many CT log emitters use; only 3.11+
+    accepts it natively. We normalise here so both providers behave
+    the same on every supported Python. Raises ValueError on
+    unparseable input — callers handle that.
+    """
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    return datetime.fromisoformat(normalized)
 
 logger = logging.getLogger("recon")
 
@@ -135,11 +149,18 @@ class CertIntelProvider(Protocol):
         """Unique identifier for this provider (e.g. 'crt.sh', 'certspotter')."""
         ...
 
-    async def query(self, domain: str) -> tuple[list[str], CertSummary | None]:
+    async def query(
+        self,
+        domain: str,
+    ) -> tuple[list[str], CertSummary | None, InfrastructureClusterReport | None]:
         """Query CT data for a domain.
 
         Returns:
-            Tuple of (discovered_subdomains, optional CertSummary).
+            Tuple of ``(discovered_subdomains, cert_summary,
+            infrastructure_clusters)``. ``cert_summary`` is None when no
+            cert metadata could be parsed; ``infrastructure_clusters``
+            is None on the same condition (the report is built from the
+            same entries).
 
         Raises:
             Exception on failure (timeout, HTTP error, etc.) so the
@@ -272,7 +293,7 @@ def _detect_deployment_bursts(
         if not isinstance(not_before_raw, str):
             continue
         try:
-            dt = datetime.fromisoformat(not_before_raw)
+            dt = _parse_iso_datetime(not_before_raw)
         except (ValueError, TypeError):
             continue
         dt = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
@@ -359,9 +380,9 @@ def build_cert_summary(
             continue
 
         try:
-            not_before_dt = datetime.fromisoformat(not_before_raw)
+            not_before_dt = _parse_iso_datetime(not_before_raw)
             # Validate not_after is also parseable
-            datetime.fromisoformat(not_after_raw)
+            _parse_iso_datetime(not_after_raw)
         except (ValueError, TypeError):
             continue
 
@@ -408,7 +429,10 @@ class CrtshProvider:
     def name(self) -> str:
         return "crt.sh"
 
-    async def query(self, domain: str) -> tuple[list[str], CertSummary | None]:
+    async def query(
+        self,
+        domain: str,
+    ) -> tuple[list[str], CertSummary | None, InfrastructureClusterReport | None]:
         """Query crt.sh for subdomain discovery and cert metadata.
 
         Raises on any failure so the fallback chain can proceed.
@@ -426,7 +450,7 @@ class CrtshProvider:
                 raise httpx.HTTPError(msg) from exc
 
         if not isinstance(data, list):
-            return [], None
+            return [], None, None
 
         # Extract a bounded candidate set from name_value fields. Do
         # not build raw/cert lists from the entire crt.sh payload:
@@ -472,8 +496,13 @@ class CrtshProvider:
 
         now = datetime.now(timezone.utc)
         cert_summary = build_cert_summary(cert_entries, now)
+        cluster_report = (
+            build_infrastructure_clusters(list(cert_entries))
+            if cert_entries
+            else None
+        )
 
-        return subdomains, cert_summary
+        return subdomains, cert_summary, cluster_report
 
 
 # ── CertSpotterProvider ─────────────────────────────────────────────────
@@ -536,7 +565,10 @@ class CertSpotterProvider:
             params["after"] = after_cursor
         return await client.get(self._BASE_URL, params=params)
 
-    async def query(self, domain: str) -> tuple[list[str], CertSummary | None]:
+    async def query(
+        self,
+        domain: str,
+    ) -> tuple[list[str], CertSummary | None, InfrastructureClusterReport | None]:
         """Query CertSpotter for subdomain discovery and cert metadata.
 
         Iterates through up to ``_MAX_PAGES`` paginated responses using
@@ -629,9 +661,14 @@ class CertSpotterProvider:
                 after_cursor = last_id
 
         if not all_raw_names and not all_cert_entries:
-            return [], None
+            return [], None, None
 
         subdomains = filter_subdomains(all_raw_names, domain)
         now = datetime.now(timezone.utc)
         cert_summary = build_cert_summary(all_cert_entries, now)
-        return subdomains, cert_summary
+        cluster_report = (
+            build_infrastructure_clusters(list(all_cert_entries))
+            if all_cert_entries
+            else None
+        )
+        return subdomains, cert_summary, cluster_report

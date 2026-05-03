@@ -227,3 +227,123 @@ class TestMatchTxt:
         result = match_txt("MS=ms12345678", patterns)
         assert result is not None
         assert "Microsoft" in result.name
+
+
+# ── v1.8 relationship metadata ──────────────────────────────────────────
+
+
+class TestRelationshipMetadata:
+    """v1.8: optional product_family / parent_vendor / bimi_org fields."""
+
+    def test_default_metadata_is_none(self):
+        """Fingerprints without the fields populated have None metadata."""
+        from pathlib import Path
+
+        from recon_tool.fingerprints import _load_from_path
+
+        path = Path(__file__).parent.parent / "recon_tool" / "data" / "fingerprints" / "ai.yaml"
+        fps = _load_from_path(path)
+        # AI fingerprints don't have metadata seeded — should all be None.
+        assert all(fp.product_family is None for fp in fps)
+        assert all(fp.parent_vendor is None for fp in fps)
+
+    def _slug_with_metadata(self, slug: str):
+        """Return the first fingerprint matching ``slug`` whose metadata is populated.
+
+        A slug can appear in multiple YAML files (e.g. an apex
+        fingerprint plus surface ``cname_target`` rules) — only the
+        apex copy carries relationship metadata, so a flat
+        ``{slug: fp}`` collapse can clobber the populated entry.
+        """
+        from recon_tool.fingerprints import load_fingerprints
+
+        for fp in load_fingerprints():
+            if fp.slug != slug:
+                continue
+            if fp.product_family or fp.parent_vendor or fp.bimi_org:
+                return fp
+        return None
+
+    def test_microsoft365_has_seeded_metadata(self):
+        fp = self._slug_with_metadata("microsoft365")
+        assert fp is not None
+        assert fp.product_family == "Microsoft 365"
+        assert fp.parent_vendor == "Microsoft"
+
+    def test_github_parent_is_microsoft(self):
+        fp = self._slug_with_metadata("github")
+        assert fp is not None
+        assert fp.parent_vendor == "Microsoft"
+
+    def test_slack_parent_is_salesforce(self):
+        fp = self._slug_with_metadata("slack")
+        assert fp is not None
+        assert fp.parent_vendor == "Salesforce"
+
+    def test_loader_strips_whitespace(self, tmp_path):
+        """Whitespace-only metadata values normalise to None."""
+        from recon_tool.fingerprints import _load_from_path
+
+        path = tmp_path / "fp.yaml"
+        path.write_text(
+            """
+fingerprints:
+- name: TestSvc
+  slug: test-svc
+  category: Misc
+  confidence: high
+  parent_vendor: "   "
+  product_family: "  ACME  "
+  detections:
+  - type: txt
+    pattern: "^test=value"
+"""
+        )
+        fps = _load_from_path(path)
+        assert len(fps) == 1
+        assert fps[0].parent_vendor is None  # whitespace-only → None
+        assert fps[0].product_family == "ACME"  # stripped
+
+
+class TestFingerprintMetadataInJson:
+    """v1.8: fingerprint_metadata JSON envelope."""
+
+    def test_only_detected_slugs_appear(self):
+        """Only slugs present in info.slugs surface in fingerprint_metadata."""
+        import json
+
+        from recon_tool.formatter import format_tenant_json
+        from recon_tool.models import ConfidenceLevel, TenantInfo
+
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Example",
+            default_domain="example.com",
+            queried_domain="example.com",
+            confidence=ConfidenceLevel.MEDIUM,
+            slugs=("microsoft365",),
+        )
+        payload = json.loads(format_tenant_json(info))
+        meta = payload["fingerprint_metadata"]
+        assert "microsoft365" in meta
+        assert meta["microsoft365"]["parent_vendor"] == "Microsoft"
+        # github isn't detected on this domain — must not appear.
+        assert "github" not in meta
+
+    def test_empty_when_no_slug_has_metadata(self):
+        """Detected slugs with no relationship metadata yield empty object."""
+        import json
+
+        from recon_tool.formatter import format_tenant_json
+        from recon_tool.models import ConfidenceLevel, TenantInfo
+
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="X",
+            default_domain="x.com",
+            queried_domain="x.com",
+            confidence=ConfidenceLevel.LOW,
+            slugs=("zoho",),  # no relationship metadata seeded
+        )
+        payload = json.loads(format_tenant_json(info))
+        assert payload["fingerprint_metadata"] == {}

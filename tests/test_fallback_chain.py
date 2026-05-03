@@ -34,7 +34,7 @@ class TestFallbackChain:
 
         async def _crtsh_ok(domain):
             call_order.append("crt.sh")
-            return ["sub.example.com"], None
+            return ["sub.example.com"], None, None
 
         mock_crtsh.query = _crtsh_ok
 
@@ -43,7 +43,7 @@ class TestFallbackChain:
 
         async def _cs_ok(domain):
             call_order.append("certspotter")
-            return [], None
+            return [], None, None
 
         mock_cs.query = _cs_ok
 
@@ -77,7 +77,7 @@ class TestFallbackChain:
 
         async def _cs_ok(domain):
             call_order.append("certspotter")
-            return ["fallback.example.com"], None
+            return ["fallback.example.com"], None, None
 
         mock_cs.query = _cs_ok
 
@@ -148,7 +148,7 @@ class TestFallbackChain:
         mock_cs.name = "certspotter"
 
         async def _cs_ok(domain):
-            return ["api.example.com"], mock_summary
+            return ["api.example.com"], mock_summary, None
 
         mock_cs.query = _cs_ok
 
@@ -178,7 +178,7 @@ class TestFallbackChain:
         mock_crtsh.name = "crt.sh"
 
         async def _crtsh_ok(domain):
-            return ["dev.example.com"], mock_summary
+            return ["dev.example.com"], mock_summary, None
 
         mock_crtsh.query = _crtsh_ok
 

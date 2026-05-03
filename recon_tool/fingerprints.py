@@ -127,6 +127,19 @@ class Fingerprint:
     provider_group: str | None = None  # e.g., "microsoft365", "google-workspace"
     display_group: str | None = None  # e.g., "Email & Communication", "Security"
     match_mode: str = "any"  # "any" (OR) or "all" (AND)
+    # v1.8 relationship metadata — purely descriptive hints used by the
+    # ecosystem hypergraph and downstream display logic. NEVER an
+    # ownership assertion. Each field is optional and free-form.
+    #   product_family — vendor-internal product line (e.g. "Microsoft 365",
+    #                    "Google Workspace", "Atlassian Cloud").
+    #   parent_vendor  — corporate parent the product rolls up to (e.g.
+    #                    "Microsoft", "Salesforce" for Slack, "Google").
+    #   bimi_org       — exact organization name expected on a BIMI VMC for
+    #                    domains under this product. Used for cross-domain
+    #                    BIMI clustering in the v1.8 hypergraph.
+    product_family: str | None = None
+    parent_vendor: str | None = None
+    bimi_org: str | None = None
 
 
 def _validate_regex(pattern: str, source: str) -> bool:
@@ -309,6 +322,14 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
         )
         return None
 
+    def _opt_str(field_name: str) -> str | None:
+        raw = fp.get(field_name)
+        if isinstance(raw, str):
+            cleaned = raw.strip()
+            if cleaned:
+                return cleaned
+        return None
+
     return Fingerprint(
         name=name,
         slug=slug,
@@ -316,9 +337,12 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
         confidence=confidence,
         m365=m365,
         detections=tuple(valid_detections),
-        provider_group=fp.get("provider_group") if isinstance(fp.get("provider_group"), str) else None,
-        display_group=fp.get("display_group") if isinstance(fp.get("display_group"), str) else None,
+        provider_group=_opt_str("provider_group"),
+        display_group=_opt_str("display_group"),
         match_mode=match_mode,
+        product_family=_opt_str("product_family"),
+        parent_vendor=_opt_str("parent_vendor"),
+        bimi_org=_opt_str("bimi_org"),
     )
 
 

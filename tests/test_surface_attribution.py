@@ -31,7 +31,6 @@ from recon_tool.models import SurfaceAttribution, UnclassifiedCnameChain
 from recon_tool.sources import dns as dns_source
 from recon_tool.sources.dns import DNSSource, _classify_chain
 
-
 # ── cname_target schema ────────────────────────────────────────────────
 
 
@@ -120,8 +119,10 @@ def test_classify_chain_walks_multiple_hops() -> None:
         "cloudflare.net.edge",  # infrastructure match
     ]
     application, infrastructure = _classify_chain(chain, rules)
-    assert application is not None and application.slug == "auth0"
-    assert infrastructure is not None and infrastructure.slug == "cloudflare"
+    assert application is not None
+    assert application.slug == "auth0"
+    assert infrastructure is not None
+    assert infrastructure.slug == "cloudflare"
 
 
 # ── Full DNS source integration ────────────────────────────────────────
@@ -183,7 +184,8 @@ async def test_surface_attribution_does_not_pollute_apex_slugs(mock_resolve):
     result = await DNSSource().lookup("example.com")
     # Surface attribution recorded distinctly:
     matches = [sa for sa in result.surface_attributions if sa.subdomain == "help.example.com"]
-    assert matches and matches[0].primary_slug == "zendesk"
+    assert matches
+    assert matches[0].primary_slug == "zendesk"
     # Apex slugs / services do NOT include the surface-only zendesk attribution:
     assert "zendesk" not in result.detected_slugs
     assert not any("Zendesk" in svc for svc in result.detected_services)

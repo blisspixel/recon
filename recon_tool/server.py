@@ -2216,6 +2216,170 @@ async def cluster_verification_tokens(domains: list[str]) -> str:
     return json_mod.dumps(payload, indent=2)
 
 
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def get_infrastructure_clusters(domain: str) -> str:
+    """Return the v1.8 CT co-occurrence community-detection report for a domain.
+
+    Surfaces the same ``infrastructure_clusters`` envelope that ships in
+    the default ``--json`` output: cluster membership, modularity score,
+    algorithm path, and underlying graph metrics. The report describes
+    observable structure — names that co-occur on the same certificates,
+    grouped by Louvain community detection — never an ownership claim.
+
+    No new network surface: the report was already computed during the
+    last ``lookup_tenant`` (or implicit resolve). This tool just exposes
+    what the deterministic graph pass produced.
+
+    Args:
+        domain: Domain to look up. Will use the existing TTL cache when
+            available; otherwise resolves via the standard pipeline.
+
+    Returns:
+        JSON object matching the ``InfrastructureClusterReport`` schema
+        in ``docs/recon-schema.json``. The ``algorithm`` field reflects
+        which path produced the partition (``louvain`` |
+        ``connected_components`` | ``skipped``); ``skipped`` means the
+        graph was empty or had no edges.
+    """
+    resolved = await _resolve_or_cache(domain)
+    if isinstance(resolved, str):
+        return json_mod.dumps({"error": resolved})
+    info, _results = resolved
+    ic = info.infrastructure_clusters
+    if ic is None:
+        return json_mod.dumps(
+            {
+                "domain": info.queried_domain,
+                "algorithm": "skipped",
+                "modularity": 0.0,
+                "node_count": 0,
+                "edge_count": 0,
+                "clusters": [],
+            },
+            indent=2,
+        )
+    return json_mod.dumps(
+        {
+            "domain": info.queried_domain,
+            "algorithm": ic.algorithm,
+            "modularity": ic.modularity,
+            "node_count": ic.node_count,
+            "edge_count": ic.edge_count,
+            "clusters": [
+                {
+                    "cluster_id": c.cluster_id,
+                    "size": c.size,
+                    "members": list(c.members),
+                    "shared_cert_count": c.shared_cert_count,
+                    "dominant_issuer": c.dominant_issuer,
+                }
+                for c in ic.clusters
+            ],
+        },
+        indent=2,
+    )
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def export_graph(domain: str) -> str:
+    """Return the raw CT co-occurrence graph (nodes + weighted edges).
+
+    Companion to ``get_infrastructure_clusters``: surfaces the underlying
+    graph that the Louvain pass partitioned. Nodes are SAN hostnames;
+    edges carry the shared-cert count between each pair. Useful for
+    Mermaid / GraphViz / CSV rendering pipelines that want to draw the
+    structure directly.
+
+    Edges are sorted by weight descending; both nodes and edges are
+    capped — see ``recon_tool/infra_graph.MAX_GRAPH_NODES`` and
+    ``MAX_EDGES_RETAINED`` for the bounds. ``cluster_assignment`` maps
+    every surfaced node to the cluster id from the same report so
+    downstream tools can colour the graph by community without re-
+    running detection.
+
+    No new network surface — the graph was already built during the
+    last ``lookup_tenant``. Read-only exposure of computed state.
+
+    Args:
+        domain: Domain whose graph to export. Uses the TTL cache when
+            available; otherwise resolves via the standard pipeline.
+
+    Returns:
+        JSON object with ``domain``, ``algorithm`` (mirroring the
+        cluster report), ``node_count``, ``edge_count``, ``nodes`` (a
+        sorted array of hostnames), ``edges`` (array of {source,
+        target, shared_cert_count} records), and ``cluster_assignment``
+        (object mapping each surfaced node to its cluster_id).
+    """
+    resolved = await _resolve_or_cache(domain)
+    if isinstance(resolved, str):
+        return json_mod.dumps({"error": resolved})
+    info, _results = resolved
+    ic = info.infrastructure_clusters
+    if ic is None:
+        return json_mod.dumps(
+            {
+                "domain": info.queried_domain,
+                "algorithm": "skipped",
+                "node_count": 0,
+                "edge_count": 0,
+                "nodes": [],
+                "edges": [],
+                "cluster_assignment": {},
+            },
+            indent=2,
+        )
+
+    cluster_assignment: dict[str, int] = {}
+    for cluster in ic.clusters:
+        for member in cluster.members:
+            cluster_assignment[member] = cluster.cluster_id
+
+    nodes_set: set[str] = set(cluster_assignment)
+    for edge in ic.edges:
+        nodes_set.add(edge.source)
+        nodes_set.add(edge.target)
+    nodes_sorted = sorted(nodes_set)
+
+    return json_mod.dumps(
+        {
+            "domain": info.queried_domain,
+            "algorithm": ic.algorithm,
+            "node_count": ic.node_count,
+            "edge_count": ic.edge_count,
+            "nodes": nodes_sorted,
+            "edges": [
+                {
+                    "source": e.source,
+                    "target": e.target,
+                    "shared_cert_count": e.shared_cert_count,
+                }
+                for e in ic.edges
+            ],
+            "cluster_assignment": cluster_assignment,
+            "disclaimer": (
+                "Graph describes observable certificate SAN co-occurrence. "
+                "Edges are co-issuance evidence, not ownership claims."
+            ),
+        },
+        indent=2,
+    )
+
+
 @mcp.prompt()
 def domain_report(domain: str) -> str:
     """Generate a domain intelligence report.
@@ -2263,7 +2427,7 @@ def _print_mcp_banner() -> None:
         "Listening on stdio transport.",
         f"Loaded {fp_count} fingerprints, {sig_count} signals.",
         "",
-        "Available tools (17 total):",
+        "Available tools (19 total):",
         "  lookup_tenant               Full domain intelligence + tenant details",
         "  analyze_posture             Neutral posture observations (accepts --profile)",
         "  assess_exposure             Security posture score (0–100)",
@@ -2274,6 +2438,8 @@ def _print_mcp_banner() -> None:
         "  explain_signal              Signal trigger conditions + evidence",
         "  test_hypothesis             Evaluate a theory against cached data",
         "  cluster_verification_tokens Cluster domains by shared TXT tokens",
+        "  get_infrastructure_clusters CT co-occurrence community report (v1.8)",
+        "  export_graph                Raw CT co-occurrence graph + cluster map (v1.8)",
         "",
         "MCP server is running and waiting for tool calls from your AI client.",
         "Press Ctrl+C to stop.",

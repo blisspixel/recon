@@ -16,6 +16,7 @@ fingerprints:
   slug: slack
   category: Productivity & Collaboration
   confidence: high
+  parent_vendor: Salesforce
   detections:
   - type: txt
     pattern: ^slack-domain-verification=

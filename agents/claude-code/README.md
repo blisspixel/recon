@@ -5,7 +5,7 @@ This directory packages recon as a [Claude Code plugin](https://docs.claude.com/
 ## What's inside
 
 ```
-claude-code/
+agents/claude-code/
 ├── .claude-plugin/plugin.json   # plugin manifest
 ├── .mcp.json                    # MCP server registration (recon mcp)
 ├── skills/recon/SKILL.md        # skill — recon's voice, workflow patterns, hedging rules
@@ -37,7 +37,7 @@ recon doctor --mcp
 **Local development / testing.** Point Claude Code at this directory directly:
 
 ```bash
-claude --plugin-dir ./claude-code
+claude --plugin-dir ./agents/claude-code
 ```
 
 The plugin loads for that session without going through a marketplace.
@@ -95,8 +95,8 @@ Plugin-bundled MCP servers are auto-approved by Claude Code when the plugin is e
 
 ## What this plugin does *not* do
 
-- It does not change recon's behavior. The MCP server exposed by this plugin is the same `recon mcp` documented in [`docs/mcp.md`](../docs/mcp.md).
+- It does not change recon's behavior. The MCP server exposed by this plugin is the same `recon mcp` documented in [`docs/mcp.md`](../../docs/mcp.md).
 - It does not add new network surface. The skill is instructions only.
 - It does not bundle credentials, API keys, or paid data. recon never has, and never will.
 
-For the full MCP tool reference, per-client config locations beyond Claude Code, and advanced agentic workflows, see [`docs/mcp.md`](../docs/mcp.md).
+For the full MCP tool reference, per-client config locations beyond Claude Code, and advanced agentic workflows, see [`docs/mcp.md`](../../docs/mcp.md). For other AI clients (Cursor, Windsurf, Kiro, VS Code, …), see the sibling folders under [`../`](../).

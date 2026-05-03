@@ -1,6 +1,6 @@
 [project]
 name = "recon-tool"
-version = "1.7.0"
+version = "1.8.0"
 description = "Domain intelligence CLI and MCP server — tech stack, email security, and signal intelligence from DNS."
 requires-python = ">=3.10"
 readme = "README.md"
@@ -30,6 +30,7 @@ dependencies = [
     "pyyaml>=6.0",
     "defusedxml>=0.7",
     "mcp>=1.0",
+    "networkx>=3.0",
 ]
 
 [project.scripts]
@@ -125,6 +126,15 @@ skips = ["B311", "B404", "B603", "B405", "B406"]
 [tool.pyright]
 pythonVersion = "3.10"
 typeCheckingMode = "strict"
+# Resolve imports through the local checkout's editable install in
+# .venv rather than any stale user-site install elsewhere on the
+# system. Without these, ``python -m pyright .`` can pick up a
+# previously-released recon-tool wheel from ~/AppData/Roaming/Python
+# and report phantom "no parameter named X" errors against schema
+# additions that only exist in the working copy.
+venv = ".venv"
+venvPath = "."
+include = ["recon_tool", "tests"]
 # Global reportUnknown* suppressions — needed across multiple files, not just YAML loaders.
 # Root causes: (1) yaml.safe_load returns Any, propagating through fingerprints.py and
 # signals.py; (2) dnspython's type stubs are incomplete (dns.py); (3) urllib.parse.urlparse
@@ -132,6 +142,11 @@ typeCheckingMode = "strict"
 # cli.py, and insights.py. Per-file overrides were evaluated but 7 files are affected —
 # the global suppression is the pragmatic choice until upstream stubs improve.
 reportMissingTypeStubs = false
+# networkx ships its type info via stubs but pyright still warns on
+# "could not be resolved from source" when only the wheel is
+# installed (no source distribution alongside). The stubs are
+# sufficient for our purposes.
+reportMissingModuleSource = false
 reportUnknownMemberType = false
 reportUnknownArgumentType = false
 reportUnknownVariableType = false
