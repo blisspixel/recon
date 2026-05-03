@@ -43,8 +43,15 @@ structure even when individual hops look bespoke. Treating the noisy
 remainder as an inference problem — graph structure, temporal proximity,
 chain motif libraries, vertical baselines — recovers usable defensive
 intelligence that single-hop fingerprinting misses, while staying inside the
-invariants. The "Ideas Worth Prototyping" table below lists the concrete
-extensions, each gated by the same live-validation discipline.
+invariants.
+
+Progress shows up as **multi-signal correlation depth**: `--explain`
+outputs whose evidence DAG references more than one source per
+high-confidence slug. The metric is tracked per release against the private
+corpus (see Success Metrics) and is the lens we use to ask "did the new
+correlation work do something single-source detection could not?". The
+**Build plan** below lists the concrete extensions, each gated by the same
+live-validation discipline.
 
 ## Current Fingerprint Library Assessment
 
@@ -237,9 +244,13 @@ calibration.
   stays small (≤20 nodes per per-domain inference), human-readable, and
   committed as data — never learned weights. Exact inference via variable
   elimination.
-- **Credible intervals replace point scores** in the experimental output
-  path. `PostureObservation` gains a posterior + interval field; the v1.0
-  default JSON shape is untouched.
+- **Calibrated posteriors with explicit passive-ceiling language.** The
+  experimental output path emits a credible interval per slug instead of
+  a point score. `PostureObservation` gains a posterior + interval field;
+  the v1.0 default JSON shape is untouched. Sparse-evidence cases produce
+  wider intervals and surface the passive-observation ceiling directly in
+  the explanation, instead of letting a hedged-but-confident-looking
+  number imply more than the evidence supports.
 - **Cross-source conflict resolution feeding posterior.** Conflicts
   surfaced in v1.7 become probabilistic dampeners on the affected slugs.
 - **Feedback-driven priors (local only).** Validation runs can update a
