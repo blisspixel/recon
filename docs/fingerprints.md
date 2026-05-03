@@ -92,6 +92,11 @@ detections on domains with partial evidence.
 
 ## Testing a new fingerprint
 
+Testing new fingerprints is part of the broader correlation engine work
+described in [correlation.md](correlation.md). Every new detection rule is
+evaluated for how much additional mutual information it extracts on
+hardened targets without violating hedging or provenance invariants.
+
 Before committing a new fingerprint to the built-in set:
 
 1. Validate: `python scripts/validate_fingerprint.py ~/.recon/fingerprints.yaml`
@@ -125,6 +130,11 @@ Patterns that have caused bad detections and should not be repeated:
   is not enough; recon intentionally avoids generic service-name matching.
 - **Shared CDN hostnames.** A CDN edge proves the edge provider, not the app
   running behind it.
+- **Patterns that would collapse sparse evidence into confident-looking
+  claims.** See the hardened-target signal recovery section in
+  [correlation.md](correlation.md) for the full reasoning — when a target
+  publishes very little, the right answer is wider hedges, not a tighter
+  pattern that pretends to know more.
 
 ## Email security score
 

@@ -232,6 +232,12 @@ structure and ecosystem views.
   `absence.py` to flag deviations from per-profile expectations
   (e.g. fintech profile expects WAF motif; absence is observable, not a
   verdict).
+- **Graph export MCP tool.** Add `get_infrastructure_clusters` (and an
+  `export_graph` companion for the raw co-occurrence edges) that returns
+  the already-computed cluster output and modularity scores. Read-only,
+  no new network surface — just exposes what the deterministic graph pass
+  produced so agents and downstream tools can reason over the structure
+  without re-deriving it.
 
 **Validation gate** — full corpus scan with `--include-ecosystem`;
 cluster modularity scores tracked across the run and compared to v1.7.0
@@ -283,14 +289,23 @@ monthly cadence on a large private corpus indefinitely.
   proved stable into the v1.0+ schema contract, with the `unclassified_*`
   and Bayesian fields explicitly versioned.
 - **MCP delta helper.** Compares supplied or cached JSON only; no hidden
-  network. The first first-class delta surface usable by AI agents.
+  network. The first first-class delta surface usable by AI agents. An
+  optional `include_fusion` flag surfaces v1.9 posterior shifts (slug
+  posteriors and credible-interval changes) alongside the deterministic
+  diff, so agents can ask "did the probability mass move?" not just "did
+  a slug appear or disappear?".
 - **Catalog metadata push.** Description coverage > 80%, reference
   coverage > 25%, deliberate non-default weights documented per
   fingerprint. The catalog becomes contributor-grade.
 - **Documentation snapshot.** [`correlation.md`](correlation.md) (currently a
   living draft) will be promoted to a polished reference describing the
   full inference pipeline (rules → graph → Bayesian) with worked examples
-  and the language hedge each layer applies.
+  and the language hedge each layer applies. Includes a small
+  **defense ↔ correlation mapping** table so a defender can read across
+  from "what I'm worried about" (e.g. shadow infrastructure, lookalike
+  domains, sovereignty drift, supply-chain motif change) to "which
+  correlation layer surfaces it" (rules, wildcard SAN siblings, temporal
+  bursts, chain motifs, community detection, posterior shift).
 
 **Validation gate** — final corpus run validating end-to-end across all
 layers, with the corpus expanded to ≥10k domains where feasible. Trend

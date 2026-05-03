@@ -131,7 +131,7 @@ are not guaranteed.
 
 | Surface | Introduced | Notes |
 |---|---|---|
-| `--fusion` CLI flag | v0.11 | Opt-in Bayesian fusion layer. |
+| `--fusion` CLI flag | v0.11 | Opt-in Bayesian fusion layer. See [correlation.md § 4.8](correlation.md#48-bayesian-network-fusion-layer-v190-experimental) for the network design and calibration discipline. |
 | `slug_confidences` field on TenantInfo / JSON output | v0.11 | Populated only when `--fusion` is set. Empty list otherwise. Algorithm, priors, and field shape may change. |
 
 ---

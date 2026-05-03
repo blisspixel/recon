@@ -33,6 +33,12 @@ gap as a known unknown.
   pointing to a shared CDN and no SaaS verification tokens are published,
   there is nothing to detect.
 
+See [correlation.md](correlation.md) for how the planned graph, temporal,
+and Bayesian layers (v1.7–v1.9) squeeze more usable defensive intelligence
+from these minimal footprints — wildcard SAN siblings, CT issuance bursts,
+and chain motifs all recover signal that single-record fingerprinting
+cannot.
+
 ### Internal-only services
 
 - **Private SSO** (on-prem ADFS without public autodiscover, internal CAS,
