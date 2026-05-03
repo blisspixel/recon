@@ -143,20 +143,159 @@ These are directional measures, not product OKRs:
   entropy reduction (or modularity score) per domain on the private corpus,
   tracked across releases. Trend matters more than absolute number.
 
-## Next Work
+## Build plan
 
-| Lane | Status | Next concrete work | Done when |
-|---|---|---|---|
-| Live validation | Active | Run the private corpus through `validation/scan.py` on a regular cadence (weekly during active iteration, monthly otherwise). Each scan produces `results.ndjson`, `gaps.json`, `candidates.json`, and `diff.json` against the prior run. Triage candidates with the `/recon-fingerprint-triage` skill; turn high-confidence findings into `cname_target` (or other) rules. | Surfaced candidates either land in a fingerprint YAML with a corpus-delta note, or are explicitly recorded as out-of-scope (intra-org, niche one-off, can't-tell). |
-| Fingerprint precision | Active | Walk the multi-detection backlog with the audit tooling, prioritizing identity, security, email, and infrastructure. Keep `tighten_patterns` at zero. | A small batch of high-value fingerprints per release is converted to `match_mode: all`, tightened, or explicitly kept `any` with rationale and before/after validation notes. |
-| Sparse-result diagnosis | Active | Keep sparse public-signal output clear and tied to [weak-areas.md](weak-areas.md); add weak-area notes when fingerprint work exposes common false negatives. | Thin results explain the likely passive-observation ceiling instead of looking like a broken run, and every sparse class has a docs anchor or validation note. |
-| Correlation depth | Planned | Promote one item from the "Ideas Worth Prototyping" table per release window. Start with the low-effort/high-validation entries (wildcard SAN siblings, temporal CT bursts, motif library). Each promotion follows the implementation-discipline checklist below. | The promoted feature ships as a YAML schema extension with corpus-delta evidence, hedged output language, and full DAG provenance. |
-| Release reliability | Active | Keep CI and release workflows aligned; release audits should inspect runtime dependencies, not the audit toolchain. | A tag-triggered release can run without diverging from main CI assumptions. |
-| Docs cohesion | Active | Keep root docs conventional, project docs indexed, and counts/version references minimal outside this assessment. Add practical JSON/MCP examples for security review, compliance review, and agent analysis. | `docs/README.md` is the entry point, roadmap does not duplicate the changelog, and integration examples use only documented stable fields or clearly marked experimental fields. |
+The plan is grouped into a small number of meaningful releases, not a long
+trail of patches. Each release ships as a complete unit: a coherent feature
+set, a catalog growth pass, and a private-corpus validation run that proves
+the new behavior on real targets. Build order respects dependencies — the
+graph layer needs the signal coverage that comes before it; the
+probabilistic layer needs the signals to feed posteriors. Patches happen
+when something actually breaks, not as a way to chunk work.
+
+Standing work that runs alongside every release:
+
+- **Catalog growth.** Each release window includes at least one private-
+  corpus scan with `validation/scan.py` against a 4k+ domain library,
+  candidate triage via the `/recon-fingerprint-triage` skill, and the
+  resulting `cname_target` (or other) rules merged with corpus-delta notes.
+- **Fingerprint precision.** Walk the multi-detection backlog one batch
+  per release; prioritize identity, security, email, infrastructure where
+  false positives have the highest downstream cost.
+- **Sparse-result diagnosis.** Every new feature documents its
+  passive-observation ceiling. When the rule does not fire, output stays
+  hedged and the user understands why.
+- **Release and docs reliability.** CI gates cover the same checks as
+  release; counts and version references stay tight to this file.
+
+### v1.7.0 — Hardened-target signal recovery
+
+Squeeze more out of CT logs and resolution chains, and surface what we
+already track but don't expose. Everything in this release lands as a YAML
+data file plus minimal engine extension.
+
+- **Wildcard SAN sibling expansion.** When `*.example.com` appears in a
+  cert, harvest every other SAN from the same cert as a candidate sibling.
+  No new network surface — uses the existing CT response and DNS resolver.
+- **Temporal CT issuance bursts.** Use the `not_before` timestamps already
+  in the CT response. Co-issued subdomains within a short window become
+  `temporal_motif: deployment_burst` evidence. Output uses relative deltas
+  and an explicit window; no absolute "same owner" claims.
+- **CNAME / NS chain motif library (`motifs.yaml`).** Data file describing
+  recurring proxy patterns (`cloudflare → akamai → custom-origin`,
+  `fastly → azure`, etc.). Chain length capped at 4. Pattern matching
+  hooks into the existing chain parser.
+- **Cross-source evidence conflict surfacing.** `MergeConflicts` already
+  records contradictions between sources. Expose them as a top-level
+  `evidence_conflicts` array in `--json` and a section in `--explain`.
+
+**Validation gate** — full private corpus scan after merge; gaps and
+candidates archived under `validation/runs-private/v170/`. Sparse-result
+language audit: every new rule has a documented "does not fire when…"
+case alongside the positive case.
+
+### v1.8.0 — Graph correlation
+
+Build the structural layer. The wildcard-sibling and burst-detection work
+in v1.7 produces edge-quality CT data; v1.8 turns it into community
+structure and ecosystem views.
+
+- **CT co-occurrence graph + community detection.** Build an in-memory
+  graph from shared cert / issuer + temporal-window evidence. Run Leiden
+  community detection (pure-Python `networkx`, new dependency). Output a
+  top-level `infrastructure_clusters` array with modularity score and per-
+  cluster edge evidence. Cap graph size at ~500 nodes per cluster pass
+  with deterministic fallback to existing simple clustering.
+- **Fingerprint relationship metadata.** Schema extension allowing each
+  fingerprint to declare relationship hints (product family, parent
+  vendor, BIMI org). Drives ecosystem aggregation in batch mode without
+  asserting ownership.
+- **Hypergraph ecosystem view (batch-only).** Behind
+  `--include-ecosystem`. Hyperedges: shared issuer + shared fingerprint
+  set + shared BIMI VMC organization. Surfaces multi-brand orgs that
+  single-domain views miss.
+- **Vertical-baseline anomaly rules.** Extend `verticals.yaml` and
+  `absence.py` to flag deviations from per-profile expectations
+  (e.g. fintech profile expects WAF motif; absence is observable, not a
+  verdict).
+
+**Validation gate** — full corpus scan with `--include-ecosystem`;
+cluster modularity scores tracked across the run and compared to v1.7.0
+baseline. Anomaly rules tested against vertical-segmented subsets of the
+corpus to confirm sensitivity without over-alerting.
+
+### v1.9.0 — Probabilistic fusion (experimental)
+
+Layer Bayesian inference on top of the deterministic engine. Existing
+deterministic rules still run first; the Bayesian layer updates posteriors
+and adds credible intervals. Gate behind the existing `--fusion` flag and
+mark output EXPERIMENTAL until at least two corpus runs validate
+calibration.
+
+- **Bayesian network in `bayesian_network.yaml`.** Nodes are fingerprint
+  slugs and signals; edges are conditional probability tables. Network
+  stays small (≤20 nodes per per-domain inference), human-readable, and
+  committed as data — never learned weights. Exact inference via variable
+  elimination.
+- **Credible intervals replace point scores** in the experimental output
+  path. `PostureObservation` gains a posterior + interval field; the v1.0
+  default JSON shape is untouched.
+- **Cross-source conflict resolution feeding posterior.** Conflicts
+  surfaced in v1.7 become probabilistic dampeners on the affected slugs.
+- **Feedback-driven priors (local only).** Validation runs can update a
+  local prior file in `~/.recon/priors.yaml`; never shared, never shipped
+  in the package, never made into a remote service.
+
+**Validation gate** — corpus entropy reduction tracked across the v1.7,
+v1.8, and v1.9 runs. Calibration check: high-posterior predictions on the
+corpus should match observable evidence; intervals should cover the
+sparse-evidence cases without collapsing on dense-evidence ones.
+
+### v2.0.0 — Maturity
+
+Lock in what the previous releases proved. Promote stable experimental
+fields to the v1.0 schema (or set them as a v2.0 contract); make the
+catalog community-PR-friendly; ensure the framework is suitable for
+monthly cadence on a large private corpus indefinitely.
+
+- **BIMI VMC legal-name clustering.** Pairs with the hypergraph view from
+  v1.8; promote to general availability with a corpus-delta showing real
+  multi-brand identification.
+- **Schema lock for experimental fields.** Move the v1.7-v1.9 fields that
+  proved stable into the v1.0+ schema contract, with the `unclassified_*`
+  and Bayesian fields explicitly versioned.
+- **MCP delta helper.** Compares supplied or cached JSON only; no hidden
+  network. The first first-class delta surface usable by AI agents.
+- **Catalog metadata push.** Description coverage > 80%, reference
+  coverage > 25%, deliberate non-default weights documented per
+  fingerprint. The catalog becomes contributor-grade.
+- **Documentation snapshot.** `docs/correlation.md` describes the full
+  inference pipeline (rules → graph → Bayesian) with worked examples and
+  the language hedge each layer applies. Replaces ad-hoc notes scattered
+  across the codebase.
+
+**Validation gate** — final corpus run validating end-to-end across all
+layers, with the corpus expanded to ≥10k domains where feasible. Trend
+metrics across v1.6 → v2.0 demonstrate the correlation engine got better
+without overclaiming.
+
+### Backlog (after v2.0)
+
+Items that are real but speculative enough to not commit a slot in the
+plan above. Each remains gated by the same invariants and validation
+discipline.
+
+- CT organization-name search (opt-in, exact-match only).
+- Wayback Machine temporal enrichment (new public network surface; opt-in).
+- Deeper hardening simulation UX (high overreach risk).
+- Anomaly detection on issuer-mix changes over time.
+- Per-domain inference cache for batch-mode reruns.
 
 ## Good First Roadmap Items
 
-These are narrow, useful, and aligned with the product shape:
+Narrow, useful, aligned with the product shape. Each one is a single PR
+with a corpus-delta or audit note. None of these block a release; they
+are picked up alongside the build plan above.
 
 - Convert one ambiguous fingerprint to `match_mode: all`, with before/after
   evidence and a regression domain in local validation notes.
@@ -183,31 +322,6 @@ These are narrow, useful, and aligned with the product shape:
 - Implement one Bayesian CPT in a draft `bayesian_network.yaml` covering
   email security + M365 federation, with the schema marked EXPERIMENTAL and
   the output gated behind the existing `--fusion` flag.
-
-## Ideas Worth Prototyping
-
-These are not commitments. Each must clear the invariants above and show real
-validation value (corpus delta + schema validation + sparse-result language
-audit) before becoming scoped work. Items higher in the table are the
-near-term candidates; items lower are speculative.
-
-| Idea | Interest | Validation value | Effort | Main risk |
-|---|---:|---:|---:|---|
-| Wildcard SAN sibling expansion | High | High | Low | crt.sh response shape variability; siblings must stay hedged as "issued together, ownership not implied". |
-| Temporal CT issuance burst detection | High | High | Low | Clock skew on crt.sh timestamps; output must use relative deltas with explicit window, never absolute "same owner" verdicts. |
-| CNAME / NS chain motif library (`motifs.yaml`) | High | High | Low | Motif explosion if cap is removed; constrain to chain length ≤ 4 and require live corpus delta before merge. |
-| Cross-source evidence conflict surfacing | Medium | High | Low | Already partially tracked in `MergeConflicts`; needs `--explain` and JSON exposure plus a docs note on what conflicts mean. |
-| CT co-occurrence graph + community detection | High | High | Medium | Graph size on large batches; cap at ~500 nodes per cluster pass with deterministic fallback to existing simple clustering. New `networkx` dep is acceptable (pure Python, widely vetted). |
-| Vertical-baseline anomaly rules | Medium | High | Low | Easy to drift into recommendation overreach; rules must remain neutral observations tied to existing `verticals.yaml` profiles. |
-| Bayesian fusion (small CPTs in YAML, credible intervals) | Medium | High | Medium | Experimental field shape must not destabilize the v1.0 JSON contract; ship behind `--fusion` (already exists) and gate output as EXPERIMENTAL. CPTs stay small (≤20 nodes), human-readable, and committed as data files — never learned weights. |
-| Hypergraph ecosystem view (batch-only) | High | High | Medium | JSON size; surface only behind `--include-ecosystem`. Hyperedges describe shared issuer + shared fingerprint set + shared BIMI VMC organization — observations, not ownership. |
-| BIMI VMC legal-name clustering | High | High | Medium | Low coverage; must stay hedged as "possible relationship". Pairs naturally with the hypergraph view above. |
-| Fingerprint relationship metadata | Medium | High | Medium | Requires a stable-schema proposal; relationship edges must describe observations, not ownership verdicts. Subsumes part of the motif and co-occurrence work. |
-| CT organization-name search | Medium | Medium | Medium | crt.sh reliability and stale certificate noise; should be exact and opt-in. |
-| Feedback-driven posterior tuning | Medium | Medium | Medium | Local-only design must not become a shared reputation database. Pairs with the Bayesian layer; never ship learned weights, only the corpus that informed local priors. |
-| MCP delta helper | Medium | Medium | Medium | Must compare supplied or cached JSON only; no hidden network fan-out. |
-| Wayback Machine temporal enrichment | Medium | Medium | Medium | Adds a new public network surface and historical-data ambiguity; must be opt-in. |
-| Deeper hardening simulation UX | Low | Low | High | Easy to drift from observation into recommendation overreach. |
 
 ## Opportunistic Refactoring
 
