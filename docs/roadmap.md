@@ -280,10 +280,11 @@ monthly cadence on a large private corpus indefinitely.
 - **Catalog metadata push.** Description coverage > 80%, reference
   coverage > 25%, deliberate non-default weights documented per
   fingerprint. The catalog becomes contributor-grade.
-- **Documentation snapshot.** `docs/correlation.md` describes the full
-  inference pipeline (rules → graph → Bayesian) with worked examples and
-  the language hedge each layer applies. Replaces ad-hoc notes scattered
-  across the codebase.
+- **Documentation snapshot.** [`docs/correlation.md`](correlation.md) (seeded
+  in the v1.6.1 era as a working draft) describes the full inference
+  pipeline (rules → graph → Bayesian) with worked examples and the
+  language hedge each layer applies. v2.0 promotes the draft to the
+  polished snapshot once each layer above has shipped.
 
 **Validation gate** — final corpus run validating end-to-end across all
 layers, with the corpus expanded to ≥10k domains where feasible. Trend

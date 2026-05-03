@@ -9,6 +9,7 @@ tooling expects them there: `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
 | Need | Read |
 |---|---|
 | Product scope and next work | [roadmap.md](roadmap.md) |
+| Why correlation works the way it does | [correlation.md](correlation.md) |
 | Known passive-collection limits | [limitations.md](limitations.md) |
 | Sparse or thin-looking results | [weak-areas.md](weak-areas.md) |
 | CLI/API stability guarantees | [stability.md](stability.md) |
