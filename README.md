@@ -85,12 +85,6 @@ See [docs/README.md](docs/README.md) for the organized documentation index.
 
 ## MCP Server
 
-> [!WARNING]
-> `recon mcp` runs with the privileges of the calling user or editor process.
-> Treat connected AI agents as untrusted input. Start with manual approvals,
-> keep `autoApprove` empty by default, and prefer an isolated workspace or
-> container for production agent use.
-
 recon runs as an MCP server for Claude, Cursor, VS Code, ChatGPT, or any MCP client. The Model Context Protocol lets AI agents call tools like recon directly from your chat.
 
 ```json

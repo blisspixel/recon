@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-05-03
+
+**Patch release - streaming batch + 26 new fingerprints from a 4,270-domain
+corpus run.** Re-ran the discovery loop on a 4.3x-larger private corpus
+(~4,270 domains across 5 geos and 9 verticals), surfaced 1,620 unclassified
+suffixes, triaged to 117 candidates, added 26 new ``cname_target``
+fingerprints. Also fixes the "no visible progress on big batches" UX gap
+discovered during the corpus run.
+
+### Added
+
+- ``recon batch --ndjson`` — streams one JSON object per line, flushed as
+  each domain completes. Eliminates the buffer-everything-then-emit
+  pattern of ``--json``. Recommended for any batch over a few hundred
+  domains; gives visible progress and constant memory use. Mutually
+  exclusive with ``--json`` / ``--md`` / ``--csv``. Skips post-batch
+  enrichment (token clustering, tenant peers) because those need all
+  results before any can emit; ``--json`` keeps the enrichment for
+  smaller batches.
+- ``validation/find_gaps.py`` and ``validation/diff_runs.py`` auto-detect
+  input shape: JSON array, single JSON object, or NDJSON. Both also pick
+  up ``*.ndjson`` files when scanning a directory.
+- ``validation/scan.py`` defaults to NDJSON now (writes ``results.ndjson``);
+  ``--json-array`` opts back into the legacy single-array shape.
+- 26 new ``cname_target`` fingerprints from the corpus run:
+  Paradox.ai Olivia, Jibe Apply, Career.page, Happydance Careers,
+  EasyRedir, SAP Customer Data Cloud (Gigya), F5 Distributed Cloud
+  (Volterra), Radware Cloud, ForgeRock Identity Cloud, IO River,
+  Section.io, Azion Edge, Acquia Cloud, Pagely, Outreach, Zuddl,
+  Postman Hosted Status, Site24x7, Salesforce Marketing Cloud
+  (exacttarget.com / sfmc-content.com extension), AWS S3 Static
+  Website, AWS EC2, Microsoft 365 China (svc.sovcloud.cn extension),
+  Webflow proxy-ssl-geo extension, PagerDuty internal status page.
+  Catalogue: 163 cname_target rules across ~95 unique slugs.
+
+### Changed
+
+- README MCP-Server section trimmed: the prominent ``> [!WARNING]``
+  block was relocated. The full safety details still live in
+  ``docs/mcp.md``; the soft "keep approvals manual" line below the
+  config snippet remains in the README.
+
+### Notes
+
+- The streaming ``--ndjson`` mode trades batch-wide enrichment
+  (``shared_verification_tokens``, ``tenant_id_peers``,
+  ``display_name_peers``) for memory bound and visible progress. If you
+  rely on cluster fields, use ``--json`` for batches that fit in memory.
+- The corpus and run outputs stay private under
+  ``validation/corpus-private/`` and ``validation/runs-private/``
+  (gitignored). Only the generic patterns surfaced for triage become
+  catalog additions.
+
 ## [1.6.0] - 2026-05-03
 
 **Minor release - catalog grown from real validation.** Used the

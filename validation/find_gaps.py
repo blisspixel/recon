@@ -50,35 +50,79 @@ def _is_intra_org(apex: str, terminal: str) -> bool:
     return terminal == apex or terminal.endswith("." + apex)
 
 
+def _iter_json_payloads(path: Path) -> list[dict[str, Any]]:
+    """Read a file as a JSON array, NDJSON, or single JSON object.
+
+    Auto-detects shape by sniffing the first non-whitespace character:
+
+    * ``[`` — full-file JSON parse, expect a list of dicts.
+    * ``{`` (one file-level object) — return as a 1-element list.
+    * Any other non-empty content is treated as NDJSON (one JSON object
+      per line). Blank lines and parse failures are skipped with a stderr
+      warning so a single malformed line doesn't kill the run.
+
+    Empty files return an empty list.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        print(f"warning: cannot read {path}: {exc}", file=sys.stderr)
+        return []
+    stripped = text.lstrip()
+    if not stripped:
+        return []
+    if stripped[0] == "[":
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as exc:
+            print(f"warning: invalid JSON array in {path}: {exc}", file=sys.stderr)
+            return []
+        return [d for d in data if isinstance(d, dict)] if isinstance(data, list) else []
+    if stripped[0] == "{":
+        # Could be a single JSON object (one domain) OR NDJSON (one per line).
+        # Try whole-file parse first; fall back to line-by-line.
+        try:
+            data = json.loads(text)
+            if isinstance(data, dict):
+                return [data]
+        except json.JSONDecodeError:
+            pass
+    out: list[dict[str, Any]] = []
+    for line_num, raw in enumerate(text.splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError as exc:
+            print(f"warning: skipping malformed line {line_num} in {path}: {exc}", file=sys.stderr)
+            continue
+        if isinstance(entry, dict):
+            out.append(entry)
+    return out
+
+
 def _load_inputs(path: Path) -> list[tuple[str, list[Any]]]:
-    """Return ``[(apex, unclassified_list), ...]`` from a file or directory."""
+    """Return ``[(apex, unclassified_list), ...]`` from a file or directory.
+
+    Accepts JSON arrays (legacy ``recon batch --json``), NDJSON streams (the
+    newer ``recon batch --ndjson``), single-object JSON files (one domain),
+    or directories of any of the above.
+    """
     files: list[Path] = (
         [Path(p) for p in sorted(glob.glob(str(path / "*.json")))]
+        + [Path(p) for p in sorted(glob.glob(str(path / "*.ndjson")))]
         if path.is_dir()
         else [path]
     )
     out: list[tuple[str, list[Any]]] = []
     for fp in files:
-        try:
-            data = json.loads(fp.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError) as exc:
-            print(f"warning: skipping {fp}: {exc}", file=sys.stderr)
-            continue
-        if isinstance(data, dict):
-            apex = str(data.get("queried_domain", fp.stem))
-            unclass = data.get("unclassified_cname_chains", [])
+        for entry in _iter_json_payloads(fp):
+            apex = str(entry.get("queried_domain", fp.stem))
+            unclass = entry.get("unclassified_cname_chains", [])
             if not isinstance(unclass, list):
                 unclass = []
             out.append((apex, unclass))
-        elif isinstance(data, list):
-            # Batch output shape: a list of per-domain dicts.
-            for entry in data:
-                if not isinstance(entry, dict):
-                    continue
-                apex = str(entry.get("queried_domain", ""))
-                unclass = entry.get("unclassified_cname_chains", [])
-                if isinstance(unclass, list):
-                    out.append((apex, unclass))
     return out
 
 

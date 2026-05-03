@@ -644,6 +644,256 @@ fingerprints:
     tier: infrastructure
     description: AWS Network/Application Load Balancer regional endpoints
 
+# ── New candidates from the v1.6.1 expanded-corpus run ───────────────────
+
+- name: Paradox Olivia
+  slug: paradox-ai
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: sites.paradox.ai
+    tier: application
+    description: Paradox.ai careers chatbot custom domain (Olivia)
+
+- name: Jibe Apply
+  slug: jibe
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: jibeapply.com
+    tier: application
+    description: Jibe / iCIMS Apply careers landing CNAME
+
+- name: Career Page
+  slug: career-page
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: career.page
+    tier: application
+    description: Career.page hosted careers site
+
+- name: Happydance Careers
+  slug: happydance
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: happydance.website
+    tier: application
+    description: Happydance careers platform CNAME
+
+- name: EasyRedir
+  slug: easyredir
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: easyredir.net
+    tier: application
+    description: EasyRedir managed URL redirects
+
+- name: SAP Customer Data Cloud (Gigya)
+  slug: gigya
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: gigya.com
+    tier: application
+    description: SAP Customer Data Cloud (formerly Gigya) hosted endpoint
+
+- name: F5 Distributed Cloud
+  slug: f5-xc
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: vh.ves.io
+    tier: infrastructure
+    description: F5 Distributed Cloud (Volterra) custom domain delegation
+
+- name: Radware Cloud
+  slug: radware-cloud
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: radwarecloud.net
+    tier: infrastructure
+    description: Radware Cloud WAF / DDoS protection custom domain
+
+- name: ForgeRock Identity Cloud
+  slug: forgerock
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: forgerock.io
+    tier: application
+    description: ForgeRock Identity Cloud tenant CNAME
+
+- name: IO River
+  slug: ioriver
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: ioriveredge.net
+    tier: infrastructure
+    description: IO River multi-CDN edge platform
+
+- name: Section.io
+  slug: section-io
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: ep.section.io
+    tier: infrastructure
+    description: Section.io edge compute / CDN endpoint
+
+- name: Azion Edge
+  slug: azion
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: azionedge.net
+    tier: infrastructure
+    description: Azion edge compute platform
+
+- name: Acquia Cloud
+  slug: acquia
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: acquia-sites.com
+    tier: application
+    description: Acquia Cloud Drupal hosting
+
+- name: Pagely
+  slug: pagely
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: pagelyhosting.com
+    tier: application
+    description: Pagely managed WordPress hosting
+
+- name: Outreach
+  slug: outreach
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: portal.outreach.io
+    tier: application
+    description: Outreach sales engagement custom subdomain
+
+- name: Zuddl
+  slug: zuddl
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: whitelabel.zuddl.com
+    tier: application
+    description: Zuddl events platform whitelabel custom domain
+
+- name: Postman Hosted Status
+  slug: postman-hosted
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: phs.getpostman.com
+    tier: application
+    description: Postman hosted status pages
+
+- name: Site24x7
+  slug: site24x7
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: site24x7sp.com
+    tier: application
+    description: Site24x7 hosted public status pages
+
+- name: Salesforce Marketing Cloud
+  slug: salesforce-mc
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: exacttarget.com
+    tier: application
+    description: SFMC ExactTarget legacy zone (s7/s10/s11/etc.)
+  - type: cname_target
+    pattern: sfmc-content.com
+    tier: application
+    description: SFMC content delivery zone (cp-sap, etc.)
+
+- name: AWS S3
+  slug: aws-s3
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: s3-website
+    tier: infrastructure
+    description: AWS S3 static-website hosting (any region)
+
+- name: AWS EC2
+  slug: aws-ec2
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: compute-1.amazonaws.com
+    tier: infrastructure
+    description: AWS EC2 us-east-1 default zone (legacy)
+  - type: cname_target
+    pattern: compute.amazonaws.com
+    tier: infrastructure
+    description: AWS EC2 regional zones
+
+- name: Microsoft 365
+  slug: microsoft365
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: svc.sovcloud.cn
+    tier: application
+    description: Microsoft 365 China (operated by 21Vianet) sovereign zone
+
+- name: Webflow
+  slug: webflow
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: proxy-ssl-geo
+    tier: application
+    description: Webflow proxy-ssl-geo custom domain CNAME
+
+- name: PagerDuty
+  slug: pagerduty
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: pdint.net
+    tier: application
+    description: PagerDuty internal status / incident pages
+
 - name: Fly.io
   slug: flyio
   category: Infrastructure
