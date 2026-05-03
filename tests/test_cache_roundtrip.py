@@ -370,3 +370,77 @@ class TestDictShape:
 
 # Needed for os.utime in test_get_stale_returns_none
 import time
+
+# ── v1.8.1: chain_motifs + v1.7 cert_summary fields round-trip ────────
+
+
+class TestChainMotifsRoundTrip:
+    """v1.8.1 regression — pre-fix the cache silently dropped
+    ``chain_motifs`` and the v1.7 ``cert_summary`` extensions
+    (``wildcard_sibling_clusters``, ``deployment_bursts``). A cached
+    lookup served zero motifs even when the original resolve produced
+    matches, which is what masked the v1.8 motif library's coverage
+    gap during the deep-dive validation.
+    """
+
+    def test_chain_motifs_round_trip(self) -> None:
+        from dataclasses import replace
+
+        from recon_tool.cache import tenant_info_from_dict, tenant_info_to_dict
+        from recon_tool.models import ChainMotifObservation
+
+        info = replace(
+            _complete_info(),
+            chain_motifs=(
+                ChainMotifObservation(
+                    motif_name="tm_to_azurefd",
+                    display_name="Azure Traffic Manager → Azure Front Door",
+                    confidence="medium",
+                    subdomain="api.example.com",
+                    chain=("foo.trafficmanager.net", "bar.azurefd.net"),
+                ),
+            ),
+        )
+        restored = tenant_info_from_dict(tenant_info_to_dict(info))
+        assert len(restored.chain_motifs) == 1
+        assert restored.chain_motifs[0].motif_name == "tm_to_azurefd"
+        assert restored.chain_motifs[0].chain == (
+            "foo.trafficmanager.net",
+            "bar.azurefd.net",
+        )
+
+    def test_v17_cert_summary_extensions_round_trip(self) -> None:
+        from dataclasses import replace
+
+        from recon_tool.cache import tenant_info_from_dict, tenant_info_to_dict
+        from recon_tool.models import CertBurst, CertSummary
+
+        info = replace(
+            _complete_info(),
+            cert_summary=CertSummary(
+                cert_count=10,
+                issuer_diversity=2,
+                issuance_velocity=5,
+                newest_cert_age_days=1,
+                oldest_cert_age_days=200,
+                top_issuers=("DigiCert",),
+                wildcard_sibling_clusters=(("a.example.com", "b.example.com"),),
+                deployment_bursts=(
+                    CertBurst(
+                        window_start="2025-04-01T00:00:00Z",
+                        window_end="2025-04-01T00:00:30Z",
+                        span_seconds=30,
+                        names=("c.example.com", "d.example.com", "e.example.com"),
+                    ),
+                ),
+            ),
+        )
+        restored = tenant_info_from_dict(tenant_info_to_dict(info))
+        assert restored.cert_summary is not None
+        assert restored.cert_summary.wildcard_sibling_clusters == (
+            ("a.example.com", "b.example.com"),
+        )
+        assert len(restored.cert_summary.deployment_bursts) == 1
+        burst = restored.cert_summary.deployment_bursts[0]
+        assert burst.span_seconds == 30
+        assert "c.example.com" in burst.names

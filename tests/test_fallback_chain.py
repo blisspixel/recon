@@ -188,3 +188,103 @@ class TestFallbackChain:
 
         assert ctx.cert_summary is mock_summary
         assert len(ctx.degraded_sources) == 0
+
+    @pytest.mark.asyncio
+    async def test_empty_providers_falls_through_to_ct_cache(self, tmp_path, monkeypatch):
+        """v1.8.1 regression — empty-but-not-error provider responses must
+        not block the CT cache fallback.
+
+        CertSpotter rate-limited responses look like a successful empty
+        result (HTTP 200 with no issuances). Before v1.8.1, the loop in
+        ``_detect_cert_intel`` returned on any successful response, so
+        the CT cache fallback never fired and ``cert_summary`` stayed
+        None even when a populated cache entry existed. The 10-domain
+        validation dive found 7/10 targets in this state.
+        """
+        # Point the CT cache at a tmp dir and seed it.
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
+        from recon_tool.ct_cache import ct_cache_put
+
+        cached_summary = CertSummary(
+            cert_count=42, issuer_diversity=2, issuance_velocity=5,
+            newest_cert_age_days=1, oldest_cert_age_days=120,
+            top_issuers=("DigiCert",),
+        )
+        ct_cache_put("example.com", ["api.example.com", "auth.example.com"],
+                     cached_summary, "certspotter")
+
+        # Both providers return empty success (no exception, no data).
+        mock_crtsh = MagicMock()
+        mock_crtsh.name = "crt.sh"
+
+        async def _crtsh_empty(domain):
+            return [], None, None
+
+        mock_crtsh.query = _crtsh_empty
+
+        mock_cs = MagicMock()
+        mock_cs.name = "certspotter"
+
+        async def _cs_empty(domain):
+            return [], None, None
+
+        mock_cs.query = _cs_empty
+
+        with (
+            patch("recon_tool.sources.dns.CrtshProvider", return_value=mock_crtsh),
+            patch("recon_tool.sources.dns.CertSpotterProvider", return_value=mock_cs),
+        ):
+            ctx = _DetectionCtx()
+            await _detect_cert_intel(ctx, "example.com")
+
+        # Cache fallback must have populated the result. Round-trip
+        # through the cache JSON serialiser produces an equal-but-
+        # not-identical CertSummary instance.
+        assert ctx.cert_summary == cached_summary
+        assert "api.example.com" in ctx.related_domains
+        assert ctx.ct_subdomain_count == 2
+        assert ctx.ct_cache_age_days == 0  # just-cached
+        # Soft-failure attribution: prefer the live provider name we
+        # actually called over the historical cache provider, so the
+        # panel reflects the current live attempt.
+        assert ctx.ct_provider_used == "crt.sh (cached)"
+
+    @pytest.mark.asyncio
+    async def test_empty_providers_no_cache_records_soft_attribution(
+        self, tmp_path, monkeypatch
+    ):
+        """v1.8.1 — when all providers return empty AND no cache exists,
+        the panel still attributes to the first provider that responded.
+        Better than leaving ct_provider_used unset (which would suggest
+        no provider was tried)."""
+        # Isolate from any real ~/.recon/ct-cache/example.com.json that
+        # may exist from prior runs.
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
+
+        mock_crtsh = MagicMock()
+        mock_crtsh.name = "crt.sh"
+
+        async def _crtsh_fail(domain):
+            raise Exception("crt.sh down")
+
+        mock_crtsh.query = _crtsh_fail
+
+        mock_cs = MagicMock()
+        mock_cs.name = "certspotter"
+
+        async def _cs_empty(domain):
+            return [], None, None
+
+        mock_cs.query = _cs_empty
+
+        with (
+            patch("recon_tool.sources.dns.CrtshProvider", return_value=mock_crtsh),
+            patch("recon_tool.sources.dns.CertSpotterProvider", return_value=mock_cs),
+        ):
+            ctx = _DetectionCtx()
+            await _detect_cert_intel(ctx, "example.com")
+
+        assert ctx.ct_provider_used == "certspotter"
+        assert ctx.ct_subdomain_count == 0
+        assert ctx.cert_summary is None
+        assert "crt.sh" in ctx.degraded_sources

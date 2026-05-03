@@ -8,6 +8,7 @@ fingerprints:
   slug: stripe
   category: Payments & Finance
   confidence: high
+  parent_vendor: Stripe
   detections:
   - type: txt
     pattern: ^stripe-verification=
@@ -15,6 +16,7 @@ fingerprints:
   slug: docusign
   category: Payments & Finance
   confidence: high
+  parent_vendor: DocuSign
   detections:
   - type: txt
     pattern: ^docusign=
@@ -22,6 +24,7 @@ fingerprints:
   slug: google-site
   category: Misc
   confidence: low
+  parent_vendor: Google
   detections:
   - type: txt
     pattern: ^google-site-verification=

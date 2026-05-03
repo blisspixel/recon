@@ -55,6 +55,23 @@ docs/accuracy.md
 /validation/runs-private/
 /validation/local/
 
+# Per-company live JSON dumps from ad-hoc validation runs. Real
+# company names belong in /validation/ (already gitignored above) or
+# discarded after analysis. These patterns belt-and-suspenders the
+# repo root so a stray `recon foo.com --json > foo.json` never
+# accidentally lands in a commit.
+/*.com.json
+/*.org.json
+/*.net.json
+/*.io.json
+/*.so.json
+/*.gov.json
+/*.edu.json
+/*.co.json
+/sc-*.json
+/v1_*_dive/
+/v1_*_validation*/
+
 # Linting / Type checking
 .ruff_cache/
 .mypy_cache/

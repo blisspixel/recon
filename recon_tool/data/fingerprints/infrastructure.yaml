@@ -187,6 +187,7 @@ fingerprints:
   slug: akamai
   category: Infrastructure
   confidence: high
+  parent_vendor: Akamai
   detections:
   - type: ns
     pattern: akamai.net
@@ -244,6 +245,8 @@ fingerprints:
   slug: azure-tm
   category: Infrastructure
   confidence: high
+  product_family: Azure
+  parent_vendor: Microsoft
   detections:
   - type: cname
     pattern: trafficmanager.net
@@ -251,6 +254,7 @@ fingerprints:
   slug: fastly
   category: Infrastructure
   confidence: high
+  parent_vendor: Fastly
   detections:
   - type: cname
     pattern: fastly.net
@@ -347,6 +351,8 @@ fingerprints:
   slug: azure-fd
   category: Infrastructure
   confidence: high
+  product_family: Azure
+  parent_vendor: Microsoft
   detections:
   - type: cname
     pattern: azurefd.net
@@ -444,6 +450,8 @@ fingerprints:
   slug: aws-acm
   category: Infrastructure
   confidence: high
+  product_family: AWS
+  parent_vendor: Amazon
   detections:
   - type: caa
     pattern: amazon.com
