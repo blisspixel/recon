@@ -53,6 +53,11 @@ correlation work do something single-source detection could not?". The
 **Build plan** below lists the concrete extensions, each gated by the same
 live-validation discipline.
 
+See [correlation.md](correlation.md) for the formal latent-variable model
+$G = (V, E, \Theta)$, the mutual-information objective, and the detailed
+mapping of each planned extension (v1.7 through v1.9) to hardened-target
+signal recovery.
+
 ## Current Fingerprint Library Assessment
 
 As of v1.6.1, built-in fingerprints live in nine categorized YAML files:
@@ -132,6 +137,12 @@ growth is welcome; engine growth needs stronger justification.
 
 These are directional measures, not product OKRs:
 
+- **Multi-signal correlation depth** — north-star metric. Share of
+  `--explain` outputs whose evidence DAG references more than one source
+  per high-confidence slug. The lens for "did the new correlation work
+  do something single-source detection could not?". Tracked per release
+  against the private corpus; explained in detail in
+  [correlation.md](correlation.md).
 - Share of high-value multi-detection fingerprints with an explicit
   `keep_any`, `match_mode: all`, or `tighten_patterns` decision backed by
   validation notes.
@@ -142,10 +153,6 @@ These are directional measures, not product OKRs:
 - Stability of JSON and MCP consumption examples against the documented schema.
 - Sustainable community fingerprint PRs that pass schema, specificity, and
   validation gates without maintainer guesswork.
-- Multi-signal correlation depth: share of `--explain` outputs whose evidence
-  DAG references more than one source per high-confidence slug. Useful as a
-  proxy for "did our correlation engine do something single-source detection
-  could not?"
 - For experimental Bayesian or community-detection output: average posterior
   entropy reduction (or modularity score) per domain on the private corpus,
   tracked across releases. Trend matters more than absolute number.
@@ -280,11 +287,10 @@ monthly cadence on a large private corpus indefinitely.
 - **Catalog metadata push.** Description coverage > 80%, reference
   coverage > 25%, deliberate non-default weights documented per
   fingerprint. The catalog becomes contributor-grade.
-- **Documentation snapshot.** [`docs/correlation.md`](correlation.md) (seeded
-  in the v1.6.1 era as a working draft) describes the full inference
-  pipeline (rules → graph → Bayesian) with worked examples and the
-  language hedge each layer applies. v2.0 promotes the draft to the
-  polished snapshot once each layer above has shipped.
+- **Documentation snapshot.** [`correlation.md`](correlation.md) (currently a
+  living draft) will be promoted to a polished reference describing the
+  full inference pipeline (rules → graph → Bayesian) with worked examples
+  and the language hedge each layer applies.
 
 **Validation gate** — final corpus run validating end-to-end across all
 layers, with the corpus expanded to ≥10k domains where feasible. Trend

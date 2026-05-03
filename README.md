@@ -54,6 +54,14 @@ Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP
 | Defensive review or vendor diligence | Hedged observations and evidence traces you can verify | You need vulnerability scanning, exploit checks, or host-level facts |
 | Automation-friendly output | Stable `--json`, batch mode, delta mode, and local MCP tools | You need dashboards, scheduled monitoring, or report generation |
 
+## How recon Works
+
+recon performs layered inference over public DNS, certificate transparency,
+and unauthenticated identity endpoints to produce hedged observations about
+an organization's external technology stack. For the formal model,
+information-theoretic foundations, and planned correlation extensions, see
+[docs/correlation.md](docs/correlation.md).
+
 ## Install
 
 Requires Python 3.10+.
@@ -118,7 +126,7 @@ The SKILL.md follows the open [agentskills.io](https://agentskills.io) standard,
 ## Limitations
 
 - **Coverage depends on public DNS.** Organizations behind heavy proxies, with minimal DNS records, or that don't publish SaaS verification tokens will return sparse results. This is fundamental to passive-only collection. When sources transiently fail, the CLI tells you which one and why so you can retry or accept the partial answer.
-- **Heuristic, not ground truth.** The fingerprint database and signal rules are rule-based and solo-maintained. Confident-looking output can still be wrong. Treat results as indicators for investigation, not as definitive assessments. Don't make business decisions based solely on this output.
+- **Heuristic, not ground truth.** The fingerprint database and signal rules are rule-based and solo-maintained. Confident-looking output can still be wrong. Treat results as indicators for investigation, not as definitive assessments. Don't make business decisions based solely on this output. See [docs/correlation.md](docs/correlation.md) for the full inference pipeline and why sparse results on hardened targets are both expected and honestly reported.
 
 ## Development
 

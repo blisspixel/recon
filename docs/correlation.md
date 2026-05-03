@@ -1,15 +1,23 @@
 # Correlation engine
 
-Reference for security architects, researchers, and contributors who want to
-understand how recon turns scattered passive observables into hedged
-intelligence — and why the design stays defensive-first by construction.
-Casual users do not need this document; the README and `--explain` output
-cover everyday use.
+**Audience.** Security architects, researchers, contributors, and
+technically curious defenders who want to understand *why* and *how* recon
+performs latent-variable inference over public observables.
 
-This file is a living draft. It mirrors the current implementation and the
-[build plan](roadmap.md#build-plan) (v1.7.0 through v2.0.0). The polished
-snapshot is itself a v2.0.0 deliverable — until then, sections will move and
-sharpen as features land.
+Casual users should rely on the main [README](../README.md) and `--explain`
+output. This is a living technical reference that mirrors the current
+implementation and the [build plan in roadmap.md](roadmap.md#build-plan).
+The polished snapshot is itself a v2.0.0 deliverable — until then, sections
+will move and sharpen as features land.
+
+**TL;DR.** recon models an organization's external technology stack as a
+latent graph $G = (V, E, \Theta)$ inferred from public DNS, certificate
+transparency, and unauthenticated identity-discovery observables $O$. It
+maximizes mutual information $I(\Theta; O)$ — the bits the public channel
+reveals about the latent stack — while preserving full provenance (every
+conclusion is reachable through the evidence DAG) and epistemic humility
+(sparse evidence stays sparse; "we cannot tell from this channel" is a
+valid answer).
 
 ## 1. What recon is doing, formally
 
@@ -130,14 +138,16 @@ the same certificate is a candidate sibling set. Wildcards exist
 specifically to collapse SAN inventory, so they look like obscurity —
 but the surrounding SAN entries in the same issuance are still public.
 
-The defensive value: a defender who relies on wildcard certs to hide
-their subdomain map can use recon to confirm that "wildcard hides
-everything" is not actually true once you read the cert metadata
-carefully. Each sibling lands as `related_domains` evidence with type
+Each sibling lands as `related_domains` evidence with type
 `ct_san_sibling` and the source cert's `not_before`. Hedged: "issued
 together; common ownership not implied" — same-cert SAN sets are
 sometimes shared across multiple tenants of the same hosting
 provider, so the rule informs but does not assert.
+
+**Defensive value.** Helps operators who rely on wildcard certs confirm
+that "wildcard hides everything" is not actually true once you read the
+cert metadata carefully — and quantify how much subdomain inventory is
+still observable through the public CT channel.
 
 ### 4.2 Temporal CT issuance bursts (v1.7.0)
 
@@ -154,10 +164,10 @@ evidence DAG, weighted by an inverse-time function $w_{ij} \propto
 survives short-lived rotation because relative timing is preserved
 across reissuances.
 
-Defensive value: detects deployment cadence even when the underlying
-hostnames are randomized or short-lived. A defender running a
-hardened-but-noisy infrastructure can use the burst signal to verify
-that operational coordination is or is not visible from the outside.
+**Defensive value.** Helps operators detect deployment cadence even when
+the underlying hostnames are randomized or short-lived. A hardened-but-
+noisy infrastructure can verify that operational coordination is or is
+not visible from the outside.
 
 ### 4.3 CNAME / NS chain motifs (v1.7.0)
 
@@ -174,10 +184,11 @@ isomorphism on the per-domain chain graph. Chain length is capped at
 fire on motifs: a fintech profile expecting a WAF motif will surface
 the absence as a hedged observation, never a verdict.
 
-Defensive value: even with randomized intermediate labels, recurring
-edge-stack signatures persist. Multi-hop proxy strategies leak
-through their structural pattern even when individual hops look
-bespoke.
+**Defensive value.** Helps operators see that randomized intermediate
+labels are not enough to obscure the edge-stack — recurring vendor
+ordering shows up in the chain pattern even when individual hops look
+bespoke. Quantifies how much of the multi-hop strategy remains
+observable.
 
 ### 4.4 Cross-source evidence conflict surfacing (v1.7.0)
 
@@ -187,11 +198,12 @@ Google auth type). v1.7.0 makes those conflicts a top-level field
 in `--json` output (`evidence_conflicts`) and a section in
 `--explain`.
 
-Defensive value: a defender may publish minimal DNS but have CT
-records that contradict it. The conflict matrix is exactly where
-hardening hygiene gaps surface. Output is neutral: "DNS reports X,
-CT shows Y" — the meaning is for the operator to interpret, not
-for recon to claim.
+**Defensive value.** Helps operators find the exact places where their
+own hardening hygiene has drifted: minimal DNS that does not match
+publicly visible CT, an MX record that contradicts the SPF policy, a
+display name in the OIDC discovery doc that disagrees with the BIMI
+VMC. Output is neutral — "DNS reports X, CT shows Y" — and the
+interpretation is for the operator.
 
 ### 4.5 CT co-occurrence graph + Leiden community detection (v1.8.0)
 
@@ -220,10 +232,10 @@ clustering when over-cap. The dependency is acceptable —
 `networkx` ships no learned weights and no aggregate-intelligence
 data, just graph algorithms.
 
-Defensive value: defenders relying on wildcard certs across
-brand-sibling domains can see exactly which certificates pin them
-together. Hardened targets can validate that their PKI segmentation
-holds at the public observation layer.
+**Defensive value.** Helps operators relying on wildcard certs across
+brand-sibling domains see exactly which certificates pin them together.
+Hardened targets can validate that their PKI segmentation holds at the
+public observation layer instead of only at the internal one.
 
 ### 4.6 Hypergraph ecosystem view (v1.8.0, batch-only)
 
@@ -244,6 +256,12 @@ Surfaced only behind `--include-ecosystem` to keep JSON size
 predictable on small runs. The output describes observed
 co-membership — not corporate ownership.
 
+**Defensive value.** Helps operators across multi-brand orgs see
+ecosystem-level coupling that is invisible from any single domain's
+perspective. A finance group with ten subsidiary brands can verify
+that PKI, fingerprint, and BIMI organization are or are not pinning
+those brands together publicly.
+
 ### 4.7 Vertical-baseline anomaly rules (v1.8.0)
 
 Each entry in `verticals.yaml` defines an expected fingerprint
@@ -257,6 +275,12 @@ explanation layer surface the deviation in neutral language
 
 Anomalies are observations, not verdicts. The wider the vertical,
 the wider the hedge.
+
+**Defensive value.** Helps operators sanity-check their own posture
+against industry norms encoded as data, without recon ever asserting
+"you should do X". A fintech team can confirm that their stack
+matches the vertical's expected control set, or surface the gap if
+not.
 
 ### 4.8 Bayesian network fusion layer (v1.9.0, experimental)
 
@@ -290,6 +314,12 @@ runs validate that high-posterior predictions match observable
 evidence and that intervals cover sparse-evidence cases without
 collapsing on dense-evidence ones.
 
+**Defensive value.** Helps operators read sparse output as a
+calibrated wide interval rather than a single hedged-but-confident-
+looking number. When the public channel really does not give recon
+enough to commit, the credible interval shows it instead of forcing
+a point estimate that implies more than the evidence supports.
+
 ### 4.9 Feedback-driven priors (v1.9.0, local only)
 
 A corpus run can update a local prior file at
@@ -306,7 +336,14 @@ This is "tune your local priors against your own corpus" —
 specifically not "build a community-wide trust model". The
 distinction is invariant.
 
+**Defensive value.** Helps operators tune the Bayesian layer to
+their own environment without ever ceding control of the prior to
+a remote service or a shared model. The corpus stays private; the
+priors stay local; the discipline stays the same.
+
 ## 5. Epistemology and the design choices that follow
+
+### Bayesian epistemic humility in practice
 
 Three principles connect the math above to the design constraints
 the project ships under:
@@ -380,3 +417,18 @@ Every extension above is gated by:
 See [roadmap.md § Implementation discipline](roadmap.md#implementation-discipline-for-new-correlation-work)
 for the per-PR checklist that turns these invariants into shippable
 behavior.
+
+## Relationship to other documents
+
+- [README.md](../README.md) — user-facing introduction and practical
+  usage. Casual readers start there.
+- [roadmap.md](roadmap.md) — forward-looking build plan, success
+  metrics, validation discipline.
+- [schema.md](schema.md) — JSON output contract. Cited from this
+  document whenever a new field is mentioned.
+- [limitations.md](limitations.md) — known passive-collection
+  ceilings. Pairs with §1–§2 above for cases where the channel
+  genuinely cannot resolve uncertainty further.
+- This document — formal model, mathematical rationale, per-feature
+  defensive-value statements, and the epistemology that ties them
+  together.
