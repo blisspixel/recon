@@ -127,6 +127,12 @@ no inbound network listeners, no user-code execution.
 - 120-second TTL cache and per-domain rate limiter prevent repeated-lookup abuse
 - No HTTP / OAuth transport, no network listener
 
+All posture and hardening tools operate exclusively on the same passive
+observables used by the core correlation engine (see
+[correlation.md](correlation.md)). The MCP surface adds no new data
+sources; it only exposes the existing inference pipeline through a
+different transport.
+
 ---
 
 ## Out of scope

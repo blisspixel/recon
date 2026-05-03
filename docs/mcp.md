@@ -76,8 +76,8 @@ default is an empty `autoApprove` list.
 | `lookup_tenant` | Cache first; may resolve | Full domain intelligence — tenant details, email score, SaaS fingerprints, signals. When `explain=true`, the response includes a JSON-serialisable `explanation_dag` with `evidence → slug → rule → signal → insight` provenance alongside the flat explanations list. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
 | `analyze_posture` | Cache first; may resolve | Neutral posture observations across email, identity, infrastructure. Accepts an optional `profile` argument — one of `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`, or a custom name from `~/.recon/profiles/`. | `domain`, `explain`: bool, `profile`: str (optional) |
 | `cluster_verification_tokens` | Cache first; may resolve each domain | Cluster a list of domains by shared TXT site-verification tokens. Reveals hedged "possible relationship" signals — operator-scoped credential reuse. | `domains`: array of domain strings |
-| `assess_exposure` | Cache first; may resolve | Security posture score (0–100) with email, identity, infrastructure sections | `domain` |
-| `find_hardening_gaps` | Cache first; may resolve | Categorized hardening gaps with severity and "Consider" recommendations | `domain` |
+| `assess_exposure` | Cache first; may resolve | Security posture score (0–100) with email, identity, infrastructure sections, using only the passive observables already collected (see [correlation.md](correlation.md) for the inference model). | `domain` |
+| `find_hardening_gaps` | Cache first; may resolve | Categorized hardening gaps with severity and "Consider" recommendations, using only the passive observables already collected (see [correlation.md](correlation.md) for the inference model). | `domain` |
 | `compare_postures` | Cache first; may resolve both domains | Side-by-side posture comparison of two domains | `domain_a`, `domain_b` |
 | `chain_lookup` | Yes | Recursive domain discovery via CNAME/CT breadcrumbs | `domain`, `depth` (1–3) |
 | `discover_fingerprint_candidates` | Yes | Mine a domain for new-fingerprint candidates. Resolves with unclassified-CNAME-chain capture, applies intra-org and already-covered filters, returns a ranked candidate list. Pair with the `/recon-fingerprint-triage` skill to turn candidates into YAML stanzas. | `domain`, `skip_ct`: bool, `keep_intra_org`: bool, `min_count`: int |
@@ -86,7 +86,7 @@ default is an empty `autoApprove` list.
 | `get_signals` | No | List all loaded signals with rules, layers, conditions | `category`, `layer` (optional filters) |
 | `explain_signal` | No unless `domain` is provided | Query a signal's trigger conditions and current state for a domain | `signal_name`, `domain` (optional) |
 | `test_hypothesis` | Cache first; may resolve | Test a theory against signals and evidence — returns likelihood + evidence | `domain`, `hypothesis` |
-| `simulate_hardening` | Cache first; may resolve | What-if: re-compute exposure score with hypothetical fixes applied | `domain`, `fixes` (array) |
+| `simulate_hardening` | Cache first; may resolve | What-if: re-compute exposure score with hypothetical fixes applied, using only the passive observables already collected (see [correlation.md](correlation.md) for the inference model). | `domain`, `fixes` (array) |
 | `inject_ephemeral_fingerprint` | No | Inject a temporary fingerprint for the current session | `name`, `slug`, `category`, `confidence`, `detections` (array) |
 | `reevaluate_domain` | No | Re-evaluate cached domain data against current fingerprints (including ephemeral) | `domain` |
 | `list_ephemeral_fingerprints` | No | List all currently loaded ephemeral fingerprints | none |
@@ -172,6 +172,12 @@ Agent: "Now re-evaluate contoso.com to see if they use Fabrikam Platform."
 → clear_ephemeral_fingerprints()
 ← {"status": "ok", "removed": 1}
 ```
+
+Ephemeral fingerprints are deliberately local-only and session-scoped. They
+support the same feedback-driven prior tuning workflow described in the
+Bayesian layer (v1.9.0 in [roadmap.md](roadmap.md#v190--probabilistic-fusion-experimental))
+without ever writing to disk or sharing data — the priors stay in memory
+for the current server process and are gone when it exits.
 
 ## Where to Put the Config
 
