@@ -98,6 +98,7 @@ fingerprints:
   slug: onetrust
   category: Security & Compliance
   confidence: high
+  parent_vendor: OneTrust
   detections:
   - type: txt
     pattern: ^onetrust-domain-verification=
@@ -121,6 +122,7 @@ fingerprints:
   category: Security & Compliance
   confidence: high
   display_group: Security & Compliance
+  parent_vendor: Okta
   detections:
   - type: txt
     pattern: ^_oktaverification=
@@ -136,6 +138,7 @@ fingerprints:
   slug: 1password
   category: Security & Compliance
   confidence: high
+  parent_vendor: 1Password
   detections:
   - type: txt
     pattern: ^1password-site-verification=
@@ -143,6 +146,7 @@ fingerprints:
   slug: jamf
   category: Security & Compliance
   confidence: high
+  parent_vendor: Jamf
   detections:
   - type: txt
     pattern: ^jamf-site-verification=

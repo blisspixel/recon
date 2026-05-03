@@ -8,6 +8,8 @@ fingerprints:
   slug: openai
   category: AI & Generative
   confidence: high
+  product_family: OpenAI Platform
+  parent_vendor: OpenAI
   detections:
   - type: txt
     pattern: ^openai-domain-verification=
@@ -17,6 +19,8 @@ fingerprints:
   slug: anthropic
   category: AI & Generative
   confidence: high
+  product_family: Claude
+  parent_vendor: Anthropic
   detections:
   - type: txt
     pattern: ^anthropic-domain-verification

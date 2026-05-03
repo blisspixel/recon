@@ -186,3 +186,124 @@ motifs:
         match:
           - cloudflare.com
           - cloudflare.net
+
+  # ── Microsoft-internal chains (v1.8.1) ──────────────────────────────
+  # The v1.8 validation surfaced that real-world chains for Microsoft-
+  # heavy targets stay inside Microsoft's own CDN/origin perimeter
+  # (trafficmanager.net → azurefd.net → t-msedge.net) rather than
+  # crossing third-party vendor boundaries. The earlier catalogue
+  # only described 3rd-party-to-3rd-party shapes and so produced zero
+  # motif observations on a 10-domain diverse dive. These motifs cover
+  # the most common single-vendor multi-hop patterns observable in
+  # public DNS for Microsoft 365 / Azure-hosted properties.
+  - name: tm_to_azurefd
+    display_name: "Azure Traffic Manager → Azure Front Door"
+    description: Traffic Manager geo/health-based routing fronting Azure Front Door — common shape for global M365 admin and Power Platform endpoints.
+    confidence: medium
+    chain:
+      - name: traffic_manager
+        match:
+          - trafficmanager.net
+      - name: azure_front_door
+        match:
+          - azurefd.net
+          - tm-azurefd.net
+
+  - name: azurefd_to_msedge
+    display_name: "Azure Front Door → Microsoft Edge fabric"
+    description: Azure Front Door terminating onto the internal Microsoft Edge data-plane (t-msedge / fb-t-msedge) — observed end of the M365 chain.
+    confidence: medium
+    chain:
+      - name: azure_front_door
+        match:
+          - azurefd.net
+          - tm-azurefd.net
+      - name: msedge
+        match:
+          - t-msedge.net
+          - fb-t-msedge.net
+          - bx-msedge.net
+          - msedge.net
+
+  - name: akamai_to_msedge
+    display_name: "Akamai → Microsoft Edge"
+    description: Akamai fronting a Microsoft Edge endpoint — observed for legacy office.com / outlook.com paths still routed via Akamai.
+    confidence: medium
+    chain:
+      - name: akamai
+        match:
+          - edgesuite.net
+          - edgekey.net
+          - akamaiedge.net
+      - name: msedge
+        match:
+          - t-msedge.net
+          - bx-msedge.net
+          - msedge.net
+
+  - name: tm_to_powerapps
+    display_name: "Azure Traffic Manager → Power Platform"
+    description: Traffic Manager fronting Power Platform / Power Apps gateway endpoints — distinguishes Power-Platform-served APIs from generic Azure App Service.
+    confidence: medium
+    chain:
+      - name: traffic_manager
+        match:
+          - trafficmanager.net
+      - name: power_platform
+        match:
+          - powerapps.com
+          - powerplatform.com
+          - dynamics.com
+
+  # ── Vendor-specific chains (v1.8.1) ─────────────────────────────────
+  - name: salesforce_chain
+    display_name: "Salesforce / Force.com edge"
+    description: Salesforce/Force.com domain terminating on the Salesforce Communities or Experience Cloud edge — distinguishes Salesforce-fronted properties from generic CDNs.
+    confidence: medium
+    chain:
+      - name: salesforce_edge
+        match:
+          - salesforce.com
+          - force.com
+          - salesforce-communities.com
+          - my.salesforce.com
+
+  - name: adobe_experience_cloud
+    display_name: "Adobe Experience Cloud"
+    description: Adobe Experience Cloud / Adobe Target / Adobe Analytics chain — observed on marketing-heavy properties.
+    confidence: medium
+    chain:
+      - name: adobe
+        match:
+          - adobe.com
+          - adobedtm.com
+          - omtrdc.net
+          - demdex.net
+          - 2o7.net
+
+  - name: akamai_to_adobe
+    display_name: "Akamai → Adobe Experience Cloud"
+    description: Akamai fronting Adobe Experience Cloud properties.
+    confidence: medium
+    chain:
+      - name: akamai
+        match:
+          - edgesuite.net
+          - edgekey.net
+          - akamaiedge.net
+      - name: adobe
+        match:
+          - adobe.com
+          - omtrdc.net
+          - demdex.net
+
+  - name: oracle_cloud_chain
+    display_name: "Oracle Cloud Infrastructure"
+    description: Oracle Cloud Infrastructure (OCI) hosted endpoints — common on legacy enterprise properties migrated from on-prem.
+    confidence: medium
+    chain:
+      - name: oracle_cloud
+        match:
+          - oraclecloud.com
+          - oraclecloud.net
+          - oraclevcn.com

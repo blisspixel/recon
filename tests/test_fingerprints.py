@@ -235,17 +235,34 @@ class TestMatchTxt:
 class TestRelationshipMetadata:
     """v1.8: optional product_family / parent_vendor / bimi_org fields."""
 
-    def test_default_metadata_is_none(self):
-        """Fingerprints without the fields populated have None metadata."""
-        from pathlib import Path
+    def test_default_metadata_is_none(self, tmp_path):
+        """Fingerprints without the relationship-metadata fields populated
+        in YAML must produce ``None`` on the loaded dataclass.
 
+        Uses a synthetic YAML — the built-in catalogs are partially
+        seeded as of v1.8.1 and growing, so they cannot be relied on
+        as a "no metadata" baseline.
+        """
         from recon_tool.fingerprints import _load_from_path
 
-        path = Path(__file__).parent.parent / "recon_tool" / "data" / "fingerprints" / "ai.yaml"
+        path = tmp_path / "no_metadata.yaml"
+        path.write_text(
+            """
+fingerprints:
+- name: BareService
+  slug: bare-svc
+  category: Misc
+  confidence: high
+  detections:
+  - type: txt
+    pattern: "^bare-svc-verification="
+"""
+        )
         fps = _load_from_path(path)
-        # AI fingerprints don't have metadata seeded — should all be None.
-        assert all(fp.product_family is None for fp in fps)
-        assert all(fp.parent_vendor is None for fp in fps)
+        assert len(fps) == 1
+        assert fps[0].product_family is None
+        assert fps[0].parent_vendor is None
+        assert fps[0].bimi_org is None
 
     def _slug_with_metadata(self, slug: str):
         """Return the first fingerprint matching ``slug`` whose metadata is populated.

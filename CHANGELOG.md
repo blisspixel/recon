@@ -5,6 +5,81 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-05-03
+
+**Hardening release driven by a 10-domain diverse deep-dive against
+v1.8.0.** Per-target output quality surfaced four issues that the
+105-domain batch validation missed because it scored corpus medians
+rather than individual results. All four are fixed and re-validated.
+Full report at
+[`validation/v1.8-validation-summary.md`](validation/v1.8-validation-summary.md).
+
+### Fixed
+
+- **CT-cache fallback gap.** `_detect_cert_intel` early-returned on
+  any provider response, even an empty one. CertSpotter rate-limited
+  responses look like a successful empty answer (HTTP 200, no
+  issuances), so when crt.sh was degraded and CertSpotter was
+  rate-limited the CT-cache fallback never fired and `cert_summary`
+  stayed null even when a populated cache entry existed. Now an
+  empty `(subdomains=[], cert_summary=None, infrastructure_clusters=None)`
+  response is treated as soft failure: the loop continues to the next
+  provider and, if all return empty, the CT cache is consulted.
+- **`chain_motifs` and v1.7 `cert_summary` extensions silently
+  dropped on cache write.** `tenant_info_to_dict` did not include
+  `chain_motifs`, `wildcard_sibling_clusters`, or
+  `deployment_bursts` in its serialized form, so cache-served
+  lookups always returned zero motifs and empty wildcard / burst
+  collections — even when the original resolve produced matches.
+  Both directions of the round-trip now preserve them. Round-trip
+  regression tests in `tests/test_cache_roundtrip.py`.
+
+### Added
+
+- **Eight new chain motifs covering Microsoft-internal and
+  vendor-specific chain shapes.** Catalog grew from 10 to 18.
+  Microsoft: `tm_to_azurefd`, `azurefd_to_msedge`, `akamai_to_msedge`,
+  `tm_to_powerapps`. Salesforce: `salesforce_chain`. Adobe:
+  `adobe_experience_cloud`, `akamai_to_adobe`. Oracle Cloud:
+  `oracle_cloud_chain`. The deep-dive observed that real-world
+  chains for hardened-target enterprises terminate inside a single
+  vendor's perimeter (e.g. `trafficmanager.net -> azurefd.net ->
+  t-msedge.net`), which the v1.7 third-party-only catalog did not
+  cover.
+- **Twenty-six more fingerprint slugs seeded with relationship
+  metadata.** v1.8.0 shipped 8 seeded slugs; v1.8.1 brings the total
+  to 34 across openai, anthropic, salesforce, salesforce-mc,
+  marketo, segment, meta, sendgrid, mailchimp, akamai, azure-tm,
+  fastly, azure-fd, aws-acm, atlassian, workplace-meta, adobe-idp,
+  adobe-sign, apple, onetrust, okta, 1password, jamf, stripe,
+  docusign, google-site. Surfaced as the `fingerprint_metadata`
+  block in `--json`.
+- **FastMCP transport smoke test for the v1.8 graph tools.**
+  `tests/test_mcp_graph_tools.py::TestMcpToolRegistry` invokes
+  `get_infrastructure_clusters` and `export_graph` through
+  `mcp.call_tool` — the same dispatch the stdio JSON-RPC handler
+  uses on `tools/call`. Confirms registration + reachability beyond
+  the unit tests.
+
+### Validation
+
+- 10-domain diverse deep-dive (microsoft, stripe, notion,
+  caterpillar, mit, epic, signal, treasury, costco, nytimes) re-run
+  with caches cleared. `chain_motifs`: 0 -> 19 observations across 4
+  domains. `fingerprint_metadata`: 6 -> 29 distinct slugs surfaced,
+  per-domain coverage 0-4 -> 4-16. Cluster partition quality
+  preserved (microsoft.com modularity 0.82 on 247 nodes).
+- 1789 tests passing, 0 failed (was 1774 in v1.8.0 + 15 new
+  regression tests). Ruff and pyright clean.
+
+### Internal
+
+- Repo-root `.gitignore` strengthened with `*.com.json`,
+  `*.org.json`, `/v1_*_dive/`, `/sc-*.json` etc. patterns so ad-hoc
+  validation lookups can't accidentally land in commits.
+- MCP server banner tool count corrected from "19 total" to "20
+  total" (the v1.8.0 banner forgot `cluster_verification_tokens`).
+
 ## [1.8.0] - 2026-05-03
 
 **Graph correlation.** Second milestone of the v1.7-v1.9 build plan in

@@ -168,3 +168,50 @@ class TestExportGraph:
         out = asyncio.run(server.export_graph("bad..com"))
         payload = json.loads(out)
         assert "error" in payload
+
+
+# ── v1.8.1: end-to-end FastMCP transport smoke test ───────────────────
+
+
+class TestMcpToolRegistry:
+    """Verify the v1.8 graph tools are wired into the FastMCP registry
+    and reachable through the same code path that the stdio JSON-RPC
+    handler uses on a ``tools/call`` request.
+    """
+
+    def test_both_tools_registered(self):
+        from recon_tool.server import mcp
+
+        names = {t.name for t in asyncio.run(mcp.list_tools())}
+        assert "get_infrastructure_clusters" in names
+        assert "export_graph" in names
+
+    def test_get_infrastructure_clusters_via_call_tool(self, stub_resolve):
+        """Invoke through ``mcp.call_tool`` — the same dispatch
+        FastMCP's stdio transport calls on tools/call. Verifies the
+        tool is not just registered but actually reachable."""
+        from recon_tool.server import mcp
+
+        stub_resolve(_info_with_clusters())
+        content, structured = asyncio.run(
+            mcp.call_tool("get_infrastructure_clusters", {"domain": "example.com"})
+        )
+        assert content, "expected at least one TextContent payload"
+        payload = json.loads(content[0].text)
+        assert payload["domain"] == "example.com"
+        assert payload["algorithm"] == "louvain"
+        assert payload["clusters"], "cluster list should be non-empty"
+        # Structured output mirrors the text content.
+        assert "result" in structured
+
+    def test_export_graph_via_call_tool(self, stub_resolve):
+        from recon_tool.server import mcp
+
+        stub_resolve(_info_with_clusters())
+        content, _ = asyncio.run(
+            mcp.call_tool("export_graph", {"domain": "example.com"})
+        )
+        payload = json.loads(content[0].text)
+        assert payload["nodes"], "graph nodes should be non-empty"
+        assert payload["edges"], "graph edges should be non-empty"
+        assert payload["cluster_assignment"], "cluster_assignment map populated"

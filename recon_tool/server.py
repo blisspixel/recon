@@ -2427,7 +2427,7 @@ def _print_mcp_banner() -> None:
         "Listening on stdio transport.",
         f"Loaded {fp_count} fingerprints, {sig_count} signals.",
         "",
-        "Available tools (19 total):",
+        "Available tools (20 total):",
         "  lookup_tenant               Full domain intelligence + tenant details",
         "  analyze_posture             Neutral posture observations (accepts --profile)",
         "  assess_exposure             Security posture score (0–100)",

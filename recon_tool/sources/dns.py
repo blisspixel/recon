@@ -1217,35 +1217,67 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
     final fallback — returning the last known subdomain set with an
     explicit cache age annotation so the panel can show "from local
     cache, N days old".
+
+    Empty-but-not-error responses (v1.8.1): a provider that returns
+    ``([], None, None)`` is treated as a soft failure, not as a
+    successful empty answer. CertSpotter rate-limited responses look
+    like that — HTTP 200 with an empty issuance list — and prior to
+    this they prevented the next provider AND the CT-cache fallback
+    from running. The 10-domain v1.8 validation found 7/10 cases
+    where both providers returned this shape and `cert_summary` was
+    silently null even though a populated cache entry existed. Now
+    we record the first such response (so the panel still shows
+    "certspotter (0 subdomains)") and continue trying.
     """
     from recon_tool.ct_cache import ct_cache_get, ct_cache_put
 
     providers: list[CertIntelProvider] = [CrtshProvider(), CertSpotterProvider()]
+    soft_provider: str | None = None  # First provider to return empty-but-not-error.
     for provider in providers:
         try:
             subdomains, cert_summary, infrastructure_clusters = await provider.query(domain)
-            ctx.related_domains.update(subdomains)
-            if cert_summary is not None:
-                ctx.cert_summary = cert_summary
-            if infrastructure_clusters is not None:
-                ctx.infrastructure_clusters = infrastructure_clusters
-            ctx.ct_provider_used = provider.name
-            ctx.ct_subdomain_count = len(subdomains)
-            logger.debug("cert intel from %s for %s: %d subdomains", provider.name, domain, len(subdomains))
-            # Cache successful result for future fallback
-            ct_cache_put(domain, subdomains, cert_summary, provider.name)
-            return
         except Exception as exc:
             logger.debug("cert intel provider %s failed for %s: %s", provider.name, domain, exc)
             ctx.degraded_sources.add(provider.name)
+            continue
 
-    # All live providers failed — try per-domain CT cache as final fallback
+        if not subdomains and cert_summary is None and infrastructure_clusters is None:
+            # Empty success — treat as a soft failure. Remember the
+            # provider name so the cache-fallback path below can still
+            # surface it in the panel ("certspotter (cached)") instead
+            # of attributing the result to a provider that never tried.
+            logger.debug(
+                "cert intel provider %s returned empty for %s — treating as soft failure",
+                provider.name,
+                domain,
+            )
+            if soft_provider is None:
+                soft_provider = provider.name
+            continue
+
+        ctx.related_domains.update(subdomains)
+        if cert_summary is not None:
+            ctx.cert_summary = cert_summary
+        if infrastructure_clusters is not None:
+            ctx.infrastructure_clusters = infrastructure_clusters
+        ctx.ct_provider_used = provider.name
+        ctx.ct_subdomain_count = len(subdomains)
+        logger.debug("cert intel from %s for %s: %d subdomains", provider.name, domain, len(subdomains))
+        # Cache successful result for future fallback
+        ct_cache_put(domain, subdomains, cert_summary, provider.name)
+        return
+
+    # All live providers failed (hard error or empty) — try per-domain
+    # CT cache as final fallback.
     cached = ct_cache_get(domain)
     if cached is not None and cached.subdomains:
         ctx.related_domains.update(cached.subdomains)
         if cached.cert_summary is not None:
             ctx.cert_summary = cached.cert_summary
-        ctx.ct_provider_used = f"{cached.provider_used} (cached)"
+        # Attribution: if a live provider returned empty (soft failure),
+        # name it explicitly so the panel reflects what actually ran.
+        attribution = soft_provider or cached.provider_used
+        ctx.ct_provider_used = f"{attribution} (cached)"
         ctx.ct_subdomain_count = len(cached.subdomains)
         ctx.ct_cache_age_days = cached.age_days
         logger.debug(
@@ -1254,6 +1286,12 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
             len(cached.subdomains),
             cached.age_days,
         )
+    elif soft_provider is not None:
+        # No cache available, but at least one provider returned an
+        # empty response — surface that in the panel rather than
+        # leaving ct_provider_used unset.
+        ctx.ct_provider_used = soft_provider
+        ctx.ct_subdomain_count = 0
 
 
 # ── Common subdomain probing ───────────────────────────────────────────

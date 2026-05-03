@@ -18,7 +18,9 @@ from typing import Any
 
 from recon_tool.models import (
     BIMIIdentity,
+    CertBurst,
     CertSummary,
+    ChainMotifObservation,
     ConfidenceLevel,
     EvidenceRecord,
     InfrastructureCluster,
@@ -222,7 +224,10 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         # peers from a previous batch run.
     }
 
-    # CertSummary → nested dict or None
+    # CertSummary → nested dict or None. v1.8.1: include the v1.7
+    # additions (wildcard_sibling_clusters, deployment_bursts) so a
+    # cache hit doesn't silently drop signal that was present in the
+    # original lookup.
     if info.cert_summary is not None:
         cs = info.cert_summary
         d["cert_summary"] = {
@@ -232,6 +237,18 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
             "newest_cert_age_days": cs.newest_cert_age_days,
             "oldest_cert_age_days": cs.oldest_cert_age_days,
             "top_issuers": list(cs.top_issuers),
+            "wildcard_sibling_clusters": [
+                list(cluster) for cluster in cs.wildcard_sibling_clusters
+            ],
+            "deployment_bursts": [
+                {
+                    "window_start": b.window_start,
+                    "window_end": b.window_end,
+                    "span_seconds": b.span_seconds,
+                    "names": list(b.names),
+                }
+                for b in cs.deployment_bursts
+            ],
         }
     else:
         d["cert_summary"] = None
@@ -314,6 +331,20 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         for uc in info.unclassified_cname_chains
     ]
 
+    # ChainMotifObservation tuple → list of dicts (v1.8.1 — was being
+    # dropped on cache write, so a cached lookup served motif_count = 0
+    # even when the original resolve produced matches).
+    d["chain_motifs"] = [
+        {
+            "motif_name": cm.motif_name,
+            "display_name": cm.display_name,
+            "confidence": cm.confidence,
+            "subdomain": cm.subdomain,
+            "chain": list(cm.chain),
+        }
+        for cm in info.chain_motifs
+    ]
+
     return d
 
 
@@ -361,6 +392,37 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
     cert_summary: CertSummary | None = None
     cs_data = data.get("cert_summary")
     if isinstance(cs_data, dict):
+        # v1.8.1: restore wildcard_sibling_clusters + deployment_bursts
+        # so cached lookups carry the same v1.7 cert intelligence as
+        # live ones.
+        wcs_raw = cs_data.get("wildcard_sibling_clusters", [])
+        wildcard_sibling_clusters: tuple[tuple[str, ...], ...] = ()
+        if isinstance(wcs_raw, list):
+            wildcard_sibling_clusters = tuple(
+                tuple(str(n) for n in cluster)
+                for cluster in wcs_raw
+                if isinstance(cluster, list)
+            )
+        bursts_raw = cs_data.get("deployment_bursts", [])
+        deployment_bursts: tuple[CertBurst, ...] = ()
+        if isinstance(bursts_raw, list):
+            burst_records: list[CertBurst] = []
+            for entry in bursts_raw:
+                if not isinstance(entry, dict):
+                    continue
+                names = entry.get("names", [])
+                if not isinstance(names, list):
+                    continue
+                burst_records.append(
+                    CertBurst(
+                        window_start=str(entry.get("window_start", "")),
+                        window_end=str(entry.get("window_end", "")),
+                        span_seconds=int(entry.get("span_seconds", 0)),
+                        names=tuple(str(n) for n in names),
+                    )
+                )
+            deployment_bursts = tuple(burst_records)
+
         cert_summary = CertSummary(
             cert_count=int(cs_data.get("cert_count", 0)),
             issuer_diversity=int(cs_data.get("issuer_diversity", 0)),
@@ -368,6 +430,8 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
             newest_cert_age_days=int(cs_data.get("newest_cert_age_days", 0)),
             oldest_cert_age_days=int(cs_data.get("oldest_cert_age_days", 0)),
             top_issuers=tuple(cs_data.get("top_issuers", [])),
+            wildcard_sibling_clusters=wildcard_sibling_clusters,
+            deployment_bursts=deployment_bursts,
         )
 
     # BIMIIdentity
@@ -507,6 +571,28 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
             )
         unclassified_cname_chains = tuple(uc_records)
 
+    # ChainMotifObservation list → tuple (v1.8.1).
+    motifs_list = data.get("chain_motifs", [])
+    chain_motifs: tuple[ChainMotifObservation, ...] = ()
+    if isinstance(motifs_list, list):
+        cm_records: list[ChainMotifObservation] = []
+        for item in motifs_list:
+            if not isinstance(item, dict):
+                continue
+            motif_chain = item.get("chain", [])
+            if not isinstance(motif_chain, list):
+                continue
+            cm_records.append(
+                ChainMotifObservation(
+                    motif_name=str(item.get("motif_name", "")),
+                    display_name=str(item.get("display_name", "")),
+                    confidence=str(item.get("confidence", "medium")),
+                    subdomain=str(item.get("subdomain", "")),
+                    chain=tuple(str(h) for h in motif_chain),
+                )
+            )
+        chain_motifs = tuple(cm_records)
+
     return TenantInfo(
         tenant_id=data.get("tenant_id"),
         display_name=display_name,
@@ -552,6 +638,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         lexical_observations=tuple(data.get("lexical_observations", [])),
         surface_attributions=surface_attributions,
         unclassified_cname_chains=unclassified_cname_chains,
+        chain_motifs=chain_motifs,
         infrastructure_clusters=infrastructure_clusters,
         resolved_at=data.get("resolved_at"),
         # cached_at is stamped by cache_get from _cached_at; not populated
