@@ -19,6 +19,7 @@ from recon_tool.models import (
     BIMIIdentity,
     CandidateValue,
     CertSummary,
+    ChainMotifObservation,
     ConfidenceLevel,
     EvidenceRecord,
     MergeConflicts,
@@ -983,6 +984,22 @@ def merge_results(
         sorted(merged_unclassified, key=lambda u: u.subdomain)
     )
 
+    # v1.7: chain motif observations. dns_records currently is the only
+    # source emitting them; propagate through the merger so future sources
+    # can contribute without engine changes.
+    seen_motif_keys: set[tuple[str, str]] = set()
+    merged_motifs: list[ChainMotifObservation] = []
+    for result in results:
+        for cm in result.chain_motifs:
+            key = (cm.subdomain, cm.motif_name)
+            if key in seen_motif_keys:
+                continue
+            seen_motif_keys.add(key)
+            merged_motifs.append(cm)
+    chain_motifs_tuple: tuple[ChainMotifObservation, ...] = tuple(
+        sorted(merged_motifs, key=lambda m: (m.subdomain, m.motif_name))
+    )
+
     return TenantInfo(
         tenant_id=tenant_id,
         display_name=display_name,
@@ -1024,4 +1041,5 @@ def merge_results(
         lexical_observations=lexical_observation_statements,
         surface_attributions=surface_tuple,
         unclassified_cname_chains=unclassified_tuple,
+        chain_motifs=chain_motifs_tuple,
     )

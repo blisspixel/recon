@@ -1,0 +1,188 @@
+# CNAME chain motif library (v1.7+)
+#
+# Each motif is an ordered sequence of "markers" expected to appear in a
+# CNAME chain. A marker matches when ANY of its substrings appears in a
+# hop's hostname. The motif fires only when every marker matches in
+# chain order; intermediate hops between markers are allowed.
+#
+# Motifs name observable proxy / CDN / origin shapes. They never claim
+# ownership ("co-hosted on" is observable; "same owner" is not).
+#
+# Schema:
+#   name (required, str): stable identifier — slug-shaped
+#   display_name (required, str): human-readable label with → separators
+#   description (optional, str): one-line note about what this shape means
+#   confidence (required, "high" | "medium" | "low")
+#   chain (required, list of markers — at least 1, at most 4)
+#     name (required, str): stable identifier for this position
+#     match (required, list of substrings — at least 1)
+#
+# Constraints:
+#   - chain length capped at 4 markers (recon_tool/motifs.py)
+#   - per-marker substrings capped at 12
+#   - additive-only when extended via ~/.recon/motifs.yaml — user motifs
+#     can extend the catalog but cannot override built-ins by name
+#
+# Naming convention: <fronting>_to_<origin> for CDN→origin shapes.
+
+motifs:
+  # ── CDN → AWS ───────────────────────────────────────────────────────
+  - name: cloudflare_to_aws
+    display_name: "Cloudflare → AWS origin"
+    description: Cloudflare CDN/edge fronting AWS infrastructure (CloudFront, ELB, S3 website endpoints).
+    confidence: medium
+    chain:
+      - name: cloudflare
+        match:
+          - cloudflare.com
+          - cloudflare.net
+      - name: aws
+        match:
+          - amazonaws.com
+          - cloudfront.net
+          - elb.amazonaws.com
+
+  - name: fastly_to_aws
+    display_name: "Fastly → AWS origin"
+    description: Fastly CDN fronting AWS infrastructure.
+    confidence: medium
+    chain:
+      - name: fastly
+        match:
+          - fastly.net
+          - fastlylb.net
+      - name: aws
+        match:
+          - amazonaws.com
+          - cloudfront.net
+          - elb.amazonaws.com
+
+  - name: akamai_to_aws
+    display_name: "Akamai → AWS origin"
+    description: Akamai edge network fronting AWS.
+    confidence: medium
+    chain:
+      - name: akamai
+        match:
+          - edgesuite.net
+          - edgekey.net
+          - akamaiedge.net
+          - akamaihd.net
+      - name: aws
+        match:
+          - amazonaws.com
+          - cloudfront.net
+          - elb.amazonaws.com
+
+  # ── CDN → Azure ─────────────────────────────────────────────────────
+  - name: cloudflare_to_azure
+    display_name: "Cloudflare → Azure origin"
+    description: Cloudflare CDN/edge fronting Azure infrastructure (App Service, Front Door, blob storage).
+    confidence: medium
+    chain:
+      - name: cloudflare
+        match:
+          - cloudflare.com
+          - cloudflare.net
+      - name: azure
+        match:
+          - azureedge.net
+          - azurewebsites.net
+          - azurefd.net
+          - cloudapp.azure.com
+          - cloudapp.net
+          - blob.core.windows.net
+
+  - name: fastly_to_azure
+    display_name: "Fastly → Azure origin"
+    description: Fastly CDN fronting Azure.
+    confidence: medium
+    chain:
+      - name: fastly
+        match:
+          - fastly.net
+          - fastlylb.net
+      - name: azure
+        match:
+          - azureedge.net
+          - azurewebsites.net
+          - azurefd.net
+          - cloudapp.azure.com
+
+  - name: akamai_to_azure
+    display_name: "Akamai → Azure origin"
+    description: Akamai fronting Azure.
+    confidence: medium
+    chain:
+      - name: akamai
+        match:
+          - edgesuite.net
+          - edgekey.net
+          - akamaiedge.net
+      - name: azure
+        match:
+          - azureedge.net
+          - azurewebsites.net
+          - azurefd.net
+          - cloudapp.azure.com
+
+  # ── CDN → GCP ───────────────────────────────────────────────────────
+  - name: cloudflare_to_gcp
+    display_name: "Cloudflare → Google Cloud origin"
+    description: Cloudflare fronting Google Cloud infrastructure (App Engine, GCS, GKE LBs).
+    confidence: medium
+    chain:
+      - name: cloudflare
+        match:
+          - cloudflare.com
+          - cloudflare.net
+      - name: gcp
+        match:
+          - googleusercontent.com
+          - appspot.com
+          - ghs.googlehosted.com
+          - storage.googleapis.com
+
+  - name: fastly_to_gcp
+    display_name: "Fastly → Google Cloud origin"
+    description: Fastly CDN fronting Google Cloud.
+    confidence: medium
+    chain:
+      - name: fastly
+        match:
+          - fastly.net
+          - fastlylb.net
+      - name: gcp
+        match:
+          - googleusercontent.com
+          - appspot.com
+          - storage.googleapis.com
+
+  # ── Multi-CDN ───────────────────────────────────────────────────────
+  - name: cloudflare_to_fastly
+    display_name: "Cloudflare → Fastly"
+    description: Cloudflare front-of-front fronting Fastly — multi-CDN topology.
+    confidence: medium
+    chain:
+      - name: cloudflare
+        match:
+          - cloudflare.com
+          - cloudflare.net
+      - name: fastly
+        match:
+          - fastly.net
+          - fastlylb.net
+
+  - name: fastly_to_cloudflare
+    display_name: "Fastly → Cloudflare"
+    description: Fastly fronting Cloudflare-managed origin — multi-CDN topology.
+    confidence: medium
+    chain:
+      - name: fastly
+        match:
+          - fastly.net
+          - fastlylb.net
+      - name: cloudflare
+        match:
+          - cloudflare.com
+          - cloudflare.net

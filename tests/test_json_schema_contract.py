@@ -133,6 +133,10 @@ _STABLE_FIELDS: dict[str, type | tuple[type, ...]] = {
     # Additional metadata
     "lexical_observations": list,
     "bimi_identity": (dict, type(None)),
+    # v1.7 — cross-source evidence conflict surfacing
+    "evidence_conflicts": list,
+    # v1.7 — chain motif observations
+    "chain_motifs": list,
 }
 
 # Experimental fields — documented but can evolve in minor releases.
@@ -219,6 +223,44 @@ class TestJSONSchemaContract:
             assert isinstance(entry[0], str)
             assert isinstance(entry[1], (int, float))
             assert 0.0 <= entry[1] <= 1.0
+
+    def test_evidence_conflicts_empty_when_no_conflicts(self) -> None:
+        """No merge_conflicts on TenantInfo → empty array (always present)."""
+        info = _build_fixture()  # fixture has no merge_conflicts set
+        payload = json.loads(format_tenant_json(info))
+        assert payload["evidence_conflicts"] == []
+
+    def test_evidence_conflicts_array_shape(self) -> None:
+        """When merge_conflicts is populated, evidence_conflicts surfaces records."""
+        from recon_tool.models import CandidateValue, MergeConflicts
+
+        info = _build_fixture()
+        info_with_conflict = TenantInfo(
+            **{f.name: getattr(info, f.name) for f in __import__("dataclasses").fields(info)},
+        )
+        # Override via a fresh dataclass replace
+        import dataclasses
+
+        info_with_conflict = dataclasses.replace(
+            info,
+            merge_conflicts=MergeConflicts(
+                display_name=(
+                    CandidateValue(value="Acme Corp", source="oidc", confidence="high"),
+                    CandidateValue(value="Acme Corporation", source="userrealm", confidence="medium"),
+                ),
+            ),
+        )
+        payload = json.loads(format_tenant_json(info_with_conflict))
+        ec = payload["evidence_conflicts"]
+        assert isinstance(ec, list)
+        assert len(ec) == 1
+        entry = ec[0]
+        assert entry["field"] == "display_name"
+        assert isinstance(entry["candidates"], list)
+        assert len(entry["candidates"]) == 2
+        for cand in entry["candidates"]:
+            assert set(cand) == {"value", "source", "confidence"}
+            assert cand["confidence"] in {"high", "medium", "low"}
 
     def test_sparse_tenant_still_conforms(self) -> None:
         """Sparse-data lookup (no tenant, minimal evidence) must still match the schema."""

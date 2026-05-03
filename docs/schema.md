@@ -100,6 +100,8 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 |---|---|---|---|---|---|
 | `lexical_observations` | `list[string]` | no | — | stable | Hedged observations from CT subdomain lexical taxonomy. |
 | `bimi_identity` | object | yes | — | stable | BIMI VMC identity: `{organization, country, state, locality, trademark}`. |
+| `evidence_conflicts` | `list[EvidenceConflict]` | no | — | stable (v1.7+) | Cross-source disagreements: each entry names a merged field where 2+ sources gave different values, with all candidates preserved. Empty array when sources agreed. |
+| `chain_motifs` | `list[ChainMotif]` | no | — | stable (v1.7+) | CNAME chain motifs that fired on related subdomains — e.g. Cloudflare → AWS origin, Akamai → Azure origin. Observable proxy/origin shape only; never an ownership claim. Catalog at `recon_tool/data/motifs.yaml`. |
 
 ### Experimental
 
@@ -120,7 +122,18 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
   "issuance_velocity": 7,
   "newest_cert_age_days": 2,
   "oldest_cert_age_days": 730,
-  "top_issuers": ["Let's Encrypt", "DigiCert", "Sectigo"]
+  "top_issuers": ["Let's Encrypt", "DigiCert", "Sectigo"],
+  "wildcard_sibling_clusters": [
+    ["api.example.com", "example.com", "www.example.com"]
+  ],
+  "deployment_bursts": [
+    {
+      "window_start": "2024-05-01T12:00:00+00:00",
+      "window_end": "2024-05-01T12:00:45+00:00",
+      "span_seconds": 45,
+      "names": ["api.example.com", "app.example.com", "www.example.com"]
+    }
+  ]
 }
 ```
 
@@ -132,6 +145,47 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | `newest_cert_age_days` | int | stable |
 | `oldest_cert_age_days` | int | stable |
 | `top_issuers` | `list[string]` (up to 3) | stable |
+| `wildcard_sibling_clusters` | `list[list[string]]` | stable (v1.7+) — each inner list is the deduplicated, sorted concrete-name SANs from a single cert that also covered ≥1 wildcard SAN. Empty when no wildcard cert produced concrete siblings. Bounded (≤10 clusters, ≤20 names per cluster). |
+| `deployment_bursts` | `list[CertBurst]` | stable (v1.7+) — co-issuance cohorts within a 60s window with ≥3 distinct non-wildcard SANs. Output is relative (span_seconds + names) and never claims ownership. Bounded (≤8 bursts, ≤25 names per burst). |
+
+`CertBurst`:
+
+```json
+{
+  "window_start": "ISO-8601 UTC",
+  "window_end": "ISO-8601 UTC",
+  "span_seconds": 45,
+  "names": ["a.example.com", "b.example.com", "c.example.com"]
+}
+```
+
+### `EvidenceConflict` (v1.7+)
+
+```json
+{
+  "field": "display_name",
+  "candidates": [
+    {"value": "Acme Corp", "source": "oidc", "confidence": "high"},
+    {"value": "Acme Corporation", "source": "userrealm", "confidence": "medium"}
+  ]
+}
+```
+
+`field` is one of: `display_name`, `auth_type`, `region`, `tenant_id`, `dmarc_policy`, `google_auth_type`. The conflict-aware merger picks a winner using source-confidence ordering; the array surfaces the alternates so consumers can see what was discarded.
+
+### `ChainMotif` (v1.7+)
+
+```json
+{
+  "motif_name": "cloudflare_to_aws",
+  "display_name": "Cloudflare → AWS origin",
+  "confidence": "medium",
+  "subdomain": "api.example.com",
+  "chain": ["edge.cloudflare.net", "origin.amazonaws.com"]
+}
+```
+
+`chain` is the matched subsequence of hops, not the full original CNAME chain. Each motif fires on observable structure only — never an ownership claim. The motif catalog is shipped in `recon_tool/data/motifs.yaml` and can be extended via `~/.recon/motifs.yaml` (additive only).
 
 ### `bimi_identity`
 

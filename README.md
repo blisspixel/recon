@@ -54,6 +54,14 @@ Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP
 | Defensive review or vendor diligence | Hedged observations and evidence traces you can verify | You need vulnerability scanning, exploit checks, or host-level facts |
 | Automation-friendly output | Stable `--json`, batch mode, delta mode, and local MCP tools | You need dashboards, scheduled monitoring, or report generation |
 
+## recon in practice
+
+recon is a fast, zero-credential first-pass tool for external technology stack and posture visibility from public sources.
+
+It is designed to help with vendor due diligence, acquisition reviews, partner assessments, and internal hardening checks.
+
+recon intentionally does not replace commercial EASM platforms, active scanners, or continuous monitoring solutions. It focuses on delivering trustworthy, hedged observations with full provenance that can feed into other tools or processes.
+
 ## How recon Works
 
 recon performs layered inference over public DNS, certificate transparency,

@@ -51,11 +51,13 @@ from recon_tool.http import http_client as _http_client
 from recon_tool.models import (
     BIMIIdentity,
     CertSummary,
+    ChainMotifObservation,
     EvidenceRecord,
     SourceResult,
     SurfaceAttribution,
     UnclassifiedCnameChain,
 )
+from recon_tool.motifs import load_motifs, match_chain_motifs
 from recon_tool.sources.cert_providers import CertIntelProvider, CertSpotterProvider, CrtshProvider
 
 logger = logging.getLogger("recon")
@@ -149,6 +151,7 @@ class _DetectionCtx:
         "_matched_fp_detections",
         "bimi_identity",
         "cert_summary",
+        "chain_motifs",
         "ct_cache_age_days",
         "ct_provider_used",
         "ct_subdomain_count",
@@ -206,6 +209,10 @@ class _DetectionCtx:
         # discovery tooling. Wildcard echoes are filtered before this list
         # is populated.
         self.unclassified_cname_chains: list[UnclassifiedCnameChain] = []
+        # v1.7: motif observations from data/motifs.yaml. Each entry
+        # records a CDN/origin shape that fired on a related subdomain's
+        # CNAME chain — never an ownership claim.
+        self.chain_motifs: list[ChainMotifObservation] = []
 
     def add(self, svc_name: str, slug: str | None = None, source_type: str = "", raw_value: str = "") -> None:
         """Register a detected service, optionally with its slug and evidence.
@@ -1667,6 +1674,12 @@ def _classify_chain(
     return application, infrastructure
 
 
+# v1.7: cap on total motif observations per lookup. Prevents a domain
+# with hundreds of related subdomains from flooding the chain_motifs
+# field. Per-chain motif count is bounded implicitly by the catalog size.
+_MAX_CHAIN_MOTIF_OBSERVATIONS = 50
+
+
 async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> None:
     """Resolve CNAME chains for related domains and attribute services.
 
@@ -1687,7 +1700,8 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
     layer, and CDNs / load balancers fall to the supplementary slot.
     """
     rules = get_cname_target_rules()
-    if not rules:
+    motifs_catalog = load_motifs()
+    if not rules and not motifs_catalog:
         return
 
     # Sort longest-pattern-first so specific matches (e.g. ``cname.vercel-dns.com``)
@@ -1743,6 +1757,25 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
         if item is None:
             continue
         host, chain = item
+
+        # v1.7: motif matching runs alongside the rule-based classifier.
+        # Motifs describe chain-shape (Cloudflare → AWS origin, etc.) and
+        # complement single-hop application detection — they never
+        # override it.
+        if motifs_catalog and len(ctx.chain_motifs) < _MAX_CHAIN_MOTIF_OBSERVATIONS:
+            for match in match_chain_motifs(chain, motifs_catalog, subdomain=host):
+                ctx.chain_motifs.append(
+                    ChainMotifObservation(
+                        motif_name=match.motif_name,
+                        display_name=match.display_name,
+                        confidence=match.confidence,
+                        subdomain=match.subdomain,
+                        chain=match.chain,
+                    )
+                )
+                if len(ctx.chain_motifs) >= _MAX_CHAIN_MOTIF_OBSERVATIONS:
+                    break
+
         application, infrastructure = _classify_chain(chain, sorted_rules)
         if application is None and infrastructure is None:
             # Genuinely unclassified — preserve for the fingerprint-discovery
@@ -1827,6 +1860,9 @@ class DNSSource:
         unclassified_tuple = tuple(
             sorted(ctx.unclassified_cname_chains, key=lambda u: u.subdomain)
         )
+        chain_motifs_tuple = tuple(
+            sorted(ctx.chain_motifs, key=lambda m: (m.subdomain, m.motif_name))
+        )
 
         if ctx.services:
             return SourceResult(
@@ -1851,6 +1887,7 @@ class DNSSource:
                 ),
                 surface_attributions=surface_tuple,
                 unclassified_cname_chains=unclassified_tuple,
+                chain_motifs=chain_motifs_tuple,
             )
 
         return SourceResult(
@@ -1871,6 +1908,7 @@ class DNSSource:
             raw_dns_records=tuple((rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals),
             surface_attributions=surface_tuple,
             unclassified_cname_chains=unclassified_tuple,
+            chain_motifs=chain_motifs_tuple,
         )
 
     @staticmethod

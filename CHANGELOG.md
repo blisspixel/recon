@@ -5,6 +5,73 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-05-03
+
+**Hardened-target signal recovery.** The first of the v1.7–v1.9 build plan
+in [`docs/roadmap.md`](docs/roadmap.md). This release squeezes more usable
+defensive intelligence out of CT logs and resolution chains we already
+collect — every new field is a post-processing layer on existing passive
+observables. Zero new network surface, zero new credentials, zero
+ownership claims. See [`docs/correlation.md`](docs/correlation.md) for
+the latent-variable framing.
+
+### Added
+
+- **Wildcard SAN sibling expansion** — when a CT cert covers `*.example.com`,
+  recon now harvests every concrete (non-wildcard) SAN from that same
+  cert as a candidate sibling cluster. Surfaced under
+  `cert_summary.wildcard_sibling_clusters` in `--json`. Bounded
+  (≤10 clusters, ≤20 names per cluster). Works for both crt.sh and
+  CertSpotter providers.
+- **Temporal CT issuance bursts** — co-issued cohorts inside a 60-second
+  window with ≥3 distinct names become `cert_summary.deployment_bursts`
+  entries: relative window deltas + name list. Output is intentionally
+  relative — co-issuance is observable; "same owner" is not.
+  Bounded (≤8 bursts, ≤25 names per burst).
+- **CNAME chain motif library** — new `recon_tool/data/motifs.yaml` and
+  loader at `recon_tool/motifs.py`. Each motif names an ordered
+  proxy/CDN/origin shape (e.g. Cloudflare → AWS origin, Akamai → Azure
+  origin); fires on a related subdomain's CNAME chain when its markers
+  appear in order. Surfaced as a top-level `chain_motifs` array in
+  `--json`. Catalog ships with 11 CDN→origin shapes covering the major
+  cloud providers; users extend additively via `~/.recon/motifs.yaml`.
+  Chain length capped at 4. Per-lookup observation cap at 50.
+- **Cross-source evidence conflicts in `--json`** — top-level
+  `evidence_conflicts` array (always present, empty when no conflicts).
+  Each entry names a merged field where 2+ sources gave different
+  values, with all candidates preserved. The legacy `conflicts` dict
+  emitted under `--explain` is unchanged for backwards compatibility.
+
+### Schema
+
+- New stable v1.7+ top-level fields: `evidence_conflicts`, `chain_motifs`.
+- New stable v1.7+ nested fields: `cert_summary.wildcard_sibling_clusters`,
+  `cert_summary.deployment_bursts`.
+- New `$defs` entries in `docs/recon-schema.json`: `EvidenceConflict`,
+  `ChainMotif`, `CertBurst`.
+- `docs/schema.md` updated with worked examples for each new field.
+
+### Internal
+
+- `models.py` gains `CertBurst`, `ChainMotifObservation`, and
+  `serialize_conflicts_array()`.
+- `cert_providers.py` `build_cert_summary()` now accepts SAN lists per
+  cert entry; both providers attach `dns_names` to each cert metadata
+  record so the wildcard / burst pipelines can consume them.
+- `dns.py` `_classify_related_surface()` invokes the motif matcher
+  alongside the existing `cname_target` rule classifier; results land
+  in `_DetectionCtx.chain_motifs` and propagate through the merger.
+
+### Validation gate
+
+- 67 new/updated tests across `test_motifs.py`, `test_cert_providers.py`
+  (wildcard cluster + burst paths), and `test_json_schema_*` (new
+  fields + conflict-array shape). Every new feature carries explicit
+  "does not fire when…" coverage alongside the positive case
+  (per-roadmap discipline).
+- Full private-corpus run is the user's responsibility (corpus is
+  gitignored). The corpus delta will land alongside the v1.7.0 PyPI tag.
+
 ## [1.6.1] - 2026-05-03
 
 **Patch release - streaming batch + 26 new fingerprints from a 4,270-domain
