@@ -45,7 +45,9 @@
     "lexical_observations",
     "bimi_identity",
     "slug_confidences",
-    "surface_attributions"
+    "surface_attributions",
+    "evidence_conflicts",
+    "chain_motifs"
   ],
   "properties": {
     "tenant_id": {
@@ -255,6 +257,16 @@
       "type": "array",
       "items": {"$ref": "#/$defs/SurfaceAttribution"}
     },
+    "evidence_conflicts": {
+      "description": "Top-level array of cross-source disagreements (v1.7+). Each entry names a merged field where 2+ sources provided different non-None values, with every candidate preserved. Empty array when sources agreed. The conflict-aware merger picks a winner using source-confidence ordering; this array surfaces the alternates so consumers can see what was discarded. The legacy `conflicts` dict that --explain emits remains for backwards compatibility.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/EvidenceConflict"}
+    },
+    "chain_motifs": {
+      "description": "CNAME chain motifs (v1.7+). Each entry records an ordered proxy/CDN/origin shape (e.g. Cloudflare → AWS origin, Akamai → Azure origin) that fired on a related subdomain's CNAME chain. Observable structure only — never an ownership claim. Empty array when no motif matched any related subdomain. The motif catalog lives in recon_tool/data/motifs.yaml and can be extended via ~/.recon/motifs.yaml (additive only).",
+      "type": "array",
+      "items": {"$ref": "#/$defs/ChainMotif"}
+    },
     "unclassified_cname_chains": {
       "description": "OPTIONAL — present only when ``--include-unclassified`` is passed. CNAME chains the surface classifier resolved but couldn't attribute to any cname_target fingerprint. Each entry: {subdomain, chain: [hop1, hop2, terminal]}. Wildcard-DNS echoes are filtered out before this list is populated. Feeds the fingerprint-discovery loop in validation/find_gaps.py and the /recon-fingerprint-triage Claude skill.",
       "type": "array",
@@ -279,7 +291,9 @@
         "issuance_velocity",
         "newest_cert_age_days",
         "oldest_cert_age_days",
-        "top_issuers"
+        "top_issuers",
+        "wildcard_sibling_clusters",
+        "deployment_bursts"
       ],
       "properties": {
         "cert_count": {"type": "integer", "minimum": 0},
@@ -291,6 +305,33 @@
           "type": "array",
           "items": {"type": "string"},
           "maxItems": 3
+        },
+        "wildcard_sibling_clusters": {
+          "description": "Stable v1.7+. Each entry is the deduplicated, sorted list of non-wildcard SANs from a single cert that also covered ≥1 wildcard SAN. Empty array when CT data showed no wildcard certs or none had concrete siblings to harvest. Bounded — at most 10 clusters, 20 names per cluster.",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "deployment_bursts": {
+          "description": "Stable v1.7+. Cohorts of cert issuances clustered by `not_before` proximity (default 60s window, min 3 distinct non-wildcard SANs). Output is intentionally relative — span_seconds + name list — and never claims ownership. Empty array when no cluster meets the minimum size. Bounded — at most 8 bursts, 25 names per burst.",
+          "type": "array",
+          "items": {"$ref": "#/$defs/CertBurst"}
+        }
+      }
+    },
+    "CertBurst": {
+      "type": "object",
+      "required": ["window_start", "window_end", "span_seconds", "names"],
+      "properties": {
+        "window_start": {"type": "string", "description": "ISO-8601 UTC of earliest not_before in this burst."},
+        "window_end": {"type": "string", "description": "ISO-8601 UTC of latest not_before in this burst."},
+        "span_seconds": {"type": "integer", "minimum": 0, "description": "Window span in seconds."},
+        "names": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Distinct non-wildcard SANs co-issued inside this window, sorted."
         }
       }
     },
@@ -329,6 +370,46 @@
         "primary_tier": {"type": "string", "enum": ["application", "infrastructure"]},
         "infra_slug": {"type": ["string", "null"]},
         "infra_name": {"type": ["string", "null"]}
+      }
+    },
+    "ChainMotif": {
+      "description": "One CNAME chain motif observed against a related subdomain. ``chain`` is the ordered subset of hops that matched the motif's markers — not the full original chain.",
+      "type": "object",
+      "required": ["motif_name", "display_name", "confidence", "subdomain", "chain"],
+      "properties": {
+        "motif_name": {"type": "string", "description": "Stable identifier from motifs.yaml."},
+        "display_name": {"type": "string", "description": "Human-readable label with → separators."},
+        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+        "subdomain": {"type": "string", "description": "Related subdomain whose chain produced the match."},
+        "chain": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Matched hops in order, one per motif marker."
+        }
+      }
+    },
+    "EvidenceConflict": {
+      "description": "A single field where two or more sources provided different non-None values during merge. Stable v1.7+.",
+      "type": "object",
+      "required": ["field", "candidates"],
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Merged field name. One of: display_name, auth_type, region, tenant_id, dmarc_policy, google_auth_type."
+        },
+        "candidates": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["value", "source", "confidence"],
+            "properties": {
+              "value": {"type": "string"},
+              "source": {"type": "string"},
+              "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+            }
+          }
+        }
       }
     },
     "UnclassifiedCnameChain": {

@@ -9,7 +9,9 @@ from typing import Any
 __all__ = [
     "BIMIIdentity",
     "CandidateValue",
+    "CertBurst",
     "CertSummary",
+    "ChainMotifObservation",
     "ChainReport",
     "ChainResult",
     "ConfidenceLevel",
@@ -26,6 +28,7 @@ __all__ = [
     "TenantInfo",
     "UnclassifiedCnameChain",
     "serialize_conflicts",
+    "serialize_conflicts_array",
 ]
 
 
@@ -67,6 +70,24 @@ class BIMIIdentity:
 
 
 @dataclass(frozen=True)
+class CertBurst:
+    """A cluster of certificates issued within a short window.
+
+    The same `not_before` window across multiple certs / SANs is a
+    deployment-burst signal. Output is intentionally relative (window
+    span in seconds, count of names, name list) rather than absolute
+    timestamps — recon does not claim "same owner", only "co-issued".
+
+    Surfaced under ``cert_summary.deployment_bursts`` in --json (v1.7+).
+    """
+
+    window_start: str  # ISO-8601 UTC of earliest not_before in this burst
+    window_end: str  # ISO-8601 UTC of latest not_before in this burst
+    span_seconds: int  # window_end - window_start, in seconds
+    names: tuple[str, ...]  # distinct non-wildcard SANs in this burst, sorted
+
+
+@dataclass(frozen=True)
 class CertSummary:
     """Certificate transparency summary from crt.sh metadata."""
 
@@ -76,6 +97,15 @@ class CertSummary:
     newest_cert_age_days: int
     oldest_cert_age_days: int
     top_issuers: tuple[str, ...]  # up to 3 most frequent issuer_name values
+    # v1.7: Wildcard SAN sibling clusters. Each inner tuple is the sorted
+    # set of non-wildcard SANs from a single cert that also covered a
+    # wildcard. Empty when no wildcard cert produced siblings, or when
+    # CT data was unavailable. Bounded.
+    wildcard_sibling_clusters: tuple[tuple[str, ...], ...] = ()
+    # v1.7: Deployment bursts — cohorts of cert issuances clustered by
+    # not_before within a short window. Empty when no burst meets the
+    # minimum cohort size.
+    deployment_bursts: tuple[CertBurst, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -161,6 +191,32 @@ def serialize_conflicts(conflicts: MergeConflicts) -> dict[str, Any]:
     return result
 
 
+def serialize_conflicts_array(conflicts: MergeConflicts | None) -> list[dict[str, Any]]:
+    """Serialize MergeConflicts to a flat array of {field, candidates} records.
+
+    Always returns a list. Empty list when ``conflicts`` is None or no
+    field has 2+ disagreeing candidates. Used by the top-level
+    ``evidence_conflicts`` array in --json output (v1.7.0+).
+    """
+    if conflicts is None:
+        return []
+    out: list[dict[str, Any]] = []
+    for f in fields(conflicts):
+        candidates: tuple[CandidateValue, ...] = getattr(conflicts, f.name)
+        if not candidates:
+            continue
+        out.append(
+            {
+                "field": f.name,
+                "candidates": [
+                    {"value": c.value, "source": c.source, "confidence": c.confidence}
+                    for c in candidates
+                ],
+            }
+        )
+    return out
+
+
 @dataclass(frozen=True)
 class UnclassifiedCnameChain:
     """A CNAME chain from a related subdomain that did NOT match any
@@ -175,6 +231,26 @@ class UnclassifiedCnameChain:
 
     subdomain: str
     chain: tuple[str, ...]  # ordered hops, terminal last
+
+
+@dataclass(frozen=True)
+class ChainMotifObservation:
+    """One CNAME chain motif observed against a related subdomain.
+
+    A motif names an ordered proxy / CDN / origin shape (e.g.
+    "Cloudflare → AWS origin"). The observation records which subdomain
+    triggered the motif and the matched hop subsequence — never an
+    ownership claim. See ``recon_tool/motifs.py`` for the matcher and
+    ``recon_tool/data/motifs.yaml`` for the catalog.
+
+    Surfaced under top-level ``chain_motifs`` in --json (v1.7+).
+    """
+
+    motif_name: str
+    display_name: str
+    confidence: str  # "high" | "medium" | "low"
+    subdomain: str
+    chain: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -290,6 +366,12 @@ class SourceResult:
     # ``--include-unclassified`` is passed. Feeds the fingerprint-discovery
     # loop (validation/find_gaps.py and the triage skill).
     unclassified_cname_chains: tuple[UnclassifiedCnameChain, ...] = ()
+
+    # --- v1.7: CNAME chain motif observations ---
+    # Each entry records a motif from data/motifs.yaml that fired on the
+    # CNAME chain of a related subdomain — e.g. Cloudflare → AWS origin,
+    # Akamai → Azure origin. Always populated; never claims ownership.
+    chain_motifs: tuple[ChainMotifObservation, ...] = ()
 
     @property
     def crtsh_degraded(self) -> bool:
@@ -428,6 +510,12 @@ class TenantInfo:
     # ``--include-unclassified`` is passed. Feeds the fingerprint-discovery
     # loop (validation/find_gaps.py and the triage skill).
     unclassified_cname_chains: tuple[UnclassifiedCnameChain, ...] = ()
+
+    # --- v1.7: CNAME chain motif observations ---
+    # Each entry records a motif from data/motifs.yaml that fired on the
+    # CNAME chain of a related subdomain — e.g. Cloudflare → AWS origin,
+    # Akamai → Azure origin. Always populated; never claims ownership.
+    chain_motifs: tuple[ChainMotifObservation, ...] = ()
 
     @property
     def crtsh_degraded(self) -> bool:

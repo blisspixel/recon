@@ -335,6 +335,152 @@ class TestBuildCertSummary:
         assert cs is not None
         assert len(cs.top_issuers) <= 3
 
+    def test_no_dns_names_means_no_clusters_or_bursts(self):
+        """Pre-v1.7 entry shape (no dns_names key) must still build cleanly."""
+        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        entries = [
+            {
+                "issuer_id": "1",
+                "issuer_name": "LE",
+                "not_before": "2024-05-01T00:00:00",
+                "not_after": "2024-08-01T00:00:00",
+            },
+        ]
+        cs = build_cert_summary(entries, now)
+        assert cs is not None
+        assert cs.wildcard_sibling_clusters == ()
+        assert cs.deployment_bursts == ()
+
+
+# ── Wildcard SAN sibling clusters (v1.7) ─────────────────────────────────
+
+
+class TestWildcardSiblingClusters:
+    """A cert with ≥1 wildcard SAN exposes its concrete-name peers."""
+
+    def _entry(self, names, when="2024-05-01T00:00:00"):
+        return {
+            "issuer_id": "le",
+            "issuer_name": "Let's Encrypt",
+            "not_before": when,
+            "not_after": "2025-05-01T00:00:00",
+            "dns_names": list(names),
+        }
+
+    def test_wildcard_with_concrete_siblings_emits_cluster(self):
+        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        cs = build_cert_summary(
+            [self._entry(["*.example.com", "example.com", "api.example.com"])],
+            now,
+        )
+        assert cs is not None
+        assert cs.wildcard_sibling_clusters == (("api.example.com", "example.com"),)
+
+    def test_no_wildcard_means_no_cluster(self):
+        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        cs = build_cert_summary([self._entry(["example.com", "api.example.com"])], now)
+        assert cs is not None
+        assert cs.wildcard_sibling_clusters == ()
+
+    def test_only_wildcards_means_no_cluster(self):
+        """A cert covering only wildcards has no concrete sibling to harvest."""
+        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        cs = build_cert_summary([self._entry(["*.example.com", "*.api.example.com"])], now)
+        assert cs is not None
+        assert cs.wildcard_sibling_clusters == ()
+
+    def test_duplicate_clusters_deduped_across_renewals(self):
+        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        entries = [
+            self._entry(["*.example.com", "example.com", "api.example.com"], when="2024-01-01T00:00:00"),
+            self._entry(["*.example.com", "example.com", "api.example.com"], when="2024-04-01T00:00:00"),
+        ]
+        cs = build_cert_summary(entries, now)
+        assert cs is not None
+        assert len(cs.wildcard_sibling_clusters) == 1
+
+    def test_clusters_capped(self):
+        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        entries = [
+            self._entry(
+                [f"*.zone{i}.example.com", f"node{i}.zone{i}.example.com"],
+                when=f"2024-0{(i % 9) + 1}-01T00:00:00",
+            )
+            for i in range(15)
+        ]
+        cs = build_cert_summary(entries, now)
+        assert cs is not None
+        assert len(cs.wildcard_sibling_clusters) <= 10
+
+
+# ── Temporal CT issuance bursts (v1.7) ───────────────────────────────────
+
+
+class TestDeploymentBursts:
+    """Co-issued certificates within a short window become a burst."""
+
+    def _entry(self, when, names):
+        return {
+            "issuer_id": "le",
+            "issuer_name": "Let's Encrypt",
+            "not_before": when,
+            "not_after": "2025-05-01T00:00:00",
+            "dns_names": list(names),
+        }
+
+    def test_three_co_issued_names_form_burst(self):
+        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        entries = [
+            self._entry("2024-05-01T12:00:00", ["api.example.com"]),
+            self._entry("2024-05-01T12:00:30", ["app.example.com"]),
+            self._entry("2024-05-01T12:00:45", ["www.example.com"]),
+        ]
+        cs = build_cert_summary(entries, now)
+        assert cs is not None
+        assert len(cs.deployment_bursts) == 1
+        burst = cs.deployment_bursts[0]
+        assert burst.span_seconds <= 60
+        assert set(burst.names) == {"api.example.com", "app.example.com", "www.example.com"}
+
+    def test_two_names_does_not_form_burst(self):
+        """Below the min_burst_names threshold."""
+        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        entries = [
+            self._entry("2024-05-01T12:00:00", ["api.example.com"]),
+            self._entry("2024-05-01T12:00:30", ["app.example.com"]),
+        ]
+        cs = build_cert_summary(entries, now)
+        assert cs is not None
+        assert cs.deployment_bursts == ()
+
+    def test_separate_windows_yield_separate_bursts(self):
+        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        entries = [
+            self._entry("2024-05-01T12:00:00", ["a.example.com"]),
+            self._entry("2024-05-01T12:00:10", ["b.example.com"]),
+            self._entry("2024-05-01T12:00:20", ["c.example.com"]),
+            # Far outside the 60-second window:
+            self._entry("2024-05-15T03:00:00", ["x.example.com"]),
+            self._entry("2024-05-15T03:00:30", ["y.example.com"]),
+            self._entry("2024-05-15T03:00:45", ["z.example.com"]),
+        ]
+        cs = build_cert_summary(entries, now)
+        assert cs is not None
+        assert len(cs.deployment_bursts) == 2
+
+    def test_wildcards_excluded_from_burst_names(self):
+        """Wildcards never count toward burst output (the wildcard fact is its own signal)."""
+        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        entries = [
+            self._entry("2024-05-01T12:00:00", ["*.example.com", "a.example.com"]),
+            self._entry("2024-05-01T12:00:10", ["b.example.com"]),
+            self._entry("2024-05-01T12:00:20", ["c.example.com"]),
+        ]
+        cs = build_cert_summary(entries, now)
+        assert cs is not None
+        assert len(cs.deployment_bursts) == 1
+        assert all(not n.startswith("*.") for n in cs.deployment_bursts[0].names)
+
 
 # ── CertSpotter request shape ───────────────────────────────────────────
 

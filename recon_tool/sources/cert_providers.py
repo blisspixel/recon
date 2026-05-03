@@ -17,7 +17,26 @@ from typing import Protocol, runtime_checkable
 import httpx
 
 from recon_tool.http import http_client
-from recon_tool.models import CertSummary
+from recon_tool.models import CertBurst, CertSummary
+
+# ── v1.7 caps for derived cert intelligence ──────────────────────────────
+# Wildcard SAN sibling clusters: each cert that contains ≥1 wildcard SAN
+# can produce one cluster of its non-wildcard SANs. We bound both how
+# many clusters surface and how big each cluster can be — a single cert
+# with hundreds of SANs would otherwise dominate the field.
+_MAX_WILDCARD_CLUSTERS = 10
+_MAX_NAMES_PER_CLUSTER = 20
+
+# Temporal CT burst detection: certificates whose not_before timestamps
+# fall within ``_BURST_WINDOW_SECONDS`` of each other are treated as a
+# co-issuance cohort. The minimum cohort size keeps single renewals out
+# of the burst output. ``_MAX_BURSTS`` and ``_MAX_NAMES_PER_BURST`` cap
+# the surface so a long history with constant renewals does not flood
+# the JSON.
+_BURST_WINDOW_SECONDS = 60
+_MIN_BURST_NAMES = 3
+_MAX_BURSTS = 8
+_MAX_NAMES_PER_BURST = 25
 
 logger = logging.getLogger("recon")
 
@@ -189,14 +208,132 @@ def filter_subdomains(
     return sorted(seen, key=_sort_key)[:max_count]
 
 
+def _extract_wildcard_sibling_clusters(
+    entries: list[dict[str, str | int | list[str] | None]],
+) -> tuple[tuple[str, ...], ...]:
+    """Walk cert entries, harvesting non-wildcard SANs from any cert that
+    also covered a wildcard SAN.
+
+    Each cert that contains ``*.something`` produces one cluster: the
+    sorted, deduplicated, non-wildcard SAN set from that same cert.
+    Wildcards in the cluster itself are dropped (the wildcard fact is
+    already implicit in the cluster's existence).
+
+    Bounded by ``_MAX_WILDCARD_CLUSTERS`` and ``_MAX_NAMES_PER_CLUSTER``
+    to keep one massive cert from dominating the field. Identical
+    clusters across renewals are deduplicated.
+    """
+    seen_clusters: set[tuple[str, ...]] = set()
+    out: list[tuple[str, ...]] = []
+    for entry in entries:
+        names = entry.get("dns_names")
+        if not isinstance(names, list) or not names:
+            continue
+        # Need at least one wildcard SAN for this cert to be a "wildcard
+        # cert" for our purposes.
+        has_wildcard = any(n.startswith("*.") for n in names)
+        if not has_wildcard:
+            continue
+        siblings: set[str] = set()
+        for n in names:
+            normalized = n.strip().lower()
+            if not normalized or normalized.startswith("*."):
+                continue
+            siblings.add(normalized)
+        if not siblings:
+            continue
+        cluster = tuple(sorted(siblings)[:_MAX_NAMES_PER_CLUSTER])
+        if cluster in seen_clusters:
+            continue
+        seen_clusters.add(cluster)
+        out.append(cluster)
+        if len(out) >= _MAX_WILDCARD_CLUSTERS:
+            break
+    return tuple(out)
+
+
+def _detect_deployment_bursts(
+    entries: list[dict[str, str | int | list[str] | None]],
+) -> tuple[CertBurst, ...]:
+    """Cluster cert entries by ``not_before`` proximity.
+
+    Sort entries by parseable ``not_before``; each contiguous group whose
+    span fits inside ``_BURST_WINDOW_SECONDS`` becomes a candidate burst.
+    A burst is emitted only when the cohort has at least
+    ``_MIN_BURST_NAMES`` distinct non-wildcard SANs across the group.
+
+    Output is intentionally relative — span_seconds + name list — and
+    never claims ownership. Co-issuance is observable; "same owner" is
+    not.
+    """
+    parsed: list[tuple[datetime, list[str]]] = []
+    for entry in entries:
+        not_before_raw = entry.get("not_before")
+        if not isinstance(not_before_raw, str):
+            continue
+        try:
+            dt = datetime.fromisoformat(not_before_raw)
+        except (ValueError, TypeError):
+            continue
+        dt = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+        names = entry.get("dns_names")
+        names_list: list[str] = []
+        if isinstance(names, list):
+            for n in names:
+                nm = n.strip().lower()
+                if nm and not nm.startswith("*."):
+                    names_list.append(nm)
+        parsed.append((dt, names_list))
+
+    if not parsed:
+        return ()
+    parsed.sort(key=lambda t: t[0])
+
+    bursts: list[CertBurst] = []
+    i = 0
+    while i < len(parsed):
+        window_start = parsed[i][0]
+        cluster: list[tuple[datetime, list[str]]] = [parsed[i]]
+        j = i + 1
+        while j < len(parsed):
+            if (parsed[j][0] - window_start).total_seconds() <= _BURST_WINDOW_SECONDS:
+                cluster.append(parsed[j])
+                j += 1
+            else:
+                break
+        # Collect distinct non-wildcard SANs across the cohort.
+        names_set: set[str] = set()
+        for _, ns in cluster:
+            names_set.update(ns)
+        if len(names_set) >= _MIN_BURST_NAMES:
+            window_end = cluster[-1][0]
+            span = max(int((window_end - window_start).total_seconds()), 0)
+            sorted_names = tuple(sorted(names_set)[:_MAX_NAMES_PER_BURST])
+            bursts.append(
+                CertBurst(
+                    window_start=window_start.isoformat(),
+                    window_end=window_end.isoformat(),
+                    span_seconds=span,
+                    names=sorted_names,
+                )
+            )
+            if len(bursts) >= _MAX_BURSTS:
+                break
+        i = j if j > i else i + 1
+    return tuple(bursts)
+
+
 def build_cert_summary(
-    entries: list[dict[str, str | int | None]],
+    entries: list[dict[str, str | int | list[str] | None]],
     now: datetime,
 ) -> CertSummary | None:
     """Build a CertSummary from certificate metadata entries.
 
     Each entry should have keys: issuer_id (or issuer_ca_id), issuer_name,
     not_before, not_after. Entries missing required fields are skipped.
+    When an entry also carries a ``dns_names`` list (CertSpotter, or
+    crt.sh after the v1.7 SAN-attached payload change), wildcard sibling
+    clustering and temporal burst detection both run.
 
     Args:
         entries: List of cert metadata dicts.
@@ -246,6 +383,9 @@ def build_cert_summary(
     oldest_dt = min(aware_dates)
     ninety_days_ago = now - timedelta(days=90)
 
+    wildcard_clusters = _extract_wildcard_sibling_clusters(entries)
+    bursts = _detect_deployment_bursts(entries)
+
     return CertSummary(
         cert_count=cert_meta_count,
         issuer_diversity=len(issuer_ids),
@@ -253,6 +393,8 @@ def build_cert_summary(
         newest_cert_age_days=max((now - newest_dt).days, 0),
         oldest_cert_age_days=max((now - oldest_dt).days, 0),
         top_issuers=tuple(name for name, _ in issuer_name_counter.most_common(3)),
+        wildcard_sibling_clusters=wildcard_clusters,
+        deployment_bursts=bursts,
     )
 
 
@@ -291,10 +433,21 @@ class CrtshProvider:
         # large CT histories can contain tens of thousands of names,
         # and only MAX_SUBDOMAINS are ever returned.
         raw_names: list[str] = []
-        cert_entries: list[dict[str, str | int | None]] = []
+        cert_entries: list[dict[str, str | int | list[str] | None]] = []
         for entry in data[:_MAX_CRTSH_ENTRIES]:
             if not isinstance(entry, dict):
                 continue
+
+            # v1.7: parse SANs once so they can both feed the
+            # ``raw_names`` discovery list AND attach to the per-cert
+            # entry for wildcard-sibling and burst analysis.
+            name_value = entry.get("name_value", "")
+            cert_sans: list[str] = []
+            if isinstance(name_value, str):
+                for raw_name in name_value.strip().split("\n"):
+                    n = raw_name.strip()
+                    if n:
+                        cert_sans.append(n)
 
             if len(cert_entries) < _MAX_CRTSH_CERT_SUMMARY_ENTRIES:
                 cert_entries.append(
@@ -304,16 +457,14 @@ class CrtshProvider:
                         "issuer_name": entry.get("issuer_name"),
                         "not_before": entry.get("not_before"),
                         "not_after": entry.get("not_after"),
+                        "dns_names": cert_sans,
                     }
                 )
 
             if len(raw_names) >= _MAX_CRTSH_RAW_NAMES:
                 continue
-            name_value = entry.get("name_value", "")
-            if not isinstance(name_value, str):
-                continue
-            for raw_name in name_value.strip().split("\n"):
-                raw_names.append(raw_name.strip())
+            for n in cert_sans:
+                raw_names.append(n)
                 if len(raw_names) >= _MAX_CRTSH_RAW_NAMES:
                     break
 
@@ -405,7 +556,7 @@ class CertSpotterProvider:
         whether that's enough.
         """
         all_raw_names: list[str] = []
-        all_cert_entries: list[dict[str, str | int | None]] = []
+        all_cert_entries: list[dict[str, str | int | list[str] | None]] = []
         after_cursor: str | None = None
 
         async with http_client(timeout=_CT_TIMEOUT, retry_transient=False) as client:
@@ -440,10 +591,14 @@ class CertSpotterProvider:
                         last_id = str(issuance_id)
 
                     dns_names = issuance.get("dns_names", [])
+                    cert_sans: list[str] = []
                     if isinstance(dns_names, list):
                         for name in dns_names:
                             if isinstance(name, str):
-                                all_raw_names.append(name.strip())
+                                stripped = name.strip()
+                                all_raw_names.append(stripped)
+                                if stripped:
+                                    cert_sans.append(stripped)
 
                     issuer = issuance.get("issuer")
                     issuer_name = None
@@ -457,6 +612,7 @@ class CertSpotterProvider:
                             "issuer_name": issuer_name,
                             "not_before": not_before,
                             "not_after": not_after,
+                            "dns_names": cert_sans,
                         }
                     )
 

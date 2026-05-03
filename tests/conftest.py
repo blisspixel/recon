@@ -14,9 +14,11 @@ import pytest
 
 from recon_tool.models import (
     BIMIIdentity,
+    CandidateValue,
     CertSummary,
     ConfidenceLevel,
     EvidenceRecord,
+    MergeConflicts,
     TenantInfo,
 )
 
@@ -87,6 +89,12 @@ def fully_populated_tenant_info() -> TenantInfo:
         tenant_region_sub_scope=None,
         msgraph_host="graph.microsoft.com",
         lexical_observations=(),
+        merge_conflicts=MergeConflicts(
+            display_name=(
+                CandidateValue(value="Contoso Ltd", source="oidc", confidence="high"),
+                CandidateValue(value="Contoso Limited", source="userrealm", confidence="medium"),
+            ),
+        ),
     )
 
 

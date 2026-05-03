@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.6.1**. Current theme: treat correlation as inference
+Current release: **v1.7.0**. Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
 validation against a private corpus drive what ships next.
@@ -182,31 +182,30 @@ Standing work that runs alongside every release:
 - **Release and docs reliability.** CI gates cover the same checks as
   release; counts and version references stay tight to this file.
 
-### v1.7.0 — Hardened-target signal recovery
+### v1.7.0 — Hardened-target signal recovery (shipped)
 
-Squeeze more out of CT logs and resolution chains, and surface what we
-already track but don't expose. Everything in this release lands as a YAML
-data file plus minimal engine extension.
+Squeezed more out of CT logs and resolution chains, and surfaced what
+we already tracked but didn't expose. Everything in this release landed
+as a YAML data file plus minimal engine extension. See
+[`CHANGELOG.md`](../CHANGELOG.md) for the full notes.
 
-- **Wildcard SAN sibling expansion.** When `*.example.com` appears in a
-  cert, harvest every other SAN from the same cert as a candidate sibling.
-  No new network surface — uses the existing CT response and DNS resolver.
-- **Temporal CT issuance bursts.** Use the `not_before` timestamps already
-  in the CT response. Co-issued subdomains within a short window become
-  `temporal_motif: deployment_burst` evidence. Output uses relative deltas
-  and an explicit window; no absolute "same owner" claims.
-- **CNAME / NS chain motif library (`motifs.yaml`).** Data file describing
-  recurring proxy patterns (`cloudflare → akamai → custom-origin`,
-  `fastly → azure`, etc.). Chain length capped at 4. Pattern matching
-  hooks into the existing chain parser.
-- **Cross-source evidence conflict surfacing.** `MergeConflicts` already
-  records contradictions between sources. Expose them as a top-level
-  `evidence_conflicts` array in `--json` and a section in `--explain`.
-
-**Validation gate** — full private corpus scan after merge; gaps and
-candidates archived under `validation/runs-private/v170/`. Sparse-result
-language audit: every new rule has a documented "does not fire when…"
-case alongside the positive case.
+- **Wildcard SAN sibling expansion.** Implemented in
+  `recon_tool/sources/cert_providers.py` `_extract_wildcard_sibling_clusters()`.
+  Surfaced under `cert_summary.wildcard_sibling_clusters` in `--json`.
+- **Temporal CT issuance bursts.** Implemented in
+  `recon_tool/sources/cert_providers.py` `_detect_deployment_bursts()`.
+  Surfaced under `cert_summary.deployment_bursts` with relative window
+  deltas (no absolute "same owner" claims).
+- **CNAME chain motif library.** Catalog at
+  `recon_tool/data/motifs.yaml`; loader and matcher at
+  `recon_tool/motifs.py`; integrated in
+  `recon_tool/sources/dns.py` `_classify_related_surface()`. Surfaced as
+  the top-level `chain_motifs` array in `--json`. Chain length capped
+  at 4. Per-lookup observation cap at 50.
+- **Cross-source evidence conflict surfacing.** Implemented as
+  `serialize_conflicts_array()` in `recon_tool/models.py` and the
+  top-level `evidence_conflicts` array in `format_tenant_dict()`. The
+  legacy `conflicts` dict under `--explain` is unchanged.
 
 ### v1.8.0 — Graph correlation
 
@@ -306,6 +305,21 @@ monthly cadence on a large private corpus indefinitely.
   domains, sovereignty drift, supply-chain motif change) to "which
   correlation layer surfaces it" (rules, wildcard SAN siblings, temporal
   bursts, chain motifs, community detection, posterior shift).
+- **Downstream consumption examples.** Short docs section with
+  copy-pasteable parsers / field mappings for common SIEM + observability
+  pipelines (Splunk, ArcSight, Elastic, Sentinel). Pure docs — recon's
+  `--json` / `--ndjson` shape is already the integration surface; this
+  removes friction without adding tool surface.
+- **Portfolio / self-audit batch mode.** A `--self-audit` (or
+  `--portfolio-report`) flag on `recon batch` aggregating vertical-baseline
+  hits, anomaly rules, correlation-depth distribution, and gateway/
+  sovereignty consistency across many domains in one summary. Targeted
+  at security teams running internal reviews against their own apex
+  inventory; never used to score third-party orgs.
+- **Non-MCP graph exports.** Mermaid diagram output for the v1.8 cluster
+  graph, plus CSV exports for relationship metadata and chain motifs.
+  Trivial once the graph layer exists — gives non-AI users a usable
+  artifact for tickets, decks, and audit packets.
 
 **Validation gate** — final corpus run validating end-to-end across all
 layers, with the corpus expanded to ≥10k domains where feasible. Trend

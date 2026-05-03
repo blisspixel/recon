@@ -33,6 +33,7 @@ from recon_tool.models import (
     ReconLookupError,
     SourceResult,
     TenantInfo,
+    serialize_conflicts_array,
 )
 
 logger = logging.getLogger(__name__)
@@ -2152,6 +2153,21 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
             "newest_cert_age_days": info.cert_summary.newest_cert_age_days,
             "oldest_cert_age_days": info.cert_summary.oldest_cert_age_days,
             "top_issuers": list(info.cert_summary.top_issuers),
+            # v1.7 — wildcard SAN sibling clusters; empty list when no
+            # wildcard cert produced siblings.
+            "wildcard_sibling_clusters": [
+                list(cluster) for cluster in info.cert_summary.wildcard_sibling_clusters
+            ],
+            # v1.7 — temporal CT issuance bursts; relative window deltas only.
+            "deployment_bursts": [
+                {
+                    "window_start": burst.window_start,
+                    "window_end": burst.window_end,
+                    "span_seconds": burst.span_seconds,
+                    "names": list(burst.names),
+                }
+                for burst in info.cert_summary.deployment_bursts
+            ],
         }
     else:
         d["cert_summary"] = None
@@ -2177,6 +2193,25 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         ]
     # v1.0 schema contract: always present (empty dict when no detections).
     d["detection_scores"] = dict(info.detection_scores)
+    # v1.7: Cross-source evidence conflicts — top-level array. Always
+    # emitted (empty list when none). Each entry is
+    # {field, candidates: [{value, source, confidence}, ...]}. The
+    # legacy `conflicts` dict under --explain is unchanged for
+    # backwards compatibility.
+    d["evidence_conflicts"] = serialize_conflicts_array(info.merge_conflicts)
+    # v1.7: chain motifs — observed CDN/edge → origin shapes from CNAME
+    # chain analysis. Always emitted (empty list when none). Each entry
+    # is one motif firing on one related subdomain.
+    d["chain_motifs"] = [
+        {
+            "motif_name": cm.motif_name,
+            "display_name": cm.display_name,
+            "confidence": cm.confidence,
+            "subdomain": cm.subdomain,
+            "chain": list(cm.chain),
+        }
+        for cm in info.chain_motifs
+    ]
     # v1.5: External surface attributions — per-subdomain SaaS attribution
     # from CNAME chain classification. Always emitted (empty list when none).
     d["surface_attributions"] = [
