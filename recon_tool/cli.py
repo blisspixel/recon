@@ -332,6 +332,17 @@ def batch(
             "use vs the default --json array. Mutually exclusive with --json/--md/--csv."
         ),
     ),
+    include_ecosystem: bool = typer.Option(
+        False,
+        "--include-ecosystem",
+        help=(
+            "(v1.8+) Compute the cross-domain ecosystem hypergraph and attach it "
+            "to JSON output as ``ecosystem_hyperedges``. Requires --json. "
+            "Hyperedges describe shared infrastructure / fingerprint / BIMI / "
+            "parent-vendor signatures across the batch — observable structure, "
+            "not ownership."
+        ),
+    ),
 ) -> None:
     """
     Look up multiple domains from a file.
@@ -349,6 +360,7 @@ def batch(
             include_unclassified=include_unclassified,
             skip_ct=no_ct,
             ndjson=ndjson,
+            include_ecosystem=include_ecosystem,
         )
     )
 
@@ -2107,10 +2119,19 @@ async def _lookup(
                 raise typer.Exit(code=EXIT_VALIDATION) from None
         if show_posture:
             from recon_tool.posture import analyze_posture
-            from recon_tool.profiles import apply_profile
+            from recon_tool.profiles import apply_profile, compute_baseline_anomalies
 
             raw_observations = analyze_posture(info)
-            observations = apply_profile(tuple(raw_observations), profile)
+            # v1.8: append vertical-baseline anomalies before profile
+            # reweighting so profile boosts apply uniformly. Empty tuple
+            # when no profile or when the profile has no expectations.
+            anomalies = compute_baseline_anomalies(
+                profile,
+                info.slugs,
+                tuple(cm.motif_name for cm in info.chain_motifs),
+            )
+            combined_obs = tuple(raw_observations) + anomalies
+            observations = apply_profile(combined_obs, profile)
 
         if json_output:
             from recon_tool.formatter import format_posture_observations
@@ -2303,6 +2324,7 @@ async def _batch(
     include_unclassified: bool = False,
     skip_ct: bool = False,
     ndjson: bool = False,
+    include_ecosystem: bool = False,
 ) -> None:
     """Process multiple domains from a file with controlled concurrency.
 
@@ -2340,6 +2362,15 @@ async def _batch(
     # Mutual exclusion: only one output format allowed
     if sum([json_output, markdown, csv_output, ndjson]) > 1:
         render_error("--json, --md, --csv, and --ndjson are mutually exclusive")
+        raise typer.Exit(code=EXIT_VALIDATION)
+
+    # v1.8: --include-ecosystem requires --json. Hypergraph is a batch-
+    # scope envelope sibling to the per-domain entries; it has no
+    # natural place in the panel, markdown, CSV, or NDJSON outputs
+    # (NDJSON streams per-domain and the hypergraph needs the full
+    # set).
+    if include_ecosystem and not json_output:
+        render_error("--include-ecosystem requires --json")
         raise typer.Exit(code=EXIT_VALIDATION)
 
     path = Path(file)
@@ -2550,6 +2581,29 @@ async def _batch(
                         entry["shared_tenant"] = tenant_peers[key]
                     if key in display_peers:
                         entry["shared_display_name"] = display_peers[key]
+
+        # v1.8: ecosystem hypergraph. Off by default. When the operator
+        # opts in via ``--include-ecosystem``, compute hyperedges over
+        # the batch's TenantInfo set and emit them as a top-level
+        # ``ecosystem_hyperedges`` envelope (a sibling to the per-domain
+        # entries). Empty when no rule fires.
+        if include_ecosystem and batch_infos:
+            from recon_tool.ecosystem import build_ecosystem_hyperedges
+
+            hyperedges = build_ecosystem_hyperedges(batch_infos)
+            ecosystem_payload = {
+                "ecosystem_hyperedges": [
+                    {
+                        "edge_type": e.edge_type,
+                        "key": e.key,
+                        "members": list(e.members),
+                    }
+                    for e in hyperedges
+                ],
+                "domains": json_results,
+            }
+            typer.echo(json_mod.dumps(ecosystem_payload, indent=2))
+            return
 
         typer.echo(json_mod.dumps(json_results, indent=2))
     elif csv_output:

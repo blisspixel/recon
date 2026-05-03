@@ -91,6 +91,8 @@ default is an empty `autoApprove` list.
 | `reevaluate_domain` | No | Re-evaluate cached domain data against current fingerprints (including ephemeral) | `domain` |
 | `list_ephemeral_fingerprints` | No | List all currently loaded ephemeral fingerprints | none |
 | `clear_ephemeral_fingerprints` | No | Remove all ephemeral fingerprints from the session | none |
+| `get_infrastructure_clusters` *(v1.8+)* | Cache first; may resolve | Surfaces the CT co-occurrence community-detection report already computed during lookup — algorithm, modularity score, cluster list. Read-only exposure of computed state. | `domain` |
+| `export_graph` *(v1.8+)* | Cache first; may resolve | Companion to `get_infrastructure_clusters`. Returns the underlying graph as nodes + weighted edges + cluster_assignment for downstream Mermaid / GraphViz / CSV rendering. | `domain` |
 
 The lookup and analysis tools are read-only. The ephemeral fingerprint tools
 mutate only in-memory session state for the current server process; they do not
@@ -183,7 +185,7 @@ for the current server process and are gone when it exits.
 
 | Client | Config file location |
 |--------|---------------------|
-| Claude Code | Use the bundled plugin at [`claude-code/`](../claude-code/) — wires up MCP and ships a skill in one install |
+| Claude Code | Use the bundled plugin at [`agents/claude-code/`](../agents/claude-code/) — wires up MCP and ships a skill in one install |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
 | Cursor | `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally |
 | VS Code + Copilot | `.vscode/mcp.json` in your project |
@@ -191,7 +193,7 @@ for the current server process and are gone when it exits.
 | Kiro (workspace) | `.kiro/settings/mcp.json` |
 | Kiro (global) | `~/.kiro/settings/mcp.json` |
 
-Copy-pasteable snippets for each client live under [`clients/`](../clients/), alongside agent-guidance pointers (skills, AGENTS.md, rules files) for clients that support them.
+Per-agent install scaffolds (config snippets + guidance templates) live under [`agents/`](../agents/) — one folder per client.
 
 ### PATH gotcha for GUI clients
 

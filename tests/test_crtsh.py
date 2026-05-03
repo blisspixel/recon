@@ -35,7 +35,7 @@ class TestCrtshProvider:
         with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
             mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
-            subdomains, _ = await provider.query("example.com")
+            subdomains, _, _ = await provider.query("example.com")
 
         assert "dev.example.com" in subdomains
         assert "staging.example.com" in subdomains
@@ -58,7 +58,7 @@ class TestCrtshProvider:
         with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
             mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
-            subdomains, _ = await provider.query("example.com")
+            subdomains, _, _ = await provider.query("example.com")
 
         assert "real.example.com" in subdomains
         assert len([d for d in subdomains if "*" in d]) == 0
@@ -83,7 +83,7 @@ class TestCrtshProvider:
         with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
             mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
-            subdomains, _ = await provider.query("example.com")
+            subdomains, _, _ = await provider.query("example.com")
 
         assert "app.example.com" in subdomains
         assert "www.example.com" not in subdomains
@@ -106,7 +106,7 @@ class TestCrtshProvider:
         with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
             mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
-            subdomains, _ = await provider.query("example.com")
+            subdomains, _, _ = await provider.query("example.com")
 
         assert "example.com" not in subdomains
         assert "sub.example.com" in subdomains
@@ -126,7 +126,7 @@ class TestCrtshProvider:
         with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
             mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
-            subdomains, _ = await provider.query("example.com")
+            subdomains, _, _ = await provider.query("example.com")
 
         assert len(subdomains) <= 100
 
@@ -154,7 +154,7 @@ class TestCrtshProvider:
         with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
             mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
-            subdomains, cert_summary = await provider.query("example.com")
+            subdomains, cert_summary, _clusters = await provider.query("example.com")
 
         assert len(subdomains) <= MAX_SUBDOMAINS
         assert "sub2500.example.com" not in subdomains
@@ -208,7 +208,7 @@ class TestCrtshProvider:
         with patch("recon_tool.sources.cert_providers.http_client") as mock_http:
             mock_http.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_http.return_value.__aexit__ = AsyncMock(return_value=False)
-            subdomains, _ = await provider.query("example.com")
+            subdomains, _, _ = await provider.query("example.com")
 
         assert "a.example.com" in subdomains
         assert "b.example.com" in subdomains

@@ -45,9 +45,11 @@ be the latent organizational technology graph we want to recover:
 
 The observables we get to look at are intentionally narrow:
 
-  $O = \{$ DNS RRsets (A, CNAME, MX, NS, TXT, SPF, DMARC, DKIM, BIMI),
-        CT log entries (issuer, SAN sets, `not_before` timestamps),
-        unauthenticated identity-discovery endpoints (M365, Google) $\}$
+$$O = \{\, O_{DNS},\ O_{CT},\ O_{ID} \,\}$$
+
+  - $O_{DNS}$: DNS RRsets (A, CNAME, MX, NS, TXT, SPF, DMARC, DKIM, BIMI).
+  - $O_{CT}$: CT log entries (issuer, SAN sets, `not_before` timestamps).
+  - $O_{ID}$: unauthenticated identity-discovery endpoints (M365, Google).
 
 The task is to compute or approximate $p(\Theta \mid O)$ — the posterior
 over the latent stack given the public broadcast channel — such that the
@@ -84,11 +86,14 @@ The tool is not claiming knowledge of $\Theta$; it is reporting how much
 $O$ has reduced its uncertainty about $\Theta$, and showing the
 defender exactly which observables drove the reduction.
 
-## 3. Current implementation (v1.6.1)
+## 3. Current implementation (v1.8.0)
 
-Everything that ships today is **deterministic rule-based fusion**. There
-is no probabilistic graphical model, no temporal feature, no graph layer.
-The architecture is:
+Everything that ships today is **deterministic rule-based fusion plus a
+deterministic graph layer**. There is no probabilistic graphical model
+yet — that is the v1.9 experimental Bayesian work in §4.8. The graph
+layer added in v1.8 (Louvain over the CT SAN co-occurrence graph) is
+deterministic given a fixed seed and runs alongside the rule-based
+fusion. Architecture:
 
   - `recon_tool/sources/dns.py` — collects DNS observables and the
     CNAME chains used by the surface-attribution pipeline.
@@ -114,6 +119,13 @@ The architecture is:
     (`recon discover`, `validation/scan.py`) sits on top of.
   - `recon_tool/explanation.py` — provenance DAG serialization for
     `--explain` and the MCP `explanation_dag` field.
+  - `recon_tool/motifs.py` (v1.7+) — CNAME chain motif catalog and
+    matcher; surfaced as the top-level `chain_motifs` array.
+  - `recon_tool/infra_graph.py` (v1.8+) — CT co-occurrence graph
+    builder + Louvain community detection (via pure-Python `networkx`).
+    Surfaced as the top-level `infrastructure_clusters` envelope.
+  - `recon_tool/ecosystem.py` (v1.8+) — batch-scope hypergraph builder
+    over per-domain results. Behind `recon batch --json --include-ecosystem`.
 
 For most domains, deterministic fusion is the right tool. It is fast,
 explainable, audit-able, and catches the high-confidence cases without
@@ -130,6 +142,10 @@ targets. Each lands as a YAML schema extension plus minimal engine
 code, ships gated behind an explicit flag where the output is
 experimental, and stays inside the invariants ([roadmap.md §
 Invariants](roadmap.md#invariants)).
+
+§§ 4.1-4.4 shipped in **v1.7.0** (hardened-target signal recovery).
+§§ 4.5-4.7 shipped in **v1.8.0** (graph correlation). §§ 4.8-4.9 are
+the v1.9 experimental Bayesian layer.
 
 ### 4.1 Wildcard SAN sibling expansion (v1.7.0)
 
@@ -205,7 +221,7 @@ display name in the OIDC discovery doc that disagrees with the BIMI
 VMC. Output is neutral — "DNS reports X, CT shows Y" — and the
 interpretation is for the operator.
 
-### 4.5 CT co-occurrence graph + Leiden community detection (v1.8.0)
+### 4.5 CT co-occurrence graph + Louvain community detection (v1.8.0)
 
 Build an in-memory undirected multi-graph $G_{CT} = (V_{CT}, E_{CT})$
 across the corpus or the chain-expanded set:
@@ -214,11 +230,16 @@ across the corpus or the chain-expanded set:
   - $E_{CT}$: weighted by shared cert ID, shared issuer, and
     temporal proximity (the burst rule from §4.2).
 
-Run Leiden community detection (modularity maximization with the
-resolution parameter we expose):
+Run Louvain community detection via pure-Python `networkx` (modularity
+maximization with the resolution parameter we expose):
 
-  $Q = \frac{1}{2m} \sum_{ij}\left[A_{ij} - \frac{k_i k_j}{2m}\right]
-  \delta(c_i, c_j)$
+$$Q = \frac{1}{2m} \sum_{ij}\left[A_{ij} - \frac{k_i k_j}{2m}\right] \delta(c_i, c_j)$$
+
+Louvain rather than Leiden: Leiden's well-connectedness guarantees only
+matter on dense million-node graphs. Our cluster passes are capped at
+~500 nodes over sparse CT co-occurrence edges, where the partition
+quality difference is negligible — and Louvain ships in pure-Python
+`networkx` while `leidenalg` would pull in C extensions.
 
 The output is a set of communities $C_1, \dots, C_k$ along with the
 modularity score $Q$. The score is the calibrated handle on
@@ -291,11 +312,9 @@ committed as data, hand-tuned with Dirichlet priors derived from the
 private corpus. Never learned weights, never auto-trained, never
 shipped binaries.
 
-Inference is exact via variable elimination for $|\mathcal{B}|
-\leq 20$:
+Inference is exact via variable elimination for $|\mathcal{B}| \leq 20$:
 
-  $p(\text{slug} \mid O) = \frac{1}{Z} \prod_{i} \phi_i(O,
-  \text{parents})$
+$$p(\text{slug} \mid O) = \frac{1}{Z} \prod_{i} \phi_i(O,\ \text{parents})$$
 
 Output: a posterior mean and credible interval per slug, replacing
 the deterministic point score in the experimental output path. The

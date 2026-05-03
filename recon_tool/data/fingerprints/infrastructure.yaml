@@ -8,6 +8,8 @@ fingerprints:
   slug: github
   category: DevTools & Infrastructure
   confidence: high
+  product_family: GitHub
+  parent_vendor: Microsoft
   detections:
   - type: txt
     pattern: ^github-site-verification=
@@ -133,6 +135,7 @@ fingerprints:
     pattern: ^render-domain-verification=
 - name: Cloudflare
   slug: cloudflare
+  parent_vendor: Cloudflare
   category: Infrastructure
   confidence: high
   display_group: Infrastructure
@@ -145,6 +148,8 @@ fingerprints:
     pattern: cloudflare
 - name: AWS Route 53
   slug: aws-route53
+  product_family: AWS
+  parent_vendor: Amazon
   category: Infrastructure
   confidence: high
   detections:
@@ -214,6 +219,8 @@ fingerprints:
     pattern: domaincontrol.com
 - name: AWS CloudFront
   slug: aws-cloudfront
+  product_family: AWS
+  parent_vendor: Amazon
   category: Infrastructure
   confidence: high
   detections:

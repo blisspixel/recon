@@ -18,6 +18,9 @@ __all__ = [
     "DeltaReport",
     "EvidenceRecord",
     "ExplanationRecord",
+    "InfrastructureCluster",
+    "InfrastructureClusterReport",
+    "InfrastructureEdge",
     "MergeConflicts",
     "MetadataCondition",
     "Observation",
@@ -254,6 +257,74 @@ class ChainMotifObservation:
 
 
 @dataclass(frozen=True)
+class InfrastructureCluster:
+    """A community detected in the per-domain CT co-occurrence graph.
+
+    Members are SAN names that co-occur across the same certificates,
+    grouped by community detection (Louvain) over an in-memory graph
+    whose edges weight shared-cert co-occurrence and same-issuer
+    proximity. The cluster is observable structure — it does not assert
+    ownership.
+
+    Surfaced under top-level ``infrastructure_clusters.clusters`` in
+    --json (v1.8+).
+    """
+
+    cluster_id: int
+    members: tuple[str, ...]  # sorted SAN names
+    size: int  # len(members)
+    shared_cert_count: int  # certs that contributed at least one edge inside this cluster
+    dominant_issuer: str | None = None  # most common issuer across contributing certs
+
+
+@dataclass(frozen=True)
+class InfrastructureEdge:
+    """One edge in the per-domain CT co-occurrence graph (v1.8+).
+
+    ``source`` and ``target`` are SAN hostnames (sorted alphabetically
+    so the edge is canonical). ``shared_cert_count`` is the number of
+    cert entries that placed both names in the same SAN list.
+
+    Surfaced via the MCP ``export_graph`` tool. Not part of the v1.0
+    JSON envelope: the cluster report ships in ``--json`` while raw
+    edges stay behind the explicit MCP surface to keep the JSON
+    contract narrow.
+    """
+
+    source: str
+    target: str
+    shared_cert_count: int
+
+
+@dataclass(frozen=True)
+class InfrastructureClusterReport:
+    """Result of running community detection on the CT co-occurrence graph.
+
+    ``algorithm`` records which path produced ``clusters`` — Louvain on
+    small graphs, connected-components fallback when the graph exceeds
+    ``MAX_GRAPH_NODES``, or "skipped" when the graph was empty / trivial.
+    ``modularity`` is 0.0 in the fallback / skipped paths since modularity
+    only applies to a Louvain partition.
+
+    Surfaced under top-level ``infrastructure_clusters`` in --json
+    (v1.8+). Always present in the JSON envelope (with empty
+    ``clusters`` when nothing fired) so the field is part of the stable
+    contract.
+    """
+
+    clusters: tuple[InfrastructureCluster, ...]
+    modularity: float
+    algorithm: str  # "louvain" | "connected_components" | "skipped"
+    node_count: int
+    edge_count: int
+    # Edges in the underlying co-occurrence graph, sorted by weight
+    # descending then alphabetically. Capped — see
+    # ``recon_tool/infra_graph.MAX_EDGES_RETAINED``. Surfaced via the
+    # MCP ``export_graph`` tool, not the default --json envelope.
+    edges: tuple[InfrastructureEdge, ...] = ()
+
+
+@dataclass(frozen=True)
 class SurfaceAttribution:
     """A subdomain's attribution to a SaaS or infrastructure provider via CNAME chain.
 
@@ -372,6 +443,13 @@ class SourceResult:
     # CNAME chain of a related subdomain — e.g. Cloudflare → AWS origin,
     # Akamai → Azure origin. Always populated; never claims ownership.
     chain_motifs: tuple[ChainMotifObservation, ...] = ()
+
+    # --- v1.8: CT co-occurrence clusters ---
+    # Communities detected in the per-domain SAN co-occurrence graph.
+    # Always populated when CT entries were available (may have an
+    # empty ``clusters`` tuple when the graph was too small or trivial).
+    # See ``recon_tool/infra_graph.py`` for the builder.
+    infrastructure_clusters: InfrastructureClusterReport | None = None
 
     @property
     def crtsh_degraded(self) -> bool:
@@ -516,6 +594,13 @@ class TenantInfo:
     # CNAME chain of a related subdomain — e.g. Cloudflare → AWS origin,
     # Akamai → Azure origin. Always populated; never claims ownership.
     chain_motifs: tuple[ChainMotifObservation, ...] = ()
+
+    # --- v1.8: CT co-occurrence clusters ---
+    # Communities detected over the per-domain certificate SAN co-occurrence
+    # graph. The report carries the cluster list, the modularity score, and
+    # the algorithm path that produced it ("louvain" | "connected_components"
+    # | "skipped"). None when CT data was unavailable.
+    infrastructure_clusters: InfrastructureClusterReport | None = None
 
     @property
     def crtsh_degraded(self) -> bool:

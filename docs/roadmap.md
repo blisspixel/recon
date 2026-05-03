@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.7.0**. Current theme: treat correlation as inference
+Current release: **v1.8.0**. Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
 validation against a private corpus drive what ships next.
@@ -60,7 +60,7 @@ signal recovery.
 
 ## Current Fingerprint Library Assessment
 
-As of v1.6.1, built-in fingerprints live in nine categorized YAML files:
+As of v1.8.0, built-in fingerprints live in nine categorized YAML files:
 `ai.yaml`, `crm-marketing.yaml`, `data-analytics.yaml`, `email.yaml`,
 `infrastructure.yaml`, `productivity.yaml`, `security.yaml`, `surface.yaml`
 (per-subdomain CNAME-target classification, added in v1.5), and
@@ -207,41 +207,38 @@ as a YAML data file plus minimal engine extension. See
   top-level `evidence_conflicts` array in `format_tenant_dict()`. The
   legacy `conflicts` dict under `--explain` is unchanged.
 
-### v1.8.0 — Graph correlation
+### v1.8.0 — Graph correlation (shipped)
 
-Build the structural layer. The wildcard-sibling and burst-detection work
-in v1.7 produces edge-quality CT data; v1.8 turns it into community
-structure and ecosystem views.
+Built the structural layer on top of the v1.7 cert intelligence. SAN
+co-occurrence becomes communities, fingerprint metadata becomes
+ecosystem hyperedges, and absence rules turn vertical profiles into
+hedged baseline checks. Zero new network surface. See
+[`CHANGELOG.md`](../CHANGELOG.md) for the full notes.
 
-- **CT co-occurrence graph + community detection.** Build an in-memory
-  graph from shared cert / issuer + temporal-window evidence. Run Leiden
-  community detection (pure-Python `networkx`, new dependency). Output a
-  top-level `infrastructure_clusters` array with modularity score and per-
-  cluster edge evidence. Cap graph size at ~500 nodes per cluster pass
-  with deterministic fallback to existing simple clustering.
-- **Fingerprint relationship metadata.** Schema extension allowing each
-  fingerprint to declare relationship hints (product family, parent
-  vendor, BIMI org). Drives ecosystem aggregation in batch mode without
-  asserting ownership.
-- **Hypergraph ecosystem view (batch-only).** Behind
-  `--include-ecosystem`. Hyperedges: shared issuer + shared fingerprint
-  set + shared BIMI VMC organization. Surfaces multi-brand orgs that
-  single-domain views miss.
-- **Vertical-baseline anomaly rules.** Extend `verticals.yaml` and
-  `absence.py` to flag deviations from per-profile expectations
-  (e.g. fintech profile expects WAF motif; absence is observable, not a
-  verdict).
-- **Graph export MCP tool.** Add `get_infrastructure_clusters` (and an
-  `export_graph` companion for the raw co-occurrence edges) that returns
-  the already-computed cluster output and modularity scores. Read-only,
-  no new network surface — just exposes what the deterministic graph pass
-  produced so agents and downstream tools can reason over the structure
-  without re-deriving it.
-
-**Validation gate** — full corpus scan with `--include-ecosystem`;
-cluster modularity scores tracked across the run and compared to v1.7.0
-baseline. Anomaly rules tested against vertical-segmented subsets of the
-corpus to confirm sensitivity without over-alerting.
+- **CT co-occurrence graph + Louvain communities.** Implemented in
+  `recon_tool/infra_graph.py`. Surfaced under top-level
+  `infrastructure_clusters` in `--json` (always emitted). 500-node cap
+  with connected-components fallback. Louvain via pure-Python
+  `networkx` (Leiden's well-connectedness guarantees do not pay off at
+  this graph size, and `leidenalg` would pull in C extensions).
+- **Fingerprint relationship metadata.** Three optional fields on the
+  fingerprint YAML schema (`product_family`, `parent_vendor`,
+  `bimi_org`); eight built-in slugs seeded. Surfaced as
+  `fingerprint_metadata` map in `--json`.
+- **Hypergraph ecosystem view (batch-only).** Implemented in
+  `recon_tool/ecosystem.py`. Behind `recon batch --json
+  --include-ecosystem`. Four hyperedge types (top_issuer, bimi_org,
+  parent_vendor, shared_slugs ≥2). Wraps batch JSON in
+  `{ecosystem_hyperedges, domains}`.
+- **Vertical-baseline anomaly rules.** `Profile` YAML gains
+  `expected_categories` + `expected_motifs`. New
+  `compute_baseline_anomalies()` in `recon_tool/profiles.py` emits
+  hedged observations on missing expectations; seeded on `fintech` and
+  `healthcare` profiles.
+- **`get_infrastructure_clusters` + `export_graph` MCP tools.**
+  Read-only exposure of the already-computed graph. The first emits
+  the cluster envelope; the second emits raw nodes + weighted edges +
+  cluster_assignment for downstream Mermaid / GraphViz / CSV pipelines.
 
 ### v1.9.0 — Probabilistic fusion (experimental)
 

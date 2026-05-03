@@ -153,6 +153,26 @@ def _get_slug_provider_groups() -> dict[str, str]:
     return {fp.slug: fp.provider_group for fp in load_fingerprints() if fp.provider_group is not None}
 
 
+def _slug_to_relationship_metadata() -> dict[str, dict[str, str | None]]:
+    """Return ``{slug: {product_family, parent_vendor, bimi_org}}`` for every
+    fingerprint with at least one populated relationship-metadata field.
+
+    Pure data lookup — drives the v1.8 ``fingerprint_metadata`` block in
+    ``format_tenant_dict``. Slugs without any populated field are
+    omitted; callers do not need to filter again.
+    """
+    out: dict[str, dict[str, str | None]] = {}
+    for fp in load_fingerprints():
+        if fp.product_family is None and fp.parent_vendor is None and fp.bimi_org is None:
+            continue
+        out[fp.slug] = {
+            "product_family": fp.product_family,
+            "parent_vendor": fp.parent_vendor,
+            "bimi_org": fp.bimi_org,
+        }
+    return out
+
+
 def _get_slug_display_groups() -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
     """Build a slug → display_group mapping from loaded fingerprints."""
     return {fp.slug: fp.display_group for fp in load_fingerprints() if fp.display_group is not None}
@@ -2212,6 +2232,61 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         }
         for cm in info.chain_motifs
     ]
+    # v1.8: infrastructure clusters — community detection over the CT
+    # SAN co-occurrence graph. Always emitted as a stable envelope; the
+    # ``algorithm`` field reflects which path produced the partition
+    # ("louvain" | "connected_components" | "skipped"). Empty
+    # ``clusters`` when no graph could be built.
+    if info.infrastructure_clusters is not None:
+        ic = info.infrastructure_clusters
+        d["infrastructure_clusters"] = {
+            "algorithm": ic.algorithm,
+            "modularity": ic.modularity,
+            "node_count": ic.node_count,
+            "edge_count": ic.edge_count,
+            "clusters": [
+                {
+                    "cluster_id": c.cluster_id,
+                    "size": c.size,
+                    "members": list(c.members),
+                    "shared_cert_count": c.shared_cert_count,
+                    "dominant_issuer": c.dominant_issuer,
+                }
+                for c in ic.clusters
+            ],
+        }
+    else:
+        d["infrastructure_clusters"] = {
+            "algorithm": "skipped",
+            "modularity": 0.0,
+            "node_count": 0,
+            "edge_count": 0,
+            "clusters": [],
+        }
+    # Note: ``edges`` from the InfrastructureClusterReport is intentionally
+    # NOT serialized into the default --json envelope. Raw edges can run
+    # into the thousands on heavy targets and would balloon the contract.
+    # They surface only via the MCP ``export_graph`` tool, which is the
+    # explicit consumer path for graph-rendering pipelines.
+
+    # v1.8: per-slug relationship metadata. Always emitted; entries
+    # appear only for slugs that fired AND have at least one populated
+    # field. Empty object when no detected slug carries metadata. Drives
+    # the v1.8 ecosystem hypergraph and downstream display logic — never
+    # an ownership claim, just descriptive hints from the fingerprint
+    # YAML.
+    metadata_lookup = _slug_to_relationship_metadata()
+    detected_slug_set = set(info.slugs)
+    fingerprint_metadata: dict[str, dict[str, str | None]] = {}
+    for slug in sorted(detected_slug_set):
+        meta = metadata_lookup.get(slug)
+        if meta is None:
+            continue
+        # Skip entries where every field is None.
+        if all(v is None for v in meta.values()):
+            continue
+        fingerprint_metadata[slug] = meta
+    d["fingerprint_metadata"] = fingerprint_metadata
     # v1.5: External surface attributions — per-subdomain SaaS attribution
     # from CNAME chain classification. Always emitted (empty list when none).
     d["surface_attributions"] = [

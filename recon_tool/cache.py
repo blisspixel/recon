@@ -21,6 +21,9 @@ from recon_tool.models import (
     CertSummary,
     ConfidenceLevel,
     EvidenceRecord,
+    InfrastructureCluster,
+    InfrastructureClusterReport,
+    InfrastructureEdge,
     SurfaceAttribution,
     TenantInfo,
     UnclassifiedCnameChain,
@@ -273,6 +276,36 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         for sa in info.surface_attributions
     ]
 
+    # InfrastructureClusterReport (v1.8) → nested dict or None.
+    if info.infrastructure_clusters is not None:
+        ic = info.infrastructure_clusters
+        d["infrastructure_clusters"] = {
+            "algorithm": ic.algorithm,
+            "modularity": ic.modularity,
+            "node_count": ic.node_count,
+            "edge_count": ic.edge_count,
+            "clusters": [
+                {
+                    "cluster_id": c.cluster_id,
+                    "size": c.size,
+                    "members": list(c.members),
+                    "shared_cert_count": c.shared_cert_count,
+                    "dominant_issuer": c.dominant_issuer,
+                }
+                for c in ic.clusters
+            ],
+            "edges": [
+                {
+                    "source": e.source,
+                    "target": e.target,
+                    "shared_cert_count": e.shared_cert_count,
+                }
+                for e in ic.edges
+            ],
+        }
+    else:
+        d["infrastructure_clusters"] = None
+
     # UnclassifiedCnameChain tuple → list of dicts. Always cached so
     # subsequent runs of validation/find_gaps.py can read from cache
     # without re-resolving DNS.
@@ -398,6 +431,62 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
             )
         surface_attributions = tuple(sa_records)
 
+    # InfrastructureClusterReport (v1.8). Empty/missing values map to a
+    # ``skipped`` envelope so the contract stays the same as live runs;
+    # legitimate cached envelopes deserialize back into a typed report.
+    infrastructure_clusters: InfrastructureClusterReport | None = None
+    ic_data = data.get("infrastructure_clusters")
+    if isinstance(ic_data, dict):
+        algorithm_raw = ic_data.get("algorithm", "skipped")
+        algorithm = (
+            str(algorithm_raw)
+            if algorithm_raw in ("louvain", "connected_components", "skipped")
+            else "skipped"
+        )
+        clusters_raw = ic_data.get("clusters")
+        cluster_records: list[InfrastructureCluster] = []
+        if isinstance(clusters_raw, list):
+            for entry in clusters_raw:
+                if not isinstance(entry, dict):
+                    continue
+                members_raw = entry.get("members", [])
+                if not isinstance(members_raw, list):
+                    continue
+                cluster_records.append(
+                    InfrastructureCluster(
+                        cluster_id=int(entry.get("cluster_id", 0)),
+                        members=tuple(str(m) for m in members_raw),
+                        size=int(entry.get("size", len(members_raw))),
+                        shared_cert_count=int(entry.get("shared_cert_count", 0)),
+                        dominant_issuer=entry.get("dominant_issuer"),
+                    )
+                )
+        edges_raw = ic_data.get("edges", [])
+        edge_records: list[InfrastructureEdge] = []
+        if isinstance(edges_raw, list):
+            for entry in edges_raw:
+                if not isinstance(entry, dict):
+                    continue
+                src = entry.get("source")
+                dst = entry.get("target")
+                if not isinstance(src, str) or not isinstance(dst, str):
+                    continue
+                edge_records.append(
+                    InfrastructureEdge(
+                        source=src,
+                        target=dst,
+                        shared_cert_count=int(entry.get("shared_cert_count", 1)),
+                    )
+                )
+        infrastructure_clusters = InfrastructureClusterReport(
+            clusters=tuple(cluster_records),
+            modularity=float(ic_data.get("modularity", 0.0) or 0.0),
+            algorithm=algorithm,
+            node_count=int(ic_data.get("node_count", 0)),
+            edge_count=int(ic_data.get("edge_count", 0)),
+            edges=tuple(edge_records),
+        )
+
     # UnclassifiedCnameChain list → tuple
     unclass_list = data.get("unclassified_cname_chains", [])
     unclassified_cname_chains: tuple[UnclassifiedCnameChain, ...] = ()
@@ -463,6 +552,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         lexical_observations=tuple(data.get("lexical_observations", [])),
         surface_attributions=surface_attributions,
         unclassified_cname_chains=unclassified_cname_chains,
+        infrastructure_clusters=infrastructure_clusters,
         resolved_at=data.get("resolved_at"),
         # cached_at is stamped by cache_get from _cached_at; not populated
         # from arbitrary dict input so round-tripping an uncached dict

@@ -137,6 +137,10 @@ _STABLE_FIELDS: dict[str, type | tuple[type, ...]] = {
     "evidence_conflicts": list,
     # v1.7 — chain motif observations
     "chain_motifs": list,
+    # v1.8 — CT co-occurrence community report (always emitted)
+    "infrastructure_clusters": dict,
+    # v1.8 — per-slug relationship metadata (always emitted, may be empty)
+    "fingerprint_metadata": dict,
 }
 
 # Experimental fields — documented but can evolve in minor releases.

@@ -5,6 +5,140 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-05-03
+
+**Graph correlation.** Second milestone of the v1.7-v1.9 build plan in
+[`docs/roadmap.md`](docs/roadmap.md). Builds a structural layer on top
+of the v1.7 cert intelligence: SAN co-occurrence becomes communities,
+fingerprint metadata becomes ecosystem hyperedges, and absence rules
+turn vertical profiles into hedged baseline checks. Zero new network
+surface — every new field is a re-projection of evidence already in
+the pipeline. See [`docs/correlation.md`](docs/correlation.md) for the
+formal framing.
+
+### Fixed
+
+- **CertSpotter `Z`-suffix dates rejected on Python 3.10.**
+  `build_cert_summary` called `datetime.fromisoformat()` directly on
+  CertSpotter `not_before` / `not_after` strings, which end in `Z`.
+  Python 3.10's parser rejects `Z` (only 3.11+ accepts it), so every
+  CertSpotter cert entry was silently skipped and `cert_summary`
+  returned None — disabling `top_issuers`,
+  `wildcard_sibling_clusters`, `deployment_bursts`, and the
+  `top_issuer` ecosystem hyperedge. New `_parse_iso_datetime()`
+  helper in `recon_tool/sources/cert_providers.py` normalizes `Z` →
+  `+00:00` before parsing. Pre-existing v1.7.0 bug surfaced by the
+  v1.8 corpus validation. Regression test in
+  `tests/test_cert_providers.py`.
+- **`shared_slugs` ecosystem hyperedge noise floor.** Validation
+  showed 195/200 hyperedges firing on trivial "every enterprise has
+  Microsoft365 + Adobe + DocuSign" coincidences. `_MIN_SLUG_OVERLAP`
+  raised 2 → 3, and a new `_baseline_slugs()` filter strips slugs
+  with >50 % corpus prevalence (`_BASELINE_FREQ_THRESHOLD = 0.5`)
+  from the overlap intersection before the threshold check. Adaptive
+  per-batch — engages only when the batch exceeds
+  `_MIN_BATCH_FOR_BASELINE = 5` so synthetic test fixtures stay
+  deterministic. Two new tests in `tests/test_ecosystem.py`.
+
+### Added
+
+- **CT co-occurrence graph + Louvain communities** — new
+  `recon_tool/infra_graph.py` builds an in-memory graph from cert
+  entries (nodes = SAN hostnames, edges = shared-cert co-occurrence,
+  attributes carry issuer name) and runs Louvain via pure-Python
+  `networkx`. The report — algorithm, modularity, node/edge counts,
+  cluster list — surfaces as the always-present top-level
+  `infrastructure_clusters` envelope in `--json`. Capped at 500 nodes
+  with deterministic connected-components fallback above the cap.
+  Skipped envelope when no graph could be built.
+- **`get_infrastructure_clusters` + `export_graph` MCP tools** —
+  read-only exposure of the already-computed graph. The first emits
+  the cluster envelope; the second emits the raw co-occurrence graph
+  (nodes + weighted edges + cluster_assignment) for downstream Mermaid
+  / GraphViz / CSV pipelines. Edges retained on the report up to
+  `MAX_EDGES_RETAINED = 2000`, sorted by weight desc.
+- **Fingerprint relationship metadata** — fingerprint YAML schema gains
+  three optional fields: `product_family`, `parent_vendor`, and
+  `bimi_org`. Eight built-in slugs now carry metadata (Microsoft 365,
+  Google Workspace, GitHub, Cloudflare, Slack, AWS Route 53,
+  AWS CloudFront, AWS SES). Surfaced as the always-present
+  `fingerprint_metadata` map in `--json`, keyed by slug.
+- **Ecosystem hypergraph (`recon batch --json --include-ecosystem`)** —
+  new `recon_tool/ecosystem.py` builds cross-domain hyperedges of four
+  types: shared CT top issuer, shared BIMI VMC organization, shared
+  fingerprint parent_vendor, and pairwise fingerprint-slug overlap
+  (≥2). Emitted as a `ecosystem_hyperedges` array sibling to the
+  per-domain `domains` array in the batch JSON wrapper. Off by default;
+  flag is mutually-exclusive with `--md`/`--csv`/`--ndjson`. Capped at
+  `MAX_HYPEREDGES = 200`.
+- **Vertical-baseline anomaly rules** — profile YAML gains
+  `expected_categories` and `expected_motifs`. The new
+  `compute_baseline_anomalies()` in `recon_tool/profiles.py` surfaces
+  hedged "absence is observable, not a verdict" observations when an
+  expected category/motif is missing from the result. Wired into the
+  posture pipeline so anomalies appear inline with regular observations
+  when `--profile` is set. Seeded for `fintech` and `healthcare`
+  profiles.
+
+### Schema
+
+- New top-level fields (always emitted on per-domain `--json`):
+  - `infrastructure_clusters` (object) — see
+    [`docs/recon-schema.json#/$defs/InfrastructureClusterReport`](docs/recon-schema.json).
+  - `fingerprint_metadata` (object) — see
+    [`docs/recon-schema.json#/$defs/FingerprintMetadata`](docs/recon-schema.json).
+- New batch wrapper shape (only when `--include-ecosystem` is set):
+  `{ ecosystem_hyperedges: [...], domains: [...] }`. The hyperedge
+  shape is documented under
+  [`docs/recon-schema.json#/$defs/EcosystemHyperedge`](docs/recon-schema.json).
+- All v1.8 fields are stable. `infrastructure_clusters.edges` is not
+  emitted in the default JSON envelope (kept behind the `export_graph`
+  MCP tool to bound payload size).
+
+### Changed
+
+- **Repo layout** — `claude-code/` and `clients/` consolidated into a
+  unified `agents/` directory: `agents/claude-code/` (full plugin),
+  plus per-client folders for Cursor, Windsurf, Kiro, and VS Code.
+  Each agent folder ships its own MCP config + README. The unified
+  index at [`agents/README.md`](agents/README.md) lists every
+  supported client. README, `docs/mcp.md`, and `validation/README.md`
+  link references updated; old `clients/` directory removed.
+- **CT provider Protocol** — `CertIntelProvider.query()` now returns a
+  3-tuple `(subdomains, cert_summary, infrastructure_clusters)`. Both
+  built-in providers (`CrtshProvider`, `CertSpotterProvider`) compute
+  the cluster report alongside the summary so the graph layer is
+  populated on the same code path that already runs CT analysis.
+
+### Internal
+
+- New module `recon_tool/infra_graph.py` (105 stmts, 92% test coverage).
+- New module `recon_tool/ecosystem.py` (97 stmts, 95% test coverage).
+- 63 new tests across `tests/test_infra_graph.py`,
+  `tests/test_ecosystem.py`, `tests/test_baseline_anomalies.py`,
+  `tests/test_mcp_graph_tools.py`, plus extensions to
+  `tests/test_fingerprints.py` and `tests/test_json_schema_contract.py`.
+- `pyright` config gains `venv = ".venv"` + `include = ["recon_tool", "tests"]`
+  so type-checking resolves through the editable install rather than
+  any stale user-site `recon-tool` wheel that may be present.
+- `networkx>=3.0` added as a runtime dependency. Pure-Python; ships no
+  learned weights or aggregate intelligence.
+
+### Validation gate
+
+- Full pytest suite green (1774 passed, 0 failed). New v1.8 modules at
+  92-95% line coverage. Ruff and pyright both clean across `recon_tool`
+  and `tests`. JSON schema drift test updated.
+- 105-domain corpus run with `--include-ecosystem` completed with **0
+  errors**. Cluster partition quality on the 11 domains with
+  buildable graphs: **mean modularity 0.563, max 0.883**. Fingerprint
+  relationship metadata fired on **91 / 105** domains. The run
+  surfaced two pre-tag hardening items (CertSpotter `Z`-suffix
+  parsing, `shared_slugs` noise floor — see *Fixed* above); both
+  were resolved and re-validated against the same corpus before
+  tagging. Full report at
+  [`validation/v1.8-validation-summary.md`](validation/v1.8-validation-summary.md).
+
 ## [1.7.0] - 2026-05-03
 
 **Hardened-target signal recovery.** The first of the v1.7–v1.9 build plan
@@ -279,7 +413,7 @@ YAML stanzas.
   match against the catalog), intra-org chains, and one-off noise
   below `--min-count`. Output is the LLM-triage-ready candidate
   list.
-- New Claude Code skill `claude-code/skills/recon-fingerprint-triage/`
+- New Claude Code skill `agents/claude-code/skills/recon-fingerprint-triage/`
   that consumes either a single recon JSON or a `candidates.json`
   and proposes `cname_target` YAML stanzas with tier and category.
 - New `UnclassifiedCnameChain` model + `unclassified_cname_chains`
@@ -377,7 +511,7 @@ consumers.
 
 **Patch release - skill refinements from running it in anger.** Docs-only.
 Seven friction points surfaced from real skill use against the v1.4.7
-artifact have been smoothed in `claude-code/skills/recon/SKILL.md` and
+artifact have been smoothed in `agents/claude-code/skills/recon/SKILL.md` and
 `AGENTS.md`. No behavior, schema, or fingerprint changes.
 
 ### Changed
@@ -439,7 +573,7 @@ guidance and the `anthropics/skills` reference repo.
 
 ### Added
 
-- `claude-code/skills/recon/SKILL.md`: `argument-hint` and `allowed-tools`
+- `agents/claude-code/skills/recon/SKILL.md`: `argument-hint` and `allowed-tools`
   fields in skill frontmatter (per Claude Code skill spec).
 - "Before first invocation" section: install probe via `recon --version`
   with explicit user approval before `pip install` — useful when the skill
@@ -466,11 +600,12 @@ MCP server and pick up agent guidance without re-deriving it per session.
 
 ### Added
 
-- `claude-code/` — full Claude Code plugin scaffold with `.claude-plugin/plugin.json`,
+- `agents/claude-code/` — full Claude Code plugin scaffold with `.claude-plugin/plugin.json`,
   `.mcp.json` MCP server registration, and a `skills/recon/SKILL.md` skill that
   teaches Claude when and how to use recon in recon's neutral-observation voice.
-- `clients/` — copy-pasteable MCP config snippets for Kiro and Windsurf, plus a
-  client-by-client install matrix covering Cursor and VS Code + Copilot.
+- `agents/{kiro,windsurf,cursor,vscode}/` — copy-pasteable MCP config snippets
+  and per-client install matrix for non-Claude-Code agents. (Originally
+  shipped under `clients/`; consolidated into `agents/` in v1.8.0.)
 - `AGENTS.md` at repo root — portable agent guidance in the
   [agents.md](https://agents.md) format. Auto-detected by Kiro and other
   agents.md-aware tools; can be referenced from `.windsurfrules`,
@@ -480,7 +615,7 @@ MCP server and pick up agent guidance without re-deriving it per session.
 
 ### Changed
 
-- README links the new `claude-code/` plugin, `clients/` snippets, and
+- README links the new `agents/claude-code/` plugin, sibling `agents/` folders, and
   `AGENTS.md` so users of any supported AI client can find their install path.
 
 ## [1.4.4] - 2026-04-27

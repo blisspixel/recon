@@ -24,3 +24,9 @@ prepend_note: |
   federation, infrastructure sovereignty, and PHI-boundary
   consistency are prioritised. Use --explain to see the evidence
   behind each signal.
+# v1.8: vertical-baseline anomaly rules. Drop or extend in
+# ~/.recon/profiles/healthcare.yaml as appropriate to your
+# environment.
+expected_categories:
+  - Identity & Auth
+  - Security

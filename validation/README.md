@@ -63,7 +63,7 @@ python validation/triage_candidates.py \
 ```
 
 Then hand `candidates.json` to the
-[`/recon-fingerprint-triage`](../claude-code/skills/recon-fingerprint-triage/SKILL.md)
+[`/recon-fingerprint-triage`](../agents/claude-code/skills/recon-fingerprint-triage/SKILL.md)
 Claude Code skill, or to any agent reading the same input shape.
 
 ### Corpus run (deliberate, batch)

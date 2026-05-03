@@ -53,6 +53,7 @@ from recon_tool.models import (
     CertSummary,
     ChainMotifObservation,
     EvidenceRecord,
+    InfrastructureClusterReport,
     SourceResult,
     SurfaceAttribution,
     UnclassifiedCnameChain,
@@ -159,6 +160,7 @@ class _DetectionCtx:
         "dmarc_pct",
         "dmarc_policy",
         "evidence",
+        "infrastructure_clusters",
         "m365",
         "mta_sts_mode",
         "raw_dns_records",
@@ -213,6 +215,11 @@ class _DetectionCtx:
         # records a CDN/origin shape that fired on a related subdomain's
         # CNAME chain — never an ownership claim.
         self.chain_motifs: list[ChainMotifObservation] = []
+        # v1.8: CT co-occurrence community detection report. Built from
+        # the same cert entries that produce cert_summary; surfaced as
+        # the top-level ``infrastructure_clusters`` JSON field. None
+        # until a CT provider returns data.
+        self.infrastructure_clusters: InfrastructureClusterReport | None = None
 
     def add(self, svc_name: str, slug: str | None = None, source_type: str = "", raw_value: str = "") -> None:
         """Register a detected service, optionally with its slug and evidence.
@@ -1216,10 +1223,12 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
     providers: list[CertIntelProvider] = [CrtshProvider(), CertSpotterProvider()]
     for provider in providers:
         try:
-            subdomains, cert_summary = await provider.query(domain)
+            subdomains, cert_summary, infrastructure_clusters = await provider.query(domain)
             ctx.related_domains.update(subdomains)
             if cert_summary is not None:
                 ctx.cert_summary = cert_summary
+            if infrastructure_clusters is not None:
+                ctx.infrastructure_clusters = infrastructure_clusters
             ctx.ct_provider_used = provider.name
             ctx.ct_subdomain_count = len(subdomains)
             logger.debug("cert intel from %s for %s: %d subdomains", provider.name, domain, len(subdomains))
@@ -1888,6 +1897,7 @@ class DNSSource:
                 surface_attributions=surface_tuple,
                 unclassified_cname_chains=unclassified_tuple,
                 chain_motifs=chain_motifs_tuple,
+                infrastructure_clusters=ctx.infrastructure_clusters,
             )
 
         return SourceResult(
@@ -1909,6 +1919,7 @@ class DNSSource:
             surface_attributions=surface_tuple,
             unclassified_cname_chains=unclassified_tuple,
             chain_motifs=chain_motifs_tuple,
+            infrastructure_clusters=ctx.infrastructure_clusters,
         )
 
     @staticmethod

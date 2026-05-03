@@ -22,6 +22,7 @@ from recon_tool.models import (
     ChainMotifObservation,
     ConfidenceLevel,
     EvidenceRecord,
+    InfrastructureClusterReport,
     MergeConflicts,
     ReconLookupError,
     SignalContext,
@@ -1000,6 +1001,16 @@ def merge_results(
         sorted(merged_motifs, key=lambda m: (m.subdomain, m.motif_name))
     )
 
+    # v1.8: infrastructure clusters. First non-None wins — currently only
+    # dns_records emits a report (built from CT cert entries) so there is
+    # nothing to merge across sources, but the propagation pattern matches
+    # the rest of cert-derived intelligence.
+    infrastructure_clusters: InfrastructureClusterReport | None = None
+    for result in results:
+        if result.infrastructure_clusters is not None:
+            infrastructure_clusters = result.infrastructure_clusters
+            break
+
     return TenantInfo(
         tenant_id=tenant_id,
         display_name=display_name,
@@ -1042,4 +1053,5 @@ def merge_results(
         surface_attributions=surface_tuple,
         unclassified_cname_chains=unclassified_tuple,
         chain_motifs=chain_motifs_tuple,
+        infrastructure_clusters=infrastructure_clusters,
     )

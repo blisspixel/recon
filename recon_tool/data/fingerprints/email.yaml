@@ -11,6 +11,8 @@ fingerprints:
   m365: true
   provider_group: microsoft365
   display_group: Microsoft 365
+  product_family: Microsoft 365
+  parent_vendor: Microsoft
   detections:
   - type: txt
     pattern: ^MS=ms
@@ -27,6 +29,8 @@ fingerprints:
   confidence: high
   provider_group: google-workspace
   display_group: Google Workspace
+  product_family: Google Workspace
+  parent_vendor: Google
   detections:
   - type: mx
     pattern: aspmx.l.google.com
@@ -54,6 +58,8 @@ fingerprints:
   slug: aws-ses
   category: Email & Communication
   confidence: high
+  product_family: AWS
+  parent_vendor: Amazon
   detections:
   - type: txt
     pattern: '^amazonses:'
