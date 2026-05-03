@@ -113,6 +113,16 @@ def main() -> None:
         action="store_true",
         help="Skip the diff step even if a prior run exists.",
     )
+    parser.add_argument(
+        "--json-array",
+        action="store_true",
+        help=(
+            "Use the legacy single-JSON-array output (recon batch --json) "
+            "instead of the streaming NDJSON default. Slower for big "
+            "corpora because everything buffers until completion; useful "
+            "if a downstream consumer expects an array."
+        ),
+    )
     args = parser.parse_args()
 
     corpus = args.corpus
@@ -129,14 +139,18 @@ def main() -> None:
     print(f"Scan {stamp} — {domain_count} domains, corpus={corpus}")
     print(f"Run directory: {run_dir}")
 
-    # Step 1: batch resolve
+    # Step 1: batch resolve. Default is NDJSON streaming (one line per
+    # domain, flushed as completed) so very large corpora stay memory-bounded
+    # and produce visible progress in real time. ``--json-array`` opts back
+    # into the legacy single-array output.
+    output_mode = "--json" if args.json_array else "--ndjson"
     batch_cmd = [
         sys.executable,
         "-m",
         "recon_tool.cli",
         "batch",
         str(corpus),
-        "--json",
+        output_mode,
         "--include-unclassified",
         "--concurrency",
         str(args.concurrency),
@@ -145,12 +159,14 @@ def main() -> None:
         batch_cmd.append("--no-ct")
 
     ct_str = "on" if args.ct else "off"
+    fmt_str = "json-array" if args.json_array else "ndjson"
     print(
         f"  resolving {domain_count} domains "
-        f"(concurrency={args.concurrency}, ct={ct_str}) ...",
+        f"(concurrency={args.concurrency}, ct={ct_str}, format={fmt_str}) ...",
         flush=True,
     )
-    results_path = run_dir / "results.json"
+    results_filename = "results.json" if args.json_array else "results.ndjson"
+    results_path = run_dir / results_filename
     with results_path.open("w", encoding="utf-8") as out:
         result = subprocess.run(  # noqa: S603 — arg list constructed locally
             batch_cmd,

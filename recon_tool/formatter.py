@@ -460,6 +460,24 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "rainfocus": "Business Apps",
     "aws-api-gateway": "Cloud",
     "aws-nlb": "Cloud",
+    # v1.6.1 corpus run
+    "paradox-ai": "Collaboration",
+    "jibe": "Business Apps",
+    "career-page": "Business Apps",
+    "happydance": "Business Apps",
+    "easyredir": "Business Apps",
+    "gigya": "Identity",
+    "f5-xc": "Cloud",
+    "radware-cloud": "Security",
+    "forgerock": "Identity",
+    "ioriver": "Cloud",
+    "section-io": "Cloud",
+    "azion": "Cloud",
+    "acquia": "Cloud",
+    "pagely": "Cloud",
+    "zuddl": "Business Apps",
+    "postman-hosted": "Collaboration",
+    "site24x7": "Collaboration",
 }
 
 # Email service-name prefixes that bypass slug lookup. These catch

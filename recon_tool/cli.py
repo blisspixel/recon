@@ -323,6 +323,15 @@ def batch(
             "domain in the batch. For high-volume corpus runs."
         ),
     ),
+    ndjson: bool = typer.Option(
+        False,
+        "--ndjson",
+        help=(
+            "Stream one JSON object per line, flushed as each domain completes. "
+            "Recommended for large corpora — gives visible progress and lower memory "
+            "use vs the default --json array. Mutually exclusive with --json/--md/--csv."
+        ),
+    ),
 ) -> None:
     """
     Look up multiple domains from a file.
@@ -339,6 +348,7 @@ def batch(
             csv_output=csv_output,
             include_unclassified=include_unclassified,
             skip_ct=no_ct,
+            ndjson=ndjson,
         )
     )
 
@@ -2292,6 +2302,7 @@ async def _batch(
     *,
     include_unclassified: bool = False,
     skip_ct: bool = False,
+    ndjson: bool = False,
 ) -> None:
     """Process multiple domains from a file with controlled concurrency.
 
@@ -2299,8 +2310,18 @@ async def _batch(
     The semaphore caps domain-level concurrency, and the HTTP transport
     retries on 429/503 with exponential backoff. For large batch files,
     an inter-domain delay prevents burst-flooding upstream endpoints.
+
+    Output modes:
+      * default — rendered tenant panel per domain
+      * ``json_output`` — single JSON array at the end (back-compat shape)
+      * ``markdown`` — rendered markdown per domain
+      * ``csv_output`` — flat CSV of headline fields
+      * ``ndjson`` — one JSON object per line, flushed as each domain
+        completes. Recommended for large corpora where ``json_output`` would
+        buffer the entire result set in memory.
     """
     import json as json_mod
+    import sys as sys_mod
     from pathlib import Path
 
     from recon_tool.formatter import (
@@ -2317,8 +2338,8 @@ async def _batch(
     console = get_console()
 
     # Mutual exclusion: only one output format allowed
-    if sum([json_output, markdown, csv_output]) > 1:
-        render_error("--json, --md, and --csv are mutually exclusive")
+    if sum([json_output, markdown, csv_output, ndjson]) > 1:
+        render_error("--json, --md, --csv, and --ndjson are mutually exclusive")
         raise typer.Exit(code=EXIT_VALIDATION)
 
     path = Path(file)
@@ -2386,7 +2407,7 @@ async def _batch(
         try:
             validated = validate_domain(domain)
         except ValueError as exc:
-            if json_output:
+            if json_output or ndjson:
                 return {"domain": domain, "error": str(exc)}
             if csv_output:
                 return (domain, None, str(exc))
@@ -2408,7 +2429,7 @@ async def _batch(
                 # that format_tenant_dict emits.
                 batch_infos[info.queried_domain] = info
 
-                if json_output:
+                if json_output or ndjson:
                     return format_tenant_dict(info, include_unclassified=include_unclassified)
                 if csv_output:
                     return (domain, info, None)
@@ -2417,13 +2438,13 @@ async def _batch(
                 return render_tenant_panel(info)
 
             except ReconLookupError as exc:
-                if json_output:
+                if json_output or ndjson:
                     return {"domain": domain, "error": str(exc)}
                 if csv_output:
                     return (domain, None, str(exc))
                 return f"{_ERROR_PREFIX}{domain}: {exc}"
             except Exception as exc:
-                if json_output:
+                if json_output or ndjson:
                     return {"domain": domain, "error": str(exc)}
                 if csv_output:
                     return (domain, None, str(exc))
@@ -2441,6 +2462,24 @@ async def _batch(
         if not json_output and not markdown and not csv_output:
             console.print(f"  [{completed}/{total}] {domain}", style="dim", highlight=False)
         return result
+
+    # NDJSON streaming path. Emits one JSON object per line, flushed as each
+    # domain completes. Skips post-batch enrichment (shared_verification_tokens,
+    # tenant peers, display-name clusters) because those require knowing all
+    # results before any can be emitted. Trade off batch-wide enrichment for
+    # constant memory and visible progress on large corpora.
+    if ndjson:
+        tasks = [asyncio.create_task(_process_one(d)) for d in domain_list]
+        for fut in asyncio.as_completed(tasks):
+            result = await fut
+            if isinstance(result, dict):
+                line = json_mod.dumps(result)
+                typer.echo(line)
+                # Flush stdout so downstream pipelines see each line as it lands.
+                sys_mod.stdout.flush()
+            elif isinstance(result, str) and result.startswith(_ERROR_PREFIX):
+                typer.echo(result.removeprefix(_ERROR_PREFIX), err=True)
+        return
 
     tasks = [_tracked(d) for d in domain_list]
     results = await asyncio.gather(*tasks)

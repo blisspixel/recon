@@ -27,30 +27,67 @@ from pathlib import Path
 from typing import Any
 
 
+def _iter_json_payloads(path: Path) -> list[dict[str, Any]]:
+    """Read a file as JSON array, NDJSON, or single JSON object.
+
+    Mirrors ``find_gaps._iter_json_payloads`` so both validation tools
+    accept the same input shapes.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        print(f"warning: cannot read {path}: {exc}", file=sys.stderr)
+        return []
+    stripped = text.lstrip()
+    if not stripped:
+        return []
+    if stripped[0] == "[":
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as exc:
+            print(f"warning: invalid JSON array in {path}: {exc}", file=sys.stderr)
+            return []
+        return [d for d in data if isinstance(d, dict)] if isinstance(data, list) else []
+    if stripped[0] == "{":
+        try:
+            data = json.loads(text)
+            if isinstance(data, dict):
+                return [data]
+        except json.JSONDecodeError:
+            pass
+    out: list[dict[str, Any]] = []
+    for line_num, raw in enumerate(text.splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError as exc:
+            print(f"warning: skipping malformed line {line_num} in {path}: {exc}", file=sys.stderr)
+            continue
+        if isinstance(entry, dict):
+            out.append(entry)
+    return out
+
+
 def _load_runs(path: Path) -> dict[str, dict[str, Any]]:
-    """Return ``{queried_domain: result_dict}`` from a file or directory."""
+    """Return ``{queried_domain: result_dict}`` from a file or directory.
+
+    Accepts JSON arrays, NDJSON streams, single-object JSON files, or
+    directories containing any of the above.
+    """
     files: list[Path] = (
         [Path(p) for p in sorted(glob.glob(str(path / "*.json")))]
+        + [Path(p) for p in sorted(glob.glob(str(path / "*.ndjson")))]
         if path.is_dir()
         else [path]
     )
     out: dict[str, dict[str, Any]] = {}
     for fp in files:
-        try:
-            data = json.loads(fp.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError) as exc:
-            print(f"warning: skipping {fp}: {exc}", file=sys.stderr)
-            continue
-        if isinstance(data, dict):
-            domain = str(data.get("queried_domain", fp.stem))
-            out[domain] = data
-        elif isinstance(data, list):
-            for entry in data:
-                if not isinstance(entry, dict):
-                    continue
-                domain = str(entry.get("queried_domain", ""))
-                if domain:
-                    out[domain] = entry
+        for entry in _iter_json_payloads(fp):
+            domain = str(entry.get("queried_domain", "")) or fp.stem
+            if domain:
+                out[domain] = entry
     return out
 
 
