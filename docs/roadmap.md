@@ -800,6 +800,88 @@ locked schema; confirm no field-shape regressions. Trend metrics
 across v1.6 → v2.0 demonstrate the correlation engine got better
 without overclaiming.
 
+### v2.1.0 — Composable validation runner (sketch, not committed)
+
+The first slot after v2.0 lock. Composability is next in priority
+order (correctness → reliability → explainability → composability →
+features), and v2.0 doesn't advance it — v2.0 is pure
+lock-and-polish on what already works.
+
+The natural composability move is *not* a bigger Bayesian
+network or new fingerprint surfaces. It's a closed-loop runner
+that uses the existing MCP toolset to advance recon's own
+north-star metric (multi-signal correlation depth) reproducibly.
+The MCP server already exposes `lookup_tenant`, `chain_lookup`,
+`discover_fingerprint_candidates`, `test_hypothesis`,
+`get_posteriors`, `explain_dag`, `get_infrastructure_clusters`,
+`cluster_verification_tokens`, etc. v2.1 packages these into a
+runner that closes the loop:
+
+  *seed → discover → validate → score → report.*
+
+**Scope (deliberately tight):**
+
+- **Three new MCP skills** wrapping existing tool calls:
+  - `run_validation_suite(domains, metrics=["correlation_depth",
+    "entropy_reduction", "posterior_calibration"])` — runs the
+    existing corpus metrics reproducibly. Returns per-metric
+    aggregates plus per-domain detail.
+  - `discover_and_rank_candidates(seed_domain, max_new=20)` —
+    composes `chain_lookup` + `discover_fingerprint_candidates` +
+    `test_hypothesis` into a single ranked candidate list.
+  - `batch_posterior_query(domains, nodes=[...])` — parallel
+    `get_posteriors` with aggregated stats per node.
+- **One CLI command:** `recon run <mode>` where `mode` is
+  `corpus-expansion`, `hardening-validation`, or
+  `fingerprint-triage`. Uses the MCP client internally so the
+  agent path and the CLI path stay identical. `--dry-run` is the
+  default; explicit `--apply` required to mutate any committed
+  data file.
+- **Tied to the corpus metric.** Every run reports Δ correlation
+  depth against the previous snapshot, so we can tell whether
+  the runner is actually moving the metric or just consuming
+  cycles.
+
+**Invariants this preserves:**
+
+- 100% passive — runner only calls existing public-signal tools.
+- Data-file only — discovered candidates land in a review queue
+  (`validation/runs-private/<stamp>/candidates.json`), never in
+  a committed catalog without human triage.
+- No ML, no decision loops with external LLM calls. The "agent"
+  in this design is the operator running the CLI or an MCP
+  client; recon itself does not embed an autonomous agent.
+- No active probes, no internet crawling beyond what the
+  underlying tools already do.
+
+**Failure modes to avoid:**
+
+- Adding fifteen new MCP skills before the schema is locked.
+  Three is the cap. More invites scope creep and breaks the v2.0
+  contract.
+- Letting the runner write to the main fingerprint catalog
+  without human triage. The whole auditability story collapses
+  if recon edits its own rules in the dark.
+- Shipping before v2.0 schema lock + agentic QA prove agents use
+  the existing posteriors. v2.1 optimizes a surface; if the
+  surface isn't useful, optimization is wasted.
+- Letting "runner" mean "embedded LLM agent." It does not. It is
+  a coordinator over deterministic + Bayesian tools that already
+  ship. If we ever want LLM-driven discovery, that's a separate
+  invariant decision and a separate release.
+
+**Why this is the right v2.1 work, not v1.9.x feature work:**
+The bridge milestones validate the *layer*. v2.1 packages the
+layer into a closed-loop tool. Doing it before v2.0 lock would
+mix infrastructure (the runner) with contract changes (the
+schema lock); doing it after lets v2.1 ship with stable inputs.
+
+This sketch is **not committed.** It is the placeholder for the
+"after v2.0, what's next?" question that the priority order
+predicts. The actual v2.1 plan gets written when v2.0 ships and
+the agentic-QA findings from v1.9.1 inform what corpus-loop work
+is most valuable.
+
 ### Backlog (after v2.0)
 
 Items that are real but speculative enough to not commit a slot in the
