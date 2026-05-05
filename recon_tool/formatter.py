@@ -1506,11 +1506,7 @@ def render_tenant_panel(
                         kept.append(n)
                         running += gap + len(n)
                     remaining = len(surface_names) - len(kept)
-                    joined = (
-                        ", ".join(kept) + f", +{remaining} more"
-                        if remaining > 0
-                        else ", ".join(kept)
-                    )
+                    joined = ", ".join(kept) + f", +{remaining} more" if remaining > 0 else ", ".join(kept)
                 svc_block.append("  ")
                 svc_block.append("Subdomain".ljust(max_width), style="dim")
                 svc_block.append(joined)
@@ -2156,6 +2152,8 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         "ct_cache_age_days": info.ct_cache_age_days,
         "slug_confidences": [[slug, score] for slug, score in info.slug_confidences],
         # v1.9 EXPERIMENTAL — populated only when --fusion is on.
+        # ``conflict_provenance`` (v1.9.1+) is always present per posterior;
+        # empty list when no cross-source conflicts dampened the interval.
         "posterior_observations": [
             {
                 "name": p.name,
@@ -2166,6 +2164,14 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
                 "evidence_used": list(p.evidence_used),
                 "n_eff": p.n_eff,
                 "sparse": p.sparse,
+                "conflict_provenance": [
+                    {
+                        "field": c.field,
+                        "sources": list(c.sources),
+                        "magnitude": c.magnitude,
+                    }
+                    for c in p.conflict_provenance
+                ],
             }
             for p in info.posterior_observations
         ],
@@ -2189,9 +2195,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
             "top_issuers": list(info.cert_summary.top_issuers),
             # v1.7 — wildcard SAN sibling clusters; empty list when no
             # wildcard cert produced siblings.
-            "wildcard_sibling_clusters": [
-                list(cluster) for cluster in info.cert_summary.wildcard_sibling_clusters
-            ],
+            "wildcard_sibling_clusters": [list(cluster) for cluster in info.cert_summary.wildcard_sibling_clusters],
             # v1.7 — temporal CT issuance bursts; relative window deltas only.
             "deployment_bursts": [
                 {
@@ -2318,8 +2322,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
     # schema narrow; on for the fingerprint-discovery loop.
     if include_unclassified:
         d["unclassified_cname_chains"] = [
-            {"subdomain": uc.subdomain, "chain": list(uc.chain)}
-            for uc in info.unclassified_cname_chains
+            {"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains
         ]
     return d
 

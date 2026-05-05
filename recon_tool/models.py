@@ -146,6 +146,23 @@ class Observation:
 
 
 @dataclass(frozen=True)
+class NodeConflict:
+    """One cross-source disagreement carried through to a NodePosterior.
+
+    Mirrors ``recon_tool.bayesian.ConflictProvenance`` for serialization
+    and cache round-trips. ``field`` is the merged ``TenantInfo`` field
+    whose sources disagreed; ``sources`` lists the distinct sources that
+    contributed candidate values; ``magnitude`` is the n_eff penalty
+    this conflict applied (uniform at v1.9.1, exposed as a number so
+    future per-node relevance weighting is schema-additive).
+    """
+
+    field: str
+    sources: tuple[str, ...]
+    magnitude: float
+
+
+@dataclass(frozen=True)
 class PosteriorObservation:
     """Per-node posterior from the v1.9 Bayesian network (EXPERIMENTAL).
 
@@ -162,6 +179,11 @@ class PosteriorObservation:
     interval expresses how much we trust the model's exactness given
     sparsity. See ``docs/correlation.md §5`` for the full derivation
     and the passive-observation ceiling that floors the interval width.
+
+    ``conflict_provenance`` (v1.9.1+) lists the cross-source
+    disagreements that contributed to this node's n_eff penalty,
+    alongside the existing top-level ``evidence_conflicts`` array.
+    Empty tuple when no conflicts dampened the interval.
     """
 
     name: str
@@ -172,6 +194,7 @@ class PosteriorObservation:
     evidence_used: tuple[str, ...]
     n_eff: float
     sparse: bool
+    conflict_provenance: tuple[NodeConflict, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -240,10 +263,7 @@ def serialize_conflicts_array(conflicts: MergeConflicts | None) -> list[dict[str
         out.append(
             {
                 "field": f.name,
-                "candidates": [
-                    {"value": c.value, "source": c.source, "confidence": c.confidence}
-                    for c in candidates
-                ],
+                "candidates": [{"value": c.value, "source": c.source, "confidence": c.confidence} for c in candidates],
             }
         )
     return out

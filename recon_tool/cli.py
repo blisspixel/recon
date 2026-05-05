@@ -326,10 +326,7 @@ def batch(
     include_unclassified: bool = typer.Option(
         False,
         "--include-unclassified",
-        help=(
-            "Include unclassified CNAME chains in JSON output for the "
-            "fingerprint-discovery loop. Off by default."
-        ),
+        help=("Include unclassified CNAME chains in JSON output for the fingerprint-discovery loop. Off by default."),
     ),
     no_ct: bool = typer.Option(
         False,
@@ -1270,9 +1267,7 @@ def fingerprints_test(
     console.print()
     console.print(f"  [bold]Testing {slug!r} against {len(domains)} domain{'s' if len(domains) != 1 else ''}[/bold]")
     if using_example_corpus:
-        console.print(
-            "  [yellow]Using the fictional-company example corpus (no real matches expected).[/yellow]"
-        )
+        console.print("  [yellow]Using the fictional-company example corpus (no real matches expected).[/yellow]")
         console.print(
             "  [dim]Supply --corpus path/to/file or drop ~/.recon/corpus.txt to test against real apexes.[/dim]"
         )
@@ -2136,7 +2131,7 @@ async def _lookup(
 
             from recon_tool.bayesian import infer_from_tenant_info
             from recon_tool.fusion import compute_slug_posteriors
-            from recon_tool.models import PosteriorObservation
+            from recon_tool.models import NodeConflict, PosteriorObservation
 
             bayesian_result = infer_from_tenant_info(info)
             bayesian_observations = tuple(
@@ -2149,6 +2144,10 @@ async def _lookup(
                     evidence_used=p.evidence_used,
                     n_eff=p.n_eff,
                     sparse=p.sparse,
+                    conflict_provenance=tuple(
+                        NodeConflict(field=c.field, sources=c.sources, magnitude=c.magnitude)
+                        for c in p.conflict_provenance
+                    ),
                 )
                 for p in bayesian_result.posteriors
             )
@@ -2210,9 +2209,7 @@ async def _lookup(
             elif fmt == "text":
                 typer.echo(render_dag_text(network, inference, domain=validated))
             else:
-                render_error(
-                    f"--explain-dag-format must be 'text' or 'dot', got {explain_dag_format!r}"
-                )
+                render_error(f"--explain-dag-format must be 'text' or 'dot', got {explain_dag_format!r}")
                 raise typer.Exit(code=EXIT_VALIDATION) from None
             return
 

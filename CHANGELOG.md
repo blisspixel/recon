@@ -5,6 +5,80 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1] - 2026-05-05
+
+**Conflict provenance on `NodePosterior`.** First v1.9.x optional-feature
+patch from the bridge plan in `docs/roadmap.md`. The v1.7 conflict-aware
+merger captures *which sources disagreed on which fields*; the v1.9.0
+fusion layer rolled this into a uniform n_eff penalty and dropped the
+detail. v1.9.1 carries the structured provenance through to every
+`PosteriorObservation` so both `--explain-dag` and the `--json` output
+can name the disagreeing sources alongside the existing top-level
+`evidence_conflicts` array. Schema-additive — required key added to
+`PosteriorObservation`; emits `[]` when no conflicts dampened the
+interval. EXPERIMENTAL alongside the rest of the v1.9 fusion surface.
+
+### Added
+
+- **`ConflictProvenance` (engine) and `NodeConflict` (model) dataclasses.**
+  `recon_tool.bayesian.ConflictProvenance` is the inference-side record
+  carrying `field`, `sources`, and `magnitude` (n_eff units). The
+  `recon_tool.models.NodeConflict` mirror is the serializable
+  TenantInfo-side counterpart and round-trips through cache.
+- **`infer(..., conflicts=...)` parameter.** Structured per-conflict
+  records replace the count-only path when supplied; the legacy
+  `conflict_field_count` parameter remains a backward-compatible entry
+  point (its callers are unchanged). When both are passed, `conflicts`
+  wins and the count is derived from `len(conflicts)`.
+- **`PosteriorObservation.conflict_provenance` field.** Always present
+  in `--json` output as a (possibly empty) array. Each entry:
+  `{field, sources: [...], magnitude}`. Documented in
+  `docs/recon-schema.json` under a new `NodeConflict` `$def`.
+- **`--explain-dag` rendering.** Text renderer adds a `**Conflicts:**`
+  line per node listing each disagreement as
+  `` `field` (source-a vs source-b, -1.50 n_eff) `` when non-empty;
+  the line is omitted when no conflicts dampened the interval. DOT
+  renderer appends `conflicts: <field-list>` to node labels for the
+  same nodes.
+- **Cache forward-compat.** Pre-v1.9.1 cached entries (no
+  `conflict_provenance` key) parse cleanly to an empty tuple; the
+  parser tolerates malformed conflict entries via the same
+  `try/except` pattern used elsewhere in `_parse_posterior_observations`.
+
+### Changed
+
+- **`PosteriorObservation` schema** in `docs/recon-schema.json` —
+  `conflict_provenance` added as a required key (always present, empty
+  array when no conflicts). `NodeConflict` `$def` added alongside.
+- **`recon_tool/bayesian.py`** — `_conflict_provenance(info)` extracts
+  structured records from `MergeConflicts`; the legacy
+  `_conflict_count(info)` helper is removed (its single caller now
+  uses the structured path).
+- **`recon_tool/cli.py`** — fusion construction site maps
+  `ConflictProvenance` → `NodeConflict` when populating
+  `PosteriorObservation.conflict_provenance`.
+
+### Tests
+
+- **`tests/test_conflict_provenance.py`** — 12 new tests covering:
+  empty provenance when no merge_conflicts; populated provenance with
+  field/source/magnitude detail; source deduplication; explicit
+  `conflicts=` argument overriding `conflict_field_count`; legacy
+  count-only path yields empty provenance; JSON shape (always-present
+  array, empty when clean); cache round-trip including a pre-v1.9.1
+  payload; text renderer surfaces conflicts; text renderer omits the
+  conflict line when clean; DOT renderer annotates conflict-bearing
+  nodes.
+
+Total: 1982 tests passing.
+
+### Roadmap
+
+- Marks the **conflict provenance on `NodePosterior`** bullet from the
+  v1.9.x optional-features list as shipped.
+- Patch-release discipline: this lands as a single-feature patch per
+  the v2.0 bridge plan; no other unrelated work in this version.
+
 ## [1.9.0] - 2026-05-04
 
 **Probabilistic fusion layer (v1.9), EXPERIMENTAL.** Adds the third

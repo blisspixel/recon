@@ -35,7 +35,6 @@ from recon_tool.bayesian import (
     load_network,
 )
 
-
 # Evidence patterns we sensitivity-check on. Each is a representative
 # operator-facing scenario: a target with high-confidence M365 stack,
 # a target with high-confidence GWS, and an empty observation (the
@@ -59,8 +58,9 @@ SCENARIOS: list[tuple[str, list[str], list[str]]] = [
 ]
 
 
-def _perturbed_network(base: BayesianNetwork, node_name: str, cpt_key: str | None,
-                        prior_only: bool, delta: float) -> BayesianNetwork:
+def _perturbed_network(
+    base: BayesianNetwork, node_name: str, cpt_key: str | None, prior_only: bool, delta: float
+) -> BayesianNetwork:
     """Return a copy of ``base`` with one CPT entry / prior shifted by
     ``delta``, clipped to [0.001, 0.999]. ``cpt_key`` is ``None`` when
     perturbing the root prior."""
@@ -80,17 +80,15 @@ def _perturbed_network(base: BayesianNetwork, node_name: str, cpt_key: str | Non
     return BayesianNetwork(version=base.version, nodes=tuple(new_nodes))
 
 
-def _max_posterior_shift(base: BayesianNetwork, perturbed: BayesianNetwork,
-                          slugs: list[str], signals: list[str]) -> float:
+def _max_posterior_shift(
+    base: BayesianNetwork, perturbed: BayesianNetwork, slugs: list[str], signals: list[str]
+) -> float:
     """Run inference on both networks; return max |Δposterior| across nodes."""
     base_result = infer(base, slugs, signals, priors_override={})
     pert_result = infer(perturbed, slugs, signals, priors_override={})
     base_map = {p.name: p.posterior for p in base_result.posteriors}
     pert_map = {p.name: p.posterior for p in pert_result.posteriors}
-    return max(
-        abs(base_map[n] - pert_map[n])
-        for n in base_map.keys() & pert_map.keys()
-    )
+    return max(abs(base_map[n] - pert_map[n]) for n in base_map.keys() & pert_map.keys())
 
 
 def _enumerate_perturbations(net: BayesianNetwork) -> list[tuple[str, str | None, bool]]:
