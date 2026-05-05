@@ -338,38 +338,76 @@ first**, so schema-affecting work is informed by what operators
 actually use rather than the other way around. Each milestone
 maps to one patch release.
 
-#### v1.9.1 — Operator UX validation (UX-before-schema)
+#### v1.9.1 — UX validation via agentic QA (the AI-agent persona is real)
 
 We have not validated that operators benefit from credible
 intervals. The entire calibration argument is academic if no one
 looks at the `posterior_observations` block before making a
-decision. Doing this *first*, before any schema-affecting work in
-the milestones below, prevents us from locking a contract whose
-user-facing value is unproven.
+decision. Doing this first, before any schema-affecting work,
+prevents us from locking a contract whose user-facing value is
+unproven.
 
-- **Three role-distinct operator interviews.** SOC analyst,
-  security architect, due-diligence reviewer. Each runs recon
-  with `--fusion` against two domains (one dense, one hardened)
-  and narrates what they look at and why. We are listening for:
-  do they read `posterior_observations`? Do they look at
-  intervals or only point estimates? Does `sparse=true` change
-  their interpretation? Do `--explain-dag` and the MCP tools get
-  used at all?
-- **Document findings publicly** in `validation/v2.0-ux-notes.md`.
-  Anonymized; method-of-use is the artifact, not the operator.
-- **Inform downstream milestones.** If operators ignore intervals,
-  that's information the schema-lock disposition (v2.0) needs.
-  Maybe the panel should surface intervals more prominently.
-  Maybe the JSON shape should change. Maybe `--fusion` should be
-  default-on rather than opt-in. Maybe credible intervals should
-  not be a load-bearing feature at all and posterior-only is
-  enough. Each of these has implications further down the
-  milestone list; we should know before we lock anything.
+The original framing called for three human operator interviews
+(SOC analyst, security architect, due-diligence reviewer). We
+keep that as a future option, but the **primary v1.9.1
+methodology is agentic QA** — one of recon's main user personas
+*is* the AI agent (the entire MCP integration story), so
+simulating that persona with a script gives us:
 
-This is the only milestone with an irreducibly qualitative gate.
-Three interviews is a small N, but it's >> zero, and a small N is
-how product validation works for a small project. Don't over-
-engineer the methodology; do it once, document, move on.
+- Real signal about whether agents read `posterior_observations`,
+  whether they distinguish dense from sparse, whether they cite
+  `--explain-dag` output, whether they ask follow-up questions
+  the credible interval should answer.
+- Reproducibility: anyone can rerun the agentic QA suite against
+  a future build and compare.
+- Speed: today, not "after we recruit three humans."
+- Publishability: synthetic / fictional domains, no private data.
+
+**Method.**
+
+- **Personas as prompt scaffolds.** Three personas — security
+  analyst triaging an alert, due-diligence researcher writing a
+  vendor assessment, ops engineer comparing two domains. Each
+  gets a system prompt that defines their role, the question
+  they're trying to answer, and the artifacts available
+  (`recon <domain> --fusion --json`, `--explain-dag`, MCP tool
+  output). No mention of credible intervals, sparse flags, or
+  evidence DAGs in the prompt — we want to see whether the
+  agent finds and uses those affordances on its own.
+- **Test domains.** Two fictional Microsoft examples
+  (`contoso.com` for dense, a deliberately-hardened scenario
+  built by stripping a normal lookup down to one slug for
+  sparse). Synthetic, public, reproducible.
+- **Scoring rubric.**
+  - *Did the agent read the posterior block?* (binary; check
+    transcript)
+  - *Did the agent cite the credible interval explicitly?*
+    (binary)
+  - *Did `sparse=true` change the agent's conclusion?*
+    (compare answers on dense vs sparse domain)
+  - *Did the agent run `--explain-dag` or call
+    `explain_dag` MCP?* (binary)
+  - *Did the agent reach a different conclusion than it would
+    have without `--fusion`?* (re-run with `--fusion` off and
+    diff)
+- **Documented in `validation/v1.9.1-agentic-ux.md`.** The
+  prompts, transcripts, and rubric all public-reproducible.
+  Per-persona summary table makes the result skimmable.
+- **Failure modes that change v2.0.** If the agent ignores the
+  posterior block on both runs, intervals are not load-bearing
+  and v2.0 should consider promoting `posterior_observations`
+  to stable but de-emphasizing it in the panel. If the agent
+  consistently misreads `sparse=true` as "low confidence" rather
+  than "passive ceiling," the field name is wrong and v2.0
+  should rename. If the agent uses `--explain-dag` heavily,
+  v2.0 should keep it prominent. Each finding maps to a concrete
+  v2.0 disposition decision.
+
+**Human interviews remain a future option.** If the agentic QA
+surfaces ambiguous results, or if we want a non-agent persona
+(SOC analyst clicking through the CLI), the original three-
+interview plan is on the shelf. But agentic QA is genuine
+validation for the agent persona, not a placeholder for it.
 
 #### v1.9.2 — Resolve the `email_security_strong` definitional gap
 
@@ -550,16 +588,22 @@ This is intentional:
 - **No bundling.** Two milestones completing on the same day is
   fine; they still ship as separate patches with separate tags.
   Bundled releases hide work and make rollback harder.
-- **Order is logical, not sequential.** v1.9.6 (metadata-gate
-  flip) is mostly description writes against the existing catalog;
-  it could land before v1.9.3 (hardened-adversarial) if the
-  description work goes faster than the corpus curation.
-  Numbering reflects which milestone is which, not delivery order.
+- **Numeric order IS delivery order.** v1.9.1 ships before
+  v1.9.2; v1.9.2 before v1.9.3; and so on. The dependency chain
+  is the point of the planning: UX validation (v1.9.1) informs
+  topology surgery (v1.9.2), which informs hardened-adversarial
+  testing (v1.9.3), which informs the per-node stability
+  decisions (v1.9.4), which informs CPT-change discipline
+  (v1.9.5), which informs the metadata gate (v1.9.6). Skipping
+  ahead because a later patch "feels easier" means we're
+  guessing at the dependency we just decided to think about.
 - **Bug-fix patches use the next available number.** A regression
   fix that lands between v1.9.4 and v1.9.5 ships as `v1.9.4.1`
   or claims the next minor number — whichever the project's
-  versioning strategy prefers at that moment. The bridge
-  milestones do not block bug fixes from shipping.
+  versioning strategy prefers at that moment. Bug fixes do not
+  block bridge milestones, and bridge milestones do not block
+  bug fixes; both make linear progress through their own number
+  spaces.
 
 EXPERIMENTAL labels come off per-node as the gates clear, not all
 at once. By the time the sixth patch ships, every surface is
@@ -651,10 +695,11 @@ operation.
 6. v1.9.6 — Metadata gate flipped from advisory to presence-
    enforcing.
 
-The patches do not have to ship in numeric order; they ship as
-work completes. v1.9.6 may land before v1.9.3 if the metadata
-description writes happen first. Numbering reflects logical
-dependency, not delivery sequence. v2.0 ships when all six are in.
+Patches ship in numeric order as work completes — v1.9.1 first,
+then v1.9.2, etc. The numbering reflects the dependency chain
+that the planning exercise produced; reordering would mean
+discarding the reason the milestones were sequenced this way.
+v2.0 ships when all six are in.
 
 **Schema-lock disposition** (every EXPERIMENTAL field gets a verdict):
 
