@@ -133,6 +133,52 @@ Correctness → reliability → explainability → composability → new feature
 Post-1.0, hardening existing behavior beats adding new surface. Data-file
 growth is welcome; engine growth needs stronger justification.
 
+## Engineering quality posture
+
+Standing engineering practices — type checking, lint gates, test
+coverage, dependency audit, trusted-publisher releases, structured
+logging, schema versioning, property-based fuzzing — are the floor
+this roadmap assumes. They are documented in `CONTRIBUTING.md` and
+exercised by CI; the v1.9.x and v2.0 plans below build on top of
+them.
+
+A few patterns are distinctive enough to call out:
+
+- **Strict-positive likelihoods, no degenerate factors.** The
+  Bayesian schema rejects `{0, 1}` likelihoods because one
+  mis-fingerprint would otherwise pin a node permanently.
+- **Cache-poisoning resilience.** Cache loaders skip malformed
+  entries instead of crashing.
+- **Property-based testing where invariants exist.** Hypothesis
+  generates random valid networks and evidence sets to surface
+  edge cases unit tests miss.
+- **Pure-Python dependency floor.** No numpy, no scipy, no
+  probabilistic-programming framework. `pip install recon-tool`
+  pulls roughly eight runtime packages.
+
+### Known gaps
+
+The list of things a security-focused project ideally has but we
+do not yet ship. Listed publicly so an evaluator can see what we
+know is missing rather than only what we know is present:
+
+- No SBOM attached to releases (CycloneDX or SPDX would be the
+  modern bar). Closing this is in the v1.9.x feature work below.
+- No SECURITY.md / vulnerability disclosure policy. Same.
+- No secrets-scanning in CI (gitleaks / TruffleHog). Same.
+- No forward-compat cache test (backward compat is tested; the
+  reverse direction is not).
+- No mutation testing — line coverage measures execution, not
+  test quality.
+- No SLSA provenance or reproducible-build verification.
+  Deferred; valuable but disproportionate for a stdio-only tool
+  at current scale.
+
+These do not block v1.9.x or v2.0. The cheap ones (SECURITY.md,
+SBOM, secrets-scanning, forward-compat test) are pulled into the
+v1.9.x feature work below. The expensive ones (SLSA, reproducible
+builds) wait.
+
 ## Success Metrics (Post-1.0)
 
 These are directional measures, not product OKRs:
@@ -271,56 +317,413 @@ v1.8, and v1.9 runs. Calibration check: high-posterior predictions on the
 corpus should match observable evidence; intervals should cover the
 sparse-evidence cases without collapsing on dense-evidence ones.
 
+### Bridge to v2.0 — patch releases, in logical order
+
+v1.9.0 shipped the third correlation layer behind `--fusion` with
+EXPERIMENTAL on every new surface. The bridge to v2.0 is a series
+of small, focused patch releases — `v1.9.1`, `v1.9.2`, … — each
+clearing exactly one milestone. Patches ship when work completes,
+not on a fixed schedule. We are not allergic to many patch
+releases; we are allergic to bundled releases that combine
+unrelated work.
+
+v2.0 itself is reserved for "polished and excellent everywhere" —
+the schema lock, the doc polish, the BIMI VMC promotion. v2.0 is
+*not* a place to park feature backlog; if a feature is real and
+gated, it ships in a v1.9.x patch and v2.0 inherits it as already-
+present.
+
+The milestones below are ordered to put **operator UX signal
+first**, so schema-affecting work is informed by what operators
+actually use rather than the other way around. Each milestone
+maps to one patch release.
+
+#### v1.9.1 — Operator UX validation (UX-before-schema)
+
+We have not validated that operators benefit from credible
+intervals. The entire calibration argument is academic if no one
+looks at the `posterior_observations` block before making a
+decision. Doing this *first*, before any schema-affecting work in
+the milestones below, prevents us from locking a contract whose
+user-facing value is unproven.
+
+- **Three role-distinct operator interviews.** SOC analyst,
+  security architect, due-diligence reviewer. Each runs recon
+  with `--fusion` against two domains (one dense, one hardened)
+  and narrates what they look at and why. We are listening for:
+  do they read `posterior_observations`? Do they look at
+  intervals or only point estimates? Does `sparse=true` change
+  their interpretation? Do `--explain-dag` and the MCP tools get
+  used at all?
+- **Document findings publicly** in `validation/v2.0-ux-notes.md`.
+  Anonymized; method-of-use is the artifact, not the operator.
+- **Inform downstream milestones.** If operators ignore intervals,
+  that's information the schema-lock disposition (v2.0) needs.
+  Maybe the panel should surface intervals more prominently.
+  Maybe the JSON shape should change. Maybe `--fusion` should be
+  default-on rather than opt-in. Maybe credible intervals should
+  not be a load-bearing feature at all and posterior-only is
+  enough. Each of these has implications further down the
+  milestone list; we should know before we lock anything.
+
+This is the only milestone with an irreducibly qualitative gate.
+Three interviews is a small N, but it's >> zero, and a small N is
+how product validation works for a small project. Don't over-
+engineer the methodology; do it once, document, move on.
+
+#### v1.9.2 — Resolve the `email_security_strong` definitional gap
+
+This is *topology surgery*, not parameter tuning. The v1.9.0
+spot-check showed 52.6% agreement on this single node; all other
+nodes were at 100%. The cause is not miscalibration. The Bayesian
+network's CPT for `email_security_strong` is parameterized over
+`{m365_tenant, google_workspace_tenant, email_gateway_present}` —
+modern-mail-provider presence. The spot-check tested it against
+`dmarc=reject + dkim + spf-strict + mta-sts (≥2 of 4)` — policy
+enforcement. **These are different claims.** No CPT tuning makes
+them agree. Two principled fixes:
+
+- **Option A — Split the node.** Replace `email_security_strong`
+  with two nodes: `email_security_modern_provider` (parameterized
+  on M365 / GWS as today) and `email_security_policy_enforcing`
+  (parameterized on observed DMARC / DKIM / SPF / MTA-STS signals).
+  Defenders care about both, but for different reasons. Two nodes
+  with two clear definitions beat one with a muddled one.
+- **Option B — Pick a definition and align both layers.** Choose
+  whichever definition matches the question defenders actually ask
+  (likely policy-enforcing), align the deterministic pipeline check
+  and the Bayesian CPT to that definition, and live with the choice.
+
+Default: Option A. It's more model surface but more honest. The
+implementation is a schema-additive `bayesian_network.yaml`
+change, not a CPT tune. **Gate:** both new nodes ship with explicit
+definitions in `docs/correlation.md` and a re-run corpus
+spot-check matches the definitions.
+
+**Adjacent suspect — `federated_identity`.** The current model
+parameterizes federation only on `m365_tenant`, but federation
+exists without M365 (Okta + GWS, Auth0 + custom IdP, standalone
+SAML setups). The current network systematically under-attributes
+federation when the path doesn't go through M365. This is the
+same shape of definitional bug as `email_security_strong`. We
+either (a) expand `federated_identity`'s parents and re-derive
+its CPT, or (b) keep it `experimental` until corpus evidence
+shows the under-attribution rate is acceptable. Decide as part
+of this milestone.
+
+**Audit-every-node — backlog, not commitment.** The pragmatic
+choice is to fix the one we know is broken, ship, and let the
+next corpus run tell us which node is broken next. Sequential
+model improvement. The rigorous-but-open-ended alternative — audit
+every node for definitional clarity in one pass — is in
+[Backlog (after v2.0)](#backlog-after-v20) below.
+
+#### v1.9.3 — Hardened-adversarial behavior validation
+
+The v1.9.0 corpus skewed enterprise. The asymmetric-likelihood
+design (§4.8.3) was justified specifically for hardened targets,
+which v1.9.0 did not exercise. This milestone validates the
+*design property*, not just the calibration:
+
+- **50-domain hardened-adversarial subset** under
+  `validation/corpus-private/hardened.txt`: minimal-DNS,
+  wildcard-cert-only, heavily-proxied apexes, randomized CNAME
+  chains, short-lived certs.
+- **Gate (behavioral, not numeric):** on this subset, the layer
+  must (a) flag `sparse=true` on most nodes, (b) report wide
+  credible intervals, and (c) refuse to report high-confidence
+  posteriors on nodes whose evidence bindings did not fire. The
+  exact numeric thresholds are less important than the
+  qualitative behavior holding up. Document the result with
+  illustrative interval shapes in correlation.md.
+- **Public failure-mode catalog.** New section in correlation.md
+  enumerating the hardening patterns that defeat each layer and
+  the language the layer uses to admit it ("layer X reports
+  sparse on this pattern"). Honest framing of where the public
+  channel really cannot resolve uncertainty.
+
+#### v1.9.4 — Per-node stability criteria (decide, don't ship the field)
+
+The current EXPERIMENTAL label is atomic — the whole `--fusion`
+layer carries it. That's over-broad. `m365_tenant`, `cdn_fronting`,
+`aws_hosting`, `google_workspace_tenant` were validated at 100%
+spot-check on the v1.9.0 corpus. `email_security_strong` was not.
+They should not share a label.
+
+This patch is about *deciding the criteria*, not shipping a
+field. v2.0 ships with no `experimental` labels anywhere
+(see v2.0.0 below), so the `stability: stable | experimental |
+deprecated` field has nothing to express at v2.0 release time.
+Ship the field when it's actually needed — which is the first
+time a post-v2.0 patch adds a node that doesn't immediately
+qualify as `stable`.
+
+- **Per-node stability criteria** (behavioral, not engine-tautological):
+  - **(a) Evidence-response correctness.** The node's posterior
+    moves in the predicted direction when relevant evidence is
+    added or removed, and *does not* move when irrelevant
+    evidence is varied. This validates the network propagation
+    works as designed for that node, not just that the engine
+    runs Bayes.
+  - **(b) Calibration in both regimes.** When the deterministic
+    pipeline classifies the slug `high`, the Bayesian posterior
+    is also high (> 0.5) and the credible interval does not span
+    the full `[0, 1]` range. When the deterministic pipeline is
+    silent (sparse target), the interval widens appropriately
+    rather than collapsing on a confident-looking point estimate.
+    Two binary checks; no ground-truth probability claim.
+  - **(c) Independent-firing threshold.** The node's evidence
+    bindings have fired on at least N independent domains in
+    aggregate corpus runs. Without enough firings we don't have
+    enough data to support promotion regardless of point-spot-
+    check rates.
+- **Apply the criteria to the v1.9.0 seed network.** Each node
+  gets a verdict — `stable` (clears all three) or `not yet`
+  (one or more criteria unmet). The `not yet` verdicts feed
+  the v2.0 disposition decisions: split the node, redefine it,
+  remove it after a deprecation patch, or keep working on it
+  in v1.9.x.
+- **The `stability` field itself ships in v2.1 or later**, the
+  first time a new node is added that needs the `experimental`
+  value. v2.0 ships without the field; the schema disposition
+  table accounts for nodes by name, not by per-node label.
+
+#### v1.9.5 — CPT-change discipline (concept, not parameter)
+
+Empirical Bayes — deriving CPT parameters from corpus statistics —
+crosses the project's "no learned weights" invariant. We almost
+did it: the v1.9.0 validation report initially recommended
+"lower `P(strong|M365+gateway)` from 0.75 → ~0.55 because the
+corpus shows 55%." That recommendation was wrong, not in the
+target number but in the framing.
+
+- **Discipline:** corpus runs are mirrors, not fitters. The
+  human's job is to question the *topology* — is this node
+  asking the right question? — not to minimize the disagreement
+  number. If the disagreement is high, the *first* hypothesis is
+  that the model is conceptually wrong (v1.9.2's
+  `email_security_strong` story). Only after the topology is
+  clean do CPT numbers get re-examined, and only with explicit
+  reasoning written in the YAML.
+- **Iteration cycle is fine; automation is not.** Iterating
+  "look at corpus → rewrite mental model → write new CPTs" with
+  a human in the loop is the right way to improve the model. An
+  automated pipeline that reads the corpus and emits CPTs
+  without questioning the topology crosses the invariant. The
+  bright line is whether a *concept* gets reconsidered when the
+  numbers disagree.
+- **Enforcement.** Add a contributor-facing note in
+  `CONTRIBUTING.md` requiring every CPT change to carry a
+  comment in the YAML explaining the concept the change
+  reflects, not just the corpus statistic that motivated it.
+  PR review enforces; no automated test, because the test would
+  game the comment requirement without measuring whether the
+  concept-questioning actually happened.
+
+#### v1.9.6 — Metadata-coverage gate (presence, not coverage)
+
+The v1.9.0 advisory gate measures description coverage as a
+percentage. Forcing 70% coverage means writing ~190 description
+strings, many of which would be one-line placeholders just to
+clear the gate. That's gate-gaming.
+
+- **Reframe the metric.** Replace "≥ 70% description coverage on
+  identity / security / infrastructure" with "every detection in
+  identity / security / infrastructure has a non-empty
+  description." Binary per-detection, not percentage per-
+  category. Catches *omission*, not richness; richness is for
+  PR review.
+- **Implementation.** Modify
+  `scripts/check_metadata_coverage.py` to count
+  detections-with-empty-or-missing-description rather than
+  percentage. Flip from advisory to enforcing when the count for
+  gated categories is zero.
+
+#### Patch-release discipline
+
+Each v1.9.x patch ships when *that one milestone* is complete.
+This is intentional:
+
+- **One milestone per patch** keeps the diff small and the changelog
+  honest. A user reading "v1.9.3 — hardened-adversarial validation"
+  knows exactly what shipped and what to test.
+- **No bundling.** Two milestones completing on the same day is
+  fine; they still ship as separate patches with separate tags.
+  Bundled releases hide work and make rollback harder.
+- **Order is logical, not sequential.** v1.9.6 (metadata-gate
+  flip) is mostly description writes against the existing catalog;
+  it could land before v1.9.3 (hardened-adversarial) if the
+  description work goes faster than the corpus curation.
+  Numbering reflects which milestone is which, not delivery order.
+- **Bug-fix patches use the next available number.** A regression
+  fix that lands between v1.9.4 and v1.9.5 ships as `v1.9.4.1`
+  or claims the next minor number — whichever the project's
+  versioning strategy prefers at that moment. The bridge
+  milestones do not block bug fixes from shipping.
+
+EXPERIMENTAL labels come off per-node as the gates clear, not all
+at once. By the time the sixth patch ships, every surface is
+either `stable`, explicitly `experimental` (and we know why), or
+explicitly `deprecated`.
+
+**v2.0 ships with zero EXPERIMENTAL labels anywhere.** This is a
+hard rule, not an aspiration:
+
+- Nodes that have cleared the v1.9.4 stability criteria → ship in
+  v2.0 as `stable`.
+- Nodes that have not cleared the criteria by v2.0 release time →
+  **removed from `bayesian_network.yaml` for v2.0**, not shipped
+  as `experimental`. They can be re-added in a v2.x patch once
+  the corpus exposure validates them. A removed-and-re-added node
+  is honest; an "experimental at v2.0" node is not, because v2.0
+  is supposed to be the polished release.
+- The per-node `stability` field stays in the schema for *future*
+  use (post-v2.0 additions ship as `experimental` and graduate
+  to `stable` later). It is not a v2.0 label-leftover surface.
+
+This is stricter than the previous draft. The previous draft
+allowed `experimental` per-node at v2.0; we removed that
+allowance. If a node can't earn `stable`, it doesn't belong in
+v2.0, full stop.
+
+### v1.9.x — Optional feature additions (parallel to the bridge milestones)
+
+The six bridge milestones above are *required* for v2.0. The
+features below are *additive* — real new surfaces that don't
+require the schema lock and don't gate v2.0. Each ships as its
+own patch release with EXPERIMENTAL on its surfaces, can land in
+any order, and gets a row in the v2.0 schema-lock disposition
+table once it has been in the wild long enough to validate.
+
+- **BIMI VMC legal-name clustering** — pairs with the v1.8
+  hypergraph view; demonstrates real multi-brand identification
+  on a private corpus.
+- **MCP delta helper** — `recon_delta(domain_or_json_a,
+  domain_or_json_b)` MCP tool. Compares supplied or cached JSON
+  only; no hidden network. Optional `include_fusion` flag
+  surfaces v1.9 posterior shifts alongside the deterministic
+  diff. The first first-class delta surface for agents.
+- **Catalog metadata richness pass** — beyond the v1.9.6 presence
+  gate, raise description coverage to ≥ 80%, reference coverage
+  to ≥ 25%, document deliberate non-default weights per
+  fingerprint. Pure data work, no schema change.
+- **Downstream consumption examples** — copy-pasteable parsers /
+  field mappings for Splunk, ArcSight, Elastic, Sentinel. recon's
+  `--json` / `--ndjson` shape is already the integration surface;
+  these are friction-removers.
+- **Portfolio / self-audit batch mode** — `recon batch
+  --self-audit` aggregating vertical-baseline hits, anomaly
+  rules, correlation-depth distribution, and gateway / sovereignty
+  consistency across many domains in one summary. Targeted at
+  security teams running internal reviews against their own apex
+  inventory; never used to score third-party orgs.
+- **Non-MCP graph exports** — Mermaid diagram output for the v1.8
+  cluster graph, plus CSV exports for relationship metadata and
+  chain motifs. Trivial once the graph layer exists; gives
+  non-AI users a usable artifact for tickets, decks, audit
+  packets.
+- **SECURITY.md and supply-chain hardening** — explicit
+  vulnerability-disclosure policy, gitleaks / TruffleHog secrets-
+  scanning in CI, SBOM (CycloneDX or SPDX) attached as a release
+  asset, forward-compat cache-loading test. Each is small;
+  bundled here so the engineering-quality "what's still missing"
+  list shrinks visibly across the v1.9.x patches.
+
+These ship as completed; v2.0 inherits them already-present and
+locks their shapes per the disposition table.
+
 ### v2.0.0 — Maturity
 
 Lock in what the previous releases proved. Promote stable experimental
-fields to the v1.0 schema (or set them as a v2.0 contract); make the
-catalog community-PR-friendly; ensure the framework is suitable for
-monthly cadence on a large private corpus indefinitely.
+fields to the v2.0 schema contract; make the catalog community-PR-
+friendly; ensure the framework is suitable for sustained corpus-driven
+operation.
 
-- **BIMI VMC legal-name clustering.** Pairs with the hypergraph view from
-  v1.8; promote to general availability with a corpus-delta showing real
-  multi-brand identification.
-- **Schema lock for experimental fields.** Move the v1.7-v1.9 fields that
-  proved stable into the v1.0+ schema contract, with the `unclassified_*`
-  and Bayesian fields explicitly versioned.
-- **MCP delta helper.** Compares supplied or cached JSON only; no hidden
-  network. The first first-class delta surface usable by AI agents. An
-  optional `include_fusion` flag surfaces v1.9 posterior shifts (slug
-  posteriors and credible-interval changes) alongside the deterministic
-  diff, so agents can ask "did the probability mass move?" not just "did
-  a slug appear or disappear?".
-- **Catalog metadata push.** Description coverage > 80%, reference
-  coverage > 25%, deliberate non-default weights documented per
-  fingerprint. The catalog becomes contributor-grade.
-- **Documentation snapshot.** [`correlation.md`](correlation.md) (currently a
-  living draft) will be promoted to a polished reference describing the
-  full inference pipeline (rules → graph → Bayesian) with worked examples
-  and the language hedge each layer applies. Includes a small
-  **defense ↔ correlation mapping** table so a defender can read across
-  from "what I'm worried about" (e.g. shadow infrastructure, lookalike
-  domains, sovereignty drift, supply-chain motif change) to "which
-  correlation layer surfaces it" (rules, wildcard SAN siblings, temporal
-  bursts, chain motifs, community detection, posterior shift).
-- **Downstream consumption examples.** Short docs section with
-  copy-pasteable parsers / field mappings for common SIEM + observability
-  pipelines (Splunk, ArcSight, Elastic, Sentinel). Pure docs — recon's
-  `--json` / `--ndjson` shape is already the integration surface; this
-  removes friction without adding tool surface.
-- **Portfolio / self-audit batch mode.** A `--self-audit` (or
-  `--portfolio-report`) flag on `recon batch` aggregating vertical-baseline
-  hits, anomaly rules, correlation-depth distribution, and gateway/
-  sovereignty consistency across many domains in one summary. Targeted
-  at security teams running internal reviews against their own apex
-  inventory; never used to score third-party orgs.
-- **Non-MCP graph exports.** Mermaid diagram output for the v1.8 cluster
-  graph, plus CSV exports for relationship metadata and chain motifs.
-  Trivial once the graph layer exists — gives non-AI users a usable
-  artifact for tickets, decks, and audit packets.
+**Pre-conditions** (the six bridge patches above must have shipped):
 
-**Validation gate** — final corpus run validating end-to-end across all
-layers, with the corpus expanded to ≥10k domains where feasible. Trend
-metrics across v1.6 → v2.0 demonstrate the correlation engine got better
+1. v1.9.1 — Operator UX validation with at least three role-distinct
+   interviews documented in `validation/v2.0-ux-notes.md`.
+2. v1.9.2 — `email_security_strong` definitional gap resolved.
+3. v1.9.3 — Hardened-adversarial behavior validated.
+4. v1.9.4 — Per-node `stability` field shipped and exercised.
+5. v1.9.5 — CPT-change discipline documented in `CONTRIBUTING.md`
+   and enforced in review.
+6. v1.9.6 — Metadata gate flipped from advisory to presence-
+   enforcing.
+
+The patches do not have to ship in numeric order; they ship as
+work completes. v1.9.6 may land before v1.9.3 if the metadata
+description writes happen first. Numbering reflects logical
+dependency, not delivery sequence. v2.0 ships when all six are in.
+
+**Schema-lock disposition** (every EXPERIMENTAL field gets a verdict):
+
+| Field | Disposition |
+|---|---|
+| `posterior_observations` | Promote to stable. Pin `name`, `description`, `posterior`, `interval_low`, `interval_high`, `evidence_used`, `n_eff`, `sparse`. |
+| `slug_confidences` | Promote to stable. Existing `[slug, posterior]` shape. |
+| `chain_motifs` (v1.7) | Promote to stable if v1.9.x corpus runs continue to fire on real targets. |
+| `wildcard_sibling_clusters` (v1.7) | Promote to stable. |
+| `deployment_bursts` (v1.7) | Promote to stable. |
+| `infrastructure_clusters` (v1.8) | Promote to stable. |
+| `ecosystem_hyperedges` (v1.8, batch-only) | Promote to stable; document as batch-only contract. |
+| `evidence_conflicts` (v1.7) | Already stable shape; formally promote in schema. |
+| `--fusion` flag | Drop EXPERIMENTAL label. |
+| `--explain-dag` flag | Drop EXPERIMENTAL label. |
+| MCP `get_posteriors` / `explain_dag` tools | Drop EXPERIMENTAL label. |
+| `bayesian_network.yaml` topology | Lock at v2.0; further changes require schema-version bump. |
+| Bayesian-network nodes that clear v1.9.4 criteria | Ship in v2.0. |
+| Bayesian-network nodes that do NOT clear v1.9.4 criteria | Remove via deprecation: a v1.9.x patch marks the node deprecated in CHANGELOG and emits a one-time stderr warning when it's used; the next patch removes it from `bayesian_network.yaml`. v2.0 ships without the node. **No node goes from `experimental` directly to "removed" without a deprecated stop in between.** |
+| Per-node `stability` field | Not shipped at v2.0. Reserved for v2.1+ when a new node first needs the `experimental` value. |
+
+**v2.0 itself is purely the lock-and-polish ceremony — two items:**
+
+- **Schema lock.** Apply the disposition table above. Bump
+  `docs/recon-schema.json` to v2.0; remove EXPERIMENTAL language
+  from the promoted fields' descriptions. This is mechanical
+  once the v1.9.x patches have validated everything.
+- **Documentation snapshot.** [`correlation.md`](correlation.md)
+  (currently a living draft) promoted to a polished reference.
+  Sections required for the snapshot:
+  - **Defense ↔ correlation mapping** table so a defender can
+    read across from "what I'm worried about" (shadow
+    infrastructure, lookalike domains, sovereignty drift,
+    supply-chain motif change) to "which correlation layer
+    surfaces it" (rules, wildcard SAN siblings, temporal bursts,
+    chain motifs, community detection, posterior shift).
+  - **Prior-art comparison.** Existing probabilistic libraries
+    (pgmpy, pomegranate, PyMC / Stan / Pyro) — what they are,
+    what they do well, and the specific reasons we did not
+    import them. Concepts we adopted are already cited inline
+    (Jeffrey 1965, Walley 1991, Augustin et al. 2014, Taroni
+    et al. 2014, Minka 2001, Naeini et al. 2015, Pearl 1988,
+    Russell-Norvig, Zhang & Poole 1994, Koller & Friedman 2009,
+    Blondel et al. 2008, Traag et al. 2019); this section makes
+    the *implementation choices* explicit so a PhD reader sees
+    what we considered and rejected, not just what we used.
+  - **Dependency-floor manifesto.** Complete runtime dependency
+    graph (httpx, dnspython, pyyaml, typer, rich, mcp, networkx,
+    pydantic-via-mcp) and the list of widely-used libraries we
+    *deliberately do not* depend on (numpy, scipy, pandas,
+    pgmpy, pomegranate, PyMC, Stan, Pyro, scikit-learn, Redis,
+    SQLite, Celery, FastAPI, Shodan / Censys / SecurityTrails
+    APIs, GeoIP / ASN databases) with one-sentence reasons.
+    Defensive, adaptive, and coding-discipline posture as one
+    artifact.
+  - **Failure-mode catalog** carried forward from v1.9.3 with
+    additional examples accumulated from corpus runs.
+  - **Engineering quality posture** carried forward from this
+    roadmap, edited for the polished-doc voice.
+
+That is v2.0. Everything else — feature additions, MCP tools,
+exports — ships in v1.9.x patch releases as work completes,
+under the same EXPERIMENTAL labelling discipline. By the time the
+schema lock runs, the features are already in the wild and their
+shapes are known.
+
+**Validation gate for v2.0** — re-run the full corpus with the
+locked schema; confirm no field-shape regressions. Trend metrics
+across v1.6 → v2.0 demonstrate the correlation engine got better
 without overclaiming.
 
 ### Backlog (after v2.0)
