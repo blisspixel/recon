@@ -835,17 +835,52 @@ hand-tuning exercise.
     (Δ correlation depth, Δ entropy reduction, conflict rate
     against existing nodes if the candidate were accepted).
     Never writes to committed catalogs. `dry_run=True` is the
-    only mode that ships in v2.1; `dry_run=False` is reserved
-    for a future patch with explicit human-review gating.
+    only supported value at v2.1 ship.
 - **One CLI command:**
   - `recon run fingerprint-mining --seed=<domain> --iterations=N
     --dry-run` (alias `recon mine`). Uses the MCP client
     internally so agent and CLI behavior stay identical.
-- **Output contract.** Every run emits NDJSON to
-  `validation/runs-private/<stamp>/mining/` with three
-  artifacts: ranked candidates, projected metric deltas, and a
-  triage-ready YAML diff that a human can review and apply (or
-  reject) by hand.
+  - Default output is one-line-per-candidate ranked summary
+    (rank, candidate suffix, count, projected Δ-correlation-
+    depth). `--detail` flag surfaces the full per-candidate
+    impact analysis; `--detail --json` emits the structured
+    NDJSON for agent consumption. Avoids drowning the operator
+    in metrics by default while keeping them one flag away.
+
+**Projection method.** The Δ-metric claims are *empirical*, not
+closed-form. For each candidate, the runner constructs a
+hypothetical fingerprint (the candidate stanza), uses the
+existing `test_hypothesis` MCP path to ephemerally inject it,
+re-runs inference on the corpus snapshot, and diffs against the
+baseline. No new math, no learned weights — just inference
+re-runs over a hypothetical catalog. Falsifiable: if the
+operator accepts the candidate and re-runs the full corpus, the
+realized delta should match the projected delta to within a
+documented tolerance.
+
+**Candidate schema (machine-readable).** Each candidate emitted
+by the runner is a dict with these fields:
+
+  - `pattern` (str) — the suffix or substring to match.
+  - `tier` (`"application" | "infrastructure"`) — attribution
+    precedence layer.
+  - `suggested_slug` (str) — slug-shaped identifier proposed for
+    the new fingerprint.
+  - `count` (int) — how many distinct domains in the corpus
+    showed this pattern.
+  - `samples` (list of `{subdomain, terminal}`) — up to five
+    representative chains for human review.
+  - `projected_delta` (dict) — `{correlation_depth, entropy_reduction,
+    conflict_rate}` from the empirical re-run.
+  - `triage_yaml` (str) — pre-formatted YAML stanza ready for
+    pasting into `recon_tool/data/fingerprints/surface.yaml`
+    pending human review.
+
+**Output contract.** Every run emits NDJSON to
+`validation/runs-private/<stamp>/mining/` with three
+artifacts: ranked candidates (per the schema above), projected
+corpus-level metric deltas, and a triage-ready YAML diff that a
+human can review and apply (or reject) by hand.
 
 **Secondary v2.1 surface (only if the primary proves out):**
 
@@ -894,6 +929,13 @@ useful — not preemptively.
 
 **Why this is the right v2.1 move:**
 
+- v2.1 is **the first release where recon's value compounds with
+  use.** Every corpus run produces candidates; every accepted
+  candidate increases correlation depth on the next run. The tool
+  gets better the more it is used. v1.7 through v2.0 ship a
+  static engine; v2.1 is where the engine starts learning from
+  its own corpus exposure (with humans-in-the-loop, not
+  autonomous fitting).
 - It directly advances the north-star metric (multi-signal
   correlation depth) without new math, new network code, or new
   fingerprint surfaces.
@@ -901,10 +943,21 @@ useful — not preemptively.
   `chain_lookup`, `test_hypothesis`, `get_posteriors` — and
   packages them into a feedback loop that measures its own
   impact.
-- It is the natural composability move that the priority order
+- It is the natural composability move the priority order
   predicts after explainability is locked.
 - It does not require v2.0 to be re-opened. It is purely
   additive on top of the locked v2.0 schema.
+
+**v2.2 escalation path (sketch only).** Pure-`dry_run` removes
+auto-edit risk but creates friction: every accepted candidate has
+to be hand-pasted from the runner's YAML diff into the catalog.
+Tedious tasks don't get done. v2.2 considers a
+`--propose-pr` mode that opens a draft GitHub PR with the
+candidate stanza added, requires human merge, and never auto-
+merges. The audit trail moves from local YAML diff → reviewable
+PR. Auto-merge is *never* shipped — that line is permanent. We
+articulate the v2.2 path here so the v2.1 friction has a known
+answer rather than an open question.
 
 This sketch is **not committed.** The actual v2.1 plan gets
 written after v2.0 ships and the agentic-QA findings from v1.9.1
