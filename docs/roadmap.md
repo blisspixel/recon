@@ -800,87 +800,116 @@ locked schema; confirm no field-shape regressions. Trend metrics
 across v1.6 → v2.0 demonstrate the correlation engine got better
 without overclaiming.
 
-### v2.1.0 — Composable validation runner (sketch, not committed)
+### v2.1.0 — Closed-loop fingerprint mining + validation runner (sketch)
 
 The first slot after v2.0 lock. Composability is next in priority
 order (correctness → reliability → explainability → composability →
 features), and v2.0 doesn't advance it — v2.0 is pure
 lock-and-polish on what already works.
 
-The natural composability move is *not* a bigger Bayesian
-network or new fingerprint surfaces. It's a closed-loop runner
-that uses the existing MCP toolset to advance recon's own
-north-star metric (multi-signal correlation depth) reproducibly.
-The MCP server already exposes `lookup_tenant`, `chain_lookup`,
-`discover_fingerprint_candidates`, `test_hypothesis`,
-`get_posteriors`, `explain_dag`, `get_infrastructure_clusters`,
-`cluster_verification_tokens`, etc. v2.1 packages these into a
-runner that closes the loop:
+The mining primitive already ships. The MCP tool
+`discover_fingerprint_candidates(domain)` (live in `server.py`
+since v1.7) already does the hard work: resolves the domain,
+captures unclassified CNAME chains, applies intra-org / already-
+covered filters via `recon_tool/discovery.py::find_candidates`,
+and returns a ranked candidate list. The
+`/recon-fingerprint-triage` Claude Code skill is already designed
+to turn that list into YAML stanzas for `surface.yaml`.
 
-  *seed → discover → validate → score → report.*
+What's missing is *the loop*: a reproducible runner that uses
+the existing MCP composition (`lookup_tenant` →
+`chain_lookup` → `discover_fingerprint_candidates` →
+`test_hypothesis` → `get_posteriors`) to systematically expand
+the catalog while measuring whether the expansion actually
+tightens correlation depth on the corpus. This makes the "art of
+correlation" *executable at scale* instead of a one-time
+hand-tuning exercise.
 
-**Scope (deliberately tight):**
+**Primary v2.1 surface:**
 
-- **Three new MCP skills** wrapping existing tool calls:
-  - `run_validation_suite(domains, metrics=["correlation_depth",
-    "entropy_reduction", "posterior_calibration"])` — runs the
-    existing corpus metrics reproducibly. Returns per-metric
-    aggregates plus per-domain detail.
-  - `discover_and_rank_candidates(seed_domain, max_new=20)` —
-    composes `chain_lookup` + `discover_fingerprint_candidates` +
-    `test_hypothesis` into a single ranked candidate list.
-  - `batch_posterior_query(domains, nodes=[...])` — parallel
-    `get_posteriors` with aggregated stats per node.
-- **One CLI command:** `recon run <mode>` where `mode` is
-  `corpus-expansion`, `hardening-validation`, or
-  `fingerprint-triage`. Uses the MCP client internally so the
-  agent path and the CLI path stay identical. `--dry-run` is the
-  default; explicit `--apply` required to mutate any committed
-  data file.
-- **Tied to the corpus metric.** Every run reports Δ correlation
-  depth against the previous snapshot, so we can tell whether
-  the runner is actually moving the metric or just consuming
-  cycles.
+- **One new MCP skill:**
+  - `run_fingerprint_mining(seed_domains, max_candidates_per_domain=20,
+    dry_run=True)` — for each seed, runs the existing chain →
+    discovery → hypothesis-test pipeline. Outputs ranked
+    candidates plus the projected impact on the corpus
+    (Δ correlation depth, Δ entropy reduction, conflict rate
+    against existing nodes if the candidate were accepted).
+    Never writes to committed catalogs. `dry_run=True` is the
+    only mode that ships in v2.1; `dry_run=False` is reserved
+    for a future patch with explicit human-review gating.
+- **One CLI command:**
+  - `recon run fingerprint-mining --seed=<domain> --iterations=N
+    --dry-run` (alias `recon mine`). Uses the MCP client
+    internally so agent and CLI behavior stay identical.
+- **Output contract.** Every run emits NDJSON to
+  `validation/runs-private/<stamp>/mining/` with three
+  artifacts: ranked candidates, projected metric deltas, and a
+  triage-ready YAML diff that a human can review and apply (or
+  reject) by hand.
+
+**Secondary v2.1 surface (only if the primary proves out):**
+
+- `run_validation_suite(domains, metrics=[...])` — packages the
+  existing corpus metrics into a reproducible call.
+- `batch_posterior_query(domains, nodes=[...])` — parallel
+  `get_posteriors` with aggregated stats.
+
+These are wrappers over capabilities the MCP server already
+ships. They land only after v2.1 mining itself ships and proves
+useful — not preemptively.
 
 **Invariants this preserves:**
 
 - 100% passive — runner only calls existing public-signal tools.
-- Data-file only — discovered candidates land in a review queue
-  (`validation/runs-private/<stamp>/candidates.json`), never in
-  a committed catalog without human triage.
-- No ML, no decision loops with external LLM calls. The "agent"
-  in this design is the operator running the CLI or an MCP
-  client; recon itself does not embed an autonomous agent.
+- Data-file only — discovered candidates land in a review queue,
+  never in a committed catalog. **`run_fingerprint_mining` ships
+  with `dry_run=True` as the only supported value in v2.1.** Any
+  future "auto-apply" mode requires its own invariant review and
+  a separate release.
+- No ML, no autonomous LLM agent inside recon. The "agent" in
+  this design is the operator running the CLI or an MCP client;
+  the runner is a deterministic coordinator over tools that
+  already ship. If we ever want LLM-driven discovery, that's a
+  separate invariant decision.
 - No active probes, no internet crawling beyond what the
   underlying tools already do.
 
 **Failure modes to avoid:**
 
-- Adding fifteen new MCP skills before the schema is locked.
-  Three is the cap. More invites scope creep and breaks the v2.0
-  contract.
-- Letting the runner write to the main fingerprint catalog
-  without human triage. The whole auditability story collapses
-  if recon edits its own rules in the dark.
-- Shipping before v2.0 schema lock + agentic QA prove agents use
-  the existing posteriors. v2.1 optimizes a surface; if the
-  surface isn't useful, optimization is wasted.
-- Letting "runner" mean "embedded LLM agent." It does not. It is
-  a coordinator over deterministic + Bayesian tools that already
-  ship. If we ever want LLM-driven discovery, that's a separate
-  invariant decision and a separate release.
+- Letting the runner auto-edit `recon_tool/data/fingerprints/`.
+  The whole auditability story collapses if recon edits its own
+  rules in the dark. Human triage is non-negotiable.
+- Calling it "agentic self-improvement" in marketing. We did not
+  build a self-improving model; we built a *coordinator over
+  existing skills* that helps a human curator move faster. The
+  framing matters because it sets the right expectations.
+- Adding fifteen new MCP skills as part of v2.1. The cap is one
+  primary skill (`run_fingerprint_mining`) plus at most two
+  secondaries that are wrappers, not new capabilities. Anything
+  more is scope creep and breaks the v2.0 schema-lock contract
+  we just wrote.
+- Shipping before v2.0 schema lock + v1.9.1 agentic QA prove
+  agents use the existing posteriors. v2.1 optimizes a surface;
+  if the surface isn't useful, optimization is wasted.
 
-**Why this is the right v2.1 work, not v1.9.x feature work:**
-The bridge milestones validate the *layer*. v2.1 packages the
-layer into a closed-loop tool. Doing it before v2.0 lock would
-mix infrastructure (the runner) with contract changes (the
-schema lock); doing it after lets v2.1 ship with stable inputs.
+**Why this is the right v2.1 move:**
 
-This sketch is **not committed.** It is the placeholder for the
-"after v2.0, what's next?" question that the priority order
-predicts. The actual v2.1 plan gets written when v2.0 ships and
-the agentic-QA findings from v1.9.1 inform what corpus-loop work
-is most valuable.
+- It directly advances the north-star metric (multi-signal
+  correlation depth) without new math, new network code, or new
+  fingerprint surfaces.
+- It uses what's already shipped — `discover_fingerprint_candidates`,
+  `chain_lookup`, `test_hypothesis`, `get_posteriors` — and
+  packages them into a feedback loop that measures its own
+  impact.
+- It is the natural composability move that the priority order
+  predicts after explainability is locked.
+- It does not require v2.0 to be re-opened. It is purely
+  additive on top of the locked v2.0 schema.
+
+This sketch is **not committed.** The actual v2.1 plan gets
+written after v2.0 ships and the agentic-QA findings from v1.9.1
+inform whether the mining loop is what operators actually want or
+whether some other composability primitive is more valuable.
 
 ### Backlog (after v2.0)
 
