@@ -76,7 +76,7 @@ class TestLookupFlags:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_full_flag(self, mock_resolve):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--full"])
+        result = runner.invoke(app, ["lookup", "contoso.com", "--full", "--no-cache"])
         assert result.exit_code == 0
         assert "Contoso Ltd" in result.output
 

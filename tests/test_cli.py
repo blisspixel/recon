@@ -71,14 +71,17 @@ class TestDirectDomainLookup:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_default(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com"])
+        # ``--no-cache`` ensures the mocked resolver is actually called
+        # rather than the test reading whatever is in the developer's
+        # ``~/.recon/cache/`` from prior real runs.
+        result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache"])
         assert result.exit_code == 0
         assert "Contoso Ltd" in result.output
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_json(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--json"])
+        result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--no-cache"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["display_name"] == "Contoso Ltd"
@@ -86,7 +89,7 @@ class TestDirectDomainLookup:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_md(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--md"])
+        result = runner.invoke(app, ["lookup", "contoso.com", "--md", "--no-cache"])
         assert result.exit_code == 0
         assert "# " in result.output
 
@@ -95,7 +98,7 @@ class TestLookupSubcommand:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_subcommand(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com"])
+        result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache"])
         assert result.exit_code == 0
         assert "Contoso Ltd" in result.output
 

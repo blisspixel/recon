@@ -4,15 +4,25 @@ import re
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-_FALLBACK_VERSION = "1.8.1"
+_FALLBACK_VERSION = "1.9.0"
 
 
 def _source_tree_version() -> str | None:
-    """Return pyproject version when running from a source checkout."""
+    """Return pyproject version when running from a source checkout.
+
+    Returns ``None`` for any read or decode failure: a corrupted or
+    unreadable ``pyproject.toml`` should not crash ``import recon_tool``
+    — the caller falls back to package metadata, then to
+    ``_FALLBACK_VERSION``.
+    """
     pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
     if not pyproject.exists():
         return None
-    match = re.search(r'^version\s*=\s*"([^"]+)"', pyproject.read_text(encoding="utf-8"), re.MULTILINE)
+    try:
+        text = pyproject.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
     if match is None:
         return None
     return match.group(1)

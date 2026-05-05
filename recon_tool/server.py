@@ -811,7 +811,7 @@ async def discover_fingerprint_candidates(
     output into YAML stanzas for ``recon_tool/data/fingerprints/surface.yaml``.
 
     Args:
-        domain: A domain name to mine (e.g., ``stripe.com``).
+        domain: A domain name to mine (e.g., ``contoso.com``).
         skip_ct: When true, skip cert-transparency providers (crt.sh,
             CertSpotter). Discovery falls back to common-subdomain probes
             and apex CNAME walks. Use for high-volume runs.
@@ -845,17 +845,43 @@ async def discover_fingerprint_candidates(
         )
         return f"Error: {exc}"
 
-    try:
-        info, _results = await resolve_tenant(validated, skip_ct=skip_ct)
-    except ReconLookupError as exc:
-        return f"Error: {exc}"
-    except Exception:
-        logger.exception(
-            "Unexpected error in discover for %s (request_id=%s)",
-            domain,
-            request_id,
+    # Mirror the lookup_tenant cache + per-domain rate-limit pattern so a
+    # prompt-injected MCP client cannot force repeated full resolutions
+    # against the same domain. Cache is keyed on validated domain only;
+    # ``skip_ct`` doesn't shard because a cached result with CT data is
+    # still usable for discover (the unclassified CNAME chains are the
+    # discover surface, not the CT subdomain set).
+    cached = _cache_get(validated)
+    if cached is not None:
+        info, _results = cached
+        _log_structured(
+            logging.INFO,
+            "cache_hit",
+            request_id=request_id,
+            domain=validated,
         )
-        return f"Error mining {domain}: an internal error occurred"
+    else:
+        if not _rate_limit_try_acquire(validated):
+            cached = _cache_get(validated)
+            if cached is None:
+                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+            info, _results = cached
+        else:
+            try:
+                info, results = await resolve_tenant(validated, skip_ct=skip_ct)
+            except ReconLookupError as exc:
+                _rate_limit_release(validated)
+                return f"Error: {exc}"
+            except Exception:
+                _rate_limit_release(validated)
+                logger.exception(
+                    "Unexpected error in discover for %s (request_id=%s)",
+                    domain,
+                    request_id,
+                )
+                return f"Error mining {domain}: an internal error occurred"
+
+            _cache_set(validated, info, list(results))
 
     unclassified = [
         {"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains
@@ -2482,6 +2508,197 @@ def main() -> None:
         sys.stderr.write(f"\nMCP server exited unexpectedly: {exc}\n")
         sys.stderr.flush()
         raise SystemExit(1) from exc
+
+
+# ── v1.9 EXPERIMENTAL: Bayesian fusion MCP tools ──────────────────────
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def get_posteriors(domain: str) -> str:
+    """Compute v1.9 Bayesian-network posteriors over high-level claims.
+
+    Runs a normal recon lookup (cached + rate-limited like ``lookup_tenant``),
+    then layers the Bayesian network at
+    ``recon_tool/data/bayesian_network.yaml`` over the resulting evidence
+    set. Returns a JSON object with one entry per node:
+
+      ``name`` (str), ``description`` (str),
+      ``posterior`` (float in [0, 1]),
+      ``interval_low`` / ``interval_high`` (float, 80% credible interval),
+      ``evidence_used`` (list of slug/signal bindings that fired),
+      ``n_eff`` (effective sample size used to derive the interval),
+      ``sparse`` (bool — True flags the passive-observation ceiling).
+
+    EXPERIMENTAL (v1.9). Field shape may evolve in minor releases. The
+    Beta layer (``slug_confidences`` on ``lookup_tenant``) operates on
+    raw evidence weights and is stable across versions; this network
+    layer propagates through chained claims and is the v1.9 addition.
+
+    Args:
+        domain: Apex domain to evaluate (e.g. ``contoso.com``).
+
+    Returns:
+        JSON string with the posterior block for the queried domain.
+    """
+    import json as json_mod
+
+    from recon_tool.bayesian import infer_from_tenant_info
+
+    request_id = uuid.uuid4().hex[:12]
+
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        _log_structured(
+            logging.WARNING,
+            "validation_failed",
+            request_id=request_id,
+            domain=domain,
+            error=str(exc),
+        )
+        return f"Error: {exc}"
+
+    cached = _cache_get(validated)
+    if cached is not None:
+        info, _results = cached
+        _log_structured(
+            logging.INFO,
+            "cache_hit",
+            request_id=request_id,
+            domain=validated,
+        )
+    else:
+        if not _rate_limit_try_acquire(validated):
+            cached = _cache_get(validated)
+            if cached is None:
+                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+            info, _results = cached
+        else:
+            try:
+                info, results = await resolve_tenant(validated)
+            except ReconLookupError as exc:
+                _rate_limit_release(validated)
+                return f"Error: {exc}"
+            except Exception:
+                _rate_limit_release(validated)
+                logger.exception(
+                    "Unexpected error in get_posteriors for %s (request_id=%s)",
+                    domain,
+                    request_id,
+                )
+                return f"Error computing posteriors for {domain}: an internal error occurred"
+            _cache_set(validated, info, list(results))
+
+    inference = infer_from_tenant_info(info)
+    payload: dict[str, object] = {
+        "domain": validated,
+        "entropy_reduction_nats": inference.entropy_reduction,
+        "evidence_count": inference.evidence_count,
+        "conflict_count": inference.conflict_count,
+        "posteriors": [
+            {
+                "name": p.name,
+                "description": p.description,
+                "posterior": p.posterior,
+                "interval_low": p.interval_low,
+                "interval_high": p.interval_high,
+                "evidence_used": list(p.evidence_used),
+                "n_eff": p.n_eff,
+                "sparse": p.sparse,
+            }
+            for p in inference.posteriors
+        ],
+    }
+    return json_mod.dumps(payload, indent=2)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def explain_dag(domain: str, output_format: str = "text") -> str:
+    """Render the v1.9 Bayesian evidence DAG for a domain.
+
+    Produces a human-readable narrative of the inference: each node's
+    posterior, the evidence that fired, and the parent dependencies
+    that shaped it. Pair with ``get_posteriors`` when you want both
+    the structured posteriors and the prose explanation.
+
+    EXPERIMENTAL (v1.9). Output language stays hedged — "the posterior
+    places X at probability ..." rather than "X is true". Sparse-
+    evidence nodes are flagged so the consumer doesn't over-interpret
+    a confident-looking number.
+
+    Args:
+        domain: Apex domain to evaluate.
+        output_format: ``"text"`` (default, plain English) or ``"dot"``
+            (Graphviz DOT for image rendering).
+
+    Returns:
+        Rendered DAG as a string in the requested format.
+    """
+    from recon_tool.bayesian import infer_from_tenant_info, load_network
+    from recon_tool.bayesian_dag import render_dag_dot, render_dag_text
+
+    request_id = uuid.uuid4().hex[:12]
+
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        _log_structured(
+            logging.WARNING,
+            "validation_failed",
+            request_id=request_id,
+            domain=domain,
+            error=str(exc),
+        )
+        return f"Error: {exc}"
+
+    fmt = (output_format or "text").lower()
+    if fmt not in ("text", "dot"):
+        return f"Error: output_format must be 'text' or 'dot', got {output_format!r}"
+
+    cached = _cache_get(validated)
+    if cached is not None:
+        info, _results = cached
+    else:
+        if not _rate_limit_try_acquire(validated):
+            cached = _cache_get(validated)
+            if cached is None:
+                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+            info, _results = cached
+        else:
+            try:
+                info, results = await resolve_tenant(validated)
+            except ReconLookupError as exc:
+                _rate_limit_release(validated)
+                return f"Error: {exc}"
+            except Exception:
+                _rate_limit_release(validated)
+                logger.exception(
+                    "Unexpected error in explain_dag for %s (request_id=%s)",
+                    domain,
+                    request_id,
+                )
+                return f"Error rendering DAG for {domain}: an internal error occurred"
+            _cache_set(validated, info, list(results))
+
+    network = load_network()
+    inference = infer_from_tenant_info(info, network=network)
+    if fmt == "dot":
+        return render_dag_dot(network, inference, domain=validated)
+    return render_dag_text(network, inference, domain=validated)
 
 
 if __name__ == "__main__":

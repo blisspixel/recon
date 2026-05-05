@@ -35,6 +35,7 @@ async def chain_resolve(
     domain: str,
     depth: int = 1,
     pool: SourcePool | None = None,
+    skip_ct: bool = False,
 ) -> ChainReport:
     """BFS resolution of related domains up to *depth* levels.
 
@@ -48,6 +49,10 @@ async def chain_resolve(
         domain: Starting domain to resolve.
         depth: Maximum recursion depth (1-3, default 1).
         pool: Optional SourcePool (defaults to standard pool).
+        skip_ct: When True, skip cert-transparency providers for every
+            domain visited in the chain. Forwarded into each
+            ``resolve_tenant`` call so ``--no-ct`` is honored across
+            the BFS, not just the seed domain.
 
     Returns:
         ChainReport with all resolved domains and metadata.
@@ -107,6 +112,7 @@ async def chain_resolve(
                     d,
                     pool=pool,
                     timeout=RESOLVE_TIMEOUT,
+                    skip_ct=skip_ct,
                 )
                 results.append(
                     ChainResult(

@@ -45,6 +45,7 @@
     "lexical_observations",
     "bimi_identity",
     "slug_confidences",
+    "posterior_observations",
     "surface_attributions",
     "evidence_conflicts",
     "chain_motifs",
@@ -253,6 +254,11 @@
           {"type": "number", "minimum": 0, "maximum": 1}
         ]
       }
+    },
+    "posterior_observations": {
+      "description": "EXPERIMENTAL (v1.9) — Marginal posteriors over high-level claims from the Bayesian network at recon_tool/data/bayesian_network.yaml. Each entry includes the posterior P(node=present | E) and the central 80% credible interval. Field shape may evolve in minor releases. Populated only when --fusion is passed; empty array otherwise. The Beta layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/PosteriorObservation"}
     },
     "surface_attributions": {
       "description": "Per-subdomain attribution to a SaaS or infrastructure provider, derived from CNAME-chain classification of related_domains. Each entry maps one subdomain to its primary service. Application-tier matches (Auth0, Shopify, Zendesk, ...) take precedence over infrastructure-tier matches (Cloudflare, Fastly, CloudFront, ...) when a chain produces both — the infrastructure layer is recorded in infra_slug / infra_name as supplementary context. Empty array when no related domains classified.",
@@ -500,6 +506,34 @@
           "items": {"type": "string"},
           "minItems": 1
         }
+      }
+    },
+    "PosteriorObservation": {
+      "description": "EXPERIMENTAL (v1.9). Per-node Bayesian posterior with 80% credible interval. The interval reflects evidence sparsity and cross-source conflict — wide intervals for hardened-target sparse cases, tight intervals for densely-corroborated cases. ``sparse=true`` flags the passive-observation ceiling. Field shape may evolve in minor releases.",
+      "type": "object",
+      "required": [
+        "name",
+        "description",
+        "posterior",
+        "interval_low",
+        "interval_high",
+        "evidence_used",
+        "n_eff",
+        "sparse"
+      ],
+      "properties": {
+        "name": {"type": "string", "description": "Stable node identifier matching bayesian_network.yaml."},
+        "description": {"type": "string", "description": "Plain-English claim the node encodes."},
+        "posterior": {"type": "number", "minimum": 0, "maximum": 1, "description": "P(node=present | observed evidence)."},
+        "interval_low": {"type": "number", "minimum": 0, "maximum": 1, "description": "Lower bound of the 80% credible interval."},
+        "interval_high": {"type": "number", "minimum": 0, "maximum": 1, "description": "Upper bound of the 80% credible interval."},
+        "evidence_used": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Bound observations that fired for this node, formatted as ``slug:<name>`` or ``signal:<name>``."
+        },
+        "n_eff": {"type": "number", "minimum": 0, "description": "Effective sample size used to derive the interval; lower means wider interval."},
+        "sparse": {"type": "boolean", "description": "True when n_eff equals the floor — interval reflects passive-observation ceiling, not strong belief."}
       }
     },
     "DeltaReport": {

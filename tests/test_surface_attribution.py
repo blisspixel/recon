@@ -360,11 +360,11 @@ def test_extract_brand_label() -> None:
     """Brand-label extraction skips TLDs and second-level public suffixes."""
     from recon_tool.discovery import extract_brand_label
 
-    assert extract_brand_label("bbc.co.uk") == "bbc"
-    assert extract_brand_label("nytimes.com") == "nytimes"
-    assert extract_brand_label("yahoo.co.jp") == "yahoo"
-    assert extract_brand_label("deutsche-bank.de") == "deutsche-bank"
-    assert extract_brand_label("softchoice.com") == "softchoice"
+    assert extract_brand_label("contoso.co.uk") == "contoso"
+    assert extract_brand_label("examplecorp.com") == "examplecorp"
+    assert extract_brand_label("contoso.co.jp") == "contoso"
+    assert extract_brand_label("northwind-traders.de") == "northwind-traders"
+    assert extract_brand_label("fabrikam.com") == "fabrikam"
     assert extract_brand_label("gov.uk") == ""  # nothing distinctive
     assert extract_brand_label("a.b") == ""  # too short
     assert extract_brand_label("") == ""
@@ -374,28 +374,28 @@ def test_looks_intra_org_brand_handles_multi_part_tld() -> None:
     """Multi-part TLDs like .co.uk used to mis-identify 'co' as the brand."""
     from recon_tool.discovery import looks_intra_org_brand
 
-    samples = [{"subdomain": "test.bbc.co.uk", "terminal": "edge.bbc.co.uk"}]
-    assert looks_intra_org_brand("bbc.co.uk", "edge.bbc.co.uk", samples) is True
+    samples = [{"subdomain": "test.contoso.co.uk", "terminal": "edge.contoso.co.uk"}]
+    assert looks_intra_org_brand("contoso.co.uk", "edge.contoso.co.uk", samples) is True
     # Different brand should not falsely match.
-    samples2 = [{"subdomain": "test.bbc.co.uk", "terminal": "edge.fastly.net"}]
-    assert looks_intra_org_brand("bbc.co.uk", "fastly.net", samples2) is False
+    samples2 = [{"subdomain": "test.contoso.co.uk", "terminal": "edge.fastly.net"}]
+    assert looks_intra_org_brand("contoso.co.uk", "fastly.net", samples2) is False
 
 
 def test_looks_intra_org_brand_catches_stem_abbreviation() -> None:
-    """nytimes.com → nyt.net is the same org via a brand-stem abbreviation."""
+    """examplecorp.com → exa.net is the same org via a brand-stem abbreviation."""
     from recon_tool.discovery import looks_intra_org_brand
 
-    # Brand "nytimes", stem-prefix "nyt" appears as a label in the suffix.
+    # Brand "examplecorp", stem-prefix "exa" appears as a label in the suffix.
     samples = [
-        {"subdomain": "api.dev.nytimes.com", "terminal": "user-api.awsma.nyt.net"}
+        {"subdomain": "api.dev.examplecorp.com", "terminal": "user-api.awsma.exa.net"}
     ]
-    assert looks_intra_org_brand("nytimes.com", "awsma.nyt.net", samples) is True
+    assert looks_intra_org_brand("examplecorp.com", "awsma.exa.net", samples) is True
 
     # Generic 3-letter sequences inside the suffix do NOT match — must be a
-    # standalone label. "ama" is inside "amazonaws.com" but not a label.
-    samples2 = [{"subdomain": "x.amazon.com", "terminal": "y.amazonaws.com"}]
-    # amazon brand is contained directly so this returns True via pattern 1.
-    assert looks_intra_org_brand("amazon.com", "amazonaws.com", samples2) is True
+    # standalone label. "fab" is inside "fabrikam-aws.com" but not a label.
+    samples2 = [{"subdomain": "x.fabrikam.com", "terminal": "y.fabrikam-aws.com"}]
+    # "fabrikam" brand is contained directly so this returns True via pattern 1.
+    assert looks_intra_org_brand("fabrikam.com", "fabrikam-aws.com", samples2) is True
 
     # A short brand label (4 chars) does NOT enable stem abbreviation —
     # too risky for accidental matches.

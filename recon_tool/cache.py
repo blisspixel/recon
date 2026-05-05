@@ -215,6 +215,19 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "ct_subdomain_count": info.ct_subdomain_count,
         "ct_cache_age_days": info.ct_cache_age_days,
         "slug_confidences": [[slug, score] for slug, score in info.slug_confidences],
+        "posterior_observations": [
+            {
+                "name": p.name,
+                "description": p.description,
+                "posterior": p.posterior,
+                "interval_low": p.interval_low,
+                "interval_high": p.interval_high,
+                "evidence_used": list(p.evidence_used),
+                "n_eff": p.n_eff,
+                "sparse": p.sparse,
+            }
+            for p in info.posterior_observations
+        ],
         "cloud_instance": info.cloud_instance,
         "tenant_region_sub_scope": info.tenant_region_sub_scope,
         "msgraph_host": info.msgraph_host,
@@ -356,6 +369,36 @@ def _parse_confidence(value: Any, fallback: ConfidenceLevel = ConfidenceLevel.ME
         except ValueError:
             return fallback
     return fallback
+
+
+def _parse_posterior_observations(data: dict[str, Any]) -> tuple[Any, ...]:
+    """Parse v1.9 posterior_observations from cache, gracefully handling
+    pre-v1.9 cache entries that lack the field."""
+    raw = data.get("posterior_observations")
+    if not isinstance(raw, list):
+        return ()
+    from recon_tool.models import PosteriorObservation
+
+    out: list[PosteriorObservation] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            out.append(
+                PosteriorObservation(
+                    name=str(entry["name"]),
+                    description=str(entry.get("description", "")),
+                    posterior=float(entry["posterior"]),
+                    interval_low=float(entry["interval_low"]),
+                    interval_high=float(entry["interval_high"]),
+                    evidence_used=tuple(str(e) for e in entry.get("evidence_used", [])),
+                    n_eff=float(entry.get("n_eff", 0.0)),
+                    sparse=bool(entry.get("sparse", False)),
+                )
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    return tuple(out)
 
 
 def _parse_degraded_sources(data: dict[str, Any]) -> tuple[str, ...]:
@@ -632,6 +675,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
             for entry in data.get("slug_confidences", [])
             if isinstance(entry, (list, tuple)) and len(entry) == 2
         ),
+        posterior_observations=_parse_posterior_observations(data),
         cloud_instance=data.get("cloud_instance"),
         tenant_region_sub_scope=data.get("tenant_region_sub_scope"),
         msgraph_host=data.get("msgraph_host"),

@@ -1642,7 +1642,7 @@ def render_tenant_panel(
                 for s in sas:
                     sub = s.subdomain
                     # Strip the apex suffix to a bare label (``app`` instead of
-                    # ``app.nytimes.com``) so the wrapped line fits more.
+                    # ``app.contoso.com``) so the wrapped line fits more.
                     if sub.endswith("." + apex):
                         sub = sub[: -(len(apex) + 1)]
                     elif sub == apex:
@@ -2155,6 +2155,20 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         "ct_subdomain_count": info.ct_subdomain_count,
         "ct_cache_age_days": info.ct_cache_age_days,
         "slug_confidences": [[slug, score] for slug, score in info.slug_confidences],
+        # v1.9 EXPERIMENTAL — populated only when --fusion is on.
+        "posterior_observations": [
+            {
+                "name": p.name,
+                "description": p.description,
+                "posterior": p.posterior,
+                "interval_low": p.interval_low,
+                "interval_high": p.interval_high,
+                "evidence_used": list(p.evidence_used),
+                "n_eff": p.n_eff,
+                "sparse": p.sparse,
+            }
+            for p in info.posterior_observations
+        ],
         # v0.11: surface email_security_score at the top level of --json
         # (previously only available inside the insights string).
         "email_security_score": _compute_email_security_score(info),
@@ -2492,10 +2506,22 @@ def render_posture_panel(observations: tuple[Observation, ...]) -> Panel | None:
 
 
 def format_delta_dict(report: DeltaReport) -> dict[str, Any]:
-    """Format DeltaReport as a dict for JSON output."""
+    """Format DeltaReport as a dict for JSON output.
+
+    The ``changed_*`` fields are always present in the output. Each is
+    either ``null`` (no change observed) or ``{"from": ..., "to": ...}``
+    (a change observed). Stable shape matches
+    ``docs/recon-schema.json#/$defs/DeltaReport`` so downstream
+    validators do not reject no-change or partial-change reports.
+    """
     from datetime import datetime, timezone
 
-    d: dict[str, Any] = {
+    def _change_pair(value: tuple[Any, Any] | None) -> dict[str, Any] | None:
+        if value is None:
+            return None
+        return {"from": value[0], "to": value[1]}
+
+    return {
         "domain": report.domain,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "has_changes": report.has_changes,
@@ -2505,21 +2531,12 @@ def format_delta_dict(report: DeltaReport) -> dict[str, Any]:
         "removed_slugs": list(report.removed_slugs),
         "added_signals": list(report.added_signals),
         "removed_signals": list(report.removed_signals),
+        "changed_auth_type": _change_pair(report.changed_auth_type),
+        "changed_dmarc_policy": _change_pair(report.changed_dmarc_policy),
+        "changed_email_security_score": _change_pair(report.changed_email_security_score),
+        "changed_confidence": _change_pair(report.changed_confidence),
+        "changed_domain_count": _change_pair(report.changed_domain_count),
     }
-    if report.changed_auth_type is not None:
-        d["changed_auth_type"] = {"from": report.changed_auth_type[0], "to": report.changed_auth_type[1]}
-    if report.changed_dmarc_policy is not None:
-        d["changed_dmarc_policy"] = {"from": report.changed_dmarc_policy[0], "to": report.changed_dmarc_policy[1]}
-    if report.changed_email_security_score is not None:
-        d["changed_email_security_score"] = {
-            "from": report.changed_email_security_score[0],
-            "to": report.changed_email_security_score[1],
-        }
-    if report.changed_confidence is not None:
-        d["changed_confidence"] = {"from": report.changed_confidence[0], "to": report.changed_confidence[1]}
-    if report.changed_domain_count is not None:
-        d["changed_domain_count"] = {"from": report.changed_domain_count[0], "to": report.changed_domain_count[1]}
-    return d
 
 
 def format_delta_json(report: DeltaReport) -> str:

@@ -241,6 +241,20 @@ def lookup(
         "--fusion",
         help="[EXPERIMENTAL] Compute Bayesian per-slug posteriors from evidence",
     ),
+    explain_dag: bool = typer.Option(
+        False,
+        "--explain-dag",
+        help=(
+            "[EXPERIMENTAL v1.9] Render the Bayesian evidence DAG as plain "
+            "English (default) or DOT (with --explain-dag-format dot). "
+            "Implies --fusion."
+        ),
+    ),
+    explain_dag_format: str = typer.Option(
+        "text",
+        "--explain-dag-format",
+        help="Output format for --explain-dag: 'text' (default) or 'dot'.",
+    ),
     include_unclassified: bool = typer.Option(
         False,
         "--include-unclassified",
@@ -289,6 +303,8 @@ def lookup(
             profile_name=profile,
             confidence_mode=confidence_mode,
             fusion=fusion,
+            explain_dag=explain_dag,
+            explain_dag_format=explain_dag_format,
             include_unclassified=include_unclassified,
             skip_ct=no_ct,
         )
@@ -343,6 +359,16 @@ def batch(
             "not ownership."
         ),
     ),
+    fusion: bool = typer.Option(
+        False,
+        "--fusion",
+        help=(
+            "[EXPERIMENTAL v1.9] Compute Bayesian-network posteriors and "
+            "credible intervals over high-level claims for every domain. "
+            "Adds the ``posterior_observations`` field to each domain's "
+            "JSON. Pure post-processing — no extra network calls."
+        ),
+    ),
 ) -> None:
     """
     Look up multiple domains from a file.
@@ -361,6 +387,7 @@ def batch(
             skip_ct=no_ct,
             ndjson=ndjson,
             include_ecosystem=include_ecosystem,
+            fusion=fusion,
         )
     )
 
@@ -1831,6 +1858,8 @@ async def _lookup(
     profile_name: str | None = None,
     confidence_mode: str = "hedged",
     fusion: bool = False,
+    explain_dag: bool = False,
+    explain_dag_format: str = "text",
     include_unclassified: bool = False,
     skip_ct: bool = False,
 ) -> None:
@@ -1916,9 +1945,9 @@ async def _lookup(
 
                 msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
                 with console.status(msg):
-                    info, results = await resolve_tenant(validated, timeout=timeout)
+                    info, results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
             else:
-                info, results = await resolve_tenant(validated, timeout=timeout)
+                info, results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
         except ReconLookupError as exc:
             render_warning(domain, exc)
             raise typer.Exit(code=EXIT_NO_DATA) from None
@@ -1945,9 +1974,9 @@ async def _lookup(
 
                 msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
                 with console.status(msg):
-                    report = await chain_resolve(validated, depth=chain_depth)
+                    report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct)
             else:
-                report = await chain_resolve(validated, depth=chain_depth)
+                report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct)
         except Exception as exc:
             render_error(_fmt_exc(exc))
             raise typer.Exit(code=EXIT_INTERNAL) from None
@@ -1998,9 +2027,9 @@ async def _lookup(
 
                     msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
                     with console.status(msg):
-                        info_exp, _results = await resolve_tenant(validated, timeout=timeout)
+                        info_exp, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
                 else:
-                    info_exp, _results = await resolve_tenant(validated, timeout=timeout)
+                    info_exp, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
 
                 if not no_cache:
                     from recon_tool.cache import cache_put
@@ -2041,9 +2070,9 @@ async def _lookup(
 
                     msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
                     with console.status(msg):
-                        info_gaps, _results = await resolve_tenant(validated, timeout=timeout)
+                        info_gaps, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
                 else:
-                    info_gaps, _results = await resolve_tenant(validated, timeout=timeout)
+                    info_gaps, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
 
                 if not no_cache:
                     from recon_tool.cache import cache_put
@@ -2085,21 +2114,57 @@ async def _lookup(
                     info, results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
             else:
                 info, results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
+            cache_miss = True
+        else:
+            cache_miss = False
 
-            # v0.11: apply Bayesian fusion when opted in. Computes per-slug
-            # posteriors from the existing evidence chain — no network calls.
-            if fusion:
-                from dataclasses import replace
+        # v0.11 + v1.9: apply Bayesian fusion when opted in. Runs on
+        # both cache hits and cache misses because fusion is purely
+        # deterministic over the existing ``TenantInfo`` and we want
+        # ``--fusion`` / ``--explain-dag`` to produce posteriors
+        # whether or not we just paid for a fresh resolve. Costs nothing
+        # — no network calls — so the recompute is cheap.
+        #   * v0.11 ``slug_confidences``: per-slug Beta posteriors
+        #     from raw evidence weights.
+        #   * v1.9 ``posterior_observations``: marginal posteriors
+        #     over the high-level claims in
+        #     ``recon_tool/data/bayesian_network.yaml``.
+        # ``--explain-dag`` implies ``--fusion``: rendering the DAG
+        # requires posteriors to be present.
+        if fusion or explain_dag:
+            from dataclasses import replace
 
-                from recon_tool.fusion import compute_slug_posteriors
+            from recon_tool.bayesian import infer_from_tenant_info
+            from recon_tool.fusion import compute_slug_posteriors
+            from recon_tool.models import PosteriorObservation
 
-                info = replace(info, slug_confidences=compute_slug_posteriors(info.evidence))
+            bayesian_result = infer_from_tenant_info(info)
+            bayesian_observations = tuple(
+                PosteriorObservation(
+                    name=p.name,
+                    description=p.description,
+                    posterior=p.posterior,
+                    interval_low=p.interval_low,
+                    interval_high=p.interval_high,
+                    evidence_used=p.evidence_used,
+                    n_eff=p.n_eff,
+                    sparse=p.sparse,
+                )
+                for p in bayesian_result.posteriors
+            )
+            info = replace(
+                info,
+                slug_confidences=compute_slug_posteriors(info.evidence),
+                posterior_observations=bayesian_observations,
+            )
 
-            # Write to cache after fresh lookup
-            if not no_cache:
-                from recon_tool.cache import cache_put
+        # Write to cache after fresh lookup. (Cache hits don't write
+        # back — the cache entry hasn't changed except for fusion
+        # output, which we recompute on read anyway.)
+        if cache_miss and not no_cache:
+            from recon_tool.cache import cache_put
 
-                cache_put(validated, info)
+            cache_put(validated, info)
 
         if verbose:
             render_verbose_sources(results)
@@ -2132,6 +2197,24 @@ async def _lookup(
             )
             combined_obs = tuple(raw_observations) + anomalies
             observations = apply_profile(combined_obs, profile)
+
+        if explain_dag:
+            from recon_tool.bayesian import infer_from_tenant_info, load_network
+            from recon_tool.bayesian_dag import render_dag_dot, render_dag_text
+
+            network = load_network()
+            inference = infer_from_tenant_info(info, network=network)
+            fmt = (explain_dag_format or "text").lower()
+            if fmt == "dot":
+                typer.echo(render_dag_dot(network, inference, domain=validated))
+            elif fmt == "text":
+                typer.echo(render_dag_text(network, inference, domain=validated))
+            else:
+                render_error(
+                    f"--explain-dag-format must be 'text' or 'dot', got {explain_dag_format!r}"
+                )
+                raise typer.Exit(code=EXIT_VALIDATION) from None
+            return
 
         if json_output:
             from recon_tool.formatter import format_posture_observations
@@ -2325,6 +2408,7 @@ async def _batch(
     skip_ct: bool = False,
     ndjson: bool = False,
     include_ecosystem: bool = False,
+    fusion: bool = False,
 ) -> None:
     """Process multiple domains from a file with controlled concurrency.
 
@@ -2453,6 +2537,36 @@ async def _batch(
                 # concurrency, but without a delay all N domains fire at once.
                 await asyncio.sleep(0.1)
                 info, _results = await resolve_tenant(validated, skip_ct=skip_ct)
+
+                # v1.9: optional Bayesian fusion. Pure post-processing
+                # over the already-collected TenantInfo, no extra
+                # network calls. Populates ``posterior_observations``
+                # and ``slug_confidences`` on the per-domain result.
+                if fusion:
+                    from dataclasses import replace as _replace
+
+                    from recon_tool.bayesian import infer_from_tenant_info as _infer
+                    from recon_tool.fusion import compute_slug_posteriors as _slug_post
+                    from recon_tool.models import PosteriorObservation as _PO
+
+                    _br = _infer(info)
+                    info = _replace(
+                        info,
+                        slug_confidences=_slug_post(info.evidence),
+                        posterior_observations=tuple(
+                            _PO(
+                                name=p.name,
+                                description=p.description,
+                                posterior=p.posterior,
+                                interval_low=p.interval_low,
+                                interval_high=p.interval_high,
+                                evidence_used=p.evidence_used,
+                                n_eff=p.n_eff,
+                                sparse=p.sparse,
+                            )
+                            for p in _br.posteriors
+                        ),
+                    )
 
                 # v0.9.3: capture TenantInfo for post-batch token clustering.
                 # Keyed by queried_domain so the post-processing pass can

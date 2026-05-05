@@ -55,7 +55,7 @@ Two entry points feed the same triage logic:
 ### Single-domain (incidental discovery during normal use)
 
 ```bash
-recon stripe.com --json --include-unclassified > result.json
+recon contoso.com --json --include-unclassified > result.json
 python validation/find_gaps.py --input result.json --output gaps.json
 python validation/triage_candidates.py \
     --gaps gaps.json --fingerprints recon_tool/data/fingerprints/ \
@@ -71,7 +71,7 @@ Claude Code skill, or to any agent reading the same input shape.
 ```bash
 # Build (once) a private corpus
 mkdir -p validation/corpus-private/
-echo "stripe.com" > validation/corpus-private/saas-b2b.txt
+echo "contoso.com" > validation/corpus-private/saas-b2b.txt
 # ... add more domains, organize as you like ...
 
 # Run respectfully — concurrency 2 stays well under crt.sh's tolerance

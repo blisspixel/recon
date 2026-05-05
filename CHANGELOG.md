@@ -5,6 +5,108 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-05-04
+
+**Probabilistic fusion layer (v1.9), EXPERIMENTAL.** Adds the third
+correlation layer planned in `docs/roadmap.md`: a small discrete
+Bayesian network with exact variable-elimination inference, calibrated
+80% credible intervals via effective-sample-size construction, and
+asymmetric one-sided likelihoods that refuse overconfident verdicts on
+hardened-target sparse evidence. Fully gated behind `--fusion`; the
+default panel and v1.0 JSON shape are unchanged. Full validation
+report at
+[`validation/v1.9-validation-summary.md`](validation/v1.9-validation-summary.md);
+formal model and citations in
+[`docs/correlation.md` §4.8](docs/correlation.md).
+
+### Added
+
+- **`recon_tool/data/bayesian_network.yaml`** — committed network
+  topology and CPTs (8-node seed: m365_tenant, google_workspace_tenant,
+  federated_identity, okta_idp, email_gateway_present,
+  email_security_strong, cdn_fronting, aws_hosting). Schema v1,
+  network topology v1.9.0 (frozen 2026-05-04). Likelihoods
+  strictly in `(0, 1)`; degenerate hard-evidence factors rejected.
+- **`recon_tool/bayesian.py`** — pure-Python variable-elimination
+  inference engine. Topology validation (DAG, complete CPTs,
+  parent reachability), TenantInfo adapter, posterior + 80% credible
+  interval per node, n_eff calibration with conflict dampener.
+  Asymmetric one-sided likelihoods (Jeffrey-style updating;
+  cautious-updating literature: Walley 1991, Augustin et al. 2014,
+  Taroni et al. 2014).
+- **`recon_tool/bayesian_dag.py`** — plain-English narrative
+  renderer + Graphviz DOT export for the inference DAG.
+- **`PosteriorObservation` model** — new dataclass on TenantInfo;
+  populates `posterior_observations` in `--json` output when
+  `--fusion` is on. Empty array otherwise. Round-trips through cache.
+- **`--explain-dag`** CLI flag with `--explain-dag-format text|dot`.
+  Implies `--fusion`. 4 worked examples in correlation.md §4.8a.
+- **`get_posteriors`** and **`explain_dag`** MCP tools — read-only,
+  cache-aware, rate-limited like `lookup_tenant`.
+- **`~/.recon/priors.yaml`** — operator-supplied root-node prior
+  override. Local-only, never shipped, never sent over the wire,
+  never persisted in cache. Loader logs an info-level message when
+  applied so operators see when an override is shaping output.
+- **`scripts/check_metadata_coverage.py`** — per-category description
+  / reference / weight coverage report. Wired into CI as advisory
+  (will flip to enforcing once the catalog reaches the 70% target on
+  identity / security / infrastructure).
+- **`validation/synthetic_calibration.py`** — publicly-reproducible
+  ground-truth calibration experiment using the network's own joint
+  distribution. Reports marginal vs conditional ECE, per-node
+  reliability tables, and identifies calibration weak spots
+  (currently `email_security_strong` and `aws_hosting`).
+- **JSON schema entry** for `posterior_observations` in
+  `docs/recon-schema.json` ($defs/PosteriorObservation, EXPERIMENTAL).
+- **Mermaid diagrams** in correlation.md: three-layer dataflow,
+  Bayesian DAG topology, sparse-vs-dense interval illustration.
+- **Sensitivity-bound regression guard.** ±0.10 perturbation of any
+  single CPT entry produces ≤ 0.139 posterior shift (median 0.019,
+  95th percentile 0.109). Test: `tests/test_bayesian_sensitivity.py`.
+
+### Changed
+
+- **`docs/correlation.md`** — substantial expansion of §4.8 with the
+  full v1.9 derivation: generative model, variable elimination
+  (citations: Zhang & Poole 1994; Koller & Friedman 2009),
+  asymmetric likelihood with literature grounding, credible-interval
+  calibration (Beta moment-matching; Wilson approximation),
+  identifiability discussion, relationship to the existing Beta
+  layer, validation strategy with publicly-reproducible numbers.
+  §3 expanded to a three-layer comparison table. §4.1–4.7 trimmed
+  of repetitive boilerplate. Citations added throughout (Pearl 1988,
+  Russell & Norvig, Blondel et al. 2008, Traag et al. 2019,
+  Naeini et al. 2015, Jeffrey 1965, Walley 1991, etc.).
+- **`docs/roadmap.md`** — v1.9 status updated to shipped.
+
+### Tests
+
+- **244 new tests** added across:
+  - `test_bayesian_canonical.py` — verifies engine matches Pearl
+    Burglary-Earthquake-Alarm and the medical-test example to four
+    decimal places under the noisy-likelihood model.
+  - `test_bayesian_inference.py` — schema validation, priors override,
+    variable elimination correctness on a hand-checked toy network,
+    credible interval shape, TenantInfo adapter.
+  - `test_bayesian_dag.py` — text + DOT renderer correctness,
+    confidence-label thresholds, sparse-flag rendering.
+  - `test_bayesian_fuzz.py` — 39 adversarial schema inputs (empty,
+    null, cycles, unicode, boundary likelihoods).
+  - `test_bayesian_hypothesis.py` — property-based testing with
+    Hypothesis: 550 random valid networks + evidence sets verify
+    closed-form Bayes match, prior recovery on no evidence,
+    invariants under random conflicts, determinism.
+  - `test_bayesian_sensitivity.py` — CPT ±0.10 perturbation bound.
+  - `test_bayesian_validation_rounds.py` — 24 inference invariants.
+  - `test_v19_robustness.py` — cache round-trip with malformed
+    entries, CLI flag combinations, MCP error paths, determinism +
+    concurrency, scale stress (15-node chain, 10-child wide network).
+  - `test_fusion_integration.py` — end-to-end --fusion path.
+  - `test_metadata_coverage.py` — CI gate behavior.
+
+Total: 1938 tests passing. Coverage on new modules:
+`recon_tool/bayesian.py` 98%, `recon_tool/bayesian_dag.py` 92%.
+
 ## [1.8.1] - 2026-05-03
 
 **Hardening release driven by a 10-domain diverse deep-dive against
@@ -63,12 +165,14 @@ Full report at
 
 ### Validation
 
-- 10-domain diverse deep-dive (microsoft, stripe, notion,
-  caterpillar, mit, epic, signal, treasury, costco, nytimes) re-run
-  with caches cleared. `chain_motifs`: 0 -> 19 observations across 4
-  domains. `fingerprint_metadata`: 6 -> 29 distinct slugs surfaced,
-  per-domain coverage 0-4 -> 4-16. Cluster partition quality
-  preserved (microsoft.com modularity 0.82 on 247 nodes).
+- 10-domain diverse deep-dive (one apex each from hyperscale tech,
+  global payments, productivity SaaS, heavy-industrial manufacturing,
+  higher-ed research, EHR, non-profit messaging, federal agency,
+  warehouse retail, and national news media) re-run with caches
+  cleared. `chain_motifs`: 0 -> 19 observations across 4 domains.
+  `fingerprint_metadata`: 6 -> 29 distinct slugs surfaced, per-domain
+  coverage 0-4 -> 4-16. Cluster partition quality preserved (the
+  hyperscale-tech apex hit modularity 0.82 on 247 nodes).
 - 1789 tests passing, 0 failed (was 1774 in v1.8.0 + 15 new
   regression tests). Ruff and pyright clean.
 
@@ -372,7 +476,7 @@ invocation suitable for monthly-cadence runs.
 - Brand-stem abbreviation detection in
   ``recon_tool.discovery.looks_intra_org_brand``. Catches cases
   where a sibling zone uses an abbreviated brand label
-  (``nytimes.com`` → ``nyt.net``). The 3-character prefix must
+  (``examplecorp.com`` → ``ec.net``). The 3-character prefix must
   appear as a standalone DNS label in the suffix; the 5-char
   brand-label floor avoids matching incidental short sequences.
 - ``validation/README.md`` documents the monthly cadence with
@@ -439,9 +543,9 @@ new fingerprints surfaced from the first discovery-loop runs.
 
 - Intra-org heuristic now skips second-level public suffixes (`co`,
   `ac`, `org`, `net`, `gov`, `edu`, ...) when extracting the apex's
-  brand label. `bbc.co.uk` correctly resolves to brand `bbc` instead
-  of `co`. Same brand-label extractor used by the `recon discover`
-  subcommand and `validation/triage_candidates.py`.
+  brand label. `contoso.co.uk` correctly resolves to brand `contoso`
+  instead of `co`. Same brand-label extractor used by the
+  `recon discover` subcommand and `validation/triage_candidates.py`.
 - `release.yml` test job now runs the same `validate-fingerprints`
   check as `ci.yml`. Closes the gap where a duplicate-slug regression
   could reach PyPI through release.yml even though ci.yml caught it.
@@ -547,8 +651,8 @@ consumers.
   attribution precedence when a chain matches both.
 - New `surface.yaml` fingerprint file seeding 50+ application and
   infrastructure CNAME-target patterns drawn from live validation
-  against pepsi.com, stripe.com, allbirds.com, notion.so,
-  nytimes.com, and huckberry.com.
+  across a private corpus spanning consumer goods, payments, retail,
+  productivity SaaS, and national news media apexes.
 - `surface_attributions` field on `TenantInfo` and the JSON output;
   see `docs/recon-schema.json` for the schema definition.
 - `External surface` section in `--full` panel output: two-column
@@ -1790,13 +1894,13 @@ noise problem.
 
 ### Example diffs
 
-Softchoice before: `Provider     Exchange Server (on-prem / hybrid) behind Trend Micro gateway + Microsoft 365 (account detected) + Google Workspace (account detected)`
+Hybrid-Exchange target before: `Provider     Exchange Server (on-prem / hybrid) behind Trend Micro gateway + Microsoft 365 (account detected) + Google Workspace (account detected)`
 
-Softchoice after: `Provider     Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)` — M365 confirmed via DKIM, GWS confirmed via DKIM too.
+Hybrid-Exchange target after: `Provider     Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)` — M365 confirmed via DKIM, GWS confirmed via DKIM too.
 
-Stripe before: `Provider     Google Workspace (primary) + Microsoft 365 (secondary)`
+GWS-primary target before: `Provider     Google Workspace (primary) + Microsoft 365 (secondary)`
 
-Stripe after: `Provider     Google Workspace (primary)` — M365 tenant exists but has no MX/DKIM evidence, so it's not shown in the default Provider line.
+GWS-primary target after: `Provider     Google Workspace (primary)` — M365 tenant exists but has no MX/DKIM evidence, so it's not shown in the default Provider line.
 
 ## [0.10.0] — 2026-04-16
 
