@@ -509,7 +509,7 @@
       }
     },
     "PosteriorObservation": {
-      "description": "EXPERIMENTAL (v1.9). Per-node Bayesian posterior with 80% credible interval. The interval reflects evidence sparsity and cross-source conflict — wide intervals for hardened-target sparse cases, tight intervals for densely-corroborated cases. ``sparse=true`` flags the passive-observation ceiling. Field shape may evolve in minor releases.",
+      "description": "EXPERIMENTAL (v1.9). Per-node Bayesian posterior with 80% credible interval. The interval reflects evidence sparsity and cross-source conflict — wide intervals for hardened-target sparse cases, tight intervals for densely-corroborated cases. ``sparse=true`` flags the passive-observation ceiling. ``conflict_provenance`` (v1.9.1+) carries the source-pair detail behind any n_eff penalty. Field shape may evolve in minor releases.",
       "type": "object",
       "required": [
         "name",
@@ -519,7 +519,8 @@
         "interval_high",
         "evidence_used",
         "n_eff",
-        "sparse"
+        "sparse",
+        "conflict_provenance"
       ],
       "properties": {
         "name": {"type": "string", "description": "Stable node identifier matching bayesian_network.yaml."},
@@ -533,7 +534,33 @@
           "description": "Bound observations that fired for this node, formatted as ``slug:<name>`` or ``signal:<name>``."
         },
         "n_eff": {"type": "number", "minimum": 0, "description": "Effective sample size used to derive the interval; lower means wider interval."},
-        "sparse": {"type": "boolean", "description": "True when n_eff equals the floor — interval reflects passive-observation ceiling, not strong belief."}
+        "sparse": {"type": "boolean", "description": "True when n_eff equals the floor — interval reflects passive-observation ceiling, not strong belief."},
+        "conflict_provenance": {
+          "type": "array",
+          "description": "Cross-source disagreements that contributed to this node's n_eff penalty (v1.9.1+). Empty array when no conflicts dampened the interval. Surfaces the source-pair detail dropped by the legacy count-only path; pairs with the existing top-level ``evidence_conflicts`` array.",
+          "items": {"$ref": "#/$defs/NodeConflict"}
+        }
+      }
+    },
+    "NodeConflict": {
+      "description": "One cross-source disagreement carried through to a NodePosterior (v1.9.1+). ``field`` is the merged TenantInfo field whose sources disagreed; ``sources`` lists the distinct sources that contributed candidate values; ``magnitude`` is the n_eff penalty (in n_eff units) this conflict applied to the node.",
+      "type": "object",
+      "required": ["field", "sources", "magnitude"],
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Merged field name. One of: display_name, auth_type, region, tenant_id, dmarc_policy, google_auth_type."
+        },
+        "sources": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Distinct source identifiers that contributed a candidate value for this field."
+        },
+        "magnitude": {
+          "type": "number",
+          "minimum": 0,
+          "description": "n_eff penalty this single conflict applied. Uniform at v1.9.1; exposed as a number so future per-node relevance weighting is schema-additive."
+        }
       }
     },
     "DeltaReport": {

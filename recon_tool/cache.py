@@ -250,9 +250,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
             "newest_cert_age_days": cs.newest_cert_age_days,
             "oldest_cert_age_days": cs.oldest_cert_age_days,
             "top_issuers": list(cs.top_issuers),
-            "wildcard_sibling_clusters": [
-                list(cluster) for cluster in cs.wildcard_sibling_clusters
-            ],
+            "wildcard_sibling_clusters": [list(cluster) for cluster in cs.wildcard_sibling_clusters],
             "deployment_bursts": [
                 {
                     "window_start": b.window_start,
@@ -340,8 +338,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
     # subsequent runs of validation/find_gaps.py can read from cache
     # without re-resolving DNS.
     d["unclassified_cname_chains"] = [
-        {"subdomain": uc.subdomain, "chain": list(uc.chain)}
-        for uc in info.unclassified_cname_chains
+        {"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains
     ]
 
     # ChainMotifObservation tuple → list of dicts (v1.8.1 — was being
@@ -377,12 +374,26 @@ def _parse_posterior_observations(data: dict[str, Any]) -> tuple[Any, ...]:
     raw = data.get("posterior_observations")
     if not isinstance(raw, list):
         return ()
-    from recon_tool.models import PosteriorObservation
+    from recon_tool.models import NodeConflict, PosteriorObservation
 
     out: list[PosteriorObservation] = []
     for entry in raw:
         if not isinstance(entry, dict):
             continue
+        conflicts: list[NodeConflict] = []
+        for raw_conflict in entry.get("conflict_provenance", []) or []:
+            if not isinstance(raw_conflict, dict):
+                continue
+            try:
+                conflicts.append(
+                    NodeConflict(
+                        field=str(raw_conflict["field"]),
+                        sources=tuple(str(s) for s in raw_conflict.get("sources", [])),
+                        magnitude=float(raw_conflict.get("magnitude", 0.0)),
+                    )
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
         try:
             out.append(
                 PosteriorObservation(
@@ -394,6 +405,7 @@ def _parse_posterior_observations(data: dict[str, Any]) -> tuple[Any, ...]:
                     evidence_used=tuple(str(e) for e in entry.get("evidence_used", [])),
                     n_eff=float(entry.get("n_eff", 0.0)),
                     sparse=bool(entry.get("sparse", False)),
+                    conflict_provenance=tuple(conflicts),
                 )
             )
         except (KeyError, TypeError, ValueError):
@@ -442,9 +454,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         wildcard_sibling_clusters: tuple[tuple[str, ...], ...] = ()
         if isinstance(wcs_raw, list):
             wildcard_sibling_clusters = tuple(
-                tuple(str(n) for n in cluster)
-                for cluster in wcs_raw
-                if isinstance(cluster, list)
+                tuple(str(n) for n in cluster) for cluster in wcs_raw if isinstance(cluster, list)
             )
         bursts_raw = cs_data.get("deployment_bursts", [])
         deployment_bursts: tuple[CertBurst, ...] = ()
@@ -545,11 +555,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
     ic_data = data.get("infrastructure_clusters")
     if isinstance(ic_data, dict):
         algorithm_raw = ic_data.get("algorithm", "skipped")
-        algorithm = (
-            str(algorithm_raw)
-            if algorithm_raw in ("louvain", "connected_components", "skipped")
-            else "skipped"
-        )
+        algorithm = str(algorithm_raw) if algorithm_raw in ("louvain", "connected_components", "skipped") else "skipped"
         clusters_raw = ic_data.get("clusters")
         cluster_records: list[InfrastructureCluster] = []
         if isinstance(clusters_raw, list):

@@ -64,6 +64,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "BayesianNetwork",
+    "ConflictProvenance",
     "InferenceResult",
     "NodePosterior",
     "infer",
@@ -111,7 +112,7 @@ class _Evidence:
     kind: str  # "slug" or "signal"
     name: str
     likelihood_present: float  # P(observed | node=present)
-    likelihood_absent: float   # P(observed | node=absent)
+    likelihood_absent: float  # P(observed | node=absent)
 
 
 @dataclass(frozen=True)
@@ -148,17 +149,40 @@ class BayesianNetwork:
 
 
 @dataclass(frozen=True)
+class ConflictProvenance:
+    """One cross-source disagreement that dampened a node's interval.
+
+    ``field`` is the merged ``TenantInfo`` field whose sources disagreed
+    (e.g. ``auth_type``, ``dmarc_policy``). ``sources`` lists every
+    distinct source that contributed a candidate value for that field.
+    ``magnitude`` is the n_eff penalty (in n_eff units) this single
+    conflict subtracted from the node's effective sample size — uniform
+    at v1.9.1 ship time, but exposed as a number so future per-node
+    relevance weighting can refine without breaking the JSON shape.
+    """
+
+    field: str
+    sources: tuple[str, ...]
+    magnitude: float
+
+
+@dataclass(frozen=True)
 class NodePosterior:
     """Per-node inference output."""
 
     name: str
     description: str
-    posterior: float            # P(node=present | E) in [0, 1]
-    interval_low: float         # 80% credible interval lower bound
-    interval_high: float        # 80% credible interval upper bound
+    posterior: float  # P(node=present | E) in [0, 1]
+    interval_low: float  # 80% credible interval lower bound
+    interval_high: float  # 80% credible interval upper bound
     evidence_used: tuple[str, ...]  # observed bindings that fired for this node
-    n_eff: float                # effective sample size used to derive interval
-    sparse: bool                # True when n_eff <= _MIN_N_EFF (wide interval)
+    n_eff: float  # effective sample size used to derive interval
+    sparse: bool  # True when n_eff <= _MIN_N_EFF (wide interval)
+    conflict_provenance: tuple[ConflictProvenance, ...] = ()
+    """Cross-source conflicts that contributed to this node's n_eff
+    penalty. Empty tuple when no conflicts dampened the interval. v1.9.1
+    surfaces the same provenance on every node (penalty is global);
+    schema is stable for future per-node relevance refinement."""
 
 
 @dataclass(frozen=True)
@@ -166,9 +190,9 @@ class InferenceResult:
     """Full inference output for a domain."""
 
     posteriors: tuple[NodePosterior, ...]
-    entropy_reduction: float    # nats — sum across nodes of H(prior) - H(posterior)
-    evidence_count: int         # total observed bindings across all nodes
-    conflict_count: int         # cross-source conflicts that dampened intervals
+    entropy_reduction: float  # nats — sum across nodes of H(prior) - H(posterior)
+    evidence_count: int  # total observed bindings across all nodes
+    conflict_count: int  # cross-source conflicts that dampened intervals
 
 
 # ── Loaders ────────────────────────────────────────────────────────────
@@ -255,17 +279,11 @@ def load_network(path: Path | None = None) -> BayesianNetwork:
                 raise ValueError(f"bayesian_network[{name}]: evidence kind={kind} missing name")
             lik = entry.get("likelihood")
             if not isinstance(lik, list) or len(lik) != 2 or not all(isinstance(x, (int, float)) for x in lik):
-                raise ValueError(
-                    f"bayesian_network[{name}/{obs_name}]: 'likelihood' must be [float, float]"
-                )
+                raise ValueError(f"bayesian_network[{name}/{obs_name}]: 'likelihood' must be [float, float]")
             lp, la = float(lik[0]), float(lik[1])
             if not (0.0 < lp < 1.0) or not (0.0 < la < 1.0):
-                raise ValueError(
-                    f"bayesian_network[{name}/{obs_name}]: likelihoods must be strictly in (0, 1)"
-                )
-            evidence.append(
-                _Evidence(kind=kind, name=obs_name, likelihood_present=lp, likelihood_absent=la)
-            )
+                raise ValueError(f"bayesian_network[{name}/{obs_name}]: likelihoods must be strictly in (0, 1)")
+            evidence.append(_Evidence(kind=kind, name=obs_name, likelihood_present=lp, likelihood_absent=la))
 
         nodes.append(
             _Node(
@@ -578,6 +596,7 @@ def infer(
     observed_signals: Iterable[str],
     conflict_field_count: int = 0,
     priors_override: dict[str, float] | None = None,
+    conflicts: tuple[ConflictProvenance, ...] = (),
 ) -> InferenceResult:
     """Run inference for one domain.
 
@@ -592,10 +611,16 @@ def infer(
             ``info.merge_conflicts``). Each conflict subtracts
             ``_CONFLICT_N_EFF_PENALTY`` from n_eff for nodes whose
             evidence overlaps the conflict surface; we apply it
-            globally as a conservative dampener.
+            globally as a conservative dampener. Ignored when
+            ``conflicts`` is non-empty (the count is derived from
+            ``len(conflicts)`` in that case).
         priors_override: optional mapping of node-name → new prior.
             When provided, supersedes the default ``load_priors_override``
             file lookup. Pass an empty dict to skip override entirely.
+        conflicts: structured per-conflict details (field, sources,
+            magnitude). When supplied, these surface on every
+            ``NodePosterior.conflict_provenance`` and replace the count
+            argument. Empty tuple preserves the legacy count-only path.
 
     Returns:
         ``InferenceResult`` with one ``NodePosterior`` per node.
@@ -603,6 +628,9 @@ def infer(
     if priors_override is None:
         priors_override = load_priors_override()
     network = _apply_priors_override(network, priors_override)
+
+    if conflicts:
+        conflict_field_count = len(conflicts)
 
     slug_set = set(observed_slugs)
     signal_set = set(observed_signals)
@@ -655,6 +683,7 @@ def infer(
                 evidence_used=tuple(f"{ev.kind}:{ev.name}" for ev in fired),
                 n_eff=round(n_eff, 2),
                 sparse=n_eff <= _MIN_N_EFF,
+                conflict_provenance=conflicts,
             )
         )
 
@@ -729,20 +758,46 @@ def signals_from_tenant_info(info: object) -> set[str]:
     return out
 
 
-def _conflict_count(info: object) -> int:
-    """Count of fields with cross-source conflict on this TenantInfo."""
+_CONFLICT_FIELDS: tuple[str, ...] = (
+    "display_name",
+    "auth_type",
+    "region",
+    "tenant_id",
+    "dmarc_policy",
+    "google_auth_type",
+)
+
+
+def _conflict_provenance(info: object) -> tuple[ConflictProvenance, ...]:
+    """Extract per-field conflict records from a TenantInfo's merge_conflicts.
+
+    Returns empty tuple when there are no conflicts. Each record names
+    the field, every source that contributed a candidate value, and the
+    n_eff penalty this conflict applied (uniform at v1.9.1).
+    """
     merge_conflicts = getattr(info, "merge_conflicts", None)
     if merge_conflicts is None:
-        return 0
-    fields_to_check = (
-        "display_name",
-        "auth_type",
-        "region",
-        "tenant_id",
-        "dmarc_policy",
-        "google_auth_type",
-    )
-    return sum(1 for f in fields_to_check if getattr(merge_conflicts, f, ()))
+        return ()
+    out: list[ConflictProvenance] = []
+    for field in _CONFLICT_FIELDS:
+        candidates = getattr(merge_conflicts, field, ())
+        if not candidates:
+            continue
+        sources: list[str] = []
+        seen: set[str] = set()
+        for c in candidates:
+            src = getattr(c, "source", "")
+            if src and src not in seen:
+                sources.append(src)
+                seen.add(src)
+        out.append(
+            ConflictProvenance(
+                field=field,
+                sources=tuple(sources),
+                magnitude=_CONFLICT_N_EFF_PENALTY,
+            )
+        )
+    return tuple(out)
 
 
 def infer_from_tenant_info(
@@ -766,11 +821,12 @@ def infer_from_tenant_info(
         network = load_network()
     slugs = set(getattr(info, "slugs", ()) or ())
     signals = signals_from_tenant_info(info)
-    conflicts = _conflict_count(info)
+    conflict_records = _conflict_provenance(info)
     return infer(
         network,
         observed_slugs=slugs,
         observed_signals=signals,
-        conflict_field_count=conflicts,
+        conflict_field_count=len(conflict_records),
         priors_override=priors_override,
+        conflicts=conflict_records,
     )

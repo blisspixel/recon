@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.0** (probabilistic fusion layer, EXPERIMENTAL).
+Current release: **v1.9.1** (probabilistic fusion layer, EXPERIMENTAL).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
@@ -511,6 +511,14 @@ qualify as `stable`.
     silent (sparse target), the interval widens appropriately
     rather than collapsing on a confident-looking point estimate.
     Two binary checks; no ground-truth probability claim.
+    Alongside these, record per-node **proper scoring rules**
+    (Brier score, log-score) and **expected calibration error
+    (ECE)** computed against the deterministic pipeline's
+    high-confidence verdicts as a proxy label. These are
+    diagnostic, not gating: a node with bad ECE on the proxy is
+    flagged for re-examination of its CPT or topology, not
+    auto-failed. The point is to make the verdict numerically
+    defensible rather than purely behavioral.
   - **(c) Independent-firing threshold.** The node's evidence
     bindings have fired on at least N independent domains in
     aggregate corpus runs. Without enough firings we don't have
@@ -701,6 +709,57 @@ table once it has been in the wild long enough to validate.
   rate at that point. Already established for v1.9.0; the
   practice continues per patch so calibration claims are
   falsifiable across time, not just at the v2.0 lock moment.
+- **Hawkes-kernel CT burst classification.**
+  `_detect_deployment_bursts()` currently uses raw inter-arrival
+  deltas. Fit a one-parameter exponential-decay kernel (pure
+  Python, no scipy) to each cluster's CT timestamps and
+  classify the cluster as `automated_renewal` (short kernel,
+  regular cadence — typical of ACME cron jobs) vs.
+  `manual_deployment` (longer kernel, irregular bursts — typical
+  of operator-driven rollouts). Surface as
+  `cert_summary.deployment_bursts[].kernel_class` in `--json`.
+  Falsifiable defensive value: the two classes mean different
+  things to a defender, and the current uniform "burst" label
+  hides that distinction.
+- **Asynchronous Label Propagation fallback for `infra_graph`.**
+  Pure-Python LPA (near-linear in `|E|`) replaces the current
+  connected-components fallback above the 500-node Louvain cap.
+  Keeps community structure visible on 10k+ -node graphs without
+  importing C extensions. The 500-node Louvain path stays for
+  small graphs (modularity is still the better objective there);
+  LPA is the honest fallback above the cap rather than the
+  flatter connected-components view.
+- **Explicit ignorance mass (epistemic vs aleatoric).** Today,
+  hardened-target output expresses uncertainty as a wider
+  credible interval. A wide interval and "the channel reveals
+  nothing here" are not the same epistemic state, and conflating
+  them can mislead an agent reading the JSON. Add an optional
+  `ignorance` field to `posterior_observations[]` (Dempster-
+  Shafer-style mass on the "don't know" state) computed from the
+  ratio of unbound to bound evidence nodes for that posterior.
+  Surfaces in `--explain-dag` as a third quantity alongside
+  posterior and interval. Lets agents distinguish "the model has
+  evidence and is unsure" from "the model has no evidence." This
+  is the lightweight version of the
+  [imprecise-Dirichlet-model backlog item](#backlog-after-v20);
+  ship the user-facing distinction first, the deeper credal-set
+  refactor only if v2.0+ corpus runs show it pays off.
+- **Conflict provenance on `NodePosterior`.** *(shipped in v1.9.1)*
+  Today the conflict count feeds the n_eff penalty but the
+  *which sources disagreed* detail is dropped. Carry the
+  source-pair list and per-pair magnitude through to
+  `--explain-dag` and the JSON output, alongside the existing
+  top-level `evidence_conflicts` array. Small surface, no
+  schema lock implications.
+- **Noisy-OR / noisy-AND CPT gates (schema-additive).** Add an
+  optional `gate: noisy_or | noisy_and | custom` field on
+  multi-parent CPTs in `bayesian_network.yaml`. Default `custom`
+  preserves the current explicit dict. Noisy-OR/AND keeps
+  multi-parent CPTs compact and human-reviewable as the network
+  grows beyond ~10 nodes; matches the positive-only evidence
+  bias the asymmetric-likelihood design already commits to. No
+  inference-engine change required — the gate compiles to the
+  same factor table at load time.
 
 These ship as completed; v2.0 inherits them already-present and
 locks their shapes per the disposition table.
@@ -981,9 +1040,12 @@ discipline.
   uncertainty on the parameters themselves rather than only on
   the posterior. Major refactor of `bayesian.py`'s factor
   representation; only worth it if v2.0+ corpus runs show the
-  fixed-CPT model is the bottleneck. Cited in `correlation.md` as
-  prior art; this entry promotes "we know about it" to "we'd
-  consider it."
+  fixed-CPT model is the bottleneck. The lightweight v1.9.x
+  optional ("explicit ignorance mass") ships the user-facing
+  epistemic-vs-aleatoric distinction first; this entry is the
+  deeper refactor that would replace point-CPTs entirely once
+  the lightweight version proves operators actually consume the
+  ignorance signal. Cited in `correlation.md` as prior art.
 - **Operator-tuned likelihoods as committed data files.** Allow
   operators to supply per-node likelihood overrides via
   `~/.recon/likelihoods.yaml` analogous to the existing priors
@@ -1043,6 +1105,47 @@ user-code plugins, remote/HTTP MCP transport. The Bayesian and graph
 extensions stay inside the box because they ship as data-file CPTs and
 algorithms over already-collected observables — never as learned weights or
 imported intelligence.
+
+**Statistical methods we deliberately don't use.** External reviews regularly
+propose techniques that would cross the invariants. Listed once here so
+contributors can see what's off-limits and why, without re-litigating each
+proposal:
+
+- *Parameter learning from corpus statistics* (EM, Snorkel, weak-supervision,
+  empirical-Bayes auto-fitting of CPTs). Crosses "no learned weights." Corpus
+  runs are mirrors that question topology, not fitters that minimize
+  disagreement. See v1.9.5 for the discipline.
+- *ML structure learning that auto-applies* (PC algorithm or FCI run as part
+  of a build pipeline). Constraint-based causal-discovery output as an
+  *operator-facing proposal tool* — a human reads the candidate edges and
+  decides whether to add them to YAML — is acceptable; the auto-apply step
+  is what crosses the invariant.
+- *Cross-organization hierarchical models that share evidence between domains
+  the operator did not look up together.* Crosses "no aggregate local
+  intelligence database." Within-batch sharing (e.g. v1.8 ecosystem
+  hypergraph) is fine because the operator chose the batch; persistent
+  cross-run state is not.
+- *Bundled scientific-Python stack* (numpy, scipy, pandas, scikit-learn,
+  pgmpy, pomegranate, PyMC, Stan, Pyro). Crosses the pure-Python dependency
+  floor. Pure-Python implementations of specific techniques are fine when
+  the technique is genuinely worth it (e.g. LPA, Hawkes-kernel fitting via
+  closed-form MLE).
+- *Loopy belief propagation, MCMC, particle filtering as the default
+  inference engine.* Variable elimination is exact and fast at current
+  network size; the ~20-25-node ceiling is a known scaling boundary, not a
+  bug. Approximate inference imports complexity that current scale doesn't
+  justify.
+- *Tractable-circuit compilation* (SPNs, arithmetic circuits) as a v1.x
+  upgrade. Real technique, real scaling story — but solves a problem we
+  don't yet have. Noted as a known option for post-v2.0 if the CPT space
+  grows past what VE handles.
+- *Replacing rule-based signals with a single unified PGM.* Misreads the
+  layering: slugs are the evidence layer, the Bayesian network is the
+  inference layer, signals are the *presentation* layer (operator-facing
+  views over slug evidence). Each abstraction is intentionally addressable
+  on its own — collapsing them into one model would lose the audit surface
+  the project's defensive posture depends on. See
+  [correlation.md § Vocabulary](correlation.md#vocabulary).
 
 **Not this tool:** company research, firmographic enrichment, news/funding
 feeds, hiring signals, GTM briefings, contact data, maturity scores, HTML

@@ -64,6 +64,22 @@ def _node_evidence_phrase(posterior: NodePosterior) -> str:
     return ", ".join(parts)
 
 
+def _node_conflict_phrase(posterior: NodePosterior) -> str | None:
+    """Format conflict_provenance as a readable phrase, or None when empty.
+
+    Each conflict surfaces as ``field (source-a vs source-b) -Nu n_eff``
+    so an operator can read both *what* disagreed and *which sources*
+    drove the interval widening.
+    """
+    if not posterior.conflict_provenance:
+        return None
+    parts: list[str] = []
+    for c in posterior.conflict_provenance:
+        sources = " vs ".join(c.sources) if c.sources else "sources unrecorded"
+        parts.append(f"`{c.field}` ({sources}, -{c.magnitude:.2f} n_eff)")
+    return "; ".join(parts)
+
+
 def render_dag_text(
     network: BayesianNetwork,
     result: InferenceResult,
@@ -131,6 +147,9 @@ def render_dag_text(
         )
         lines.append(f"- **Confidence label:** {confidence}")
         lines.append(f"- **Evidence:** {evidence_phrase}")
+        conflict_phrase = _node_conflict_phrase(post)
+        if conflict_phrase is not None:
+            lines.append(f"- **Conflicts:** {conflict_phrase}")
         if node.parents:
             parent_phrases: list[str] = []
             for parent_name in node.parents:
@@ -138,9 +157,7 @@ def render_dag_text(
                 if parent_post is None:
                     parent_phrases.append(f"`{parent_name}`")
                     continue
-                parent_phrases.append(
-                    f"`{parent_name}` (posterior {parent_post.posterior:.3f})"
-                )
+                parent_phrases.append(f"`{parent_name}` (posterior {parent_post.posterior:.3f})")
             lines.append(
                 f"- **Depends on:** {', '.join(parent_phrases)} "
                 f"— see CPT in `bayesian_network.yaml` for the conditional table."
@@ -165,7 +182,7 @@ def render_dag_dot(
     title = domain or "domain"
     lines: list[str] = []
     lines.append(f'digraph "recon_bayesian_{title}" {{')
-    lines.append('  rankdir=LR;')
+    lines.append("  rankdir=LR;")
     lines.append('  node [shape=box, style="rounded", fontname="Helvetica"];')
     lines.append('  edge [fontname="Helvetica", fontsize=10];')
     lines.append("")
@@ -177,12 +194,16 @@ def render_dag_dot(
             border = "solid"
             color = "black"
         else:
+            conflict_suffix = ""
+            if post.conflict_provenance:
+                conflict_suffix = "\\nconflicts: " + ", ".join(c.field for c in post.conflict_provenance)
             label = (
                 f"{node.name}\\n"
                 f"{node.description}\\n"
                 f"posterior {post.posterior:.3f}\\n"
                 f"[{post.interval_low:.3f}, {post.interval_high:.3f}]"
                 f"{' (sparse)' if post.sparse else ''}"
+                f"{conflict_suffix}"
             )
             border = "dashed" if post.sparse else "solid"
             color = _color_for_posterior(post.posterior)
@@ -190,10 +211,7 @@ def render_dag_dot(
         # in our network, but description text could in principle contain
         # them. The replace is cheap and defensive.
         safe_label = label.replace('"', '\\"')
-        lines.append(
-            f'  "{node.name}" [label="{safe_label}", '
-            f'style="rounded,{border}", color="{color}"];'
-        )
+        lines.append(f'  "{node.name}" [label="{safe_label}", style="rounded,{border}", color="{color}"];')
 
     lines.append("")
     for node in network.nodes:

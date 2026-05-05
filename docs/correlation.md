@@ -61,6 +61,49 @@ evidence bindings reference slugs and signals. The three abstractions
 are intentionally layered, not merged; §4.8 develops the network
 formally.
 
+### Why these layers are separate (and stay separate)
+
+A reasonable external critique reads the architecture as
+"fingerprints → signals → optional Bayesian overlay" and proposes
+collapsing it into one unified probabilistic model. We do not, and
+the reason is structural rather than aesthetic:
+
+  - **Slugs are the evidence layer.** Each slug is a falsifiable
+    statement about $O$ (e.g. "this domain has an MX pointing to
+    `aspmx.l.google.com`"). Slugs are what an auditor verifies by
+    re-running the underlying DNS or CT query. They have to be
+    addressable on their own, because the project's defensive posture
+    is "every conclusion is reachable through the evidence DAG."
+  - **The Bayesian network is the inference layer.** Nodes here are
+    *latent* claims about the organization ("M365-federated tenant")
+    that no single observable settles. They are exactly the place
+    where probabilistic reasoning belongs, and the v1.9 layer is
+    confined to this scope on purpose.
+  - **Signals are the presentation layer.** They are operator-facing
+    rollups that compose slug evidence into named ideas the operator
+    already has a mental model for ("DMARC reject," "federated SSO
+    hub"). They are not inference primitives — they are *views over*
+    the evidence layer. Their value is that a security architect can
+    cite `dmarc_reject` in a ticket without forcing every reader to
+    re-derive it from RRsets.
+
+Collapsing these three into one model is technically possible but
+would erase the audit surface. An auditor who can only read posterior
+probabilities — without being able to point at the slug that fired,
+the network node it bound to, or the named signal a colleague is
+referring to — cannot reconstruct the argument. That is the failure
+mode the layering exists to prevent. Sections 4.1–4.7 stay
+deterministic for the same reason: a deterministic conclusion is
+auditable in a way a black-box posterior is not, even when the
+posterior is numerically more honest.
+
+This is also why the project does not adopt unified-PGM proposals
+that ask signals to "disappear or become queries over the
+posterior." The presentation layer exists for humans, not for the
+inference engine. Removing it to satisfy a model-purity argument
+would impose a tax on every operator who uses the tool to write a
+finding.
+
 ### What this document does *not* claim
 
 To preempt a reasonable critique: we do not claim recon optimizes any
