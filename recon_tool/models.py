@@ -146,6 +146,35 @@ class Observation:
 
 
 @dataclass(frozen=True)
+class PosteriorObservation:
+    """Per-node posterior from the v1.9 Bayesian network (EXPERIMENTAL).
+
+    Each entry corresponds to a node in
+    ``recon_tool/data/bayesian_network.yaml``. ``posterior`` is
+    ``P(node=present | E)`` where ``E`` is the observed-evidence set
+    for the queried domain (slugs and signals). ``interval_low`` and
+    ``interval_high`` form the 80% credible interval; sparse evidence
+    produces wider intervals (``sparse=True``) and dense, corroborating
+    evidence produces tight intervals.
+
+    The interval is calibration on top of exact inference, not a
+    different inference method — the network math is exact, the
+    interval expresses how much we trust the model's exactness given
+    sparsity. See ``docs/correlation.md §5`` for the full derivation
+    and the passive-observation ceiling that floors the interval width.
+    """
+
+    name: str
+    description: str
+    posterior: float
+    interval_low: float
+    interval_high: float
+    evidence_used: tuple[str, ...]
+    n_eff: float
+    sparse: bool
+
+
+@dataclass(frozen=True)
 class CandidateValue:
     """A per-source value for a merged field."""
 
@@ -545,6 +574,16 @@ class TenantInfo:
     # Populated only when `--fusion` is passed. Empty otherwise.
     # Tagged EXPERIMENTAL — field shape may evolve in minor releases.
     slug_confidences: tuple[tuple[str, float], ...] = ()
+
+    # --- v1.9: Bayesian-network posteriors (experimental) ---
+    # Posterior P(node=present | E) and 80% credible interval for each
+    # node in the v1.9 Bayesian network. Populated only when
+    # ``--fusion`` is passed. Empty otherwise. The Beta layer
+    # (``slug_confidences``) and the network layer
+    # (``posterior_observations``) coexist: Beta operates on raw
+    # evidence weights, the network propagates through chained claims.
+    # Tagged EXPERIMENTAL.
+    posterior_observations: tuple[PosteriorObservation, ...] = ()
 
     # --- v0.9.3: OIDC tenant metadata enrichment ---
     # Sovereignty / cloud instance information extracted from the

@@ -16,7 +16,7 @@ recon doesn't yet recognize.
 
 The user wants to grow the fingerprint catalog by mining real DNS data:
 
-- "Find new fingerprints from stripe.com"
+- "Find new fingerprints from contoso.com"
 - "What SaaS does this company use that we don't fingerprint?"
 - "Triage gaps from my latest validation run"
 - "Is there a fingerprint candidate in this CNAME chain?"
@@ -67,7 +67,7 @@ five outcomes:
 
 3. **Intra-org self-reference** — the chain stays inside the organization's
    own brand zone (different TLD or sibling brand). Common for big enterprises
-   (chase → gslbjpmchase, bbc → bbc.co.uk → eglb.bbc.co.uk).
+   (e.g. ``contoso.com → gslb-contoso.com``, ``contoso.co.uk → eglb.contoso.co.uk``).
    **Action:** drop. Don't fingerprint internal CDN patterns. Note this in
    your triage summary so the user knows it was intentionally skipped.
 

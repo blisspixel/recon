@@ -47,8 +47,8 @@ def is_intra_org(apex: str, terminal: str) -> bool:
 
 
 # Second-level public suffixes that aren't a brand label. Skipped when
-# extracting the apex's brand stem so ``bbc.co.uk`` → "bbc" and
-# ``yahoo.co.jp`` → "yahoo" instead of "co".
+# extracting the apex's brand stem so ``contoso.co.uk`` → "bbc" and
+# ``contoso.co.jp`` → "contoso" instead of "co".
 _SECOND_LEVEL_PUBLIC: frozenset[str] = frozenset(
     {"co", "com", "ac", "org", "net", "gov", "edu", "ne", "or", "go", "mil", "biz"}
 )
@@ -61,11 +61,11 @@ def extract_brand_label(apex: str) -> str:
     common second-level public suffixes (co, ac, org, net, gov, edu, ...)
     so that:
 
-    * ``bbc.co.uk`` → ``"bbc"``
-    * ``nytimes.com`` → ``"nytimes"``
-    * ``yahoo.co.jp`` → ``"yahoo"``
-    * ``deutsche-bank.de`` → ``"deutsche-bank"``
-    * ``softchoice.com`` → ``"softchoice"``
+    * ``contoso.co.uk`` → ``"contoso"``
+    * ``contoso.com`` → ``"contoso"``
+    * ``contoso.co.jp`` → ``"contoso"``
+    * ``northwind-traders.de`` → ``"northwind-traders"``
+    * ``fabrikam.com`` → ``"fabrikam"``
 
     Returns an empty string when the apex has fewer than two labels or no
     plausible brand label survives the skip rules.
@@ -88,19 +88,22 @@ def looks_intra_org_brand(apex: str, suffix: str, samples: list[dict[str, Any]])
 
     The strict ``is_intra_org`` check only catches chains that stay within
     the apex's own zone. Many enterprises route through a sibling brand
-    domain (gslbjpmchase.com from chase.com, bbcnewslabs.co.uk from bbc.com).
-    Two patterns are caught here:
+    domain (a vendor-prefixed sibling like ``gslb-contoso.com`` from
+    ``contoso.com``, or a project-suffixed sibling like
+    ``contoso-labs.co.uk`` from ``contoso.com``). Two patterns are caught
+    here:
 
-    1. **Full brand label substring** — ``softchoice`` appears anywhere in
+    1. **Full brand label substring** — ``contoso`` appears anywhere in
        the suffix.
     2. **Brand-stem abbreviation** — the brand's first 3+ characters appear
-       as a standalone label in the suffix. Catches the nytimes.com → nyt.net
-       case (brand="nytimes", abbreviation="nyt") without over-matching on
-       arbitrary 3-char substrings.
+       as a standalone label in the suffix. Catches the
+       ``examplecorp.com`` → ``ec.net`` case (brand="examplecorp",
+       abbreviation="exa") without over-matching on arbitrary 3-char
+       substrings.
 
-    Best-effort. Genuine acronym abbreviations (generalmotors → gm,
-    internationalbusinessmachines → ibm) won't match — those need the LLM
-    step to recognize the relationship.
+    Best-effort. Genuine acronym abbreviations (multi-word legal names
+    abbreviated to two- or three-letter tickers) won't match — those need
+    the LLM step to recognize the relationship.
     """
     if not samples:
         return False

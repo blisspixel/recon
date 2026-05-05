@@ -227,7 +227,12 @@ def main() -> None:
 
     if compare_target is not None and not args.no_compare:
         diff_path = run_dir / "diff.json"
-        prior_results = compare_target / "results.json"
+        # Prior runs may have written either ``results.ndjson`` (current
+        # default) or ``results.json`` (legacy ``--json-array``); accept
+        # both. ``diff_runs.py`` already reads NDJSON.
+        prior_ndjson = compare_target / "results.ndjson"
+        prior_json = compare_target / "results.json"
+        prior_results = prior_ndjson if prior_ndjson.exists() else prior_json
         if prior_results.exists():
             _run_step(
                 [
@@ -243,7 +248,9 @@ def main() -> None:
                 f"diff_runs vs {compare_target.name}",
             )
         else:
-            print(f"  skipping diff: no results.json at {prior_results}")
+            print(
+                f"  skipping diff: no results.ndjson or results.json in {compare_target}"
+            )
             diff_path = None
 
     # Step 5: meta.json
@@ -273,7 +280,7 @@ def main() -> None:
 
     print()
     print(f"Scan complete: {gaps_count} gaps, {candidates_count} candidates after triage")
-    print(f"  results:    {run_dir / 'results.json'}")
+    print(f"  results:    {results_path}")
     print(f"  gaps:       {run_dir / 'gaps.json'}")
     print(f"  candidates: {run_dir / 'candidates.json'}")
     if diff_path:

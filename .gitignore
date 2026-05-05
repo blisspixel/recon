@@ -46,10 +46,17 @@ docs/accuracy.md
 !/validation/scan.py
 !/validation/corpus-example.txt
 !/validation/README.md
-# v1.8 corpus-validation report — statistics + technical narrative;
-# no per-domain data. The full result JSONs (v1.8-validation-results*.json)
+# v1.9: publicly-reproducible calibration scripts. Both operate
+# against either the synthetic-network distribution or a user-supplied
+# corpus; neither contains target data.
+!/validation/synthetic_calibration.py
+!/validation/analyze_v19_calibration.py
+# Per-release corpus-validation reports — statistics + technical
+# narrative; no per-domain data. The full result JSONs
+# (v1.8-validation-results*.json, v1.9-validation-results*.json, ...)
 # stay private under the /validation/* glob.
 !/validation/v1.8-validation-summary.md
+!/validation/v1.9-validation-summary.md
 # User-curated private corpus + run outputs — never commit.
 /validation/corpus-private/
 /validation/runs-private/

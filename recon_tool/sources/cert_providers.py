@@ -91,6 +91,15 @@ _MAX_CRTSH_ENTRIES = MAX_SUBDOMAINS * 20
 _MAX_CRTSH_RAW_NAMES = MAX_SUBDOMAINS * 10
 _MAX_CRTSH_CERT_SUMMARY_ENTRIES = MAX_SUBDOMAINS * 10
 
+# Hostnames cap out at 253 chars. A pathological crt.sh ``name_value``
+# field could in principle list millions of newline-delimited names,
+# and parsing the whole field before any later cap is what made
+# CrtshProvider memory-unbounded under hostile/malformed CT responses.
+# Cap the per-cert SAN parse to a generous-but-bounded number; sane
+# certs are well below this (web PKI BR limits push real certs to a
+# few thousand SANs at the outside).
+_MAX_SANS_PER_CERT = 2000
+
 # High-signal subdomain prefixes that commonly CNAME to SaaS providers.
 HIGH_SIGNAL_PREFIXES = (
     "auth",
@@ -464,11 +473,15 @@ class CrtshProvider:
 
             # v1.7: parse SANs once so they can both feed the
             # ``raw_names`` discovery list AND attach to the per-cert
-            # entry for wildcard-sibling and burst analysis.
+            # entry for wildcard-sibling and burst analysis. Bounded
+            # by ``_MAX_SANS_PER_CERT`` so a hostile/malformed
+            # ``name_value`` cannot exhaust memory during the split.
             name_value = entry.get("name_value", "")
             cert_sans: list[str] = []
             if isinstance(name_value, str):
-                for raw_name in name_value.strip().split("\n"):
+                for raw_name in name_value.split("\n", _MAX_SANS_PER_CERT):
+                    if len(cert_sans) >= _MAX_SANS_PER_CERT:
+                        break
                     n = raw_name.strip()
                     if n:
                         cert_sans.append(n)
@@ -626,6 +639,8 @@ class CertSpotterProvider:
                     cert_sans: list[str] = []
                     if isinstance(dns_names, list):
                         for name in dns_names:
+                            if len(cert_sans) >= _MAX_SANS_PER_CERT:
+                                break
                             if isinstance(name, str):
                                 stripped = name.strip()
                                 all_raw_names.append(stripped)

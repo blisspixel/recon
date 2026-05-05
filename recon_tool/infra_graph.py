@@ -112,18 +112,38 @@ def _clean_sans(raw: Any) -> list[str]:
 
 def _build_graph(
     entries: list[dict[str, Any]],
-) -> tuple[nx.Graph[str], dict[tuple[str, str], list[str]]]:
+) -> tuple[nx.Graph[str], dict[tuple[str, str], list[str]], bool]:
     """Build the SAN co-occurrence graph from cert entries.
 
-    Returns a ``(graph, edge_issuers)`` tuple. ``edge_issuers`` maps
+    Returns ``(graph, edge_issuers, truncated)``. ``edge_issuers`` maps
     each (sorted) edge tuple to the issuer names that contributed to
     that edge — used afterward to compute ``dominant_issuer`` per
-    cluster without re-reading entries.
+    cluster without re-reading entries. ``truncated`` is True when
+    construction stopped early because the node cap was reached, so
+    callers can route to the connected-components fallback without
+    attempting Louvain on the partial graph.
+
+    Construction is bounded twice: once per cert by
+    ``_MAX_SANS_PER_CERT_FOR_EDGES`` (so a single huge cert cannot
+    blow up edge count quadratically), and globally by
+    ``MAX_GRAPH_NODES`` (so a hostile/pathological CT response with
+    many large certs cannot materialize millions of edges before the
+    later cap is checked).
     """
     g: nx.Graph[str] = nx.Graph()
     edge_issuers: dict[tuple[str, str], list[str]] = {}
+    truncated = False
 
     for entry in entries:
+        if g.number_of_nodes() >= MAX_GRAPH_NODES:
+            # Stop adding new certs once the node cap is reached.
+            # Existing edges still aggregate their issuer lists for
+            # accuracy on the bounded partition; new SAN names are
+            # rejected. The caller routes to connected-components
+            # fallback rather than running Louvain on this partial
+            # graph.
+            truncated = True
+            break
         sans = _clean_sans(entry.get("dns_names"))
         if len(sans) < 2:
             continue
@@ -141,7 +161,7 @@ def _build_graph(
                 g.add_edge(a, b, shared_certs=1, weight=1.0)
             if issuer:
                 edge_issuers.setdefault((a, b), []).append(issuer)
-    return g, edge_issuers
+    return g, edge_issuers, truncated
 
 
 def _louvain_partition(g: nx.Graph[str]) -> tuple[list[set[str]], float, str]:
@@ -209,7 +229,7 @@ def build_infrastructure_clusters(
     ``MAX_CLUSTERS``. Within each cluster, members are sorted and
     capped by ``MAX_MEMBERS_PER_CLUSTER``.
     """
-    g, edge_issuers = _build_graph(entries)
+    g, edge_issuers, truncated = _build_graph(entries)
     node_count = int(g.number_of_nodes())
     edge_count = int(g.number_of_edges())
 
@@ -222,7 +242,7 @@ def build_infrastructure_clusters(
             edge_count=edge_count,
         )
 
-    if node_count > MAX_GRAPH_NODES:
+    if truncated or node_count > MAX_GRAPH_NODES:
         comms, modularity, algorithm = _connected_components_partition(g)
     else:
         try:

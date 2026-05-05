@@ -1,0 +1,175 @@
+# Bayesian network — v1.9 (EXPERIMENTAL)
+#
+# Schema version: 1
+# Network topology version: v1.9.0 (frozen 2026-05-04)
+#
+# Discrete Bayesian network over high-level claims about a domain's
+# public-facing posture. Nodes are binary unless otherwise noted.
+# Evidence binds to nodes via observable slugs and signals already
+# emitted by the deterministic pipeline. The network is committed
+# as a YAML data file — no learned weights, no trained models.
+#
+# Topology stability contract: the SET of nodes and the parent
+# relationships in this file are stable across v1.9.x releases.
+# Likelihood numbers and CPT entries may be tuned in v1.9.x based on
+# corpus calibration findings; node additions / removals are v1.10+
+# (require schema version bump).
+#
+# Validation: see validation/v1.9-validation-summary.md for
+# numerical correctness, sensitivity bound, synthetic calibration
+# ECE, and per-node calibration weak spots driving the v1.9.x
+# tuning roadmap.
+#
+# Schema
+# ------
+#
+# version (required, int): schema version. 1 for v1.9.
+#
+# nodes (required, list): every node in the network.
+#   name (required, str): stable identifier (slug-shaped).
+#   description (required, str): one-line claim, plain English.
+#     Used in --explain-dag rendering.
+#   prior (optional, float in [0, 1]): P(present). Required for nodes
+#     without parents. When parents are listed, ``cpt`` is required
+#     instead.
+#   parents (optional, list of node names): all listed parents must
+#     be defined elsewhere in this file. The full network must be a
+#     DAG; the loader rejects cycles.
+#   cpt (optional, dict): conditional probability table when parents
+#     are listed. Keys are ``parent1=state1,parent2=state2`` strings;
+#     values are P(this_node=present | that parent assignment) in
+#     [0, 1]. Every parent assignment must appear (loader checks).
+#     Parent states are ``present`` / ``absent`` for binary parents.
+#   evidence (optional, list): observable bindings.
+#     slug (optional, str): fingerprint slug to watch for.
+#     signal (optional, str): signal name to watch for.
+#     likelihood (required, [float, float]):
+#       [P(observed | node=present), P(observed | node=absent)].
+#       Both in (0, 1). The "observed" side is what enters as
+#       evidence; the "not observed" side is implicit (1 - likelihood).
+#
+# Inference operates on the marginal posterior P(node=present | E)
+# where E is the observed-evidence set for the queried domain. Exact
+# inference via variable elimination — see ``recon_tool/bayesian.py``.
+#
+# Operator override
+# -----------------
+#
+# A user-supplied ``~/.recon/priors.yaml`` can override the ``prior``
+# field on any node listed here. Override is local-only; never shared,
+# never sent over the wire, never persisted in cache. Operators use
+# this to inject domain-specific base rates (e.g., a security team
+# whose scope skews heavily M365 might raise the prior on
+# m365_tenant from 0.30 to 0.70).
+#
+# Adding nodes
+# ------------
+#
+# Stay under 20 nodes per per-domain inference. The network is a
+# domain-modelling tool, not an attempt to encode every fingerprint.
+# Each node should answer a question a human would ask ("are they
+# federated?", "is email security strong?") — not "is slug X present?".
+# Slug-level posteriors live in the existing ``fusion.py`` Beta layer.
+
+version: 1
+
+nodes:
+  # ── Identity layer ─────────────────────────────────────────────────
+  - name: m365_tenant
+    description: "Domain has a Microsoft 365 / Entra tenant."
+    prior: 0.30
+    evidence:
+      - slug: microsoft365
+        likelihood: [0.95, 0.03]
+      - slug: entra-id
+        likelihood: [0.88, 0.02]
+      - slug: exchange-online
+        likelihood: [0.85, 0.02]
+
+  - name: google_workspace_tenant
+    description: "Domain has a Google Workspace tenant."
+    prior: 0.25
+    evidence:
+      - slug: google-workspace
+        likelihood: [0.92, 0.04]
+      - slug: gmail
+        likelihood: [0.85, 0.05]
+
+  - name: federated_identity
+    description: "Domain uses an external IdP for SSO (Okta, Auth0, Ping, etc.)."
+    parents: [m365_tenant]
+    cpt:
+      "m365_tenant=present": 0.45
+      "m365_tenant=absent": 0.08
+    evidence:
+      - signal: federated_sso_hub
+        likelihood: [0.90, 0.05]
+
+  - name: okta_idp
+    description: "Identity provider is Okta."
+    parents: [federated_identity]
+    cpt:
+      "federated_identity=present": 0.30
+      "federated_identity=absent": 0.005
+    evidence:
+      - slug: okta
+        likelihood: [0.92, 0.02]
+
+  # ── Email security layer ──────────────────────────────────────────
+  - name: email_gateway_present
+    description: "Third-party email security gateway in front of MX."
+    prior: 0.18
+    evidence:
+      - slug: proofpoint
+        likelihood: [0.90, 0.02]
+      - slug: mimecast
+        likelihood: [0.90, 0.02]
+      - slug: barracuda
+        likelihood: [0.85, 0.02]
+
+  - name: email_security_strong
+    description: "DMARC enforcement + DKIM + strict SPF observed (composite)."
+    parents: [m365_tenant, google_workspace_tenant, email_gateway_present]
+    cpt:
+      "m365_tenant=present,google_workspace_tenant=present,email_gateway_present=present": 0.85
+      "m365_tenant=present,google_workspace_tenant=present,email_gateway_present=absent": 0.55
+      "m365_tenant=present,google_workspace_tenant=absent,email_gateway_present=present": 0.75
+      "m365_tenant=present,google_workspace_tenant=absent,email_gateway_present=absent": 0.45
+      "m365_tenant=absent,google_workspace_tenant=present,email_gateway_present=present": 0.75
+      "m365_tenant=absent,google_workspace_tenant=present,email_gateway_present=absent": 0.45
+      "m365_tenant=absent,google_workspace_tenant=absent,email_gateway_present=present": 0.65
+      "m365_tenant=absent,google_workspace_tenant=absent,email_gateway_present=absent": 0.20
+    evidence:
+      - signal: dmarc_reject
+        likelihood: [0.85, 0.05]
+      - signal: dmarc_quarantine
+        likelihood: [0.55, 0.10]
+      - signal: mta_sts_enforce
+        likelihood: [0.70, 0.05]
+      - signal: dkim_present
+        likelihood: [0.90, 0.20]
+      - signal: spf_strict
+        likelihood: [0.75, 0.30]
+
+  # ── Infrastructure layer ──────────────────────────────────────────
+  - name: cdn_fronting
+    description: "A CDN or edge proxy fronts the apex/origin."
+    prior: 0.45
+    evidence:
+      - slug: cloudflare
+        likelihood: [0.92, 0.03]
+      - slug: akamai
+        likelihood: [0.85, 0.02]
+      - slug: fastly
+        likelihood: [0.85, 0.02]
+
+  - name: aws_hosting
+    description: "AWS-hosted infrastructure observed in chains or fingerprints."
+    prior: 0.40
+    evidence:
+      - slug: aws
+        likelihood: [0.85, 0.05]
+      - slug: aws-cloudfront
+        likelihood: [0.80, 0.03]
+      - slug: aws-route53
+        likelihood: [0.70, 0.05]

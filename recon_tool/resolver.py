@@ -106,6 +106,7 @@ async def _safe_lookup(
 async def _enrich_from_related(
     info: TenantInfo,
     all_results: list[SourceResult],
+    skip_ct: bool = False,
 ) -> tuple[TenantInfo, list[SourceResult]]:
     """If related domains were found, run lookups on them and merge.
 
@@ -117,6 +118,11 @@ async def _enrich_from_related(
       These are rare (1-2 typically) and may have their own TXT/MX/NS records.
 
     Caps at MAX_RELATED_ENRICHMENTS total to prevent runaway lookups.
+
+    ``skip_ct`` is forwarded to the separate-domain DNSSource lookups so
+    that operators using ``--no-ct`` for privacy/load reasons do not
+    silently issue CT-provider queries for related domains discovered
+    via cross-domain CNAME breadcrumbs.
     """
     from recon_tool.sources.dns import DNSSource, lightweight_subdomain_lookup, medium_subdomain_lookup
 
@@ -231,10 +237,11 @@ async def _enrich_from_related(
 
     # Run all tiers concurrently
     dns_source = DNSSource()
+    separate_kwargs: dict[str, Any] = {"skip_ct": True} if skip_ct else {}
     all_tasks = [
         *(medium_subdomain_lookup(d) for d in medium_subs),
         *(lightweight_subdomain_lookup(d) for d in lightweight_subs),
-        *(_safe_lookup(dns_source, d) for d in capped_separate),
+        *(_safe_lookup(dns_source, d, **separate_kwargs) for d in capped_separate),
     ]
     related_results = await asyncio.gather(*all_tasks)
 
@@ -324,7 +331,7 @@ async def _resolve_tenant_inner(
 
     # Auto-enrich from related domains (e.g. northwind-internal.com discovered via
     # autodiscover CNAME when looking up northwindtraders.com)
-    info, all_results = await _enrich_from_related(info, list(results))
+    info, all_results = await _enrich_from_related(info, list(results), skip_ct=skip_ct)
 
     return info, all_results
 

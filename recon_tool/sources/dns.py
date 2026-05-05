@@ -1671,6 +1671,66 @@ _SURFACE_MAX_HOSTS = 100
 _SURFACE_MAX_HOPS = 5
 _SURFACE_CONCURRENCY = 30
 
+# Suffixes that identify private/internal/special-use DNS names. A
+# CNAME hop pointing at one of these should be dropped: continuing to
+# resolve it would turn an attacker-controlled public CNAME into an
+# oracle for the operator's internal/split-horizon DNS, and including
+# it in evidence would leak internal topology to the caller. RFC 6761
+# special-use suffixes plus the common private-network conventions
+# (.local, .internal, .corp, .lan, .home, .home.arpa) plus reverse-
+# DNS arpa zones plus the Tor namespace (.onion). The list is
+# deliberately permissive on the public-DNS side: anything not in
+# this set is treated as resolvable public DNS.
+_PRIVATE_DNS_SUFFIXES = (
+    ".local",
+    ".localhost",
+    ".internal",
+    ".intranet",
+    ".private",
+    ".corp",
+    ".lan",
+    ".home",
+    ".home.arpa",
+    ".test",
+    ".example",
+    ".invalid",
+    ".onion",
+    ".in-addr.arpa",
+    ".ip6.arpa",
+    ".arpa",
+)
+
+
+def _is_public_dns_name(name: str) -> bool:
+    """Return True when *name* looks like a name on the public DNS.
+
+    Rejects single-label names, IP literals, RFC 6761 special-use
+    suffixes, reverse-DNS arpa zones, common private-network
+    conventions (.local/.corp/.lan/etc.), and the Tor namespace. The
+    check is suffix-based and case-insensitive.
+
+    The CNAME chain walker uses this to refuse to follow attacker-
+    controlled CNAME hops that target internal/split-horizon DNS,
+    which would otherwise let a public domain owner force the
+    operator's resolver to query arbitrary internal hostnames and
+    leak internal topology in evidence output.
+    """
+    if not name:
+        return False
+    n = name.strip().lower().rstrip(".")
+    if not n or "." not in n:
+        # Single-label names are either internal hostnames or root-
+        # zone TLDs; neither is a sensible CNAME target.
+        return False
+    # IP literals (IPv4 dotted-quad or IPv6 with hex+colons). CNAMEs
+    # cannot legally target IPs in DNS, but defensive resolvers may
+    # still see something interpretable as one.
+    if all(part.isdigit() for part in n.split(".")):
+        return False
+    if ":" in n:
+        return False
+    return all(not n.endswith(suffix) for suffix in _PRIVATE_DNS_SUFFIXES)
+
 
 async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> list[str]:
     """Walk the CNAME chain for *host*, returning the list of targets.
@@ -1678,6 +1738,13 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
     Returns an empty list when the host has no CNAME (typical for hosts
     with direct A records, or for stale CT entries that no longer
     resolve). Stops at *max_hops* to defend against pathological loops.
+
+    Drops CNAME hops whose target is not a public DNS name (see
+    ``_is_public_dns_name``). The walk halts at that hop without
+    recording it: the operator's resolver does not get pointed at
+    arbitrary internal/split-horizon names just because attacker-
+    controlled DNS returned them, and evidence output cannot leak
+    internal topology.
     """
     chain: list[str] = []
     cur = host
@@ -1687,6 +1754,13 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
             break
         target = results[0].lower().rstrip(".")
         if not target or target == cur:
+            break
+        if not _is_public_dns_name(target):
+            logger.debug(
+                "CNAME chain walker: refusing non-public hop from %s -> %s",
+                cur,
+                target,
+            )
             break
         chain.append(target)
         cur = target

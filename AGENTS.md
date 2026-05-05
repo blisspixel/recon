@@ -45,16 +45,28 @@ Wait for explicit approval, then `pip install recon-tool` followed by `recon doc
 
 Before choosing CLI vs MCP, look at your own available-tools list. If you see `recon:*` tools (e.g. `mcp__recon__lookup_tenant`, `mcp__recon__analyze_posture`), the MCP server is connected — prefer those. If you do not, fall back to the CLI. Do not call an MCP tool speculatively to test connectivity.
 
+## Domain validation before any CLI invocation (mandatory)
+
+When falling back to the CLI, **never** interpolate a user- or context-supplied domain into a Bash command without first validating it against this exact pattern:
+
+```
+^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$
+```
+
+Lowercase the input, strip any leading `https://` / `http://` / `www.`, then match. If the resulting string does **not** match — including any presence of whitespace, quotes, `;`, `|`, `&`, `$`, backticks, parentheses, redirection (`>` `<`), path components (`/` `\`), or non-ASCII — refuse to run the command and tell the user the domain is malformed. Do not "fix it up" by stripping characters; reject the input.
+
+Pass the validated domain inside double quotes in the Bash command (`recon "validated.example.com"`) as defense-in-depth; the regex is the primary control. The MCP path takes structured arguments and is not subject to this rule.
+
 ## Two invocation modes
 
 ### Default mode — panel output
 
 Use this when the user asks recon-shaped questions conversationally — "recon contoso.com", "what does pokemon.com run on" — without explicitly requesting full or structured data.
 
-When MCP is connected, call `lookup_tenant(domain)` and reformat to a panel-equivalent summary. Otherwise shell out:
+When MCP is connected, call `lookup_tenant(domain)` and reformat to a panel-equivalent summary. Otherwise shell out (after validating `<domain>` per the rule above):
 
 ```bash
-recon <domain>
+recon "<domain>"
 ```
 
 **Relay the CLI panel output verbatim.** Do not reformat it into Markdown bullets, tables, or headers. The panel is purpose-built and tighter than anything reformatted. End with a single short pointer such as *"Run with `--full` for everything, or ask me to `--explain` the reasoning."* Then stop. No interpretation, no commentary.
@@ -91,15 +103,15 @@ That is the shape recon emits. Pass it through unchanged.
 
 ### Full / structured mode — `--full --json`
 
-Trigger this mode when the user explicitly says "full", "max details", "give me everything", or when downstream automation needs structured data:
+Trigger this mode when the user explicitly says "full", "max details", "give me everything", or when downstream automation needs structured data. Do **not** use shell redirection; capture stdout and write the file with your own file-write tool:
 
 ```bash
-recon <domain> --full --json > recon-<domain>.json
+recon "<domain>" --full --json
 ```
 
 In this mode, **do not dump the JSON inline.** Output is typically 3–10 KB depending on org size and consumes context for no benefit. Instead:
 
-1. Save the JSON to a file in the current working directory (or a path the user specifies).
+1. Capture stdout from the Bash call. Use your file-write tool to save it to `recon-<validated-domain>.json` in the current working directory (or a path the user specifies). Never substitute the unvalidated domain into a shell redirect.
 2. Reply with a 3-line headline only (field names per [`docs/recon-schema.json`](docs/recon-schema.json) v1.0 contract):
    > **{display_name}** — {provider}, confidence {confidence}.
    > {N services detected, {ct_subdomain_count} CT subdomains, email security {email_security_score}/5}.
