@@ -673,6 +673,34 @@ table once it has been in the wild long enough to validate.
   asset, forward-compat cache-loading test. Each is small;
   bundled here so the engineering-quality "what's still missing"
   list shrinks visibly across the v1.9.x patches.
+- **Per-node `n_eff_multiplier` in `bayesian_network.yaml`** —
+  schema-additive field that scales effective sample size on a
+  per-node basis. Lets weak-calibration nodes (currently
+  `email_security_strong`, `aws_hosting`) widen their credible
+  intervals without globally widening every node. Default 1.0;
+  ≤ 1.0 widens. Replaces the current uniform formula with
+  `n_eff = max(_MIN_N_EFF, multiplier * (evidence_count -
+  conflict_penalty))`. Falls naturally out of v1.9.3
+  hardened-adversarial findings + the existing sensitivity test.
+- **Top-3 influential edges in `--explain-dag`** — extend
+  `render_dag_text` to identify the three highest-leverage
+  evidence bindings per node (largest contribution to the
+  posterior) and surface their factor values inline. Makes the
+  layer's reasoning visible without requiring an external DOT
+  rendering step. No schema change.
+- **Corpus-driven Hypothesis tests** — extend
+  `tests/test_bayesian_hypothesis.py` with property tests over
+  real corpus output: e.g., "for any domain with ≥ 3 evidence
+  pieces and 0 conflicts, interval width ≤ 0.25." Strengthens
+  the test floor against future regressions; the existing
+  synthetic-network properties already pass.
+- **Per-release calibration aggregate publish.** Each v1.9.x
+  patch ships its own one-page validation summary
+  (`validation/v1.9.N-calibration.md`) with the sensitivity
+  numbers, ECE on the synthetic network, and corpus spot-check
+  rate at that point. Already established for v1.9.0; the
+  practice continues per patch so calibration claims are
+  falsifiable across time, not just at the v2.0 lock moment.
 
 These ship as completed; v2.0 inherits them already-present and
 locks their shapes per the disposition table.
@@ -783,6 +811,27 @@ discipline.
 - Deeper hardening simulation UX (high overreach risk).
 - Anomaly detection on issuer-mix changes over time.
 - Per-domain inference cache for batch-mode reruns.
+- **Imprecise Dirichlet Model (Walley 1991) for CPT entries.**
+  Replace point-CPT values with intervals derived from
+  bounded-prior Dirichlet samples. Yields second-order
+  uncertainty on the parameters themselves rather than only on
+  the posterior. Major refactor of `bayesian.py`'s factor
+  representation; only worth it if v2.0+ corpus runs show the
+  fixed-CPT model is the bottleneck. Cited in `correlation.md` as
+  prior art; this entry promotes "we know about it" to "we'd
+  consider it."
+- **Operator-tuned likelihoods as committed data files.** Allow
+  operators to supply per-node likelihood overrides via
+  `~/.recon/likelihoods.yaml` analogous to the existing priors
+  override. Crosses into v1.9.5's "no automated CPT fitting"
+  invariant only if a script auto-derives the file; manual
+  operator-side tuning with explicit reasoning is fine. Decide
+  the discipline before shipping.
+- **Cross-vertical generalization study.** The v1.9.0 corpus
+  skews enterprise. A future calibration pass on
+  consumer-facing / niche-SaaS targets would tell us whether the
+  network's prior assumptions transfer; ECE on that subset is
+  the metric.
 
 ## Good First Roadmap Items
 
@@ -835,6 +884,16 @@ imported intelligence.
 feeds, hiring signals, GTM briefings, contact data, maturity scores, HTML
 dashboards, TUI, REPL, daemon mode, scheduled monitoring, STIX/Maltego/MISP
 exports, Prometheus metrics, Docker image, Homebrew tap, PDF reports.
+
+**Distribution we don't ship:** static binaries (PyInstaller / shiv /
+PEX), self-contained installers, OS-native packages (.deb / .rpm /
+MSI), Homebrew tap. recon ships as a Python wheel on PyPI; that's
+the contract. Static-binary distribution adds signing,
+notarization, per-OS verification, and reproducible-build
+overhead disproportionate to the audience size. Operators who
+need a containerised recon can run it under `uv run` or any
+ephemeral Python sandbox; we do not gain from owning that
+distribution surface.
 
 Use `--json` (or `--ndjson` for big batches) as the integration surface. If
 you need rendered graphs, reports, SIEM ingestion, or company research, pipe
