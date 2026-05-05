@@ -4,7 +4,8 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.8.0**. Current theme: treat correlation as inference
+Current release: **v1.9.0** (probabilistic fusion layer, EXPERIMENTAL).
+Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
 validation against a private corpus drive what ships next.
