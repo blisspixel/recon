@@ -31,6 +31,10 @@ dependencies = [
     "defusedxml>=0.7",
     "mcp>=1.0",
     "networkx>=3.0",
+    # Security floor on a transitive dependency: mcp pulls in python-multipart,
+    # and 0.0.26 has CVE-2026-42561 (fix: 0.0.27). Pinned here so resolvers and
+    # `pip-audit` stay green until mcp's own floor catches up.
+    "python-multipart>=0.0.27",
 ]
 
 [project.scripts]
