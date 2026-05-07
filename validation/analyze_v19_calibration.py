@@ -34,7 +34,6 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-
 # Mapping from Bayesian network nodes to the deterministic-pipeline
 # slugs / signals that *should* be present when the posterior fires
 # high. Used by the calibration spot-check.
@@ -88,8 +87,8 @@ def main() -> int:
 
     domains: list[dict] = []
     with args.input.open(encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
+        for raw_line in f:
+            line = raw_line.strip()
             if not line:
                 continue
             try:
@@ -240,10 +239,10 @@ def main() -> int:
         for p in po:
             if len(p.get("evidence_used", [])) > 1:
                 multi_signal_per_node[p["name"]] += 1
-    print(f"=== Multi-signal correlation depth ===")
+    print("=== Multi-signal correlation depth ===")
     print(f"  Domains with >1 evidence binding firing across nodes: "
           f"{multi_signal_count}/{n} ({multi_signal_count/n:.1%})")
-    print(f"  Per-node count of >1-binding firings:")
+    print("  Per-node count of >1-binding firings:")
     for name in sorted(multi_signal_per_node):
         print(f"    {name}: {multi_signal_per_node[name]}")
     print()
@@ -263,7 +262,7 @@ def main() -> int:
             )
     if posterior_means:
         q1, med, q3 = _quartiles(posterior_means)
-        print(f"=== Per-domain mean posterior across nodes ===")
+        print("=== Per-domain mean posterior across nodes ===")
         print(f"  Q1={q1:.3f}  Median={med:.3f}  Q3={q3:.3f}")
         print()
 
@@ -274,7 +273,7 @@ def main() -> int:
         ec = d.get("evidence_conflicts", [])
         conflict_counts.append(len(ec))
     counter = Counter(conflict_counts)
-    print(f"=== Cross-source conflict count distribution ===")
+    print("=== Cross-source conflict count distribution ===")
     print(f"  {'count':>5} {'domains':>8} {'fraction':>10}")
     for c in sorted(counter):
         frac = counter[c] / n
@@ -285,12 +284,12 @@ def main() -> int:
 
     total_observations = sum(node_total.values())
     total_sparse = sum(node_sparse_counts.values())
-    print(f"=== Sparse-flag rate (overall) ===")
+    print("=== Sparse-flag rate (overall) ===")
     print(f"  {total_sparse}/{total_observations} ({total_sparse/total_observations:.1%}) "
           f"node-domain observations flagged as sparse")
-    print(f"  (Sparse flag fires when n_eff is at the floor — the")
-    print(f"  passive-observation ceiling is the load-bearing fact, not")
-    print(f"  the point estimate.)")
+    print("  (Sparse flag fires when n_eff is at the floor — the")
+    print("  passive-observation ceiling is the load-bearing fact, not")
+    print("  the point estimate.)")
 
     return 0
 
