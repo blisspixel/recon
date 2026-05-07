@@ -2544,6 +2544,7 @@ async def _batch(
 
                     from recon_tool.bayesian import infer_from_tenant_info as _infer
                     from recon_tool.fusion import compute_slug_posteriors as _slug_post
+                    from recon_tool.models import NodeConflict as _NC
                     from recon_tool.models import PosteriorObservation as _PO
 
                     _br = _infer(info)
@@ -2560,6 +2561,10 @@ async def _batch(
                                 evidence_used=p.evidence_used,
                                 n_eff=p.n_eff,
                                 sparse=p.sparse,
+                                conflict_provenance=tuple(
+                                    _NC(field=c.field, sources=c.sources, magnitude=c.magnitude)
+                                    for c in p.conflict_provenance
+                                ),
                             )
                             for p in _br.posteriors
                         ),

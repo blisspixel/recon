@@ -19,7 +19,7 @@ from recon_tool.bayesian import (
     load_network,
 )
 from recon_tool.bayesian_dag import render_dag_dot, render_dag_text
-from recon_tool.cache import _parse_posterior_observations
+from recon_tool.cache import _parse_posterior_observations, tenant_info_from_dict, tenant_info_to_dict
 from recon_tool.formatter import format_tenant_dict
 from recon_tool.models import (
     CandidateValue,
@@ -173,6 +173,18 @@ class TestSerialization:
         parsed = _parse_posterior_observations(d)
         assert len(parsed) == 1
         assert parsed[0].conflict_provenance == (
+            NodeConflict(field="auth_type", sources=("graph", "openid_config"), magnitude=1.5),
+        )
+
+    def test_cache_serializer_preserves_conflict_provenance(self) -> None:
+        info = self._info_with_one_posterior()
+        d = tenant_info_to_dict(info)
+        assert d["posterior_observations"][0]["conflict_provenance"] == [
+            {"field": "auth_type", "sources": ["graph", "openid_config"], "magnitude": 1.5}
+        ]
+
+        restored = tenant_info_from_dict(d)
+        assert restored.posterior_observations[0].conflict_provenance == (
             NodeConflict(field="auth_type", sources=("graph", "openid_config"), magnitude=1.5),
         )
 

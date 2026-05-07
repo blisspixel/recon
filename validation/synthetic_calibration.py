@@ -55,7 +55,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from recon_tool.bayesian import BayesianNetwork, infer, load_network
+from recon_tool.bayesian import BayesianNetwork, infer, load_network  # noqa: E402
 
 
 def _sample_topological(net: BayesianNetwork, rng: random.Random) -> dict[str, str]:
@@ -68,7 +68,9 @@ def _sample_topological(net: BayesianNetwork, rng: random.Random) -> dict[str, s
         cur = queue.pop(0)
         node = by_name[cur]
         if not node.parents:
-            assert node.prior is not None
+            if node.prior is None:
+                msg = f"root node {node.name!r} is missing a prior"
+                raise ValueError(msg)
             p_present = node.prior
         else:
             key = ",".join(f"{p}={out[p]}" for p in node.parents)
@@ -156,7 +158,7 @@ def main() -> int:
     args = parser.parse_args()
 
     net = load_network()
-    rng = random.Random(args.seed)
+    rng = random.Random(args.seed)  # noqa: S311 - reproducible synthetic experiment, not security-sensitive.
 
     # Per-node prediction / outcome / interval / fired-flag lists.
     # ``fired`` records whether at least one binding fired for this

@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from unittest.mock import AsyncMock, patch
 
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
 from recon_tool.models import (
+    CandidateValue,
     ConfidenceLevel,
+    MergeConflicts,
     ReconLookupError,
     SourceResult,
     TenantInfo,
@@ -133,3 +136,26 @@ class TestBatchCommand:
         assert result.exit_code == 0
         result = runner.invoke(app, ["batch", str(domain_file), "--json", "-c", "100"])
         assert result.exit_code == 0
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_fusion_json_preserves_conflict_provenance(self, mock_resolve, tmp_path):
+        conflicts = MergeConflicts(
+            auth_type=(
+                CandidateValue(value="Federated", source="graph", confidence="high"),
+                CandidateValue(value="Managed", source="openid_config", confidence="medium"),
+            ),
+        )
+        info = replace(SAMPLE_INFO, merge_conflicts=conflicts)
+        mock_resolve.return_value = (info, SAMPLE_RESULTS)
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("contoso.com\n")
+
+        result = runner.invoke(app, ["batch", str(domain_file), "--json", "--fusion"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        posterior = data[0]["posterior_observations"]
+        assert posterior
+        assert posterior[0]["conflict_provenance"] == [
+            {"field": "auth_type", "sources": ["graph", "openid_config"], "magnitude": 1.5}
+        ]

@@ -225,6 +225,14 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
                 "evidence_used": list(p.evidence_used),
                 "n_eff": p.n_eff,
                 "sparse": p.sparse,
+                "conflict_provenance": [
+                    {
+                        "field": c.field,
+                        "sources": list(c.sources),
+                        "magnitude": c.magnitude,
+                    }
+                    for c in p.conflict_provenance
+                ],
             }
             for p in info.posterior_observations
         ],
