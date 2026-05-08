@@ -57,6 +57,23 @@ docs/accuracy.md
 # stay private under the /validation/* glob.
 !/validation/v1.8-validation-summary.md
 !/validation/v1.9-validation-summary.md
+# validation/__init__.py — added in v1.9.2 to make ``validation`` a
+# proper package (previously implicit namespace) so static analysis
+# resolves intra-package imports cleanly.
+!/validation/__init__.py
+# v1.9.2 agentic UX validation harness. Dev-only tooling — fixtures use
+# Microsoft fictional brands (Contoso/Northwind) so the committed
+# transcripts and report are safe. Any local run outputs against real
+# corpora must stay under runs/ or local/ inside the harness, both of
+# which are ignored below.
+!/validation/agentic_ux/
+!/validation/agentic_ux/**
+# Re-ignore Python build/cache artifacts and any per-run output dirs
+# inside the harness even though the parent is whitelisted above.
+/validation/agentic_ux/**/__pycache__/
+/validation/agentic_ux/runs/
+/validation/agentic_ux/local/
+!/validation/v1.9.2-agentic-ux.md
 # User-curated private corpus + run outputs — never commit.
 /validation/corpus-private/
 /validation/runs-private/

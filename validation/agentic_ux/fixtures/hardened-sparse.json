@@ -1,0 +1,147 @@
+{
+  "tenant_id": null,
+  "display_name": null,
+  "default_domain": "northwindtraders.com",
+  "queried_domain": "northwindtraders.com",
+  "provider": "Microsoft 365 (primary)",
+  "confidence": "low",
+  "evidence_confidence": "low",
+  "inference_confidence": "low",
+  "region": "WW",
+  "auth_type": "Unknown",
+  "dmarc_policy": null,
+  "domain_count": 1,
+  "sources": [
+    "user_realm"
+  ],
+  "services": [
+    "Microsoft 365"
+  ],
+  "slugs": [
+    "microsoft365"
+  ],
+  "insights": [
+    "Single weak indicator: user-realm endpoint returned a Federated tenant marker. No DNS, MX, TXT, or CT corroboration."
+  ],
+  "tenant_domains": [
+    "northwindtraders.com"
+  ],
+  "related_domains": [],
+  "ct_subdomain_count": 0,
+  "ct_provider_used": "crtsh",
+  "ct_cache_age_days": 0,
+  "cloud_instance": null,
+  "msgraph_host": null,
+  "tenant_region_sub_scope": null,
+  "google_auth_type": null,
+  "google_idp_name": null,
+  "primary_email_provider": "Microsoft 365",
+  "likely_primary_email_provider": "Microsoft 365",
+  "email_gateway": null,
+  "email_security_score": 0,
+  "dmarc_pct": null,
+  "mta_sts_mode": null,
+  "bimi_identity": null,
+  "site_verification_tokens": [],
+  "lexical_observations": [],
+  "surface_attributions": [],
+  "fingerprint_metadata": {},
+  "infrastructure_clusters": {
+    "clusters": [],
+    "total_nodes": 0,
+    "edge_count": 0,
+    "modularity": 0.0,
+    "method": "louvain",
+    "reason": null
+  },
+  "chain_motifs": [],
+  "cert_summary": {
+    "issuer_counts": {},
+    "wildcard_san_count": 0,
+    "wildcard_sibling_clusters": [],
+    "deployment_bursts": [],
+    "earliest": null,
+    "latest": null
+  },
+  "evidence": [
+    {
+      "source": "user_realm",
+      "domain": "northwindtraders.com",
+      "fact": "NameSpaceType=Federated",
+      "weight": 0.4
+    }
+  ],
+  "evidence_conflicts": [],
+  "detection_scores": [],
+  "degraded_sources": [
+    {
+      "source": "dns_records",
+      "reason": "no MX, no TXT, no SPF, no DMARC observed at apex"
+    },
+    {
+      "source": "oidc_discovery",
+      "reason": "no openid-configuration discovered at common endpoints"
+    },
+    {
+      "source": "crtsh",
+      "reason": "no CT entries returned; possible private CA or wildcard-only deployment"
+    }
+  ],
+  "partial": true,
+  "posterior_observations": [
+    {
+      "name": "m365_tenant",
+      "description": "Domain has a Microsoft 365 / Entra tenant.",
+      "posterior": 0.6184,
+      "interval_low": 0.2103,
+      "interval_high": 0.9461,
+      "evidence_used": [
+        "slug:microsoft365"
+      ],
+      "n_eff": 1.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "google_workspace_tenant",
+      "description": "Domain has a Google Workspace tenant.",
+      "posterior": 0.2852,
+      "interval_low": 0.0,
+      "interval_high": 0.5745,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "federated_identity",
+      "description": "Domain uses federated identity (e.g. ADFS, Okta).",
+      "posterior": 0.5102,
+      "interval_low": 0.1004,
+      "interval_high": 0.8927,
+      "evidence_used": [
+        "user_realm:Federated"
+      ],
+      "n_eff": 1.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "email_security_strong",
+      "description": "Domain enforces strong email-security signals (M365/GWS + gateway).",
+      "posterior": 0.3147,
+      "interval_low": 0.0,
+      "interval_high": 0.7022,
+      "evidence_used": [],
+      "n_eff": 0.0,
+      "sparse": true,
+      "conflict_provenance": []
+    }
+  ],
+  "slug_confidences": [
+    [
+      "microsoft365",
+      0.6184
+    ]
+  ]
+}

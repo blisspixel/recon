@@ -5,6 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.2] - 2026-05-08
+
+**Agentic UX validation harness — first v1.9.x bridge milestone toward
+v2.0.** Operators are not the only persona that reads recon's `--fusion`
+output: the MCP server is a primary surface, and an AI agent reading
+recon JSON is itself a production user. v1.9.2 ships a reproducible
+harness that drives three persona prompts (security analyst,
+due-diligence researcher, ops engineer) across two fixtures
+(`contoso.com` dense lookup and a hand-stripped `northwindtraders.com`
+hardened-sparse variant) under both `--fusion`-on and `--fusion`-off
+arms — twelve sessions per run — and scores the transcripts against
+the five-check rubric defined in `docs/roadmap.md`. The shipped
+artifact (`validation/v1.9.2-agentic-ux.md`) is the first calibration
+input for the v2.0 schema-lock disposition decisions; subsequent runs
+against other providers append to that record.
+
+### Added
+
+- **`validation/agentic_ux/` harness.** `providers.py` is a
+  multi-provider chat adapter (Anthropic / OpenAI / xAI Grok) with
+  optional-import SDK loading; `score.py` is the binary rubric
+  scorer (regex/keyword scans, no LLM-as-judge); `run.py` is the
+  CLI entry point (`python -m validation.agentic_ux.run`) that
+  orchestrates the 3 × 2 × 2 matrix, totals realized cost from API
+  responses, and writes a self-contained markdown report. The
+  module is decoupled from `recon_tool` so the harness can run
+  against captured recon JSON from any version.
+- **Persona scaffolds.** `personas/{analyst,researcher,ops}.md` —
+  none mention `posterior_observations`, `sparse=true`,
+  `--explain-dag`, or credible intervals; the rubric measures
+  whether the agent finds those affordances unprompted.
+- **Committed fixtures.** `fixtures/contoso-dense.json` (full
+  `recon contoso.com --json --fusion` output, Microsoft fictional
+  brand) and `fixtures/hardened-sparse.json` (hand-stripped to one
+  slug for `northwindtraders.com`, also Microsoft fictional). Real
+  apexes never get committed, per the no-real-company-data
+  invariant in `validation/README.md`.
+- **`validation/v1.9.2-agentic-ux.md`** — the first canonical run
+  artifact (Anthropic Claude Sonnet 4.6). Subsequent runs append.
+
+### Changed
+
+- **`docs/roadmap.md`** — bridge milestones renumbered. v1.9.1 was
+  consumed by the conflict-provenance optional feature, so the
+  bridge sequence now reads v1.9.2 (this release) → v1.9.3
+  (`email_security_strong` topology surgery) → v1.9.4
+  (hardened-adversarial validation) → v1.9.5 (per-node stability
+  criteria) → v1.9.6 (CPT-change discipline) → v1.9.7
+  (metadata-coverage gate). Cross-references and the v2.0
+  pre-conditions table updated to match. The introductory
+  paragraph of the bridge section now explains the renumbering
+  explicitly.
+- **`validation/__init__.py`** — added so `validation` is a proper
+  package rather than an implicit namespace package. Defeats
+  pyright import-resolution flakiness without changing the
+  runtime contract (existing `python -m validation.<name>`
+  invocations are unchanged).
+
+### Tests
+
+- **`tests/test_agentic_ux.py`** — 26 new tests covering the
+  provider-adapter shape with mocked SDK clients (no network),
+  rubric scoring on synthetic transcripts (positive and negative
+  cases for every check), runner orchestration (12-session matrix,
+  fusion-stripping correctness), and the report writer (required
+  sections present, cost rendering correct).
+
+Total: 2012 tests passing.
+
+### Roadmap
+
+- Closes the **v1.9.2 — UX validation via agentic QA** bridge
+  milestone toward v2.0. Findings from the first canonical run map
+  directly to the v2.0 schema-lock disposition decisions in
+  `docs/roadmap.md`.
+
 ## [1.9.1] - 2026-05-05
 
 **Conflict provenance on `NodePosterior`.** First v1.9.x optional-feature
