@@ -1,0 +1,551 @@
+{
+  "tenant_id": "6babcaad-604b-40ac-a9d7-9fd97c0b779f",
+  "display_name": "Contoso, Ltd",
+  "default_domain": "contoso.com",
+  "queried_domain": "contoso.com",
+  "provider": "Microsoft 365 (primary)",
+  "confidence": "high",
+  "evidence_confidence": "high",
+  "inference_confidence": "high",
+  "region": "NA",
+  "auth_type": "Managed",
+  "dmarc_policy": "reject",
+  "domain_count": 1,
+  "sources": [
+    "oidc_discovery",
+    "user_realm",
+    "dns_records"
+  ],
+  "services": [
+    "ADFS SSO hub",
+    "Agari (DMARC)",
+    "Azure DNS",
+    "DMARC",
+    "Exchange Server (on-prem / hybrid)",
+    "Microsoft 365",
+    "SPF: strict (-all)"
+  ],
+  "slugs": [
+    "adfs-sso-hub",
+    "agari",
+    "azure-dns",
+    "exchange-onprem",
+    "microsoft365"
+  ],
+  "insights": [
+    "Cloud-managed identity indicators (Entra ID native)",
+    "Email security: DMARC reject, SPF strict",
+    "No DKIM at common selectors (custom selectors possible)",
+    "DMARC Governance Investment: Agari"
+  ],
+  "tenant_domains": [
+    "contoso.com"
+  ],
+  "related_domains": [
+    "adfs.contoso.com",
+    "april7cert.sovnext.contoso.com",
+    "arcdirectconnect.adfs.contoso.com",
+    "auditnrt.protection.sovnext.contoso.com",
+    "authdal.protection.sovnext.contoso.com",
+    "authgls.protection.sovnext.contoso.com",
+    "autodiscover.contoso.com",
+    "cafecacheconvergence.sovnext.contoso.com",
+    "cafeconfigmgmt.sovnext.contoso.com",
+    "cafeobjectstoremetadata.sovnext.contoso.com",
+    "cafetlssessionresumption.prod.sovnext.contoso.com",
+    "cert.ccs.login.microsoftonline.sovnext.contoso.com",
+    "cosmos.protection.sovnext.contoso.com",
+    "dc.trs10.sovnext.contoso.com",
+    "eop-gas.protection.sovnext.contoso.com",
+    "eop-gls.protection.sovnext.contoso.com",
+    "eop-mailflow.protection.sovnext.contoso.com",
+    "eopazuredi.datainsights.sovnext.contoso.com",
+    "fp.measure.sovnext.contoso.com",
+    "informationprotectionkeyvault.protection.sovnext.contoso.com",
+    "login.contoso.com",
+    "mafe-mgt.mafe.exo.sovnext.contoso.com",
+    "mafe.exo.sovnext.contoso.com",
+    "may3.sovnextcut.contoso.com",
+    "may4.sovnextcut.contoso.com",
+    "mip.eop.auth.exo.sovnext.contoso.com",
+    "owa.contoso.com",
+    "public.testlab.contoso.com",
+    "routeresolutionclient.sovnext.contoso.com",
+    "sbstauditclient.auditing.exo.sovnext.contoso.com",
+    "substrate.svc.exo.sovnext.contoso.com",
+    "webdns.exo.sovnext.contoso.com"
+  ],
+  "partial": false,
+  "degraded_sources": [
+    "crt.sh"
+  ],
+  "google_auth_type": null,
+  "google_idp_name": null,
+  "mta_sts_mode": null,
+  "site_verification_tokens": [],
+  "primary_email_provider": "Microsoft 365",
+  "likely_primary_email_provider": null,
+  "email_gateway": null,
+  "dmarc_pct": 100,
+  "ct_provider_used": "certspotter",
+  "ct_subdomain_count": 28,
+  "ct_cache_age_days": null,
+  "slug_confidences": [
+    [
+      "microsoft365",
+      0.9615
+    ],
+    [
+      "agari",
+      0.6923
+    ],
+    [
+      "akamai",
+      0.6667
+    ],
+    [
+      "adfs-sso-hub",
+      0.6364
+    ],
+    [
+      "exchange-onprem",
+      0.6364
+    ]
+  ],
+  "posterior_observations": [
+    {
+      "name": "m365_tenant",
+      "description": "Domain has a Microsoft 365 / Entra tenant.",
+      "posterior": 0.9526,
+      "interval_low": 0.8309,
+      "interval_high": 1.0,
+      "evidence_used": [
+        "slug:microsoft365"
+      ],
+      "n_eff": 5.0,
+      "sparse": false,
+      "conflict_provenance": []
+    },
+    {
+      "name": "google_workspace_tenant",
+      "description": "Domain has a Google Workspace tenant.",
+      "posterior": 0.2852,
+      "interval_low": 0.0,
+      "interval_high": 0.5745,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "federated_identity",
+      "description": "Domain uses an external IdP for SSO (Okta, Auth0, Ping, etc.).",
+      "posterior": 0.4325,
+      "interval_low": 0.115,
+      "interval_high": 0.7499,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "okta_idp",
+      "description": "Identity provider is Okta.",
+      "posterior": 0.1326,
+      "interval_low": 0.0,
+      "interval_high": 0.3499,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "email_gateway_present",
+      "description": "Third-party email security gateway in front of MX.",
+      "posterior": 0.2585,
+      "interval_low": 0.0,
+      "interval_high": 0.5391,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "email_security_strong",
+      "description": "DMARC enforcement + DKIM + strict SPF observed (composite).",
+      "posterior": 0.9477,
+      "interval_low": 0.82,
+      "interval_high": 1.0,
+      "evidence_used": [
+        "signal:dmarc_reject"
+      ],
+      "n_eff": 5.0,
+      "sparse": false,
+      "conflict_provenance": []
+    },
+    {
+      "name": "cdn_fronting",
+      "description": "A CDN or edge proxy fronts the apex/origin.",
+      "posterior": 0.45,
+      "interval_low": 0.1312,
+      "interval_high": 0.7688,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "aws_hosting",
+      "description": "AWS-hosted infrastructure observed in chains or fingerprints.",
+      "posterior": 0.4,
+      "interval_low": 0.0861,
+      "interval_high": 0.7139,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    }
+  ],
+  "email_security_score": 2,
+  "cloud_instance": "microsoftonline.com",
+  "tenant_region_sub_scope": null,
+  "msgraph_host": "graph.microsoft.com",
+  "lexical_observations": [],
+  "cert_summary": {
+    "cert_count": 100,
+    "issuer_diversity": 1,
+    "issuance_velocity": 0,
+    "newest_cert_age_days": 112,
+    "oldest_cert_age_days": 359,
+    "top_issuers": [
+      "Microsoft"
+    ],
+    "wildcard_sibling_clusters": [
+      [
+        "attachments.outlook.sovnext2-usercontent.us",
+        "autodiscover-s.outlook.sovnext2.us",
+        "mafe.exo.sovnext.contoso.com",
+        "outlook.sovnext2.us",
+        "smtp.outlook.sovnext2.us",
+        "substrate.svc.sovnext2-core.us",
+        "substrate.svc.sovnext2.us"
+      ]
+    ],
+    "deployment_bursts": [
+      {
+        "window_start": "2025-10-17T10:34:21+00:00",
+        "window_end": "2025-10-17T10:34:21+00:00",
+        "span_seconds": 0,
+        "names": [
+          "attachments.outlook.sovnext2-usercontent.us",
+          "autodiscover-s.outlook.sovnext2.us",
+          "mafe.exo.sovnext.contoso.com",
+          "outlook.sovnext2.us",
+          "smtp.outlook.sovnext2.us",
+          "substrate.svc.sovnext2-core.us",
+          "substrate.svc.sovnext2.us"
+        ]
+      },
+      {
+        "window_start": "2025-12-10T22:10:44+00:00",
+        "window_end": "2025-12-10T22:10:44+00:00",
+        "span_seconds": 0,
+        "names": [
+          "alt.space",
+          "altspacevr.com",
+          "altvr.com",
+          "altvr.net",
+          "ambassadors.microsoft.com",
+          "answerdesk.microsoft.com",
+          "artofsciencepodcast.com",
+          "au.luis.ai",
+          "avouslatech.microsoft.fr",
+          "azurecontainerapps-test.io",
+          "azuremaps.com",
+          "azureplayfab.com",
+          "bingads.com",
+          "blog.edge.ms",
+          "blog.flow.microsoft.com",
+          "blog.powerautomate.com",
+          "bugs.edge.ms",
+          "ccsmhub.microsoft.com",
+          "ceoconnections.microsoft.com",
+          "cfsdeployment.crm.dynamics.com",
+          "ch9.ms",
+          "changelog.edge.ms",
+          "cla.azure.com",
+          "clockworkrevolution.game",
+          "cloudappsecuritygov.com"
+        ]
+      },
+      {
+        "window_start": "2025-12-28T14:33:54+00:00",
+        "window_end": "2025-12-28T14:33:54+00:00",
+        "span_seconds": 0,
+        "names": [
+          "attachments.outlook.sovnext2-usercontent.us",
+          "autodiscover-s.outlook.sovnext2.us",
+          "mafe.exo.sovnext.contoso.com",
+          "outlook.sovnext2.us",
+          "smtp.outlook.sovnext2.us",
+          "substrate.svc.sovnext2-core.us",
+          "substrate.svc.sovnext2.us"
+        ]
+      },
+      {
+        "window_start": "2026-01-14T07:45:08+00:00",
+        "window_end": "2026-01-14T07:45:48+00:00",
+        "span_seconds": 40,
+        "names": [
+          "auditnrt.protection.sovnext.contoso.com",
+          "authdal.protection.sovnext.contoso.com",
+          "authgls.protection.sovnext.contoso.com"
+        ]
+      },
+      {
+        "window_start": "2026-01-14T07:54:24+00:00",
+        "window_end": "2026-01-14T07:55:11+00:00",
+        "span_seconds": 47,
+        "names": [
+          "cafeobjectstoremetadata.sovnext.contoso.com",
+          "cafetlssessionresumption.prod.sovnext.contoso.com",
+          "substrate.svc.exo.sovnext.contoso.com"
+        ]
+      },
+      {
+        "window_start": "2026-01-14T08:04:13+00:00",
+        "window_end": "2026-01-14T08:04:49+00:00",
+        "span_seconds": 36,
+        "names": [
+          "eop-gas.protection.sovnext.contoso.com",
+          "eop-gls.protection.sovnext.contoso.com",
+          "eop-mailflow.protection.sovnext.contoso.com"
+        ]
+      },
+      {
+        "window_start": "2026-01-14T08:07:09+00:00",
+        "window_end": "2026-01-14T08:07:09+00:00",
+        "span_seconds": 0,
+        "names": [
+          "alt.space",
+          "altspacevr.com",
+          "altvr.com",
+          "altvr.net",
+          "ambassadors.microsoft.com",
+          "answerdesk.microsoft.com",
+          "artofsciencepodcast.com",
+          "au.luis.ai",
+          "avouslatech.microsoft.fr",
+          "azurecontainerapps-test.io",
+          "azuremaps.com",
+          "azureplayfab.com",
+          "bingads.com",
+          "blog.edge.ms",
+          "blog.flow.microsoft.com",
+          "blog.powerautomate.com",
+          "bugs.edge.ms",
+          "ccsmhub.microsoft.com",
+          "ceoconnections.microsoft.com",
+          "cfsdeployment.crm.dynamics.com",
+          "ch9.ms",
+          "changelog.edge.ms",
+          "cla.azure.com",
+          "clockworkrevolution.game",
+          "cloudappsecuritygov.com"
+        ]
+      },
+      {
+        "window_start": "2026-01-14T10:48:00+00:00",
+        "window_end": "2026-01-14T10:48:44+00:00",
+        "span_seconds": 44,
+        "names": [
+          "auditnrt.protection.sovnext.contoso.com",
+          "authdal.protection.sovnext.contoso.com",
+          "authgls.protection.sovnext.contoso.com"
+        ]
+      }
+    ]
+  },
+  "bimi_identity": null,
+  "evidence": [
+    {
+      "source_type": "HTTP",
+      "raw_value": "tenant_id=6babcaad-604b-40ac-a9d7-9fd97c0b779f",
+      "rule_name": "OIDC Discovery",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "HTTP",
+      "raw_value": "FederationBrandName=Contoso, Ltd",
+      "rule_name": "GetUserRealm",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "HTTP",
+      "raw_value": "NameSpaceType=Managed",
+      "rule_name": "GetUserRealm",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "MX",
+      "raw_value": "10 contoso-com.mail.protection.outlook.com",
+      "rule_name": "Microsoft 365",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "TXT",
+      "raw_value": "MS=ms47806392",
+      "rule_name": "Microsoft 365",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "TXT",
+      "raw_value": "ms-domain-verification=2e80f95d-a89f-4e56-b4a6-d0b1ef123c46",
+      "rule_name": "Microsoft 365",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "TXT",
+      "raw_value": "MS=ms67787810",
+      "rule_name": "Microsoft 365",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "TXT",
+      "raw_value": "MS=ms89099513",
+      "rule_name": "Microsoft 365",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "DMARC_RUA",
+      "raw_value": "rua=mailto:d@rua.agari.com",
+      "rule_name": "Agari (DMARC)",
+      "slug": "agari"
+    },
+    {
+      "source_type": "A",
+      "raw_value": "adfs.contoso.com",
+      "rule_name": "ADFS SSO hub",
+      "slug": "adfs-sso-hub"
+    },
+    {
+      "source_type": "A",
+      "raw_value": "autodiscover.contoso.com, owa.contoso.com",
+      "rule_name": "Exchange Server (on-prem / hybrid)",
+      "slug": "exchange-onprem"
+    },
+    {
+      "source_type": "CNAME",
+      "raw_value": "login.contoso.com: vanity.cpim.aadg.windows.net -> vanity.prda.aadg.msidentity.com -> www.tm.a.prd.aadg.akadns.net -> www.next.a.prd.aadg.akadns.net -> wst-lb.next.a.prd.aadg.akadns.net",
+      "rule_name": "Akamai",
+      "slug": "akamai"
+    }
+  ],
+  "detection_scores": {
+    "adfs-sso-hub": "low",
+    "agari": "low",
+    "akamai": "low",
+    "exchange-onprem": "low",
+    "microsoft365": "high"
+  },
+  "evidence_conflicts": [],
+  "chain_motifs": [],
+  "infrastructure_clusters": {
+    "algorithm": "louvain",
+    "modularity": 0.02317562126657868,
+    "node_count": 67,
+    "edge_count": 1791,
+    "clusters": [
+      {
+        "cluster_id": 0,
+        "size": 50,
+        "members": [
+          "alt.space",
+          "altspacevr.com",
+          "altvr.com",
+          "altvr.net",
+          "ambassadors.microsoft.com",
+          "answerdesk.microsoft.com",
+          "artofsciencepodcast.com",
+          "au.luis.ai",
+          "avouslatech.microsoft.fr",
+          "azurecontainerapps-test.io",
+          "azuremaps.com",
+          "azureplayfab.com",
+          "bingads.com",
+          "blog.edge.ms",
+          "blog.flow.microsoft.com",
+          "blog.powerautomate.com",
+          "bugs.edge.ms",
+          "ccsmhub.microsoft.com",
+          "ceoconnections.microsoft.com",
+          "cfsdeployment.crm.dynamics.com",
+          "ch9.ms",
+          "changelog.edge.ms",
+          "cla.azure.com",
+          "clockworkrevolution.game",
+          "cloudappsecuritygov.com",
+          "club.microsoft.fr",
+          "community-staging.flow.microsoft.com",
+          "community.flow.microsoft.com",
+          "community.powerautomate.com",
+          "contoso.com",
+          "copilotstudio.com",
+          "csharp.net",
+          "customsearch.ai",
+          "dev.windows.com",
+          "developer.windows.com",
+          "dfofficehosted.com",
+          "dfofficehosted.net",
+          "dfofficehosted.org",
+          "diagnostics.outlook.com",
+          "docs.com",
+          "docs.cyclecomputing.com",
+          "docs.flow.microsoft.com",
+          "docs.microsoftcommunitytraining.com",
+          "docs.ms",
+          "dynamics365.de",
+          "eduinsights.ms",
+          "eu.luis.ai",
+          "excel.microsoft",
+          "forums.towerborn.com",
+          "hitrefresh.com"
+        ],
+        "shared_cert_count": 2450,
+        "dominant_issuer": "Microsoft"
+      },
+      {
+        "cluster_id": 1,
+        "size": 7,
+        "members": [
+          "attachments.outlook.sovnext2-usercontent.us",
+          "autodiscover-s.outlook.sovnext2.us",
+          "mafe.exo.sovnext.contoso.com",
+          "outlook.sovnext2.us",
+          "smtp.outlook.sovnext2.us",
+          "substrate.svc.sovnext2-core.us",
+          "substrate.svc.sovnext2.us"
+        ],
+        "shared_cert_count": 42,
+        "dominant_issuer": "Microsoft"
+      }
+    ]
+  },
+  "fingerprint_metadata": {
+    "microsoft365": {
+      "product_family": "Microsoft 365",
+      "parent_vendor": "Microsoft",
+      "bimi_org": null
+    }
+  },
+  "surface_attributions": [
+    {
+      "subdomain": "login.contoso.com",
+      "primary_slug": "akamai",
+      "primary_name": "Akamai",
+      "primary_tier": "infrastructure",
+      "infra_slug": null,
+      "infra_name": null
+    }
+  ]
+}

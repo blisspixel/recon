@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.1** (probabilistic fusion layer, EXPERIMENTAL).
+Current release: **v1.9.2** (agentic UX validation harness; v1.9 fusion layer remains EXPERIMENTAL).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
@@ -322,11 +322,16 @@ sparse-evidence cases without collapsing on dense-evidence ones.
 
 v1.9.0 shipped the third correlation layer behind `--fusion` with
 EXPERIMENTAL on every new surface. The bridge to v2.0 is a series
-of small, focused patch releases — `v1.9.1`, `v1.9.2`, … — each
-clearing exactly one milestone. Patches ship when work completes,
-not on a fixed schedule. We are not allergic to many patch
-releases; we are allergic to bundled releases that combine
-unrelated work.
+of small, focused patch releases — each clearing exactly one
+milestone. Patches ship when work completes, not on a fixed
+schedule. We are not allergic to many patch releases; we are
+allergic to bundled releases that combine unrelated work.
+
+The bridge sequence starts at **v1.9.2**: `v1.9.1` was used for the
+optional "conflict provenance on `NodePosterior`" feature (listed
+in the v1.9.x optional additions below) before the bridge plan
+stabilized. Bridge milestones are numbered in delivery order from
+there, so the six patches below cover **v1.9.2 through v1.9.7**.
 
 v2.0 itself is reserved for "polished and excellent everywhere" —
 the schema lock, the doc polish, the BIMI VMC promotion. v2.0 is
@@ -339,7 +344,7 @@ first**, so schema-affecting work is informed by what operators
 actually use rather than the other way around. Each milestone
 maps to one patch release.
 
-#### v1.9.1 — UX validation via agentic QA (the AI-agent persona is real)
+#### v1.9.2 — UX validation via agentic QA (the AI-agent persona is real)
 
 We have not validated that operators benefit from credible
 intervals. The entire calibration argument is academic if no one
@@ -350,7 +355,7 @@ unproven.
 
 The original framing called for three human operator interviews
 (SOC analyst, security architect, due-diligence reviewer). We
-keep that as a future option, but the **primary v1.9.1
+keep that as a future option, but the **primary v1.9.2
 methodology is agentic QA** — one of recon's main user personas
 *is* the AI agent (the entire MCP integration story), so
 simulating that persona with a script gives us:
@@ -391,7 +396,7 @@ simulating that persona with a script gives us:
   - *Did the agent reach a different conclusion than it would
     have without `--fusion`?* (re-run with `--fusion` off and
     diff)
-- **Documented in `validation/v1.9.1-agentic-ux.md`.** The
+- **Documented in `validation/v1.9.2-agentic-ux.md`.** The
   prompts, transcripts, and rubric all public-reproducible.
   Per-persona summary table makes the result skimmable.
 - **Failure modes that change v2.0.** If the agent ignores the
@@ -410,7 +415,7 @@ surfaces ambiguous results, or if we want a non-agent persona
 interview plan is on the shelf. But agentic QA is genuine
 validation for the agent persona, not a placeholder for it.
 
-#### v1.9.2 — Resolve the `email_security_strong` definitional gap
+#### v1.9.3 — Resolve the `email_security_strong` definitional gap
 
 This is *topology surgery*, not parameter tuning. The v1.9.0
 spot-check showed 52.6% agreement on this single node; all other
@@ -457,7 +462,7 @@ model improvement. The rigorous-but-open-ended alternative — audit
 every node for definitional clarity in one pass — is in
 [Backlog (after v2.0)](#backlog-after-v20) below.
 
-#### v1.9.3 — Hardened-adversarial behavior validation
+#### v1.9.4 — Hardened-adversarial behavior validation
 
 The v1.9.0 corpus skewed enterprise. The asymmetric-likelihood
 design (§4.8.3) was justified specifically for hardened targets,
@@ -481,7 +486,7 @@ which v1.9.0 did not exercise. This milestone validates the
   sparse on this pattern"). Honest framing of where the public
   channel really cannot resolve uncertainty.
 
-#### v1.9.4 — Per-node stability criteria (decide, don't ship the field)
+#### v1.9.5 — Per-node stability criteria (decide, don't ship the field)
 
 The current EXPERIMENTAL label is atomic — the whole `--fusion`
 layer carries it. That's over-broad. `m365_tenant`, `cdn_fronting`,
@@ -535,7 +540,7 @@ qualify as `stable`.
   value. v2.0 ships without the field; the schema disposition
   table accounts for nodes by name, not by per-node label.
 
-#### v1.9.5 — CPT-change discipline (concept, not parameter)
+#### v1.9.6 — CPT-change discipline (concept, not parameter)
 
 Empirical Bayes — deriving CPT parameters from corpus statistics —
 crosses the project's "no learned weights" invariant. We almost
@@ -548,7 +553,7 @@ target number but in the framing.
   human's job is to question the *topology* — is this node
   asking the right question? — not to minimize the disagreement
   number. If the disagreement is high, the *first* hypothesis is
-  that the model is conceptually wrong (v1.9.2's
+  that the model is conceptually wrong (v1.9.3's
   `email_security_strong` story). Only after the topology is
   clean do CPT numbers get re-examined, and only with explicit
   reasoning written in the YAML.
@@ -567,7 +572,7 @@ target number but in the framing.
   game the comment requirement without measuring whether the
   concept-questioning actually happened.
 
-#### v1.9.6 — Metadata-coverage gate (presence, not coverage)
+#### v1.9.7 — Metadata-coverage gate (presence, not coverage)
 
 The v1.9.0 advisory gate measures description coverage as a
 percentage. Forcing 70% coverage means writing ~190 description
@@ -592,22 +597,22 @@ Each v1.9.x patch ships when *that one milestone* is complete.
 This is intentional:
 
 - **One milestone per patch** keeps the diff small and the changelog
-  honest. A user reading "v1.9.3 — hardened-adversarial validation"
+  honest. A user reading "v1.9.4 — hardened-adversarial validation"
   knows exactly what shipped and what to test.
 - **No bundling.** Two milestones completing on the same day is
   fine; they still ship as separate patches with separate tags.
   Bundled releases hide work and make rollback harder.
-- **Numeric order IS delivery order.** v1.9.1 ships before
-  v1.9.2; v1.9.2 before v1.9.3; and so on. The dependency chain
-  is the point of the planning: UX validation (v1.9.1) informs
-  topology surgery (v1.9.2), which informs hardened-adversarial
-  testing (v1.9.3), which informs the per-node stability
-  decisions (v1.9.4), which informs CPT-change discipline
-  (v1.9.5), which informs the metadata gate (v1.9.6). Skipping
+- **Numeric order IS delivery order.** v1.9.2 ships before
+  v1.9.3; v1.9.3 before v1.9.4; and so on. The dependency chain
+  is the point of the planning: UX validation (v1.9.2) informs
+  topology surgery (v1.9.3), which informs hardened-adversarial
+  testing (v1.9.4), which informs the per-node stability
+  decisions (v1.9.5), which informs CPT-change discipline
+  (v1.9.6), which informs the metadata gate (v1.9.7). Skipping
   ahead because a later patch "feels easier" means we're
   guessing at the dependency we just decided to think about.
 - **Bug-fix patches use the next available number.** A regression
-  fix that lands between v1.9.4 and v1.9.5 ships as `v1.9.4.1`
+  fix that lands between v1.9.5 and v1.9.6 ships as `v1.9.5.1`
   or claims the next minor number — whichever the project's
   versioning strategy prefers at that moment. Bug fixes do not
   block bridge milestones, and bridge milestones do not block
@@ -622,7 +627,7 @@ explicitly `deprecated`.
 **v2.0 ships with zero EXPERIMENTAL labels anywhere.** This is a
 hard rule, not an aspiration:
 
-- Nodes that have cleared the v1.9.4 stability criteria → ship in
+- Nodes that have cleared the v1.9.5 stability criteria → ship in
   v2.0 as `stable`.
 - Nodes that have not cleared the criteria by v2.0 release time →
   **removed from `bayesian_network.yaml` for v2.0**, not shipped
@@ -656,7 +661,7 @@ table once it has been in the wild long enough to validate.
   only; no hidden network. Optional `include_fusion` flag
   surfaces v1.9 posterior shifts alongside the deterministic
   diff. The first first-class delta surface for agents.
-- **Catalog metadata richness pass** — beyond the v1.9.6 presence
+- **Catalog metadata richness pass** — beyond the v1.9.7 presence
   gate, raise description coverage to ≥ 80%, reference coverage
   to ≥ 25%, document deliberate non-default weights per
   fingerprint. Pure data work, no schema change.
@@ -688,7 +693,7 @@ table once it has been in the wild long enough to validate.
   intervals without globally widening every node. Default 1.0;
   ≤ 1.0 widens. Replaces the current uniform formula with
   `n_eff = max(_MIN_N_EFF, multiplier * (evidence_count -
-  conflict_penalty))`. Falls naturally out of v1.9.3
+  conflict_penalty))`. Falls naturally out of v1.9.4
   hardened-adversarial findings + the existing sensitivity test.
 - **Top-3 influential edges in `--explain-dag`** — extend
   `render_dag_text` to identify the three highest-leverage
@@ -773,18 +778,18 @@ operation.
 
 **Pre-conditions** (the six bridge patches above must have shipped):
 
-1. v1.9.1 — Operator UX validation with at least three role-distinct
-   interviews documented in `validation/v2.0-ux-notes.md`.
-2. v1.9.2 — `email_security_strong` definitional gap resolved.
-3. v1.9.3 — Hardened-adversarial behavior validated.
-4. v1.9.4 — Per-node `stability` field shipped and exercised.
-5. v1.9.5 — CPT-change discipline documented in `CONTRIBUTING.md`
+1. v1.9.2 — Operator UX validation via agentic QA documented in
+   `validation/v1.9.2-agentic-ux.md`.
+2. v1.9.3 — `email_security_strong` definitional gap resolved.
+3. v1.9.4 — Hardened-adversarial behavior validated.
+4. v1.9.5 — Per-node `stability` field shipped and exercised.
+5. v1.9.6 — CPT-change discipline documented in `CONTRIBUTING.md`
    and enforced in review.
-6. v1.9.6 — Metadata gate flipped from advisory to presence-
+6. v1.9.7 — Metadata gate flipped from advisory to presence-
    enforcing.
 
-Patches ship in numeric order as work completes — v1.9.1 first,
-then v1.9.2, etc. The numbering reflects the dependency chain
+Patches ship in numeric order as work completes — v1.9.2 first,
+then v1.9.3, etc. The numbering reflects the dependency chain
 that the planning exercise produced; reordering would mean
 discarding the reason the milestones were sequenced this way.
 v2.0 ships when all six are in.
@@ -805,8 +810,8 @@ v2.0 ships when all six are in.
 | `--explain-dag` flag | Drop EXPERIMENTAL label. |
 | MCP `get_posteriors` / `explain_dag` tools | Drop EXPERIMENTAL label. |
 | `bayesian_network.yaml` topology | Lock at v2.0; further changes require schema-version bump. |
-| Bayesian-network nodes that clear v1.9.4 criteria | Ship in v2.0. |
-| Bayesian-network nodes that do NOT clear v1.9.4 criteria | Remove via deprecation: a v1.9.x patch marks the node deprecated in CHANGELOG and emits a one-time stderr warning when it's used; the next patch removes it from `bayesian_network.yaml`. v2.0 ships without the node. **No node goes from `experimental` directly to "removed" without a deprecated stop in between.** |
+| Bayesian-network nodes that clear v1.9.5 criteria | Ship in v2.0. |
+| Bayesian-network nodes that do NOT clear v1.9.5 criteria | Remove via deprecation: a v1.9.x patch marks the node deprecated in CHANGELOG and emits a one-time stderr warning when it's used; the next patch removes it from `bayesian_network.yaml`. v2.0 ships without the node. **No node goes from `experimental` directly to "removed" without a deprecated stop in between.** |
 | Per-node `stability` field | Not shipped at v2.0. Reserved for v2.1+ when a new node first needs the `experimental` value. |
 
 **v2.0 itself is purely the lock-and-polish ceremony — two items:**
@@ -843,7 +848,7 @@ v2.0 ships when all six are in.
     APIs, GeoIP / ASN databases) with one-sentence reasons.
     Defensive, adaptive, and coding-discipline posture as one
     artifact.
-  - **Failure-mode catalog** carried forward from v1.9.3 with
+  - **Failure-mode catalog** carried forward from v1.9.4 with
     additional examples accumulated from corpus runs.
   - **Engineering quality posture** carried forward from this
     roadmap, edited for the polished-doc voice.
@@ -982,7 +987,7 @@ useful — not preemptively.
   secondaries that are wrappers, not new capabilities. Anything
   more is scope creep and breaks the v2.0 schema-lock contract
   we just wrote.
-- Shipping before v2.0 schema lock + v1.9.1 agentic QA prove
+- Shipping before v2.0 schema lock + v1.9.2 agentic QA prove
   agents use the existing posteriors. v2.1 optimizes a surface;
   if the surface isn't useful, optimization is wasted.
 
@@ -1019,7 +1024,7 @@ articulate the v2.2 path here so the v2.1 friction has a known
 answer rather than an open question.
 
 This sketch is **not committed.** The actual v2.1 plan gets
-written after v2.0 ships and the agentic-QA findings from v1.9.1
+written after v2.0 ships and the agentic-QA findings from v1.9.2
 inform whether the mining loop is what operators actually want or
 whether some other composability primitive is more valuable.
 
@@ -1049,7 +1054,7 @@ discipline.
 - **Operator-tuned likelihoods as committed data files.** Allow
   operators to supply per-node likelihood overrides via
   `~/.recon/likelihoods.yaml` analogous to the existing priors
-  override. Crosses into v1.9.5's "no automated CPT fitting"
+  override. Crosses into v1.9.6's "no automated CPT fitting"
   invariant only if a script auto-derives the file; manual
   operator-side tuning with explicit reasoning is fine. Decide
   the discipline before shipping.
@@ -1114,7 +1119,7 @@ proposal:
 - *Parameter learning from corpus statistics* (EM, Snorkel, weak-supervision,
   empirical-Bayes auto-fitting of CPTs). Crosses "no learned weights." Corpus
   runs are mirrors that question topology, not fitters that minimize
-  disagreement. See v1.9.5 for the discipline.
+  disagreement. See v1.9.6 for the discipline.
 - *ML structure learning that auto-applies* (PC algorithm or FCI run as part
   of a build pipeline). Constraint-based causal-discovery output as an
   *operator-facing proposal tool* — a human reads the candidate edges and
