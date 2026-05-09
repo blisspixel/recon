@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.2** (agentic UX validation harness; v1.9 fusion layer remains EXPERIMENTAL).
+Current release: **v1.9.2.1** (MCP UX patch — install + doctor + TTY misuse panel; v1.9 fusion layer remains EXPERIMENTAL).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
@@ -894,12 +894,16 @@ hand-tuning exercise.
 - **One new MCP skill:**
   - `run_fingerprint_mining(seed_domains, max_candidates_per_domain=20,
     dry_run=True)` — for each seed, runs the existing chain →
-    discovery → hypothesis-test pipeline. Outputs ranked
-    candidates plus the projected impact on the corpus
-    (Δ correlation depth, Δ entropy reduction, conflict rate
-    against existing nodes if the candidate were accepted).
-    Never writes to committed catalogs. `dry_run=True` is the
-    only supported value at v2.1 ship.
+    discovery → hypothesis-test pipeline and draws candidates
+    from three already-shipped graph layers: chain motifs (v1.7
+    `motifs.yaml` + `discover_fingerprint_candidates`), Louvain
+    communities (v1.8 `infrastructure_clusters`), and ecosystem
+    hyperedges (v1.8 batch hypergraph). Outputs ranked candidates
+    plus the projected impact on the corpus (Δ correlation depth,
+    Δ entropy reduction, conflict rate against existing nodes if
+    the candidate were accepted). Never writes to committed
+    catalogs. `dry_run=True` is the only supported value at v2.1
+    ship.
 - **One CLI command:**
   - `recon run fingerprint-mining --seed=<domain> --iterations=N
     --dry-run` (alias `recon mine`). Uses the MCP client
@@ -936,6 +940,13 @@ by the runner is a dict with these fields:
     representative chains for human review.
   - `projected_delta` (dict) — `{correlation_depth, entropy_reduction,
     conflict_rate}` from the empirical re-run.
+  - `clue_source` (`"chain_motif" | "graph_community" | "hyperedge"`)
+    — which already-shipped layer surfaced the candidate. Lets
+    PR review trace each candidate back to a specific motif
+    match, Louvain community ID, or hyperedge type rather than
+    treating the runner as a black box. Carry the source ID in
+    the YAML triage stanza so the provenance chain stays intact
+    after merge.
   - `triage_yaml` (str) — pre-formatted YAML stanza ready for
     pasting into `recon_tool/data/fingerprints/surface.yaml`
     pending human review.
@@ -1039,6 +1050,18 @@ discipline.
 - Deeper hardening simulation UX (high overreach risk).
 - Anomaly detection on issuer-mix changes over time.
 - Per-domain inference cache for batch-mode reruns.
+- **`--mine-motifs` mode for `run_fingerprint_mining` (v2.2+).**
+  Specialised runner mode that proposes new entries for
+  `motifs.yaml` (or a sibling `community_motifs.yaml`) by
+  clustering recurring chain patterns inside Louvain communities.
+  Output includes representative samples and projected
+  multi-signal depth gain on the corpus. Same dry-run + human-
+  triage discipline as v2.1 mining; never auto-edits the catalog.
+  Worth doing only if v2.1 corpus runs show that
+  community-scoped motif candidates consistently outscore single-
+  domain motif candidates on the north-star metric. The feature
+  is additive on top of v2.1's `clue_source: "graph_community"`
+  branch and reuses the same projection pipeline.
 - **Imprecise Dirichlet Model (Walley 1991) for CPT entries.**
   Replace point-CPT values with intervals derived from
   bounded-prior Dirichlet samples. Yields second-order

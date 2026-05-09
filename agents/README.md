@@ -2,6 +2,21 @@
 
 Per-agent install scaffolds for AI clients. Each subfolder is self-contained — pick the one that matches your agent and follow that folder's README.
 
+## Quickest path: `recon mcp install`
+
+For the MCP-server half of the setup, the canonical move is:
+
+```bash
+recon mcp install --client=claude-desktop
+# supported: claude-desktop, claude-code, cursor, vscode, windsurf, kiro
+recon mcp install --client=cursor --dry-run            # preview the plan
+recon mcp install --client=kiro --scope=workspace      # project-local instead of user-global
+```
+
+The install is idempotent and merge-safe — sibling MCP servers and any extra fields you've added to the recon block (custom `env`, `autoApprove` entries, `disabled` flags) all survive a `--force` rerun. Writes are atomic, so a failure mid-write never leaves you with a truncated config.
+
+That handles **piece 1** of the setup (the MCP server). Per-client folders below still cover **piece 2** (the agent guidance — when and how the client should reach for recon) and per-client gotchas.
+
 ## Folders
 
 | Agent | Folder | Pieces shipped |
@@ -12,7 +27,7 @@ Per-agent install scaffolds for AI clients. Each subfolder is self-contained —
 | **Windsurf** | [`windsurf/`](windsurf/) | MCP config + `.windsurfrules` reference template. |
 | **VS Code + Copilot** | [`vscode/`](vscode/) | MCP config + `.github/copilot-instructions.md` template. |
 
-For Claude Desktop and other clients without a folder here, see [`docs/mcp.md`](../docs/mcp.md) — the same MCP shape works everywhere; only the config path and PATH-inheritance behaviour differ.
+For Claude Desktop and other clients without a folder here, `recon mcp install --client=claude-desktop` covers the MCP wiring; see [`docs/mcp.md`](../docs/mcp.md) for full reference.
 
 ## How the pieces fit together
 
@@ -51,7 +66,7 @@ Two fixes — both apply equally to every shipped `mcp.json`:
    { "command": "/usr/local/bin/python3", "args": ["-m", "recon_tool.server"] }
    ```
 
-Run `recon doctor --mcp` in your shell to confirm recon is reachable; it prints copy-pasteable JSON snippets for several supported clients.
+Run `recon doctor --mcp` in your shell to confirm recon is reachable; it prints copy-pasteable JSON snippets for several supported clients. For a live JSON-RPC handshake check (does the server actually respond?), run `recon mcp doctor`.
 
 Kiro is also a desktop app but its MCP loader has been more forgiving in practice. If `command: "recon"` fails on Kiro, fall back to the same fixes.
 
@@ -64,7 +79,8 @@ Once configured, ask the client:
 If the client reports the recon MCP server is connected and tools enumerate, you're done. If not, check:
 
 - Is `recon-tool` installed in the same Python environment the client launches?
-- Does `recon doctor --mcp` succeed in your shell?
+- Does `recon doctor --mcp` succeed in your shell? (Static-shape check.)
+- Does `recon mcp doctor` succeed? (Live JSON-RPC handshake — catches subprocess-level failures the static check can't see.)
 - Are you hitting the macOS GUI PATH issue above?
 
 For deeper troubleshooting, the full MCP reference lives in [`docs/mcp.md`](../docs/mcp.md).

@@ -214,3 +214,164 @@ class TestMCPMetadata:
         assert "WARNING" in captured.err
         assert "privileges of the calling user" in captured.err
         assert "auto-approval" in captured.err
+
+
+class TestTTYStartupGuard:
+    """A human running `python -m recon_tool.server` directly should see a
+    helpful 'this is not a REPL' panel instead of being dropped into the
+    JSON-RPC loop where their stray newlines surface as Pydantic errors."""
+
+    def test_tty_prints_misuse_panel_and_exits_without_running(
+        self,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from recon_tool import server
+
+        monkeypatch.setattr(server, "_stdin_is_tty", lambda: True)
+        monkeypatch.delenv("RECON_MCP_FORCE_STDIO", raising=False)
+
+        ran = {"called": False}
+
+        def _fail_run() -> None:
+            ran["called"] = True
+            raise AssertionError("mcp.run() must not be reached when stdin is a TTY")
+
+        monkeypatch.setattr(server.mcp, "run", _fail_run)
+
+        server.main()
+
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert "NOT an interactive REPL" in captured.err
+        assert "JSON-RPC over stdio" in captured.err
+        assert "RECON_MCP_FORCE_STDIO" in captured.err
+        assert ran["called"] is False
+
+    def test_tty_skip_does_not_emit_normal_banner(
+        self,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from recon_tool import server
+
+        monkeypatch.setattr(server, "_stdin_is_tty", lambda: True)
+        monkeypatch.delenv("RECON_MCP_FORCE_STDIO", raising=False)
+        monkeypatch.setattr(server.mcp, "run", lambda: None)
+
+        server.main()
+
+        captured = capsys.readouterr()
+        # The startup banner's WARNING block belongs only to the JSON-RPC
+        # path. The misuse panel is the only thing humans should see.
+        assert "Listening on stdio transport." not in captured.err
+
+    @pytest.mark.parametrize("override_value", ["1", "true", "yes"])
+    def test_force_stdio_env_var_bypasses_tty_guard(
+        self,
+        override_value: str,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from recon_tool import server
+
+        monkeypatch.setattr(server, "_stdin_is_tty", lambda: True)
+        monkeypatch.setenv("RECON_MCP_FORCE_STDIO", override_value)
+
+        ran = {"called": False}
+
+        def _ok_run() -> None:
+            ran["called"] = True
+
+        monkeypatch.setattr(server.mcp, "run", _ok_run)
+
+        server.main()
+
+        captured = capsys.readouterr()
+        assert ran["called"] is True
+        assert "NOT an interactive REPL" not in captured.err
+        assert "Listening on stdio transport." in captured.err
+
+    def test_non_tty_path_runs_server_normally(
+        self,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from recon_tool import server
+
+        monkeypatch.setattr(server, "_stdin_is_tty", lambda: False)
+        monkeypatch.delenv("RECON_MCP_FORCE_STDIO", raising=False)
+
+        ran = {"called": False}
+
+        def _ok_run() -> None:
+            ran["called"] = True
+
+        monkeypatch.setattr(server.mcp, "run", _ok_run)
+
+        server.main()
+
+        captured = capsys.readouterr()
+        assert ran["called"] is True
+        assert "NOT an interactive REPL" not in captured.err
+        assert "Listening on stdio transport." in captured.err
+
+    def test_stdin_is_tty_helper_handles_missing_isatty(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from recon_tool import server
+
+        class _StubStdin:
+            pass  # no isatty attribute at all
+
+        monkeypatch.setattr("sys.stdin", _StubStdin())
+
+        # Must not raise; absence of a real terminal looks like a client
+        # spawn from the server's perspective.
+        assert server._stdin_is_tty() is False
+
+    @pytest.mark.parametrize("exc", [ValueError("closed"), OSError("bad handle")])
+    def test_stdin_is_tty_helper_handles_isatty_raising(
+        self,
+        exc: BaseException,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from recon_tool import server
+
+        class _RaisingStdin:
+            def isatty(self) -> bool:
+                raise exc
+
+        monkeypatch.setattr("sys.stdin", _RaisingStdin())
+
+        # Closed stdin (ValueError) and weird-handle states (OSError on
+        # Windows when the underlying file descriptor is in a bad state)
+        # both mean "no human at the keyboard" — we should not crash
+        # the server before mcp.run() ever gets a chance.
+        assert server._stdin_is_tty() is False
+
+    @pytest.mark.parametrize("override_value", ["true", "TRUE", "TruE", " 1 ", "ON"])
+    def test_force_stdio_override_is_case_insensitive_and_trimmed(
+        self,
+        override_value: str,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from recon_tool import server
+
+        monkeypatch.setattr(server, "_stdin_is_tty", lambda: True)
+        monkeypatch.setenv("RECON_MCP_FORCE_STDIO", override_value)
+
+        ran = {"called": False}
+
+        def _ok_run() -> None:
+            ran["called"] = True
+
+        monkeypatch.setattr(server.mcp, "run", _ok_run)
+
+        server.main()
+
+        captured = capsys.readouterr()
+        assert ran["called"] is True
+        assert "NOT an interactive REPL" not in captured.err

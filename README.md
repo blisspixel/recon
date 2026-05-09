@@ -104,6 +104,17 @@ See [docs/README.md](docs/README.md) for the organized documentation index.
 
 recon runs as an MCP server for Claude, Cursor, VS Code, ChatGPT, or any MCP client. The Model Context Protocol lets AI agents call tools like recon directly from your chat.
 
+**One-shot install** — let recon write the right config block for you:
+
+```bash
+recon mcp install --client=claude-desktop   # or claude-code, cursor, vscode, windsurf, kiro
+recon mcp doctor                            # spawn the server and verify the JSON-RPC handshake
+```
+
+The install command is idempotent and merge-safe — sibling MCP servers, hand-curated `autoApprove` lists, custom `env` vars, and any other keys you've added to the recon block all survive a `--force` rerun. Use `--dry-run` first if you want to preview the plan.
+
+**Manual install** — if you'd rather edit by hand, add this to your client's MCP config:
+
 ```json
 {
   "mcpServers": {

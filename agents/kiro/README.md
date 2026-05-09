@@ -21,14 +21,24 @@ Other forms (`uv tool install`, `uvx`) work too — see [`docs/mcp.md`](../../do
 
 ## 2. Wire the MCP server
 
-Drop [`mcp.json`](mcp.json) at one of these paths:
+**One-shot install (recommended):**
+
+```bash
+recon mcp install --client=kiro                  # writes to ~/.kiro/settings/mcp.json
+recon mcp install --client=kiro --scope=workspace  # writes .kiro/settings/mcp.json in cwd
+recon mcp install --client=kiro --dry-run        # preview
+```
+
+The install auto-detects whether `recon` is on PATH and falls back to `python -m recon_tool.server` when it's not (rare on Kiro, more common in sandboxed setups). Sibling MCP servers and any custom fields you've added to your recon block are preserved.
+
+**Manual install:** drop [`mcp.json`](mcp.json) at one of:
 
 | Scope | Path |
 |---|---|
 | Workspace | `.kiro/settings/mcp.json` |
 | Global | `~/.kiro/settings/mcp.json` |
 
-The shipped config sets `command: "recon"`. If `recon` is not on Kiro's launcher PATH (rare on Kiro, more common in sandboxed setups), edit the file to use the absolute binary path or the Python module form — both alternatives are documented in [`../claude-code/README.md`](../claude-code/README.md#choosing-the-mcp-launch-command).
+The shipped config sets `command: "recon"`. If `recon` is not on Kiro's launcher PATH, edit the file to use the absolute binary path or the Python module form — both alternatives are documented in [`../claude-code/README.md`](../claude-code/README.md#choosing-the-mcp-launch-command).
 
 ## 3. Wire the agent guidance
 

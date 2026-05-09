@@ -42,6 +42,8 @@ If the command is not found:
 
 Wait for explicit approval, then `pip install recon-tool` followed by `recon doctor` to verify connectivity. If `recon --version` succeeds, continue immediately — do not re-prompt on subsequent calls in the same session.
 
+If the user separately asks you to wire recon into another MCP client (Claude Desktop, Cursor, VS Code, Windsurf, Kiro), use `recon mcp install --client=<name>` rather than instructing them to copy-paste a JSON block by hand. Run `recon mcp doctor` afterward for a live JSON-RPC handshake check.
+
 ## Detecting whether MCP is connected
 
 Before choosing CLI vs MCP, look at your own available-tools list. If you see `recon:*` tools (e.g. `mcp__recon__lookup_tenant`, `mcp__recon__analyze_posture`), the MCP server is connected — prefer those. If you do not, fall back to the CLI. Do not call an MCP tool speculatively to test connectivity.

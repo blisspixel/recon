@@ -32,7 +32,21 @@ Then verify:
 recon doctor --mcp
 ```
 
-### 2. Install the Claude Code plugin
+### 2a. (Alternative) Wire MCP without the plugin
+
+If you want recon's MCP server registered in Claude Code without using the plugin form, run:
+
+```bash
+recon mcp install --client=claude-code               # user-level: ~/.claude.json
+recon mcp install --client=claude-code --scope=workspace  # project-local: .mcp.json
+recon mcp install --client=claude-code --dry-run     # preview without writing
+```
+
+The install merges into existing `mcpServers` without touching siblings; `--force` refreshes the recon block while preserving any custom `env`, `autoApprove`, or other fields you've added.
+
+The plugin path below (2b) is still the recommended setup because it bundles the recon **skill** alongside the MCP server.
+
+### 2b. Install the Claude Code plugin
 
 **Local development / testing.** Point Claude Code at this directory directly:
 
@@ -51,6 +65,9 @@ The plugin loads for that session without going through a marketplace.
 A marketplace is itself just a repo containing a `.claude-plugin/marketplace.json` index that points at one or more plugins. The official marketplace is at [claude.com/plugins](https://claude.com/plugins); you can also publish your own. See the [plugin marketplaces docs](https://code.claude.com/docs/en/plugin-marketplaces.md) for the current schema and submission flow — both are still evolving.
 
 ### 3. Try it
+
+After install, run `recon mcp doctor` for a live JSON-RPC handshake check — spawns the server and confirms a real MCP client can talk to it.
+
 
 In a Claude Code session:
 
