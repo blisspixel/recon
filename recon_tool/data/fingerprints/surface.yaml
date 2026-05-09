@@ -1303,3 +1303,455 @@ fingerprints:
     pattern: svc.cloud.microsoft
     tier: application
     description: Microsoft 365 cloud autodiscover / Mira service zone
+
+# ── v1.9.2.1 catalog growth ───────────────────────────────────────────────
+# Triaged from the v1.9.2-pre-release corpus scan (4,270 domains).
+# Process: validation/scan.py -> validation/triage_llm.py -> hand review.
+# Drops (45 candidates): 27 intra-org self-references, 12 already-covered
+# slugs, 4 niche one-offs, 2 unclear pending more corpus exposure.
+# See validation/runs-private/<stamp>/triage-llm.md (gitignored) for the
+# per-candidate verdict trail.
+
+- name: Akamai EAA (Zero Trust)
+  slug: akamai-eaa
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: go.akamai-access.com
+    tier: application
+    description: Akamai Enterprise Application Access zero-trust network access; protected apps CNAME to *.go.akamai-access.com.
+    reference: https://www.akamai.com/products/enterprise-application-access
+
+- name: Amplience
+  slug: amplience
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: amplience.net
+    tier: application
+    description: Amplience headless CMS / DAM; media CDN CNAMEs chain through cdn.media.amplience.net to dm.amplience.net.
+    reference: https://amplience.com/
+
+- name: BigMarker
+  slug: bigmarker
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: whitelabel.bigmarker.com
+    tier: application
+    description: BigMarker webinar / virtual events platform; custom event domains CNAME to whitelabel.bigmarker.com.
+    reference: https://www.bigmarker.com/
+
+- name: CampusPress
+  slug: campuspress
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: campuspress.com
+    tier: application
+    description: CampusPress managed WordPress hosting for universities; academic blog CNAMEs resolve to *.lb.campuspress.com.
+    reference: https://campuspress.com/
+
+- name: Certain (Cvent)
+  slug: certain-cvent
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: certainaws.com
+    tier: application
+    description: Certain event management platform (acquired by Cvent); event subdomains chain through *.certain.com to cloud1.certainaws.com.
+    reference: https://www.cvent.com/
+
+- name: easyDNS URL Forwarding
+  slug: easydns
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: url-fwd.easydns.com
+    tier: infrastructure
+    description: easyDNS registrar URL-forwarding service (HTTP variant).
+    reference: https://help.easydns.com/support/solutions/articles/48001183024
+  - type: cname_target
+    pattern: url-fwd-https.easydns.com
+    tier: infrastructure
+    description: easyDNS registrar URL-forwarding service (HTTPS variant).
+
+- name: EdgeCDN (Bitban)
+  slug: edgetcdn-bitban
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: edgetcdn.io
+    tier: infrastructure
+    description: Bitban EdgeCDN Spanish content delivery network; CNAMEs chain through edge2befaster.io to *.usg.edgetcdn.io.
+    reference: https://www.bitban.com/
+
+- name: Edgio CDN (Limelight)
+  slug: edgio-cdn
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: vo.llnwd.net
+    tier: infrastructure
+    description: Edgio (formerly Limelight Networks) CDN; customer media CNAMEs terminate at *.vo.llnwd.net.
+    reference: https://edgio.com/
+
+- name: Fanatics Retail Group
+  slug: fanatics
+  category: Commerce
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: fanaticsretailgroup.com
+    tier: application
+    description: Fanatics white-label sports merchandise platform; team-shop CNAMEs resolve through *.fanaticsretailgroup.com.
+    reference: https://www.fanatics.com/
+
+- name: Fluid Topics (Antidot)
+  slug: fluid-topics
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: fluidtopics.net
+    tier: application
+    description: Antidot Fluid Topics cloud documentation portal; customer docs domains CNAME through *.fluidtopics.net to aws.antidot.net.
+    reference: https://www.fluidtopics.com/
+
+- name: Fortinet FortiWeb Cloud
+  slug: fortiweb-cloud
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: fortiwebcloud.net
+    tier: application
+    description: Fortinet FortiWeb Cloud WAF-as-a-Service; customer CNAMEs route through *.fortiwebcloud.net.
+    reference: https://www.fortinet.com/products/web-application-firewall/fortiweb-cloud
+  - type: cname_target
+    pattern: waas-online.net
+    tier: application
+    description: FortiWeb Cloud upstream backend; chains terminate at aws.waas-online.net.
+
+- name: Framer
+  slug: framer
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: sites.framer.app
+    tier: application
+    description: Framer no-code website builder; custom domains CNAME to sites.framer.app.
+    reference: https://www.framer.com/support/using-framer/custom-domain/
+
+- name: Gandi Web Redirect
+  slug: gandi-webredir
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: partners.gandi.net
+    tier: infrastructure
+    description: Gandi registrar web-redirect service; CNAMEs terminate at webredir.partners.gandi.net.
+    reference: https://docs.gandi.net/en/domain_names/common_operations/web_forwarding.html
+  - type: cname_target
+    pattern: vip.gandi.net
+    tier: infrastructure
+    description: Gandi web-redirect (legacy zone); same forwarding service as partners.gandi.net.
+
+- name: Gatsby Events
+  slug: gatsby-events
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: gatsby.events
+    tier: application
+    description: Gatsby virtual / hybrid events platform; custom event domains CNAME to *.customers.gatsby.events.
+    reference: https://gatsby.events/
+
+- name: Google Cloud (App Engine / Cloud Run)
+  slug: gcp-app
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: bc.googleusercontent.com
+    tier: infrastructure
+    description: GCP-hosted workloads with public IPs in the bc.googleusercontent.com reverse zone.
+
+- name: GitBook
+  slug: gitbook
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: hosting.gitbook.io
+    tier: application
+    description: GitBook documentation platform; custom docs domains CNAME through hosting.gitbook.com to hosting.gitbook.io.
+    reference: https://docs.gitbook.com/publishing/custom-domain
+
+- name: Hostinger Email
+  slug: hostinger-email
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: mail.hostinger.com
+    tier: application
+    description: Hostinger hosted email service; autodiscover CNAMEs terminate at autodiscover.mail.hostinger.com.
+    reference: https://support.hostinger.com/en/articles/1583227
+
+- name: IONOS (1&1) Hosting
+  slug: ionos
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: adsredir.ionos.info
+    tier: infrastructure
+    description: IONOS (1&1) web hosting redirect / autodiscover endpoint; signals IONOS-hosted domains.
+    reference: https://www.ionos.com/
+
+- name: Kinsta
+  slug: kinsta
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: hosting.kinsta.cloud
+    tier: application
+    description: Kinsta managed WordPress hosting; customer sites CNAME to *.hosting.kinsta.cloud.
+    reference: https://kinsta.com/knowledgebase/add-domain/
+
+- name: Lumen CDN (Footprint)
+  slug: lumen-cdn
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: c.footprint.net
+    tier: infrastructure
+    description: Lumen / CenturyLink (formerly Level 3) CDN edge network; customer CNAMEs terminate at *.c.footprint.net.
+    reference: https://www.lumen.com/en-us/edge-computing/cdn.html
+
+- name: Medianova CDN
+  slug: medianova-cdn
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: sm.mncdn.com
+    tier: infrastructure
+    description: Medianova Turkish content delivery network; customer CDN CNAMEs terminate at *.sm.mncdn.com.
+    reference: https://www.medianova.com/
+
+- name: Merlin CDN
+  slug: merlincdn
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: merlincdn.net
+    tier: infrastructure
+    description: Merlin CDN Turkish content delivery network; customer CNAMEs resolve through *.merlincdn.net edge nodes.
+    reference: https://www.merlincdn.com/
+
+- name: Mintlify
+  slug: mintlify
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: mintlify.builders
+    tier: application
+    description: Mintlify developer documentation platform; custom docs domains CNAME to cname.mintlify.builders.
+    reference: https://mintlify.com/docs/settings/custom-domain
+
+- name: Movable Ink
+  slug: movable-ink
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: ed4.net
+    tier: application
+    description: Movable Ink email content personalization platform; image CNAMEs resolve through img.ed4.net to instantconfig.ed4.net.
+    reference: https://movableink.com/
+
+- name: Okta
+  slug: okta
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: okta-gov.com
+    tier: application
+    description: Okta Government Cloud (FedRAMP); federal-agency custom logins CNAME through customdomains.okta-gov.com.
+    reference: https://www.okta.com/okta-for-government/
+  - type: cname_target
+    pattern: okta-dnssec.com
+    tier: application
+    description: Okta DNSSEC-enabled custom domain endpoint.
+
+- name: Ping Identity (PingOne)
+  slug: ping-identity
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: ping.cloud
+    tier: application
+    description: Ping Identity PingFederate cloud; enterprise SSO / federation CNAMEs route through *.ping.cloud cluster endpoints.
+    reference: https://www.pingidentity.com/en/platform/pingfederate.html
+
+- name: Prowly
+  slug: prowly
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cname.prowly.com
+    tier: application
+    description: Prowly PR / media newsroom platform; custom newsroom domains CNAME to cname.prowly.com.
+    reference: https://prowly.com/
+
+- name: Q4 Inc. (IR Platform)
+  slug: q4-ir
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: q4web.com
+    tier: application
+    description: Q4 Inc. investor relations website platform; IR subdomain CNAMEs terminate at webfarm-*.q4web.com.
+    reference: https://www.q4inc.com/
+
+- name: Rackspace Email
+  slug: rackspace-email
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: emailsrvr.com
+    tier: application
+    description: Rackspace Email hosted email service; autodiscover CNAME to autodiscover.emailsrvr.com.
+    reference: https://www.rackspace.com/email-hosting
+
+- name: Refined (Confluence Theme)
+  slug: refined-site
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: domain.refined.site
+    tier: application
+    description: Refined Confluence / Jira theme platform with custom domain hosting; knowledge-base CNAMEs terminate at custom.domain.refined.site.
+    reference: https://www.refined.com/
+
+- name: SAP Commerce Cloud
+  slug: sap-commerce
+  category: Commerce
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: commerce.ondemand.com
+    tier: application
+    description: SAP Commerce Cloud (formerly Hybris) SaaS storefront; custom shop domains CNAME to *.cc.commerce.ondemand.com.
+    reference: https://www.sap.com/products/crm/commerce-cloud.html
+
+- name: Stova (Aventri)
+  slug: stova-aventri
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: aventri.com
+    tier: application
+    description: Stova (formerly Aventri) event management platform; custom event domains CNAME to *.micros.aventri.com.
+    reference: https://www.stova.io/
+
+- name: Talentera
+  slug: talentera
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: talentera.com
+    tier: application
+    description: Talentera MENA applicant tracking and career portal; careers subdomains CNAME to regional endpoints like ksa.talentera.com.
+    reference: https://www.talentera.com/
+
+- name: Terminus (Sigstr)
+  slug: terminus-sigstr
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: spgo.io
+    tier: application
+    description: Terminus / Sigstr email signature marketing platform; customer subdomains CNAME to spgo.io.
+    reference: https://terminus.com/sigstr/
+
+- name: Tistory (Kakao)
+  slug: tistory
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: tistory.com
+    tier: application
+    description: Tistory Korean blogging platform (Kakao); custom blog domains CNAME through blog.tistory.com to *.kgslb.com endpoints.
+    reference: https://www.tistory.com/
+
+- name: Tumblr
+  slug: tumblr
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: domains.tumblr.com
+    tier: application
+    description: Tumblr blog platform custom-domain endpoint; CNAMEs terminate at domains.tumblr.com.
+    reference: https://help.tumblr.com/hc/en-us/articles/231256548
+
+- name: Uberflip (ZoomInfo)
+  slug: uberflip
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: pageserve.co
+    tier: application
+    description: Uberflip content experience platform (acquired by ZoomInfo); custom domains CNAME to secure.pageserve.co.
+    reference: https://www.uberflip.com/
+
+- name: Weglot
+  slug: weglot
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: weglot.io
+    tier: application
+    description: Weglot website translation platform; translated subdomain CNAMEs resolve through *.translate-cf.weglot.io.
+    reference: https://weglot.com/documentation/custom-domain
+
+- name: WordPress.com
+  slug: wordpress-com
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: lb.wordpress.com
+    tier: application
+    description: WordPress.com hosted blogs with custom domain mapping; CNAMEs terminate at lb.wordpress.com.
+    reference: https://wordpress.com/support/domains/map-subdomain/

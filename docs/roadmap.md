@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.2.1** (MCP UX patch — install + doctor + TTY misuse panel; v1.9 fusion layer remains EXPERIMENTAL).
+Current release: **v1.9.2.2** (catalog growth — 39 new fingerprints from the v1.9.2-pre-release corpus scan; v1.9 fusion layer remains EXPERIMENTAL).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
