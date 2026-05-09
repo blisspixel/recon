@@ -127,13 +127,24 @@
       "conflict_provenance": []
     },
     {
-      "name": "email_security_strong",
-      "description": "Domain enforces strong email-security signals (M365/GWS + gateway).",
+      "name": "email_security_modern_provider",
+      "description": "Domain runs a modern, managed mail provider (M365 or Google Workspace) and/or a third-party email gateway in front of MX.",
       "posterior": 0.3147,
       "interval_low": 0.0,
       "interval_high": 0.7022,
       "evidence_used": [],
       "n_eff": 0.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "email_security_policy_enforcing",
+      "description": "Observable email-authentication policy is enforcing (DMARC reject/quarantine + DKIM + strict SPF + optional MTA-STS enforce).",
+      "posterior": 0.25,
+      "interval_low": 0.0,
+      "interval_high": 0.5468,
+      "evidence_used": [],
+      "n_eff": 4.0,
       "sparse": true,
       "conflict_provenance": []
     }

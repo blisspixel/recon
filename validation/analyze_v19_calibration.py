@@ -44,9 +44,9 @@ NODE_TO_DETERMINISTIC_EVIDENCE: dict[str, list[str]] = {
     "email_gateway_present": ["proofpoint", "mimecast", "barracuda"],
     "cdn_fronting": ["cloudflare", "akamai", "fastly"],
     "aws_hosting": ["aws", "aws-cloudfront", "aws-route53"],
-    # email_security_strong and federated_identity are signal-driven
-    # (DMARC, DKIM, SPF, federated_sso_hub); we check the structured
-    # fields directly.
+    # email_security_modern_provider, email_security_policy_enforcing,
+    # and federated_identity are checked against structured fields
+    # below — they are not slug-driven.
 }
 
 
@@ -181,17 +181,27 @@ def main() -> int:
 
             if name in NODE_TO_DETERMINISTIC_EVIDENCE:
                 agrees = bool(set(NODE_TO_DETERMINISTIC_EVIDENCE[name]) & slugs)
-            elif name == "email_security_strong":
-                # Composite: at least 2 of {dmarc_reject, mta_sts_enforce, dkim, spf_strict}
-                count = sum(
-                    [
-                        dmarc == "reject",
-                        mta_sts == "enforce",
-                        has_dkim,
-                        spf_strict,
-                    ]
+            elif name == "email_security_modern_provider":
+                # v1.9.3 split — provider-presence claim. High posterior
+                # iff any modern-mail provider OR gateway slug fired.
+                agrees = bool(
+                    {"microsoft365", "entra-id", "exchange-online",
+                     "google-workspace", "gmail",
+                     "proofpoint", "mimecast", "barracuda"} & slugs
                 )
-                agrees = count >= 2
+            elif name == "email_security_policy_enforcing":
+                # v1.9.3 split — policy-enforcement claim. High posterior
+                # iff one of the strong-policy signals fired. DMARC reject
+                # OR MTA-STS enforce is sufficient evidence of enforcement;
+                # DKIM and SPF strict are supplementary, not required —
+                # DKIM selector enumeration is best-effort and missing it
+                # should not invalidate an observed reject policy.
+                # Provider-independent.
+                agrees = (
+                    dmarc == "reject"
+                    or mta_sts == "enforce"
+                    or (has_dkim and spf_strict)
+                )
             elif name == "federated_identity":
                 agrees = d.get("auth_type") == "Federated" or d.get("google_auth_type") == "Federated"
 

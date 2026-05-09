@@ -171,8 +171,19 @@
       "conflict_provenance": []
     },
     {
-      "name": "email_security_strong",
-      "description": "DMARC enforcement + DKIM + strict SPF observed (composite).",
+      "name": "email_security_modern_provider",
+      "description": "Domain runs a modern, managed mail provider (M365 or Google Workspace) and/or a third-party email gateway in front of MX.",
+      "posterior": 0.945,
+      "interval_low": 0.79,
+      "interval_high": 1.0,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "email_security_policy_enforcing",
+      "description": "Observable email-authentication policy is enforcing (DMARC reject/quarantine + DKIM + strict SPF + optional MTA-STS enforce).",
       "posterior": 0.9477,
       "interval_low": 0.82,
       "interval_high": 1.0,

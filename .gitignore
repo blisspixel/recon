@@ -62,6 +62,7 @@ docs/accuracy.md
 # stay private under the /validation/* glob.
 !/validation/v1.8-validation-summary.md
 !/validation/v1.9-validation-summary.md
+!/validation/v1.9.3-calibration.md
 # validation/__init__.py — added in v1.9.2 to make ``validation`` a
 # proper package (previously implicit namespace) so static analysis
 # resolves intra-package imports cleanly.

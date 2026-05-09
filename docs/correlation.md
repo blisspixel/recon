@@ -433,10 +433,12 @@ nodes:
 
   - name: federated_identity
     description: "Domain uses an external IdP for SSO."
-    parents: [m365_tenant]
+    parents: [m365_tenant, google_workspace_tenant]
     cpt:
-      "m365_tenant=present": 0.45
-      "m365_tenant=absent":  0.08
+      "m365_tenant=present,google_workspace_tenant=present": 0.50
+      "m365_tenant=present,google_workspace_tenant=absent":  0.45
+      "m365_tenant=absent,google_workspace_tenant=present":  0.35
+      "m365_tenant=absent,google_workspace_tenant=absent":   0.08
     evidence:
       - signal: federated_sso_hub
         likelihood: [0.90, 0.05]
@@ -453,20 +455,25 @@ nodes:
 ```
 
 Read top-down: a tenant is M365 with prior probability 0.30; given
-M365, federation is present with probability 0.45; given federation,
+the modern-mail-provider state, federation is present with
+probability 0.45 when only M365 is observed (and 0.35 when only GWS
+is observed — federation is less common on GWS-native deployments
+because GWS-native auth is often used directly); given federation,
 Okta is the IdP with conditional probability 0.30. The numbers are
 tunable and explicitly committed as data — never learned, never
 hidden behind a binary blob.
 
-##### Network topology (seed)
+##### Network topology (v1.9.3)
 
 ```mermaid
 graph LR
   m365[m365_tenant<br/>prior 0.30] --> fed[federated_identity]
+  gws[google_workspace_tenant<br/>prior 0.25] --> fed
   fed --> okta[okta_idp]
-  m365 --> esec[email_security_strong]
-  gws[google_workspace_tenant<br/>prior 0.25] --> esec
-  egw[email_gateway_present<br/>prior 0.18] --> esec
+  m365 --> emp[email_security_modern_provider]
+  gws --> emp
+  egw[email_gateway_present<br/>prior 0.18] --> emp
+  pol[email_security_policy_enforcing<br/>prior 0.25]
   cdn[cdn_fronting<br/>prior 0.45]
   aws[aws_hosting<br/>prior 0.40]
 
@@ -475,15 +482,20 @@ graph LR
   style egw fill:#eef
   style cdn fill:#eef
   style aws fill:#eef
+  style pol fill:#eef
   style fed fill:#fff
   style okta fill:#fff
-  style esec fill:#fff
+  style emp fill:#fff
 ```
 
-Eight nodes total. Three roots (priors only); five children (CPTs).
-Email-security-strong has three parents because the path through
-M365, GWS, and email-gateway each contribute differently to a
-strong-email-security posterior.
+Nine nodes total. Five roots (priors only); four children (CPTs).
+`email_security_modern_provider` has three parents because the path
+through M365, GWS, and email-gateway each contribute differently to
+the *provider-presence* claim. `email_security_policy_enforcing` is
+a separate root because policy enforcement is provider-independent
+— a Zoho or Fastmail tenant with a strict DMARC reject policy fires
+that node identically to an M365 one. See §4.8.x for the v1.9.3
+split rationale.
 
 #### 4.8.2 Inference: variable elimination
 
@@ -797,9 +809,13 @@ conclude the layer is poorly calibrated. They are correct: it is, in
 the no-evidence regime, by design. The conditional figure is the one
 the layer claims, and it is in the "acceptable but not ideal" band
 ($0.16$). That gap is exactly where v1.9.x catalog-tuning work
-should focus — `email_security_strong` and `aws_hosting` have the
-worst conditional ECE in the synthetic test, suggesting their
-likelihoods need adjustment based on real-corpus observations.
+should focus — `email_security_strong` and `aws_hosting` had the
+worst conditional ECE in the v1.9.0 synthetic test. The
+`email_security_strong` weak spot was diagnosed as a definitional
+gap (not a calibration error) and resolved in v1.9.3 by splitting
+the node into `email_security_modern_provider` and
+`email_security_policy_enforcing`; see §4.8.9. `aws_hosting`
+remains a v1.9.5 stability-criteria candidate.
 
 #### 4.8.8 Defensive value
 
@@ -817,6 +833,70 @@ Either way, the operator gets a calibrated posterior with full
 provenance, not a black-box score they have to trust. That, more
 than any specific feature, is what justifies the cost of shipping
 the layer.
+
+#### 4.8.9 Definitional discipline: the v1.9.3 split
+
+The v1.9.0 corpus calibration revealed exactly one weak spot:
+`email_security_strong` agreed with the deterministic pipeline
+on only 52.6% of high-confidence posteriors, while every other node
+sat at 100%. The temptation is to read that as a calibration
+problem — wrong CPT numbers, fix the numbers. The v1.9.3 surgery is
+the result of taking the alternative hypothesis seriously: the
+disagreement is *definitional*, not numerical, and no parameter
+tuning makes the two definitions agree.
+
+**The diagnosis.** The v1.9.0 node's CPT was parameterized on
+`{m365_tenant, google_workspace_tenant, email_gateway_present}` —
+modern-mail-provider presence. Its evidence bindings were
+`dmarc_reject`, `dmarc_quarantine`, `mta_sts_enforce`,
+`dkim_present`, `spf_strict` — policy enforcement signals. The
+deterministic spot-check tested DMARC reject + DKIM + strict SPF
++ MTA-STS (≥ 2 of 4). These are *different claims*: an M365 tenant
+with `dmarc=none` is a modern provider with weak policy; a
+self-hosted setup behind a gateway with a strict DMARC reject is
+weak provider with strong policy. The v1.9.0 node tried to assert
+"strong email security" using *provider* parents and *policy*
+evidence, conflating the two. No CPT entry can repair that.
+
+**The fix.** Replace the v1.9.0 node with two:
+
+- `email_security_modern_provider` keeps the provider-presence
+  parents (`m365_tenant`, `google_workspace_tenant`,
+  `email_gateway_present`) and drops the evidence bindings. Its
+  posterior is pure CPT propagation from the parents — provider
+  presence is fully observable through the parent slugs.
+- `email_security_policy_enforcing` is a root node (no parents)
+  with a base-rate prior of 0.25 and the policy-signal evidence
+  bindings carried over from v1.9.0. Policy enforcement is
+  provider-independent: a Zoho, Fastmail, or self-hosted tenant
+  with `dmarc=reject + DKIM + spf=-all` fires this node identically
+  to an M365 one. Removing the provider parents was the topology
+  surgery the v1.9.0 model needed but didn't have.
+
+An operator who wants the conjunction ("modern provider AND
+enforcing policy") computes it downstream from the two posteriors.
+Two clear claims are more useful than one muddled claim that tried
+to be both.
+
+**Adjacent fix: `federated_identity` parents.** The same
+diagnostic discipline applies to `federated_identity`, whose v1.9.0
+CPT parameterized federation only on `m365_tenant`. Federation
+exists without M365 (Okta + GWS, Auth0 + custom IdP, standalone
+SAML); the single-parent network systematically under-attributed
+federation when the path didn't go through M365. v1.9.3 expands the
+parents to `[m365_tenant, google_workspace_tenant]` and re-derives
+the CPT. The v1.9.4 hardened-adversarial corpus run will tighten
+the GWS-path values; the v1.9.3 numbers are seeded from defensible
+priors, not corpus-fitted, per the no-learned-weights invariant.
+
+**The principle.** Corpus runs are mirrors that question the
+*topology*, not fitters that minimize the disagreement number.
+When a node disagrees with the deterministic pipeline at high
+posterior, the first hypothesis is that the model is conceptually
+wrong. Only after the topology is clean do CPT numbers get
+re-examined. v1.9.3 makes that principle concrete on the one node
+v1.9.0 surfaced as broken; v1.9.6 codifies it as standing
+discipline for future CPT changes.
 
 ### 4.8a Worked `--explain-dag` examples (v1.9.0)
 

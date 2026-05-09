@@ -1,7 +1,7 @@
 # Bayesian network — v1.9 (EXPERIMENTAL)
 #
 # Schema version: 1
-# Network topology version: v1.9.0 (frozen 2026-05-04)
+# Network topology version: v1.9.3 (frozen 2026-05-09)
 #
 # Discrete Bayesian network over high-level claims about a domain's
 # public-facing posture. Nodes are binary unless otherwise noted.
@@ -10,10 +10,24 @@
 # as a YAML data file — no learned weights, no trained models.
 #
 # Topology stability contract: the SET of nodes and the parent
-# relationships in this file are stable across v1.9.x releases.
+# relationships in this file are stable across v1.9.x releases
+# *except* at bridge milestones that explicitly authorize topology
+# change (v1.9.3 split of email_security_strong, v1.9.5 dispositions).
 # Likelihood numbers and CPT entries may be tuned in v1.9.x based on
-# corpus calibration findings; node additions / removals are v1.10+
-# (require schema version bump).
+# corpus calibration findings; arbitrary node additions / removals
+# remain v1.10+ (require schema version bump).
+#
+# Topology change history:
+#   v1.9.0 — initial seed network (8 nodes).
+#   v1.9.3 — split email_security_strong into
+#            email_security_modern_provider (provider presence,
+#            CPT-driven, no evidence) and
+#            email_security_policy_enforcing (root, evidence-driven
+#            on DMARC/DKIM/SPF/MTA-STS). Expanded federated_identity
+#            parents to include google_workspace_tenant. Resolves the
+#            52.6% v1.9.0 corpus disagreement on email_security_strong
+#            (definitional gap — see docs/correlation.md §4.8.x and
+#            validation/v1.9.3-calibration.md). Net: 9 nodes.
 #
 # Validation: see validation/v1.9-validation-summary.md for
 # numerical correctness, sensitivity bound, synthetic calibration
@@ -97,10 +111,18 @@ nodes:
 
   - name: federated_identity
     description: "Domain uses an external IdP for SSO (Okta, Auth0, Ping, etc.)."
-    parents: [m365_tenant]
+    # v1.9.3: parents expanded to include google_workspace_tenant.
+    # Federation exists without M365 (Okta + GWS, Auth0 + custom IdP,
+    # standalone SAML); the v1.9.0 single-parent network systematically
+    # under-attributed federation when the path didn't go through M365.
+    # GWS path P() values are seeded; the v1.9.4 hardened-adversarial
+    # corpus run will tighten them.
+    parents: [m365_tenant, google_workspace_tenant]
     cpt:
-      "m365_tenant=present": 0.45
-      "m365_tenant=absent": 0.08
+      "m365_tenant=present,google_workspace_tenant=present": 0.50
+      "m365_tenant=present,google_workspace_tenant=absent":  0.45
+      "m365_tenant=absent,google_workspace_tenant=present":  0.35
+      "m365_tenant=absent,google_workspace_tenant=absent":   0.08
     evidence:
       - signal: federated_sso_hub
         likelihood: [0.90, 0.05]
@@ -127,27 +149,49 @@ nodes:
       - slug: barracuda
         likelihood: [0.85, 0.02]
 
-  - name: email_security_strong
-    description: "DMARC enforcement + DKIM + strict SPF observed (composite)."
+  # v1.9.3: replaced email_security_strong with two separate nodes
+  # below. The v1.9.0 node parameterized its CPT over modern-mail-
+  # provider presence (M365 / GWS / gateway) but tested DMARC/DKIM/SPF/
+  # MTA-STS policy enforcement via its evidence bindings — different
+  # claims, no CPT tuning could reconcile them. The split makes both
+  # claims first-class. An operator who wants the conjunction can
+  # compute it downstream from the two posteriors.
+
+  - name: email_security_modern_provider
+    description: "Domain runs a modern, managed mail provider (M365 or Google Workspace) and/or a third-party email gateway in front of MX."
     parents: [m365_tenant, google_workspace_tenant, email_gateway_present]
+    # CPT calibrated to *provider presence* given parents. Pure
+    # propagation: no evidence bindings — provider presence is fully
+    # captured by the parent slugs. The numbers preserve the v1.9.0
+    # CPT structure for the provider-presence claim only.
     cpt:
-      "m365_tenant=present,google_workspace_tenant=present,email_gateway_present=present": 0.85
-      "m365_tenant=present,google_workspace_tenant=present,email_gateway_present=absent": 0.55
-      "m365_tenant=present,google_workspace_tenant=absent,email_gateway_present=present": 0.75
-      "m365_tenant=present,google_workspace_tenant=absent,email_gateway_present=absent": 0.45
-      "m365_tenant=absent,google_workspace_tenant=present,email_gateway_present=present": 0.75
-      "m365_tenant=absent,google_workspace_tenant=present,email_gateway_present=absent": 0.45
-      "m365_tenant=absent,google_workspace_tenant=absent,email_gateway_present=present": 0.65
-      "m365_tenant=absent,google_workspace_tenant=absent,email_gateway_present=absent": 0.20
+      "m365_tenant=present,google_workspace_tenant=present,email_gateway_present=present": 0.99
+      "m365_tenant=present,google_workspace_tenant=present,email_gateway_present=absent":  0.97
+      "m365_tenant=present,google_workspace_tenant=absent,email_gateway_present=present":  0.97
+      "m365_tenant=present,google_workspace_tenant=absent,email_gateway_present=absent":   0.95
+      "m365_tenant=absent,google_workspace_tenant=present,email_gateway_present=present":  0.97
+      "m365_tenant=absent,google_workspace_tenant=present,email_gateway_present=absent":   0.95
+      "m365_tenant=absent,google_workspace_tenant=absent,email_gateway_present=present":   0.85
+      "m365_tenant=absent,google_workspace_tenant=absent,email_gateway_present=absent":    0.05
+
+  - name: email_security_policy_enforcing
+    description: "Observable email-authentication policy is enforcing (DMARC reject/quarantine + DKIM + strict SPF + optional MTA-STS enforce)."
+    # Root node — policy enforcement is provider-independent. Many M365
+    # / GWS tenants ship with weak policy (p=none); some self-hosted /
+    # gateway-fronted setups enforce strictly. The two claims should
+    # not be entangled in the topology.
+    # Prior 0.25 reflects published base rates of fully-enforcing DMARC
+    # deployment on enterprise apex domains (not corpus-fitted).
+    prior: 0.25
     evidence:
       - signal: dmarc_reject
-        likelihood: [0.85, 0.05]
+        likelihood: [0.92, 0.04]
       - signal: dmarc_quarantine
         likelihood: [0.55, 0.10]
       - signal: mta_sts_enforce
         likelihood: [0.70, 0.05]
       - signal: dkim_present
-        likelihood: [0.90, 0.20]
+        likelihood: [0.85, 0.30]
       - signal: spf_strict
         likelihood: [0.75, 0.30]
 

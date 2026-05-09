@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.2.2** (catalog growth — 39 new fingerprints from the v1.9.2-pre-release corpus scan; v1.9 fusion layer remains EXPERIMENTAL).
+Current release: **v1.9.3** (Bayesian-network topology surgery — `email_security_strong` split into `email_security_modern_provider` + `email_security_policy_enforcing`, `federated_identity` parents expanded; v1.9 fusion layer remains EXPERIMENTAL).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
@@ -228,6 +228,13 @@ Standing work that runs alongside every release:
   hedged and the user understands why.
 - **Release and docs reliability.** CI gates cover the same checks as
   release; counts and version references stay tight to this file.
+- **Per-release calibration aggregate publish.** Each v1.9.x patch
+  ships its own one-page validation summary
+  (`validation/v1.9.N-calibration.md`) with sensitivity numbers, ECE
+  on the synthetic network, and corpus spot-check rate at that point.
+  Established for v1.9.0; the practice continues per patch so
+  calibration claims are falsifiable across time, not just at the
+  v2.0 lock moment.
 
 ### v1.7.0 — Hardened-target signal recovery (shipped)
 
@@ -344,7 +351,7 @@ first**, so schema-affecting work is informed by what operators
 actually use rather than the other way around. Each milestone
 maps to one patch release.
 
-#### v1.9.2 — UX validation via agentic QA (the AI-agent persona is real)
+#### v1.9.2 — UX validation via agentic QA (shipped)
 
 We have not validated that operators benefit from credible
 intervals. The entire calibration argument is academic if no one
@@ -415,7 +422,7 @@ surfaces ambiguous results, or if we want a non-agent persona
 interview plan is on the shelf. But agentic QA is genuine
 validation for the agent persona, not a placeholder for it.
 
-#### v1.9.3 — Resolve the `email_security_strong` definitional gap
+#### v1.9.3 — Resolve the `email_security_strong` definitional gap (shipped)
 
 This is *topology surgery*, not parameter tuning. The v1.9.0
 spot-check showed 52.6% agreement on this single node; all other
@@ -644,14 +651,70 @@ allowed `experimental` per-node at v2.0; we removed that
 allowance. If a node can't earn `stable`, it doesn't belong in
 v2.0, full stop.
 
-### v1.9.x — Optional feature additions (parallel to the bridge milestones)
+### v1.9.x — Required quality work for v2.0 (parallel to the bridge milestones)
 
-The six bridge milestones above are *required* for v2.0. The
-features below are *additive* — real new surfaces that don't
-require the schema lock and don't gate v2.0. Each ships as its
-own patch release with EXPERIMENTAL on its surfaces, can land in
-any order, and gets a row in the v2.0 schema-lock disposition
-table once it has been in the wild long enough to validate.
+The six bridge milestones above resolve known *correctness* gaps in
+the Bayesian layer. The items below resolve known *quality* gaps —
+explainability, supply-chain hygiene, and consumption ergonomics —
+that v2.0 cannot honestly ship without. They are not bridge
+milestones (no dependency chain among them; they can land in any
+order under whatever v1.9.x.y patch numbers are available), but
+they are *required* before v2.0 in the same sense the bridge
+milestones are.
+
+The reason these moved from "optional" to "required": v2.0 is the
+"polished and excellent everywhere" release. Calling these optional
+while the roadmap simultaneously cites their gaps (187/485 detections
+have descriptions; "Known gaps" lists missing SECURITY.md, SBOM,
+secrets-scanning) is internally inconsistent. Either the gaps are
+real and need closing for the polished release, or they are not real
+and don't belong on the gap list. They are real.
+
+- **Catalog metadata richness pass.** Beyond the v1.9.7 presence
+  gate, raise description coverage to ≥ 80%, reference coverage to
+  ≥ 25%, document deliberate non-default weights per fingerprint.
+  Pure data work, no schema change. **Required because** the tool's
+  value prop is auditable, debuggable evidence; shipping a v2.0
+  whose `--explain` panel surfaces slugs without descriptions or
+  reference links is an explainability gap that the priority order
+  (correctness → reliability → **explainability** → composability)
+  promises to close before v2.0.
+- **SECURITY.md and supply-chain hardening.** Explicit
+  vulnerability-disclosure policy, gitleaks / TruffleHog
+  secrets-scanning in CI, SBOM (CycloneDX or SPDX) attached as a
+  release asset, forward-compat cache-loading test. Each is small.
+  **Required because** the project's own "Known gaps" section calls
+  these out as "things a security-focused project ideally has but we
+  do not yet ship." A polished v2.0 of a defensive security tool
+  cannot leave that list intact.
+- **Downstream consumption examples** (at least two SIEMs).
+  Copy-pasteable parsers / field mappings for at least Splunk and
+  one of (Elastic / Sentinel / ArcSight). recon's `--json` /
+  `--ndjson` shape is already the integration surface; these turn
+  the schema lock from a contract-on-paper into a contract anyone
+  can actually consume. **Required because** v2.0 IS the schema
+  lock; locking a contract no published example demonstrates is
+  premature. Two SIEMs is the floor; more is welcome.
+- **Top-3 influential edges in `--explain-dag`.** Extend
+  `render_dag_text` to identify the three highest-leverage evidence
+  bindings per node (largest contribution to the posterior) and
+  surface their factor values inline. No schema change.
+  **Required because** `--explain-dag` is the explainability surface
+  v2.0 is supposed to lock; without influential-edge surfacing, the
+  layer reports a posterior and an evidence list but does not show
+  *which* evidence drove the answer, which is exactly the question a
+  defending operator needs to debug a surprising result.
+
+These ship as completed in any order before v2.0; v2.0 inherits them
+already-present.
+
+### v1.9.x — Optional feature additions (post-v2.0-friendly)
+
+The features below are *additive* — real new surfaces that don't
+require the schema lock and don't gate v2.0. Each ships as its own
+patch release with EXPERIMENTAL on its surfaces, can land in any
+order, and gets a row in the v2.0 schema-lock disposition table only
+if it shipped before the lock; otherwise it inherits a v2.x slot.
 
 - **BIMI VMC legal-name clustering** — pairs with the v1.8
   hypergraph view; demonstrates real multi-brand identification
@@ -661,14 +724,6 @@ table once it has been in the wild long enough to validate.
   only; no hidden network. Optional `include_fusion` flag
   surfaces v1.9 posterior shifts alongside the deterministic
   diff. The first first-class delta surface for agents.
-- **Catalog metadata richness pass** — beyond the v1.9.7 presence
-  gate, raise description coverage to ≥ 80%, reference coverage
-  to ≥ 25%, document deliberate non-default weights per
-  fingerprint. Pure data work, no schema change.
-- **Downstream consumption examples** — copy-pasteable parsers /
-  field mappings for Splunk, ArcSight, Elastic, Sentinel. recon's
-  `--json` / `--ndjson` shape is already the integration surface;
-  these are friction-removers.
 - **Portfolio / self-audit batch mode** — `recon batch
   --self-audit` aggregating vertical-baseline hits, anomaly
   rules, correlation-depth distribution, and gateway / sovereignty
@@ -680,40 +735,23 @@ table once it has been in the wild long enough to validate.
   chain motifs. Trivial once the graph layer exists; gives
   non-AI users a usable artifact for tickets, decks, audit
   packets.
-- **SECURITY.md and supply-chain hardening** — explicit
-  vulnerability-disclosure policy, gitleaks / TruffleHog secrets-
-  scanning in CI, SBOM (CycloneDX or SPDX) attached as a release
-  asset, forward-compat cache-loading test. Each is small;
-  bundled here so the engineering-quality "what's still missing"
-  list shrinks visibly across the v1.9.x patches.
 - **Per-node `n_eff_multiplier` in `bayesian_network.yaml`** —
   schema-additive field that scales effective sample size on a
-  per-node basis. Lets weak-calibration nodes (currently
-  `email_security_strong`, `aws_hosting`) widen their credible
-  intervals without globally widening every node. Default 1.0;
-  ≤ 1.0 widens. Replaces the current uniform formula with
+  per-node basis. Lets weak-calibration nodes (`aws_hosting` and
+  any v1.9.5 not-yet nodes that survive into v1.9.5+) widen their
+  credible intervals without globally widening every node. Default
+  1.0; ≤ 1.0 widens. Replaces the current uniform formula with
   `n_eff = max(_MIN_N_EFF, multiplier * (evidence_count -
-  conflict_penalty))`. Falls naturally out of v1.9.4
-  hardened-adversarial findings + the existing sensitivity test.
-- **Top-3 influential edges in `--explain-dag`** — extend
-  `render_dag_text` to identify the three highest-leverage
-  evidence bindings per node (largest contribution to the
-  posterior) and surface their factor values inline. Makes the
-  layer's reasoning visible without requiring an external DOT
-  rendering step. No schema change.
+  conflict_penalty))`. **Conditionally required** if v1.9.4
+  hardened-adversarial findings + the existing sensitivity test
+  surface nodes whose interval shape only makes sense with per-node
+  scaling; otherwise post-v2.0.
 - **Corpus-driven Hypothesis tests** — extend
   `tests/test_bayesian_hypothesis.py` with property tests over
   real corpus output: e.g., "for any domain with ≥ 3 evidence
   pieces and 0 conflicts, interval width ≤ 0.25." Strengthens
   the test floor against future regressions; the existing
   synthetic-network properties already pass.
-- **Per-release calibration aggregate publish.** Each v1.9.x
-  patch ships its own one-page validation summary
-  (`validation/v1.9.N-calibration.md`) with the sensitivity
-  numbers, ECE on the synthetic network, and corpus spot-check
-  rate at that point. Already established for v1.9.0; the
-  practice continues per patch so calibration claims are
-  falsifiable across time, not just at the v2.0 lock moment.
 - **Hawkes-kernel CT burst classification.**
   `_detect_deployment_bursts()` currently uses raw inter-arrival
   deltas. Fit a one-parameter exponential-decay kernel (pure
@@ -776,7 +814,9 @@ fields to the v2.0 schema contract; make the catalog community-PR-
 friendly; ensure the framework is suitable for sustained corpus-driven
 operation.
 
-**Pre-conditions** (the six bridge patches above must have shipped):
+**Pre-conditions** — two tracks must clear, both required:
+
+*Track A — Bridge milestones (numeric order; dependency-driven):*
 
 1. v1.9.2 — Operator UX validation via agentic QA documented in
    `validation/v1.9.2-agentic-ux.md`.
@@ -788,11 +828,20 @@ operation.
 6. v1.9.7 — Metadata gate flipped from advisory to presence-
    enforcing.
 
-Patches ship in numeric order as work completes — v1.9.2 first,
-then v1.9.3, etc. The numbering reflects the dependency chain
-that the planning exercise produced; reordering would mean
-discarding the reason the milestones were sequenced this way.
-v2.0 ships when all six are in.
+*Track B — Required quality work (any order, parallel to Track A):*
+
+7. Catalog metadata richness pass — descriptions ≥ 80%, references
+   ≥ 25% across the catalog.
+8. SECURITY.md and supply-chain hardening — vulnerability-disclosure
+   policy, gitleaks / TruffleHog secrets-scanning in CI, SBOM
+   attached as a release asset, forward-compat cache test.
+9. Downstream consumption examples — at least Splunk + one of
+   (Elastic / Sentinel / ArcSight).
+10. Top-3 influential edges in `--explain-dag` rendering.
+
+Track A patches ship in numeric order. Track B items can land in
+any order under whatever v1.9.x.y patch numbers are available.
+v2.0 ships when all ten pre-conditions clear.
 
 **Schema-lock disposition** (every EXPERIMENTAL field gets a verdict):
 

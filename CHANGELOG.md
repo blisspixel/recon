@@ -5,6 +5,80 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3] - 2026-05-09
+
+**v1.9.3 bridge milestone — Bayesian-network topology surgery.**
+Resolves the `email_security_strong` definitional gap that produced
+the 52.6% v1.9.0 calibration disagreement. Per
+[docs/roadmap.md §v1.9.3](docs/roadmap.md), this is topology surgery,
+not CPT tuning — the v1.9.0 node parameterized its CPT on
+modern-mail-provider presence (M365 / GWS / gateway) but tested
+policy-enforcement signals (DMARC / DKIM / SPF / MTA-STS) via its
+evidence bindings. Different claims; no parameter tuning could
+reconcile them.
+
+**Calibration impact.** Spot-check agreement on
+`email_security_policy_enforcing` (the evidence-driven half of the
+split) is **100%** on the v1.9.3 spot corpus. See
+[validation/v1.9.3-calibration.md](validation/v1.9.3-calibration.md)
+for the full calibration aggregate and reproducibility instructions.
+
+### Changed (EXPERIMENTAL surface)
+
+- **`bayesian_network.yaml` topology** bumped to v1.9.3 (frozen
+  2026-05-09; 9 nodes, was 8). The topology stability contract
+  acknowledges bridge milestones as planned exceptions.
+- **`email_security_strong` removed** from
+  `recon_tool/data/bayesian_network.yaml`. Consumers pinning the
+  v1.9.0 node name in `posterior_observations[]` must update. The
+  EXPERIMENTAL label on the whole `--fusion` surface accommodates
+  this; no separate deprecation patch — the node's calibration was
+  the explicit weak spot v1.9.x was committed to fixing.
+- **`federated_identity` parents expanded** from `[m365_tenant]` to
+  `[m365_tenant, google_workspace_tenant]`. The v1.9.0 single-parent
+  network systematically under-attributed federation when the path
+  didn't go through M365 (Okta + GWS, Auth0 + custom IdP, standalone
+  SAML). Four-entry CPT preserves the M365-path numbers and seeds
+  GWS-path values.
+
+### Added
+
+- **`email_security_modern_provider`** node — provider-presence
+  claim. Parents `[m365_tenant, google_workspace_tenant,
+  email_gateway_present]`; no evidence bindings (pure CPT
+  propagation). Provider presence is fully observable through the
+  parent slugs.
+- **`email_security_policy_enforcing`** node — policy-enforcement
+  claim. Root node, prior 0.25. Evidence bindings carried over from
+  the v1.9.0 node: `dmarc_reject`, `dmarc_quarantine`,
+  `mta_sts_enforce`, `dkim_present`, `spf_strict`. Provider-
+  independent — a Zoho or Fastmail tenant with a strict DMARC
+  reject policy fires this node identically to an M365 one.
+- **`tests/test_bayesian_v193_topology.py`** — 11 regression tests
+  pinning the new topology against silent reversion.
+- **`validation/v1.9.3-calibration.md`** — per-release calibration
+  aggregate (sensitivity, synthetic ECE, spot-check); part of the
+  standing per-release publish discipline.
+- **`docs/correlation.md §4.8.9`** — *Definitional discipline: the
+  v1.9.3 split.* The v1.9.3 gate the roadmap required: explicit
+  definitions of both new nodes, why they are separate claims, and
+  the principle behind questioning topology before tuning numbers.
+
+### Roadmap
+
+- **v1.9.3 bridge milestone closed.** v1.9.4 (hardened-adversarial
+  behavior validation) is next. The full v1.9.0 corpus will be
+  re-run against the v1.9.3 topology as part of v1.9.4 to certify
+  cross-vertical calibration.
+- **Roadmap restructured** — items previously in
+  *v1.9.x — Optional feature additions* that v2.0 polish requires
+  (catalog metadata richness, SECURITY.md + supply-chain hardening,
+  downstream consumption examples, top-3 influential edges in
+  `--explain-dag`) moved to a new *Required quality work for v2.0*
+  section. v2.0 pre-conditions now enumerate ten items across two
+  tracks: six bridge milestones (Track A) plus four required
+  quality items (Track B).
+
 ## [1.9.2.2] - 2026-05-08
 
 **Catalog growth from the v1.9.2-pre-release corpus scan — 39 new
