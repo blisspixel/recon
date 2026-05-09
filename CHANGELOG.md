@@ -5,6 +5,110 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.2.2] - 2026-05-08
+
+**Catalog growth from the v1.9.2-pre-release corpus scan — 39 new
+fingerprints.** The 4,270-domain scan that gated v1.9.2 surfaced 86
+unclassified CNAME patterns. v1.9.2.2 ships the **39 new fingerprints**
+(33 application-tier SaaS + 6 infrastructure-tier CDNs) that survived
+hand-reviewed LLM-assisted triage against the project's existing
+`recon-fingerprint-triage` skill rubric. The remaining 47 candidates
+were dropped: 27 intra-org self-references (e.g. Microsoft's own
+`dc-msedge.net`, Baidu's `shifen.com`, Alibaba's `tbcache.com`),
+12 already-covered slugs, 4 niche one-offs, 2 unclear pending more
+corpus exposure.
+
+This is a follow-up patch to v1.9.2 (which was harness-only with no
+recon_tool/ changes) and to v1.9.2.1 (MCP UX, also no catalog
+changes). The "no bundling" rule applies: shipping fingerprint
+additions in their own patch keeps each tag attached to one
+user-facing story.
+
+### Added
+
+- **39 new `cname_target` fingerprints** in
+  `recon_tool/data/fingerprints/surface.yaml`:
+  - **Identity / Security:** Akamai EAA (Zero Trust), Fortinet
+    FortiWeb Cloud, plus extended Okta (FedRAMP `okta-gov.com`
+    and DNSSEC `okta-dnssec.com` patterns) and Ping Identity
+    (PingOne `ping.cloud`).
+  - **Email & Communication:** Hostinger Email, Rackspace Email.
+  - **Productivity & Collaboration:** BigMarker, CampusPress,
+    Fluid Topics (Antidot), Framer, Gatsby Events, GitBook,
+    Mintlify, Refined (Confluence theme), Stova (Aventri),
+    Tistory (Kakao), Tumblr, Weglot, WordPress.com.
+  - **Marketing:** Movable Ink, Prowly, Terminus (Sigstr),
+    Uberflip (ZoomInfo).
+  - **Business Apps:** Amplience, Q4 Inc. (IR Platform),
+    Talentera.
+  - **Commerce:** Fanatics Retail Group, SAP Commerce Cloud.
+  - **Certain (Cvent)** event management.
+  - **Infrastructure-tier CDNs:** Edgio CDN (Limelight),
+    EdgeCDN (Bitban), Lumen CDN (Footprint), Medianova CDN,
+    Merlin CDN, plus extended Gandi (`partners.gandi.net` +
+    `vip.gandi.net` web-redirect), easyDNS URL forwarding,
+    IONOS hosting (`adsredir.ionos.info`), Kinsta managed
+    WordPress, and Google Cloud (`bc.googleusercontent.com`
+    extending the existing `gcp-app` slug).
+- **36 new formatter category mappings** in
+  `recon_tool/formatter.py:_CATEGORY_BY_SLUG` for the new slugs
+  (three slugs — okta, ping-identity, gcp-app — reuse existing
+  entries rather than introducing duplicate names).
+- **`validation/triage_llm.py`** — programmatic LLM-assisted
+  triage runner. Reads a `candidates.json` produced by
+  `validation/triage_candidates.py`, batches the entries to an
+  Anthropic chat model with the project's triage rubric as the
+  system prompt, parses the structured response into a markdown
+  triage report (kept local — references real sample subdomains)
+  plus a proposed-stanzas YAML diff (only generic patterns,
+  safe to commit). Dev tool only; not a runtime dependency.
+  End users do not need an LLM API key for any recon CLI
+  surface.
+
+### Changed
+
+- `recon_tool/data/fingerprints/surface.yaml` — appended catalog-
+  growth section under the existing Microsoft 365 entry. Catalog
+  validator confirms **385 / 385 entries pass** schema (was 346).
+
+### Tests
+
+- Existing 2091 tests still pass at 84.03% coverage. No new tests
+  added — fingerprint behavior is data-driven and exercised by the
+  catalog validator (`recon fingerprints check`), the match-mode
+  audit (`validation/audit_fingerprints.py`), and the existing
+  per-detection unit tests in `tests/test_fingerprints*.py`.
+
+### Fixed
+
+- **`tests/test_mcp_install.py::test_envvar_expands_in_cli_config_path`
+  cross-platform regression.** The test added in v1.9.2.1 used a
+  `$VAR` POSIX form with an inverted polarity check that
+  reassigned to `%VAR%` (Windows-only) after ``os.path.expandvars``
+  successfully expanded the POSIX form. On Linux the resulting
+  `%VAR%` literal never gets re-expanded by Python's stdlib, so
+  the install never wrote to the temp dir and the assertion
+  failed. v1.9.2.1's CI publish job consequently failed on Linux
+  even though the local Windows test pass count was 2091. This
+  patch swaps to the curly-brace `${VAR}` POSIX form which
+  ``os.path.expandvars`` handles identically on every platform.
+  Net effect: PyPI did not receive a v1.9.2.1 release; users
+  upgrading skip from 1.9.2 to 1.9.2.2.
+
+### Roadmap
+
+- Standing-work discipline restored: every release window now
+  includes at least one private-corpus scan plus the resulting
+  catalog growth in the same release window (v1.9.2 +
+  v1.9.2.2 together). The "no bundling" rule is preserved by
+  separating the harness work (v1.9.2), MCP UX (v1.9.2.1), and
+  catalog growth (this) into three tagged releases that share a
+  release window but not a single tag. v1.9.2.1 was tagged on
+  GitHub but its release workflow failed at the test job
+  (regression noted under Fixed above), so PyPI never received
+  it; the MCP UX features it introduced ride along with this
+  v1.9.2.2 wheel.
+
 ## [1.9.2.1] - 2026-05-08
 
 **MCP works by default — interactive misuse caught, install + live

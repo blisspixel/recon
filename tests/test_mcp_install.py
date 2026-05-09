@@ -648,15 +648,15 @@ class TestPathExpansion:
     def test_envvar_expands_in_cli_config_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("RECON_TEST_DIR", str(tmp_path))
 
-        # `$RECON_TEST_DIR/foo.json` (POSIX) or `%RECON_TEST_DIR%\foo.json`
-        # (Windows) — os.path.expandvars handles both, so the same test
-        # body works cross-platform if we use the POSIX form on Unix and
-        # check both shapes via expandvars itself.
+        # ``${RECON_TEST_DIR}`` (curly-brace POSIX form) is expanded by
+        # ``os.path.expandvars`` on every platform — Python's stdlib
+        # treats both ``$name`` and ``${name}`` as portable, while
+        # ``%name%`` is Windows-only. Pick the cross-platform form so
+        # the install code path runs the same way under CI on Linux
+        # and on Windows-local development.
         import os
 
-        raw = os.path.join("$RECON_TEST_DIR", "envvar-test.json")
-        if "$" not in os.path.expandvars(raw):
-            raw = os.path.join("%RECON_TEST_DIR%", "envvar-test.json")
+        raw = os.path.join("${RECON_TEST_DIR}", "envvar-test.json")
 
         result = runner.invoke(
             app,

@@ -51,6 +51,11 @@ docs/accuracy.md
 # corpus; neither contains target data.
 !/validation/synthetic_calibration.py
 !/validation/analyze_v19_calibration.py
+# v1.9.2.2: LLM-assisted triage runner for fingerprint candidates.
+# Reads private candidates.json (gitignored) and emits generic
+# YAML stanzas that are safe to commit. The runner itself is
+# generic catalog-growth tooling.
+!/validation/triage_llm.py
 # Per-release corpus-validation reports — statistics + technical
 # narrative; no per-domain data. The full result JSONs
 # (v1.8-validation-results*.json, v1.9-validation-results*.json, ...)
