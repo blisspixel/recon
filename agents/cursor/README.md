@@ -21,14 +21,24 @@ Other forms (`uv tool install`, `uvx`) work too — see [`docs/mcp.md`](../../do
 
 ## 2. Wire the MCP server
 
-Drop [`mcp.json`](mcp.json) at one of these paths:
+**One-shot install (recommended):**
+
+```bash
+recon mcp install --client=cursor              # writes to ~/.cursor/mcp.json
+recon mcp install --client=cursor --scope=workspace   # writes .cursor/mcp.json in cwd
+recon mcp install --client=cursor --dry-run    # preview without writing
+```
+
+The install merges into existing `mcpServers` without touching siblings; `--force` refreshes the recon block while preserving any custom `env`, `autoApprove`, or other fields you've added.
+
+**Manual install:** drop [`mcp.json`](mcp.json) at one of:
 
 | Scope | Path |
 |---|---|
 | Project | `.cursor/mcp.json` |
 | Global | `~/.cursor/mcp.json` |
 
-**macOS PATH gotcha.** Cursor is a GUI Electron app and does not inherit your shell's PATH. If `command: "recon"` fails to launch the server, replace it with the absolute path (`which recon` in your shell) or the Python module form (`{ "command": "/usr/local/bin/python3", "args": ["-m", "recon_tool.server"] }`).
+**macOS PATH gotcha.** Cursor is a GUI Electron app and does not inherit your shell's PATH. If `command: "recon"` fails to launch the server, replace it with the absolute path (`which recon` in your shell) or the Python module form (`{ "command": "/usr/local/bin/python3", "args": ["-m", "recon_tool.server"] }`). The install command auto-detects this case and falls back to the Python module form when `recon` isn't on PATH at install time.
 
 ## 3. Wire the agent guidance
 

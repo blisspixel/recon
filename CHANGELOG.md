@@ -5,6 +5,129 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.2.1] - 2026-05-08
+
+**MCP works by default — interactive misuse caught, install + live
+self-check shipped.** Three independent UX patches bundled because
+they share a single user-facing story: "I ran the MCP server and it
+either confused me or didn't connect." Operators who launched
+`python -m recon_tool.server` (or `recon mcp`) directly in a shell
+hit a Pydantic JSON-parse traceback the first time their stray
+newline reached the JSON-RPC parser; this release intercepts that
+case with an explicit "this is not a REPL" panel. Operators who
+wanted to wire recon into an MCP client had to copy-paste a JSON
+block into a per-OS, per-client config file by hand;
+`recon mcp install --client=<name>` now does that idempotently.
+And operators who installed but couldn't tell whether the wiring
+actually worked had only static-shape diagnostics; `recon mcp
+doctor` now spawns the server and walks a real initialize +
+tools/list handshake the way a client would.
+
+These are roadmap "v1.9.x — Optional feature additions (parallel
+to the bridge milestones)" entries — they ship as a bundle here
+rather than as three separate patches because the underlying
+narrative is one user-facing change, and CHANGELOG readers benefit
+from seeing the three components together. The next bridge
+milestone (v1.9.3 — `email_security_strong` definitional gap) is
+unaffected.
+
+### Added
+
+- **`recon_tool/server.py:_print_tty_misuse_panel` + TTY guard.**
+  When `sys.stdin.isatty()` returns True and the
+  `RECON_MCP_FORCE_STDIO` env var is unset, `main()` prints a
+  human-readable panel explaining that the server speaks JSON-RPC
+  over stdio and exits cleanly. The previous behavior — feeding
+  the user's stray newlines into the FastMCP JSON parser and
+  surfacing a Pydantic stack trace — is preserved behind
+  `RECON_MCP_FORCE_STDIO=1` (case-insensitive; `1`, `true`,
+  `yes`, `on` all enable the bypass). The TTY check itself
+  catches `AttributeError`, `ValueError`, and `OSError` from
+  `isatty()` so embedded environments with stubbed-out or
+  closed-handle stdin don't crash before the JSON-RPC loop ever
+  starts.
+- **`recon mcp install --client=<name>` (`recon_tool/mcp_install.py`).**
+  Idempotent merge of the canonical `mcpServers.recon` block into
+  the right config file for six clients: claude-desktop,
+  claude-code, cursor, vscode, windsurf, kiro. Per-OS path table
+  (Windows / macOS / Linux), `--scope user|workspace|auto`,
+  `--config-path` override (with `~` and env-var expansion),
+  `--force` to refresh canonical fields, `--dry-run` to preview
+  without writing. `--force` is field-
+  preserving: only `command` and `args` are authoritative on the
+  install side; the user's hand-curated `autoApprove` list,
+  `env` overrides, `disabled` flags, and any other keys they've
+  added to the recon block all survive a `--force` rerun. Reads
+  with `utf-8-sig` so a UTF-8 BOM (Windows Notepad / certain
+  PowerShell redirects) doesn't trip JSON parsing; writes with
+  `ensure_ascii=False` and `newline="\n"` so non-ASCII content
+  in sibling configs round-trips byte-for-byte and disk format
+  stays platform-agnostic. Refuses to clobber unparseable JSON,
+  top-level non-object configs, or a `--config-path` that points
+  at a directory rather than a file; preserves sibling
+  `mcpServers` entries; falls back from `recon` to `python -m recon_tool.server`
+  when `recon` is not on PATH so GUI clients (Claude Desktop,
+  Windsurf) that don't inherit the shell PATH still launch the
+  server. Idempotent rerun is genuinely free — when no canonical
+  field would change, the file is not rewritten and its mtime is
+  not bumped, avoiding spurious file-watcher reloads in clients
+  like Cursor and VS Code. Writes are atomic — content goes to a
+  sibling tempfile in the same directory, gets ``fsync``'d where
+  the filesystem supports it, then ``os.replace``'d into place,
+  so a partial-write failure (disk full, antivirus mid-scan,
+  network drive drop, OS crash) leaves either the old config
+  intact or the new config fully on disk — never a half-written
+  truncation.
+- **`recon mcp doctor` (`recon_tool/mcp_doctor.py`).** End-to-end
+  self-check: spawns the server through the running interpreter
+  (`python -m recon_tool.server`), opens a real `stdio_client` +
+  `ClientSession`, performs `initialize` + `tools/list`, and
+  asserts the response includes the canonical anchor tools
+  (`lookup_tenant`, `analyze_posture`, `assess_exposure`,
+  `find_hardening_gaps`, `chain_lookup`). 30-second handshake
+  timeout. Spawned-server stderr is captured to a tempfile rather
+  than forwarded to the terminal; on a successful run, that
+  capture is dropped (no banner flood above the checks); on a
+  crash during ``initialize``, the trailing twelve lines of the
+  captured stderr are spliced into the failure detail so the user
+  sees the actual ImportError / traceback / missing-dependency
+  message instead of an opaque ``BrokenPipeError``. Distinct from
+  the existing `recon doctor --mcp`, which remains the static-
+  shape sibling (package import, FastMCP introspection, copy-
+  pasteable config snippet).
+
+### Changed
+
+- **`recon mcp` is now a typer sub-typer instead of a leaf command.**
+  Bare `recon mcp` (no subcommand) still starts the server — the
+  callback uses `invoke_without_command=True` so backward
+  compatibility is preserved. New subcommands (`install`,
+  `doctor`) live under it. No change to existing scripts or MCP
+  client configs.
+
+### Tests
+
+- 72 new tests across `tests/test_mcp_install.py` (55),
+  `tests/test_mcp_doctor.py` (10 including a real
+  subprocess-spawning live handshake and a server-stderr
+  capture-on-crash case), plus TTY-guard and field-preservation
+  cases in `tests/test_server.py`. New tests pin: BOM-stripped
+  reads, unicode round-trip without `\u` escapes, LF line endings
+  on Windows, idempotent rerun (mtime stable), user `env` /
+  non-empty `autoApprove` / `disabled` / unknown-key preservation
+  under `--force`, `~` and env-var expansion in `--config-path`,
+  directory-path refusal, `Path.home()` failure, `OSError` /
+  `ValueError` / `AttributeError` paths through
+  `_stdin_is_tty()`, and case-folded / whitespace-tolerant
+  `RECON_MCP_FORCE_STDIO` parsing, atomic-write debris cleanup,
+  and partial-write-failure preservation of the original config.
+  Full suite: 2091 passing.
+
+### Roadmap
+
+- Closes three "v1.9.x — Optional feature additions" entries.
+  Bridge sequence (v1.9.3 → v1.9.7 → v2.0) unaffected.
+
 ## [1.9.2] - 2026-05-08
 
 **Agentic UX validation harness — first v1.9.x bridge milestone toward

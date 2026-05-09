@@ -2478,6 +2478,66 @@ def _print_mcp_banner() -> None:
     sys.stderr.flush()
 
 
+def _print_tty_misuse_panel() -> None:
+    """Tell a human who launched the server in a terminal what to do instead.
+
+    The MCP stdio transport expects JSON-RPC frames on stdin. When a human
+    runs the server in a TTY and presses Enter, the loose newline reaches
+    the JSON-RPC parser as ``'\\n'`` and surfaces as a Pydantic validation
+    error — terrifying-looking, but not actually broken. This panel
+    intercepts that case and explains the situation before any framing
+    error has a chance to fire.
+    """
+    import sys
+
+    lines = [
+        "=" * 80,
+        "recon MCP server — this is NOT an interactive REPL.",
+        "=" * 80,
+        "",
+        "The server speaks JSON-RPC over stdio. It is meant to be launched",
+        "by an MCP client (Claude Desktop, Claude Code, Cursor, VS Code,",
+        "Windsurf, Kiro), not run by hand at a shell prompt.",
+        "",
+        "What to do:",
+        "  • Configure your client to spawn `recon mcp` and let the client",
+        "    drive the JSON-RPC handshake. Per-client scaffolds live under",
+        "    the agents/ directory of the recon repo, and config snippets",
+        "    are in the README and docs/mcp.md.",
+        "  • Run `recon doctor` to verify your install is healthy.",
+        "  • Run `recon <domain>` to use the CLI directly.",
+        "",
+        "Override (for debugging / piping JSON-RPC by hand):",
+        "  set RECON_MCP_FORCE_STDIO=1 before launching, and the server",
+        "  will start even with a TTY attached.",
+        "",
+        "=" * 80,
+        "",
+    ]
+    sys.stderr.write("\n".join(lines))
+    sys.stderr.flush()
+
+
+def _stdin_is_tty() -> bool:
+    """Return True if stdin looks like an interactive terminal.
+
+    Wrapped in a helper so tests can monkeypatch it without poking at the
+    real ``sys.stdin``.
+    """
+    import sys
+
+    try:
+        return sys.stdin.isatty()
+    except (AttributeError, ValueError, OSError):
+        # Some embedded environments replace stdin with an object that
+        # doesn't implement isatty(), close it outright (ValueError),
+        # or hand back a handle in a state that makes the underlying
+        # ioctl/GetFileType call fail (OSError). In every case the
+        # right answer is "no human at the keyboard" — behave like a
+        # client launched us and let the JSON-RPC loop run.
+        return False
+
+
 def main() -> None:
     """Run the MCP server with stdio transport.
 
@@ -2487,8 +2547,19 @@ def main() -> None:
     ``"MCP server stopped"`` instead of a raw traceback. The stdio
     transport is still owned by stdout — the banner and shutdown
     message both go to stderr so JSON-RPC framing stays clean.
+
+    When stdin is a TTY (a human running the server directly in a
+    shell), prints a misuse panel and exits 0 instead of feeding the
+    user's stray newlines into the JSON-RPC parser. Set the env var
+    ``RECON_MCP_FORCE_STDIO=1`` to override.
     """
+    import os
     import sys
+
+    force_stdio_raw = os.environ.get("RECON_MCP_FORCE_STDIO", "").strip().lower()
+    if _stdin_is_tty() and force_stdio_raw not in {"1", "true", "yes", "on"}:
+        _print_tty_misuse_panel()
+        return
 
     _print_mcp_banner()
 

@@ -22,22 +22,35 @@ Works with Claude Desktop, Cursor, VS Code + Copilot, ChatGPT, or any other
 pip install recon-tool
 ```
 
-2. Add this to your AI client's MCP config:
+2. Wire the MCP server into your client. Two ways:
 
-```json
-{
-  "mcpServers": {
-    "recon": {
-      "command": "recon",
-      "args": ["mcp"],
-      "autoApprove": []
-    }
-  }
-}
-```
+   **a. One-shot install (recommended).** Let recon write the right config block at the right per-OS path:
 
-> Alternative: use `"command": "python", "args": ["-m", "recon_tool.server"]`
-> if `recon` is not on your PATH.
+   ```bash
+   recon mcp install --client=claude-desktop
+   # supported: claude-desktop, claude-code, cursor, vscode, windsurf, kiro
+   recon mcp install --client=cursor --dry-run        # preview without writing
+   recon mcp install --client=cursor --scope=workspace  # project-local instead of user-global
+   ```
+
+   The command merges the recon stanza into your existing config without touching sibling MCP servers. Existing `autoApprove` lists, custom `env` vars, `disabled` flags, and any other fields you've added to your recon block survive a `--force` rerun — only `command` and `args` are authoritative on the install side. Writes are atomic (sibling tempfile + `os.replace`), so a partial-write failure leaves the original config intact.
+
+   **b. Manual install.** If you'd rather edit by hand, drop this into the right config file (table below):
+
+   ```json
+   {
+     "mcpServers": {
+       "recon": {
+         "command": "recon",
+         "args": ["mcp"],
+         "autoApprove": []
+       }
+     }
+   }
+   ```
+
+   > Alternative: use `"command": "python", "args": ["-m", "recon_tool.server"]`
+   > if `recon` is not on your PATH.
 
 3. Ask your AI tool something like: "Run a recon lookup on
 northwindtraders.com and summarize the security posture."
@@ -68,6 +81,12 @@ deliberately trust.
 recon intentionally does not add a separate "safe mode" or "full auto" CLI
 flag here. Approval policy belongs in the MCP client config, and the safest
 default is an empty `autoApprove` list.
+
+### Running `recon mcp` directly in a terminal
+
+If you launch `recon mcp` (or `python -m recon_tool.server`) by hand in a shell, recon detects that stdin is a TTY and prints a "this is not a REPL" panel before exiting cleanly. The MCP server is meant to be spawned by an MCP client over stdio JSON-RPC; running it interactively used to surface a Pydantic JSON-parse traceback the first time you pressed Enter, which scared people off. The panel replaces that.
+
+If you genuinely need to drive the JSON-RPC loop by hand (e.g. piping crafted requests for debugging), set `RECON_MCP_FORCE_STDIO=1` (case-insensitive — `1`, `true`, `yes`, `on` all enable the bypass) before launching.
 
 ## Available Tools
 
@@ -212,4 +231,9 @@ GUI MCP clients (Claude Desktop, Windsurf, Cursor, VS Code) typically don't inhe
 
 ### Verify your setup
 
-Run `recon doctor --mcp` to confirm the MCP dependencies are installed, the server loads, all tools enumerate, and `recon` is on your PATH. The output includes a copy-pasteable JSON snippet for every supported client.
+Two complementary checks:
+
+- **`recon doctor --mcp`** — *static* diagnostic. Confirms the MCP dependencies are installed, the server module loads, FastMCP introspection finds all tools, and `recon` is on your PATH. Also prints a copy-pasteable JSON snippet for every supported client.
+- **`recon mcp doctor`** — *live* end-to-end check. Spawns the recon MCP server through the running interpreter, opens a real `stdio_client` + `ClientSession`, runs an `initialize` + `tools/list` handshake the way a client would, and asserts the canonical anchor tools (`lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `chain_lookup`) are registered. If the spawned server crashes during `initialize`, the trailing twelve lines of its stderr are spliced into the failure detail so you see the actual ImportError / traceback instead of an opaque `BrokenPipeError`. 30-second handshake timeout.
+
+The static check (`recon doctor --mcp`) is the right starting point. If it passes but a client still can't talk to the server, run `recon mcp doctor` to confirm the JSON-RPC loop itself is healthy.

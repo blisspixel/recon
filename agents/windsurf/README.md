@@ -21,7 +21,16 @@ Other forms (`uv tool install`, `uvx`) work too — see [`docs/mcp.md`](../../do
 
 ## 2. Wire the MCP server
 
-Drop [`mcp_config.json`](mcp_config.json) at:
+**One-shot install (recommended):**
+
+```bash
+recon mcp install --client=windsurf             # writes the per-OS config path
+recon mcp install --client=windsurf --dry-run   # preview without writing
+```
+
+The install auto-resolves the per-OS path (macOS/Linux: `~/.codeium/windsurf/mcp_config.json`, Windows: `%USERPROFILE%\.codeium\windsurf\mcp_config.json`) and falls back to `python -m recon_tool.server` if `recon` isn't on PATH at install time — which neatly sidesteps the macOS GUI PATH issue below.
+
+**Manual install:** drop [`mcp_config.json`](mcp_config.json) at:
 
 | Platform | Path |
 |---|---|
