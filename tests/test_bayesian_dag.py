@@ -111,6 +111,8 @@ class TestDotRenderer:
         out = render_dag_dot(network, dense_inference, domain="x")
         # m365_tenant -> federated_identity must be present
         assert '"m365_tenant" -> "federated_identity"' in out
+        # google_workspace_tenant -> federated_identity (v1.9.3 expansion)
+        assert '"google_workspace_tenant" -> "federated_identity"' in out
         # federated_identity -> okta_idp
         assert '"federated_identity" -> "okta_idp"' in out
 

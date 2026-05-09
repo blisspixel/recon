@@ -326,10 +326,10 @@ def _summarize_findings(summary: score_mod.RubricSummary) -> str:
         "Technical personas (analyst, ops) read and use posterior material; "
         "narrative personas do not. The most actionable finding for v2.0 is the "
         "explain-DAG invisibility — that is a fixable shape-of-the-JSON issue, "
-        "not a model-of-uncertainty issue. The next bridge milestone "
-        "(v1.9.3, `email_security_strong` topology surgery) is unaffected by "
-        "this run; the v2.0 schema-lock disposition for `posterior_observations` "
-        "is informed by it.",
+        "not a model-of-uncertainty issue. The v1.9.3 bridge milestone "
+        "(email_security_strong topology surgery) is independent of this run; "
+        "the v2.0 schema-lock disposition for `posterior_observations` is "
+        "informed by it.",
     )
     return "\n".join(lines)
 
