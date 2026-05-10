@@ -69,14 +69,43 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install dependencies (for SBOM generation)
+        run: uv sync --extra dev
+
       - name: Build package
         run: uv build
+
+      - name: Generate CycloneDX SBOM
+        # pip-audit emits CycloneDX from the same locked requirements
+        # the audit gate validates, so the SBOM and the audit report
+        # describe the same dependency set. The SBOM goes to a
+        # separate ``sbom/`` directory rather than ``dist/`` so the
+        # PyPI publish job only sees wheels and sdists; a stray JSON
+        # file in dist/ is harmless to twine's default filter but the
+        # explicit separation removes the question.
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p sbom
+          uv export --frozen --no-dev --no-emit-project --no-hashes --format requirements.txt --output-file .ci-audit-requirements.txt
+          uv run pip-audit -r .ci-audit-requirements.txt --format=cyclonedx-json --output "sbom/recon-tool-${VERSION}.cdx.json" --no-deps || true
+          # The "|| true" catches the audit's vulnerability-finding
+          # exit code; the SBOM file is written regardless. The
+          # audit *gate* is in the ``test`` job — this step produces
+          # the SBOM artifact, not the audit verdict.
+          test -f "sbom/recon-tool-${VERSION}.cdx.json"
+          ls -la sbom/
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: sbom/
 
   publish-pypi:
     needs: build
@@ -118,6 +147,12 @@ jobs:
           name: dist
           path: dist/
 
+      - name: Download SBOM artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: sbom
+          path: sbom/
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
@@ -125,4 +160,9 @@ jobs:
           body_path: release_notes.md
           draft: false
           prerelease: false
-          files: dist/*
+          # Attach wheels, sdist, and the CycloneDX SBOM. Consumers
+          # pull the SBOM by stable name (recon-tool-<version>.cdx.json)
+          # for downstream supply-chain audits.
+          files: |
+            dist/*
+            sbom/*
