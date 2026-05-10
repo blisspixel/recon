@@ -493,6 +493,41 @@ which v1.9.0 did not exercise. This milestone validates the
   sparse on this pattern"). Honest framing of where the public
   channel really cannot resolve uncertainty.
 
+**Quality bar — exceptionally well (every item must be checked):**
+
+- [ ] Hardened corpus has explicit *inclusion criteria* documented
+  at the top of `validation/corpus-private/hardened.txt`: a domain
+  qualifies iff it satisfies ≥ 3 of {wildcard SAN ratio ≥ 80%,
+  CNAME chain depth ≥ 3, no public IdP metadata, ≤ 2 public DNS
+  records beyond the apex, certificate validity ≤ 30 days}. Public
+  enough that someone else can build a comparable corpus from
+  CT-log scans + heuristics.
+- [ ] **Full v1.9.0 91-domain corpus re-run** against the v1.9.3
+  topology (deferred from `v1.9.3-calibration.md`), reported in
+  `validation/v1.9.4-calibration.md` alongside the hardened subset.
+  Trend numbers v1.9.0 → v1.9.3 → v1.9.4 published per node.
+- [ ] **Per-hardening-pattern result rows** in the failure-mode
+  catalog. Not "the layer reports sparse on hardened targets" but
+  "wildcard-cert-only targets: cdn_fronting fires (CNAME path),
+  every other node sparse, federated_identity interval [0.0, 0.45];
+  randomized-chain targets: chain_motifs fires when motif library
+  hits, otherwise sparse; etc." One row per hardening pattern.
+- [ ] **Survival rate** quantified: what fraction of high-confidence
+  posteriors *survive* migration from soft-target corpus to
+  hardened-target corpus, per node. The honest number — most should
+  vanish; the ones that don't are the leak surfaces.
+- [ ] **No new code-path regressions on the soft corpus** —
+  re-running the v1.9.0 corpus shows the same 100% per-node
+  agreement (other than `email_security_strong` which is gone).
+- [ ] **Failure-mode catalog cross-referenced** to specific
+  defensive guidance in correlation.md §4.8.8 (Defensive value):
+  "if you're worried about X, the correlation layer that surfaces
+  it is Y; if X is hardened away, the layer reports Z."
+- [ ] **Reproducibility section** in `v1.9.4-calibration.md` shows
+  how an outside reader could build a comparable hardened corpus
+  from public sources (CT-log queries against short-lived issuers,
+  filter for wildcard SANs, etc.). Anonymized aggregates only.
+
 #### v1.9.5 — Per-node stability criteria (decide, don't ship the field)
 
 The current EXPERIMENTAL label is atomic — the whole `--fusion`
@@ -547,6 +582,34 @@ qualify as `stable`.
   value. v2.0 ships without the field; the schema disposition
   table accounts for nodes by name, not by per-node label.
 
+**Quality bar — exceptionally well:**
+
+- [ ] **Per-node verdict table** in `validation/v1.9.5-stability.md`.
+  One row per node, three columns (a / b / c), explicit pass/fail.
+  Pass requires *all three* — partial-pass nodes are `not yet`.
+- [ ] **Numeric backing for criterion (b)**: per-node Brier score,
+  log-score, and ECE on the v1.9.4 corpus run, with ranges
+  documented (e.g., "ECE ≤ 0.20 considered acceptable for
+  stable; > 0.20 flagged for re-examination, not auto-failed").
+- [ ] **Independent-firing threshold (c) explicit**: N ≥ 10
+  independent domains for stable; the table records the actual
+  firing count per node from the v1.9.4 corpus, not a self-report.
+- [ ] **Criterion-(a) test exists in code** as a parametrized
+  test (`tests/test_node_stability_criteria.py`) — for every
+  node, an assertion that varying its bound evidence moves its
+  posterior and that varying unbound evidence does *not*. The
+  test failing is a regression signal, not a v1.9.5-only check.
+- [ ] **`not yet` verdicts route to specific dispositions** before
+  v2.0:
+  - Split the node (per v1.9.3 surgery template)
+  - Redefine it (CPT changes with concept comments per v1.9.6)
+  - Remove it (one-patch deprecation → next-patch deletion;
+    no "experimental at v2.0" allowance)
+  Each `not yet` node carries its disposition decision in the
+  same v1.9.5-stability.md row.
+- [ ] **No fast-tracking on numbers alone.** A node with great ECE
+  but only 4 firings does not pass — the threshold is *all three*.
+
 #### v1.9.6 — CPT-change discipline (concept, not parameter)
 
 Empirical Bayes — deriving CPT parameters from corpus statistics —
@@ -579,6 +642,28 @@ target number but in the framing.
   game the comment requirement without measuring whether the
   concept-questioning actually happened.
 
+**Quality bar — exceptionally well:**
+
+- [ ] **Worked example in CONTRIBUTING.md**: the v1.9.3 surgery
+  used as the canonical case. "We almost tuned a CPT and shipped;
+  the right answer was topology surgery. Here's how to recognize
+  the same pattern." Concrete enough that a future contributor
+  facing a similar disagreement asks the topology question first.
+- [ ] **PR-template addition**: a non-blocking checkbox `[ ] If
+  this PR changes any CPT entry in bayesian_network.yaml, the
+  YAML carries a comment explaining the *concept* this change
+  reflects, not just the corpus statistic that motivated it.`
+  Pre-filled in `.github/pull_request_template.md`. Reviewer
+  enforces; checkbox is the prompt.
+- [ ] **Anti-pattern catalog**: explicit list of changes the
+  reviewer should reject — "lowered P(X|Y) from 0.75 to 0.55 to
+  match corpus rate" without a concept comment is the canonical
+  rejection. Three or four worked rejections in CONTRIBUTING.md.
+- [ ] **No automated CPT-fitting tooling**: confirm no script
+  under `scripts/` or `validation/` has emerged that auto-emits
+  CPT values from corpus statistics. Periodic audit, not a
+  test (the audit is the discipline).
+
 #### v1.9.7 — Metadata-coverage gate (presence, not coverage)
 
 The v1.9.0 advisory gate measures description coverage as a
@@ -597,6 +682,32 @@ clear the gate. That's gate-gaming.
   detections-with-empty-or-missing-description rather than
   percentage. Flip from advisory to enforcing when the count for
   gated categories is zero.
+
+**Quality bar — exceptionally well:**
+
+- [ ] **Per-category gap report**: when the script fails, output
+  lists the exact slug + detection-rule pair missing a
+  description, grouped by category. A contributor sees "fix
+  these 7 entries" not "your category coverage dropped to 87%."
+- [ ] **Pre-commit hook entry** added to `.pre-commit-config.yaml`
+  so the gate fires locally before push, not just in CI. Faster
+  feedback loop; aligns with the project's existing pre-commit
+  posture.
+- [ ] **What-good-looks-like guide** in `CONTRIBUTING.md`:
+  description rubric requiring (a) what slug detects, (b) what it
+  doesn't detect, (c) common false positives if known. Two or
+  three worked examples (good vs placeholder). Empty-string
+  presence checks the floor; the rubric raises it for new
+  contributions.
+- [ ] **Backfill before flip**: zero detections in
+  identity/security/infrastructure are missing descriptions
+  before the gate flips from advisory to enforcing. The flip is
+  the last commit of v1.9.7, not the first; the patch ships with
+  zero CI breakage on main.
+- [ ] **Reference-presence reporting** added (advisory only at
+  v1.9.7): script also reports references-missing per-detection
+  count, but does not fail. Sets up the Track B metadata richness
+  pass that follows.
 
 #### Patch-release discipline
 
@@ -679,6 +790,27 @@ and don't belong on the gap list. They are real.
   reference links is an explainability gap that the priority order
   (correctness → reliability → **explainability** → composability)
   promises to close before v2.0.
+
+  **Quality bar — exceptionally well:**
+  - [ ] Description rubric (in `CONTRIBUTING.md`): each detection's
+    description states (a) what the slug detects, (b) the
+    observable signal pattern, (c) common false-positive
+    configurations if known. One sentence each; not boilerplate.
+  - [ ] References point to *vendor-published* DNS / MX / CNAME /
+    TXT documentation when possible (auditable third-party source),
+    not blog posts. Where vendor docs are absent, link to the
+    relevant RFC or to a stable archived URL.
+  - [ ] Audit pass: every existing description re-read against the
+    rubric, not just gap-filling. Placeholder descriptions ("Detects
+    Foo") flagged and rewritten. The pass is a single multi-PR
+    workstream tracked in `validation/metadata-audit.md`.
+  - [ ] Chunked into PRs of ≤ 30 fingerprints each; each PR
+    independently reviewable; no single mega-PR.
+  - [ ] Coverage check script reports both presence (v1.9.7 gate)
+    and *richness signals* (mean description length, reference
+    presence, non-default weight rationale). Richness numbers are
+    advisory; presence stays enforcing.
+
 - **SECURITY.md and supply-chain hardening.** Explicit
   vulnerability-disclosure policy, gitleaks / TruffleHog
   secrets-scanning in CI, SBOM (CycloneDX or SPDX) attached as a
@@ -687,6 +819,36 @@ and don't belong on the gap list. They are real.
   these out as "things a security-focused project ideally has but we
   do not yet ship." A polished v2.0 of a defensive security tool
   cannot leave that list intact.
+
+  **Quality bar — exceptionally well:**
+  - [ ] `SECURITY.md` specifies: scope (defensive, passive-only —
+    explicitly out-of-scope: active scanning issues, third-party
+    services we query); response SLA (e.g., acknowledge within 72
+    hours, fix or workaround within 30 days for high-severity);
+    disclosure channel (security contact alias or GitHub Private
+    Vulnerability Reporting); coordination policy with downstream
+    redistributors. Not a template — real commitments the
+    maintainer can keep.
+  - [ ] Secrets scanning runs on (a) every PR, (b) push to main,
+    (c) a weekly scheduled scan against the historical branch tree.
+    Catches both new and historical leaks; weekly cadence catches
+    rotated secrets that re-leak.
+  - [ ] SBOM in CycloneDX format attached to every GitHub Release
+    as an asset (`recon-tool-<version>.cdx.json`). Generated by the
+    release workflow, not by hand. Includes both runtime and
+    transitive dependencies with their licenses.
+  - [ ] Forward-compat cache test: a v1.10-shaped cache entry (one
+    field added) loads cleanly on the v1.9 reader, with the new
+    field ignored gracefully. Backward-compat is already tested;
+    forward-compat is the missing direction.
+  - [ ] Pinned-floor rationale documented in `pyproject.toml` for
+    every transitive pin we carry (already done for
+    `python-multipart`; audit and document any others). The
+    "why this pin exists" comment is the artifact.
+  - [ ] `pip-audit` runs in CI on every PR (already exists per
+    pyproject `[dev]`); confirm exit-on-vulnerability is set, not
+    advisory.
+
 - **Downstream consumption examples** (at least two SIEMs).
   Copy-pasteable parsers / field mappings for at least Splunk and
   one of (Elastic / Sentinel / ArcSight). recon's `--json` /
@@ -695,6 +857,29 @@ and don't belong on the gap list. They are real.
   can actually consume. **Required because** v2.0 IS the schema
   lock; locking a contract no published example demonstrates is
   premature. Two SIEMs is the floor; more is welcome.
+
+  **Quality bar — exceptionally well:**
+  - [ ] Field-by-field mapping table per SIEM: recon JSON path →
+    SIEM field → notes. Covers both deterministic-pipeline fields
+    (slugs, services, dmarc_policy, etc.) AND fusion-layer fields
+    (posterior_observations, evidence_conflicts).
+  - [ ] Worked end-to-end example per SIEM: input recon JSON
+    (using a Microsoft fictional brand — Contoso/Northwind/
+    Fabrikam) → expected SIEM event with severity mapping and
+    correlation hints. Both the input and expected output checked
+    into `examples/siem/<vendor>/`.
+  - [ ] Use-case framing per SIEM: "if you want to alert on
+    shadow-IT detection, this is the field path; if you want to
+    track DMARC drift over time, this is the schema." Not a
+    parser dump; a decision tree for the SIEM operator.
+  - [ ] CI test that re-parses the worked-example output and
+    diffs against expected, so a v2.0 schema regression breaks
+    the SIEM examples (which is the point of having examples
+    that validate the contract).
+  - [ ] Each SIEM example author-of-record listed; if a vendor
+    employee can't QA it, the example is marked
+    "community-contributed, unverified."
+
 - **Top-3 influential edges in `--explain-dag`.** Extend
   `render_dag_text` to identify the three highest-leverage evidence
   bindings per node (largest contribution to the posterior) and
@@ -704,6 +889,32 @@ and don't belong on the gap list. They are real.
   layer reports a posterior and an evidence list but does not show
   *which* evidence drove the answer, which is exactly the question a
   defending operator needs to debug a surprising result.
+
+  **Quality bar — exceptionally well:**
+  - [ ] Influence is *quantified* per binding as
+    log-likelihood-ratio contribution
+    (`log(P(obs|present)/P(obs|absent))`), not just count or
+    presence. Each surfaced edge carries its LLR and a percentage
+    of total evidence influence.
+  - [ ] Sorted by absolute LLR contribution; ties broken by
+    binding name (deterministic for diff-stability).
+  - [ ] Output format example (literal): `Evidence: slug
+    'microsoft365' (LLR +3.45, 42% of evidence influence), slug
+    'entra-id' (LLR +3.78, 35%), signal 'federated_sso_hub' (LLR
+    +2.89, 23%)`. Operator reads "the M365 + Entra slugs together
+    drove this posterior; if you want to dispute the verdict,
+    those are the facts to challenge."
+  - [ ] DOT export (`--explain-dag-format dot`) carries LLR as
+    edge label. Non-AI users get the same visibility in their
+    diagram as the agent gets in the text.
+  - [ ] Sparse-target behavior: when fewer than 3 bindings fired,
+    the section reports the actual count without padding ("only
+    1 binding fired; the rest of this node's posterior is
+    structural propagation from parents"). No fake top-3.
+  - [ ] Snapshot test (`tests/test_explain_dag_top3.py`) pins the
+    rendered output for the worked correlation.md examples;
+    regression-proof against future renderer changes that drop
+    LLR display.
 
 These ship as completed in any order before v2.0; v2.0 inherits them
 already-present.
@@ -912,6 +1123,39 @@ shapes are known.
 locked schema; confirm no field-shape regressions. Trend metrics
 across v1.6 → v2.0 demonstrate the correlation engine got better
 without overclaiming.
+
+**Quality bar for v2.0 itself — exceptionally well:**
+
+- [ ] **Schema lock validates against published consumers.** The
+  Track B SIEM examples re-parse without modification on the v2.0
+  schema. If a SIEM example breaks, the schema-lock decision was
+  wrong (or the example was) — fix one of them before tagging.
+- [ ] **`validation/v2.0-validation-summary.md` published** —
+  full corpus results, trend table v1.6 → v1.7 → v1.8 → v1.9.0 →
+  v1.9.3 → v1.9.4 → v2.0 per node. The trend table is the public
+  evidence the engine got better.
+- [ ] **All ten Track A + Track B pre-conditions ticked off** in
+  the v2.0 release CHANGELOG entry, each with a link to its
+  shipping patch. A reader can verify each gate cleared without
+  trusting the maintainer's word.
+- [ ] **Zero EXPERIMENTAL labels** in any docstring, panel string,
+  CLI help text, MCP tool description, or schema field
+  description. `grep -ri experimental recon_tool/` returns zero
+  user-facing hits (internal test markers excepted). Verified by
+  a CI grep gate in `release.yml`.
+- [ ] **No "v1.9.x" references** linger in user-facing docs as
+  forward-looking commitments. A reader landing on the v2.0 docs
+  doesn't see "this will be fixed in v1.9.x"; the items either
+  shipped (referenced in past tense) or moved to post-v2.0
+  backlog with explicit motivation.
+- [ ] **Polish-doc cross-checks** in correlation.md: every cited
+  prior-art reference is reachable (no dead links); every
+  dependency in the manifesto matches `pyproject.toml`'s actual
+  dependency list (no manifesto/code drift).
+- [ ] **`recon doctor` updated** to print "v2.0 stable schema" in
+  its first line, and to verify the locked schema fields are all
+  present in a sample lookup output. The user installing v2.0 sees
+  the polish, not just the version number.
 
 ### v2.1.0 — Closed-loop fingerprint mining + validation runner (sketch)
 
