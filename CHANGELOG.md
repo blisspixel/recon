@@ -5,6 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3.5] - 2026-05-11
+
+**Security: CNAME chain target validation, layer 2 (audit finding,
+MEDIUM).** Closes the audit finding *"CNAME chain walking can query
+and leak internal DNS names"* with the second of two layers. Layer 1
+(suffix denylist) was already in place from v1.9.0; this patch adds
+layer 2 (resolved-address private check).
+
+The remaining gap: an attacker who controls a public domain returns
+a CNAME to a publicly-named host (passes the suffix denylist) whose
+A record resolves to RFC1918 or other private space via split-horizon
+DNS. The suffix check alone cannot see this — only resolving the
+target's A/AAAA records can.
+
+### Added
+
+- **`recon_tool/sources/dns._is_private_ip_literal`** — returns True
+  for RFC1918, loopback, link-local, ULA, reserved, multicast, and
+  unspecified IPv4/IPv6 addresses. Defensive on parse failure
+  (returns False so the caller falls back to other checks rather
+  than dropping legitimate hops on garbage input).
+- **`recon_tool/sources/dns._hop_resolves_publicly`** — resolves a
+  target's A and AAAA records in parallel and returns True iff at
+  least one resolved address is in public space. Fail-open on
+  unresolved cases (no A/AAAA records) so CNAME-only intermediate
+  hops in legitimate chains continue to walk.
+- **`tests/test_cname_chain_validation.py`** — 47 tests covering
+  both defense layers plus end-to-end walker behaviour: suffix
+  denylist on 17 private/malformed names and 5 public names,
+  IP-literal classification across RFC1918/loopback/link-local/ULA
+  /multicast/v6 and garbage inputs, hop-resolution helper across
+  public/private/mixed/unresolved cases, and four chain-walker
+  integration tests (suffix-drop, A-drop, legitimate-public,
+  truncate-at-first-failing-hop).
+
+### Changed
+
+- **`recon_tool/sources/dns._resolve_cname_chain`** now calls
+  ``_hop_resolves_publicly`` after the suffix check passes. A hop
+  whose suffix passes but whose A/AAAA records are all in private
+  space is dropped without recording — the walker halts at that
+  point. Adds at most two DNS queries per accepted hop (A + AAAA),
+  well inside the existing ``_SURFACE_MAX_HOPS=5`` and
+  ``_SURFACE_CONCURRENCY=30`` budgets.
+
+### Notes for downstream consumers
+
+- Legitimate public CNAME chains continue to walk identically.
+- An operator behind split-horizon DNS will see fewer CNAME hops
+  recorded when an attacker-controlled public name resolves to
+  their internal range — this is the intended defensive behaviour;
+  the previously-leaking internal name no longer appears in
+  evidence output.
+- The new helpers (`_is_private_ip_literal`, `_hop_resolves_publicly`)
+  are module-private (leading underscore). They are not part of the
+  public API; callers should not rely on them.
+
+### Tests
+
+- 2197 passed (+47 CNAME-validation tests, was 2150 in v1.9.3.4).
+- Coverage 83.32% (≥ 80% gate).
+- ruff + pyright clean on `recon_tool/` + `tests/`.
+
+This is the third of four security patches. v1.9.3.6 (validation
+harness path containment, informational) remains.
+
 ## [1.9.3.4] - 2026-05-11
 
 **Security: MCP doctor/install path isolation (audit finding, HIGH).**

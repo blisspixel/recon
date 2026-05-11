@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.3.4** (Security: MCP doctor/install path isolation — addresses audit finding *"MCP doctor/install can execute shadowed recon_tool package"* via three defense layers: safe-cwd + `PYTHONSAFEPATH=1` in `mcp_doctor`, persisted `PYTHONSAFEPATH=1` env in install fallback configs, runtime guard in `server.py` that refuses cwd-shadow loads).
+Current release: **v1.9.3.5** (Security: CNAME chain target validation layer 2 — addresses audit finding *"CNAME chain walking can query and leak internal DNS names"* by adding resolved-A/AAAA private-IP check on top of the existing suffix denylist).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
