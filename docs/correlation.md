@@ -920,34 +920,61 @@ fires `microsoft365`, `entra-id`, `okta`, `federated_sso_hub`,
 ## m365_tenant
 Domain has a Microsoft 365 / Entra tenant.
 
-- Posterior: 1.000  (80% credible interval: [0.992, 1.000], n_eff=6.00)
+- Posterior: 1.000  (80% credible interval: [0.987, 1.000], n_eff=6.00)
 - Confidence label: high-confidence
 - Evidence: slug `microsoft365`, slug `entra-id`
+- Top influences (ranked, 2 fired):
+    1. slug `entra-id` — LLR +3.78 (52.3% of evidence influence)
+    2. slug `microsoft365` — LLR +3.46 (47.7% of evidence influence)
 
 ## federated_identity
 Domain uses an external IdP for SSO (Okta, Auth0, Ping, etc.).
 
-- Posterior: 0.994  (80% credible interval: [0.951, 1.000], n_eff=5.00)
+- Posterior: 0.995  (80% credible interval: [0.952, 1.000], n_eff=5.00)
 - Confidence label: high-confidence
 - Evidence: signal `federated_sso_hub`
+- Top influence:
+    1. signal `federated_sso_hub` — LLR +2.89 (100.0% of evidence influence)
 - Depends on: `m365_tenant` (posterior 1.000) — see CPT in
   bayesian_network.yaml for the conditional table.
 
 ## okta_idp
 Identity provider is Okta.
 
-- Posterior: 0.947  (80% credible interval: [0.819, 1.000], n_eff=5.00)
+- Posterior: 0.948  (80% credible interval: [0.820, 1.000], n_eff=5.00)
 - Confidence label: high-confidence
 - Evidence: slug `okta`
+- Top influence:
+    1. slug `okta` — LLR +3.83 (100.0% of evidence influence)
+
+## email_security_policy_enforcing
+Observable email-authentication policy is enforcing (DMARC reject/quarantine
++ DKIM + strict SPF + optional MTA-STS enforce).
+
+- Posterior: 0.982  (80% credible interval: [0.917, 1.000], n_eff=7.00)
+- Confidence label: high-confidence
+- Evidence: signal `dmarc_reject`, signal `dkim_present`, signal `spf_strict`
+- Top influences (ranked, 3 fired):
+    1. signal `dmarc_reject` — LLR +3.14 (61.6% of evidence influence)
+    2. signal `dkim_present`  — LLR +1.04 (20.4% of evidence influence)
+    3. signal `spf_strict`    — LLR +0.92 (18.0% of evidence influence)
 ```
 
 Reading: the chain reasoning is explicit. M365 is supported by two
-direct slugs; federated identity is supported by a signal AND
-propagates from the M365 parent (the CPT line `m365_tenant=present`
-puts $P(\text{federated}|\text{M365}) = 0.45$); Okta then propagates
-from `federated_identity`. Every claim in the chain is hedged with
-a credible interval and an n_eff so a downstream reader can audit the
-confidence rather than taking a single number on faith.
+direct slugs and the ranked top-influences list quantifies *which*
+slug drove the posterior — `entra-id` carries 52% of the evidence
+influence because its likelihood ratio (0.88 / 0.02 ≈ 44) is slightly
+larger than `microsoft365`'s (0.95 / 0.03 ≈ 32). Federated identity
+is supported by a signal AND propagates from the M365 parent (the
+CPT line `m365_tenant=present`,`google_workspace_tenant=absent` puts
+$P(\text{federated}|\text{M365}) = 0.45$); Okta then propagates from
+`federated_identity`. The policy-enforcing email node sits on three
+fired signals — DMARC reject is the load-bearing one (61% of influence,
+LLR +3.14), DKIM and SPF strict are confirmatory. Every claim in the
+chain is hedged with a credible interval, an n_eff, and a top-3 LLR
+ranking so a downstream reader can audit *which* facts drove the
+posterior — the question a defending operator asks when disputing a
+verdict.
 
 #### Example 2 — sparse hardened target
 

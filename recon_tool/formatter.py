@@ -2191,6 +2191,9 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         # v1.9 EXPERIMENTAL — populated only when --fusion is on.
         # ``conflict_provenance`` (v1.9.1+) is always present per posterior;
         # empty list when no cross-source conflicts dampened the interval.
+        # ``evidence_ranked`` (v1.9.3.2+) ranks fired bindings by absolute
+        # LLR contribution so consumers can surface the highest-leverage
+        # evidence per node. Empty list when no bindings fired.
         "posterior_observations": [
             {
                 "name": p.name,
@@ -2208,6 +2211,15 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
                         "magnitude": c.magnitude,
                     }
                     for c in p.conflict_provenance
+                ],
+                "evidence_ranked": [
+                    {
+                        "kind": e.kind,
+                        "name": e.name,
+                        "llr": e.llr,
+                        "influence_pct": e.influence_pct,
+                    }
+                    for e in p.evidence_ranked
                 ],
             }
             for p in info.posterior_observations

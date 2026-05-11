@@ -163,6 +163,32 @@ class NodeConflict:
 
 
 @dataclass(frozen=True)
+class NodeEvidence:
+    """One bound observation's quantified influence on a node's posterior.
+
+    Public-facing counterpart to ``recon_tool.bayesian.EvidenceContribution``.
+    Surfaced through ``PosteriorObservation.evidence_ranked`` so JSON
+    consumers, the cache, and the ``--explain-dag`` renderer all read
+    from a stable shape.
+
+    ``llr`` is the natural-log likelihood ratio for the binding that
+    fired — positive when the observation favours ``present``, negative
+    when it favours ``absent``. ``influence_pct`` normalizes ``|llr|``
+    to a percentage across all fired bindings for the same node.
+
+    Added v1.9.3.2 for top-3 influential-edge rendering. Schema-additive:
+    the default empty tuple on ``PosteriorObservation.evidence_ranked``
+    preserves the v1.9.0 JSON shape for consumers that don't read this
+    field.
+    """
+
+    kind: str  # "slug" or "signal"
+    name: str
+    llr: float
+    influence_pct: float
+
+
+@dataclass(frozen=True)
 class PosteriorObservation:
     """Per-node posterior from the v1.9 Bayesian network (EXPERIMENTAL).
 
@@ -195,6 +221,12 @@ class PosteriorObservation:
     n_eff: float
     sparse: bool
     conflict_provenance: tuple[NodeConflict, ...] = ()
+    evidence_ranked: tuple[NodeEvidence, ...] = ()
+    """Fired bindings ranked by absolute LLR contribution (descending).
+
+    Added v1.9.3.2. Same shape/order as the engine's
+    ``EvidenceContribution`` tuple; default empty tuple preserves
+    backward-compatibility with v1.9.0 / v1.9.3 JSON consumers."""
 
 
 @dataclass(frozen=True)

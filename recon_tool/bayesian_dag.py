@@ -64,6 +64,56 @@ def _node_evidence_phrase(posterior: NodePosterior) -> str:
     return ", ".join(parts)
 
 
+_TOP_K_INFLUENTIAL = 3
+
+
+def _node_influence_lines(posterior: NodePosterior) -> list[str]:
+    """Render the top-3 most influential bindings as ranked bullets.
+
+    Surfaces ``log(P(obs|present) / P(obs|absent))`` (LLR) per binding
+    plus the binding's share of total |LLR| for the node. When fewer
+    than 3 bindings fired, the section reports the actual count without
+    padding — no fake top-3 on a sparse target. When zero bindings
+    fired the section is omitted entirely; the caller's structural-
+    propagation language carries the explanation.
+
+    Format example for a node with three corroborating slugs::
+
+        - **Top influences (ranked):**
+            1. slug `entra-id`     LLR +3.78 (52.3% of evidence influence)
+            2. slug `microsoft365` LLR +3.46 (47.7%)
+
+    Single-binding case prints the LLR and reports "100% of evidence
+    influence" honestly — a single fact is the entirety of the
+    posterior shift on that node.
+    """
+    ranked = posterior.evidence_ranked
+    if not ranked:
+        return []
+    top = ranked[:_TOP_K_INFLUENTIAL]
+    if len(ranked) == 1:
+        header = "- **Top influence:**"
+    elif len(ranked) <= _TOP_K_INFLUENTIAL:
+        header = f"- **Top influences (ranked, {len(ranked)} fired):**"
+    else:
+        header = (
+            f"- **Top influences (ranked top {_TOP_K_INFLUENTIAL} of {len(ranked)} fired):**"
+        )
+    lines: list[str] = [header]
+    for idx, ec in enumerate(top, start=1):
+        if ec.kind == "slug":
+            label = f"slug `{ec.name}`"
+        elif ec.kind == "signal":
+            label = f"signal `{ec.name}`"
+        else:
+            label = f"{ec.kind}:{ec.name}"
+        lines.append(
+            f"    {idx}. {label} — LLR {ec.llr:+.2f} "
+            f"({ec.influence_pct:.1f}% of evidence influence)"
+        )
+    return lines
+
+
 def _node_conflict_phrase(posterior: NodePosterior) -> str | None:
     """Format conflict_provenance as a readable phrase, or None when empty.
 
@@ -147,6 +197,8 @@ def render_dag_text(
         )
         lines.append(f"- **Confidence label:** {confidence}")
         lines.append(f"- **Evidence:** {evidence_phrase}")
+        influence_lines = _node_influence_lines(post)
+        lines.extend(influence_lines)
         conflict_phrase = _node_conflict_phrase(post)
         if conflict_phrase is not None:
             lines.append(f"- **Conflicts:** {conflict_phrase}")
@@ -197,6 +249,19 @@ def render_dag_dot(
             conflict_suffix = ""
             if post.conflict_provenance:
                 conflict_suffix = "\\nconflicts: " + ", ".join(c.field for c in post.conflict_provenance)
+            # v1.9.3.2: surface top-3 influential bindings inside the
+            # node label so a DOT viewer renders the same evidence
+            # ranking the text narrative shows. ``edge label`` per the
+            # quality bar's intent — the DAG's structural edges are
+            # parent→child CPT links, not evidence→node links, so we
+            # attach LLR ranking to the node it influences.
+            influence_suffix = ""
+            if post.evidence_ranked:
+                top = post.evidence_ranked[:_TOP_K_INFLUENTIAL]
+                influence_suffix = "\\ntop influences: " + ", ".join(
+                    f"{ec.name} (LLR {ec.llr:+.2f}, {ec.influence_pct:.0f}%)"
+                    for ec in top
+                )
             label = (
                 f"{node.name}\\n"
                 f"{node.description}\\n"
@@ -204,6 +269,7 @@ def render_dag_dot(
                 f"[{post.interval_low:.3f}, {post.interval_high:.3f}]"
                 f"{' (sparse)' if post.sparse else ''}"
                 f"{conflict_suffix}"
+                f"{influence_suffix}"
             )
             border = "dashed" if post.sparse else "solid"
             color = _color_for_posterior(post.posterior)
