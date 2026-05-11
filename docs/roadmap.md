@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.3.6** (Security: validation harness path containment — addresses audit finding *"Validation runner permits local fixture/persona file exfiltration"* with strict identifier validation + path-containment check in `_load_persona` / `_load_fixture`. Closes the fourth and final audit finding; four security patches (v1.9.3.3–v1.9.3.6) addressed all audit findings).
+Current release: **v1.9.3.7** (CI fix: skip the v1.9.3.4 PYTHONSAFEPATH integration test on Python 3.10 — the env var is a no-op on 3.10, so the test's premise only holds for 3.11+. No product code or defense change; the architectural limit on Py3.10 is documented in the skip reason).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live

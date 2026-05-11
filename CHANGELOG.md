@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3.7] - 2026-05-11
+
+**CI fix: skip PYTHONSAFEPATH-only integration test on Python 3.10.**
+The shadow-workspace integration test added in v1.9.3.4
+(`test_shadow_workspace_cannot_execute`) asserted that
+`PYTHONSAFEPATH=1` prevents a hostile cwd from shadowing
+`recon_tool` when spawning `python -m recon_tool.server`. The
+assertion is correct on Python 3.11+ but `PYTHONSAFEPATH` was
+introduced in 3.11 (PEP 686) and is a no-op on 3.10. The CI matrix
+includes Python 3.10, so the test failed for v1.9.3.4 / v1.9.3.5 /
+v1.9.3.6.
+
+The defense gap is architectural on 3.10, not a regression: the
+v1.9.3.4 product code already routes around the unprotected
+pattern.
+
+### Changed
+
+- **`tests/test_mcp_path_isolation.py`** — the shadow-workspace
+  integration test now carries an explicit
+  `@pytest.mark.skipif(sys.version_info < (3, 11), ...)` with a
+  reason explaining the architectural limit. The skip reason
+  records the recommended Python 3.10 launch path (`recon mcp`
+  via the script entry point, not `python -m recon_tool.server`
+  from an untrusted cwd). Unit tests in `TestServerRuntimeGuard`
+  and source-inspection tests in `TestMcpDoctorSpawnsSafely`
+  continue to run on every Python version — they cover the
+  runtime guard and the safe-cwd + env-var contract
+  independently.
+
+### Notes for downstream consumers
+
+- No code change to product behaviour. The v1.9.3.4 defenses
+  (safe cwd in `mcp_doctor`, persisted `PYTHONSAFEPATH=1` in
+  `mcp_install` fallback configs, runtime guard in
+  `recon_tool/server.py`) are unchanged.
+- On Python 3.10, the safe MCP launch pattern is `recon mcp`
+  (the script entry point — has no `-m` and therefore no
+  cwd-prepend risk). `mcp_install`'s `warn_if_fallback` already
+  recommends this when `recon` is not on PATH.
+
+### Tests
+
+- 2245 passed, 1 skipped (the integration test skips on Py3.10
+  and on Windows; runs on Py3.11/3.12/3.13 across ubuntu and
+  macos).
+- ruff + pyright clean.
+
+This is a CI-only patch; no security regression and no defense
+weakening. All four v1.9.3.x security findings remain closed by
+v1.9.3.3 → v1.9.3.6.
+
 ## [1.9.3.6] - 2026-05-11
 
 **Security: validation harness path containment (audit finding,
