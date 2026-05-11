@@ -1,0 +1,75 @@
+{
+  "_index": "recon-lookup-2026.05",
+  "_id": "(auto-generated)",
+  "_source": {
+    "@timestamp": "(set by Filebeat at read time, or by ingest pipeline timestamp processor)",
+    "event": {
+      "kind": "event",
+      "category": ["configuration", "iam"],
+      "type": ["info"],
+      "dataset": "recon.lookup",
+      "module": "recon",
+      "severity": 2
+    },
+    "host": {
+      "domain": "northwindtraders.com"
+    },
+    "organization": {
+      "name": "Northwind Traders"
+    },
+    "tenant_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "default_domain": "northwindtraders.onmicrosoft.com",
+    "region": "NA",
+    "domain_count": 3,
+    "msgraph_host": "graph.microsoft.com",
+    "recon": {
+      "provider": "Microsoft 365",
+      "confidence": "high",
+      "auth_type": "Federated",
+      "cloud_instance": "microsoftonline.com",
+      "services": [
+        "Anthropic (Claude)",
+        "Atlassian (Jira/Confluence)",
+        "DKIM (Exchange Online)",
+        "DMARC",
+        "DocuSign",
+        "Exchange Autodiscover",
+        "Figma",
+        "Intune / MDM",
+        "KnowBe4",
+        "MTA-STS",
+        "Microsoft 365",
+        "Microsoft Teams",
+        "Miro",
+        "Okta",
+        "Salesforce",
+        "Slack",
+        "SPF: strict (-all)",
+        "Zendesk"
+      ],
+      "insights": [
+        "Federated identity via Okta",
+        "Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)",
+        "Likely M365 E3/E5 (Intune + federated auth)",
+        "Security stack: KnowBe4 (security training), Okta (identity)",
+        "AI Adoption: anthropic",
+        "Modern Collaboration: slack, miro, atlassian, figma",
+        "Enterprise Security Stack: knowbe4, okta"
+      ],
+      "email": {
+        "dmarc_policy": "reject",
+        "security_score": 4,
+        "primary_provider": "Microsoft 365"
+      }
+    },
+    "tenant_domains": [
+      "northwindtraders.com",
+      "northwindtraders.onmicrosoft.com",
+      "northwind-internal.com"
+    ],
+    "related_domains": [
+      "northwind-internal.com"
+    ]
+  },
+  "_notes": "Fields that the ingest-pipeline.json does NOT rename (tenant_id, default_domain, region, domain_count, msgraph_host, tenant_domains, related_domains) land at the top level of _source unchanged. The pipeline's rename processors are scoped to the recon-specific and ECS-aligned fields; extending the rename set is a forward-compatible change. _index uses a monthly suffix; tune to your retention via ILM. _id and @timestamp are populated by Elasticsearch / Filebeat at ingest time."
+}

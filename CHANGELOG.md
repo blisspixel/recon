@@ -5,6 +5,84 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3.8] - 2026-05-11
+
+**Track B quality work — downstream SIEM consumption examples.**
+Ships the v2.0 pre-condition for "downstream consumption examples
+(at least two SIEMs)" from the v1.9.x quality bar (see
+`docs/roadmap.md`). recon's `--json` shape is the v2.0 schema-lock
+target; locking that contract without published examples that
+actually parse and ingest is premature. This patch makes the
+contract real for Splunk and Elasticsearch operators and pins both
+mappings against future schema drift via a CI gate.
+
+### Added
+
+- **`examples/siem/`** — cross-SIEM consumption index, plus two
+  per-SIEM subdirectories.
+- **`examples/siem/splunk/`** — `README.md` (field-mapping table,
+  severity mapping, three use-case SPL snippets: shadow-IT
+  alerting, DMARC drift, federation discovery), `props.conf`
+  (sourcetype definition for `recon:lookup`), `savedsearches.conf`
+  (three example saved searches matching the use cases), and
+  `expected-splunk-event.json` (the worked output the CI gate
+  verifies).
+- **`examples/siem/elastic/`** — `README.md` (ECS-aligned field
+  mapping table, severity mapping, same use-case framing),
+  `ingest-pipeline.json` (Elasticsearch ingest pipeline that
+  rewrites recon JSON to ECS namespaces), `index-template.json`
+  (field-type pinning so Kibana visualizations don't drift on
+  first-write surprises), and `expected-elastic-document.json`
+  (worked output).
+- **`tests/test_siem_examples.py`** — 33 contract tests pinning
+  the worked examples against schema regression. Verifies: the
+  shared sample input parses and carries every always-present
+  field the SIEM READMEs claim to map; each SIEM's
+  expected-output file parses; each README's "always present"
+  mapping table references paths reachable in the sample;
+  severity mappings consistent between README and worked output;
+  the cross-SIEM index README lists both shipped SIEMs.
+
+### Changed
+
+- **`examples/sample-output.json`** enriched with the
+  always-present-on-M365 fields the SIEM mappings reference:
+  `slugs`, `email_security_score`, `cloud_instance`,
+  `msgraph_host`, `primary_email_provider`. Still fictional
+  Northwind Traders; no real-company data. Existing consumers of
+  the sample see additional fields, not renamed ones —
+  schema-additive.
+
+### Notes for downstream consumers
+
+- The SIEM examples are **maintainer-authored, vendor-unverified**.
+  Per-example READMEs name the author-of-record. A SIEM-vendor
+  employee opening a PR to validate or extend a mapping is welcome.
+- The severity mapping documented in both READMEs is
+  intentionally inverted from intuition (high recon confidence →
+  low severity) because high confidence means strong public-signal
+  evidence and a well-characterized posture; low confidence on a
+  hardened target is the higher-severity signal worth operator
+  review. Operators are expected to tune this for their context;
+  the mapping is policy, not derivation.
+- The CI gate verifies the worked-example file shapes against the
+  shared input — a future schema rename that breaks SIEM ingestion
+  fails the test before the schema change can reach a release tag.
+
+### Roadmap
+
+- **Track B item #9 of 10 cleared.** v2.0 pre-condition list shows
+  one Track B item remaining: catalog metadata richness pass
+  (descriptions ≥ 80%, references ≥ 25%). Track A bridge milestones
+  v1.9.4 → v1.9.7 unchanged.
+
+### Tests
+
+- 2278 passed (+33 SIEM-example tests, was 2245 in v1.9.3.7).
+- 1 skipped (Py3.10 + Windows shadow-workspace integration test).
+- Coverage 83.33% (≥ 80% gate).
+- ruff + pyright clean on `recon_tool/` + `tests/`.
+
 ## [1.9.3.7] - 2026-05-11
 
 **CI fix: skip PYTHONSAFEPATH-only integration test on Python 3.10.**

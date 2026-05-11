@@ -1,0 +1,154 @@
+{
+  "description": "recon-lookup ingest pipeline. Rewrites recon --json output into ECS-aligned shape for Elasticsearch indexing. Project-specific fields stay under recon.* namespace; ECS-standard fields land under event.*, host.*, organization.*.",
+  "processors": [
+    {
+      "set": {
+        "field": "event.kind",
+        "value": "event"
+      }
+    },
+    {
+      "set": {
+        "field": "event.category",
+        "value": ["configuration", "iam"]
+      }
+    },
+    {
+      "set": {
+        "field": "event.type",
+        "value": ["info"]
+      }
+    },
+    {
+      "set": {
+        "field": "event.dataset",
+        "value": "recon.lookup"
+      }
+    },
+    {
+      "set": {
+        "field": "event.module",
+        "value": "recon"
+      }
+    },
+    {
+      "rename": {
+        "field": "queried_domain",
+        "target_field": "host.domain",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "display_name",
+        "target_field": "organization.name",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "provider",
+        "target_field": "recon.provider",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "confidence",
+        "target_field": "recon.confidence",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "auth_type",
+        "target_field": "recon.auth_type",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "dmarc_policy",
+        "target_field": "recon.email.dmarc_policy",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "email_security_score",
+        "target_field": "recon.email.security_score",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "primary_email_provider",
+        "target_field": "recon.email.primary_provider",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "services",
+        "target_field": "recon.services",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "slugs",
+        "target_field": "recon.slugs",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "cloud_instance",
+        "target_field": "recon.cloud_instance",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "insights",
+        "target_field": "recon.insights",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "posterior_observations",
+        "target_field": "recon.fusion.posteriors",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "evidence_conflicts",
+        "target_field": "recon.fusion.conflicts",
+        "ignore_missing": true
+      }
+    },
+    {
+      "set": {
+        "field": "event.severity",
+        "value": 4,
+        "if": "ctx?.recon?.confidence == 'medium'"
+      }
+    },
+    {
+      "set": {
+        "field": "event.severity",
+        "value": 6,
+        "if": "ctx?.recon?.confidence == 'low' || ctx?.recon?.confidence == 'partial'"
+      }
+    },
+    {
+      "set": {
+        "field": "event.severity",
+        "value": 2,
+        "if": "ctx?.recon?.confidence == 'high'"
+      }
+    }
+  ]
+}
