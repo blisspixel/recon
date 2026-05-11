@@ -5,6 +5,79 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3.6] - 2026-05-11
+
+**Security: validation harness path containment (audit finding,
+informational).** Closes the audit finding *"Validation runner
+permits local fixture/persona file exfiltration"* against
+`validation/agentic_ux/run.py`. The finding is informational
+because the affected code is the maintainer-only validation
+harness — not packaged in the wheel, not invoked by CI, not on a
+recon end-user's product path — but the gap was real: a future
+wrapper or agent calling `python -m validation.agentic_ux.run`
+with unvalidated `--personas` / `--fixtures` arguments could have
+caused arbitrary local `.md` / `.json` files to be read and
+shipped to the configured LLM provider as part of the prompt.
+
+This is the fourth and final patch addressing the security audit.
+
+### Added
+
+- **`validation.agentic_ux.run._validate_name`** — strict
+  identifier validator (`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`) that
+  rejects every selector with a separator, traversal sequence,
+  leading dot, leading dash, whitespace, or non-ASCII character.
+  Accepts every legitimate in-repo persona/fixture name; raises
+  `ValueError` on anything else.
+- **`_SAFE_NAME_RE`** — the compiled regex, exposed as a module
+  attribute so a future maintainer adding a new persona/fixture
+  can see the format contract without re-deriving it.
+- **`tests/test_validation_harness_path_containment.py`** — 48
+  tests covering: 12 legitimate names accepted, 16 unsafe shapes
+  rejected (empty, traversal, absolute paths, separators, dots,
+  null bytes, over-length), regex anchoring, both loader entry
+  points refusing unsafe names before any filesystem read, and a
+  sanity check that all in-repo personas/fixtures still load.
+
+### Changed
+
+- **`_load_persona`** and **`_load_fixture`** now run the new
+  validator on the input name *before* building the file path,
+  and confirm the resolved path is still under the intended
+  directory (`is_relative_to`) — defense-in-depth in case a future
+  edit loosens the regex.
+
+### Notes for downstream consumers
+
+- The harness is not packaged in the recon-tool wheel; only the
+  recon CLI and MCP server are. End users see no change.
+- Maintainers running the harness with the existing committed
+  persona/fixture names see no behavioural change.
+- Any wrapper passing user-supplied `--personas` / `--fixtures`
+  values now needs to surface a sensible error message when an
+  unsafe selector is rejected (the `ValueError` carries one).
+
+### Tests
+
+- 2245 passed (+48 harness-containment tests, was 2197 in v1.9.3.5).
+- Coverage 83.32% (≥ 80% gate).
+- ruff + pyright clean on `recon_tool/` + `tests/`.
+
+### Security audit closed
+
+This patch closes the fourth and final finding from the v1.9.3.x
+security audit:
+
+  1. v1.9.3.3 — Release workflow supply-chain isolation (HIGH).
+  2. v1.9.3.4 — MCP doctor/install path isolation (HIGH).
+  3. v1.9.3.5 — CNAME chain target validation, layer 2 (MEDIUM).
+  4. v1.9.3.6 — Validation harness path containment
+     (informational, this patch).
+
+Each shipped as its own tag through the v1.9.3.3 hardened release
+workflow. The CHANGELOG entries for each carry the per-finding
+quality-bar verification.
+
 ## [1.9.3.5] - 2026-05-11
 
 **Security: CNAME chain target validation, layer 2 (audit finding,
