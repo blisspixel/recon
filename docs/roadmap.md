@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.3.10** (Make subdomain-level surface intelligence visible by default — unclassified-surface section in the default panel surfaces CNAME chain termini the catalog couldn't classify; the "Subdomain" summary now reports per-provider counts so multi-cloud distribution shows at a glance. Empirical validation against a rich-stack sample confirmed the catalog is comprehensive for top-tier enterprise vendors; remaining gaps are architectural [passive DNS cannot see server-side API consumption] rather than catalog).
+Current release: **v1.9.3.10** (subdomain-level surface intelligence visible by default; roadmap restructured to a flat numeric sequence v1.9.4 → v2.0 with QA built into each version).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
@@ -275,31 +275,36 @@ across releases; high-posterior calibration; interval coverage on
 sparse-evidence cases) cleared on the v1.9.0 corpus run; per-node
 calibration findings drove the v1.9.3 surgery.
 
-### Bridge to v2.0 — patch releases, in logical order
+### The path to v2.0 — a numbered sequence
 
-v1.9.0 shipped the third correlation layer behind `--fusion` with
-EXPERIMENTAL on every new surface. The bridge to v2.0 is a series
-of small, focused patch releases — each clearing exactly one
-milestone. Patches ship when work completes, not on a fixed
-schedule. We are not allergic to many patch releases; we are
-allergic to bundled releases that combine unrelated work.
+v2.0 is the "polished and excellent everywhere" release: schema
+lock + doc snapshot + zero EXPERIMENTAL labels anywhere. It is not
+a parking lot for feature backlog. Every gated feature ships in a
+v1.9.x patch first; v2.0 inherits each as already-present and
+locks the shape.
 
-The bridge sequence starts at **v1.9.2**: `v1.9.1` was used for the
-optional "conflict provenance on `NodePosterior`" feature (listed
-in the v1.9.x optional additions below) before the bridge plan
-stabilized. Bridge milestones are numbered in delivery order from
-there, so the six patches below cover **v1.9.2 through v1.9.7**.
+The sequence below is the planned order from where we are now
+(post-v1.9.3.10) to v2.0. Each version answers four questions:
 
-v2.0 itself is reserved for "polished and excellent everywhere" —
-the schema lock, the doc polish, the BIMI VMC promotion. v2.0 is
-*not* a place to park feature backlog; if a feature is real and
-gated, it ships in a v1.9.x patch and v2.0 inherits it as already-
-present.
+- **What ships.** The concrete deliverable.
+- **Why this is next.** The dependency chain that puts this
+  version where it is, rather than later.
+- **Quality bar.** Falsifiable acceptance criteria a reviewer can
+  check before the patch tags.
+- **Validation step.** How we know the patch is good before it
+  ships, separate from the quality-bar checks.
+- **Refinement.** What we'd revisit if the validation surfaced
+  something the quality bar didn't predict.
 
-The milestones below are ordered to put **operator UX signal
-first**, so schema-affecting work is informed by what operators
-actually use rather than the other way around. Each milestone
-maps to one patch release.
+Patches ship when their one version's work completes, not on a
+fixed schedule. Multiple patches in a day is fine; bundled work
+that combines unrelated stories is not (see Patch-release
+discipline below). Bug-fix patches between versions claim the
+next available `v1.9.X.Y` number and do not block the sequence.
+
+Standing work runs alongside every version: catalog growth
+(corpus-observed + vendor-doc-sourced), per-release calibration
+aggregate published, CI / lint / typecheck / coverage gates.
 
 #### v1.9.2 — UX validation via agentic QA *(shipped — see [CHANGELOG](../CHANGELOG.md) and `validation/v1.9.2-agentic-ux.md`)*
 
@@ -680,15 +685,17 @@ This is intentional:
 - **No bundling.** Two milestones completing on the same day is
   fine; they still ship as separate patches with separate tags.
   Bundled releases hide work and make rollback harder.
-- **Numeric order IS delivery order.** v1.9.2 ships before
-  v1.9.3; v1.9.3 before v1.9.4; and so on. The dependency chain
-  is the point of the planning: UX validation (v1.9.2) informs
-  topology surgery (v1.9.3), which informs hardened-adversarial
-  testing (v1.9.4), which informs the per-node stability
-  decisions (v1.9.5), which informs CPT-change discipline
-  (v1.9.6), which informs the metadata gate (v1.9.7). Skipping
-  ahead because a later patch "feels easier" means we're
-  guessing at the dependency we just decided to think about.
+- **Numeric order IS delivery order.** The dependency chain is
+  the point of the planning: hardened-adversarial validation
+  (v1.9.4) informs the per-node stability decisions (v1.9.5),
+  which inform CPT-change discipline (v1.9.6), which precedes
+  the metadata-coverage gate flip (v1.9.7), which gates the
+  richness pass (v1.9.8), which feeds the detection-gap UX
+  surfaces (v1.9.9), which the stratified pre-lock validation
+  (v1.9.10) verifies, which the doc-polish dry-run (v1.9.11)
+  consolidates before v2.0 tags. Skipping ahead because a later
+  patch "feels easier" means we're guessing at the dependency we
+  just decided to think about.
 - **Bug-fix patches use the next available number.** A regression
   fix that lands between v1.9.5 and v1.9.6 ships as `v1.9.5.1`
   or claims the next minor number — whichever the project's
@@ -697,10 +704,12 @@ This is intentional:
   bug fixes; both make linear progress through their own number
   spaces.
 
-EXPERIMENTAL labels come off per-node as the gates clear, not all
-at once. By the time the sixth patch ships, every surface is
-either `stable`, explicitly `experimental` (and we know why), or
-explicitly `deprecated`.
+EXPERIMENTAL labels come off per-node as the v1.9.4 → v1.9.11
+sequence advances, not all at once. By the time v1.9.11 ships
+(the doc-polish dry-run), every surface is either `stable`,
+explicitly `experimental` (and we know why), or explicitly
+`deprecated`. v2.0 then mechanically strips the remaining
+EXPERIMENTAL language.
 
 **v2.0 ships with zero EXPERIMENTAL labels anywhere.** This is a
 hard rule, not an aspiration:
@@ -722,191 +731,222 @@ allowed `experimental` per-node at v2.0; we removed that
 allowance. If a node can't earn `stable`, it doesn't belong in
 v2.0, full stop.
 
-### v1.9.x — Required quality work for v2.0 (parallel to the bridge milestones)
+#### v1.9.8 — Catalog metadata richness pass
 
-The six bridge milestones above resolve known *correctness* gaps in
-the Bayesian layer. The items below resolve known *quality* gaps —
-explainability, supply-chain hygiene, and consumption ergonomics —
-that v2.0 cannot honestly ship without. They are not bridge
-milestones (no dependency chain among them; they can land in any
-order under whatever v1.9.x.y patch numbers are available), but
-they are *required* before v2.0 in the same sense the bridge
-milestones are.
+**What ships.** Description coverage raised to ≥ 80% across all
+fingerprint files; reference coverage to ≥ 25%; non-default weights
+documented per fingerprint with inline rationale. Pure data work
+across `recon_tool/data/fingerprints/`, chunked into multiple PRs.
 
-The reason these moved from "optional" to "required": v2.0 is the
-"polished and excellent everywhere" release. Calling these optional
-while the roadmap simultaneously cites their gaps (187/485 detections
-have descriptions; "Known gaps" lists missing SECURITY.md, SBOM,
-secrets-scanning) is internally inconsistent. Either the gaps are
-real and need closing for the polished release, or they are not real
-and don't belong on the gap list. They are real.
+**Why this is next.** v1.9.7 turned the metadata-presence gate
+enforcing; this version raises the floor from "every detection has a
+description" to "every description is informative." Defenders read
+the `--explain` panel to decide whether to act on a finding; a slug
+labelled `auth0` without a description forces them to know what
+Auth0's CNAME pattern looks like. v2.0 is the polished release;
+shipping with description-less detections undercuts the explainability
+priority.
 
-- **Catalog metadata richness pass.** Beyond the v1.9.7 presence
-  gate, raise description coverage to ≥ 80%, reference coverage to
-  ≥ 25%, document deliberate non-default weights per fingerprint.
-  Pure data work, no schema change. **Required because** the tool's
-  value prop is auditable, debuggable evidence; shipping a v2.0
-  whose `--explain` panel surfaces slugs without descriptions or
-  reference links is an explainability gap that the priority order
-  (correctness → reliability → **explainability** → composability)
-  promises to close before v2.0.
+**Quality bar.**
+- [ ] Description rubric (in `CONTRIBUTING.md`): each detection's
+  description states (a) what the slug detects, (b) the observable
+  signal pattern, (c) common false-positive configurations if known.
+  One sentence each; not boilerplate.
+- [ ] References point to *vendor-published* DNS / MX / CNAME / TXT
+  docs when possible (auditable third-party source), not blog posts.
+  Where vendor docs are absent, link to the relevant RFC or a stable
+  archived URL.
+- [ ] Audit pass: every existing description re-read against the
+  rubric, not just gap-filling. Placeholder descriptions ("Detects
+  Foo") flagged and rewritten. Pass tracked in
+  `validation/metadata-audit.md`.
+- [ ] Chunked into PRs of ≤ 30 fingerprints each; no single mega-PR.
+- [ ] Coverage check script reports both presence (v1.9.7 gate) and
+  richness signals (mean description length, reference presence,
+  non-default weight rationale). Richness is advisory; presence stays
+  enforcing.
 
-  **Quality bar — exceptionally well:**
-  - [ ] Description rubric (in `CONTRIBUTING.md`): each detection's
-    description states (a) what the slug detects, (b) the
-    observable signal pattern, (c) common false-positive
-    configurations if known. One sentence each; not boilerplate.
-  - [ ] References point to *vendor-published* DNS / MX / CNAME /
-    TXT documentation when possible (auditable third-party source),
-    not blog posts. Where vendor docs are absent, link to the
-    relevant RFC or to a stable archived URL.
-  - [ ] Audit pass: every existing description re-read against the
-    rubric, not just gap-filling. Placeholder descriptions ("Detects
-    Foo") flagged and rewritten. The pass is a single multi-PR
-    workstream tracked in `validation/metadata-audit.md`.
-  - [ ] Chunked into PRs of ≤ 30 fingerprints each; each PR
-    independently reviewable; no single mega-PR.
-  - [ ] Coverage check script reports both presence (v1.9.7 gate)
-    and *richness signals* (mean description length, reference
-    presence, non-default weight rationale). Richness numbers are
-    advisory; presence stays enforcing.
+**Validation.** `scripts/check_metadata_coverage.py --report` after
+the final PR lands shows ≥ 80% / ≥ 25% across identity, security,
+infrastructure, productivity, email, AI, CRM, data-analytics,
+verticals, and surface files. Trend per category logged.
 
-- **SECURITY.md and supply-chain hardening.** *(shipped in v1.9.3.1)*
-  Explicit vulnerability-disclosure policy, gitleaks
-  secrets-scanning in CI, SBOM (CycloneDX) attached as a release
-  asset, forward-compat cache-loading test. **Required because**
-  the project's own "Known gaps" section called these out as
-  "things a security-focused project ideally has but we do not yet
-  ship." A polished v2.0 of a defensive security tool cannot leave
-  that list intact. See v1.9.3.1 CHANGELOG entry for the full
-  per-item quality-bar verification.
+**Refinement.** If the rubric forces boilerplate on niche slugs (an
+internal API endpoint that doesn't merit three full sentences),
+relax the rubric for that category and document the relaxation in
+the audit log — don't game the gate with placeholder prose.
 
-- **Downstream consumption examples** *(shipped in v1.9.3.8)* —
-  Splunk + Elasticsearch field mappings, worked input/output pairs,
-  severity mapping, CI gate against schema drift. `examples/siem/`
-  carries per-SIEM READMEs (with use-case framing for shadow-IT
-  alerting / DMARC drift / federation discovery), conf-files and
-  ingest pipelines, and expected-output files; `tests/test_siem_examples.py`
-  re-parses each worked example on every push, so a future schema
-  rename that breaks SIEM ingestion fails the test before it can
-  reach a release tag. Both SIEM examples are marked
-  maintainer-authored, vendor-unverified; PRs from SIEM-vendor
-  employees that validate or extend them are welcome.
+#### v1.9.9 — Detection-gap UX surfaces
 
-- **Top-3 influential edges in `--explain-dag`.** *(shipped in v1.9.3.2)*
-  Extends `render_dag_text` and `render_dag_dot` to rank fired
-  evidence bindings per node by absolute log-likelihood-ratio
-  contribution. **Required because** `--explain-dag` is the
-  explainability surface v2.0 is supposed to lock; without
-  influential-edge surfacing, the layer reports a posterior and
-  an evidence list but does not show *which* evidence drove the
-  answer. Schema-additive `evidence_ranked: tuple[NodeEvidence, ...]`
-  field on `PosteriorObservation` carries the ranking through the
-  JSON output, the cache, and the renderer. See v1.9.3.2 CHANGELOG
-  entry and `tests/test_explain_dag_top3.py` for the full
-  per-criterion verification.
+**What ships.** Three operator-facing surfaces that make the
+passive-DNS architectural limit visible:
 
-These ship as completed in any order before v2.0; v2.0 inherits them
-already-present.
+1. **Passive-DNS ceiling phrasing.** When the default panel shows
+   few services on a domain that the operator clearly expects to
+   have many, the panel adds a one-line acknowledgement:
+   "Passive DNS surfaces X public services; server-side API
+   consumption, internal workloads, and SaaS without DNS
+   verification are not observable from public DNS alone."
+   Prevents "absence of finding = service not present" reading.
+2. **Expanded subdomain enumeration breadth.** CT SAN-set traversal
+   pulls subdomains from *all* observed apex certs (not just the
+   queried apex's certs); the common-prefix wordlist extends to
+   include `data`, `analytics`, `ml`, `ai`, `internal`, `ops`,
+   `security`, `tools`; an optional CT search by org-name surfaces
+   when one is available from a prior lookup.
+3. **Apex-level multi-cloud rollup indicator.** When the
+   `surface_attributions` span ≥ 2 cloud-categorized providers,
+   a top-of-panel line reads: `Multi-cloud: 3 providers observed
+   across the surface (AWS, Cloudflare, GCP)`. The detail lives in
+   the existing Subdomain line (v1.9.3.10 counts); this rollup is
+   the single-line scannable indicator.
 
-### v1.9.x — Optional feature additions (post-v2.0-friendly)
+**Why this is next.** v1.9.3.10 surfaced the unclassified-chain
+gap and per-provider subdomain counts in the default panel. This
+version completes the detection-gap surface story: the panel now
+*shows what it cannot see* (the ceiling), *casts a wider net for
+what it can see* (enumeration breadth), and *summarises the
+distribution* (multi-cloud indicator). After v1.9.9 lands, the
+default panel is honest about both its findings and its limits —
+the v2.0 polish target.
 
-The features below are *additive* — real new surfaces that don't
-require the schema lock and don't gate v2.0. Each ships as its own
-patch release with EXPERIMENTAL on its surfaces, can land in any
-order, and gets a row in the v2.0 schema-lock disposition table only
-if it shipped before the lock; otherwise it inherits a v2.x slot.
+**Quality bar.**
+- [ ] Ceiling phrasing fires only when heuristics agree the panel
+  is sparse for the apex's likely scale (e.g. domain_count ≥ 3 AND
+  fewer than 5 categorized services). Conservative trigger; don't
+  add the line to genuinely-small organizations' panels.
+- [ ] Subdomain wordlist additions documented per term: which
+  category of subdomain (data / ops / security / ai) and why it
+  belongs in the common set. No speculative additions.
+- [ ] Multi-cloud indicator counts distinct cloud-categorized
+  providers, not distinct slugs. AWS CloudFront + AWS Route 53
+  count as one (AWS), not two; the operator cares about cloud
+  vendors at this rollup level, not service granularity.
+- [ ] Tests cover the trigger heuristic (panel-sparse case), the
+  expanded wordlist (resolves new subdomain class), and the rollup
+  (collapses same-vendor slugs).
 
-- **BIMI VMC legal-name clustering** — pairs with the v1.8
-  hypergraph view; demonstrates real multi-brand identification
-  on a private corpus.
-- **MCP delta helper** — `recon_delta(domain_or_json_a,
-  domain_or_json_b)` MCP tool. Compares supplied or cached JSON
-  only; no hidden network. Optional `include_fusion` flag
-  surfaces v1.9 posterior shifts alongside the deterministic
-  diff. The first first-class delta surface for agents.
-- **Portfolio / self-audit batch mode** — `recon batch
-  --self-audit` aggregating vertical-baseline hits, anomaly
-  rules, correlation-depth distribution, and gateway / sovereignty
-  consistency across many domains in one summary. Targeted at
-  security teams running internal reviews against their own apex
-  inventory; never used to score third-party orgs.
-- **Non-MCP graph exports** — Mermaid diagram output for the v1.8
-  cluster graph, plus CSV exports for relationship metadata and
-  chain motifs. Trivial once the graph layer exists; gives
-  non-AI users a usable artifact for tickets, decks, audit
-  packets.
-- **Per-node `n_eff_multiplier` in `bayesian_network.yaml`** —
-  schema-additive field that scales effective sample size on a
-  per-node basis. Lets weak-calibration nodes (`aws_hosting` and
-  any v1.9.5 not-yet nodes that survive into v1.9.5+) widen their
-  credible intervals without globally widening every node. Default
-  1.0; ≤ 1.0 widens. Replaces the current uniform formula with
-  `n_eff = max(_MIN_N_EFF, multiplier * (evidence_count -
-  conflict_penalty))`. **Conditionally required** if v1.9.4
-  hardened-adversarial findings + the existing sensitivity test
-  surface nodes whose interval shape only makes sense with per-node
-  scaling; otherwise post-v2.0.
-- **Corpus-driven Hypothesis tests** — extend
-  `tests/test_bayesian_hypothesis.py` with property tests over
-  real corpus output: e.g., "for any domain with ≥ 3 evidence
-  pieces and 0 conflicts, interval width ≤ 0.25." Strengthens
-  the test floor against future regressions; the existing
-  synthetic-network properties already pass.
-- **Hawkes-kernel CT burst classification.**
-  `_detect_deployment_bursts()` currently uses raw inter-arrival
-  deltas. Fit a one-parameter exponential-decay kernel (pure
-  Python, no scipy) to each cluster's CT timestamps and
-  classify the cluster as `automated_renewal` (short kernel,
-  regular cadence — typical of ACME cron jobs) vs.
-  `manual_deployment` (longer kernel, irregular bursts — typical
-  of operator-driven rollouts). Surface as
-  `cert_summary.deployment_bursts[].kernel_class` in `--json`.
-  Falsifiable defensive value: the two classes mean different
-  things to a defender, and the current uniform "burst" label
-  hides that distinction.
-- **Asynchronous Label Propagation fallback for `infra_graph`.**
-  Pure-Python LPA (near-linear in `|E|`) replaces the current
-  connected-components fallback above the 500-node Louvain cap.
-  Keeps community structure visible on 10k+ -node graphs without
-  importing C extensions. The 500-node Louvain path stays for
-  small graphs (modularity is still the better objective there);
-  LPA is the honest fallback above the cap rather than the
-  flatter connected-components view.
-- **Explicit ignorance mass (epistemic vs aleatoric).** Today,
-  hardened-target output expresses uncertainty as a wider
-  credible interval. A wide interval and "the channel reveals
-  nothing here" are not the same epistemic state, and conflating
-  them can mislead an agent reading the JSON. Add an optional
-  `ignorance` field to `posterior_observations[]` (Dempster-
-  Shafer-style mass on the "don't know" state) computed from the
-  ratio of unbound to bound evidence nodes for that posterior.
-  Surfaces in `--explain-dag` as a third quantity alongside
-  posterior and interval. Lets agents distinguish "the model has
-  evidence and is unsure" from "the model has no evidence." This
-  is the lightweight version of the
-  [imprecise-Dirichlet-model backlog item](#backlog-after-v20);
-  ship the user-facing distinction first, the deeper credal-set
-  refactor only if v2.0+ corpus runs show it pays off.
-- **Conflict provenance on `NodePosterior`.** *(shipped in v1.9.1)*
-  Today the conflict count feeds the n_eff penalty but the
-  *which sources disagreed* detail is dropped. Carry the
-  source-pair list and per-pair magnitude through to
-  `--explain-dag` and the JSON output, alongside the existing
-  top-level `evidence_conflicts` array. Small surface, no
-  schema lock implications.
-- **Noisy-OR / noisy-AND CPT gates (schema-additive).** Add an
-  optional `gate: noisy_or | noisy_and | custom` field on
-  multi-parent CPTs in `bayesian_network.yaml`. Default `custom`
-  preserves the current explicit dict. Noisy-OR/AND keeps
-  multi-parent CPTs compact and human-reviewable as the network
-  grows beyond ~10 nodes; matches the positive-only evidence
-  bias the asymmetric-likelihood design already commits to. No
-  inference-engine change required — the gate compiles to the
-  same factor table at load time.
+**Validation.** Re-run the v1.9.3.10 empirical sample (Stripe,
+Shopify, Slack, Atlassian, Datadog, HashiCorp) plus 4 hardened-
+adversarial apexes from the v1.9.4 corpus. Verify: ceiling phrasing
+fires on the hardened apexes, not on the rich-stack ones (or fires
+appropriately on both with different wording); subdomain
+enumeration surfaces 10+ additional subdomains per rich-stack
+apex; multi-cloud rollup fires on Stripe (AWS+Fastly+Stripe) but
+not on a single-cloud target.
 
-These ship as completed; v2.0 inherits them already-present and
-locks their shapes per the disposition table.
+**Refinement.** If the ceiling phrasing fires on legitimate
+single-cloud organizations and looks alarmist, tune the trigger
+heuristic or change the wording. The point is to teach operators
+about the architectural limit, not to suggest something's wrong.
+
+#### v1.9.10 — Stratified-corpus pre-lock validation
+
+**What ships.** A 60-domain stratified validation suite across six
+vertical/cloud strata, run against the v1.9.9 build to confirm the
+catalog and the new UX surfaces hold up before the v2.0 schema
+lock. Output: a per-stratum coverage report
+(`validation/v1.9.10-pre-lock.md`) plus a trend table tracking
+multi-signal correlation depth from v1.6 → v1.9.10 per stratum.
+
+**Why this is next.** Up to now, validation has been single-corpus
+(enterprise M365/AWS-skewed) plus one small rich-stack empirical
+pass (v1.9.3.10). The v2.0 schema lock is the moment to confirm
+the engine works across cloud strata, not just the ones our
+historical corpus over-represented. A stratum where the engine
+performs poorly is information the v2.0 release should disclose
+explicitly, not hide.
+
+**Quality bar.**
+- [ ] Strata: known-GCP customers (10), known-Azure non-O365 (10),
+  known-Oracle customers (10), known-Alibaba customers (10),
+  known-PaaS / Vercel / Netlify (10), known-SSE/SASE-fronted (10).
+  Each stratum's 10 domains are publicly-documented users of that
+  vendor sourced from vendor case-studies, vendor blog posts, or
+  job listings; no proprietary intel.
+- [ ] Per-stratum coverage metric: fraction of domains where
+  recon's `Cloud` line correctly names the expected cloud vendor
+  for that stratum.
+- [ ] Per-stratum unclassified-termini count: zero is great; > 0
+  identifies catalog gaps that need filling before v2.0.
+- [ ] Trend table per stratum across v1.6 → v1.9.10, even if the
+  earlier versions need to be re-run against the new strata.
+- [ ] Aggregate findings published in
+  `validation/v1.9.10-pre-lock.md`.
+
+**Validation.** The validation IS the version's deliverable. The
+quality bar replaces "validation step".
+
+**Refinement.** If a stratum surfaces ≥ 3 unclassified termini,
+v1.9.10 ships a follow-up catalog-growth patch (v1.9.10.1) before
+v1.9.11 starts. If a stratum has < 50% Cloud-line agreement,
+investigate: is the catalog missing entries, or is the cloud's
+public DNS surface genuinely too thin to detect?
+
+#### v1.9.11 — Documentation polish dry-run
+
+**What ships.** Every doc reviewed against the v2.0 quality bar
+before v2.0 actually tags. correlation.md polished to the v2.0
+draft form (defense ↔ correlation mapping table, prior-art
+comparison, dependency-floor manifesto, failure-mode catalog).
+README, CONTRIBUTING, AGENTS.md, docs/mcp.md, docs/legal.md,
+docs/security.md cross-checked for stale references, dead links,
+EXPERIMENTAL labels in user-facing text. Migration guide for
+v1.x → v2.0 consumers added (`docs/migration-v2.md`) covering the
+EXPERIMENTAL → stable field promotions, the dropped Bayesian-
+network nodes that didn't clear v1.9.5, and the schema-version
+bump.
+
+**Why this is next.** v2.0 should be a *mechanical* lock-and-tag
+event, not a "let's also rewrite docs" event. If the v2.0 docs are
+already polished, the lock just bumps the schema version, strips
+EXPERIMENTAL labels from code/JSON descriptions, and tags. Doing
+the doc work as v1.9.11 separates the rewriting from the
+mechanical lock.
+
+**Quality bar.**
+- [ ] Zero EXPERIMENTAL labels in any doc, panel string, CLI help
+  text, MCP tool description, or schema field description.
+  Verified by `grep -ri experimental` returning zero user-facing
+  hits (internal test markers excepted).
+- [ ] All v1.9.x backlog items either shipped or moved to the
+  post-v2.0 Backlog. No "we'll fix this in v1.9.x" forward-looking
+  text remaining in user-facing docs.
+- [ ] Every cited prior-art reference in correlation.md is
+  reachable (no dead links); every dependency in the
+  dependency-floor manifesto matches `pyproject.toml`'s actual
+  dependency list (no manifesto/code drift).
+- [ ] Every CONTRIBUTING.md procedure is tested by following it
+  literally — a maintainer walks through "add a new fingerprint"
+  using only the CONTRIBUTING.md text; gaps in the procedure
+  surface here, not after v2.0 ships.
+- [ ] Migration guide covers (a) the EXPERIMENTAL field promotions
+  by name, (b) dropped Bayesian-network nodes from v1.9.5
+  dispositions, (c) schema-version bump, and (d) a downgrade-path
+  recommendation for consumers who can't move yet.
+
+**Validation.** Run the entire v1.9.3.10 empirical sample plus the
+v1.9.10 stratified suite ONE MORE TIME on the v1.9.11 build with
+all docs reflecting v2.0 state. No code change between v1.9.11 and
+v2.0 should be required.
+
+**Refinement.** If the docs review surfaces gaps in the code (e.g.
+a docstring describes behaviour the code doesn't implement),
+v1.9.11 ships a follow-up code patch before v2.0 starts. The
+v2.0 release notes should read like an inventory, not a feature
+list — every claim should already be true at v1.9.11 tag time.
+
+_Additive feature candidates (BIMI VMC clustering, MCP delta helper,
+self-audit batch mode, non-MCP graph exports, per-node
+`n_eff_multiplier`, corpus-driven Hypothesis tests, Hawkes-kernel
+CT burst classification, LPA fallback for `infra_graph`, explicit
+ignorance mass, noisy-OR / noisy-AND CPT gates) are now in the
+[Backlog (after v2.0)](#backlog-after-v20) section. They were
+previously framed as "optional v1.9.x feature additions"; under
+the v1.9.4 → v2.0 linear sequence, they no longer claim slots in
+the path-to-v2.0 plan. Any of them may be promoted into a
+post-v2.0 v2.x.y patch when there's a falsifiable defensive case
+and corpus evidence to back it._
 
 ### v2.0.0 — Maturity
 
@@ -915,40 +955,51 @@ fields to the v2.0 schema contract; make the catalog community-PR-
 friendly; ensure the framework is suitable for sustained corpus-driven
 operation.
 
-**Pre-conditions** — two tracks must clear, both required:
+**Pre-conditions** — the v1.9.4 → v1.9.11 linear sequence has
+completed, in order:
 
-*Track A — Bridge milestones (numeric order; dependency-driven):*
+1. **v1.9.4** — Hardened-adversarial behaviour validated; 50-domain
+   minimal-DNS corpus exercises the asymmetric-likelihood design.
+2. **v1.9.5** — Per-node stability dispositions decided for every
+   Bayesian-network node; "not yet" nodes either redefined,
+   deprecated, or removed.
+3. **v1.9.6** — CPT-change discipline documented in
+   `CONTRIBUTING.md` and enforced in review.
+4. **v1.9.7** — Metadata-coverage gate flipped from advisory to
+   presence-enforcing.
+5. **v1.9.8** — Catalog metadata richness: descriptions ≥ 80%,
+   references ≥ 25%.
+6. **v1.9.9** — Detection-gap UX surfaces shipped: passive-DNS
+   ceiling phrasing, expanded subdomain enumeration breadth,
+   apex-level multi-cloud rollup indicator.
+7. **v1.9.10** — Stratified-corpus pre-lock validation passed:
+   60-domain stratified suite (per-cloud × 6 strata) shows the
+   engine works across cloud customers, not just the
+   enterprise-M365/AWS-skewed historical corpus.
+8. **v1.9.11** — Documentation polish dry-run: every doc reviewed
+   against v2.0 quality bar; migration guide drafted; zero
+   EXPERIMENTAL labels remain in any user-facing text.
 
-1. v1.9.2 — Operator UX validation via agentic QA documented in
-   `validation/v1.9.2-agentic-ux.md`.
-2. v1.9.3 — `email_security_strong` definitional gap resolved.
-3. v1.9.4 — Hardened-adversarial behavior validated.
-4. v1.9.5 — Per-node `stability` field shipped and exercised.
-5. v1.9.6 — CPT-change discipline documented in `CONTRIBUTING.md`
-   and enforced in review.
-6. v1.9.7 — Metadata gate flipped from advisory to presence-
-   enforcing.
+Each version's prose above documents its own quality bar,
+validation step, and refinement check.
 
-*Track B — Required quality work (any order, parallel to Track A):*
+Already cleared en route to this sequence:
 
-7. Catalog metadata richness pass — descriptions ≥ 80%, references
-   ≥ 25% across the catalog.
-8. ~~SECURITY.md and supply-chain hardening~~ — **shipped in v1.9.3.1**
-   (vulnerability-disclosure policy, gitleaks secrets-scanning in
-   CI, CycloneDX SBOM attached as a release asset, forward-compat
-   cache test).
-9. ~~Downstream consumption examples~~ — **shipped in v1.9.3.8**
-   (Splunk + Elasticsearch field mappings, worked input/output pairs,
-   severity mapping, CI gate against schema drift).
-10. ~~Top-3 influential edges in `--explain-dag` rendering.~~
-    **Shipped in v1.9.3.2** — LLR-per-binding + percentage influence
-    surfaced inline in text + DOT output; schema-additive
-    `evidence_ranked` field on `PosteriorObservation`.
-
-Track A patches ship in numeric order. Track B items can land in
-any order under whatever v1.9.x.y patch numbers are available.
-v2.0 ships when the remaining seven pre-conditions clear (three
-already cleared in v1.9.3.1 + v1.9.3.2 + v1.9.3.8).
+- ~~v1.9.2 (operator UX validation via agentic QA)~~ — see
+  `validation/v1.9.2-agentic-ux.md`.
+- ~~v1.9.3 (email_security_strong definitional gap)~~ — see
+  `validation/v1.9.3-calibration.md`.
+- ~~Supply-chain hardening, SBOM, secrets-scanning, forward-compat
+  cache test~~ — shipped in v1.9.3.1.
+- ~~Top-3 influential edges in --explain-dag~~ — shipped in v1.9.3.2.
+- ~~Cloud-vendor coverage gap fill (GCP / Azure non-O365 / Oracle
+  / IBM / Alibaba / PaaS / SSE-SASE / identity extras; 29 new
+  fingerprints)~~ — shipped in v1.9.3.9.
+- ~~Subdomain-level surface intelligence in default panel
+  (unclassified-surface section + per-provider counts)~~ —
+  shipped in v1.9.3.10.
+- ~~Downstream consumption examples (Splunk + Elasticsearch field
+  mappings, CI gate against schema drift)~~ — shipped in v1.9.3.8.
 
 **Schema-lock disposition** (every EXPERIMENTAL field gets a verdict):
 
@@ -1269,6 +1320,53 @@ companies):*
   extension is a top-of-panel `Multi-cloud` indicator: "5 cloud
   providers observed across the surface". Backlog because the
   threshold for "multi-cloud" is policy.
+
+**Additive feature candidates** *(moved from the former
+"v1.9.x optional feature additions" section when the roadmap
+restructured to a flat sequence; any of these may be promoted into
+a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
+
+- **BIMI VMC legal-name clustering** — pairs with the v1.8
+  hypergraph view; demonstrates real multi-brand identification on
+  a private corpus.
+- **MCP delta helper** — `recon_delta(domain_or_json_a,
+  domain_or_json_b)` MCP tool. Compares supplied or cached JSON
+  only; no hidden network. Optional `include_fusion` flag surfaces
+  v1.9 posterior shifts alongside the deterministic diff.
+- **Portfolio / self-audit batch mode** — `recon batch --self-audit`
+  aggregating vertical-baseline hits, anomaly rules, correlation-
+  depth distribution, and gateway / sovereignty consistency across
+  many domains in one summary.
+- **Non-MCP graph exports** — Mermaid diagram output for the v1.8
+  cluster graph, plus CSV exports for relationship metadata and
+  chain motifs.
+- **Per-node `n_eff_multiplier` in `bayesian_network.yaml`** —
+  schema-additive field that scales effective sample size on a
+  per-node basis. Lets weak-calibration nodes widen their credible
+  intervals without globally widening every node. May be promoted
+  into a pre-v2.0 patch if v1.9.4 hardened-adversarial findings +
+  the existing sensitivity test surface nodes whose interval shape
+  only makes sense with per-node scaling.
+- **Corpus-driven Hypothesis tests** — extend
+  `tests/test_bayesian_hypothesis.py` with property tests over real
+  corpus output. Strengthens the test floor.
+- **Hawkes-kernel CT burst classification** — fit a one-parameter
+  exponential-decay kernel to each cluster's CT timestamps and
+  classify `automated_renewal` vs `manual_deployment`. Surface as
+  `cert_summary.deployment_bursts[].kernel_class`.
+- **Asynchronous Label Propagation fallback for `infra_graph`** —
+  pure-Python LPA replaces the connected-components fallback above
+  the 500-node Louvain cap, keeping community structure visible on
+  10k+-node graphs.
+- **Explicit ignorance mass (epistemic vs aleatoric)** — Dempster-
+  Shafer-style mass on the "don't know" state, computed from the
+  ratio of unbound to bound evidence nodes for that posterior;
+  surfaces in `--explain-dag` as a third quantity alongside
+  posterior and interval.
+- **Noisy-OR / noisy-AND CPT gates** — schema-additive
+  `gate: noisy_or | noisy_and | custom` on multi-parent CPTs in
+  `bayesian_network.yaml`. Compact and human-reviewable as the
+  network grows beyond ~10 nodes.
 
 **Pre-existing backlog:**
 
