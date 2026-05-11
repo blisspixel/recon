@@ -238,13 +238,29 @@ class TestServerRuntimeGuard:
 
 class TestShadowWorkspaceIntegration:
     """Spawn ``python -m recon_tool.server`` from a workspace that
-    contains a malicious ``recon_tool/server.py``. The runtime guard
-    must refuse, OR — on Python 3.11+ with PYTHONSAFEPATH=1 set — the
-    installed module must load instead of the shadow.
+    contains a malicious ``recon_tool/server.py``. With
+    ``PYTHONSAFEPATH=1`` set (Python 3.11+), the installed module
+    must load instead of the shadow.
 
-    This is the load-bearing test for the audit finding. Skipped on
-    platforms where subprocess + tempdir manipulation is flaky (none
-    expected; left as a marker)."""
+    Architectural note on Python 3.10: ``PYTHONSAFEPATH`` was
+    introduced in Python 3.11 (PEP 686 / commit-time decision). On
+    3.10 the env var is a no-op, so direct ``python -m
+    recon_tool.server`` from a hostile cwd will load the shadow —
+    Python's lookup unavoidably prepends cwd to ``sys.path``. The
+    v1.9.3.4 product defenses avoid this invocation pattern entirely:
+    ``mcp_doctor`` sets ``cwd`` to an empty tempdir, and
+    ``mcp_install``'s preferred form uses the ``recon`` script entry
+    point (no ``-m``). The runtime guard in ``server.py`` is the
+    third layer but cannot fire when a shadow's ``server.py`` is the
+    code that actually loads. Hence this test only validates the
+    PYTHONSAFEPATH path; the unit tests in
+    ``TestServerRuntimeGuard`` cover the runtime-guard behaviour
+    independently, and the source-inspection tests above pin the
+    safe-cwd + env-var contract in ``mcp_doctor``.
+
+    Skipped on Windows because subprocess + tempdir cleanup
+    interacts poorly with test isolation; the unit-level guard
+    tests cover the same path."""
 
     def _write_shadow_package(self, root: Path) -> None:
         pkg = root / "recon_tool"
@@ -271,6 +287,18 @@ class TestShadowWorkspaceIntegration:
         sys.platform == "win32",
         reason="Windows subprocess + tempdir cleanup interacts poorly with "
         "test isolation; the unit-level guard tests cover the same path.",
+    )
+    @pytest.mark.skipif(
+        sys.version_info < (3, 11),
+        reason="PYTHONSAFEPATH was introduced in Python 3.11 (PEP 686). "
+        "On 3.10 the env var is a no-op, so direct `python -m "
+        "recon_tool.server` from a hostile cwd will load the shadow — "
+        "this is architecturally unprotected on 3.10. The product code "
+        "avoids the unprotected pattern: mcp_doctor sets a safe cwd, "
+        "mcp_install prefers the `recon` script entry point. "
+        "Operators on 3.10 should install recon to PATH and invoke "
+        "`recon mcp` rather than `python -m recon_tool.server` from "
+        "untrusted workspaces.",
     )
     def test_shadow_workspace_cannot_execute(self, tmp_path):
         self._write_shadow_package(tmp_path)
