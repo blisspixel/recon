@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.3.9** (Catalog growth: cloud-vendor coverage gap fill — 29 new fingerprints across GCP, AWS, Azure non-O365, Oracle Cloud, IBM Cloud, Alibaba, additional PaaS, SSE/SASE, and identity providers. Vendor-doc-sourced methodology codified in CONTRIBUTING.md as standing practice alongside the existing corpus-observed path).
+Current release: **v1.9.3.10** (Make subdomain-level surface intelligence visible by default — unclassified-surface section in the default panel surfaces CNAME chain termini the catalog couldn't classify; the "Subdomain" summary now reports per-provider counts so multi-cloud distribution shows at a glance. Empirical validation against a rich-stack sample confirmed the catalog is comprehensive for top-tier enterprise vendors; remaining gaps are architectural [passive DNS cannot see server-side API consumption] rather than catalog).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
@@ -61,54 +61,43 @@ signal recovery.
 
 ## Current Fingerprint Library Assessment
 
-As of v1.8.0, built-in fingerprints live in nine categorized YAML files:
-`ai.yaml`, `crm-marketing.yaml`, `data-analytics.yaml`, `email.yaml`,
-`infrastructure.yaml`, `productivity.yaml`, `security.yaml`, `surface.yaml`
+Built-in fingerprints live in nine categorized YAML files under
+`recon_tool/data/fingerprints/`: `ai.yaml`, `crm-marketing.yaml`,
+`data-analytics.yaml`, `email.yaml`, `infrastructure.yaml`,
+`productivity.yaml`, `security.yaml`, `surface.yaml`
 (per-subdomain CNAME-target classification, added in v1.5), and
 `verticals.yaml`.
 
-Current no-network catalog audit:
+**Current totals** *(as of v1.9.3.9)*:
 
-- 346 fingerprint entries across 282 unique slugs (slugs may appear in
-  multiple files when, e.g., `surface.yaml` extends an apex fingerprint
-  with `cname_target` rules under the same name).
-- 485 detection rules total, of which 163 are `cname_target` rules driving
-  the surface-attribution pipeline.
-- 97 multi-detection fingerprints.
-- All built-ins currently use `match_mode: any`.
-- Metadata coverage: 187/485 detections have descriptions, 9/485 have
-  references, and 4/485 use non-default weights. Description coverage
-  remains the largest gap; raise it before the catalog grows further.
+- 414 fingerprint entries; 343 unique slugs.
+- All slugs map to a defender-visible category in `formatter.py`.
+- Zero cross-file slug-name collisions (verified by `tests/test_fingerprint_expansion.py`).
 
-What is good:
+**Coverage outlook.** v1.9.3.9 closed the largest cloud-vendor coverage
+blindspot (GCP / Azure non-O365 / Oracle / IBM / Alibaba / SaaS-PaaS /
+SSE-SASE) via vendor-doc-sourced fingerprints. Empirical validation
+against a stratified sample of known-rich-stack public companies
+(Stripe, Shopify, Slack, Atlassian, Datadog, HashiCorp; gitignored
+private corpus) showed **zero unclassified CNAME chain termini** on
+these targets — the catalog is comprehensive for top-tier enterprise
+vendors. Residual coverage gaps live in lesser-known regional clouds
+(Yandex, OVH, Kakao), SAP / Oracle SaaS apps beyond Fusion, and the
+long-tail SSE/SASE vendors (iboss, Versa, Aryaka).
 
-- The per-category YAML split is easy to review and contributor-friendly.
-- Most high-confidence entries use service-specific TXT, MX, CNAME, NS, SRV,
-  CAA, SPF, or `subdomain_txt` evidence instead of generic subdomain labels.
-- Multi-signal support, detection weights, descriptions, references,
-  `recon fingerprints new`, and `recon://fingerprints` already exist.
-- The posture and signal layers consume fingerprint slugs as neutral
-  observations, which keeps the output factual instead of prescriptive.
-- Validation tooling now has both live-corpus comparison and a match-mode audit
-  path, so catalog changes can be reviewed as evidence decisions.
+**What remains.** The metadata richness pass is the largest pending
+catalog-quality item — see Track B below. Description and reference
+coverage targets (≥ 80% / ≥ 25%) before v2.0; the vendor-doc-sourced
+methodology codified in `CONTRIBUTING.md` advances reference coverage
+on every new `cname_target` rule shipped under it.
 
-What is missing or high ROI:
-
-- Metadata consistency is uneven. Description and reference coverage should
-  rise before the catalog gets much larger.
-- The `review_for_all` queue needs manual validation. Identity, security, and
-  infrastructure fingerprints should be prioritized because false positives
-  there have the highest downstream cost.
-- Keep the `tighten_patterns` queue at zero by tightening generic substrings
-  before merge, especially on infrastructure and email-deliverability entries.
-- Under-covered breadth remains in newer AI platforms, enterprise data/BI,
-  SASE/SSE, payment/commerce, HR/operations, and vertical-specific tooling.
-- Common false-negative configurations should be captured in
-  [weak-areas.md](weak-areas.md) or PR notes so sparse results become easier to
-  explain.
-- New relationship-oriented metadata such as product families or co-location
-  edges would require an explicit schema proposal; do not smuggle unsupported
-  fields into YAML.
+**Detection-gap honesty.** Coverage is bounded by passive DNS
+fundamentally: server-side API consumption, internal workloads, data
+pipelines, and ML jobs that call cloud APIs from existing
+infrastructure never surface in DNS records on the queried apex.
+recon will not, and architecturally cannot, see these. The
+[Backlog](#backlog-after-v20) carries the framing-side fixes that
+make this limit visible to operators rather than hiding it.
 
 ## Invariants
 
@@ -248,94 +237,43 @@ Standing work that runs alongside every release:
   calibration claims are falsifiable across time, not just at the
   v2.0 lock moment.
 
-### v1.7.0 — Hardened-target signal recovery (shipped)
+### v1.7.0 — Hardened-target signal recovery *(shipped — see [CHANGELOG](../CHANGELOG.md))*
 
 Squeezed more out of CT logs and resolution chains, and surfaced what
-we already tracked but didn't expose. Everything in this release landed
-as a YAML data file plus minimal engine extension. See
-[`CHANGELOG.md`](../CHANGELOG.md) for the full notes.
+we already tracked but didn't expose. Surfaces: wildcard SAN sibling
+expansion (`cert_summary.wildcard_sibling_clusters`), temporal CT
+issuance bursts (`cert_summary.deployment_bursts`), CNAME chain motif
+library (`chain_motifs` array), cross-source evidence conflict
+surfacing (`evidence_conflicts` array). All shipped as YAML data
+files plus minimal engine extension; the v2.0 schema lock promotes
+each to stable per the disposition table below.
 
-- **Wildcard SAN sibling expansion.** Implemented in
-  `recon_tool/sources/cert_providers.py` `_extract_wildcard_sibling_clusters()`.
-  Surfaced under `cert_summary.wildcard_sibling_clusters` in `--json`.
-- **Temporal CT issuance bursts.** Implemented in
-  `recon_tool/sources/cert_providers.py` `_detect_deployment_bursts()`.
-  Surfaced under `cert_summary.deployment_bursts` with relative window
-  deltas (no absolute "same owner" claims).
-- **CNAME chain motif library.** Catalog at
-  `recon_tool/data/motifs.yaml`; loader and matcher at
-  `recon_tool/motifs.py`; integrated in
-  `recon_tool/sources/dns.py` `_classify_related_surface()`. Surfaced as
-  the top-level `chain_motifs` array in `--json`. Chain length capped
-  at 4. Per-lookup observation cap at 50.
-- **Cross-source evidence conflict surfacing.** Implemented as
-  `serialize_conflicts_array()` in `recon_tool/models.py` and the
-  top-level `evidence_conflicts` array in `format_tenant_dict()`. The
-  legacy `conflicts` dict under `--explain` is unchanged.
+### v1.8.0 — Graph correlation *(shipped — see [CHANGELOG](../CHANGELOG.md))*
 
-### v1.8.0 — Graph correlation (shipped)
+Built the structural layer on top of the v1.7 cert intelligence.
+Surfaces: CT co-occurrence graph + Louvain communities
+(`infrastructure_clusters`), fingerprint relationship metadata
+(`product_family`, `parent_vendor`, `bimi_org` fields → emitted as
+`fingerprint_metadata` map), batch-only hypergraph ecosystem view
+(`ecosystem_hyperedges` when `--include-ecosystem`),
+vertical-baseline anomaly rules (`expected_categories` /
+`expected_motifs` on profiles, hedged-observation output),
+`get_infrastructure_clusters` + `export_graph` MCP tools.
+Zero new network surface; all derived from already-collected
+observables. v2.0 promotes each to stable per the disposition table.
 
-Built the structural layer on top of the v1.7 cert intelligence. SAN
-co-occurrence becomes communities, fingerprint metadata becomes
-ecosystem hyperedges, and absence rules turn vertical profiles into
-hedged baseline checks. Zero new network surface. See
-[`CHANGELOG.md`](../CHANGELOG.md) for the full notes.
+### v1.9.0 — Probabilistic fusion *(shipped, EXPERIMENTAL surfaces — see [CHANGELOG](../CHANGELOG.md), `docs/correlation.md` §4.8, `validation/v1.9-validation-summary.md`)*
 
-- **CT co-occurrence graph + Louvain communities.** Implemented in
-  `recon_tool/infra_graph.py`. Surfaced under top-level
-  `infrastructure_clusters` in `--json` (always emitted). 500-node cap
-  with connected-components fallback. Louvain via pure-Python
-  `networkx` (Leiden's well-connectedness guarantees do not pay off at
-  this graph size, and `leidenalg` would pull in C extensions).
-- **Fingerprint relationship metadata.** Three optional fields on the
-  fingerprint YAML schema (`product_family`, `parent_vendor`,
-  `bimi_org`); eight built-in slugs seeded. Surfaced as
-  `fingerprint_metadata` map in `--json`.
-- **Hypergraph ecosystem view (batch-only).** Implemented in
-  `recon_tool/ecosystem.py`. Behind `recon batch --json
-  --include-ecosystem`. Four hyperedge types (top_issuer, bimi_org,
-  parent_vendor, shared_slugs ≥2). Wraps batch JSON in
-  `{ecosystem_hyperedges, domains}`.
-- **Vertical-baseline anomaly rules.** `Profile` YAML gains
-  `expected_categories` + `expected_motifs`. New
-  `compute_baseline_anomalies()` in `recon_tool/profiles.py` emits
-  hedged observations on missing expectations; seeded on `fintech` and
-  `healthcare` profiles.
-- **`get_infrastructure_clusters` + `export_graph` MCP tools.**
-  Read-only exposure of the already-computed graph. The first emits
-  the cluster envelope; the second emits raw nodes + weighted edges +
-  cluster_assignment for downstream Mermaid / GraphViz / CSV pipelines.
-
-### v1.9.0 — Probabilistic fusion (experimental)
-
-Layer Bayesian inference on top of the deterministic engine. Existing
-deterministic rules still run first; the Bayesian layer updates posteriors
-and adds credible intervals. Gate behind the existing `--fusion` flag and
-mark output EXPERIMENTAL until at least two corpus runs validate
-calibration.
-
-- **Bayesian network in `bayesian_network.yaml`.** Nodes are fingerprint
-  slugs and signals; edges are conditional probability tables. Network
-  stays small (≤20 nodes per per-domain inference), human-readable, and
-  committed as data — never learned weights. Exact inference via variable
-  elimination.
-- **Calibrated posteriors with explicit passive-ceiling language.** The
-  experimental output path emits a credible interval per slug instead of
-  a point score. `PostureObservation` gains a posterior + interval field;
-  the v1.0 default JSON shape is untouched. Sparse-evidence cases produce
-  wider intervals and surface the passive-observation ceiling directly in
-  the explanation, instead of letting a hedged-but-confident-looking
-  number imply more than the evidence supports.
-- **Cross-source conflict resolution feeding posterior.** Conflicts
-  surfaced in v1.7 become probabilistic dampeners on the affected slugs.
-- **Feedback-driven priors (local only).** Validation runs can update a
-  local prior file in `~/.recon/priors.yaml`; never shared, never shipped
-  in the package, never made into a remote service.
-
-**Validation gate** — corpus entropy reduction tracked across the v1.7,
-v1.8, and v1.9 runs. Calibration check: high-posterior predictions on the
-corpus should match observable evidence; intervals should cover the
-sparse-evidence cases without collapsing on dense-evidence ones.
+Layered Bayesian inference on top of the deterministic engine, gated
+behind `--fusion`. Surfaces (`posterior_observations`, `slug_confidences`,
+`evidence_conflicts`, `--explain-dag`, `chain_motifs`,
+`wildcard_sibling_clusters`, `deployment_bursts`,
+`infrastructure_clusters`, `ecosystem_hyperedges`) are all marked
+EXPERIMENTAL until the v1.9.x bridge milestones below close out and v2.0
+locks the schema. The validation gate (corpus entropy reduction tracked
+across releases; high-posterior calibration; interval coverage on
+sparse-evidence cases) cleared on the v1.9.0 corpus run; per-node
+calibration findings drove the v1.9.3 surgery.
 
 ### Bridge to v2.0 — patch releases, in logical order
 
@@ -363,7 +301,10 @@ first**, so schema-affecting work is informed by what operators
 actually use rather than the other way around. Each milestone
 maps to one patch release.
 
-#### v1.9.2 — UX validation via agentic QA (shipped)
+#### v1.9.2 — UX validation via agentic QA *(shipped — see [CHANGELOG](../CHANGELOG.md) and `validation/v1.9.2-agentic-ux.md`)*
+
+<details>
+<summary>Shipped detail — methodology + findings</summary>
 
 We have not validated that operators benefit from credible
 intervals. The entire calibration argument is academic if no one
@@ -434,7 +375,12 @@ surfaces ambiguous results, or if we want a non-agent persona
 interview plan is on the shelf. But agentic QA is genuine
 validation for the agent persona, not a placeholder for it.
 
-#### v1.9.3 — Resolve the `email_security_strong` definitional gap (shipped)
+</details>
+
+#### v1.9.3 — Resolve the `email_security_strong` definitional gap *(shipped — see [CHANGELOG](../CHANGELOG.md) and `validation/v1.9.3-calibration.md`)*
+
+<details>
+<summary>Shipped detail — topology surgery rationale</summary>
 
 This is *topology surgery*, not parameter tuning. The v1.9.0
 spot-check showed 52.6% agreement on this single node; all other
@@ -480,6 +426,8 @@ next corpus run tell us which node is broken next. Sequential
 model improvement. The rigorous-but-open-ended alternative — audit
 every node for definitional clarity in one pass — is in
 [Backlog (after v2.0)](#backlog-after-v20) below.
+
+</details>
 
 #### v1.9.4 — Hardened-adversarial behavior validation
 
@@ -1285,6 +1233,44 @@ whether some other composability primitive is more valuable.
 Items that are real but speculative enough to not commit a slot in the
 plan above. Each remains gated by the same invariants and validation
 discipline.
+
+**Detection-gap framing & enumeration breadth** *(added 2026-05-11
+following empirical validation pass against rich-stack public
+companies):*
+
+- **Passive-DNS ceiling phrasing in the panel.** When the default
+  panel lists few services on a domain that public knowledge suggests
+  uses many, surface a one-line acknowledgement: "Passive DNS surfaces
+  X public services; server-side API consumption, internal workloads,
+  and SaaS without DNS verification are not observable from public
+  DNS alone." Prevents "absence of finding = service not present"
+  reading. The architectural Category-1 limit becomes visible without
+  needing the operator to know the invariants. Backlog because the
+  trigger heuristic ("when does the panel hint at the ceiling?") is
+  policy and deserves explicit design.
+- **Subdomain enumeration breadth.** Today's related-domain discovery
+  is CT-driven + a fixed common-prefix probe. A customer with
+  `data-pipeline.example.com → GCP` whose subdomain doesn't appear in
+  CT and isn't a common prefix is invisible. Expand: pull SAN sets
+  from ALL observed apex certs (not just the queried apex), longer
+  common-prefix wordlist (security, ops, internal, ml, ai, data,
+  etc.), and a CT search by org name when one is available from a
+  prior lookup. None violates passive-only. Backlog because the
+  optimal wordlist + CT-query plan needs corpus-driven calibration.
+- **Stratified-corpus validation as standing practice.** Single
+  private corpus has bias; stratified samples (known GCP-customer set,
+  known Azure-customer set, etc.) surface the bias by design. Process
+  change in `validation/` — not code. Backlog because the per-cloud
+  10-domain reference sets need curation; vendor case-studies are the
+  starting input.
+- **Cloud-provider rollup at the apex level.** When subdomains span
+  multiple clouds (apex on Cloudflare, subdomains across AWS + Fastly
+  + Stripe), the v1.9.3.10 "Subdomain" line shows counts. A natural
+  extension is a top-of-panel `Multi-cloud` indicator: "5 cloud
+  providers observed across the surface". Backlog because the
+  threshold for "multi-cloud" is policy.
+
+**Pre-existing backlog:**
 
 - CT organization-name search (opt-in, exact-match only).
 - Wayback Machine temporal enrichment (new public network surface; opt-in).
