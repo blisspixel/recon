@@ -5,6 +5,73 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3.2] - 2026-05-10
+
+**Track B quality work — Top-3 influential edges in `--explain-dag`.**
+Closes the v2.0 explainability gap on the `--explain-dag` surface.
+The v1.9.0 renderer reported a posterior and a flat evidence list but
+didn't show *which* evidence drove the answer — exactly the question
+a defending operator asks when disputing a verdict. v1.9.3.2 surfaces
+each fired binding's log-likelihood-ratio contribution + its share of
+total |LLR| influence, ranked top-3 per node, inline in both the text
+narrative and the Graphviz DOT export.
+
+The ranking matches the v1.9.x quality bar: LLR is quantified per
+binding (not count or presence), sorted by absolute LLR descending,
+ties broken by `(kind, name)` for diff-stability, single-binding case
+uses singular header ("Top influence:"), no fake top-3 on sparse
+targets, no section emitted when zero bindings fired.
+
+### Added
+
+- **`recon_tool.bayesian.EvidenceContribution`** dataclass — engine-side
+  representation of a fired binding's LLR + influence_pct.
+- **`recon_tool.models.NodeEvidence`** dataclass — public-facing
+  counterpart, surfaced through `PosteriorObservation.evidence_ranked`
+  in the cache, JSON output, and renderer.
+- **`PosteriorObservation.evidence_ranked: tuple[NodeEvidence, ...]`** —
+  schema-additive field. Default empty tuple preserves v1.9.0 / v1.9.3
+  JSON shape for consumers that don't read this field.
+- **`tests/test_explain_dag_top3.py`** — 16 tests covering LLR
+  correctness (hand-verified against three canonical bindings from
+  the seed network), ranking determinism (sort key, tie-break),
+  sparse/zero-binding behaviour, and a snapshot pinning the rendered
+  m365_tenant block. Future renderer changes must update the snapshot
+  deliberately.
+
+### Changed
+
+- **`render_dag_text`** emits a "Top influence" or "Top influences
+  (ranked, N fired)" section after the evidence list when ≥ 1 binding
+  fired. Section header pluralizes correctly; when more than 3 fired,
+  header reads "Top influences (ranked top 3 of N fired)".
+- **`render_dag_dot`** node labels include a "top influences:" suffix
+  with the top-3 ranking inline so DOT-rendered diagrams carry the
+  same visibility the text narrative provides.
+- **`docs/correlation.md` Example 1 (dense M365-federated stack)**
+  regenerated with v1.9.3.2 output. The reading commentary explains
+  *why* `entra-id` outranks `microsoft365` in evidence influence
+  (likelihood ratio 44 vs 32) and how the ranking lets an operator
+  audit which facts drove a verdict.
+- **Cache + JSON serialization** round-trips `evidence_ranked` through
+  `cache.py` and `formatter.py`. The forward-compat tests added in
+  v1.9.3.1 already cover the case where an older reader encounters
+  the new field (it ignores it gracefully).
+
+### Roadmap
+
+- **Track B "Top-3 influential edges" item closed.** v2.0
+  pre-condition list shows 8 remaining (was 9 after v1.9.3.1).
+  Two Track B items remain: catalog metadata richness pass and
+  downstream consumption examples. Track A bridge milestones
+  v1.9.4-v1.9.7 unchanged.
+
+### Tests
+
+- 2128 passed (+16 top-3 tests, was 2112 in v1.9.3.1).
+- Coverage 83.32% (≥ 80% gate).
+- ruff + pyright clean on `recon_tool/` + `tests/`.
+
 ## [1.9.3.1] - 2026-05-10
 
 **Track B quality work — SECURITY.md and supply-chain hardening.**

@@ -233,6 +233,15 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
                     }
                     for c in p.conflict_provenance
                 ],
+                "evidence_ranked": [
+                    {
+                        "kind": e.kind,
+                        "name": e.name,
+                        "llr": e.llr,
+                        "influence_pct": e.influence_pct,
+                    }
+                    for e in p.evidence_ranked
+                ],
             }
             for p in info.posterior_observations
         ],
@@ -382,7 +391,7 @@ def _parse_posterior_observations(data: dict[str, Any]) -> tuple[Any, ...]:
     raw = data.get("posterior_observations")
     if not isinstance(raw, list):
         return ()
-    from recon_tool.models import NodeConflict, PosteriorObservation
+    from recon_tool.models import NodeConflict, NodeEvidence, PosteriorObservation
 
     out: list[PosteriorObservation] = []
     for entry in raw:
@@ -402,6 +411,21 @@ def _parse_posterior_observations(data: dict[str, Any]) -> tuple[Any, ...]:
                 )
             except (KeyError, TypeError, ValueError):
                 continue
+        ranked: list[NodeEvidence] = []
+        for raw_ranked in entry.get("evidence_ranked", []) or []:
+            if not isinstance(raw_ranked, dict):
+                continue
+            try:
+                ranked.append(
+                    NodeEvidence(
+                        kind=str(raw_ranked["kind"]),
+                        name=str(raw_ranked["name"]),
+                        llr=float(raw_ranked["llr"]),
+                        influence_pct=float(raw_ranked.get("influence_pct", 0.0)),
+                    )
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
         try:
             out.append(
                 PosteriorObservation(
@@ -414,6 +438,7 @@ def _parse_posterior_observations(data: dict[str, Any]) -> tuple[Any, ...]:
                     n_eff=float(entry.get("n_eff", 0.0)),
                     sparse=bool(entry.get("sparse", False)),
                     conflict_provenance=tuple(conflicts),
+                    evidence_ranked=tuple(ranked),
                 )
             )
         except (KeyError, TypeError, ValueError):

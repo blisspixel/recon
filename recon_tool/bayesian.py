@@ -65,6 +65,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "BayesianNetwork",
     "ConflictProvenance",
+    "EvidenceContribution",
     "InferenceResult",
     "NodePosterior",
     "infer",
@@ -167,6 +168,31 @@ class ConflictProvenance:
 
 
 @dataclass(frozen=True)
+class EvidenceContribution:
+    """One bound observation's quantified influence on a node's posterior.
+
+    The log-likelihood-ratio (LLR) for a binding that fired is
+    :math:`\\log\\!\\bigl(P(\\text{obs}\\mid\\text{present})\\;/\\;P(\\text{obs}\\mid\\text{absent})\\bigr)`,
+    positive when the observation favours ``present`` and negative when
+    it favours ``absent``. ``influence_pct`` is this binding's
+    ``|llr|`` normalized to a percentage across all fired bindings for
+    the same node — the renderer uses it to surface "this evidence
+    drove 42% of the posterior shift" without forcing the reader to
+    convert nats to a share.
+
+    Added v1.9.3.2 to support top-3 influential-edge rendering in
+    ``--explain-dag``. Schema-additive: the default empty tuple on
+    ``NodePosterior.evidence_ranked`` preserves the v1.9.0 shape for
+    consumers that don't read this field.
+    """
+
+    kind: str  # "slug" or "signal"
+    name: str
+    llr: float  # natural-log likelihood ratio for the fired observation
+    influence_pct: float  # |llr| / sum(|llr|) * 100 across this node's fired bindings
+
+
+@dataclass(frozen=True)
 class NodePosterior:
     """Per-node inference output."""
 
@@ -183,6 +209,12 @@ class NodePosterior:
     penalty. Empty tuple when no conflicts dampened the interval. v1.9.1
     surfaces the same provenance on every node (penalty is global);
     schema is stable for future per-node relevance refinement."""
+    evidence_ranked: tuple[EvidenceContribution, ...] = ()
+    """Fired bindings ranked by absolute LLR contribution (descending),
+    ties broken by binding name for diff-stability. Same set as
+    ``evidence_used`` but with quantified influence. Empty tuple when
+    no bindings fired. Added v1.9.3.2 for top-3 influential-edge
+    rendering in ``--explain-dag``; schema-additive."""
 
 
 @dataclass(frozen=True)
@@ -673,6 +705,8 @@ def infer(
         entropy_reduction = _binary_entropy(prior_p) - _binary_entropy(post)
         total_entropy_reduction += entropy_reduction
 
+        evidence_ranked = _rank_evidence(fired)
+
         posteriors.append(
             NodePosterior(
                 name=node.name,
@@ -684,6 +718,7 @@ def infer(
                 n_eff=round(n_eff, 2),
                 sparse=n_eff <= _MIN_N_EFF,
                 conflict_provenance=conflicts,
+                evidence_ranked=evidence_ranked,
             )
         )
 
@@ -706,6 +741,51 @@ def _binary_entropy(p: float) -> float:
     if p <= 0.0 or p >= 1.0:
         return 0.0
     return -(p * math.log(p) + (1.0 - p) * math.log(1.0 - p))
+
+
+def _rank_evidence(fired: Iterable[_Evidence]) -> tuple[EvidenceContribution, ...]:
+    """Rank fired bindings by absolute LLR contribution.
+
+    For each binding that fired, compute
+    :math:`\\text{LLR} = \\log\\!\\bigl(\\ell_{\\text{present}} /
+    \\ell_{\\text{absent}}\\bigr)` where the likelihoods come from the
+    binding's YAML entry. ``influence_pct`` normalizes ``|LLR|`` across
+    all fired bindings for the same node so the operator sees a share,
+    not a raw nats value, in the rendered output.
+
+    Sorted by absolute LLR descending. Ties on absolute LLR are broken
+    by ``(kind, name)`` ascending so the order is deterministic — this
+    matters for the snapshot test pinning ``--explain-dag`` output.
+
+    Returns an empty tuple when no bindings fired.
+    """
+    fired_list = list(fired)
+    if not fired_list:
+        return ()
+    raw: list[tuple[_Evidence, float]] = []
+    for ev in fired_list:
+        # Schema guarantees both likelihoods in the open interval (0, 1),
+        # so the ratio is positive and the log is finite — no clamp
+        # needed. We still defend against a future schema relaxation by
+        # clamping if either side rounds to exactly 0; behaviour stays
+        # honest (LLR magnitude grows large but doesn't overflow).
+        present = max(ev.likelihood_present, 1e-12)
+        absent = max(ev.likelihood_absent, 1e-12)
+        raw.append((ev, math.log(present / absent)))
+    abs_sum = sum(abs(llr) for _, llr in raw) or 1.0
+    ranked = sorted(
+        raw,
+        key=lambda pair: (-abs(pair[1]), pair[0].kind, pair[0].name),
+    )
+    return tuple(
+        EvidenceContribution(
+            kind=ev.kind,
+            name=ev.name,
+            llr=round(llr, 4),
+            influence_pct=round(100.0 * abs(llr) / abs_sum, 2),
+        )
+        for ev, llr in ranked
+    )
 
 
 # ── TenantInfo adapter ────────────────────────────────────────────────

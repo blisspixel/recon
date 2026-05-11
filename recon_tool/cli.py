@@ -2313,7 +2313,7 @@ async def _lookup(
 
             from recon_tool.bayesian import infer_from_tenant_info
             from recon_tool.fusion import compute_slug_posteriors
-            from recon_tool.models import NodeConflict, PosteriorObservation
+            from recon_tool.models import NodeConflict, NodeEvidence, PosteriorObservation
 
             bayesian_result = infer_from_tenant_info(info)
             bayesian_observations = tuple(
@@ -2329,6 +2329,15 @@ async def _lookup(
                     conflict_provenance=tuple(
                         NodeConflict(field=c.field, sources=c.sources, magnitude=c.magnitude)
                         for c in p.conflict_provenance
+                    ),
+                    evidence_ranked=tuple(
+                        NodeEvidence(
+                            kind=e.kind,
+                            name=e.name,
+                            llr=e.llr,
+                            influence_pct=e.influence_pct,
+                        )
+                        for e in p.evidence_ranked
                     ),
                 )
                 for p in bayesian_result.posteriors

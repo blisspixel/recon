@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.3.1** (Track B quality work — SECURITY.md/supply-chain hardening: CycloneDX SBOM as release asset, gitleaks secrets scanning, forward-compat cache test).
+Current release: **v1.9.3.2** (Track B quality work — top-3 influential edges in `--explain-dag`: LLR-per-binding ranking surfaced in text + DOT output; schema-additive `evidence_ranked` field on `PosteriorObservation`).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
@@ -864,41 +864,18 @@ and don't belong on the gap list. They are real.
     employee can't QA it, the example is marked
     "community-contributed, unverified."
 
-- **Top-3 influential edges in `--explain-dag`.** Extend
-  `render_dag_text` to identify the three highest-leverage evidence
-  bindings per node (largest contribution to the posterior) and
-  surface their factor values inline. No schema change.
-  **Required because** `--explain-dag` is the explainability surface
-  v2.0 is supposed to lock; without influential-edge surfacing, the
-  layer reports a posterior and an evidence list but does not show
-  *which* evidence drove the answer, which is exactly the question a
-  defending operator needs to debug a surprising result.
-
-  **Quality bar — exceptionally well:**
-  - [ ] Influence is *quantified* per binding as
-    log-likelihood-ratio contribution
-    (`log(P(obs|present)/P(obs|absent))`), not just count or
-    presence. Each surfaced edge carries its LLR and a percentage
-    of total evidence influence.
-  - [ ] Sorted by absolute LLR contribution; ties broken by
-    binding name (deterministic for diff-stability).
-  - [ ] Output format example (literal): `Evidence: slug
-    'microsoft365' (LLR +3.45, 42% of evidence influence), slug
-    'entra-id' (LLR +3.78, 35%), signal 'federated_sso_hub' (LLR
-    +2.89, 23%)`. Operator reads "the M365 + Entra slugs together
-    drove this posterior; if you want to dispute the verdict,
-    those are the facts to challenge."
-  - [ ] DOT export (`--explain-dag-format dot`) carries LLR as
-    edge label. Non-AI users get the same visibility in their
-    diagram as the agent gets in the text.
-  - [ ] Sparse-target behavior: when fewer than 3 bindings fired,
-    the section reports the actual count without padding ("only
-    1 binding fired; the rest of this node's posterior is
-    structural propagation from parents"). No fake top-3.
-  - [ ] Snapshot test (`tests/test_explain_dag_top3.py`) pins the
-    rendered output for the worked correlation.md examples;
-    regression-proof against future renderer changes that drop
-    LLR display.
+- **Top-3 influential edges in `--explain-dag`.** *(shipped in v1.9.3.2)*
+  Extends `render_dag_text` and `render_dag_dot` to rank fired
+  evidence bindings per node by absolute log-likelihood-ratio
+  contribution. **Required because** `--explain-dag` is the
+  explainability surface v2.0 is supposed to lock; without
+  influential-edge surfacing, the layer reports a posterior and
+  an evidence list but does not show *which* evidence drove the
+  answer. Schema-additive `evidence_ranked: tuple[NodeEvidence, ...]`
+  field on `PosteriorObservation` carries the ranking through the
+  JSON output, the cache, and the renderer. See v1.9.3.2 CHANGELOG
+  entry and `tests/test_explain_dag_top3.py` for the full
+  per-criterion verification.
 
 These ship as completed in any order before v2.0; v2.0 inherits them
 already-present.
@@ -1033,12 +1010,15 @@ operation.
    cache test).
 9. Downstream consumption examples — at least Splunk + one of
    (Elastic / Sentinel / ArcSight).
-10. Top-3 influential edges in `--explain-dag` rendering.
+10. ~~Top-3 influential edges in `--explain-dag` rendering.~~
+    **Shipped in v1.9.3.2** — LLR-per-binding + percentage influence
+    surfaced inline in text + DOT output; schema-additive
+    `evidence_ranked` field on `PosteriorObservation`.
 
 Track A patches ship in numeric order. Track B items can land in
 any order under whatever v1.9.x.y patch numbers are available.
-v2.0 ships when the remaining nine pre-conditions clear (one
-already cleared in v1.9.3.1).
+v2.0 ships when the remaining eight pre-conditions clear (two
+already cleared in v1.9.3.1 + v1.9.3.2).
 
 **Schema-lock disposition** (every EXPERIMENTAL field gets a verdict):
 
