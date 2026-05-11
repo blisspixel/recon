@@ -1755,3 +1755,469 @@ fingerprints:
     tier: application
     description: WordPress.com hosted blogs with custom domain mapping; CNAMEs terminate at lb.wordpress.com.
     reference: https://wordpress.com/support/domains/map-subdomain/
+
+# ──────────────────────────────────────────────────────────────────────────
+# v1.9.3.9: cloud-vendor coverage gap fill.
+#
+# Each fingerprint below was added based on the vendor's own published
+# documentation of customer-facing custom-domain CNAME targets — not from
+# corpus observation. The ``reference`` field cites the vendor doc URL.
+# This methodology (vendor-doc-sourced) complements the existing
+# corpus-observed methodology (where catalog growth ships fingerprints
+# for unclassified CNAME patterns surfaced by a private-corpus scan):
+#
+#   * Corpus-observed fingerprints catch what we see. The bias: our
+#     private corpus skews enterprise M365 + AWS + Cloudflare. Heavy
+#     GCP / Azure non-O365 / Oracle / Alibaba / SaaS-PaaS / SSE-SASE
+#     coverage gets under-represented.
+#
+#   * Vendor-doc-sourced fingerprints catch what we *would* see if a
+#     customer of that vendor entered our scope. Closes the coverage
+#     blindspot before a customer happens to be in the corpus.
+#
+# Future catalog growth should use BOTH methodologies. A new
+# ``cname_target`` rule that does not cite a vendor-doc URL should be
+# corpus-backed; a rule that cites a vendor doc may ship without
+# corpus observation if the vendor doc documents the pattern as
+# stable.
+# ──────────────────────────────────────────────────────────────────────────
+
+# ── Google Cloud Platform — customer-facing service endpoints ──────────────
+
+- name: Firebase Hosting
+  slug: firebase-hosting
+  category: Infrastructure
+  confidence: high
+  product_family: Firebase
+  parent_vendor: Google
+  detections:
+  - type: cname_target
+    pattern: firebaseapp.com
+    tier: infrastructure
+    description: Firebase Hosting legacy custom-domain target; subdomains CNAME to ``*.firebaseapp.com`` before the platform serves the SPA / static site.
+    reference: https://firebase.google.com/docs/hosting/custom-domain
+  - type: cname_target
+    pattern: web.app
+    tier: infrastructure
+    description: Firebase Hosting modern custom-domain target; subdomains CNAME to ``*.web.app`` for Firebase-hosted apps provisioned after 2018.
+    reference: https://firebase.google.com/docs/hosting/custom-domain
+
+- name: Google Cloud Functions
+  slug: gcp-cloud-functions
+  category: Infrastructure
+  confidence: high
+  product_family: Cloud Functions
+  parent_vendor: Google
+  detections:
+  - type: cname_target
+    pattern: cloudfunctions.net
+    tier: infrastructure
+    description: Google Cloud Functions HTTPS trigger endpoints; customer-mapped subdomains CNAME to ``<function>-<hash>-<region>.cloudfunctions.net``.
+    reference: https://cloud.google.com/functions/docs/calling/http
+
+- name: Firebase Realtime Database
+  slug: firebase-realtime
+  category: Infrastructure
+  confidence: high
+  product_family: Firebase
+  parent_vendor: Google
+  detections:
+  - type: cname_target
+    pattern: firebaseio.com
+    tier: infrastructure
+    description: Firebase Realtime Database endpoint (the JSON database, distinct from Firestore); URLs look like ``<project>.firebaseio.com``.
+    reference: https://firebase.google.com/docs/database/web/start
+
+- name: Looker Studio
+  slug: looker-studio
+  category: Data & Analytics
+  confidence: high
+  product_family: Looker Studio
+  parent_vendor: Google
+  detections:
+  - type: cname_target
+    pattern: lookerstudio.google.com
+    tier: application
+    description: Looker Studio (formerly Google Data Studio) embed and report-share endpoint; custom-domain embeds proxy through this host.
+    reference: https://cloud.google.com/looker
+  - type: cname_target
+    pattern: looker.com
+    tier: application
+    description: Looker BI platform endpoint; customer instances are typically ``<customer>.cloud.looker.com``.
+    reference: https://cloud.google.com/looker/docs
+
+- name: Google Cloud Storage (custom domain)
+  slug: gcp-storage
+  category: Infrastructure
+  confidence: high
+  product_family: Cloud Storage
+  parent_vendor: Google
+  detections:
+  - type: cname_target
+    pattern: c.storage.googleapis.com
+    tier: infrastructure
+    description: GCS custom-domain CNAME target for buckets serving static content under a CNAME-mapped subdomain; documented as the canonical target for the legacy ``c.storage.googleapis.com`` mapping.
+    reference: https://cloud.google.com/storage/docs/hosting-static-website
+
+# ── AWS — customer-facing service endpoints not yet catalogued ─────────────
+
+- name: AWS Amplify
+  slug: aws-amplify
+  category: Infrastructure
+  confidence: high
+  product_family: Amplify
+  parent_vendor: Amazon
+  detections:
+  - type: cname_target
+    pattern: amplifyapp.com
+    tier: infrastructure
+    description: AWS Amplify Hosting custom-domain target; frontend / SPA / SSR sites CNAME to ``<branch>.<app-id>.amplifyapp.com``.
+    reference: https://docs.aws.amazon.com/amplify/latest/userguide/custom-domains.html
+
+- name: Amazon Cognito
+  slug: aws-cognito
+  category: Identity
+  confidence: high
+  product_family: Cognito
+  parent_vendor: Amazon
+  detections:
+  - type: cname_target
+    pattern: amazoncognito.com
+    tier: infrastructure
+    description: Amazon Cognito hosted UI / user-pool domains; customer-managed domains land on ``auth.<region>.amazoncognito.com``.
+    reference: https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-add-custom-domain.html
+
+- name: AWS WAF (custom domain)
+  slug: aws-waf
+  category: Security
+  confidence: high
+  product_family: WAF
+  parent_vendor: Amazon
+  detections:
+  - type: cname_target
+    pattern: awswaf.com
+    tier: infrastructure
+    description: AWS WAF customer-managed challenge / verification endpoints; CNAME-mapped JavaScript challenge tokens land here.
+    reference: https://docs.aws.amazon.com/waf/latest/developerguide/waf-chapter.html
+
+# ── Azure — non-O365 customer-facing service endpoints ─────────────────────
+
+- name: Azure Blob Storage
+  slug: azure-blob
+  category: Infrastructure
+  confidence: high
+  product_family: Azure Storage
+  parent_vendor: Microsoft
+  detections:
+  - type: cname_target
+    pattern: blob.core.windows.net
+    tier: infrastructure
+    description: Azure Blob Storage endpoint; custom-domain-mapped containers CNAME to ``<account>.blob.core.windows.net``.
+    reference: https://learn.microsoft.com/azure/storage/blobs/storage-custom-domain-name
+  - type: cname_target
+    pattern: web.core.windows.net
+    tier: infrastructure
+    description: Azure Storage static-website endpoint; the ``$web`` container is served from ``<account>.z<region>.web.core.windows.net``.
+    reference: https://learn.microsoft.com/azure/storage/blobs/storage-blob-static-website
+
+- name: Azure Static Web Apps
+  slug: azure-static-web-apps
+  category: Infrastructure
+  confidence: high
+  product_family: Static Web Apps
+  parent_vendor: Microsoft
+  detections:
+  - type: cname_target
+    pattern: azurestaticapps.net
+    tier: infrastructure
+    description: Azure Static Web Apps custom-domain target; SWA-hosted sites CNAME to ``<random>.<region>.azurestaticapps.net``.
+    reference: https://learn.microsoft.com/azure/static-web-apps/custom-domain
+
+- name: Azure Container Apps
+  slug: azure-container-apps
+  category: Infrastructure
+  confidence: high
+  product_family: Container Apps
+  parent_vendor: Microsoft
+  detections:
+  - type: cname_target
+    pattern: azurecontainerapps.io
+    tier: infrastructure
+    description: Azure Container Apps customer-facing endpoint; container apps with custom domain CNAME to ``<app>.<env>.<region>.azurecontainerapps.io``.
+    reference: https://learn.microsoft.com/azure/container-apps/custom-domains-certificates
+
+- name: Azure API Management
+  slug: azure-api-management
+  category: Infrastructure
+  confidence: high
+  product_family: API Management
+  parent_vendor: Microsoft
+  detections:
+  - type: cname_target
+    pattern: azure-api.net
+    tier: infrastructure
+    description: Azure API Management gateway endpoint; customer-managed API surfaces CNAME to ``<service>.azure-api.net``.
+    reference: https://learn.microsoft.com/azure/api-management/configure-custom-domain
+
+- name: Azure App Service
+  slug: azure-appservice
+  category: Infrastructure
+  confidence: high
+  product_family: App Service
+  parent_vendor: Microsoft
+  detections:
+  - type: cname_target
+    pattern: azurewebsites.net
+    tier: infrastructure
+    description: Azure App Service customer-facing endpoint; web apps with custom domains CNAME to ``<app>.azurewebsites.net`` before App Service serves the response.
+    reference: https://learn.microsoft.com/azure/app-service/app-service-web-tutorial-custom-domain
+
+# ── Oracle Cloud Infrastructure (OCI) ──────────────────────────────────────
+
+- name: Oracle Cloud Infrastructure
+  slug: oracle-cloud
+  category: Cloud
+  confidence: high
+  product_family: OCI
+  parent_vendor: Oracle
+  detections:
+  - type: cname_target
+    pattern: oraclecloud.com
+    tier: infrastructure
+    description: OCI customer-facing endpoint (generic); compute / load-balancer / object-storage subdomains CNAME to ``*.oraclecloud.com`` regional / service hosts.
+    reference: https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingDNS.htm
+
+- name: Oracle Fusion Cloud
+  slug: oracle-fusion
+  category: Business Apps
+  confidence: high
+  product_family: Fusion Cloud Applications
+  parent_vendor: Oracle
+  detections:
+  - type: cname_target
+    pattern: fa.oraclecloud.com
+    tier: application
+    description: Oracle Fusion Cloud Applications (ERP / HCM / SCM) tenant endpoint; instances CNAME to ``<tenant>.fa.<region>.oraclecloud.com``.
+    reference: https://docs.oracle.com/en/cloud/saas/
+
+# ── IBM Cloud ──────────────────────────────────────────────────────────────
+
+- name: IBM Cloud (Code Engine / Cloud Foundry)
+  slug: ibm-cloud
+  category: Cloud
+  confidence: high
+  product_family: IBM Cloud
+  parent_vendor: IBM
+  detections:
+  - type: cname_target
+    pattern: appdomain.cloud
+    tier: infrastructure
+    description: IBM Cloud customer-facing endpoint covering Code Engine, Cloud Foundry, and Cloud Functions; apps CNAME to ``<app>.<region>.cf.appdomain.cloud`` or similar.
+    reference: https://cloud.ibm.com/docs/codeengine?topic=codeengine-domain-mappings
+  - type: cname_target
+    pattern: bluemix.net
+    tier: infrastructure
+    description: IBM Cloud legacy (Bluemix-era) endpoint; older apps still resolve through ``*.mybluemix.net``.
+    reference: https://www.ibm.com/cloud
+
+# ── Alibaba Cloud ──────────────────────────────────────────────────────────
+
+- name: Alibaba Cloud (API Gateway)
+  slug: alibaba-api
+  category: Infrastructure
+  confidence: high
+  product_family: Alibaba Cloud
+  parent_vendor: Alibaba
+  detections:
+  - type: cname_target
+    pattern: alicloudapi.com
+    tier: infrastructure
+    description: Alibaba Cloud API Gateway endpoint; managed APIs CNAME to ``<app>.<region>.alicloudapi.com``.
+    reference: https://www.alibabacloud.com/help/en/api-gateway
+
+- name: Alibaba Cloud CDN
+  slug: alibaba-cdn
+  category: Infrastructure
+  confidence: high
+  product_family: Alibaba Cloud
+  parent_vendor: Alibaba
+  detections:
+  - type: cname_target
+    pattern: alikunlun.com
+    tier: infrastructure
+    description: Alibaba Cloud CDN edge endpoint; accelerated subdomains CNAME to ``*.alikunlun.com``.
+    reference: https://www.alibabacloud.com/help/en/cdn
+  - type: cname_target
+    pattern: cdngslb.com
+    tier: infrastructure
+    description: Alibaba Cloud CDN global server load balancing endpoint; high-volume edges CNAME through ``*.cdngslb.com``.
+    reference: https://www.alibabacloud.com/help/en/cdn
+
+- name: Alibaba Cloud (compute / generic)
+  slug: alibaba-cloud
+  category: Cloud
+  confidence: high
+  product_family: Alibaba Cloud
+  parent_vendor: Alibaba
+  detections:
+  - type: cname_target
+    pattern: aliyuncs.com
+    tier: infrastructure
+    description: Alibaba Cloud generic customer-facing endpoint (compute, OSS, RDS); subdomains CNAME to ``*.<region>.aliyuncs.com``.
+    reference: https://www.alibabacloud.com/help/en/ecs
+
+# ── Additional PaaS / app-platform endpoints ───────────────────────────────
+
+- name: Railway
+  slug: railway
+  category: Cloud
+  confidence: high
+  product_family: Railway
+  parent_vendor: Railway
+  detections:
+  - type: cname_target
+    pattern: up.railway.app
+    tier: infrastructure
+    description: Railway deployment endpoint; service URLs CNAME to ``<service>.up.railway.app``.
+    reference: https://docs.railway.app/guides/public-networking
+
+- name: Replit
+  slug: replit
+  category: Cloud
+  confidence: high
+  product_family: Replit
+  parent_vendor: Replit
+  detections:
+  - type: cname_target
+    pattern: replit.app
+    tier: infrastructure
+    description: Replit hosted-deployment endpoint; deployments CNAME to ``<name>.replit.app``.
+    reference: https://docs.replit.com/cloud-services/deployments/custom-domains
+  - type: cname_target
+    pattern: repl.co
+    tier: infrastructure
+    description: Replit legacy hosted-Repl endpoint; older Repls resolve through ``*.repl.co``.
+    reference: https://docs.replit.com/cloud-services/deployments/custom-domains
+
+- name: Glitch
+  slug: glitch
+  category: Cloud
+  confidence: high
+  product_family: Glitch
+  parent_vendor: Glitch
+  detections:
+  - type: cname_target
+    pattern: glitch.me
+    tier: infrastructure
+    description: Glitch hosted-app endpoint; projects resolve at ``<project>.glitch.me``.
+    reference: https://help.glitch.com/kb/article/29-using-a-custom-domain/
+
+# ── SSE / SASE / CASB — security service edges ─────────────────────────────
+
+- name: Zscaler
+  slug: zscaler
+  category: Security
+  confidence: high
+  product_family: Zscaler Internet Access
+  parent_vendor: Zscaler
+  detections:
+  - type: cname_target
+    pattern: zscaler.net
+    tier: infrastructure
+    description: Zscaler ZIA / ZPA edge endpoint; tenant connectors CNAME to ``<tenant>.<cloud>.zscaler.net`` (and the numbered variants below).
+    reference: https://help.zscaler.com/zia/about-zia
+  - type: cname_target
+    pattern: zscalerthree.net
+    tier: infrastructure
+    description: Zscaler ZIA edge endpoint on the "three" cloud; tenant routing alternates between numbered clouds.
+    reference: https://help.zscaler.com/zia/about-zia
+  - type: cname_target
+    pattern: zscalertwo.net
+    tier: infrastructure
+    description: Zscaler ZIA edge endpoint on the "two" cloud.
+    reference: https://help.zscaler.com/zia/about-zia
+
+- name: Netskope
+  slug: netskope
+  category: Security
+  confidence: high
+  product_family: Netskope SSE
+  parent_vendor: Netskope
+  detections:
+  - type: cname_target
+    pattern: netskope.com
+    tier: infrastructure
+    description: Netskope SSE customer-facing endpoint; tenant gateways CNAME to ``*.gw.netskope.com``.
+    reference: https://docs.netskope.com/
+  - type: cname_target
+    pattern: goskope.com
+    tier: infrastructure
+    description: Netskope alternate customer-facing endpoint for the proxy-mode SSE service.
+    reference: https://docs.netskope.com/
+
+- name: Cato Networks
+  slug: cato-networks
+  category: Security
+  confidence: high
+  product_family: Cato SASE
+  parent_vendor: Cato Networks
+  detections:
+  - type: cname_target
+    pattern: cato-networks.com
+    tier: infrastructure
+    description: Cato Networks SASE PoP endpoint; tenant traffic CNAMEs through Cato's named PoPs (``*.cato-networks.com``).
+    reference: https://www.catonetworks.com/
+
+- name: Palo Alto Prisma Access
+  slug: prisma-access
+  category: Security
+  confidence: high
+  product_family: Prisma Access
+  parent_vendor: Palo Alto Networks
+  detections:
+  - type: cname_target
+    pattern: prismaaccess.com
+    tier: infrastructure
+    description: Palo Alto Prisma Access SASE service portal and tenant endpoint.
+    reference: https://docs.paloaltonetworks.com/prisma/prisma-access
+
+# ── Identity (additional providers) ────────────────────────────────────────
+
+- name: OneLogin
+  slug: onelogin
+  category: Identity
+  confidence: high
+  product_family: OneLogin
+  parent_vendor: One Identity
+  detections:
+  - type: cname_target
+    pattern: onelogin.com
+    tier: application
+    description: OneLogin SSO portal and identity-provider endpoint; customer tenants land at ``<tenant>.onelogin.com``.
+    reference: https://developers.onelogin.com/
+
+- name: JumpCloud
+  slug: jumpcloud
+  category: Identity
+  confidence: high
+  product_family: JumpCloud Directory
+  parent_vendor: JumpCloud
+  detections:
+  - type: cname_target
+    pattern: jumpcloud.com
+    tier: application
+    description: JumpCloud directory and SSO endpoint; portal subdomains CNAME to ``console.jumpcloud.com``.
+    reference: https://jumpcloud.com/support
+
+- name: Duo Security
+  slug: duo
+  category: Security
+  confidence: high
+  product_family: Duo
+  parent_vendor: Cisco
+  detections:
+  - type: cname_target
+    pattern: duosecurity.com
+    tier: application
+    description: Duo Security (Cisco) MFA / Universal Prompt endpoint; tenant frames load from ``api-<id>.duosecurity.com``.
+    reference: https://duo.com/docs

@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.3.8** (Track B quality work — downstream SIEM consumption examples: Splunk and Elasticsearch field mappings, worked input/output pairs, severity mapping, CI gate against schema drift. Closes the Track B "downstream consumption examples" item; one Track B item remaining for v2.0 — catalog metadata richness pass).
+Current release: **v1.9.3.9** (Catalog growth: cloud-vendor coverage gap fill — 29 new fingerprints across GCP, AWS, Azure non-O365, Oracle Cloud, IBM Cloud, Alibaba, additional PaaS, SSE/SASE, and identity providers. Vendor-doc-sourced methodology codified in CONTRIBUTING.md as standing practice alongside the existing corpus-observed path).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live

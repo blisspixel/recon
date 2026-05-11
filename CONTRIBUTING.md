@@ -245,6 +245,41 @@ The audit is advisory. Use it to document whether the entry should remain
 - [ ] `pytest tests/` passes — property tests must still hold on the sparse-data corpus
 - [ ] If the service could trip false positives on domains that merely *visited* the vendor's marketing site, used `match_mode: all`
 
+### Vendor-doc-sourced `cname_target` rules
+
+`cname_target` rules in `recon_tool/data/fingerprints/surface.yaml`
+can be added two ways:
+
+1. **Corpus-observed.** The default historical path: a private-corpus
+   scan surfaces an unclassified CNAME terminus, the
+   `/recon-fingerprint-triage` skill proposes a slug, and the rule
+   ships in a release-window catalog-growth pass.
+2. **Vendor-doc-sourced** *(v1.9.3.9+)*. A cloud vendor (GCP, AWS,
+   Azure, Oracle, IBM, Alibaba, SSE/SASE platforms, PaaS providers,
+   etc.) documents customer-facing custom-domain CNAME targets in
+   their own product docs. Reading those docs and seeding fingerprints
+   from them closes coverage blindspots BEFORE a customer of that
+   vendor lands in our private corpus — corpus-observed alone has a
+   built-in bias toward the segments our corpus already represents.
+
+Both paths are encouraged. The **`reference`** field on each
+detection makes the source explicit:
+
+- Vendor-doc-sourced: `reference` MUST point at the canonical vendor
+  documentation URL that names the CNAME pattern (e.g.
+  `https://firebase.google.com/docs/hosting/custom-domain` for
+  Firebase Hosting). The PR description should quote the relevant
+  doc excerpt so review can verify the pattern is documented as
+  stable, not a transient internal endpoint.
+- Corpus-observed: `reference` SHOULD point at the vendor's
+  marketing page or main docs index, and the PR description should
+  cite the private-corpus delta count (e.g. "fired on 23/4270
+  domains in the v1.9.2-pre-release scan").
+
+Either way, `reference` exists so a future maintainer can re-verify
+the pattern. A rule shipped without a `reference` is allowed but
+will be flagged in the metadata-richness gate (v1.9.7+).
+
 Use the fingerprint PR template — GitHub surfaces it automatically.
 
 ---
