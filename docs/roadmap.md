@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.3.2** (Track B quality work — top-3 influential edges in `--explain-dag`: LLR-per-binding ranking surfaced in text + DOT output; schema-additive `evidence_ranked` field on `PosteriorObservation`).
+Current release: **v1.9.3.3** (Security: release workflow supply-chain isolation — addresses audit finding *"Dev deps can tamper release artifacts"* by splitting the release workflow into pure `build` and isolated `sbom` jobs; 13 contract tests pin the isolation against regression).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live

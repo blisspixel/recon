@@ -12,6 +12,31 @@ on:
 # dependency could mint a token and publish to PyPI under our trusted-
 # publisher identity. Scoping to ``publish-pypi`` / ``github-release``
 # respects least-privilege.
+#
+# Supply-chain isolation contract (v1.9.3.3+):
+#
+#   * ``test`` job installs dev deps and runs the full gate
+#     (pytest, ruff, pip-audit). Dev deps execute here. No dist/
+#     exists, so a compromised dev dep cannot tamper with release
+#     artifacts from this job.
+#   * ``build`` job is PURE: ``uv build`` runs against the locked
+#     runtime dependency set (no ``--extra dev``); ``dist/`` is
+#     created and immediately uploaded as an artifact. No additional
+#     code executes between build and upload. ``actions/upload-artifact``
+#     seals the bytes into GitHub-managed storage at upload time.
+#   * ``sbom`` job runs on a separate runner. It installs pip-audit
+#     in its own workspace and generates the CycloneDX SBOM from the
+#     locked-requirements text. dist/ does not exist in this runner,
+#     so even a compromised pip-audit cannot reach release artifacts.
+#   * ``publish-pypi`` and ``github-release`` download the sealed
+#     artifacts from GitHub storage. They never re-build, never
+#     re-install dev deps, never execute additional dependency code.
+#
+# The threat the contract addresses: if a transitive dev dependency
+# of pip-audit (or pip-audit itself) is compromised at the locked
+# version, executing it cannot modify dist/ because dist/ is not
+# on the same runner. This closes the v1.9.3.1 audit finding
+# "Dev deps can tamper release artifacts" (HIGH).
 permissions:
   contents: read
 
@@ -54,6 +79,13 @@ jobs:
         run: uv run pip-audit -r .ci-audit-requirements.txt
 
   build:
+    # Pure build job. The supply-chain isolation contract requires
+    # that NO additional dependency code executes in this workspace
+    # between ``uv build`` and ``actions/upload-artifact``. Do not
+    # add ``uv sync --extra dev`` here. Do not run pip-audit, SBOM
+    # generation, ruff, pyright, pytest, or any other tool that
+    # imports project dependencies in this job. Those belong in
+    # other jobs that do not touch dist/.
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -69,37 +101,76 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies (for SBOM generation)
-        run: uv sync --extra dev
+      - name: Sync runtime deps (no --extra dev)
+        # ``uv build`` resolves the build backend (hatchling) from
+        # pyproject; this sync ensures we have a clean uv cache state
+        # without installing the optional dev set. Dev tooling
+        # (pip-audit, pytest, ruff, pyright) is deliberately absent
+        # from this workspace.
+        run: uv sync --no-dev
 
       - name: Build package
         run: uv build
 
-      - name: Generate CycloneDX SBOM
-        # pip-audit emits CycloneDX from the same locked requirements
-        # the audit gate validates, so the SBOM and the audit report
-        # describe the same dependency set. The SBOM goes to a
-        # separate ``sbom/`` directory rather than ``dist/`` so the
-        # PyPI publish job only sees wheels and sdists; a stray JSON
-        # file in dist/ is harmless to twine's default filter but the
-        # explicit separation removes the question.
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          mkdir -p sbom
-          uv export --frozen --no-dev --no-emit-project --no-hashes --format requirements.txt --output-file .ci-audit-requirements.txt
-          uv run pip-audit -r .ci-audit-requirements.txt --format=cyclonedx-json --output "sbom/recon-tool-${VERSION}.cdx.json" --no-deps || true
-          # The "|| true" catches the audit's vulnerability-finding
-          # exit code; the SBOM file is written regardless. The
-          # audit *gate* is in the ``test`` job — this step produces
-          # the SBOM artifact, not the audit verdict.
-          test -f "sbom/recon-tool-${VERSION}.cdx.json"
-          ls -la sbom/
-
+      # IMMEDIATE upload — nothing executes between build and seal.
+      # The artifact bytes are stored in GitHub-managed artifact
+      # storage at this point; downstream jobs read from there, not
+      # from this runner's filesystem.
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
+
+  sbom:
+    # Separate runner. dist/ does not exist in this workspace. A
+    # compromised pip-audit (or any transitive) cannot tamper with
+    # the release artifacts because the artifacts are sealed in
+    # GitHub storage and not present on this filesystem.
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Export runtime requirements
+        # Re-export so the SBOM job is self-contained — it does not
+        # consume any artifact from build/test. Same lock, same
+        # resolved set, derivable independently.
+        run: uv export --frozen --no-dev --no-emit-project --no-hashes --format requirements.txt --output-file .ci-audit-requirements.txt
+
+      - name: Install pip-audit (isolated)
+        # pipx-style isolation: pip-audit lives only in a uv-managed
+        # virtualenv on this throwaway runner. It never sees dist/
+        # because dist/ is on the ``build`` job's filesystem (sealed
+        # into GitHub storage at upload time and not retrieved here).
+        run: uv tool install pip-audit
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p sbom
+          # ``--no-deps`` tells pip-audit not to install the locked
+          # requirements again — it just reads the requirements text
+          # to produce the SBOM. The "|| true" catches the audit's
+          # vulnerability-finding exit code; the SBOM file is written
+          # regardless. The audit *gate* runs in the ``test`` job.
+          uv tool run pip-audit -r .ci-audit-requirements.txt \
+            --format=cyclonedx-json \
+            --output "sbom/recon-tool-${VERSION}.cdx.json" \
+            --no-deps || true
+          test -f "sbom/recon-tool-${VERSION}.cdx.json"
+          ls -la sbom/
 
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v7
@@ -126,7 +197,7 @@ jobs:
           skip-existing: true
 
   github-release:
-    needs: build
+    needs: [build, sbom]
     runs-on: ubuntu-latest
     permissions:
       contents: write
