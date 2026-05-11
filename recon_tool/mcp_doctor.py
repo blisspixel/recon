@@ -98,6 +98,19 @@ async def _run_handshake(errlog: TextIO) -> tuple[list[str], list[DoctorCheck]]:
     a server crash during ``initialize`` would otherwise show as a
     bare ``BrokenPipeError`` with no hint at the underlying import
     error, traceback, or missing-dependency message that produced it.
+
+    Supply-chain hardening (v1.9.3.4): the subprocess is spawned with
+    ``cwd`` pointing at an empty temporary directory and the
+    ``PYTHONSAFEPATH=1`` env var set. Both protect against the
+    cwd-shadow attack pattern audited in v1.9.3.4 — Python's ``-m``
+    flag prepends cwd to ``sys.path`` on Python 3.10 (and absent
+    ``PYTHONSAFEPATH``), so a malicious workspace containing a
+    ``recon_tool/`` directory could otherwise shadow the installed
+    package and execute attacker code. The empty-cwd defense works
+    on all supported Python versions; the env-var defense reinforces
+    it on Python 3.11+. The runtime guard in
+    ``recon_tool.server._detect_cwd_shadow_install`` is the third
+    layer.
     """
     from mcp import ClientSession
     from mcp.client.stdio import StdioServerParameters, stdio_client
@@ -109,35 +122,46 @@ async def _run_handshake(errlog: TextIO) -> tuple[list[str], list[DoctorCheck]]:
     # not whatever happens to be on PATH.
     env = dict(os.environ)
     env["RECON_MCP_FORCE_STDIO"] = "1"  # bypass the TTY guard added in v1.9.x
-    params = StdioServerParameters(
-        command=sys.executable,
-        args=["-m", "recon_tool.server"],
-        env=env,
-    )
+    env["PYTHONSAFEPATH"] = "1"  # v1.9.3.4: disable cwd prepend on Py3.11+
 
-    async with stdio_client(params, errlog=errlog) as (read_stream, write_stream):
-        checks.append(DoctorCheck("server spawn", "ok", "stdio transport opened"))
+    # v1.9.3.4: empty cwd for the child so ``-m recon_tool.server``
+    # can never find a shadow ``recon_tool/`` next to it. We use a
+    # tempdir created on entry to ``stdio_client`` rather than a fixed
+    # location (e.g. the installed package's parent) because:
+    #   * an empty tempdir guarantees no Python files exist there,
+    #   * it isolates the child filesystem footprint from the doctor's,
+    #   * cleanup is automatic via the context manager.
+    with tempfile.TemporaryDirectory(prefix="recon-mcp-doctor-cwd-") as safe_cwd:
+        params = StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "recon_tool.server"],
+            env=env,
+            cwd=safe_cwd,
+        )
 
-        async with ClientSession(read_stream, write_stream) as session:
-            init_result = await session.initialize()
-            server_name = getattr(init_result.serverInfo, "name", "?")
-            checks.append(
-                DoctorCheck(
-                    "initialize handshake",
-                    "ok",
-                    f"server={server_name} protocol={init_result.protocolVersion}",
+        async with stdio_client(params, errlog=errlog) as (read_stream, write_stream):
+            checks.append(DoctorCheck("server spawn", "ok", "stdio transport opened"))
+
+            async with ClientSession(read_stream, write_stream) as session:
+                init_result = await session.initialize()
+                server_name = getattr(init_result.serverInfo, "name", "?")
+                checks.append(
+                    DoctorCheck(
+                        "initialize handshake",
+                        "ok",
+                        f"server={server_name} protocol={init_result.protocolVersion}",
+                    )
                 )
-            )
 
-            tools_result = await session.list_tools()
-            tool_names = [t.name for t in tools_result.tools]
-            checks.append(
-                DoctorCheck(
-                    "tools/list",
-                    "ok",
-                    f"{len(tool_names)} tools registered",
+                tools_result = await session.list_tools()
+                tool_names = [t.name for t in tools_result.tools]
+                checks.append(
+                    DoctorCheck(
+                        "tools/list",
+                        "ok",
+                        f"{len(tool_names)} tools registered",
+                    )
                 )
-            )
 
     return tool_names, checks
 

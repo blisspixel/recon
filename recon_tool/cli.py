@@ -718,6 +718,7 @@ def mcp_install_command(
         default_scope,
         install,
         plan_install,
+        warn_if_fallback,
     )
 
     console = get_console()
@@ -790,6 +791,16 @@ def mcp_install_command(
 
     console.print(f"  [green]wrote {result.path}[/green]")
     console.print()
+
+    # v1.9.3.4: emit the cwd-shadow warning when the fallback launch
+    # form was persisted. Informational only — the persisted env
+    # carries PYTHONSAFEPATH=1 plus the runtime guard in server.py,
+    # so MCP clients on Python 3.11+ are protected.
+    fallback_warning = warn_if_fallback()
+    if fallback_warning is not None:
+        console.print(f"  [yellow]{fallback_warning}[/yellow]")
+        console.print()
+
     console.print(
         "  Restart your MCP client to pick up the new server. "
         "Run [bold]recon mcp doctor[/bold] for a live JSON-RPC handshake check."
