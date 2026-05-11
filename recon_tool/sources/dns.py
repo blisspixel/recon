@@ -1732,6 +1732,65 @@ def _is_public_dns_name(name: str) -> bool:
     return all(not n.endswith(suffix) for suffix in _PRIVATE_DNS_SUFFIXES)
 
 
+def _is_private_ip_literal(ip: str) -> bool:
+    """Return True when *ip* is RFC1918 / loopback / link-local / ULA.
+
+    Used by the CNAME chain walker (v1.9.3.5) to drop hops whose name
+    passes the public-suffix check but resolves to private address
+    space. This catches the attacker pattern: own a public domain,
+    return a CNAME to a publicly-named host that happens to resolve
+    to 10.x.x.x or 192.168.x.x in the operator's resolver context
+    (split-horizon). The suffix check alone cannot see that — only
+    resolving the A record can.
+
+    Defensive on parse failures: anything we cannot recognize as a
+    valid IP returns ``False`` (treated as not-private, so the caller
+    falls back to other checks). The chain walker's caller already
+    handles the not-private branch correctly.
+    """
+    import ipaddress
+
+    try:
+        addr = ipaddress.ip_address(ip.strip())
+    except (ValueError, TypeError):
+        return False
+    return bool(
+        addr.is_private
+        or addr.is_loopback
+        or addr.is_link_local
+        or addr.is_reserved
+        or addr.is_multicast
+        or addr.is_unspecified,
+    )
+
+
+async def _hop_resolves_publicly(host: str) -> bool:
+    """Return True when *host* has at least one public A/AAAA record.
+
+    Resolves A and AAAA in parallel and treats the hop as private if
+    every resolved address is in private/loopback/link-local/reserved
+    space. Returns True when there are no resolved addresses at all
+    (e.g. CNAME-only intermediate hops, transient resolver failures)
+    so the walker can still process legitimate chain shapes — this is
+    "fail open" on the unresolved case because the next iteration's
+    CNAME query will fail too if the chain is truly broken, and we
+    don't want to drop legitimate hops just because A/AAAA isn't
+    populated at the resolver moment.
+
+    Called by ``_resolve_cname_chain`` after the suffix check passes.
+    Adds at most two extra DNS queries per hop (A + AAAA), well within
+    the existing hop and concurrency budgets.
+    """
+    a_records, aaaa_records = await asyncio.gather(
+        _safe_resolve(host, "A"),
+        _safe_resolve(host, "AAAA"),
+    )
+    addresses = [*a_records, *aaaa_records]
+    if not addresses:
+        return True  # no addresses → can't classify; allow the walk to continue
+    return any(not _is_private_ip_literal(addr) for addr in addresses)
+
+
 async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> list[str]:
     """Walk the CNAME chain for *host*, returning the list of targets.
 
@@ -1739,12 +1798,25 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
     with direct A records, or for stale CT entries that no longer
     resolve). Stops at *max_hops* to defend against pathological loops.
 
-    Drops CNAME hops whose target is not a public DNS name (see
-    ``_is_public_dns_name``). The walk halts at that hop without
-    recording it: the operator's resolver does not get pointed at
-    arbitrary internal/split-horizon names just because attacker-
-    controlled DNS returned them, and evidence output cannot leak
-    internal topology.
+    Two-layer attacker-controlled-target defense (v1.9.3.5):
+
+    1. **Suffix denylist** (``_is_public_dns_name``) — rejects hops whose
+       name ends in obvious private suffixes (``.local``, ``.corp``,
+       ``.internal``, ``.home.arpa``, ``.onion``, etc.) and IP literals.
+       Suffix-based; cheap; catches the easy case where the attacker
+       points at a clearly-internal name.
+
+    2. **Resolved-address check** (``_hop_resolves_publicly``) — for hops
+       that pass the suffix check, resolve the target's A and AAAA
+       records and refuse to walk further if every resolved address is
+       in private / loopback / link-local / reserved space. Catches the
+       harder case where the attacker points at a publicly-named host
+       whose split-horizon resolution lands inside the operator's
+       private network. Adds at most two DNS queries per accepted hop.
+
+    Either check failing halts the walk at that hop without recording
+    it: the operator's resolver is not pointed at internal/split-horizon
+    targets, and evidence output cannot leak internal topology.
     """
     chain: list[str] = []
     cur = host
@@ -1757,7 +1829,15 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
             break
         if not _is_public_dns_name(target):
             logger.debug(
-                "CNAME chain walker: refusing non-public hop from %s -> %s",
+                "CNAME chain walker: refusing non-public-suffix hop from %s -> %s",
+                cur,
+                target,
+            )
+            break
+        if not await _hop_resolves_publicly(target):
+            logger.debug(
+                "CNAME chain walker: refusing hop %s -> %s (all resolved "
+                "addresses are in private/loopback/link-local/reserved space)",
                 cur,
                 target,
             )
