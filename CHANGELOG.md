@@ -5,6 +5,125 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3.9] - 2026-05-11
+
+**Catalog growth: cloud-vendor coverage gap fill (29 new
+fingerprints, vendor-doc-sourced).** Closes a systematic coverage
+blindspot surfaced during operator testing: a Solidifi/realmatters
+lookup showed solid M365 + Cloudflare + Mailchimp + Atlassian
+detection but missed several known GCP-customer service categories.
+Diagnosis: the historical corpus-observed catalog-growth path
+(scan a private corpus, fingerprint unclassified CNAME patterns)
+has a built-in bias toward the segments our corpus already
+represents — heavy GCP, Azure non-O365, Oracle Cloud, IBM Cloud,
+Alibaba, the SaaS-PaaS galaxy, and SSE/SASE vendors get
+systematically under-classified even when the chain walker
+follows CNAMEs to the right terminus.
+
+### Added — vendor-doc-sourced fingerprints in `surface.yaml`
+
+Each entry cites the canonical vendor documentation URL in its
+`reference` field. The methodology (vendor-doc-sourced as a
+complement to corpus-observed) is documented in `CONTRIBUTING.md`
+as standing practice for future catalog growth.
+
+**Google Cloud Platform (5 slugs, 6 detections):**
+- `firebase-hosting` — `firebaseapp.com`, `web.app`
+- `gcp-cloud-functions` — `cloudfunctions.net`
+- `firebase-realtime` — `firebaseio.com`
+- `looker-studio` — `lookerstudio.google.com`, `looker.com`
+- `gcp-storage` — `c.storage.googleapis.com`
+
+**AWS (3 slugs, 3 detections):**
+- `aws-amplify` — `amplifyapp.com`
+- `aws-cognito` — `amazoncognito.com`
+- `aws-waf` — `awswaf.com`
+
+**Azure non-O365 (5 slugs, 6 detections):**
+- `azure-blob` — `blob.core.windows.net`, `web.core.windows.net`
+- `azure-static-web-apps` — `azurestaticapps.net`
+- `azure-container-apps` — `azurecontainerapps.io`
+- `azure-api-management` — `azure-api.net`
+- `azure-appservice` extended with `azurewebsites.net`
+
+**Oracle Cloud (2 slugs, 2 detections):**
+- `oracle-cloud` — `oraclecloud.com`
+- `oracle-fusion` — `fa.oraclecloud.com`
+
+**IBM Cloud (1 slug, 2 detections):**
+- `ibm-cloud` — `appdomain.cloud`, `bluemix.net`
+
+**Alibaba Cloud (3 slugs, 4 detections):**
+- `alibaba-api` — `alicloudapi.com`
+- `alibaba-cdn` — `alikunlun.com`, `cdngslb.com`
+- `alibaba-cloud` — `aliyuncs.com`
+
+**Additional PaaS (3 slugs, 4 detections):**
+- `railway` extended with `up.railway.app`
+- `replit` — `replit.app`, `repl.co`
+- `glitch` — `glitch.me`
+
+**SSE / SASE / CASB (4 slugs, 6 detections):**
+- `zscaler` extended with `zscaler.net`, `zscalerthree.net`,
+  `zscalertwo.net`
+- `netskope` extended with `netskope.com`, `goskope.com`
+- `cato-networks` — `cato-networks.com`
+- `prisma-access` — `prismaaccess.com`
+
+**Identity (3 slugs, 3 detections):**
+- `onelogin` extended with `onelogin.com`
+- `jumpcloud` — `jumpcloud.com`
+- `duo` extended with `duosecurity.com`
+
+### Changed
+
+- **`recon_tool/formatter.py`** — `_CATEGORY_BY_SLUG` updated with
+  the 22 new slugs that didn't already have a category mapping
+  from prior fingerprints (Cloud / Security / Identity / Business
+  Apps / Data & Analytics buckets).
+- **`CONTRIBUTING.md`** — adds a "Vendor-doc-sourced `cname_target`
+  rules" subsection codifying the methodology: every new rule
+  cites a vendor doc URL in `reference`; corpus-observed and
+  vendor-doc-sourced are both encouraged paths; rules without a
+  `reference` will be flagged once the v1.9.7 metadata-richness
+  gate is enforcing.
+
+### Catalog totals
+
+- 414 fingerprint entries validated (was 386 in v1.9.3.8).
+- 343 unique slugs.
+- All slugs map to a defender-visible category.
+- 0 cross-file slug-name collisions.
+
+### Notes on residual coverage
+
+This patch closes the biggest visible cloud-vendor gaps but is not
+exhaustive. Real-world coverage still depends on the operator
+running recon against the right subdomains — a tenant that uses
+Firebase Hosting only on `app.example.com` requires that subdomain
+to be in scope of the lookup (CT-log enumeration or known-prefix
+probing) before the new fingerprint can fire. The catalog now
+*can* classify; surfacing requires the chain walker to reach the
+right host.
+
+Verticals or vendors still likely under-represented:
+SAP / Oracle SaaS apps beyond Fusion, smaller PaaS (Cyclic, Fl0,
+Deta), edge/CDN providers outside the top tier (Fastly variants,
+BunnyCDN extras), regional clouds (Yandex, OVH, Hetzner, Kakao),
+and the long tail of SSE/SASE vendors (iboss, Versa, Aryaka).
+Future catalog-growth passes should target these per the
+methodology now documented in CONTRIBUTING.md.
+
+### Tests
+
+- 2278 passed, 1 skipped (same headline as v1.9.3.8 — no new tests
+  added; the existing slug-uniqueness and metadata-coverage tests
+  exercise the additions).
+- Coverage 83.32% (≥ 80% gate).
+- ruff + pyright clean on `recon_tool/` + `tests/`.
+- Local `validate_fingerprint.py recon_tool/data/fingerprints/`
+  passes (414/414 entries; same gate CI runs).
+
 ## [1.9.3.8] - 2026-05-11
 
 **Track B quality work — downstream SIEM consumption examples.**
