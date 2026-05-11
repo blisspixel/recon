@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import textwrap
 from dataclasses import dataclass
@@ -43,6 +44,14 @@ _FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures"
 
 _DEFAULT_PERSONAS = ("analyst", "researcher", "ops")
 _DEFAULT_FIXTURES = ("contoso-dense", "hardened-sparse")
+
+# v1.9.3.6: persona/fixture name format. Restricts caller-supplied
+# --personas / --fixtures values to a strict identifier shape so a
+# CLI argument like "../../etc/passwd" or "/etc/passwd" cannot be
+# interpolated into a file path that escapes the intended directory.
+# The format permits the existing in-repo names ("contoso-dense",
+# "hardened-sparse", "analyst", etc.) and rejects everything else.
+_SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 
 # Top-level JSON keys that are exclusively part of the v1.9 fusion
 # layer. Stripping these is what the "fusion off" arm of the rubric
@@ -74,18 +83,59 @@ def _strip_fusion(payload: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in payload.items() if k not in _FUSION_FIELDS}
 
 
+def _validate_name(kind: str, name: str) -> str:
+    """Reject persona/fixture selectors that aren't safe identifiers.
+
+    v1.9.3.6 — defense in depth for the dev-only validation harness.
+    The audit finding (informational) flagged that ``--personas`` and
+    ``--fixtures`` values were interpolated directly into ``Path``
+    objects without rejecting traversal (``../``), absolute paths
+    (``/etc/passwd``), separators, or dots. With the rejected
+    interpolations, an attacker who controlled CLI arguments could
+    coerce the harness into reading an arbitrary ``.md`` or ``.json``
+    file off the local filesystem and shipping its contents to the
+    configured LLM provider.
+
+    The format rule is intentionally strict (``[A-Za-z0-9][A-Za-z0-9_-]*``):
+    accepts every legitimate committed persona/fixture name, rejects
+    anything with a separator, traversal, leading dot, or non-ASCII
+    character. Raises ``ValueError`` on mismatch; the CLI surfaces
+    the failure with a usage hint.
+    """
+    if not _SAFE_NAME_RE.match(name):
+        raise ValueError(
+            f"{kind} name {name!r} is not a safe identifier — "
+            f"allowed: letters, digits, underscore, hyphen (max 64 "
+            f"chars, must start with letter or digit). Rejected to "
+            f"prevent path traversal in the validation harness."
+        )
+    return name
+
+
 def _load_persona(name: str) -> str:
+    name = _validate_name("persona", name)
     path = _PERSONA_DIR / f"{name}.md"
-    if not path.exists():
-        raise FileNotFoundError(f"persona not found: {path}")
-    return path.read_text(encoding="utf-8").strip()
+    # Defense in depth: resolve and confirm containment under the
+    # intended directory. The _SAFE_NAME_RE check above is sufficient
+    # on its own, but a future change that loosens the regex would
+    # otherwise silently regress this property.
+    resolved = path.resolve()
+    if not resolved.is_relative_to(_PERSONA_DIR.resolve()):
+        raise ValueError(f"persona path {resolved} escapes {_PERSONA_DIR}")
+    if not resolved.exists():
+        raise FileNotFoundError(f"persona not found: {resolved}")
+    return resolved.read_text(encoding="utf-8").strip()
 
 
 def _load_fixture(name: str) -> dict[str, Any]:
+    name = _validate_name("fixture", name)
     path = _FIXTURE_DIR / f"{name}.json"
-    if not path.exists():
-        raise FileNotFoundError(f"fixture not found: {path}")
-    return json.loads(path.read_text(encoding="utf-8"))
+    resolved = path.resolve()
+    if not resolved.is_relative_to(_FIXTURE_DIR.resolve()):
+        raise ValueError(f"fixture path {resolved} escapes {_FIXTURE_DIR}")
+    if not resolved.exists():
+        raise FileNotFoundError(f"fixture not found: {resolved}")
+    return json.loads(resolved.read_text(encoding="utf-8"))
 
 
 def _build_user_prompt(fixture_name: str, payload: dict[str, Any]) -> str:
