@@ -2538,6 +2538,95 @@ def _stdin_is_tty() -> bool:
         return False
 
 
+def _detect_cwd_shadow_install() -> str | None:
+    """Return a non-None error message if the recon_tool package was
+    loaded from a cwd-shadow path.
+
+    Python's ``-m`` flag prepends the current working directory to
+    ``sys.path`` before installed packages (on Python 3.10 — Python 3.11+
+    supports ``PYTHONSAFEPATH=1`` / ``-P`` to disable this, which
+    ``recon_tool.mcp_doctor`` and ``recon_tool.mcp_install`` now set
+    when they spawn / persist the server launch command). A malicious
+    workspace that contains ``recon_tool/server.py`` will, on Python 3.10
+    or when ``PYTHONSAFEPATH`` is unset, shadow the installed package and
+    execute the attacker's code rather than the legitimate install.
+
+    This guard runs at server startup. If the loaded ``recon_tool``
+    module's ``__file__`` resolves to a path under the current working
+    directory AND that cwd does *not* look like the legitimate recon
+    source repository, return an error message. The caller (``main()``)
+    prints it and exits with a non-zero status before any tool
+    handlers run.
+
+    Legitimate development workflows (running ``python -m recon_tool.server``
+    from the source repo) are preserved because the cwd check matches a
+    real ``pyproject.toml`` whose ``name`` field is ``recon-tool``.
+
+    Returns ``None`` when the install looks safe, or a human-readable
+    error string when shadowing is detected.
+    """
+    from pathlib import Path
+
+    import recon_tool  # the actually-imported package — what we want to verify
+
+    try:
+        pkg_dir = Path(recon_tool.__file__).resolve().parent
+    except (AttributeError, OSError):
+        # If we can't even resolve the package path, something is far
+        # weirder than cwd-shadowing. Don't block startup on it.
+        return None
+
+    try:
+        cwd = Path.cwd().resolve()
+    except (OSError, ValueError):
+        # No usable cwd → cwd-shadow attack cannot apply. Don't block.
+        return None
+
+    try:
+        pkg_dir.relative_to(cwd)
+    except ValueError:
+        # Package directory is outside cwd. The cwd-prepend attack
+        # cannot reach the package; safe.
+        return None
+
+    # Package is under cwd. Verify cwd looks like the legitimate
+    # recon source checkout. Two signals — pyproject.toml exists at cwd
+    # AND its ``[project] name`` is exactly ``recon-tool``. Both
+    # required; an attacker who plants a fake pyproject.toml with the
+    # right name has done enough work that they could plant arbitrary
+    # files anyway, but the joint check raises the bar.
+    pyproject = cwd / "pyproject.toml"
+    if pyproject.is_file():
+        try:
+            content = pyproject.read_text(encoding="utf-8")
+        except OSError:
+            content = ""
+        # Tolerate whitespace variations: ``name="recon-tool"``,
+        # ``name = "recon-tool"``, etc. The literal substring covers
+        # the common cases without pulling in a TOML parser.
+        if 'name = "recon-tool"' in content or 'name="recon-tool"' in content:
+            return None  # legitimate source checkout
+
+    return (
+        "recon mcp server: refusing to start — the recon_tool package "
+        f"was loaded from {pkg_dir}, which is under the current working "
+        f"directory ({cwd}). This is the cwd-shadow attack pattern "
+        "audited in v1.9.3.4: Python's -m flag prepends cwd to sys.path "
+        "on Python < 3.11 (and when PYTHONSAFEPATH is unset), so a "
+        "malicious workspace containing a recon_tool/ directory would "
+        "execute attacker code instead of the installed package.\n"
+        "\n"
+        "If you intended to run from a legitimate source checkout, the "
+        "checkout's pyproject.toml at this directory does not have "
+        "`name = \"recon-tool\"`. Either:\n"
+        "  * Run from outside the workspace (cd to your home directory "
+        "and re-invoke); or\n"
+        "  * Set PYTHONSAFEPATH=1 in the environment (Python 3.11+); or\n"
+        "  * Install recon-tool via pip and invoke it as `recon mcp`, "
+        "not `python -m recon_tool.server`.\n"
+    )
+
+
 def main() -> None:
     """Run the MCP server with stdio transport.
 
@@ -2555,6 +2644,16 @@ def main() -> None:
     """
     import os
     import sys
+
+    # v1.9.3.4: runtime guard against cwd-shadow installs. Runs BEFORE
+    # the TTY check so an attacker cannot rely on stdin being non-TTY
+    # to bypass the guard. Defense-in-depth on top of the
+    # PYTHONSAFEPATH=1 and safe-cwd protections in mcp_doctor/install.
+    shadow_error = _detect_cwd_shadow_install()
+    if shadow_error is not None:
+        sys.stderr.write(shadow_error)
+        sys.stderr.flush()
+        sys.exit(2)
 
     force_stdio_raw = os.environ.get("RECON_MCP_FORCE_STDIO", "").strip().lower()
     if _stdin_is_tty() and force_stdio_raw not in {"1", "true", "yes", "on"}:

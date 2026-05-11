@@ -227,6 +227,21 @@ def build_recon_block() -> dict[str, object]:
     `python -m recon_tool.server` when `recon` isn't on PATH — this is
     the same trick documented in `agents/claude-code/README.md` for
     GUI clients that don't inherit shell PATH.
+
+    Supply-chain hardening (v1.9.3.4): when the fallback form is used,
+    the persisted ``env`` block sets ``PYTHONSAFEPATH=1`` so MCP
+    clients launching the server on Python 3.11+ get protection
+    against the cwd-shadow attack (a workspace containing a
+    malicious ``recon_tool/`` directory shadowing the installed
+    package). On Python 3.10 ``PYTHONSAFEPATH`` is a no-op, but the
+    runtime guard in ``recon_tool.server._detect_cwd_shadow_install``
+    is the final defense in depth.
+
+    Operators on Python 3.10 should install ``recon`` to PATH and
+    let this function return the preferred ``{"command": "recon",
+    "args": ["mcp"]}`` form, which has no cwd-shadow risk. A warning
+    surfaces in ``warn_if_fallback`` to make the recommendation
+    explicit.
     """
     recon_on_path = shutil.which("recon")
     if recon_on_path:
@@ -238,8 +253,38 @@ def build_recon_block() -> dict[str, object]:
     return {
         "command": sys.executable,
         "args": ["-m", "recon_tool.server"],
+        # v1.9.3.4: persisted env protects future client launches on
+        # Python 3.11+ from cwd-shadow even if the client sets cwd
+        # to an untrusted workspace.
+        "env": {"PYTHONSAFEPATH": "1"},
         "autoApprove": [],
     }
+
+
+def warn_if_fallback() -> str | None:
+    """Return a stderr-formatted warning when the fallback launch form
+    would be persisted, or ``None`` when ``recon`` is on PATH.
+
+    Callers (CLI install command) print the warning so the operator
+    can decide whether to add ``recon`` to PATH before persisting a
+    config that may carry residual cwd-shadow risk on Python 3.10.
+    The warning is informational — it does not block the install,
+    because the persisted ``PYTHONSAFEPATH=1`` env entry plus the
+    server-side runtime guard close the threat on supported
+    deployments.
+    """
+    if shutil.which("recon") is not None:
+        return None
+    return (
+        "warning: `recon` is not on PATH; persisting the fallback launch "
+        f"form (`{sys.executable} -m recon_tool.server`). MCP clients on "
+        "Python 3.11+ are protected by the persisted PYTHONSAFEPATH=1 env "
+        "entry; on Python 3.10 the cwd-shadow attack (v1.9.3.4 audit) "
+        "depends on the runtime guard in recon_tool.server alone. "
+        "For maximum safety on Python 3.10, install recon to PATH "
+        "(`pip install --user recon-tool` or `pipx install recon-tool`) "
+        "and rerun this install command."
+    )
 
 
 @dataclass(frozen=True)

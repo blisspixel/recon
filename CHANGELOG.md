@@ -5,6 +5,92 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3.4] - 2026-05-11
+
+**Security: MCP doctor/install path isolation (audit finding, HIGH).**
+Closes the audit finding *"MCP doctor/install can execute shadowed
+recon_tool package"* against `recon_tool/mcp_doctor.py` and
+`recon_tool/mcp_install.py` (v1.9.2.1). The finding: `recon mcp
+doctor` spawned `python -m recon_tool.server` with inherited cwd and
+no environment sanitization. Python's `-m` flag prepends the current
+working directory to `sys.path` on Python 3.10 (and absent
+`PYTHONSAFEPATH=1` on 3.11+), so an attacker-controlled workspace
+containing a `recon_tool/server.py` could shadow the installed
+package and execute attacker code as the local user. The installer's
+fallback config (used when `recon` is not on PATH) persisted the
+same launch form, so future MCP-client launches from untrusted
+workspaces inherited the same risk.
+
+The fix is defense-in-depth across three layers:
+
+### Changed
+
+- **`recon_tool/mcp_doctor.py`** — the subprocess is now spawned
+  with `cwd` pointing at an empty `tempfile.TemporaryDirectory` and
+  `env["PYTHONSAFEPATH"] = "1"` set. The empty cwd guarantees no
+  `recon_tool/` directory is reachable via cwd-prepend on any Python
+  version; the env var disables cwd-prepend entirely on Python 3.11+.
+  Both safeguards together close the attack on every supported
+  Python version, including 3.10 where the env var alone is a no-op.
+- **`recon_tool/mcp_install.py` — `build_recon_block`** now persists
+  `env: {"PYTHONSAFEPATH": "1"}` in the fallback launch block so
+  future MCP-client launches on Python 3.11+ inherit the protection.
+  The preferred form (when `recon` is on PATH) is unchanged — it
+  invokes the script entry point, which has no cwd-prepend concern,
+  so the env block stays clean.
+- **`recon_tool/mcp_install.py` — `warn_if_fallback`** (new) exposes
+  a warning when the fallback launch form would be persisted.
+  Surfaced by `recon mcp install` so operators on Python 3.10 see
+  the residual-risk hint and can install `recon` to PATH for the
+  safer launch form.
+- **`recon_tool/server.py` — `_detect_cwd_shadow_install`** (new)
+  runs at server startup before any tool handlers register. It
+  resolves `recon_tool.__file__` and refuses to start when the
+  package was loaded from a path under the current working
+  directory unless cwd contains a legitimate `recon-tool` named
+  `pyproject.toml` (the source-checkout case). The runtime guard
+  is the final defense — it catches the attack regardless of how
+  the server was launched, including any MCP client config that
+  pre-dates the v1.9.3.4 mitigations.
+
+### Added
+
+- **`tests/test_mcp_path_isolation.py`** — 10 tests across the
+  three defense layers: (a) source inspection asserts `mcp_doctor.py`
+  sets `PYTHONSAFEPATH=1` and passes a safe `cwd`; (b) unit tests
+  prove the install fallback persists the env var and the preferred
+  form omits it; (c) runtime-guard tests cover normal install,
+  shadow workspace (refuses), and legitimate source checkout
+  (allows). The shadow-workspace integration test launches a real
+  subprocess with a malicious `recon_tool/server.py` and asserts the
+  installed module loads, not the shadow.
+
+### Notes for downstream consumers
+
+- MCP clients already configured via `recon mcp install` keep
+  working; the persisted env-block addition is backward-compatible.
+- Operators with hand-edited MCP client configs that point at
+  `python -m recon_tool.server` SHOULD add `"env":
+  {"PYTHONSAFEPATH": "1"}` to those configs on Python 3.11+, or
+  re-run `recon mcp install` to refresh the canonical block.
+- The runtime guard refuses to start if cwd looks suspicious. If
+  you legitimately run `python -m recon_tool.server` from a source
+  checkout, the checkout's `pyproject.toml` must have
+  `name = "recon-tool"` (the project's own pyproject.toml does).
+
+### Tests
+
+- 2150 passed (+9 path-isolation tests passing; 1 shadow-workspace
+  integration test skipped on Windows). One pre-existing flaky
+  exposure-copy hypothesis test (unrelated; tracked separately).
+- Coverage 83.24% (≥ 80% gate).
+- ruff + pyright clean on `recon_tool/` + `tests/`.
+
+This is the second of four security patches addressing the audit
+findings. Remaining: v1.9.3.5 CNAME chain target validation
+(MEDIUM), v1.9.3.6 validation harness path containment
+(informational).
+
 ## [1.9.3.3] - 2026-05-11
 
 **Security: release workflow supply-chain isolation (audit finding,
