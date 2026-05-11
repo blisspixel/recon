@@ -5,6 +5,92 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3.10] - 2026-05-11
+
+**Make subdomain-level surface intelligence visible by default.**
+The default panel previously had two surfaces hidden behind `--full`
+/ `--domains`: the chain walker's unclassified CNAME termini (chains
+we walked but the catalog couldn't classify) and the per-provider
+subdomain count (multi-cloud distribution across the apex's surface).
+Both addressed real operator-facing detection-gap concerns surfaced
+during empirical testing.
+
+The implicit message of the prior panel was "they only use the
+services we listed." That's wrong. The correct implicit message is
+"they use AT LEAST the services we listed, plus N unclassified
+surfaces we walked but couldn't name, plus their subdomains are
+distributed across these specific providers in these specific
+counts."
+
+### Added
+
+- **Default-panel "Unclassified surface" section.** When the chain
+  walker reaches CNAME termini the catalog couldn't classify, the
+  default panel now renders a one-line count plus up to two
+  representative `subdomain → terminus` examples, with a discovery
+  hint pointing at `recon discover <domain>` for triage. Renders only
+  when `unclassified_cname_chains` is non-empty; absent otherwise.
+  Coexists with the existing `--full`-mode unclassified-chain
+  surface — the new section is gated by `not show_domains` so the
+  two paths stay mutually exclusive.
+- **Per-provider counts in the Subdomain line.** Previously listed
+  surface-attributed services as a flat name list (`AWS CloudFront,
+  Fastly, Stripe`); now shows counts (`Stripe (18), Fastly (12), AWS
+  CloudFront (10)`) sorted by count descending. Dropped the apex-
+  evidence filter that hid the multi-cloud picture on tenants whose
+  apex and subdomains share a provider — the Subdomain line answers
+  a different question from the Cloud line (provider distribution
+  across the surface vs apex provider), so the duplication is
+  intentional surfacing, not noise.
+- **`tests/test_unclassified_surface_panel.py`** — 11 tests pinning
+  the new section: singular/plural noun handling, discovery-hint
+  presence, example count cap, terminus is chain's last hop, absence
+  when field empty, `--domains` mode mutual exclusion, isolation from
+  related-domains rendering.
+
+### Changed — documentation
+
+- **`docs/roadmap.md` substantially compressed.** Shipped milestones
+  (v1.7.0, v1.8.0, v1.9.0, v1.9.2, v1.9.3) collapsed from full prose
+  to one-line shipped stubs that point at the CHANGELOG for detail.
+  v1.9.2 and v1.9.3 retain expandable `<details>` blocks for readers
+  who want the historical rationale inline. `Current Fingerprint
+  Library Assessment` rewritten to reflect v1.9.3.9 totals
+  (414 entries, 343 unique slugs) and the empirical finding that the
+  catalog is comprehensive for top-tier enterprise vendors. Detection-
+  gap honesty paragraph added: passive DNS architecturally cannot see
+  server-side API consumption.
+- **`docs/roadmap.md` Backlog expanded** with detection-gap items
+  surfaced during empirical validation:
+  - Passive-DNS ceiling phrasing in the panel (Category-1 framing fix
+    so absence-of-finding doesn't read as evidence of absence).
+  - Subdomain enumeration breadth (CT SAN-set traversal beyond the
+    queried apex, longer common-prefix wordlist, CT-by-org-name).
+  - Stratified-corpus validation as standing practice (per-cloud
+    10-domain reference sets to surface bias by design).
+  - Cloud-provider rollup at apex level (top-of-panel multi-cloud
+    indicator when ≥2 cloud-categorized providers across the surface).
+  Each is backlog rather than committed because the trigger heuristic
+  / wordlist / reference-set curation needs explicit design before
+  shipping.
+
+### Empirical validation (documented for the record)
+
+Validated against a stratified sample of 6 known-rich-stack public
+companies (gitignored private corpus). Highlight: zero unclassified
+CNAME chain termini across the sample on top-tier vendors. The
+catalog is comprehensive for known enterprise stacks; residual gaps
+are architectural (Category-1 server-side API consumption) rather
+than catalog. This finding shifts the v2.0 priority from "add more
+fingerprints" to "make the architectural limit visible to operators".
+
+### Tests
+
+- 2289 passed, 1 skipped (+11 unclassified-surface-panel tests, was
+  2278 in v1.9.3.9).
+- Coverage 83.43% (≥ 80% gate).
+- ruff + pyright clean on `recon_tool/` + `tests/`.
+
 ## [1.9.3.9] - 2026-05-11
 
 **Catalog growth: cloud-vendor coverage gap fill (29 new

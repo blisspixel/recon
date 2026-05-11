@@ -1531,46 +1531,67 @@ def render_tenant_panel(
         # questions and conflating them double-counts. --full users see
         # the full per-subdomain table further down the panel, so we
         # suppress the summary there to avoid redundancy.
+        #
+        # v1.9.3.10: the Subdomain summary now reports counts per provider
+        # (e.g. ``AWS CloudFront (5), Fastly (3), Stripe (12)``) so the
+        # multi-cloud picture is visible by default. The prior version
+        # listed names without counts, which hid the fact that an apex on
+        # one cloud has subdomains across several others. Sorted by count
+        # descending so the dominant providers anchor the line.
         if info.surface_attributions and not show_domains:
-            # Apex-evidenced slugs = anything not from a surface CNAME chain.
-            # Surface CNAME evidence carries the marker "host: target" with a
-            # colon in raw_value; apex CNAME evidence is a bare target.
-            apex_evidenced_slugs: set[str] = set()
-            for ev in info.evidence:
-                if ev.source_type == "CNAME" and ": " in ev.raw_value:
-                    continue
-                if ev.slug:
-                    apex_evidenced_slugs.add(ev.slug)
-
-            seen_names: set[str] = set()
-            surface_names: list[str] = []
+            # Count per-name occurrences across surface attributions.
+            # v1.9.3.10: deliberately NO apex-evidence filter. The
+            # Subdomain line answers a different question from the Cloud
+            # line above — "how many subdomains are hosted on which
+            # provider" vs "what does the apex resolve to". When apex and
+            # subdomains share a provider (e.g., apex on AWS Route 53,
+            # 15 subdomains on AWS CloudFront), the prior version's
+            # filter hid the subdomain counts because the AWS slug was
+            # apex-evidenced. That collapsed the multi-cloud distribution.
+            # Showing both surfaces with their distinct labels lets
+            # operators see at a glance: where the apex sits AND how the
+            # subdomain footprint is split across providers.
+            name_counts: dict[str, int] = {}
             for sa in info.surface_attributions:
-                for slug, name in ((sa.primary_slug, sa.primary_name), (sa.infra_slug, sa.infra_name)):
-                    if not slug or not name:
+                # Only the *primary* attribution is counted per subdomain;
+                # the infra tier (CDN fronting the primary) is the same
+                # subdomain, not an additional one, so counting both
+                # would double-attribute. Surface infra separately only
+                # when there's no primary.
+                name = sa.primary_name
+                if not sa.primary_slug or not name:
+                    name = sa.infra_name
+                    if not sa.infra_slug or not name:
                         continue
-                    if slug in apex_evidenced_slugs:
-                        continue  # already in apex Services categories above
-                    if name in seen_names:
-                        continue
-                    seen_names.add(name)
-                    surface_names.append(name)
+                name_counts[name] = name_counts.get(name, 0) + 1
 
-            if surface_names:
+            if name_counts:
+                # Sort by count descending, then name ascending for
+                # diff-stable output on ties.
+                ranked = sorted(name_counts.items(), key=lambda p: (-p[1], p[0]))
+                # Render: "Name (N), Name (M), ..." — counts make
+                # multi-cloud distribution visible at a glance.
+                surface_summary = [
+                    f"{name} ({count})" for name, count in ranked
+                ]
                 budget = _PANEL_WIDTH - (2 + max_width) - 2
-                joined = ", ".join(surface_names)
+                joined = ", ".join(surface_summary)
                 if len(joined) > budget:
-                    # Pack as many names as fit, reserving room for a
-                    # "+N more" suffix so the line stays single-row.
+                    # Pack as many fit, reserving room for "+N more".
                     kept: list[str] = []
                     running = 0
-                    for n in surface_names:
+                    for s in surface_summary:
                         gap = 2 if kept else 0
-                        if running + gap + len(n) > budget - 12:
+                        if running + gap + len(s) > budget - 12:
                             break
-                        kept.append(n)
-                        running += gap + len(n)
-                    remaining = len(surface_names) - len(kept)
-                    joined = ", ".join(kept) + f", +{remaining} more" if remaining > 0 else ", ".join(kept)
+                        kept.append(s)
+                        running += gap + len(s)
+                    remaining = len(surface_summary) - len(kept)
+                    joined = (
+                        ", ".join(kept) + f", +{remaining} more"
+                        if remaining > 0
+                        else ", ".join(kept)
+                    )
                 svc_block.append("  ")
                 svc_block.append("Subdomain".ljust(max_width), style="dim")
                 svc_block.append(joined)
@@ -1601,6 +1622,50 @@ def render_tenant_panel(
                     style="dim italic",
                 )
             blocks.append(rel)
+
+    # ── Unclassified surface (default panel; v1.9.3.10) ───────────
+    # The chain walker reached CNAME termini that the catalog could
+    # not classify. Surface the count + a sample so the operator
+    # knows we walked something interesting but couldn't name it.
+    # The implicit message of the default panel was "they only use
+    # the services we listed" — this corrects it to "they use AT
+    # LEAST the services we listed, plus N unclassified surfaces".
+    # Humility over completeness: hide the gap is the worst-case
+    # failure mode, since absence of evidence reads as evidence of
+    # absence to operators who don't know recon's invariants.
+    if info.unclassified_cname_chains and not show_domains:
+        _spacer()
+        unc = Text()
+        n = len(info.unclassified_cname_chains)
+        noun = "terminus" if n == 1 else "termini"
+        unc.append("Unclassified surface", style="bold")
+        unc.append("\n  ")
+        unc.append(
+            f"{n} CNAME chain {noun} reached, no fingerprint match. ",
+            style="dim",
+        )
+        unc.append(
+            "We walked them but cannot name them — open a fingerprint PR or run\n  ",
+            style="dim",
+        )
+        unc.append(
+            f"`recon discover {info.queried_domain}` to triage candidates.",
+            style="dim italic",
+        )
+        # Show up to 2 representative subdomain → terminus pairs so the
+        # operator can sanity-check what's getting missed. More than 2
+        # would crowd the default panel; --full / `recon discover` is
+        # the path to the complete list.
+        examples = list(info.unclassified_cname_chains[:2])
+        if examples:
+            unc.append("\n  ", style="dim")
+            unc.append("examples: ", style="dim")
+            sample_strs: list[str] = []
+            for uc in examples:
+                terminus = uc.chain[-1] if uc.chain else "(no terminus)"
+                sample_strs.append(f"{uc.subdomain} → {terminus}")
+            unc.append(", ".join(sample_strs), style="dim italic")
+        blocks.append(unc)
 
     # ── Full tenant_domains listing (only with --domains / --full) ─
     if show_domains and info.tenant_domains:
