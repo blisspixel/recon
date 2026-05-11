@@ -1,0 +1,83 @@
+{
+  "index_patterns": ["recon-lookup-*"],
+  "priority": 200,
+  "_meta": {
+    "description": "Field mappings for recon-lookup-* indices. Pins ECS-standard fields to their ECS types and recon-specific fields (under recon.*) to types that match the JSON shape so Kibana visualizations don't drift on first-write surprises.",
+    "managed_by": "recon",
+    "ecs_version": "8.11.0"
+  },
+  "template": {
+    "settings": {
+      "index": {
+        "number_of_shards": 1,
+        "number_of_replicas": 1,
+        "default_pipeline": "recon-lookup"
+      }
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "event": {
+          "properties": {
+            "kind": { "type": "keyword" },
+            "category": { "type": "keyword" },
+            "type": { "type": "keyword" },
+            "dataset": { "type": "keyword" },
+            "module": { "type": "keyword" },
+            "severity": { "type": "long" }
+          }
+        },
+        "host": {
+          "properties": {
+            "domain": { "type": "keyword" }
+          }
+        },
+        "organization": {
+          "properties": {
+            "name": { "type": "keyword" }
+          }
+        },
+        "recon": {
+          "properties": {
+            "provider": { "type": "keyword" },
+            "confidence": { "type": "keyword" },
+            "auth_type": { "type": "keyword" },
+            "cloud_instance": { "type": "keyword" },
+            "services": { "type": "keyword" },
+            "slugs": { "type": "keyword" },
+            "insights": { "type": "text" },
+            "email": {
+              "properties": {
+                "dmarc_policy": { "type": "keyword" },
+                "security_score": { "type": "long" },
+                "primary_provider": { "type": "keyword" }
+              }
+            },
+            "fusion": {
+              "properties": {
+                "posteriors": {
+                  "type": "nested",
+                  "properties": {
+                    "name": { "type": "keyword" },
+                    "posterior": { "type": "float" },
+                    "interval_low": { "type": "float" },
+                    "interval_high": { "type": "float" },
+                    "sparse": { "type": "boolean" }
+                  }
+                },
+                "conflicts": {
+                  "type": "nested",
+                  "properties": {
+                    "field": { "type": "keyword" },
+                    "sources": { "type": "keyword" },
+                    "magnitude": { "type": "float" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.3.7** (CI fix: skip the v1.9.3.4 PYTHONSAFEPATH integration test on Python 3.10 — the env var is a no-op on 3.10, so the test's premise only holds for 3.11+. No product code or defense change; the architectural limit on Py3.10 is documented in the skip reason).
+Current release: **v1.9.3.8** (Track B quality work — downstream SIEM consumption examples: Splunk and Elasticsearch field mappings, worked input/output pairs, severity mapping, CI gate against schema drift. Closes the Track B "downstream consumption examples" item; one Track B item remaining for v2.0 — catalog metadata richness pass).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
@@ -833,36 +833,17 @@ and don't belong on the gap list. They are real.
   that list intact. See v1.9.3.1 CHANGELOG entry for the full
   per-item quality-bar verification.
 
-- **Downstream consumption examples** (at least two SIEMs).
-  Copy-pasteable parsers / field mappings for at least Splunk and
-  one of (Elastic / Sentinel / ArcSight). recon's `--json` /
-  `--ndjson` shape is already the integration surface; these turn
-  the schema lock from a contract-on-paper into a contract anyone
-  can actually consume. **Required because** v2.0 IS the schema
-  lock; locking a contract no published example demonstrates is
-  premature. Two SIEMs is the floor; more is welcome.
-
-  **Quality bar — exceptionally well:**
-  - [ ] Field-by-field mapping table per SIEM: recon JSON path →
-    SIEM field → notes. Covers both deterministic-pipeline fields
-    (slugs, services, dmarc_policy, etc.) AND fusion-layer fields
-    (posterior_observations, evidence_conflicts).
-  - [ ] Worked end-to-end example per SIEM: input recon JSON
-    (using a Microsoft fictional brand — Contoso/Northwind/
-    Fabrikam) → expected SIEM event with severity mapping and
-    correlation hints. Both the input and expected output checked
-    into `examples/siem/<vendor>/`.
-  - [ ] Use-case framing per SIEM: "if you want to alert on
-    shadow-IT detection, this is the field path; if you want to
-    track DMARC drift over time, this is the schema." Not a
-    parser dump; a decision tree for the SIEM operator.
-  - [ ] CI test that re-parses the worked-example output and
-    diffs against expected, so a v2.0 schema regression breaks
-    the SIEM examples (which is the point of having examples
-    that validate the contract).
-  - [ ] Each SIEM example author-of-record listed; if a vendor
-    employee can't QA it, the example is marked
-    "community-contributed, unverified."
+- **Downstream consumption examples** *(shipped in v1.9.3.8)* —
+  Splunk + Elasticsearch field mappings, worked input/output pairs,
+  severity mapping, CI gate against schema drift. `examples/siem/`
+  carries per-SIEM READMEs (with use-case framing for shadow-IT
+  alerting / DMARC drift / federation discovery), conf-files and
+  ingest pipelines, and expected-output files; `tests/test_siem_examples.py`
+  re-parses each worked example on every push, so a future schema
+  rename that breaks SIEM ingestion fails the test before it can
+  reach a release tag. Both SIEM examples are marked
+  maintainer-authored, vendor-unverified; PRs from SIEM-vendor
+  employees that validate or extend them are welcome.
 
 - **Top-3 influential edges in `--explain-dag`.** *(shipped in v1.9.3.2)*
   Extends `render_dag_text` and `render_dag_dot` to rank fired
@@ -1008,8 +989,9 @@ operation.
    (vulnerability-disclosure policy, gitleaks secrets-scanning in
    CI, CycloneDX SBOM attached as a release asset, forward-compat
    cache test).
-9. Downstream consumption examples — at least Splunk + one of
-   (Elastic / Sentinel / ArcSight).
+9. ~~Downstream consumption examples~~ — **shipped in v1.9.3.8**
+   (Splunk + Elasticsearch field mappings, worked input/output pairs,
+   severity mapping, CI gate against schema drift).
 10. ~~Top-3 influential edges in `--explain-dag` rendering.~~
     **Shipped in v1.9.3.2** — LLR-per-binding + percentage influence
     surfaced inline in text + DOT output; schema-additive
@@ -1017,8 +999,8 @@ operation.
 
 Track A patches ship in numeric order. Track B items can land in
 any order under whatever v1.9.x.y patch numbers are available.
-v2.0 ships when the remaining eight pre-conditions clear (two
-already cleared in v1.9.3.1 + v1.9.3.2).
+v2.0 ships when the remaining seven pre-conditions clear (three
+already cleared in v1.9.3.1 + v1.9.3.2 + v1.9.3.8).
 
 **Schema-lock disposition** (every EXPERIMENTAL field gets a verdict):
 
