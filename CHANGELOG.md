@@ -5,6 +5,77 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3.3] - 2026-05-11
+
+**Security: release workflow supply-chain isolation (audit finding,
+HIGH).** Closes the audit finding *"Dev deps can tamper release
+artifacts"* against `.github/workflows/release.yml` (introduced in
+v1.9.3.1). The finding: the v1.9.3.1 release workflow installed the
+dev extra (`uv sync --extra dev`) and ran `pip-audit` for SBOM
+generation in the same workspace as the just-built `dist/` directory,
+BEFORE `actions/upload-artifact` sealed the wheel and sdist into
+GitHub-managed storage. A compromised dev dependency (or transitive
+of pip-audit) executing during SBOM generation could have modified
+the release artifacts; those modified artifacts would then have been
+published to PyPI under the project's trusted-publisher identity.
+
+The fix is structural — workspace isolation, not just ordering.
+
+### Changed
+
+- **`.github/workflows/release.yml` restructured** with an explicit
+  supply-chain isolation contract documented in the header comment:
+  - **`build` job is now PURE.** Runs only `uv sync --no-dev` and
+    `uv build`, then immediately uploads `dist/` as a sealed artifact.
+    No dev dependencies installed; no pip-audit; no SBOM generation;
+    no `run:` step exists between `uv build` and the dist upload.
+    Steps that previously ran here have been moved.
+  - **New `sbom` job** runs on a separate runner. Re-derives the
+    locked requirements text from `uv.lock`, installs `pip-audit`
+    via `uv tool install` (isolated venv), and generates the
+    CycloneDX SBOM from the requirements text alone. `dist/` does
+    not exist in this runner. A compromised pip-audit cannot reach
+    release artifacts because they are sealed in GitHub storage and
+    not present on this filesystem.
+  - **`sbom` depends on `test`, not on `build`.** This makes the
+    parallel-runner isolation structurally obvious — the two jobs
+    run on different workspaces with no shared state. A future
+    contributor adding `needs: build` to `sbom` would be regressing
+    the threat model; the new contract test catches this.
+  - **`github-release`** now `needs: [build, sbom]` so the release
+    cannot ship without an SBOM. `publish-pypi` is unchanged —
+    still the only job with `id-token: write`, still only downloads
+    `dist/` and publishes.
+
+### Added
+
+- **`tests/test_release_workflow_contract.py`** — 13 contract tests
+  that parse `release.yml` and assert the isolation properties hold:
+  build job has no `--extra dev`, no `pip-audit`, no SBOM steps;
+  no `run:` step between `uv build` and dist upload; sbom job does
+  not depend on build; sbom job does not download `dist/`;
+  `id-token: write` is restricted to `publish-pypi`; github-release
+  attaches both `dist/` and `sbom/`. The test is structural — it
+  inspects the workflow YAML, not the runtime — so it runs in
+  ~1 second on every pytest invocation and catches regressions
+  that would otherwise only surface after a tampered release.
+
+### Tests
+
+- 2141 passed (+13 release-workflow contract tests, was 2128).
+- Coverage 83.31% (≥ 80% gate).
+- ruff + pyright clean on `recon_tool/` + `tests/`.
+
+### Notes for downstream consumers
+
+- The `dist/` artifact published to PyPI is structurally unchanged
+  by this patch. Existing `pip install recon-tool` workflows are
+  unaffected.
+- The SBOM artifact attached to the GitHub Release continues to be
+  named `recon-tool-<version>.cdx.json`. Consumers pulling the SBOM
+  by stable name see no change.
+- Future v1.9.x.y releases ship through the hardened workflow.
+
 ## [1.9.3.2] - 2026-05-10
 
 **Track B quality work — Top-3 influential edges in `--explain-dag`.**
