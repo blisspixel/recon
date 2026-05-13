@@ -11,6 +11,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^databricks-domain-verification=
+    description: >-
+      Databricks Lakehouse Platform domain-verification TXT token.
+      Indicates the domain is administratively bound to a Databricks
+      workspace, typically for SSO, account claim, or enterprise
+      identity setup. Does not prove active query workload. Many
+      orgs verify the domain during initial setup; corroborate with
+      observed user or data flows before reading this as "actively
+      running on Databricks."
 - name: Snowflake
   slug: snowflake
   category: Data & Analytics
@@ -18,6 +26,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^snowflake-domain-verification=
+    description: >-
+      Snowflake data-warehouse domain-verification TXT. Indicates
+      the domain has been claimed for SSO or SCIM provisioning
+      against a Snowflake account. Does not identify which
+      Snowflake region or cloud (AWS, Azure, or GCP) the account
+      lives in, and does not indicate the warehouse is actively
+      queried. The token persists after the verification step.
 - name: MongoDB Atlas
   slug: mongodb
   category: Data & Analytics
@@ -25,6 +40,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^mongodb-site-verification=
+    description: >-
+      MongoDB Atlas domain-verification TXT token. Indicates the
+      domain has been registered with an Atlas organization,
+      typically for SSO federation or custom-domain endpoints.
+      Does not prove any specific database is hosted on Atlas.
+      The verification can be set up before any cluster exists.
 - name: Dynatrace
   slug: dynatrace
   category: Data & Analytics
@@ -32,6 +53,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^dynatrace-site-verification=
+    description: >-
+      Dynatrace domain-verification TXT (Dynatrace is an
+      observability and APM platform). Indicates the domain is
+      claimed by a Dynatrace tenant. Does not prove the domain's
+      services are actively instrumented. Agent rollout is
+      independent of the domain verification.
 - name: Datadog
   slug: datadog
   category: Data & Analytics
@@ -39,6 +66,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^datadog-domain-verification=
+    description: >-
+      Datadog domain-verification TXT. Indicates the domain is
+      administratively bound to a Datadog organization, used for
+      SSO identity-provider federation and custom RUM or
+      synthetics endpoints. Does not identify which Datadog site
+      (US1, US3, US5, EU, and so on) the org is on, and does not
+      prove active monitoring of this specific domain's
+      infrastructure.
 - name: New Relic
   slug: newrelic
   category: Data & Analytics
@@ -46,6 +81,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^newrelic-domain-verification=
+    description: >-
+      New Relic domain-verification TXT (New Relic is an APM and
+      observability platform). Indicates the domain is registered
+      with a New Relic account, typically for SSO. Confidence is
+      medium because the verification token can persist long
+      after the account becomes inactive. Corroborate via APM
+      agent traffic or insights URLs before reading this as
+      "currently using New Relic."
 - name: WalkMe
   slug: walkme
   category: Data & Analytics
@@ -53,6 +96,13 @@ fingerprints:
   detections:
   - type: cname
     pattern: walkme.com
+    description: >-
+      CNAME pointing into walkme.com (WalkMe is a digital-adoption
+      platform that hosts in-app guidance and onboarding overlays).
+      Indicates the domain serves at least one page with WalkMe
+      injected. Common false positive: a CNAME for a single legacy
+      training subdomain does not mean WalkMe is in active
+      production use across the apex.
 - name: Optimizely
   slug: optimizely
   category: Data & Analytics
@@ -60,6 +110,13 @@ fingerprints:
   detections:
   - type: cname
     pattern: optimizely.com
+    description: >-
+      CNAME pointing into optimizely.com (Optimizely is an
+      experimentation and A-B-testing platform). Indicates at
+      least one page or feature flag served via Optimizely's edge.
+      Does not distinguish between Optimizely's Web Experimentation,
+      Feature Experimentation, or CMP products on the same vendor;
+      confidence is medium for that reason.
 - name: Mixpanel
   slug: mixpanel
   category: Data & Analytics
@@ -67,6 +124,14 @@ fingerprints:
   detections:
   - type: cname
     pattern: mixpanel.com
+    description: >-
+      CNAME pointing into mixpanel.com (Mixpanel is a product-
+      analytics vendor). Indicates the domain proxies analytics
+      events through Mixpanel-hosted infrastructure, typically
+      via a `mixpanel-proxy.example.com` subdomain. Does not
+      prove client-side Mixpanel SDK presence on user-facing
+      pages; that ships in JavaScript and is not observable via
+      DNS.
 - name: Amplitude
   slug: amplitude
   category: Data & Analytics
@@ -74,6 +139,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^amplitude-domain-verification=
+    description: >-
+      Amplitude product-analytics domain-verification TXT.
+      Indicates the domain is registered with an Amplitude
+      organization, typically for SSO federation or custom-domain
+      ingestion. Does not prove active event ingestion.
+      Verification is a one-time setup step.
 - name: Heap Analytics
   slug: heap
   category: Data & Analytics
@@ -81,6 +152,13 @@ fingerprints:
   detections:
   - type: cname
     pattern: heapanalytics.com
+    description: >-
+      CNAME pointing into heapanalytics.com (Heap is an
+      auto-capture product-analytics vendor). Indicates the
+      domain proxies events through Heap's infrastructure. Does
+      not indicate which Heap edition (free, standard, or
+      enterprise) or whether the SDK is currently loaded on
+      user-facing pages.
 - name: Pendo
   slug: pendo
   category: Data & Analytics
@@ -88,6 +166,13 @@ fingerprints:
   detections:
   - type: cname
     pattern: pendo.io
+    description: >-
+      CNAME pointing into pendo.io (Pendo offers in-app guides and
+      product analytics). Indicates the domain serves at least
+      one page with Pendo embedded. Common with SaaS apps using
+      Pendo for user-onboarding overlays. Does not distinguish
+      Pendo's Engage (in-app guides) from its analytics-only
+      offering on the same vendor.
 - name: Hotjar
   slug: hotjar
   category: Data & Analytics
@@ -95,3 +180,10 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^hotjar-domain-verification=
+    description: >-
+      Hotjar heatmap and session-replay domain-verification TXT.
+      Indicates the domain is registered with a Hotjar account.
+      Confidence is medium because the verification persists
+      regardless of whether the tracking script is currently
+      installed on user-facing pages. DNS cannot observe
+      client-side script presence.

@@ -12,13 +12,37 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^salesforce-domain-verification=
+    description: >-
+      Salesforce domain-verification TXT. Indicates the domain
+      is administratively bound to a Salesforce org, typically
+      for SSO federation or Experience Cloud custom-domain
+      setup. Does not by itself identify which Salesforce
+      product (Sales Cloud, Service Cloud, Experience Cloud,
+      Marketing Cloud) is in use.
   - type: txt
     pattern: ^00D[A-Za-z0-9]{12,15}=
-    description: Salesforce OrgID (00D prefix) — unique tenant identifier, proves CRM relationship
+    description: >-
+      Salesforce Organization ID (the `00D` prefix is the
+      fixed identifier for Org records in Salesforce's
+      object-prefix scheme). Indicates the domain has been
+      verified to a specific Salesforce org. The OrgID itself
+      is a unique tenant identifier; presence proves an
+      administrative CRM relationship between the domain owner
+      and a Salesforce org.
   - type: spf
     pattern: salesforce.com
+    description: >-
+      SPF include matching salesforce.com. Authorizes Salesforce
+      to send mail on behalf of the domain, typically for
+      Salesforce-initiated emails (case responses, Marketing
+      Cloud sends through the platform, automated workflows).
   - type: spf
     pattern: _spf.salesforce.com
+    description: >-
+      Alternative Salesforce SPF include (`_spf.salesforce.com`).
+      Same outbound-authorization semantics as the bare
+      `salesforce.com` include; some tenant configurations use
+      the underscored form.
 - name: Salesforce Marketing Cloud
   slug: salesforce-mc
   category: CRM & Marketing
@@ -28,13 +52,26 @@ fingerprints:
   detections:
   - type: cname
     pattern: sfmc-marketing.com
-    description: Salesforce Marketing Cloud click/view tracking CNAME
+    description: >-
+      CNAME pointing into sfmc-marketing.com, Salesforce
+      Marketing Cloud's link-tracking and click-attribution
+      endpoint. Indicates the domain has at least one tracked
+      subdomain for SFMC sends.
   - type: cname
     pattern: sfmc-content.com
-    description: Salesforce Marketing Cloud image/content hosting CNAME
+    description: >-
+      CNAME pointing into sfmc-content.com, Salesforce
+      Marketing Cloud's content and image hosting endpoint.
+      Indicates the domain serves SFMC-hosted images and
+      attachments through a branded subdomain.
   - type: cname
     pattern: exacttarget.com
-    description: Salesforce Marketing Cloud (legacy ExactTarget) CNAME
+    description: >-
+      CNAME pointing into exacttarget.com, the legacy domain
+      for Salesforce Marketing Cloud (originally ExactTarget,
+      acquired by Salesforce in 2013). Functionally
+      equivalent to the `sfmc-*.com` patterns; some tenants
+      still use the legacy CNAME.
 - name: HubSpot
   slug: hubspot
   category: CRM & Marketing
@@ -42,13 +79,35 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^hubspot-domain-verification=
+    description: >-
+      HubSpot domain-verification TXT. Indicates the domain is
+      registered with a HubSpot account, typically for hosting
+      HubSpot-served landing pages, blog posts, or marketing
+      sends under a branded subdomain. Does not identify
+      which HubSpot Hubs (Marketing, Sales, Service, CMS) are
+      licensed.
   - type: txt
     pattern: ^hubspot-developer-verification=
-    description: HubSpot developer portal / sandbox domain verification
+    description: >-
+      HubSpot developer-portal or sandbox-account domain
+      verification TXT. Used for verifying domains against
+      HubSpot's developer test accounts rather than production.
+      Presence suggests a development team is using HubSpot
+      tooling; less indicative of production HubSpot use.
   - type: spf
     pattern: hubspotemail.net
+    description: >-
+      SPF include matching hubspotemail.net. Authorizes
+      HubSpot to send marketing and transactional emails on
+      behalf of the domain. Typically present alongside the
+      HubSpot domain-verification TXT.
   - type: cname
     pattern: hubspot.net
+    description: >-
+      CNAME pointing into hubspot.net, HubSpot's CDN and
+      hosted-page endpoint. Indicates the domain serves at
+      least one page (landing page, blog, or knowledge base)
+      from HubSpot infrastructure under a branded subdomain.
 - name: Marketo (Adobe)
   slug: marketo
   category: CRM & Marketing
@@ -57,13 +116,25 @@ fingerprints:
   detections:
   - type: spf
     pattern: mktomail.com
-    description: Marketo email sending SPF include
+    description: >-
+      SPF include matching mktomail.com, Marketo's outbound
+      sending infrastructure (Marketo is now part of Adobe
+      Experience Cloud after the 2018 acquisition).
+      Authorizes Marketo to send marketing email on behalf of
+      the domain.
   - type: cname
     pattern: mktosvc.com
-    description: Marketo hosted service CNAME
+    description: >-
+      CNAME pointing into mktosvc.com, Marketo's hosted
+      service endpoint for tracking and link redirects.
+      Indicates the domain uses Marketo for marketing
+      campaigns.
   - type: cname
     pattern: mktoweb.com
-    description: Marketo landing page CNAME
+    description: >-
+      CNAME pointing into mktoweb.com, Marketo's landing-page
+      hosting endpoint. Indicates the domain hosts Marketo
+      landing pages under a branded subdomain.
 - name: Klaviyo
   slug: klaviyo
   category: CRM & Marketing
@@ -71,6 +142,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^klaviyo-site-verification=
+    description: >-
+      Klaviyo site-verification TXT (Klaviyo is an e-commerce-
+      focused email and SMS marketing platform). Indicates the
+      domain is registered with a Klaviyo account, typically
+      for branded sending domains and SMS short-link tracking.
+      Common in Shopify and other e-commerce stacks.
 - name: Kartra
   slug: kartra
   category: CRM & Marketing
@@ -78,7 +155,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: kartra.com
-    description: Kartra hosted marketing / learning portal CNAME
+    description: >-
+      CNAME pointing into kartra.com (Kartra is an all-in-one
+      marketing platform offering landing pages, email,
+      checkout, and membership sites). Indicates the domain
+      hosts at least one Kartra-served page or funnel.
 - name: LiveRamp
   slug: liveramp
   category: CRM & Marketing
@@ -86,6 +167,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^liveramp-site-verification=
+    description: >-
+      LiveRamp site-verification TXT (LiveRamp is a data
+      connectivity and identity-resolution platform).
+      Indicates the domain is registered with a LiveRamp
+      account. Confidence is medium because the verification
+      can persist independent of active data-onboarding use.
 - name: Segment (Twilio)
   slug: segment
   category: CRM & Marketing
@@ -94,10 +181,23 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^segment-site-verification=
+    description: >-
+      Segment site-verification TXT (Segment is a Twilio-owned
+      customer-data platform). Indicates the domain is
+      registered with a Segment workspace.
   - type: cname
     pattern: segment.com
+    description: >-
+      CNAME pointing into segment.com. Typically a tracking
+      subdomain delegated to Segment for client-side event
+      collection through a branded endpoint.
   - type: cname
     pattern: segment.io
+    description: >-
+      CNAME pointing into segment.io (the legacy Segment
+      tracking domain pre-Twilio acquisition). Functionally
+      equivalent to segment.com; some tenants still use the
+      legacy CNAME.
 - name: Meta Business Suite
   slug: meta
   category: Social & Advertising
@@ -106,6 +206,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^facebook-domain-verification=
+    description: >-
+      Meta (Facebook) Business Suite domain-verification TXT
+      (the `facebook-domain-verification=` prefix predates the
+      Meta rebrand). Indicates the domain has been claimed by
+      a Meta Business account, typically for ad-account
+      ownership, Aggregated Event Measurement, or
+      Conversions API setup. Does not prove active ad
+      campaigns are running.
 - name: Yandex
   slug: yandex
   category: Social & Advertising
@@ -113,6 +221,15 @@ fingerprints:
   detections:
   - type: txt
     pattern: '^yandex-verification:'
+    description: >-
+      Yandex domain-verification TXT (Yandex is a Russian
+      internet-services company offering search, ads, and
+      cloud). Indicates the domain is verified to a Yandex
+      account, typically for Yandex Webmaster, Yandex Direct
+      ads, or Yandex Metrica analytics. Confidence is medium
+      because the verification persists across the various
+      Yandex products and does not identify which one is in
+      use.
 - name: Unbounce
   slug: unbounce
   category: CRM & Marketing
@@ -120,6 +237,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: unbounce.com
+    description: >-
+      CNAME pointing into unbounce.com (Unbounce is a
+      landing-page builder and conversion-optimization
+      platform). Indicates the domain hosts at least one
+      Unbounce-served landing page under a branded subdomain.
 - name: Pardot Landing Pages
   slug: pardot
   category: Sales Intelligence
@@ -127,6 +249,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: pardot.com
+    description: >-
+      CNAME pointing into pardot.com (Pardot is Salesforce's
+      B2B marketing-automation product, rebranded to Marketing
+      Cloud Account Engagement in 2022 but the pardot.com
+      hostname is still in service). Indicates the domain
+      hosts Pardot-served landing pages or tracking endpoints.
 - name: Drift Chat
   slug: drift
   category: Sales Intelligence
@@ -134,6 +262,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: drift.com
+    description: >-
+      CNAME pointing into drift.com (Drift is a conversational-
+      marketing and chatbot platform, acquired by Salesloft in
+      2024). Indicates the domain hosts Drift's chat widget
+      or related endpoints. Confidence is medium because the
+      CNAME can persist after a team has moved off Drift.
 - name: Braze
   slug: braze
   category: CRM & Marketing
@@ -141,7 +275,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: braze.com
-    description: Braze customer engagement platform CNAME
+    description: >-
+      CNAME pointing into braze.com (Braze is a customer-
+      engagement platform offering email, push, in-app, and
+      SMS messaging). Indicates the domain uses Braze for at
+      least one channel, typically with a branded tracking
+      subdomain.
 - name: Iterable
   slug: iterable
   category: CRM & Marketing
@@ -149,6 +288,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: iterable.com
+    description: >-
+      CNAME pointing into iterable.com (Iterable is a
+      cross-channel marketing-automation platform).
+      Indicates the domain uses Iterable for marketing sends,
+      typically with a branded tracking or link-rewrite
+      subdomain.
 - name: Customer.io
   slug: customerio
   category: CRM & Marketing
@@ -156,6 +301,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: customer.io
+    description: >-
+      CNAME pointing into customer.io (Customer.io is a
+      behavioral-messaging platform for email, push, and SMS).
+      Indicates the domain uses Customer.io for at least one
+      messaging channel.
 - name: 6sense
   slug: 6sense
   category: Sales Intelligence
@@ -163,10 +313,25 @@ fingerprints:
   detections:
   - type: cname
     pattern: 6sense.com
+    description: >-
+      CNAME pointing into 6sense.com (6sense is an account-
+      based marketing and B2B intent-data platform).
+      Indicates the domain uses 6sense for tracking,
+      typically through a branded tracking subdomain.
   - type: cname
     pattern: 6sense.io
+    description: >-
+      CNAME pointing into 6sense.io (alternative 6sense
+      tracking domain). Same semantics as the .com form;
+      some tenants use the .io variant.
   - type: txt
     pattern: ^6sense
+    description: >-
+      Catch-all TXT pattern starting with "6sense". Lower-
+      specificity fallback for 6sense verification records
+      that do not follow a fixed prefix. Subject to false
+      positives on TXT records mentioning 6sense in unrelated
+      contexts.
 - name: Demandbase
   slug: demandbase
   category: Sales Intelligence
@@ -174,6 +339,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: demandbase.com
+    description: >-
+      CNAME pointing into demandbase.com (Demandbase is an
+      account-based marketing platform that overlaps with
+      6sense in B2B intent data). Indicates the domain uses
+      Demandbase, typically for site personalization or ABM
+      campaigns.
 - name: Eloqua (Oracle)
   slug: eloqua
   category: Sales Intelligence
@@ -181,6 +352,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: eloqua.com
+    description: >-
+      CNAME pointing into eloqua.com (Eloqua is Oracle's
+      marketing-automation platform, part of Oracle CX after
+      the 2012 acquisition). Indicates the domain hosts
+      Eloqua-served landing pages, forms, or tracking
+      endpoints.
 - name: Clearbit
   slug: clearbit
   category: Sales Intelligence
@@ -188,6 +365,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: clearbit.com
+    description: >-
+      CNAME pointing into clearbit.com (Clearbit is a
+      data-enrichment platform, acquired by HubSpot in 2023
+      and now branded as Breeze Intelligence). Indicates
+      the domain uses Clearbit for visitor identification or
+      enrichment, typically through a branded API subdomain.
 - name: Outreach
   slug: outreach
   category: Sales Intelligence
@@ -195,8 +378,15 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^outreach
+    description: >-
+      Catch-all TXT pattern starting with "outreach" (Outreach
+      is a sales-engagement platform). Lower-specificity
+      fallback for Outreach verification records.
   - type: spf
     pattern: outreach.io
+    description: >-
+      SPF include matching outreach.io. Authorizes Outreach
+      to send sales engagement email on behalf of the domain.
 - name: Salesloft
   slug: salesloft
   category: Sales Intelligence
@@ -204,8 +394,16 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^salesloft
+    description: >-
+      Catch-all TXT pattern starting with "salesloft"
+      (Salesloft is a sales-engagement platform, comparable
+      to Outreach). Lower-specificity fallback for Salesloft
+      verification records.
   - type: spf
     pattern: salesloft.com
+    description: >-
+      SPF include matching salesloft.com. Authorizes Salesloft
+      to send sales engagement email on behalf of the domain.
 - name: Apollo.io
   slug: apollo
   category: Sales Intelligence
@@ -213,6 +411,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^apollo-domain-verification=
+    description: >-
+      Apollo.io domain-verification TXT (Apollo is a sales-
+      intelligence and engagement platform offering contact
+      data and outbound automation). Indicates the domain is
+      registered with an Apollo account.
 - name: Gong
   slug: gong
   category: Sales Intelligence
@@ -220,6 +423,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^gong-domain-verification=
+    description: >-
+      Gong domain-verification TXT (Gong is a revenue-
+      intelligence platform that records and analyzes sales
+      calls). Indicates the domain is registered with a Gong
+      account.
 - name: Intercom
   slug: intercom
   category: Sales Intelligence
@@ -227,8 +435,18 @@ fingerprints:
   detections:
   - type: cname
     pattern: intercom.io
+    description: >-
+      CNAME pointing into intercom.io (Intercom is a customer-
+      messaging and support-chat platform). Indicates the
+      domain hosts Intercom's messenger widget or related
+      endpoints under a branded subdomain.
   - type: txt
     pattern: ^intercom-domain-verification=
+    description: >-
+      Intercom domain-verification TXT. Indicates the domain
+      is registered with an Intercom workspace, typically for
+      custom email domains used by Intercom-sent campaign or
+      transactional messages.
 - name: Dynamics 365 Marketing
   slug: d365-marketing
   category: Sales & Marketing
@@ -236,7 +454,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^d365mktkey=
-    description: Microsoft Dynamics 365 Marketing domain verification
+    description: >-
+      Microsoft Dynamics 365 Marketing domain-verification TXT
+      (the `d365mktkey=` prefix). Indicates the domain is
+      registered with a Dynamics 365 Marketing tenant for
+      use as a sending domain in marketing journeys. Distinct
+      from base Dynamics 365 CRM verification.
 - name: Salesforce Marketing Cloud (SFMC)
   slug: sfmc
   category: Sales & Marketing
@@ -244,7 +467,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^SFMC-
-    description: Salesforce Marketing Cloud domain verification (SFMC)
+    description: >-
+      Salesforce Marketing Cloud domain-verification TXT
+      (the `SFMC-` prefix). Indicates the domain is verified
+      to a Salesforce Marketing Cloud account for use as a
+      sending domain. Distinct slug from the broader
+      `salesforce-mc` CNAME-based detections; this is the
+      explicit verification TXT.
 - name: Emma Email Marketing
   slug: emma
   category: Sales & Marketing
@@ -252,7 +481,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^e2ma-verification=
-    description: Emma (myemma) email marketing domain verification
+    description: >-
+      Emma email marketing domain-verification TXT (the
+      `e2ma-verification=` prefix; e2ma is Emma's legacy
+      internal name). Emma is now part of Marigold, which
+      consolidated Emma, Campaign Monitor, and other
+      mid-market email vendors. Indicates the domain is
+      registered with an Emma account.
 - name: iContact Email Marketing
   slug: icontact
   category: Sales & Marketing
@@ -260,7 +495,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^iContact
-    description: iContact email marketing domain verification
+    description: >-
+      iContact email marketing domain-verification TXT
+      (iContact is a J2 Global / Ziff Davis property
+      focused on small-business email marketing). Indicates
+      the domain is registered with an iContact account.
 - name: MailerLite
   slug: mailerlite
   category: Sales & Marketing
@@ -268,4 +507,8 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^mailerlite-domain-verification=
-    description: MailerLite email marketing domain verification
+    description: >-
+      MailerLite domain-verification TXT (MailerLite is a
+      mid-market email marketing platform). Indicates the
+      domain is registered with a MailerLite account,
+      typically for use as a branded sending domain.

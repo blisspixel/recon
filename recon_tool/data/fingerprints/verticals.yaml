@@ -12,6 +12,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^stripe-verification=
+    description: >-
+      Stripe domain-verification TXT token. Indicates the domain is
+      claimed by a Stripe account, typically for Apple Pay merchant
+      verification or custom-domain Checkout or Connect setups.
+      Does not prove the domain processes payments through Stripe.
+      The verification is administrative and persists independently
+      of transaction activity.
 - name: DocuSign
   slug: docusign
   category: Payments & Finance
@@ -20,6 +27,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^docusign=
+    description: >-
+      DocuSign domain-verification TXT (the bare `docusign=`
+      prefix). Indicates the domain is administratively bound to a
+      DocuSign account, typically for SSO federation, account
+      claim, or DocuSign Click custom-domain setups. Does not
+      prove active envelope-sending volume.
 - name: Google (site verified)
   slug: google-site
   category: Misc

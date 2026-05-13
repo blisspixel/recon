@@ -1,4 +1,9 @@
-"""Tests for the v1.9 metadata-coverage CI gate script."""
+"""Tests for the v1.9.7 metadata-coverage CI gate script.
+
+The gate flipped from a percentage threshold to a presence check in
+v1.9.7. Every detection in every category must carry a non-empty
+``description`` field, or the script exits non-zero.
+"""
 
 from __future__ import annotations
 
@@ -21,8 +26,8 @@ def _make_corpus(
     out.mkdir()
     for category, detections in detections_per_category.items():
         # Pick a filename that maps to the requested category. The
-        # script's _FILENAME_TO_CATEGORY maps surface.yaml → infrastructure;
-        # for 'infrastructure' we use that filename for one of the cases.
+        # script's _FILENAME_TO_CATEGORY maps surface.yaml to
+        # infrastructure; for 'infrastructure' we use that filename.
         filename = f"{category}.yaml"
         spec = {
             "fingerprints": [
@@ -57,8 +62,10 @@ def _run_script(corpus_dir: Path, *extra_args: str) -> subprocess.CompletedProce
 
 
 class TestCoverageGate:
-    def test_passes_when_all_gated_at_threshold(self, tmp_path: Path) -> None:
-        """All detections in identity/security/infrastructure have descriptions."""
+    def test_passes_when_every_detection_has_description(self, tmp_path: Path) -> None:
+        """v1.9.7 gate: every detection in every category has a
+        non-empty description.
+        """
         corpus = _make_corpus(
             tmp_path,
             {
@@ -72,26 +79,29 @@ class TestCoverageGate:
                 "infrastructure": [
                     {"type": "txt", "pattern": "infra-1", "description": "ok"},
                 ],
+                "ai": [
+                    {"type": "txt", "pattern": "ai-1", "description": "ok"},
+                ],
             },
         )
         result = _run_script(corpus)
         assert result.returncode == 0, result.stderr
 
-    def test_fails_when_security_below_threshold(self, tmp_path: Path) -> None:
-        # Two detections, only one with description → 50% < 70%.
+    def test_fails_when_any_detection_missing_description(self, tmp_path: Path) -> None:
+        """One missing description anywhere fails the gate."""
         corpus = _make_corpus(
             tmp_path,
             {
                 "security": [
                     {"type": "txt", "pattern": "sec-1", "description": "ok"},
-                    {"type": "txt", "pattern": "sec-2"},  # no description
+                    {"type": "txt", "pattern": "sec-2"},  # missing description
                 ],
             },
         )
         result = _run_script(corpus)
         assert result.returncode == 1
-        assert "security" in result.stderr
-        assert "below threshold" in result.stderr
+        # Failure message names the slug + pattern that needs a fix.
+        assert "sec-2" in result.stderr or "slug-security-1" in result.stderr
 
     def test_report_only_returns_zero_even_on_failure(self, tmp_path: Path) -> None:
         corpus = _make_corpus(
@@ -106,24 +116,11 @@ class TestCoverageGate:
         result = _run_script(corpus, "--report-only")
         assert result.returncode == 0
 
-    def test_threshold_flag_lowered(self, tmp_path: Path) -> None:
-        # 50% security → fails at default 70% but passes at 50%.
-        corpus = _make_corpus(
-            tmp_path,
-            {
-                "security": [
-                    {"type": "txt", "pattern": "sec-1", "description": "ok"},
-                    {"type": "txt", "pattern": "sec-2"},
-                ],
-            },
-        )
-        fail = _run_script(corpus)
-        assert fail.returncode == 1
-        ok = _run_script(corpus, "--threshold", "0.5")
-        assert ok.returncode == 0
-
-    def test_non_gated_categories_do_not_fail(self, tmp_path: Path) -> None:
-        # ai is not in the gated list — even at 0% it passes.
+    def test_non_gated_categories_still_gate_in_v197(self, tmp_path: Path) -> None:
+        """v1.9.0 had only three gated categories (identity, security,
+        infrastructure); v1.9.7 gates every category. A missing
+        description in ai is now a failure.
+        """
         corpus = _make_corpus(
             tmp_path,
             {
@@ -134,20 +131,46 @@ class TestCoverageGate:
             },
         )
         result = _run_script(corpus)
-        assert result.returncode == 0
+        assert result.returncode == 1
+        assert "ai-1" in result.stderr or "slug-ai-0" in result.stderr
 
     def test_reports_per_category_table(self, tmp_path: Path) -> None:
         corpus = _make_corpus(
             tmp_path,
             {
                 "identity": [{"type": "txt", "pattern": "id-1", "description": "ok"}],
-                "ai": [{"type": "txt", "pattern": "ai-1"}],
+                "ai": [{"type": "txt", "pattern": "ai-1", "description": "ok"}],
             },
         )
         result = _run_script(corpus)
         assert "identity" in result.stdout
         assert "ai" in result.stdout
         assert "category" in result.stdout
+
+    def test_failure_lists_exact_gap_locations(self, tmp_path: Path) -> None:
+        """Per-detection gap report on failure: the script emits the
+        exact slug and detection pattern of every detection missing a
+        description, grouped by category. Contributors see "fix these
+        N entries" rather than a percentage drop.
+        """
+        corpus = _make_corpus(
+            tmp_path,
+            {
+                "security": [
+                    {"type": "txt", "pattern": "sec-with-desc", "description": "ok"},
+                    {"type": "txt", "pattern": "sec-missing-1"},
+                    {"type": "mx", "pattern": "sec-missing-2"},
+                ],
+            },
+        )
+        result = _run_script(corpus)
+        assert result.returncode == 1
+        # Both missing detections show in the gap report.
+        assert "sec-missing-1" in result.stderr
+        assert "sec-missing-2" in result.stderr
+        # The detection-with-description does not appear in the gap report
+        # (it's in the stdout summary, but not in the stderr failure list).
+        assert "sec-with-desc" not in result.stderr
 
     def test_invalid_directory(self, tmp_path: Path) -> None:
         result = _run_script(tmp_path / "does-not-exist")
@@ -156,7 +179,7 @@ class TestCoverageGate:
 
     def test_handles_missing_detections_gracefully(self, tmp_path: Path) -> None:
         # A file with no detections (e.g. relationship-metadata-only) is
-        # not a failure — just contributes zero detections.
+        # not a failure: it simply contributes zero detections.
         corpus_dir = tmp_path / "fp"
         corpus_dir.mkdir()
         (corpus_dir / "identity.yaml").write_text(
@@ -164,7 +187,7 @@ class TestCoverageGate:
             encoding="utf-8",
         )
         result = _run_script(corpus_dir)
-        # No gated category has detections → nothing to fail on
+        # No detections anywhere means no gaps; the gate passes.
         assert result.returncode == 0
 
     def test_handles_malformed_yaml(self, tmp_path: Path) -> None:
@@ -176,14 +199,17 @@ class TestCoverageGate:
         assert result.returncode == 0
 
     def test_runs_against_shipped_catalog(self) -> None:
-        # The shipped catalog might be below threshold (currently is for
-        # security/infrastructure as of v1.9 ship). With --report-only
-        # the script must still exit 0.
+        """v1.9.7+: the shipped catalog is at 100 percent description
+        coverage, so the gate must exit 0 without ``--report-only``.
+        """
         result = subprocess.run(  # noqa: S603
-            [sys.executable, str(SCRIPT), "--report-only"],
+            [sys.executable, str(SCRIPT)],
             capture_output=True,
             text=True,
             cwd=str(REPO_ROOT),
             check=False,
         )
-        assert result.returncode == 0
+        assert result.returncode == 0, (
+            "Shipped catalog must be at 100 percent description coverage. "
+            f"Script output:\n{result.stdout}\n{result.stderr}"
+        )

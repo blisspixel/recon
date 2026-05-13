@@ -16,13 +16,42 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^MS=ms
-    description: Microsoft 365 domain verification
+    description: >-
+      Microsoft 365 domain-verification TXT (the `MS=ms########`
+      form Microsoft issues during tenant domain claim).
+      Indicates the domain is administratively bound to a
+      Microsoft 365 or Entra tenant. Does not prove the tenant
+      is actively used for email. Some orgs verify the domain to
+      claim the namespace then route mail elsewhere, so
+      corroborate with MX evidence before reading this as "they
+      run M365 email."
   - type: txt
     pattern: ^ms-domain-verification=
+    description: >-
+      Alternative Microsoft 365 verification TXT format (the
+      `ms-domain-verification=` prefix used for some Entra ID
+      and Microsoft Defender services). Same administrative-
+      binding semantics as `MS=ms########`. Does not by itself
+      imply active email use.
   - type: mx
     pattern: mail.protection.outlook.com
+    description: >-
+      MX record terminating at Microsoft 365's mail-protection
+      cluster (`*.mail.protection.outlook.com`). Indicates active
+      M365 email use: incoming SMTP for the domain routes through
+      Exchange Online Protection. Note that an upstream gateway
+      (Proofpoint, Mimecast, Barracuda) may sit in front of M365
+      even when this MX is published, so "M365 only" is not
+      implied without checking for gateway MX evidence as well.
   - type: spf
     pattern: spf.protection.outlook.com
+    description: >-
+      SPF `include:spf.protection.outlook.com` authorizes
+      Microsoft 365 to send mail on behalf of the domain.
+      Typically present alongside the M365 MX and consistent
+      with M365 use. Does not prove M365 is the primary sender;
+      many domains include M365 as one of several authorized
+      senders.
 - name: Google Workspace
   slug: google-workspace
   category: Email & Communication
@@ -34,8 +63,21 @@ fingerprints:
   detections:
   - type: mx
     pattern: aspmx.l.google.com
+    description: >-
+      MX terminating at Google Workspace's primary inbound mail
+      cluster (`aspmx.l.google.com` and the `alt1` through `alt4`
+      variants). Indicates active Google Workspace email use. As
+      with M365, an upstream gateway may sit in front of Gmail
+      even when this MX is published; check for gateway MX
+      evidence before concluding "Gmail only."
   - type: spf
     pattern: _spf.google.com
+    description: >-
+      SPF `include:_spf.google.com` authorizes Google to send
+      mail on behalf of the domain. Usually present with the GWS
+      MX and consistent with Google Workspace use. Does not
+      distinguish Workspace from consumer Gmail forwarding setups
+      on its own; combined with the MX, the read is GWS.
 - name: Zoho Mail
   slug: zoho
   category: Email & Communication
@@ -44,8 +86,19 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^zoho-verification=
+    description: >-
+      Zoho domain-verification TXT. Indicates the domain is
+      claimed by a Zoho account (Zoho Mail, CRM, and other Zoho
+      One services share the same verification mechanism). Does
+      not distinguish Zoho Mail from other Zoho products on its
+      own; corroborate with Zoho MX for the email claim
+      specifically.
   - type: mx
     pattern: zoho.com
+    description: >-
+      MX terminating at Zoho Mail (`mx*.zoho.com` and regional
+      variants like `mx*.zohomail.eu`). Indicates Zoho Mail is
+      the active mail provider for the domain.
 - name: ProtonMail
   slug: protonmail
   category: Email & Communication
@@ -54,6 +107,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^protonmail-verification=
+    description: >-
+      Proton Mail custom-domain verification TXT. Indicates the
+      domain is administratively bound to a Proton account for
+      use as a Proton Mail custom-domain alias. Does not prove
+      Proton Mail is the exclusive mail provider for the
+      domain; corroborate with Proton MX records
+      (`*.protonmail.ch`).
 - name: AWS SES
   slug: aws-ses
   category: Email & Communication
@@ -63,8 +123,20 @@ fingerprints:
   detections:
   - type: txt
     pattern: '^amazonses:'
+    description: >-
+      Amazon SES domain-verification TXT (the `amazonses:`
+      prefix). Indicates the domain is verified to send mail
+      through Amazon SES, typically for transactional or
+      application-generated email. SES is rarely the inbound
+      mail provider, so combined with a non-SES MX the more
+      accurate read is "uses SES for outbound application mail."
   - type: spf
     pattern: amazonses.com
+    description: >-
+      SPF `include:amazonses.com` authorizes Amazon SES to send
+      mail on behalf of the domain. Typically a sender-only
+      authorization for transactional mail; not by itself
+      evidence of inbound mail handling on SES.
 - name: SendGrid
   slug: sendgrid
   category: Email & Communication
@@ -74,6 +146,12 @@ fingerprints:
   detections:
   - type: spf
     pattern: sendgrid.net
+    description: >-
+      SPF `include:sendgrid.net` authorizes SendGrid (a Twilio
+      property) to send mail on behalf of the domain. SendGrid
+      is a transactional and bulk-mail sender; this is an
+      outbound-authorization signal, not an indication that
+      SendGrid receives mail for the domain.
 - name: Mailgun
   slug: mailgun
   category: Email & Communication
@@ -81,6 +159,11 @@ fingerprints:
   detections:
   - type: spf
     pattern: mailgun.org
+    description: >-
+      SPF `include:mailgun.org` authorizes Mailgun (a Sinch
+      property) to send mail on behalf of the domain.
+      Transactional and API-driven outbound sender; the signal
+      is outbound only.
 - name: SendCloud
   slug: sendcloud
   category: Email & Communication
@@ -88,8 +171,20 @@ fingerprints:
   detections:
   - type: spf
     pattern: spf1.sendcloud.org
+    description: >-
+      SPF `include:spf1.sendcloud.org` authorizes SendCloud
+      (a transactional and marketing-mail sender common in EU
+      and Asia-Pacific markets) to send on behalf of the
+      domain. Note that the name collides with multiple
+      unrelated "SendCloud" companies; this fingerprint covers
+      the transactional-mail vendor at sendcloud.net, not the
+      EU shipping platform of the same name.
   - type: spf
     pattern: spf2.sendcloud.org
+    description: >-
+      Alternative SendCloud SPF include (`spf2`), used alongside
+      `spf1` for SPF lookup-count optimization. Same outbound-
+      authorization semantics.
 - name: Postmark
   slug: postmark
   category: Email & Communication
@@ -97,6 +192,11 @@ fingerprints:
   detections:
   - type: spf
     pattern: postmarkapp.com
+    description: >-
+      SPF include matching against Postmark (an ActiveCampaign
+      property, formerly Wildbit). Authorizes Postmark to send
+      transactional mail on behalf of the domain. Outbound-only
+      signal.
 - name: SparkPost
   slug: sparkpost
   category: Email & Communication
@@ -104,6 +204,12 @@ fingerprints:
   detections:
   - type: spf
     pattern: sparkpostmail.com
+    description: >-
+      SPF include matching against SparkPost's
+      `sparkpostmail.com` (a MessageBird and Bird property).
+      Authorizes SparkPost to send on behalf of the domain.
+      Outbound transactional and marketing mail; not inbound
+      mail handling.
 - name: Brevo (Sendinblue)
   slug: brevo
   category: Email & Communication
@@ -111,8 +217,20 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^Sendinblue-code
+    description: >-
+      Legacy Sendinblue domain-verification TXT (the brand
+      rebranded to Brevo, but pre-rebrand verifications still
+      use the `Sendinblue-code` prefix). Indicates the domain
+      is administratively bound to a Brevo account for
+      marketing-mail sending. Does not prove active sending
+      volume; the verification persists post-rebrand.
   - type: txt
     pattern: ^brevo-code
+    description: >-
+      Post-rebrand Brevo (formerly Sendinblue) domain-
+      verification TXT. Same administrative-binding semantics
+      as the legacy `Sendinblue-code` form. New verifications
+      use this prefix.
 - name: Mailchimp
   slug: mailchimp
   category: Email & Communication
@@ -122,8 +240,19 @@ fingerprints:
   detections:
   - type: spf
     pattern: servers.mcsv.net
+    description: >-
+      SPF `include:servers.mcsv.net` authorizes Mailchimp (an
+      Intuit property) to send marketing mail on behalf of the
+      domain. The `mcsv` stands for "Mailchimp Servers"; the
+      include predates the Intuit acquisition.
   - type: spf
     pattern: spf.mandrillapp.com
+    description: >-
+      SPF `include:spf.mandrillapp.com` authorizes Mandrill
+      (Mailchimp's transactional-mail product) to send on
+      behalf of the domain. Distinct product from Mailchimp's
+      marketing mail; presence indicates transactional or API-
+      driven mail use, not necessarily marketing campaigns.
 - name: TLS-RPT
   slug: tls-rpt
   category: Email & Communication
@@ -132,7 +261,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^v=TLSRPTv1
-    description: SMTP TLS Reporting — domain receives TLS failure reports
+    description: >-
+      SMTP TLS Reporting (RFC 8460) policy TXT, found at
+      `_smtp._tls.<domain>`. Indicates the domain has opted in
+      to receive aggregated TLS failure reports for inbound
+      SMTP connections. Implies a baseline of email-security
+      tooling investment; does not by itself prove DMARC
+      enforcement.
 - name: AutoSPF
   slug: autospf
   category: Email & Communication
@@ -141,7 +276,11 @@ fingerprints:
   detections:
   - type: spf
     pattern: autospf.com
-    description: AutoSPF flattening service — indicates enterprise SPF management
+    description: >-
+      SPF include matching AutoSPF, a flattening and lookup-count
+      management service. Indicates the domain uses an external
+      SPF management product, common in enterprise mail setups
+      with many authorized senders.
 - name: OnDMARC (Red Sift)
   slug: ondmarc
   category: Email & Communication
@@ -150,10 +289,16 @@ fingerprints:
   detections:
   - type: spf
     pattern: ondmarc.com
-    description: OnDMARC (Red Sift) email authentication management
+    description: >-
+      SPF include matching OnDMARC (Red Sift's email-
+      authentication-management product). Indicates the domain
+      uses OnDMARC for SPF or DMARC management.
   - type: dmarc_rua
     pattern: ondmarc.com
-    description: Red Sift OnDMARC DMARC aggregate report receiving domain
+    description: >-
+      DMARC `rua=` aggregate-report target at OnDMARC (Red
+      Sift). Indicates the domain sends DMARC aggregate reports
+      to OnDMARC for analysis.
 - name: dmarcian
   slug: dmarcian
   category: Email & Communication
@@ -162,10 +307,16 @@ fingerprints:
   detections:
   - type: spf
     pattern: dmarcian.com
-    description: dmarcian DMARC management and SPF optimization
+    description: >-
+      SPF include matching dmarcian, a DMARC-management and
+      SPF-optimization vendor. Indicates the domain uses
+      dmarcian's tooling.
   - type: dmarc_rua
     pattern: dmarcian.com
-    description: dmarcian DMARC aggregate report receiving domain
+    description: >-
+      DMARC `rua=` aggregate-report target at dmarcian.
+      Indicates the domain sends DMARC aggregate reports to
+      dmarcian for analysis.
 - name: EasyDMARC
   slug: easydmarc
   category: Email & Communication
@@ -174,10 +325,16 @@ fingerprints:
   detections:
   - type: spf
     pattern: easydmarc.com
-    description: EasyDMARC email authentication management
+    description: >-
+      SPF include matching EasyDMARC, an email-authentication-
+      management vendor. Indicates the domain uses EasyDMARC's
+      tooling.
   - type: dmarc_rua
     pattern: easydmarc.com
-    description: EasyDMARC DMARC aggregate report receiving domain
+    description: >-
+      DMARC `rua=` aggregate-report target at EasyDMARC.
+      Indicates the domain sends DMARC aggregate reports to
+      EasyDMARC for analysis.
 - name: Valimail
   slug: valimail
   category: Email & Communication
@@ -186,10 +343,16 @@ fingerprints:
   detections:
   - type: spf
     pattern: valimail.com
-    description: Valimail email authentication automation and SPF management
+    description: >-
+      SPF include matching Valimail, an email-authentication-
+      automation and SPF-management vendor. Indicates the
+      domain uses Valimail's tooling.
   - type: dmarc_rua
     pattern: valimail.com
-    description: Valimail DMARC aggregate report receiving domain
+    description: >-
+      DMARC `rua=` aggregate-report target at Valimail.
+      Indicates the domain sends DMARC aggregate reports to
+      Valimail for analysis.
 - name: Agari (DMARC)
   slug: agari
   category: Email Governance
@@ -197,7 +360,11 @@ fingerprints:
   detections:
   - type: dmarc_rua
     pattern: agari.com
-    description: Agari DMARC aggregate report receiving domain
+    description: >-
+      DMARC `rua=` aggregate-report target at Agari (a Fortra
+      property after the Helpsystems / Fortra acquisitions).
+      Indicates the domain sends DMARC aggregate reports to
+      Agari for analysis.
 - name: Proofpoint EFD
   slug: proofpoint-efd
   category: Email Governance
@@ -205,7 +372,11 @@ fingerprints:
   detections:
   - type: dmarc_rua
     pattern: emaildefense.proofpoint.com
-    description: Proofpoint Email Fraud Defense DMARC report receiving domain
+    description: >-
+      DMARC `rua=` aggregate-report target at Proofpoint Email
+      Fraud Defense. Indicates the domain sends DMARC aggregate
+      reports to Proofpoint EFD, typically alongside Proofpoint
+      gateway use.
 - name: URIports
   slug: uriports
   category: Email Governance
@@ -213,7 +384,12 @@ fingerprints:
   detections:
   - type: dmarc_rua
     pattern: uriports.com
-    description: URIports DMARC aggregate report receiving domain
+    description: >-
+      DMARC `rua=` aggregate-report target at URIports.
+      Indicates the domain sends DMARC aggregate reports to
+      URIports for analysis. URIports also handles MTA-STS
+      reporting and CSP violation reports for other security
+      headers; the slug is DMARC-specific.
 - name: DMARC Advisor
   slug: dmarc-advisor
   category: Email Governance
@@ -221,7 +397,10 @@ fingerprints:
   detections:
   - type: dmarc_rua
     pattern: dmarcadvisor.com
-    description: DMARC Advisor aggregate report receiving domain
+    description: >-
+      DMARC `rua=` aggregate-report target at DMARC Advisor.
+      Indicates the domain sends DMARC aggregate reports to
+      DMARC Advisor for analysis.
 - name: PowerDMARC
   slug: powerdmarc
   category: Email Governance
@@ -229,7 +408,10 @@ fingerprints:
   detections:
   - type: dmarc_rua
     pattern: powerdmarc.com
-    description: PowerDMARC aggregate report receiving domain
+    description: >-
+      DMARC `rua=` aggregate-report target at PowerDMARC.
+      Indicates the domain sends DMARC aggregate reports to
+      PowerDMARC for analysis.
 - name: Mimecast DMARC Analyzer
   slug: mimecast-dmarc-analyzer
   category: Email Governance
@@ -237,4 +419,9 @@ fingerprints:
   detections:
   - type: dmarc_rua
     pattern: dmarc-analyzer.com
-    description: Mimecast DMARC Analyzer aggregate report receiving domain
+    description: >-
+      DMARC `rua=` aggregate-report target at Mimecast DMARC
+      Analyzer (formerly the standalone DMARC Analyzer vendor
+      acquired by Mimecast). Indicates the domain sends DMARC
+      aggregate reports for analysis; commonly seen alongside
+      Mimecast gateway use.

@@ -299,7 +299,7 @@ class TestShadowWorkspaceIntegration:
         env["PYTHONSAFEPATH"] = "1"
         env["RECON_MCP_FORCE_STDIO"] = "1"
 
-        result = subprocess.run(  # noqa: S603 — test deliberately spawns the MCP server subprocess to verify cwd / PYTHONSAFEPATH isolation; sys.executable + literal args are trusted by construction.
+        result = subprocess.run(
             [sys.executable, "-m", "recon_tool.server"],
             cwd=tmp_path,
             env=env,
