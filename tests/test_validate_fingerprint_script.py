@@ -26,7 +26,7 @@ def test_validate_file_skips_specificity_for_schema_rejected_pattern(
         "    confidence: high\n"
         "    detections:\n"
         "      - type: txt\n"
-        "        pattern: \"(a+)+\"\n",
+        '        pattern: "(a+)+"\n',
         encoding="utf-8",
     )
 
@@ -60,7 +60,7 @@ def test_fingerprints_check_uses_packaged_validator(tmp_path: Path) -> None:
         "    confidence: high\n"
         "    detections:\n"
         "      - type: txt\n"
-        "        pattern: \"^example-service-verification=\"\n",
+        '        pattern: "^example-service-verification="\n',
         encoding="utf-8",
     )
 

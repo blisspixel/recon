@@ -75,8 +75,7 @@ class TestUnclassifiedSurfaceVisible:
         )
         out = _render_to_string(info)
         assert "Unclassified surface" in out, (
-            "default panel must surface the 'Unclassified surface' header "
-            "when unclassified_cname_chains is non-empty"
+            "default panel must surface the 'Unclassified surface' header when unclassified_cname_chains is non-empty"
         )
 
     def test_singular_noun_for_one_chain(self):
@@ -127,9 +126,7 @@ class TestUnclassifiedSurfaceVisible:
             ),
         )
         out = _render_to_string(info)
-        assert "recon discover contoso.com" in out, (
-            "section must point operators at `recon discover` for triage"
-        )
+        assert "recon discover contoso.com" in out, "section must point operators at `recon discover` for triage"
 
     def test_shows_up_to_two_examples(self):
         """Examples are capped at 2 so the default panel stays
@@ -156,8 +153,7 @@ class TestUnclassifiedSurfaceVisible:
         lines = out.splitlines()
         example_line = next((line for line in lines if "examples:" in line), "")
         assert example_line.count("→") <= 2, (
-            f"examples line {example_line!r} should show at most 2 arrows; "
-            "more would crowd the default panel"
+            f"examples line {example_line!r} should show at most 2 arrows; more would crowd the default panel"
         )
 
     def test_terminus_is_chain_last_hop(self):
@@ -190,8 +186,7 @@ class TestUnclassifiedSurfaceHiddenWhenEmpty:
         info = _make_tenant(unclassified_cname_chains=())
         out = _render_to_string(info)
         assert "Unclassified surface" not in out, (
-            "default panel must omit the 'Unclassified surface' section "
-            "when unclassified_cname_chains is empty"
+            "default panel must omit the 'Unclassified surface' section when unclassified_cname_chains is empty"
         )
 
     def test_section_omitted_in_show_domains_mode(self):
@@ -214,8 +209,7 @@ class TestUnclassifiedSurfaceHiddenWhenEmpty:
         # --domains mode — the per-subdomain attribution list
         # carries the unclassified surface there.
         assert "Unclassified surface\n" not in out, (
-            "--domains mode must not duplicate the default-panel "
-            "Unclassified surface section"
+            "--domains mode must not duplicate the default-panel Unclassified surface section"
         )
 
 

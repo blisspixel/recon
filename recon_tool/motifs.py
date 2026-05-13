@@ -96,9 +96,7 @@ def _validate_motif(raw: Any, source: str) -> ChainMotif | None:
         return None
     confidence = raw.get("confidence", "medium")
     if confidence not in _VALID_CONFIDENCE:
-        logger.warning(
-            "Motif %r has invalid confidence %r in %s — skipped", name, confidence, source
-        )
+        logger.warning("Motif %r has invalid confidence %r in %s — skipped", name, confidence, source)
         return None
     description = raw.get("description") or ""
     if not isinstance(description, str):

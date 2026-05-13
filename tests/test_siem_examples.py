@@ -116,6 +116,66 @@ class TestSharedInput:
 _SPLUNK_DIR = _SIEM_DIR / "splunk"
 
 
+class TestSplunkSearchSafety:
+    """v1.9.4: the published Splunk saved-search examples must use
+    literal set-membership (in() inside mvfilter()) — not regex
+    alternation — when comparing slugs against a baseline. A previous
+    version used ``match(current_slugs, mvjoin(baseline_slugs, "|"))``
+    which interprets slug values as a regex alternation; a slug
+    containing ``.*`` would silently suppress the shadow-IT alert.
+
+    Pinned here so a future edit to the SPL can't regress."""
+
+    def test_savedsearch_uses_literal_set_membership(self):
+        path = _SPLUNK_DIR / "savedsearches.conf"
+        text = path.read_text(encoding="utf-8")
+        assert "NOT in(current_slugs, baseline_slugs)" in text, (
+            "Splunk shadow-IT saved search must use NOT in(current_slugs, "
+            "baseline_slugs) for literal set-membership; the old "
+            "mvjoin/match pattern is regex-unsafe and was the audit finding "
+            "this test pins."
+        )
+
+    def test_savedsearch_does_not_use_unsafe_regex_join(self):
+        path = _SPLUNK_DIR / "savedsearches.conf"
+        # Strip comment lines (starting with #) before checking — the
+        # security commentary in this file deliberately names the
+        # previous unsafe pattern in a `# ...` comment to explain why
+        # the new pattern exists. Only the executable SPL (the
+        # `search = ...` lines and continuations) must be clean.
+        non_comment_lines = [
+            line for line in path.read_text(encoding="utf-8").splitlines() if not line.lstrip().startswith("#")
+        ]
+        executable_spl = "\n".join(non_comment_lines)
+        assert "mvjoin(baseline_slugs" not in executable_spl, (
+            "Splunk SPL must not pass baseline_slugs through mvjoin() to "
+            "regex match() — that pattern was the v1.9.3.8 audit finding "
+            "(slugs interpreted as regex alternation). Use literal "
+            "set-membership via in() inside mvfilter() instead."
+        )
+
+    def test_readme_uses_literal_set_membership(self):
+        path = _SPLUNK_DIR / "README.md"
+        text = path.read_text(encoding="utf-8")
+        assert "NOT in(current_slugs, baseline_slugs)" in text, (
+            "Splunk README must document the safe (in()-based) pattern; operators copy-paste from here."
+        )
+
+    def test_readme_does_not_publish_unsafe_pattern(self):
+        path = _SPLUNK_DIR / "README.md"
+        text = path.read_text(encoding="utf-8")
+        # The README may still mention the unsafe pattern in a "what
+        # NOT to do" call-out — but only adjacent to a "Why" block
+        # that explains the safety issue. Cheap proxy: if the unsafe
+        # pattern appears, the safety call-out must appear too.
+        if "mvjoin(baseline_slugs" in text:
+            assert "regex" in text.lower() or "literal" in text.lower(), (
+                "Splunk README mentions the unsafe regex-join pattern but "
+                "does not document why it's unsafe. Either remove the "
+                "pattern or add a safety call-out."
+            )
+
+
 class TestSplunkExample:
     """The Splunk example's expected event parses, and every recon
     JSON path the Splunk README claims to map is reachable in the
@@ -228,8 +288,7 @@ class TestElasticExample:
             "sample-output.json display_name; regenerate or fix sample."
         )
         assert source["host"]["domain"] == sample["queried_domain"], (
-            "Elastic expected-document host.domain drifted from "
-            "sample-output.json queried_domain"
+            "Elastic expected-document host.domain drifted from sample-output.json queried_domain"
         )
 
     def test_readme_mapping_table_references_real_fields(self):
@@ -325,7 +384,9 @@ def _extract_mapped_paths(readme_text: str) -> list[str]:
     a lighter shape check on the fusion section.
     """
     section = _isolate_section(
-        readme_text, _ALWAYS_PRESENT_HEADER, _FUSION_ONLY_HEADER,
+        readme_text,
+        _ALWAYS_PRESENT_HEADER,
+        _FUSION_ONLY_HEADER,
     )
     seen: dict[str, None] = {}
     for match in _MAPPING_ROW_RE.finditer(section):
@@ -336,10 +397,7 @@ def _extract_mapped_paths(readme_text: str) -> list[str]:
     # field references start with the SIEM's own namespace (``event.``,
     # ``recon.``, ``host.``, ``organization.``) and are not recon JSON
     # paths.
-    return [
-        p for p in seen
-        if not p.startswith(("event.", "recon.", "host.", "organization."))
-    ]
+    return [p for p in seen if not p.startswith(("event.", "recon.", "host.", "organization."))]
 
 
 def _isolate_section(text: str, start_header: str, end_header: str) -> str:
@@ -354,7 +412,7 @@ def _isolate_section(text: str, start_header: str, end_header: str) -> str:
     start_idx = text.find(start_header)
     if start_idx == -1:
         return ""
-    after_start = text[start_idx + len(start_header):]
+    after_start = text[start_idx + len(start_header) :]
     end_idx = after_start.find(end_header)
     if end_idx == -1:
         return after_start

@@ -225,7 +225,7 @@ class TestJSONSchemaContract:
             assert isinstance(entry, list)
             assert len(entry) == 2
             assert isinstance(entry[0], str)
-            assert isinstance(entry[1], (int, float))
+            assert isinstance(entry[1], int | float)
             assert 0.0 <= entry[1] <= 1.0
 
     def test_evidence_conflicts_empty_when_no_conflicts(self) -> None:

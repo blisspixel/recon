@@ -34,9 +34,7 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SKILL_RUBRIC_PATH = (
-    REPO_ROOT / "agents" / "claude-code" / "skills" / "recon-fingerprint-triage" / "SKILL.md"
-)
+SKILL_RUBRIC_PATH = REPO_ROOT / "agents" / "claude-code" / "skills" / "recon-fingerprint-triage" / "SKILL.md"
 FINGERPRINTS_DIR = REPO_ROOT / "recon_tool" / "data" / "fingerprints"
 
 
@@ -66,7 +64,7 @@ def _build_system_prompt(existing_slugs: dict[str, str]) -> str:
         "no prose, no code fence, with this top-level shape:\n\n"
         "{\n"
         '  "triage": [\n'
-        '    {\n'
+        "    {\n"
         '      "suffix": "<the candidate suffix verbatim>",\n'
         '      "verdict": "real_saas" | "infrastructure" | "intra_org" | "niche" '
         '| "unclear" | "already_covered",\n'

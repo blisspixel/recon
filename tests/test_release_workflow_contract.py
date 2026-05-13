@@ -116,8 +116,7 @@ class TestBuildJobIsPure:
                 "SBOM generation belongs in the dedicated sbom job."
             )
             assert "sbom" not in text, (
-                f"build job step {step.get('name')!r} touches SBOM output; "
-                "SBOM belongs in the dedicated sbom job."
+                f"build job step {step.get('name')!r} touches SBOM output; SBOM belongs in the dedicated sbom job."
             )
 
     def test_build_job_uploads_dist_immediately_after_build(self, workflow):
@@ -210,14 +209,12 @@ class TestSbomJobIsIsolated:
         uploads = [
             step
             for step in _steps(sbom)
-            if isinstance(step.get("uses"), str)
-            and step["uses"].startswith("actions/upload-artifact")
+            if isinstance(step.get("uses"), str) and step["uses"].startswith("actions/upload-artifact")
         ]
         assert uploads, "sbom job must upload at least one artifact"
-        assert any(
-            isinstance(s.get("with"), dict) and s["with"].get("name") == "sbom"
-            for s in uploads
-        ), "sbom job must upload an artifact named 'sbom'"
+        assert any(isinstance(s.get("with"), dict) and s["with"].get("name") == "sbom" for s in uploads), (
+            "sbom job must upload an artifact named 'sbom'"
+        )
 
 
 class TestPublishJobIsHardened:
@@ -230,9 +227,7 @@ class TestPublishJobIsHardened:
             perms = job.get("permissions") or {}
             id_token = perms.get("id-token") if isinstance(perms, dict) else None
             if name == "publish-pypi":
-                assert id_token == _PERM_WRITE, (
-                    "publish-pypi must have id-token: write for OIDC trusted publishing"
-                )
+                assert id_token == _PERM_WRITE, "publish-pypi must have id-token: write for OIDC trusted publishing"
             else:
                 assert id_token != _PERM_WRITE, (
                     f"job {name!r} has id-token: write — only publish-pypi may carry this "

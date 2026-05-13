@@ -78,9 +78,7 @@ def test_cache_roundtrip_preserves_resolved_at(tmp_cache_dir: Path) -> None:
 
 
 def test_cache_get_stamps_cached_at(tmp_cache_dir: Path) -> None:
-    info = _minimal_info(
-        resolved_at=datetime(2026, 4, 21, 8, 0, 0, tzinfo=timezone.utc).isoformat()
-    )
+    info = _minimal_info(resolved_at=datetime(2026, 4, 21, 8, 0, 0, tzinfo=timezone.utc).isoformat())
 
     cache_put("contoso.com", info)
     loaded = cache_get("contoso.com")

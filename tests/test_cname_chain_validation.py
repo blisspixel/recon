@@ -62,9 +62,7 @@ class TestPublicDnsNameSuffix:
         ],
     )
     def test_rejects_private_and_malformed(self, name):
-        assert dns_mod._is_public_dns_name(name) is False, (
-            f"{name!r} should NOT be classified as public DNS"
-        )
+        assert dns_mod._is_public_dns_name(name) is False, f"{name!r} should NOT be classified as public DNS"
 
     @pytest.mark.parametrize(
         "name",
@@ -77,9 +75,7 @@ class TestPublicDnsNameSuffix:
         ],
     )
     def test_accepts_obviously_public(self, name):
-        assert dns_mod._is_public_dns_name(name) is True, (
-            f"{name!r} should be classified as public DNS"
-        )
+        assert dns_mod._is_public_dns_name(name) is True, f"{name!r} should be classified as public DNS"
 
 
 # ── Layer 2: resolved-address private check ────────────────────────
@@ -106,9 +102,7 @@ class TestPrivateIpLiteralCheck:
         ],
     )
     def test_recognizes_private_addresses(self, ip):
-        assert dns_mod._is_private_ip_literal(ip) is True, (
-            f"{ip} should be classified as private"
-        )
+        assert dns_mod._is_private_ip_literal(ip) is True, f"{ip} should be classified as private"
 
     @pytest.mark.parametrize(
         "ip",
@@ -120,9 +114,7 @@ class TestPrivateIpLiteralCheck:
         ],
     )
     def test_recognizes_public_addresses(self, ip):
-        assert dns_mod._is_private_ip_literal(ip) is False, (
-            f"{ip} should be classified as public"
-        )
+        assert dns_mod._is_private_ip_literal(ip) is False, f"{ip} should be classified as public"
 
     @pytest.mark.parametrize("garbage", ["not-an-ip", "999.999.999.999", "", "::xyz::"])
     def test_unparseable_returns_false(self, garbage):
@@ -172,11 +164,8 @@ class TestHopResolvesPublicly:
                 },
             ),
         )
-        assert (
-            await dns_mod._hop_resolves_publicly("split-horizon.example.com") is False
-        ), (
-            "split-horizon target with only private A/AAAA records must be "
-            "classified as not-publicly-resolving"
+        assert await dns_mod._hop_resolves_publicly("split-horizon.example.com") is False, (
+            "split-horizon target with only private A/AAAA records must be classified as not-publicly-resolving"
         )
 
     @pytest.mark.asyncio
@@ -224,26 +213,52 @@ class TestResolveCnameChainBlocksPrivateTargets:
         }
         monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
         chain = await dns_mod._resolve_cname_chain("attacker.example.com")
-        assert chain == [], (
-            "walker should not record a hop whose suffix marks it as "
-            f"private; got chain={chain!r}"
-        )
+        assert chain == [], f"walker should not record a hop whose suffix marks it as private; got chain={chain!r}"
 
     @pytest.mark.asyncio
-    async def test_walker_drops_public_name_with_private_a_records(self, monkeypatch):
-        # attacker.example.com CNAME -> split.attacker-domain.com (public
-        # suffix), but split.attacker-domain.com resolves to 10.0.0.5
-        # (private A). Layer-1 (suffix) passes; layer-2 (A check) drops.
+    async def test_walker_does_not_resolve_a_aaaa_during_walk(self, monkeypatch):
+        # v1.9.4: the walker uses suffix-only defense. It does NOT
+        # call A/AAAA on intermediate hops, because doing so would
+        # cause the recursive resolver to chase deeper CNAMEs while
+        # answering — potentially querying private/internal names
+        # *before* this walker has applied its suffix denylist to
+        # those deeper hops.
+        #
+        # This test asserts the walker accepts a public-suffix hop
+        # whose A records (if any) we don't even ask about. The
+        # split-horizon protection v1.9.3.5 added was removed in
+        # v1.9.4 specifically because it required the dangerous
+        # A/AAAA call. The cost: we no longer detect public-suffix
+        # names that resolve to private IPs via split-horizon DNS.
+        # The benefit: zero internal-DNS leakage from the walker.
+        queries_made: list[tuple[str, str]] = []
         plan: dict[tuple[str, str], list[str]] = {
             ("attacker.example.com", "CNAME"): ["split.attacker-domain.com"],
-            ("split.attacker-domain.com", "A"): ["10.0.0.5"],
-            ("split.attacker-domain.com", "AAAA"): [],
+            # NOTE: no A or AAAA records in the plan. If the walker
+            # asked for them, the stub would still return [] and the
+            # walker would (correctly) accept the hop — but we want
+            # to confirm the walker DOES NOT ASK at all.
         }
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
+
+        async def _tracking_resolve(domain: str, rdtype: str, **kwargs) -> list[str]:
+            queries_made.append((domain, rdtype))
+            return list(plan.get((domain, rdtype), []))
+
+        monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
         chain = await dns_mod._resolve_cname_chain("attacker.example.com")
-        assert chain == [], (
-            "walker should drop a public-suffix hop whose A records are "
-            f"all in private space; got chain={chain!r}"
+
+        # Walker accepts the public-suffix hop (suffix-only defense).
+        assert chain == ["split.attacker-domain.com"], f"walker should accept a public-suffix hop; got chain={chain!r}"
+        # And critically: only CNAME queries were issued. No A or AAAA
+        # queries during the walk — this is the v1.9.4 security
+        # invariant that closes the audit finding.
+        non_cname_queries = [q for q in queries_made if q[1] != "CNAME"]
+        assert non_cname_queries == [], (
+            "walker must issue ONLY CNAME queries during the walk. "
+            f"v1.9.4 audit fix: A/AAAA on attacker-influenced names "
+            "causes the recursive resolver to chase deeper CNAMEs "
+            "internally, potentially querying private names before "
+            f"this walker's suffix denylist sees them. Got: {non_cname_queries!r}"
         )
 
     @pytest.mark.asyncio
@@ -262,22 +277,21 @@ class TestResolveCnameChainBlocksPrivateTargets:
         )
 
     @pytest.mark.asyncio
-    async def test_walker_truncates_at_first_failing_hop(self, monkeypatch):
+    async def test_walker_truncates_at_first_failing_suffix(self, monkeypatch):
         # Two legitimate public hops, then an attacker hop pointing at
-        # private space. The walker records the two legitimate hops but
-        # not the malicious one.
+        # a clearly-private suffix. The walker records the two
+        # legitimate hops but rejects the malicious one by suffix
+        # denylist (no A/AAAA call needed).
         plan: dict[tuple[str, str], list[str]] = {
             ("apex.example.com", "CNAME"): ["edge.fastly.net"],
-            ("edge.fastly.net", "A"): ["151.101.1.10"],
-            ("edge.fastly.net", "CNAME"): ["origin.attacker-domain.com"],
-            ("origin.attacker-domain.com", "A"): ["10.0.0.99"],
-            ("origin.attacker-domain.com", "AAAA"): [],
+            ("edge.fastly.net", "CNAME"): ["origin.attacker.corp"],
         }
         monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
         chain = await dns_mod._resolve_cname_chain("apex.example.com")
-        # First hop (edge.fastly.net) passes both checks; second hop is
-        # dropped because its A record is private. Walker halts there.
+        # First hop (edge.fastly.net) passes suffix; second hop
+        # (origin.attacker.corp) fails suffix (private .corp). Walker
+        # halts there.
         assert chain == ["edge.fastly.net"], (
             f"walker should keep legitimate hops up to but not including "
-            f"the first failing hop; got chain={chain!r}"
+            f"the first suffix-failing hop; got chain={chain!r}"
         )

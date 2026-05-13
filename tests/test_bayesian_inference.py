@@ -308,9 +308,7 @@ class TestInferenceCorrectness:
         # Umbrella node sees direct evidence → very high.
         assert umbrellas.posterior > 0.90
 
-    def test_entropy_reduction_positive_when_posteriors_collapse(
-        self, toy_network_yaml: Path
-    ) -> None:
+    def test_entropy_reduction_positive_when_posteriors_collapse(self, toy_network_yaml: Path) -> None:
         # Strong corroborating evidence on both nodes should reduce
         # total entropy — both posteriors collapse toward 1.0 (away
         # from the maximum-entropy point at 0.5).
@@ -363,9 +361,7 @@ class TestInferenceCorrectness:
         # because wet_pavement wasn't observed.
         assert rain_umbrellas.posterior >= baseline_rain.posterior
 
-    def test_unrelated_evidence_does_not_move_unrelated_node(
-        self, shipped_network: BayesianNetwork
-    ) -> None:
+    def test_unrelated_evidence_does_not_move_unrelated_node(self, shipped_network: BayesianNetwork) -> None:
         # Strong M365 evidence shouldn't tell us much about cdn_fronting.
         baseline = infer(shipped_network, [], [], priors_override={})
         cdn_baseline = next(p for p in baseline.posteriors if p.name == "cdn_fronting")

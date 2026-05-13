@@ -26,9 +26,7 @@ def test_release_oidc_is_scoped_to_pypi_publish_job() -> None:
     workflow = _load_release_workflow()
     jobs = workflow["jobs"]
 
-    jobs_with_oidc = {
-        name for name, job in jobs.items() if job.get("permissions", {}).get("id-token") == "write"
-    }
+    jobs_with_oidc = {name for name, job in jobs.items() if job.get("permissions", {}).get("id-token") == "write"}
     assert jobs_with_oidc == {"publish-pypi"}
     assert jobs["publish-pypi"]["environment"] == "pypi"
 

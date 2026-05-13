@@ -93,7 +93,7 @@ class TestExceptionPath:
         async def _crash(errlog: io.StringIO) -> tuple[list[str], list[DoctorCheck]]:
             errlog.write(
                 "Traceback (most recent call last):\n"
-                "  File \"server.py\", line 1, in <module>\n"
+                '  File "server.py", line 1, in <module>\n'
                 "    import recon_tool\n"
                 "ModuleNotFoundError: No module named 'recon_tool'\n"
             )
@@ -159,9 +159,7 @@ class TestCLI:
     def test_doctor_renders_failed_report_with_nonzero_exit(self, monkeypatch: pytest.MonkeyPatch) -> None:
         def _stub_run() -> DoctorReport:
             return DoctorReport(
-                checks=(
-                    DoctorCheck("server spawn", "fail", "subprocess refused to start"),
-                ),
+                checks=(DoctorCheck("server spawn", "fail", "subprocess refused to start"),),
                 elapsed_seconds=0.1,
             )
 

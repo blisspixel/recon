@@ -161,8 +161,7 @@ def find_gaps(input_path: Path, *, max_samples_per_suffix: int = 5) -> list[dict
     # ranked order. Avoids running a sort key over heterogeneous dict values.
     ranked = sorted(suffix_count.items(), key=lambda pair: (-pair[1], pair[0]))
     rows: list[dict[str, Any]] = [
-        {"suffix": suffix, "count": count, "samples": suffix_samples[suffix]}
-        for suffix, count in ranked
+        {"suffix": suffix, "count": count, "samples": suffix_samples[suffix]} for suffix, count in ranked
     ]
     return rows
 

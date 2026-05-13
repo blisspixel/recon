@@ -436,8 +436,7 @@ def validate_ephemeral_input_size(
     for field_name, value in text_fields.items():
         if len(value) > _MAX_EPHEMERAL_TEXT_FIELD_LENGTH:
             raise EphemeralCapacityError(
-                f"Ephemeral fingerprint {field_name} is too long "
-                f"({len(value)} > {_MAX_EPHEMERAL_TEXT_FIELD_LENGTH})."
+                f"Ephemeral fingerprint {field_name} is too long ({len(value)} > {_MAX_EPHEMERAL_TEXT_FIELD_LENGTH})."
             )
     if detection_count > _MAX_EPHEMERAL_DETECTIONS_PER_FINGERPRINT:
         raise EphemeralCapacityError(

@@ -1764,22 +1764,27 @@ def _is_private_ip_literal(ip: str) -> bool:
     )
 
 
-async def _hop_resolves_publicly(host: str) -> bool:
+async def _hop_resolves_publicly(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
     """Return True when *host* has at least one public A/AAAA record.
 
-    Resolves A and AAAA in parallel and treats the hop as private if
-    every resolved address is in private/loopback/link-local/reserved
-    space. Returns True when there are no resolved addresses at all
-    (e.g. CNAME-only intermediate hops, transient resolver failures)
-    so the walker can still process legitimate chain shapes — this is
-    "fail open" on the unresolved case because the next iteration's
-    CNAME query will fail too if the chain is truly broken, and we
-    don't want to drop legitimate hops just because A/AAAA isn't
-    populated at the resolver moment.
+    **WARNING — v1.9.4: not called by the chain walker.** The walker
+    in ``_resolve_cname_chain`` used to invoke this helper after the
+    suffix check. A security audit established that doing so caused
+    the recursive resolver to chase intermediate CNAMEs internally
+    while answering the A/AAAA query, potentially querying private/
+    split-horizon names *before* the explicit walker had a chance to
+    apply its suffix denylist. Calling this helper on attacker-
+    influenced names defeats the suffix-denylist protection.
 
-    Called by ``_resolve_cname_chain`` after the suffix check passes.
-    Adds at most two extra DNS queries per hop (A + AAAA), well within
-    the existing hop and concurrency budgets.
+    The function is preserved for callers who already know the name
+    is trusted (e.g. fully suffix-validated chain terminuses chosen
+    by recon's own catalog, not by attacker DNS). New callers must
+    confirm the name's entire CNAME chain has been suffix-validated
+    by the explicit walker first.
+
+    Resolves A and AAAA in parallel; returns True iff at least one
+    resolved address is in public space; returns True (fail-open)
+    when no addresses resolve.
     """
     a_records, aaaa_records = await asyncio.gather(
         _safe_resolve(host, "A"),
@@ -1798,21 +1803,42 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
     with direct A records, or for stale CT entries that no longer
     resolve). Stops at *max_hops* to defend against pathological loops.
 
-    Two-layer attacker-controlled-target defense (v1.9.3.5):
+    **Attacker-controlled-target defense (v1.9.4 — suffix-only):**
 
-    1. **Suffix denylist** (``_is_public_dns_name``) — rejects hops whose
-       name ends in obvious private suffixes (``.local``, ``.corp``,
-       ``.internal``, ``.home.arpa``, ``.onion``, etc.) and IP literals.
-       Suffix-based; cheap; catches the easy case where the attacker
-       points at a clearly-internal name.
+    The walker validates each hop's *name* against the private-suffix
+    denylist (``_is_public_dns_name``). It does NOT resolve A/AAAA
+    during the walk.
 
-    2. **Resolved-address check** (``_hop_resolves_publicly``) — for hops
-       that pass the suffix check, resolve the target's A and AAAA
-       records and refuse to walk further if every resolved address is
-       in private / loopback / link-local / reserved space. Catches the
-       harder case where the attacker points at a publicly-named host
-       whose split-horizon resolution lands inside the operator's
-       private network. Adds at most two DNS queries per accepted hop.
+    Why suffix-only: the v1.9.3.5 design called for a second
+    resolved-address check (``_hop_resolves_publicly``) on top of the
+    suffix denylist, intended to catch attacker-controlled
+    public-suffix names whose split-horizon resolution lands inside
+    the operator's private network. A security audit established
+    that calling A/AAAA on an intermediate hop causes the recursive
+    resolver to chase deeper CNAMEs internally while answering —
+    potentially querying private/internal names *before* the walker
+    has applied its suffix denylist to those deeper hops. That is
+    the original CNAME-chain-leakage vulnerability the chain walker
+    was supposed to prevent.
+
+    The split-horizon protection that v1.9.3.5 added is therefore
+    removed in v1.9.4. The suffix denylist alone is the right
+    primary defense: any attacker pattern that points at a clearly
+    private suffix (.local, .corp, .internal, etc.) is rejected
+    without a single A/AAAA query, and any attacker pattern that
+    points at a publicly-suffixed name whose resolved IP is private
+    (the split-horizon case) is no longer chased — because we don't
+    chase by A/AAAA at all during the walk.
+
+    The CNAME chain walker queries CNAME records only. CNAME queries
+    do not cause recursive resolvers to chase further records; they
+    return the immediate CNAME or nothing. This is the safe primitive.
+
+    A future patch may add a terminus-only A/AAAA check (resolve
+    A/AAAA only after the entire chain has been suffix-validated, and
+    only on the last hop) if the split-horizon attack pattern proves
+    common enough to warrant the bounded leak risk. v1.9.4 errs on
+    the side of zero internal-DNS leakage.
 
     Either check failing halts the walk at that hop without recording
     it: the operator's resolver is not pointed at internal/split-horizon
@@ -1834,14 +1860,16 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
                 target,
             )
             break
-        if not await _hop_resolves_publicly(target):
-            logger.debug(
-                "CNAME chain walker: refusing hop %s -> %s (all resolved "
-                "addresses are in private/loopback/link-local/reserved space)",
-                cur,
-                target,
-            )
-            break
+        # v1.9.4: removed the A/AAAA resolution check that v1.9.3.5
+        # added here. A security audit established that calling
+        # _hop_resolves_publicly on an attacker-influenced target
+        # causes the recursive resolver to chase deeper CNAMEs while
+        # answering A/AAAA — potentially querying private/internal
+        # names before this walker has applied its suffix denylist
+        # to those deeper hops. The CNAME-only walk (above) is the
+        # safe primitive: CNAME queries do not cause recursive
+        # resolvers to chase further records. Suffix denylist alone
+        # is the primary defense.
         chain.append(target)
         cur = target
     return chain
@@ -1983,9 +2011,7 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
             # loop. The chain is real (wildcard echoes were filtered upstream)
             # and didn't match any cname_target rule, so it is a candidate
             # for a new fingerprint.
-            ctx.unclassified_cname_chains.append(
-                UnclassifiedCnameChain(subdomain=host, chain=tuple(chain))
-            )
+            ctx.unclassified_cname_chains.append(UnclassifiedCnameChain(subdomain=host, chain=tuple(chain)))
             continue
 
         primary = application if application is not None else infrastructure
@@ -2058,12 +2084,8 @@ class DNSSource:
             )
 
         surface_tuple = tuple(sorted(ctx.surface_attributions, key=lambda s: s.subdomain))
-        unclassified_tuple = tuple(
-            sorted(ctx.unclassified_cname_chains, key=lambda u: u.subdomain)
-        )
-        chain_motifs_tuple = tuple(
-            sorted(ctx.chain_motifs, key=lambda m: (m.subdomain, m.motif_name))
-        )
+        unclassified_tuple = tuple(sorted(ctx.unclassified_cname_chains, key=lambda u: u.subdomain))
+        chain_motifs_tuple = tuple(sorted(ctx.chain_motifs, key=lambda m: (m.subdomain, m.motif_name)))
 
         if ctx.services:
             return SourceResult(

@@ -88,11 +88,7 @@ class Hyperedge:
 def _slug_to_parent_vendor() -> dict[str, str]:
     """Return ``{slug: parent_vendor}`` for fingerprints with the
     metadata populated."""
-    return {
-        fp.slug: fp.parent_vendor
-        for fp in load_fingerprints()
-        if fp.parent_vendor is not None
-    }
+    return {fp.slug: fp.parent_vendor for fp in load_fingerprints() if fp.parent_vendor is not None}
 
 
 def _normalize_org(name: str) -> str:
@@ -160,9 +156,7 @@ def _parent_vendor_hyperedges(
         if len(members) < 2:
             continue
         members_sorted = tuple(sorted(members))[:MAX_MEMBERS_PER_HYPEREDGE]
-        out.append(
-            Hyperedge(edge_type="parent_vendor", key=vendor, members=members_sorted)
-        )
+        out.append(Hyperedge(edge_type="parent_vendor", key=vendor, members=members_sorted))
     return out
 
 
@@ -185,9 +179,7 @@ def _baseline_slugs(
     for slug_set in domain_slugs.values():
         for slug in slug_set:
             counts[slug] = counts.get(slug, 0) + 1
-    return frozenset(
-        slug for slug, c in counts.items() if c / n > _BASELINE_FREQ_THRESHOLD
-    )
+    return frozenset(slug for slug, c in counts.items() if c / n > _BASELINE_FREQ_THRESHOLD)
 
 
 def _shared_slugs_hyperedges(

@@ -117,4 +117,4 @@ class TestProfilesResource:
             assert isinstance(entry["category_boost"], dict)
             assert isinstance(entry["signal_boost"], dict)
             for v in entry["category_boost"].values():
-                assert isinstance(v, (int, float))
+                assert isinstance(v, int | float)

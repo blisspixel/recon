@@ -437,9 +437,7 @@ class TestChainMotifsRoundTrip:
         )
         restored = tenant_info_from_dict(tenant_info_to_dict(info))
         assert restored.cert_summary is not None
-        assert restored.cert_summary.wildcard_sibling_clusters == (
-            ("a.example.com", "b.example.com"),
-        )
+        assert restored.cert_summary.wildcard_sibling_clusters == (("a.example.com", "b.example.com"),)
         assert len(restored.cert_summary.deployment_bursts) == 1
         burst = restored.cert_summary.deployment_bursts[0]
         assert burst.span_seconds == 30

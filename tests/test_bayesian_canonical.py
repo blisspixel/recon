@@ -131,9 +131,7 @@ class TestBurglaryAlarmCanonical:
             priors_override={},
         )
         alarm = next(p for p in result.posteriors if p.name == "alarm")
-        assert abs(alarm.posterior - 0.7396) < 1e-3, (
-            f"Expected ~0.7396, got {alarm.posterior}"
-        )
+        assert abs(alarm.posterior - 0.7396) < 1e-3, f"Expected ~0.7396, got {alarm.posterior}"
         # Textbook hard-evidence answer: 0.761.
         assert abs(alarm.posterior - 0.761) < 0.025
 
@@ -176,8 +174,7 @@ class TestBurglaryAlarmCanonical:
         # When earthquake is highly probable a priori, alarm is well-
         # explained by it and the burglary posterior drops.
         assert b_explained < b_baseline, (
-            f"Explaining away failed: baseline={b_baseline:.4f}, "
-            f"with high-eq-prior={b_explained:.4f}"
+            f"Explaining away failed: baseline={b_baseline:.4f}, with high-eq-prior={b_explained:.4f}"
         )
 
     def test_no_evidence_returns_priors(self, burglary_net_yaml: Path) -> None:

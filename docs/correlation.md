@@ -898,6 +898,142 @@ re-examined. v1.9.3 makes that principle concrete on the one node
 v1.9.0 surfaced as broken; v1.9.6 codifies it as standing
 discipline for future CPT changes.
 
+#### 4.8.10 Failure-mode catalog: hardening pattern fingerprints
+
+The v1.9.4 milestone validated the asymmetric-likelihood design
+property end-to-end against a 50-domain hardened-adversarial
+corpus stratified across five categories of public-DNS posture
+(see `validation/v1.9.4-calibration.md` for full methodology and
+the per-node trend table). Each category produces a distinctive
+sparse-rate fingerprint at the Bayesian layer.
+
+This subsection documents those fingerprints so a defender can
+read across from **the hardening posture they have or want** to
+**what recon's panel will and will not infer**. The mapping is
+descriptive — recon's claims about a domain reflect what its
+public DNS surface reveals, not a maturity verdict.
+
+The "Survival vs soft corpus" column is the high-confidence
+survival ratio (hardened high-conf% / soft high-conf%) per node
+on the v1.9.4 sample. Values below 1.0 mean the layer correctly
+backs off on that node when the public channel narrows; values
+near 1.0 mean the signal stays visible regardless of hardening.
+
+##### Pattern A — Heavy edge-proxied apexes
+
+| Node | Sparse rate | Survival vs soft corpus | What the panel reports |
+|---|---|---|---|
+| `cdn_fronting` | 50% | n/a (category-level) | High-confidence fire on the CDN that *is* the front; the layer correctly names the surface visible to passive DNS. |
+| `m365_tenant` | 60% | — | Moderate hedging; partial visibility through MX / SPF / verification TXT records that bypass the edge. |
+| `email_security_policy_enforcing` | 0% | — | DMARC policy is a public TXT record; the edge doesn't hide it. Fires routinely. |
+| `email_gateway_present` | 90% | — | Gateways rarely route through CF/Akamai/Fastly at MX-resolve time; nearly always sparse. |
+| `okta_idp` | 90% | — | Hub probes blocked or hidden behind the edge; nearly always sparse. |
+
+**Defensive read for the edge-proxied operator:** the CDN front is
+inferable from passive DNS (your CNAME chain terminates there); the
+identity / cloud stack behind it stays hidden when subdomains also
+front through the same CDN. The hardening is doing what it should.
+
+##### Pattern B — Privacy-focused organizations
+
+| Node | Sparse rate | Survival vs soft corpus | What the panel reports |
+|---|---|---|---|
+| `email_gateway_present` | 100% | — | Privacy orgs minimize SaaS verification surface; gateway visibility consistently absent. |
+| `aws_hosting` | 60% | — | Moderate sparsity; some privacy orgs run public-facing AWS Cloudfront. |
+| `federated_identity` | 80% | — | Federation indicators (OIDC discovery, etc.) intentionally minimized. |
+| `google_workspace_tenant` | 40% | — | GWS verification TXT sometimes published (mail signing); often sparse. |
+| `email_security_policy_enforcing` | 20% | — | Privacy orgs almost always publish enforcing DMARC. Fires routinely. |
+
+**Defensive read for the privacy-focused operator:** strict DMARC
+policy is still publicly inferable (and is the right defensive
+posture); identity / cloud signals are absent or sparse as
+intended.
+
+##### Pattern C — Major financial institutions
+
+| Node | Sparse rate | Survival vs soft corpus | What the panel reports |
+|---|---|---|---|
+| `aws_hosting` | 100% | — | Financial institutions on this sample do not surface AWS-specific apex evidence. |
+| `m365_tenant` | 20% | — | Heavy M365 use; verification + MX evidence consistently present. |
+| `cdn_fronting` | 10% | — | CDN-fronted public sites are the norm; the layer fires high-confidence. |
+| `google_workspace_tenant` | 100% | — | Financial orgs in this sample are M365-only; GWS uniformly sparse. |
+| `email_security_policy_enforcing` | 0% | — | Enforcing DMARC universal in this sample. |
+
+**Defensive read for the financial-services operator:** the public
+fingerprint is "M365 + CDN-fronted + strong DMARC" with everything
+else sparse. This is the strongest available posture for
+fingerprint disclosure while running an enterprise M365 stack;
+recon reports exactly that.
+
+##### Pattern D — Defense / national-security adjacent
+
+| Node | Sparse rate | Survival vs soft corpus | What the panel reports |
+|---|---|---|---|
+| `google_workspace_tenant` | 80% | — | Defense orgs in this sample are AWS / M365 / on-prem; minimal GWS, with two chains the v1.9.4 suffix-only CNAME walker traverses past split-horizon hops. |
+| `aws_hosting` | 80% | — | Some defense-cloud presence on AWS gov regions surfaces. |
+| `federated_identity` | 80% | — | Most identity surface intentionally suppressed publicly; one additional defense chain surfaces a federated-identity binding under the v1.9.4 suffix-only walker. |
+| `okta_idp` | 100% | — | No Okta-specific evidence in this sample's defense subset. |
+| `email_security_policy_enforcing` | 20% | — | Enforcing DMARC mostly published. |
+
+**Defensive read for the defense-contractor operator:** the public
+fingerprint is "AWS / M365 footprint visible at the apex level;
+identity stack hidden". The layer correctly reports the limit; an
+attacker scanning passively gets the surface, not the stack
+behind it.
+
+##### Pattern E — Major government agencies
+
+| Node | Sparse rate | Survival vs soft corpus | What the panel reports |
+|---|---|---|---|
+| `m365_tenant` | 20% | — | Federal agencies heavily M365 (and `.gov` policy reinforces). |
+| `google_workspace_tenant` | 100% | — | GWS uniformly absent in this sample. |
+| `cdn_fronting` | 10% | — | CDN-fronted public sites the norm; layer fires high-confidence. |
+| `aws_hosting` | 90% | — | Some agency cloud presence on AWS GovCloud surfaces. |
+| `federated_identity` | 90% | — | Identity stack intentionally hidden. |
+| `okta_idp` | 100% | — | No Okta surfacing in this sample's gov subset. |
+
+**Defensive read for the federal operator:** identical signature
+to the financial-institution category from the layer's perspective
+("M365 + CDN-fronted + strong DMARC, everything else sparse").
+The two categories share defensive posture in public DNS even
+though their internal stacks differ.
+
+##### Cross-cutting findings
+
+- **`email_security_modern_provider` is 100% sparse on every
+  hardened category.** By design — the node has no evidence
+  bindings (v1.9.3 split); it's purely structural CPT propagation.
+  This is the calibrated honesty response, not a defect.
+- **`email_security_policy_enforcing` survives soft → hardened at
+  0.98.** DMARC policy is a public TXT record that defenders
+  *should* publish regardless of other hardening. The layer
+  correctly fires routinely; no posture hides this.
+- **`cdn_fronting` survives at 0.84** with 60% high-confidence on
+  the hardened corpus. The CDN front is part of the hardening
+  posture, not hidden by it; the layer correctly surfaces it.
+- **`email_gateway_present` survives at 0.57** — the cleanest
+  demonstration of the asymmetric-likelihood design. Gateways
+  rarely route through CDN edges at MX-resolve time; the layer
+  correctly retreats when public DNS doesn't carry the evidence.
+
+##### What this catalog does not cover
+
+- **Actively-deceptive DNS posture.** The corpus represents
+  *defensively-hardened* organizations, not orgs that craft
+  misleading CNAMEs to fool fingerprinting. That is a different
+  threat model.
+- **Per-vertical long-tail postures.** The five categories cover
+  the headline hardening patterns. Healthcare-payer / higher-ed /
+  retail / crypto-exchange and similar verticals have their own
+  fingerprints; future calibration passes will extend the
+  catalog as v1.9.10's stratified validation adds the data.
+- **Server-side / internal cloud consumption.** A defender whose
+  hardening posture is "we use GCP for ML internally" gets no
+  GCP signal at all in this catalog because no GCP signal
+  exists in their public DNS. This is the architectural
+  Category-1 limit (see backlog item "Passive-DNS ceiling
+  phrasing" in roadmap.md).
+
 ### 4.8a Worked `--explain-dag` examples (v1.9.0)
 
 The Bayesian layer ships a renderer (`recon_tool/bayesian_dag.py`)

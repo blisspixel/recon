@@ -185,9 +185,7 @@ def _validate_path_with_capture(
     # extends an apex fingerprint with cname_target rules under the same slug
     # and name). Real duplicates flag two distinct services colliding on a slug.
     duplicates = {
-        slug: paths
-        for slug, paths in slug_sources.items()
-        if len(paths) > 1 and len(slug_names.get(slug, set())) > 1
+        slug: paths for slug, paths in slug_sources.items() if len(paths) > 1 and len(slug_names.get(slug, set())) > 1
     }
 
     print()

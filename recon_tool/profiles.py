@@ -335,9 +335,7 @@ def compute_baseline_anomalies(
     from recon_tool.fingerprints import load_fingerprints
 
     slug_to_category: dict[str, str] = {fp.slug: fp.category for fp in load_fingerprints()}
-    detected_categories = {
-        slug_to_category[slug].lower() for slug in detected_slugs if slug in slug_to_category
-    }
+    detected_categories = {slug_to_category[slug].lower() for slug in detected_slugs if slug in slug_to_category}
     detected_motifs = {name.lower() for name in chain_motif_names}
 
     out: list[Observation] = []

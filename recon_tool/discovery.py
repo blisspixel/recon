@@ -214,9 +214,7 @@ def find_candidates(
             if drop_intra_org and is_intra_org(apex, terminal):
                 continue
             suffix = suffix_for(terminal)
-            if drop_intra_org and looks_intra_org_brand(
-                apex, suffix, [{"subdomain": subdomain, "terminal": terminal}]
-            ):
+            if drop_intra_org and looks_intra_org_brand(apex, suffix, [{"subdomain": subdomain, "terminal": terminal}]):
                 continue
             if already_covered(suffix, existing_patterns):
                 continue

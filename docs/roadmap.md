@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.3.10** (subdomain-level surface intelligence visible by default; roadmap restructured to a flat numeric sequence v1.9.4 → v2.0 with QA built into each version).
+Current release: **v1.9.4** (hardened-adversarial validation: 50-domain stratified corpus across 5 hardening postures, 100% spot-check agreement, 64.4% sparse-flag rate, asymmetric-likelihood design property validated; failure-mode catalog added to `correlation.md` §4.8.10; A/AAAA internal-DNS leak fixed in CNAME chain walker; Splunk SPL switched from regex to literal set-membership).
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
@@ -1336,7 +1336,15 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
 - **Portfolio / self-audit batch mode** — `recon batch --self-audit`
   aggregating vertical-baseline hits, anomaly rules, correlation-
   depth distribution, and gateway / sovereignty consistency across
-  many domains in one summary.
+  many domains in one summary. A lightweight agent-side precursor
+  ships today in `AGENTS.md` / `SKILL.md` under the
+  "Family-of-companies / portfolio rollup" workflow — agents
+  synthesize the rollup from per-domain JSON returned by
+  `recon batch --json --include-ecosystem`. Promoting to Python
+  gives deterministic, testable output emitted as schema fields;
+  worth doing once the agent-side rollup has validated the report
+  shape on a private corpus. Operator-supplied apex list in both
+  versions; recon never infers the corporate-family relationship.
 - **Non-MCP graph exports** — Mermaid diagram output for the v1.8
   cluster graph, plus CSV exports for relationship metadata and
   chain motifs.

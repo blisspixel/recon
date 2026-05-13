@@ -85,8 +85,9 @@ def _sample_topological(net: BayesianNetwork, rng: random.Random) -> dict[str, s
     return out
 
 
-def _sample_observations(net: BayesianNetwork, true_state: dict[str, str],
-                          rng: random.Random) -> tuple[list[str], list[str]]:
+def _sample_observations(
+    net: BayesianNetwork, true_state: dict[str, str], rng: random.Random
+) -> tuple[list[str], list[str]]:
     """Given the ground-truth assignment, simulate which evidence
     bindings fire."""
     obs_slugs: list[str] = []
@@ -110,8 +111,9 @@ def _brier(predicted: list[float], outcome: list[int]) -> float:
     return sum((p - o) ** 2 for p, o in zip(predicted, outcome, strict=True)) / len(predicted)
 
 
-def _reliability_table(predicted: list[float], outcome: list[int],
-                        bins: int = 10) -> list[tuple[float, float, float, int]]:
+def _reliability_table(
+    predicted: list[float], outcome: list[int], bins: int = 10
+) -> list[tuple[float, float, float, int]]:
     """Bin predictions; return (bin_low, bin_high, empirical_freq, count)."""
     width = 1.0 / bins
     buckets: dict[int, list[int]] = defaultdict(list)
@@ -133,8 +135,7 @@ def _reliability_table(predicted: list[float], outcome: list[int],
     return out
 
 
-def _expected_calibration_error(table: list[tuple[float, float, float, int]],
-                                 total: int) -> float:
+def _expected_calibration_error(table: list[tuple[float, float, float, int]], total: int) -> float:
     """Weighted mean of |bin_midpoint - empirical_freq| over bins."""
     if total == 0:
         return 0.0
@@ -147,14 +148,14 @@ def _expected_calibration_error(table: list[tuple[float, float, float, int]],
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--samples", type=int, default=20000,
-                         help="Number of synthetic domains to simulate (default 20000).")
-    parser.add_argument("--seed", type=int, default=1729,
-                         help="RNG seed for reproducibility (default 1729).")
-    parser.add_argument("--node", type=str, default=None,
-                         help="Restrict reliability table to one node. Default: all nodes.")
-    parser.add_argument("--bins", type=int, default=10,
-                         help="Number of probability bins (default 10).")
+    parser.add_argument(
+        "--samples", type=int, default=20000, help="Number of synthetic domains to simulate (default 20000)."
+    )
+    parser.add_argument("--seed", type=int, default=1729, help="RNG seed for reproducibility (default 1729).")
+    parser.add_argument(
+        "--node", type=str, default=None, help="Restrict reliability table to one node. Default: all nodes."
+    )
+    parser.add_argument("--bins", type=int, default=10, help="Number of probability bins (default 10).")
     args = parser.parse_args()
 
     net = load_network()
@@ -167,9 +168,7 @@ def main() -> int:
     by_node: dict[str, tuple[list[float], list[int], list[tuple[float, float]], list[bool]]] = {
         n.name: ([], [], [], []) for n in net.nodes
     }
-    fired_names_per_node: dict[str, set[str]] = {
-        n.name: {ev.name for ev in n.evidence} for n in net.nodes
-    }
+    fired_names_per_node: dict[str, set[str]] = {n.name: {ev.name for ev in n.evidence} for n in net.nodes}
 
     print(f"Simulating {args.samples} synthetic domains under the v1.9 network...")
     for i in range(args.samples):

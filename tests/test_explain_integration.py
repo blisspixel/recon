@@ -411,7 +411,7 @@ class TestSimulateHardening:
         assert "score_delta" in data
         assert "applied_fixes" in data
         assert "remaining_gaps" in data
-        assert isinstance(data["score_delta"], (int, float))
+        assert isinstance(data["score_delta"], int | float)
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)

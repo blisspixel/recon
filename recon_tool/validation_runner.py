@@ -45,10 +45,7 @@ def summarize_batch_results(results: list[dict[str, Any]]) -> dict[str, Any]:
         str(insight) for entry in successes for insight in (entry.get("insights") or []) if insight
     )
     sparse_counter = Counter(
-        sparse
-        for entry in successes
-        for sparse in [_first_sparse_insight(entry)]
-        if sparse is not None
+        sparse for entry in successes for sparse in [_first_sparse_insight(entry)] if sparse is not None
     )
 
     return {
@@ -78,10 +75,7 @@ def summarize_batch_results(results: list[dict[str, Any]]) -> dict[str, Any]:
 def compare_batch_summaries(before: dict[str, Any], after: dict[str, Any]) -> dict[str, int]:
     """Compare two batch summaries on the core triage counters."""
     keys = ("total", "successes", "errors", "partials", "degraded")
-    return {
-        f"{key}_delta": int(after.get(key, 0)) - int(before.get(key, 0))
-        for key in keys
-    }
+    return {f"{key}_delta": int(after.get(key, 0)) - int(before.get(key, 0)) for key in keys}
 
 
 def _result_domain(entry: dict[str, Any]) -> str:

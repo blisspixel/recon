@@ -232,9 +232,7 @@ class TestInstallRefusals:
     def test_force_overwrites_existing_recon_block(self, tmp_path: Path) -> None:
         target = tmp_path / "mcp.json"
         target.write_text(
-            json.dumps(
-                {"mcpServers": {"recon": {"command": "old-binary", "args": ["mcp"]}}}
-            ),
+            json.dumps({"mcpServers": {"recon": {"command": "old-binary", "args": ["mcp"]}}}),
             encoding="utf-8",
         )
 
@@ -542,9 +540,7 @@ class TestCLI:
     def test_install_with_force_replaces(self, tmp_path: Path) -> None:
         target = tmp_path / "mcp.json"
         target.write_text(
-            json.dumps(
-                {"mcpServers": {"recon": {"command": "old", "args": ["mcp"]}}}
-            ),
+            json.dumps({"mcpServers": {"recon": {"command": "old", "args": ["mcp"]}}}),
             encoding="utf-8",
         )
         result = runner.invoke(
@@ -584,10 +580,13 @@ class TestAtomicWrite:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         target = tmp_path / "mcp.json"
-        original = json.dumps(
-            {"mcpServers": {"sibling": {"command": "untouched", "args": ["serve"]}}},
-            indent=2,
-        ) + "\n"
+        original = (
+            json.dumps(
+                {"mcpServers": {"sibling": {"command": "untouched", "args": ["serve"]}}},
+                indent=2,
+            )
+            + "\n"
+        )
         target.write_text(original, encoding="utf-8")
 
         # Simulate a disk-full / network-drop / antivirus-block on the

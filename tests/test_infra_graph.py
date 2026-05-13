@@ -161,9 +161,7 @@ class TestCaps:
         # surface at most MAX_CLUSTERS even if more exist.
         entries = []
         for cluster_idx in range(MAX_CLUSTERS + 5):
-            entries.append(
-                _entry([f"c{cluster_idx}-a.example.com", f"c{cluster_idx}-b.example.com"])
-            )
+            entries.append(_entry([f"c{cluster_idx}-a.example.com", f"c{cluster_idx}-b.example.com"]))
         report = build_infrastructure_clusters(entries)
         assert len(report.clusters) <= MAX_CLUSTERS
 

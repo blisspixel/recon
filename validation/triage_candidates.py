@@ -175,14 +175,8 @@ def main() -> None:
     )
     payload = json.dumps(survivors, indent=2)
 
-    covered_drops = sum(
-        1 for g in gaps_data if is_already_covered(str(g.get("suffix", "")), existing)
-    )
-    summary = (
-        f"input: {len(gaps_data)} gaps, "
-        f"existing-patterns dropped: {covered_drops}, "
-        f"survivors: {len(survivors)}"
-    )
+    covered_drops = sum(1 for g in gaps_data if is_already_covered(str(g.get("suffix", "")), existing))
+    summary = f"input: {len(gaps_data)} gaps, existing-patterns dropped: {covered_drops}, survivors: {len(survivors)}"
 
     if args.output is None:
         print(payload)

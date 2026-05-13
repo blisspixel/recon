@@ -193,9 +193,7 @@ class TestMcpToolRegistry:
         from recon_tool.server import mcp
 
         stub_resolve(_info_with_clusters())
-        content, structured = asyncio.run(
-            mcp.call_tool("get_infrastructure_clusters", {"domain": "example.com"})
-        )
+        content, structured = asyncio.run(mcp.call_tool("get_infrastructure_clusters", {"domain": "example.com"}))
         assert content, "expected at least one TextContent payload"
         payload = json.loads(content[0].text)
         assert payload["domain"] == "example.com"
@@ -208,9 +206,7 @@ class TestMcpToolRegistry:
         from recon_tool.server import mcp
 
         stub_resolve(_info_with_clusters())
-        content, _ = asyncio.run(
-            mcp.call_tool("export_graph", {"domain": "example.com"})
-        )
+        content, _ = asyncio.run(mcp.call_tool("export_graph", {"domain": "example.com"}))
         payload = json.loads(content[0].text)
         assert payload["nodes"], "graph nodes should be non-empty"
         assert payload["edges"], "graph edges should be non-empty"
