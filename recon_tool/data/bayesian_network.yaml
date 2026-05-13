@@ -175,13 +175,33 @@ nodes:
       "m365_tenant=absent,google_workspace_tenant=absent,email_gateway_present=absent":    0.05
 
   - name: email_security_policy_enforcing
-    description: "Observable email-authentication policy is enforcing (DMARC reject/quarantine + DKIM + strict SPF + optional MTA-STS enforce)."
+    description: "Observable email-authentication policy is enforcing (DMARC reject/quarantine + strict SPF + optional MTA-STS enforce)."
     # Root node — policy enforcement is provider-independent. Many M365
     # / GWS tenants ship with weak policy (p=none); some self-hosted /
     # gateway-fronted setups enforce strictly. The two claims should
     # not be entangled in the topology.
     # Prior 0.25 reflects published base rates of fully-enforcing DMARC
     # deployment on enterprise apex domains (not corpus-fitted).
+    #
+    # v1.9.6: removed `dkim_present` from the evidence list (it was
+    # `[0.85, 0.30]`, LR ≈ 2.83). Concept: DKIM publication is a
+    # deliverability hygiene signal, not a policy-enforcement signal.
+    # Many domains publish DKIM without enforcing DMARC, so the
+    # 2.83× likelihood ratio overstated the evidence DKIM provides
+    # about the node's actual claim. The v1.9.5 stability report's
+    # (b1) failure (10 of 129 det-positive-HIGH non-sparse
+    # observations had posterior ≈ 0.486, all
+    # `evidence_used = (signal:dkim_present,)` alone) surfaced this
+    # conceptual gap. The corpus-fitting reflex was to lower
+    # `[0.85, 0.30]` to `[0.85, 0.20]` so dkim-only domains would
+    # clear posterior > 0.5; that would have improved the criterion
+    # number while making the node a worse predictor of what its
+    # name says. The right answer was removing the binding — the
+    # node's claim is enforcement, and DKIM doesn't speak to
+    # enforcement. The remaining four bindings (`dmarc_reject`,
+    # `dmarc_quarantine`, `mta_sts_enforce`, `spf_strict`) all
+    # speak directly to it. See CONTRIBUTING.md "CPT-change
+    # discipline" → "Worked example 2" for the worked rejection.
     prior: 0.25
     evidence:
       - signal: dmarc_reject
@@ -190,8 +210,6 @@ nodes:
         likelihood: [0.55, 0.10]
       - signal: mta_sts_enforce
         likelihood: [0.70, 0.05]
-      - signal: dkim_present
-        likelihood: [0.85, 0.30]
       - signal: spf_strict
         likelihood: [0.75, 0.30]
 

@@ -41,9 +41,9 @@ from typing import Any
 
 # Threshold constants — keep here so the verdict table can cite them
 # directly without re-deriving the rationale.
-ECE_MAX_FOR_STABLE = 0.20        # roadmap §v1.9.5 criterion (b) diagnostic
-BRIER_MAX_FOR_STABLE = 0.15      # binary forecast companion to ECE
-FIRING_MIN_FOR_STABLE = 10       # roadmap §v1.9.5 criterion (c)
+ECE_MAX_FOR_STABLE = 0.20  # roadmap §v1.9.5 criterion (b) diagnostic
+BRIER_MAX_FOR_STABLE = 0.15  # binary forecast companion to ECE
+FIRING_MIN_FOR_STABLE = 10  # roadmap §v1.9.5 criterion (c)
 N_ECE_BINS = 10
 # Deterministic-pipeline "high confidence" threshold for slug bindings.
 # Roadmap §v1.9.5 criterion (b1) is phrased "when the deterministic
@@ -83,8 +83,8 @@ class NodeRollup:
     name: str
     total_obs: int = 0
     sparse_obs: int = 0
-    det_positive_obs: int = 0     # ``evidence_used`` non-empty
-    det_silent_obs: int = 0       # ``evidence_used`` empty
+    det_positive_obs: int = 0  # ``evidence_used`` non-empty
+    det_silent_obs: int = 0  # ``evidence_used`` empty
 
     # Criterion (b1): det-positive non-sparse observations whose
     # posterior is > 0.5 AND interval ≠ full [0, 1].
@@ -141,9 +141,7 @@ def _accumulate(
     interval_high = float(obs.get("interval_high", 1.0))
 
     det_positive = len(evidence_used) > 0
-    det_positive_high = det_positive and _has_high_confidence_binding(
-        list(evidence_used), slug_confidences
-    )
+    det_positive_high = det_positive and _has_high_confidence_binding(list(evidence_used), slug_confidences)
 
     if sparse:
         rollup.sparse_obs += 1
@@ -351,9 +349,7 @@ def main() -> int:
     print(f"Combined:        {len(hardened_records) + len(soft_records)} domains\n")
 
     header = (
-        f"{'node':<35} {'firings':>8} {'(c)':>6} "
-        f"{'b1':>10} {'b2':>10} "
-        f"{'brier':>8} {'log':>8} {'ece':>8} {'b/c':>8}"
+        f"{'node':<35} {'firings':>8} {'(c)':>6} {'b1':>10} {'b2':>10} {'brier':>8} {'log':>8} {'ece':>8} {'b/c':>8}"
     )
     print(header)
     print("-" * len(header))
