@@ -106,9 +106,13 @@ def _per_node_aggregate(records: list[dict]) -> dict[str, dict[str, float]]:
 
     A high-confidence posterior is posterior >= 0.85 AND sparse=False.
     """
-    per_node: dict[str, dict[str, list]] = defaultdict(lambda: {
-        "posteriors": [], "sparse": [], "high_conf": [],
-    })
+    per_node: dict[str, dict[str, list]] = defaultdict(
+        lambda: {
+            "posteriors": [],
+            "sparse": [],
+            "high_conf": [],
+        }
+    )
     for d in records:
         for p in d.get("posterior_observations", []) or []:
             name = p["name"]

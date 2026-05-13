@@ -5,6 +5,168 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.5] - 2026-05-13
+
+**v1.9.5 bridge milestone — per-node stability dispositions for the
+v1.9 Bayesian layer.** Decides, does not ship, per-node stability
+criteria for the 9-node v1.9.3+ topology. The atomic EXPERIMENTAL
+label that covered the whole `--fusion` layer through v1.9.4 was
+over-broad: `m365_tenant` and `email_security_policy_enforcing`
+should not share a label. v1.9.5 produces an explicit per-node
+verdict against three behavioral criteria; v2.0 ships with that
+disposition table baked into the network as committed, without a
+`stability` schema field. The field itself enters the schema the
+first time a post-v2.0 patch introduces a node that does not
+immediately qualify as `stable`.
+
+This is the v1.9.5 step of the v1.9.4 → v2.0 linear sequence in
+`docs/roadmap.md`. The deliverable is the verdict report, the
+parametrized regression test, and the disposition decisions — no
+engine changes, no schema changes, one new validation script and
+one new test file.
+
+### Headline verdict
+
+| Verdict | Count | Nodes |
+|---|---|---|
+| **stable** | 7 | `m365_tenant`, `google_workspace_tenant`, `federated_identity`, `email_gateway_present`, `email_security_modern_provider`, `cdn_fronting`, `aws_hosting` |
+| **not yet** | 2 | `okta_idp` (criterion (c) — only 7 firings on the 141-domain combined corpus, threshold 10), `email_security_policy_enforcing` (criterion (b1) — 10 of 129 det-positive-HIGH non-sparse observations have posterior ≤ 0.5, all driven by `signal:dkim_present` alone) |
+
+Both `not yet` nodes carry explicit dispositions in
+`validation/v1.9.5-stability.md`. Neither disposition is *Split*
+or *Remove*; both stay in the network as v2.0 ships.
+
+### Added
+
+- **`validation/v1.9.5-stability.md`** — full per-node verdict
+  report: methodology, per-node table joining the (a) test result
+  with the (b1)(b2)(c) analyzer outputs, prose interpretation for
+  each `stable` cluster, and explicit dispositions for the two
+  `not yet` nodes (`okta_idp`: keep, expand corpus;
+  `email_security_policy_enforcing`: redefine in v1.9.6 with a
+  CPT-change-discipline concept comment, choosing among raising
+  the prior, widening the sparse threshold, or tightening the
+  weak-likelihood signals). Anonymized aggregates only; no
+  per-domain detail.
+- **`validation/compute_node_stability.py`** — analyzer for
+  criterion (b) and (c). Reads the v1.9.4 hardened + soft NDJSON,
+  computes per-node firing count, (b1) ratio (det-positive-HIGH
+  non-sparse → posterior > 0.5), (b2) ratio (det-silent → sparse),
+  Brier score, log-score, and 10-bin ECE. Filters slug bindings by
+  deterministic high-confidence threshold (≥ 0.70); signal
+  bindings are binary. Pure-propagation nodes have criterion (c)
+  marked `n/a`. Output is publicly-reproducible from the corpus
+  NDJSON.
+- **`tests/test_node_stability_criteria.py`** — parametrized
+  regression test for criterion (a) (evidence-response
+  correctness). 20 assertions covering all 9 nodes:
+  bound-evidence sensitivity (any evidence binding raises the
+  node's posterior by ≥ 0.01 from baseline) and unrelated-evidence
+  inertia (a d-separated binding leaves the posterior at baseline
+  within 1e-9). Pure-propagation nodes
+  (`email_security_modern_provider`) get the bound-evidence test
+  via each parent's evidence — the CPT must propagate. Plus two
+  sanity tests pinning root-baseline = prior and directory
+  completeness against the shipped network. The test failing is
+  a regression signal that future patches must satisfy before
+  reaching a release tag.
+
+### Notable findings
+
+- **`email_security_policy_enforcing` (b1) failure is exactly
+  one pattern, 10 times.** Every one of the 10 failing
+  observations has `evidence_used = ('signal:dkim_present',)`
+  and nothing else. With prior 0.25 and likelihood [0.85, 0.30],
+  the resulting posterior is ≈ 0.486 — just below the 0.5
+  threshold. The n_eff threshold for sparse is satisfied by the
+  single binding, so the layer doesn't hedge either. This is the
+  exact calibration gap v1.9.6's CPT-change discipline exists to
+  address: the disagreement is the *signal*, not the fix; the
+  right question is which conceptual claim
+  `policy_enforcing` is making (target population for prior,
+  evidence requirement for non-sparse, or weak-likelihood
+  meaning).
+- **`okta_idp` firing count is corpus-limited, not engine-limited.**
+  All other criteria pass cleanly (b1=7/7, b2=134/134, Brier
+  0.022, ECE 0.144). Okta's public DNS fingerprint is thin; many
+  Okta-using orgs don't surface the `okta` slug. The disposition
+  is to keep the node and expand the validation corpus, not
+  change the engine.
+- **Pure-propagation node criterion-(c) handling.**
+  `email_security_modern_provider` has no direct evidence
+  bindings by design — provider presence is captured entirely
+  through CPT propagation from `m365_tenant`,
+  `google_workspace_tenant`, and `email_gateway_present`. The
+  analyzer marks (c) `n/a` for this node and gates stability on
+  (a) and (b) only. The (a) test exercises propagation from each
+  of the three parents; all three propagate correctly.
+- **Diagnostic calibration metrics are uniformly within
+  threshold.** Every node's ECE is ≤ 0.144 (threshold 0.20) and
+  Brier is ≤ 0.0346 (threshold 0.15). The criterion-(b) failure
+  for `policy_enforcing` is a binary-check failure, not a
+  calibration-error failure; the layer is well-calibrated overall
+  but fails the strict "det-positive HIGH ⇒ posterior > 0.5" gate
+  on the dkim-only pattern.
+
+### Real-company-data discipline
+
+The 141-domain corpus reuses v1.9.4's stratified samples (50
+hardened-adversarial across five postures + 91 soft v1.9.0
+calibration domains). Per the project's no-real-company-data
+policy:
+
+- Corpus files (`v1.9.4-hardened.txt`, `v1.9.0-soft.txt`) and
+  NDJSON results are gitignored.
+- `validation/v1.9.5-stability.md` carries only per-node
+  aggregates — no per-organization detail.
+- The analyzer (`validation/compute_node_stability.py`)
+  anonymizes by design; no domain names print to stdout.
+- The criterion-(a) test uses no corpus data — it operates on
+  synthetic inputs against the shipped network.
+
+### Quality bar verification
+
+- [x] Per-node verdict table in `validation/v1.9.5-stability.md`
+  (one row per node, three columns plus diagnostics; pass requires
+  all three).
+- [x] Numeric backing for criterion (b): per-node Brier score,
+  log-score, ECE on the v1.9.4 corpus, with ECE ≤ 0.20 and Brier
+  ≤ 0.15 thresholds documented (advisory; not gating).
+- [x] Independent-firing threshold (c) explicit: N ≥ 10 from
+  roadmap §v1.9.5; per-node firing count from the v1.9.4 corpus,
+  not a self-report.
+- [x] Criterion-(a) test in code as parametrized pytest test —
+  20 assertions covering both directions (bound-evidence raises,
+  unrelated-evidence inert) across all 9 nodes plus 2 sanity
+  tests.
+- [x] `not yet` verdicts route to specific dispositions before
+  v2.0: `okta_idp` → keep + corpus expansion; `policy_enforcing`
+  → redefine in v1.9.6 with a CPT-change-discipline concept
+  comment.
+- [x] No fast-tracking on numbers alone: `okta_idp` has excellent
+  (b) numbers but fails (c) and remains `not yet`. The threshold
+  is *all three*.
+
+### Tests
+
+- Total: 2314 passed, 1 skipped, 4 deselected (v1.9.4 → v1.9.5:
+  +20 tests from the new `test_node_stability_criteria.py`).
+- Coverage: 83.43% (≥ 80% gate, unchanged).
+- ruff + pyright clean on `recon_tool/` + `tests/`.
+- pre-commit (ruff, ruff-format, pyright, actionlint) clean.
+- `validate_fingerprint.py` 414/414.
+
+### Roadmap
+
+- v1.9.5 bridge milestone **closed**.
+- Next in sequence: v1.9.6 (CPT-change discipline) — the
+  `email_security_policy_enforcing` disposition routes directly
+  into v1.9.6's milestone scope: pick one of the three candidate
+  changes (raise prior / widen sparse threshold / tighten weak
+  likelihoods), document the concept in
+  `bayesian_network.yaml`, and re-run this stability report to
+  confirm (b1) reaches 129/129.
+
 ## [1.9.4] - 2026-05-12
 
 **v1.9.4 bridge milestone — hardened-adversarial behavior validation.**
