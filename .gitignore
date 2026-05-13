@@ -65,6 +65,8 @@ docs/accuracy.md
 !/validation/v1.9.3-calibration.md
 !/validation/v1.9.4-calibration.md
 !/validation/analyze_v19_4_hardened.py
+!/validation/v1.9.5-stability.md
+!/validation/compute_node_stability.py
 # validation/__init__.py — added in v1.9.2 to make ``validation`` a
 # proper package (previously implicit namespace) so static analysis
 # resolves intra-package imports cleanly.
