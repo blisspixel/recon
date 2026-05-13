@@ -159,17 +159,19 @@ class TestRenderDagTextTop3:
         assert "**Top influences (ranked, 2 fired):**" in out
 
     def test_more_than_three_bindings_shows_top_three_with_total(self, network):
-        # Stack five signals on email_security_policy_enforcing
-        # (the only node with 5 bindings in the current network).
+        # Stack four signals on email_security_policy_enforcing
+        # (v1.9.6 removed ``dkim_present`` as a binding, so the node
+        # now has 4 evidence signals; that's still > 3 so the top-3
+        # ranking renders).
         result = infer(
             network,
             [],
-            ["dmarc_reject", "dmarc_quarantine", "mta_sts_enforce", "dkim_present", "spf_strict"],
+            ["dmarc_reject", "dmarc_quarantine", "mta_sts_enforce", "spf_strict"],
             priors_override={},
         )
         out = render_dag_text(network, result, domain="contoso.com")
-        # 5 fired, top 3 shown.
-        assert "(ranked top 3 of 5 fired)" in out
+        # 4 fired, top 3 shown.
+        assert "(ranked top 3 of 4 fired)" in out
 
     def test_llr_appears_with_sign_and_two_decimals(self, network):
         result = infer(network, ["microsoft365"], [], priors_override={})

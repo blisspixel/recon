@@ -91,7 +91,12 @@ _NODE_BINDINGS: dict[str, list[tuple[str, str]]] = {
         ("signal", "dmarc_reject"),
         ("signal", "dmarc_quarantine"),
         ("signal", "mta_sts_enforce"),
-        ("signal", "dkim_present"),
+        # v1.9.6: dkim_present removed as evidence binding — DKIM
+        # publication is a deliverability hygiene signal, not a
+        # policy-enforcement signal. See bayesian_network.yaml
+        # `email_security_policy_enforcing` for the concept comment
+        # and CONTRIBUTING.md "CPT-change discipline" for the worked
+        # rejection of the corpus-fitting alternative.
         ("signal", "spf_strict"),
     ],
     "cdn_fronting": [
@@ -172,15 +177,10 @@ def _baseline_posterior(node_name: str) -> float:
 
 
 @pytest.mark.parametrize(
-    "node_name,bindings",
-    [
-        pytest.param(n, b, id=n)
-        for n, b in {**_NODE_BINDINGS, **_PURE_PROPAGATION_NODES}.items()
-    ],
+    ("node_name", "bindings"),
+    [pytest.param(n, b, id=n) for n, b in {**_NODE_BINDINGS, **_PURE_PROPAGATION_NODES}.items()],
 )
-def test_bound_evidence_raises_posterior(
-    node_name: str, bindings: list[tuple[str, str]]
-) -> None:
+def test_bound_evidence_raises_posterior(node_name: str, bindings: list[tuple[str, str]]) -> None:
     """Adding any bound binding (or parent binding, for
     pure-propagation nodes) strictly raises the node's posterior
     above the no-evidence baseline by at least ``MIN_BOUND_LIFT``.
@@ -189,10 +189,7 @@ def test_bound_evidence_raises_posterior(
     """
     baseline = _baseline_posterior(node_name)
     for kind, name in bindings:
-        if kind == "slug":
-            result = _infer_with({name}, set())
-        else:
-            result = _infer_with(set(), {name})
+        result = _infer_with({name}, set()) if kind == "slug" else _infer_with(set(), {name})
         posterior = _posterior_for(node_name, result)
         assert posterior > baseline + MIN_BOUND_LIFT, (
             f"{node_name}: posterior with {kind}:{name} = {posterior:.4f}, "
@@ -216,10 +213,7 @@ def test_unrelated_evidence_is_inert(node_name: str) -> None:
     """
     baseline = _baseline_posterior(node_name)
     kind, name = _UNRELATED_BINDING_FOR_NODE[node_name]
-    if kind == "slug":
-        result = _infer_with({name}, set())
-    else:
-        result = _infer_with(set(), {name})
+    result = _infer_with({name}, set()) if kind == "slug" else _infer_with(set(), {name})
     posterior = _posterior_for(node_name, result)
     drift = abs(posterior - baseline)
     assert drift < EPSILON_NO_MOVE, (
@@ -240,9 +234,7 @@ def test_baseline_root_posteriors_equal_priors() -> None:
             continue  # descendants have CPT-propagated marginals, not prior
         baseline = _posterior_for(node.name, _BASELINE)
         assert node.prior is not None, f"{node.name} is rootless but no prior"
-        assert abs(baseline - node.prior) < 1e-9, (
-            f"{node.name}: baseline {baseline:.6f} != prior {node.prior:.6f}"
-        )
+        assert abs(baseline - node.prior) < 1e-9, f"{node.name}: baseline {baseline:.6f} != prior {node.prior:.6f}"
 
 
 def test_node_bindings_directory_is_complete() -> None:
@@ -261,6 +253,5 @@ def test_node_bindings_directory_is_complete() -> None:
         "_NODE_BINDINGS or _PURE_PROPAGATION_NODES with their evidence."
     )
     assert not extra, (
-        f"node(s) {sorted(extra)} declared in test but not in "
-        "bayesian_network.yaml — clean up the test directory."
+        f"node(s) {sorted(extra)} declared in test but not in bayesian_network.yaml — clean up the test directory."
     )

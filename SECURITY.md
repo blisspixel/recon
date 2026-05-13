@@ -24,6 +24,17 @@ If you discover a security vulnerability in recon, please report it responsibly.
 - **Assessment:** Within 7 days
 - **Fix or mitigation:** Best effort, typically within 30 days for confirmed vulnerabilities
 
+## Closed audit findings
+
+Findings reported by external audits, scanners, or security reviews are
+tracked with closure receipts in
+[`docs/security-audit-resolutions.md`](docs/security-audit-resolutions.md).
+The file is keyed by *topic* rather than vendor-specific ID so the record
+stays portable across audit tools, and it includes file:line receipts
+plus closure commit SHAs for verification. If a scanner reports a
+finding listed there as open, the closure status documented in that file
+is authoritative — the scanner is likely lagging the repo.
+
 ## Scope
 
 This policy covers the `recon-tool` Python package as distributed on PyPI,

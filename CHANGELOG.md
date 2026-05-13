@@ -5,6 +5,169 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.6] - 2026-05-13
+
+**v1.9.6 bridge milestone — CPT-change discipline (concept, not
+parameter).** Ships the discipline that distinguishes "the corpus
+disagrees, so the number must be wrong" (corpus-fitting, prohibited)
+from "the corpus disagrees, so the topology must be asking the wrong
+question" (concept-driven, the right cycle). Bundles the first
+canonical application: the v1.9.5 `email_security_policy_enforcing`
+"not yet" disposition closes by removing `dkim_present` as an
+evidence binding — DKIM publication is a deliverability hygiene
+signal, not a policy-enforcement signal.
+
+This is the v1.9.6 step of the v1.9.4 → v2.0 linear sequence in
+`docs/roadmap.md`. Deliverables: the discipline in `CONTRIBUTING.md`,
+a PR-template prompt that surfaces the discipline at review time,
+the audit confirmation that no automated CPT-fitting tooling has
+emerged, the `policy_enforcing` redefinition with its concept
+comment in the YAML, the stability-update delta report, and the
+audit-resolution document closing four external-audit findings.
+
+### Headline verdict change
+
+`email_security_policy_enforcing` v1.9.5 `not yet` → v1.9.6
+**stable**. Binary criterion (b1) goes from 119/129 to 119/119;
+criterion (b2) eligible set grows by 10 as the dkim-only domains
+correctly move to det-silent + sparse. Total stability verdict count:
+**8 stable, 1 not yet** (`okta_idp`, unchanged — corpus-limited).
+
+### Added
+
+- **`CONTRIBUTING.md` "CPT-change discipline (v1.9.6+)" section.**
+  Worked examples (v1.9.3 surgery on `email_security_strong`; v1.9.6
+  surgery on `email_security_policy_enforcing`), anti-pattern catalog
+  (4 reviewer rejection examples), decision tree, and the concept-
+  comment requirement. Stays terse; the rubric makes future
+  contributors pause before number-driven CPT changes.
+- **`.github/pull_request_template.md`** — new root-level default PR
+  template (the existing `PULL_REQUEST_TEMPLATE/fingerprint.md` is
+  preserved for fingerprint-only PRs via the `?template=` URL
+  parameter). Carries the CPT-change-discipline non-blocking
+  checkbox plus the fingerprint, no-real-company-data, and
+  no-Claude-trailer reviewer prompts. The checkbox is the
+  conversation starter, not a CI gate — reviewer judgement is the
+  enforcement.
+- **`validation/v1.9.6-stability-update.md`** — short delta report
+  against `v1.9.5-stability.md`, showing the per-metric movement on
+  `email_security_policy_enforcing` and confirming all other nodes'
+  verdicts unchanged. Includes "what this does not validate" notes.
+- **`docs/security-audit-resolutions.md`** — closure record for
+  external audit findings. Keyed by *topic* rather than vendor-
+  specific ID so the record is portable across audit tools. Four
+  initial entries closing (HIGH) MCP doctor/install shadow-load via
+  v1.9.3.4, (MEDIUM) A/AAAA CNAME validation leak via v1.9.4,
+  (MEDIUM) original CNAME chain walking via v1.9.3.5+v1.9.4
+  mitigation, (INFORMATIONAL) Splunk regex-slug example via v1.9.4.
+  Each entry cites the closure commit SHA, the pinning test, and a
+  file:line receipt against current code. SECURITY.md gets a
+  forward pointer.
+
+### Changed — engine
+
+- **`recon_tool/data/bayesian_network.yaml`:
+  `email_security_policy_enforcing` evidence list shrinks from 5
+  bindings to 4.** Removed `signal: dkim_present` (was
+  `likelihood: [0.85, 0.30]`). Concept comment in the YAML cites the
+  v1.9.5 stability report finding (10/129 b1 failures, all
+  `evidence_used = (signal:dkim_present,)` alone, producing posterior
+  ≈ 0.486 from a single weak-LR signal) and explains why the right
+  fix is binding removal rather than likelihood retuning:
+
+  > "The corpus-fitting reflex was to lower the likelihood for the
+  > absent case from 0.30 to 0.20, lifting the dkim-only posterior
+  > to 0.59. That would have improved the criterion number while
+  > making the node a worse predictor of what its name says. The
+  > right answer was removing the binding — the node's claim is
+  > enforcement, and DKIM doesn't speak to enforcement."
+
+  Node description also tightened: "Observable email-authentication
+  policy is enforcing (DMARC reject/quarantine + strict SPF +
+  optional MTA-STS enforce)." — removed "+ DKIM" since DKIM is no
+  longer evidence.
+
+- **`tests/test_node_stability_criteria.py`:
+  `email_security_policy_enforcing` binding list mirrored** — the
+  parametrized test's directory must stay in sync with the YAML so
+  the directory-completeness sanity check passes. Inline comment in
+  the test file cross-references the YAML concept comment.
+
+### Notable findings
+
+- **The redefinition improves the layer's honesty, not just the
+  criterion number.** The 10 dkim-only domains in the v1.9.5
+  corpus genuinely don't have an enforcing posture (DKIM alone,
+  no DMARC, no MTA-STS, no strict SPF). The v1.9.5 layer reported
+  them with posterior ≈ 0.486 and non-sparse — confidently
+  uncertain, in a way that hurts the (b1) criterion. The v1.9.6
+  layer reports them sparse=true with no firings — explicitly
+  hedged. Both criterion (b1) and the layer's truthfulness
+  improve simultaneously.
+- **Diagnostic ECE rises slightly (0.128 → 0.154) — this is a
+  numerator artifact, not a regression.** Removing 10
+  well-classified non-sparse observations from a small eligible
+  set raises per-bin variance. Brier improves (0.0346 → 0.0331).
+  Both numbers stay comfortably below the 0.20 / 0.15 advisory
+  thresholds. The headline verdict change (not yet → stable) is
+  driven by the (b1) binary criterion, not by these diagnostics.
+- **Audit-finding closure documentation pattern.** The
+  `docs/security-audit-resolutions.md` file is keyed by topic
+  rather than audit-tool ID so it stays portable. Scanners that
+  re-flag a closed finding (because they trace introduction
+  commits but not subsequent fix commits) get authoritatively
+  answered by the file. Closure precedence is documented in the
+  file's process-notes footer.
+
+### Real-company-data discipline
+
+- Reuses the v1.9.4 / v1.9.5 corpus; no new corpus runs needed for
+  the engine-isolated re-inference. The re-inference uses saved
+  evidence (slugs + signals) from the gitignored NDJSON, so the
+  v1.9.6 stability comparison is fully isolated from upstream DNS
+  drift.
+- `docs/security-audit-resolutions.md` uses generic placeholder
+  hostnames (`internal.example`, `attacker.example`) — no real
+  internal infrastructure of any organization, consistent with the
+  project's no-real-company-data policy.
+
+### Quality bar verification
+
+- [x] **Worked example in CONTRIBUTING.md** — v1.9.3 surgery is the
+  historical case; v1.9.6 surgery on `policy_enforcing` is the
+  live case shipping in this release.
+- [x] **PR-template addition** — non-blocking CPT-change-discipline
+  checkbox added to a new root-level
+  `.github/pull_request_template.md`.
+- [x] **Anti-pattern catalog** — four worked reviewer rejections in
+  `CONTRIBUTING.md` (corpus-rate tuning without concept comment,
+  ECE-driven likelihood adjustment, priors-override
+  miscalibration patch, automated CPT fitting).
+- [x] **No automated CPT-fitting tooling** — confirmed by grep for
+  `def (learn_cpt|fit_cpt|auto_tune|optimize_cpt|empirical_bayes|
+  fit_likelihood|tune_likelihood)` across the repo (zero matches)
+  and for write-paths against `bayesian_network.yaml` (zero
+  matches). The audit IS the discipline, not a CI test.
+
+### Tests
+
+- Total: 2314 passed, 1 skipped, 4 deselected (unchanged test count
+  — the v1.9.6 fix is a data-file change; the criterion-(a) test's
+  binding directory updates without adding new tests).
+- Coverage: 83.43% (≥ 80% gate, unchanged).
+- ruff + pyright clean on `recon_tool/` + `tests/` + `validation/`.
+- pre-commit (ruff, ruff-format, pyright, actionlint) clean.
+- `validate_fingerprint.py` 414/414.
+
+### Roadmap
+
+- v1.9.6 bridge milestone **closed**.
+- Next in sequence: v1.9.7 (metadata-coverage gate flip — replace
+  the percentage threshold with a binary "every detection in
+  identity/security/infrastructure has a non-empty description"
+  presence check; flip from advisory to enforcing once backfill
+  reaches zero).
+
 ## [1.9.5] - 2026-05-13
 
 **v1.9.5 bridge milestone — per-node stability dispositions for the

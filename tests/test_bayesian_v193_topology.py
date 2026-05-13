@@ -58,12 +58,15 @@ def test_policy_enforcing_is_root_with_policy_signals(network):
     node = next(n for n in network.nodes if n.name == "email_security_policy_enforcing")
     assert node.parents == (), "policy enforcement must be provider-independent"
     bindings = {ev.name for ev in node.evidence}
-    # The five policy signals carried over from v1.9.0.
+    # The four policy-enforcement signals after v1.9.6 removed
+    # ``dkim_present`` (DKIM publication is a deliverability hygiene
+    # signal, not a policy-enforcement signal — see the YAML concept
+    # comment on this node and CONTRIBUTING.md "CPT-change discipline
+    # → Worked example 2").
     assert bindings == {
         "dmarc_reject",
         "dmarc_quarantine",
         "mta_sts_enforce",
-        "dkim_present",
         "spf_strict",
     }
 
@@ -104,16 +107,23 @@ def test_modern_provider_does_not_move_on_policy_signals(network):
 
 
 def test_policy_enforcing_responds_to_policy_signals(network):
-    """The policy_enforcing posterior moves up when DMARC / DKIM / SPF /
-    MTA-STS fire."""
+    """The policy_enforcing posterior moves up when DMARC / SPF / MTA-STS
+    fire, and stays at baseline when only ``dkim_present`` fires (no
+    longer a binding as of v1.9.6).
+    """
     no_evidence = _posterior(network, [], [], "email_security_policy_enforcing")
     with_dmarc_reject = _posterior(network, [], ["dmarc_reject"], "email_security_policy_enforcing")
     with_dkim = _posterior(network, [], ["dkim_present"], "email_security_policy_enforcing")
     with_mta_sts = _posterior(network, [], ["mta_sts_enforce"], "email_security_policy_enforcing")
+    with_spf = _posterior(network, [], ["spf_strict"], "email_security_policy_enforcing")
 
     assert with_dmarc_reject > no_evidence + 0.30
-    assert with_dkim > no_evidence + 0.05
     assert with_mta_sts > no_evidence + 0.10
+    assert with_spf > no_evidence + 0.05
+    # v1.9.6: dkim_present is no longer a binding — it now acts as
+    # unrelated evidence for policy_enforcing, so the posterior must
+    # stay at baseline within numerical tolerance.
+    assert abs(with_dkim - no_evidence) < 1e-9
 
 
 def test_policy_enforcing_does_not_move_on_provider_slugs(network):
