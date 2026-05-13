@@ -45,9 +45,7 @@ def test_schema_is_valid_json_schema_2020_12(schema: dict) -> None:
     assert isinstance(schema.get("required"), list)
 
 
-def test_every_output_key_appears_in_schema_properties(
-    schema: dict, fixture_payload: dict
-) -> None:
+def test_every_output_key_appears_in_schema_properties(schema: dict, fixture_payload: dict) -> None:
     """Drift guard: a new field in JSON output without a schema entry is a bug."""
     schema_props = set(schema["properties"].keys())
     output_keys = set(fixture_payload.keys())
@@ -58,9 +56,7 @@ def test_every_output_key_appears_in_schema_properties(
     )
 
 
-def test_every_schema_required_field_appears_in_output(
-    schema: dict, fixture_payload: dict
-) -> None:
+def test_every_schema_required_field_appears_in_output(schema: dict, fixture_payload: dict) -> None:
     """Drift guard: a required schema field that the formatter never emits is a bug."""
     required = set(schema["required"])
     output_keys = set(fixture_payload.keys())

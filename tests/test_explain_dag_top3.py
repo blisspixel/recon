@@ -176,6 +176,7 @@ class TestRenderDagTextTop3:
         out = render_dag_text(network, result, domain="contoso.com")
         # Format: "LLR +3.46" — signed, two-decimal.
         import re
+
         assert re.search(r"LLR [+-]\d+\.\d{2}", out), "LLR must be signed with two decimal places"
 
     def test_influence_percentage_appears(self, network):

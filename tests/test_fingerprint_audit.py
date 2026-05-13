@@ -103,11 +103,7 @@ def test_audit_output_formats_summary_and_entries() -> None:
             DetectionRule(type="txt", pattern="^notion-verification-code"),
         ),
     )
-    entries = audit_multi_detection_fingerprints(
-        (
-            fp,
-        )
-    )
+    entries = audit_multi_detection_fingerprints((fp,))
 
     payload = format_fingerprint_audit_dict(entries)
     rendered = render_fingerprint_audit_markdown(entries)

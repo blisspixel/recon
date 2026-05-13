@@ -206,12 +206,14 @@ class TestFallbackChain:
         from recon_tool.ct_cache import ct_cache_put
 
         cached_summary = CertSummary(
-            cert_count=42, issuer_diversity=2, issuance_velocity=5,
-            newest_cert_age_days=1, oldest_cert_age_days=120,
+            cert_count=42,
+            issuer_diversity=2,
+            issuance_velocity=5,
+            newest_cert_age_days=1,
+            oldest_cert_age_days=120,
             top_issuers=("DigiCert",),
         )
-        ct_cache_put("example.com", ["api.example.com", "auth.example.com"],
-                     cached_summary, "certspotter")
+        ct_cache_put("example.com", ["api.example.com", "auth.example.com"], cached_summary, "certspotter")
 
         # Both providers return empty success (no exception, no data).
         mock_crtsh = MagicMock()
@@ -250,9 +252,7 @@ class TestFallbackChain:
         assert ctx.ct_provider_used == "crt.sh (cached)"
 
     @pytest.mark.asyncio
-    async def test_empty_providers_no_cache_records_soft_attribution(
-        self, tmp_path, monkeypatch
-    ):
+    async def test_empty_providers_no_cache_records_soft_attribution(self, tmp_path, monkeypatch):
         """v1.8.1 — when all providers return empty AND no cache exists,
         the panel still attributes to the first provider that responded.
         Better than leaving ct_provider_used unset (which would suggest

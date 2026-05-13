@@ -69,8 +69,7 @@ def main() -> None:
         type=Path,
         required=True,
         help=(
-            "Corpus file (one domain per line). Recommend a curated, "
-            "gitignored list under validation/corpus-private/."
+            "Corpus file (one domain per line). Recommend a curated, gitignored list under validation/corpus-private/."
         ),
     )
     parser.add_argument(
@@ -161,8 +160,7 @@ def main() -> None:
     ct_str = "on" if args.ct else "off"
     fmt_str = "json-array" if args.json_array else "ndjson"
     print(
-        f"  resolving {domain_count} domains "
-        f"(concurrency={args.concurrency}, ct={ct_str}, format={fmt_str}) ...",
+        f"  resolving {domain_count} domains (concurrency={args.concurrency}, ct={ct_str}, format={fmt_str}) ...",
         flush=True,
     )
     results_filename = "results.json" if args.json_array else "results.ndjson"
@@ -217,11 +215,7 @@ def main() -> None:
     compare_target: Path | None = args.compare_to
     if compare_target is None and not args.no_compare:
         # Pick the most recent existing run that isn't this one.
-        prior_candidates = [
-            p
-            for p in sorted(args.output_root.iterdir())
-            if p.is_dir() and p.name != stamp
-        ]
+        prior_candidates = [p for p in sorted(args.output_root.iterdir()) if p.is_dir() and p.name != stamp]
         if prior_candidates:
             compare_target = prior_candidates[-1]
 
@@ -248,9 +242,7 @@ def main() -> None:
                 f"diff_runs vs {compare_target.name}",
             )
         else:
-            print(
-                f"  skipping diff: no results.ndjson or results.json in {compare_target}"
-            )
+            print(f"  skipping diff: no results.ndjson or results.json in {compare_target}")
             diff_path = None
 
     # Step 5: meta.json
@@ -259,9 +251,7 @@ def main() -> None:
     with contextlib.suppress(OSError, json.JSONDecodeError):
         gaps_count = len(json.loads((run_dir / "gaps.json").read_text(encoding="utf-8")))
     with contextlib.suppress(OSError, json.JSONDecodeError):
-        candidates_count = len(
-            json.loads((run_dir / "candidates.json").read_text(encoding="utf-8"))
-        )
+        candidates_count = len(json.loads((run_dir / "candidates.json").read_text(encoding="utf-8")))
 
     meta: dict[str, Any] = {
         "scan_stamp": stamp,

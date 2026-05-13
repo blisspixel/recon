@@ -50,8 +50,7 @@ def test_modern_provider_has_three_parents_and_no_evidence(network):
     node = next(n for n in network.nodes if n.name == "email_security_modern_provider")
     assert set(node.parents) == {"m365_tenant", "google_workspace_tenant", "email_gateway_present"}
     assert len(node.evidence) == 0, (
-        "modern_provider must remain pure CPT propagation; provider "
-        "presence is fully captured by parent slugs"
+        "modern_provider must remain pure CPT propagation; provider presence is fully captured by parent slugs"
     )
 
 

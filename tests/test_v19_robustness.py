@@ -149,6 +149,7 @@ class TestCacheRoundTrip:
             for p in result.posteriors
         )
         from dataclasses import replace
+
         info_with_po = replace(info_with_evidence, posterior_observations=po)
         d = tenant_info_to_dict(info_with_po)
         round_trip = tenant_info_from_dict(d)
@@ -173,6 +174,7 @@ class TestCLIFlagCombinations:
         from typer.testing import CliRunner
 
         from recon_tool.cli import app
+
         return app, CliRunner()
 
     def test_explain_dag_text_format(self) -> None:

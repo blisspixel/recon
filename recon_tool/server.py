@@ -883,9 +883,7 @@ async def discover_fingerprint_candidates(
 
             _cache_set(validated, info, list(results))
 
-    unclassified = [
-        {"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains
-    ]
+    unclassified = [{"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains]
     fingerprints_dir = Path(__file__).resolve().parent / "data" / "fingerprints"
     candidates = find_candidates(
         [(info.queried_domain, unclassified)],
@@ -2618,7 +2616,7 @@ def _detect_cwd_shadow_install() -> str | None:
         "\n"
         "If you intended to run from a legitimate source checkout, the "
         "checkout's pyproject.toml at this directory does not have "
-        "`name = \"recon-tool\"`. Either:\n"
+        '`name = "recon-tool"`. Either:\n'
         "  * Run from outside the workspace (cd to your home directory "
         "and re-invoke); or\n"
         "  * Set PYTHONSAFEPATH=1 in the environment (Python 3.11+); or\n"

@@ -218,10 +218,7 @@ def test_score_session_detects_explain_dag_invocation() -> None:
 
 
 def test_score_session_counts_hedge_phrases() -> None:
-    text = (
-        "Limited evidence. Cannot confirm the email provider. The signal is sparse "
-        "and the target appears hardened."
-    )
+    text = "Limited evidence. Cannot confirm the email provider. The signal is sparse and the target appears hardened."
     s = score.score_session("analyst", "hardened-sparse", True, text)
     assert s.hedge_count >= 3
 

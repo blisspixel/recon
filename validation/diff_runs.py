@@ -137,12 +137,8 @@ def diff(before: dict[str, dict[str, Any]], after: dict[str, dict[str, Any]]) ->
                 "domain": domain,
                 "added_slugs": added_slugs,
                 "removed_slugs": removed_slugs,
-                "added_surface_attributions": [
-                    {"subdomain": s, "primary_slug": slug} for s, slug in added_surface
-                ],
-                "removed_surface_attributions": [
-                    {"subdomain": s, "primary_slug": slug} for s, slug in removed_surface
-                ],
+                "added_surface_attributions": [{"subdomain": s, "primary_slug": slug} for s, slug in added_surface],
+                "removed_surface_attributions": [{"subdomain": s, "primary_slug": slug} for s, slug in removed_surface],
             }
         )
 
@@ -162,9 +158,7 @@ def diff(before: dict[str, dict[str, Any]], after: dict[str, dict[str, Any]]) ->
         if delta != 0:
             slug_freq_pairs.append((slug, before_freq[slug], after_freq[slug], delta))
     slug_freq_pairs.sort(key=lambda t: (-abs(t[3]), t[0]))
-    slug_freq_changes = [
-        {"slug": s, "before": b, "after": a, "delta": d} for s, b, a, d in slug_freq_pairs
-    ]
+    slug_freq_changes = [{"slug": s, "before": b, "after": a, "delta": d} for s, b, a, d in slug_freq_pairs]
 
     return {
         "added_domains": sorted(after_keys - before_keys),
@@ -193,10 +187,7 @@ def main() -> None:
     else:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(payload, encoding="utf-8")
-        print(
-            f"wrote {args.output} "
-            f"({report['domains_changed']} of {report['domains_compared']} compared changed)"
-        )
+        print(f"wrote {args.output} ({report['domains_changed']} of {report['domains_compared']} compared changed)")
 
 
 if __name__ == "__main__":

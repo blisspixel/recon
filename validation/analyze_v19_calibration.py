@@ -167,9 +167,7 @@ def main() -> int:
         evidence = d.get("evidence", []) or []
         has_dkim = any(e.get("source_type") == "DKIM" for e in evidence)
         spf_strict = any(
-            e.get("source_type") == "SPF"
-            and "-all" in str(e.get("raw_value", "")).lower()
-            for e in evidence
+            e.get("source_type") == "SPF" and "-all" in str(e.get("raw_value", "")).lower() for e in evidence
         )
         domain_hash = _domain_hash(d.get("queried_domain", ""))
 
@@ -185,9 +183,17 @@ def main() -> int:
                 # v1.9.3 split — provider-presence claim. High posterior
                 # iff any modern-mail provider OR gateway slug fired.
                 agrees = bool(
-                    {"microsoft365", "entra-id", "exchange-online",
-                     "google-workspace", "gmail",
-                     "proofpoint", "mimecast", "barracuda"} & slugs
+                    {
+                        "microsoft365",
+                        "entra-id",
+                        "exchange-online",
+                        "google-workspace",
+                        "gmail",
+                        "proofpoint",
+                        "mimecast",
+                        "barracuda",
+                    }
+                    & slugs
                 )
             elif name == "email_security_policy_enforcing":
                 # v1.9.3 split — policy-enforcement claim. High posterior
@@ -197,11 +203,7 @@ def main() -> int:
                 # DKIM selector enumeration is best-effort and missing it
                 # should not invalidate an observed reject policy.
                 # Provider-independent.
-                agrees = (
-                    dmarc == "reject"
-                    or mta_sts == "enforce"
-                    or (has_dkim and spf_strict)
-                )
+                agrees = dmarc == "reject" or mta_sts == "enforce" or (has_dkim and spf_strict)
             elif name == "federated_identity":
                 agrees = d.get("auth_type") == "Federated" or d.get("google_auth_type") == "Federated"
 
@@ -250,8 +252,10 @@ def main() -> int:
             if len(p.get("evidence_used", [])) > 1:
                 multi_signal_per_node[p["name"]] += 1
     print("=== Multi-signal correlation depth ===")
-    print(f"  Domains with >1 evidence binding firing across nodes: "
-          f"{multi_signal_count}/{n} ({multi_signal_count/n:.1%})")
+    print(
+        f"  Domains with >1 evidence binding firing across nodes: "
+        f"{multi_signal_count}/{n} ({multi_signal_count / n:.1%})"
+    )
     print("  Per-node count of >1-binding firings:")
     for name in sorted(multi_signal_per_node):
         print(f"    {name}: {multi_signal_per_node[name]}")
@@ -267,9 +271,7 @@ def main() -> int:
     for d in domains:
         po = d.get("posterior_observations", [])
         if po:
-            posterior_means.append(
-                statistics.mean(p["posterior"] for p in po)
-            )
+            posterior_means.append(statistics.mean(p["posterior"] for p in po))
     if posterior_means:
         q1, med, q3 = _quartiles(posterior_means)
         print("=== Per-domain mean posterior across nodes ===")
@@ -295,8 +297,10 @@ def main() -> int:
     total_observations = sum(node_total.values())
     total_sparse = sum(node_sparse_counts.values())
     print("=== Sparse-flag rate (overall) ===")
-    print(f"  {total_sparse}/{total_observations} ({total_sparse/total_observations:.1%}) "
-          f"node-domain observations flagged as sparse")
+    print(
+        f"  {total_sparse}/{total_observations} ({total_sparse / total_observations:.1%}) "
+        f"node-domain observations flagged as sparse"
+    )
     print("  (Sparse flag fires when n_eff is at the floor — the")
     print("  passive-observation ceiling is the load-bearing fact, not")
     print("  the point estimate.)")

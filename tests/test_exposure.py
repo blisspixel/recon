@@ -93,11 +93,32 @@ _CONFIDENCE_LEVELS = st.sampled_from(list(ConfidenceLevel))
 
 
 def _evidence_for_slug(slug: str) -> st.SearchStrategy[EvidenceRecord]:
-    """Generate an EvidenceRecord for a given slug."""
+    """Generate an EvidenceRecord for a given slug.
+
+    ``raw_value`` mimics realistic DNS record content (alphanumerics plus
+    the small punctuation set actually seen in TXT / MX / CNAME / NS / CAA
+    values: ``. - _ = ; : / @``). The strategy also filters out any draw
+    that contains a term from ``EXPOSURE_DISCOURAGED_COPY_TERMS``: the
+    Property-8 neutral-copy test walks every string field of the
+    ExposureAssessment, including echoed evidence values, and a randomly
+    drawn natural-English token (``"should"``, ``"risk"`` ...) would
+    spuriously fail a test that exists to validate *recon-authored*
+    prose, not echoed inputs. Real DNS records do not contain those
+    plain-English tokens, so the filter narrows the strategy toward
+    realistic inputs rather than restricting genuine coverage.
+    """
+    raw_value_strategy = st.text(
+        min_size=1,
+        max_size=50,
+        alphabet=st.characters(
+            whitelist_categories=("L", "N"),
+            whitelist_characters=".-_=;:/@",
+        ),
+    ).filter(lambda v: not any(term in v.lower() for term in EXPOSURE_DISCOURAGED_COPY_TERMS))
     return st.builds(
         EvidenceRecord,
         source_type=st.sampled_from(["TXT", "MX", "CNAME", "NS", "CAA"]),
-        raw_value=st.text(min_size=1, max_size=50, alphabet=st.characters(whitelist_categories=("L", "N", "P"))),
+        raw_value=raw_value_strategy,
         rule_name=st.just(f"rule-{slug}"),
         slug=st.just(slug),
     )
@@ -395,7 +416,7 @@ def _collect_string_fields(obj: object) -> list[str]:
     strings: list[str] = []
     if isinstance(obj, str):
         strings.append(obj)
-    elif isinstance(obj, (tuple, list)):
+    elif isinstance(obj, tuple | list):
         for item in obj:
             strings.extend(_collect_string_fields(item))
     elif hasattr(obj, "__dataclass_fields__"):
@@ -702,6 +723,4 @@ class TestNeutralCopyIntegration:
             for term in EXPOSURE_DISCOURAGED_COPY_TERMS:
                 # Use word boundary to avoid false positives (e.g. "hardening" vs "harden")
                 pattern = rf"\b{re.escape(term)}\b"
-                assert not re.search(pattern, lower), (
-                    f"Discouraged copy term '{term}' in docstring of {func.__name__}"
-                )
+                assert not re.search(pattern, lower), f"Discouraged copy term '{term}' in docstring of {func.__name__}"

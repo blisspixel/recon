@@ -712,7 +712,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         slug_confidences=tuple(
             (str(entry[0]), float(entry[1]))
             for entry in data.get("slug_confidences", [])
-            if isinstance(entry, (list, tuple)) and len(entry) == 2
+            if isinstance(entry, list | tuple) and len(entry) == 2
         ),
         posterior_observations=_parse_posterior_observations(data),
         cloud_instance=data.get("cloud_instance"),

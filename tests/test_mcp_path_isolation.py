@@ -62,8 +62,7 @@ class TestMcpDoctorSpawnsSafely:
     def test_mcp_doctor_source_sets_pythonsafepath_env(self):
         src = Path("recon_tool/mcp_doctor.py").read_text(encoding="utf-8")
         assert "PYTHONSAFEPATH" in src, (
-            "mcp_doctor.py must reference PYTHONSAFEPATH on the subprocess "
-            "env to disable cwd-prepend on Python 3.11+."
+            "mcp_doctor.py must reference PYTHONSAFEPATH on the subprocess env to disable cwd-prepend on Python 3.11+."
         )
         assert '"1"' in src, (
             "mcp_doctor.py must set PYTHONSAFEPATH to '1' (the value that "
@@ -80,8 +79,7 @@ class TestMcpDoctorSpawnsSafely:
             "(potentially untrusted) workspace."
         )
         assert "tempfile.TemporaryDirectory" in src, (
-            "mcp_doctor.py must create the safe cwd via "
-            "tempfile.TemporaryDirectory for automatic cleanup."
+            "mcp_doctor.py must create the safe cwd via tempfile.TemporaryDirectory for automatic cleanup."
         )
 
 
@@ -125,8 +123,7 @@ class TestMcpInstallPersistsSafeEnv:
         assert block["command"] == "/fake/path/to/recon"
         assert block["args"] == ["mcp"]
         assert "env" not in block, (
-            "preferred block (recon on PATH) should not carry an env "
-            "key — it has no cwd-shadow concern to mitigate."
+            "preferred block (recon on PATH) should not carry an env key — it has no cwd-shadow concern to mitigate."
         )
 
     def test_warn_if_fallback_when_recon_missing(self, monkeypatch):
@@ -191,17 +188,15 @@ class TestServerRuntimeGuard:
         # Monkeypatch the imported recon_tool module to look like it
         # loaded from the shadow dir.
         import recon_tool
-        monkeypatch.setattr(
-            recon_tool, "__file__", str(fake_pkg / "__init__.py")
-        )
+
+        monkeypatch.setattr(recon_tool, "__file__", str(fake_pkg / "__init__.py"))
         monkeypatch.chdir(tmp_path)
 
         from recon_tool.server import _detect_cwd_shadow_install
 
         result = _detect_cwd_shadow_install()
         assert result is not None, (
-            "guard failed to detect a shadow workspace — recon_tool was "
-            f"under {tmp_path}, but the guard returned None."
+            f"guard failed to detect a shadow workspace — recon_tool was under {tmp_path}, but the guard returned None."
         )
         assert "refusing to start" in result
         assert "cwd-shadow" in result.lower() or "shadow" in result.lower()
@@ -218,9 +213,8 @@ class TestServerRuntimeGuard:
         )
 
         import recon_tool
-        monkeypatch.setattr(
-            recon_tool, "__file__", str(fake_pkg / "__init__.py")
-        )
+
+        monkeypatch.setattr(recon_tool, "__file__", str(fake_pkg / "__init__.py"))
         monkeypatch.chdir(tmp_path)
 
         from recon_tool.server import _detect_cwd_shadow_install
@@ -265,9 +259,7 @@ class TestShadowWorkspaceIntegration:
     def _write_shadow_package(self, root: Path) -> None:
         pkg = root / "recon_tool"
         pkg.mkdir()
-        (pkg / "__init__.py").write_text(
-            'SHADOW_LOADED = True\n', encoding="utf-8"
-        )
+        (pkg / "__init__.py").write_text("SHADOW_LOADED = True\n", encoding="utf-8")
         # The "server" submodule prints a marker that proves the
         # shadow ran. If we see this marker in stderr, the guard
         # failed.
@@ -307,7 +299,7 @@ class TestShadowWorkspaceIntegration:
         env["PYTHONSAFEPATH"] = "1"
         env["RECON_MCP_FORCE_STDIO"] = "1"
 
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603 — test deliberately spawns the MCP server subprocess to verify cwd / PYTHONSAFEPATH isolation; sys.executable + literal args are trusted by construction.
             [sys.executable, "-m", "recon_tool.server"],
             cwd=tmp_path,
             env=env,

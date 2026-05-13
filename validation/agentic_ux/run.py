@@ -214,9 +214,7 @@ def run_matrix(
 
 def score_records(records: list[SessionRecord]) -> score_mod.RubricSummary:
     """Apply the rubric to a list of session records."""
-    sessions = [
-        score_mod.score_session(r.persona, r.fixture, r.fusion, r.response_text) for r in records
-    ]
+    sessions = [score_mod.score_session(r.persona, r.fixture, r.fusion, r.response_text) for r in records]
     by_key = {(r.persona, r.fixture, r.fusion): r for r in records}
     score_by_key = {(s.persona, s.fixture, s.fusion): s for s in sessions}
 
@@ -301,12 +299,8 @@ def _summarize_findings(summary: score_mod.RubricSummary) -> str:
     personas = {s.persona for s in sessions}
     persona_ignores_fusion = personas - fusion_on_engaged
 
-    sparse_only_intervals = [
-        s for s in sessions if s.cited_credible_interval and s.fixture == "hardened-sparse"
-    ]
-    dense_only_intervals = [
-        s for s in sessions if s.cited_credible_interval and s.fixture == "contoso-dense"
-    ]
+    sparse_only_intervals = [s for s in sessions if s.cited_credible_interval and s.fixture == "hardened-sparse"]
+    dense_only_intervals = [s for s in sessions if s.cited_credible_interval and s.fixture == "contoso-dense"]
 
     diff_no_change = [d for d in summary.diffs if not d.differed]
 
@@ -324,7 +318,7 @@ def _summarize_findings(summary: score_mod.RubricSummary) -> str:
             "No persona suggested running `--explain-dag` or invoking the "
             "`explain_dag` MCP tool. v2.0 disposition: the affordance exists "
             "but agents do not find it from the JSON alone. Either surface a "
-            "pointer field in the JSON (`explanation_pointer: \"--explain-dag\"`) "
+            'pointer field in the JSON (`explanation_pointer: "--explain-dag"`) '
             "or rely on docs/MCP-tool-listing rather than expecting the agent "
             "to infer it from output shape.",
         )
@@ -408,14 +402,12 @@ def render_report(
     parts: list[str] = []
     parts.append("# Agentic UX Validation — v1.9.2\n")
     parts.append(
-        "Bridge milestone: **v1.9.2 — UX validation via agentic QA** "
-        "(see `docs/roadmap.md`).\n",
+        "Bridge milestone: **v1.9.2 — UX validation via agentic QA** (see `docs/roadmap.md`).\n",
     )
     parts.append("**Run metadata.**\n")
     parts.append(f"- Provider / model: `{provider}` / `{model}`")
     parts.append(
-        f"- Sessions: {len(records)} ({persona_count} personas "
-        f"x {fixture_count} fixtures x 2 fusion modes)",
+        f"- Sessions: {len(records)} ({persona_count} personas x {fixture_count} fixtures x 2 fusion modes)",
     )
     parts.append(f"- Started: {started_at.isoformat()}")
     parts.append(f"- Finished: {finished_at.isoformat()} (duration {duration:.1f}s)")
@@ -465,8 +457,7 @@ def render_report(
         fusion_label = "fusion=on" if record.fusion else "fusion=off"
         parts.append(f"### {record.persona} / {record.fixture} / {fusion_label}\n")
         parts.append(
-            f"_Tokens: {record.input_tokens:,} in / {record.output_tokens:,} out — "
-            f"cost ${record.cost_usd:.4f}_\n",
+            f"_Tokens: {record.input_tokens:,} in / {record.output_tokens:,} out — cost ${record.cost_usd:.4f}_\n",
         )
         parts.append("**Agent response:**\n")
         parts.append("```markdown")

@@ -164,6 +164,21 @@ Vendor diligence across many domains:
 1. `cluster_verification_tokens` over the list to find shared-credential clusters.
 2. `lookup_tenant` only the domains the user wants to drill into — don't fan out unprompted.
 
+Family-of-companies / portfolio rollup:
+
+The operator supplies a group of related apexes — parent + subsidiaries, an M&A target's brand portfolio, a holding-company structure — and wants a unified report. recon does **not** infer ownership. The operator owns the relationship; recon describes observable structure across the set.
+
+1. **Confirm the input list explicitly.** Ask for the apexes one per line; do not derive them from a company name or external research. The operator's list is authoritative.
+2. **Fan out.** For ~5 or fewer apexes, call `lookup_tenant(domain, explain=true)` per apex. For larger sets, `recon batch <file> --json --include-ecosystem` returns the per-domain lookups plus the v1.8 ecosystem hypergraph and cross-domain token clustering in one payload.
+3. **Sanity-check the asserted relationship.** `cluster_verification_tokens(domains=[...])` surfaces shared TXT verification tokens — a hedged "consistent with stated relationship" signal. Their absence is also worth reporting: *"no shared verification tokens observed; the brands appear administratively separate at the DNS level."*
+4. **Synthesize the rollup along these axes:**
+   - Identity stack consistency — same M365 tenant across siblings, or distinct tenants per brand?
+   - Email gateway consistency — same Proofpoint / Mimecast / Cisco upstream, mixed, or none?
+   - Cloud footprint overlap — which providers appear across the set.
+   - **Posture divergence (highest-signal output)** — flag any sibling whose `email_security_score` is materially below the family median, or whose DMARC policy is weaker (`p=none` while siblings are `p=reject`). The outlier is the actionable finding.
+   - Per-brand notable findings — one line each, only when a brand has something its siblings don't.
+5. **Keep the voice hedged.** *"Five domains share a Microsoft 365 tenant"* is observable. *"Acquired in 2024 and still on the same tenant"* is firmographic enrichment — out of scope. Surface per-brand `confidence` honestly; do not average it across the family.
+
 Tracking change over time:
 
 1. `recon delta <domain>` (CLI) compares the current resolution against the cached snapshot at `~/.recon/cache/`. The output is a `DeltaReport` (see `$defs/DeltaReport` in `docs/recon-schema.json`) with explicit `added_*` / `removed_*` / `changed_*` fields. Report the deltas; do not narrate causes.

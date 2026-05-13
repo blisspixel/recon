@@ -110,27 +110,20 @@ def _walk_fingerprints(root: Path) -> dict[str, CategoryStats]:
                 if isinstance(ref, str) and ref.strip():
                     cat_stats.detection_with_reference += 1
                 weight = det.get("weight")
-                if isinstance(weight, (int, float)) and float(weight) != 1.0:
+                if isinstance(weight, int | float) and float(weight) != 1.0:
                     cat_stats.detection_with_weight += 1
     return stats
 
 
 def _format_stats_table(stats: dict[str, CategoryStats], threshold: float) -> str:
     lines: list[str] = []
-    header = (
-        f"{'category':<20} {'detections':>12} "
-        f"{'description':>13} {'reference':>11} {'weight':>10}"
-    )
+    header = f"{'category':<20} {'detections':>12} {'description':>13} {'reference':>11} {'weight':>10}"
     lines.append(header)
     lines.append("-" * len(header))
     for category in sorted(stats):
         s = stats[category]
         gated = "*" if category in _GATED_CATEGORIES else " "
-        below = (
-            "!!"
-            if category in _GATED_CATEGORIES and s.description_coverage < threshold
-            else ""
-        )
+        below = "!!" if category in _GATED_CATEGORIES and s.description_coverage < threshold else ""
         lines.append(
             f"{gated} {category:<18} {s.detection_total:>12} "
             f"{s.description_coverage:>12.1%} "

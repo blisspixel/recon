@@ -73,9 +73,7 @@ def summarize_fingerprint_catalog(
         "fingerprints_with_detection_descriptions": sum(
             1 for fp in fps if any(rule.description for rule in fp.detections)
         ),
-        "fingerprints_with_detection_references": sum(
-            1 for fp in fps if any(rule.reference for rule in fp.detections)
-        ),
+        "fingerprints_with_detection_references": sum(1 for fp in fps if any(rule.reference for rule in fp.detections)),
         "detections_with_description": sum(1 for rule in detections if rule.description),
         "detections_with_reference": sum(1 for rule in detections if rule.reference),
         "weighted_detections": sum(1 for rule in detections if rule.weight != 1.0),
@@ -213,14 +211,8 @@ def render_fingerprint_audit_markdown(
         f"- detection rules: {summary['total_detections']}",
         f"- multi-detection fingerprints: {summary['multi_detection_fingerprints']}",
         f"- match modes: {_format_counter(summary['match_modes'])}",
-        (
-            "- detection descriptions: "
-            f"{summary['detections_with_description']}/{summary['total_detections']}"
-        ),
-        (
-            "- detection references: "
-            f"{summary['detections_with_reference']}/{summary['total_detections']}"
-        ),
+        (f"- detection descriptions: {summary['detections_with_description']}/{summary['total_detections']}"),
+        (f"- detection references: {summary['detections_with_reference']}/{summary['total_detections']}"),
         f"- weighted detections: {summary['weighted_detections']}/{summary['total_detections']}",
         "",
         "## Summary",

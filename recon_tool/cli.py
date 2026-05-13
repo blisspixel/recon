@@ -724,10 +724,7 @@ def mcp_install_command(
     console = get_console()
 
     if client not in SUPPORTED_CLIENTS:
-        console.print(
-            f"[red]Unknown client `{client}`.[/red]\n"
-            f"  Supported: {', '.join(SUPPORTED_CLIENTS)}"
-        )
+        console.print(f"[red]Unknown client `{client}`.[/red]\n  Supported: {', '.join(SUPPORTED_CLIENTS)}")
         raise typer.Exit(EXIT_VALIDATION)
 
     if scope == "auto":
@@ -762,8 +759,7 @@ def mcp_install_command(
     console.print(f"  action    {plan.action}")
     if plan.existing_block is not None and plan.action == "replace":
         console.print(
-            "  [yellow]existing recon block will be replaced.[/yellow] "
-            "Use --dry-run to preview without writing."
+            "  [yellow]existing recon block will be replaced.[/yellow] Use --dry-run to preview without writing."
         )
     if plan.parent_dirs_to_create:
         console.print(f"  mkdir     {len(plan.parent_dirs_to_create)} new parent dir(s)")

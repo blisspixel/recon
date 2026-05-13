@@ -483,6 +483,5 @@ class TestBackwardCompatibilityV080:
             by_name.setdefault(fp.name, set()).add(fp.slug)
         collisions = {name: slugs for name, slugs in by_name.items() if len(slugs) > 1}
         assert not collisions, (
-            "Names mapping to multiple slugs (different services share a "
-            f"display name): {collisions}"
+            f"Names mapping to multiple slugs (different services share a display name): {collisions}"
         )

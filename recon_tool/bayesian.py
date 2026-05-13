@@ -277,7 +277,7 @@ def load_network(path: Path | None = None) -> BayesianNetwork:
         cpt: dict[str, float] = {}
 
         if not parents:
-            if not isinstance(prior_raw, (int, float)):
+            if not isinstance(prior_raw, int | float):
                 raise ValueError(f"bayesian_network[{name}]: root node requires numeric 'prior'")
             prior = float(prior_raw)
             if not 0.0 <= prior <= 1.0:
@@ -286,7 +286,7 @@ def load_network(path: Path | None = None) -> BayesianNetwork:
             if not isinstance(cpt_raw, dict) or not cpt_raw:
                 raise ValueError(f"bayesian_network[{name}]: node with parents requires 'cpt'")
             for k, v in cpt_raw.items():
-                if not isinstance(k, str) or not isinstance(v, (int, float)):
+                if not isinstance(k, str) or not isinstance(v, int | float):
                     raise ValueError(f"bayesian_network[{name}]: cpt entries must be str→float")
                 if not 0.0 <= float(v) <= 1.0:
                     raise ValueError(f"bayesian_network[{name}]: cpt value {v} outside [0, 1]")
@@ -310,7 +310,7 @@ def load_network(path: Path | None = None) -> BayesianNetwork:
             if not isinstance(obs_name, str) or not obs_name:
                 raise ValueError(f"bayesian_network[{name}]: evidence kind={kind} missing name")
             lik = entry.get("likelihood")
-            if not isinstance(lik, list) or len(lik) != 2 or not all(isinstance(x, (int, float)) for x in lik):
+            if not isinstance(lik, list) or len(lik) != 2 or not all(isinstance(x, int | float) for x in lik):
                 raise ValueError(f"bayesian_network[{name}/{obs_name}]: 'likelihood' must be [float, float]")
             lp, la = float(lik[0]), float(lik[1])
             if not (0.0 < lp < 1.0) or not (0.0 < la < 1.0):
@@ -407,7 +407,7 @@ def load_priors_override(path: Path | None = None) -> dict[str, float]:
     for k, v in priors.items():
         if not isinstance(k, str):
             continue
-        if not isinstance(v, (int, float)):
+        if not isinstance(v, int | float):
             continue
         fv = float(v)
         if not 0.0 <= fv <= 1.0:

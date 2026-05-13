@@ -96,9 +96,7 @@ def _node_influence_lines(posterior: NodePosterior) -> list[str]:
     elif len(ranked) <= _TOP_K_INFLUENTIAL:
         header = f"- **Top influences (ranked, {len(ranked)} fired):**"
     else:
-        header = (
-            f"- **Top influences (ranked top {_TOP_K_INFLUENTIAL} of {len(ranked)} fired):**"
-        )
+        header = f"- **Top influences (ranked top {_TOP_K_INFLUENTIAL} of {len(ranked)} fired):**"
     lines: list[str] = [header]
     for idx, ec in enumerate(top, start=1):
         if ec.kind == "slug":
@@ -107,10 +105,7 @@ def _node_influence_lines(posterior: NodePosterior) -> list[str]:
             label = f"signal `{ec.name}`"
         else:
             label = f"{ec.kind}:{ec.name}"
-        lines.append(
-            f"    {idx}. {label} — LLR {ec.llr:+.2f} "
-            f"({ec.influence_pct:.1f}% of evidence influence)"
-        )
+        lines.append(f"    {idx}. {label} — LLR {ec.llr:+.2f} ({ec.influence_pct:.1f}% of evidence influence)")
     return lines
 
 
@@ -259,8 +254,7 @@ def render_dag_dot(
             if post.evidence_ranked:
                 top = post.evidence_ranked[:_TOP_K_INFLUENTIAL]
                 influence_suffix = "\\ntop influences: " + ", ".join(
-                    f"{ec.name} (LLR {ec.llr:+.2f}, {ec.influence_pct:.0f}%)"
-                    for ec in top
+                    f"{ec.name} (LLR {ec.llr:+.2f}, {ec.influence_pct:.0f}%)" for ec in top
                 )
             label = (
                 f"{node.name}\\n"

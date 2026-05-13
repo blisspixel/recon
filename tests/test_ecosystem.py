@@ -175,8 +175,7 @@ class TestSharedSlugs:
         """
         ubiquitous = ("microsoft365", "google-site", "spf-strict")
         infos = {
-            f"d{i}.com": _info(f"d{i}.com", slugs=(*ubiquitous, f"unique-{i}-1", f"unique-{i}-2"))
-            for i in range(8)
+            f"d{i}.com": _info(f"d{i}.com", slugs=(*ubiquitous, f"unique-{i}-1", f"unique-{i}-2")) for i in range(8)
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "shared_slugs"]
         # Without the baseline filter every pair would fire on the 3
@@ -222,10 +221,7 @@ class TestSortingAndCaps:
     def test_global_cap_applied(self):
         # Build many shared_slugs pairs to push past MAX_HYPEREDGES.
         # 30 distinct domains → 435 pairs, each with overlap=2.
-        infos = {
-            f"d{i}.com": _info(f"d{i}.com", slugs=("s1", "s2"))
-            for i in range(30)
-        }
+        infos = {f"d{i}.com": _info(f"d{i}.com", slugs=("s1", "s2")) for i in range(30)}
         edges = build_ecosystem_hyperedges(infos)
         assert len(edges) <= MAX_HYPEREDGES
 

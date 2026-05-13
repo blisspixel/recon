@@ -74,9 +74,7 @@ def test_classify_chain_picks_application_over_infrastructure() -> None:
         _make_rule("cloudflare.net", "cloudflare", "infrastructure"),
     )
     # Sorted longest-first by the caller; both same length so order stable.
-    application, infrastructure = _classify_chain(
-        ["auth0-ingress.us.auth0.com.cdn.cloudflare.net"], rules
-    )
+    application, infrastructure = _classify_chain(["auth0-ingress.us.auth0.com.cdn.cloudflare.net"], rules)
     assert application is not None
     assert application.slug == "auth0"
     assert infrastructure is not None
@@ -89,9 +87,7 @@ def test_classify_chain_falls_back_to_infrastructure_when_no_application() -> No
         _make_rule("auth0.com", "auth0", "application"),
         _make_rule("cloudfront.net", "aws-cloudfront", "infrastructure"),
     )
-    application, infrastructure = _classify_chain(
-        ["d3icacrl6c33io.cloudfront.net"], rules
-    )
+    application, infrastructure = _classify_chain(["d3icacrl6c33io.cloudfront.net"], rules)
     assert application is None
     assert infrastructure is not None
     assert infrastructure.slug == "aws-cloudfront"
@@ -100,9 +96,7 @@ def test_classify_chain_falls_back_to_infrastructure_when_no_application() -> No
 def test_classify_chain_returns_none_when_no_match() -> None:
     """Chains that don't match any rule produce no attribution."""
     rules = (_make_rule("auth0.com", "auth0", "application"),)
-    application, infrastructure = _classify_chain(
-        ["internal-prod-1234567.us-west-2.elb.amazonaws.com"], rules
-    )
+    application, infrastructure = _classify_chain(["internal-prod-1234567.us-west-2.elb.amazonaws.com"], rules)
     assert application is None
     assert infrastructure is None
 
@@ -283,9 +277,7 @@ async def test_unclassified_cname_chain_captured(mock_resolve):
         }
     )
     result = await DNSSource().lookup("example.com")
-    weird = [
-        uc for uc in result.unclassified_cname_chains if uc.subdomain == "app.example.com"
-    ]
+    weird = [uc for uc in result.unclassified_cname_chains if uc.subdomain == "app.example.com"]
     assert weird, "expected unclassified chain for app.example.com"
     assert weird[0].chain == ("edge.totally-new-saas-co.io",)
 
@@ -301,9 +293,7 @@ def test_format_tenant_dict_omits_unclassified_by_default() -> None:
         default_domain="example.com",
         queried_domain="example.com",
         confidence=ConfidenceLevel.HIGH,
-        unclassified_cname_chains=(
-            UnclassifiedCnameChain(subdomain="x.example.com", chain=("y.example.io",)),
-        ),
+        unclassified_cname_chains=(UnclassifiedCnameChain(subdomain="x.example.com", chain=("y.example.io",)),),
     )
     d = format_tenant_dict(info)
     assert "unclassified_cname_chains" not in d
@@ -347,9 +337,7 @@ async def test_skip_ct_omits_cert_intel_probe(mock_resolve):
     success, or the source would appear in degraded_sources on failure.
     With skip_ct, neither happens — no CT-related state at all.
     """
-    mock_resolve.side_effect = _resolve_factory(
-        {"example.com/TXT": [], "example.com/MX": []}
-    )
+    mock_resolve.side_effect = _resolve_factory({"example.com/TXT": [], "example.com/MX": []})
     result = await DNSSource().lookup("example.com", skip_ct=True)
     assert result.ct_provider_used is None
     assert "crt.sh" not in result.degraded_sources
@@ -386,9 +374,7 @@ def test_looks_intra_org_brand_catches_stem_abbreviation() -> None:
     from recon_tool.discovery import looks_intra_org_brand
 
     # Brand "examplecorp", stem-prefix "exa" appears as a label in the suffix.
-    samples = [
-        {"subdomain": "api.dev.examplecorp.com", "terminal": "user-api.awsma.exa.net"}
-    ]
+    samples = [{"subdomain": "api.dev.examplecorp.com", "terminal": "user-api.awsma.exa.net"}]
     assert looks_intra_org_brand("examplecorp.com", "awsma.exa.net", samples) is True
 
     # Generic 3-letter sequences inside the suffix do NOT match — must be a

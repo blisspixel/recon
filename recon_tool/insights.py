@@ -153,9 +153,7 @@ _IDP_SLUG_MAP: dict[str, str] = {
     "duo": "Duo",
 }
 
-_SPARSE_NON_SUBSTANTIVE_PREFIXES = (
-    "SPF complexity:",
-)
+_SPARSE_NON_SUBSTANTIVE_PREFIXES = ("SPF complexity:",)
 
 _EDGE_SERVICE_PREFIXES = ("DNS:", "CDN:", "WAF:")
 

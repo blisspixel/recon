@@ -59,9 +59,7 @@ class TestMatchSemantics:
             display_name=name,
             description="",
             confidence="medium",
-            markers=tuple(
-                _MotifMarker(name=mn, patterns=tuple(ps)) for mn, ps in markers_spec
-            ),
+            markers=tuple(_MotifMarker(name=mn, patterns=tuple(ps)) for mn, ps in markers_spec),
         )
 
     def test_two_marker_motif_fires_in_order(self):
@@ -139,8 +137,7 @@ class TestValidatorRejects:
 
         path = tmp_path / "bad.yaml"
         path.write_text(
-            "motifs:\n  - display_name: 'no name'\n    confidence: medium\n    "
-            "chain: [{name: a, match: [x]}]\n"
+            "motifs:\n  - display_name: 'no name'\n    confidence: medium\n    chain: [{name: a, match: [x]}]\n"
         )
         assert _load_from_path(path) == []
 
@@ -157,12 +154,9 @@ class TestValidatorRejects:
     def test_rejects_chain_too_long(self, tmp_path: Path):
         from recon_tool.motifs import _load_from_path
 
-        markers = "\n".join(
-            f"      - {{name: m{i}, match: [x{i}]}}" for i in range(MOTIF_CHAIN_HARD_CAP + 1)
-        )
+        markers = "\n".join(f"      - {{name: m{i}, match: [x{i}]}}" for i in range(MOTIF_CHAIN_HARD_CAP + 1))
         path = tmp_path / "bad.yaml"
         path.write_text(
-            f"motifs:\n  - name: too_long\n    display_name: too long\n    "
-            f"confidence: medium\n    chain:\n{markers}\n"
+            f"motifs:\n  - name: too_long\n    display_name: too long\n    confidence: medium\n    chain:\n{markers}\n"
         )
         assert _load_from_path(path) == []

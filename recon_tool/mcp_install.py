@@ -192,17 +192,11 @@ def resolve_config_path(
     spec = _client_specs()[client]
     if scope == "workspace":
         if spec.workspace_path is None:
-            raise ValueError(
-                f"{client} does not support workspace-scoped config — "
-                f"use --scope=user instead."
-            )
+            raise ValueError(f"{client} does not support workspace-scoped config — use --scope=user instead.")
         return Path.cwd() / spec.workspace_path
     # scope == "user"
     if spec.user_paths is None:
-        raise ValueError(
-            f"{client} does not support user-scoped config — "
-            f"use --scope=workspace instead."
-        )
+        raise ValueError(f"{client} does not support user-scoped config — use --scope=workspace instead.")
     family = _os_family(platform_name)
     return spec.user_paths[family]
 
@@ -334,8 +328,7 @@ def _read_existing(path: Path) -> dict[str, object]:
         # PermissionError noise that doesn't tell the operator what
         # they actually got wrong.
         raise InstallError(
-            f"{path} is a directory, not a config file. "
-            f"Point --config-path at the actual `mcp.json`-shaped file."
+            f"{path} is a directory, not a config file. Point --config-path at the actual `mcp.json`-shaped file."
         )
     try:
         raw = path.read_text(encoding="utf-8-sig")
@@ -352,10 +345,7 @@ def _read_existing(path: Path) -> dict[str, object]:
             f"delete it and rerun."
         ) from exc
     if not isinstance(data, dict):
-        raise InstallError(
-            f"{path} contains {type(data).__name__}, not an object. "
-            f"Refusing to rewrite."
-        )
+        raise InstallError(f"{path} contains {type(data).__name__}, not an object. Refusing to rewrite.")
     return data
 
 
@@ -403,8 +393,10 @@ def plan_install(
     Used internally by `install(dry_run=True)` and by the CLI to pre-
     render the plan before asking the user for confirmation.
     """
-    path = config_path_override if config_path_override is not None else resolve_config_path(
-        client, scope, platform_name=platform_name
+    path = (
+        config_path_override
+        if config_path_override is not None
+        else resolve_config_path(client, scope, platform_name=platform_name)
     )
     existing = _read_existing(path)
     canonical_block = build_recon_block()
@@ -461,10 +453,7 @@ def plan_install(
             # Tell the operator exactly which canonical fields would
             # change, so they can decide whether they actually want
             # those refreshed.
-            diffs = sorted(
-                key for key in _CANONICAL_KEYS
-                if existing_recon.get(key) != target_block.get(key)
-            )
+            diffs = sorted(key for key in _CANONICAL_KEYS if existing_recon.get(key) != target_block.get(key))
             diff_blurb = ", ".join(diffs) if diffs else "fields"
             raise InstallError(
                 f"{path} already has an `mcpServers.recon` entry whose "

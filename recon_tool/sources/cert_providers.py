@@ -52,6 +52,7 @@ def _parse_iso_datetime(value: str) -> datetime:
     normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
     return datetime.fromisoformat(normalized)
 
+
 logger = logging.getLogger("recon")
 
 __all__ = [
@@ -509,11 +510,7 @@ class CrtshProvider:
 
         now = datetime.now(timezone.utc)
         cert_summary = build_cert_summary(cert_entries, now)
-        cluster_report = (
-            build_infrastructure_clusters(list(cert_entries))
-            if cert_entries
-            else None
-        )
+        cluster_report = build_infrastructure_clusters(list(cert_entries)) if cert_entries else None
 
         return subdomains, cert_summary, cluster_report
 
@@ -632,7 +629,7 @@ class CertSpotterProvider:
                         continue
 
                     issuance_id = issuance.get("id")
-                    if isinstance(issuance_id, (str, int)):
+                    if isinstance(issuance_id, str | int):
                         last_id = str(issuance_id)
 
                     dns_names = issuance.get("dns_names", [])
@@ -681,9 +678,5 @@ class CertSpotterProvider:
         subdomains = filter_subdomains(all_raw_names, domain)
         now = datetime.now(timezone.utc)
         cert_summary = build_cert_summary(all_cert_entries, now)
-        cluster_report = (
-            build_infrastructure_clusters(list(all_cert_entries))
-            if all_cert_entries
-            else None
-        )
+        cluster_report = build_infrastructure_clusters(list(all_cert_entries)) if all_cert_entries else None
         return subdomains, cert_summary, cluster_report

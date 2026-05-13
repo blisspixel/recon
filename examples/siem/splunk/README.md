@@ -89,10 +89,20 @@ machine-readable join key.
 index=recon sourcetype=recon:lookup
 | stats values(slugs) as current_slugs by queried_domain
 | lookup recon_slug_baseline.csv queried_domain OUTPUT slugs AS baseline_slugs
-| eval new_slugs=mvfilter(NOT match(current_slugs, mvjoin(baseline_slugs,"|")))
+| eval new_slugs=mvfilter(NOT in(current_slugs, baseline_slugs))
 | where mvcount(new_slugs) > 0
 | table queried_domain new_slugs
 ```
+
+> **Why `in(x, mv_field)` and not `match(x, "regex")`?** A previous
+> version of this example used
+> `match(current_slugs, mvjoin(baseline_slugs, "|"))`, which
+> interprets baseline slug values as a regex alternation. A
+> baseline slug containing regex metacharacters such as `.*`
+> would match any `current_slug` and silently suppress the alert.
+> `in()` inside `mvfilter()` compares literal values element by
+> element — no regex semantics — and is the right primitive for
+> set-membership tests against arbitrary identifier strings.
 
 ### DMARC drift
 

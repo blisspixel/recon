@@ -1571,9 +1571,7 @@ def render_tenant_panel(
                 ranked = sorted(name_counts.items(), key=lambda p: (-p[1], p[0]))
                 # Render: "Name (N), Name (M), ..." — counts make
                 # multi-cloud distribution visible at a glance.
-                surface_summary = [
-                    f"{name} ({count})" for name, count in ranked
-                ]
+                surface_summary = [f"{name} ({count})" for name, count in ranked]
                 budget = _PANEL_WIDTH - (2 + max_width) - 2
                 joined = ", ".join(surface_summary)
                 if len(joined) > budget:
@@ -1587,11 +1585,7 @@ def render_tenant_panel(
                         kept.append(s)
                         running += gap + len(s)
                     remaining = len(surface_summary) - len(kept)
-                    joined = (
-                        ", ".join(kept) + f", +{remaining} more"
-                        if remaining > 0
-                        else ", ".join(kept)
-                    )
+                    joined = ", ".join(kept) + f", +{remaining} more" if remaining > 0 else ", ".join(kept)
                 svc_block.append("  ")
                 svc_block.append("Subdomain".ljust(max_width), style="dim")
                 svc_block.append(joined)

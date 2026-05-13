@@ -5,6 +5,291 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.4] - 2026-05-12
+
+**v1.9.4 bridge milestone — hardened-adversarial behavior validation.**
+Validates the **design property** behind the v1.9 asymmetric-
+likelihood Bayesian layer (`docs/correlation.md` §4.8.3): on
+minimal-DNS / wildcard-cert / heavily-fronted apexes, the layer
+must hedge — flagging `sparse=true`, reporting wide credible
+intervals, and refusing to assert high-confidence posteriors on
+evidence-binding-silent nodes. The corpus stratifies across five
+hardening postures (heavy edge-proxied, privacy-focused, major
+financial, defense / national-security, major government).
+
+This is the v1.9.4 step of the v1.9.4 → v2.0 linear sequence in
+`docs/roadmap.md`. The deliverable is the validation report and
+the failure-mode catalog in `correlation.md` — no engine or
+schema changes.
+
+### Headline result
+
+| Metric | Result |
+|---|---|
+| Spot-check agreement on high-confidence posteriors | **100%** (157/157 non-sparse) |
+| Overall sparse-flag rate (hardened) | **64.0%** (288/450 observations) |
+| Multi-signal correlation depth (hardened) | 92.0% (46/50 domains have ≥ 2 firings) |
+| Cross-source conflicts | 0 / 50 |
+| Soft-corpus regression check | -17 high-confidence posteriors v1.9.0 → v1.9.3+ topology, fully accounted for by the `email_security_strong` split |
+
+The asymmetric-likelihood design property holds. The layer
+hedges on hardened targets without over-claiming.
+
+### Added
+
+- **`validation/v1.9.4-calibration.md`** — full calibration
+  report: per-node sparse-rate trend (v1.9.0 → v1.9.3+ →
+  v1.9.4-hardened), high-confidence survival ratios (soft →
+  hardened), per-category breakdown across five hardening postures,
+  soft-corpus regression tripwire, defensive value interpretation,
+  reproducibility instructions. Anonymized aggregates only; no
+  per-domain detail.
+- **`validation/analyze_v19_4_hardened.py`** — analyzer for the
+  trend, survival-ratio, and per-category aggregates from the
+  hardened + soft-current + soft-original NDJSON runs. Output is
+  publicly-reproducible (no proprietary data).
+- **`docs/correlation.md` §4.8.10 — Failure-mode catalog:
+  hardening pattern fingerprints.** Documents the distinctive
+  sparse-rate fingerprint each hardening pattern produces at the
+  Bayesian layer, with per-pattern defensive read. Patterns
+  (edge-proxied, privacy-focused, financial, defense, government)
+  carry no per-organization detail. Cross-references the v1.9.4
+  calibration report's data.
+- **Family-of-companies / portfolio rollup workflow in
+  `AGENTS.md` and `agents/claude-code/skills/recon/SKILL.md`.**
+  Agent guidance for synthesizing a unified report across an
+  operator-supplied set of related apexes (parent + subsidiaries,
+  M&A brand portfolio, holding-company structure). The operator
+  owns the relationship — recon never infers ownership. Five
+  rollup axes: identity stack consistency, email gateway
+  consistency, cloud footprint overlap, posture divergence
+  (the highest-signal output — outlier siblings are the
+  actionable finding), and per-brand notable findings.
+  Lightweight agent-side precursor to the heavier
+  `recon batch --self-audit` Python rollup in
+  `docs/roadmap.md` backlog; ships first because validating
+  the report shape on real workflows is cheaper at the skill
+  layer than in committed schema.
+
+### Notable findings
+
+- **`email_gateway_present` high-confidence survival ratio = 0.57**
+  (soft → hardened). The cleanest demonstration of the asymmetric-
+  likelihood design property: hardened orgs do not surface
+  Proofpoint / Mimecast / Barracuda MX records publicly, and the
+  Bayesian layer correctly retreats rather than over-claiming.
+- **`cdn_fronting` high-confidence survival = 0.84** with 60%
+  hardened high-conf: CDN-fronting is part of the hardening
+  posture, not hidden by it. The layer correctly fires on the
+  visible front while reporting everything behind it as sparse.
+- **`email_security_policy_enforcing` survival = 0.98**: DMARC
+  policy is a public TXT record that defenders publish regardless
+  of other hardening. Fires routinely; no posture hides this.
+- **Two hardening categories (financial, government) produce an
+  identical signature** from the Bayesian layer's perspective —
+  "M365 + CDN-fronted + strong DMARC, everything else sparse" —
+  even though their internal stacks differ. The layer cannot
+  distinguish posture from posture when both apply the same
+  public-DNS hygiene.
+
+### Notes on no-regression
+
+The v1.9.0 91-domain soft corpus was re-run on the current
+(v1.9.3+) topology and compared against the original v1.9.0
+results. All non-`email_security_strong` nodes have sparse rates
+within 1-2 percentage points across both runs (within sampling
+noise). The 17-posterior reduction in high-confidence count is
+fully accounted for by the v1.9.3 `email_security_strong` split:
+the original node (78 high-conf at 52.6% deterministic agreement,
+the calibration weak spot v1.9.3 fixed) became `modern_provider`
+(0 high-conf, always sparse — by design) + `policy_enforcing`
+(62 high-conf at 100% agreement). No node had its calibration
+*degraded* by the topology surgery.
+
+### Real-company-data discipline
+
+The hardened-adversarial corpus uses real organization apexes
+sampled across five categories of public-DNS hardening posture.
+Per the project's no-real-company-data policy:
+
+- The corpus file (`validation/corpus-private/v1.9.4-hardened.txt`)
+  is gitignored. Real apex names never appear in committed files.
+- The NDJSON results file
+  (`validation/corpus-private/v1.9.4-hardened/results.ndjson`) is
+  gitignored.
+- The calibration report (`validation/v1.9.4-calibration.md`) and
+  failure-mode catalog (`docs/correlation.md` §4.8.10) carry only
+  category-level aggregates: per-pattern sparse rates, per-pattern
+  defensive reads. No per-organization detail.
+- The analyzer script
+  (`validation/analyze_v19_4_hardened.py`) anonymizes by design;
+  no domain names print to stdout.
+
+### Quality bar verification
+
+- [x] Hardened corpus has explicit inclusion criteria documented at
+  the top of the corpus file (5 criteria, qualify on ≥ 3).
+- [x] Full v1.9.0 91-domain corpus re-run against the v1.9.3 topology
+  alongside the hardened subset.
+- [x] Per-hardening-pattern result rows in the failure-mode catalog
+  (5 categories, each with per-node sparse rate + defensive read).
+- [x] Survival rate quantified per node (high-conf% hardened /
+  high-conf% soft).
+- [x] No regression on the soft corpus (sparse rates within
+  sampling noise on every node that exists in both topologies).
+- [x] Failure-mode catalog cross-referenced to defensive guidance
+  per category.
+- [x] Reproducibility section in `validation/v1.9.4-calibration.md`
+  documents the corpus-build methodology and the analyzer invocation.
+
+### Tests
+
+- 2294 passed, 1 skipped, 4 deselected (the dns.py walker security
+  fix and SIEM regex-slug fix added new pinning tests; net +5
+  versus v1.9.3.10).
+- Coverage 83.43% (≥ 80% gate, unchanged).
+- ruff + pyright clean on `recon_tool/` + `tests/`.
+- Local `validate_fingerprint.py` passes 414/414.
+- Local pytest passes including the v1.9.3.10 panel tests against
+  the new corpus data.
+- **Property-test strategy tightened in
+  `tests/test_exposure.py`.** The Hypothesis strategy for
+  `EvidenceRecord.raw_value` previously used an over-permissive
+  alphabet (Unicode `L|N|P` categories), allowing draws like the
+  literal English word ``"should"`` — which is in
+  `EXPOSURE_DISCOURAGED_COPY_TERMS`. The Property-8 neutral-copy
+  test then walked every string field of the exposure assessment,
+  including the *echoed* evidence value, and the natural-English
+  token spuriously failed a check that exists to validate
+  *recon-authored* prose. Strategy now uses a DNS-realistic
+  alphabet (alphanumerics + ``. - _ = ; : / @``) and filters out
+  any draw containing a discouraged-copy term. The fix narrows the
+  strategy toward realistic DNS record content; genuine coverage of
+  the discouraged-term gate is unaffected because the test's true
+  surface — recon-authored prose — was never the source of the
+  failure.
+
+### Security fixes (bundled with the v1.9.4 validation milestone)
+
+The hardened-adversarial validation surfaced two audit findings
+already in flight. Bundling the fixes with v1.9.4 keeps the
+security work attached to the validation that motivated it.
+
+#### CNAME chain walker: A/AAAA internal-DNS leak (audit finding, MEDIUM)
+
+The v1.9.3.5 fix added a resolved-address private-IP check
+(`_hop_resolves_publicly`) called by `_resolve_cname_chain` after
+the suffix denylist. A subsequent security audit established that
+this call sequence creates an internal-DNS oracle: invoking A/AAAA
+on an attacker-influenced target causes the recursive resolver to
+chase deeper CNAMEs *while answering the address query*,
+potentially querying private/internal names *before* the explicit
+walker has applied its suffix denylist to those deeper hops. That
+is the original CNAME-chain-leakage vulnerability the chain walker
+was supposed to prevent.
+
+**Fix:** removed the inline A/AAAA call from
+`_resolve_cname_chain`. The walker now uses **suffix-only**
+defense — every hop's name is validated against the private-suffix
+denylist, but no A/AAAA queries are issued during the walk. CNAME
+queries do not cause recursive resolvers to chase further records,
+making them the safe primitive for attacker-influenced names.
+
+**Cost:** the split-horizon protection that v1.9.3.5 added (where a
+public-suffix name resolves to private IPs via split-horizon DNS)
+is no longer in place. The suffix denylist alone is the primary
+defense. A future patch may add a terminus-only A/AAAA check
+(resolve A/AAAA only after the entire chain has been suffix-
+validated, and only on the last hop) if the split-horizon attack
+pattern proves common enough to warrant the bounded leak risk.
+v1.9.4 errs on the side of zero internal-DNS leakage.
+
+**Tests:** `tests/test_cname_chain_validation.py::TestResolveCnameChainBlocksPrivateTargets::test_walker_does_not_resolve_a_aaaa_during_walk`
+pins the v1.9.4 security invariant by tracking every DNS query
+the walker issues and asserting only `CNAME` queries fire — never
+`A` or `AAAA`. Future regression that re-introduces inline A/AAAA
+fails this test before it can reach a release tag. The
+`_hop_resolves_publicly` helper is preserved for callers who already
+know the name is trusted (no current callers); the function-level
+docstring documents the constraint.
+
+#### Splunk SIEM example: unescaped regex slugs (audit finding, INFORMATIONAL)
+
+The v1.9.3.8 shadow-IT alert example used
+`match(current_slugs, mvjoin(baseline_slugs, "|"))`, which treats
+every baseline slug value as a regex alternation. A baseline slug
+containing regex metacharacters such as `.*` would match any
+current slug and silently suppress the shadow-IT alert.
+
+**Fix:** switched to `mvfilter(NOT in(current_slugs, baseline_slugs))`
+in both `examples/siem/splunk/savedsearches.conf` and the README's
+copy-pasteable SPL snippet. `in()` performs literal set-membership;
+slug values are never interpreted as regex.
+
+**Tests:** `tests/test_siem_examples.py::TestSplunkSearchSafety`
+pins the safe pattern (3 tests covering the conf, the README, and
+absence-of-unsafe-pattern in executable SPL). Future regression
+that reverts to the unsafe form fails this test.
+
+#### MCP doctor/install path isolation (audit finding, HIGH — already fixed)
+
+The audit also flagged the v1.9.2.1 MCP doctor/install code path
+that called `python -m recon_tool.server` with inherited cwd/env,
+allowing a workspace-shadow attack. **This finding was already
+closed in v1.9.3.4** (see v1.9.3.4 CHANGELOG entry): `mcp_doctor.py`
+spawns the subprocess with an empty `tempfile.TemporaryDirectory`
+cwd + `PYTHONSAFEPATH=1` env; `mcp_install.py` persists
+`PYTHONSAFEPATH=1` in the fallback launch block + warns operators
+when the fallback is used; `recon_tool/server.py` carries a
+runtime guard that refuses cwd-shadow loads. Audit replays the
+original finding against pre-v1.9.3.4 code; no further action
+required.
+
+### Housekeeping (bundled with v1.9.4)
+
+Pre-commit's `ruff` + `ruff-format` surfaced drift unrelated to
+the validation milestone but accumulated since the project's last
+broad format pass. Bundled here so the v1.9.4 commit lands on a
+clean tree rather than carrying the drift forward into v1.9.5.
+
+- **`.pre-commit-config.yaml` ruff hook args fixed.** The hook
+  was configured with `args: [check, --fix]`, but
+  `astral-sh/ruff-pre-commit@v0.11.6` already invokes
+  `ruff check` from the hook entry. The duplicate `check`
+  was parsed as a filename, producing
+  `E902 The system cannot find the file specified` on every
+  run. Reduced args to `[--fix]`.
+- **64 files reformatted by `ruff-format`** — line-ending
+  normalization (Windows working-copy LF/CRLF drift) plus minor
+  whitespace cleanups. No behavioral changes; the diffs are
+  whitespace-only.
+- **12 `UP038` / `S603` lint fixes** applied across
+  `recon_tool/bayesian.py`, `recon_tool/cache.py`,
+  `recon_tool/sources/cert_providers.py`,
+  `scripts/check_metadata_coverage.py`, and five test files
+  (`test_explain_integration.py`, `test_exposure.py`,
+  `test_json_schema_contract.py`, `test_mcp_path_isolation.py`,
+  `test_server_resources.py`). `isinstance(x, (A, B))` is rewritten
+  to `isinstance(x, A | B)` per `UP038` (semantically equivalent on
+  Python 3.10+). The single `S603` site in
+  `test_mcp_path_isolation.py` — a deliberate subprocess invocation
+  that *is* the test's subject — gets a targeted
+  `# noqa: S603` with a justification comment rather than a code
+  change, because rewriting away the subprocess call would defeat
+  the test.
+
+These fixes are why pre-commit had been failing locally on commit;
+CI's narrower gate (`ruff check recon_tool/`, no `ruff-format`)
+was masking the drift. v1.9.4 is the first commit on the cleaned-
+up tree.
+
+### Roadmap
+
+- v1.9.4 bridge milestone **closed**.
+- Next in sequence: v1.9.5 (per-node stability dispositions —
+  takes the per-node firing counts from this run + the soft-corpus
+  re-run as raw inputs).
+
 ## [1.9.3.10] - 2026-05-11
 
 **Make subdomain-level surface intelligence visible by default.**
