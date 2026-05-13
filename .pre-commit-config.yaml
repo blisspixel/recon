@@ -16,6 +16,13 @@ repos:
         pass_filenames: false
         args: [recon_tool/]
 
+      - id: metadata-coverage
+        name: metadata-coverage (descriptions on every fingerprint detection)
+        entry: python scripts/check_metadata_coverage.py
+        language: system
+        pass_filenames: false
+        files: ^recon_tool/data/fingerprints/.*\.yaml$
+
   # Static lint for GitHub Actions workflow YAML. Catches:
   #   - unresolved action refs (the ``setup-uv@v8`` non-tag that broke
   #     the first v1.0.2 release),

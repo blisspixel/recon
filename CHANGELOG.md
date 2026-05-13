@@ -5,6 +5,164 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.7] - 2026-05-13
+
+**v1.9.7 bridge milestone: metadata-coverage gate flip (presence,
+not coverage) plus full catalog backfill.** The v1.9.0 advisory
+gate measured description coverage as a percentage with a 70
+percent threshold on three "gated" categories (identity, security,
+infrastructure). That framing invited gate-gaming: writing
+placeholder descriptions to clear a percentage rather than
+explaining what each detection claims. v1.9.7 replaces the
+percentage with a presence check, gates every category, and
+backfills the full 298-detection gap so the gate ships enforcing
+on a clean tree.
+
+This is the v1.9.7 step of the v1.9.4 to v2.0 linear sequence in
+`docs/roadmap.md`. The deliverable is the gate flip, the backfill,
+the per-detection gap reporting, the pre-commit hook, and the
+description rubric in CONTRIBUTING.md.
+
+### Headline numbers
+
+| Metric | Before (v1.9.6) | After (v1.9.7) |
+|---|---|---|
+| Total detections | 566 | 566 |
+| Detections with description | 268 (47 percent) | **566 (100 percent)** |
+| Gated categories | 3 (identity, security, infrastructure) | **all 8** |
+| Gate type | percentage threshold (70 percent) | **presence (every detection)** |
+| CI behavior | advisory (`--report-only` in ci.yml) | **enforcing in CI and release.yml** |
+
+Backfill per category:
+
+| Category | Before | After | Added |
+|---|---|---|---|
+| ai | 100 percent | 100 percent | 0 |
+| crm-marketing | 32 percent | 100 percent | 32 |
+| data-analytics | 0 percent | 100 percent | 13 |
+| email | 46 percent | 100 percent | 20 |
+| infrastructure | 56 percent | 100 percent | 146 |
+| productivity | 9 percent | 100 percent | 41 |
+| security | 31 percent | 100 percent | 44 |
+| verticals | 89 percent | 100 percent | 2 |
+| **total** | **268** | **566** | **+298** |
+
+### Added
+
+- **`CONTRIBUTING.md` "Detection description rubric (v1.9.7+)"
+  section.** Three-part rubric: (a) what the slug detects, (b)
+  what it does not detect, (c) common false positives if known.
+  Plus tone guidance (humble, no overclaim, no em-dashes) and
+  two worked examples (good vs placeholder). Sets the bar for
+  new contributions; reviewer judgement is the enforcer.
+- **`.pre-commit-config.yaml` metadata-coverage hook.** Fires
+  the presence gate locally before push when any
+  `recon_tool/data/fingerprints/*.yaml` is touched. Catches
+  missing descriptions in the developer loop rather than in CI.
+- **Per-detection gap reporting in `scripts/check_metadata_coverage.py`.**
+  On failure the script emits the exact slug + detection-rule
+  pairs missing a description, grouped by category, so a
+  contributor sees "fix these N entries" rather than "your
+  category coverage dropped to 87 percent."
+
+### Changed
+
+- **`scripts/check_metadata_coverage.py`: presence gate replaces
+  percentage threshold.** Dropped `--threshold` and
+  `_DEFAULT_THRESHOLD = 0.70`; dropped the `_GATED_CATEGORIES`
+  allowlist. Every category gates; every detection must carry a
+  non-empty `description`. Reference and weight coverage remain
+  advisory diagnostics, not gating.
+- **`.github/workflows/ci.yml`: metadata-coverage step is now
+  enforcing.** Removed `--report-only` from the metadata-coverage
+  invocation. CI fails the build when any detection is missing a
+  description.
+- **`.github/workflows/release.yml` runs the metadata-coverage
+  gate.** Added to the `test` job, mirroring `ci.yml`. Prevents
+  a catalog regression from reaching PyPI just because the
+  tests passed.
+- **All 298 backfilled descriptions follow the rubric.**
+  Vendor-specific text covers what the pattern matches, what
+  inference the slug supports, common false positives where
+  known, and acquisition / rebrand history where it affects
+  reading the slug name (for example, Pardot is now Salesforce
+  Marketing Cloud Account Engagement; Auth0 is an Okta property
+  since 2021; SignalFx is sold as Splunk Observability Cloud).
+
+### Notable findings from the backfill
+
+- **The "infrastructure" category is the bulk of the catalog.**
+  332 of 566 detections (59 percent) live in
+  `infrastructure.yaml` and `surface.yaml` (CNAME-target rules
+  for the surface-attribution pipeline). The detection patterns
+  there map to CDNs, cloud-provider endpoints, hosted-app
+  platforms, and DNS providers; descriptions document both the
+  vendor and the specific surface the pattern fires on (apex
+  delegation, edge proxying, branded-subdomain hosting, regional
+  endpoints, and so on).
+- **Many detections cover legacy vendor domains.** The catalog
+  carries CNAMEs for products whose vendor was acquired and
+  rebranded but whose hostnames persist (ExactTarget for
+  Salesforce Marketing Cloud, Mandrill for Mailchimp
+  Transactional, FireEye for Trellix, Idaptive for CyberArk
+  Identity, Wildbit for Postmark, and similar cases). Each
+  description notes the rebrand so the reader does not chase a
+  vendor name that no longer markets under that brand.
+- **Pure deliverability signals are not enforcement signals.**
+  Echoing the v1.9.6 `email_security_policy_enforcing` lesson,
+  several email-vendor descriptions explicitly note that SPF
+  includes authorize outbound sending only and do not imply
+  inbound mail handling. The rubric's "what it does not detect"
+  framing surfaces this consistently across the catalog.
+
+### Real-company-data discipline
+
+The backfill describes vendor products and the specific evidence
+patterns recon matches against. No real-organization names appear
+in descriptions. Acquisition and rebrand history is sourced from
+publicly available vendor announcements and does not reveal
+customer identities.
+
+### Quality bar verification
+
+- [x] Per-category gap report on failure: the script prints
+  every slug + detection-rule pair that lacks a description,
+  grouped by category, so a contributor sees "fix these N
+  entries" not "coverage dropped to 87 percent."
+- [x] Pre-commit hook entry added to `.pre-commit-config.yaml`
+  scoped to fingerprint YAML changes; the gate fires locally
+  before push.
+- [x] "What good looks like" rubric in `CONTRIBUTING.md` with
+  two worked examples (good vs placeholder).
+- [x] Backfill before flip: zero detections missing
+  descriptions in any category before the gate flipped from
+  advisory to enforcing. The flip is in the same release as
+  the backfill, but the backfill is committed before the
+  workflow-file edits.
+- [x] Reference-presence reporting remains advisory. Reference
+  coverage stays low (22.9 percent on infrastructure, lower
+  elsewhere); the rubric notes reference URLs are nice to have
+  but harder to source defensively, so they do not gate.
+
+### Tests
+
+- Total: 2314 passed, 1 skipped, 4 deselected (unchanged test
+  count, the v1.9.7 change is a data and gate edit).
+- Coverage: 83.4 percent (above the 80 percent gate, unchanged).
+- ruff, pyright, pre-commit (including the new metadata-coverage
+  hook), and the fingerprint validator all clean.
+
+### Roadmap
+
+- v1.9.7 bridge milestone **closed**.
+- Next in sequence: v1.9.8 (catalog metadata richness pass) and
+  v1.9.9 (detection-gap UX surfaces).
+- New post-v2.0 backlog item added: machine-readable CLI surface
+  inventory for downstream skill and agent authors. See
+  `docs/roadmap.md` Backlog "Machine-readable CLI surface
+  inventory" for the rationale (improve recon's surface
+  inventory; leave agent-behavior layer to skill files).
+
 ## [1.9.6] - 2026-05-13
 
 **v1.9.6 bridge milestone — CPT-change discipline (concept, not

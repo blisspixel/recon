@@ -13,8 +13,22 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^github-site-verification=
+    description: >-
+      GitHub domain-verification TXT (GitHub is a Microsoft
+      property since the 2018 acquisition). Indicates the
+      domain is verified to a GitHub organization, typically
+      a precondition for using verified-domain features like
+      domain-restricted SAML SSO or Verified Domain badges on
+      org profiles. Compare with `_github-pages-challenge` for
+      the Pages-specific verification.
   - type: txt
     pattern: ^_github-pages-challenge
+    description: >-
+      GitHub Pages domain-challenge TXT (found at
+      `_github-pages-challenge-<org>.<domain>`). Indicates the
+      domain has been verified for use as a custom Pages site.
+      Distinct from org-level domain verification; Pages
+      verification is per-site.
 - name: GitLab
   slug: gitlab
   category: DevTools & Infrastructure
@@ -22,10 +36,19 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^gitlab-pages-verification-code=
-    description: GitLab SaaS / Pages domain verification at zone apex
+    description: >-
+      GitLab Pages domain-verification TXT at zone apex.
+      Indicates the domain is verified for use as a custom
+      GitLab Pages site. Common on GitLab SaaS
+      (gitlab.com); self-managed GitLab installations can
+      also use this verification.
   - type: subdomain_txt
     pattern: _gitlab-pages-verification-code:.
-    description: GitLab Pages verification at designated subdomain
+    description: >-
+      GitLab Pages subdomain-verification TXT (found at a
+      designated `_gitlab-pages-verification-code.<subdomain>`
+      record). Same purpose as the apex form; used when the
+      Pages site lives at a subdomain rather than the apex.
 - name: Postman
   slug: postman
   category: DevTools & Infrastructure
@@ -33,6 +56,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^postman-domain-verification=
+    description: >-
+      Postman domain-verification TXT (Postman is an API
+      platform with collections, collaboration, and an API
+      gateway). Indicates the domain is registered with a
+      Postman team for SSO federation or custom-domain API
+      documentation.
 - name: Linear
   slug: linear
   category: DevTools & Infrastructure
@@ -40,6 +69,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^linear-domain-verification=
+    description: >-
+      Linear domain-verification TXT (Linear is an issue-
+      tracking and project-management platform popular in
+      engineering organizations). Indicates the domain is
+      registered with a Linear workspace, typically for SSO
+      federation.
 - name: Autodesk
   slug: autodesk
   category: DevTools & Infrastructure
@@ -47,6 +82,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^autodesk-domain-verification=
+    description: >-
+      Autodesk domain-verification TXT (Autodesk publishes
+      AutoCAD, Revit, Fusion 360, and the broader AEC and
+      manufacturing design suite). Indicates the domain is
+      registered with an Autodesk enterprise account.
 - name: Grammarly
   slug: grammarly
   category: DevTools & Infrastructure
@@ -54,6 +94,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^grammarly-domain-verification=
+    description: >-
+      Grammarly domain-verification TXT (Grammarly Business is
+      the enterprise writing-assistance offering). Indicates
+      the domain is registered with a Grammarly Business
+      account, typically for SSO federation.
 - name: Vercel
   slug: vercel
   category: DevTools & Infrastructure
@@ -61,8 +106,18 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^vercel-domain-verification=
+    description: >-
+      Vercel domain-verification TXT (Vercel is a frontend
+      cloud platform best known as the Next.js maintainer).
+      Indicates the domain is registered with a Vercel team
+      for deploying applications under a custom domain.
   - type: cname
     pattern: vercel-dns.com
+    description: >-
+      CNAME pointing into vercel-dns.com. Indicates the
+      domain uses Vercel's hosted DNS, typically when the
+      domain was registered through Vercel or delegated to
+      Vercel's nameservers for custom-domain management.
 - name: Webflow
   slug: webflow
   category: DevTools & Infrastructure
@@ -70,6 +125,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^webflow-domain-verification=
+    description: >-
+      Webflow domain-verification TXT (Webflow is a no-code
+      website-builder and CMS platform). Indicates the
+      domain is registered with a Webflow account, typically
+      for hosting a Webflow site under the custom domain.
 - name: Netlify
   slug: netlify
   category: DevTools & Infrastructure
@@ -77,11 +137,24 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^netlify=
+    description: >-
+      Netlify domain-verification TXT (the bare `netlify=`
+      prefix). Indicates the domain is registered with a
+      Netlify team for hosting one or more sites under the
+      custom domain.
   - type: txt
     pattern: ^verified-for-netlify=
-    description: Netlify site ownership verification token
+    description: >-
+      Netlify site-ownership verification TXT
+      (`verified-for-netlify=` prefix). Used for per-site
+      verification rather than team-level claim. Same
+      administrative-binding semantics, finer-grained scope.
   - type: cname
     pattern: netlify.app
+    description: >-
+      CNAME pointing into netlify.app. Indicates the domain
+      hosts a Netlify-deployed site under a custom subdomain
+      that proxies to Netlify's edge.
 - name: Twilio
   slug: twilio
   category: DevTools & Infrastructure
@@ -89,6 +162,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^twilio-domain-verification=
+    description: >-
+      Twilio domain-verification TXT. Indicates the domain
+      is registered with a Twilio account, typically for
+      SSO federation or for verifying a sending domain for
+      Twilio SendGrid or Twilio Conversations. Does not
+      identify which Twilio product is in use.
 - name: Citrix
   slug: citrix
   category: DevTools & Infrastructure
@@ -96,6 +175,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^citrix-verification-code=
+    description: >-
+      Citrix domain-verification TXT (Citrix is now part of
+      Cloud Software Group after the 2022 merger with TIBCO).
+      Indicates the domain is registered with a Citrix
+      Cloud tenant, typically for SSO federation across
+      Citrix DaaS, Citrix Workspace, or NetScaler.
 - name: Dell Technologies
   slug: dell
   category: DevTools & Infrastructure
@@ -103,6 +188,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^dell-technologies-domain-verification=
+    description: >-
+      Dell Technologies domain-verification TXT. Indicates
+      the domain is registered with a Dell Technologies
+      enterprise account, typically for Dell premier or
+      support-portal SSO federation.
 - name: CloudHealth (VMware)
   slug: cloudhealth
   category: DevTools & Infrastructure
@@ -110,6 +200,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^cloudhealth=
+    description: >-
+      CloudHealth domain-verification TXT (CloudHealth is a
+      cloud cost-management platform, originally a VMware
+      acquisition, now part of Broadcom after the 2023
+      VMware acquisition). Indicates the domain is
+      registered with a CloudHealth tenant.
 - name: Unity
   slug: unity
   category: DevTools & Infrastructure
@@ -117,6 +213,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^unity-sso-verification=
+    description: >-
+      Unity SSO domain-verification TXT (Unity Technologies
+      publishes the Unity game engine and developer tools).
+      Indicates the domain is registered with a Unity
+      organization for SSO federation, common at game studios
+      and digital-twin teams.
 - name: PagerDuty
   slug: pagerduty
   category: DevTools & Infrastructure
@@ -124,6 +226,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^pagerduty-domain-verification=
+    description: >-
+      PagerDuty domain-verification TXT (PagerDuty is an
+      incident-management and on-call platform). Indicates
+      the domain is registered with a PagerDuty account,
+      typically for SSO federation.
 - name: Render
   slug: render
   category: DevTools & Infrastructure
@@ -131,8 +238,17 @@ fingerprints:
   detections:
   - type: cname
     pattern: onrender.com
+    description: >-
+      CNAME pointing into onrender.com (Render is a unified
+      cloud-application platform comparable to Heroku and
+      Fly.io). Indicates the domain hosts at least one
+      service deployed on Render under a custom domain.
   - type: txt
     pattern: ^render-domain-verification=
+    description: >-
+      Render domain-verification TXT. Indicates the domain
+      is registered with a Render account, a precondition
+      for using a custom domain on Render-deployed services.
 - name: Cloudflare
   slug: cloudflare
   parent_vendor: Cloudflare
@@ -142,10 +258,28 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^cloudflare-verify=
+    description: >-
+      Cloudflare domain-verification TXT (`cloudflare-verify=`
+      prefix). Indicates the domain is verified to a
+      Cloudflare account, used for some Cloudflare products
+      (Cloudflare for Teams, Cloudflare Pages custom domains,
+      and so on).
   - type: ns
     pattern: cloudflare.com
+    description: >-
+      NS records terminate at Cloudflare nameservers. The
+      domain uses Cloudflare as authoritative DNS, a common
+      precondition for using Cloudflare's CDN, WAF, or DNS
+      products on the apex. Does not by itself prove the apex
+      sits behind Cloudflare's CDN; those are separate
+      products on the same vendor.
   - type: cname
     pattern: cloudflare
+    description: >-
+      CNAME containing the string `cloudflare`. Lower-
+      specificity fallback for Cloudflare-product CNAMEs
+      that do not match the more-specific patterns
+      elsewhere in the catalog.
 - name: AWS Route 53
   slug: aws-route53
   product_family: AWS
@@ -155,6 +289,13 @@ fingerprints:
   detections:
   - type: ns
     pattern: awsdns
+    description: >-
+      NS records contain `awsdns` (AWS Route 53 nameserver
+      hostnames follow the `ns-*.awsdns-*.{com,net,org,co.uk}`
+      pattern). Indicates the domain uses Route 53 as
+      authoritative DNS. Does not by itself indicate the
+      domain's workloads run on AWS; many domains use Route
+      53 for DNS while hosting elsewhere.
 - name: Azure DNS
   slug: azure-dns
   category: Infrastructure
@@ -162,6 +303,12 @@ fingerprints:
   detections:
   - type: ns
     pattern: azure-dns
+    description: >-
+      NS records contain `azure-dns` (Azure DNS nameserver
+      hostnames follow the `ns*.azure-dns.{com,net,org,info}`
+      pattern). Indicates the domain uses Azure DNS as
+      authoritative DNS. Does not by itself indicate Azure
+      hosts the domain's workloads.
 - name: Google Cloud DNS
   slug: gcp-dns
   category: Infrastructure
@@ -169,6 +316,15 @@ fingerprints:
   detections:
   - type: ns
     pattern: google.com
+    description: >-
+      NS records terminating at Google Cloud DNS
+      nameservers (`ns-cloud-{a,b,c,d}*.googledomains.com`
+      and `*.google.com` patterns). Indicates the domain
+      uses Google Cloud DNS as authoritative DNS. Note that
+      a Google-NS match does not by itself distinguish
+      Cloud DNS from legacy Google Domains DNS or from
+      Workspace-managed DNS; the underlying service is GCP
+      Cloud DNS in the modern configuration.
 - name: UltraDNS (Neustar)
   slug: ultradns
   category: Infrastructure
@@ -176,6 +332,13 @@ fingerprints:
   detections:
   - type: ns
     pattern: ultradns
+    description: >-
+      NS records contain `ultradns` (UltraDNS is a managed-
+      DNS service originally part of Neustar, now part of
+      Vercara after the 2024 Neustar Security Services
+      acquisition). Indicates the domain uses UltraDNS as
+      authoritative DNS, common in enterprise and
+      financial-services configurations.
 - name: Dyn (Oracle)
   slug: dyn
   category: Infrastructure
@@ -183,6 +346,11 @@ fingerprints:
   detections:
   - type: ns
     pattern: dynect.net
+    description: >-
+      NS records terminating at Dyn's managed DNS
+      (`*.dynect.net`). Dyn is now part of Oracle Cloud
+      Infrastructure after the 2016 acquisition. Indicates
+      the domain uses Dyn as authoritative DNS.
 - name: Akamai
   slug: akamai
   category: Infrastructure
@@ -191,19 +359,36 @@ fingerprints:
   detections:
   - type: ns
     pattern: akamai.net
-    description: Akamai authoritative DNS hostname
+    description: >-
+      NS records terminating in akamai.net. Indicates the
+      domain uses Akamai as authoritative DNS, often paired
+      with Akamai's CDN edge or DNS-based traffic management
+      products.
   - type: ns
     pattern: akam.net
-    description: Akamai authoritative DNS hostname
+    description: >-
+      NS records terminating in akam.net (alternative Akamai
+      authoritative-DNS domain). Same authoritative-DNS
+      semantics as the akamai.net form.
   - type: cname
     pattern: akamaiedge.net
-    description: Akamai edge CNAME delegation
+    description: >-
+      CNAME terminating in akamaiedge.net. Indicates the
+      domain or subdomain proxies through Akamai's edge,
+      typically for CDN or WAF services.
   - type: cname
     pattern: edgekey.net
-    description: Akamai edge key CNAME delegation
+    description: >-
+      CNAME terminating in edgekey.net (Akamai's edge-key
+      domain used for some product configurations).
+      Same edge-proxying semantics as the akamaiedge.net
+      form.
   - type: cname
     pattern: edgesuite.net
-    description: Akamai EdgeSuite CDN/WAF CNAME delegation
+    description: >-
+      CNAME terminating in edgesuite.net (Akamai's EdgeSuite
+      CDN and WAF product domain). Same edge-proxying
+      semantics as the other Akamai edge-CNAME patterns.
 - name: NS1 (IBM)
   slug: ns1
   category: Infrastructure
@@ -211,6 +396,12 @@ fingerprints:
   detections:
   - type: ns
     pattern: nsone.net
+    description: >-
+      NS records terminating in nsone.net (NS1 is a managed-
+      DNS provider acquired by IBM in 2024). Indicates the
+      domain uses NS1 as authoritative DNS, often selected
+      for advanced traffic-steering and observability
+      features.
 - name: GoDaddy
   slug: godaddy
   category: Infrastructure
@@ -218,6 +409,12 @@ fingerprints:
   detections:
   - type: ns
     pattern: domaincontrol.com
+    description: >-
+      NS records terminating in domaincontrol.com (GoDaddy's
+      authoritative-DNS hostname). Indicates the domain is
+      registered through GoDaddy and uses GoDaddy's default
+      DNS hosting, which is common but not informative about
+      where the domain's workloads actually run.
 - name: AWS CloudFront
   slug: aws-cloudfront
   product_family: AWS
@@ -227,6 +424,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: cloudfront.net
+    description: >-
+      CNAME terminating in cloudfront.net (AWS CloudFront
+      CDN distribution domain). Indicates the domain has at
+      least one subdomain delegating to a CloudFront
+      distribution. CloudFront is commonly used in front of
+      S3, API Gateway, ELB, or custom origins.
 - name: Azure CDN
   slug: azure-cdn
   category: Infrastructure
@@ -234,6 +437,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: azureedge.net
+    description: >-
+      CNAME terminating in azureedge.net (Azure CDN edge
+      domain, covering both Azure CDN Standard from Microsoft
+      and the deprecating Akamai and Verizon partner tiers).
+      Indicates the domain delegates traffic to an Azure CDN
+      profile.
 - name: Azure App Service
   slug: azure-appservice
   category: Infrastructure
@@ -241,6 +450,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: azurewebsites.net
+    description: >-
+      CNAME terminating in azurewebsites.net (Azure App
+      Service / Web Apps default hostname domain). Indicates
+      the domain has at least one subdomain delegating to an
+      App Service, which can host web apps, APIs, or Azure
+      Functions in the App Service plan.
 - name: Azure Traffic Manager
   slug: azure-tm
   category: Infrastructure
@@ -250,6 +465,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: trafficmanager.net
+    description: >-
+      CNAME terminating in trafficmanager.net (Azure Traffic
+      Manager DNS-based traffic routing). Indicates the
+      domain uses Traffic Manager for DNS-level failover or
+      geographic routing, typically in front of multi-region
+      Azure deployments.
 - name: Fastly
   slug: fastly
   category: Infrastructure
@@ -258,9 +479,19 @@ fingerprints:
   detections:
   - type: cname
     pattern: fastly.net
+    description: >-
+      CNAME terminating in fastly.net (Fastly CDN edge
+      domain). Indicates the domain delegates traffic to
+      Fastly's edge, used for CDN, image optimization, and
+      Compute@Edge workloads.
   - type: cname
     pattern: fastly\.net$|fastlylb\.net$
-    description: Fastly CDN/edge compute CNAME delegation
+    description: >-
+      CNAME terminating in fastly.net or fastlylb.net (the
+      latter is Fastly's load-balancer endpoint domain).
+      Indicates the domain uses Fastly for CDN or edge
+      compute. The combined-regex form covers configurations
+      that use either domain.
 - name: Shopify
   slug: shopify
   category: Infrastructure
@@ -268,6 +499,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: myshopify.com
+    description: >-
+      CNAME terminating in myshopify.com (Shopify's storefront
+      hostname domain). Indicates the domain points to a
+      Shopify store, typically via a `shop.example.com` or
+      apex CNAME flattening configuration.
 - name: Wix
   slug: wix
   category: Infrastructure
@@ -275,6 +511,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: wixdns.net
+    description: >-
+      CNAME terminating in wixdns.net (Wix's DNS hosting
+      domain). Indicates the domain is hosted on Wix, the
+      no-code website-builder platform. Common with small
+      business and creator websites.
 - name: Squarespace
   slug: squarespace
   category: Infrastructure
@@ -282,6 +523,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: squarespace.com
+    description: >-
+      CNAME pointing into squarespace.com (Squarespace is a
+      website-builder and e-commerce platform). Indicates
+      the domain hosts at least one site or page on
+      Squarespace.
 - name: Heroku
   slug: heroku
   category: Infrastructure
@@ -289,6 +535,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: herokuapp.com
+    description: >-
+      CNAME terminating in herokuapp.com (Heroku is a
+      Salesforce-owned application platform). Indicates the
+      domain has at least one subdomain delegating to a
+      Heroku dyno or formation.
 - name: WP Engine
   slug: wpengine
   category: Infrastructure
@@ -296,9 +547,18 @@ fingerprints:
   detections:
   - type: cname
     pattern: wpengine.com
+    description: >-
+      CNAME pointing into wpengine.com (WP Engine is a
+      managed-WordPress hosting platform). Indicates the
+      domain hosts a WordPress site on WP Engine
+      infrastructure.
   - type: txt
     pattern: ^wpe-verification=
-    description: WP Engine WordPress hosting domain verification
+    description: >-
+      WP Engine domain-verification TXT. Indicates the
+      domain is verified for use on a WP Engine
+      installation, typically a precondition for SSL
+      provisioning on the managed-WordPress site.
 - name: Pantheon
   slug: pantheon
   category: Infrastructure
@@ -306,6 +566,10 @@ fingerprints:
   detections:
   - type: cname
     pattern: pantheon.io
+    description: >-
+      CNAME pointing into pantheon.io (Pantheon is a
+      managed-WordPress and managed-Drupal hosting platform).
+      Indicates the domain hosts a Pantheon-managed site.
 - name: AWS Elastic Load Balancer
   slug: aws-elb
   category: Infrastructure
@@ -313,10 +577,20 @@ fingerprints:
   detections:
   - type: cname
     pattern: elb.amazonaws.com
-    description: AWS Application/Network Load Balancer CNAME
+    description: >-
+      CNAME terminating in elb.amazonaws.com (AWS
+      Application Load Balancer or Network Load Balancer
+      classic endpoint). Indicates the domain delegates
+      traffic to an AWS load balancer, typically fronting
+      EC2, ECS, or EKS workloads.
   - type: cname
     pattern: .elb.
-    description: AWS Elastic Load Balancer regional CNAME
+    description: >-
+      CNAME containing `.elb.` (regional AWS ELB hostname
+      patterns like `*.us-east-1.elb.amazonaws.com`).
+      Catch-all for ALB / NLB / CLB endpoints across
+      regions. Same workload-fronting semantics as the
+      bare `elb.amazonaws.com` pattern.
 - name: AWS S3
   slug: aws-s3
   category: Infrastructure
@@ -324,13 +598,28 @@ fingerprints:
   detections:
   - type: cname
     pattern: s3.amazonaws.com
-    description: AWS S3 REST endpoint CNAME
+    description: >-
+      CNAME terminating in s3.amazonaws.com (AWS S3 REST API
+      endpoint). Indicates the domain proxies to an S3
+      bucket, typically for object storage or static-asset
+      serving. Note that this does not by itself indicate
+      static-website-hosting mode is enabled; for that, the
+      `s3-website-*` patterns apply.
   - type: cname
     pattern: .s3-website-
-    description: AWS S3 static website endpoint CNAME
+    description: >-
+      CNAME containing `.s3-website-` (AWS S3 static-website
+      hosting endpoint, regional form like
+      `s3-website-us-east-1.amazonaws.com`). Indicates the
+      bucket is configured for static-website hosting and
+      the domain serves through that endpoint.
   - type: cname
     pattern: .s3-website.
-    description: AWS S3 static website endpoint CNAME
+    description: >-
+      CNAME containing `.s3-website.` (newer-style S3
+      static-website endpoint, like
+      `s3-website.us-east-2.amazonaws.com`). Same static-
+      website-hosting semantics as the dash-form pattern.
 - name: AWS Elastic Beanstalk
   slug: aws-eb
   category: Infrastructure
@@ -338,6 +627,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: elasticbeanstalk.com
+    description: >-
+      CNAME terminating in elasticbeanstalk.com (AWS Elastic
+      Beanstalk PaaS endpoint). Indicates the domain
+      delegates to a Beanstalk environment, typically a
+      multi-tier application managed by Beanstalk.
 - name: Google Cloud (App Engine / Cloud Run)
   slug: gcp-app
   category: Infrastructure
@@ -345,8 +639,19 @@ fingerprints:
   detections:
   - type: cname
     pattern: appspot.com
+    description: >-
+      CNAME terminating in appspot.com (Google App Engine's
+      default hostname domain). Indicates the domain
+      delegates to an App Engine service.
   - type: cname
     pattern: run.app
+    description: >-
+      CNAME terminating in run.app (Google Cloud Run's
+      default hostname domain). Indicates the domain
+      delegates to a Cloud Run container service. Cloud Run
+      is GCP's serverless container platform; presence of
+      this CNAME suggests modern GCP usage patterns rather
+      than legacy App Engine.
 - name: Azure Front Door
   slug: azure-fd
   category: Infrastructure
@@ -356,8 +661,19 @@ fingerprints:
   detections:
   - type: cname
     pattern: azurefd.net
+    description: >-
+      CNAME terminating in azurefd.net (Azure Front Door
+      classic and Standard / Premium endpoint domain).
+      Indicates the domain proxies through Azure Front
+      Door, Microsoft's global load balancer and edge
+      acceleration product.
   - type: cname
     pattern: afd.ms
+    description: >-
+      CNAME terminating in afd.ms (Azure Front Door Standard
+      and Premium short-form endpoint domain). Same Front
+      Door semantics as the azurefd.net form; the .ms
+      domain is used by some newer SKUs.
 - name: Contentful
   slug: contentful
   category: DevTools & Infrastructure
@@ -365,6 +681,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: contentful.com
+    description: >-
+      CNAME pointing into contentful.com (Contentful is a
+      headless CMS). Indicates the domain proxies content
+      through Contentful, typically via a `cdn.example.com`
+      or `images.example.com` branded subdomain.
 - name: Sanity.io
   slug: sanity
   category: DevTools & Infrastructure
@@ -372,6 +693,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: sanity.io
+    description: >-
+      CNAME pointing into sanity.io (Sanity is a headless
+      CMS with a real-time backend). Indicates the domain
+      uses Sanity for content management, typically through
+      a branded API or asset subdomain.
 - name: Prismic
   slug: prismic
   category: DevTools & Infrastructure
@@ -379,6 +705,10 @@ fingerprints:
   detections:
   - type: cname
     pattern: prismic.io
+    description: >-
+      CNAME pointing into prismic.io (Prismic is a headless
+      CMS). Indicates the domain uses Prismic for content
+      management.
 - name: LaunchDarkly
   slug: launchdarkly
   category: DevTools & Infrastructure
@@ -386,6 +716,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: launchdarkly.com
+    description: >-
+      CNAME pointing into launchdarkly.com (LaunchDarkly is
+      a feature-management and experimentation platform).
+      Indicates the domain proxies feature-flag traffic
+      through LaunchDarkly, often via a branded relay-proxy
+      subdomain.
 - name: Cloudinary
   slug: cloudinary
   category: Infrastructure
@@ -393,6 +729,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: cloudinary.com
+    description: >-
+      CNAME pointing into cloudinary.com (Cloudinary is an
+      image and video management and delivery platform).
+      Indicates the domain proxies media assets through
+      Cloudinary, typically via a branded
+      `images.example.com` subdomain.
 - name: Imgix
   slug: imgix
   category: Infrastructure
@@ -400,6 +742,10 @@ fingerprints:
   detections:
   - type: cname
     pattern: imgix.net
+    description: >-
+      CNAME pointing into imgix.net (imgix is a real-time
+      image processing and delivery CDN). Indicates the
+      domain proxies image assets through imgix.
 - name: KeyCDN
   slug: keycdn
   category: Infrastructure
@@ -407,8 +753,16 @@ fingerprints:
   detections:
   - type: cname
     pattern: keycdn.com
+    description: >-
+      CNAME pointing into keycdn.com (KeyCDN is a content
+      delivery network). Indicates the domain proxies
+      through KeyCDN's edge.
   - type: cname
     pattern: kxcdn.com
+    description: >-
+      CNAME pointing into kxcdn.com (KeyCDN's edge-zone
+      domain). Same CDN semantics as the keycdn.com form;
+      kxcdn.com is the zone-hostname pattern.
 - name: StackPath / MaxCDN
   slug: stackpath
   category: Infrastructure
@@ -416,6 +770,13 @@ fingerprints:
   detections:
   - type: cname
     pattern: stackpathdns.com
+    description: >-
+      CNAME terminating in stackpathdns.com (StackPath was
+      a content-delivery and edge-compute platform that
+      absorbed MaxCDN; StackPath shut down its CDN business
+      in 2024 and many domains have migrated off). Indicates
+      the domain delegated to StackPath's edge; the CNAME
+      may persist on configurations not yet migrated.
 - name: Ghost (CMS)
   slug: ghost
   category: Infrastructure
@@ -423,6 +784,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: ghost.io
+    description: >-
+      CNAME pointing into ghost.io (Ghost is an open-source
+      blogging and newsletter platform; ghost.io is the
+      managed-hosting offering). Indicates the domain hosts
+      a Ghost-managed publication.
 - name: 'CAA: Let''s Encrypt'
   slug: letsencrypt
   category: Infrastructure
@@ -430,6 +796,12 @@ fingerprints:
   detections:
   - type: caa
     pattern: letsencrypt.org
+    description: >-
+      CAA record authorizing Let's Encrypt to issue
+      certificates for the domain. Indicates the domain
+      owner has explicitly allow-listed Let's Encrypt as a
+      certificate-issuing CA. Common with cost-conscious or
+      automation-friendly TLS setups.
 - name: 'CAA: DigiCert'
   slug: digicert
   category: Infrastructure
@@ -437,6 +809,12 @@ fingerprints:
   detections:
   - type: caa
     pattern: digicert.com
+    description: >-
+      CAA record authorizing DigiCert to issue certificates
+      for the domain. Indicates the domain owner has
+      allow-listed DigiCert, an enterprise certificate
+      authority used for OV and EV certificates and
+      regulated industries.
 - name: 'CAA: Sectigo'
   slug: sectigo
   category: Infrastructure
@@ -444,8 +822,19 @@ fingerprints:
   detections:
   - type: caa
     pattern: sectigo.com
+    description: >-
+      CAA record authorizing Sectigo to issue certificates
+      for the domain. Sectigo is a CA spun out from the
+      Comodo CA business in 2018. Common in enterprise and
+      mid-market TLS setups.
   - type: caa
     pattern: comodoca.com
+    description: >-
+      CAA record authorizing the Comodo CA (now Sectigo
+      under the post-2018 rebrand). The comodoca.com
+      authorization is functionally equivalent to
+      sectigo.com; some CAA records still use the legacy
+      identifier.
 - name: 'CAA: AWS Certificate Manager'
   slug: aws-acm
   category: Infrastructure
@@ -455,8 +844,20 @@ fingerprints:
   detections:
   - type: caa
     pattern: amazon.com
+    description: >-
+      CAA record authorizing Amazon (typically AWS
+      Certificate Manager) to issue certificates for the
+      domain. Indicates the domain owner uses AWS-managed
+      TLS, common with CloudFront, ELB, and API Gateway
+      certificates.
   - type: caa
     pattern: amazontrust.com
+    description: >-
+      CAA record authorizing Amazon Trust Services
+      (Amazon's CA brand for the publicly-trusted
+      certificates ACM issues). Functionally equivalent to
+      the amazon.com authorization; some CAA records use
+      the more-specific amazontrust.com identifier.
 - name: 'CAA: Google Trust Services'
   slug: google-trust
   category: Infrastructure
@@ -464,6 +865,12 @@ fingerprints:
   detections:
   - type: caa
     pattern: pki.goog
+    description: >-
+      CAA record authorizing Google Trust Services to issue
+      certificates for the domain. Indicates the domain
+      owner uses Google-managed TLS, common with Google
+      Cloud Load Balancing and managed-certificate setups
+      on GCP.
 - name: Fly.io
   slug: flyio
   category: Infrastructure
@@ -471,7 +878,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: fly\.dev$|edgeapp\.net$
-    description: Fly.io edge compute CNAME delegation
+    description: >-
+      CNAME terminating in fly.dev or edgeapp.net (Fly.io is
+      a globally-distributed application platform). The
+      fly.dev domain is the default-app hostname; edgeapp.net
+      is the legacy form. Indicates the domain hosts at
+      least one Fly.io-deployed service.
 - name: Railway
   slug: railway
   category: Infrastructure
@@ -479,7 +891,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: railway\.app$
-    description: Railway deployment platform CNAME delegation
+    description: >-
+      CNAME terminating in railway.app (Railway is a
+      developer-focused deployment platform comparable to
+      Render and Fly.io). Indicates the domain hosts at
+      least one Railway-deployed service.
 - name: VMware Cloud
   slug: vmware-cloud
   category: Infrastructure
@@ -487,7 +903,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^vmware-cloud-verification-
-    description: VMware Cloud domain verification
+    description: >-
+      VMware Cloud domain-verification TXT (the
+      `vmware-cloud-verification-` prefix). Indicates the
+      domain is registered with a VMware Cloud account.
+      VMware is now part of Broadcom after the 2023
+      acquisition; the VMware Cloud brand has been
+      restructured but the verification prefix persists.
 - name: Sentry
   slug: sentry
   category: DevTools & Infrastructure
@@ -495,7 +917,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^sentry-verification=
-    description: Sentry error tracking domain verification token
+    description: >-
+      Sentry domain-verification TXT (Sentry is an
+      error-tracking and APM platform). Indicates the
+      domain is registered with a Sentry organization,
+      typically for SSO federation or for proxying SDK
+      events through a branded subdomain.
 - name: Grafana Cloud
   slug: grafana-cloud
   category: DevTools & Infrastructure
@@ -503,7 +930,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^grafana-site-verification=
-    description: Grafana Cloud observability domain verification
+    description: >-
+      Grafana Cloud site-verification TXT (Grafana Cloud is
+      Grafana Labs' managed observability platform offering
+      metrics, logs, traces, and profiles). Indicates the
+      domain is registered with a Grafana Cloud organization.
 - name: Sumo Logic
   slug: sumologic
   category: DevTools & Infrastructure
@@ -511,7 +942,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^sumologic-site-verification=
-    description: Sumo Logic log analytics domain verification
+    description: >-
+      Sumo Logic site-verification TXT (Sumo Logic is a
+      cloud-native log analytics and observability platform).
+      Indicates the domain is registered with a Sumo Logic
+      organization, typically for SSO federation.
 - name: Honeycomb
   slug: honeycomb
   category: DevTools & Infrastructure
@@ -519,7 +954,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^honeycomb-io-site-verification=
-    description: Honeycomb.io observability domain verification
+    description: >-
+      Honeycomb.io site-verification TXT (Honeycomb is an
+      observability platform specializing in high-cardinality
+      tracing). Indicates the domain is registered with a
+      Honeycomb account.
 - name: Statsig
   slug: statsig
   category: DevTools & Infrastructure
@@ -527,7 +966,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^statsig-domain-verification=
-    description: Statsig feature flagging domain verification
+    description: >-
+      Statsig domain-verification TXT (Statsig is a feature-
+      flag and experimentation platform comparable to
+      LaunchDarkly and Split.io). Indicates the domain is
+      registered with a Statsig project.
 - name: Split.io
   slug: splitio
   category: DevTools & Infrastructure
@@ -535,7 +978,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^split-domain-verification=
-    description: Split.io feature flags domain verification
+    description: >-
+      Split.io domain-verification TXT (Split is a feature-
+      flag and experimentation platform, acquired by
+      Harness in 2024). Indicates the domain is registered
+      with a Split workspace.
 - name: Splunk
   slug: splunk
   category: DevTools & Infrastructure
@@ -543,7 +990,17 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^splunk-verification=
-    description: Splunk Observability / Cloud domain verification
+    description: >-
+      Splunk domain-verification TXT. Used for Splunk
+      Observability Cloud (formerly SignalFx) and Splunk
+      Cloud Platform tenant claim. Indicates the domain is
+      registered with a Splunk organization, typically for
+      SSO federation.
   - type: cname
     pattern: signalfx\.com$
-    description: SignalFx (Splunk Observability) CNAME
+    description: >-
+      CNAME terminating in signalfx.com (SignalFx was the
+      observability product Splunk acquired in 2019, now
+      sold as Splunk Observability Cloud; the signalfx.com
+      domain persists for legacy ingestion endpoints).
+      Indicates the domain uses Splunk Observability.

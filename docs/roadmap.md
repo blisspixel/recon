@@ -1419,6 +1419,31 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   consumer-facing / niche-SaaS targets would tell us whether the
   network's prior assumptions transfer; ECE on that subset is
   the metric.
+- **Machine-readable CLI surface inventory for downstream skill
+  and agent authors.** Two small additions captured here from
+  feedback on the v1.9.6 release:
+  1. A "Tool surface changes" one-liner per release in the
+     CHANGELOG, focused on the user-visible CLI surface (new
+     subcommands, new flags). Lets skill maintainers do a
+     30-second sync check between releases without diffing
+     `recon --help` output. The current CHANGELOG mixes
+     surface changes into the narrative; a single-line
+     callout per release would be more scannable.
+  2. A `docs/cli-surface.md` (or `recon --help-extended`)
+     canonical reference: every flag and subcommand with a
+     one-line description, suitable for copy-paste into
+     skill files or AI agent prompts. Today the info is
+     split across README excerpts, `recon --help`, and
+     `docs/mcp.md`. A consolidated reference removes that
+     scatter.
+
+  Explicitly out of scope for this entry: Claude-skill-
+  specific or agent-behavior guidance in the repo. That
+  layer lives in the per-client skill files under `agents/`
+  (and the portable `AGENTS.md` at the repo root). The
+  recon repo's job here is to be the source of truth for
+  the tool's surface, machine-readable; the skill's job is
+  to translate that surface into agent behavior.
 
 ## Good First Roadmap Items
 

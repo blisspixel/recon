@@ -140,10 +140,12 @@ jobs:
         # argument shape).
         run: uv run python scripts/validate_fingerprint.py recon_tool/data/fingerprints/ --quiet
 
-      - name: Report fingerprint metadata coverage (v1.9)
-        # Per-category description / reference / weight coverage report.
-        # ``--report-only`` keeps this advisory while the catalog catches
-        # up to the 70% target on gated categories (identity, security,
-        # infrastructure). When the floor is reached, drop ``--report-only``
-        # to flip the gate to enforcement.
-        run: uv run python scripts/check_metadata_coverage.py --report-only
+      - name: Enforce fingerprint metadata coverage (v1.9.7+)
+        # Per-detection presence gate: every detection in every
+        # category must carry a non-empty ``description`` field.
+        # Flipped from advisory (``--report-only``) to enforcing in
+        # v1.9.7 once the catalog was backfilled to 100 percent.
+        # The script emits the exact slug + detection-rule pairs
+        # missing a description on failure so a contributor sees
+        # "fix these N entries" rather than a percentage.
+        run: uv run python scripts/check_metadata_coverage.py

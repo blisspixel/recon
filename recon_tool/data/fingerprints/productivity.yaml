@@ -12,7 +12,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^atlassian-domain-verification=
-    description: Atlassian Cloud organization domain verification (SSO, Guard)
+    description: >-
+      Atlassian Cloud organization domain-verification TXT.
+      Indicates the domain is administratively bound to an
+      Atlassian Cloud org (Jira, Confluence, Bitbucket, Atlassian
+      Guard, and so on; products share the org-level
+      verification). Common in setups with SSO federation and
+      Atlassian Guard (formerly Atlassian Access).
 - name: Slack
   slug: slack
   category: Productivity & Collaboration
@@ -21,11 +27,21 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^slack-domain-verification=
-    description: Slack workspace domain claim (Enterprise Grid)
+    description: >-
+      Slack workspace domain-verification TXT. Indicates the
+      domain is claimed by a Slack workspace, typically as part
+      of Enterprise Grid setup. Slack is a Salesforce product
+      after the 2021 acquisition.
     reference: https://slack.com/help/articles/5513043606547
   - type: subdomain_txt
     pattern: _slack-challenge:.
-    description: Slack Enterprise Grid verification — proves Enterprise tier (not Pro/Business)
+    description: >-
+      Slack Enterprise Grid subdomain-challenge TXT found at
+      `_slack-challenge.<domain>`. Indicates the domain is
+      verified to a Slack Enterprise Grid org (Slack's top
+      tier), not a Pro or Business+ workspace. Useful for
+      distinguishing Enterprise customers from standard
+      tenants.
 - name: Notion
   slug: notion
   category: Productivity & Collaboration
@@ -33,8 +49,17 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^notion-domain-verification=
+    description: >-
+      Notion domain-verification TXT. Indicates the domain is
+      registered with a Notion workspace, typically for SSO
+      federation or hosting Notion-published sites under a
+      branded subdomain.
   - type: txt
     pattern: ^notion-verification-code
+    description: >-
+      Alternative Notion verification TXT format
+      (`notion-verification-code` prefix). Same administrative-
+      binding semantics; Notion has used both forms over time.
 - name: Miro
   slug: miro
   category: Productivity & Collaboration
@@ -42,6 +67,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^miro-verification=
+    description: >-
+      Miro domain-verification TXT (Miro is a collaborative
+      whiteboarding platform). Indicates the domain is
+      registered with a Miro team account, typically for SSO
+      federation. Does not indicate active board volume.
 - name: Asana
   slug: asana
   category: Productivity & Collaboration
@@ -49,6 +79,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^asana-domain-verification=
+    description: >-
+      Asana domain-verification TXT (Asana is a work-management
+      platform for project and task tracking). Indicates the
+      domain is registered with an Asana organization,
+      typically for SSO federation or domain-restricted
+      sharing.
 - name: Monday.com
   slug: monday
   category: Productivity & Collaboration
@@ -56,8 +92,17 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^monday-domain-verification=
+    description: >-
+      Monday.com domain-verification TXT (monday.com is a
+      work-management platform with workflow automation).
+      Indicates the domain is registered with a monday.com
+      account, typically for SSO federation.
   - type: txt
     pattern: ^monday-verification
+    description: >-
+      Alternative monday.com verification TXT format. Same
+      administrative-binding semantics as the prefixed
+      `monday-domain-verification=` form.
 - name: Wrike
   slug: wrike
   category: Productivity & Collaboration
@@ -65,6 +110,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^wrike-verification=
+    description: >-
+      Wrike domain-verification TXT (Wrike is a project-
+      management platform acquired by Citrix and now part of
+      Cloud Software Group). Indicates the domain is
+      registered with a Wrike account.
 - name: Smartsheet
   slug: smartsheet
   category: Productivity & Collaboration
@@ -72,6 +122,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^smartsheet-site-validation=
+    description: >-
+      Smartsheet site-validation TXT (Smartsheet is a
+      spreadsheet-based work-management platform). Indicates
+      the domain is registered with a Smartsheet account,
+      typically for SSO federation or branded sharing
+      domains.
 - name: Airtable
   slug: airtable
   category: Productivity & Collaboration
@@ -79,8 +135,17 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^airtable-domain-verification=
+    description: >-
+      Airtable domain-verification TXT (Airtable is a
+      hybrid database / spreadsheet collaboration platform).
+      Indicates the domain is registered with an Airtable
+      workspace, typically for SSO federation.
   - type: txt
     pattern: ^airtable-verification=
+    description: >-
+      Alternative Airtable verification TXT format. Same
+      administrative-binding semantics as the prefixed
+      `airtable-domain-verification=` form.
 - name: ClickUp
   slug: clickup
   category: Productivity & Collaboration
@@ -88,6 +153,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^clickup-domain-verification=
+    description: >-
+      ClickUp domain-verification TXT (ClickUp is a work-
+      management platform combining project tracking,
+      documents, and time tracking). Indicates the domain is
+      registered with a ClickUp workspace.
 - name: Loom
   slug: loom
   category: Productivity & Collaboration
@@ -95,6 +165,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^loom-site-verification=
+    description: >-
+      Loom site-verification TXT (Loom is an asynchronous-
+      video messaging platform, acquired by Atlassian in
+      2023). Indicates the domain is registered with a Loom
+      account, typically for SSO federation in the
+      Loom Business and Enterprise plans.
 - name: Canva
   slug: canva
   category: Productivity & Collaboration
@@ -102,6 +178,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^canva-site-verification=
+    description: >-
+      Canva site-verification TXT (Canva is a graphic-design
+      platform). Indicates the domain is registered with a
+      Canva for Teams or Canva for Enterprise account,
+      typically for SSO federation.
 - name: Beautiful.ai
   slug: beautifulai
   category: Productivity & Collaboration
@@ -109,6 +190,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^beautifulai-site-verification=
+    description: >-
+      Beautiful.ai site-verification TXT (Beautiful.ai is a
+      presentation-design platform). Indicates the domain is
+      registered with a Beautiful.ai account, typically for
+      SSO federation in the team and enterprise plans.
 - name: Disciple Media
   slug: disciple-media
   category: Productivity & Collaboration
@@ -116,7 +202,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: disciplemedia.com
-    description: Disciple Media branded community platform CNAME
+    description: >-
+      CNAME pointing into disciplemedia.com (Disciple Media is
+      a branded community platform for membership sites and
+      private communities). Indicates the domain hosts a
+      Disciple-served community under a branded subdomain.
 - name: Zoom
   slug: zoom
   category: Productivity & Collaboration
@@ -124,6 +214,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^ZOOM_verify_
+    description: >-
+      Zoom domain-verification TXT (the `ZOOM_verify_` prefix).
+      Indicates the domain is registered with a Zoom account,
+      typically for Zoom SSO federation, Zoom Phone custom
+      domains, or managed-domain claim. Does not indicate
+      whether Zoom Meetings, Phone, Webinars, or Workplace is
+      in use; the verification covers the broader Zoom
+      account.
 - name: Dropbox
   slug: dropbox
   category: Productivity & Collaboration
@@ -131,6 +229,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^dropbox-domain-verification=
+    description: >-
+      Dropbox domain-verification TXT. Indicates the domain is
+      registered with a Dropbox Business or Education team,
+      typically for SSO federation and the team-managed-user
+      claim. Does not by itself prove active file-storage
+      use.
 - name: Workplace (Meta)
   slug: workplace-meta
   category: Productivity & Collaboration
@@ -139,6 +243,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^workplace-domain-verification=
+    description: >-
+      Workplace by Meta (formerly Workplace by Facebook)
+      domain-verification TXT. Note that Meta is sunsetting
+      Workplace by 2026 with full shutdown in 2026, so
+      domains carrying this verification may be in active
+      migration to Slack, Microsoft Teams, or other
+      alternatives.
 - name: LucidLink
   slug: lucidlink
   category: Productivity & Collaboration
@@ -146,6 +257,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^lucidlink-verification=
+    description: >-
+      LucidLink domain-verification TXT (LucidLink is a
+      cloud-native distributed file-system platform popular
+      in media and entertainment production workflows).
+      Indicates the domain is registered with a LucidLink
+      organization.
 - name: Adobe (IDP)
   slug: adobe-idp
   category: Productivity & Collaboration
@@ -154,6 +271,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^adobe-idp-site-verification=
+    description: >-
+      Adobe Identity domain-verification TXT (the `adobe-idp`
+      prefix corresponds to Adobe's Identity service used
+      across Creative Cloud, Document Cloud, and Experience
+      Cloud SSO). Indicates the domain is registered with an
+      Adobe Admin Console organization for Federated ID or
+      Enterprise ID setup.
 - name: Adobe Sign
   slug: adobe-sign
   category: Productivity & Collaboration
@@ -162,6 +286,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^adobe-sign-verification=
+    description: >-
+      Adobe Sign domain-verification TXT (Adobe Sign is the
+      e-signature product within Adobe Document Cloud,
+      formerly EchoSign). Indicates the domain is registered
+      with an Adobe Sign tenant.
 - name: Apple Business
   slug: apple
   category: Productivity & Collaboration
@@ -170,6 +299,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^apple-domain-verification=
+    description: >-
+      Apple Business / Apple Developer domain-verification TXT.
+      Indicates the domain is claimed against an Apple
+      enterprise account, typically for Apple Business Manager,
+      Apple School Manager, or Sign in with Apple custom-
+      domain setups. Does not distinguish which Apple service
+      the verification is for.
 - name: Box
   slug: box
   category: Productivity & Collaboration
@@ -177,6 +313,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^box-domain-verification=
+    description: >-
+      Box domain-verification TXT (Box is an enterprise file
+      storage and content collaboration platform). Indicates
+      the domain is registered with a Box enterprise account,
+      typically for SSO federation.
 - name: Egnyte
   slug: egnyte
   category: Productivity & Collaboration
@@ -184,6 +325,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^egnyte-domain-verification=
+    description: >-
+      Egnyte domain-verification TXT (Egnyte is an enterprise
+      file-collaboration and content-governance platform that
+      positions against Box, Dropbox Business, and SharePoint).
+      Indicates the domain is registered with an Egnyte
+      tenant.
 - name: Glean (Enterprise AI Search)
   slug: glean
   category: Productivity & Collaboration
@@ -191,6 +338,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^glean-domain-verification=
+    description: >-
+      Glean domain-verification TXT (Glean is an enterprise
+      AI search and knowledge-management platform that indexes
+      across SaaS applications). Indicates the domain is
+      registered with a Glean tenant. Common in mid-to-large
+      enterprises with sprawling SaaS stacks.
 - name: Zendesk
   slug: zendesk
   category: Support & Helpdesk
@@ -198,12 +351,29 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^zendesk-domain-verification=
+    description: >-
+      Zendesk domain-verification TXT. Indicates the domain
+      is registered with a Zendesk account, typically for
+      branded help-center subdomains and SSO federation.
   - type: spf
     pattern: zendesk.com
+    description: >-
+      SPF include matching zendesk.com. Authorizes Zendesk
+      to send customer-support emails (ticket notifications,
+      help-center signups) on behalf of the domain.
   - type: spf
     pattern: mail.zendesk.com
+    description: >-
+      Alternative Zendesk mail-sending SPF include
+      (`mail.zendesk.com`). Some Zendesk tenants use this
+      form. Same outbound-authorization semantics.
   - type: cname
     pattern: zendesk.com
+    description: >-
+      CNAME pointing into zendesk.com. Typically a branded
+      help-center subdomain (`help.example.com` or
+      `support.example.com`) hosted by Zendesk. Indicates
+      active Zendesk use for customer support.
 - name: Freshdesk
   slug: freshdesk
   category: Support & Helpdesk
@@ -211,8 +381,16 @@ fingerprints:
   detections:
   - type: spf
     pattern: freshdesk.com
+    description: >-
+      SPF include matching freshdesk.com (Freshdesk is a
+      Freshworks helpdesk product, comparable to Zendesk).
+      Authorizes Freshdesk to send support emails on behalf
+      of the domain.
   - type: cname
     pattern: freshdesk.com
+    description: >-
+      CNAME pointing into freshdesk.com. Typically a branded
+      help-center subdomain hosted by Freshdesk.
 - name: ServiceNow
   slug: servicenow
   category: Support & Helpdesk
@@ -220,6 +398,13 @@ fingerprints:
   detections:
   - type: spf
     pattern: service-now.com
+    description: >-
+      SPF include matching service-now.com (ServiceNow is an
+      ITSM, ITOM, and workflow platform). Authorizes
+      ServiceNow to send platform-generated emails (incident
+      notifications, approval requests) on behalf of the
+      domain. Often appears in larger enterprise mail
+      configurations.
 - name: Statuspage (Atlassian)
   slug: statuspage
   category: Support & Helpdesk
@@ -227,8 +412,17 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^statuspage-domain-verification=
+    description: >-
+      Atlassian Statuspage domain-verification TXT. Indicates
+      the domain is registered with a Statuspage account for
+      hosting a public status page under a branded subdomain.
   - type: cname
     pattern: statuspage.io
+    description: >-
+      CNAME pointing into statuspage.io. Typically a
+      `status.example.com` subdomain delegated to Atlassian
+      Statuspage for incident communication. Indicates the
+      org operates a public-facing status page.
 - name: Workday
   slug: workday
   category: HR & Operations
@@ -236,6 +430,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^workday-domain-verification=
+    description: >-
+      Workday domain-verification TXT (Workday is an
+      enterprise HCM and finance platform). Indicates the
+      domain is registered with a Workday tenant. Common
+      among large enterprises with full-suite HRIS
+      deployments.
 - name: SAP
   slug: sap
   category: HR & Operations
@@ -243,6 +443,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^sap-domain-verification=
+    description: >-
+      SAP domain-verification TXT (SAP is an enterprise
+      software suite spanning ERP, HCM via SuccessFactors,
+      CRM, and analytics). Indicates the domain is
+      registered with an SAP cloud tenant. Does not identify
+      which SAP product the verification is for.
 - name: UKG (UltiPro)
   slug: ukg
   category: HR & Operations
@@ -250,6 +456,12 @@ fingerprints:
   detections:
   - type: spf
     pattern: _spf.ultipro.com
+    description: >-
+      SPF include matching `_spf.ultipro.com` (UKG, formerly
+      Ultimate Software / UltiPro, merged with Kronos in
+      2020). Authorizes UKG to send HRIS-generated emails
+      (paystub notifications, benefits enrollment) on behalf
+      of the domain.
 - name: Qualtrics
   slug: qualtrics
   category: HR & Operations
@@ -257,6 +469,12 @@ fingerprints:
   detections:
   - type: spf
     pattern: _spf.qualtrics.com
+    description: >-
+      SPF include matching `_spf.qualtrics.com` (Qualtrics is
+      an experience-management platform offering employee,
+      customer, and product surveys; originally an SAP
+      acquisition, spun out in 2023). Authorizes Qualtrics
+      to send survey invitations on behalf of the domain.
 - name: Rippling
   slug: rippling
   category: HR & Operations
@@ -264,6 +482,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^rippling-domain-verification=
+    description: >-
+      Rippling domain-verification TXT (Rippling is an
+      employee-management platform combining HR, IT
+      provisioning, and finance). Indicates the domain is
+      registered with a Rippling account.
 - name: Deel
   slug: deel
   category: HR & Operations
@@ -271,6 +494,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^deel-domain-verification=
+    description: >-
+      Deel domain-verification TXT (Deel is a global-payroll
+      and contractor-management platform). Indicates the
+      domain is registered with a Deel account, typically
+      for SSO federation in larger Deel deployments.
 - name: Figma
   slug: figma
   category: Productivity & Collaboration
@@ -278,5 +506,15 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^figma-domain-verification=
+    description: >-
+      Figma domain-verification TXT (Figma is a collaborative
+      design platform, currently independent after the
+      blocked Adobe acquisition). Indicates the domain is
+      registered with a Figma team or organization,
+      typically for SSO federation.
   - type: txt
     pattern: ^figma-verification
+    description: >-
+      Alternative Figma verification TXT format. Same
+      administrative-binding semantics as the prefixed
+      `figma-domain-verification=` form.

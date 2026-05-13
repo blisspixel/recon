@@ -245,6 +245,90 @@ The audit is advisory. Use it to document whether the entry should remain
 - [ ] `pytest tests/` passes — property tests must still hold on the sparse-data corpus
 - [ ] If the service could trip false positives on domains that merely *visited* the vendor's marketing site, used `match_mode: all`
 
+### Detection description rubric (v1.9.7+)
+
+Every detection rule in `recon_tool/data/fingerprints/*.yaml` must
+carry a non-empty `description` field. The metadata-coverage gate
+(`scripts/check_metadata_coverage.py`) enforces presence at commit
+time via pre-commit and at release time via CI. There is no
+percentage threshold. Every detection, every category.
+
+The gate enforces *presence*, not quality. The rubric below raises
+the bar for new contributions; reviewer judgement is the enforcer
+of quality.
+
+**Three-part rubric:**
+
+1. **What the slug detects.** Vendor and the specific evidence
+   pattern the detection matches (TXT verification token, MX
+   record terminus, CNAME chain, NS pattern, certificate SAN,
+   and so on).
+2. **What it doesn't detect.** When the slug fires, what claim is
+   *not* being made. Common framings: "fires on $X, not on $Y";
+   "indicates administrative binding to $TENANT, not active use";
+   "evidence of $PRODUCT, not of $RELATED_PRODUCT in the same
+   vendor family."
+3. **Common false positives if known.** Patterns where the
+   detection fires correctly but the operator-facing inference
+   would be misleading. Skip if no known FPs. Do not invent them.
+
+**Tone:** humble, factual, no overclaim. recon's catalog reads
+like an analyst's careful notes, not marketing copy. Avoid
+adjectives like "strong", "robust", "cleanly", "the best", and
+similar self-congratulatory framings. State what the evidence
+shows and what it does not show. Acknowledge limits.
+
+**Style:** no em-dashes (use commas, periods, or parentheses
+instead). No emojis. Length target: 1 to 3 sentences. Terser
+than docstrings, longer than slug names. The goal is that a
+future contributor (or an AI agent reading the YAML) understands
+the claim's edge cases without grepping source.
+
+**Worked examples:**
+
+Good (`microsoft365` TXT detection):
+
+```yaml
+detections:
+  - type: txt
+    pattern: ^MS=ms\d{8}$
+    description: >-
+      Microsoft 365 domain-verification TXT token. Indicates the
+      domain is administratively bound to a Microsoft 365 tenant.
+      Does not prove the tenant is actively used for email. Some
+      orgs verify the domain to claim the namespace but route
+      mail elsewhere, so corroborate with MX evidence before
+      reading this as "they run M365 email."
+```
+
+Good (`cloudflare` NS detection):
+
+```yaml
+detections:
+  - type: ns
+    pattern: \.cloudflare\.com\.$
+    description: >-
+      Apex NS records resolve to Cloudflare nameservers,
+      indicating Cloudflare is the authoritative DNS provider
+      for the domain. Does not prove the apex sits behind
+      Cloudflare's CDN or WAF (those are separate products on
+      the same vendor). Corroborate via Server headers or
+      CDN-specific chain motifs for the front-the-origin claim.
+```
+
+Placeholder (rejected):
+
+```yaml
+detections:
+  - type: txt
+    pattern: ^MS=ms\d{8}$
+    description: "Detects Microsoft 365."
+```
+
+Rejection reason: does not explain what the pattern matches, or
+what claim is or is not being made. Empty-string presence is the
+floor; the rubric is the bar.
+
 ### Vendor-doc-sourced `cname_target` rules
 
 `cname_target` rules in `recon_tool/data/fingerprints/surface.yaml`

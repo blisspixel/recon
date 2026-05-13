@@ -72,6 +72,13 @@ jobs:
         # whose display names disagree.
         run: uv run python scripts/validate_fingerprint.py recon_tool/data/fingerprints/ --quiet
 
+      - name: Enforce fingerprint metadata coverage (v1.9.7+)
+        # Mirrors ci.yml. Presence gate: every detection in every
+        # category must carry a non-empty ``description``. Prevents
+        # a catalog regression from reaching PyPI just because the
+        # tests passed.
+        run: uv run python scripts/check_metadata_coverage.py
+
       - name: Export runtime requirements
         run: uv export --frozen --no-dev --no-emit-project --no-hashes --format requirements.txt --output-file .ci-audit-requirements.txt
 

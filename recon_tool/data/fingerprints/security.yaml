@@ -11,8 +11,22 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^crowdstrike-falcon-site-verification=
+    description: >-
+      CrowdStrike Falcon domain-verification TXT (CrowdStrike is
+      a cloud-delivered endpoint-protection vendor). Indicates
+      the domain is registered with a Falcon tenant. Does not
+      prove sensor coverage on endpoints; sensor rollout is
+      independent of the domain verification.
   - type: txt
     pattern: crowdstrike
+    description: >-
+      Catch-all TXT pattern containing the literal string
+      "crowdstrike". Lower-specificity fallback for legacy or
+      non-standard CrowdStrike verification records. Subject to
+      false positives on TXT records that mention CrowdStrike
+      in unrelated contexts (vendor-procurement notes, asset
+      tags, and so on); confidence relies on the catalog's
+      higher-specificity patterns firing as well.
 - name: KnowBe4
   slug: knowbe4
   category: Security & Compliance
@@ -20,8 +34,21 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^knowbe4-site-verification=
+    description: >-
+      KnowBe4 domain-verification TXT (KnowBe4 is a security-
+      awareness and phishing-simulation training vendor).
+      Indicates the domain is registered with a KnowBe4 account,
+      typically so that simulated-phishing campaigns can send
+      from a tenant-owned domain. Does not by itself prove
+      active training rollout.
   - type: spf
     pattern: _spf.psm.knowbe4.com
+    description: >-
+      SPF `include:_spf.psm.knowbe4.com` authorizes KnowBe4's
+      PhishER / PhishER Plus mail-handling infrastructure to
+      send mail on behalf of the domain. Typically present
+      alongside the KnowBe4 verification TXT; useful as a second
+      corroborating signal.
 - name: Proofpoint
   slug: proofpoint
   category: Security & Compliance
@@ -29,14 +56,41 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^proofpoint-domain-verification=
+    description: >-
+      Proofpoint domain-verification TXT (Proofpoint is an email
+      security gateway and CASB vendor). Indicates the domain is
+      administratively bound to a Proofpoint tenant. Does not
+      prove the gateway sits in front of inbound mail; check MX
+      evidence for that.
   - type: txt
     pattern: ^proofpoint-
+    description: >-
+      Less-specific Proofpoint TXT prefix, used by some
+      Proofpoint product lines (Email Fraud Defense, Digital
+      Risk Protection) for domain claim. Lower specificity than
+      the `proofpoint-domain-verification=` form; the
+      higher-specificity pattern is preferred when both fire.
   - type: mx
     pattern: pphosted.com
+    description: >-
+      MX terminating at Proofpoint's mail-protection cluster
+      (`*.pphosted.com`, "PP hosted"). Indicates Proofpoint
+      sits in front of inbound mail for the domain. Often
+      observed in front of Microsoft 365 or Google Workspace
+      tenants; the downstream provider is not deducible from
+      this MX alone.
   - type: spf
     pattern: spf.pphosted.com
+    description: >-
+      SPF `include:spf.pphosted.com` authorizes Proofpoint to
+      send mail on behalf of the domain. Typically paired with
+      the Proofpoint MX.
   - type: spf
     pattern: _spf.proofpoint.com
+    description: >-
+      Alternative Proofpoint SPF include (`_spf.proofpoint.com`),
+      used by some tenant configurations. Same authorization
+      semantics as `spf.pphosted.com`.
 - name: Mimecast
   slug: mimecast
   category: Security & Compliance
@@ -44,10 +98,26 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^mimecast
+    description: >-
+      Mimecast domain-verification TXT (Mimecast is an email
+      security gateway vendor). Indicates the domain is
+      administratively bound to a Mimecast tenant. Does not
+      prove the gateway is currently in the inbound mail flow;
+      check MX evidence for that.
   - type: mx
     pattern: mimecast.com
+    description: >-
+      MX terminating at Mimecast (`*.mimecast.com` regional
+      variants like `eu-smtp-inbound.mimecast.com`). Indicates
+      Mimecast sits in front of inbound mail. Like Proofpoint,
+      often deployed in front of M365 or Google Workspace; the
+      downstream provider is not deducible from this MX alone.
   - type: spf
     pattern: _netblocks.mimecast.com
+    description: >-
+      SPF `include:_netblocks.mimecast.com` authorizes Mimecast
+      to send mail on behalf of the domain. Typically paired
+      with the Mimecast MX.
 - name: Barracuda
   slug: barracuda
   category: Security & Compliance
@@ -55,6 +125,12 @@ fingerprints:
   detections:
   - type: mx
     pattern: barracudanetworks.com
+    description: >-
+      MX terminating at Barracuda Networks' email-protection
+      cloud (`*.barracudanetworks.com`). Indicates Barracuda
+      Email Protection sits in front of inbound mail. The
+      downstream mail provider is not deducible from this MX
+      alone.
 - name: Trend Micro Email Security
   slug: trendmicro
   category: Security & Compliance
@@ -62,8 +138,16 @@ fingerprints:
   detections:
   - type: mx
     pattern: tmes.trendmicro.com
+    description: >-
+      MX terminating at Trend Micro Email Security
+      (`*.tmes.trendmicro.com`). Indicates Trend Micro's
+      cloud email gateway handles inbound mail for the domain.
   - type: spf
     pattern: spf.tmes.trendmicro.com
+    description: >-
+      SPF `include:spf.tmes.trendmicro.com` authorizes Trend
+      Micro Email Security to send mail on behalf of the
+      domain. Typically paired with the Trend Micro MX.
 - name: Sophos
   slug: sophos
   category: Security & Compliance
@@ -71,6 +155,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^sophos-domain-verification=
+    description: >-
+      Sophos domain-verification TXT (Sophos is an endpoint-
+      and-network-security vendor). Indicates the domain is
+      registered with a Sophos Central tenant. Does not
+      identify which Sophos product (Intercept X, Email,
+      Firewall, MDR, and so on) is in use.
 - name: Palo Alto Networks
   slug: paloalto
   category: Security & Compliance
@@ -78,6 +168,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^paloaltonetworks-domain-verification=
+    description: >-
+      Palo Alto Networks domain-verification TXT. Indicates
+      the domain is registered with a Palo Alto tenant.
+      Does not identify which Palo Alto product (Prisma
+      Cloud, Cortex XDR, Cortex XSIAM, Strata firewalls, and
+      so on) the tenant is licensed for.
 - name: Zscaler
   slug: zscaler
   category: Security & Compliance
@@ -85,8 +181,20 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^zscaler-domain-verification=
+    description: >-
+      Zscaler domain-verification TXT (Zscaler is a Secure
+      Service Edge / SASE vendor providing ZIA and ZPA).
+      Indicates the domain is registered with a Zscaler
+      tenant. Does not distinguish ZIA (Internet Access) from
+      ZPA (Private Access) deployments.
   - type: txt
     pattern: zscaler
+    description: >-
+      Catch-all TXT pattern containing the literal string
+      "zscaler", for legacy or non-standard verification
+      records. Lower specificity than the prefixed form;
+      subject to false positives on TXT records that mention
+      Zscaler in unrelated contexts.
 - name: Wiz Security
   slug: wiz
   category: Security & Compliance
@@ -94,6 +202,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^wiz-domain-verification=
+    description: >-
+      Wiz domain-verification TXT (Wiz is a cloud-security-
+      posture-management vendor, acquired by Google in 2025).
+      Indicates the domain is registered with a Wiz tenant.
+      Does not by itself indicate which cloud accounts the
+      tenant covers (AWS, Azure, GCP, OCI) or whether
+      scanning is currently active.
 - name: OneTrust
   slug: onetrust
   category: Security & Compliance
@@ -102,6 +217,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^onetrust-domain-verification=
+    description: >-
+      OneTrust domain-verification TXT (OneTrust is a privacy,
+      consent-management, and GRC vendor). Indicates the
+      domain is registered with a OneTrust tenant. Does not
+      identify which OneTrust module (Privacy, Consent,
+      ESG, GRC, Vendor Risk) is in use.
 - name: Have I Been Pwned
   slug: hibp
   category: Security & Compliance
@@ -109,7 +230,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^have-i-been-pwned-verification=
-    description: Troy Hunt's breach notification service — domain-level monitoring
+    description: >-
+      Have I Been Pwned domain-verification TXT (Troy Hunt's
+      breach-notification service). Indicates the domain owner
+      has claimed domain-level breach monitoring on the
+      service.
 - name: Duo Security
   slug: duo
   category: Security & Compliance
@@ -117,6 +242,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^duo_sso_verification=
+    description: >-
+      Duo Security SSO domain-verification TXT (Duo is a
+      Cisco-owned MFA and zero-trust-access vendor). Indicates
+      the domain is registered with Duo SSO, typically as part
+      of a Single Sign-On deployment. Does not prove MFA is
+      enforced on user accounts; the SSO tenant claim is
+      administrative.
 - name: Okta
   slug: okta
   category: Security & Compliance
@@ -126,14 +258,34 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^_oktaverification=
+    description: >-
+      Okta domain-verification TXT (the `_oktaverification=`
+      form). Indicates the domain is registered with an Okta
+      tenant for use as a custom-domain login URL or for SCIM
+      provisioning. Does not by itself indicate Okta is the
+      primary IdP; some domains register with Okta as a
+      secondary verification path.
   - type: txt
     pattern: ^okta-domain-verification
+    description: >-
+      Alternative Okta verification TXT format
+      (`okta-domain-verification`). Same administrative-binding
+      semantics as `_oktaverification=`.
   - type: cname
     pattern: okta.com
-    description: Okta custom domain CNAME delegation (login/SSO pages)
+    description: >-
+      CNAME pointing into okta.com. Typically a login subdomain
+      (`login.example.com` or `sso.example.com`) delegated to
+      Okta for hosted SSO and MFA pages. Indicates active Okta
+      use for at least one identity flow.
   - type: cname
     pattern: oktapreview.com
-    description: Okta preview/staging environment CNAME
+    description: >-
+      CNAME pointing into oktapreview.com (Okta's preview /
+      staging environment). Indicates the domain has a test or
+      pre-production Okta tenant in addition to (or instead of)
+      a production tenant. Common in environments with
+      separate test orgs.
 - name: 1Password
   slug: 1password
   category: Security & Compliance
@@ -142,6 +294,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^1password-site-verification=
+    description: >-
+      1Password domain-verification TXT (1Password is a
+      password-manager and secrets-management vendor).
+      Indicates the domain is registered with a 1Password
+      Business or Teams account, typically for SSO federation
+      or domain-bound enrollment. Does not prove employee-wide
+      rollout.
 - name: Jamf
   slug: jamf
   category: Security & Compliance
@@ -150,6 +309,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^jamf-site-verification=
+    description: >-
+      Jamf domain-verification TXT (Jamf is an Apple device
+      management vendor, formerly JAMF Software). Indicates
+      the domain is registered with a Jamf Pro or Jamf Now
+      tenant. Does not indicate device-enrollment counts or
+      MDM scope; the domain claim is administrative.
 - name: GlobalSign (SSL)
   slug: globalsign
   category: Security & Compliance
@@ -157,8 +322,21 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^_globalsign-domain-verification=
+    description: >-
+      GlobalSign domain-control-validation TXT (the prefixed
+      `_globalsign-domain-verification=` form, found at
+      `_globalsign-domain-verification.<domain>`). Indicates
+      the domain has been verified for issuance of a
+      GlobalSign certificate at some point. The token may
+      persist after the certificate has been replaced or
+      retired; confidence is medium for that reason.
   - type: txt
     pattern: ^globalsign-domain-verification
+    description: >-
+      Alternative GlobalSign DCV TXT format
+      (`globalsign-domain-verification` without the leading
+      underscore). Same caveats as the underscored form: the
+      token can persist after certificate replacement.
 - name: Imperva (Incapsula)
   slug: imperva
   category: Security & Compliance
@@ -166,6 +344,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: incapdns.net
+    description: >-
+      CNAME pointing into incapdns.net (Imperva Cloud WAF,
+      formerly Incapsula). Indicates the apex or a subdomain
+      sits behind Imperva's WAF and CDN edge. Does not
+      distinguish Imperva's WAF tier (Essentials, Plus,
+      Premier) on its own.
 - name: Sucuri WAF
   slug: sucuri
   category: Security & Compliance
@@ -173,6 +357,11 @@ fingerprints:
   detections:
   - type: cname
     pattern: sucuri.net
+    description: >-
+      CNAME pointing into sucuri.net (Sucuri is a GoDaddy-owned
+      website-security and WAF vendor). Indicates the domain
+      sits behind Sucuri's WAF. Common with small business and
+      WordPress hosting.
 - name: Symantec Email Security
   slug: symantec
   category: Security & Compliance
@@ -180,8 +369,18 @@ fingerprints:
   detections:
   - type: mx
     pattern: messagelabs.com
+    description: >-
+      MX terminating at Symantec MessageLabs / Symantec Email
+      Security.cloud (`*.messagelabs.com`). Now a Broadcom
+      product after the Symantec Enterprise Security
+      acquisition. Indicates Symantec MessageLabs sits in
+      front of inbound mail.
   - type: spf
     pattern: spf.messagelabs.com
+    description: >-
+      SPF `include:spf.messagelabs.com` authorizes Symantec
+      MessageLabs to send mail on behalf of the domain.
+      Typically paired with the MessageLabs MX.
 - name: Cisco IronPort
   slug: cisco-ironport
   category: Security & Compliance
@@ -189,6 +388,12 @@ fingerprints:
   detections:
   - type: mx
     pattern: iphmx.com
+    description: >-
+      MX terminating at Cisco IronPort Hosted Email Security
+      (`*.iphmx.com`). Indicates Cisco IronPort sits in front
+      of inbound mail. Note: this is the older IronPort
+      hosted-platform domain; new deployments often use the
+      `ess.cisco.com` form covered by the `cisco-email` slug.
 - name: Cisco Secure Email
   slug: cisco-email
   category: Security & Compliance
@@ -196,6 +401,12 @@ fingerprints:
   detections:
   - type: mx
     pattern: ess.cisco.com
+    description: >-
+      MX terminating at Cisco Secure Email Cloud Gateway
+      (`*.ess.cisco.com`, formerly Email Security Service).
+      Indicates Cisco Secure Email sits in front of inbound
+      mail. This is the current Cisco-branded form of the
+      service formerly sold under the IronPort name.
 - name: Cisco Webex
   slug: webex
   category: Security & Compliance
@@ -203,6 +414,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^webexdomainverification
+    description: >-
+      Cisco Webex domain-verification TXT. Indicates the
+      domain is registered with a Webex tenant for SSO
+      claim or custom-domain meetings. Does not prove active
+      Webex usage; the verification is administrative. Webex
+      is categorized here as "security" rather than
+      "productivity" because Cisco's enterprise positioning
+      bundles Webex with the broader Cisco security stack.
 - name: Cisco (Identity)
   slug: cisco-identity
   category: Security & Compliance
@@ -210,8 +429,18 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^cisco-ci-domain-verification=
+    description: >-
+      Cisco Common Identity domain-verification TXT (the
+      "CI" stands for Cisco's Common Identity service, used
+      across Webex, Cisco SecureX, and other Cisco SaaS).
+      Indicates the domain is registered with Cisco's
+      identity-platform tenant.
   - type: txt
     pattern: ^ciscocidomainverification=
+    description: >-
+      Alternative Cisco Common Identity verification TXT
+      format (no hyphens). Same administrative-binding
+      semantics as the hyphenated form.
 - name: Trellix (FireEye)
   slug: trellix
   category: Security & Compliance
@@ -219,6 +448,13 @@ fingerprints:
   detections:
   - type: mx
     pattern: fireeyecloud.com
+    description: >-
+      MX terminating at Trellix Cloud Email Security
+      (`*.fireeyecloud.com`, retaining the FireEye-era
+      cloud-domain name). Trellix was formed in 2022 from
+      the merger of McAfee Enterprise and FireEye.
+      Indicates Trellix Email Security sits in front of
+      inbound mail.
 - name: SentinelOne
   slug: sentinelone
   category: Security & Compliance
@@ -226,7 +462,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^sentinelone-domain-verification=
-    description: SentinelOne Singularity endpoint protection domain claim
+    description: >-
+      SentinelOne Singularity domain-verification TXT
+      (SentinelOne is an EDR / XDR vendor). Indicates the
+      domain is registered with a SentinelOne tenant. Does
+      not prove agent rollout on endpoints.
 - name: Netskope
   slug: netskope
   category: Security & Compliance
@@ -234,7 +474,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^netskope-domain-verification=
-    description: Netskope SASE/SSE platform domain verification
+    description: >-
+      Netskope domain-verification TXT (Netskope is a SASE /
+      SSE vendor offering CASB, SWG, and ZTNA). Indicates
+      the domain is registered with a Netskope tenant. Does
+      not distinguish which Netskope products are licensed.
 - name: Kandji
   slug: kandji
   category: Security & Compliance
@@ -242,7 +486,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^kandji-domain-verification=
-    description: Kandji Apple device management domain verification
+    description: >-
+      Kandji domain-verification TXT (Kandji is an Apple
+      device management vendor, comparable to Jamf for the
+      Apple-only segment). Indicates the domain is registered
+      with a Kandji tenant. Does not indicate enrollment
+      scope.
 - name: Ping Identity (PingOne)
   slug: ping-identity
   category: Security & Compliance
@@ -250,13 +499,26 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^pingone-domain-verification=
+    description: >-
+      PingOne domain-verification TXT (Ping Identity offers
+      PingOne for cloud identity and PingFederate for hybrid
+      deployments). Indicates the domain is registered with a
+      PingOne tenant.
   - type: cname
     pattern: ping-ccd.com
-    description: PingOne custom domain CNAME delegation for SSO/MFA pages
+    description: >-
+      CNAME pointing into ping-ccd.com (Ping's Custom Cloud
+      Domain service for hosted SSO and MFA pages).
+      Indicates the domain delegates an authentication
+      subdomain to PingOne.
   - type: txt
     pattern: pingoneemail=
     weight: 0.6
-    description: PingOne email trust verification — authorizes PingOne to send email on behalf of the domain
+    description: >-
+      PingOne email-trust verification TXT (`pingoneemail=`
+      prefix). Authorizes PingOne to send email on behalf of
+      the domain, typically for password-reset and
+      passwordless-authentication flows.
     reference: https://docs.pingidentity.com/pingone/settings/p1_set_up_trusted_email_domain.html
 - name: CyberArk
   slug: cyberark
@@ -265,10 +527,21 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^cyberark-domain-verification=
+    description: >-
+      CyberArk domain-verification TXT (CyberArk is a
+      privileged-access-management vendor). Indicates the
+      domain is registered with a CyberArk tenant, typically
+      for Identity or Privilege Cloud setup. Does not
+      identify which CyberArk product is in use.
   - type: cname
     pattern: \.idaptive\.(?:com|app)$
     weight: 0.7
-    description: CyberArk Identity (legacy Idaptive) CNAME delegation for identity portal
+    description: >-
+      CNAME terminating in `idaptive.com` or `idaptive.app`,
+      the legacy domain for CyberArk Identity (originally
+      Idaptive, acquired by CyberArk in 2020). Indicates
+      active CyberArk Identity portal use; the legacy domain
+      is still in service after the rebrand.
 - name: Lakera (LLM Guardrails)
   slug: lakera
   category: Security & Compliance
@@ -276,6 +549,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^lakera-domain-verification=
+    description: >-
+      Lakera domain-verification TXT (Lakera is an LLM-
+      security and prompt-injection-defense vendor).
+      Indicates the domain is registered with a Lakera
+      tenant. Does not prove Lakera Guard or Lakera Chrome
+      is currently inline on application traffic.
 - name: Cato Networks (SASE)
   slug: cato
   category: Security & Compliance
@@ -283,6 +562,11 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^cato-domain-verification=
+    description: >-
+      Cato Networks domain-verification TXT (Cato is a SASE
+      vendor offering an integrated SD-WAN, SWG, ZTNA, and
+      FWaaS stack). Indicates the domain is registered with
+      a Cato tenant.
 - name: Auth0 (Okta)
   slug: auth0
   category: Security & Compliance
@@ -290,7 +574,14 @@ fingerprints:
   detections:
   - type: cname
     pattern: auth0.com
-    description: Auth0 custom domain CNAME for login/identity pages
+    description: >-
+      CNAME pointing into auth0.com (Auth0 is an Okta-owned
+      developer-focused IdP and CIAM vendor, acquired by Okta
+      in 2021). Typically a `login.example.com` or
+      `auth.example.com` delegation. Indicates active Auth0
+      use for at least one identity flow; distinct from the
+      Okta Workforce or Customer Identity products even
+      though both vendors share Okta as parent.
 - name: OneLogin
   slug: onelogin
   category: Security & Compliance
@@ -298,8 +589,17 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^onelogin-domain-verification=
+    description: >-
+      OneLogin domain-verification TXT (OneLogin is an IdP
+      vendor, acquired by One Identity in 2021). Indicates
+      the domain is registered with a OneLogin tenant.
   - type: cname
     pattern: onelogin.com
+    description: >-
+      CNAME pointing into onelogin.com, typically a login
+      subdomain delegated to OneLogin for hosted SSO pages.
+      Indicates active OneLogin use for at least one
+      identity flow.
 - name: Snyk
   slug: snyk
   category: Security & Compliance
@@ -307,10 +607,18 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^snyk-domain-verification=
-    description: Snyk software composition analysis domain verification
+    description: >-
+      Snyk domain-verification TXT (Snyk is an SCA / SAST /
+      container-scanning vendor). Indicates the domain is
+      registered with a Snyk tenant, typically for SSO or
+      web-asset-scanning authorization.
   - type: txt
     pattern: snyk-site-verification=
-    description: Snyk alternate site verification pattern for web asset scanning authorization
+    description: >-
+      Alternative Snyk site-verification TXT format used for
+      web-asset scanning authorization. Same administrative-
+      binding semantics; web-asset scanning requires this
+      verification to confirm ownership before scanning.
 - name: GitHub Advanced Security
   slug: github-advanced-security
   category: Security & Compliance
@@ -318,7 +626,14 @@ fingerprints:
   detections:
   - type: subdomain_txt
     pattern: _github-challenge:.+
-    description: GitHub Enterprise domain challenge — proves GitHub Enterprise Cloud with Advanced Security
+    description: >-
+      GitHub Enterprise domain-challenge TXT (the
+      `_github-challenge:` form found at
+      `_github-challenge.<domain>`). Indicates the domain has
+      been verified to a GitHub Enterprise Cloud organization;
+      a precondition for using GitHub Advanced Security
+      features (code scanning, secret scanning, dependency
+      review) on Enterprise repos under that domain.
 - name: Sonatype
   slug: sonatype
   category: Security & Compliance
@@ -326,11 +641,24 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^sonatype-domain-verification=
-    description: Sonatype Nexus supply chain security domain verification
+    description: >-
+      Sonatype domain-verification TXT (Sonatype operates
+      Nexus Repository, Nexus IQ, and Maven Central).
+      Indicates the domain is registered with a Sonatype
+      tenant for Nexus IQ or Nexus Lifecycle policy
+      management.
   - type: txt
     pattern: ^OSSRH-\d+$
     weight: 0.8
-    description: Sonatype OSSRH Maven Central namespace verification — proves active Java/JVM artifact publishing
+    description: >-
+      Sonatype OSS Repository Hosting namespace-verification
+      TXT (`OSSRH-<ticket>` form). Indicates the domain has
+      been claimed for publishing artifacts to Maven Central
+      under a reverse-domain group ID. The presence of this
+      record is a precondition for publishing to Central, so
+      finding it indicates the org publishes (or has
+      published) Java or JVM artifacts under that domain's
+      coordinates.
     reference: https://central.sonatype.org/faq/verify-ownership/
 - name: Container Signing Attestation (Cosign)
   slug: cosign-attestation
@@ -339,7 +667,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^cosign\.pub=|cosign-verification=
-    description: Cosign container image signing public key or verification record — indicates supply chain attestation
+    description: >-
+      Cosign container-image-signing public key or verification
+      TXT record. Indicates the domain publishes a Cosign
+      public key (or verification record) for supply-chain
+      attestation of container images. Confidence is medium
+      because the convention is not standardized across the
+      Sigstore ecosystem; some teams publish keys via other
+      mechanisms.
     reference: https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/
 - name: Beyond Identity
   slug: beyond-identity
@@ -348,11 +683,21 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^beyondidentity-domain-verification=
-    description: Beyond Identity passwordless MFA domain verification
+    description: >-
+      Beyond Identity domain-verification TXT (Beyond Identity
+      is a passwordless-MFA vendor using device-bound
+      cryptographic keys). Indicates the domain is registered
+      with a Beyond Identity tenant.
   - type: cname
     pattern: authenticator\.beyondidentity\.com
     weight: 0.5
-    description: Beyond Identity platform authenticator CNAME — indicates passwordless MFA deployment
+    description: >-
+      CNAME pointing into authenticator.beyondidentity.com,
+      Beyond Identity's platform-authenticator endpoint.
+      Indicates the domain delegates a passwordless-MFA
+      authenticator subdomain to Beyond Identity. Confidence
+      is medium because the CNAME may be present for
+      pilot or partial rollouts.
     reference: https://docs.beyondidentity.com/docs/resources/proxy-end-user
 - name: VMware Workspace ONE
   slug: workspace-one
@@ -361,7 +706,16 @@ fingerprints:
   detections:
   - type: cname
     pattern: workspaceoneaccess\.com$
-    description: VMware Workspace ONE Access CNAME
+    description: >-
+      CNAME terminating in workspaceoneaccess.com, VMware
+      Workspace ONE Access (formerly VMware Identity Manager,
+      acquired by Broadcom in 2023). Indicates the domain
+      delegates an identity subdomain to Workspace ONE.
   - type: cname
     pattern: vmwareidentity\.com$
-    description: VMware Identity Manager CNAME
+    description: >-
+      CNAME terminating in vmwareidentity.com, the legacy
+      VMware Identity Manager domain that predates the
+      Workspace ONE rebrand. Functionally equivalent to the
+      `workspaceoneaccess.com` form; some tenants still use
+      the legacy CNAME.
