@@ -11,6 +11,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^databricks-domain-verification=
+    reference: https://docs.databricks.com/
     description: >-
       Databricks Lakehouse Platform domain-verification TXT token.
       Indicates the domain is administratively bound to a Databricks
@@ -26,6 +27,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^snowflake-domain-verification=
+    reference: https://docs.snowflake.com/
     description: >-
       Snowflake data-warehouse domain-verification TXT. Indicates
       the domain has been claimed for SSO or SCIM provisioning
@@ -40,6 +42,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^mongodb-site-verification=
+    reference: https://www.mongodb.com/docs/
     description: >-
       MongoDB Atlas domain-verification TXT token. Indicates the
       domain has been registered with an Atlas organization,
@@ -53,6 +56,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^dynatrace-site-verification=
+    reference: https://docs.dynatrace.com/
     description: >-
       Dynatrace domain-verification TXT (Dynatrace is an
       observability and APM platform). Indicates the domain is
@@ -66,6 +70,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^datadog-domain-verification=
+    reference: https://docs.datadoghq.com/
     description: >-
       Datadog domain-verification TXT. Indicates the domain is
       administratively bound to a Datadog organization, used for
@@ -81,6 +86,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^newrelic-domain-verification=
+    reference: https://docs.newrelic.com/
     description: >-
       New Relic domain-verification TXT (New Relic is an APM and
       observability platform). Indicates the domain is registered
@@ -96,6 +102,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: walkme.com
+    reference: https://support.walkme.com/
     description: >-
       CNAME pointing into walkme.com (WalkMe is a digital-adoption
       platform that hosts in-app guidance and onboarding overlays).
@@ -110,6 +117,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: optimizely.com
+    reference: https://docs.developers.optimizely.com/
     description: >-
       CNAME pointing into optimizely.com (Optimizely is an
       experimentation and A-B-testing platform). Indicates at
@@ -124,6 +132,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: mixpanel.com
+    reference: https://docs.mixpanel.com/
     description: >-
       CNAME pointing into mixpanel.com (Mixpanel is a product-
       analytics vendor). Indicates the domain proxies analytics
@@ -139,6 +148,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^amplitude-domain-verification=
+    reference: https://help.amplitude.com/hc/en-us
     description: >-
       Amplitude product-analytics domain-verification TXT.
       Indicates the domain is registered with an Amplitude
@@ -152,6 +162,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: heapanalytics.com
+    reference: https://help.heap.io/
     description: >-
       CNAME pointing into heapanalytics.com (Heap is an
       auto-capture product-analytics vendor). Indicates the
@@ -166,6 +177,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: pendo.io
+    reference: https://support.pendo.io/
     description: >-
       CNAME pointing into pendo.io (Pendo offers in-app guides and
       product analytics). Indicates the domain serves at least
@@ -180,6 +192,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^hotjar-domain-verification=
+    reference: https://help.hotjar.com/hc/en-us
     description: >-
       Hotjar heatmap and session-replay domain-verification TXT.
       Indicates the domain is registered with a Hotjar account.

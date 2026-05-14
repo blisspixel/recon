@@ -7,6 +7,8 @@
 
 Passive domain intelligence from public sources. Queries DNS records, Microsoft/Google identity endpoints, and certificate transparency logs to build a picture of an organization's technology stack — no credentials, no API keys, no active scanning.
 
+Drop in a domain, get a calibrated read on its identity stack, email posture, and cloud footprint in seconds.
+
 > **Defensive use only.** recon is designed for legitimate security posture assessment, IT architecture review, vendor due diligence, and defensive hardening. It performs zero active scanning and zero credentialed access. See [docs/legal.md](docs/legal.md) for the full intended-use policy.
 
 ```bash
@@ -56,19 +58,39 @@ Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP
 
 ## recon in practice
 
-recon is a fast, zero-credential first-pass tool for external technology stack and posture visibility from public sources.
+recon is the fast, zero-credential first-pass for external technology-stack and posture visibility. Run it before a vendor diligence call, before a partner integration, before an M&A review, before a hardening audit. Output is hedged, traceable, and shaped for downstream automation.
 
-It is designed to help with vendor due diligence, acquisition reviews, partner assessments, and internal hardening checks.
-
-recon intentionally does not replace commercial EASM platforms, active scanners, or continuous monitoring solutions. It focuses on delivering trustworthy, hedged observations with full provenance that can feed into other tools or processes.
+recon does not replace commercial EASM platforms, active scanners, or continuous monitoring. It is the upstream signal that feeds those tools, with full provenance so you can verify any conclusion before you act on it.
 
 ## How recon Works
 
-recon performs layered inference over public DNS, certificate transparency,
-and unauthenticated identity endpoints to produce hedged observations about
-an organization's external technology stack. For the formal model,
-information-theoretic foundations, and planned correlation extensions, see
-[docs/correlation.md](docs/correlation.md).
+recon starts as a fast **passive DNS and certificate-transparency
+reader**. It gathers the public-channel observables: MX records, CNAME
+chains, SPF and DMARC TXT records, CT log SAN sets, and the
+unauthenticated identity-discovery endpoints Microsoft and Google
+publish for tenant resolution.
+
+Those observables are then fed into a small Bayesian network, where
+exact inference produces 80% credible intervals over high-level claims
+(M365 tenant, federated identity, email-policy enforcement, CDN
+fronting, AWS hosting, and so on). The output is an interval, not a
+binary verdict, and the structural motifs the network surfaces (a CDN
+in front of an identity provider, an email gateway in front of M365, a
+secondary GWS deployment alongside primary M365) are the ones
+single-source detection often misses.
+
+On hardened or heavily-proxied targets, the credible interval widens
+rather than collapsing on a confident point estimate. This is a
+construction property of the inference layer: by design, absent
+evidence is treated as no evidence rather than as evidence of absence.
+The tool reports what the public channel reveals and is explicit about
+what it does not.
+
+> **For the formal model:** the missing-data treatment under adversarial
+> assumptions (MNAR via Distributionally Robust Optimization), the
+> calibration principles the credible interval satisfies, and the
+> failure-mode catalog across five hardening postures live in
+> [docs/correlation.md](docs/correlation.md).
 
 ## Install
 
@@ -146,7 +168,8 @@ The SKILL.md follows the open [agentskills.io](https://agentskills.io) standard,
 ## Limitations
 
 - **Coverage depends on public DNS.** Organizations behind heavy proxies, with minimal DNS records, or that don't publish SaaS verification tokens will return sparse results. This is fundamental to passive-only collection. When sources transiently fail, the CLI tells you which one and why so you can retry or accept the partial answer.
-- **Heuristic, not ground truth.** The fingerprint database and signal rules are rule-based and solo-maintained. Confident-looking output can still be wrong. Treat results as indicators for investigation, not as definitive assessments. Don't make business decisions based solely on this output. See [docs/correlation.md](docs/correlation.md) for the full inference pipeline and why sparse results on hardened targets are both expected and honestly reported.
+- **Internal workloads are structurally invisible.** Server-side API consumption (an org running internal Google Cloud ML, internal AWS data pipelines, internal Snowflake warehouses without public verification tokens, and so on) leaves no trace in public DNS, CT logs, or unauthenticated identity-discovery endpoints. recon cannot tell you what runs internally; it can only tell you what the org publishes externally. The CLI panel calls this out explicitly when it detects a truncated public footprint, so the "Cloud" line surfaces what is observable and acknowledges that the internal stack is a separate question.
+- **Heuristic, not ground truth.** The fingerprint database and signal rules are rule-based and solo-maintained. Confident-looking output can still be wrong. The credible interval is the load-bearing field, not the point estimate: by construction, sparse evidence on hardened targets produces a wide interval rather than a confident-looking point estimate, and the `sparse=true` flag in the JSON output is the operator-facing signal that the layer has hit the passive-observation ceiling. Every detection in the catalog carries a description and a vendor doc URL (v1.9.8+), so a finding can be re-verified against the vendor's own documentation before action. Treat results as indicators for investigation, not as definitive assessments. Don't make business decisions based solely on this output. See [docs/correlation.md](docs/correlation.md) for the calibration principles the interval satisfies and the failure-mode catalog across hardening postures.
 
 ## Development
 

@@ -362,7 +362,8 @@ detection makes the source explicit:
 
 Either way, `reference` exists so a future maintainer can re-verify
 the pattern. A rule shipped without a `reference` is allowed but
-will be flagged in the metadata-richness gate (v1.9.7+).
+will be flagged by the advisory metadata-richness audit
+(`scripts/check_metadata_coverage.py --report-richness`, v1.9.8+).
 
 Use the fingerprint PR template — GitHub surfaces it automatically.
 

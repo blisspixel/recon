@@ -299,7 +299,7 @@ class TestShadowWorkspaceIntegration:
         env["PYTHONSAFEPATH"] = "1"
         env["RECON_MCP_FORCE_STDIO"] = "1"
 
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603 — argv list, no shell.
             [sys.executable, "-m", "recon_tool.server"],
             cwd=tmp_path,
             env=env,

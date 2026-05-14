@@ -12,6 +12,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^atlassian-domain-verification=
+    reference: https://support.atlassian.com/atlassian-account/
     description: >-
       Atlassian Cloud organization domain-verification TXT.
       Indicates the domain is administratively bound to an
@@ -27,6 +28,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^slack-domain-verification=
+    reference: https://slack.com/help
     description: >-
       Slack workspace domain-verification TXT. Indicates the
       domain is claimed by a Slack workspace, typically as part
@@ -35,6 +37,7 @@ fingerprints:
     reference: https://slack.com/help/articles/5513043606547
   - type: subdomain_txt
     pattern: _slack-challenge:.
+    reference: https://slack.com/help
     description: >-
       Slack Enterprise Grid subdomain-challenge TXT found at
       `_slack-challenge.<domain>`. Indicates the domain is
@@ -49,6 +52,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^notion-domain-verification=
+    reference: https://www.notion.so/help
     description: >-
       Notion domain-verification TXT. Indicates the domain is
       registered with a Notion workspace, typically for SSO
@@ -56,6 +60,7 @@ fingerprints:
       branded subdomain.
   - type: txt
     pattern: ^notion-verification-code
+    reference: https://www.notion.so/help
     description: >-
       Alternative Notion verification TXT format
       (`notion-verification-code` prefix). Same administrative-
@@ -67,6 +72,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^miro-verification=
+    reference: https://help.miro.com/hc/en-us
     description: >-
       Miro domain-verification TXT (Miro is a collaborative
       whiteboarding platform). Indicates the domain is
@@ -79,6 +85,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^asana-domain-verification=
+    reference: https://asana.com/guide
     description: >-
       Asana domain-verification TXT (Asana is a work-management
       platform for project and task tracking). Indicates the
@@ -92,6 +99,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^monday-domain-verification=
+    reference: https://support.monday.com/hc/en-us
     description: >-
       Monday.com domain-verification TXT (monday.com is a
       work-management platform with workflow automation).
@@ -99,6 +107,7 @@ fingerprints:
       account, typically for SSO federation.
   - type: txt
     pattern: ^monday-verification
+    reference: https://support.monday.com/hc/en-us
     description: >-
       Alternative monday.com verification TXT format. Same
       administrative-binding semantics as the prefixed
@@ -110,6 +119,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^wrike-verification=
+    reference: https://help.wrike.com/hc/en-us
     description: >-
       Wrike domain-verification TXT (Wrike is a project-
       management platform acquired by Citrix and now part of
@@ -122,6 +132,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^smartsheet-site-validation=
+    reference: https://help.smartsheet.com/
     description: >-
       Smartsheet site-validation TXT (Smartsheet is a
       spreadsheet-based work-management platform). Indicates
@@ -135,6 +146,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^airtable-domain-verification=
+    reference: https://support.airtable.com/
     description: >-
       Airtable domain-verification TXT (Airtable is a
       hybrid database / spreadsheet collaboration platform).
@@ -142,6 +154,7 @@ fingerprints:
       workspace, typically for SSO federation.
   - type: txt
     pattern: ^airtable-verification=
+    reference: https://support.airtable.com/
     description: >-
       Alternative Airtable verification TXT format. Same
       administrative-binding semantics as the prefixed
@@ -153,6 +166,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^clickup-domain-verification=
+    reference: https://help.clickup.com/
     description: >-
       ClickUp domain-verification TXT (ClickUp is a work-
       management platform combining project tracking,
@@ -165,6 +179,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^loom-site-verification=
+    reference: https://support.loom.com/hc/en-us
     description: >-
       Loom site-verification TXT (Loom is an asynchronous-
       video messaging platform, acquired by Atlassian in
@@ -178,6 +193,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^canva-site-verification=
+    reference: https://www.canva.com/help/
     description: >-
       Canva site-verification TXT (Canva is a graphic-design
       platform). Indicates the domain is registered with a
@@ -190,6 +206,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^beautifulai-site-verification=
+    reference: https://www.beautiful.ai/support
     description: >-
       Beautiful.ai site-verification TXT (Beautiful.ai is a
       presentation-design platform). Indicates the domain is
@@ -202,6 +219,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: disciplemedia.com
+    reference: https://www.disciplemedia.com/
     description: >-
       CNAME pointing into disciplemedia.com (Disciple Media is
       a branded community platform for membership sites and
@@ -214,6 +232,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^ZOOM_verify_
+    reference: https://support.zoom.us/hc/en-us
     description: >-
       Zoom domain-verification TXT (the `ZOOM_verify_` prefix).
       Indicates the domain is registered with a Zoom account,
@@ -229,6 +248,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^dropbox-domain-verification=
+    reference: https://help.dropbox.com/
     description: >-
       Dropbox domain-verification TXT. Indicates the domain is
       registered with a Dropbox Business or Education team,
@@ -243,6 +263,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^workplace-domain-verification=
+    reference: https://www.facebook.com/help/work/
     description: >-
       Workplace by Meta (formerly Workplace by Facebook)
       domain-verification TXT. Note that Meta is sunsetting
@@ -257,6 +278,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^lucidlink-verification=
+    reference: https://support.lucidlink.com/hc/en-us
     description: >-
       LucidLink domain-verification TXT (LucidLink is a
       cloud-native distributed file-system platform popular
@@ -271,6 +293,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^adobe-idp-site-verification=
+    reference: https://helpx.adobe.com/enterprise/using/set-up-identity.html
     description: >-
       Adobe Identity domain-verification TXT (the `adobe-idp`
       prefix corresponds to Adobe's Identity service used
@@ -286,6 +309,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^adobe-sign-verification=
+    reference: https://helpx.adobe.com/sign/using/sign-up-domain-claim.html
     description: >-
       Adobe Sign domain-verification TXT (Adobe Sign is the
       e-signature product within Adobe Document Cloud,
@@ -299,6 +323,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^apple-domain-verification=
+    reference: https://developer.apple.com/account/
     description: >-
       Apple Business / Apple Developer domain-verification TXT.
       Indicates the domain is claimed against an Apple
@@ -313,6 +338,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^box-domain-verification=
+    reference: https://support.box.com/hc/en-us
     description: >-
       Box domain-verification TXT (Box is an enterprise file
       storage and content collaboration platform). Indicates
@@ -325,6 +351,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^egnyte-domain-verification=
+    reference: https://helpdesk.egnyte.com/hc/en-us
     description: >-
       Egnyte domain-verification TXT (Egnyte is an enterprise
       file-collaboration and content-governance platform that
@@ -338,6 +365,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^glean-domain-verification=
+    reference: https://help.glean.com/
     description: >-
       Glean domain-verification TXT (Glean is an enterprise
       AI search and knowledge-management platform that indexes
@@ -351,24 +379,28 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^zendesk-domain-verification=
+    reference: https://support.zendesk.com/hc/en-us/articles/4408822492698
     description: >-
       Zendesk domain-verification TXT. Indicates the domain
       is registered with a Zendesk account, typically for
       branded help-center subdomains and SSO federation.
   - type: spf
     pattern: zendesk.com
+    reference: https://support.zendesk.com/hc/en-us/articles/4408822492698
     description: >-
       SPF include matching zendesk.com. Authorizes Zendesk
       to send customer-support emails (ticket notifications,
       help-center signups) on behalf of the domain.
   - type: spf
     pattern: mail.zendesk.com
+    reference: https://support.zendesk.com/hc/en-us/articles/4408822492698
     description: >-
       Alternative Zendesk mail-sending SPF include
       (`mail.zendesk.com`). Some Zendesk tenants use this
       form. Same outbound-authorization semantics.
   - type: cname
     pattern: zendesk.com
+    reference: https://support.zendesk.com/hc/en-us/articles/4408822492698
     description: >-
       CNAME pointing into zendesk.com. Typically a branded
       help-center subdomain (`help.example.com` or
@@ -381,6 +413,7 @@ fingerprints:
   detections:
   - type: spf
     pattern: freshdesk.com
+    reference: https://support.freshdesk.com/en/support/solutions/articles/216671
     description: >-
       SPF include matching freshdesk.com (Freshdesk is a
       Freshworks helpdesk product, comparable to Zendesk).
@@ -388,9 +421,13 @@ fingerprints:
       of the domain.
   - type: cname
     pattern: freshdesk.com
+    reference: https://support.freshdesk.com/en/support/solutions/articles/216671
     description: >-
       CNAME pointing into freshdesk.com. Typically a branded
-      help-center subdomain hosted by Freshdesk.
+      help-center subdomain hosted by Freshdesk. Does not by
+      itself indicate ticket volume or which Freshworks
+      products are bundled in the tenant; the chain is the
+      hosting signal, not a usage signal.
 - name: ServiceNow
   slug: servicenow
   category: Support & Helpdesk
@@ -398,6 +435,7 @@ fingerprints:
   detections:
   - type: spf
     pattern: service-now.com
+    reference: https://docs.servicenow.com/
     description: >-
       SPF include matching service-now.com (ServiceNow is an
       ITSM, ITOM, and workflow platform). Authorizes
@@ -412,12 +450,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^statuspage-domain-verification=
+    reference: https://support.atlassian.com/statuspage/docs/customize-your-status-page/
     description: >-
       Atlassian Statuspage domain-verification TXT. Indicates
       the domain is registered with a Statuspage account for
       hosting a public status page under a branded subdomain.
   - type: cname
     pattern: statuspage.io
+    reference: https://support.atlassian.com/statuspage/docs/customize-your-status-page/
     description: >-
       CNAME pointing into statuspage.io. Typically a
       `status.example.com` subdomain delegated to Atlassian
@@ -430,6 +470,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^workday-domain-verification=
+    reference: https://www.workday.com/en-us/support.html
     description: >-
       Workday domain-verification TXT (Workday is an
       enterprise HCM and finance platform). Indicates the
@@ -443,6 +484,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^sap-domain-verification=
+    reference: https://help.sap.com/
     description: >-
       SAP domain-verification TXT (SAP is an enterprise
       software suite spanning ERP, HCM via SuccessFactors,
@@ -456,6 +498,7 @@ fingerprints:
   detections:
   - type: spf
     pattern: _spf.ultipro.com
+    reference: https://www.ukg.com/support
     description: >-
       SPF include matching `_spf.ultipro.com` (UKG, formerly
       Ultimate Software / UltiPro, merged with Kronos in
@@ -469,6 +512,7 @@ fingerprints:
   detections:
   - type: spf
     pattern: _spf.qualtrics.com
+    reference: https://www.qualtrics.com/support/
     description: >-
       SPF include matching `_spf.qualtrics.com` (Qualtrics is
       an experience-management platform offering employee,
@@ -482,6 +526,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^rippling-domain-verification=
+    reference: https://support.rippling.com/
     description: >-
       Rippling domain-verification TXT (Rippling is an
       employee-management platform combining HR, IT
@@ -494,6 +539,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^deel-domain-verification=
+    reference: https://help.letsdeel.com/hc/en-gb
     description: >-
       Deel domain-verification TXT (Deel is a global-payroll
       and contractor-management platform). Indicates the
@@ -506,6 +552,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^figma-domain-verification=
+    reference: https://help.figma.com/hc/en-us
     description: >-
       Figma domain-verification TXT (Figma is a collaborative
       design platform, currently independent after the
@@ -514,6 +561,7 @@ fingerprints:
       typically for SSO federation.
   - type: txt
     pattern: ^figma-verification
+    reference: https://help.figma.com/hc/en-us
     description: >-
       Alternative Figma verification TXT format. Same
       administrative-binding semantics as the prefixed

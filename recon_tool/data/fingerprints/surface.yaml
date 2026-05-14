@@ -35,12 +35,24 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: myshopify.com
+    reference: https://help.shopify.com/en/manual/online-store/domains
     tier: application
-    description: Subdomain CNAMEs to a Shopify storefront (shops.myshopify.com)
+    description: >-
+      Subdomain CNAME terminating at a Shopify-hosted storefront
+      (canonical form `<shop>.myshopify.com`). Indicates the org
+      runs a Shopify storefront for at least one branded subdomain.
+      Does not indicate Shopify Plus vs basic plan; the chain is
+      identical across tiers.
   - type: cname_target
     pattern: shopifycdn.com
+    reference: https://help.shopify.com/en/manual/online-store/domains
     tier: application
-    description: Shopify CDN endpoint
+    description: >-
+      CNAME into Shopify's image and asset CDN
+      (`*.shopifycdn.com`). Indicates the storefront serves
+      product imagery through Shopify's hosted CDN. Does not by
+      itself prove an active storefront; orphaned product images
+      can persist after a shop is unpublished.
 
 - name: Zendesk
   slug: zendesk
@@ -49,8 +61,15 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: zendesk.com
+    reference: https://support.zendesk.com/hc/en-us/articles/4408822492698
     tier: application
-    description: Custom subdomain CNAMEd to a Zendesk help portal
+    description: >-
+      Custom subdomain CNAMEd to a Zendesk help-center portal.
+      Indicates the org runs a Zendesk hosted help center on a
+      branded domain. Does not distinguish Zendesk Suite from
+      Zendesk Sell; both products share the same custom-domain
+      chain. Hosting-binding signal only, not a ticket-volume
+      signal.
 
 - name: Auth0 (Okta)
   slug: auth0
@@ -59,8 +78,15 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: auth0.com
+    reference: https://auth0.com/docs/customize/custom-domains
     tier: application
-    description: Custom subdomain delegated to an Auth0 tenant
+    description: >-
+      Custom-domain CNAME delegated to an Auth0 (Okta CIC) tenant
+      for hosted login pages or universal-login flows. Indicates
+      Auth0 is the org's customer-identity surface for at least
+      one application. Does not prove enterprise-tier features
+      (Organizations, custom databases); those are configured
+      inside the Auth0 tenant and not visible from the chain.
 
 - name: Okta
   slug: okta
@@ -69,8 +95,15 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: customdomains.okta.com
+    reference: https://help.okta.com/en-us/content/topics/settings/custom-url-domain.htm
     tier: application
-    description: Okta custom-domain delegation
+    description: >-
+      Okta custom-domain delegation CNAME for hosted-SSO login at
+      a branded subdomain. Indicates Okta is the org's primary or
+      enterprise IdP. Does not distinguish Okta Workforce from
+      Okta Customer Identity (Auth0); the chain is shared. Treat
+      as a strong identity-stack binding signal corroborated by
+      MX and federation metadata.
 
 - name: Mailgun
   slug: mailgun
@@ -79,6 +112,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: mailgun.org
+    reference: https://documentation.mailgun.com/en/latest/quickstart-sending.html
     tier: application
     description: >-
       Subdomain CNAMEs into mailgun.org, typically a branded
@@ -93,6 +127,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: sendgrid.net
+    reference: https://docs.sendgrid.com/ui/account-and-settings/how-to-set-up-domain-authentication
     tier: application
     description: >-
       Subdomain CNAMEs into sendgrid.net, typically a branded
@@ -107,8 +142,15 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: mandrillapp.com
+    reference: https://mailchimp.com/help/set-up-email-domain-authentication/
     tier: application
-    description: Mailchimp Transactional (formerly Mandrill) hosted CNAME
+    description: >-
+      CNAME into mandrillapp.com, Mailchimp Transactional (the
+      rebranded Mandrill service). Indicates the org sends
+      transactional mail through Mandrill rather than (or alongside)
+      Mailchimp's marketing-mail surface. Does not indicate
+      marketing-list volume; the two product paths are billed
+      separately.
 
 - name: Postmark
   slug: postmark
@@ -117,6 +159,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: postmarkapp.com
+    reference: https://postmarkapp.com/support/article/1124-
     tier: application
     description: >-
       Subdomain CNAMEs into postmarkapp.com, typically a branded
@@ -124,6 +167,7 @@ fingerprints:
       Indicates the domain uses Postmark for transactional email.
   - type: cname_target
     pattern: pstmrk.com
+    reference: https://postmarkapp.com/support/article/1124-
     tier: application
     description: >-
       Subdomain CNAMEs into pstmrk.com (Postmark's link-tracking
@@ -137,6 +181,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: sparkpostmail.com
+    reference: https://www.sparkpost.com/docs/
     tier: application
     description: >-
       Subdomain CNAMEs into sparkpostmail.com, typically a
@@ -151,6 +196,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: klaviyo.com
+    reference: https://help.klaviyo.com/hc/en-us/articles/115005082927
     tier: application
     description: >-
       Subdomain CNAMEs into klaviyo.com, typically a branded
@@ -165,6 +211,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: hubspotpagebuilder.com
+    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
     tier: application
     description: >-
       Subdomain CNAMEs into hubspotpagebuilder.com (HubSpot's
@@ -173,6 +220,7 @@ fingerprints:
       subdomain.
   - type: cname_target
     pattern: hs-sites.com
+    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
     tier: application
     description: >-
       Subdomain CNAMEs into hs-sites.com (HubSpot CMS site-
@@ -180,6 +228,7 @@ fingerprints:
       (blog, knowledge base, marketing site) on HubSpot CMS.
   - type: cname_target
     pattern: hubspot.net
+    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
     tier: application
     description: >-
       Subdomain CNAMEs into hubspot.net (HubSpot's CDN and
@@ -187,6 +236,7 @@ fingerprints:
       HubSpot-hosted content under a branded subdomain.
   - type: cname_target
     pattern: hsforms.net
+    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
     tier: application
     description: >-
       Subdomain CNAMEs into hsforms.net (HubSpot Forms hosting
@@ -200,6 +250,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: intercom.help
+    reference: https://www.intercom.com/help/en/articles/179-set-up-a-custom-domain
     tier: application
     description: >-
       Subdomain CNAMEs into intercom.help (Intercom's
@@ -208,6 +259,7 @@ fingerprints:
       center under a branded subdomain.
   - type: cname_target
     pattern: intercomcdn.com
+    reference: https://www.intercom.com/help/en/articles/179-set-up-a-custom-domain
     tier: application
     description: >-
       Subdomain CNAMEs into intercomcdn.com (Intercom's CDN
@@ -215,6 +267,7 @@ fingerprints:
       Indicates the domain proxies Intercom-hosted assets.
   - type: cname_target
     pattern: intercomhelpcenter.com
+    reference: https://www.intercom.com/help/en/articles/179-set-up-a-custom-domain
     tier: application
     description: >-
       Subdomain CNAMEs into intercomhelpcenter.com (Intercom
@@ -229,6 +282,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: mktoresp.com
+    reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
     tier: application
     description: >-
       Subdomain CNAMEs into mktoresp.com (Marketo's response /
@@ -236,6 +290,7 @@ fingerprints:
       response tracking through a branded subdomain.
   - type: cname_target
     pattern: marketo.com
+    reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
     tier: application
     description: >-
       Subdomain CNAMEs into marketo.com (Marketo, now Adobe
@@ -244,6 +299,7 @@ fingerprints:
       a branded subdomain.
   - type: cname_target
     pattern: mktoweb.com
+    reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
     tier: application
     description: >-
       Subdomain CNAMEs into mktoweb.com (Marketo's landing-
@@ -251,6 +307,7 @@ fingerprints:
       Marketo landing pages under a branded subdomain.
   - type: cname_target
     pattern: mktossl.com
+    reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
     tier: application
     description: >-
       Subdomain CNAMEs into mktossl.com (Marketo's SSL-
@@ -264,6 +321,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: hs.eloqua.com
+    reference: https://docs.oracle.com/en/cloud/saas/marketing/eloqua-user/Help/UserSetup/CustomDomains/CustomDomains.htm
     tier: application
     description: >-
       Subdomain CNAMEs into hs.eloqua.com (Oracle Eloqua's
@@ -272,6 +330,7 @@ fingerprints:
       branded subdomain.
   - type: cname_target
     pattern: en25.com
+    reference: https://docs.oracle.com/en/cloud/saas/marketing/eloqua-user/Help/UserSetup/CustomDomains/CustomDomains.htm
     tier: application
     description: >-
       Subdomain CNAMEs into en25.com (Oracle Eloqua's hosted
@@ -286,6 +345,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: edge2.salesforce.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm
     tier: application
     description: >-
       Subdomain CNAMEs into edge2.salesforce.com (Salesforce
@@ -294,6 +354,7 @@ fingerprints:
       under a branded subdomain.
   - type: cname_target
     pattern: force.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm
     tier: application
     description: >-
       Subdomain CNAMEs into force.com (Salesforce's
@@ -308,6 +369,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: fe.pardot.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.pardot_domain_management.htm
     tier: application
     description: >-
       Subdomain CNAMEs into fe.pardot.com (Pardot's frontend
@@ -316,6 +378,7 @@ fingerprints:
       landing pages or forms.
   - type: cname_target
     pattern: pardot.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.pardot_domain_management.htm
     tier: application
     description: >-
       Subdomain CNAMEs into pardot.com (Pardot is Salesforce's
@@ -330,6 +393,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: campaign.adobe.com
+    reference: https://experienceleague.adobe.com/docs/experience-cloud/
     tier: application
     description: >-
       Subdomain CNAMEs into campaign.adobe.com (Adobe
@@ -337,6 +401,7 @@ fingerprints:
       Adobe Campaign for marketing automation.
   - type: cname_target
     pattern: cjm.adobe.com
+    reference: https://experienceleague.adobe.com/docs/experience-cloud/
     tier: application
     description: >-
       Subdomain CNAMEs into cjm.adobe.com (Adobe Customer
@@ -350,6 +415,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: service-now.com
+    reference: https://docs.servicenow.com/
     tier: application
     description: >-
       Subdomain CNAMEs into service-now.com (ServiceNow's
@@ -366,6 +432,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: wixsite.com
+    reference: https://support.wix.com/en/article/about-domains
     tier: application
     description: >-
       Subdomain CNAMEs into wixsite.com (Wix's hosted-site
@@ -373,6 +440,7 @@ fingerprints:
       under a branded subdomain.
   - type: cname_target
     pattern: wixdns.net
+    reference: https://support.wix.com/en/article/about-domains
     tier: application
     description: >-
       Subdomain CNAMEs into wixdns.net (Wix's DNS hosting
@@ -386,8 +454,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: cname.bitly.com
+    reference: https://support.bitly.com/hc/en-us/sections/4407653486477
     tier: application
-    description: Bitly branded short-link domain
+    description: >-
+      Bitly branded short-link domain CNAME. Indicates the org runs
+      a custom short-link domain (e.g. brand.ly) through Bitly's
+      hosted shortener. Does not prove enterprise-tier adoption;
+      Bitly Custom Domains is available on multiple tiers and the
+      CNAME is identical.
 
 - name: Short.io
   slug: shortio
@@ -396,6 +470,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: cname.short.io
+    reference: https://help.short.io/
     tier: application
     description: >-
       Subdomain CNAMEs into cname.short.io (Short.io is a
@@ -410,8 +485,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: statuspage.betteruptime.com
+    reference: https://betterstack.com/docs/uptime/custom-domains/
     tier: application
-    description: Better Stack / Better Uptime status page hosted endpoint
+    description: >-
+      Better Stack (formerly Better Uptime) hosted status-page
+      endpoint CNAME. Indicates the org publishes a public status
+      page through Better Stack. Does not prove the org's
+      incident-response process runs through Better Stack; the
+      status page can be a passive presence.
 
 - name: Unbounce
   slug: unbounce
@@ -420,6 +501,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: unbouncepages.com
+    reference: https://documentation.unbounce.com/hc/en-us/articles/203510044
     tier: application
     description: >-
       Subdomain CNAMEs into unbouncepages.com (Unbounce's
@@ -434,6 +516,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: tm-3.office.com
+    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
     tier: application
     description: >-
       Subdomain CNAMEs into tm-3.office.com (Microsoft 365
@@ -442,6 +525,7 @@ fingerprints:
       M365 endpoint subdomain.
   - type: cname_target
     pattern: sharepoint.com
+    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
     tier: application
     description: >-
       Subdomain CNAMEs into sharepoint.com (the
@@ -457,6 +541,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: wpenginepowered.com
+    reference: https://wpengine.com/support/add-domain/
     tier: application
     description: >-
       Subdomain CNAMEs into wpenginepowered.com (WP Engine's
@@ -470,6 +555,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: netlifyglobalcdn.com
+    reference: https://docs.netlify.com/domains-https/custom-domains/
     tier: application
     description: >-
       Subdomain CNAMEs into netlifyglobalcdn.com (Netlify's
@@ -483,6 +569,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: b-cdn.net
+    reference: https://docs.bunny.net/
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into b-cdn.net (Bunny CDN's edge
@@ -498,8 +585,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: go-vip.net
+    reference: https://docs.wpvip.com/networking/custom-domains/
     tier: application
-    description: WordPress VIP (Automattic) managed hosting
+    description: >-
+      WordPress VIP (Automattic) managed-hosting CNAME for
+      enterprise WordPress workloads. Indicates the org is on the
+      VIP managed tier rather than self-hosted WordPress or
+      WordPress.com. Does not by itself indicate the editorial
+      scale; VIP serves both single-site and multi-site newsrooms.
 
 - name: WorkOS
   slug: workos
@@ -508,12 +601,22 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: workosdns.com
+    reference: https://workos.com/docs/sso/guide/set-up-sso/launch-checklist
     tier: application
-    description: WorkOS B2B SSO custom domain CNAME
+    description: >-
+      WorkOS B2B SSO custom-domain CNAME for hosted
+      SSO-as-a-service. Indicates the org embeds WorkOS as its
+      B2B-SSO layer in front of customer-facing apps. Does not by
+      itself indicate SCIM or directory-sync adoption; those are
+      separate WorkOS products on the same tenant.
   - type: cname_target
     pattern: workos-dns.com
+    reference: https://workos.com/docs/sso/guide/set-up-sso/launch-checklist
     tier: application
-    description: WorkOS custom-domain CNAME (newer hyphenated zone)
+    description: >-
+      Alternative WorkOS custom-domain CNAME using the hyphenated
+      zone (newer rollouts). Functionally equivalent to the
+      `workosdns.com` form; some tenants run on the newer zone.
 
 - name: Ping Identity (PingOne)
   slug: ping-identity
@@ -522,8 +625,15 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: pingone.com
+    reference: https://docs.pingidentity.com/pingone/main/
     tier: application
-    description: PingOne identity-as-a-service tenant CNAME
+    description: >-
+      PingOne identity-as-a-service tenant CNAME for hosted SSO and
+      MFA pages. Indicates Ping is the org's IdP or
+      customer-identity surface for at least one application. Does
+      not distinguish PingOne for Workforce from PingOne for
+      Customers; the chain is shared across the PingOne product
+      family.
 
 - name: Salesloft
   slug: salesloft
@@ -532,8 +642,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: salesloft.com
+    reference: https://help.salesloft.com/s/article/Custom-Email-Domain-Setup
     tier: application
-    description: Salesloft custom-tracking subdomain delegation
+    description: >-
+      Salesloft custom-tracking-subdomain CNAME for sales engagement
+      (Cadence, Conversations). Indicates the org runs Salesloft as
+      part of its sales-engagement stack. Does not by itself
+      indicate Drift adoption; Drift is a separate Salesloft product
+      line.
 
 - name: Pendo
   slug: pendo
@@ -542,8 +658,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: pendo.io
+    reference: https://support.pendo.io/
     tier: application
-    description: Pendo product-analytics customer endpoint
+    description: >-
+      Pendo product-analytics customer-endpoint CNAME. Indicates the
+      org runs Pendo on at least one product surface for in-app
+      analytics and guides. Does not by itself indicate the
+      integration depth; Pendo can be deployed as a single Snippet
+      or as a full Engage rollout.
 
 - name: Docebo
   slug: docebo
@@ -552,8 +674,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: docebopaas.com
+    reference: https://help.docebo.com/
     tier: application
-    description: Docebo learning-management system tenant
+    description: >-
+      Docebo learning-management-system tenant CNAME. Indicates the
+      org runs Docebo as its LMS for at least one branded learning
+      subdomain. Does not indicate audience (employee vs customer
+      training); Docebo serves both topologies on the same chain.
 
 - name: Skilljar
   slug: skilljar
@@ -562,8 +689,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: skilljarapp.com
+    reference: https://help.skilljar.com/
     tier: application
-    description: Skilljar customer-education platform
+    description: >-
+      Skilljar customer-education-platform CNAME. Indicates the org
+      runs Skilljar as its customer-training LMS. Does not by itself
+      indicate course volume; a single course produces the same
+      chain as a multi-course catalog.
 
 - name: Bizzabo
   slug: bizzabo
@@ -572,8 +704,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: bizzabo.com
+    reference: https://help.bizzabo.com/
     tier: application
-    description: Bizzabo events platform custom domain
+    description: >-
+      Bizzabo events-platform custom-domain CNAME. Indicates the org
+      has stood up at least one branded event hub on Bizzabo. Does
+      not by itself indicate event cadence; the chain persists
+      between events independent of activity.
 
 - name: Instatus
   slug: instatus
@@ -582,8 +719,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: instatus.com
+    reference: https://instatus.com/help/custom-domain
     tier: application
-    description: Instatus hosted status page
+    description: >-
+      Instatus hosted status-page CNAME (a lower-cost competitor to
+      Statuspage and Better Stack). Indicates the org publishes a
+      status page through Instatus. Does not indicate paid-tier
+      adoption; Instatus offers free tier on the same chain.
 
 - name: Frontify
   slug: frontify
@@ -592,8 +734,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: frontify.com
+    reference: https://help.frontify.com/
     tier: application
-    description: Frontify brand-asset management custom domain
+    description: >-
+      Frontify brand-asset-management custom-domain CNAME. Indicates
+      the org runs a branded Frontify portal for design-system or
+      brand-guideline distribution. Does not prove the portal is
+      public-facing; many Frontify tenants sit behind
+      invitation-only auth.
 
 - name: ReadMe
   slug: readme
@@ -602,8 +750,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: readmessl.com
+    reference: https://docs.readme.com/main/docs/custom-domain
     tier: application
-    description: ReadMe documentation hub custom domain
+    description: >-
+      ReadMe documentation-hub custom-domain CNAME. Indicates the
+      org publishes developer docs through ReadMe on a branded
+      subdomain. Does not by itself indicate API audience size;
+      ReadMe serves both internal and public doc surfaces on the
+      same chain.
 
 - name: WP Engine
   slug: wpengine
@@ -612,8 +766,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: wpeproxy.com
+    reference: https://wpengine.com/support/add-domain/
     tier: application
-    description: WP Engine WordPress hosting proxy CNAME (variant)
+    description: >-
+      WP Engine WordPress-hosting proxy CNAME (variant zone).
+      Indicates the org is on WP Engine's managed-WordPress platform
+      via the alternative proxy chain. Functionally equivalent to
+      the `wpengine.com` chain; some tenants run on this variant.
 
 # ── New candidates from the v1.6.0 corpus run ───────────────────────────
 
@@ -624,8 +783,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: swoogo.net
+    reference: https://help.swoogo.com/
     tier: application
-    description: Swoogo events platform custom domain
+    description: >-
+      Swoogo events-platform custom-domain CNAME. Indicates the org
+      runs Swoogo for event-registration sites. Does not by itself
+      indicate event scale; corporate single-event use produces the
+      same chain as professional-association annual-conference use.
 
 - name: UptimeRobot
   slug: uptimerobot
@@ -634,8 +798,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: uptimerobot.com
+    reference: https://uptimerobot.com/help/
     tier: application
-    description: UptimeRobot hosted public status page
+    description: >-
+      UptimeRobot hosted public-status-page CNAME. Indicates the org
+      publishes uptime data through UptimeRobot. Does not by itself
+      indicate paid-tier adoption; free-tier status pages produce
+      the same chain.
 
 - name: bl.ink
   slug: blink
@@ -644,8 +813,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: dns.bl.ink
+    reference: https://app.bl.ink/docs
     tier: application
-    description: bl.ink branded URL shortener custom domain
+    description: >-
+      bl.ink branded URL-shortener custom-domain CNAME. Indicates
+      the org runs a branded short-link domain through bl.ink (a
+      Bitly competitor). Does not by itself indicate
+      marketing-attribution depth; the chain only shows the
+      hosted-shortener binding.
 
 - name: GoDaddy Workspace Email
   slug: godaddy-email
@@ -654,8 +829,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: email.secureserver.net
+    reference: https://www.godaddy.com/help/setup-my-professional-email-account-9011
     tier: application
-    description: GoDaddy Workspace Email hosted endpoint
+    description: >-
+      GoDaddy Workspace Email hosted-endpoint CNAME. Indicates the
+      org's email runs through GoDaddy's hosted-mail service (a
+      smaller-business tier, comparable to Microsoft 365 Business
+      Basic). Does not by itself indicate the size of the email
+      footprint.
 
 - name: cloud.gov
   slug: cloud-gov
@@ -664,8 +845,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: external-domains-production.cloud.gov
+    reference: https://cloud.gov/docs/services/external-domain-service/
     tier: application
-    description: cloud.gov FedRAMP-authorized PaaS for US federal agencies
+    description: >-
+      cloud.gov FedRAMP-authorized PaaS endpoint CNAME for US
+      federal agency workloads. Indicates the agency runs production
+      workloads on cloud.gov. Does not by itself indicate FedRAMP
+      impact level; cloud.gov offers Moderate and the chain is
+      shared across agency tenants.
 
 - name: Pantheon
   slug: pantheon
@@ -674,8 +861,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: edge.pantheon.io
+    reference: https://docs.pantheon.io/domains
     tier: application
-    description: Pantheon Drupal/WordPress hosting edge endpoint
+    description: >-
+      Pantheon managed-hosting edge endpoint CNAME for Drupal and
+      WordPress workloads. Indicates the org runs Pantheon for at
+      least one branded site. Does not distinguish Pantheon's Elite
+      (enterprise) tier from standard; the chain is shared.
 
 - name: jobs2web
   slug: jobs2web
@@ -684,8 +876,15 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: jobs2web.com
+    reference: https://www.successfactors.com/en_us/lp/recruiting-marketing.html
     tier: application
-    description: Symphony Talent / SAP SuccessFactors recruiting custom domain
+    description: >-
+      Symphony Talent / SAP SuccessFactors recruiting-marketing
+      custom-domain CNAME (jobs2web is the legacy product name after
+      the SuccessFactors acquisition). Indicates the org runs
+      Symphony Talent for candidate-experience pages. Functionally
+      equivalent to direct SuccessFactors recruiting in most
+      deployments.
 
 - name: Presspage
   slug: presspage
@@ -694,8 +893,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: presspage.com
+    reference: https://www.presspage.com/help/
     tier: application
-    description: Presspage PR/newsroom hosted custom domain
+    description: >-
+      Presspage PR / newsroom custom-domain CNAME. Indicates the org
+      publishes press releases through Presspage on a branded
+      subdomain. Does not by itself indicate press-cadence; a
+      single-release setup produces the same chain as an active
+      newsroom.
 
 - name: Localist
   slug: localist
@@ -704,8 +909,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: enterprise.localist.com
+    reference: https://www.localist.com/support
     tier: application
-    description: Localist event-calendar platform for institutions
+    description: >-
+      Localist event-calendar-platform CNAME for higher-ed and
+      institutional event hubs. Indicates the org runs Localist as
+      its public event-calendar surface. Does not by itself indicate
+      event volume; the chain reflects platform binding only.
 
 - name: RainFocus
   slug: rainfocus
@@ -714,8 +924,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: prd.rainfocus.com
+    reference: https://www.rainfocus.com/
     tier: application
-    description: RainFocus event-management platform custom domain
+    description: >-
+      RainFocus event-management-platform custom-domain CNAME.
+      Indicates the org runs RainFocus for one or more branded event
+      hubs. Does not by itself indicate event cadence; the chain
+      persists between events.
 
 - name: Squarespace
   slug: squarespace
@@ -724,8 +939,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: ext-cust.squarespace.com
+    reference: https://support.squarespace.com/hc/en-us/sections/206537167
     tier: application
-    description: Squarespace external-customer custom-domain CNAME
+    description: >-
+      Squarespace external-customer custom-domain CNAME. Indicates
+      the org's website is hosted by Squarespace on a branded
+      domain. Does not by itself distinguish Squarespace Personal,
+      Business, or Commerce tiers; the chain is identical.
 
 - name: HubSpot
   slug: hubspot
@@ -734,8 +954,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: hscoscdn-eu1.net
+    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
     tier: application
-    description: HubSpot CMS EU CDN
+    description: >-
+      HubSpot CMS EU CDN zone for content delivered through
+      HubSpot's European edge infrastructure. Indicates the org runs
+      HubSpot CMS with EU-region content hosting. Does not by itself
+      indicate GDPR posture; data-residency controls are configured
+      separately inside the HubSpot tenant.
 
 - name: Akamai
   slug: akamai
@@ -744,8 +970,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: akamaiedge-staging.net
+    reference: https://techdocs.akamai.com/property-mgr/docs
     tier: infrastructure
-    description: Akamai Edge staging zone
+    description: >-
+      Akamai Edge staging-zone CNAME. Indicates the org has an
+      Akamai staging environment in addition to a production
+      deployment. Does not by itself prove production volume;
+      staging is the testbed surface, not the customer-traffic
+      surface.
 
 - name: Azure App Service
   slug: azure-appservice
@@ -754,6 +986,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: cloudapp.azure.com
+    reference: https://learn.microsoft.com/en-us/azure/app-service/app-service-web-tutorial-custom-domain
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into cloudapp.azure.com (Azure's
@@ -770,6 +1003,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: execute-api.us-east-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into AWS API Gateway in us-east-1.
@@ -777,6 +1011,7 @@ fingerprints:
       to an API Gateway deployment in N. Virginia.
   - type: cname_target
     pattern: execute-api.us-west-2.amazonaws.com
+    reference: https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into AWS API Gateway in us-west-2
@@ -784,6 +1019,7 @@ fingerprints:
       that region.
   - type: cname_target
     pattern: execute-api.eu-west-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into AWS API Gateway in eu-west-1
@@ -791,6 +1027,7 @@ fingerprints:
       that region.
   - type: cname_target
     pattern: execute-api.eu-central-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into AWS API Gateway in eu-central-1
@@ -798,6 +1035,7 @@ fingerprints:
       in that region, common with EU-data-residency setups.
   - type: cname_target
     pattern: execute-api.ap-southeast-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into AWS API Gateway in ap-southeast-1
@@ -811,6 +1049,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: elb.us-east-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into a regional AWS ALB or NLB
@@ -819,24 +1058,30 @@ fingerprints:
       Network Load Balancers.
   - type: cname_target
     pattern: elb.us-west-2.amazonaws.com
+    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
     tier: infrastructure
     description: >-
-      Subdomain CNAMEs into a regional AWS ALB or NLB
-      endpoint in us-west-2 (Oregon).
+      Subdomain CNAMEs into a regional AWS ALB or NLB endpoint
+      in us-west-2 (Oregon). Does not distinguish ALB from NLB;
+      both produce this chain. Hosting-binding signal only, not
+      a traffic-volume signal.
   - type: cname_target
     pattern: elb.eu-west-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into a regional AWS ALB or NLB
       endpoint in eu-west-1 (Ireland).
   - type: cname_target
     pattern: elb.eu-central-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into a regional AWS ALB or NLB
       endpoint in eu-central-1 (Frankfurt).
   - type: cname_target
     pattern: elb.ap-southeast-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into a regional AWS ALB or NLB
@@ -851,8 +1096,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: sites.paradox.ai
+    reference: https://www.paradox.ai/
     tier: application
-    description: Paradox.ai careers chatbot custom domain (Olivia)
+    description: >-
+      Paradox.ai careers-chatbot (Olivia) custom-domain CNAME.
+      Indicates the org runs Paradox.ai as its conversational
+      recruiting layer. Does not prove application volume; the chain
+      is the platform-binding signal, not the candidate-funnel
+      signal.
 
 - name: Jibe Apply
   slug: jibe
@@ -861,8 +1112,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: jibeapply.com
+    reference: https://www.jibe.com/
     tier: application
-    description: Jibe / iCIMS Apply careers landing CNAME
+    description: >-
+      Jibe / iCIMS Apply careers-landing-page CNAME (jibe is now the
+      iCIMS Talent Cloud careers product). Indicates the org uses
+      iCIMS for candidate-experience pages. Functionally equivalent
+      to direct iCIMS chain rules.
 
 - name: Career Page
   slug: career-page
@@ -871,8 +1127,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: career.page
+    reference: https://www.careerpage.com/
     tier: application
-    description: Career.page hosted careers site
+    description: >-
+      Career.page hosted careers-site CNAME (a lightweight
+      alternative to Greenhouse, Lever, and similar ATS-hosted
+      careers pages). Indicates the org runs a basic careers page on
+      Career.page rather than a full ATS-hosted surface.
 
 - name: Happydance Careers
   slug: happydance
@@ -881,8 +1142,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: happydance.website
+    reference: https://happydance.club/
     tier: application
-    description: Happydance careers platform CNAME
+    description: >-
+      Happydance careers-platform custom-domain CNAME (a
+      Workday-adjacent careers-page builder). Indicates the org runs
+      Happydance for candidate-facing pages, typically on top of
+      Workday Recruiting.
 
 - name: EasyRedir
   slug: easyredir
@@ -891,8 +1157,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: easyredir.net
+    reference: https://www.easyredir.com/help/
     tier: application
-    description: EasyRedir managed URL redirects
+    description: >-
+      EasyRedir managed-URL-redirects CNAME. Indicates the org runs
+      EasyRedir for hosted URL redirects (mergers, rebrands, vanity
+      domains). Does not by itself indicate redirect volume; the
+      chain is the platform-binding signal only.
 
 - name: SAP Customer Data Cloud (Gigya)
   slug: gigya
@@ -901,8 +1172,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: gigya.com
+    reference: https://help.sap.com/docs/SAP_CUSTOMER_DATA_CLOUD
     tier: application
-    description: SAP Customer Data Cloud (formerly Gigya) hosted endpoint
+    description: >-
+      SAP Customer Data Cloud (formerly Gigya) hosted-endpoint
+      CNAME. Indicates the org runs SAP CDC for customer identity
+      and consent management. Functionally equivalent to direct SAP
+      CDC chain rules; Gigya is the legacy product name.
 
 - name: F5 Distributed Cloud
   slug: f5-xc
@@ -911,8 +1187,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: vh.ves.io
+    reference: https://docs.cloud.f5.com/docs/
     tier: infrastructure
-    description: F5 Distributed Cloud (Volterra) custom domain delegation
+    description: >-
+      F5 Distributed Cloud (formerly Volterra) custom-domain
+      delegation CNAME. Indicates the org runs F5 XC for multi-cloud
+      networking, WAF, or app-delivery. Does not distinguish the
+      specific F5 XC product; the chain is shared across the F5 XC
+      service family.
 
 - name: Radware Cloud
   slug: radware-cloud
@@ -921,8 +1203,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: radwarecloud.net
+    reference: https://www.radware.com/products/cloud-application-protection-services/
     tier: infrastructure
-    description: Radware Cloud WAF / DDoS protection custom domain
+    description: >-
+      Radware Cloud WAF and DDoS-protection custom-domain CNAME.
+      Indicates the org routes at least one application through
+      Radware's cloud-protection edge. Does not by itself indicate
+      the policy posture; rule sets are configured inside the
+      Radware tenant.
 
 - name: ForgeRock Identity Cloud
   slug: forgerock
@@ -931,8 +1219,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: forgerock.io
+    reference: https://backstage.forgerock.com/docs
     tier: application
-    description: ForgeRock Identity Cloud tenant CNAME
+    description: >-
+      ForgeRock Identity Cloud tenant CNAME (ForgeRock is now a Ping
+      Identity company after the 2023 acquisition). Indicates the
+      org runs ForgeRock for identity and access management.
+      Functionally equivalent to direct Ping Identity chains in some
+      post-acquisition setups.
 
 - name: IO River
   slug: ioriver
@@ -941,8 +1235,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: ioriveredge.net
+    reference: https://www.ioriver.io/docs
     tier: infrastructure
-    description: IO River multi-CDN edge platform
+    description: >-
+      IO River multi-CDN-edge-platform CNAME. Indicates the org runs
+      IO River as a CDN-management abstraction across multiple
+      underlying CDNs. Does not reveal which underlying CDNs are in
+      the IO River configuration.
 
 - name: Section.io
   slug: section-io
@@ -951,8 +1250,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: ep.section.io
+    reference: https://www.section.io/docs/
     tier: infrastructure
-    description: Section.io edge compute / CDN endpoint
+    description: >-
+      Section.io edge-compute / CDN-endpoint CNAME. Indicates the
+      org runs Section.io for edge-deployed workloads. Does not by
+      itself indicate the workload type; Section.io hosts a wide
+      range of edge applications on the same chain.
 
 - name: Azion Edge
   slug: azion
@@ -961,8 +1265,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: azionedge.net
+    reference: https://www.azion.com/en/documentation/
     tier: infrastructure
-    description: Azion edge compute platform
+    description: >-
+      Azion edge-compute-platform CNAME (Azion is a
+      South-America-focused edge-compute alternative to Cloudflare
+      and Fastly). Indicates the org runs Azion for at least one
+      edge-deployed workload.
 
 - name: Acquia Cloud
   slug: acquia
@@ -971,8 +1280,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: acquia-sites.com
+    reference: https://docs.acquia.com/cloud-platform/
     tier: application
-    description: Acquia Cloud Drupal hosting
+    description: >-
+      Acquia Cloud Drupal hosting CNAME. Indicates the org runs
+      managed-Drupal through Acquia. Does not distinguish Acquia
+      Site Factory (multi-site) from single-site Acquia Cloud; the
+      chain is shared.
 
 - name: Pagely
   slug: pagely
@@ -981,8 +1295,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: pagelyhosting.com
+    reference: https://support.pagely.com/
     tier: application
-    description: Pagely managed WordPress hosting
+    description: >-
+      Pagely managed-WordPress hosting CNAME (enterprise-tier
+      WordPress hosting, comparable to WP Engine Premium and
+      WordPress VIP). Indicates the org runs Pagely as a
+      managed-WordPress provider.
 
 - name: Outreach
   slug: outreach
@@ -991,8 +1310,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: portal.outreach.io
+    reference: https://support.outreach.io/hc/en-us
     tier: application
-    description: Outreach sales engagement custom subdomain
+    description: >-
+      Outreach sales-engagement custom-subdomain CNAME for the
+      user-facing portal. Indicates the org runs Outreach as its
+      sales-engagement layer. Does not by itself indicate seat
+      count; the chain reflects platform binding only.
 
 - name: Zuddl
   slug: zuddl
@@ -1001,8 +1325,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: whitelabel.zuddl.com
+    reference: https://help.zuddl.com/
     tier: application
-    description: Zuddl events platform whitelabel custom domain
+    description: >-
+      Zuddl events-platform whitelabel custom-domain CNAME.
+      Indicates the org runs Zuddl for branded virtual or hybrid
+      event hubs. Does not by itself indicate event cadence; the
+      chain persists between events.
 
 - name: Postman Hosted Status
   slug: postman-hosted
@@ -1011,8 +1340,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: phs.getpostman.com
+    reference: https://learning.postman.com/docs/publishing-your-api/api-documentation-overview/
     tier: application
-    description: Postman hosted status pages
+    description: >-
+      Postman hosted-status-page CNAME. Indicates the org publishes
+      a Postman-hosted public status page. Does not by itself
+      indicate API audience or partner count; the chain reflects
+      platform binding only.
 
 - name: Site24x7
   slug: site24x7
@@ -1021,8 +1355,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: site24x7sp.com
+    reference: https://www.site24x7.com/help/
     tier: application
-    description: Site24x7 hosted public status pages
+    description: >-
+      Site24x7 hosted public-status-pages CNAME (Site24x7 is a
+      ManageEngine / Zoho product). Indicates the org publishes a
+      public status page through Site24x7. Functionally equivalent
+      to Statuspage or Better Stack for the status-page surface.
 
 - name: Salesforce Marketing Cloud
   slug: salesforce-mc
@@ -1031,12 +1370,24 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: exacttarget.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
     tier: application
-    description: SFMC ExactTarget legacy zone (s7/s10/s11/etc.)
+    description: >-
+      Salesforce Marketing Cloud (SFMC) ExactTarget legacy zone
+      CNAME (s7, s10, s11, and other tenant-instance zones).
+      Indicates the org runs SFMC. Functionally equivalent to direct
+      `marketingcloudapis.com` chains; ExactTarget is the
+      pre-2013-acquisition product name.
   - type: cname_target
     pattern: sfmc-content.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
     tier: application
-    description: SFMC content delivery zone (cp-sap, etc.)
+    description: >-
+      SFMC content-delivery zone CNAME (cp-sap and related
+      subzones). Indicates the org runs Marketing Cloud and delivers
+      content through SFMC's CDN layer. Does not distinguish SFMC
+      editions; the chain is shared across Enterprise, Pro, and
+      Corporate tiers.
 
 - name: AWS S3
   slug: aws-s3
@@ -1045,8 +1396,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: s3-website
+    reference: https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteHosting.html
     tier: infrastructure
-    description: AWS S3 static-website hosting (any region)
+    description: >-
+      AWS S3 static-website-hosting endpoint CNAME (region- agnostic
+      substring match). Indicates the org runs at least one static
+      site hosted directly from an S3 bucket. Does not by itself
+      indicate the bucket policy or whether CloudFront fronts the
+      bucket.
 
 - name: AWS EC2
   slug: aws-ec2
@@ -1055,12 +1412,22 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: compute-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html
     tier: infrastructure
-    description: AWS EC2 us-east-1 default zone (legacy)
+    description: >-
+      AWS EC2 us-east-1 default-zone CNAME (legacy DNS form from the
+      original EC2 region). Indicates the org runs an EC2 workload
+      reachable via the legacy zone format. Functionally equivalent
+      to the newer per-region `compute.amazonaws.com` form.
   - type: cname_target
     pattern: compute.amazonaws.com
+    reference: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html
     tier: infrastructure
-    description: AWS EC2 regional zones
+    description: >-
+      AWS EC2 regional-zone CNAME (the modern per-region form).
+      Indicates the org runs an EC2 workload directly reachable via
+      DNS. Does not by itself indicate the workload type; EC2 hosts
+      arbitrary user workloads.
 
 - name: Microsoft 365
   slug: microsoft365
@@ -1069,8 +1436,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: svc.sovcloud.cn
+    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
     tier: application
-    description: Microsoft 365 China (operated by 21Vianet) sovereign zone
+    description: >-
+      Microsoft 365 China (operated by 21Vianet) sovereign-cloud
+      zone CNAME. Indicates the org runs Microsoft 365 on the
+      21Vianet-operated China sovereign tenant. Distinct from
+      commercial M365; data residency and feature parity differ.
 
 - name: Webflow
   slug: webflow
@@ -1079,8 +1451,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: proxy-ssl-geo
+    reference: https://help.webflow.com/hc/en-us/articles/4427060980499
     tier: application
-    description: Webflow proxy-ssl-geo custom domain CNAME
+    description: >-
+      Webflow proxy-ssl-geo custom-domain CNAME (the SSL and
+      geo-routing front for Webflow custom domains). Indicates the
+      org runs Webflow for at least one branded site. Does not
+      distinguish Webflow CMS tiers; the chain is shared across
+      plans.
 
 - name: PagerDuty
   slug: pagerduty
@@ -1089,8 +1467,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: pdint.net
+    reference: https://support.pagerduty.com/
     tier: application
-    description: PagerDuty internal status / incident pages
+    description: >-
+      PagerDuty internal status / incident-page CNAME. Indicates the
+      org uses PagerDuty's hosted incident- communication surface.
+      Does not by itself indicate the org's on-call topology; the
+      chain reflects platform binding only.
 
 - name: Fly.io
   slug: flyio
@@ -1099,8 +1482,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: fly.dev
+    reference: https://fly.io/docs/networking/custom-domain/
     tier: application
-    description: Fly.io app platform CNAME endpoint
+    description: >-
+      Fly.io app-platform-endpoint CNAME for hosted workloads on
+      Fly's global edge. Indicates the org runs at least one
+      workload on Fly. Does not distinguish Fly's Free, Hobby, and
+      Launch tiers; the chain is shared.
 
 - name: Beehiiv
   slug: beehiiv
@@ -1109,8 +1497,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: beehiiv.com
+    reference: https://www.beehiiv.com/support/article/4407692953751
     tier: application
-    description: Beehiiv newsletter platform branded CNAME
+    description: >-
+      Beehiiv newsletter-platform branded CNAME. Indicates the org
+      runs a Beehiiv newsletter on a branded domain. Does not by
+      itself indicate subscriber count; Beehiiv serves both
+      early-stage and enterprise newsletters on the same chain.
 
 - name: Salesforce Marketing Cloud
   slug: salesforce-mc
@@ -1119,6 +1512,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: sfmc-marketing.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
     tier: application
     description: >-
       Subdomain CNAMEs into sfmc-marketing.com (Salesforce
@@ -1127,6 +1521,7 @@ fingerprints:
       subdomain.
   - type: cname_target
     pattern: marketingcloudapis.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
     tier: application
     description: >-
       Subdomain CNAMEs into marketingcloudapis.com (SFMC's
@@ -1134,6 +1529,7 @@ fingerprints:
       Marketing Cloud API traffic through a branded subdomain.
   - type: cname_target
     pattern: exct.net
+    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
     tier: application
     description: >-
       Subdomain CNAMEs into exct.net (a legacy ExactTarget /
@@ -1148,6 +1544,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: statuspage.io
+    reference: https://support.atlassian.com/statuspage/docs/customize-your-status-page/
     tier: application
     description: >-
       Subdomain CNAMEs into statuspage.io (Atlassian
@@ -1156,6 +1553,7 @@ fingerprints:
       subdomain.
   - type: cname_target
     pattern: statuspageio.com
+    reference: https://support.atlassian.com/statuspage/docs/customize-your-status-page/
     tier: application
     description: >-
       Subdomain CNAMEs into statuspageio.com (alternative
@@ -1163,6 +1561,7 @@ fingerprints:
       status-page semantics as statuspage.io.
   - type: cname_target
     pattern: stspg-customer.com
+    reference: https://support.atlassian.com/statuspage/docs/customize-your-status-page/
     tier: application
     description: >-
       Subdomain CNAMEs into stspg-customer.com (Atlassian
@@ -1178,6 +1577,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: atlassian.net
+    reference: https://support.atlassian.com/atlassian-account/
     tier: application
     description: >-
       Subdomain CNAMEs into atlassian.net (Atlassian Cloud
@@ -1186,6 +1586,7 @@ fingerprints:
       branded subdomain to an Atlassian Cloud instance.
   - type: cname_target
     pattern: saas.atlassian.com
+    reference: https://support.atlassian.com/atlassian-account/
     tier: application
     description: >-
       Subdomain CNAMEs into saas.atlassian.com (Atlassian-
@@ -1200,6 +1601,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: pagerduty.com
+    reference: https://support.pagerduty.com/
     tier: application
     description: >-
       Subdomain CNAMEs into pagerduty.com (PagerDuty's
@@ -1214,6 +1616,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: docusign.net
+    reference: https://support.docusign.com/
     tier: application
     description: >-
       Subdomain CNAMEs into docusign.net (DocuSign's hosted-
@@ -1228,6 +1631,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: cloudinary.com
+    reference: https://cloudinary.com/documentation/
     tier: application
     description: >-
       Subdomain CNAMEs into cloudinary.com (Cloudinary
@@ -1242,6 +1646,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: stripecdn.com
+    reference: https://docs.stripe.com/payments/checkout/custom-domains
     tier: application
     description: >-
       Subdomain CNAMEs into stripecdn.com (Stripe's hosted
@@ -1256,6 +1661,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: apigee.net
+    reference: https://cloud.google.com/apigee/docs
     tier: application
     description: >-
       Subdomain CNAMEs into apigee.net (Google Cloud Apigee
@@ -1263,6 +1669,7 @@ fingerprints:
       branded API gateway endpoint through Apigee.
   - type: cname_target
     pattern: apigee.com
+    reference: https://cloud.google.com/apigee/docs
     tier: application
     description: >-
       Subdomain CNAMEs into apigee.com (alternative Apigee
@@ -1276,6 +1683,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: anypointdns.net
+    reference: https://docs.mulesoft.com/general/
     tier: application
     description: >-
       Subdomain CNAMEs into anypointdns.net (MuleSoft
@@ -1291,6 +1699,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: submittable.com
+    reference: https://submittable.help/
     tier: application
     description: >-
       Subdomain CNAMEs into submittable.com (Submittable is
@@ -1305,6 +1714,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: loopreturns.com
+    reference: https://help.loopreturns.com/
     tier: application
     description: >-
       Subdomain CNAMEs into loopreturns.com (Loop is a
@@ -1319,6 +1729,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: attentivemobile.com
+    reference: https://help.attentivemobile.com/
     tier: application
     description: >-
       Subdomain CNAMEs into attentivemobile.com (Attentive
@@ -1328,6 +1739,7 @@ fingerprints:
       campaigns.
   - type: cname_target
     pattern: attntags.com
+    reference: https://help.attentivemobile.com/
     tier: application
     description: >-
       Subdomain CNAMEs into attntags.com (Attentive's
@@ -1342,6 +1754,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: iterable.com
+    reference: https://support.iterable.com/hc/en-us/articles/115004273343
     tier: application
     description: >-
       Subdomain CNAMEs into iterable.com (Iterable is a
@@ -1356,6 +1769,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: customer.io
+    reference: https://customer.io/docs/
     tier: application
     description: >-
       Subdomain CNAMEs into customer.io (Customer.io is a
@@ -1370,8 +1784,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: bnc.lt
+    reference: https://help.branch.io/
     tier: application
-    description: Branch.io mobile deep-linking custom domain
+    description: >-
+      Branch.io mobile-deep-linking custom-domain CNAME. Indicates
+      the org runs Branch for deferred deep links or attribution.
+      Does not by itself indicate which Branch product is active
+      (Linking, Attribution, Web-to-App).
 
 - name: Heroku
   slug: heroku
@@ -1380,6 +1799,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: herokudns.com
+    reference: https://devcenter.heroku.com/articles/custom-domains
     tier: application
     description: >-
       Subdomain CNAMEs into herokudns.com (Heroku's
@@ -1388,6 +1808,7 @@ fingerprints:
       to a Heroku dyno or formation.
   - type: cname_target
     pattern: herokuapp.com
+    reference: https://devcenter.heroku.com/articles/custom-domains
     tier: application
     description: >-
       Subdomain CNAMEs into herokuapp.com (Heroku's
@@ -1401,6 +1822,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: github.io
+    reference: https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site
     tier: application
     description: >-
       Subdomain CNAMEs into github.io (GitHub Pages
@@ -1414,6 +1836,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: webflow.io
+    reference: https://help.webflow.com/hc/en-us/articles/4427060980499
     tier: application
     description: >-
       Subdomain CNAMEs into webflow.io (Webflow's default
@@ -1421,6 +1844,7 @@ fingerprints:
       Webflow-built site under a custom subdomain.
   - type: cname_target
     pattern: cdn.webflow.com
+    reference: https://help.webflow.com/hc/en-us/articles/4427060980499
     tier: application
     description: >-
       Subdomain CNAMEs into cdn.webflow.com (Webflow's CDN
@@ -1434,6 +1858,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: cname.vercel-dns.com
+    reference: https://vercel.com/docs/projects/domains
     tier: application
     description: >-
       Subdomain CNAMEs into cname.vercel-dns.com (Vercel's
@@ -1442,6 +1867,7 @@ fingerprints:
       a Vercel-deployed application.
   - type: cname_target
     pattern: vercel.app
+    reference: https://vercel.com/docs/projects/domains
     tier: application
     description: >-
       Subdomain CNAMEs into vercel.app (Vercel's default
@@ -1449,6 +1875,7 @@ fingerprints:
       a branded subdomain to a Vercel-deployed app.
   - type: cname_target
     pattern: vercel-dns-
+    reference: https://vercel.com/docs/projects/domains
     tier: application
     description: >-
       Subdomain CNAMEs into a vercel-dns-* pattern (Vercel
@@ -1463,6 +1890,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: netlify.app
+    reference: https://docs.netlify.com/domains-https/custom-domains/
     tier: application
     description: >-
       Subdomain CNAMEs into netlify.app (Netlify's default
@@ -1476,6 +1904,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: squarespace-cdn.com
+    reference: https://support.squarespace.com/hc/en-us/sections/206537167
     tier: application
     description: >-
       Subdomain CNAMEs into squarespace-cdn.com
@@ -1492,6 +1921,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: fastly.net
+    reference: https://docs.fastly.com/en/guides/working-with-domains
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into fastly.net (Fastly CDN edge).
@@ -1499,6 +1929,7 @@ fingerprints:
       edge for CDN, image optimization, or Compute@Edge.
   - type: cname_target
     pattern: fastlylb.net
+    reference: https://docs.fastly.com/en/guides/working-with-domains
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into fastlylb.net (Fastly's load-
@@ -1512,6 +1943,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: cloudfront.net
+    reference: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/CNAMEs.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into cloudfront.net (AWS CloudFront
@@ -1526,6 +1958,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: elb.amazonaws.com
+    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/what-is-load-balancing.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into elb.amazonaws.com (AWS Classic
@@ -1540,6 +1973,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: awsglobalaccelerator.com
+    reference: https://docs.aws.amazon.com/global-accelerator/latest/dg/what-is-global-accelerator.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into awsglobalaccelerator.com (AWS
@@ -1555,6 +1989,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: awsapprunner.com
+    reference: https://docs.aws.amazon.com/apprunner/latest/dg/manage-custom-domains.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into awsapprunner.com (AWS App Runner
@@ -1569,6 +2004,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: elasticbeanstalk.com
+    reference: https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/customdomains.html
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into elasticbeanstalk.com (AWS
@@ -1583,6 +2019,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: akamaiedge.net
+    reference: https://techdocs.akamai.com/property-mgr/docs
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into akamaiedge.net (Akamai edge
@@ -1590,6 +2027,7 @@ fingerprints:
       Akamai's edge for CDN or WAF services.
   - type: cname_target
     pattern: akamaized.net
+    reference: https://techdocs.akamai.com/property-mgr/docs
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into akamaized.net (Akamai's
@@ -1598,6 +2036,7 @@ fingerprints:
       to Akamai.
   - type: cname_target
     pattern: edgekey.net
+    reference: https://techdocs.akamai.com/property-mgr/docs
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into edgekey.net (Akamai's edge-key
@@ -1605,6 +2044,7 @@ fingerprints:
       akamaiedge.net.
   - type: cname_target
     pattern: edgesuite.net
+    reference: https://techdocs.akamai.com/property-mgr/docs
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into edgesuite.net (Akamai EdgeSuite
@@ -1612,6 +2052,7 @@ fingerprints:
       the other Akamai edge domains.
   - type: cname_target
     pattern: akadns.net
+    reference: https://techdocs.akamai.com/property-mgr/docs
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into akadns.net (Akamai Edge DNS or
@@ -1626,6 +2067,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: cloudflare.net
+    reference: https://developers.cloudflare.com/dns/zone-setups/full-setup/
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into cloudflare.net (Cloudflare's
@@ -1640,6 +2082,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: pages.dev
+    reference: https://developers.cloudflare.com/pages/configuration/custom-domains/
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into pages.dev (Cloudflare Pages
@@ -1654,6 +2097,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: incapdns.net
+    reference: https://docs.imperva.com/howto/d8fa5dd6/
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into incapdns.net (Imperva Cloud WAF
@@ -1661,6 +2105,7 @@ fingerprints:
       Indicates the domain proxies through Imperva's edge.
   - type: cname_target
     pattern: impervadns.net
+    reference: https://docs.imperva.com/howto/d8fa5dd6/
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into impervadns.net (Imperva's
@@ -1674,6 +2119,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: azureedge.net
+    reference: https://learn.microsoft.com/en-us/azure/cdn/cdn-map-content-to-custom-domain
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into azureedge.net (Azure CDN edge,
@@ -1682,6 +2128,7 @@ fingerprints:
       domain delegates to an Azure CDN profile.
   - type: cname_target
     pattern: azurefd.net
+    reference: https://learn.microsoft.com/en-us/azure/cdn/cdn-map-content-to-custom-domain
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into azurefd.net (Azure Front Door
@@ -1696,6 +2143,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: trafficmanager.net
+    reference: https://learn.microsoft.com/en-us/azure/traffic-manager/traffic-manager-overview
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into trafficmanager.net (Azure
@@ -1710,6 +2158,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: ghs.googlehosted.com
+    reference: https://support.google.com/a/answer/7314058
     tier: application
     description: >-
       Subdomain CNAMEs into ghs.googlehosted.com (Google
@@ -1719,12 +2168,19 @@ fingerprints:
       Workspace-hosted resource.
   - type: cname_target
     pattern: ghs.google.com
+    reference: https://support.google.com/a/answer/7314058
     tier: application
     description: >-
       Subdomain CNAMEs into ghs.google.com (alternative
       Google Hosted Services endpoint). Same hosted-
       services semantics as the googlehosted.com form.
-    description: Google Workspace Sites / module CNAME on the newer ghs.google.com zone
+    description: >-
+      Google Workspace Sites / module CNAME on the newer
+      `ghs.google.com` zone (the legacy form is
+      `ghs.googlehosted.com`). Indicates the domain delegates a
+      Google-hosted module surface. Does not by itself prove the
+      org's email runs through Workspace; many verifications persist
+      without the email tier.
 
 - name: Sucuri WAF
   slug: sucuri
@@ -1733,6 +2189,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: sucuri.net
+    reference: https://docs.sucuri.net/
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into sucuri.net (Sucuri is a GoDaddy-
@@ -1747,8 +2204,14 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: svc.cloud.microsoft
+    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
     tier: application
-    description: Microsoft 365 cloud autodiscover / Mira service zone
+    description: >-
+      Microsoft 365 cloud autodiscover / service-zone CNAME (the
+      newer Mira service surface). Indicates the org runs Microsoft
+      365 with the modern service-zone endpoints. Functionally
+      equivalent in product binding to the legacy `*.outlook.com`
+      autodiscover form.
 
 # ── v1.9.2.1 catalog growth ───────────────────────────────────────────────
 # Triaged from the v1.9.2-pre-release corpus scan (4,270 domains).
@@ -1820,13 +2283,22 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: url-fwd.easydns.com
+    reference: https://kb.easydns.com/
     tier: infrastructure
-    description: easyDNS registrar URL-forwarding service (HTTP variant).
+    description: >-
+      easyDNS registrar URL-forwarding-service CNAME (HTTP variant).
+      Indicates the org uses easyDNS for hosted URL redirects. Does
+      not by itself indicate registrar binding; URL forwarding can
+      be enabled independently of where DNS is hosted.
     reference: https://help.easydns.com/support/solutions/articles/48001183024
   - type: cname_target
     pattern: url-fwd-https.easydns.com
+    reference: https://kb.easydns.com/
     tier: infrastructure
-    description: easyDNS registrar URL-forwarding service (HTTPS variant).
+    description: >-
+      easyDNS registrar URL-forwarding-service CNAME (HTTPS
+      variant). Functionally equivalent to the HTTP variant but
+      terminates the SSL handshake at the easyDNS edge.
 
 - name: EdgeCDN (Bitban)
   slug: edgetcdn-bitban
@@ -1879,13 +2351,20 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: fortiwebcloud.net
+    reference: https://docs.fortinet.com/product/fortiweb-cloud/
     tier: application
     description: Fortinet FortiWeb Cloud WAF-as-a-Service; customer CNAMEs route through *.fortiwebcloud.net.
     reference: https://www.fortinet.com/products/web-application-firewall/fortiweb-cloud
   - type: cname_target
     pattern: waas-online.net
+    reference: https://docs.fortinet.com/product/fortiweb-cloud/
     tier: application
-    description: FortiWeb Cloud upstream backend; chains terminate at aws.waas-online.net.
+    description: >-
+      FortiWeb Cloud upstream backend CNAME (chains terminate at
+      `aws.waas-online.net` and similar). Indicates the org routes
+      at least one application through FortiWeb Cloud WAF. Does not
+      by itself indicate FortiGate firewall adoption; FortiWeb is a
+      separate Fortinet product.
 
 - name: Framer
   slug: framer
@@ -1894,8 +2373,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: sites.framer.app
+    reference: https://www.framer.com/learn/custom-domain-setup/
     tier: application
-    description: Framer no-code website builder; custom domains CNAME to sites.framer.app.
+    description: >-
+      Framer no-code website-builder CNAME (custom domains CNAME to
+      `sites.framer.app`). Indicates the org runs a Framer-hosted
+      site on a branded domain. Does not by itself indicate plan
+      tier; Framer's free and paid tiers share the chain.
     reference: https://www.framer.com/support/using-framer/custom-domain/
 
 - name: Gandi Web Redirect
@@ -1905,11 +2389,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: partners.gandi.net
+    reference: https://docs.gandi.net/en/domain_names/
     tier: infrastructure
     description: Gandi registrar web-redirect service; CNAMEs terminate at webredir.partners.gandi.net.
     reference: https://docs.gandi.net/en/domain_names/common_operations/web_forwarding.html
   - type: cname_target
     pattern: vip.gandi.net
+    reference: https://docs.gandi.net/en/domain_names/
     tier: infrastructure
     description: Gandi web-redirect (legacy zone); same forwarding service as partners.gandi.net.
 
@@ -1931,6 +2417,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: bc.googleusercontent.com
+    reference: https://cloud.google.com/appengine/docs/standard/mapping-custom-domains
     tier: infrastructure
     description: GCP-hosted workloads with public IPs in the bc.googleusercontent.com reverse zone.
 
@@ -2040,13 +2527,19 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: okta-gov.com
+    reference: https://help.okta.com/en-us/content/topics/settings/custom-url-domain.htm
     tier: application
     description: Okta Government Cloud (FedRAMP); federal-agency custom logins CNAME through customdomains.okta-gov.com.
     reference: https://www.okta.com/okta-for-government/
   - type: cname_target
     pattern: okta-dnssec.com
+    reference: https://help.okta.com/en-us/content/topics/settings/custom-url-domain.htm
     tier: application
-    description: Okta DNSSEC-enabled custom domain endpoint.
+    description: >-
+      Okta DNSSEC-enabled custom-domain endpoint CNAME. Indicates
+      the org runs Okta with DNSSEC turned on for the custom-domain
+      surface (a hardening choice). Does not by itself indicate the
+      broader DNSSEC posture for the org's apex.
 
 - name: Ping Identity (PingOne)
   slug: ping-identity
@@ -2055,6 +2548,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: ping.cloud
+    reference: https://docs.pingidentity.com/pingone/main/
     tier: application
     description: Ping Identity PingFederate cloud; enterprise SSO / federation CNAMEs route through *.ping.cloud cluster endpoints.
     reference: https://www.pingidentity.com/en/platform/pingfederate.html
@@ -2198,6 +2692,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: lb.wordpress.com
+    reference: https://wordpress.com/support/domains/
     tier: application
     description: WordPress.com hosted blogs with custom domain mapping; CNAMEs terminate at lb.wordpress.com.
     reference: https://wordpress.com/support/domains/map-subdomain/
@@ -2316,6 +2811,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: amplifyapp.com
+    reference: https://docs.aws.amazon.com/amplify/latest/userguide/custom-domains.html
     tier: infrastructure
     description: AWS Amplify Hosting custom-domain target; frontend / SPA / SSR sites CNAME to ``<branch>.<app-id>.amplifyapp.com``.
     reference: https://docs.aws.amazon.com/amplify/latest/userguide/custom-domains.html
@@ -2414,6 +2910,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: azurewebsites.net
+    reference: https://learn.microsoft.com/en-us/azure/app-service/app-service-web-tutorial-custom-domain
     tier: infrastructure
     description: Azure App Service customer-facing endpoint; web apps with custom domains CNAME to ``<app>.azurewebsites.net`` before App Service serves the response.
     reference: https://learn.microsoft.com/azure/app-service/app-service-web-tutorial-custom-domain
@@ -2523,6 +3020,7 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: up.railway.app
+    reference: https://docs.railway.app/deploy/exposing-your-app
     tier: infrastructure
     description: Railway deployment endpoint; service URLs CNAME to ``<service>.up.railway.app``.
     reference: https://docs.railway.app/guides/public-networking
@@ -2537,12 +3035,21 @@ fingerprints:
   - type: cname_target
     pattern: replit.app
     tier: infrastructure
-    description: Replit hosted-deployment endpoint; deployments CNAME to ``<name>.replit.app``.
+    description: >-
+      Replit hosted-deployment endpoint CNAME (deployments CNAME to
+      `<name>.replit.app`). Indicates the org runs at least one
+      Replit Deployment on a branded surface. Does not by itself
+      indicate the language or runtime; Replit hosts arbitrary user
+      workloads.
     reference: https://docs.replit.com/cloud-services/deployments/custom-domains
   - type: cname_target
     pattern: repl.co
     tier: infrastructure
-    description: Replit legacy hosted-Repl endpoint; older Repls resolve through ``*.repl.co``.
+    description: >-
+      Replit legacy hosted-Repl endpoint CNAME (older Repls resolve
+      through `repl.co`). Indicates the org runs a Repl on the
+      pre-deployments surface. Functionally equivalent to the newer
+      `replit.app` chain for the binding signal.
     reference: https://docs.replit.com/cloud-services/deployments/custom-domains
 
 - name: Glitch
@@ -2555,7 +3062,11 @@ fingerprints:
   - type: cname_target
     pattern: glitch.me
     tier: infrastructure
-    description: Glitch hosted-app endpoint; projects resolve at ``<project>.glitch.me``.
+    description: >-
+      Glitch hosted-app endpoint CNAME (projects resolve at
+      `<project>.glitch.me`). Indicates the org runs at least one
+      Glitch project. Does not by itself indicate production use;
+      Glitch is most commonly used for prototypes and demos.
     reference: https://help.glitch.com/kb/article/29-using-a-custom-domain/
 
 # ── SSE / SASE / CASB — security service edges ─────────────────────────────
@@ -2580,7 +3091,12 @@ fingerprints:
   - type: cname_target
     pattern: zscalertwo.net
     tier: infrastructure
-    description: Zscaler ZIA edge endpoint on the "two" cloud.
+    description: >-
+      Zscaler ZIA edge-endpoint CNAME on the legacy `two` cloud.
+      Indicates the org routes traffic through Zscaler's
+      secure-web-gateway service. Functionally equivalent to other
+      Zscaler cloud zones; the `two` designation reflects deployment
+      region, not product.
     reference: https://help.zscaler.com/zia/about-zia
 
 - name: Netskope
@@ -2598,7 +3114,12 @@ fingerprints:
   - type: cname_target
     pattern: goskope.com
     tier: infrastructure
-    description: Netskope alternate customer-facing endpoint for the proxy-mode SSE service.
+    description: >-
+      Netskope alternate customer-facing endpoint CNAME for the
+      proxy-mode SWG / SSE surface (a sibling zone to
+      `netskope.com`). Indicates the org runs Netskope for
+      secure-web-gateway or CASB workloads. Does not by itself
+      distinguish the active product line.
     reference: https://docs.netskope.com/
 
 - name: Cato Networks
@@ -2624,7 +3145,11 @@ fingerprints:
   - type: cname_target
     pattern: prismaaccess.com
     tier: infrastructure
-    description: Palo Alto Prisma Access SASE service portal and tenant endpoint.
+    description: >-
+      Palo Alto Prisma Access SASE service-portal and
+      tenant-endpoint CNAME. Indicates the org runs Prisma Access as
+      its SASE layer. Does not distinguish Prisma Access Cloud
+      Managed from Panorama Managed; the chain is shared.
     reference: https://docs.paloaltonetworks.com/prisma/prisma-access
 
 # ── Identity (additional providers) ────────────────────────────────────────

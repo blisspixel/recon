@@ -13,6 +13,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^github-site-verification=
+    reference: https://docs.github.com/en/organizations/managing-organization-settings/verifying-or-approving-a-domain-for-your-organization
     description: >-
       GitHub domain-verification TXT (GitHub is a Microsoft
       property since the 2018 acquisition). Indicates the
@@ -23,6 +24,7 @@ fingerprints:
       the Pages-specific verification.
   - type: txt
     pattern: ^_github-pages-challenge
+    reference: https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/verifying-your-custom-domain-for-github-pages
     description: >-
       GitHub Pages domain-challenge TXT (found at
       `_github-pages-challenge-<org>.<domain>`). Indicates the
@@ -36,6 +38,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^gitlab-pages-verification-code=
+    reference: https://docs.gitlab.com/ee/user/project/pages/custom_domains_ssl_tls_certification/
     description: >-
       GitLab Pages domain-verification TXT at zone apex.
       Indicates the domain is verified for use as a custom
@@ -44,6 +47,7 @@ fingerprints:
       also use this verification.
   - type: subdomain_txt
     pattern: _gitlab-pages-verification-code:.
+    reference: https://docs.gitlab.com/ee/user/project/pages/custom_domains_ssl_tls_certification/
     description: >-
       GitLab Pages subdomain-verification TXT (found at a
       designated `_gitlab-pages-verification-code.<subdomain>`
@@ -56,6 +60,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^postman-domain-verification=
+    reference: https://learning.postman.com/docs/administration/managing-your-team/configuring-domain-capture/
     description: >-
       Postman domain-verification TXT (Postman is an API
       platform with collections, collaboration, and an API
@@ -69,6 +74,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^linear-domain-verification=
+    reference: https://linear.app/docs
     description: >-
       Linear domain-verification TXT (Linear is an issue-
       tracking and project-management platform popular in
@@ -82,6 +88,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^autodesk-domain-verification=
+    reference: https://www.autodesk.com/support/account/
     description: >-
       Autodesk domain-verification TXT (Autodesk publishes
       AutoCAD, Revit, Fusion 360, and the broader AEC and
@@ -94,6 +101,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^grammarly-domain-verification=
+    reference: https://support.grammarly.com/hc/en-us/categories/115000004391
     description: >-
       Grammarly domain-verification TXT (Grammarly Business is
       the enterprise writing-assistance offering). Indicates
@@ -106,6 +114,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^vercel-domain-verification=
+    reference: https://vercel.com/docs/projects/domains
     description: >-
       Vercel domain-verification TXT (Vercel is a frontend
       cloud platform best known as the Next.js maintainer).
@@ -113,6 +122,7 @@ fingerprints:
       for deploying applications under a custom domain.
   - type: cname
     pattern: vercel-dns.com
+    reference: https://vercel.com/docs/projects/domains
     description: >-
       CNAME pointing into vercel-dns.com. Indicates the
       domain uses Vercel's hosted DNS, typically when the
@@ -125,6 +135,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^webflow-domain-verification=
+    reference: https://help.webflow.com/hc/en-us/articles/4427060980499
     description: >-
       Webflow domain-verification TXT (Webflow is a no-code
       website-builder and CMS platform). Indicates the
@@ -137,6 +148,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^netlify=
+    reference: https://docs.netlify.com/domains-https/custom-domains/
     description: >-
       Netlify domain-verification TXT (the bare `netlify=`
       prefix). Indicates the domain is registered with a
@@ -144,6 +156,7 @@ fingerprints:
       custom domain.
   - type: txt
     pattern: ^verified-for-netlify=
+    reference: https://docs.netlify.com/domains-https/custom-domains/
     description: >-
       Netlify site-ownership verification TXT
       (`verified-for-netlify=` prefix). Used for per-site
@@ -151,6 +164,7 @@ fingerprints:
       administrative-binding semantics, finer-grained scope.
   - type: cname
     pattern: netlify.app
+    reference: https://docs.netlify.com/domains-https/custom-domains/
     description: >-
       CNAME pointing into netlify.app. Indicates the domain
       hosts a Netlify-deployed site under a custom subdomain
@@ -162,6 +176,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^twilio-domain-verification=
+    reference: https://www.twilio.com/docs/usage/api
     description: >-
       Twilio domain-verification TXT. Indicates the domain
       is registered with a Twilio account, typically for
@@ -175,6 +190,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^citrix-verification-code=
+    reference: https://docs.citrix.com/
     description: >-
       Citrix domain-verification TXT (Citrix is now part of
       Cloud Software Group after the 2022 merger with TIBCO).
@@ -188,6 +204,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^dell-technologies-domain-verification=
+    reference: https://www.dell.com/support/
     description: >-
       Dell Technologies domain-verification TXT. Indicates
       the domain is registered with a Dell Technologies
@@ -200,6 +217,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^cloudhealth=
+    reference: https://docs.vmware.com/en/VMware-Aria-Cost-powered-by-CloudHealth/index.html
     description: >-
       CloudHealth domain-verification TXT (CloudHealth is a
       cloud cost-management platform, originally a VMware
@@ -213,6 +231,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^unity-sso-verification=
+    reference: https://docs.unity.com/
     description: >-
       Unity SSO domain-verification TXT (Unity Technologies
       publishes the Unity game engine and developer tools).
@@ -226,6 +245,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^pagerduty-domain-verification=
+    reference: https://support.pagerduty.com/
     description: >-
       PagerDuty domain-verification TXT (PagerDuty is an
       incident-management and on-call platform). Indicates
@@ -238,6 +258,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: onrender.com
+    reference: https://docs.render.com/custom-domains
     description: >-
       CNAME pointing into onrender.com (Render is a unified
       cloud-application platform comparable to Heroku and
@@ -245,6 +266,7 @@ fingerprints:
       service deployed on Render under a custom domain.
   - type: txt
     pattern: ^render-domain-verification=
+    reference: https://docs.render.com/custom-domains
     description: >-
       Render domain-verification TXT. Indicates the domain
       is registered with a Render account, a precondition
@@ -258,6 +280,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^cloudflare-verify=
+    reference: https://developers.cloudflare.com/dns/
     description: >-
       Cloudflare domain-verification TXT (`cloudflare-verify=`
       prefix). Indicates the domain is verified to a
@@ -266,6 +289,7 @@ fingerprints:
       and so on).
   - type: ns
     pattern: cloudflare.com
+    reference: https://developers.cloudflare.com/dns/zone-setups/full-setup/
     description: >-
       NS records terminate at Cloudflare nameservers. The
       domain uses Cloudflare as authoritative DNS, a common
@@ -275,6 +299,7 @@ fingerprints:
       products on the same vendor.
   - type: cname
     pattern: cloudflare
+    reference: https://developers.cloudflare.com/dns/
     description: >-
       CNAME containing the string `cloudflare`. Lower-
       specificity fallback for Cloudflare-product CNAMEs
@@ -289,6 +314,7 @@ fingerprints:
   detections:
   - type: ns
     pattern: awsdns
+    reference: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/Welcome.html
     description: >-
       NS records contain `awsdns` (AWS Route 53 nameserver
       hostnames follow the `ns-*.awsdns-*.{com,net,org,co.uk}`
@@ -303,6 +329,7 @@ fingerprints:
   detections:
   - type: ns
     pattern: azure-dns
+    reference: https://learn.microsoft.com/en-us/azure/dns/dns-overview
     description: >-
       NS records contain `azure-dns` (Azure DNS nameserver
       hostnames follow the `ns*.azure-dns.{com,net,org,info}`
@@ -316,6 +343,7 @@ fingerprints:
   detections:
   - type: ns
     pattern: google.com
+    reference: https://cloud.google.com/dns/docs/overview
     description: >-
       NS records terminating at Google Cloud DNS
       nameservers (`ns-cloud-{a,b,c,d}*.googledomains.com`
@@ -332,6 +360,7 @@ fingerprints:
   detections:
   - type: ns
     pattern: ultradns
+    reference: https://docs.ultradns.com/
     description: >-
       NS records contain `ultradns` (UltraDNS is a managed-
       DNS service originally part of Neustar, now part of
@@ -346,6 +375,7 @@ fingerprints:
   detections:
   - type: ns
     pattern: dynect.net
+    reference: https://help.dyn.com/managed-dns/
     description: >-
       NS records terminating at Dyn's managed DNS
       (`*.dynect.net`). Dyn is now part of Oracle Cloud
@@ -359,6 +389,7 @@ fingerprints:
   detections:
   - type: ns
     pattern: akamai.net
+    reference: https://techdocs.akamai.com/edge-dns/docs/welcome-to-edge-dns
     description: >-
       NS records terminating in akamai.net. Indicates the
       domain uses Akamai as authoritative DNS, often paired
@@ -366,18 +397,21 @@ fingerprints:
       products.
   - type: ns
     pattern: akam.net
+    reference: https://techdocs.akamai.com/edge-dns/docs/welcome-to-edge-dns
     description: >-
       NS records terminating in akam.net (alternative Akamai
       authoritative-DNS domain). Same authoritative-DNS
       semantics as the akamai.net form.
   - type: cname
     pattern: akamaiedge.net
+    reference: https://techdocs.akamai.com/property-mgr/docs
     description: >-
       CNAME terminating in akamaiedge.net. Indicates the
       domain or subdomain proxies through Akamai's edge,
       typically for CDN or WAF services.
   - type: cname
     pattern: edgekey.net
+    reference: https://techdocs.akamai.com/property-mgr/docs
     description: >-
       CNAME terminating in edgekey.net (Akamai's edge-key
       domain used for some product configurations).
@@ -385,6 +419,7 @@ fingerprints:
       form.
   - type: cname
     pattern: edgesuite.net
+    reference: https://techdocs.akamai.com/property-mgr/docs
     description: >-
       CNAME terminating in edgesuite.net (Akamai's EdgeSuite
       CDN and WAF product domain). Same edge-proxying
@@ -396,6 +431,7 @@ fingerprints:
   detections:
   - type: ns
     pattern: nsone.net
+    reference: https://www.ns1.com/products/managed-dns/
     description: >-
       NS records terminating in nsone.net (NS1 is a managed-
       DNS provider acquired by IBM in 2024). Indicates the
@@ -409,6 +445,7 @@ fingerprints:
   detections:
   - type: ns
     pattern: domaincontrol.com
+    reference: https://www.godaddy.com/help/about-godaddy-nameservers-664
     description: >-
       NS records terminating in domaincontrol.com (GoDaddy's
       authoritative-DNS hostname). Indicates the domain is
@@ -424,6 +461,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: cloudfront.net
+    reference: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/
     description: >-
       CNAME terminating in cloudfront.net (AWS CloudFront
       CDN distribution domain). Indicates the domain has at
@@ -437,6 +475,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: azureedge.net
+    reference: https://learn.microsoft.com/en-us/azure/cdn/cdn-map-content-to-custom-domain
     description: >-
       CNAME terminating in azureedge.net (Azure CDN edge
       domain, covering both Azure CDN Standard from Microsoft
@@ -450,6 +489,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: azurewebsites.net
+    reference: https://learn.microsoft.com/en-us/azure/app-service/app-service-web-tutorial-custom-domain
     description: >-
       CNAME terminating in azurewebsites.net (Azure App
       Service / Web Apps default hostname domain). Indicates
@@ -465,6 +505,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: trafficmanager.net
+    reference: https://learn.microsoft.com/en-us/azure/traffic-manager/traffic-manager-overview
     description: >-
       CNAME terminating in trafficmanager.net (Azure Traffic
       Manager DNS-based traffic routing). Indicates the
@@ -479,6 +520,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: fastly.net
+    reference: https://docs.fastly.com/en/guides/working-with-domains
     description: >-
       CNAME terminating in fastly.net (Fastly CDN edge
       domain). Indicates the domain delegates traffic to
@@ -486,6 +528,7 @@ fingerprints:
       Compute@Edge workloads.
   - type: cname
     pattern: fastly\.net$|fastlylb\.net$
+    reference: https://docs.fastly.com/en/guides/working-with-domains
     description: >-
       CNAME terminating in fastly.net or fastlylb.net (the
       latter is Fastly's load-balancer endpoint domain).
@@ -499,6 +542,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: myshopify.com
+    reference: https://help.shopify.com/en/manual/online-store/domains
     description: >-
       CNAME terminating in myshopify.com (Shopify's storefront
       hostname domain). Indicates the domain points to a
@@ -511,6 +555,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: wixdns.net
+    reference: https://support.wix.com/en/article/about-domains
     description: >-
       CNAME terminating in wixdns.net (Wix's DNS hosting
       domain). Indicates the domain is hosted on Wix, the
@@ -523,6 +568,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: squarespace.com
+    reference: https://support.squarespace.com/hc/en-us/sections/206537167
     description: >-
       CNAME pointing into squarespace.com (Squarespace is a
       website-builder and e-commerce platform). Indicates
@@ -535,6 +581,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: herokuapp.com
+    reference: https://devcenter.heroku.com/articles/custom-domains
     description: >-
       CNAME terminating in herokuapp.com (Heroku is a
       Salesforce-owned application platform). Indicates the
@@ -547,6 +594,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: wpengine.com
+    reference: https://wpengine.com/support/add-domain/
     description: >-
       CNAME pointing into wpengine.com (WP Engine is a
       managed-WordPress hosting platform). Indicates the
@@ -554,6 +602,7 @@ fingerprints:
       infrastructure.
   - type: txt
     pattern: ^wpe-verification=
+    reference: https://wpengine.com/support/add-domain/
     description: >-
       WP Engine domain-verification TXT. Indicates the
       domain is verified for use on a WP Engine
@@ -566,6 +615,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: pantheon.io
+    reference: https://docs.pantheon.io/domains
     description: >-
       CNAME pointing into pantheon.io (Pantheon is a
       managed-WordPress and managed-Drupal hosting platform).
@@ -577,6 +627,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: elb.amazonaws.com
+    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/what-is-load-balancing.html
     description: >-
       CNAME terminating in elb.amazonaws.com (AWS
       Application Load Balancer or Network Load Balancer
@@ -585,6 +636,7 @@ fingerprints:
       EC2, ECS, or EKS workloads.
   - type: cname
     pattern: .elb.
+    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/what-is-load-balancing.html
     description: >-
       CNAME containing `.elb.` (regional AWS ELB hostname
       patterns like `*.us-east-1.elb.amazonaws.com`).
@@ -598,6 +650,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: s3.amazonaws.com
+    reference: https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteHosting.html
     description: >-
       CNAME terminating in s3.amazonaws.com (AWS S3 REST API
       endpoint). Indicates the domain proxies to an S3
@@ -607,6 +660,7 @@ fingerprints:
       `s3-website-*` patterns apply.
   - type: cname
     pattern: .s3-website-
+    reference: https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteHosting.html
     description: >-
       CNAME containing `.s3-website-` (AWS S3 static-website
       hosting endpoint, regional form like
@@ -615,6 +669,7 @@ fingerprints:
       the domain serves through that endpoint.
   - type: cname
     pattern: .s3-website.
+    reference: https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteHosting.html
     description: >-
       CNAME containing `.s3-website.` (newer-style S3
       static-website endpoint, like
@@ -627,6 +682,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: elasticbeanstalk.com
+    reference: https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/customdomains.html
     description: >-
       CNAME terminating in elasticbeanstalk.com (AWS Elastic
       Beanstalk PaaS endpoint). Indicates the domain
@@ -639,12 +695,14 @@ fingerprints:
   detections:
   - type: cname
     pattern: appspot.com
+    reference: https://cloud.google.com/appengine/docs/standard/mapping-custom-domains
     description: >-
       CNAME terminating in appspot.com (Google App Engine's
       default hostname domain). Indicates the domain
       delegates to an App Engine service.
   - type: cname
     pattern: run.app
+    reference: https://cloud.google.com/run/docs/mapping-custom-domains
     description: >-
       CNAME terminating in run.app (Google Cloud Run's
       default hostname domain). Indicates the domain
@@ -661,6 +719,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: azurefd.net
+    reference: https://learn.microsoft.com/en-us/azure/frontdoor/front-door-overview
     description: >-
       CNAME terminating in azurefd.net (Azure Front Door
       classic and Standard / Premium endpoint domain).
@@ -669,6 +728,7 @@ fingerprints:
       acceleration product.
   - type: cname
     pattern: afd.ms
+    reference: https://learn.microsoft.com/en-us/azure/frontdoor/front-door-overview
     description: >-
       CNAME terminating in afd.ms (Azure Front Door Standard
       and Premium short-form endpoint domain). Same Front
@@ -681,6 +741,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: contentful.com
+    reference: https://www.contentful.com/help/
     description: >-
       CNAME pointing into contentful.com (Contentful is a
       headless CMS). Indicates the domain proxies content
@@ -693,6 +754,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: sanity.io
+    reference: https://www.sanity.io/docs
     description: >-
       CNAME pointing into sanity.io (Sanity is a headless
       CMS with a real-time backend). Indicates the domain
@@ -705,6 +767,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: prismic.io
+    reference: https://prismic.io/docs
     description: >-
       CNAME pointing into prismic.io (Prismic is a headless
       CMS). Indicates the domain uses Prismic for content
@@ -716,6 +779,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: launchdarkly.com
+    reference: https://docs.launchdarkly.com/
     description: >-
       CNAME pointing into launchdarkly.com (LaunchDarkly is
       a feature-management and experimentation platform).
@@ -729,6 +793,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: cloudinary.com
+    reference: https://cloudinary.com/documentation/
     description: >-
       CNAME pointing into cloudinary.com (Cloudinary is an
       image and video management and delivery platform).
@@ -742,6 +807,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: imgix.net
+    reference: https://docs.imgix.com/setup/serving-images/custom-domains
     description: >-
       CNAME pointing into imgix.net (imgix is a real-time
       image processing and delivery CDN). Indicates the
@@ -753,12 +819,14 @@ fingerprints:
   detections:
   - type: cname
     pattern: keycdn.com
+    reference: https://www.keycdn.com/support/create-a-zonealias
     description: >-
       CNAME pointing into keycdn.com (KeyCDN is a content
       delivery network). Indicates the domain proxies
       through KeyCDN's edge.
   - type: cname
     pattern: kxcdn.com
+    reference: https://www.keycdn.com/support/create-a-zonealias
     description: >-
       CNAME pointing into kxcdn.com (KeyCDN's edge-zone
       domain). Same CDN semantics as the keycdn.com form;
@@ -770,6 +838,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: stackpathdns.com
+    reference: https://www.stackpath.com/
     description: >-
       CNAME terminating in stackpathdns.com (StackPath was
       a content-delivery and edge-compute platform that
@@ -784,6 +853,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: ghost.io
+    reference: https://ghost.org/docs/
     description: >-
       CNAME pointing into ghost.io (Ghost is an open-source
       blogging and newsletter platform; ghost.io is the
@@ -796,6 +866,7 @@ fingerprints:
   detections:
   - type: caa
     pattern: letsencrypt.org
+    reference: https://letsencrypt.org/docs/caa/
     description: >-
       CAA record authorizing Let's Encrypt to issue
       certificates for the domain. Indicates the domain
@@ -809,6 +880,7 @@ fingerprints:
   detections:
   - type: caa
     pattern: digicert.com
+    reference: https://www.digicert.com/faq/dns/what-is-a-caa-record
     description: >-
       CAA record authorizing DigiCert to issue certificates
       for the domain. Indicates the domain owner has
@@ -822,6 +894,7 @@ fingerprints:
   detections:
   - type: caa
     pattern: sectigo.com
+    reference: https://sectigo.com/resource-library/what-is-caa-record
     description: >-
       CAA record authorizing Sectigo to issue certificates
       for the domain. Sectigo is a CA spun out from the
@@ -829,6 +902,7 @@ fingerprints:
       mid-market TLS setups.
   - type: caa
     pattern: comodoca.com
+    reference: https://sectigo.com/resource-library/what-is-caa-record
     description: >-
       CAA record authorizing the Comodo CA (now Sectigo
       under the post-2018 rebrand). The comodoca.com
@@ -844,6 +918,7 @@ fingerprints:
   detections:
   - type: caa
     pattern: amazon.com
+    reference: https://docs.aws.amazon.com/acm/latest/userguide/setup-caa.html
     description: >-
       CAA record authorizing Amazon (typically AWS
       Certificate Manager) to issue certificates for the
@@ -852,6 +927,7 @@ fingerprints:
       certificates.
   - type: caa
     pattern: amazontrust.com
+    reference: https://docs.aws.amazon.com/acm/latest/userguide/setup-caa.html
     description: >-
       CAA record authorizing Amazon Trust Services
       (Amazon's CA brand for the publicly-trusted
@@ -865,6 +941,7 @@ fingerprints:
   detections:
   - type: caa
     pattern: pki.goog
+    reference: https://pki.goog/
     description: >-
       CAA record authorizing Google Trust Services to issue
       certificates for the domain. Indicates the domain
@@ -878,6 +955,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: fly\.dev$|edgeapp\.net$
+    reference: https://fly.io/docs/networking/custom-domain/
     description: >-
       CNAME terminating in fly.dev or edgeapp.net (Fly.io is
       a globally-distributed application platform). The
@@ -891,6 +969,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: railway\.app$
+    reference: https://docs.railway.app/deploy/exposing-your-app
     description: >-
       CNAME terminating in railway.app (Railway is a
       developer-focused deployment platform comparable to
@@ -903,6 +982,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^vmware-cloud-verification-
+    reference: https://docs.vmware.com/
     description: >-
       VMware Cloud domain-verification TXT (the
       `vmware-cloud-verification-` prefix). Indicates the
@@ -917,6 +997,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^sentry-verification=
+    reference: https://docs.sentry.io/
     description: >-
       Sentry domain-verification TXT (Sentry is an
       error-tracking and APM platform). Indicates the
@@ -930,6 +1011,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^grafana-site-verification=
+    reference: https://grafana.com/docs/grafana-cloud/
     description: >-
       Grafana Cloud site-verification TXT (Grafana Cloud is
       Grafana Labs' managed observability platform offering
@@ -942,6 +1024,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^sumologic-site-verification=
+    reference: https://help.sumologic.com/
     description: >-
       Sumo Logic site-verification TXT (Sumo Logic is a
       cloud-native log analytics and observability platform).
@@ -954,6 +1037,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^honeycomb-io-site-verification=
+    reference: https://docs.honeycomb.io/
     description: >-
       Honeycomb.io site-verification TXT (Honeycomb is an
       observability platform specializing in high-cardinality
@@ -966,6 +1050,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^statsig-domain-verification=
+    reference: https://docs.statsig.com/
     description: >-
       Statsig domain-verification TXT (Statsig is a feature-
       flag and experimentation platform comparable to
@@ -978,6 +1063,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^split-domain-verification=
+    reference: https://help.split.io/
     description: >-
       Split.io domain-verification TXT (Split is a feature-
       flag and experimentation platform, acquired by
@@ -990,6 +1076,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^splunk-verification=
+    reference: https://www.splunk.com/en_us/products/observability.html
     description: >-
       Splunk domain-verification TXT. Used for Splunk
       Observability Cloud (formerly SignalFx) and Splunk
@@ -998,6 +1085,7 @@ fingerprints:
       SSO federation.
   - type: cname
     pattern: signalfx\.com$
+    reference: https://docs.splunk.com/observability/en/
     description: >-
       CNAME terminating in signalfx.com (SignalFx was the
       observability product Splunk acquired in 2019, now

@@ -5,6 +5,112 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.8] - 2026-05-13
+
+**v1.9.8 bridge milestone: catalog metadata richness pass on top of
+the v1.9.7 presence floor.** v1.9.7 lifted every detection to a
+non-empty description; v1.9.8 lifts every detection to a
+substantive, scope-narrowed, externally-referenced description.
+After this pass every detection in every category satisfies all
+three proxy signals of the new advisory richness audit
+(`--report-richness`): description length, scope-narrowing language,
+and external `reference` URL. No engine code changes ship in this
+release.
+
+This is the v1.9.8 step of the v1.9.4 to v2.0 linear sequence in
+`docs/roadmap.md`.
+
+### Headline numbers
+
+| Metric | Before (v1.9.7) | After (v1.9.8) |
+|---|---|---|
+| Detections with `reference` URL | 76 of 566 (13.4%) | **566 of 566 (100%)** |
+| Categories at 100% reference | 0 of 8 | **8 of 8** |
+| Detections passing richness audit (all 3 signals) | partial | **566 of 566 (100%)** |
+| Non-default weights with inline rationale | 0 of 4 | **4 of 4** |
+| Richness audit (advisory) | not present | `--report-richness` flag |
+
+### Added
+
+- **`scripts/check_metadata_coverage.py --report-richness`.** Advisory
+  pass that scores each description against three proxy signals:
+  long-desc (length floor of 80 chars, proxies signal 1), scope-narrow
+  (presence of scope-narrowing tokens, proxies signal 2), and
+  `reference` (external URL). Detections failing two or more signals
+  are surfaced as a per-category worklist. The audit never gates;
+  presence-gate exit code is unchanged. The token set is tuned to the
+  catalog's actual writing style: explicit-negation tokens (`not`,
+  `does not`) plus the catalog idioms it uses to narrow scope
+  (`alternative`, `legacy`, `functionally equivalent`, `typically
+  paired`, `same semantics`, `cname through`, `chain through`,
+  `subdomain cnames into`, `government cloud`, and similar).
+- **Reference URLs on 490 detections** across every fingerprint file.
+  Every detection in every category now points at a canonical vendor
+  product or docs root (`help.okta.com/en-us/...`,
+  `docs.aws.amazon.com/...`, `docs.github.com/en/organizations/...`),
+  chosen to be stable enough for a future maintainer to re-verify the
+  pattern without chasing rotted deep links.
+- **Description-quality lift across the catalog.** Every short
+  cname_target index entry in `surface.yaml` (the v1.9.3.x
+  catalog-growth artifacts) was expanded into a proper three-signal
+  description: what the slug detects, what the chain narrows to, and
+  what it does not prove. Comparable lift in `ai.yaml` and
+  `verticals.yaml`. Existing block-scalar descriptions in
+  `security.yaml`, `email.yaml`, `productivity.yaml`,
+  `crm-marketing.yaml`, and `data-analytics.yaml` were left alone
+  where they already satisfied the rubric.
+- **Inline weight rationale** on all four non-default weights in
+  `security.yaml`: `ping-identity` `pingoneemail=` TXT (0.6),
+  `cyberark` `*.idaptive.{com,app}` CNAME (0.7), `sonatype`
+  `^OSSRH-\d+$` TXT (0.8), `beyond-identity`
+  `authenticator.beyondidentity.com` CNAME (0.5). Comment lives above
+  the `weight:` key in each detection block.
+- **`validation/v1.9.8-metadata-audit.md`** documenting the pass:
+  before/after reference coverage, end-state richness numbers per
+  category, weight-rationale table, scope and non-goals.
+
+### Changed
+
+- **`CONTRIBUTING.md` "Detection description rubric".** Stale
+  "v1.9.7+" pointer on the advisory metadata-richness reference
+  updated to "v1.9.8+ advisory" so contributors land on
+  `--report-richness`.
+
+### Fixed
+
+- **`recon_tool/http.py`** `asynccontextmanager` deprecation warning
+  surfaced by a recent pyright/typeshed update. Annotation switched
+  from `AsyncIterator` to `AsyncGenerator` per the typeshed change;
+  no runtime behavior difference.
+- **`tests/test_mcp_path_isolation.py`** subprocess.run call now
+  carries the `# noqa: S603 — argv list, no shell.` annotation
+  matching the pattern in `tests/test_metadata_coverage.py` and
+  `scripts/release.py`.
+
+### Scope
+
+In scope:
+- Full description-quality lift across the catalog.
+- Full `reference` URL coverage across the catalog.
+- Inline rationale on every non-default weight.
+- `--report-richness` advisory mode in
+  `scripts/check_metadata_coverage.py`.
+- Rubric pointer cleanup in `CONTRIBUTING.md`.
+
+Out of scope (stays out by design):
+- Engine changes (`signals.py`, `merger.py`, `absence.py`,
+  `fusion.py`) — v1.9.8 is data + tooling only.
+- New fingerprints — v1.9.8 does not add or remove detections.
+
+### Quality gate
+
+`ruff check`, `pyright`, `pytest`,
+`scripts/validate_fingerprint.py` (414 entries passed),
+`scripts/check_metadata_coverage.py` (PASS, every detection in every
+category has a non-empty description, and every detection satisfies
+all three richness signals), and all pre-commit hooks pass on a clean
+tree.
+
 ## [1.9.7] - 2026-05-13
 
 **v1.9.7 bridge milestone: metadata-coverage gate flip (presence,

@@ -11,6 +11,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^crowdstrike-falcon-site-verification=
+    reference: https://www.crowdstrike.com/platform/
     description: >-
       CrowdStrike Falcon domain-verification TXT (CrowdStrike is
       a cloud-delivered endpoint-protection vendor). Indicates
@@ -19,6 +20,7 @@ fingerprints:
       independent of the domain verification.
   - type: txt
     pattern: crowdstrike
+    reference: https://www.crowdstrike.com/platform/
     description: >-
       Catch-all TXT pattern containing the literal string
       "crowdstrike". Lower-specificity fallback for legacy or
@@ -34,6 +36,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^knowbe4-site-verification=
+    reference: https://www.knowbe4.com/products/security-awareness-training
     description: >-
       KnowBe4 domain-verification TXT (KnowBe4 is a security-
       awareness and phishing-simulation training vendor).
@@ -43,6 +46,7 @@ fingerprints:
       active training rollout.
   - type: spf
     pattern: _spf.psm.knowbe4.com
+    reference: https://www.knowbe4.com/products/phisher
     description: >-
       SPF `include:_spf.psm.knowbe4.com` authorizes KnowBe4's
       PhishER / PhishER Plus mail-handling infrastructure to
@@ -56,6 +60,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^proofpoint-domain-verification=
+    reference: https://help.proofpoint.com/
     description: >-
       Proofpoint domain-verification TXT (Proofpoint is an email
       security gateway and CASB vendor). Indicates the domain is
@@ -64,6 +69,7 @@ fingerprints:
       evidence for that.
   - type: txt
     pattern: ^proofpoint-
+    reference: https://help.proofpoint.com/
     description: >-
       Less-specific Proofpoint TXT prefix, used by some
       Proofpoint product lines (Email Fraud Defense, Digital
@@ -72,6 +78,7 @@ fingerprints:
       higher-specificity pattern is preferred when both fire.
   - type: mx
     pattern: pphosted.com
+    reference: https://www.proofpoint.com/us/products/email-protection
     description: >-
       MX terminating at Proofpoint's mail-protection cluster
       (`*.pphosted.com`, "PP hosted"). Indicates Proofpoint
@@ -81,12 +88,14 @@ fingerprints:
       this MX alone.
   - type: spf
     pattern: spf.pphosted.com
+    reference: https://www.proofpoint.com/us/products/email-protection
     description: >-
       SPF `include:spf.pphosted.com` authorizes Proofpoint to
       send mail on behalf of the domain. Typically paired with
       the Proofpoint MX.
   - type: spf
     pattern: _spf.proofpoint.com
+    reference: https://www.proofpoint.com/us/products/email-protection
     description: >-
       Alternative Proofpoint SPF include (`_spf.proofpoint.com`),
       used by some tenant configurations. Same authorization
@@ -98,6 +107,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^mimecast
+    reference: https://community.mimecast.com/
     description: >-
       Mimecast domain-verification TXT (Mimecast is an email
       security gateway vendor). Indicates the domain is
@@ -106,6 +116,7 @@ fingerprints:
       check MX evidence for that.
   - type: mx
     pattern: mimecast.com
+    reference: https://www.mimecast.com/products/email-security/
     description: >-
       MX terminating at Mimecast (`*.mimecast.com` regional
       variants like `eu-smtp-inbound.mimecast.com`). Indicates
@@ -114,6 +125,7 @@ fingerprints:
       downstream provider is not deducible from this MX alone.
   - type: spf
     pattern: _netblocks.mimecast.com
+    reference: https://www.mimecast.com/products/email-security/
     description: >-
       SPF `include:_netblocks.mimecast.com` authorizes Mimecast
       to send mail on behalf of the domain. Typically paired
@@ -125,6 +137,7 @@ fingerprints:
   detections:
   - type: mx
     pattern: barracudanetworks.com
+    reference: https://www.barracuda.com/products/email-protection
     description: >-
       MX terminating at Barracuda Networks' email-protection
       cloud (`*.barracudanetworks.com`). Indicates Barracuda
@@ -138,12 +151,14 @@ fingerprints:
   detections:
   - type: mx
     pattern: tmes.trendmicro.com
+    reference: https://www.trendmicro.com/en_us/business/products/user-protection/sps/email-and-collaboration/email-security.html
     description: >-
       MX terminating at Trend Micro Email Security
       (`*.tmes.trendmicro.com`). Indicates Trend Micro's
       cloud email gateway handles inbound mail for the domain.
   - type: spf
     pattern: spf.tmes.trendmicro.com
+    reference: https://www.trendmicro.com/en_us/business/products/user-protection/sps/email-and-collaboration/email-security.html
     description: >-
       SPF `include:spf.tmes.trendmicro.com` authorizes Trend
       Micro Email Security to send mail on behalf of the
@@ -155,6 +170,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^sophos-domain-verification=
+    reference: https://docs.sophos.com/
     description: >-
       Sophos domain-verification TXT (Sophos is an endpoint-
       and-network-security vendor). Indicates the domain is
@@ -168,6 +184,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^paloaltonetworks-domain-verification=
+    reference: https://docs.paloaltonetworks.com/
     description: >-
       Palo Alto Networks domain-verification TXT. Indicates
       the domain is registered with a Palo Alto tenant.
@@ -181,6 +198,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^zscaler-domain-verification=
+    reference: https://help.zscaler.com/zia
     description: >-
       Zscaler domain-verification TXT (Zscaler is a Secure
       Service Edge / SASE vendor providing ZIA and ZPA).
@@ -189,6 +207,7 @@ fingerprints:
       ZPA (Private Access) deployments.
   - type: txt
     pattern: zscaler
+    reference: https://help.zscaler.com/zia
     description: >-
       Catch-all TXT pattern containing the literal string
       "zscaler", for legacy or non-standard verification
@@ -202,6 +221,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^wiz-domain-verification=
+    reference: https://docs.wiz.io/
     description: >-
       Wiz domain-verification TXT (Wiz is a cloud-security-
       posture-management vendor, acquired by Google in 2025).
@@ -217,6 +237,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^onetrust-domain-verification=
+    reference: https://my.onetrust.com/
     description: >-
       OneTrust domain-verification TXT (OneTrust is a privacy,
       consent-management, and GRC vendor). Indicates the
@@ -230,6 +251,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^have-i-been-pwned-verification=
+    reference: https://haveibeenpwned.com/DomainSearch
     description: >-
       Have I Been Pwned domain-verification TXT (Troy Hunt's
       breach-notification service). Indicates the domain owner
@@ -242,6 +264,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^duo_sso_verification=
+    reference: https://duo.com/docs/sso
     description: >-
       Duo Security SSO domain-verification TXT (Duo is a
       Cisco-owned MFA and zero-trust-access vendor). Indicates
@@ -258,6 +281,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^_oktaverification=
+    reference: https://help.okta.com/en-us/content/topics/settings/custom-url-domain.htm
     description: >-
       Okta domain-verification TXT (the `_oktaverification=`
       form). Indicates the domain is registered with an Okta
@@ -267,12 +291,14 @@ fingerprints:
       secondary verification path.
   - type: txt
     pattern: ^okta-domain-verification
+    reference: https://help.okta.com/en-us/content/topics/settings/custom-url-domain.htm
     description: >-
       Alternative Okta verification TXT format
       (`okta-domain-verification`). Same administrative-binding
       semantics as `_oktaverification=`.
   - type: cname
     pattern: okta.com
+    reference: https://help.okta.com/en-us/content/topics/settings/custom-url-domain.htm
     description: >-
       CNAME pointing into okta.com. Typically a login subdomain
       (`login.example.com` or `sso.example.com`) delegated to
@@ -280,6 +306,7 @@ fingerprints:
       use for at least one identity flow.
   - type: cname
     pattern: oktapreview.com
+    reference: https://help.okta.com/en-us/content/topics/security/preview-orgs.htm
     description: >-
       CNAME pointing into oktapreview.com (Okta's preview /
       staging environment). Indicates the domain has a test or
@@ -294,6 +321,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^1password-site-verification=
+    reference: https://support.1password.com/scim-bridge-okta/
     description: >-
       1Password domain-verification TXT (1Password is a
       password-manager and secrets-management vendor).
@@ -309,6 +337,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^jamf-site-verification=
+    reference: https://learn.jamf.com/en-US/bundle/jamf-pro-documentation-current/
     description: >-
       Jamf domain-verification TXT (Jamf is an Apple device
       management vendor, formerly JAMF Software). Indicates
@@ -322,6 +351,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^_globalsign-domain-verification=
+    reference: https://www.globalsign.com/en/ssl-information-center/what-is-a-caa-record
     description: >-
       GlobalSign domain-control-validation TXT (the prefixed
       `_globalsign-domain-verification=` form, found at
@@ -332,6 +362,7 @@ fingerprints:
       retired; confidence is medium for that reason.
   - type: txt
     pattern: ^globalsign-domain-verification
+    reference: https://www.globalsign.com/en/ssl-information-center/what-is-a-caa-record
     description: >-
       Alternative GlobalSign DCV TXT format
       (`globalsign-domain-verification` without the leading
@@ -344,6 +375,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: incapdns.net
+    reference: https://docs.imperva.com/howto/d8fa5dd6/
     description: >-
       CNAME pointing into incapdns.net (Imperva Cloud WAF,
       formerly Incapsula). Indicates the apex or a subdomain
@@ -357,6 +389,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: sucuri.net
+    reference: https://docs.sucuri.net/
     description: >-
       CNAME pointing into sucuri.net (Sucuri is a GoDaddy-owned
       website-security and WAF vendor). Indicates the domain
@@ -369,6 +402,7 @@ fingerprints:
   detections:
   - type: mx
     pattern: messagelabs.com
+    reference: https://www.broadcom.com/products/cybersecurity/email/security-cloud
     description: >-
       MX terminating at Symantec MessageLabs / Symantec Email
       Security.cloud (`*.messagelabs.com`). Now a Broadcom
@@ -377,6 +411,7 @@ fingerprints:
       front of inbound mail.
   - type: spf
     pattern: spf.messagelabs.com
+    reference: https://www.broadcom.com/products/cybersecurity/email/security-cloud
     description: >-
       SPF `include:spf.messagelabs.com` authorizes Symantec
       MessageLabs to send mail on behalf of the domain.
@@ -388,6 +423,7 @@ fingerprints:
   detections:
   - type: mx
     pattern: iphmx.com
+    reference: https://www.cisco.com/c/en/us/products/security/email-security/index.html
     description: >-
       MX terminating at Cisco IronPort Hosted Email Security
       (`*.iphmx.com`). Indicates Cisco IronPort sits in front
@@ -401,6 +437,7 @@ fingerprints:
   detections:
   - type: mx
     pattern: ess.cisco.com
+    reference: https://www.cisco.com/c/en/us/products/security/email-security/index.html
     description: >-
       MX terminating at Cisco Secure Email Cloud Gateway
       (`*.ess.cisco.com`, formerly Email Security Service).
@@ -414,6 +451,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^webexdomainverification
+    reference: https://help.webex.com/en-us/article/nj34yk2/
     description: >-
       Cisco Webex domain-verification TXT. Indicates the
       domain is registered with a Webex tenant for SSO
@@ -429,6 +467,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^cisco-ci-domain-verification=
+    reference: https://www.cisco.com/c/en/us/products/security/identity-services-engine/
     description: >-
       Cisco Common Identity domain-verification TXT (the
       "CI" stands for Cisco's Common Identity service, used
@@ -437,6 +476,7 @@ fingerprints:
       identity-platform tenant.
   - type: txt
     pattern: ^ciscocidomainverification=
+    reference: https://www.cisco.com/c/en/us/products/security/identity-services-engine/
     description: >-
       Alternative Cisco Common Identity verification TXT
       format (no hyphens). Same administrative-binding
@@ -448,6 +488,7 @@ fingerprints:
   detections:
   - type: mx
     pattern: fireeyecloud.com
+    reference: https://www.trellix.com/products/email-security/
     description: >-
       MX terminating at Trellix Cloud Email Security
       (`*.fireeyecloud.com`, retaining the FireEye-era
@@ -462,6 +503,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^sentinelone-domain-verification=
+    reference: https://www.sentinelone.com/platform/singularity-platform/
     description: >-
       SentinelOne Singularity domain-verification TXT
       (SentinelOne is an EDR / XDR vendor). Indicates the
@@ -474,6 +516,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^netskope-domain-verification=
+    reference: https://docs.netskope.com/
     description: >-
       Netskope domain-verification TXT (Netskope is a SASE /
       SSE vendor offering CASB, SWG, and ZTNA). Indicates
@@ -486,6 +529,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^kandji-domain-verification=
+    reference: https://support.kandji.io/
     description: >-
       Kandji domain-verification TXT (Kandji is an Apple
       device management vendor, comparable to Jamf for the
@@ -499,6 +543,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^pingone-domain-verification=
+    reference: https://docs.pingidentity.com/pingone/main/
     description: >-
       PingOne domain-verification TXT (Ping Identity offers
       PingOne for cloud identity and PingFederate for hybrid
@@ -506,6 +551,7 @@ fingerprints:
       PingOne tenant.
   - type: cname
     pattern: ping-ccd.com
+    reference: https://docs.pingidentity.com/pingone/main/
     description: >-
       CNAME pointing into ping-ccd.com (Ping's Custom Cloud
       Domain service for hosted SSO and MFA pages).
@@ -513,6 +559,10 @@ fingerprints:
       subdomain to PingOne.
   - type: txt
     pattern: pingoneemail=
+    # weight 0.6: narrower claim than core PingOne identity binding.
+    # An email-trust TXT proves PingOne is authorized to send transactional
+    # mail for the domain, not that PingOne is the primary IdP. Downweighted
+    # so it corroborates rather than carries the identity inference.
     weight: 0.6
     description: >-
       PingOne email-trust verification TXT (`pingoneemail=`
@@ -527,6 +577,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^cyberark-domain-verification=
+    reference: https://docs.cyberark.com/identity/
     description: >-
       CyberArk domain-verification TXT (CyberArk is a
       privileged-access-management vendor). Indicates the
@@ -535,6 +586,11 @@ fingerprints:
       identify which CyberArk product is in use.
   - type: cname
     pattern: \.idaptive\.(?:com|app)$
+    reference: https://docs.cyberark.com/identity/
+    # weight 0.7: legacy-domain CNAME. Idaptive was rebranded to
+    # CyberArk Identity in 2020; some tenants still resolve through
+    # the old surface even after migration. Downweighted because the
+    # legacy chain can persist administratively without active use.
     weight: 0.7
     description: >-
       CNAME terminating in `idaptive.com` or `idaptive.app`,
@@ -549,6 +605,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^lakera-domain-verification=
+    reference: https://www.lakera.ai/
     description: >-
       Lakera domain-verification TXT (Lakera is an LLM-
       security and prompt-injection-defense vendor).
@@ -562,6 +619,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^cato-domain-verification=
+    reference: https://www.catonetworks.com/sase-platform/
     description: >-
       Cato Networks domain-verification TXT (Cato is a SASE
       vendor offering an integrated SD-WAN, SWG, ZTNA, and
@@ -574,6 +632,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: auth0.com
+    reference: https://auth0.com/docs/customize/custom-domains
     description: >-
       CNAME pointing into auth0.com (Auth0 is an Okta-owned
       developer-focused IdP and CIAM vendor, acquired by Okta
@@ -589,12 +648,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^onelogin-domain-verification=
+    reference: https://developers.onelogin.com/api-docs/2/users/list-users
     description: >-
       OneLogin domain-verification TXT (OneLogin is an IdP
       vendor, acquired by One Identity in 2021). Indicates
       the domain is registered with a OneLogin tenant.
   - type: cname
     pattern: onelogin.com
+    reference: https://developers.onelogin.com/api-docs/2/users/list-users
     description: >-
       CNAME pointing into onelogin.com, typically a login
       subdomain delegated to OneLogin for hosted SSO pages.
@@ -607,6 +668,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^snyk-domain-verification=
+    reference: https://docs.snyk.io/
     description: >-
       Snyk domain-verification TXT (Snyk is an SCA / SAST /
       container-scanning vendor). Indicates the domain is
@@ -614,6 +676,7 @@ fingerprints:
       web-asset-scanning authorization.
   - type: txt
     pattern: snyk-site-verification=
+    reference: https://docs.snyk.io/
     description: >-
       Alternative Snyk site-verification TXT format used for
       web-asset scanning authorization. Same administrative-
@@ -626,6 +689,7 @@ fingerprints:
   detections:
   - type: subdomain_txt
     pattern: _github-challenge:.+
+    reference: https://docs.github.com/en/code-security/getting-started/github-security-features
     description: >-
       GitHub Enterprise domain-challenge TXT (the
       `_github-challenge:` form found at
@@ -641,6 +705,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^sonatype-domain-verification=
+    reference: https://central.sonatype.org/faq/verify-ownership/
     description: >-
       Sonatype domain-verification TXT (Sonatype operates
       Nexus Repository, Nexus IQ, and Maven Central).
@@ -649,6 +714,10 @@ fingerprints:
       management.
   - type: txt
     pattern: ^OSSRH-\d+$
+    # weight 0.8: namespace-ownership TXT, not active-use evidence.
+    # An OSSRH ticket TXT proves the org claimed a Maven Central
+    # namespace at some point; it does not prove the org currently
+    # publishes artifacts. Downweighted to reflect that lifecycle gap.
     weight: 0.8
     description: >-
       Sonatype OSS Repository Hosting namespace-verification
@@ -683,6 +752,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^beyondidentity-domain-verification=
+    reference: https://docs.beyondidentity.com/
     description: >-
       Beyond Identity domain-verification TXT (Beyond Identity
       is a passwordless-MFA vendor using device-bound
@@ -690,6 +760,11 @@ fingerprints:
       with a Beyond Identity tenant.
   - type: cname
     pattern: authenticator\.beyondidentity\.com
+    # weight 0.5: single platform-authenticator CNAME. Beyond Identity
+    # rollouts often touch one subdomain for the authenticator endpoint
+    # while the bulk of identity flow goes through the primary IdP.
+    # Downweighted because the CNAME alone is consistent with both
+    # full Beyond Identity adoption and an isolated pilot.
     weight: 0.5
     description: >-
       CNAME pointing into authenticator.beyondidentity.com,
@@ -706,6 +781,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: workspaceoneaccess\.com$
+    reference: https://docs.omnissa.com/category/Workspace_ONE_Access
     description: >-
       CNAME terminating in workspaceoneaccess.com, VMware
       Workspace ONE Access (formerly VMware Identity Manager,
@@ -713,6 +789,7 @@ fingerprints:
       delegates an identity subdomain to Workspace ONE.
   - type: cname
     pattern: vmwareidentity\.com$
+    reference: https://docs.omnissa.com/category/Workspace_ONE_Access
     description: >-
       CNAME terminating in vmwareidentity.com, the legacy
       VMware Identity Manager domain that predates the

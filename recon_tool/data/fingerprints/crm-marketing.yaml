@@ -12,6 +12,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^salesforce-domain-verification=
+    reference: https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm
     description: >-
       Salesforce domain-verification TXT. Indicates the domain
       is administratively bound to a Salesforce org, typically
@@ -21,6 +22,7 @@ fingerprints:
       Marketing Cloud) is in use.
   - type: txt
     pattern: ^00D[A-Za-z0-9]{12,15}=
+    reference: https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm
     description: >-
       Salesforce Organization ID (the `00D` prefix is the
       fixed identifier for Org records in Salesforce's
@@ -31,6 +33,7 @@ fingerprints:
       and a Salesforce org.
   - type: spf
     pattern: salesforce.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm
     description: >-
       SPF include matching salesforce.com. Authorizes Salesforce
       to send mail on behalf of the domain, typically for
@@ -38,6 +41,7 @@ fingerprints:
       Cloud sends through the platform, automated workflows).
   - type: spf
     pattern: _spf.salesforce.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm
     description: >-
       Alternative Salesforce SPF include (`_spf.salesforce.com`).
       Same outbound-authorization semantics as the bare
@@ -52,6 +56,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: sfmc-marketing.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
     description: >-
       CNAME pointing into sfmc-marketing.com, Salesforce
       Marketing Cloud's link-tracking and click-attribution
@@ -59,6 +64,7 @@ fingerprints:
       subdomain for SFMC sends.
   - type: cname
     pattern: sfmc-content.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
     description: >-
       CNAME pointing into sfmc-content.com, Salesforce
       Marketing Cloud's content and image hosting endpoint.
@@ -66,6 +72,7 @@ fingerprints:
       attachments through a branded subdomain.
   - type: cname
     pattern: exacttarget.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
     description: >-
       CNAME pointing into exacttarget.com, the legacy domain
       for Salesforce Marketing Cloud (originally ExactTarget,
@@ -79,6 +86,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^hubspot-domain-verification=
+    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
     description: >-
       HubSpot domain-verification TXT. Indicates the domain is
       registered with a HubSpot account, typically for hosting
@@ -88,6 +96,7 @@ fingerprints:
       licensed.
   - type: txt
     pattern: ^hubspot-developer-verification=
+    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
     description: >-
       HubSpot developer-portal or sandbox-account domain
       verification TXT. Used for verifying domains against
@@ -96,6 +105,7 @@ fingerprints:
       tooling; less indicative of production HubSpot use.
   - type: spf
     pattern: hubspotemail.net
+    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
     description: >-
       SPF include matching hubspotemail.net. Authorizes
       HubSpot to send marketing and transactional emails on
@@ -103,6 +113,7 @@ fingerprints:
       HubSpot domain-verification TXT.
   - type: cname
     pattern: hubspot.net
+    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
     description: >-
       CNAME pointing into hubspot.net, HubSpot's CDN and
       hosted-page endpoint. Indicates the domain serves at
@@ -116,6 +127,7 @@ fingerprints:
   detections:
   - type: spf
     pattern: mktomail.com
+    reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
     description: >-
       SPF include matching mktomail.com, Marketo's outbound
       sending infrastructure (Marketo is now part of Adobe
@@ -124,6 +136,7 @@ fingerprints:
       the domain.
   - type: cname
     pattern: mktosvc.com
+    reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
     description: >-
       CNAME pointing into mktosvc.com, Marketo's hosted
       service endpoint for tracking and link redirects.
@@ -131,6 +144,7 @@ fingerprints:
       campaigns.
   - type: cname
     pattern: mktoweb.com
+    reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
     description: >-
       CNAME pointing into mktoweb.com, Marketo's landing-page
       hosting endpoint. Indicates the domain hosts Marketo
@@ -142,6 +156,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^klaviyo-site-verification=
+    reference: https://help.klaviyo.com/hc/en-us/articles/115005082927
     description: >-
       Klaviyo site-verification TXT (Klaviyo is an e-commerce-
       focused email and SMS marketing platform). Indicates the
@@ -155,6 +170,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: kartra.com
+    reference: https://support.kartra.com/
     description: >-
       CNAME pointing into kartra.com (Kartra is an all-in-one
       marketing platform offering landing pages, email,
@@ -167,6 +183,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^liveramp-site-verification=
+    reference: https://docs.liveramp.com/
     description: >-
       LiveRamp site-verification TXT (LiveRamp is a data
       connectivity and identity-resolution platform).
@@ -181,18 +198,24 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^segment-site-verification=
+    reference: https://segment.com/docs/connections/sources/custom-domain/
     description: >-
       Segment site-verification TXT (Segment is a Twilio-owned
       customer-data platform). Indicates the domain is
       registered with a Segment workspace.
   - type: cname
     pattern: segment.com
+    reference: https://segment.com/docs/connections/sources/custom-domain/
     description: >-
       CNAME pointing into segment.com. Typically a tracking
       subdomain delegated to Segment for client-side event
-      collection through a branded endpoint.
+      collection through a branded endpoint. Does not prove
+      Segment is the org's primary CDP; many tenants run
+      Segment alongside an in-house analytics pipeline. The
+      legacy `segment.io` chain is captured separately.
   - type: cname
     pattern: segment.io
+    reference: https://segment.com/docs/connections/sources/custom-domain/
     description: >-
       CNAME pointing into segment.io (the legacy Segment
       tracking domain pre-Twilio acquisition). Functionally
@@ -206,6 +229,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^facebook-domain-verification=
+    reference: https://developers.facebook.com/docs/sharing/domain-verification
     description: >-
       Meta (Facebook) Business Suite domain-verification TXT
       (the `facebook-domain-verification=` prefix predates the
@@ -221,6 +245,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: '^yandex-verification:'
+    reference: https://yandex.com/support/connect/
     description: >-
       Yandex domain-verification TXT (Yandex is a Russian
       internet-services company offering search, ads, and
@@ -237,6 +262,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: unbounce.com
+    reference: https://documentation.unbounce.com/hc/en-us/articles/203510044
     description: >-
       CNAME pointing into unbounce.com (Unbounce is a
       landing-page builder and conversion-optimization
@@ -249,6 +275,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: pardot.com
+    reference: https://help.salesforce.com/s/articleView?id=sf.pardot_domain_management.htm
     description: >-
       CNAME pointing into pardot.com (Pardot is Salesforce's
       B2B marketing-automation product, rebranded to Marketing
@@ -262,6 +289,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: drift.com
+    reference: https://devdocs.drift.com/docs/quick-start-guide
     description: >-
       CNAME pointing into drift.com (Drift is a conversational-
       marketing and chatbot platform, acquired by Salesloft in
@@ -275,6 +303,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: braze.com
+    reference: https://www.braze.com/docs/
     description: >-
       CNAME pointing into braze.com (Braze is a customer-
       engagement platform offering email, push, in-app, and
@@ -288,6 +317,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: iterable.com
+    reference: https://support.iterable.com/hc/en-us
     description: >-
       CNAME pointing into iterable.com (Iterable is a
       cross-channel marketing-automation platform).
@@ -301,6 +331,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: customer.io
+    reference: https://customer.io/docs/
     description: >-
       CNAME pointing into customer.io (Customer.io is a
       behavioral-messaging platform for email, push, and SMS).
@@ -313,6 +344,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: 6sense.com
+    reference: https://support.6sense.com/
     description: >-
       CNAME pointing into 6sense.com (6sense is an account-
       based marketing and B2B intent-data platform).
@@ -320,12 +352,14 @@ fingerprints:
       typically through a branded tracking subdomain.
   - type: cname
     pattern: 6sense.io
+    reference: https://support.6sense.com/
     description: >-
       CNAME pointing into 6sense.io (alternative 6sense
       tracking domain). Same semantics as the .com form;
       some tenants use the .io variant.
   - type: txt
     pattern: ^6sense
+    reference: https://support.6sense.com/
     description: >-
       Catch-all TXT pattern starting with "6sense". Lower-
       specificity fallback for 6sense verification records
@@ -339,6 +373,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: demandbase.com
+    reference: https://help.demandbase.com/
     description: >-
       CNAME pointing into demandbase.com (Demandbase is an
       account-based marketing platform that overlaps with
@@ -352,6 +387,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: eloqua.com
+    reference: https://docs.oracle.com/en/cloud/saas/marketing/eloqua-user/
     description: >-
       CNAME pointing into eloqua.com (Eloqua is Oracle's
       marketing-automation platform, part of Oracle CX after
@@ -365,6 +401,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: clearbit.com
+    reference: https://help.clearbit.com/hc/en-us
     description: >-
       CNAME pointing into clearbit.com (Clearbit is a
       data-enrichment platform, acquired by HubSpot in 2023
@@ -378,12 +415,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^outreach
+    reference: https://support.outreach.io/hc/en-us
     description: >-
       Catch-all TXT pattern starting with "outreach" (Outreach
       is a sales-engagement platform). Lower-specificity
       fallback for Outreach verification records.
   - type: spf
     pattern: outreach.io
+    reference: https://support.outreach.io/hc/en-us
     description: >-
       SPF include matching outreach.io. Authorizes Outreach
       to send sales engagement email on behalf of the domain.
@@ -394,6 +433,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^salesloft
+    reference: https://help.salesloft.com/s/article/Custom-Email-Domain-Setup
     description: >-
       Catch-all TXT pattern starting with "salesloft"
       (Salesloft is a sales-engagement platform, comparable
@@ -401,6 +441,7 @@ fingerprints:
       verification records.
   - type: spf
     pattern: salesloft.com
+    reference: https://help.salesloft.com/s/article/Custom-Email-Domain-Setup
     description: >-
       SPF include matching salesloft.com. Authorizes Salesloft
       to send sales engagement email on behalf of the domain.
@@ -411,6 +452,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^apollo-domain-verification=
+    reference: https://knowledge.apollo.io/
     description: >-
       Apollo.io domain-verification TXT (Apollo is a sales-
       intelligence and engagement platform offering contact
@@ -423,6 +465,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^gong-domain-verification=
+    reference: https://help.gong.io/
     description: >-
       Gong domain-verification TXT (Gong is a revenue-
       intelligence platform that records and analyzes sales
@@ -435,6 +478,7 @@ fingerprints:
   detections:
   - type: cname
     pattern: intercom.io
+    reference: https://www.intercom.com/help/en/articles/179-set-up-a-custom-domain
     description: >-
       CNAME pointing into intercom.io (Intercom is a customer-
       messaging and support-chat platform). Indicates the
@@ -442,6 +486,7 @@ fingerprints:
       endpoints under a branded subdomain.
   - type: txt
     pattern: ^intercom-domain-verification=
+    reference: https://www.intercom.com/help/en/articles/179-set-up-a-custom-domain
     description: >-
       Intercom domain-verification TXT. Indicates the domain
       is registered with an Intercom workspace, typically for
@@ -454,6 +499,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^d365mktkey=
+    reference: https://learn.microsoft.com/en-us/dynamics365/marketing/
     description: >-
       Microsoft Dynamics 365 Marketing domain-verification TXT
       (the `d365mktkey=` prefix). Indicates the domain is
@@ -467,6 +513,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^SFMC-
+    reference: https://help.salesforce.com/s/articleView?id=sf.mc_overview_marketing_cloud.htm
     description: >-
       Salesforce Marketing Cloud domain-verification TXT
       (the `SFMC-` prefix). Indicates the domain is verified
@@ -481,6 +528,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^e2ma-verification=
+    reference: https://support.myemma.com/
     description: >-
       Emma email marketing domain-verification TXT (the
       `e2ma-verification=` prefix; e2ma is Emma's legacy
@@ -495,6 +543,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^iContact
+    reference: https://www.icontact.com/help
     description: >-
       iContact email marketing domain-verification TXT
       (iContact is a J2 Global / Ziff Davis property
@@ -507,6 +556,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^mailerlite-domain-verification=
+    reference: https://www.mailerlite.com/help
     description: >-
       MailerLite domain-verification TXT (MailerLite is a
       mid-market email marketing platform). Indicates the
