@@ -16,6 +16,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^MS=ms
+    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
     description: >-
       Microsoft 365 domain-verification TXT (the `MS=ms########`
       form Microsoft issues during tenant domain claim).
@@ -27,6 +28,7 @@ fingerprints:
       run M365 email."
   - type: txt
     pattern: ^ms-domain-verification=
+    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
     description: >-
       Alternative Microsoft 365 verification TXT format (the
       `ms-domain-verification=` prefix used for some Entra ID
@@ -35,6 +37,7 @@ fingerprints:
       imply active email use.
   - type: mx
     pattern: mail.protection.outlook.com
+    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
     description: >-
       MX record terminating at Microsoft 365's mail-protection
       cluster (`*.mail.protection.outlook.com`). Indicates active
@@ -45,6 +48,7 @@ fingerprints:
       implied without checking for gateway MX evidence as well.
   - type: spf
     pattern: spf.protection.outlook.com
+    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
     description: >-
       SPF `include:spf.protection.outlook.com` authorizes
       Microsoft 365 to send mail on behalf of the domain.
@@ -63,6 +67,7 @@ fingerprints:
   detections:
   - type: mx
     pattern: aspmx.l.google.com
+    reference: https://support.google.com/a/answer/7314058
     description: >-
       MX terminating at Google Workspace's primary inbound mail
       cluster (`aspmx.l.google.com` and the `alt1` through `alt4`
@@ -72,6 +77,7 @@ fingerprints:
       evidence before concluding "Gmail only."
   - type: spf
     pattern: _spf.google.com
+    reference: https://support.google.com/a/answer/7314058
     description: >-
       SPF `include:_spf.google.com` authorizes Google to send
       mail on behalf of the domain. Usually present with the GWS
@@ -86,6 +92,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^zoho-verification=
+    reference: https://www.zoho.com/mail/help/adminconsole/domain-verification.html
     description: >-
       Zoho domain-verification TXT. Indicates the domain is
       claimed by a Zoho account (Zoho Mail, CRM, and other Zoho
@@ -95,6 +102,7 @@ fingerprints:
       specifically.
   - type: mx
     pattern: zoho.com
+    reference: https://www.zoho.com/mail/help/adminconsole/domain-verification.html
     description: >-
       MX terminating at Zoho Mail (`mx*.zoho.com` and regional
       variants like `mx*.zohomail.eu`). Indicates Zoho Mail is
@@ -107,6 +115,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^protonmail-verification=
+    reference: https://proton.me/support/custom-domain
     description: >-
       Proton Mail custom-domain verification TXT. Indicates the
       domain is administratively bound to a Proton account for
@@ -123,6 +132,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: '^amazonses:'
+    reference: https://docs.aws.amazon.com/ses/latest/dg/send-email-getting-started.html
     description: >-
       Amazon SES domain-verification TXT (the `amazonses:`
       prefix). Indicates the domain is verified to send mail
@@ -132,6 +142,7 @@ fingerprints:
       accurate read is "uses SES for outbound application mail."
   - type: spf
     pattern: amazonses.com
+    reference: https://docs.aws.amazon.com/ses/latest/dg/send-email-getting-started.html
     description: >-
       SPF `include:amazonses.com` authorizes Amazon SES to send
       mail on behalf of the domain. Typically a sender-only
@@ -146,6 +157,7 @@ fingerprints:
   detections:
   - type: spf
     pattern: sendgrid.net
+    reference: https://docs.sendgrid.com/ui/account-and-settings/how-to-set-up-domain-authentication
     description: >-
       SPF `include:sendgrid.net` authorizes SendGrid (a Twilio
       property) to send mail on behalf of the domain. SendGrid
@@ -159,6 +171,7 @@ fingerprints:
   detections:
   - type: spf
     pattern: mailgun.org
+    reference: https://documentation.mailgun.com/en/latest/quickstart-sending.html
     description: >-
       SPF `include:mailgun.org` authorizes Mailgun (a Sinch
       property) to send mail on behalf of the domain.
@@ -171,6 +184,7 @@ fingerprints:
   detections:
   - type: spf
     pattern: spf1.sendcloud.org
+    reference: https://www.sendcloud.com/help-center/
     description: >-
       SPF `include:spf1.sendcloud.org` authorizes SendCloud
       (a transactional and marketing-mail sender common in EU
@@ -181,6 +195,7 @@ fingerprints:
       EU shipping platform of the same name.
   - type: spf
     pattern: spf2.sendcloud.org
+    reference: https://www.sendcloud.com/help-center/
     description: >-
       Alternative SendCloud SPF include (`spf2`), used alongside
       `spf1` for SPF lookup-count optimization. Same outbound-
@@ -192,6 +207,7 @@ fingerprints:
   detections:
   - type: spf
     pattern: postmarkapp.com
+    reference: https://postmarkapp.com/support/article/1124-
     description: >-
       SPF include matching against Postmark (an ActiveCampaign
       property, formerly Wildbit). Authorizes Postmark to send
@@ -204,6 +220,7 @@ fingerprints:
   detections:
   - type: spf
     pattern: sparkpostmail.com
+    reference: https://www.sparkpost.com/docs/
     description: >-
       SPF include matching against SparkPost's
       `sparkpostmail.com` (a MessageBird and Bird property).
@@ -217,6 +234,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^Sendinblue-code
+    reference: https://help.brevo.com/hc/en-us
     description: >-
       Legacy Sendinblue domain-verification TXT (the brand
       rebranded to Brevo, but pre-rebrand verifications still
@@ -226,6 +244,7 @@ fingerprints:
       volume; the verification persists post-rebrand.
   - type: txt
     pattern: ^brevo-code
+    reference: https://help.brevo.com/hc/en-us
     description: >-
       Post-rebrand Brevo (formerly Sendinblue) domain-
       verification TXT. Same administrative-binding semantics
@@ -240,6 +259,7 @@ fingerprints:
   detections:
   - type: spf
     pattern: servers.mcsv.net
+    reference: https://mailchimp.com/help/set-up-email-domain-authentication/
     description: >-
       SPF `include:servers.mcsv.net` authorizes Mailchimp (an
       Intuit property) to send marketing mail on behalf of the
@@ -247,6 +267,7 @@ fingerprints:
       include predates the Intuit acquisition.
   - type: spf
     pattern: spf.mandrillapp.com
+    reference: https://mailchimp.com/help/set-up-email-domain-authentication/
     description: >-
       SPF `include:spf.mandrillapp.com` authorizes Mandrill
       (Mailchimp's transactional-mail product) to send on
@@ -261,6 +282,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^v=TLSRPTv1
+    reference: https://datatracker.ietf.org/doc/html/rfc8460
     description: >-
       SMTP TLS Reporting (RFC 8460) policy TXT, found at
       `_smtp._tls.<domain>`. Indicates the domain has opted in
@@ -276,6 +298,7 @@ fingerprints:
   detections:
   - type: spf
     pattern: autospf.com
+    reference: https://autospf.com/
     description: >-
       SPF include matching AutoSPF, a flattening and lookup-count
       management service. Indicates the domain uses an external
@@ -289,12 +312,14 @@ fingerprints:
   detections:
   - type: spf
     pattern: ondmarc.com
+    reference: https://www.redsift.com/ondmarc
     description: >-
       SPF include matching OnDMARC (Red Sift's email-
       authentication-management product). Indicates the domain
       uses OnDMARC for SPF or DMARC management.
   - type: dmarc_rua
     pattern: ondmarc.com
+    reference: https://www.redsift.com/ondmarc
     description: >-
       DMARC `rua=` aggregate-report target at OnDMARC (Red
       Sift). Indicates the domain sends DMARC aggregate reports
@@ -307,12 +332,14 @@ fingerprints:
   detections:
   - type: spf
     pattern: dmarcian.com
+    reference: https://dmarcian.com/dmarc-record-wizard/
     description: >-
       SPF include matching dmarcian, a DMARC-management and
       SPF-optimization vendor. Indicates the domain uses
       dmarcian's tooling.
   - type: dmarc_rua
     pattern: dmarcian.com
+    reference: https://dmarcian.com/dmarc-record-wizard/
     description: >-
       DMARC `rua=` aggregate-report target at dmarcian.
       Indicates the domain sends DMARC aggregate reports to
@@ -325,12 +352,14 @@ fingerprints:
   detections:
   - type: spf
     pattern: easydmarc.com
+    reference: https://easydmarc.com/blog/
     description: >-
       SPF include matching EasyDMARC, an email-authentication-
       management vendor. Indicates the domain uses EasyDMARC's
       tooling.
   - type: dmarc_rua
     pattern: easydmarc.com
+    reference: https://easydmarc.com/blog/
     description: >-
       DMARC `rua=` aggregate-report target at EasyDMARC.
       Indicates the domain sends DMARC aggregate reports to
@@ -343,12 +372,14 @@ fingerprints:
   detections:
   - type: spf
     pattern: valimail.com
+    reference: https://help.valimail.com/
     description: >-
       SPF include matching Valimail, an email-authentication-
       automation and SPF-management vendor. Indicates the
       domain uses Valimail's tooling.
   - type: dmarc_rua
     pattern: valimail.com
+    reference: https://help.valimail.com/
     description: >-
       DMARC `rua=` aggregate-report target at Valimail.
       Indicates the domain sends DMARC aggregate reports to
@@ -360,6 +391,7 @@ fingerprints:
   detections:
   - type: dmarc_rua
     pattern: agari.com
+    reference: https://www.fortra.com/products/email-fraud-protection-agari-brand-protection
     description: >-
       DMARC `rua=` aggregate-report target at Agari (a Fortra
       property after the Helpsystems / Fortra acquisitions).
@@ -372,6 +404,7 @@ fingerprints:
   detections:
   - type: dmarc_rua
     pattern: emaildefense.proofpoint.com
+    reference: https://www.proofpoint.com/us/products/email-protection/email-fraud-defense
     description: >-
       DMARC `rua=` aggregate-report target at Proofpoint Email
       Fraud Defense. Indicates the domain sends DMARC aggregate
@@ -384,6 +417,7 @@ fingerprints:
   detections:
   - type: dmarc_rua
     pattern: uriports.com
+    reference: https://www.uriports.com/dmarc/
     description: >-
       DMARC `rua=` aggregate-report target at URIports.
       Indicates the domain sends DMARC aggregate reports to
@@ -397,6 +431,7 @@ fingerprints:
   detections:
   - type: dmarc_rua
     pattern: dmarcadvisor.com
+    reference: https://www.dmarcadvisor.com/
     description: >-
       DMARC `rua=` aggregate-report target at DMARC Advisor.
       Indicates the domain sends DMARC aggregate reports to
@@ -408,6 +443,7 @@ fingerprints:
   detections:
   - type: dmarc_rua
     pattern: powerdmarc.com
+    reference: https://powerdmarc.com/dmarc-record/
     description: >-
       DMARC `rua=` aggregate-report target at PowerDMARC.
       Indicates the domain sends DMARC aggregate reports to
@@ -419,6 +455,7 @@ fingerprints:
   detections:
   - type: dmarc_rua
     pattern: dmarc-analyzer.com
+    reference: https://www.mimecast.com/products/dmarc-analyzer/
     description: >-
       DMARC `rua=` aggregate-report target at Mimecast DMARC
       Analyzer (formerly the standalone DMARC Analyzer vendor

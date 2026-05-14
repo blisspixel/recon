@@ -13,7 +13,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^openai-domain-verification=
-    description: OpenAI enterprise domain verification for ChatGPT Team/Enterprise
+    description: >-
+      OpenAI domain-verification TXT (`openai-domain-verification=`
+      prefix). Indicates the domain is administratively bound to a
+      ChatGPT Team or Enterprise tenant, typically as the SSO and
+      provisioning precondition. Does not prove active usage; the
+      verification ships before users are licensed.
     reference: https://help.openai.com/en/articles/8871611-domain-verification
 - name: Anthropic (Claude)
   slug: anthropic
@@ -24,7 +29,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^anthropic-domain-verification
-    description: Anthropic Claude enterprise domain claim
+    description: >-
+      Anthropic domain-verification TXT for Claude for Work / Claude
+      Enterprise tenant claim. Indicates an Anthropic workspace is
+      bound to the domain. Does not by itself prove the workspace is
+      in active use; verification is the SSO and provisioning hook.
+    reference: https://docs.anthropic.com/en/api/getting-started
 - name: Mistral AI
   slug: mistral
   category: AI & Generative
@@ -32,7 +42,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^mistral-domain-verification=
-    description: Mistral AI enterprise domain verification for SAML SSO
+    description: >-
+      Mistral AI enterprise domain-verification TXT
+      (`mistral-domain-verification=` prefix). Indicates the domain
+      is registered with a Mistral tenant for SAML SSO. Does not
+      indicate which Mistral product line is in use; the verification
+      is shared across the enterprise surface.
+    reference: https://docs.mistral.ai/
 - name: Perplexity Enterprise
   slug: perplexity
   category: AI & Generative
@@ -40,7 +56,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^perplexity-domain-verification=
-    description: Perplexity AI Enterprise Pro domain verification
+    description: >-
+      Perplexity Enterprise Pro domain-verification TXT. Indicates the
+      domain is bound to a Perplexity enterprise workspace as the
+      SSO-enablement step. Does not prove active seat usage; some
+      orgs verify the domain during a trial without rolling out.
+    reference: https://docs.perplexity.ai/
 - name: n8n (Workflow Automation)
   slug: n8n
   category: AI & Generative
@@ -48,7 +69,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^n8n-domain-verification=
-    description: n8n workflow automation platform domain verification
+    description: >-
+      n8n workflow-automation domain-verification TXT for the
+      n8n Cloud enterprise tier. Indicates an n8n Cloud workspace is
+      bound to the domain. Does not distinguish self-hosted from
+      managed n8n; this TXT is specific to the managed-cloud
+      enterprise path.
+    reference: https://docs.n8n.io/
 - name: Dify (AI App Builder)
   slug: dify
   category: AI & Generative
@@ -56,7 +83,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^dify-domain-verification=
-    description: Dify AI application builder domain verification
+    description: >-
+      Dify AI app-builder domain-verification TXT. Indicates the
+      domain is registered with a Dify workspace, typically for SSO
+      or custom-domain hosted apps. Does not by itself indicate
+      production deployment; many orgs verify during evaluation.
+    reference: https://docs.dify.ai/
 - name: AutoGen (Microsoft)
   slug: autogen
   category: AI & Generative
@@ -64,7 +96,13 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^autogen-domain-verification=
-    description: Microsoft AutoGen agentic framework domain verification
+    description: >-
+      Microsoft AutoGen agentic-framework domain-verification TXT.
+      Indicates the domain is registered with AutoGen Studio or the
+      AutoGen managed-service path. Does not prove the org's runtime
+      agents reach external endpoints from this domain; the TXT is a
+      tenant-claim signal, not a runtime signal.
+    reference: https://microsoft.github.io/autogen/
 - name: CrewAI Agent Interface Discovery (AID)
   slug: crewai-aid
   category: AI & Generative
@@ -72,7 +110,12 @@ fingerprints:
   detections:
   - type: subdomain_txt
     pattern: _agent:v=aid1;.*(?:src=|uri=)
-    description: CrewAI AID TXT record at _agent.<domain> advertising autonomous agent MCP endpoints
+    description: >-
+      CrewAI Agent Interface Discovery TXT at `_agent.<domain>`,
+      advertising autonomous-agent MCP endpoints per the AID v1
+      proposal. Indicates the org is publishing discoverable agent
+      surfaces. Does not prove the advertised endpoints are reachable
+      or authenticated; AID is a discovery layer, not a contract.
     reference: https://github.com/crewAIInc/crewAI/discussions/3164
 - name: LangSmith Enterprise
   slug: langsmith
@@ -81,7 +124,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: \.p\.api\.smith\.langchain\.com$
-    description: CNAME delegation to LangSmith managed GCP infrastructure for AI observability
+    description: >-
+      CNAME delegation to LangSmith's managed-GCP infrastructure for
+      AI observability and tracing. Indicates the domain routes
+      LangSmith traffic through LangChain's hosted control plane.
+      Does not prove which LangChain SDKs are emitting traces; the
+      CNAME is the ingestion surface, not the application code.
     reference: https://docs.langchain.com/langsmith/cloud
 - name: MCP DNS Discovery
   slug: mcp-discovery
@@ -90,5 +138,11 @@ fingerprints:
   detections:
   - type: subdomain_txt
     pattern: _mcp:^v=mcp1;
-    description: MCP DNS-native discovery record at _mcp.<domain> advertising Model Context Protocol endpoints
+    description: >-
+      Model Context Protocol DNS discovery record at `_mcp.<domain>`,
+      advertising MCP server endpoints per the v1 discovery draft.
+      Indicates the org is publishing MCP endpoints for agent
+      discovery. Does not prove the advertised servers are reachable
+      or implement the current MCP spec; treat as discovery metadata,
+      not a contract.
     reference: https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/2368

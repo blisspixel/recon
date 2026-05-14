@@ -68,6 +68,7 @@ docs/accuracy.md
 !/validation/v1.9.5-stability.md
 !/validation/compute_node_stability.py
 !/validation/v1.9.6-stability-update.md
+!/validation/v1.9.8-metadata-audit.md
 # validation/__init__.py — added in v1.9.2 to make ``validation`` a
 # proper package (previously implicit namespace) so static analysis
 # resolves intra-package imports cleanly.

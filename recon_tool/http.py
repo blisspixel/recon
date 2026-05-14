@@ -22,7 +22,7 @@ import asyncio
 import ipaddress
 import logging
 import socket
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import httpx
@@ -225,7 +225,7 @@ async def http_client(
     provided: httpx.AsyncClient | None = None,
     timeout: float = DEFAULT_TIMEOUT,
     retry_transient: bool = True,
-) -> AsyncIterator[httpx.AsyncClient]:
+) -> AsyncGenerator[httpx.AsyncClient]:
     """Yield an httpx.AsyncClient — reuses the provided one or creates a new one.
 
     If a client is provided, it is yielded as-is (caller owns lifecycle).

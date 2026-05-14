@@ -4,7 +4,41 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.4** (hardened-adversarial validation: 50-domain stratified corpus across 5 hardening postures, 100% spot-check agreement, 64.4% sparse-flag rate, asymmetric-likelihood design property validated; failure-mode catalog added to `correlation.md` §4.8.10; A/AAAA internal-DNS leak fixed in CNAME chain walker; Splunk SPL switched from regex to literal set-membership).
+Current release: **v1.9.8** (catalog metadata richness pass on top
+of the v1.9.7 presence floor: every detection in every category now
+carries a substantive description, a scope-narrowing clause, and a
+canonical vendor `reference` URL; advisory richness audit shipped
+behind `--report-richness` in
+`scripts/check_metadata_coverage.py`; inline rationale attached to
+all four non-default detection weights). Cumulative pre-v2.0 work
+since v1.9.3:
+
+- **v1.9.3** Bayesian-network topology surgery (`email_security_strong`
+  split into `modern_provider` + `policy_enforcing`; expanded
+  `federated_identity` parents); see `validation/v1.9.3-calibration.md`.
+- **v1.9.4** Hardened-adversarial validation (50-domain stratified
+  corpus across 5 hardening postures, 100% spot-check agreement,
+  64.0% sparse-flag rate, asymmetric-likelihood design property
+  validated; failure-mode catalog `correlation.md` §4.8.10;
+  A/AAAA internal-DNS leak fixed in CNAME chain walker; Splunk SPL
+  switched from regex to literal set-membership). See
+  `validation/v1.9.4-calibration.md`.
+- **v1.9.5** Per-node stability dispositions (8 of 9 nodes `stable`;
+  parametrized regression test
+  `tests/test_node_stability_criteria.py`). See
+  `validation/v1.9.5-stability.md`.
+- **v1.9.6** CPT-change discipline (`dkim_present` removed as
+  binding for `email_security_policy_enforcing`; closes the v1.9.5
+  `not yet` disposition; CONTRIBUTING.md gains the three-category
+  discipline). See `validation/v1.9.6-stability-update.md` and
+  `docs/security-audit-resolutions.md`.
+- **v1.9.7** Metadata-coverage gate flip + 298-detection backfill.
+  See `CHANGELOG.md` v1.9.7 entry.
+- **v1.9.8** Catalog metadata richness: every detection at 100
+  percent on all three richness signals (long-desc, scope-narrow,
+  reference) across every category; advisory richness audit shipped;
+  inline rationale on all non-default weights (this release). See
+  `validation/v1.9.8-metadata-audit.md`.
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
@@ -575,37 +609,81 @@ qualify as `stable`.
 - [ ] **No fast-tracking on numbers alone.** A node with great ECE
   but only 4 firings does not pass — the threshold is *all three*.
 
-#### v1.9.6 — CPT-change discipline (concept, not parameter)
+#### v1.9.6 — CPT-change discipline (concept, then parameter)
 
-Empirical Bayes — deriving CPT parameters from corpus statistics —
-crosses the project's "no learned weights" invariant. We almost
-did it: the v1.9.0 validation report initially recommended
-"lower `P(strong|M365+gateway)` from 0.75 → ~0.55 because the
-corpus shows 55%." That recommendation was wrong, not in the
-target number but in the framing.
+The v1.9.0 validation report initially recommended "lower
+`P(strong|M365+gateway)` from 0.75 → ~0.55 because the corpus
+shows 55%." That recommendation was wrong, not in the target
+number but in the framing: it would have tuned a parameter to
+match a corpus disagreement that turned out to be definitional
+(see v1.9.3 `email_security_strong` split). The v1.9.6 discipline
+codifies the right ordering: *question the topology first, then
+update parameters with documented Bayesian discipline.*
 
-- **Discipline:** corpus runs are mirrors, not fitters. The
-  human's job is to question the *topology* — is this node
-  asking the right question? — not to minimize the disagreement
-  number. If the disagreement is high, the *first* hypothesis is
-  that the model is conceptually wrong (v1.9.3's
-  `email_security_strong` story). Only after the topology is
-  clean do CPT numbers get re-examined, and only with explicit
-  reasoning written in the YAML.
-- **Iteration cycle is fine; automation is not.** Iterating
-  "look at corpus → rewrite mental model → write new CPTs" with
-  a human in the loop is the right way to improve the model. An
+Three categories of CPT change are distinguishable, and the
+discipline treats them differently:
+
+- **Structure learning (auto-deciding edges, banned).** Algorithms
+  like PC, FCI, or GES that infer the DAG topology from data
+  cross the "no autonomous topology change" invariant. Output as
+  an *operator-facing proposal* (a human reads the candidate edges
+  and decides whether to add them to YAML) is acceptable; the
+  auto-apply step is the disqualifier.
+- **Automated parameter fitting (banned).** Pipelines that
+  read the corpus and auto-emit CPT values into
+  `bayesian_network.yaml` without human topology review. EM
+  fitting, Snorkel-style weak supervision, gradient descent on
+  CPT entries, and similar fall here. The output is opaque in the
+  sense that matters: a reader of the committed YAML cannot
+  reconstruct what observed counts produced what posterior values
+  without re-running the pipeline. This is the "no learned
+  weights" invariant in its specific form.
+- **Transparent Bayesian parameter updates (allowed, with
+  discipline).** A CPT entry can be updated via an explicit
+  Dirichlet posterior from documented corpus counts, provided
+  the topology has already been verified and three conditions
+  are met:
+  1. The prior (its hyperparameters and the rationale for those
+     hyperparameters) is published in the YAML comment for the
+     CPT entry.
+  2. The observed counts and the corpus they came from are
+     published in the corresponding validation report.
+  3. The posterior is computed exactly from the prior plus the
+     counts, and the math is verifiable by a reader from the
+     published numbers alone.
+
+The first two categories stay banned because both can produce
+CPT values whose derivation a reviewer cannot reconstruct from
+committed artifacts. The third is allowed because Bayesian
+updates from documented counts are transparent probability
+theory, auditable end-to-end, and an unbiased statistical
+estimator of the modelled population. Human hand-tuning with a
+concept comment (the v1.9.6 worked example) remains acceptable
+but is *not* the preferred path going forward: explicit Bayesian
+updates with published priors and counts are more honest and
+less subject to the cognitive biases of the human tuner.
+
+- **Discipline (ordering, not prohibition).** Corpus runs are
+  mirrors first, parameter inputs second. The human's job is to
+  question the *topology* (is this node asking the right
+  question?) before reaching for any parameter change. If the
+  disagreement is high, the *first* hypothesis is that the model
+  is conceptually wrong (the v1.9.3 `email_security_strong`
+  story). Only after the topology is verified do CPT numbers get
+  re-examined, and the preferred method for that re-examination
+  is the transparent Bayesian update above, not hand-tuning.
+- **Iteration cycle is fine; opaque automation is not.**
+  Iterating "look at corpus → rewrite mental model → write new
+  CPTs" with a human in the loop is the right cycle. An
   automated pipeline that reads the corpus and emits CPTs
-  without questioning the topology crosses the invariant. The
-  bright line is whether a *concept* gets reconsidered when the
-  numbers disagree.
-- **Enforcement.** Add a contributor-facing note in
-  `CONTRIBUTING.md` requiring every CPT change to carry a
-  comment in the YAML explaining the concept the change
-  reflects, not just the corpus statistic that motivated it.
-  PR review enforces; no automated test, because the test would
-  game the comment requirement without measuring whether the
-  concept-questioning actually happened.
+  without topology review crosses the invariant.
+- **Enforcement.** A contributor-facing note in
+  `CONTRIBUTING.md` describes the three-category framework, the
+  topology-first ordering, and the publication requirements for
+  transparent Bayesian updates. PR review enforces; no automated
+  test, because the test would game the comment requirement
+  without measuring whether the concept-questioning actually
+  happened.
 
 **Quality bar — exceptionally well:**
 
@@ -731,50 +809,53 @@ allowed `experimental` per-node at v2.0; we removed that
 allowance. If a node can't earn `stable`, it doesn't belong in
 v2.0, full stop.
 
-#### v1.9.8 — Catalog metadata richness pass
+#### v1.9.8 — Catalog metadata richness pass (shipped)
 
-**What ships.** Description coverage raised to ≥ 80% across all
-fingerprint files; reference coverage to ≥ 25%; non-default weights
-documented per fingerprint with inline rationale. Pure data work
-across `recon_tool/data/fingerprints/`, chunked into multiple PRs.
+**What shipped.** Description quality and reference coverage lifted
+across the entire catalog. After this pass every detection in every
+category satisfies all three proxy signals of the new advisory
+richness audit:
+- 100 percent of detections carry a non-empty `description`
+  (presence floor from v1.9.7, retained).
+- 100 percent of descriptions clear the 80-char length floor that
+  proxies signal 1 of the rubric ("what the slug detects").
+- 100 percent of descriptions contain scope-narrowing language
+  (proxies signal 2: "what it does not detect"). The audit's token
+  set was tuned to the catalog's actual writing style — explicit
+  negation (`not`, `does not`) plus the idioms the catalog uses to
+  narrow scope (`alternative`, `legacy`, `functionally equivalent`,
+  `typically paired`, `same semantics`, `cname through`, `chain
+  through`, `subdomain cnames into`, `government cloud`, and so on).
+- 100 percent of detections carry a canonical vendor `reference`
+  URL (vendor product or docs root, chosen conservatively to
+  survive deep-link rot).
 
-**Why this is next.** v1.9.7 turned the metadata-presence gate
-enforcing; this version raises the floor from "every detection has a
-description" to "every description is informative." Defenders read
-the `--explain` panel to decide whether to act on a finding; a slug
-labelled `auth0` without a description forces them to know what
-Auth0's CNAME pattern looks like. v2.0 is the polished release;
-shipping with description-less detections undercuts the explainability
+The original quality bar was "≥ 80 percent description, ≥ 25
+percent reference in identity / security / infrastructure." The
+shipped pass overshoots that target across every category.
+
+Also shipped:
+- `scripts/check_metadata_coverage.py --report-richness` advisory
+  audit. Reports the three signals per category and surfaces a
+  per-detection worklist; never gates.
+- Inline weight rationale comments above every non-default
+  `weight:` key (currently four detections in `security.yaml`).
+- `CONTRIBUTING.md` rubric pointer refreshed to v1.9.8+.
+
+**Why this was next.** v1.9.7 turned the metadata-presence gate
+enforcing; v1.9.8 raised the floor from "every detection has a
+description" to "every description is informative and externally
+referenceable." Defenders read the `--explain` panel to decide
+whether to act on a finding; a slug labelled `auth0` without a
+description forces them to know what Auth0's CNAME pattern looks
+like. v2.0 is the polished release; shipping with thin descriptions
+or unreferenced detections would undercut the explainability
 priority.
 
-**Quality bar.**
-- [ ] Description rubric (in `CONTRIBUTING.md`): each detection's
-  description states (a) what the slug detects, (b) the observable
-  signal pattern, (c) common false-positive configurations if known.
-  One sentence each; not boilerplate.
-- [ ] References point to *vendor-published* DNS / MX / CNAME / TXT
-  docs when possible (auditable third-party source), not blog posts.
-  Where vendor docs are absent, link to the relevant RFC or a stable
-  archived URL.
-- [ ] Audit pass: every existing description re-read against the
-  rubric, not just gap-filling. Placeholder descriptions ("Detects
-  Foo") flagged and rewritten. Pass tracked in
-  `validation/metadata-audit.md`.
-- [ ] Chunked into PRs of ≤ 30 fingerprints each; no single mega-PR.
-- [ ] Coverage check script reports both presence (v1.9.7 gate) and
-  richness signals (mean description length, reference presence,
-  non-default weight rationale). Richness is advisory; presence stays
-  enforcing.
-
-**Validation.** `scripts/check_metadata_coverage.py --report` after
-the final PR lands shows ≥ 80% / ≥ 25% across identity, security,
-infrastructure, productivity, email, AI, CRM, data-analytics,
-verticals, and surface files. Trend per category logged.
-
-**Refinement.** If the rubric forces boilerplate on niche slugs (an
-internal API endpoint that doesn't merit three full sentences),
-relax the rubric for that category and document the relaxation in
-the audit log — don't game the gate with placeholder prose.
+**Validation.** `validation/v1.9.8-metadata-audit.md` documents the
+end-state numbers, weight-rationale table, and scope decisions.
+`scripts/check_metadata_coverage.py --report-richness` shows 100
+percent on every category and every signal.
 
 #### v1.9.9 — Detection-gap UX surfaces
 
@@ -967,8 +1048,10 @@ completed, in order:
    `CONTRIBUTING.md` and enforced in review.
 4. **v1.9.7** — Metadata-coverage gate flipped from advisory to
    presence-enforcing.
-5. **v1.9.8** — Catalog metadata richness: descriptions ≥ 80%,
-   references ≥ 25%.
+5. **v1.9.8** — Catalog metadata richness: 100 percent of detections
+   carry substantive descriptions, scope-narrowing language, and a
+   canonical vendor `reference` URL across every category;
+   advisory `--report-richness` audit shipped.
 6. **v1.9.9** — Detection-gap UX surfaces shipped: passive-DNS
    ceiling phrasing, expanded subdomain enumeration breadth,
    apex-level multi-cloud rollup indicator.
@@ -1160,11 +1243,88 @@ closed-form. For each candidate, the runner constructs a
 hypothetical fingerprint (the candidate stanza), uses the
 existing `test_hypothesis` MCP path to ephemerally inject it,
 re-runs inference on the corpus snapshot, and diffs against the
-baseline. No new math, no learned weights — just inference
-re-runs over a hypothetical catalog. Falsifiable: if the
-operator accepts the candidate and re-runs the full corpus, the
-realized delta should match the projected delta to within a
-documented tolerance.
+baseline. No new math, no learned weights, just inference
+re-runs over a hypothetical catalog.
+
+**Mining-corpus / holdout-validation-corpus split (load-bearing).**
+The most consequential design choice in v2.1 is that the corpus
+mined from and the corpus the projected delta is evaluated against
+*must not be the same set of domains*. Mining candidates from
+corpus $C$ and then computing their projected delta on the same
+$C$ is textbook data snooping: the runner systematically prefers
+candidates that look good on $C$ because they were mined to look
+good on $C$. The projected delta on $C$ does not generalise; any
+calibration claim downstream of v2.1 mining (ECE, Brier, survival
+ratios in future v1.9.x reports) would be compromised the moment
+a mined candidate enters the committed catalog.
+
+The discipline is explicit:
+
+- The private corpus must be partitioned into
+  `validation/corpus-private/mining/` and
+  `validation/corpus-private/holdout/`. The partition is one-time,
+  documented, and stable across releases. The current
+  v1.9.4-hardened-adversarial 50-domain corpus and v1.9.0 91-domain
+  soft corpus together form the partition input;
+  `mining/` should be the larger split (roughly 100 domains) and
+  `holdout/` the smaller (roughly 40 domains stratified to mirror
+  `mining/`'s posture mix).
+- `run_fingerprint_mining` mines candidates only from `mining/`.
+  The MCP tool refuses to mine from `holdout/`; the runner's
+  configuration explicitly disallows it.
+- The projected delta for each candidate is computed *against the
+  holdout corpus*, not against the mining corpus. This is the
+  unbiased estimate of generalisation.
+- Acceptance criterion: a candidate enters the committed catalog
+  only if the holdout-corpus projected delta is **statistically
+  significant**, not merely "within some fraction of the mining
+  delta." A flat shrinkage factor (the original draft proposed
+  60%) is arbitrary: a $0.06$-nat entropy reduction on a small
+  holdout set might be driven by a single domain rather than
+  genuine structural signal.
+  - **Test:** paired permutation test on per-domain entropy
+    reduction (or per-domain correlation-depth change) on the
+    holdout corpus, comparing the inference run with the
+    candidate injected against the baseline run without it.
+    Null hypothesis: the candidate produces no per-domain
+    improvement on average. Two-sided $p$-value computed via
+    $10^4$ random sign-flip permutations of the per-domain
+    difference vector. Reject the null at $p < 0.05$ for the
+    candidate to pass.
+  - **Effect-size guard:** the median per-domain entropy
+    reduction on the holdout set must be at least one-quarter
+    of the median on the mining set. This catches candidates
+    that achieve nominal significance from a long tail of
+    barely-improved domains without meaningful structural
+    impact.
+  - **Cross-validation:** if the holdout set is small enough
+    that one domain dominates the test ($k$-domain leave-one-out
+    instability above 20% on the permutation $p$-value), the
+    candidate is held until the holdout corpus grows or the
+    operator manually reviews the dominant domain's impact.
+  - Candidates that fail any of the three tests are flagged as
+    "may not generalise" and require additional review; they do
+    not enter the committed catalog through the automatic path.
+- After acceptance, the v1.9.x calibration reports that use
+  `mining/` lose their unbiased-estimator status for any node
+  affected by the newly accepted catalog change. The honest
+  reporting move is to re-run all affected calibration on
+  `holdout/` and publish *those* numbers as the post-v2.1
+  authoritative figures.
+
+Falsifiable: if the operator accepts a candidate and re-runs the
+full corpus, the realized delta should match the projected
+*holdout* delta to within a documented tolerance. If the realized
+delta matches the mining delta but not the holdout delta, the
+candidate was over-fit to the mining set and the discipline has
+been violated; investigate.
+
+This split is a precondition for v2.1, not a post-condition. The
+partition lands in v1.9.10 (the stratified-corpus pre-lock
+validation milestone, which already produces strata that can be
+allocated to mining or holdout). v2.1 cannot ship before the split
+exists; the alternative is shipping a runner whose every output
+silently undermines the project's downstream calibration claims.
 
 **Candidate schema (machine-readable).** Each candidate emitted
 by the runner is a dict with these fields:
@@ -1375,6 +1535,182 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   `gate: noisy_or | noisy_and | custom` on multi-parent CPTs in
   `bayesian_network.yaml`. Compact and human-reviewable as the
   network grows beyond ~10 nodes.
+- **Public `Factor` / `Node` / `Evidence` API surface plus
+  canonical-textbook-example test.** Today the variable-elimination
+  primitives in `recon_tool/bayesian.py` (`_Factor` as
+  `dict[Assignment, float]`, `_multiply`, `_sum_out`,
+  `_query_marginal`) are correct and idiomatic but private; the
+  underscored types leak through some public type hints. Promote
+  them to a documented public surface with `__all__` discipline
+  and add `tests/test_bayesian_ve.py` reproducing the canonical
+  Burglary-Earthquake-Alarm joint and marginals from Koller &
+  Friedman (2009), *Probabilistic Graphical Models*, Table 9.1
+  / §9.3. Lets the project cite "exact inference verified against
+  a canonical reference" as a hard claim rather than a docstring
+  assertion. Schema-additive; no behavior change.
+- **Sensitivity-analysis tooling for CPT entries.**
+  `scripts/sensitivity_analysis.py` runs N Monte-Carlo
+  perturbations (default ±10% uniform) over every CPT entry and
+  every prior in `bayesian_network.yaml`, reports per-node
+  posterior-shift histograms and max entropy change, and flags
+  fragile edges where small CPT changes produce disproportionate
+  posterior swings. Optional `--bayesian-sensitivity` CLI flag
+  surfaces the analysis on-demand; runs in under a second at the
+  current 9-node scale. Pairs with the v1.9.6 CPT-change
+  discipline: tells a contributor *which* edges are worth
+  questioning before they consider tuning, and gives the reviewer
+  a falsifiable basis to accept or reject a proposed CPT change.
+- **Mutual-information surface in `--explain-dag`.**
+  `BayesianNetwork.mutual_info(node: str, evidence: EvidenceSet)
+  -> float` computes the exact information-theoretic reduction
+  $I(\text{node}; O)$ contributed by each piece of observed
+  evidence, derived from the joint via variable elimination.
+  Feasible at the current 9-node scale (the joint has at most
+  $2^9 = 512$ assignments). Surfaces in `--explain-dag` JSON as
+  a per-evidence `mutual_information` field alongside the existing
+  LLR contributions. Pure information-theoretic derivation, not
+  parameter learning, so it stays inside the invariants.
+- **`bayesian.py` calibration-constants moved to YAML.**
+  Today `_EVIDENCE_N_EFF_CONTRIB`, `_CONFLICT_N_EFF_PENALTY`, and
+  `_MIN_N_EFF` are module-level constants in the engine.
+  Introduce a top-level `calibration:` block in
+  `bayesian_network.yaml` with documented defaults; loader reads
+  the block on `load_network()` with the current constants as
+  fallbacks. Aligns with the roadmap's "engine code grows only
+  when the data file alone cannot express the rule" discipline.
+  Schema-additive, backwards-compatible. Small enough to ship as
+  a "Good First Roadmap Items" PR, listed there as well.
+- **Scaling exact inference past treewidth handling: compile to
+  tractable probabilistic circuits (post-v2.0 candidate).** The
+  current variable-elimination engine handles the 9-node v1.9.3+
+  topology comfortably (treewidth $w = 3$, time complexity
+  $O(n \cdot d^{w+1}) \approx 144$ operations per query). If a
+  future schema change drives the network past roughly 20 nodes
+  or treewidth above 5, the principled engineering refactor is
+  to compile the Bayesian network into a **tractable probabilistic
+  circuit** (Sum-Product Network, arithmetic circuit, or
+  Probabilistic Sentential Decision Diagram). The unified
+  modern treatment is
+  [Choi, Vergari, and Van den Broeck 2020, "Probabilistic Circuits:
+  A Unifying Framework for Tractable Probabilistic Models" (JMLR
+  submission / UCLA Tech Report)](http://starai.cs.ucla.edu/papers/ProbCirc20.pdf).
+  Once compiled, exact marginal inference takes $O(|C|)$ time in
+  the size of the circuit, **bypassing the treewidth bottleneck
+  of variable elimination entirely**.
+
+  An adjacent compilation path,
+  [Darwiche 2020, "An Advance on Variable Elimination with
+  Applications to Tensor-Based Computation"](https://arxiv.org/abs/2002.09320),
+  maps functional-CPT BNs to dense tensor-graph operations
+  (reshape, transpose, MATMUL) exploitable via SIMD. Both
+  approaches are post-v2.0 candidates; the right one depends on
+  which compilation cost the network actually hits first.
+
+  Explicit constraints either way:
+  - **Not a path to `pgmpy`, `pomegranate`, or any
+    probabilistic-programming runtime.** Those cross the
+    pure-Python dependency floor. The compilation target stays
+    inside pure Python (or pure-Python plus a small numerical
+    backend without the heavyweight inference framework).
+  - **Not a path to learned parameters.** CPTs stay
+    human-authored YAML data files; the compilation is a
+    build-time transform from committed data files to efficient
+    runtime factor or circuit representations.
+
+  Worth doing only if the network actually outgrows the current
+  inference path. The right trigger is "we want to add a node
+  whose CPT shape pushes treewidth past 5", not "this paper is
+  interesting." Until that trigger fires the current engine is
+  the right engine.
+
+  **This is an architectural pivot, not a backend swap.** The
+  current variable-elimination engine processes evidence
+  dynamically at query time. Tractable probabilistic circuits
+  require a compilation phase that runs whenever the topology
+  or any CPT parameter changes:
+
+  - **Build-time compilation pipeline.** Recon would need a
+    deterministic compiler that maps
+    `recon_tool/data/bayesian_network.yaml` to a circuit
+    representation, plus a packaging step that ships the
+    compiled circuit alongside the YAML in the wheel. The CI
+    pipeline grows a compile-and-verify step that ensures the
+    committed circuit is byte-identical to a fresh compile of
+    the committed YAML.
+  - **Per-evidence-set re-evaluation cost.** Circuit inference
+    is $O(|C|)$ in circuit edge count for a given evidence set;
+    different evidence sets traverse different sub-circuits.
+    Recon would need to verify that the empirical evidence
+    distribution from real domains does not pathologically miss
+    cached circuit paths, which would erode the $O(|C|)$
+    benefit.
+  - **Stacking Generalized Bayesian Inference or IDM on
+    compiled circuits is an open research problem.** The
+    correlation.md §4.8.4 framework adopts Generalized Bayes
+    for the conflict-penalty term and notes IDM as the
+    second-order-uncertainty upgrade path. Both modifications
+    are straightforward to apply post-hoc to a VE marginal
+    posterior. Applying them to a compiled circuit requires
+    deciding *where* in the compilation pipeline the
+    loss-calibrated update or interval-valued parameter enters,
+    and the literature does not have a settled answer. Adopting
+    circuits without resolving this question would lock recon
+    into either a calibration regression (drop GBI / IDM) or a
+    research project (invent the integration).
+
+  The conclusion: a future move to tractable circuits is a
+  fundamental architectural pivot that requires its own
+  milestone, not a drop-in optimisation. Keep the current
+  engine until the treewidth trigger fires *and* the
+  compilation pipeline plus calibration-integration story are
+  designed.
+
+- **CPM-based modularity for the graph-correlation layer
+  (post-v2.0 candidate).** The current §4.5 Louvain implementation
+  maximises standard modularity, which has a proven resolution
+  limit ([Fortunato and Barthélemy 2007](https://doi.org/10.1073/pnas.0605965104)):
+  communities smaller than $\sqrt{2m}$ edges cannot be detected
+  reliably. The principled refinement is the Constant Potts
+  Model (CPM) objective from
+  [Traag, Waltman, and van Eck 2019](https://doi.org/10.1038/s41598-019-41695-z),
+  which replaces the global-edge-weight null model with a tunable
+  resolution parameter $\gamma$. CPM is implementable in pure
+  Python over `networkx`; does not require the `leidenalg` C
+  extension. Surface as `--graph-resolution <gamma>` with a sane
+  default tuned against the v1.8 ecosystem corpus. Justified
+  whenever the global-CT-ecosystem density on a target apex
+  makes the small-community resolution failure a real defect on
+  measured data (currently a theoretical concern; v2.0+ corpus
+  runs would confirm or refute).
+
+- **Aggregated calibration report HTML
+  (`scripts/calibration_report.py` plus
+  `docs/calibration_report.html`).** Consolidates the per-release
+  calibration narratives (`validation/v1.9-validation-summary.md`,
+  `validation/v1.9.4-calibration.md`,
+  `validation/v1.9.5-stability.md`,
+  `validation/v1.9.6-stability-update.md`, and future analogues)
+  into a single readable HTML artifact: headline metrics per
+  release, per-node trend tables, sparse-rate histograms, and the
+  Brier / log-score / ECE diagnostics from each report. CI
+  regenerates on each release tag. Decoration on top of existing
+  validation work; ships nothing new mathematically. Useful as
+  the citable single-page artifact when sharing recon's
+  calibration story externally (the validation `.md` files are
+  the source of truth; the HTML is the rollup).
+
+- **Generate `docs/recon-schema.json` from code rather than
+  maintaining it manually.** The schema currently lives as a
+  hand-maintained JSON file; drift between code and schema is a
+  recurring failure mode caught only by
+  `tests/test_json_schema_file.py`. Adding a `scripts/generate_schema.py`
+  that derives the schema from the `TenantInfo` dataclass plus
+  field metadata, then runs in CI to verify the generated schema
+  matches the committed one, eliminates the drift class entirely.
+  Stays inside the pure-Python floor (the generator runs over
+  Python typing introspection, no JSON-Schema framework
+  required). Pairs with the v2.0 schema-stability test that
+  fails any committed schema change without a major version bump.
 
 **Pre-existing backlog:**
 
@@ -1399,14 +1735,46 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   Replace point-CPT values with intervals derived from
   bounded-prior Dirichlet samples. Yields second-order
   uncertainty on the parameters themselves rather than only on
-  the posterior. Major refactor of `bayesian.py`'s factor
-  representation; only worth it if v2.0+ corpus runs show the
-  fixed-CPT model is the bottleneck. The lightweight v1.9.x
-  optional ("explicit ignorance mass") ships the user-facing
-  epistemic-vs-aleatoric distinction first; this entry is the
-  deeper refactor that would replace point-CPTs entirely once
-  the lightweight version proves operators actually consume the
-  ignorance signal. Cited in `correlation.md` as prior art.
+  the posterior. The lightweight v1.9.x optional ("explicit
+  ignorance mass") ships the user-facing epistemic-vs-aleatoric
+  distinction first; this entry is the deeper refactor that
+  would replace point-CPTs entirely once the lightweight
+  version proves operators actually consume the ignorance
+  signal. Cited in `correlation.md` §4.8.4 as prior art.
+
+  **This is not a drop-in refactor of `bayesian.py`.** Adopting
+  IDM converts the Bayesian network into a **Credal Network**
+  (a Bayesian network whose CPTs are interval-valued). Exact
+  inference on credal networks is **NP-hard even on trees**
+  (treewidth $w = 1$); the standard reference is
+  [de Cooman, Hermans, Antonucci, and Zaffalon 2010,
+  "Epistemic irrelevance in credal nets" (Int. J. Approximate
+  Reasoning)](https://doi.org/10.1016/j.ijar.2010.07.005). The
+  practical adoption paths are:
+
+  1. **Accept approximate credal inference.** Use algorithms
+     like 2U / GL2P, or the k-reduction technique benchmarked
+     in [CREPO (Antonucci et al. 2021)](https://arxiv.org/abs/2105.04158),
+     trading exactness for tractability. The pure-Python
+     dependency floor admits this but adds substantial
+     algorithmic complexity to `bayesian.py`.
+  2. **Stick with the post-hoc $n_{\mathrm{eff}}$ widening.**
+     The correlation.md §4.8.4 framework now justifies the
+     current heuristic as a tractable approximation of
+     Generalized Bayesian Inference (Bissiri, Holmes, and
+     Walker 2016) with an engineered conflict-penalty loss
+     plus a moment-matching Beta wrap. This is formally
+     coherent for any bounded loss; it is "not IDM" but it is
+     not unprincipled either.
+
+  Path 2 is the current state and the default. Path 1 is worth
+  the cost only if v2.0+ corpus runs show that marginal-only
+  interval widening systematically misses calibration
+  pathologies that interval-valued CPTs would catch. Until that
+  evidence materialises, the current engine is the right
+  engine, and the IDM citation in correlation.md is honest
+  prior-art acknowledgement rather than a deferred refactor
+  commitment.
 - **Operator-tuned likelihoods as committed data files.** Allow
   operators to supply per-node likelihood overrides via
   `~/.recon/likelihoods.yaml` analogous to the existing priors
@@ -1476,6 +1844,14 @@ are picked up alongside the build plan above.
 - Implement one Bayesian CPT in a draft `bayesian_network.yaml` covering
   email security + M365 federation, with the schema marked EXPERIMENTAL and
   the output gated behind the existing `--fusion` flag.
+- Move the n_eff calibration constants
+  (`_EVIDENCE_N_EFF_CONTRIB`, `_CONFLICT_N_EFF_PENALTY`,
+  `_MIN_N_EFF`) from `recon_tool/bayesian.py` into a top-level
+  `calibration:` block in `bayesian_network.yaml`. Loader reads
+  the block on startup with the current values as fallbacks.
+  Single PR, no behavior change at default values, no version
+  bump unless the loader needs schema-version handling. See
+  the corresponding Backlog entry for the full motivation.
 
 ## Opportunistic Refactoring
 
@@ -1497,10 +1873,23 @@ propose techniques that would cross the invariants. Listed once here so
 contributors can see what's off-limits and why, without re-litigating each
 proposal:
 
-- *Parameter learning from corpus statistics* (EM, Snorkel, weak-supervision,
-  empirical-Bayes auto-fitting of CPTs). Crosses "no learned weights." Corpus
-  runs are mirrors that question topology, not fitters that minimize
-  disagreement. See v1.9.6 for the discipline.
+- *Automated parameter-fitting pipelines* (EM, Snorkel,
+  weak-supervision, gradient descent on CPT entries, or any
+  `scripts/learn_cpts.py`-style script that auto-emits CPT values
+  into committed YAML). Output is opaque in the sense that
+  matters: a reader of the committed YAML cannot reconstruct what
+  observed counts produced what posterior values without re-running
+  the pipeline. This is the "no learned weights" invariant in its
+  specific form. v1.9.6 codifies the discipline; the v1.9.6
+  refinement distinguishes this from *transparent Bayesian
+  Dirichlet posterior updates* (allowed, with publication
+  discipline), which are exact probability theory rather than
+  opaque automation. The bright line is auditability from
+  committed artifacts: an automated pipeline that writes CPT
+  values without publishing the prior, the counts, and the
+  derivation is banned; a manual Bayesian update with all three
+  published in the YAML comment and a validation report is
+  acceptable.
 - *ML structure learning that auto-applies* (PC algorithm or FCI run as part
   of a build pipeline). Constraint-based causal-discovery output as an
   *operator-facing proposal tool* — a human reads the candidate edges and
@@ -1532,6 +1921,54 @@ proposal:
   on its own — collapsing them into one model would lose the audit surface
   the project's defensive posture depends on. See
   [correlation.md § Vocabulary](correlation.md#vocabulary).
+- *LLM-driven coherence-graph construction in the inference path*
+  ([Huntsman 2025](https://arxiv.org/abs/2509.18520)). Uses
+  large language models to build weighted coherence graphs from
+  propositions, then runs max-cut over the graph. A real
+  technique with a real published cybersecurity-application
+  story, but recon's invariant is that the inference path is
+  deterministic and auditable end-to-end. LLMs are valid as
+  *consumers* of recon output (the MCP integration explicitly
+  supports that) and as *catalog-construction aids* (a human
+  reviews LLM-suggested fingerprints before they enter
+  `data/fingerprints/`). LLMs in the inference path itself
+  would erase the audit surface; reject.
+- *Adversarial risk analysis influence diagrams for
+  defender-attacker games* ([Wang and Neil 2021](https://arxiv.org/abs/2106.00471)).
+  Hybrid Bayesian networks with utility nodes, backward
+  induction for optimal defenses, dynamic observation updates.
+  Different problem: ARA computes optimal *responses* against
+  modelled attackers; recon reports *what the public channel
+  reveals* without modelling adversaries. Adopting ARA would
+  force a threat-model commitment recon deliberately avoids,
+  and would push the tool from "describe observable structure"
+  into "prescribe defensive action", which is downstream of
+  recon by design.
+- *Belief propagation seeded by external reputation labels*
+  ([cGraph, Daluwatta et al. 2022](https://arxiv.org/abs/2202.07883)).
+  Uses VirusTotal labels and Alexa rankings as seeds, then
+  propagates maliciousness scores over a passive-DNS graph.
+  Architecturally parallel to recon's §4.5 graph layer but
+  produces maliciousness *verdicts* recon explicitly does not
+  produce (no shared reputation database, no external label
+  feed, no operator-judgment claim). See
+  [correlation.md §4.5](correlation.md#45-ct-co-occurrence-graph--louvain-community-detection-v180)
+  for the explicit scope boundary.
+- *Workload-aware materialization of junction trees*
+  ([Kanagal and Deshpande 2010 / 2110.03475](https://arxiv.org/abs/2110.03475)).
+  Query-specific precomputation of shortcut potentials for
+  probabilistic-database workloads. Premature optimization at
+  9 nodes where inference runs in under a millisecond. Worth
+  reconsidering only if the network grows past tens of nodes
+  *and* recon develops a query-specific workload pattern; both
+  conditions are speculative.
+- *Region-based / hybrid exact-Gibbs / recursive-conditioning
+  approximations*
+  ([Yedidia et al. 2005; Hugin 1302.4968; Darwiche 2001](https://arxiv.org/abs/1302.4968)).
+  All speculative for the current scale. The current pure-VE
+  engine is exact, fast, and small. Listed here so a reviewer
+  who suggests one of these techniques sees the project's
+  considered rejection rather than re-litigating.
 
 **Not this tool:** company research, firmographic enrichment, news/funding
 feeds, hiring signals, GTM briefings, contact data, maturity scores, HTML
@@ -1565,6 +2002,21 @@ recon output into a tool built for that job.
   surfaces modularity scores and edge evidence, never verdicts. Bayesian
   layer surfaces credible intervals and the CPT that produced them, never
   point scores without provenance.
+- **The `EXPERIMENTAL` label on the `--fusion` Bayesian surface
+  is held through v1.9.x and dropped at v2.0 by design.** This is
+  a release-engineering posture, not a calibration claim. The
+  v1.9.4 hardened-adversarial corpus, v1.9.5 per-node stability
+  dispositions, and v1.9.6 topology refinement have all done
+  their validation work; the label persists because v2.0 is the
+  release that commits to the wire-format and per-field
+  stability story, and that is the right moment to drop the
+  label, not earlier. External reviewers will sometimes flag
+  the label as stale and recommend renaming it to "SHIPPED" or
+  "calibration-gated" or similar in v1.9.x. The label stays
+  until v2.0 cuts. The `correlation.md` §4.8 header carries a
+  "Label vs. status" paragraph that explains the distinction;
+  that paragraph is the right place for an interested reader to
+  understand the current validation state.
 
 ## Implementation discipline for new correlation work
 

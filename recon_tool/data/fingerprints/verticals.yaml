@@ -12,6 +12,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^stripe-verification=
+    reference: https://docs.stripe.com/payments/checkout/custom-domains
     description: >-
       Stripe domain-verification TXT token. Indicates the domain is
       claimed by a Stripe account, typically for Apple Pay merchant
@@ -27,6 +28,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^docusign=
+    reference: https://support.docusign.com/
     description: >-
       DocuSign domain-verification TXT (the bare `docusign=`
       prefix). Indicates the domain is administratively bound to a
@@ -41,7 +43,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^google-site-verification=
-    description: Google Search Console / site ownership — NOT Google Workspace email
+    reference: https://support.google.com/a/answer/183895
+    description: >-
+      Google site-verification TXT for Google Search Console or
+      Google site-ownership claim. Indicates someone has proven
+      ownership of the domain to Google for a search or webmaster
+      surface. Does not indicate Google Workspace email or identity
+      adoption; the same TXT prefix is used across many Google
+      products and is the lowest-signal Google binding.
 - name: Canvas LMS (Instructure)
   slug: canvas-lms
   category: Education
@@ -49,10 +58,23 @@ fingerprints:
   detections:
   - type: cname
     pattern: instructure.com
-    description: Canvas LMS by Instructure — dominant higher-ed learning management system
+    reference: https://community.canvaslms.com/t5/Canvas-Admin-Guide/tkb-p/admin
+    description: >-
+      CNAME terminating at `instructure.com`, the canonical Canvas
+      LMS hosted-platform domain. Indicates the org's learning
+      subdomain (commonly `learn.<edu>` or `canvas.<edu>`) is hosted
+      by Instructure. Does not by itself indicate the integration
+      depth (SCIM, LTI, federated SSO); those are configured
+      separately inside the Canvas tenant.
   - type: txt
     pattern: ^canvas-site-verification=
-    description: Canvas LMS domain verification token
+    reference: https://community.canvaslms.com/t5/Canvas-Admin-Guide/tkb-p/admin
+    description: >-
+      Canvas LMS domain-verification TXT. Indicates the org has
+      claimed the domain inside an Instructure tenant, typically as
+      the SSO and custom-domain precondition. Does not prove active
+      enrollment; verification can persist on a domain after the
+      tenant is wound down.
 - name: Blackboard Learn
   slug: blackboard
   category: Education
@@ -60,10 +82,22 @@ fingerprints:
   detections:
   - type: cname
     pattern: blackboard.com
-    description: Blackboard Learn LMS
+    reference: https://help.blackboard.com/
+    description: >-
+      CNAME terminating at `blackboard.com`, indicating Blackboard
+      Learn LMS hosts a learning subdomain for the org. Does not
+      distinguish self-hosted from Blackboard SaaS; the CNAME alone
+      is consistent with both. Cross-check with the Blackboard
+      Collaborate (`bbcollab.com`) chain for live-classroom adoption.
   - type: cname
     pattern: bbcollab.com
-    description: Blackboard Collaborate (live classrooms)
+    reference: https://help.blackboard.com/
+    description: >-
+      CNAME terminating at `bbcollab.com`, Blackboard Collaborate
+      live-classroom hosted-platform domain. Indicates the org has
+      live-session capabilities on top of Blackboard Learn. Does not
+      indicate volume; a single classroom tenant produces the same
+      CNAME as district-wide rollout.
 - name: Moodle
   slug: moodle
   category: Education
@@ -71,10 +105,22 @@ fingerprints:
   detections:
   - type: cname
     pattern: moodle.com
-    description: Moodle LMS hosting
+    reference: https://docs.moodle.org/
+    description: >-
+      CNAME into `moodle.com`, indicating Moodle LMS hosting (either
+      self-hosted with `moodle.com`-tracked services or a Moodle
+      partner-hosted tenant). Does not prove which Moodle version is
+      running; the CNAME is the platform-binding signal, not a
+      version probe.
   - type: cname
     pattern: moodlecloud.com
-    description: MoodleCloud hosted LMS
+    reference: https://docs.moodle.org/
+    description: >-
+      CNAME into `moodlecloud.com`, Moodle's managed SaaS offering.
+      Indicates the org is on Moodle's managed cloud rather than
+      self-hosted Moodle. Distinct from the `moodle.com` chain;
+      typically present on smaller-deployment K-12 or extension
+      programs.
 - name: Ellucian Banner
   slug: ellucian-banner
   category: Education
@@ -82,10 +128,23 @@ fingerprints:
   detections:
   - type: cname
     pattern: ellucian.com
-    description: Ellucian Banner Student Information System
+    reference: https://www.ellucian.com/solutions/banner
+    description: >-
+      CNAME terminating at `ellucian.com`, the canonical Ellucian
+      Banner Student Information System hosted-platform domain.
+      Indicates the org uses Banner SIS for enrollment, records, or
+      financial aid. Does not indicate the integration topology;
+      Banner is often middlewared behind an integration hub like
+      Ethos or a campus ESB.
   - type: cname
     pattern: ellucianworkflow.com
-    description: Ellucian Workflow
+    reference: https://www.ellucian.com/solutions/banner
+    description: >-
+      CNAME terminating at `ellucianworkflow.com`, Ellucian's
+      Workflow process-automation product. Indicates the org has
+      stood up business-process workflows on top of Banner. Does not
+      prove the workflows are active; the CNAME persists after
+      tenant claim independent of usage.
 - name: Handshake (careers)
   slug: handshake
   category: Education
@@ -93,7 +152,13 @@ fingerprints:
   detections:
   - type: cname
     pattern: joinhandshake.com
-    description: Handshake student career services platform
+    reference: https://support.joinhandshake.com/hc/en-us
+    description: >-
+      CNAME terminating at `joinhandshake.com`, the Handshake
+      student-career-services hosted-platform domain. Indicates the
+      org publishes career-services content via Handshake. Does not
+      prove employer-side activity; the chain is a school-side
+      tenant signal.
 - name: Top Hat
   slug: tophat
   category: Education
@@ -101,7 +166,13 @@ fingerprints:
   detections:
   - type: cname
     pattern: tophat.com
-    description: Top Hat student engagement / course engagement platform
+    reference: https://success.tophat.com/s/
+    description: >-
+      CNAME into `tophat.com`, the Top Hat student-engagement /
+      course-engagement hosted-platform domain. Indicates the org
+      uses Top Hat for in-class polling, attendance, or homework.
+      Does not indicate course volume; a single department's
+      adoption produces the same CNAME as institution-wide rollout.
 - name: Salesforce NPSP (Nonprofit)
   slug: salesforce-npsp
   category: Nonprofit
@@ -109,10 +180,22 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^salesforce-npsp-verification=
-    description: Salesforce Nonprofit Success Pack domain verification
+    reference: https://help.salesforce.com/s/articleView?id=sfdo_npsp_intro.htm
+    description: >-
+      Salesforce Nonprofit Success Pack domain-verification TXT.
+      Indicates the org runs NPSP on top of a Salesforce org for
+      donor and program management. Does not prove active fundraising
+      volume; NPSP is a managed-package layer on Salesforce, and the
+      verification ships at install time.
   - type: cname
     pattern: salesforce-communities.com
-    description: Salesforce Communities / Experience Cloud (commonly used by nonprofits)
+    reference: https://help.salesforce.com/s/articleView?id=sfdo_npsp_intro.htm
+    description: >-
+      CNAME into `salesforce-communities.com`, the Salesforce
+      Experience Cloud (formerly Communities) hosted-platform domain.
+      Commonly used by nonprofits for donor portals and volunteer
+      signup. Does not prove the community is public-facing; many
+      sit behind invitation-only auth.
 - name: Blackbaud
   slug: blackbaud
   category: Nonprofit
@@ -120,10 +203,22 @@ fingerprints:
   detections:
   - type: cname
     pattern: blackbaud.com
-    description: Blackbaud CRM / Raiser's Edge / fundraising tools
+    reference: https://www.blackbaud.com/products
+    description: >-
+      CNAME terminating at `blackbaud.com`, indicating Blackbaud's
+      CRM, Raiser's Edge, or fundraising-tool surface is hosted for
+      the org. Does not distinguish the specific Blackbaud product;
+      Raiser's Edge, eTapestry, and NetCommunity all share this
+      chain root.
   - type: cname
     pattern: blackbaudhosting.com
-    description: Blackbaud hosted services
+    reference: https://www.blackbaud.com/products
+    description: >-
+      CNAME into `blackbaudhosting.com`, Blackbaud's managed-services
+      hosting domain. Indicates the org runs Blackbaud as a hosted
+      managed service rather than self-hosted. Does not by itself
+      indicate product mix; cross-check with the `blackbaud.com`
+      chain.
 - name: Classy (GoFundMe)
   slug: classy
   category: Nonprofit
@@ -131,4 +226,10 @@ fingerprints:
   detections:
   - type: cname
     pattern: classy.org
-    description: Classy nonprofit fundraising platform (owned by GoFundMe)
+    reference: https://support.classy.org/
+    description: >-
+      CNAME terminating at `classy.org`, Classy's nonprofit
+      fundraising platform (acquired by GoFundMe in 2022).
+      Indicates the org's donation pages are hosted on Classy.
+      Does not indicate fundraising volume; a single campaign
+      produces the same chain as a continuous program.
