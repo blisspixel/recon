@@ -185,13 +185,13 @@ flowchart LR
   obs["O = (O_DNS, O_CT, O_ID)"]
   obs --> rules["Layer 1: Rule-based fusion<br/>slugs and signals"]
   rules --> panel["Default panel and JSON"]
-  obs --> graph["Layer 2: Graph correlation<br/>communities and motifs"]
-  graph --> panel
+  obs --> graphL["Layer 2: Graph correlation<br/>communities and motifs"]
+  graphL --> panel
   rules -. "evidence chain" .-> bn["Layer 3: Bayesian network<br/>posteriors and intervals"]
   bn -. "fusion-only" .-> panel
 
   style rules fill:#eef
-  style graph fill:#efe
+  style graphL fill:#efe
   style bn fill:#fee
 ```
 
@@ -903,8 +903,8 @@ comes from the **missingness-graph (m-graph)** framework of
 Data"](https://doi.org/10.1080/01621459.2021.1874961). An m-graph
 augments the Bayesian network with one extra binary masking
 indicator $R_E$ for each potentially-missing evidence variable $E$.
-The observed value is $E^* = E$ when $R_E = 0$ and
-$E^* = \text{missing}$ when $R_E = 1$. The dependence structure of
+The observed value is $E^{\ast} = E$ when $R_E = 0$ and
+$E^{\ast} = \text{missing}$ when $R_E = 1$. The dependence structure of
 $R_E$ on the rest of the network determines whether the missingness
 is MCAR, MAR, or MNAR, and whether the latent state is recoverable
 from the observed data.
@@ -916,20 +916,20 @@ $E$ specifically because $X$ is present). The recent ML treatment
 of this regime is [Dong et al. 2024, "Fair Graph Machine Learning
 under Adversarial Missingness Processes" (ICLR)](https://openreview.net/forum?id=adversarial-missingness),
 which formalises the case where an adversary optimises $R_E$ to
-decouple the observed $E^*$ from the true latent $X$.
+decouple the observed $E^{\ast}$ from the true latent $X$.
 
 Under that adversarial optimisation, the robust-observer choice is
 to treat the missingness mechanism as perfectly uninformative.
 Formally,
 
-$$P(X \mid E^* = \text{missing}) = P(X),$$
+$$P(X \mid E^{\ast} = \text{missing}) = P(X),$$
 
 which is exactly the $LR = 1$ claim above.
 
 ##### Formal derivation via Distributionally Robust Optimization
 
 The m-graph framing motivates the robust-observer move but does not
-*automatically* yield $P(X \mid E^* = \text{missing}) = P(X)$.
+*automatically* yield $P(X \mid E^{\ast} = \text{missing}) = P(X)$.
 M-graphs only model the dependency of $R_E$ on $X$; the LR = 1
 conclusion requires a further step. The cleanest formalisation
 is **Distributionally Robust Optimization** (DRO; [Duchi and
@@ -939,55 +939,36 @@ Distributionally Robust Optimization"](https://arxiv.org/abs/1810.08750)).
 Let $\mathcal{P}$ denote an uncertainty set of adversarial masking
 policies: each $P \in \mathcal{P}$ specifies a different
 conditional $P(R_E \mid X)$, and therefore a different posterior
-$P(X \mid E^* = \text{missing})$. Under DRO, the observer commits
+$P(X \mid E^{\ast} = \text{missing})$. Under DRO, the observer commits
 to the worst-case posterior over the set,
 
-$$P^*(X \mid E^* = \text{missing}) \;=\; \inf_{P \in \mathcal{P}} P(X \mid E^* = \text{missing}).$$
+$$P^{\ast}(X \mid E^{\ast} = \text{missing}) \;=\; \inf_{P \in \mathcal{P}} P(X \mid E^{\ast} = \text{missing}).$$
 
 For the unconstrained adversarial set, where the operator can
-decouple $E^*$ from $X$ to arbitrary degree, the worst-case
+decouple $E^{\ast}$ from $X$ to arbitrary degree, the worst-case
 posterior collapses to the prior $P(X)$. This is exactly the
 $LR = 1$ claim, derived rather than asserted. The asymmetric
 likelihood is the minimax-robust update against an unconstrained
 adversarial masking mechanism.
 
-A complementary framing is **Manski's partial identification**
-([Manski 2003, *Partial Identification of Probability
-Distributions*](https://doi.org/10.1007/978-0-387-21789-9)).
-Manski shows that when the missingness mechanism is unknown,
-point probabilities become *bounds* (intervals) rather than
-identified point estimates. The interval-widening behaviour
-that recon's $n_{\mathrm{eff}}$ construction produces under sparse
-evidence is the marginal-level realisation of Manski bounds:
-absent evidence does not let the layer identify a point
-probability, so the layer reports an interval that contains the
-prior. Both DRO and Manski bounds reach the same answer through
-slightly different routes; recon's construction is consistent
-with both.
-
-This is not standard symmetric Bayesian conditioning. It is closer
-to **Jeffrey-style updating** with one-sided evidence
-([Jeffrey 1965](https://www.cambridge.org/core/books/logic-of-decision/B6AC0F4DDDF6E2BCB8985CB7CB7E1B59))
-and to the **cautious-updating** treatments developed in imprecise-
-probability theory
+Manski's partial identification reaches the same answer through a
+different route: when the missingness mechanism is unknown, point
+probabilities become bounds (intervals), and recon's
+$n_{\mathrm{eff}}$ interval-widening under sparse evidence is the
+marginal-level realisation of those bounds ([Manski 2003, *Partial
+Identification of Probability Distributions*](https://doi.org/10.1007/978-0-387-21789-9)).
+The construction is also consistent with Jeffrey-style updating
+on one-sided evidence ([Jeffrey 1965](https://www.cambridge.org/core/books/logic-of-decision/B6AC0F4DDDF6E2BCB8985CB7CB7E1B59)),
+the cautious-updating treatments in imprecise-probability theory
 ([Walley 1991](https://www.crcpress.com/Statistical-Reasoning-with-Imprecise-Probabilities/Walley/p/book/9780412286604);
-[Augustin et al. 2014, *Introduction to Imprecise Probabilities*](https://onlinelibrary.wiley.com/doi/book/10.1002/9781118763117))
-and in **forensic Bayesian networks**
-([Taroni et al. 2014, *Bayesian Networks for Probabilistic Inference and Decision Analysis in Forensic Science*](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470665879)),
-where evidence is often one-sided by design (a fingerprint match is
-informative; the absence of a match is mostly uninformative because
-the surface that *could have* been matched against is unobserved).
-We do not claim novelty. We claim that the formal framework for
-"update on positive evidence only" exists in the literature, the
-reasons it exists are the same reasons we apply it here (passive,
-adversarial-hardening setting), and we are choosing it deliberately
-rather than as an ad-hoc shortcut. The trade-off is real: some
-statistical efficiency is lost in well-instrumented domains where
-absence carries genuine information, and honesty is preserved under
-hardening where absence does not. For a defensive tool, that is the
-right side of the trade-off. The choice is annotated in
-`recon_tool/bayesian.py` so a future contributor who reaches for
-symmetric conditioning reads the rationale first.
+[Augustin et al. 2014](https://onlinelibrary.wiley.com/doi/book/10.1002/9781118763117)),
+and forensic Bayesian networks where evidence is one-sided by design
+([Taroni et al. 2014](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470665879)).
+No novelty is claimed; the framework exists, the rationale is the
+same as recon's (passive, adversarial-hardening setting), and the
+choice is annotated in `recon_tool/bayesian.py` so future
+contributors who reach for symmetric conditioning read the
+rationale first.
 
 #### 4.8.4 Credible intervals: calibration over inference
 
@@ -1966,82 +1947,38 @@ match is an event the layer conditions on. v1.9.7 and v1.9.8 are
 not network changes; they are upstream-of-the-network changes that
 make those primitives auditable.
 
-**v1.9.7 — presence floor.** The metadata-coverage gate
-(`scripts/check_metadata_coverage.py`) flipped from a 70-percent
-percentage threshold (advisory, three categories) to a presence
-check (enforcing, every category). Every detection in
-`recon_tool/data/fingerprints/` now carries a non-empty
-`description` field; the gate runs in CI, in the release
-workflow, and in pre-commit. The 298-detection backfill brought
-the catalog from 47 percent to 100 percent description coverage.
-See the v1.9.7 entry in `CHANGELOG.md`.
+**v1.9.7 + v1.9.8.** v1.9.7 flipped the metadata-coverage gate
+from a percentage threshold to a presence check; the 298-detection
+backfill brought every detection in
+`recon_tool/data/fingerprints/` to a non-empty `description`
+field. v1.9.8 lifted that floor to a richness floor: every
+detection passes the three-signal audit (length ≥ 80 chars,
+scope-narrowing language, canonical vendor `reference` URL).
+Inline weight rationale on every non-default detection weight.
+Full details in `validation/v1.9.8-metadata-audit.md`.
 
-**v1.9.8 — richness pass.** The presence floor became a richness
-floor: every detection now satisfies all three proxy signals of
-the new advisory richness audit
-(`--report-richness`): description length ≥ 80 characters
-(signal 1, "what the slug detects"), scope-narrowing language
-present (signal 2, "what it does not detect"), and a canonical
-vendor `reference` URL (signal 3, external auditability). The
-audit's token set was tuned to the catalog's actual writing
-style — explicit negation tokens (`not`, `does not`) plus the
-idioms the catalog uses to narrow scope (`alternative`,
-`legacy`, `functionally equivalent`, `typically paired`, `same
-semantics`, `cname through`, `chain through`, `subdomain cnames
-into`, `government cloud`, and so on). Every non-default detection
-weight in the catalog (currently four entries in `security.yaml`)
-now carries an inline rationale comment above the `weight:` key.
-See `validation/v1.9.8-metadata-audit.md`.
-
-**Why this is a calibration concern, not a documentation concern.**
-The Bayesian layer's likelihoods are functions of the slug
-matches that fire (§4.8.1). When a detection fires without an
-externally-verifiable provenance — a description explaining what
-the chain proves and a vendor doc URL the operator can read —
-the layer's posterior is harder to defend against an adversarial
-operator who challenges the inference. After v1.9.7+v1.9.8, every
-slug that contributes evidence to the network is paired with a
-defender-readable explanation of what the slug claims and a
-vendor doc URL the defender can re-verify against. The layer's
-calibration story (§4.8.12) is unchanged; what changed is the
-audit trail for the inputs the calibration story rests on.
+**Why this is a calibration concern.** The Bayesian layer's
+likelihoods are functions of the slug matches that fire (§4.8.1).
+A detection without externally-verifiable provenance leaves the
+posterior harder to defend against an adversarial operator who
+challenges the inference. After v1.9.7+v1.9.8, every slug that
+contributes evidence is paired with a description and a vendor
+doc URL the defender can re-verify against. The calibration story
+itself (§4.8.12) is unchanged; what changed is the audit trail
+for the inputs the calibration rests on.
 
 #### 4.8.14 Detection-gap UX surfaces (v1.9.9)
 
-v1.9.9 is a renderer-side pass: no engine code changes, no
-schema additions, no calibration claim. The relevance to the
-inference layer is indirect but worth stating because the
-default panel is one of the surfaces an operator (or AI agent)
-reads to act on the layer's output.
-
-Three additions:
-- **Passive-DNS ceiling phrasing.** On sparse-services +
-  multi-domain apexes the panel renders a one-line footer:
-  "Passive DNS surfaces what publishes externally. Server-side
-  API consumption, internal workloads, and SaaS without DNS
-  verification do not appear in public DNS records." This is the
-  panel-layer counterpart to the layer's `sparse=true` flag
-  (§4.8.4): a structural rather than statistical statement that
-  some classes of evidence are unreachable through public DNS.
-- **Multi-cloud rollup indicator.** When the public footprint
-  touches more than one canonicalized cloud vendor across apex
-  and surface attributions, a `Multi-cloud` row joins the key-
-  facts block. The rollup is a renderer-side derivation from
-  the existing slug data; the JSON shape is unchanged.
-- **Common-prefix wordlist breadth.** The active-DNS probe and
-  the CT-prioritization sort both gained eight prefixes covering
-  data, AI/ML, internal-tooling, and security tiers. The wordlist
-  change widens the slug-collection surface that flows into the
-  network's evidence set $E$ but does not change the network or
-  the likelihoods.
-
-The validation evidence is two memos
-(`validation/v1.9.9-detection-gap-ux.md` for the test-quality
-manifesto and `validation/v1.9.9-corpus-run.md` for the synthetic-
-corpus results) plus 167 new tests across 20 files. The panel
-behaviour is end-to-end validated against a 19-fixture publicly-
-reproducible synthetic corpus generator at
-`validation/synthetic_corpus/generator.py`.
+v1.9.9 is renderer-side: no engine code, no schema, no calibration
+claim. One connection to the inference layer worth recording: the
+panel's "Passive-DNS ceiling" footer is the operator-facing
+counterpart to the layer's `sparse=true` flag (§4.8.4) — a
+structural statement that some classes of evidence are unreachable
+through public DNS, paired with the statistical interval the layer
+already emits. The Multi-cloud rollup and wordlist-breadth
+additions widen slug collection at the surface-attribution layer
+without changing the network's bindings. See
+`validation/v1.9.9-detection-gap-ux.md` for the full v1.9.9 story.
 
 ### 4.8a Worked `--explain-dag` examples (v1.9.0)
 
