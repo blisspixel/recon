@@ -1014,9 +1014,9 @@ explicitly, not hide.
   mutation-resistance pilot covers six named mutations and the
   catalog-driven Hypothesis tests caught one real bug (the
   `Data & Analytics` KeyError in v1.9.9). A full automated sweep
-  via the existing `cosmic-ray-v199.toml` config would surface
-  whatever mutations the hand-rolled pilot did not think to write.
-  Tracked in `validation/invariant_audit.md` item 2.
+  via cosmic-ray (config to be authored at sweep time) would
+  surface whatever mutations the hand-rolled pilot did not think
+  to write. Tracked in `validation/invariant_audit.md` item 2.
 - [ ] **Aggregator on the gitignored private corpus.** Run
   `validation/corpus_aggregator.py` against the v1.9.4 hardened
   corpus and the v1.9.3.10 rich-stack sample; emit anonymized
