@@ -10,6 +10,7 @@ pip-delete-this-directory.txt
 
 # Build / distribution
 dist/
+dist-*/
 build/
 *.whl
 *.tar.gz
@@ -195,6 +196,7 @@ $RECYCLE.BIN/
 .env.local
 .env.*.local
 .venv/
+.venv-*/
 venv/
 env/
 
