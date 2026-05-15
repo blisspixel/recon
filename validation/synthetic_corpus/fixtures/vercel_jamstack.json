@@ -1,0 +1,43 @@
+{
+  "cache_version": 1,
+  "tenant_id": "fabrikam-jam",
+  "display_name": "Fabrikam Marketing",
+  "default_domain": "fabrikam-marketing.com",
+  "queried_domain": "fabrikam-marketing.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "fabrikam-marketing.com",
+    "fabrikam.io",
+    "fabrikam-blog.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Vercel",
+    "Cloudflare",
+    "GitHub",
+    "Stripe"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "vercel",
+    "cloudflare",
+    "github",
+    "stripe"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "www.fabrikam-marketing.com",
+      "primary_slug": "vercel",
+      "primary_name": "Vercel",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "docs.fabrikam-marketing.com",
+      "primary_slug": "vercel",
+      "primary_name": "Vercel",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

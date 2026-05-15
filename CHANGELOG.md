@@ -5,6 +5,412 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.9] - 2026-05-14
+
+**v1.9.9 bridge milestone: detection-gap UX surfaces.** Three additions
+to the default panel that make the architectural limits of passive DNS
+collection visible without changing what data the tool collects. After
+v1.9.9 the panel shows what it cannot see (the passive-DNS ceiling),
+casts a wider net for what it can see (extended common-prefix
+enumeration), and summarises the distribution (apex-level multi-cloud
+rollup). No engine code changes ship; no JSON schema additions ship.
+
+This is the v1.9.9 step of the v1.9.4 to v2.0 linear sequence in
+`docs/roadmap.md`. The multi-apex CT SAN traversal mentioned alongside
+the wordlist additions in the v1.9.9 roadmap section was deferred to
+v1.9.9.1 so the cert-side breadth change can land with its own
+validation pass; the three surfaces shipped here are panel-only and
+self-contained.
+
+### Added
+
+- **Passive-DNS ceiling phrasing in the default panel.** When the panel
+  is sparse on an apex that probably should not be, a one-line teaching
+  footer renders under the Services block: "Passive DNS surfaces what
+  publishes externally. Server-side API consumption, internal workloads,
+  and SaaS without DNS verification do not appear in public DNS
+  records." Operators and AI agents reading the panel now have an
+  explicit cue against the absence-of-finding-equals-absence-of-service
+  misread. Trigger heuristic is conservative on purpose: fires only when
+  `info.services` is non-empty (a different surface owns failed runs),
+  `info.domain_count >= 3` (the apex has multiple tenant domains, so
+  sparse is genuinely surprising), categorized service families are
+  fewer than 5, and CNAME-chain subdomain attributions are fewer than 5.
+  Both halves of the sparse check must hold so a domain with short
+  Services but many surface attributions does not gain a misleading
+  footer. `--full` / `--domains` suppresses the line because those modes
+  already carry the long surface section.
+- **Apex-level multi-cloud rollup indicator.** When the canonicalized
+  vendor count across apex slugs and surface attributions is at least
+  two, a `Multi-cloud` row joins the key-facts block above Confidence:
+  for example `Multi-cloud: 3 providers observed (AWS, Cloudflare,
+  GCP)`. A single-vendor apex stays unannotated to avoid adding a
+  vacuous row. Sibling slugs collapse: AWS Route 53 plus AWS CloudFront
+  is one AWS vote, not two. Firebase rolls up under GCP because that
+  matches how operators think about the Google cloud footprint at the
+  rollup level. The per-slug Cloud row and per-subdomain Subdomain row
+  continue to carry the full distribution; the rollup is the at-a-glance
+  summary, not a replacement.
+- **Cloud-vendor canonicalization map.** `_CLOUD_VENDOR_BY_SLUG` in
+  `recon_tool/formatter.py` is the single source of truth that maps
+  cloud-categorized fingerprint slugs to their vendor identity (AWS,
+  Azure, GCP, Cloudflare, Fastly, Akamai, Vercel, Netlify, Oracle Cloud,
+  IBM Cloud, Alibaba Cloud, and so on). Two public helpers,
+  `canonical_cloud_vendor(slug)` and `count_cloud_vendors(apex_slugs,
+  surface_slugs)`, sit on top of it so future panels and JSON paths can
+  reuse the same canonicalization without duplicating the table inline.
+  Slugs not in the map are not counted as cloud vendors, which is the
+  right default for things like Slack or Auth0 (SaaS, not cloud
+  infrastructure) and developer-platform slugs like Replit or Glitch.
+- **Common-prefix wordlist breadth across four stack tiers.** The
+  active-DNS probe in `recon_tool/sources/dns.py` and the CT
+  high-signal sort in `recon_tool/sources/cert_providers.py` both gained
+  the same eight prefixes covering tiers the prior wordlist ignored:
+  data and analytics (`data`, `analytics`), AI and ML (`ai`, `ml`),
+  operations and internal tooling (`internal`, `ops`, `tools`), and
+  security (`security`). Each prefix maps to a recognised stack tier
+  with vendor-product backing (Snowflake under `data`, Vertex AI under
+  `ai`, internal portals under `internal`, SIEM consoles under
+  `security`). The CT-side additions keep prioritization parity so a CT
+  response surfacing `data.contoso.com` sorts to the top of the bounded
+  output rather than falling off the cap.
+- **`tests/test_formatter_ceiling.py`** (7 tests). Pins the trigger
+  heuristic: fires on sparse-services + multi-domain apex; suppressed
+  on single-domain apex, dense categorized services, many surface
+  attributions, `--full` mode, and empty services. Phrasing tone is
+  asserted to be teaching, not tool-blaming.
+- **`tests/test_multi_cloud_rollup.py`** (16 tests). Pins both
+  canonicalization (AWS family collapses to AWS, Firebase rolls under
+  GCP, non-cloud slugs return None) and trigger discipline (fires on
+  multi-vendor, suppressed on single-vendor and SaaS-only apex).
+- **`tests/test_subdomain_enumeration_breadth.py`** (10 tests). Pins
+  the new wordlist entries in both the active-probe tuple and the
+  CT-prioritization tuple. A future refactor that compacts either
+  cannot silently drop tier coverage without these tests flagging.
+- **`tests/test_cloud_vendor_coverage.py`** (4 tests). Coverage-gap
+  enforcement: every Cloud-categorized slug in ``_CATEGORY_BY_SLUG``
+  must appear in either ``_CLOUD_VENDOR_BY_SLUG`` or
+  ``_CLOUD_VENDOR_ROLLUP_EXCLUSIONS`` (a new explicit exclusion set
+  for SaaS hosting, prototyping platforms, and long-tail specialty
+  vendors). Map and exclusion set are disjoint and both stay
+  consistent with the cloud category. The test caught one real
+  inconsistency at introduction: ``aws-waf`` was incorrectly in the
+  rollup map even though it is Security-categorized, not Cloud;
+  removed.
+- **`tests/test_formatter_ceiling_boundary.py`** (8 tests). Off-by-one
+  cases that the surrounding fixture tests would miss: exact-threshold
+  domain_count (3 fires, 2 suppresses), categorized count (4 fires, 5
+  suppresses), surface attributions count (4 fires, 5 suppresses), and
+  the AND-gate behaviour where density on one half is enough to
+  suppress.
+- **`tests/test_count_cloud_vendors_properties.py`** (5 Hypothesis
+  property tests). Invariants that hold across the full input space:
+  order independence on the apex stream, non-cloud-slug additions are
+  no-ops, stream union semantics (apex + surface split equals
+  concatenated stream), total count equals input length when all
+  inputs are in the map, distinct vendor count is bounded above by
+  the input slug count.
+- **`tests/test_panel_render_snapshots.py`** (12 end-to-end render
+  snapshot tests). Two reference TenantInfo fixtures (Contoso
+  multi-cloud rich-stack, Northwind sparse-hardened) exercised through
+  ``render_tenant_panel`` with structural asserts on which v1.9.9
+  surfaces fire on which fixture, the layout invariant that
+  Multi-cloud renders above Confidence in the key-facts block, and
+  the ``--full``-mode suppression behaviour for the ceiling block.
+- **``_CLOUD_VENDOR_ROLLUP_EXCLUSIONS`` in formatter.py**. New
+  explicit exclusion set documenting which Cloud-categorized slugs
+  intentionally do not appear in the rollup, with three rationale
+  categories: SaaS hosting (WP Engine, Kinsta, Acquia, GitHub Pages,
+  WordPress VIP), developer / prototyping platforms (Replit, Glitch),
+  specialty CDN / DAM / hosting that operators would not list
+  alongside AWS/Azure/GCP (Cloudinary, Azion, Section.io, MerlinCDN,
+  Edgio, Lumen, Ionos, and others). Forces the rollup decision at PR
+  time when a new cloud-categorized slug ships.
+- **``category_for_slug`` public accessor in formatter.py**. Wraps
+  `_CATEGORY_BY_SLUG` so callers outside the formatter (notably the
+  v1.9.9 corpus aggregator) can estimate the panel's categorized
+  count without re-running `_categorize_services` or reaching into
+  the private lookup.
+- **`validation/corpus_aggregator.py`**. Pure-function script
+  that consumes a `recon batch --json` results file and emits
+  anonymized aggregate statistics on Multi-cloud and ceiling
+  firing rates. Reads gitignored private corpus runs; emits
+  anonymized output safe to commit. The trigger logic mirrors the
+  renderer's by design; the test file pins both implementations
+  to the same fixtures so they cannot drift.
+
+### Changed
+
+- **`recon_tool/formatter.py`** gains `_CLOUD_VENDOR_BY_SLUG`,
+  `_CLOUD_VENDOR_ROLLUP_EXCLUSIONS`, `canonical_cloud_vendor`, and
+  `count_cloud_vendors`, plus the Multi-cloud field and the
+  Passive-DNS ceiling block in `render_tenant_panel`. The
+  categorized-service count threads through a small local helper
+  variable so the ceiling check can reference it outside the services
+  branch without `categorized` itself escaping scope.
+- **AWS rollup family expanded.** Added `aws-nlb`, `aws-api-gateway`,
+  `aws-app-runner`, `aws-global-accelerator` to the AWS family so the
+  rollup catches them. Added `cloudflare-pages` to the Cloudflare
+  family. Removed `aws-waf` (Security-categorized, not Cloud — the
+  coverage-gap test caught this at introduction).
+- **Standalone vendor coverage expanded** to include Heroku, VMware
+  Cloud, Cloud.gov, Edgio, Lumen, F5 Distributed Cloud — each
+  represents a cloud vendor an operator would name alongside AWS or
+  Azure when describing a footprint at the rollup level.
+- **`recon_tool/sources/dns.py`**'s `_COMMON_SUBDOMAIN_PREFIXES` grew
+  from 38 to 46 entries; each new entry carries an inline comment naming
+  the stack tier it represents and the vendor-product idiom that
+  motivates including it.
+- **`recon_tool/sources/cert_providers.py`**'s `HIGH_SIGNAL_PREFIXES`
+  grew the same 8 prefixes so CT subdomain prioritization stays in
+  parity with the active probe.
+
+### Security
+
+- **MCP fallback launch path closed on Python 3.10.** The
+  `build_recon_block()` fallback (used when ``recon`` is not on
+  PATH) previously persisted ``python -m recon_tool.server`` with
+  ``PYTHONSAFEPATH=1``. On Python 3.10 the env var is a no-op, so a
+  malicious workspace containing ``recon_tool/server.py`` could
+  shadow the installed package and execute attacker code at module
+  import time — before the runtime guard in ``server.py`` could
+  fire. The v1.9.3.4 mitigation closed this for ``mcp_doctor``
+  (which sets a safe tempdir cwd) but left the persisted
+  installer block reliant on PYTHONSAFEPATH on 3.10.
+
+  v1.9.9 closes this fully by switching the persisted form to
+  ``python -c "<sys.path-stripping launcher>"``. The launcher runs
+  ``sys.path[:] = [p for p in sys.path if p not in ('', '.')]``
+  BEFORE any ``recon_tool`` import, removing the cwd-equivalent
+  entry at the language level. This works on every supported
+  Python version, including 3.10. PYTHONSAFEPATH=1 stays in the
+  persisted env as belt-and-suspenders for 3.11+.
+
+  New integration test
+  ``test_v199_fallback_launcher_blocks_shadow_on_all_pythons``
+  exercises the actual persisted launcher against a malicious
+  shadow workspace and asserts the shadow does not execute.
+  ``docs/security-audit-resolutions.md`` updated to reflect the
+  v1.9.9 closure honestly (the v1.9.3.4 entry now distinguishes
+  the doctor-path closure from the install-path partial mitigation
+  that v1.9.9 completed).
+
+### Fixed
+
+- **`Data & Analytics` category KeyError in panel renderer.** The
+  category was added to ``_CATEGORY_BY_SLUG`` in v1.9.3.9 (with the
+  ``looker-studio`` slug) but never to ``_SERVICE_CATEGORIES_ORDER``.
+  Any apex with the slug fired triggered ``KeyError`` at
+  ``by_cat[cat].append(...)`` in ``_categorize_services`` and
+  crashed the panel. Fixed by adding the category to the order
+  tuple and adding a defensive bucket-creation guard so future
+  category drift cannot crash the renderer (the new category will
+  be missing from rendered output until added to the tuple, but
+  the panel will not crash). Caught at first run by the new
+  catalog-driven Hypothesis test
+  ``test_catalog_driven_corpus.py::test_low_domain_count_never_fires_ceiling``.
+- **Okta surface description used "strong"** (overclaim per the
+  project's humble-tone discipline). Rephrased to "load-bearing"
+  (`recon_tool/data/fingerprints/surface.yaml`). Caught at first
+  run by the new suite-wide humble-tone enforcement test
+  ``test_humble_tone_global.py``.
+- **`aws-waf` was wrongly in the Multi-cloud rollup map** even
+  though it is Security-categorized in `_CATEGORY_BY_SLUG`.
+  Removed from `_CLOUD_VENDOR_BY_SLUG`. Caught by the
+  coverage-gap test added during v1.9.9 development.
+
+### Validation
+
+- All 2496 tests pass (2 skipped, 4 deselected). v1.9.9 ships **182
+  new tests across 23 new test files plus a corpus-aggregator
+  script, a synthetic 19-fixture corpus generator, a render-
+  snapshot report, a threshold-sensitivity analysis, an invariant
+  audit, an agentic-UX runbook, a coverage-gap audit, and a
+  performance baseline doc** covering falsifiable surfaces along
+  seven orthogonal axes: trigger behaviour (fixture, boundary,
+  property), test quality (mutation resistance with 6 named
+  mutations + three-way differential agreement check), integration
+  (CLI, cross-version cache, JSON shape), robustness (fuzz,
+  adversarial, determinism, performance bounds), corpus validation
+  (synthetic corpus + catalog-driven Hypothesis + aggregator),
+  tone discipline (suite-wide humble-tone enforcement), and
+  documentation (validation memo, test-quality manifesto,
+  corpus-run report, threshold sensitivity, invariant audit,
+  coverage-gap audit, performance baseline, agentic-UX runbook).
+
+  The **catalog-driven Hypothesis test caught a real pre-existing
+  bug**: ``looker-studio`` (added in v1.9.3.9 with category
+  ``"Data & Analytics"``) was missing from
+  ``_SERVICE_CATEGORIES_ORDER``, causing a ``KeyError`` in the
+  panel renderer for any apex with the slug. Fixed by adding the
+  missing category to the order tuple and adding a defensive
+  bucket-creation guard in ``_categorize_services``. Test invariant
+  pinned in ``test_cloud_vendor_coverage.py`` so future drift fails
+  at PR time.
+
+  The **suite-wide humble-tone test caught a real catalog
+  violation**: the okta surface description used the word "strong"
+  (overclaim per the project's discipline). Rephrased to
+  "load-bearing".
+
+  See `validation/v1.9.9-detection-gap-ux.md` for the per-file
+  rationale and the explicit "what we test and what we honestly do
+  not" section. See `validation/invariant_audit.md` for the
+  distinct-invariant count (51) vs the test count (182), and the
+  remediation plan for each "what we honestly do not test" item.
+  Test files:
+  1. Fixture behaviour on the ceiling trigger
+     (`test_formatter_ceiling.py` — 7 tests).
+  2. Fixture behaviour on the multi-cloud rollup, including
+     canonicalization (`test_multi_cloud_rollup.py` — 16 tests).
+  3. Wordlist extensions in both the active probe and the CT priority
+     tuple (`test_subdomain_enumeration_breadth.py` — 10 tests).
+  4. Coverage-gap enforcement on the rollup map versus
+     `_CATEGORY_BY_SLUG`, with explicit exclusion-set discipline
+     (`test_cloud_vendor_coverage.py` — 4 tests). Caught one real
+     bug at introduction: `aws-waf` was wrongly in the rollup map.
+  5. Off-by-one boundaries on the ceiling trigger's three numeric
+     thresholds (`test_formatter_ceiling_boundary.py` — 8 tests).
+  6. Hypothesis property invariants on `count_cloud_vendors`
+     (`test_count_cloud_vendors_properties.py` — 5 tests).
+  7. End-to-end render snapshots across two reference TenantInfo
+     fixtures (`test_panel_render_snapshots.py` — 12 tests).
+  8. Render-fuzz: arbitrary TenantInfo through
+     `render_tenant_panel` must not raise
+     (`test_render_fuzz.py` — 3 tests, 500 Hypothesis examples).
+  9. v1.9.2 agentic-UX fixture compatibility under the v1.9.9
+     panel (`test_agentic_ux_compatibility.py` — 7 tests).
+  10. JSON-absence contract: v1.9.9 surfaces are panel-only
+      (`test_panel_only_surfaces_json_absence.py` — 6 tests).
+  11. Rendered-output sanity: no vendor duplication, no orphan
+      punctuation, no overclaim words, bounded line length
+      (`test_panel_output_sanity.py` — 7 tests).
+  12. Wordlist hygiene: deduplication, lowercase, no whitespace,
+      parity between active probe and CT priority tuples
+      (`test_wordlist_sanity.py` — 8 tests).
+  13. Corpus-aggregator script behaviour, mirroring the renderer's
+      trigger logic on serialized TenantInfo dicts
+      (`test_corpus_aggregator.py` — 11 tests).
+  14. **Targeted mutation resistance** on the v1.9.9 helpers. Five
+      named mutations (None-guard drop, unknown-slug leak, double
+      count, comparator flip, threshold flip) confirmed caught by
+      the existing test suite (`test_mutation_resistance.py` — 9
+      tests). Honest framing: this is a hand-rolled pilot, not a
+      full ``mutmut`` sweep. The bar is "the most likely mutations
+      to slip past careful review are caught"; broader coverage
+      remains a post-v2.0 backlog item.
+  15. **CLI integration smoke** for the Typer entry point.
+      ``--help``, ``--version``, every subcommand's help, the
+      installed-entry-point shape via subprocess
+      (`test_cli_integration_smoke.py` — 15 tests).
+  16. **Render determinism** in-process and across processes with
+      distinct ``PYTHONHASHSEED`` values. 30 in-process renders
+      byte-identical; subprocess renders with three distinct seeds
+      identical to each other (`test_render_determinism.py` —
+      5 tests).
+  17. **Adversarial-input robustness**: unicode display names
+      (CJK, RTL, accented, emoji), control characters and ANSI
+      escapes in slugs and subdomains, 1000-char display names,
+      200-slug and 200-attribution inputs, punycode IDN subdomains
+      (`test_adversarial_render.py` — 13 tests). Threat model:
+      data-quality robustness, not security boundary enforcement.
+  18. **Cross-version cache compatibility**: synthesized v1.9.8-
+      shape cache loads through v1.9.9 reader; new v1.9.9 surfaces
+      derive from existing cache fields without re-collection;
+      ``_CACHE_VERSION`` constant pinning prevents silent schema
+      bumps (`test_cache_cross_version_compatibility.py` — 7 tests).
+  19. **Render-time performance bounds**: typical (10 slugs), large
+      (100), and stress (1000) inputs render under generous time
+      budgets; ratio of large-input time to small-input time is
+      sub-quadratic (`test_render_performance.py` — 8 tests; 1
+      skip on machines too fast for a stable ratio).
+  20. **Expanded mutation library**: 6 named mutations beyond the
+      original 3 (stream swap, empty-string-vs-None contract,
+      case-sensitivity invariant). All caught by the existing test
+      suite (`test_mutation_resistance.py` — 15 tests total).
+  21. **Three-way trigger differential agreement**: renderer +
+      aggregator + regex-parser must agree on every fixture
+      (`test_trigger_differential_agreement.py` — 6 tests).
+      Breaks the two-implementation circularity by adding a third
+      independent code path.
+  22. **Catalog-driven Hypothesis property tests**: inputs drawn
+      from the live fingerprint catalog rather than hand-curated
+      fixtures (`test_catalog_driven_corpus.py` — 5 tests).
+      Caught the `Data & Analytics` KeyError bug at first run.
+  23. **Suite-wide humble-tone enforcement**: catalog descriptions
+      and formatter top-level constants must avoid overclaim words
+      (`test_humble_tone_global.py` — 4 tests). Caught the okta
+      "strong" violation at first run.
+- **Synthetic 19-fixture corpus** at
+  `validation/synthetic_corpus/fixtures/` (M365+Okta, GWS+AWS,
+  multi-cloud SaaS, hardened minimal, Azure-native, GCP-native,
+  hybrid, healthcare, fintech, public-sector, media, education,
+  Heroku legacy, SaaS-only, AWS-family-only). Generator at
+  `validation/synthetic_corpus/generator.py` is deterministic and
+  publicly-reproducible.
+- **Corpus aggregator** at `validation/corpus_aggregator.py` emits
+  anonymized firing statistics for both the estimator path and the
+  authoritative render-based path. Run output committed at
+  `validation/synthetic_corpus/aggregate.json`: 8/19 multi-cloud
+  fires (42.1%), 11/19 ceiling fires (57.9%).
+- **Render snapshots** of all 21 fixtures (2 v1.9.2 agentic-UX +
+  19 synthetic) at `validation/synthetic_corpus/render_snapshots.md`
+  give the maintainer the operator-facing panel text for each
+  fixture without re-running the renderer.
+- **Threshold sensitivity analysis** at
+  `validation/threshold_sensitivity.md` sweeps each ceiling-trigger
+  threshold across plausible values and reports the firing-rate
+  shape. Makes the threshold choice falsifiable instead of intuitive.
+- **Distinct-invariant audit** at `validation/invariant_audit.md`
+  collapses the 182-test count to 51 distinct invariants and assigns
+  each "what we honestly do not test" item a specific milestone
+  (v1.9.10 for empirical corpus, cosmic-ray, Bayesian
+  re-validation; v1.9.11 for agentic UX; post-v2.0 for memory
+  bounds).
+- **Coverage-gap audit** at `validation/coverage_gap_audit.md`
+  categorizes the 1648 uncovered lines by risk surface (MCP server
+  runtime is the largest gap; per-source error paths is the
+  second-largest).
+- **Performance baseline** at `validation/performance_baseline.md`
+  records the actual measured render times (10 slugs: 0.9 ms,
+  100 slugs: 1.5 ms, 1000 slugs: 9.2 ms) so the test budgets can
+  be assessed against real numbers instead of intuition.
+- **Agentic UX runbook** at
+  `validation/agentic_ux_v199_runbook.md` documents the
+  smallest-cost LLM invocation for the maintainer to validate
+  agent-readability of the new surfaces against API-key-controlled
+  cost (~$0.016 per focused run on Haiku 4.5).
+- **`category_for_slug` public accessor** added to formatter.py
+  for the corpus aggregator and threshold sensitivity script;
+  removes the `_CATEGORY_BY_SLUG` private-import warning.
+- Coverage at 84% total (89% on formatter.py, up from 83% pre-v1.9.9).
+- ruff lint and ruff format clean across 205 files.
+- pyright on `recon_tool/` and the validation tooling reports 0
+  errors, 0 warnings, 0 informations.
+- See `validation/v1.9.9-detection-gap-ux.md` for the per-fixture
+  trigger behaviour notes and the test-quality manifesto.
+- See `validation/v1.9.9-corpus-run.md` for the synthetic-corpus
+  validation evidence.
+
+### Scope notes
+
+- The multi-apex CT SAN traversal item in the v1.9.9 roadmap section
+  (pull subdomains from all observed apex certs rather than just the
+  queried apex's) is deferred to v1.9.9.1. It touches external HTTP
+  behaviour and warrants its own validation pass against the v1.9.4
+  hardened corpus; bundling it with the three panel surfaces here
+  would have obscured which change drove any behavioural shift in CT
+  traversal. The wordlist additions ship in v1.9.9 because they are
+  internal to the probe loop and the CT sort, with no observable change
+  in HTTP request volume.
+- The CT-by-org-name search hinted at in the same roadmap section
+  carries the same external-HTTP rationale and likewise defers to
+  v1.9.9.1 or later.
+- No JSON schema changes ship: the rollup vendor list and the ceiling
+  phrasing are panel-only. `tests/test_json_schema_file.py` would catch
+  drift if a future patch ever surfaces either as a structured JSON
+  field; that decision is explicitly out of scope here.
+
 ## [1.9.8] - 2026-05-13
 
 **v1.9.8 bridge milestone: catalog metadata richness pass on top of

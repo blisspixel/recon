@@ -214,28 +214,38 @@ def default_scope(client: Client) -> Scope:
     return "user"
 
 
+# Cwd-strip launcher used by the fallback persisted MCP block when
+# ``recon`` is not on PATH. Python adds ``""`` (cwd) to ``sys.path[0]``
+# on ``-c`` invocations; we filter it out BEFORE any ``recon_tool``
+# import so a malicious workspace containing ``recon_tool/server.py``
+# cannot shadow the installed package. Works on every supported Python
+# version, including Python 3.10 where ``PYTHONSAFEPATH`` is a no-op.
+_FALLBACK_LAUNCH_CODE = (
+    "import sys; sys.path[:] = [p for p in sys.path if p not in ('', '.')]; from recon_tool.server import main; main()"
+)
+
+
 def build_recon_block() -> dict[str, object]:
     """Return the MCP server stanza we register under `mcpServers.recon`.
 
-    Falls back from `recon` to the running interpreter's
-    `python -m recon_tool.server` when `recon` isn't on PATH — this is
-    the same trick documented in `agents/claude-code/README.md` for
-    GUI clients that don't inherit shell PATH.
+    Falls back from ``recon`` to the running interpreter when ``recon``
+    isn't on PATH. The fallback uses ``python -c "<safe-launcher>"``
+    rather than ``python -m recon_tool.server`` so cwd-shadow attacks
+    are blocked on every supported Python version, including Python
+    3.10 where ``PYTHONSAFEPATH`` is a no-op.
 
-    Supply-chain hardening (v1.9.3.4): when the fallback form is used,
-    the persisted ``env`` block sets ``PYTHONSAFEPATH=1`` so MCP
-    clients launching the server on Python 3.11+ get protection
-    against the cwd-shadow attack (a workspace containing a
-    malicious ``recon_tool/`` directory shadowing the installed
-    package). On Python 3.10 ``PYTHONSAFEPATH`` is a no-op, but the
-    runtime guard in ``recon_tool.server._detect_cwd_shadow_install``
-    is the final defense in depth.
+    Supply-chain hardening (v1.9.9): the launcher code runs
+    ``del sys.path[0]`` before importing ``recon_tool``, removing the
+    cwd-equivalent entry Python adds to ``sys.path``. This is the
+    cross-version protection the previous ``-m`` + ``PYTHONSAFEPATH=1``
+    fallback could not provide on Python 3.10. The PYTHONSAFEPATH env
+    entry stays in place as belt-and-suspenders for Python 3.11+.
 
-    Operators on Python 3.10 should install ``recon`` to PATH and
+    Operators on any version may still install ``recon`` to PATH and
     let this function return the preferred ``{"command": "recon",
-    "args": ["mcp"]}`` form, which has no cwd-shadow risk. A warning
-    surfaces in ``warn_if_fallback`` to make the recommendation
-    explicit.
+    "args": ["mcp"]}`` form, which is shorter and equivalently safe.
+    ``warn_if_fallback`` surfaces a stderr advisory when the fallback
+    form is written.
     """
     recon_on_path = shutil.which("recon")
     if recon_on_path:
@@ -246,10 +256,15 @@ def build_recon_block() -> dict[str, object]:
         }
     return {
         "command": sys.executable,
-        "args": ["-m", "recon_tool.server"],
-        # v1.9.3.4: persisted env protects future client launches on
-        # Python 3.11+ from cwd-shadow even if the client sets cwd
-        # to an untrusted workspace.
+        # v1.9.9: ``-c`` with explicit sys.path[0] removal closes the
+        # cwd-shadow attack on every supported Python. The previous
+        # ``-m`` form left Python 3.10 reliant on the runtime guard,
+        # which fires AFTER Python imports the (potentially malicious)
+        # module — too late to protect against an attacker who put a
+        # payload at module top-level. The ``-c`` launcher runs the
+        # path-strip BEFORE any recon_tool import, so a shadow
+        # ``recon_tool/server.py`` in cwd cannot be selected.
+        "args": ["-c", _FALLBACK_LAUNCH_CODE],
         "env": {"PYTHONSAFEPATH": "1"},
         "autoApprove": [],
     }
@@ -259,23 +274,24 @@ def warn_if_fallback() -> str | None:
     """Return a stderr-formatted warning when the fallback launch form
     would be persisted, or ``None`` when ``recon`` is on PATH.
 
-    Callers (CLI install command) print the warning so the operator
-    can decide whether to add ``recon`` to PATH before persisting a
-    config that may carry residual cwd-shadow risk on Python 3.10.
-    The warning is informational — it does not block the install,
-    because the persisted ``PYTHONSAFEPATH=1`` env entry plus the
-    server-side runtime guard close the threat on supported
-    deployments.
+    The warning is informational. v1.9.9 changed the persisted
+    fallback to use ``python -c "<sys.path-stripping launcher>"``
+    instead of ``python -m recon_tool.server``, so the cwd-shadow
+    attack is blocked on every supported Python version (including
+    Python 3.10 where ``PYTHONSAFEPATH`` is a no-op). Installing
+    ``recon`` to PATH still produces a shorter and arguably
+    more readable persisted command; the warning recommends it
+    on cosmetic grounds, not safety grounds.
     """
     if shutil.which("recon") is not None:
         return None
     return (
-        "warning: `recon` is not on PATH; persisting the fallback launch "
-        f"form (`{sys.executable} -m recon_tool.server`). MCP clients on "
-        "Python 3.11+ are protected by the persisted PYTHONSAFEPATH=1 env "
-        "entry; on Python 3.10 the cwd-shadow attack (v1.9.3.4 audit) "
-        "depends on the runtime guard in recon_tool.server alone. "
-        "For maximum safety on Python 3.10, install recon to PATH "
+        "info: `recon` is not on PATH; persisting the fallback launch "
+        f'form (`{sys.executable} -c "<sys.path-stripping launcher>"`). '
+        "The launcher removes the cwd entry from sys.path before any "
+        "recon_tool import, so the cwd-shadow attack is blocked on every "
+        "supported Python (including Python 3.10). For a shorter "
+        "persisted command, install recon to PATH "
         "(`pip install --user recon-tool` or `pipx install recon-tool`) "
         "and rerun this install command."
     )

@@ -1,0 +1,51 @@
+{
+  "cache_version": 1,
+  "tenant_id": "adatum-health",
+  "display_name": "Adatum Health",
+  "default_domain": "adatum-health.com",
+  "queried_domain": "adatum-health.com",
+  "confidence": "high",
+  "domain_count": 5,
+  "tenant_domains": [
+    "adatum-health.com",
+    "adatum-care.com",
+    "adatum-hospital.com",
+    "adatum.health",
+    "adatum-rx.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Okta",
+    "Cloudflare",
+    "AWS CloudFront",
+    "Proofpoint",
+    "Mimecast",
+    "Wiz",
+    "CrowdStrike"
+  ],
+  "slugs": [
+    "microsoft365",
+    "okta",
+    "cloudflare",
+    "aws-cloudfront",
+    "proofpoint",
+    "mimecast",
+    "wiz",
+    "crowdstrike"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "patient.adatum-health.com",
+      "primary_slug": "aws-cloudfront",
+      "primary_name": "AWS CloudFront",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "portal.adatum-health.com",
+      "primary_slug": "okta",
+      "primary_name": "Okta",
+      "primary_tier": "application"
+    }
+  ]
+}

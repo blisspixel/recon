@@ -1,0 +1,813 @@
+[
+  {
+    "cache_version": 1,
+    "tenant_id": "contoso-mid",
+    "display_name": "Contoso Ltd",
+    "default_domain": "contoso.com",
+    "queried_domain": "contoso.com",
+    "confidence": "high",
+    "domain_count": 7,
+    "tenant_domains": [
+      "contoso.com",
+      "contoso.net",
+      "contoso.co.uk",
+      "contoso-corp.com",
+      "contoso-mail.com",
+      "contoso.io",
+      "contoso.eu"
+    ],
+    "services": [
+      "Microsoft 365",
+      "Okta",
+      "Slack",
+      "Wiz",
+      "Cloudflare",
+      "AWS CloudFront",
+      "Atlassian"
+    ],
+    "slugs": [
+      "microsoft365",
+      "okta",
+      "slack",
+      "wiz",
+      "cloudflare",
+      "aws-cloudfront",
+      "atlassian"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "api.contoso.com",
+        "primary_slug": "aws-cloudfront",
+        "primary_name": "AWS CloudFront",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "app.contoso.com",
+        "primary_slug": "aws-cloudfront",
+        "primary_name": "AWS CloudFront",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "status.contoso.com",
+        "primary_slug": "fastly",
+        "primary_name": "Fastly",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "support.contoso.com",
+        "primary_slug": "zendesk",
+        "primary_name": "Zendesk",
+        "primary_tier": "application"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "northwind-eng",
+    "display_name": "Northwind Traders",
+    "default_domain": "northwind.com",
+    "queried_domain": "northwind.com",
+    "confidence": "high",
+    "domain_count": 5,
+    "tenant_domains": [
+      "northwind.com",
+      "northwind.net",
+      "northwind.dev",
+      "nw-corp.com",
+      "nw-eng.io"
+    ],
+    "services": [
+      "Google Workspace",
+      "AWS Route 53",
+      "AWS CloudFront",
+      "AWS S3",
+      "GitHub",
+      "Slack"
+    ],
+    "slugs": [
+      "googleworkspace",
+      "aws-route53",
+      "aws-cloudfront",
+      "aws-s3",
+      "github",
+      "slack"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "api.northwind.com",
+        "primary_slug": "aws-cloudfront",
+        "primary_name": "AWS CloudFront",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "docs.northwind.com",
+        "primary_slug": "aws-s3",
+        "primary_name": "AWS S3",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "blog.northwind.com",
+        "primary_slug": "aws-cloudfront",
+        "primary_name": "AWS CloudFront",
+        "primary_tier": "infrastructure"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "fabrikam-saas",
+    "display_name": "Fabrikam, Inc.",
+    "default_domain": "fabrikam.com",
+    "queried_domain": "fabrikam.com",
+    "confidence": "high",
+    "domain_count": 6,
+    "tenant_domains": [
+      "fabrikam.com",
+      "fabrikam.io",
+      "fabrikam-cloud.com",
+      "fabrikam.net",
+      "fabrikam-eu.com",
+      "fabrikam-jp.com"
+    ],
+    "services": [
+      "Microsoft 365",
+      "Cloudflare",
+      "AWS CloudFront",
+      "GCP Compute Engine",
+      "Snowflake",
+      "Slack"
+    ],
+    "slugs": [
+      "microsoft365",
+      "cloudflare",
+      "aws-cloudfront",
+      "gcp-compute",
+      "snowflake",
+      "slack"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "api.fabrikam.com",
+        "primary_slug": "fastly",
+        "primary_name": "Fastly",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "app.fabrikam.com",
+        "primary_slug": "aws-cloudfront",
+        "primary_name": "AWS CloudFront",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "data.fabrikam.com",
+        "primary_slug": "snowflake",
+        "primary_name": "Snowflake",
+        "primary_tier": "application"
+      },
+      {
+        "subdomain": "ml.fabrikam.com",
+        "primary_slug": "gcp-compute",
+        "primary_name": "GCP Compute Engine",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "status.fabrikam.com",
+        "primary_slug": "atlassian",
+        "primary_name": "Atlassian Statuspage",
+        "primary_tier": "application"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "adatum-hard",
+    "display_name": "Adatum Corporation",
+    "default_domain": "adatum.com",
+    "queried_domain": "adatum.com",
+    "confidence": "low",
+    "domain_count": 8,
+    "tenant_domains": [
+      "adatum.com",
+      "adatum.net",
+      "adatum.co.uk",
+      "adatum-corp.com",
+      "adatum-secure.com",
+      "adatum.eu",
+      "adatum.jp",
+      "adatum.au"
+    ],
+    "services": [
+      "Cloudflare"
+    ],
+    "slugs": [
+      "cloudflare"
+    ],
+    "sources": [],
+    "surface_attributions": []
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "tailspin-startup",
+    "display_name": "Tailspin Toys",
+    "default_domain": "tailspin.com",
+    "queried_domain": "tailspin.com",
+    "confidence": "high",
+    "domain_count": 3,
+    "tenant_domains": [
+      "tailspin.com",
+      "tailspin.io",
+      "tailspin-app.com"
+    ],
+    "services": [
+      "Google Workspace",
+      "Firebase Hosting",
+      "GCP Compute Engine",
+      "GCP Cloud Functions"
+    ],
+    "slugs": [
+      "googleworkspace",
+      "firebase-hosting",
+      "gcp-compute",
+      "gcp-cloud-functions"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "app.tailspin.com",
+        "primary_slug": "firebase-hosting",
+        "primary_name": "Firebase Hosting",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "api.tailspin.com",
+        "primary_slug": "gcp-cloud-functions",
+        "primary_name": "GCP Cloud Functions",
+        "primary_tier": "infrastructure"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "wingtip-azure",
+    "display_name": "Wingtip Toys",
+    "default_domain": "wingtip.com",
+    "queried_domain": "wingtip.com",
+    "confidence": "high",
+    "domain_count": 4,
+    "tenant_domains": [
+      "wingtip.com",
+      "wingtip.net",
+      "wingtip.eu",
+      "wingtip-corp.com"
+    ],
+    "services": [
+      "Microsoft 365",
+      "Azure DNS",
+      "Azure CDN",
+      "Azure App Service",
+      "Azure Blob Storage"
+    ],
+    "slugs": [
+      "microsoft365",
+      "azure-dns",
+      "azure-cdn",
+      "azure-appservice",
+      "azure-blob"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "api.wingtip.com",
+        "primary_slug": "azure-appservice",
+        "primary_name": "Azure App Service",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "cdn.wingtip.com",
+        "primary_slug": "azure-cdn",
+        "primary_name": "Azure CDN",
+        "primary_tier": "infrastructure"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "litware-small",
+    "display_name": "Litware, Inc.",
+    "default_domain": "litware.com",
+    "queried_domain": "litware.com",
+    "confidence": "high",
+    "domain_count": 1,
+    "tenant_domains": [
+      "litware.com"
+    ],
+    "services": [
+      "Microsoft 365"
+    ],
+    "slugs": [
+      "microsoft365"
+    ],
+    "sources": [],
+    "surface_attributions": []
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "treyresearch-saas",
+    "display_name": "Trey Research",
+    "default_domain": "treyresearch.com",
+    "queried_domain": "treyresearch.com",
+    "confidence": "high",
+    "domain_count": 3,
+    "tenant_domains": [
+      "treyresearch.com",
+      "treyresearch.net",
+      "trey-research.io"
+    ],
+    "services": [
+      "Microsoft 365",
+      "Slack",
+      "Atlassian",
+      "Salesforce",
+      "HubSpot"
+    ],
+    "slugs": [
+      "microsoft365",
+      "slack",
+      "atlassian",
+      "salesforce",
+      "hubspot"
+    ],
+    "sources": [],
+    "surface_attributions": []
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "contoso-hybrid",
+    "display_name": "Contoso Mergers",
+    "default_domain": "contoso-merger.com",
+    "queried_domain": "contoso-merger.com",
+    "confidence": "medium",
+    "domain_count": 6,
+    "tenant_domains": [
+      "contoso-merger.com",
+      "contoso.com",
+      "contoso.net",
+      "contoso-acquired.com",
+      "merger-corp.com",
+      "contoso-eu.com"
+    ],
+    "services": [
+      "Microsoft 365",
+      "Google Workspace",
+      "Okta",
+      "Proofpoint",
+      "AWS Route 53",
+      "Cloudflare"
+    ],
+    "slugs": [
+      "microsoft365",
+      "googleworkspace",
+      "okta",
+      "proofpoint",
+      "aws-route53",
+      "cloudflare"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "api.contoso-merger.com",
+        "primary_slug": "aws-cloudfront",
+        "primary_name": "AWS CloudFront",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "sso.contoso-merger.com",
+        "primary_slug": "okta",
+        "primary_name": "Okta",
+        "primary_tier": "application"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "northwind-cdn",
+    "display_name": "Northwind Boutique",
+    "default_domain": "northwind-boutique.com",
+    "queried_domain": "northwind-boutique.com",
+    "confidence": "medium",
+    "domain_count": 2,
+    "tenant_domains": [
+      "northwind-boutique.com",
+      "northwind-shop.com"
+    ],
+    "services": [
+      "Cloudflare",
+      "Shopify"
+    ],
+    "slugs": [
+      "cloudflare",
+      "shopify"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "shop.northwind-boutique.com",
+        "primary_slug": "shopify",
+        "primary_name": "Shopify",
+        "primary_tier": "application"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "fabrikam-jam",
+    "display_name": "Fabrikam Marketing",
+    "default_domain": "fabrikam-marketing.com",
+    "queried_domain": "fabrikam-marketing.com",
+    "confidence": "high",
+    "domain_count": 3,
+    "tenant_domains": [
+      "fabrikam-marketing.com",
+      "fabrikam.io",
+      "fabrikam-blog.com"
+    ],
+    "services": [
+      "Google Workspace",
+      "Vercel",
+      "Cloudflare",
+      "GitHub",
+      "Stripe"
+    ],
+    "slugs": [
+      "googleworkspace",
+      "vercel",
+      "cloudflare",
+      "github",
+      "stripe"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "www.fabrikam-marketing.com",
+        "primary_slug": "vercel",
+        "primary_name": "Vercel",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "docs.fabrikam-marketing.com",
+        "primary_slug": "vercel",
+        "primary_name": "Vercel",
+        "primary_tier": "infrastructure"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "adatum-health",
+    "display_name": "Adatum Health",
+    "default_domain": "adatum-health.com",
+    "queried_domain": "adatum-health.com",
+    "confidence": "high",
+    "domain_count": 5,
+    "tenant_domains": [
+      "adatum-health.com",
+      "adatum-care.com",
+      "adatum-hospital.com",
+      "adatum.health",
+      "adatum-rx.com"
+    ],
+    "services": [
+      "Microsoft 365",
+      "Okta",
+      "Cloudflare",
+      "AWS CloudFront",
+      "Proofpoint",
+      "Mimecast",
+      "Wiz",
+      "CrowdStrike"
+    ],
+    "slugs": [
+      "microsoft365",
+      "okta",
+      "cloudflare",
+      "aws-cloudfront",
+      "proofpoint",
+      "mimecast",
+      "wiz",
+      "crowdstrike"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "patient.adatum-health.com",
+        "primary_slug": "aws-cloudfront",
+        "primary_name": "AWS CloudFront",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "portal.adatum-health.com",
+        "primary_slug": "okta",
+        "primary_name": "Okta",
+        "primary_tier": "application"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "tailspin-gov",
+    "display_name": "Tailspin Public Services",
+    "default_domain": "tailspin-public.gov",
+    "queried_domain": "tailspin-public.gov",
+    "confidence": "low",
+    "domain_count": 4,
+    "tenant_domains": [
+      "tailspin-public.gov",
+      "tailspin-state.gov",
+      "tailspin-services.gov",
+      "tailspin-portal.gov"
+    ],
+    "services": [
+      "Microsoft 365",
+      "AWS Route 53"
+    ],
+    "slugs": [
+      "microsoft365",
+      "aws-route53"
+    ],
+    "sources": [],
+    "surface_attributions": []
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "wingtip-media",
+    "display_name": "Wingtip Media",
+    "default_domain": "wingtip-media.com",
+    "queried_domain": "wingtip-media.com",
+    "confidence": "high",
+    "domain_count": 4,
+    "tenant_domains": [
+      "wingtip-media.com",
+      "wingtip-news.com",
+      "wingtip-tv.com",
+      "wingtip-stream.com"
+    ],
+    "services": [
+      "Google Workspace",
+      "Cloudflare",
+      "Fastly",
+      "AWS S3",
+      "AWS CloudFront"
+    ],
+    "slugs": [
+      "googleworkspace",
+      "cloudflare",
+      "fastly",
+      "aws-s3",
+      "aws-cloudfront"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "cdn0.wingtip-media.com",
+        "primary_slug": "fastly",
+        "primary_name": "Fastly",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "cdn1.wingtip-media.com",
+        "primary_slug": "fastly",
+        "primary_name": "Fastly",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "cdn2.wingtip-media.com",
+        "primary_slug": "fastly",
+        "primary_name": "Fastly",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "cdn3.wingtip-media.com",
+        "primary_slug": "fastly",
+        "primary_name": "Fastly",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "cdn4.wingtip-media.com",
+        "primary_slug": "fastly",
+        "primary_name": "Fastly",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "cdn5.wingtip-media.com",
+        "primary_slug": "fastly",
+        "primary_name": "Fastly",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "cdn6.wingtip-media.com",
+        "primary_slug": "fastly",
+        "primary_name": "Fastly",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "cdn7.wingtip-media.com",
+        "primary_slug": "fastly",
+        "primary_name": "Fastly",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "video.wingtip-media.com",
+        "primary_slug": "aws-cloudfront",
+        "primary_name": "AWS CloudFront",
+        "primary_tier": "infrastructure"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "litware-fin",
+    "display_name": "Litware Capital",
+    "default_domain": "litware-capital.com",
+    "queried_domain": "litware-capital.com",
+    "confidence": "high",
+    "domain_count": 6,
+    "tenant_domains": [
+      "litware-capital.com",
+      "litware-banking.com",
+      "litware-invest.com",
+      "litware-trade.com",
+      "litware-corp.com",
+      "litware-secure.com"
+    ],
+    "services": [
+      "Microsoft 365",
+      "Okta",
+      "AWS CloudFront",
+      "AWS Route 53",
+      "Cloudflare",
+      "Wiz",
+      "CrowdStrike",
+      "Proofpoint",
+      "Snyk"
+    ],
+    "slugs": [
+      "microsoft365",
+      "okta",
+      "aws-cloudfront",
+      "aws-route53",
+      "cloudflare",
+      "wiz",
+      "crowdstrike",
+      "proofpoint",
+      "snyk"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "api.litware-capital.com",
+        "primary_slug": "aws-cloudfront",
+        "primary_name": "AWS CloudFront",
+        "primary_tier": "infrastructure"
+      },
+      {
+        "subdomain": "portal.litware-capital.com",
+        "primary_slug": "okta",
+        "primary_name": "Okta",
+        "primary_tier": "application"
+      },
+      {
+        "subdomain": "trade.litware-capital.com",
+        "primary_slug": "fastly",
+        "primary_name": "Fastly",
+        "primary_tier": "infrastructure"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "trey-university",
+    "display_name": "Trey University",
+    "default_domain": "trey-university.edu",
+    "queried_domain": "trey-university.edu",
+    "confidence": "high",
+    "domain_count": 5,
+    "tenant_domains": [
+      "trey-university.edu",
+      "trey-u.edu",
+      "trey-campus.edu",
+      "trey-online.edu",
+      "trey-alumni.edu"
+    ],
+    "services": [
+      "Google Workspace",
+      "Canvas LMS",
+      "AWS Route 53",
+      "AWS CloudFront",
+      "Zoom"
+    ],
+    "slugs": [
+      "googleworkspace",
+      "canvas-lms",
+      "aws-route53",
+      "aws-cloudfront",
+      "zoom"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "learn.trey-university.edu",
+        "primary_slug": "canvas-lms",
+        "primary_name": "Canvas LMS",
+        "primary_tier": "application"
+      },
+      {
+        "subdomain": "portal.trey-university.edu",
+        "primary_slug": "aws-cloudfront",
+        "primary_name": "AWS CloudFront",
+        "primary_tier": "infrastructure"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "contoso-legacy",
+    "display_name": "Contoso Legacy Apps",
+    "default_domain": "contoso-legacy.com",
+    "queried_domain": "contoso-legacy.com",
+    "confidence": "medium",
+    "domain_count": 3,
+    "tenant_domains": [
+      "contoso-legacy.com",
+      "contoso-old.com",
+      "legacy-contoso.net"
+    ],
+    "services": [
+      "Microsoft 365",
+      "Heroku",
+      "Cloudflare",
+      "GitHub"
+    ],
+    "slugs": [
+      "microsoft365",
+      "heroku",
+      "cloudflare",
+      "github"
+    ],
+    "sources": [],
+    "surface_attributions": [
+      {
+        "subdomain": "app.contoso-legacy.com",
+        "primary_slug": "heroku",
+        "primary_name": "Heroku",
+        "primary_tier": "application"
+      }
+    ]
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "northwind-min",
+    "display_name": "Northwind Minimal",
+    "default_domain": "northwind-min.com",
+    "queried_domain": "northwind-min.com",
+    "confidence": "low",
+    "domain_count": 1,
+    "tenant_domains": [
+      "northwind-min.com"
+    ],
+    "services": [],
+    "slugs": [],
+    "sources": [],
+    "surface_attributions": []
+  },
+  {
+    "cache_version": 1,
+    "tenant_id": "fabrikam-aws-only",
+    "display_name": "Fabrikam Cloud Services",
+    "default_domain": "fabrikam-cloud.com",
+    "queried_domain": "fabrikam-cloud.com",
+    "confidence": "high",
+    "domain_count": 3,
+    "tenant_domains": [
+      "fabrikam-cloud.com",
+      "fabrikam.io",
+      "fabrikam-cs.com"
+    ],
+    "services": [
+      "AWS Route 53",
+      "AWS CloudFront",
+      "AWS S3",
+      "AWS EC2"
+    ],
+    "slugs": [
+      "aws-route53",
+      "aws-cloudfront",
+      "aws-s3",
+      "aws-ec2"
+    ],
+    "sources": [],
+    "surface_attributions": []
+  }
+]

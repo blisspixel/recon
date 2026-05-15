@@ -8,6 +8,11 @@ If any of these matter for your use case, either pipe recon's output into a
 complementary tool (active scanner, authenticated API consumer) or accept the
 gap as a known unknown.
 
+> **Surfaced in the panel (v1.9.9+).** When a queried apex looks sparse for
+> its likely scale, the default panel adds a one-line "Passive-DNS ceiling"
+> footer naming the categories of evidence that public DNS cannot reach. This
+> page is the long-form inventory; the panel footer is the at-a-glance cue.
+
 ---
 
 ## What recon cannot see

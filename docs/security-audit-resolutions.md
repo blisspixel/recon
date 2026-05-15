@@ -24,8 +24,9 @@ notes, see [`docs/security.md`](security.md).
 |---|---|
 | **Severity (as audited)** | High |
 | **Introduced** | v1.9.2.1 (`recon mcp doctor` / `recon mcp install` shipped without cwd / `PYTHONSAFEPATH` isolation) |
-| **Closed** | **v1.9.3.4** — commit `f9b3415` |
-| **Pinned by** | `tests/test_mcp_path_isolation.py` |
+| **Initial mitigation** | v1.9.3.4 — commit `f9b3415` (effective on Python 3.11+; Python 3.10 still relied on the runtime guard) |
+| **Fully closed** | **v1.9.9** — `build_recon_block()` rewritten to use `python -c "<sys.path-stripping launcher>"` instead of `python -m recon_tool.server`. The launcher strips empty/`.` entries from `sys.path` BEFORE any `recon_tool` import, blocking the cwd-shadow attack at the language level on every supported Python (including 3.10 where `PYTHONSAFEPATH` is a no-op). |
+| **Pinned by** | `tests/test_mcp_path_isolation.py`, `tests/test_mcp_install.py` |
 
 **Summary.** Before v1.9.3.4, `recon mcp doctor` spawned the server
 as `sys.executable -m recon_tool.server` with the caller's
@@ -37,42 +38,85 @@ execute attacker code. The same launch form was persisted into MCP
 client configuration by the installer when `recon` was not on PATH,
 extending the risk to subsequent client launches.
 
-**Fix shape.**
+**v1.9.3.4 partial mitigation.**
 
 * `recon_tool/mcp_doctor.py` spawns the subprocess with `cwd` set to
-  an empty `tempfile.TemporaryDirectory` and `env["PYTHONSAFEPATH"]
-  = "1"`. Cwd isolation works on Python 3.10 (where `PYTHONSAFEPATH`
-  is a no-op); the env var is the belt to the cwd-isolation
-  suspenders for 3.11+.
-* `recon_tool/mcp_install.py` persists `PYTHONSAFEPATH=1` in the
-  fallback launch block when `recon` is not found on PATH, so MCP
-  clients launching via the persisted config also get the
-  protection. `warn_if_fallback` surfaces a stderr advisory when
-  the fallback form is written.
-* `recon_tool/server.py` carries a runtime guard refusing
-  cwd-shadow loads as defense-in-depth.
+  an empty `tempfile.TemporaryDirectory` and
+  `env["PYTHONSAFEPATH"] = "1"`. The cwd isolation works on every
+  supported Python, including 3.10; the env var is the
+  belt-and-suspenders for 3.11+. **This path was fully closed in
+  v1.9.3.4.**
+* `recon_tool/mcp_install.py` persisted `PYTHONSAFEPATH=1` in the
+  fallback launch block when `recon` was not found on PATH. **This
+  path was NOT fully closed in v1.9.3.4** because the MCP installer
+  cannot control where the downstream MCP client launches the
+  persisted command from. On Python 3.10, `PYTHONSAFEPATH` is a
+  no-op; an MCP client launching the persisted
+  `python -m recon_tool.server` form from an attacker-influenced
+  cwd would still hit the cwd-shadow attack. The runtime guard in
+  `server.py` runs AFTER Python imports the module — too late to
+  protect against a malicious `recon_tool/server.py` whose payload
+  runs at import time.
 
-**Receipts (current code state).**
+A subsequent external audit (May 2026) correctly flagged this
+remaining gap on the supported Python 3.10 fallback path. The
+fix shipped in v1.9.9.
+
+**v1.9.9 full closure.**
+
+`build_recon_block()` now persists a `python -c "<launcher>"` form
+instead of `python -m recon_tool.server`. The launcher explicitly
+strips `""` and `"."` entries from `sys.path` BEFORE any
+`recon_tool` import:
+
+```python
+# recon_tool/mcp_install.py — build_recon_block() (v1.9.9)
+_FALLBACK_LAUNCH_CODE = (
+    "import sys; "
+    "sys.path[:] = [p for p in sys.path if p not in ('', '.')]; "
+    "from recon_tool.server import main; "
+    "main()"
+)
+
+return {
+    "command": sys.executable,
+    "args": ["-c", _FALLBACK_LAUNCH_CODE],
+    "env": {"PYTHONSAFEPATH": "1"},  # belt for 3.11+; no-op on 3.10
+    "autoApprove": [],
+}
+```
+
+The `sys.path` strip runs as ordinary Python code BEFORE the
+`recon_tool` import, so a malicious `recon_tool/server.py` in cwd
+cannot be selected. This protection works on every supported
+Python version — language-level rather than env-flag-dependent.
+
+`recon_tool/server.py` still carries the runtime guard as
+defense-in-depth (catches misconfigured callers who bypass the
+persisted launcher), but it is no longer the sole protection on
+Python 3.10.
+
+**Receipts (v1.9.9 code state).**
 
 ```python
 # recon_tool/mcp_doctor.py
-env["PYTHONSAFEPATH"] = "1"  # v1.9.3.4: disable cwd prepend on Py3.11+
+env["PYTHONSAFEPATH"] = "1"  # v1.9.3.4: belt for Python 3.11+
 with tempfile.TemporaryDirectory(prefix="recon-mcp-doctor-cwd-") as safe_cwd:
     params = StdioServerParameters(
         command=sys.executable,
         args=["-m", "recon_tool.server"],
         env=env,
-        cwd=safe_cwd,
+        cwd=safe_cwd,  # v1.9.3.4: cwd isolation works on every supported Python
     )
 ```
 
 ```python
-# recon_tool/mcp_install.py — build_recon_block()
+# recon_tool/mcp_install.py — build_recon_block() (v1.9.9)
 return {
     "command": sys.executable,
-    "args": ["-m", "recon_tool.server"],
+    "args": ["-c", _FALLBACK_LAUNCH_CODE],  # v1.9.9: language-level cwd-strip
+    "env": {"PYTHONSAFEPATH": "1"},  # belt-and-suspenders for 3.11+
     "autoApprove": [],
-    "env": {"PYTHONSAFEPATH": "1"},
 }
 ```
 

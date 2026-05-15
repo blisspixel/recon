@@ -1,0 +1,45 @@
+{
+  "cache_version": 1,
+  "tenant_id": "trey-university",
+  "display_name": "Trey University",
+  "default_domain": "trey-university.edu",
+  "queried_domain": "trey-university.edu",
+  "confidence": "high",
+  "domain_count": 5,
+  "tenant_domains": [
+    "trey-university.edu",
+    "trey-u.edu",
+    "trey-campus.edu",
+    "trey-online.edu",
+    "trey-alumni.edu"
+  ],
+  "services": [
+    "Google Workspace",
+    "Canvas LMS",
+    "AWS Route 53",
+    "AWS CloudFront",
+    "Zoom"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "canvas-lms",
+    "aws-route53",
+    "aws-cloudfront",
+    "zoom"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "learn.trey-university.edu",
+      "primary_slug": "canvas-lms",
+      "primary_name": "Canvas LMS",
+      "primary_tier": "application"
+    },
+    {
+      "subdomain": "portal.trey-university.edu",
+      "primary_slug": "aws-cloudfront",
+      "primary_name": "AWS CloudFront",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

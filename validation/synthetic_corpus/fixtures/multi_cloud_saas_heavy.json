@@ -1,0 +1,66 @@
+{
+  "cache_version": 1,
+  "tenant_id": "fabrikam-saas",
+  "display_name": "Fabrikam, Inc.",
+  "default_domain": "fabrikam.com",
+  "queried_domain": "fabrikam.com",
+  "confidence": "high",
+  "domain_count": 6,
+  "tenant_domains": [
+    "fabrikam.com",
+    "fabrikam.io",
+    "fabrikam-cloud.com",
+    "fabrikam.net",
+    "fabrikam-eu.com",
+    "fabrikam-jp.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Cloudflare",
+    "AWS CloudFront",
+    "GCP Compute Engine",
+    "Snowflake",
+    "Slack"
+  ],
+  "slugs": [
+    "microsoft365",
+    "cloudflare",
+    "aws-cloudfront",
+    "gcp-compute",
+    "snowflake",
+    "slack"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "api.fabrikam.com",
+      "primary_slug": "fastly",
+      "primary_name": "Fastly",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "app.fabrikam.com",
+      "primary_slug": "aws-cloudfront",
+      "primary_name": "AWS CloudFront",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "data.fabrikam.com",
+      "primary_slug": "snowflake",
+      "primary_name": "Snowflake",
+      "primary_tier": "application"
+    },
+    {
+      "subdomain": "ml.fabrikam.com",
+      "primary_slug": "gcp-compute",
+      "primary_name": "GCP Compute Engine",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "status.fabrikam.com",
+      "primary_slug": "atlassian",
+      "primary_name": "Atlassian Statuspage",
+      "primary_tier": "application"
+    }
+  ]
+}

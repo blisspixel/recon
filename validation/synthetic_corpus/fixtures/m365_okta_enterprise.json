@@ -1,0 +1,63 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-mid",
+  "display_name": "Contoso Ltd",
+  "default_domain": "contoso.com",
+  "queried_domain": "contoso.com",
+  "confidence": "high",
+  "domain_count": 7,
+  "tenant_domains": [
+    "contoso.com",
+    "contoso.net",
+    "contoso.co.uk",
+    "contoso-corp.com",
+    "contoso-mail.com",
+    "contoso.io",
+    "contoso.eu"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Okta",
+    "Slack",
+    "Wiz",
+    "Cloudflare",
+    "AWS CloudFront",
+    "Atlassian"
+  ],
+  "slugs": [
+    "microsoft365",
+    "okta",
+    "slack",
+    "wiz",
+    "cloudflare",
+    "aws-cloudfront",
+    "atlassian"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "api.contoso.com",
+      "primary_slug": "aws-cloudfront",
+      "primary_name": "AWS CloudFront",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "app.contoso.com",
+      "primary_slug": "aws-cloudfront",
+      "primary_name": "AWS CloudFront",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "status.contoso.com",
+      "primary_slug": "fastly",
+      "primary_name": "Fastly",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "support.contoso.com",
+      "primary_slug": "zendesk",
+      "primary_name": "Zendesk",
+      "primary_tier": "application"
+    }
+  ]
+}

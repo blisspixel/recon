@@ -1,0 +1,41 @@
+{
+  "cache_version": 1,
+  "tenant_id": "tailspin-startup",
+  "display_name": "Tailspin Toys",
+  "default_domain": "tailspin.com",
+  "queried_domain": "tailspin.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "tailspin.com",
+    "tailspin.io",
+    "tailspin-app.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Firebase Hosting",
+    "GCP Compute Engine",
+    "GCP Cloud Functions"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "firebase-hosting",
+    "gcp-compute",
+    "gcp-cloud-functions"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "app.tailspin.com",
+      "primary_slug": "firebase-hosting",
+      "primary_name": "Firebase Hosting",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "api.tailspin.com",
+      "primary_slug": "gcp-cloud-functions",
+      "primary_name": "GCP Cloud Functions",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

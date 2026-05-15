@@ -536,27 +536,30 @@ inference is exact and the calibration is honest.
 **Label vs. status.** The layer keeps the `EXPERIMENTAL` label
 through v1.9.x and ships without an `experimental` tag at v2.0.
 The label is a release-engineering choice, not a statement that
-calibration is absent. As of v1.9.8 the layer has been validated
-in four ways the original v1.9.0 framing did not have access to:
+calibration is absent. As of v1.9.9 the layer has been validated
+in five ways the original v1.9.0 framing did not have access to:
 the v1.9.4 hardened-adversarial corpus (50 domains across five
 hardening postures; `validation/v1.9.4-calibration.md`), the
 v1.9.5 per-node stability dispositions (eight of nine nodes
 classified `stable` against behavioural criteria;
 `validation/v1.9.5-stability.md`), the v1.9.6 topology fix
 that closed the one `not yet` node (`validation/v1.9.6-stability-
-update.md`), and the v1.9.7+v1.9.8 catalog metadata pass that
+update.md`), the v1.9.7+v1.9.8 catalog metadata pass that
 brought every detection in every category to a non-empty
 description, scope-narrowing language, and a canonical vendor
-`reference` URL (`validation/v1.9.8-metadata-audit.md`). The
-catalog-metadata pass is upstream of the inference layer (it
-governs what the slug observations $O$ in §4.5 represent) but
-load-bearing for the layer's auditability: every fingerprint match
-that flows into the network now has a vendor-doc citation, so a
-defender re-reading the inference output can re-verify the
-underlying detection without grepping the source. The current
-label is "experimental in name, validated in fact, kept that way
-until v2.0 by design." See §4.8.12 for the per-release calibration
-narrative.
+`reference` URL (`validation/v1.9.8-metadata-audit.md`), and the
+v1.9.9 detection-gap UX surfaces backed by 167 new tests across
+20 files plus a 19-fixture publicly-reproducible synthetic
+corpus (`validation/v1.9.9-detection-gap-ux.md`,
+`validation/v1.9.9-corpus-run.md`). The catalog-metadata pass is
+upstream of the inference layer (it governs what the slug
+observations $O$ in §4.5 represent) but load-bearing for the
+layer's auditability: every fingerprint match that flows into the
+network now has a vendor-doc citation, so a defender re-reading
+the inference output can re-verify the underlying detection
+without grepping the source. The current label is "experimental in
+name, validated in fact, kept that way until v2.0 by design." See
+§4.8.12 for the per-release calibration narrative.
 
 #### 4.8.1 Generative model
 
@@ -1960,19 +1963,19 @@ numbers and the layer's truthfulness. `CONTRIBUTING.md`
 standing practice for future CPT changes: question topology,
 not parameters.
 
-##### Net effect on the network at v1.9.8
+##### Net effect on the network at v1.9.9
 
 Eight stable, one `not yet`. The remaining `not yet` is
 `okta_idp` (criterion (c), corpus-limited at 7 firings; the
 disposition is "keep node, expand corpus", not "fix engine").
-The disposition table held through v1.9.8 (the v1.9.8 release is
-a catalog-metadata pass; no node-level CPT or topology change).
-The v2.0 release ships with this disposition table baked into
-the committed network and no `experimental` label on individual
-nodes. The label persists on the layer as a release-engineering
-choice (the whole `--fusion` surface is held `EXPERIMENTAL`
-until the v2.0 cut) but not on any individual node's
-calibration story.
+The disposition table held through v1.9.9 (the v1.9.8 release is
+a catalog-metadata pass and v1.9.9 is a panel-UX pass; neither
+touches node-level CPTs or topology). The v2.0 release ships
+with this disposition table baked into the committed network and
+no `experimental` label on individual nodes. The label persists
+on the layer as a release-engineering choice (the whole
+`--fusion` surface is held `EXPERIMENTAL` until the v2.0 cut) but
+not on any individual node's calibration story.
 
 #### 4.8.13 Catalog metadata as upstream calibration (v1.9.7–v1.9.8)
 
@@ -2021,6 +2024,43 @@ defender-readable explanation of what the slug claims and a
 vendor doc URL the defender can re-verify against. The layer's
 calibration story (§4.8.12) is unchanged; what changed is the
 audit trail for the inputs the calibration story rests on.
+
+#### 4.8.14 Detection-gap UX surfaces (v1.9.9)
+
+v1.9.9 is a renderer-side pass: no engine code changes, no
+schema additions, no calibration claim. The relevance to the
+inference layer is indirect but worth stating because the
+default panel is one of the surfaces an operator (or AI agent)
+reads to act on the layer's output.
+
+Three additions:
+- **Passive-DNS ceiling phrasing.** On sparse-services +
+  multi-domain apexes the panel renders a one-line footer:
+  "Passive DNS surfaces what publishes externally. Server-side
+  API consumption, internal workloads, and SaaS without DNS
+  verification do not appear in public DNS records." This is the
+  panel-layer counterpart to the layer's `sparse=true` flag
+  (§4.8.4): a structural rather than statistical statement that
+  some classes of evidence are unreachable through public DNS.
+- **Multi-cloud rollup indicator.** When the public footprint
+  touches more than one canonicalized cloud vendor across apex
+  and surface attributions, a `Multi-cloud` row joins the key-
+  facts block. The rollup is a renderer-side derivation from
+  the existing slug data; the JSON shape is unchanged.
+- **Common-prefix wordlist breadth.** The active-DNS probe and
+  the CT-prioritization sort both gained eight prefixes covering
+  data, AI/ML, internal-tooling, and security tiers. The wordlist
+  change widens the slug-collection surface that flows into the
+  network's evidence set $E$ but does not change the network or
+  the likelihoods.
+
+The validation evidence is two memos
+(`validation/v1.9.9-detection-gap-ux.md` for the test-quality
+manifesto and `validation/v1.9.9-corpus-run.md` for the synthetic-
+corpus results) plus 167 new tests across 20 files. The panel
+behaviour is end-to-end validated against a 19-fixture publicly-
+reproducible synthetic corpus generator at
+`validation/synthetic_corpus/generator.py`.
 
 ### 4.8a Worked `--explain-dag` examples (v1.9.0)
 
