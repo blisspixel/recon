@@ -153,9 +153,9 @@ shape or documents the divergence.
 **Status:** hand-rolled mutation library covers six named
 mutations; cosmic-ray pilot was attempted but interrupted.
 **Remediation milestone:** v1.9.10 — full cosmic-ray sweep on
-formatter.py via the existing `cosmic-ray-v199.toml` config.
-Document surviving mutants and either kill them with new tests or
-explicitly accept them in the manifesto.
+formatter.py (config authored at sweep time, not committed
+in advance). Document surviving mutants and either kill them
+with new tests or explicitly accept them in the manifesto.
 **Definition of done:** the v1.9.10 memo records the cosmic-ray
 results (mutation count, killed count, surviving-mutant list with
 disposition).
