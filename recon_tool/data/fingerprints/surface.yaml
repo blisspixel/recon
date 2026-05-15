@@ -962,6 +962,16 @@ fingerprints:
       HubSpot CMS with EU-region content hosting. Does not by itself
       indicate GDPR posture; data-residency controls are configured
       separately inside the HubSpot tenant.
+  - type: cname_target
+    pattern: hscoscdn-na2.net
+    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
+    tier: application
+    description: >-
+      HubSpot CMS North America CDN zone for content delivered
+      through HubSpot's NA edge infrastructure. Same product family
+      as hscoscdn-eu1.net; the suffix difference reflects the
+      tenant's hosting region. Does not distinguish HubSpot CMS
+      tier (Starter, Professional, Enterprise); the chain is shared.
 
 - name: Akamai
   slug: akamai
@@ -3192,3 +3202,569 @@ fingerprints:
     tier: application
     description: Duo Security (Cisco) MFA / Universal Prompt endpoint; tenant frames load from ``api-<id>.duosecurity.com``.
     reference: https://duo.com/docs
+
+# ── Post-v1.9.11 corpus-observed catalog growth (4270-apex scan) ─────────────
+#
+# 30 new cname_target entries surfaced by the v2.0-prep real-corpus aggregate.
+# Triaged from the gap list against vendor-doc-sourced references. Each entry
+# carries the 3-part rubric description and a public reference URL.
+
+# ── Western SaaS and analytics ──────────────────────────────────────────────
+
+- name: Tyler Socrata
+  slug: socrata
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: socrata.net
+    tier: application
+    description: >-
+      Subdomain CNAME terminates at Socrata's hosted open-data
+      platform (Tyler Technologies). Indicates the org publishes
+      open-data portals on Socrata, often for government or
+      civic transparency. Does not by itself distinguish FedRAMP
+      from commercial deployments; the region-specific prefix
+      (e.g. ``aws-us-east-1-fedramp-prod.socrata.net``) carries
+      that detail.
+    reference: https://dev.socrata.com/
+
+- name: Adobe Analytics
+  slug: adobe-analytics
+  category: Data & Analytics
+  confidence: high
+  product_family: Adobe Experience Cloud
+  parent_vendor: Adobe
+  detections:
+  - type: cname_target
+    pattern: omtrdc.net
+    tier: application
+    description: >-
+      Adobe Analytics first-party tracking endpoint
+      (``<companyId>.sc.omtrdc.net``). Indicates the org has
+      configured first-party data collection through Adobe
+      Analytics. Does not distinguish Adobe Analytics from
+      Customer Journey Analytics; both products surface through
+      the same CNAME family.
+    reference: https://experienceleague.adobe.com/docs/analytics/implementation/vars/config-vars/trackingserver.html
+
+- name: Adobe Analytics (legacy)
+  slug: adobe-analytics-legacy
+  category: Data & Analytics
+  confidence: medium
+  product_family: Adobe Experience Cloud
+  parent_vendor: Adobe
+  detections:
+  - type: cname_target
+    pattern: 2o7.net
+    tier: application
+    description: >-
+      Legacy Omniture (now Adobe Analytics) tracking domain;
+      pre-2017 Adobe SiteCatalyst deployments use a numeric
+      partner-ID host such as ``122.2o7.net``. Indicates a
+      long-standing Adobe Analytics integration that has not
+      been migrated to ``omtrdc.net``. Persistence beyond
+      decommissioning is common; not a freshness signal.
+    reference: https://experienceleague.adobe.com/docs/analytics/implementation/vars/config-vars/trackingserver.html
+
+- name: Adobe Experience Cloud
+  slug: adobe-experience-cloud
+  category: Data & Analytics
+  confidence: medium
+  product_family: Adobe Experience Cloud
+  parent_vendor: Adobe
+  detections:
+  - type: cname_target
+    pattern: adobedc.net
+    tier: application
+    description: >-
+      Adobe Experience Cloud data-collection endpoint, the
+      Experience Platform Edge Network successor to legacy
+      tracking domains. Indicates the org runs at least one
+      Adobe Experience Cloud product (Analytics, Target, Audience
+      Manager, Real-Time CDP). Does not identify which product
+      specifically; further evidence (Target mbox, AAM dpid) is
+      needed to narrow.
+    reference: https://experienceleague.adobe.com/docs/experience-platform/edge/fundamentals/domains.html
+
+- name: SafeBase
+  slug: safebase
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: safebase.io
+    tier: application
+    description: >-
+      SafeBase customer trust-portal endpoint
+      (``portals.safebase.io`` or ``<org>.safebase.io``).
+      Indicates the org publishes a SafeBase-hosted trust portal
+      for security questionnaires, SOC reports, and compliance
+      artefacts. Does not by itself imply SOC 2 or ISO 27001
+      certification; the portal can host evidence at any
+      maturity level.
+    reference: https://safebase.io/
+
+- name: AWS regional service
+  slug: aws-region-endpoint
+  category: Cloud
+  confidence: medium
+  product_family: AWS
+  parent_vendor: Amazon Web Services
+  detections:
+  - type: cname_target
+    pattern: us-east-1.amazonaws.com
+    tier: infrastructure
+    description: >-
+      AWS regional service endpoint in us-east-1 not classified
+      by a more specific AWS slug (ELB, S3, API Gateway, etc.).
+      Indicates the chain terminates inside AWS's N. Virginia
+      region but the specific service is not yet catalogued.
+      Generic fallback; corroborate with service-specific evidence
+      before claiming a product binding.
+    reference: https://docs.aws.amazon.com/general/latest/gr/rande.html
+  - type: cname_target
+    pattern: us-west-1.amazonaws.com
+    tier: infrastructure
+    description: >-
+      AWS regional service endpoint in us-west-1 not classified
+      by a more specific AWS slug. Same caveat as us-east-1: the
+      chain is inside AWS N. California but the specific service
+      is uncatalogued.
+    reference: https://docs.aws.amazon.com/general/latest/gr/rande.html
+  - type: cname_target
+    pattern: us-east-2.amazonaws.com
+    tier: infrastructure
+    description: >-
+      AWS regional service endpoint in us-east-2 not classified
+      by a more specific AWS slug. Same caveat as the other
+      regional fallbacks.
+    reference: https://docs.aws.amazon.com/general/latest/gr/rande.html
+  - type: cname_target
+    pattern: ap-southeast-2.amazonaws.com
+    tier: infrastructure
+    description: >-
+      AWS regional service endpoint in ap-southeast-2 (Sydney)
+      not classified by a more specific AWS slug. Same caveat
+      as the other regional fallbacks.
+    reference: https://docs.aws.amazon.com/general/latest/gr/rande.html
+
+- name: Esri ArcGIS Hub
+  slug: arcgis-hub
+  category: Data & Analytics
+  confidence: high
+  product_family: ArcGIS
+  parent_vendor: Esri
+  detections:
+  - type: cname_target
+    pattern: arcgis.com
+    tier: application
+    description: >-
+      Subdomain CNAMEs into Esri's ArcGIS Hub or ArcGIS Online
+      platform (``hub.arcgis.com`` for hub sites, ``*.arcgis.com``
+      for tenant-mapped pages). Indicates the org publishes
+      geographic data or maps through ArcGIS. Does not
+      distinguish ArcGIS Hub from ArcGIS Online or ArcGIS
+      Enterprise; the cloud-hosted family shares the chain.
+    reference: https://doc.arcgis.com/en/hub/
+
+- name: Yahoo Japan image CDN
+  slug: yahoo-japan-cdn
+  category: Infrastructure
+  confidence: medium
+  parent_vendor: Yahoo Japan
+  detections:
+  - type: cname_target
+    pattern: yimg.jp
+    tier: infrastructure
+    description: >-
+      Yahoo Japan image CDN endpoint (``g.yimg.jp``,
+      ``s.yimg.jp``). Indicates the chain serves content through
+      Yahoo Japan's media-asset infrastructure, common for
+      Japanese commercial and partner integrations. Does not by
+      itself indicate ownership; the CDN can be reached through
+      partnership without the org being a direct customer.
+    reference: https://about.yahoo.co.jp/
+
+- name: Microsoft Edge (Front Door)
+  slug: microsoft-edge-cdn
+  category: Infrastructure
+  confidence: high
+  product_family: Azure Front Door
+  parent_vendor: Microsoft
+  detections:
+  - type: cname_target
+    pattern: dc-msedge.net
+    tier: infrastructure
+    description: >-
+      Microsoft Edge / Azure Front Door customer-facing CDN
+      endpoint (``<id>.dc-msedge.net``). Indicates the chain
+      terminates in Microsoft's global edge network, the
+      backbone for both Azure Front Door and Microsoft consumer
+      properties. Does not distinguish Azure Front Door tenant
+      configurations from Microsoft first-party usage; further
+      Azure evidence is needed to claim AFD customer status.
+    reference: https://learn.microsoft.com/azure/frontdoor/
+
+- name: Azion CDN
+  slug: azion-cdn
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: azioncdn.net
+    tier: infrastructure
+    description: >-
+      Azion Edge customer endpoint (``<id>.ha.azioncdn.net``).
+      Indicates the org delivers content through Azion's
+      Brazil-based edge platform. Does not distinguish Azion
+      products (CDN, Edge Application, Edge Firewall); the host
+      reflects shared edge infrastructure across the product
+      family.
+    reference: https://www.azion.com/en/documentation/
+
+# ── Asian ecosystem CDNs and platforms (vendor-doc-sourced) ─────────────────
+
+- name: Baidu CDN
+  slug: baidu-cdn
+  category: Infrastructure
+  confidence: high
+  parent_vendor: Baidu
+  detections:
+  - type: cname_target
+    pattern: shifen.com
+    tier: infrastructure
+    description: >-
+      Baidu's CDN and load-balancer endpoint (``<shard>.shifen.com``,
+      with shard letters covering a/b/c/.../z and longer aliases).
+      Indicates the chain resolves through Baidu's edge
+      infrastructure. Common for Chinese commercial sites and
+      partner integrations. Does not by itself identify a
+      specific Baidu product (Baidu Cloud CDN, Smart Cloud, etc.).
+    reference: https://cloud.baidu.com/product/cdn.html
+
+- name: JD GSLB
+  slug: jd-gslb
+  category: Infrastructure
+  confidence: medium
+  parent_vendor: JD.com
+  detections:
+  - type: cname_target
+    pattern: gslb.qianxun.com
+    tier: infrastructure
+    description: >-
+      JD.com (Jingdong) internal GSLB load-balancing platform.
+      Pattern is ``<orig-fqdn>.gslb.qianxun.com`` where the
+      original hostname is prepended to the GSLB zone. Indicates
+      JD ecosystem presence: either a JD subsidiary, a JD partner
+      integration, or content fronted by JD's edge platform.
+      Does not imply the org is a Qianxun Positioning customer
+      (the domain qianxun.com resolves to JD infrastructure, not
+      Qianxun Positioning / 千寻位置).
+    reference: https://www.jd.com/
+
+- name: Tencent EdgeOne
+  slug: tencent-edgeone
+  category: Infrastructure
+  confidence: high
+  product_family: Tencent EdgeOne
+  parent_vendor: Tencent
+  detections:
+  - type: cname_target
+    pattern: eo.dnse1.com
+    tier: infrastructure
+    description: >-
+      Tencent EdgeOne (边缘安全加速平台 EO) customer endpoint,
+      shard 1 of the multi-zone CNAME chain. Indicates the org
+      runs Tencent EdgeOne for CDN, WAF, or edge-acceleration
+      workloads. Tencent EdgeOne supersedes Tencent Cloud CDN
+      for new tenants. Sibling shards (dnse2 through dnse5)
+      below.
+    reference: https://www.tencentcloud.com/document/product/1145
+  - type: cname_target
+    pattern: eo.dnse2.com
+    tier: infrastructure
+    description: Tencent EdgeOne customer endpoint, shard 2.
+    reference: https://www.tencentcloud.com/document/product/1145
+  - type: cname_target
+    pattern: eo.dnse3.com
+    tier: infrastructure
+    description: Tencent EdgeOne customer endpoint, shard 3.
+    reference: https://www.tencentcloud.com/document/product/1145
+  - type: cname_target
+    pattern: eo.dnse4.com
+    tier: infrastructure
+    description: Tencent EdgeOne customer endpoint, shard 4.
+    reference: https://www.tencentcloud.com/document/product/1145
+  - type: cname_target
+    pattern: eo.dnse5.com
+    tier: infrastructure
+    description: Tencent EdgeOne customer endpoint, shard 5.
+    reference: https://www.tencentcloud.com/document/product/1145
+
+- name: Naver Cloud Platform
+  slug: naver-cloud-platform
+  category: Cloud
+  confidence: high
+  parent_vendor: Naver
+  detections:
+  - type: cname_target
+    pattern: naverncp.com
+    tier: infrastructure
+    description: >-
+      Naver Cloud Platform customer endpoint (``lb.naverncp.com``
+      for load balancers, with NCP service-specific subzones).
+      Indicates the org runs workloads on Naver's South-Korea
+      commercial cloud. Does not distinguish NCP product family
+      (compute, CDN, AI); further evidence is needed to narrow.
+    reference: https://guide.ncloud-docs.com/docs/en/home
+
+- name: Naver internal CDN
+  slug: naver-cdn
+  category: Infrastructure
+  confidence: medium
+  parent_vendor: Naver
+  detections:
+  - type: cname_target
+    pattern: nheos.com
+    tier: infrastructure
+    description: >-
+      Naver's internal CDN and GSLB layer; pattern is
+      ``<orig-fqdn>.nheos.com`` where the original hostname is
+      prepended to the Naver-owned zone. Often fronts Naver
+      first-party properties or Naver sub-brands. Third-party
+      tenants are rare. Does not imply the org is a Naver Cloud
+      Platform customer; the two products are distinct
+      (see ``naver-cloud-platform``).
+    reference: https://www.naver.com/
+
+- name: Taobao Cache
+  slug: taobao-cache
+  category: Infrastructure
+  confidence: medium
+  parent_vendor: Alibaba
+  detections:
+  - type: cname_target
+    pattern: tbcache.com
+    tier: infrastructure
+    description: >-
+      Alibaba / Taobao image and asset cache CDN
+      (``danuoyi.tbcache.com``). Indicates the chain serves
+      Taobao-ecosystem content through Alibaba's media cache
+      infrastructure. Common for Taobao, Tmall, and Alibaba
+      partner sites. Does not by itself indicate the org is an
+      Alibaba Cloud (Aliyun) customer.
+    reference: https://www.alibabacloud.com/help/en/cdn
+
+- name: Bilibili CDN
+  slug: bilibili-cdn
+  category: Infrastructure
+  confidence: high
+  parent_vendor: Bilibili
+  detections:
+  - type: cname_target
+    pattern: bilicdn1.com
+    tier: infrastructure
+    description: >-
+      Bilibili (B站) content delivery network endpoint
+      (``w.bilicdn1.com`` and similar). Indicates the chain
+      serves Bilibili-ecosystem media (video, image, static
+      assets) through Bilibili's edge. Common for Bilibili
+      partner content integrations. Does not imply the org runs
+      a Bilibili creator channel; the CDN can deliver embedded
+      content without an account binding.
+    reference: https://www.bilibili.com/
+
+- name: Sina
+  slug: sina
+  category: Infrastructure
+  confidence: low
+  parent_vendor: Sina Corp
+  detections:
+  - type: cname_target
+    pattern: sina.com.cn
+    tier: infrastructure
+    description: >-
+      Sina Corp's main domain appearing in a CNAME chain.
+      Typically indicates a partner integration with Sina
+      Weibo, Sina News, or another Sina property, but the
+      specific binding is ambiguous from the CNAME alone.
+      Confidence is intentionally low; corroborate before
+      asserting a product relationship.
+    reference: https://www.sina.com.cn/
+
+- name: Tencent WeChat
+  slug: tencent-wechat
+  category: Productivity & Collaboration
+  confidence: low
+  product_family: WeChat
+  parent_vendor: Tencent
+  detections:
+  - type: cname_target
+    pattern: weixin.qq.com
+    tier: application
+    description: >-
+      WeChat (微信) frontend or Mini Program domain referenced
+      in a CNAME chain. Typically indicates a WeChat Mini
+      Program domain-verification binding or partner
+      integration. Does not by itself indicate WeChat Work
+      (Qiyeweixin) or Tencent Meeting; those products use
+      different domains.
+    reference: https://developers.weixin.qq.com/
+
+# ── Niche SaaS (post-triage catalog adds) ───────────────────────────────────
+
+- name: Vanta Trust
+  slug: vanta
+  category: Security & Compliance
+  confidence: high
+  product_family: Vanta Trust
+  parent_vendor: Vanta
+  detections:
+  - type: cname_target
+    pattern: vantatrust.com
+    tier: application
+    description: >-
+      Vanta Trust customer endpoint (``cname.vantatrust.com``,
+      ``<org>.vantatrust.com``). Indicates the org publishes a
+      Vanta-hosted trust portal for security questionnaires,
+      audit reports, and compliance posture. Does not imply
+      Vanta is the org's primary GRC platform; trust portals
+      can be a thin layer over other compliance workflows.
+    reference: https://www.vanta.com/products/trust
+
+- name: GoodData
+  slug: gooddata
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: gooddata.com
+    tier: application
+    description: >-
+      GoodData embedded analytics platform endpoint
+      (``secure.gooddata.com``, ``<tenant>.gooddata.com``).
+      Indicates the org embeds GoodData BI dashboards in its
+      product or runs GoodData for internal analytics. Does
+      not distinguish GoodData Cloud from GoodData CN
+      (on-prem); the cloud-hosted SaaS shares the suffix.
+    reference: https://www.gooddata.com/developers/
+
+- name: Coherent Path
+  slug: coherent-path
+  category: CRM & Marketing
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: coherentpath.com
+    tier: application
+    description: >-
+      Coherent Path content-marketing AI platform endpoint
+      (``cdn.coherentpath.com``). Indicates the org uses
+      Coherent Path for personalized email and content
+      recommendations. Acquired by Bounteous in 2022; the
+      domain remains the product chain.
+    reference: https://www.bounteous.com/insights/coherent-path
+
+- name: Blink (Joblist)
+  slug: blink-app
+  category: HR & Operations
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: blink.app
+    tier: application
+    description: >-
+      Blink frontline workforce app endpoint
+      (``accelerator.blink.app``). Indicates the org runs Blink
+      for frontline employee communication or ops workflows.
+      Different from ``blinkdb`` or any infrastructure tool
+      using a similar name; the ``.app`` TLD is the load-
+      bearing signal.
+    reference: https://www.joinblink.com/
+
+- name: Red Shield Internet
+  slug: red-shield
+  category: Security
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: red-shield.net
+    tier: infrastructure
+    description: >-
+      Red Shield Internet web-application protection endpoint
+      (``cdn.red-shield.net``). Indicates the org fronts at
+      least one web property through Red Shield's WAF/CDN.
+      Niche New Zealand based product; corroborate vendor
+      identity before claiming an enterprise binding.
+    reference: https://www.redshield.co/
+
+- name: Redfin
+  slug: redfin
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: rdfn.net
+    tier: application
+    description: >-
+      Redfin partner or affiliate frontend endpoint
+      (``frontdoor.rdfn.net``). Typically indicates a
+      real-estate partner integration with Redfin's listing
+      and IDX platform. Does not imply the org is Redfin
+      itself; the CNAME pattern is the partner-frontend chain.
+    reference: https://www.redfin.com/
+
+- name: Joopbox
+  slug: joopbox
+  category: Misc
+  confidence: low
+  detections:
+  - type: cname_target
+    pattern: joopbox.com
+    tier: infrastructure
+    description: >-
+      Joopbox service endpoint (``srv.joopbox.com``); the
+      specific product is not well-documented publicly.
+      Indicates the chain terminates at Joopbox infrastructure.
+      Confidence is intentionally low pending vendor
+      identification; corroborate before asserting a product
+      binding.
+    reference: https://joopbox.com/
+
+- name: OVS CDN
+  slug: ovs-cdn
+  category: Infrastructure
+  confidence: low
+  detections:
+  - type: cname_target
+    pattern: ovscdns.com
+    tier: infrastructure
+    description: >-
+      OVS CDN scheduler endpoint (``sched.ovscdns.com``); the
+      specific product family is not well-documented publicly.
+      Indicates the chain resolves through OVS's edge.
+      Confidence is intentionally low pending vendor
+      identification; corroborate before claiming a product
+      family.
+    reference: https://www.ovscdn.com/
+
+- name: 250ok (Validity)
+  slug: 250ok
+  category: Email Governance
+  confidence: medium
+  product_family: Validity Everest
+  parent_vendor: Validity
+  detections:
+  - type: cname_target
+    pattern: 250analytics.com
+    tier: application
+    description: >-
+      250ok email-deliverability analytics endpoint
+      (``<id>.250analytics.com``). Acquired by Validity in
+      2020 and folded into Validity Everest; the legacy domain
+      remains the chain. Indicates the org runs deliverability
+      monitoring, often alongside DMARC reporting and inbox
+      placement testing. Does not imply Validity Everest is the
+      org's primary email vendor.
+    reference: https://www.validity.com/everest/
