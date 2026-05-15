@@ -264,9 +264,9 @@ of quality.
    record terminus, CNAME chain, NS pattern, certificate SAN,
    and so on).
 2. **What it doesn't detect.** When the slug fires, what claim is
-   *not* being made. Common framings: "fires on $X, not on $Y";
-   "indicates administrative binding to $TENANT, not active use";
-   "evidence of $PRODUCT, not of $RELATED_PRODUCT in the same
+   *not* being made. Common framings: "fires on `X`, not on `Y`";
+   "indicates administrative binding to `TENANT`, not active use";
+   "evidence of `PRODUCT`, not of `RELATED_PRODUCT` in the same
    vendor family."
 3. **Common false positives if known.** Patterns where the
    detection fires correctly but the operator-facing inference
