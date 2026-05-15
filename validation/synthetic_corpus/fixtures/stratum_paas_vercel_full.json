@@ -37,5 +37,6 @@
       "primary_name": "Vercel",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "paas"
 }

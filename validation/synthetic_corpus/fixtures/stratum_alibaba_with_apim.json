@@ -29,5 +29,6 @@
       "primary_name": "Alibaba API",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "alibaba"
 }

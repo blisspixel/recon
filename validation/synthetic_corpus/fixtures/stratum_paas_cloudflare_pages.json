@@ -29,5 +29,6 @@
       "primary_name": "Cloudflare Pages",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "paas"
 }

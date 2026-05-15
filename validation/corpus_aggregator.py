@@ -144,27 +144,27 @@ def _render_to_string(info: Any) -> str:
     return console.export_text()
 
 
-def _stratum_for_tenant(tenant_id: str) -> str:
-    """Group fixtures by stratum tag.
+_VALID_STRATA: frozenset[str] = frozenset({"alibaba", "azure", "baseline", "gcp", "oracle", "paas", "sse"})
 
-    v1.9.10 stratum-tagged fixtures use ``stratum_<id>_*`` tenant_ids
-    in the synthetic corpus. The first underscore-separated token after
-    ``stratum_`` is the stratum identifier (gcp, azure, oracle,
-    alibaba, paas, sse). Fixtures without the prefix are grouped under
-    ``baseline`` (the v1.9.9 mixed-strata base corpus).
+
+def _stratum_for_entry(entry: dict[str, Any]) -> str:
+    """Bucket a results.json entry into a stratum.
+
+    Reads the explicit ``_stratum`` tag injected by
+    ``validation/synthetic_corpus/generator.py`` (v1.9.11+). The
+    generator derives the tag from the REGISTRY key, which is the
+    only authoritative grouping signal — tenant_id values do not
+    consistently embed a stratum marker.
+
+    Entries without an ``_stratum`` tag (e.g., real-corpus
+    ``results.json`` written by ``recon batch --json``) bucket under
+    ``"baseline"``. Per-stratum metrics only carry meaning for
+    deliberately stratified inputs; an unstratified run reports
+    everything as one group, which the result-shell documents.
     """
-    if tenant_id.startswith("stratum_"):
-        # Defensive: tenant_ids generally use hyphens, not
-        # underscores. Falls through to the substring parser below
-        # if the prefix split somehow doesn't yield a stratum token.
-        return tenant_id.split("_", 2)[1] if "_" in tenant_id else "baseline"
-    # The synthetic corpus's tenant_ids encode stratum as a substring
-    # (``-gcp-``, ``-az-``, ``-oracle-``, ``-ali-``, ``-paas-``,
-    # ``-sse-``) for the v1.9.10 fixtures. Look for those tokens.
-    lower = tenant_id.lower()
-    for marker in ("-gcp", "-az", "-oracle", "-ali", "-paas", "-sse"):
-        if marker in lower:
-            return marker.lstrip("-")
+    raw = entry.get("_stratum")
+    if isinstance(raw, str) and raw in _VALID_STRATA:
+        return raw
     return "baseline"
 
 
@@ -177,9 +177,11 @@ def aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
     ceiling_rendered = 0  # Confirmed via end-to-end render
     subdomain_counts: list[int] = []
 
-    # Per-stratum breakdown (v1.9.10): grouping by tenant_id
-    # substring so the per-stratum coverage rows in the v1.9.10
-    # pre-lock memo are populated automatically.
+    # Per-stratum breakdown: v1.9.11 reads the explicit ``_stratum``
+    # tag injected by the synthetic-corpus generator (derived from
+    # the REGISTRY key, the only authoritative source). v1.9.10 used
+    # a tenant_id substring matcher that misbucketed brand-style
+    # tenant_ids; that approach is removed.
     per_stratum: dict[str, dict[str, int]] = {}
 
     corpus_size = len(results)
@@ -192,7 +194,7 @@ def aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
             skipped += 1
             continue
 
-        stratum = _stratum_for_tenant(info.tenant_id or "")
+        stratum = _stratum_for_entry(entry)
         s = per_stratum.setdefault(
             stratum,
             {"counted": 0, "multi_cloud_rendered": 0, "ceiling_rendered": 0},

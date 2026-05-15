@@ -27,5 +27,6 @@
     "azure-fd"
   ],
   "sources": [],
-  "surface_attributions": []
+  "surface_attributions": [],
+  "_stratum": "azure"
 }

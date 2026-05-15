@@ -30,5 +30,6 @@
       "primary_name": "Alibaba CDN",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "alibaba"
 }

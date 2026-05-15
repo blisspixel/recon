@@ -29,5 +29,6 @@
       "primary_name": "Azure Static Web Apps",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "azure"
 }

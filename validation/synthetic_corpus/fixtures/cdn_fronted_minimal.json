@@ -26,5 +26,6 @@
       "primary_name": "Shopify",
       "primary_tier": "application"
     }
-  ]
+  ],
+  "_stratum": "baseline"
 }

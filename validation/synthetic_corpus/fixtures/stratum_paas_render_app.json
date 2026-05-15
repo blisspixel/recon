@@ -22,5 +22,6 @@
     "cloudflare"
   ],
   "sources": [],
-  "surface_attributions": []
+  "surface_attributions": [],
+  "_stratum": "paas"
 }

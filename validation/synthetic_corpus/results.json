@@ -60,7 +60,8 @@
         "primary_name": "Zendesk",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -113,7 +114,8 @@
         "primary_name": "AWS CloudFront",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -179,7 +181,8 @@
         "primary_name": "Atlassian Statuspage",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -206,7 +209,8 @@
       "cloudflare"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -247,7 +251,8 @@
         "primary_name": "GCP Cloud Functions",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -291,7 +296,8 @@
         "primary_name": "Azure CDN",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -311,7 +317,8 @@
       "microsoft365"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -341,7 +348,8 @@
       "hubspot"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -389,7 +397,8 @@
         "primary_name": "Okta",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -419,7 +428,8 @@
         "primary_name": "Shopify",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -462,7 +472,8 @@
         "primary_name": "Vercel",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -513,7 +524,8 @@
         "primary_name": "Okta",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -538,7 +550,8 @@
       "aws-route53"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -624,7 +637,8 @@
         "primary_name": "AWS CloudFront",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -684,7 +698,8 @@
         "primary_name": "Fastly",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -729,7 +744,8 @@
         "primary_name": "AWS CloudFront",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -764,7 +780,8 @@
         "primary_name": "Heroku",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -780,7 +797,8 @@
     "services": [],
     "slugs": [],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -808,7 +826,8 @@
       "aws-ec2"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "baseline"
   },
   {
     "cache_version": 1,
@@ -839,7 +858,8 @@
       "gcp-storage"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "gcp"
   },
   {
     "cache_version": 1,
@@ -884,7 +904,8 @@
         "primary_name": "Okta",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "gcp"
   },
   {
     "cache_version": 1,
@@ -917,7 +938,8 @@
       "snyk"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "gcp"
   },
   {
     "cache_version": 1,
@@ -958,7 +980,8 @@
         "primary_name": "Apigee",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "gcp"
   },
   {
     "cache_version": 1,
@@ -997,7 +1020,8 @@
         "primary_name": "Firebase Realtime",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "gcp"
   },
   {
     "cache_version": 1,
@@ -1020,7 +1044,8 @@
       "gcp-dns"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "gcp"
   },
   {
     "cache_version": 1,
@@ -1062,7 +1087,8 @@
         "primary_name": "AWS CloudFront",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "gcp"
   },
   {
     "cache_version": 1,
@@ -1092,7 +1118,8 @@
       "databricks"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "gcp"
   },
   {
     "cache_version": 1,
@@ -1127,7 +1154,8 @@
         "primary_name": "Firebase Hosting",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "gcp"
   },
   {
     "cache_version": 1,
@@ -1169,7 +1197,8 @@
         "primary_name": "Auth0",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "gcp"
   },
   {
     "cache_version": 1,
@@ -1213,7 +1242,8 @@
         "primary_name": "Azure CDN",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "azure"
   },
   {
     "cache_version": 1,
@@ -1244,7 +1274,8 @@
       "azure-fd"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "azure"
   },
   {
     "cache_version": 1,
@@ -1277,7 +1308,8 @@
         "primary_name": "Azure Static Web Apps",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "azure"
   },
   {
     "cache_version": 1,
@@ -1309,7 +1341,8 @@
       "azure-container-apps"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "azure"
   },
   {
     "cache_version": 1,
@@ -1336,7 +1369,8 @@
       "azure-appservice"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "azure"
   },
   {
     "cache_version": 1,
@@ -1359,7 +1393,8 @@
       "azure-dns"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "azure"
   },
   {
     "cache_version": 1,
@@ -1390,7 +1425,8 @@
       "snowflake"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "azure"
   },
   {
     "cache_version": 1,
@@ -1435,7 +1471,8 @@
         "primary_name": "Azure App Service",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "azure"
   },
   {
     "cache_version": 1,
@@ -1470,7 +1507,8 @@
         "primary_name": "Azure API Management",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "azure"
   },
   {
     "cache_version": 1,
@@ -1506,7 +1544,8 @@
         "primary_name": "Auth0",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "azure"
   },
   {
     "cache_version": 1,
@@ -1535,7 +1574,8 @@
       "okta"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "oracle"
   },
   {
     "cache_version": 1,
@@ -1561,7 +1601,8 @@
       "cloudflare"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "oracle"
   },
   {
     "cache_version": 1,
@@ -1591,7 +1632,8 @@
       "proofpoint"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "oracle"
   },
   {
     "cache_version": 1,
@@ -1615,7 +1657,8 @@
       "oracle-cloud"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "oracle"
   },
   {
     "cache_version": 1,
@@ -1637,7 +1680,8 @@
       "oracle-cloud"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "oracle"
   },
   {
     "cache_version": 1,
@@ -1668,7 +1712,8 @@
       "aws-cloudfront"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "oracle"
   },
   {
     "cache_version": 1,
@@ -1699,7 +1744,8 @@
       "crowdstrike"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "oracle"
   },
   {
     "cache_version": 1,
@@ -1730,7 +1776,8 @@
       "cloudflare"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "oracle"
   },
   {
     "cache_version": 1,
@@ -1764,7 +1811,8 @@
         "primary_name": "Okta",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "oracle"
   },
   {
     "cache_version": 1,
@@ -1786,7 +1834,8 @@
       "oracle-cloud"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "oracle"
   },
   {
     "cache_version": 1,
@@ -1820,7 +1869,8 @@
         "primary_name": "Alibaba CDN",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "alibaba"
   },
   {
     "cache_version": 1,
@@ -1850,7 +1900,8 @@
       "alibaba-cdn"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "alibaba"
   },
   {
     "cache_version": 1,
@@ -1876,7 +1927,8 @@
       "wiz"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "alibaba"
   },
   {
     "cache_version": 1,
@@ -1898,7 +1950,8 @@
       "alibaba-cloud"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "alibaba"
   },
   {
     "cache_version": 1,
@@ -1930,7 +1983,8 @@
       "aws-cloudfront"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "alibaba"
   },
   {
     "cache_version": 1,
@@ -1970,7 +2024,8 @@
         "primary_name": "Alibaba CDN",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "alibaba"
   },
   {
     "cache_version": 1,
@@ -1994,7 +2049,8 @@
       "alibaba-cloud"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "alibaba"
   },
   {
     "cache_version": 1,
@@ -2027,7 +2083,8 @@
         "primary_name": "Alibaba API",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "alibaba"
   },
   {
     "cache_version": 1,
@@ -2049,7 +2106,8 @@
       "alibaba-cdn"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "alibaba"
   },
   {
     "cache_version": 1,
@@ -2076,7 +2134,8 @@
       "slack"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "alibaba"
   },
   {
     "cache_version": 1,
@@ -2117,7 +2176,8 @@
         "primary_name": "Vercel",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "paas"
   },
   {
     "cache_version": 1,
@@ -2156,7 +2216,8 @@
         "primary_name": "Netlify",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "paas"
   },
   {
     "cache_version": 1,
@@ -2191,7 +2252,8 @@
         "primary_name": "Auth0",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "paas"
   },
   {
     "cache_version": 1,
@@ -2224,7 +2286,8 @@
         "primary_name": "Railway",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "paas"
   },
   {
     "cache_version": 1,
@@ -2250,7 +2313,8 @@
       "cloudflare"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "paas"
   },
   {
     "cache_version": 1,
@@ -2276,7 +2340,8 @@
       "cloudflare"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "paas"
   },
   {
     "cache_version": 1,
@@ -2298,7 +2363,8 @@
       "vercel"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "paas"
   },
   {
     "cache_version": 1,
@@ -2320,7 +2386,8 @@
       "netlify"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "paas"
   },
   {
     "cache_version": 1,
@@ -2353,7 +2420,8 @@
         "primary_name": "Cloudflare Pages",
         "primary_tier": "infrastructure"
       }
-    ]
+    ],
+    "_stratum": "paas"
   },
   {
     "cache_version": 1,
@@ -2382,7 +2450,8 @@
       "cloudflare"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "paas"
   },
   {
     "cache_version": 1,
@@ -2410,7 +2479,8 @@
       "aws-route53"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "sse"
   },
   {
     "cache_version": 1,
@@ -2437,7 +2507,8 @@
       "cloudflare"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "sse"
   },
   {
     "cache_version": 1,
@@ -2464,7 +2535,8 @@
       "okta"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "sse"
   },
   {
     "cache_version": 1,
@@ -2491,7 +2563,8 @@
       "paloalto"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "sse"
   },
   {
     "cache_version": 1,
@@ -2518,7 +2591,8 @@
       "aws-route53"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "sse"
   },
   {
     "cache_version": 1,
@@ -2542,7 +2616,8 @@
       "zscaler"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "sse"
   },
   {
     "cache_version": 1,
@@ -2572,7 +2647,8 @@
       "cloudflare"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "sse"
   },
   {
     "cache_version": 1,
@@ -2606,7 +2682,8 @@
         "primary_name": "Okta",
         "primary_tier": "application"
       }
-    ]
+    ],
+    "_stratum": "sse"
   },
   {
     "cache_version": 1,
@@ -2630,7 +2707,8 @@
       "paloalto"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "sse"
   },
   {
     "cache_version": 1,
@@ -2657,6 +2735,7 @@
       "paloalto"
     ],
     "sources": [],
-    "surface_attributions": []
+    "surface_attributions": [],
+    "_stratum": "sse"
   }
 ]

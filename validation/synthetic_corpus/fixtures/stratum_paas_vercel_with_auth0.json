@@ -31,5 +31,6 @@
       "primary_name": "Auth0",
       "primary_tier": "application"
     }
-  ]
+  ],
+  "_stratum": "paas"
 }

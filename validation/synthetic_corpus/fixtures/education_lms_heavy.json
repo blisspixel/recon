@@ -41,5 +41,6 @@
       "primary_name": "AWS CloudFront",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "baseline"
 }

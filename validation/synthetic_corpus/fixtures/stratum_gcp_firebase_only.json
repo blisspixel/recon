@@ -35,5 +35,6 @@
       "primary_name": "Firebase Realtime",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "gcp"
 }

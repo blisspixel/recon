@@ -56,5 +56,6 @@
       "primary_name": "Fastly",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "baseline"
 }

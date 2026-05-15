@@ -1599,16 +1599,57 @@ REGISTRY: dict[str, Any] = {
 }
 
 
+# Canonical stratum names matched by ``_stratum_from_registry_key`` below.
+# Listed long-form to longest-match-first so ``alibaba`` is preferred over
+# any incidental ``ali`` substring.
+_STRATUM_NAMES: tuple[str, ...] = ("alibaba", "oracle", "azure", "paas", "sse", "gcp")
+
+
+def _stratum_from_registry_key(registry_key: str) -> str:
+    """Derive the stratum from the REGISTRY key.
+
+    The REGISTRY key is the authoritative grouping signal: stratum
+    fixtures use the ``stratum_<id>_<scenario>`` convention and base-
+    corpus fixtures do not. Bucketing from ``tenant_id`` was the
+    v1.9.10 design, and a v1.9.11 audit found it was unreliable
+    because several stratum fixtures use brand-style tenant_ids
+    (``tailspin-firebase`` for GCP, ``northwind-oci`` for Oracle)
+    that lack the substring marker the aggregator was scanning for.
+    Deriving from the registry key removes that ambiguity entirely.
+    """
+    if not registry_key.startswith("stratum_"):
+        return "baseline"
+    suffix = registry_key[len("stratum_") :]
+    for name in _STRATUM_NAMES:
+        if suffix.startswith(name + "_") or suffix == name:
+            return name
+    return "baseline"
+
+
+def _tag(registry_key: str, fixture: dict[str, Any]) -> dict[str, Any]:
+    """Inject the authoritative ``_stratum`` tag and return the fixture.
+
+    Mutates a copy rather than the caller's dict so re-running the
+    generator stays deterministic and side-effect-free per builder.
+    The tag prefix ``_`` keeps the field out of any TenantInfo
+    deserialization path (``recon_tool.cache.tenant_info_from_dict``
+    ignores fields it does not recognize).
+    """
+    tagged = dict(fixture)
+    tagged["_stratum"] = _stratum_from_registry_key(registry_key)
+    return tagged
+
+
 def main() -> int:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     for name, builder in REGISTRY.items():
-        fixture = builder()
+        fixture = _tag(name, builder())
         path = OUTPUT_DIR / f"{name}.json"
         path.write_text(json.dumps(fixture, indent=2) + "\n", encoding="utf-8")
         print(f"wrote {path.name}")
 
     # Also emit a single combined results.json for the aggregator.
-    combined = [builder() for builder in REGISTRY.values()]
+    combined = [_tag(name, builder()) for name, builder in REGISTRY.items()]
     combined_path = Path(__file__).resolve().parent / "results.json"
     combined_path.write_text(json.dumps(combined, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {combined_path.name} ({len(combined)} fixtures)")
