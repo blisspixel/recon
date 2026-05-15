@@ -105,11 +105,11 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | `infrastructure_clusters` | `InfrastructureClusterReport` | no | always | stable (v1.8+) | CT co-occurrence community detection report. `algorithm` ∈ {`louvain`, `connected_components`, `skipped`}; `modularity` is 0.0 in fallback / skipped paths. Members sorted; clusters sorted by size desc. |
 | `fingerprint_metadata` | `dict[string, FingerprintMetadata]` | no | always | stable (v1.8+) | Per-slug `{product_family, parent_vendor, bimi_org}` for detected slugs that carry relationship hints in their fingerprint YAML. Slugs without metadata are omitted. Empty object when nothing applies. Drives the v1.8 ecosystem hypergraph; never an ownership assertion. |
 
-### Experimental
+### Bayesian fusion fields (stable v2.0+)
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `slug_confidences` | `list[[string, float]]` | no | pairs of `(slug, posterior)` with `posterior` in `[0, 1]` | **experimental** | Bayesian per-slug posterior means. Populated only when `--fusion` is passed. The algorithm, priors, and field shape may evolve in minor releases. See [`fusion.py`](../recon_tool/fusion.py). |
+| `slug_confidences` | `list[[string, float]]` | no | pairs of `(slug, posterior)` with `posterior` in `[0, 1]` | stable (v2.0+) | Bayesian per-slug posterior means. Populated only when `--fusion` is passed. See [`fusion.py`](../recon_tool/fusion.py). |
 
 ---
 

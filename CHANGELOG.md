@@ -5,6 +5,121 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.11] - 2026-05-15
+
+**v1.9.11 bridge milestone: documentation polish dry-run.** Last
+patch before v2.0 schema lock. Every doc reviewed against the v2.0
+quality bar; every promised-to-be-stable surface has the
+EXPERIMENTAL label stripped; the v1.9.11 worklist from
+`validation/v2.0-prep-baseline.md` is fully resolved. No engine
+behaviour changes; v2.0 will be a mechanical lock-and-tag event
+on top of this build.
+
+This is the v1.9.11 step of the v1.9.4 → v2.0 linear sequence in
+`docs/roadmap.md`.
+
+### Added
+
+- **`docs/migration-v2.md` populated.** v1.x → v2.0 migration
+  guide with the field-promotion table, `okta_idp` disposition
+  section, schema-version bump notes, and downgrade-path
+  recommendation. Replaces the skeleton shipped in v1.9.10.1 prep.
+- **`docs/recon-schema.json` BatchResult definition.** Closes the
+  one known schema gap (`ecosystem_hyperedges` was previously a
+  typed property only in description text; now formally a
+  property of the BatchResult def). The schema-disposition test
+  `tests/test_v2_schema_disposition.py` is fully green with zero
+  known gaps.
+- **`scripts/check_no_experimental_labels.py`.** Targeted CI gate
+  that pattern-matches active EXPERIMENTAL labels (parentheticals,
+  bracket-prefixes, markdown stability columns) on user-facing
+  surfaces and exits non-zero on any hit. Wired into
+  `.github/workflows/ci.yml` after the metadata-coverage gate.
+- **`validation/v1.9.11-trend-table.md`.** Public per-release
+  trend table v1.6 → v1.9.11. Compiled from per-release
+  validation memos and the v1.9.10 stratified aggregate. Anchors
+  the v2.0 "engine got progressively more validated" claim with
+  named sources, not the maintainer's word.
+- **`validation/v2.0-corpus-run-runbook.md`** and
+  **`validation/v2.0-corpus-run.md`** (result shell). Maintainer-
+  side recipe for the real-corpus aggregator run that gates v2.0,
+  plus the empty result-shell the run populates. The v2.0
+  release workflow refuses to tag if the result shell still
+  contains the `<TO BE POPULATED>` placeholders.
+- **`docs/correlation.md` §4a, §4b, §4c.** Three v2.0 snapshot
+  sections promised in the roadmap quality bar: Defense ↔
+  correlation mapping table, prior-art comparison, and
+  dependency-floor manifesto. Each is anchored against the
+  existing formal model in §4–§4.8 rather than restating it.
+- **`recon doctor` schema-stability indicator.** Doctor's
+  header now prints "(pre-v2.0 schema)" on v1.9.x builds and
+  "(v2.0 stable schema)" on v2.0+ builds, so operators see the
+  lock visibly. v2.0 tag will flip the label without further
+  code changes.
+
+### Changed
+
+- **EXPERIMENTAL labels stripped from user-facing surfaces.**
+  v1.9.10's baseline (38 hits across 14 files) brought to zero
+  active labels. Surfaces touched: `recon_tool/models.py`
+  (5 hits), `recon_tool/server.py` (3), `recon_tool/cli.py` (3),
+  `docs/stability.md` (3 active labels → table of pre-v2.0 →
+  v2.0 promotions), `docs/recon-schema.json` (3 field-description
+  rewrites), `recon_tool/fusion.py`, `recon_tool/formatter.py`,
+  `recon_tool/data/bayesian_network.yaml`,
+  `recon_tool/bayesian_dag.py`, `recon_tool/bayesian.py`,
+  `docs/schema.md`, `docs/mcp.md`, `docs/correlation.md`
+  (14 hits → 0 active labels; "Validation history" subsection
+  replaces the per-release running-commentary framing).
+  Past-tense prose discussion of the historical label survives
+  in `docs/roadmap.md`, `docs/migration-v2.md`, and
+  `docs/release-process.md` — the CI gate pattern-matches for
+  active labels (parens, brackets, prefixes), not prose.
+- **`okta_idp` disposition applied** per
+  `validation/v2.0-prep-baseline.md` §3. Node ships in v2.0 with
+  an inline YAML comment recording the corpus-exposure caveat
+  (criterion (c) cleared on v1.9.10's stratified synthetic
+  corpus with 8+ fixtures firing the node; real-corpus
+  authoritative number recorded in `validation/v2.0-corpus-run.md`
+  per the v2.0 gate).
+- **`tests/test_v2_schema_disposition.py`** updated:
+  `ecosystem_hyperedges` moved from `_V2_KNOWN_SCHEMA_GAPS` to
+  `_V2_PROMOTED_FIELDS` once the BatchResult schema definition
+  shipped. Gap list is empty at v1.9.11 ship; the v2.0 check
+  will fail on any future entry to the gap list when version
+  reaches 2.0.
+
+### Validation
+
+- All 2502 tests pass (3 skipped, 4 deselected).
+- ruff lint + format clean across 207 files.
+- pyright on `recon_tool/`, `validation/corpus_aggregator.py`,
+  `validation/threshold_sensitivity.py`, and
+  `scripts/check_no_experimental_labels.py` reports 0/0/0.
+- `scripts/check_no_experimental_labels.py` returns 0 active
+  labels.
+- `tests/test_v2_schema_disposition.py` 6 tests all green; the
+  v2.0-blocks-on-unresolved-gap test confirms the gap list is
+  empty.
+
+### What's left before v2.0 tag
+
+The remaining v2.0 blockers all live outside this commit:
+
+- **Real-corpus aggregator run.** Maintainer runs locally per
+  `validation/v2.0-corpus-run-runbook.md`; the result-shell
+  populates with aggregate counts (no domain names) and is
+  committed.
+- **Schema-version bump in `docs/recon-schema.json`** when v2.0
+  tags. Mechanical: the v2.0 release workflow does it.
+- **Final correlation.md proofread** against the v2.0 quality
+  bar (dead links, dependency-manifest drift, prose voice).
+- v2.0 release notes draft.
+
+Per the roadmap, v2.0 itself is a mechanical lock-and-tag
+ceremony on top of v1.9.11; no engine changes between this
+release and v2.0 should be required.
+
 ## [1.9.10.1] - 2026-05-15
 
 **Docs-only patch.** v1.9.10's sdist shipped with three Mermaid

@@ -1,4 +1,4 @@
-# Bayesian network — v1.9 (EXPERIMENTAL)
+# Bayesian network — v1.9 (stable v2.0+)
 #
 # Schema version: 1
 # Network topology version: v1.9.3 (frozen 2026-05-09)
@@ -129,6 +129,14 @@ nodes:
 
   - name: okta_idp
     description: "Identity provider is Okta."
+    # Stability note (v1.9.5 → v1.9.11): node clears criteria (a) and (b)
+    # (evidence-response correctness, calibration in both regimes). v1.9.5
+    # flagged criterion (c) (N >= 10 independent firings) as 'not yet';
+    # v1.9.10's stratified synthetic corpus brought the synthetic firing
+    # count above 10 (8 fixtures across GCP/Azure/Oracle/SSE strata fire
+    # the node). The real-corpus run gated by v2.0 records the
+    # authoritative criterion-(c) number — see
+    # validation/v2.0-corpus-run.md.
     parents: [federated_identity]
     cpt:
       "federated_identity=present": 0.30

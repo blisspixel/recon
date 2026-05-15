@@ -149,3 +149,13 @@ jobs:
         # missing a description on failure so a contributor sees
         # "fix these N entries" rather than a percentage.
         run: uv run python scripts/check_metadata_coverage.py
+
+      - name: Enforce zero EXPERIMENTAL labels (v1.9.11+)
+        # v2.0 quality bar: no active EXPERIMENTAL label on any
+        # operator-facing surface (CLI help, MCP tool descriptions,
+        # JSON schema field descriptions, schema reference docs).
+        # The script pattern-matches for label shapes (parens /
+        # brackets / prefixes / Stability-column markdown) and
+        # allows past-tense prose discussion in roadmap and
+        # migration docs.
+        run: uv run python scripts/check_no_experimental_labels.py

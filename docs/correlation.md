@@ -11,7 +11,7 @@ certificate transparency, and unauthenticated identity-discovery
 endpoints — and runs three layered correlation engines on top of them:
 deterministic rule-based fusion, deterministic graph correlation
 (Louvain communities, chain motifs, hypergraph ecosystem view), and a
-small probabilistic Bayesian network (v1.9, EXPERIMENTAL). The
+small probabilistic Bayesian network (v1.9, stable v2.0+). The
 contract throughout is **provenance + calibration**: every conclusion
 is traceable through the evidence DAG, sparse evidence stays sparse,
 and "we cannot tell from this channel" is a valid result. We do not
@@ -143,7 +143,7 @@ Two hard constraints govern every extractor:
 
 These are the load-bearing commitments. Everything else — the lack
 of telemetry, the data-file-only schema for fingerprints/CPTs, the
-EXPERIMENTAL gating on the Bayesian layer — falls out of them.
+opt-in (`--fusion`-gated) Bayesian layer — falls out of them.
 
 ## 3. Current implementation
 
@@ -161,8 +161,8 @@ machinery:
    plus chain-motif matching plus the batch-scope hypergraph view.
    Deterministic given a fixed Louvain seed; runs alongside the
    rule-based fusion without changing it.
-3. **Probabilistic Bayesian-network fusion** (v1.9.0,
-   `--fusion`-gated, EXPERIMENTAL). Variable-elimination inference
+3. **Probabilistic Bayesian-network fusion** (v1.9.0, `--fusion`-
+   gated, stable v2.0+). Variable-elimination inference
    over a small discrete DAG whose CPTs ship as a YAML data file.
    Surfaces marginal posteriors with 80% credible intervals over
    high-level claims (M365 tenant, federated identity,
@@ -248,7 +248,7 @@ layers do their work.
 |---|---|---|
 | **Rule-based fusion** (default, deterministic) | Direct slug attribution from authoritative observables (OIDC tenant, DKIM signing, MX provider, vendor-specific TXT). High-precision when the channel publishes anything. | Misses hardened targets that publish nothing. No notion of "claim X is uncertain"; output buckets are `low/medium/high`. |
 | **Graph correlation** (v1.8, deterministic, always emitted) | Structural signal across multiple domains: SAN co-occurrence communities, chain motif matches, ecosystem-level co-membership across a batch. Recovers vendor-order pattern when individual labels are randomized. | Operates on the *observed* graph — gives no ownership claim, only co-membership / co-issuance / co-motif. Modularity score is the calibrated handle on partition quality; low score is reported, not hidden. |
-| **Bayesian network** (v1.9, EXPERIMENTAL, `--fusion`) | Calibrated posterior + 80% credible interval over a small set of high-level claims (M365 tenant, federated identity, strong email security, etc.) with cross-source-conflict dampening. Sparse-evidence cases produce wide intervals rather than confident-looking point estimates. | Posterior quality is bounded by CPT specification: a wrong CPT produces a tight interval around the wrong mean. Network is small (9 nodes at v1.9.3+; 20-node design budget) and intentionally so. EXPERIMENTAL through v1.9.x; v1.9.4 hardened-adversarial calibration and v1.9.5 per-node stability dispositions are documented in `validation/v1.9.4-calibration.md` and `validation/v1.9.5-stability.md`. |
+| **Bayesian network** (v1.9, `--fusion`, stable v2.0+) | Calibrated posterior + 80% credible interval over a small set of high-level claims (M365 tenant, federated identity, modern email security, etc.) with cross-source-conflict dampening. Sparse-evidence cases produce wide intervals rather than confident-looking point estimates. | Posterior quality is bounded by CPT specification: a wrong CPT produces a tight interval around the wrong mean. Network is small (9 nodes at v1.9.3+; 20-node design budget) and intentionally so. Held opt-in through v1.9.x; v1.9.4 hardened-adversarial calibration, v1.9.5 per-node stability dispositions, and the v1.9.10 stratified-corpus revalidation cleared the path to v2.0. See `validation/v1.9.4-calibration.md`, `validation/v1.9.5-stability.md`, `validation/v1.9.10-pre-lock.md`. |
 
 The three layers do not replace each other. The default panel is
 the rule-based fusion. The graph layer is *always* emitted and
@@ -262,13 +262,12 @@ network layer) populate.
 Every extension below is a feature extractor over $O$ that recovers
 information the current deterministic engine misses on hardened
 targets. Each lands as a YAML schema extension plus minimal engine
-code, ships gated behind an explicit flag where the output is
-experimental, and stays inside the invariants ([roadmap.md §
-Invariants](roadmap.md#invariants)).
+code, ships gated behind an explicit flag, and stays inside the
+invariants ([roadmap.md § Invariants](roadmap.md#invariants)).
 
 §§ 4.1-4.4 shipped in **v1.7.0** (hardened-target signal recovery).
-§§ 4.5-4.7 shipped in **v1.8.0** (graph correlation). §§ 4.8-4.9 are
-the v1.9 experimental Bayesian layer.
+§§ 4.5-4.7 shipped in **v1.8.0** (graph correlation). §§ 4.8-4.9
+cover the v1.9 Bayesian layer (stable v2.0+).
 
 ### 4.1 Wildcard SAN sibling expansion (v1.7.0)
 
@@ -521,7 +520,7 @@ observations, not verdicts.
 *Defender use:* sanity-check posture against industry norms encoded
 as data, without recon ever asserting "you should do X".
 
-### 4.8 Bayesian network fusion layer (v1.9.x, experimental)
+### 4.8 Bayesian network fusion layer (v1.9; stable v2.0+)
 
 The Bayesian layer is a small discrete graphical model
 $\mathcal{B} = (V_\mathcal{B}, E_\mathcal{B}, \Phi)$ committed as a
@@ -533,33 +532,31 @@ infrastructure. We make no claim that the network is the right
 abstraction; we claim only that *given* the abstraction, the
 inference is exact and the calibration is honest.
 
-**Label vs. status.** The layer keeps the `EXPERIMENTAL` label
-through v1.9.x and ships without an `experimental` tag at v2.0.
-The label is a release-engineering choice, not a statement that
-calibration is absent. As of v1.9.9 the layer has been validated
-in five ways the original v1.9.0 framing did not have access to:
-the v1.9.4 hardened-adversarial corpus (50 domains across five
-hardening postures; `validation/v1.9.4-calibration.md`), the
-v1.9.5 per-node stability dispositions (eight of nine nodes
-classified `stable` against behavioural criteria;
-`validation/v1.9.5-stability.md`), the v1.9.6 topology fix
-that closed the one `not yet` node (`validation/v1.9.6-stability-
-update.md`), the v1.9.7+v1.9.8 catalog metadata pass that
-brought every detection in every category to a non-empty
-description, scope-narrowing language, and a canonical vendor
-`reference` URL (`validation/v1.9.8-metadata-audit.md`), and the
-v1.9.9 detection-gap UX surfaces backed by 167 new tests across
-20 files plus a 19-fixture publicly-reproducible synthetic
-corpus (`validation/v1.9.9-detection-gap-ux.md`,
-`validation/v1.9.9-corpus-run.md`). The catalog-metadata pass is
-upstream of the inference layer (it governs what the slug
-observations $O$ in §4.5 represent) but load-bearing for the
-layer's auditability: every fingerprint match that flows into the
-network now has a vendor-doc citation, so a defender re-reading
-the inference output can re-verify the underlying detection
-without grepping the source. The current label is "experimental in
-name, validated in fact, kept that way until v2.0 by design." See
-§4.8.12 for the per-release calibration narrative.
+**Validation history.** The layer reached v2.0 stable through six
+named validation steps documented per release: the v1.9.4
+hardened-adversarial corpus (50 domains across five hardening
+postures; `validation/v1.9.4-calibration.md`), the v1.9.5 per-node
+stability dispositions (eight of nine nodes classified `stable`
+against behavioural criteria; `validation/v1.9.5-stability.md`),
+the v1.9.6 topology fix that closed the one `not yet` node
+(`validation/v1.9.6-stability-update.md`), the v1.9.7+v1.9.8
+catalog metadata pass that brought every detection in every
+category to a non-empty description, scope-narrowing language,
+and a canonical vendor `reference` URL
+(`validation/v1.9.8-metadata-audit.md`), the v1.9.9 detection-gap
+UX surfaces backed by 167 new tests plus a publicly-reproducible
+synthetic corpus generator
+(`validation/v1.9.9-detection-gap-ux.md`), and the v1.9.10
+stratified-corpus pre-lock validation across six cloud strata
+(`validation/v1.9.10-pre-lock.md`,
+`validation/v1.9.10-bayesian-revalidation.md`). The
+catalog-metadata pass is upstream of the inference layer (it
+governs what the slug observations $O$ in §4.5 represent) but
+load-bearing for the layer's auditability: every fingerprint match
+that flows into the network has a vendor-doc citation, so a
+defender re-reading the inference output can re-verify the
+underlying detection without grepping the source. See §4.8.12 for
+the per-release calibration narrative.
 
 #### 4.8.1 Generative model
 
@@ -1319,7 +1316,8 @@ layer is per-slug confidence the deterministic engine extracted; the
 network layer is structural belief over claims that *use* those slugs
 as evidence. A downstream consumer can read either or both depending
 on the question. The schema fields `slug_confidences` and
-`posterior_observations` are independent and both EXPERIMENTAL.
+`posterior_observations` are independent and both stable as of
+v2.0 per the schema-lock disposition table.
 
 #### 4.8.7 Validation strategy
 
@@ -1927,17 +1925,16 @@ not parameters.
 
 ##### Net effect on the network at v1.9.9
 
-Eight stable, one `not yet`. The remaining `not yet` is
-`okta_idp` (criterion (c), corpus-limited at 7 firings; the
-disposition is "keep node, expand corpus", not "fix engine").
-The disposition table held through v1.9.9 (the v1.9.8 release is
-a catalog-metadata pass and v1.9.9 is a panel-UX pass; neither
-touches node-level CPTs or topology). The v2.0 release ships
-with this disposition table baked into the committed network and
-no `experimental` label on individual nodes. The label persists
-on the layer as a release-engineering choice (the whole
-`--fusion` surface is held `EXPERIMENTAL` until the v2.0 cut) but
-not on any individual node's calibration story.
+Eight nodes cleared all three criteria at v1.9.5. The ninth,
+`okta_idp`, cleared criteria (a) and (b) but had only 7 firings on
+the v1.9.0 corpus, below the N≥10 threshold for criterion (c).
+v1.9.10's stratified synthetic corpus brought the synthetic
+firing count above 10 (8 fixtures across the GCP / Azure / Oracle
+/ SSE strata fire the node); the real-corpus run gated by v2.0
+records the authoritative number. v2.0 ships with the full nine-
+node network, the disposition table baked into the committed
+configuration, and the `okta_idp` corpus-exposure caveat noted in
+the YAML inline comment for the node.
 
 #### 4.8.13 Catalog metadata as upstream calibration (v1.9.7–v1.9.8)
 
@@ -2155,6 +2152,96 @@ their own environment without ever ceding control of the prior to
 a remote service or a shared model. The corpus stays private; the
 priors stay local; the discipline stays the same.
 
+## 4a. Defense ↔ correlation mapping
+
+A defender reading this document for the practical question "which
+correlation layer surfaces the thing I am worried about?" can use
+the table below as the lookup. Each row maps a defender concern to
+the layer that produces evidence for it.
+
+| Defender concern | Layer that surfaces it | Output field / flag |
+|---|---|---|
+| Shadow infrastructure (subdomains the apex's owner forgot about, or third-party SaaS deployed without DNS-visibility tracking) | Rule-based fusion + surface attribution; ecosystem hypergraph in batch mode | `surface_attributions`, `unclassified_cname_chains`, `ecosystem_hyperedges` |
+| Lookalike domains in an attacker's CT issuance batch | Graph correlation (wildcard SAN sibling clusters; cert burst windows) | `cert_summary.wildcard_sibling_clusters`, `cert_summary.deployment_bursts` |
+| Sovereignty / cloud-instance drift (org reports M365 commercial but a sub-tenant is on gov-cloud) | Rule-based fusion (OIDC tenant metadata) + Bayesian posterior conflict surfacing | `cloud_instance`, `tenant_region_sub_scope`, `evidence_conflicts` |
+| Supply-chain motif change (vendor introduces a new CNAME chain pattern; ecosystem of customers shifts) | Graph correlation (chain motif library) | `chain_motifs`, `infrastructure_clusters` |
+| Multi-cloud surface drift across an apex's subdomain footprint | Multi-cloud rollup indicator in the default panel + per-subdomain `surface_attributions` | Panel `Multi-cloud` row; `surface_attributions` |
+| Email security regression (DMARC policy slipped from `reject` to `quarantine`) | Rule-based fusion + Bayesian `email_security_policy_enforcing` posterior | `dmarc_policy`; posterior on `email_security_policy_enforcing` |
+| Identity provider exposure (Okta tenant reachable; federated SSO endpoint published) | Rule-based fusion (slug detection) + Bayesian `federated_identity` and `okta_idp` posteriors | `slugs`; posteriors on `federated_identity`, `okta_idp` |
+| Hardened-target visibility floor (org has minimized DNS publication; what can recon say?) | Bayesian credible intervals widen; passive-DNS ceiling panel footer; `sparse=true` flag | `posterior_observations` interval width; panel "Passive-DNS ceiling" block; `sparse=true` |
+
+The mapping is intentionally not exhaustive: row-by-row coverage
+of every fingerprint is what the catalog (`recon_tool/data/fingerprints/`)
+exists for. Each row in this table is a defender-level concern,
+not a vendor-product concern.
+
+## 4b. Prior-art comparison
+
+The Bayesian layer's design choices are derived from published
+work rather than invented. This section lists the libraries and
+papers we considered, what they offer, and why each was either
+adopted (cited inline elsewhere in this document) or deliberately
+not depended on (cf. §4c).
+
+**Probabilistic-programming libraries considered and not used.**
+
+| Library | What it offers | Why not |
+|---|---|---|
+| pgmpy | Discrete and continuous PGMs with VE, junction tree, sampling. | Pulls numpy/scipy/pandas. recon's nine-node network does not need the breadth; the dependency cost is disproportionate. |
+| pomegranate | Fast HMM/PGM library with Cython core. | Cython build dependency on every install target; transitively pulls numpy. |
+| PyMC / Stan / Pyro | Continuous-domain Bayesian inference (MCMC, variational). | We need discrete VE; sampling-based libraries solve a different problem. |
+| scikit-learn | Bayesian classifiers, calibration utilities. | Discriminative-model toolkit; would require restating the network as a feature pipeline. Pulls numpy/scipy. |
+
+**Methodological work cited inline.** The asymmetric likelihood
+construction (§4.8.3), the m-graph framing of adversarial
+missingness, the DRO worst-case derivation, the Manski bounds
+framing, Jeffrey-style updating, and the cautious-updating
+literature in imprecise probability are all cited at point-of-use
+in §4.8.3. The forensic-Bayesian-network analogue (Taroni et al.
+2014) is cited there too. The Louvain modularity / CPM split is
+cited at §4.5. The Generalized Bayesian Inference / conflict-
+penalty literature is cited at §4.8.4. We claim no novelty;
+every formal choice has a published source whose framing matches
+recon's adversarial-public-channel setting.
+
+## 4c. Dependency-floor manifesto
+
+recon ships with eight runtime dependencies. Each is named below
+with the role it plays. The list of widely-used libraries we
+*deliberately do not depend on* follows; each exclusion is a
+positive commitment the project makes about complexity bounds,
+audit surface, and supply-chain risk.
+
+**Runtime dependencies (pinned in `pyproject.toml`):**
+
+| Dependency | Role |
+|---|---|
+| `httpx` | Single async HTTP client for all live transports (OIDC, GetUserRealm, CT providers). |
+| `dnspython` | DNS resolution. |
+| `pyyaml` | Catalog file format. |
+| `typer` | CLI dispatch. |
+| `rich` | Terminal rendering. |
+| `mcp` | Model Context Protocol server. |
+| `networkx` | Graph correlation layer (Louvain, community detection). |
+| `hatchling` | Build backend only — not imported at runtime. |
+
+**Deliberately not depended on:**
+
+| Excluded | Reason |
+|---|---|
+| `numpy`, `scipy`, `pandas` | The Bayesian layer is exact discrete inference over a nine-node network; pure-Python VE is fast enough. Importing numerical stacks would add hundreds of megabytes and a build dependency on system BLAS / LAPACK. |
+| `pgmpy`, `pomegranate`, `PyMC`, `Stan`, `Pyro` | All pull numpy or have Cython build steps. The library that fits in one Python file (`recon_tool/bayesian.py`) is the right size for the problem. |
+| `scikit-learn` | Discriminative ML; not what recon does. Would add a maintenance surface that suggests recon learns from data. recon does not. |
+| `redis`, `sqlite` (server), `celery`, `FastAPI` | recon is a stdio MCP tool plus a local CLI. No server, no queue, no shared cache. |
+| Shodan / Censys / SecurityTrails APIs | Paid intelligence services. The "zero credentials, zero API keys" invariant rules them out. |
+| GeoIP / ASN databases (MaxMind, Team Cymru, etc.) | Local intelligence-database imports. recon's invariants exclude bundled intelligence — every conclusion must trace to a public observable, not to a maintained mapping table. |
+
+The exclusion list is the practical statement of the
+"data-file-only schema, no learned weights" invariant. A
+contributor proposing a new dependency must justify why their
+addition belongs alongside the eight above and not on the
+exclusion list.
+
 ## 5. Epistemology and the design choices that follow
 
 ### Bayesian epistemic humility in practice
@@ -2207,7 +2294,7 @@ a recon (offensive) tool.
     surface. Unclassified CNAME chains are observables we found but
     cannot yet attribute; they feed the validation loop and the
     `/recon-fingerprint-triage` skill.
-  - **`--fusion`** *(experimental, v1.9.0+)* — Bayesian posteriors
+  - **`--fusion`** *(v1.9.0+, stable v2.0+)* — Bayesian posteriors
     with credible intervals. Read intervals, not just means.
 
 ## 7. Alignment with invariants

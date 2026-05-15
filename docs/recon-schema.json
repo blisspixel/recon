@@ -243,7 +243,7 @@
       ]
     },
     "slug_confidences": {
-      "description": "EXPERIMENTAL — Bayesian per-slug posterior means. Field shape may evolve in minor releases. Each entry is a [slug, posterior] pair with posterior in [0, 1]. Populated only when --fusion is passed.",
+      "description": "Bayesian per-slug posterior means (stable v2.0+). Each entry is a [slug, posterior] pair with posterior in [0, 1]. Populated only when --fusion is passed.",
       "type": "array",
       "items": {
         "type": "array",
@@ -256,7 +256,7 @@
       }
     },
     "posterior_observations": {
-      "description": "EXPERIMENTAL (v1.9) — Marginal posteriors over high-level claims from the Bayesian network at recon_tool/data/bayesian_network.yaml. Each entry includes the posterior P(node=present | E) and the central 80% credible interval. Field shape may evolve in minor releases. Populated only when --fusion is passed; empty array otherwise. The Beta layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
+      "description": "Marginal posteriors over high-level claims from the Bayesian network at recon_tool/data/bayesian_network.yaml (v1.9; stable v2.0+). Each entry includes the posterior P(node=present | E) and the central 80% credible interval. Populated only when --fusion is passed; empty array otherwise. The Beta layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
       "type": "array",
       "items": {"$ref": "#/$defs/PosteriorObservation"}
     },
@@ -509,7 +509,7 @@
       }
     },
     "PosteriorObservation": {
-      "description": "EXPERIMENTAL (v1.9). Per-node Bayesian posterior with 80% credible interval. The interval reflects evidence sparsity and cross-source conflict — wide intervals for hardened-target sparse cases, tight intervals for densely-corroborated cases. ``sparse=true`` flags the passive-observation ceiling. ``conflict_provenance`` (v1.9.1+) carries the source-pair detail behind any n_eff penalty. Field shape may evolve in minor releases.",
+      "description": "Per-node Bayesian posterior with 80% credible interval (v1.9; stable v2.0+). The interval reflects evidence sparsity and cross-source conflict — wide intervals for hardened-target sparse cases, tight intervals for densely-corroborated cases. ``sparse=true`` flags the passive-observation ceiling. ``conflict_provenance`` (v1.9.1+) carries the source-pair detail behind any n_eff penalty.",
       "type": "object",
       "required": [
         "name",
@@ -652,6 +652,23 @@
               }
             }
           ]
+        }
+      }
+    },
+    "BatchResult": {
+      "description": "Output shape of ``recon batch <file> --json``. Wraps one ``TenantInfo`` per queried domain under ``domains``, with an optional top-level ``ecosystem_hyperedges`` array emitted when ``--include-ecosystem`` is set. Stable v2.0. Per-domain entries follow the top-level ``TenantInfo`` schema in this file.",
+      "type": "object",
+      "required": ["domains"],
+      "properties": {
+        "domains": {
+          "type": "array",
+          "description": "Per-domain ``TenantInfo`` results, one entry per input apex.",
+          "items": {"$ref": "#"}
+        },
+        "ecosystem_hyperedges": {
+          "type": "array",
+          "description": "Multi-domain signatures observed across the batch. Present only when ``--include-ecosystem`` is set; absent otherwise. Each entry is one ``EcosystemHyperedge``.",
+          "items": {"$ref": "#/$defs/EcosystemHyperedge"}
         }
       }
     }

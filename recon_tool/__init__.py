@@ -4,7 +4,7 @@ import re
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-_FALLBACK_VERSION = "1.9.10.1"
+_FALLBACK_VERSION = "1.9.11"
 
 
 def _source_tree_version() -> str | None:

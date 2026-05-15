@@ -239,15 +239,14 @@ def lookup(
     fusion: bool = typer.Option(
         False,
         "--fusion",
-        help="[EXPERIMENTAL] Compute Bayesian per-slug posteriors from evidence",
+        help="Compute Bayesian per-slug posteriors from evidence",
     ),
     explain_dag: bool = typer.Option(
         False,
         "--explain-dag",
         help=(
-            "[EXPERIMENTAL v1.9] Render the Bayesian evidence DAG as plain "
-            "English (default) or DOT (with --explain-dag-format dot). "
-            "Implies --fusion."
+            "Render the Bayesian evidence DAG as plain English (default) "
+            "or DOT (with --explain-dag-format dot). Implies --fusion."
         ),
     ),
     explain_dag_format: str = typer.Option(
@@ -360,10 +359,10 @@ def batch(
         False,
         "--fusion",
         help=(
-            "[EXPERIMENTAL v1.9] Compute Bayesian-network posteriors and "
-            "credible intervals over high-level claims for every domain. "
-            "Adds the ``posterior_observations`` field to each domain's "
-            "JSON. Pure post-processing — no extra network calls."
+            "Compute Bayesian-network posteriors and credible intervals "
+            "over high-level claims for every domain. Adds the "
+            "``posterior_observations`` field to each domain's JSON. "
+            "Pure post-processing — no extra network calls."
         ),
     ),
 ) -> None:
@@ -1795,7 +1794,15 @@ async def _doctor() -> None:
 
     console = get_console()
     console.print()
-    console.print(f"  recon [bold]v{__version__}[/bold]")
+    # v1.9.11+: print the schema-stability indicator alongside the
+    # version so operators see at a glance whether they are running a
+    # pre-v2.0 build (Bayesian fusion was opt-in/experimental) or the
+    # v2.0+ build (Bayesian fusion is stable per the schema-lock
+    # disposition table). The substring "v2.0 stable schema" is the
+    # text v2.0's quality bar requires; v1.9.x builds print
+    # "pre-v2.0 schema" so the difference is visible.
+    schema_label = "v2.0 stable schema" if __version__.startswith("2.") else "pre-v2.0 schema"
+    console.print(f"  recon [bold]v{__version__}[/bold] [dim]({schema_label})[/dim]")
     console.print(f"  Python [bold]{sys.version.split()[0]}[/bold]")
     console.print()
 

@@ -1,4 +1,4 @@
-"""DAG rendering for the v1.9 Bayesian fusion layer (EXPERIMENTAL).
+"""DAG rendering for the v1.9 Bayesian fusion layer (stable v2.0+).
 
 Two outputs:
 

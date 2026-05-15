@@ -81,6 +81,9 @@ docs/accuracy.md
 !/validation/v1.9.10-bayesian-revalidation.md
 !/validation/v1.9.10-mutation-status.md
 !/validation/v2.0-prep-baseline.md
+!/validation/v2.0-corpus-run-runbook.md
+!/validation/v2.0-corpus-run.md
+!/validation/v1.9.11-trend-table.md
 !/validation/corpus_aggregator.py
 !/validation/synthetic_corpus/
 !/validation/synthetic_corpus/**
