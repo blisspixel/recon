@@ -1,0 +1,33 @@
+{
+  "cache_version": 1,
+  "tenant_id": "trey-ali-api",
+  "display_name": "Trey Alibaba API",
+  "default_domain": "trey-ali-api.com",
+  "queried_domain": "trey-ali-api.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "trey-ali-api.com",
+    "trey-cn-api.com",
+    "trey-svc.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Alibaba Cloud",
+    "Alibaba API"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "alibaba-cloud",
+    "alibaba-api"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "api.trey-ali-api.com",
+      "primary_slug": "alibaba-api",
+      "primary_name": "Alibaba API",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

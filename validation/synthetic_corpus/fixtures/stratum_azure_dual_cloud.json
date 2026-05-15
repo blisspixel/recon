@@ -1,0 +1,45 @@
+{
+  "cache_version": 1,
+  "tenant_id": "trey-az-aws",
+  "display_name": "Trey Azure-AWS Dual",
+  "default_domain": "trey-dual.com",
+  "queried_domain": "trey-dual.com",
+  "confidence": "high",
+  "domain_count": 5,
+  "tenant_domains": [
+    "trey-dual.com",
+    "trey-east.com",
+    "trey-west.com",
+    "trey-eu.com",
+    "trey-corp.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Azure App Service",
+    "AWS S3",
+    "AWS CloudFront",
+    "Cloudflare"
+  ],
+  "slugs": [
+    "microsoft365",
+    "azure-appservice",
+    "aws-s3",
+    "aws-cloudfront",
+    "cloudflare"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "static.trey-dual.com",
+      "primary_slug": "aws-cloudfront",
+      "primary_name": "AWS CloudFront",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "eu.trey-dual.com",
+      "primary_slug": "azure-appservice",
+      "primary_name": "Azure App Service",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

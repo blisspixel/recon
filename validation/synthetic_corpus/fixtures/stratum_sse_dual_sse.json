@@ -1,0 +1,30 @@
+{
+  "cache_version": 1,
+  "tenant_id": "litware-sse-dual",
+  "display_name": "Litware Dual SSE",
+  "default_domain": "litware-dse.com",
+  "queried_domain": "litware-dse.com",
+  "confidence": "high",
+  "domain_count": 5,
+  "tenant_domains": [
+    "litware-dse.com",
+    "litware-zt.com",
+    "litware-sase.com",
+    "litware-portal.com",
+    "litware-corp.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Zscaler",
+    "Netskope",
+    "Cloudflare"
+  ],
+  "slugs": [
+    "microsoft365",
+    "zscaler",
+    "netskope",
+    "cloudflare"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

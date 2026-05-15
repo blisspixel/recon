@@ -1,0 +1,27 @@
+{
+  "cache_version": 1,
+  "tenant_id": "fabrikam-sse-cf1",
+  "display_name": "Fabrikam Cloudflare One",
+  "default_domain": "fabrikam-cf1.com",
+  "queried_domain": "fabrikam-cf1.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "fabrikam-cf1.com",
+    "fabrikam-zt.com",
+    "fabrikam-portal.com",
+    "fabrikam-corp.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Cloudflare",
+    "Okta"
+  ],
+  "slugs": [
+    "microsoft365",
+    "cloudflare",
+    "okta"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

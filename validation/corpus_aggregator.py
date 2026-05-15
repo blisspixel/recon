@@ -144,6 +144,30 @@ def _render_to_string(info: Any) -> str:
     return console.export_text()
 
 
+def _stratum_for_tenant(tenant_id: str) -> str:
+    """Group fixtures by stratum tag.
+
+    v1.9.10 stratum-tagged fixtures use ``stratum_<id>_*`` tenant_ids
+    in the synthetic corpus. The first underscore-separated token after
+    ``stratum_`` is the stratum identifier (gcp, azure, oracle,
+    alibaba, paas, sse). Fixtures without the prefix are grouped under
+    ``baseline`` (the v1.9.9 mixed-strata base corpus).
+    """
+    if tenant_id.startswith("stratum_"):
+        # Defensive: tenant_ids generally use hyphens, not
+        # underscores. Falls through to the substring parser below
+        # if the prefix split somehow doesn't yield a stratum token.
+        return tenant_id.split("_", 2)[1] if "_" in tenant_id else "baseline"
+    # The synthetic corpus's tenant_ids encode stratum as a substring
+    # (``-gcp-``, ``-az-``, ``-oracle-``, ``-ali-``, ``-paas-``,
+    # ``-sse-``) for the v1.9.10 fixtures. Look for those tokens.
+    lower = tenant_id.lower()
+    for marker in ("-gcp", "-az", "-oracle", "-ali", "-paas", "-sse"):
+        if marker in lower:
+            return marker.lstrip("-")
+    return "baseline"
+
+
 def aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
     multi_cloud_fired = 0
     vendor_counts: list[int] = []
@@ -152,6 +176,11 @@ def aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
     multi_cloud_rendered = 0  # Confirmed via end-to-end render
     ceiling_rendered = 0  # Confirmed via end-to-end render
     subdomain_counts: list[int] = []
+
+    # Per-stratum breakdown (v1.9.10): grouping by tenant_id
+    # substring so the per-stratum coverage rows in the v1.9.10
+    # pre-lock memo are populated automatically.
+    per_stratum: dict[str, dict[str, int]] = {}
 
     corpus_size = len(results)
     skipped = 0
@@ -162,6 +191,13 @@ def aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
         except Exception:
             skipped += 1
             continue
+
+        stratum = _stratum_for_tenant(info.tenant_id or "")
+        s = per_stratum.setdefault(
+            stratum,
+            {"counted": 0, "multi_cloud_rendered": 0, "ceiling_rendered": 0},
+        )
+        s["counted"] += 1
 
         # Estimator-based check (fast, lower bound on categorized count)
         fired_mc, vendor_count = _multi_cloud_fired(info)
@@ -185,8 +221,10 @@ def aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
             rendered = _render_to_string(info)
             if "Multi-cloud" in rendered:
                 multi_cloud_rendered += 1
+                s["multi_cloud_rendered"] += 1
             if "Passive-DNS ceiling" in rendered:
                 ceiling_rendered += 1
+                s["ceiling_rendered"] += 1
         except Exception:  # noqa: S110 — per-fixture anomaly, see comment above.
             pass
 
@@ -226,6 +264,16 @@ def aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
             "subdomain_count_mean": (round(statistics.mean(subdomain_counts), 1) if subdomain_counts else 0.0),
             "subdomain_count_median": (int(statistics.median(subdomain_counts)) if subdomain_counts else 0),
             "subdomain_count_max": max(subdomain_counts) if subdomain_counts else 0,
+        },
+        "per_stratum": {
+            stratum: {
+                "counted": s["counted"],
+                "multi_cloud_rendered": s["multi_cloud_rendered"],
+                "multi_cloud_share": _share(s["multi_cloud_rendered"], s["counted"]),
+                "ceiling_rendered": s["ceiling_rendered"],
+                "ceiling_share": _share(s["ceiling_rendered"], s["counted"]),
+            }
+            for stratum, s in sorted(per_stratum.items())
         },
         "_notes": [
             (

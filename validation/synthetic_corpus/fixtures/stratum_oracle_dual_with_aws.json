@@ -1,0 +1,31 @@
+{
+  "cache_version": 1,
+  "tenant_id": "wingtip-oracle-aws",
+  "display_name": "Wingtip Oracle-AWS Dual",
+  "default_domain": "wingtip-oracle-aws.com",
+  "queried_domain": "wingtip-oracle-aws.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "wingtip-oracle-aws.com",
+    "wingtip-erp.com",
+    "wingtip-aws.com",
+    "wingtip-eu.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Oracle Fusion ERP",
+    "Oracle Cloud",
+    "AWS S3",
+    "AWS CloudFront"
+  ],
+  "slugs": [
+    "microsoft365",
+    "oracle-fusion",
+    "oracle-cloud",
+    "aws-s3",
+    "aws-cloudfront"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

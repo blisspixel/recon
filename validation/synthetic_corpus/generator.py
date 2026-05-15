@@ -516,10 +516,1001 @@ def two_aws_slugs_one_vendor() -> dict[str, Any]:
     )
 
 
+# ── v1.9.10 stratified corpus expansion ───────────────────────────────
+#
+# Six cloud strata, ~10 fixtures each, brings the synthetic corpus to
+# ~60 fixtures total for the v1.9.10 pre-lock validation. Each
+# fixture is named with a ``stratum_<id>_<scenario>`` prefix so the
+# per-stratum aggregator can group them automatically.
+#
+# Stratum mapping (matches the v1.9.10 roadmap quality bar):
+#   gcp:       known-GCP customers
+#   azure:     known-Azure non-O365 customers
+#   oracle:    known-Oracle customers
+#   alibaba:   known-Alibaba customers
+#   paas:      known-PaaS / Vercel / Netlify customers
+#   sse:       known-SSE/SASE-fronted customers
+#
+# All apex names use the Microsoft fictional brand convention. The
+# scenarios within each stratum vary scale, identity, security stack,
+# and surface attribution density to exercise the trigger discipline
+# across realistic intra-stratum variation.
+
+# Stratum: GCP
+
+
+def stratum_gcp_pure_native() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="contoso-gcp-pure",
+        display_name="Contoso Analytics",
+        default_domain="contoso-analytics.com",
+        queried_domain="contoso-analytics.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["contoso-analytics.com", "contoso-data.com", "contoso-ml.com", "contoso-bi.com"],
+        services=["Google Workspace", "Firebase Hosting", "GCP Compute Engine", "GCP Cloud Functions", "GCP Storage"],
+        slugs=["googleworkspace", "firebase-hosting", "gcp-compute", "gcp-cloud-functions", "gcp-storage"],
+    )
+
+
+def stratum_gcp_with_okta() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="northwind-gcp-okta",
+        display_name="Northwind Engineering",
+        default_domain="northwind-eng.com",
+        queried_domain="northwind-eng.com",
+        confidence="high",
+        domain_count=5,
+        tenant_domains=["northwind-eng.com", "northwind.dev", "northwind-prod.com", "nw-eng.io", "nw-stage.com"],
+        services=["Google Workspace", "Okta", "GCP Compute Engine", "GCP Storage", "Cloudflare"],
+        slugs=["googleworkspace", "okta", "gcp-compute", "gcp-storage", "cloudflare"],
+        surface_attributions=[
+            _surface_attrib("api.northwind-eng.com", "gcp-compute", "GCP Compute Engine"),
+            _surface_attrib("portal.northwind-eng.com", "okta", "Okta", "application"),
+        ],
+    )
+
+
+def stratum_gcp_with_security_stack() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="fabrikam-gcp-sec",
+        display_name="Fabrikam Cloud Security",
+        default_domain="fabrikam-cs.com",
+        queried_domain="fabrikam-cs.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["fabrikam-cs.com", "fabrikam-soc.com", "fabrikam-ir.com", "fabrikam-vuln.com"],
+        services=["Google Workspace", "GCP Compute Engine", "GCP Storage", "Wiz", "CrowdStrike", "Snyk"],
+        slugs=["googleworkspace", "gcp-compute", "gcp-storage", "wiz", "crowdstrike", "snyk"],
+    )
+
+
+def stratum_gcp_apigee_heavy() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="adatum-gcp-apigee",
+        display_name="Adatum API Platform",
+        default_domain="adatum-api.com",
+        queried_domain="adatum-api.com",
+        confidence="high",
+        domain_count=3,
+        tenant_domains=["adatum-api.com", "adatum-gateway.com", "adatum-services.com"],
+        services=["Google Workspace", "Apigee", "GCP Compute Engine", "GCP Cloud Functions"],
+        slugs=["googleworkspace", "apigee", "gcp-compute", "gcp-cloud-functions"],
+        surface_attributions=[
+            _surface_attrib("api.adatum-api.com", "apigee", "Apigee", "application"),
+            _surface_attrib("v2.adatum-api.com", "apigee", "Apigee", "application"),
+        ],
+    )
+
+
+def stratum_gcp_firebase_only() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="tailspin-firebase",
+        display_name="Tailspin Mobile",
+        default_domain="tailspin-mobile.com",
+        queried_domain="tailspin-mobile.com",
+        confidence="medium",
+        domain_count=3,
+        tenant_domains=["tailspin-mobile.com", "tailspin-app.com", "tailspin-api.com"],
+        services=["Google Workspace", "Firebase Hosting", "Firebase Realtime Database"],
+        slugs=["googleworkspace", "firebase-hosting", "firebase-realtime"],
+        surface_attributions=[
+            _surface_attrib("app.tailspin-mobile.com", "firebase-hosting", "Firebase Hosting"),
+            _surface_attrib("api.tailspin-mobile.com", "firebase-realtime", "Firebase Realtime"),
+        ],
+    )
+
+
+def stratum_gcp_minimal_hardened() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="wingtip-gcp-min",
+        display_name="Wingtip GCP Hardened",
+        default_domain="wingtip-secure.com",
+        queried_domain="wingtip-secure.com",
+        confidence="low",
+        domain_count=4,
+        tenant_domains=["wingtip-secure.com", "wingtip-prod.com", "wingtip-internal.com", "wingtip-corp.com"],
+        services=["GCP DNS"],
+        slugs=["gcp-dns"],
+    )
+
+
+def stratum_gcp_dual_with_aws() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="litware-gcp-aws",
+        display_name="Litware Multi-Cloud",
+        default_domain="litware-mc.com",
+        queried_domain="litware-mc.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["litware-mc.com", "litware-east.com", "litware-west.com", "litware-eu.com"],
+        services=["Google Workspace", "GCP Compute Engine", "AWS S3", "AWS CloudFront"],
+        slugs=["googleworkspace", "gcp-compute", "aws-s3", "aws-cloudfront"],
+        surface_attributions=[
+            _surface_attrib("backup.litware-mc.com", "aws-s3", "AWS S3"),
+            _surface_attrib("static.litware-mc.com", "aws-cloudfront", "AWS CloudFront"),
+        ],
+    )
+
+
+def stratum_gcp_data_pipeline() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="trey-gcp-data",
+        display_name="Trey Data Sciences",
+        default_domain="trey-data.com",
+        queried_domain="trey-data.com",
+        confidence="high",
+        domain_count=3,
+        tenant_domains=["trey-data.com", "trey-bi.com", "trey-ml.com"],
+        services=["Google Workspace", "GCP Compute Engine", "GCP Storage", "Snowflake", "Databricks"],
+        slugs=["googleworkspace", "gcp-compute", "gcp-storage", "snowflake", "databricks"],
+    )
+
+
+def stratum_gcp_cloud_run_modern() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="contoso-gcp-cr",
+        display_name="Contoso Modern Stack",
+        default_domain="contoso-modern.com",
+        queried_domain="contoso-modern.com",
+        confidence="high",
+        domain_count=3,
+        tenant_domains=["contoso-modern.com", "contoso-app.com", "contoso-stage.com"],
+        services=["Google Workspace", "GCP Cloud Functions", "Firebase Hosting", "Cloudflare"],
+        slugs=["googleworkspace", "gcp-cloud-functions", "firebase-hosting", "cloudflare"],
+        surface_attributions=[
+            _surface_attrib("app.contoso-modern.com", "firebase-hosting", "Firebase Hosting"),
+        ],
+    )
+
+
+def stratum_gcp_idp_heavy() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="northwind-gcp-idp",
+        display_name="Northwind GCP IdP",
+        default_domain="northwind-idp.com",
+        queried_domain="northwind-idp.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["northwind-idp.com", "northwind-sso.com", "northwind-id.com", "northwind-auth.com"],
+        services=["Google Workspace", "Okta", "GCP Compute Engine", "Auth0"],
+        slugs=["googleworkspace", "okta", "gcp-compute", "auth0"],
+        surface_attributions=[
+            _surface_attrib("sso.northwind-idp.com", "okta", "Okta", "application"),
+            _surface_attrib("login.northwind-idp.com", "auth0", "Auth0", "application"),
+        ],
+    )
+
+
+# Stratum: Azure non-O365
+
+
+def stratum_azure_native_no_m365() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="contoso-az-noM365",
+        display_name="Contoso Azure Native",
+        default_domain="contoso-az.com",
+        queried_domain="contoso-az.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["contoso-az.com", "contoso-azure.com", "contoso-eastus.com", "contoso-eu.com"],
+        services=["Google Workspace", "Azure DNS", "Azure App Service", "Azure CDN", "Azure Blob Storage"],
+        slugs=["googleworkspace", "azure-dns", "azure-appservice", "azure-cdn", "azure-blob"],
+        surface_attributions=[
+            _surface_attrib("api.contoso-az.com", "azure-appservice", "Azure App Service"),
+            _surface_attrib("static.contoso-az.com", "azure-cdn", "Azure CDN"),
+        ],
+    )
+
+
+def stratum_azure_with_okta_sso() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="northwind-az-okta",
+        display_name="Northwind Azure SSO",
+        default_domain="northwind-az.com",
+        queried_domain="northwind-az.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["northwind-az.com", "nw-az-east.com", "nw-az-west.com", "nw-az-eu.com"],
+        services=["Google Workspace", "Okta", "Azure DNS", "Azure App Service", "Azure Front Door"],
+        slugs=["googleworkspace", "okta", "azure-dns", "azure-appservice", "azure-fd"],
+    )
+
+
+def stratum_azure_static_web_apps() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="fabrikam-az-swa",
+        display_name="Fabrikam SWA Sites",
+        default_domain="fabrikam-swa.com",
+        queried_domain="fabrikam-swa.com",
+        confidence="medium",
+        domain_count=3,
+        tenant_domains=["fabrikam-swa.com", "fabrikam-marketing.com", "fabrikam-blog.com"],
+        services=["Google Workspace", "Azure DNS", "Azure Static Web Apps"],
+        slugs=["googleworkspace", "azure-dns", "azure-static-web-apps"],
+        surface_attributions=[
+            _surface_attrib("www.fabrikam-swa.com", "azure-static-web-apps", "Azure Static Web Apps"),
+        ],
+    )
+
+
+def stratum_azure_with_proofpoint() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="adatum-az-pp",
+        display_name="Adatum Azure with Proofpoint",
+        default_domain="adatum-az.com",
+        queried_domain="adatum-az.com",
+        confidence="high",
+        domain_count=5,
+        tenant_domains=["adatum-az.com", "adatum-azure.com", "adatum-cloud.com", "adatum-corp.com", "adatum-eu.com"],
+        services=["Google Workspace", "Proofpoint", "Azure DNS", "Azure App Service", "Azure Container Apps"],
+        slugs=["googleworkspace", "proofpoint", "azure-dns", "azure-appservice", "azure-container-apps"],
+    )
+
+
+def stratum_azure_govcloud() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="tailspin-az-gov",
+        display_name="Tailspin Government Cloud",
+        default_domain="tailspin-gov.gov",
+        queried_domain="tailspin-gov.gov",
+        confidence="medium",
+        domain_count=4,
+        tenant_domains=["tailspin-gov.gov", "tailspin-state.gov", "tailspin-fed.gov", "tailspin-portal.gov"],
+        services=["Microsoft 365", "Azure DNS", "Azure App Service"],
+        slugs=["microsoft365", "azure-dns", "azure-appservice"],
+    )
+
+
+def stratum_azure_minimal() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="wingtip-az-min",
+        display_name="Wingtip Azure Minimal",
+        default_domain="wingtip-az.com",
+        queried_domain="wingtip-az.com",
+        confidence="low",
+        domain_count=4,
+        tenant_domains=["wingtip-az.com", "wingtip-prod.com", "wingtip-staging.com", "wingtip-internal.com"],
+        services=["Azure DNS"],
+        slugs=["azure-dns"],
+    )
+
+
+def stratum_azure_with_databricks() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="litware-az-db",
+        display_name="Litware Azure Analytics",
+        default_domain="litware-an.com",
+        queried_domain="litware-an.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["litware-an.com", "litware-data.com", "litware-bi.com", "litware-ml.com"],
+        services=["Google Workspace", "Azure DNS", "Azure App Service", "Databricks", "Snowflake"],
+        slugs=["googleworkspace", "azure-dns", "azure-appservice", "databricks", "snowflake"],
+    )
+
+
+def stratum_azure_dual_cloud() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="trey-az-aws",
+        display_name="Trey Azure-AWS Dual",
+        default_domain="trey-dual.com",
+        queried_domain="trey-dual.com",
+        confidence="high",
+        domain_count=5,
+        tenant_domains=["trey-dual.com", "trey-east.com", "trey-west.com", "trey-eu.com", "trey-corp.com"],
+        services=["Microsoft 365", "Azure App Service", "AWS S3", "AWS CloudFront", "Cloudflare"],
+        slugs=["microsoft365", "azure-appservice", "aws-s3", "aws-cloudfront", "cloudflare"],
+        surface_attributions=[
+            _surface_attrib("static.trey-dual.com", "aws-cloudfront", "AWS CloudFront"),
+            _surface_attrib("eu.trey-dual.com", "azure-appservice", "Azure App Service"),
+        ],
+    )
+
+
+def stratum_azure_api_management() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="contoso-az-apim",
+        display_name="Contoso Azure APIs",
+        default_domain="contoso-apim.com",
+        queried_domain="contoso-apim.com",
+        confidence="high",
+        domain_count=3,
+        tenant_domains=["contoso-apim.com", "contoso-gateway.com", "contoso-svc.com"],
+        services=["Google Workspace", "Azure DNS", "Azure API Management", "Azure App Service"],
+        slugs=["googleworkspace", "azure-dns", "azure-api-management", "azure-appservice"],
+        surface_attributions=[
+            _surface_attrib("api.contoso-apim.com", "azure-api-management", "Azure API Management"),
+        ],
+    )
+
+
+def stratum_azure_idp_managed() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="adatum-az-idp",
+        display_name="Adatum Azure IdP",
+        default_domain="adatum-idp.com",
+        queried_domain="adatum-idp.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["adatum-idp.com", "adatum-sso.com", "adatum-mfa.com", "adatum-portal.com"],
+        services=["Microsoft 365", "Azure DNS", "Azure App Service", "Auth0"],
+        slugs=["microsoft365", "azure-dns", "azure-appservice", "auth0"],
+        surface_attributions=[
+            _surface_attrib("login.adatum-idp.com", "auth0", "Auth0", "application"),
+        ],
+    )
+
+
+# Stratum: Oracle
+
+
+def stratum_oracle_fusion_apps() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="contoso-oracle-fusion",
+        display_name="Contoso Oracle Fusion",
+        default_domain="contoso-erp.com",
+        queried_domain="contoso-erp.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["contoso-erp.com", "contoso-hcm.com", "contoso-fin.com", "contoso-corp.com"],
+        services=["Microsoft 365", "Oracle Fusion ERP", "Oracle Cloud", "Okta"],
+        slugs=["microsoft365", "oracle-fusion", "oracle-cloud", "okta"],
+    )
+
+
+def stratum_oracle_oci_only() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="northwind-oci",
+        display_name="Northwind OCI",
+        default_domain="northwind-oci.com",
+        queried_domain="northwind-oci.com",
+        confidence="high",
+        domain_count=3,
+        tenant_domains=["northwind-oci.com", "northwind-cloud.com", "northwind-svc.com"],
+        services=["Google Workspace", "Oracle Cloud", "Cloudflare"],
+        slugs=["googleworkspace", "oracle-cloud", "cloudflare"],
+    )
+
+
+def stratum_oracle_with_legacy() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="fabrikam-oracle-legacy",
+        display_name="Fabrikam Oracle Hybrid",
+        default_domain="fabrikam-oracle.com",
+        queried_domain="fabrikam-oracle.com",
+        confidence="medium",
+        domain_count=5,
+        tenant_domains=[
+            "fabrikam-oracle.com",
+            "fabrikam-erp.com",
+            "fabrikam-hcm.com",
+            "fabrikam-corp.com",
+            "fabrikam-legacy.com",
+        ],
+        services=["Microsoft 365", "Oracle Fusion ERP", "Oracle Cloud", "Proofpoint"],
+        slugs=["microsoft365", "oracle-fusion", "oracle-cloud", "proofpoint"],
+    )
+
+
+def stratum_oracle_apex_dev() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="adatum-oracle-apex",
+        display_name="Adatum Oracle APEX",
+        default_domain="adatum-apex.com",
+        queried_domain="adatum-apex.com",
+        confidence="medium",
+        domain_count=3,
+        tenant_domains=["adatum-apex.com", "adatum-dev.com", "adatum-app.com"],
+        services=["Google Workspace", "Oracle Cloud"],
+        slugs=["googleworkspace", "oracle-cloud"],
+    )
+
+
+def stratum_oracle_minimal() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="tailspin-oracle-min",
+        display_name="Tailspin Oracle Minimal",
+        default_domain="tailspin-oracle.com",
+        queried_domain="tailspin-oracle.com",
+        confidence="low",
+        domain_count=3,
+        tenant_domains=["tailspin-oracle.com", "tailspin-erp.com", "tailspin-corp.com"],
+        services=["Oracle Cloud"],
+        slugs=["oracle-cloud"],
+    )
+
+
+def stratum_oracle_dual_with_aws() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="wingtip-oracle-aws",
+        display_name="Wingtip Oracle-AWS Dual",
+        default_domain="wingtip-oracle-aws.com",
+        queried_domain="wingtip-oracle-aws.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["wingtip-oracle-aws.com", "wingtip-erp.com", "wingtip-aws.com", "wingtip-eu.com"],
+        services=["Microsoft 365", "Oracle Fusion ERP", "Oracle Cloud", "AWS S3", "AWS CloudFront"],
+        slugs=["microsoft365", "oracle-fusion", "oracle-cloud", "aws-s3", "aws-cloudfront"],
+    )
+
+
+def stratum_oracle_with_security() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="litware-oracle-sec",
+        display_name="Litware Oracle Secured",
+        default_domain="litware-oracle.com",
+        queried_domain="litware-oracle.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["litware-oracle.com", "litware-erp.com", "litware-fin.com", "litware-soc.com"],
+        services=["Microsoft 365", "Oracle Cloud", "Okta", "Wiz", "CrowdStrike"],
+        slugs=["microsoft365", "oracle-cloud", "okta", "wiz", "crowdstrike"],
+    )
+
+
+def stratum_oracle_global() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="trey-oracle-global",
+        display_name="Trey Oracle Global",
+        default_domain="trey-oracle.com",
+        queried_domain="trey-oracle.com",
+        confidence="high",
+        domain_count=6,
+        tenant_domains=[
+            "trey-oracle.com",
+            "trey-eu.com",
+            "trey-jp.com",
+            "trey-au.com",
+            "trey-br.com",
+            "trey-corp.com",
+        ],
+        services=["Google Workspace", "Oracle Cloud", "Oracle Fusion ERP", "Cloudflare"],
+        slugs=["googleworkspace", "oracle-cloud", "oracle-fusion", "cloudflare"],
+    )
+
+
+def stratum_oracle_idp_with_okta() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="contoso-oracle-okta",
+        display_name="Contoso Oracle Identity",
+        default_domain="contoso-oid.com",
+        queried_domain="contoso-oid.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["contoso-oid.com", "contoso-sso.com", "contoso-fed.com", "contoso-corp.com"],
+        services=["Google Workspace", "Okta", "Oracle Cloud"],
+        slugs=["googleworkspace", "okta", "oracle-cloud"],
+        surface_attributions=[
+            _surface_attrib("sso.contoso-oid.com", "okta", "Okta", "application"),
+        ],
+    )
+
+
+def stratum_oracle_with_apex_only() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="northwind-oracle-bare",
+        display_name="Northwind Oracle Bare",
+        default_domain="northwind-or.com",
+        queried_domain="northwind-or.com",
+        confidence="medium",
+        domain_count=3,
+        tenant_domains=["northwind-or.com", "northwind-svc.com", "northwind-internal.com"],
+        services=["Oracle Cloud"],
+        slugs=["oracle-cloud"],
+    )
+
+
+# Stratum: Alibaba
+
+
+def stratum_alibaba_native() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="contoso-ali",
+        display_name="Contoso Alibaba",
+        default_domain="contoso-ali.com",
+        queried_domain="contoso-ali.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["contoso-ali.com", "contoso-cn.com", "contoso-apac.com", "contoso-corp.com"],
+        services=["Google Workspace", "Alibaba Cloud", "Alibaba CDN"],
+        slugs=["googleworkspace", "alibaba-cloud", "alibaba-cdn"],
+        surface_attributions=[
+            _surface_attrib("cdn.contoso-ali.com", "alibaba-cdn", "Alibaba CDN"),
+        ],
+    )
+
+
+def stratum_alibaba_global() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="northwind-ali",
+        display_name="Northwind Alibaba Global",
+        default_domain="northwind-ali.com",
+        queried_domain="northwind-ali.com",
+        confidence="high",
+        domain_count=5,
+        tenant_domains=[
+            "northwind-ali.com",
+            "northwind-cn.com",
+            "northwind-jp.com",
+            "northwind-sg.com",
+            "northwind-corp.com",
+        ],
+        services=["Google Workspace", "Alibaba Cloud", "Alibaba API", "Alibaba CDN"],
+        slugs=["googleworkspace", "alibaba-cloud", "alibaba-api", "alibaba-cdn"],
+    )
+
+
+def stratum_alibaba_with_security() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="fabrikam-ali",
+        display_name="Fabrikam Alibaba Secured",
+        default_domain="fabrikam-ali.com",
+        queried_domain="fabrikam-ali.com",
+        confidence="high",
+        domain_count=3,
+        tenant_domains=["fabrikam-ali.com", "fabrikam-cn.com", "fabrikam-corp.com"],
+        services=["Microsoft 365", "Alibaba Cloud", "Wiz"],
+        slugs=["microsoft365", "alibaba-cloud", "wiz"],
+    )
+
+
+def stratum_alibaba_minimal() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="adatum-ali-min",
+        display_name="Adatum Alibaba Minimal",
+        default_domain="adatum-ali.com",
+        queried_domain="adatum-ali.com",
+        confidence="low",
+        domain_count=3,
+        tenant_domains=["adatum-ali.com", "adatum-cn.com", "adatum-corp.com"],
+        services=["Alibaba Cloud"],
+        slugs=["alibaba-cloud"],
+    )
+
+
+def stratum_alibaba_dual_with_aws() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="tailspin-ali-aws",
+        display_name="Tailspin Alibaba-AWS",
+        default_domain="tailspin-ali-aws.com",
+        queried_domain="tailspin-ali-aws.com",
+        confidence="high",
+        domain_count=5,
+        tenant_domains=[
+            "tailspin-ali-aws.com",
+            "tailspin-cn.com",
+            "tailspin-us.com",
+            "tailspin-eu.com",
+            "tailspin-corp.com",
+        ],
+        services=["Microsoft 365", "Alibaba Cloud", "Alibaba CDN", "AWS S3", "AWS CloudFront"],
+        slugs=["microsoft365", "alibaba-cloud", "alibaba-cdn", "aws-s3", "aws-cloudfront"],
+    )
+
+
+def stratum_alibaba_ecommerce() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="wingtip-ali-shop",
+        display_name="Wingtip Alibaba Commerce",
+        default_domain="wingtip-shop.com",
+        queried_domain="wingtip-shop.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["wingtip-shop.com", "wingtip-cn.com", "wingtip-store.com", "wingtip-corp.com"],
+        services=["Google Workspace", "Alibaba Cloud", "Alibaba CDN"],
+        slugs=["googleworkspace", "alibaba-cloud", "alibaba-cdn"],
+        surface_attributions=[
+            _surface_attrib("shop.wingtip-shop.com", "alibaba-cdn", "Alibaba CDN"),
+            _surface_attrib("store.wingtip-shop.com", "alibaba-cdn", "Alibaba CDN"),
+        ],
+    )
+
+
+def stratum_alibaba_with_oss() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="litware-ali-oss",
+        display_name="Litware Alibaba OSS",
+        default_domain="litware-ali.com",
+        queried_domain="litware-ali.com",
+        confidence="medium",
+        domain_count=3,
+        tenant_domains=["litware-ali.com", "litware-cn.com", "litware-storage.com"],
+        services=["Microsoft 365", "Alibaba Cloud"],
+        slugs=["microsoft365", "alibaba-cloud"],
+    )
+
+
+def stratum_alibaba_with_apim() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="trey-ali-api",
+        display_name="Trey Alibaba API",
+        default_domain="trey-ali-api.com",
+        queried_domain="trey-ali-api.com",
+        confidence="high",
+        domain_count=3,
+        tenant_domains=["trey-ali-api.com", "trey-cn-api.com", "trey-svc.com"],
+        services=["Google Workspace", "Alibaba Cloud", "Alibaba API"],
+        slugs=["googleworkspace", "alibaba-cloud", "alibaba-api"],
+        surface_attributions=[
+            _surface_attrib("api.trey-ali-api.com", "alibaba-api", "Alibaba API"),
+        ],
+    )
+
+
+def stratum_alibaba_minimal_cdn() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="contoso-ali-cdn-only",
+        display_name="Contoso Alibaba CDN Only",
+        default_domain="contoso-acdn.com",
+        queried_domain="contoso-acdn.com",
+        confidence="low",
+        domain_count=3,
+        tenant_domains=["contoso-acdn.com", "contoso-static.com", "contoso-svc.com"],
+        services=["Alibaba CDN"],
+        slugs=["alibaba-cdn"],
+    )
+
+
+def stratum_alibaba_with_dingtalk_proxy() -> dict[str, Any]:
+    """Alibaba customer with collaboration via Slack (DingTalk
+    not in catalog)."""
+    return _base_tenant(
+        tenant_id="northwind-ali-dt",
+        display_name="Northwind Alibaba Collab",
+        default_domain="northwind-ad.com",
+        queried_domain="northwind-ad.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["northwind-ad.com", "northwind-cn-team.com", "northwind-collab.com", "northwind-corp.com"],
+        services=["Microsoft 365", "Alibaba Cloud", "Slack"],
+        slugs=["microsoft365", "alibaba-cloud", "slack"],
+    )
+
+
+# Stratum: PaaS / Vercel / Netlify
+
+
+def stratum_paas_vercel_full() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="contoso-paas-vc",
+        display_name="Contoso Vercel Stack",
+        default_domain="contoso-vc.com",
+        queried_domain="contoso-vc.com",
+        confidence="high",
+        domain_count=3,
+        tenant_domains=["contoso-vc.com", "contoso-app.com", "contoso-blog.com"],
+        services=["Google Workspace", "Vercel", "Cloudflare", "GitHub"],
+        slugs=["googleworkspace", "vercel", "cloudflare", "github"],
+        surface_attributions=[
+            _surface_attrib("www.contoso-vc.com", "vercel", "Vercel"),
+            _surface_attrib("app.contoso-vc.com", "vercel", "Vercel"),
+        ],
+    )
+
+
+def stratum_paas_netlify_jamstack() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="northwind-paas-nl",
+        display_name="Northwind Netlify",
+        default_domain="northwind-nl.com",
+        queried_domain="northwind-nl.com",
+        confidence="high",
+        domain_count=3,
+        tenant_domains=["northwind-nl.com", "northwind-marketing.com", "northwind-docs.com"],
+        services=["Google Workspace", "Netlify", "Cloudflare"],
+        slugs=["googleworkspace", "netlify", "cloudflare"],
+        surface_attributions=[
+            _surface_attrib("www.northwind-nl.com", "netlify", "Netlify"),
+            _surface_attrib("docs.northwind-nl.com", "netlify", "Netlify"),
+        ],
+    )
+
+
+def stratum_paas_vercel_with_auth0() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="fabrikam-paas-auth",
+        display_name="Fabrikam Vercel + Auth0",
+        default_domain="fabrikam-vc.com",
+        queried_domain="fabrikam-vc.com",
+        confidence="high",
+        domain_count=3,
+        tenant_domains=["fabrikam-vc.com", "fabrikam-app.com", "fabrikam-id.com"],
+        services=["Google Workspace", "Vercel", "Auth0", "Cloudflare"],
+        slugs=["googleworkspace", "vercel", "auth0", "cloudflare"],
+        surface_attributions=[
+            _surface_attrib("login.fabrikam-vc.com", "auth0", "Auth0", "application"),
+        ],
+    )
+
+
+def stratum_paas_railway_app() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="adatum-paas-rw",
+        display_name="Adatum Railway",
+        default_domain="adatum-rw.com",
+        queried_domain="adatum-rw.com",
+        confidence="medium",
+        domain_count=3,
+        tenant_domains=["adatum-rw.com", "adatum-app.com", "adatum-api.com"],
+        services=["Google Workspace", "Railway", "Cloudflare"],
+        slugs=["googleworkspace", "railway", "cloudflare"],
+        surface_attributions=[
+            _surface_attrib("api.adatum-rw.com", "railway", "Railway"),
+        ],
+    )
+
+
+def stratum_paas_render_app() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="tailspin-paas-rd",
+        display_name="Tailspin Render",
+        default_domain="tailspin-rd.com",
+        queried_domain="tailspin-rd.com",
+        confidence="medium",
+        domain_count=3,
+        tenant_domains=["tailspin-rd.com", "tailspin-app.com", "tailspin-svc.com"],
+        services=["Google Workspace", "Render", "Cloudflare"],
+        slugs=["googleworkspace", "render", "cloudflare"],
+    )
+
+
+def stratum_paas_flyio_distributed() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="wingtip-paas-fly",
+        display_name="Wingtip Fly.io",
+        default_domain="wingtip-fly.com",
+        queried_domain="wingtip-fly.com",
+        confidence="medium",
+        domain_count=3,
+        tenant_domains=["wingtip-fly.com", "wingtip-edge.com", "wingtip-app.com"],
+        services=["Google Workspace", "Fly.io", "Cloudflare"],
+        slugs=["googleworkspace", "flyio", "cloudflare"],
+    )
+
+
+def stratum_paas_vercel_minimal() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="litware-paas-vc-min",
+        display_name="Litware Vercel Minimal",
+        default_domain="litware-vc.com",
+        queried_domain="litware-vc.com",
+        confidence="low",
+        domain_count=3,
+        tenant_domains=["litware-vc.com", "litware-blog.com", "litware-corp.com"],
+        services=["Vercel"],
+        slugs=["vercel"],
+    )
+
+
+def stratum_paas_netlify_minimal() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="trey-paas-nl-min",
+        display_name="Trey Netlify Minimal",
+        default_domain="trey-nl.com",
+        queried_domain="trey-nl.com",
+        confidence="low",
+        domain_count=3,
+        tenant_domains=["trey-nl.com", "trey-blog.com", "trey-corp.com"],
+        services=["Netlify"],
+        slugs=["netlify"],
+    )
+
+
+def stratum_paas_cloudflare_pages() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="contoso-paas-cfp",
+        display_name="Contoso Cloudflare Pages",
+        default_domain="contoso-cfp.com",
+        queried_domain="contoso-cfp.com",
+        confidence="medium",
+        domain_count=3,
+        tenant_domains=["contoso-cfp.com", "contoso-pages.com", "contoso-app.com"],
+        services=["Google Workspace", "Cloudflare", "Cloudflare Pages"],
+        slugs=["googleworkspace", "cloudflare", "cloudflare-pages"],
+        surface_attributions=[
+            _surface_attrib("www.contoso-cfp.com", "cloudflare-pages", "Cloudflare Pages"),
+        ],
+    )
+
+
+def stratum_paas_multi_paas() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="northwind-paas-multi",
+        display_name="Northwind Multi-PaaS",
+        default_domain="northwind-mp.com",
+        queried_domain="northwind-mp.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["northwind-mp.com", "northwind-vc.com", "northwind-nl.com", "northwind-corp.com"],
+        services=["Google Workspace", "Vercel", "Netlify", "Cloudflare"],
+        slugs=["googleworkspace", "vercel", "netlify", "cloudflare"],
+    )
+
+
+# Stratum: SSE / SASE
+
+
+def stratum_sse_zscaler_fronted() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="contoso-sse-zs",
+        display_name="Contoso Zscaler",
+        default_domain="contoso-zs.com",
+        queried_domain="contoso-zs.com",
+        confidence="high",
+        domain_count=5,
+        tenant_domains=[
+            "contoso-zs.com",
+            "contoso-portal.com",
+            "contoso-svc.com",
+            "contoso-corp.com",
+            "contoso-eu.com",
+        ],
+        services=["Microsoft 365", "Zscaler", "AWS Route 53"],
+        slugs=["microsoft365", "zscaler", "aws-route53"],
+    )
+
+
+def stratum_sse_netskope_fronted() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="northwind-sse-ns",
+        display_name="Northwind Netskope",
+        default_domain="northwind-ns.com",
+        queried_domain="northwind-ns.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["northwind-ns.com", "northwind-cloud.com", "northwind-corp.com", "northwind-eu.com"],
+        services=["Microsoft 365", "Netskope", "Cloudflare"],
+        slugs=["microsoft365", "netskope", "cloudflare"],
+    )
+
+
+def stratum_sse_cloudflare_one() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="fabrikam-sse-cf1",
+        display_name="Fabrikam Cloudflare One",
+        default_domain="fabrikam-cf1.com",
+        queried_domain="fabrikam-cf1.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["fabrikam-cf1.com", "fabrikam-zt.com", "fabrikam-portal.com", "fabrikam-corp.com"],
+        services=["Microsoft 365", "Cloudflare", "Okta"],
+        slugs=["microsoft365", "cloudflare", "okta"],
+    )
+
+
+def stratum_sse_prisma_access() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="adatum-sse-pa",
+        display_name="Adatum Prisma Access",
+        default_domain="adatum-pa.com",
+        queried_domain="adatum-pa.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["adatum-pa.com", "adatum-zt.com", "adatum-portal.com", "adatum-corp.com"],
+        services=["Microsoft 365", "Prisma Access", "Palo Alto Networks"],
+        slugs=["microsoft365", "prisma-access", "paloalto"],
+    )
+
+
+def stratum_sse_cato_sase() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="tailspin-sse-cato",
+        display_name="Tailspin Cato SASE",
+        default_domain="tailspin-cato.com",
+        queried_domain="tailspin-cato.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["tailspin-cato.com", "tailspin-sase.com", "tailspin-portal.com", "tailspin-corp.com"],
+        services=["Microsoft 365", "Cato Networks", "AWS Route 53"],
+        slugs=["microsoft365", "cato-networks", "aws-route53"],
+    )
+
+
+def stratum_sse_minimal_zscaler() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="wingtip-sse-zs-min",
+        display_name="Wingtip Zscaler Minimal",
+        default_domain="wingtip-zs.com",
+        queried_domain="wingtip-zs.com",
+        confidence="medium",
+        domain_count=3,
+        tenant_domains=["wingtip-zs.com", "wingtip-corp.com", "wingtip-eu.com"],
+        services=["Microsoft 365", "Zscaler"],
+        slugs=["microsoft365", "zscaler"],
+    )
+
+
+def stratum_sse_dual_sse() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="litware-sse-dual",
+        display_name="Litware Dual SSE",
+        default_domain="litware-dse.com",
+        queried_domain="litware-dse.com",
+        confidence="high",
+        domain_count=5,
+        tenant_domains=[
+            "litware-dse.com",
+            "litware-zt.com",
+            "litware-sase.com",
+            "litware-portal.com",
+            "litware-corp.com",
+        ],
+        services=["Microsoft 365", "Zscaler", "Netskope", "Cloudflare"],
+        slugs=["microsoft365", "zscaler", "netskope", "cloudflare"],
+    )
+
+
+def stratum_sse_with_okta_sso() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="trey-sse-okta",
+        display_name="Trey SSE + Okta",
+        default_domain="trey-sse.com",
+        queried_domain="trey-sse.com",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["trey-sse.com", "trey-zt.com", "trey-sso.com", "trey-corp.com"],
+        services=["Microsoft 365", "Zscaler", "Okta"],
+        slugs=["microsoft365", "zscaler", "okta"],
+        surface_attributions=[
+            _surface_attrib("sso.trey-sse.com", "okta", "Okta", "application"),
+        ],
+    )
+
+
+def stratum_sse_paloalto_only() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="contoso-sse-pa-only",
+        display_name="Contoso PA Only",
+        default_domain="contoso-pa.com",
+        queried_domain="contoso-pa.com",
+        confidence="medium",
+        domain_count=3,
+        tenant_domains=["contoso-pa.com", "contoso-firewall.com", "contoso-corp.com"],
+        services=["Microsoft 365", "Palo Alto Networks"],
+        slugs=["microsoft365", "paloalto"],
+    )
+
+
+def stratum_sse_government() -> dict[str, Any]:
+    return _base_tenant(
+        tenant_id="northwind-sse-gov",
+        display_name="Northwind Government SASE",
+        default_domain="northwind-gov.gov",
+        queried_domain="northwind-gov.gov",
+        confidence="high",
+        domain_count=4,
+        tenant_domains=["northwind-gov.gov", "northwind-fed.gov", "northwind-state.gov", "northwind-portal.gov"],
+        services=["Microsoft 365", "Zscaler", "Palo Alto Networks"],
+        slugs=["microsoft365", "zscaler", "paloalto"],
+    )
+
+
 # ── Registry and runner ────────────────────────────────────────────────
 
 
 REGISTRY: dict[str, Any] = {
+    # v1.9.9 base corpus (19 fixtures, mixed strata)
     "m365_okta_enterprise": m365_okta_enterprise,
     "google_workspace_aws_native": google_workspace_aws_native,
     "multi_cloud_saas_heavy": multi_cloud_saas_heavy,
@@ -539,6 +1530,72 @@ REGISTRY: dict[str, Any] = {
     "heroku_legacy_app": heroku_legacy_app,
     "empty_minimal": empty_minimal,
     "two_aws_slugs_one_vendor": two_aws_slugs_one_vendor,
+    # v1.9.10 stratified expansion — Stratum: GCP
+    "stratum_gcp_pure_native": stratum_gcp_pure_native,
+    "stratum_gcp_with_okta": stratum_gcp_with_okta,
+    "stratum_gcp_with_security_stack": stratum_gcp_with_security_stack,
+    "stratum_gcp_apigee_heavy": stratum_gcp_apigee_heavy,
+    "stratum_gcp_firebase_only": stratum_gcp_firebase_only,
+    "stratum_gcp_minimal_hardened": stratum_gcp_minimal_hardened,
+    "stratum_gcp_dual_with_aws": stratum_gcp_dual_with_aws,
+    "stratum_gcp_data_pipeline": stratum_gcp_data_pipeline,
+    "stratum_gcp_cloud_run_modern": stratum_gcp_cloud_run_modern,
+    "stratum_gcp_idp_heavy": stratum_gcp_idp_heavy,
+    # Stratum: Azure non-O365
+    "stratum_azure_native_no_m365": stratum_azure_native_no_m365,
+    "stratum_azure_with_okta_sso": stratum_azure_with_okta_sso,
+    "stratum_azure_static_web_apps": stratum_azure_static_web_apps,
+    "stratum_azure_with_proofpoint": stratum_azure_with_proofpoint,
+    "stratum_azure_govcloud": stratum_azure_govcloud,
+    "stratum_azure_minimal": stratum_azure_minimal,
+    "stratum_azure_with_databricks": stratum_azure_with_databricks,
+    "stratum_azure_dual_cloud": stratum_azure_dual_cloud,
+    "stratum_azure_api_management": stratum_azure_api_management,
+    "stratum_azure_idp_managed": stratum_azure_idp_managed,
+    # Stratum: Oracle
+    "stratum_oracle_fusion_apps": stratum_oracle_fusion_apps,
+    "stratum_oracle_oci_only": stratum_oracle_oci_only,
+    "stratum_oracle_with_legacy": stratum_oracle_with_legacy,
+    "stratum_oracle_apex_dev": stratum_oracle_apex_dev,
+    "stratum_oracle_minimal": stratum_oracle_minimal,
+    "stratum_oracle_dual_with_aws": stratum_oracle_dual_with_aws,
+    "stratum_oracle_with_security": stratum_oracle_with_security,
+    "stratum_oracle_global": stratum_oracle_global,
+    "stratum_oracle_idp_with_okta": stratum_oracle_idp_with_okta,
+    "stratum_oracle_with_apex_only": stratum_oracle_with_apex_only,
+    # Stratum: Alibaba
+    "stratum_alibaba_native": stratum_alibaba_native,
+    "stratum_alibaba_global": stratum_alibaba_global,
+    "stratum_alibaba_with_security": stratum_alibaba_with_security,
+    "stratum_alibaba_minimal": stratum_alibaba_minimal,
+    "stratum_alibaba_dual_with_aws": stratum_alibaba_dual_with_aws,
+    "stratum_alibaba_ecommerce": stratum_alibaba_ecommerce,
+    "stratum_alibaba_with_oss": stratum_alibaba_with_oss,
+    "stratum_alibaba_with_apim": stratum_alibaba_with_apim,
+    "stratum_alibaba_minimal_cdn": stratum_alibaba_minimal_cdn,
+    "stratum_alibaba_with_dingtalk_proxy": stratum_alibaba_with_dingtalk_proxy,
+    # Stratum: PaaS / Vercel / Netlify
+    "stratum_paas_vercel_full": stratum_paas_vercel_full,
+    "stratum_paas_netlify_jamstack": stratum_paas_netlify_jamstack,
+    "stratum_paas_vercel_with_auth0": stratum_paas_vercel_with_auth0,
+    "stratum_paas_railway_app": stratum_paas_railway_app,
+    "stratum_paas_render_app": stratum_paas_render_app,
+    "stratum_paas_flyio_distributed": stratum_paas_flyio_distributed,
+    "stratum_paas_vercel_minimal": stratum_paas_vercel_minimal,
+    "stratum_paas_netlify_minimal": stratum_paas_netlify_minimal,
+    "stratum_paas_cloudflare_pages": stratum_paas_cloudflare_pages,
+    "stratum_paas_multi_paas": stratum_paas_multi_paas,
+    # Stratum: SSE / SASE
+    "stratum_sse_zscaler_fronted": stratum_sse_zscaler_fronted,
+    "stratum_sse_netskope_fronted": stratum_sse_netskope_fronted,
+    "stratum_sse_cloudflare_one": stratum_sse_cloudflare_one,
+    "stratum_sse_prisma_access": stratum_sse_prisma_access,
+    "stratum_sse_cato_sase": stratum_sse_cato_sase,
+    "stratum_sse_minimal_zscaler": stratum_sse_minimal_zscaler,
+    "stratum_sse_dual_sse": stratum_sse_dual_sse,
+    "stratum_sse_with_okta_sso": stratum_sse_with_okta_sso,
+    "stratum_sse_paloalto_only": stratum_sse_paloalto_only,
+    "stratum_sse_government": stratum_sse_government,
 }
 
 

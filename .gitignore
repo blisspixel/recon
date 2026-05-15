@@ -77,6 +77,9 @@ docs/accuracy.md
 !/validation/performance_baseline.md
 !/validation/invariant_audit.md
 !/validation/agentic_ux_v199_runbook.md
+!/validation/v1.9.10-pre-lock.md
+!/validation/v1.9.10-bayesian-revalidation.md
+!/validation/v1.9.10-mutation-status.md
 !/validation/corpus_aggregator.py
 !/validation/synthetic_corpus/
 !/validation/synthetic_corpus/**
@@ -127,10 +130,30 @@ docs/accuracy.md
 .pytype/
 .pyright/
 
-# Mutation-testing session state. The .toml config is committed
-# (reproducible setup); the .sqlite holds per-run results that
-# replay locally and are not a committed artifact.
-cosmic-ray-*.sqlite
+# Mutation-testing session state and any other tool-specific
+# scratch files. Tools that need session state should write into
+# .mutmut-cache/, .cosmic-ray/, or similar — never the repo root.
+# These globs catch the ones that ignore the convention.
+cosmic-ray*.sqlite
+cosmic-ray*.toml
+.mutmut-cache/
+.cosmic-ray/
+.hypothesis/
+
+# Stray scratch files that occasionally land in root from
+# interrupted shell sessions or crashed tools. Each pattern matches
+# garbage that should not be committed. (.stackdump, .DS_Store,
+# Thumbs.db are already covered by the OS-artefact section below.)
+core
+*.core
+nohup.out
+test-output.txt
+test-output-*.txt
+scratch.py
+scratch-*.py
+_scratch*
+tmp/
+_tmp/
 
 # IDE / editors
 .vscode/

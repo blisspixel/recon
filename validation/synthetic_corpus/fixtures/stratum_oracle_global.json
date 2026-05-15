@@ -1,0 +1,31 @@
+{
+  "cache_version": 1,
+  "tenant_id": "trey-oracle-global",
+  "display_name": "Trey Oracle Global",
+  "default_domain": "trey-oracle.com",
+  "queried_domain": "trey-oracle.com",
+  "confidence": "high",
+  "domain_count": 6,
+  "tenant_domains": [
+    "trey-oracle.com",
+    "trey-eu.com",
+    "trey-jp.com",
+    "trey-au.com",
+    "trey-br.com",
+    "trey-corp.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Oracle Cloud",
+    "Oracle Fusion ERP",
+    "Cloudflare"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "oracle-cloud",
+    "oracle-fusion",
+    "cloudflare"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

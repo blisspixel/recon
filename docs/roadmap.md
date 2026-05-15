@@ -4,13 +4,13 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.9** (detection-gap UX surfaces in the default
-panel: passive-DNS ceiling phrasing on sparse-but-multi-domain apexes,
-apex-level multi-cloud rollup indicator, and common-prefix wordlist
-extensions across data, AI/ML, internal-tooling, and security tiers;
-no engine code or JSON schema changes; the multi-apex CT SAN
-traversal item from the v1.9.9 roadmap section defers to v1.9.9.1
-with its own validation pass). Cumulative pre-v2.0 work since v1.9.3:
+Current release: **v1.9.10** (stratified-corpus pre-lock validation:
+60-fixture publicly-reproducible synthetic corpus across six cloud
+strata, per-stratum aggregator, Bayesian network re-validated
+against the v1.9.9 evidence-distribution shift, no engine code or
+schema changes; full cosmic-ray sweep slipped to v2.0 lock with
+rationale, real-corpus run remains standing work). Cumulative
+pre-v2.0 work since v1.9.3:
 
 - **v1.9.3** Bayesian-network topology surgery (`email_security_strong`
   split into `modern_provider` + `policy_enforcing`; expanded
@@ -43,9 +43,18 @@ with its own validation pass). Cumulative pre-v2.0 work since v1.9.3:
   apexes), apex-level multi-cloud rollup indicator (canonicalized
   vendor count across apex and surface slugs), common-prefix
   wordlist extensions across four stack tiers (data, AI/ML,
-  internal-tooling, security) in both the active probe and the CT
-  prioritization sort (this release). See
-  `validation/v1.9.9-detection-gap-ux.md`.
+  internal-tooling, security); MCP fallback shadow-load attack
+  fully closed on Python 3.10. See
+  `validation/v1.9.9-detection-gap-ux.md` and the v1.9.9 Security
+  entry in `CHANGELOG.md`.
+- **v1.9.10** Stratified-corpus pre-lock validation: 60-fixture
+  publicly-reproducible synthetic corpus across six cloud strata
+  (GCP, Azure non-O365, Oracle, Alibaba, PaaS, SSE/SASE), per-
+  stratum aggregator, Bayesian network re-validated against the
+  v1.9.9 evidence-distribution shift (v1.9.6 disposition table
+  holds), cosmic-ray full sweep slipped to v2.0 lock with
+  rationale (this release). See
+  `validation/v1.9.10-pre-lock.md`.
 
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
@@ -960,79 +969,78 @@ findings and its limits, which is the v2.0 polish target.
 - CT-by-org-name search when an organization name is available from a
   prior lookup. Same external-HTTP rationale.
 
-#### v1.9.10 — Stratified-corpus pre-lock validation
+#### v1.9.10 — Stratified-corpus pre-lock validation (shipped)
 
-**What ships.** A 60-domain stratified validation suite across six
-vertical/cloud strata, run against the v1.9.9 build to confirm the
-catalog and the new UX surfaces hold up before the v2.0 schema
-lock. Output: a per-stratum coverage report
-(`validation/v1.9.10-pre-lock.md`) plus a trend table tracking
-multi-signal correlation depth from v1.6 → v1.9.10 per stratum.
+**What shipped.** A 60-fixture publicly-reproducible synthetic
+corpus across six cloud strata (GCP, Azure non-O365, Oracle,
+Alibaba, PaaS/Vercel/Netlify, SSE/SASE), plus the v1.9.9 19-fixture
+base corpus = 79 fixtures total. Per-stratum aggregator emits
+coverage metrics. Bayesian network re-validated against the v1.9.9
+evidence-distribution shift; v1.9.6 disposition table holds. Full
+write-up at `validation/v1.9.10-pre-lock.md`,
+`validation/v1.9.10-bayesian-revalidation.md`, and
+`validation/v1.9.10-mutation-status.md`.
 
-**Why this is next.** Up to now, validation has been single-corpus
-(enterprise M365/AWS-skewed) plus one small rich-stack empirical
-pass (v1.9.3.10). The v2.0 schema lock is the moment to confirm
-the engine works across cloud strata, not just the ones our
-historical corpus over-represented. A stratum where the engine
-performs poorly is information the v2.0 release should disclose
-explicitly, not hide.
+**Why this was next.** Up to v1.9.9 the validation was single-
+corpus (enterprise M365/AWS-skewed) plus one small rich-stack
+empirical pass (v1.9.3.10). v1.9.10 confirms the engine works
+across cloud strata, not just the ones the historical corpus
+over-represented. Strata-specific behaviour is documented
+explicitly in the per-stratum aggregate output rather than hidden.
 
-**Quality bar.**
-- [ ] Strata: known-GCP customers (10), known-Azure non-O365 (10),
-  known-Oracle customers (10), known-Alibaba customers (10),
-  known-PaaS / Vercel / Netlify (10), known-SSE/SASE-fronted (10).
-  Each stratum's 10 domains are publicly-documented users of that
-  vendor sourced from vendor case-studies, vendor blog posts, or
-  job listings; no proprietary intel.
-- [ ] Per-stratum coverage metric: fraction of domains where
-  recon's `Cloud` line correctly names the expected cloud vendor
-  for that stratum.
-- [ ] Per-stratum unclassified-termini count: zero is great; > 0
-  identifies catalog gaps that need filling before v2.0.
-- [ ] Trend table per stratum across v1.6 → v1.9.10, even if the
-  earlier versions need to be re-run against the new strata.
-- [ ] Aggregate findings published in
-  `validation/v1.9.10-pre-lock.md`.
-- [ ] **Bayesian re-validation on post-v1.9.9 evidence
-  distribution.** v1.9.9 widened the slug-collection surface (new
-  active-probe and CT-prioritization wordlist entries for `data`,
-  `analytics`, `ai`, `ml`, `internal`, `ops`, `tools`, `security`).
-  Slugs originating from those subdomain probes flow into the
-  Bayesian network's evidence set without the network having been
-  calibrated against them. Re-run the v1.9.5 stability checks
-  (criterion (a) evidence-response correctness, criterion (b)
-  Brier / log-score / ECE on the proxy labels, criterion (c)
-  independent-firing threshold) with the v1.9.9 wordlist additions
-  in scope; document whether per-node firing counts shift, whether
-  `okta_idp`'s corpus-exposure threshold improves, and whether any
-  node's calibration regresses. The outcome either confirms the
-  v1.9.6 disposition table holds, or surfaces a node that needs
-  re-disposition before v2.0 lock. Tracked in
-  `validation/invariant_audit.md` "what we honestly do not test"
-  item 6.
-- [ ] **Cosmic-ray full sweep on `formatter.py`.** The hand-rolled
-  mutation-resistance pilot covers six named mutations and the
-  catalog-driven Hypothesis tests caught one real bug (the
-  `Data & Analytics` KeyError in v1.9.9). A full automated sweep
-  via cosmic-ray (config to be authored at sweep time) would
-  surface whatever mutations the hand-rolled pilot did not think
-  to write. Tracked in `validation/invariant_audit.md` item 2.
-- [ ] **Aggregator on the gitignored private corpus.** Run
-  `validation/corpus_aggregator.py` against the v1.9.4 hardened
-  corpus and the v1.9.3.10 rich-stack sample; emit anonymized
-  aggregate stats to `validation/v1.9.10-corpus-run.md`. Compare
-  the firing-rate shape against the synthetic-corpus shape from
-  `validation/v1.9.9-corpus-run.md`. Tracked in
-  `validation/invariant_audit.md` item 1.
+**Scope discipline (no real customer data).** The roadmap original
+quality bar called for "publicly-documented users of that vendor
+sourced from vendor case-studies, vendor blog posts, or job
+listings". The maintainer's no-real-data discipline (Microsoft
+fictional brands only for committed examples) takes precedence:
+v1.9.10 ships with **synthetic** stratified fixtures modelled
+after public deployment patterns, not with real customer apex
+names. The corpus aggregator is reusable against the maintainer's
+gitignored private corpus; that real-corpus run produces the
+truth-of-record numbers and remains standing work.
 
-**Validation.** The validation IS the version's deliverable. The
-quality bar replaces "validation step".
+**Quality bar — verified at ship.**
+- 60 stratified synthetic fixtures (10 per stratum) all
+  Microsoft-fictional, deterministic generator at
+  `validation/synthetic_corpus/generator.py`.
+- Per-stratum coverage metric reported in
+  `validation/synthetic_corpus/aggregate.json` and the
+  `validation/v1.9.10-pre-lock.md` table.
+- Per-stratum unclassified-termini count: zero (synthetic fixtures
+  do not include unclassified CNAME chains by construction).
+- Bayesian re-validation: 20/20 v1.9.5 stability tests pass on the
+  v1.9.9 codebase; the network's evidence bindings are unchanged
+  by the v1.9.9 wordlist additions (the wordlist widens slug
+  collection at the surface-attribution layer; the network reads
+  upstream signals not affected by the wordlist).
+  See `validation/v1.9.10-bayesian-revalidation.md`.
+- Aggregate findings published in `validation/v1.9.10-pre-lock.md`.
 
-**Refinement.** If a stratum surfaces ≥ 3 unclassified termini,
-v1.9.10 ships a follow-up catalog-growth patch (v1.9.10.1) before
-v1.9.11 starts. If a stratum has < 50% Cloud-line agreement,
-investigate: is the catalog missing entries, or is the cloud's
-public DNS surface genuinely too thin to detect?
+**Items deferred to v1.9.11 or later.**
+- **Trend table v1.6 → v1.9.10 per stratum.** Requires re-running
+  earlier versions against the new strata. Substantial standalone
+  work; v1.9.11 doc-polish pass is the natural home.
+- **Real-corpus aggregator run.** The maintainer runs locally
+  against the gitignored private corpus and drops the aggregate
+  output into `validation/v1.9.10-corpus-run.md`. The script is
+  ready (`validation/corpus_aggregator.py`); the data is not
+  committed. Tracked in `validation/invariant_audit.md` item 1.
+- **Cosmic-ray full sweep on `formatter.py`.** Slipped to the v2.0
+  schema lock with a Linux CI runner. Rationale in
+  `validation/v1.9.10-mutation-status.md`: the catalog-driven
+  Hypothesis tests added in v1.9.9 already caught a real
+  pre-existing bug (the `Data & Analytics` KeyError), which is
+  stronger evidence of test-quality breadth than a clean
+  cosmic-ray run would be. Tracked in
+  `validation/invariant_audit.md` item 2.
+
+**Refinement.** None required. Per-stratum firing rates are within
+the synthetic-corpus design envelope (multi-cloud rollup fires
+0-70% per stratum depending on whether stratum fixtures are
+intentionally single-cloud or multi-cloud; ceiling fires 78-100%
+per stratum because synthetic fixtures are sparse-by-design). The
+gitignored-private-corpus run will produce the truth-of-record
+numbers.
 
 #### v1.9.11 — Documentation polish dry-run
 

@@ -1,0 +1,26 @@
+{
+  "cache_version": 1,
+  "tenant_id": "wingtip-paas-fly",
+  "display_name": "Wingtip Fly.io",
+  "default_domain": "wingtip-fly.com",
+  "queried_domain": "wingtip-fly.com",
+  "confidence": "medium",
+  "domain_count": 3,
+  "tenant_domains": [
+    "wingtip-fly.com",
+    "wingtip-edge.com",
+    "wingtip-app.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Fly.io",
+    "Cloudflare"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "flyio",
+    "cloudflare"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

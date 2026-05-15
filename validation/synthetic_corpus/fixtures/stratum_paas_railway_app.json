@@ -1,0 +1,33 @@
+{
+  "cache_version": 1,
+  "tenant_id": "adatum-paas-rw",
+  "display_name": "Adatum Railway",
+  "default_domain": "adatum-rw.com",
+  "queried_domain": "adatum-rw.com",
+  "confidence": "medium",
+  "domain_count": 3,
+  "tenant_domains": [
+    "adatum-rw.com",
+    "adatum-app.com",
+    "adatum-api.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Railway",
+    "Cloudflare"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "railway",
+    "cloudflare"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "api.adatum-rw.com",
+      "primary_slug": "railway",
+      "primary_name": "Railway",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

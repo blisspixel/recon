@@ -1,0 +1,35 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-az-apim",
+  "display_name": "Contoso Azure APIs",
+  "default_domain": "contoso-apim.com",
+  "queried_domain": "contoso-apim.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "contoso-apim.com",
+    "contoso-gateway.com",
+    "contoso-svc.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Azure DNS",
+    "Azure API Management",
+    "Azure App Service"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "azure-dns",
+    "azure-api-management",
+    "azure-appservice"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "api.contoso-apim.com",
+      "primary_slug": "azure-api-management",
+      "primary_name": "Azure API Management",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

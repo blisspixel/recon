@@ -182,13 +182,13 @@ develop the graph and Bayesian layers in detail.
 
 ```mermaid
 flowchart LR
-  obs[O = O_DNS + O_CT + O_ID]
-  obs --> rules[Layer 1<br/>Rule-based fusion<br/>slugs + signals]
-  rules --> panel[Default panel<br/>+ JSON]
-  obs --> graph[Layer 2<br/>Graph correlation<br/>communities + motifs]
+  obs["O = (O_DNS, O_CT, O_ID)"]
+  obs --> rules["Layer 1: Rule-based fusion<br/>slugs and signals"]
+  rules --> panel["Default panel and JSON"]
+  obs --> graph["Layer 2: Graph correlation<br/>communities and motifs"]
   graph --> panel
-  rules -. evidence chain .-> bn[Layer 3<br/>Bayesian network<br/>posteriors + intervals]
-  bn -. --fusion only .-> panel
+  rules -. "evidence chain" .-> bn["Layer 3: Bayesian network<br/>posteriors and intervals"]
+  bn -. "fusion-only" .-> panel
 
   style rules fill:#eef
   style graph fill:#efe
@@ -673,15 +673,15 @@ hidden behind a binary blob.
 
 ```mermaid
 graph LR
-  m365[m365_tenant<br/>prior 0.30] --> fed[federated_identity]
-  gws[google_workspace_tenant<br/>prior 0.25] --> fed
-  fed --> okta[okta_idp]
-  m365 --> emp[email_security_modern_provider]
+  m365["m365_tenant<br/>prior 0.30"] --> fed["federated_identity"]
+  gws["google_workspace_tenant<br/>prior 0.25"] --> fed
+  fed --> okta["okta_idp"]
+  m365 --> emp["email_security_modern_provider"]
   gws --> emp
-  egw[email_gateway_present<br/>prior 0.18] --> emp
-  pol[email_security_policy_enforcing<br/>prior 0.25]
-  cdn[cdn_fronting<br/>prior 0.45]
-  aws[aws_hosting<br/>prior 0.40]
+  egw["email_gateway_present<br/>prior 0.18"] --> emp
+  pol["email_security_policy_enforcing<br/>prior 0.25"]
+  cdn["cdn_fronting<br/>prior 0.45"]
+  aws["aws_hosting<br/>prior 0.40"]
 
   style m365 fill:#eef
   style gws fill:#eef
@@ -842,32 +842,18 @@ is toward whichever absences the missingness mechanism produces.
 recon's defensive setting is MNAR by design. When a hardened
 operator strips a public OIDC discovery endpoint, the absence of
 the `microsoft365` slug is *not* random: it is correlated with the
-latent $X = \text{m365\_tenant}$ through the operator's deliberate
-hiding choice. Conditioning on absence under that mechanism would
-treat the deliberate hiding as evidence against the latent, which
-is exactly the failure mode (Rubin 1976; for the recent
-machine-learning treatment of MNAR in selective-disclosure
-settings, see [Mohan and Pearl 2021,
-"Graphical Models for Processing Missing Data"](https://doi.org/10.1080/01621459.2021.1874961)).
+latent `m365_tenant` claim through the operator's deliberate
+hiding choice. A symmetric model cannot distinguish that case
+from genuine absence and so produces overconfident posteriors
+against $X$ on exactly the targets recon must refuse to overclaim
+about (Rubin 1976; Mohan and Pearl 2021,
+["Graphical Models for Processing Missing Data"](https://doi.org/10.1080/01621459.2021.1874961)).
 
-Two scenarios from the public channel make this concrete:
-
-1. The structural claim $X$ is genuinely absent (no M365, no Okta).
-2. $X$ is present but $b$ is not exposed because the operator
-   hardened DNS to strip the public OIDC discovery, even though
-   the tenant exists.
-
-A symmetric-conditioning model treats these two cases as identical
-evidence against $X$. Under MCAR/MAR that would be correct; under
-MNAR it produces overconfident posteriors against $X$ on hardened
-targets, which is exactly the population recon must refuse to
-overclaim about.
-
-So the model is intentionally one-sided: positive bindings update the
-posterior toward presence; non-firing bindings leave the posterior
-where the priors and parent-claims placed it. Formally: the
-likelihood factor for a node $X$ is the product over *only* the
-bindings that fired,
+The model is therefore intentionally one-sided: positive bindings
+update the posterior toward presence; non-firing bindings leave
+the posterior where the priors and parent-claims placed it.
+Formally: the likelihood factor for a node $X$ is the product
+over *only* the bindings that fired,
 
 $$L(O \mid X) = \prod_{b \in O \cap B(X)} \ell_b(X),$$
 
@@ -898,21 +884,16 @@ The trade-off, made explicit:
 - Under recon's **asymmetric (virtual-evidence) construction** the
   absence LR is 1, meaning absence carries no information either way.
 
-We accept the cost of the asymmetric choice. In well-instrumented
-domains (no operator hiding, complete public surface), recon will
-under-claim presence relative to a symmetric model that correctly
-exploits absence as evidence. In adversarial / hardened domains
-(operator deliberately hides indicators), the symmetric model would
-over-claim absence as confirming absence and produce false-negative
-verdicts. Recon's input distribution is dominated by partially or
-fully hardened targets, so the asymmetric trade is the right side
-of the bias-conservatism axis for the tool's threat model.
-
-The $LR = 1$ equivalence is the precise mathematical content of "we
-do not condition on absence." Owning the statement is more honest
-than the bare virtual-evidence framing, which can be read as
-sidestepping the implication. The implication is exactly what we
-want the layer to commit to.
+We accept the cost. In well-instrumented domains (no hiding,
+complete public surface), the asymmetric model under-claims
+presence relative to a symmetric model that correctly exploits
+absence. In adversarial domains the symmetric model over-claims
+absence as confirming absence and produces false-negative verdicts.
+recon's input distribution is dominated by partially or fully
+hardened targets, so the asymmetric trade is on the right side of
+the bias-conservatism axis for the threat model. The $LR = 1$
+equivalence is the precise mathematical content of "we do not
+condition on absence" and the implication the layer commits to.
 
 ##### Adversarial-missingness derivation via m-graphs
 
@@ -1287,13 +1268,13 @@ load-bearing field, not the mean:
 %%{init: {'theme':'base'}}%%
 graph TB
   subgraph sparse["n_eff = 4 (sparse, hardened target)"]
-    s_low(0.21) --- s_mean(0.5) --- s_high(0.79)
+    sl["0.21"] --- sm["0.5"] --- sh["0.79"]
   end
   subgraph mid["n_eff = 8"]
-    m_low(0.27) --- m_mean(0.5) --- m_high(0.73)
+    ml["0.27"] --- mm["0.5"] --- mh["0.73"]
   end
   subgraph dense["n_eff = 14 (dense corroborating evidence)"]
-    d_low(0.33) --- d_mean(0.5) --- d_high(0.67)
+    dl["0.33"] --- dm["0.5"] --- dh["0.67"]
   end
 ```
 

@@ -1,0 +1,30 @@
+{
+  "cache_version": 1,
+  "tenant_id": "fabrikam-oracle-legacy",
+  "display_name": "Fabrikam Oracle Hybrid",
+  "default_domain": "fabrikam-oracle.com",
+  "queried_domain": "fabrikam-oracle.com",
+  "confidence": "medium",
+  "domain_count": 5,
+  "tenant_domains": [
+    "fabrikam-oracle.com",
+    "fabrikam-erp.com",
+    "fabrikam-hcm.com",
+    "fabrikam-corp.com",
+    "fabrikam-legacy.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Oracle Fusion ERP",
+    "Oracle Cloud",
+    "Proofpoint"
+  ],
+  "slugs": [
+    "microsoft365",
+    "oracle-fusion",
+    "oracle-cloud",
+    "proofpoint"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

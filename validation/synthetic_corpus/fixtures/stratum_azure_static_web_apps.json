@@ -1,0 +1,33 @@
+{
+  "cache_version": 1,
+  "tenant_id": "fabrikam-az-swa",
+  "display_name": "Fabrikam SWA Sites",
+  "default_domain": "fabrikam-swa.com",
+  "queried_domain": "fabrikam-swa.com",
+  "confidence": "medium",
+  "domain_count": 3,
+  "tenant_domains": [
+    "fabrikam-swa.com",
+    "fabrikam-marketing.com",
+    "fabrikam-blog.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Azure DNS",
+    "Azure Static Web Apps"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "azure-dns",
+    "azure-static-web-apps"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "www.fabrikam-swa.com",
+      "primary_slug": "azure-static-web-apps",
+      "primary_name": "Azure Static Web Apps",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

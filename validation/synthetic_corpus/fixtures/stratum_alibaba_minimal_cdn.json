@@ -1,0 +1,22 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-ali-cdn-only",
+  "display_name": "Contoso Alibaba CDN Only",
+  "default_domain": "contoso-acdn.com",
+  "queried_domain": "contoso-acdn.com",
+  "confidence": "low",
+  "domain_count": 3,
+  "tenant_domains": [
+    "contoso-acdn.com",
+    "contoso-static.com",
+    "contoso-svc.com"
+  ],
+  "services": [
+    "Alibaba CDN"
+  ],
+  "slugs": [
+    "alibaba-cdn"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

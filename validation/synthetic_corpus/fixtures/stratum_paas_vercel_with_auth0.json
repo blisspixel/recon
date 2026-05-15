@@ -1,0 +1,35 @@
+{
+  "cache_version": 1,
+  "tenant_id": "fabrikam-paas-auth",
+  "display_name": "Fabrikam Vercel + Auth0",
+  "default_domain": "fabrikam-vc.com",
+  "queried_domain": "fabrikam-vc.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "fabrikam-vc.com",
+    "fabrikam-app.com",
+    "fabrikam-id.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Vercel",
+    "Auth0",
+    "Cloudflare"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "vercel",
+    "auth0",
+    "cloudflare"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "login.fabrikam-vc.com",
+      "primary_slug": "auth0",
+      "primary_name": "Auth0",
+      "primary_tier": "application"
+    }
+  ]
+}

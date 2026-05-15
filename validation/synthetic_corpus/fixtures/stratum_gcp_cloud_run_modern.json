@@ -1,0 +1,35 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-gcp-cr",
+  "display_name": "Contoso Modern Stack",
+  "default_domain": "contoso-modern.com",
+  "queried_domain": "contoso-modern.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "contoso-modern.com",
+    "contoso-app.com",
+    "contoso-stage.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "GCP Cloud Functions",
+    "Firebase Hosting",
+    "Cloudflare"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "gcp-cloud-functions",
+    "firebase-hosting",
+    "cloudflare"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "app.contoso-modern.com",
+      "primary_slug": "firebase-hosting",
+      "primary_name": "Firebase Hosting",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "cache_version": 1,
+  "tenant_id": "adatum-sse-pa",
+  "display_name": "Adatum Prisma Access",
+  "default_domain": "adatum-pa.com",
+  "queried_domain": "adatum-pa.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "adatum-pa.com",
+    "adatum-zt.com",
+    "adatum-portal.com",
+    "adatum-corp.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Prisma Access",
+    "Palo Alto Networks"
+  ],
+  "slugs": [
+    "microsoft365",
+    "prisma-access",
+    "paloalto"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

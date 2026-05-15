@@ -1,0 +1,41 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-paas-vc",
+  "display_name": "Contoso Vercel Stack",
+  "default_domain": "contoso-vc.com",
+  "queried_domain": "contoso-vc.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "contoso-vc.com",
+    "contoso-app.com",
+    "contoso-blog.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Vercel",
+    "Cloudflare",
+    "GitHub"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "vercel",
+    "cloudflare",
+    "github"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "www.contoso-vc.com",
+      "primary_slug": "vercel",
+      "primary_name": "Vercel",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "app.contoso-vc.com",
+      "primary_slug": "vercel",
+      "primary_name": "Vercel",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

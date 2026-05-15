@@ -1,0 +1,34 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-ali",
+  "display_name": "Contoso Alibaba",
+  "default_domain": "contoso-ali.com",
+  "queried_domain": "contoso-ali.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "contoso-ali.com",
+    "contoso-cn.com",
+    "contoso-apac.com",
+    "contoso-corp.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Alibaba Cloud",
+    "Alibaba CDN"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "alibaba-cloud",
+    "alibaba-cdn"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "cdn.contoso-ali.com",
+      "primary_slug": "alibaba-cdn",
+      "primary_name": "Alibaba CDN",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

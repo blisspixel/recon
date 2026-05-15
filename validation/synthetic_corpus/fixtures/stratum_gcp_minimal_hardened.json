@@ -1,0 +1,23 @@
+{
+  "cache_version": 1,
+  "tenant_id": "wingtip-gcp-min",
+  "display_name": "Wingtip GCP Hardened",
+  "default_domain": "wingtip-secure.com",
+  "queried_domain": "wingtip-secure.com",
+  "confidence": "low",
+  "domain_count": 4,
+  "tenant_domains": [
+    "wingtip-secure.com",
+    "wingtip-prod.com",
+    "wingtip-internal.com",
+    "wingtip-corp.com"
+  ],
+  "services": [
+    "GCP DNS"
+  ],
+  "slugs": [
+    "gcp-dns"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

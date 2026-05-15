@@ -1,0 +1,31 @@
+{
+  "cache_version": 1,
+  "tenant_id": "litware-oracle-sec",
+  "display_name": "Litware Oracle Secured",
+  "default_domain": "litware-oracle.com",
+  "queried_domain": "litware-oracle.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "litware-oracle.com",
+    "litware-erp.com",
+    "litware-fin.com",
+    "litware-soc.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Oracle Cloud",
+    "Okta",
+    "Wiz",
+    "CrowdStrike"
+  ],
+  "slugs": [
+    "microsoft365",
+    "oracle-cloud",
+    "okta",
+    "wiz",
+    "crowdstrike"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

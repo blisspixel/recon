@@ -1,0 +1,30 @@
+{
+  "cache_version": 1,
+  "tenant_id": "northwind-ali",
+  "display_name": "Northwind Alibaba Global",
+  "default_domain": "northwind-ali.com",
+  "queried_domain": "northwind-ali.com",
+  "confidence": "high",
+  "domain_count": 5,
+  "tenant_domains": [
+    "northwind-ali.com",
+    "northwind-cn.com",
+    "northwind-jp.com",
+    "northwind-sg.com",
+    "northwind-corp.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Alibaba Cloud",
+    "Alibaba API",
+    "Alibaba CDN"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "alibaba-cloud",
+    "alibaba-api",
+    "alibaba-cdn"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}
