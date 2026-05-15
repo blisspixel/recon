@@ -1,0 +1,53 @@
+{
+  "cache_version": 1,
+  "tenant_id": "northwind-eng",
+  "display_name": "Northwind Traders",
+  "default_domain": "northwind.com",
+  "queried_domain": "northwind.com",
+  "confidence": "high",
+  "domain_count": 5,
+  "tenant_domains": [
+    "northwind.com",
+    "northwind.net",
+    "northwind.dev",
+    "nw-corp.com",
+    "nw-eng.io"
+  ],
+  "services": [
+    "Google Workspace",
+    "AWS Route 53",
+    "AWS CloudFront",
+    "AWS S3",
+    "GitHub",
+    "Slack"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "aws-route53",
+    "aws-cloudfront",
+    "aws-s3",
+    "github",
+    "slack"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "api.northwind.com",
+      "primary_slug": "aws-cloudfront",
+      "primary_name": "AWS CloudFront",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "docs.northwind.com",
+      "primary_slug": "aws-s3",
+      "primary_name": "AWS S3",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "blog.northwind.com",
+      "primary_slug": "aws-cloudfront",
+      "primary_name": "AWS CloudFront",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

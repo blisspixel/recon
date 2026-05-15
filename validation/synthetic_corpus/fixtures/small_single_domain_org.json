@@ -1,0 +1,20 @@
+{
+  "cache_version": 1,
+  "tenant_id": "litware-small",
+  "display_name": "Litware, Inc.",
+  "default_domain": "litware.com",
+  "queried_domain": "litware.com",
+  "confidence": "high",
+  "domain_count": 1,
+  "tenant_domains": [
+    "litware.com"
+  ],
+  "services": [
+    "Microsoft 365"
+  ],
+  "slugs": [
+    "microsoft365"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

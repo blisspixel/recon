@@ -1,6 +1,6 @@
 [project]
 name = "recon-tool"
-version = "1.9.8"
+version = "1.9.9"
 description = "Domain intelligence CLI and MCP server — tech stack, email security, and signal intelligence from DNS."
 requires-python = ">=3.10"
 readme = "README.md"
@@ -138,7 +138,7 @@ typeCheckingMode = "strict"
 # additions that only exist in the working copy.
 venv = ".venv"
 venvPath = "."
-include = ["recon_tool", "tests"]
+include = ["recon_tool", "tests", "validation/corpus_aggregator.py"]
 # Global reportUnknown* suppressions — needed across multiple files, not just YAML loaders.
 # Root causes: (1) yaml.safe_load returns Any, propagating through fingerprints.py and
 # signals.py; (2) dnspython's type stubs are incomplete (dns.py); (3) urllib.parse.urlparse

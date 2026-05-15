@@ -91,7 +91,12 @@ class TestMcpInstallPersistsSafeEnv:
     fallback launch block's env. ``warn_if_fallback`` exposes a
     warning when the fallback is in use."""
 
-    def test_fallback_block_has_pythonsafepath_env(self, monkeypatch):
+    def test_fallback_block_uses_safe_launcher_args(self, monkeypatch):
+        """v1.9.9: the fallback uses ``python -c "<launcher>"`` so the
+        cwd-shadow attack is blocked at the language level on every
+        supported Python version (including Python 3.10 where
+        ``PYTHONSAFEPATH`` is a no-op). The launcher strips empty
+        and "." entries from sys.path BEFORE importing recon_tool."""
         # Force the fallback path: pretend ``recon`` is not on PATH.
         monkeypatch.setattr(
             "recon_tool.mcp_install.shutil.which",
@@ -101,13 +106,28 @@ class TestMcpInstallPersistsSafeEnv:
 
         block = build_recon_block()
         assert block["command"] == sys.executable
-        assert block["args"] == ["-m", "recon_tool.server"]
-        # The new env entry — load-bearing for the audit fix.
-        assert block.get("env") == {"PYTHONSAFEPATH": "1"}, (
-            "fallback block must persist PYTHONSAFEPATH=1 in env so "
-            "MCP clients launching the server on Python 3.11+ get "
-            "cwd-shadow protection."
-        )
+        args = block["args"]
+        assert isinstance(args, list)
+        # The launcher uses ``-c`` to avoid the ``-m`` cwd-prepend
+        # behaviour. The first arg is ``-c`` and the second is the
+        # launcher source itself.
+        assert args[0] == "-c"
+        assert len(args) == 2
+        launcher = args[1]
+        assert isinstance(launcher, str)
+        # The launcher must perform sys.path filtering BEFORE the
+        # recon_tool import — the order matters because the goal is
+        # to remove the cwd entry before any chance to import a
+        # shadow recon_tool/server.py.
+        path_strip = launcher.find("sys.path")
+        recon_import = launcher.find("from recon_tool")
+        assert 0 <= path_strip < recon_import, "launcher must strip sys.path before importing recon_tool"
+        # PYTHONSAFEPATH=1 stays as belt-and-suspenders for Python
+        # 3.11+ — the language-level protection is the primary;
+        # the env entry is redundant on Python 3.11+ and a no-op on
+        # Python 3.10. Either way, persisting it is documentation of
+        # intent.
+        assert block.get("env") == {"PYTHONSAFEPATH": "1"}
 
     def test_recon_on_path_block_omits_env(self, monkeypatch):
         # When recon is on PATH, the block uses the `recon mcp` form
@@ -136,9 +156,12 @@ class TestMcpInstallPersistsSafeEnv:
         warning = warn_if_fallback()
         assert warning is not None
         assert "PATH" in warning
-        assert "PYTHONSAFEPATH" in warning, (
-            "warning must mention the env-var-level mitigation so the "
-            "operator can map it to their Python version's protection."
+        # v1.9.9: warning describes the cwd-stripping launcher protection
+        # rather than the prior PYTHONSAFEPATH framing (which was
+        # incomplete for Python 3.10).
+        assert "sys.path" in warning, (
+            "warning must mention the sys.path-stripping protection so the "
+            "operator understands the language-level mitigation."
         )
 
     def test_warn_if_fallback_returns_none_when_recon_on_path(self, monkeypatch):
@@ -299,7 +322,7 @@ class TestShadowWorkspaceIntegration:
         env["PYTHONSAFEPATH"] = "1"
         env["RECON_MCP_FORCE_STDIO"] = "1"
 
-        result = subprocess.run(  # noqa: S603 — argv list, no shell.
+        result = subprocess.run(
             [sys.executable, "-m", "recon_tool.server"],
             cwd=tmp_path,
             env=env,
@@ -313,5 +336,52 @@ class TestShadowWorkspaceIntegration:
         assert "RECON_SHADOW_EXECUTED" not in (result.stdout + result.stderr), (
             "Shadow recon_tool/server.py executed despite "
             "PYTHONSAFEPATH=1 — the cwd-prepend protection failed. "
+            f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+        )
+
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="Windows subprocess + tempdir cleanup interacts poorly with test isolation.",
+    )
+    def test_v199_fallback_launcher_blocks_shadow_on_all_pythons(self, tmp_path):
+        """v1.9.9 closure: the new fallback launcher uses
+        ``python -c "<sys.path-stripping launcher>"`` instead of
+        ``python -m recon_tool.server``. The launcher strips the cwd
+        entry from ``sys.path`` BEFORE any ``recon_tool`` import, so
+        a shadow ``recon_tool/server.py`` in cwd cannot be selected
+        — on every supported Python version, including Python 3.10
+        where ``PYTHONSAFEPATH`` is a no-op.
+
+        This test spawns the actual launcher that
+        ``build_recon_block()`` persists and confirms the shadow
+        does not execute. Unlike the prior PYTHONSAFEPATH-only
+        integration test (which skips on Python 3.10), this one
+        runs on every supported Python."""
+        self._write_shadow_package(tmp_path)
+
+        from recon_tool.mcp_install import _FALLBACK_LAUNCH_CODE
+
+        env = dict(os.environ)
+        # Deliberately do NOT set PYTHONSAFEPATH — the language-level
+        # sys.path strip is what we are testing. Setting the env var
+        # would conflate two protections.
+        env.pop("PYTHONSAFEPATH", None)
+        env["RECON_MCP_FORCE_STDIO"] = "1"
+
+        result = subprocess.run(  # noqa: S603 — argv list, no shell.
+            [sys.executable, "-c", _FALLBACK_LAUNCH_CODE],
+            cwd=tmp_path,
+            env=env,
+            input="",
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+
+        assert "RECON_SHADOW_EXECUTED" not in (result.stdout + result.stderr), (
+            "Shadow recon_tool/server.py executed despite the v1.9.9 "
+            "sys.path-stripping launcher. The cwd-shadow attack should "
+            "be blocked at the language level on every supported Python. "
             f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
         )

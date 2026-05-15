@@ -1,0 +1,28 @@
+{
+  "cache_version": 1,
+  "tenant_id": "fabrikam-aws-only",
+  "display_name": "Fabrikam Cloud Services",
+  "default_domain": "fabrikam-cloud.com",
+  "queried_domain": "fabrikam-cloud.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "fabrikam-cloud.com",
+    "fabrikam.io",
+    "fabrikam-cs.com"
+  ],
+  "services": [
+    "AWS Route 53",
+    "AWS CloudFront",
+    "AWS S3",
+    "AWS EC2"
+  ],
+  "slugs": [
+    "aws-route53",
+    "aws-cloudfront",
+    "aws-s3",
+    "aws-ec2"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

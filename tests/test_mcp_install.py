@@ -128,7 +128,17 @@ class TestBuildReconBlock:
         assert block["args"] == ["mcp"]
         assert block["autoApprove"] == []
 
-    def test_falls_back_to_python_module_form(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_falls_back_to_python_safe_launcher(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """v1.9.9: the fallback uses ``python -c "<sys.path-stripping launcher>"``
+        instead of ``python -m recon_tool.server``. The ``-m`` form
+        was vulnerable on Python 3.10 (where ``PYTHONSAFEPATH`` is a
+        no-op) because Python adds cwd to sys.path before importing
+        the named module — so a malicious ``recon_tool/server.py`` in
+        cwd would shadow the install. The ``-c`` form runs an
+        explicit ``sys.path[:] = [p for p in sys.path if p not in ('', '.')]``
+        before any ``recon_tool`` import, blocking the cwd-shadow
+        attack at the language level."""
+
         def _which(_cmd: str) -> str | None:
             return None
 
@@ -136,7 +146,28 @@ class TestBuildReconBlock:
         monkeypatch.setattr("recon_tool.mcp_install.sys.executable", "/opt/python/bin/python3")
         block = build_recon_block()
         assert block["command"] == "/opt/python/bin/python3"
-        assert block["args"] == ["-m", "recon_tool.server"]
+        # Args must be ``-c`` followed by a launcher that filters
+        # cwd-equivalent entries out of sys.path BEFORE importing
+        # recon_tool.
+        args = block["args"]
+        assert isinstance(args, list)
+        assert args[0] == "-c"
+        assert len(args) == 2
+        launcher = args[1]
+        assert isinstance(launcher, str)
+        # The launcher must strip the cwd entry before any
+        # recon_tool import. We assert on the substring that does
+        # the strip and on the import order.
+        assert "sys.path" in launcher
+        assert "''" in launcher  # filter pattern includes empty-string strip
+        # The recon_tool import must come AFTER the path strip in
+        # source order; otherwise the strip would not protect the
+        # import.
+        path_strip_pos = launcher.find("sys.path")
+        recon_import_pos = launcher.find("from recon_tool")
+        assert 0 <= path_strip_pos < recon_import_pos, (
+            "sys.path strip must precede the recon_tool import in the launcher"
+        )
 
 
 class TestPlanAndInstallCreate:

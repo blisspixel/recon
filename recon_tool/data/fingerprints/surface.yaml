@@ -102,8 +102,8 @@ fingerprints:
       a branded subdomain. Indicates Okta is the org's primary or
       enterprise IdP. Does not distinguish Okta Workforce from
       Okta Customer Identity (Auth0); the chain is shared. Treat
-      as a strong identity-stack binding signal corroborated by
-      MX and federation metadata.
+      as a load-bearing identity-stack binding signal that is best
+      corroborated by MX and federation metadata.
 
 - name: Mailgun
   slug: mailgun

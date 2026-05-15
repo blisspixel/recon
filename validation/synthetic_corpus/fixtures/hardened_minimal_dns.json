@@ -1,0 +1,27 @@
+{
+  "cache_version": 1,
+  "tenant_id": "adatum-hard",
+  "display_name": "Adatum Corporation",
+  "default_domain": "adatum.com",
+  "queried_domain": "adatum.com",
+  "confidence": "low",
+  "domain_count": 8,
+  "tenant_domains": [
+    "adatum.com",
+    "adatum.net",
+    "adatum.co.uk",
+    "adatum-corp.com",
+    "adatum-secure.com",
+    "adatum.eu",
+    "adatum.jp",
+    "adatum.au"
+  ],
+  "services": [
+    "Cloudflare"
+  ],
+  "slugs": [
+    "cloudflare"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

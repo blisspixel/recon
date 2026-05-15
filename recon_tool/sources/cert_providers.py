@@ -139,6 +139,18 @@ HIGH_SIGNAL_PREFIXES = (
     "sandbox",
     "preview",
     "uat",
+    # v1.9.9: keep prioritization in parity with the dns.py probe
+    # wordlist. CT SAN sets that include these prefixes should sort to
+    # the top of the returned subdomain list so the operator sees the
+    # data, AI, ops, and security tiers when CT happens to surface them.
+    "data",
+    "analytics",
+    "ml",
+    "ai",
+    "internal",
+    "ops",
+    "tools",
+    "security",
 )
 
 # Timeout for CT HTTP calls — separate from DNS query timeout

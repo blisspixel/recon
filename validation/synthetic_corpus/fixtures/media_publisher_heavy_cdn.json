@@ -1,0 +1,86 @@
+{
+  "cache_version": 1,
+  "tenant_id": "wingtip-media",
+  "display_name": "Wingtip Media",
+  "default_domain": "wingtip-media.com",
+  "queried_domain": "wingtip-media.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "wingtip-media.com",
+    "wingtip-news.com",
+    "wingtip-tv.com",
+    "wingtip-stream.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Cloudflare",
+    "Fastly",
+    "AWS S3",
+    "AWS CloudFront"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "cloudflare",
+    "fastly",
+    "aws-s3",
+    "aws-cloudfront"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "cdn0.wingtip-media.com",
+      "primary_slug": "fastly",
+      "primary_name": "Fastly",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "cdn1.wingtip-media.com",
+      "primary_slug": "fastly",
+      "primary_name": "Fastly",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "cdn2.wingtip-media.com",
+      "primary_slug": "fastly",
+      "primary_name": "Fastly",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "cdn3.wingtip-media.com",
+      "primary_slug": "fastly",
+      "primary_name": "Fastly",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "cdn4.wingtip-media.com",
+      "primary_slug": "fastly",
+      "primary_name": "Fastly",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "cdn5.wingtip-media.com",
+      "primary_slug": "fastly",
+      "primary_name": "Fastly",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "cdn6.wingtip-media.com",
+      "primary_slug": "fastly",
+      "primary_name": "Fastly",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "cdn7.wingtip-media.com",
+      "primary_slug": "fastly",
+      "primary_name": "Fastly",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "video.wingtip-media.com",
+      "primary_slug": "aws-cloudfront",
+      "primary_name": "AWS CloudFront",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

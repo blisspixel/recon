@@ -4,14 +4,13 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.8** (catalog metadata richness pass on top
-of the v1.9.7 presence floor: every detection in every category now
-carries a substantive description, a scope-narrowing clause, and a
-canonical vendor `reference` URL; advisory richness audit shipped
-behind `--report-richness` in
-`scripts/check_metadata_coverage.py`; inline rationale attached to
-all four non-default detection weights). Cumulative pre-v2.0 work
-since v1.9.3:
+Current release: **v1.9.9** (detection-gap UX surfaces in the default
+panel: passive-DNS ceiling phrasing on sparse-but-multi-domain apexes,
+apex-level multi-cloud rollup indicator, and common-prefix wordlist
+extensions across data, AI/ML, internal-tooling, and security tiers;
+no engine code or JSON schema changes; the multi-apex CT SAN
+traversal item from the v1.9.9 roadmap section defers to v1.9.9.1
+with its own validation pass). Cumulative pre-v2.0 work since v1.9.3:
 
 - **v1.9.3** Bayesian-network topology surgery (`email_security_strong`
   split into `modern_provider` + `policy_enforcing`; expanded
@@ -37,8 +36,17 @@ since v1.9.3:
 - **v1.9.8** Catalog metadata richness: every detection at 100
   percent on all three richness signals (long-desc, scope-narrow,
   reference) across every category; advisory richness audit shipped;
-  inline rationale on all non-default weights (this release). See
+  inline rationale on all non-default weights. See
   `validation/v1.9.8-metadata-audit.md`.
+- **v1.9.9** Detection-gap UX surfaces: passive-DNS ceiling phrasing
+  in the default panel (fires on sparse-services + multi-domain
+  apexes), apex-level multi-cloud rollup indicator (canonicalized
+  vendor count across apex and surface slugs), common-prefix
+  wordlist extensions across four stack tiers (data, AI/ML,
+  internal-tooling, security) in both the active probe and the CT
+  prioritization sort (this release). See
+  `validation/v1.9.9-detection-gap-ux.md`.
+
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
 endpoints), keep every output hedged with full provenance, and let live
@@ -857,69 +865,100 @@ end-state numbers, weight-rationale table, and scope decisions.
 `scripts/check_metadata_coverage.py --report-richness` shows 100
 percent on every category and every signal.
 
-#### v1.9.9 — Detection-gap UX surfaces
+#### v1.9.9 — Detection-gap UX surfaces (shipped)
 
-**What ships.** Three operator-facing surfaces that make the
-passive-DNS architectural limit visible:
+**What shipped.** Three operator-facing surfaces in the default panel
+that make the architectural limits of passive DNS collection visible.
+No engine code changes, no JSON schema additions. The fourth roadmap
+item from the original v1.9.9 scope (multi-apex CT SAN traversal)
+deferred to v1.9.9.1 so the external-HTTP behaviour change can land
+with its own validation pass.
 
-1. **Passive-DNS ceiling phrasing.** When the default panel shows
-   few services on a domain that the operator clearly expects to
-   have many, the panel adds a one-line acknowledgement:
-   "Passive DNS surfaces X public services; server-side API
-   consumption, internal workloads, and SaaS without DNS
-   verification are not observable from public DNS alone."
-   Prevents "absence of finding = service not present" reading.
-2. **Expanded subdomain enumeration breadth.** CT SAN-set traversal
-   pulls subdomains from *all* observed apex certs (not just the
-   queried apex's certs); the common-prefix wordlist extends to
-   include `data`, `analytics`, `ml`, `ai`, `internal`, `ops`,
-   `security`, `tools`; an optional CT search by org-name surfaces
-   when one is available from a prior lookup.
-3. **Apex-level multi-cloud rollup indicator.** When the
-   `surface_attributions` span ≥ 2 cloud-categorized providers,
-   a top-of-panel line reads: `Multi-cloud: 3 providers observed
-   across the surface (AWS, Cloudflare, GCP)`. The detail lives in
-   the existing Subdomain line (v1.9.3.10 counts); this rollup is
-   the single-line scannable indicator.
+1. **Passive-DNS ceiling phrasing.** When the default panel is sparse
+   on an apex that probably should not be, a one-line teaching footer
+   renders under the Services block: "Passive DNS surfaces what
+   publishes externally. Server-side API consumption, internal
+   workloads, and SaaS without DNS verification do not appear in
+   public DNS records." Trigger heuristic is conservative on purpose:
+   fires only when `info.services` is non-empty (a different surface
+   owns failed runs), `info.domain_count >= 3` (the apex has multiple
+   tenant domains, so sparse is genuinely surprising), categorized
+   service families are fewer than 5, AND CNAME-chain subdomain
+   attributions are fewer than 5. Both halves of the sparse check must
+   hold so a domain with short Services but many surface attributions
+   does not gain a misleading footer. `--full` / `--domains` suppresses
+   the line because those modes already carry the long surface
+   section.
+2. **Common-prefix wordlist extensions.** The active-DNS probe in
+   `recon_tool/sources/dns.py` and the CT high-signal sort in
+   `recon_tool/sources/cert_providers.py` both gained eight prefixes
+   covering tiers the prior wordlist ignored: `data`, `analytics`,
+   `ai`, `ml`, `internal`, `ops`, `tools`, `security`. Each prefix
+   maps to a recognised stack tier with vendor-product backing
+   (Snowflake under `data`, Vertex AI under `ai`, internal portals
+   under `internal`, SIEM consoles under `security`). The CT-side
+   additions keep prioritization parity so a CT response surfacing
+   `data.contoso.com` sorts to the top of the bounded output rather
+   than falling off the cap.
+3. **Apex-level multi-cloud rollup indicator.** When the canonicalized
+   vendor count across apex slugs and surface attributions is at least
+   two, a `Multi-cloud` row joins the key-facts block above
+   Confidence: for example `Multi-cloud: 3 providers observed (AWS,
+   Cloudflare, GCP)`. A single-vendor apex stays unannotated. Sibling
+   slugs collapse: AWS Route 53 plus AWS CloudFront is one AWS vote.
+   Firebase rolls up under GCP. The canonicalization map
+   (`_CLOUD_VENDOR_BY_SLUG` in `formatter.py`) is the single source of
+   truth; two public helpers (`canonical_cloud_vendor`,
+   `count_cloud_vendors`) sit on top of it so future panels and JSON
+   paths can reuse the canonicalization without duplicating the table
+   inline.
 
-**Why this is next.** v1.9.3.10 surfaced the unclassified-chain
-gap and per-provider subdomain counts in the default panel. This
-version completes the detection-gap surface story: the panel now
-*shows what it cannot see* (the ceiling), *casts a wider net for
-what it can see* (enumeration breadth), and *summarises the
-distribution* (multi-cloud indicator). After v1.9.9 lands, the
-default panel is honest about both its findings and its limits —
-the v2.0 polish target.
+**Why this was next.** v1.9.3.10 surfaced the unclassified-chain gap
+and per-provider subdomain counts in the default panel. v1.9.9
+completes the detection-gap surface story: the panel now shows what it
+cannot see (the ceiling), casts a wider net for what it can see
+(enumeration breadth), and summarises the distribution (multi-cloud
+indicator). After v1.9.9 the default panel is honest about both its
+findings and its limits, which is the v2.0 polish target.
 
-**Quality bar.**
-- [ ] Ceiling phrasing fires only when heuristics agree the panel
-  is sparse for the apex's likely scale (e.g. domain_count ≥ 3 AND
-  fewer than 5 categorized services). Conservative trigger; don't
-  add the line to genuinely-small organizations' panels.
-- [ ] Subdomain wordlist additions documented per term: which
-  category of subdomain (data / ops / security / ai) and why it
-  belongs in the common set. No speculative additions.
-- [ ] Multi-cloud indicator counts distinct cloud-categorized
-  providers, not distinct slugs. AWS CloudFront + AWS Route 53
-  count as one (AWS), not two; the operator cares about cloud
-  vendors at this rollup level, not service granularity.
-- [ ] Tests cover the trigger heuristic (panel-sparse case), the
-  expanded wordlist (resolves new subdomain class), and the rollup
-  (collapses same-vendor slugs).
+**Quality bar — verified at ship.**
+- Ceiling phrasing fires only on sparse-services + multi-domain
+  apexes. Both `len(categorized) < 5` and `len(surface_attributions) <
+  5` must hold; `domain_count >= 3` gates the multi-domain check.
+- Subdomain wordlist additions documented per term with inline
+  comments naming the stack tier and the vendor-product idiom that
+  motivates inclusion. No speculative additions; the eight prefixes
+  map one-to-one to recognised stack tiers.
+- Multi-cloud indicator counts canonicalized vendors, not slugs. The
+  `count_cloud_vendors` helper round-trips through
+  `_CLOUD_VENDOR_BY_SLUG` so sibling slugs collapse before the trigger
+  threshold is checked.
+- Tests: **167 v1.9.9 tests across 20 new test files** covering six
+  orthogonal axes (trigger behaviour, test quality, integration,
+  robustness, corpus validation, documentation). Full suite at
+  **2481 pass / 1 skip / 4 deselect**; coverage 84% total. Deterministic
+  under both `--cov` and non-`--cov` runs.
 
-**Validation.** Re-run the v1.9.3.10 empirical sample (Stripe,
-Shopify, Slack, Atlassian, Datadog, HashiCorp) plus 4 hardened-
-adversarial apexes from the v1.9.4 corpus. Verify: ceiling phrasing
-fires on the hardened apexes, not on the rich-stack ones (or fires
-appropriately on both with different wording); subdomain
-enumeration surfaces 10+ additional subdomains per rich-stack
-apex; multi-cloud rollup fires on Stripe (AWS+Fastly+Stripe) but
-not on a single-cloud target.
+**Validation.** Two memos:
+- `validation/v1.9.9-detection-gap-ux.md` — per-fixture trigger
+  behaviour, wordlist rationale, canonicalization decisions
+  (Firebase under GCP, Replit and Glitch excluded), test-quality
+  manifesto with explicit "what we test and what we honestly do not"
+  framing.
+- `validation/v1.9.9-corpus-run.md` — synthetic 19-fixture corpus
+  results: 8/19 multi-cloud fires (42.1%), 11/19 ceiling fires
+  (57.9%). The corpus is publicly reproducible from
+  `validation/synthetic_corpus/generator.py`; the aggregator at
+  `validation/corpus_aggregator.py` mirrors the renderer's trigger
+  logic and emits anonymized counts (no apex names).
 
-**Refinement.** If the ceiling phrasing fires on legitimate
-single-cloud organizations and looks alarmist, tune the trigger
-heuristic or change the wording. The point is to teach operators
-about the architectural limit, not to suggest something's wrong.
+**Refinement.** Two items moved to v1.9.9.1:
+- Multi-apex CT SAN traversal (pull subdomains from all observed apex
+  certs, not just the queried apex's). External-HTTP behaviour change
+  warranting its own validation pass against the v1.9.4 hardened
+  corpus.
+- CT-by-org-name search when an organization name is available from a
+  prior lookup. Same external-HTTP rationale.
 
 #### v1.9.10 — Stratified-corpus pre-lock validation
 
@@ -954,6 +993,37 @@ explicitly, not hide.
   earlier versions need to be re-run against the new strata.
 - [ ] Aggregate findings published in
   `validation/v1.9.10-pre-lock.md`.
+- [ ] **Bayesian re-validation on post-v1.9.9 evidence
+  distribution.** v1.9.9 widened the slug-collection surface (new
+  active-probe and CT-prioritization wordlist entries for `data`,
+  `analytics`, `ai`, `ml`, `internal`, `ops`, `tools`, `security`).
+  Slugs originating from those subdomain probes flow into the
+  Bayesian network's evidence set without the network having been
+  calibrated against them. Re-run the v1.9.5 stability checks
+  (criterion (a) evidence-response correctness, criterion (b)
+  Brier / log-score / ECE on the proxy labels, criterion (c)
+  independent-firing threshold) with the v1.9.9 wordlist additions
+  in scope; document whether per-node firing counts shift, whether
+  `okta_idp`'s corpus-exposure threshold improves, and whether any
+  node's calibration regresses. The outcome either confirms the
+  v1.9.6 disposition table holds, or surfaces a node that needs
+  re-disposition before v2.0 lock. Tracked in
+  `validation/invariant_audit.md` "what we honestly do not test"
+  item 6.
+- [ ] **Cosmic-ray full sweep on `formatter.py`.** The hand-rolled
+  mutation-resistance pilot covers six named mutations and the
+  catalog-driven Hypothesis tests caught one real bug (the
+  `Data & Analytics` KeyError in v1.9.9). A full automated sweep
+  via the existing `cosmic-ray-v199.toml` config would surface
+  whatever mutations the hand-rolled pilot did not think to write.
+  Tracked in `validation/invariant_audit.md` item 2.
+- [ ] **Aggregator on the gitignored private corpus.** Run
+  `validation/corpus_aggregator.py` against the v1.9.4 hardened
+  corpus and the v1.9.3.10 rich-stack sample; emit anonymized
+  aggregate stats to `validation/v1.9.10-corpus-run.md`. Compare
+  the firing-rate shape against the synthetic-corpus shape from
+  `validation/v1.9.9-corpus-run.md`. Tracked in
+  `validation/invariant_audit.md` item 1.
 
 **Validation.** The validation IS the version's deliverable. The
 quality bar replaces "validation step".
@@ -1127,7 +1197,7 @@ Already cleared en route to this sequence:
     et al. 2014, Minka 2001, Naeini et al. 2015, Pearl 1988,
     Russell-Norvig, Zhang & Poole 1994, Koller & Friedman 2009,
     Blondel et al. 2008, Traag et al. 2019); this section makes
-    the *implementation choices* explicit so a PhD reader sees
+    the *implementation choices* explicit so a careful reader sees
     what we considered and rejected, not just what we used.
   - **Dependency-floor manifesto.** Complete runtime dependency
     graph (httpx, dnspython, pyyaml, typer, rich, mcp, networkx,

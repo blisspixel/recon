@@ -1,0 +1,35 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-legacy",
+  "display_name": "Contoso Legacy Apps",
+  "default_domain": "contoso-legacy.com",
+  "queried_domain": "contoso-legacy.com",
+  "confidence": "medium",
+  "domain_count": 3,
+  "tenant_domains": [
+    "contoso-legacy.com",
+    "contoso-old.com",
+    "legacy-contoso.net"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Heroku",
+    "Cloudflare",
+    "GitHub"
+  ],
+  "slugs": [
+    "microsoft365",
+    "heroku",
+    "cloudflare",
+    "github"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "app.contoso-legacy.com",
+      "primary_slug": "heroku",
+      "primary_name": "Heroku",
+      "primary_tier": "application"
+    }
+  ]
+}

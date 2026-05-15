@@ -1,0 +1,16 @@
+{
+  "cache_version": 1,
+  "tenant_id": "northwind-min",
+  "display_name": "Northwind Minimal",
+  "default_domain": "northwind-min.com",
+  "queried_domain": "northwind-min.com",
+  "confidence": "low",
+  "domain_count": 1,
+  "tenant_domains": [
+    "northwind-min.com"
+  ],
+  "services": [],
+  "slugs": [],
+  "sources": [],
+  "surface_attributions": []
+}

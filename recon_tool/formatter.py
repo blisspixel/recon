@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterable
 from typing import Any
 
 from rich.console import Console
@@ -259,6 +260,7 @@ _SERVICE_CATEGORIES_ORDER: tuple[str, ...] = (
     "Cloud",
     "Security",
     "AI",
+    "Data & Analytics",
     "Collaboration",
     "Business Apps",
 )
@@ -684,6 +686,195 @@ _SLUG_DISPLAY_OVERRIDES: dict[str, str] = {
     "exchange-onprem": "Exchange Server (on-prem / hybrid)",
 }
 
+# v1.9.9: canonicalization from per-slug cloud entries to a single
+# cloud-vendor identity. Used by the apex-level multi-cloud rollup
+# indicator so that, for example, "AWS CloudFront" and "AWS Route 53"
+# collapse to one AWS vote rather than counting as two distinct
+# providers. The rollup answers "how many distinct cloud vendors does
+# this organization's public footprint touch", not "how many cloud
+# slugs fired"; the slug-level view stays available in the Cloud
+# services row and the per-subdomain Subdomain row.
+#
+# Keys map to vendor labels operators recognise. Slugs absent from
+# this map are not counted as cloud vendors at all, which is the
+# right call for things like ``replit`` or ``glitch`` (developer
+# platforms but not cloud vendors in the rollup sense). When a new
+# cloud-categorized slug ships, add it here so the rollup sees it.
+_CLOUD_VENDOR_BY_SLUG: dict[str, str] = {
+    # AWS family. Every AWS service slug rolls up to a single "AWS"
+    # vote: an apex with Route 53, CloudFront, and S3 is one cloud
+    # vendor (AWS), not three.
+    "aws-route53": "AWS",
+    "aws-cloudfront": "AWS",
+    "aws-elb": "AWS",
+    "aws-nlb": "AWS",
+    "aws-s3": "AWS",
+    "aws-eb": "AWS",
+    "aws-acm": "AWS",
+    "aws-ec2": "AWS",
+    "aws-compute": "AWS",
+    "aws-amplify": "AWS",
+    "aws-api-gateway": "AWS",
+    "aws-app-runner": "AWS",
+    "aws-global-accelerator": "AWS",
+    # Azure family
+    "azure-dns": "Azure",
+    "azure-cdn": "Azure",
+    "azure-appservice": "Azure",
+    "azure-fd": "Azure",
+    "azure-tm": "Azure",
+    "azure-vm": "Azure",
+    "azure-blob": "Azure",
+    "azure-static-web-apps": "Azure",
+    "azure-container-apps": "Azure",
+    "azure-api-management": "Azure",
+    # GCP family. Firebase rolls up under GCP because Firebase is part
+    # of the Google cloud footprint at the rollup level even though the
+    # product brand is distinct. The Cloud services row still shows
+    # "Firebase Hosting" as the slug name.
+    "gcp-dns": "GCP",
+    "gcp-app": "GCP",
+    "gcp-compute": "GCP",
+    "gcp-cloud-functions": "GCP",
+    "gcp-storage": "GCP",
+    "firebase-hosting": "GCP",
+    "firebase-realtime": "GCP",
+    # Alibaba family
+    "alibaba-api": "Alibaba Cloud",
+    "alibaba-cdn": "Alibaba Cloud",
+    "alibaba-cloud": "Alibaba Cloud",
+    # Standalone vendors. Each appears once because the slug already
+    # names the vendor; no family collapse is needed.
+    "cloudflare": "Cloudflare",
+    "cloudflare-pages": "Cloudflare",
+    "akamai": "Akamai",
+    "fastly": "Fastly",
+    "imperva": "Imperva",
+    "cdn77": "CDN77",
+    "bunnycdn": "BunnyCDN",
+    "vercel": "Vercel",
+    "netlify": "Netlify",
+    "flyio": "Fly.io",
+    "railway": "Railway",
+    "render": "Render",
+    "linode": "Linode",
+    "digitalocean": "DigitalOcean",
+    "hetzner": "Hetzner",
+    "ovh": "OVH",
+    "vultr": "Vultr",
+    "oracle-cloud": "Oracle Cloud",
+    "ibm-cloud": "IBM Cloud",
+    "heroku": "Heroku",
+    "vmware-cloud": "VMware Cloud",
+    "cloud-gov": "Cloud.gov",
+    "edgio-cdn": "Edgio",
+    "lumen-cdn": "Lumen",
+    "f5-xc": "F5 Distributed Cloud",
+}
+
+# v1.9.9: cloud-categorized slugs that are intentionally NOT counted
+# as cloud vendors in the rollup. Two reasons a slug ends up here:
+#
+# (a) The product is SaaS hosting rather than cloud infrastructure
+#     in the rollup sense. WP Engine, Kinsta, Pagely, Acquia, and
+#     WordPress VIP host one specific application stack; counting
+#     them as "cloud vendors" alongside AWS would dilute the
+#     rollup's signal (a domain on AWS + WP Engine is not really
+#     "multi-cloud" to an operator).
+# (b) The product is a developer / prototyping platform rather than
+#     a production cloud surface. Replit and Glitch fall here.
+# (c) The product is a single-purpose specialty CDN or DAM that an
+#     operator would not list alongside AWS / Azure / GCP when
+#     describing a cloud footprint.
+#
+# This set is the single source of truth for those exclusions. The
+# coverage-gap test (``tests/test_cloud_vendor_coverage.py``) asserts
+# every Cloud-categorized slug is either in ``_CLOUD_VENDOR_BY_SLUG``
+# above or in this set, so a future contributor adding a new cloud
+# slug to ``_CATEGORY_BY_SLUG`` has to make the rollup decision
+# explicitly. Silent omissions are not possible.
+_CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
+    {
+        # SaaS hosting — one application stack, not general cloud
+        "wpengine",
+        "kinsta",
+        "pagely",
+        "acquia",
+        "wordpress-vip",
+        "webflow",
+        "github-pages",
+        # Developer / prototyping platforms — not production cloud
+        "replit",
+        "glitch",
+        # Specialty CDN / DAM — long-tail not in the rollup
+        "cloudinary",
+        "azion",
+        "section-io",
+        "ioriver",
+        "medianova-cdn",
+        "merlincdn",
+        "edgetcdn-bitban",
+        # Specialty hosting / DNS providers
+        "ionos",
+        "easydns",
+        "gandi-webredir",
+        # API management not tied to a major cloud at the rollup level
+        "apigee",
+        "mulesoft",
+    }
+)
+
+
+def category_for_slug(slug: str) -> str | None:
+    """Return the panel category for a fingerprint slug, or ``None``.
+
+    Public accessor over the ``_CATEGORY_BY_SLUG`` lookup. v1.9.9
+    corpus-aggregation tooling uses this to estimate the panel's
+    categorized-service count from a serialized TenantInfo without
+    re-running the full ``_categorize_services`` pipeline. Returning
+    ``None`` for slugs not in the table is the documented contract.
+    """
+    return _CATEGORY_BY_SLUG.get(slug)
+
+
+def canonical_cloud_vendor(slug: str) -> str | None:
+    """Collapse a fingerprint slug to its cloud-vendor identity.
+
+    Returns the vendor label (``"AWS"``, ``"Azure"``, ``"Cloudflare"``,
+    ...) for slugs that map to a recognised cloud vendor, or ``None``
+    for slugs that are not cloud-categorized. The mapping is the
+    single source of truth used by the v1.9.9 multi-cloud rollup; do
+    not duplicate it inline at call sites.
+    """
+    return _CLOUD_VENDOR_BY_SLUG.get(slug)
+
+
+def count_cloud_vendors(
+    apex_slugs: Iterable[str],
+    surface_slugs: Iterable[str] = (),
+) -> dict[str, int]:
+    """Count distinct cloud-vendor mentions across apex and surface slugs.
+
+    The returned dict maps vendor label to slug-mention count. A vendor
+    with multiple slug families (AWS Route 53 + AWS CloudFront) is one
+    key with a count of 2. Slugs that do not map to a cloud vendor are
+    silently dropped. Apex and surface slug streams are merged before
+    counting, so a vendor that fires on the apex and on a subdomain
+    counts twice (one mention per slug), but still as one distinct
+    vendor key.
+
+    Used by the panel rollup to decide whether to fire (≥ 2 distinct
+    keys) and what vendor list to render. Sorted-output handling is the
+    caller's job because callers differ in tie-break preference.
+    """
+    counts: dict[str, int] = {}
+    for slug in (*apex_slugs, *surface_slugs):
+        vendor = _CLOUD_VENDOR_BY_SLUG.get(slug)
+        if vendor is None:
+            continue
+        counts[vendor] = counts.get(vendor, 0) + 1
+    return counts
+
 
 def _pick_single_primary(joined: str) -> tuple[str, list[str]]:
     """Split a ``" + "``-joined provider string into one primary and
@@ -1033,6 +1224,15 @@ def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:
             name.startswith(pfx) for pfx in _FILTERED_SERVICE_PREFIXES
         )
 
+    # Initialize one bucket per declared category. Unknown categories
+    # produced by ``_CATEGORY_BY_SLUG`` (e.g. when a future fingerprint
+    # introduces a category that ``_SERVICE_CATEGORIES_ORDER`` does
+    # not yet list) are added to ``by_cat`` defensively in pass 1
+    # below. Without that defence, a slug whose category is missing
+    # from the order tuple raises ``KeyError`` at append time and
+    # crashes the panel for any apex that has the slug fire. The
+    # category will not appear in the rendered panel until added to
+    # ``_SERVICE_CATEGORIES_ORDER``, but the renderer will not crash.
     by_cat: dict[str, list[str]] = {c: [] for c in _SERVICE_CATEGORIES_ORDER}
     seen_services: set[str] = set()
     slugs_filed: set[str] = set()  # slugs pass 1 has already filed
@@ -1069,6 +1269,14 @@ def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:
                 name = f"{name} ({qualifier})"
         if name in seen_services:
             continue
+        # Defensive: if the slug's category is missing from
+        # ``_SERVICE_CATEGORIES_ORDER`` (a future-fingerprint drift),
+        # add the bucket on the fly so the append does not raise.
+        # The category will not appear in the rendered panel order
+        # until added to the tuple; the v1.9.9 catalog-driven
+        # Hypothesis tests pin this invariant.
+        if cat not in by_cat:
+            by_cat[cat] = []
         by_cat[cat].append(name)
         seen_services.add(name)
         slugs_filed.add(slug)
@@ -1459,6 +1667,36 @@ def render_tenant_panel(
             sov_label += f" ({info.tenant_region_sub_scope})"
         _field("Cloud", sov_label)
 
+    # Multi-cloud rollup (v1.9.9) — a single-line indicator that the
+    # public footprint touches more than one cloud vendor. The per-slug
+    # Cloud row and per-subdomain Subdomain row already carry the full
+    # distribution; this rollup is the at-a-glance summary so the fact
+    # that a domain spans AWS + Cloudflare + GCP is visible without
+    # reading two later sections. Slugs from the apex (info.slugs) and
+    # from CNAME-chain subdomain attributions both contribute. The
+    # canonicalization map in ``_CLOUD_VENDOR_BY_SLUG`` collapses sibling
+    # slugs (Route 53 + CloudFront → one AWS) so the count reflects
+    # distinct vendors, not slugs. Fires only when ≥ 2 distinct vendors
+    # are observed; a single-cloud target stays unannotated to avoid
+    # adding noise to the panel.
+    surface_slug_stream: list[str] = []
+    for sa in info.surface_attributions:
+        if sa.primary_slug:
+            surface_slug_stream.append(sa.primary_slug)
+        if sa.infra_slug:
+            surface_slug_stream.append(sa.infra_slug)
+    vendor_counts = count_cloud_vendors(info.slugs, surface_slug_stream)
+    if len(vendor_counts) >= 2:
+        # Sort by mention count descending, then alphabetically on ties
+        # for diff-stable output. The mention count itself does not ship
+        # in the label — it's a slug-population artefact, not an
+        # operator-meaningful number. The rollup tells you which vendors
+        # are observed, not which is "biggest".
+        ranked_vendors = sorted(vendor_counts.items(), key=lambda p: (-p[1], p[0]))
+        vendor_names = [v for v, _ in ranked_vendors]
+        rollup = f"{len(vendor_names)} providers observed ({', '.join(vendor_names)})"
+        _field("Multi-cloud", rollup)
+
     # Confidence — green only for High, default otherwise.
     dots = CONFIDENCE_DOTS[info.confidence]
     conf_value = f"{dots} {info.confidence.value.capitalize()} ({len(info.sources)} sources)"
@@ -1592,6 +1830,63 @@ def render_tenant_panel(
                 svc_block.append("\n")
 
         blocks.append(svc_block)
+        ceiling_categorized_count = len(categorized)
+    else:
+        # No services: handled by render_warning. The ceiling check
+        # below short-circuits on ``info.services`` so this default
+        # value is only here to keep ``categorized`` out of the
+        # conditional's scope.
+        ceiling_categorized_count = 0
+
+    # ── Passive-DNS ceiling phrasing (v1.9.9) ─────────────────────
+    # When a domain looks like it should be richer than what we
+    # surfaced, add a one-line teaching note about what passive DNS
+    # cannot see. Operators (and AI agents) reading a sparse panel
+    # otherwise risk the "absence of finding = service not present"
+    # misread. The line teaches the architectural limit; it does not
+    # suggest something is wrong with the tool or the target.
+    #
+    # Trigger heuristic — conservative on purpose. Fires only when
+    # all of the following hold:
+    #   - default panel (``--full`` shows the long surface section
+    #     and signals scale on its own; the ceiling line would be
+    #     redundant there).
+    #   - ``info.services`` populated (we did get something back; a
+    #     completely failed run is a different message handled by
+    #     ``render_warning``).
+    #   - ``info.domain_count >= 3`` — the apex has at least three
+    #     tenant domains, suggesting a non-trivial organization. A
+    #     single-domain target genuinely may publish little.
+    #   - fewer than 5 categorized service families AND fewer than 5
+    #     CNAME-chain subdomain attributions. Both halves of the
+    #     check matter: a domain with 4 service categories and 30
+    #     surface attributions is not sparse; one with 4 categories
+    #     and 0 attributions is. Under-firing on a small-but-genuine
+    #     org is preferable to alarming on a richly-attributed one.
+    _SPARSE_CATEGORY_FLOOR = 5
+    _SPARSE_SURFACE_FLOOR = 5
+    _MIN_DOMAINS_FOR_CEILING = 3
+    if (
+        info.services
+        and not show_domains
+        and info.domain_count >= _MIN_DOMAINS_FOR_CEILING
+        and ceiling_categorized_count < _SPARSE_CATEGORY_FLOOR
+        and len(info.surface_attributions) < _SPARSE_SURFACE_FLOOR
+    ):
+        _spacer()
+        ceiling = Text()
+        ceiling.append("Passive-DNS ceiling", style="bold")
+        ceiling.append("\n  ")
+        ceiling.append(
+            "Passive DNS surfaces what publishes externally. Server-side API consumption, internal workloads, and",
+            style="dim",
+        )
+        ceiling.append("\n  ")
+        ceiling.append(
+            "SaaS without DNS verification do not appear in public DNS records.",
+            style="dim",
+        )
+        blocks.append(ceiling)
 
     # ── Related domains (compact) ─────────────────────────────────
     if info.related_domains and not show_domains:

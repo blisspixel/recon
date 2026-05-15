@@ -1353,6 +1353,34 @@ _COMMON_SUBDOMAIN_PREFIXES = (
     "preview",
     "uat",
     "stage-auth",
+    # Data / analytics platform subdomains (v1.9.9). Vendors like
+    # Snowflake, Databricks, Looker, Tableau, Mode, ThoughtSpot, and
+    # PowerBI commonly resolve under host-level prefixes. Adding these
+    # widens the probe to the analytics tier, which the prior set
+    # missed entirely.
+    "data",
+    "analytics",
+    # AI / ML platform subdomains (v1.9.9). Organizations that publish
+    # internal ML tooling or vendor-hosted AI services (Hugging Face
+    # spaces, Vertex AI endpoints, OpenAI proxies, AzureML workspaces)
+    # often expose them under these prefixes. Adds coverage for an
+    # increasingly common stack tier the prior set ignored.
+    "ml",
+    "ai",
+    # Operations / internal-tooling subdomains (v1.9.9). When an org
+    # publishes operations dashboards, internal-only services with
+    # public DNS entries, or platform tooling, these prefixes are the
+    # idiomatic landing zones. Surfacing them in passive enumeration
+    # gives defenders visibility into the operations tier that the
+    # original commerce/identity-skewed wordlist missed.
+    "internal",
+    "ops",
+    "tools",
+    # Security-team subdomains (v1.9.9). Vendors and internal SOCs
+    # often surface incident-response portals, vuln-disclosure
+    # endpoints, or SIEM consoles under this prefix. Low false-positive
+    # rate because the prefix is rarely used for non-security purposes.
+    "security",
 )
 
 

@@ -1,0 +1,60 @@
+{
+  "cache_version": 1,
+  "tenant_id": "litware-fin",
+  "display_name": "Litware Capital",
+  "default_domain": "litware-capital.com",
+  "queried_domain": "litware-capital.com",
+  "confidence": "high",
+  "domain_count": 6,
+  "tenant_domains": [
+    "litware-capital.com",
+    "litware-banking.com",
+    "litware-invest.com",
+    "litware-trade.com",
+    "litware-corp.com",
+    "litware-secure.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Okta",
+    "AWS CloudFront",
+    "AWS Route 53",
+    "Cloudflare",
+    "Wiz",
+    "CrowdStrike",
+    "Proofpoint",
+    "Snyk"
+  ],
+  "slugs": [
+    "microsoft365",
+    "okta",
+    "aws-cloudfront",
+    "aws-route53",
+    "cloudflare",
+    "wiz",
+    "crowdstrike",
+    "proofpoint",
+    "snyk"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "api.litware-capital.com",
+      "primary_slug": "aws-cloudfront",
+      "primary_name": "AWS CloudFront",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "portal.litware-capital.com",
+      "primary_slug": "okta",
+      "primary_name": "Okta",
+      "primary_tier": "application"
+    },
+    {
+      "subdomain": "trade.litware-capital.com",
+      "primary_slug": "fastly",
+      "primary_name": "Fastly",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

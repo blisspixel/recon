@@ -1,0 +1,30 @@
+{
+  "cache_version": 1,
+  "tenant_id": "northwind-cdn",
+  "display_name": "Northwind Boutique",
+  "default_domain": "northwind-boutique.com",
+  "queried_domain": "northwind-boutique.com",
+  "confidence": "medium",
+  "domain_count": 2,
+  "tenant_domains": [
+    "northwind-boutique.com",
+    "northwind-shop.com"
+  ],
+  "services": [
+    "Cloudflare",
+    "Shopify"
+  ],
+  "slugs": [
+    "cloudflare",
+    "shopify"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "shop.northwind-boutique.com",
+      "primary_slug": "shopify",
+      "primary_name": "Shopify",
+      "primary_tier": "application"
+    }
+  ]
+}

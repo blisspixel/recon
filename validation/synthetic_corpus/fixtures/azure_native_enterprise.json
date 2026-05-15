@@ -1,0 +1,44 @@
+{
+  "cache_version": 1,
+  "tenant_id": "wingtip-azure",
+  "display_name": "Wingtip Toys",
+  "default_domain": "wingtip.com",
+  "queried_domain": "wingtip.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "wingtip.com",
+    "wingtip.net",
+    "wingtip.eu",
+    "wingtip-corp.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Azure DNS",
+    "Azure CDN",
+    "Azure App Service",
+    "Azure Blob Storage"
+  ],
+  "slugs": [
+    "microsoft365",
+    "azure-dns",
+    "azure-cdn",
+    "azure-appservice",
+    "azure-blob"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "api.wingtip.com",
+      "primary_slug": "azure-appservice",
+      "primary_name": "Azure App Service",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "cdn.wingtip.com",
+      "primary_slug": "azure-cdn",
+      "primary_name": "Azure CDN",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

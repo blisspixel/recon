@@ -1,0 +1,34 @@
+{
+  "corpus_size": 19,
+  "counted": 19,
+  "skipped_load_errors": 0,
+  "multi_cloud": {
+    "fired": 8,
+    "suppressed": 11,
+    "fired_share": 0.421,
+    "vendor_count_distribution": {
+      "3": 3,
+      "4": 1,
+      "2": 4
+    },
+    "rendered_fired": 8,
+    "rendered_fired_share": 0.421
+  },
+  "ceiling": {
+    "fired": 13,
+    "suppressed": 6,
+    "fired_share": 0.684,
+    "fired_with_zero_attribs": 4,
+    "rendered_fired": 11,
+    "rendered_fired_share": 0.579
+  },
+  "wordlist_breadth_proxy": {
+    "subdomain_count_mean": 0,
+    "subdomain_count_median": 0,
+    "subdomain_count_max": 0
+  },
+  "_notes": [
+    "Both an estimator-based and a render-based firing count are reported. The estimator (``fired`` / ``fired_share``) uses a slug-only lower-bound on the categorized count and therefore over-fires the ceiling vs reality. The render-based number (``rendered_fired`` / ``rendered_fired_share``) drives the actual panel and is the authoritative measurement.",
+    "subdomain_count is a proxy for wordlist-breadth gains; per-prefix-class breakdown requires a richer instrumentation pass."
+  ]
+}

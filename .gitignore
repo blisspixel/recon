@@ -69,6 +69,17 @@ docs/accuracy.md
 !/validation/compute_node_stability.py
 !/validation/v1.9.6-stability-update.md
 !/validation/v1.9.8-metadata-audit.md
+!/validation/v1.9.9-detection-gap-ux.md
+!/validation/v1.9.9-corpus-run.md
+!/validation/threshold_sensitivity.md
+!/validation/threshold_sensitivity.py
+!/validation/coverage_gap_audit.md
+!/validation/performance_baseline.md
+!/validation/invariant_audit.md
+!/validation/agentic_ux_v199_runbook.md
+!/validation/corpus_aggregator.py
+!/validation/synthetic_corpus/
+!/validation/synthetic_corpus/**
 # validation/__init__.py — added in v1.9.2 to make ``validation`` a
 # proper package (previously implicit namespace) so static analysis
 # resolves intra-package imports cleanly.
@@ -115,6 +126,11 @@ docs/accuracy.md
 .pyre/
 .pytype/
 .pyright/
+
+# Mutation-testing session state. The .toml config is committed
+# (reproducible setup); the .sqlite holds per-run results that
+# replay locally and are not a committed artifact.
+cosmic-ray-*.sqlite
 
 # IDE / editors
 .vscode/
@@ -181,3 +197,4 @@ secrets.yml
 # Kiro
 .kiro/
 /archive
+docs/archive/

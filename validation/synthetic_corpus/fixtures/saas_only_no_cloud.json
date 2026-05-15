@@ -1,0 +1,30 @@
+{
+  "cache_version": 1,
+  "tenant_id": "treyresearch-saas",
+  "display_name": "Trey Research",
+  "default_domain": "treyresearch.com",
+  "queried_domain": "treyresearch.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "treyresearch.com",
+    "treyresearch.net",
+    "trey-research.io"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Slack",
+    "Atlassian",
+    "Salesforce",
+    "HubSpot"
+  ],
+  "slugs": [
+    "microsoft365",
+    "slack",
+    "atlassian",
+    "salesforce",
+    "hubspot"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

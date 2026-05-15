@@ -1,0 +1,48 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-hybrid",
+  "display_name": "Contoso Mergers",
+  "default_domain": "contoso-merger.com",
+  "queried_domain": "contoso-merger.com",
+  "confidence": "medium",
+  "domain_count": 6,
+  "tenant_domains": [
+    "contoso-merger.com",
+    "contoso.com",
+    "contoso.net",
+    "contoso-acquired.com",
+    "merger-corp.com",
+    "contoso-eu.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Google Workspace",
+    "Okta",
+    "Proofpoint",
+    "AWS Route 53",
+    "Cloudflare"
+  ],
+  "slugs": [
+    "microsoft365",
+    "googleworkspace",
+    "okta",
+    "proofpoint",
+    "aws-route53",
+    "cloudflare"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "api.contoso-merger.com",
+      "primary_slug": "aws-cloudfront",
+      "primary_name": "AWS CloudFront",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "sso.contoso-merger.com",
+      "primary_slug": "okta",
+      "primary_name": "Okta",
+      "primary_tier": "application"
+    }
+  ]
+}
