@@ -2678,7 +2678,7 @@ def main() -> None:
         raise SystemExit(1) from exc
 
 
-# ── v1.9 EXPERIMENTAL: Bayesian fusion MCP tools ──────────────────────
+# ── Bayesian fusion MCP tools (v1.9, stable v2.0+) ─────────────────────
 
 
 @mcp.tool(
@@ -2704,10 +2704,10 @@ async def get_posteriors(domain: str) -> str:
       ``n_eff`` (effective sample size used to derive the interval),
       ``sparse`` (bool — True flags the passive-observation ceiling).
 
-    EXPERIMENTAL (v1.9). Field shape may evolve in minor releases. The
-    Beta layer (``slug_confidences`` on ``lookup_tenant``) operates on
-    raw evidence weights and is stable across versions; this network
-    layer propagates through chained claims and is the v1.9 addition.
+    Stable v2.0+. The Beta layer (``slug_confidences`` on
+    ``lookup_tenant``) operates on raw evidence weights; this network
+    layer propagates through chained claims and adds the per-node
+    posterior + credible interval.
 
     Args:
         domain: Apex domain to evaluate (e.g. ``contoso.com``).
@@ -2803,7 +2803,7 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
     that shaped it. Pair with ``get_posteriors`` when you want both
     the structured posteriors and the prose explanation.
 
-    EXPERIMENTAL (v1.9). Output language stays hedged — "the posterior
+    Stable v2.0+. Output language stays hedged — "the posterior
     places X at probability ..." rather than "X is true". Sparse-
     evidence nodes are flagged so the consumer doesn't over-interpret
     a confident-looking number.

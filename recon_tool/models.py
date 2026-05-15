@@ -190,7 +190,7 @@ class NodeEvidence:
 
 @dataclass(frozen=True)
 class PosteriorObservation:
-    """Per-node posterior from the v1.9 Bayesian network (EXPERIMENTAL).
+    """Per-node posterior from the v1.9 Bayesian network (stable v2.0+).
 
     Each entry corresponds to a node in
     ``recon_tool/data/bayesian_network.yaml``. ``posterior`` is
@@ -621,20 +621,20 @@ class TenantInfo:
     resolved_at: str | None = None
     cached_at: str | None = None
 
-    # --- v0.11: Bayesian fusion (experimental) ---
+    # --- v0.11: Bayesian fusion (stable v2.0+) ---
     # Per-slug posterior mean in [0, 1] from the Bayesian fusion layer.
     # Populated only when `--fusion` is passed. Empty otherwise.
-    # Tagged EXPERIMENTAL — field shape may evolve in minor releases.
+    # Shape: ``[(slug, posterior_mean), ...]``. Stable v2.0.
     slug_confidences: tuple[tuple[str, float], ...] = ()
 
-    # --- v1.9: Bayesian-network posteriors (experimental) ---
+    # --- v1.9: Bayesian-network posteriors (stable v2.0+) ---
     # Posterior P(node=present | E) and 80% credible interval for each
     # node in the v1.9 Bayesian network. Populated only when
     # ``--fusion`` is passed. Empty otherwise. The Beta layer
     # (``slug_confidences``) and the network layer
     # (``posterior_observations``) coexist: Beta operates on raw
     # evidence weights, the network propagates through chained claims.
-    # Tagged EXPERIMENTAL.
+    # Stable v2.0; shape pinned by ``PosteriorObservation``.
     posterior_observations: tuple[PosteriorObservation, ...] = ()
 
     # --- v0.9.3: OIDC tenant metadata enrichment ---

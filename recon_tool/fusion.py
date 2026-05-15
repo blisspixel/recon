@@ -1,6 +1,6 @@
 """Bayesian fusion — per-slug confidence from weighted evidence.
 
-Tagged **experimental** in v0.11. Provides a principled alternative to the
+Shipped in v0.11; stable v2.0+. Provides a principled alternative to the
 hardcoded thresholds in ``merger.compute_detection_scores``. Opt-in via the
 ``--fusion`` CLI flag; never auto-enabled, never overrides the existing
 confidence fields.

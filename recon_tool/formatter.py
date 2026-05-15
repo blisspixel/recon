@@ -2569,7 +2569,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         "ct_subdomain_count": info.ct_subdomain_count,
         "ct_cache_age_days": info.ct_cache_age_days,
         "slug_confidences": [[slug, score] for slug, score in info.slug_confidences],
-        # v1.9 EXPERIMENTAL — populated only when --fusion is on.
+        # v1.9 Bayesian network — populated only when --fusion is on.
         # ``conflict_provenance`` (v1.9.1+) is always present per posterior;
         # empty list when no cross-source conflicts dampened the interval.
         # ``evidence_ranked`` (v1.9.3.2+) ranks fired bindings by absolute

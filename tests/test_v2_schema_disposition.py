@@ -56,21 +56,14 @@ _V2_PROMOTED_FIELDS: dict[str, str] = {
     "wildcard_sibling_clusters": "v1.7.0 cert-issuance SAN sibling clusters (nested in CertSummary).",
     "deployment_bursts": "v1.7.0 temporal CT issuance bursts (nested in CertSummary).",
     "infrastructure_clusters": "v1.8.0 Louvain co-occurrence clusters.",
+    "ecosystem_hyperedges": "v1.8.0 batch-wrapper field (typed in BatchResult def, added v1.9.11).",
     "evidence_conflicts": "v1.7.0 cross-source evidence conflict array.",
 }
 
-# Fields that the disposition table promotes but the current schema
-# only documents in description text, not as a typed property. v1.9.11
-# is the milestone for closing each gap (either add a batch-wrapper
-# schema definition, or downgrade the disposition table entry).
-# Track here so v2.0 cannot tag with an unresolved gap.
-_V2_KNOWN_SCHEMA_GAPS: dict[str, str] = {
-    "ecosystem_hyperedges": (
-        "v1.8.0 batch-wrapper field. Schema documents only per-domain TenantInfo; "
-        "v1.9.11 either adds the batch wrapper definition or moves this entry off "
-        "the disposition table. See `validation/v2.0-prep-baseline.md`."
-    ),
-}
+# Schema gaps the v1.9.11 doc-polish pass needs to close before v2.0
+# can tag. Empty at v1.9.11 ship; the test below fails if anything
+# remains here when the package version reaches 2.0.
+_V2_KNOWN_SCHEMA_GAPS: dict[str, str] = {}
 
 
 # Pinned shape for ``posterior_observations``. The disposition table
@@ -192,8 +185,8 @@ class TestKnownGapsResolveBeforeV20:
             return
 
         assert not _V2_KNOWN_SCHEMA_GAPS, (
-            f"v2.0 cannot tag with unresolved schema gaps. The disposition table promotes "
-            f"fields that are not in the schema as typed properties. Either add them to "
-            f"`docs/recon-schema.json` or remove from the disposition table.\n\n"
+            "v2.0 cannot tag with unresolved schema gaps. The disposition table promotes "
+            "fields that are not in the schema as typed properties. Either add them to "
+            "`docs/recon-schema.json` or remove from the disposition table.\n\n"
             + "\n".join(f"  {f}: {r}" for f, r in _V2_KNOWN_SCHEMA_GAPS.items())
         )

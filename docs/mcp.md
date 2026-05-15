@@ -196,9 +196,10 @@ Agent: "Now re-evaluate contoso.com to see if they use Fabrikam Platform."
 
 Ephemeral fingerprints are deliberately local-only and session-scoped. They
 support the same feedback-driven prior tuning workflow described in the
-Bayesian layer (v1.9.0 in [roadmap.md](roadmap.md#v190--probabilistic-fusion-experimental))
-without ever writing to disk or sharing data — the priors stay in memory
-for the current server process and are gone when it exits.
+Bayesian layer (v1.9.0; stable v2.0+, see
+[roadmap.md](roadmap.md#v190--probabilistic-fusion-shipped)) without
+ever writing to disk or sharing data — the priors stay in memory for
+the current server process and are gone when it exits.
 
 ## Where to Put the Config
 

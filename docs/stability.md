@@ -2,8 +2,12 @@
 
 As of v1.0, recon commits to the public surfaces listed below. **Stable**
 surfaces will not break between patch or minor releases — breaking them
-requires a major version bump and a deprecation window. **Experimental**
-surfaces may evolve in minor releases without a major bump.
+requires a major version bump and a deprecation window. v2.0 promotes
+the Bayesian fusion surfaces (`--fusion`, `--explain-dag`,
+`posterior_observations`, `slug_confidences`, MCP `get_posteriors` and
+`explain_dag`) from their pre-v2.0 experimental status into the stable
+set. The disposition table that anchors the promotion lives in
+[`roadmap.md`](roadmap.md#v200--maturity).
 
 For the JSON output contract in full field-by-field detail, see
 [`schema.md`](schema.md). For the release process, see
@@ -50,7 +54,8 @@ For the JSON output contract in full field-by-field detail, see
 | `--chain`, `--depth <1-3>` | Stable | Recursive related-domain resolution. |
 | `--no-cache`, `--cache-ttl <sec>` | Stable | Cache control. |
 | `--timeout <sec>` / `-t` | Stable | Pipeline timeout (default 120s). |
-| `--fusion` | **Experimental** | v0.11. Opt-in Bayesian fusion. |
+| `--fusion` | Stable (v2.0+) | v0.11. Opt-in Bayesian fusion. |
+| `--explain-dag` | Stable (v2.0+) | v1.9.0. Render Bayesian evidence DAG. |
 
 ### CLI exit codes
 
@@ -102,7 +107,10 @@ of stability tags:
 - **~45 stable fields** covering identity, provider, sources, services,
   domains, email security, CT metadata, sovereignty, and nested
   `cert_summary` / `bimi_identity` objects.
-- **1 experimental field**: `slug_confidences` (Bayesian fusion, v0.11).
+- **Bayesian fusion fields** (`slug_confidences`,
+  `posterior_observations`) — pre-v2.0 experimental, stable v2.0+ per
+  the schema-lock disposition table in
+  [`roadmap.md`](roadmap.md#v200--maturity).
 
 Any `--json` consumer that reads only stable fields will work across
 patch and minor releases without modification.
@@ -123,16 +131,28 @@ patch and minor releases without modification.
 
 ---
 
-## Experimental surfaces
+## Surfaces promoted from experimental to stable in v2.0
 
-These may evolve in minor releases without a major version bump. Use at
-your own risk in automation — the field shape, semantics, or existence
-are not guaranteed.
+The following surfaces shipped pre-v2.0 under an experimental label
+and graduate to stable in v2.0 per the schema-lock disposition table
+in [`roadmap.md`](roadmap.md#v200--maturity). Each one's pre-v2.0
+shape is preserved unchanged; only the EXPERIMENTAL qualifier in
+docstrings and schema descriptions is removed.
 
-| Surface | Introduced | Notes |
+| Surface | Introduced | Stable as of |
 |---|---|---|
-| `--fusion` CLI flag | v0.11 | Opt-in Bayesian fusion layer. See [correlation.md § 4.8](correlation.md#48-bayesian-network-fusion-layer-v190-experimental) for the network design and calibration discipline. |
-| `slug_confidences` field on TenantInfo / JSON output | v0.11 | Populated only when `--fusion` is set. Empty list otherwise. Algorithm, priors, and field shape may change. |
+| `--fusion` CLI flag | v0.11 | v2.0 |
+| `--explain-dag` CLI flag | v1.9.0 | v2.0 |
+| `slug_confidences` field | v0.11 | v2.0 |
+| `posterior_observations` field | v1.9.0 | v2.0 |
+| MCP `get_posteriors` tool | v1.9.0 | v2.0 |
+| MCP `explain_dag` tool | v1.9.0 | v2.0 |
+| `chain_motifs` field | v1.7.0 | v2.0 |
+| `wildcard_sibling_clusters` field (in `cert_summary`) | v1.7.0 | v2.0 |
+| `deployment_bursts` field (in `cert_summary`) | v1.7.0 | v2.0 |
+| `infrastructure_clusters` field | v1.8.0 | v2.0 |
+| `ecosystem_hyperedges` field (batch wrapper) | v1.8.0 | v2.0 |
+| `evidence_conflicts` field | v1.7.0 | v2.0 |
 
 ---
 

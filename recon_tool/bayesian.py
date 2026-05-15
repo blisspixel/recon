@@ -1,4 +1,4 @@
-"""Bayesian-network inference layer (v1.9, EXPERIMENTAL).
+"""Bayesian-network inference layer (v1.9; stable v2.0+).
 
 Discrete Bayesian network loaded from
 ``recon_tool/data/bayesian_network.yaml``. Computes a marginal
