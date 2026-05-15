@@ -59,5 +59,6 @@
       "primary_name": "Zendesk",
       "primary_tier": "application"
     }
-  ]
+  ],
+  "_stratum": "baseline"
 }

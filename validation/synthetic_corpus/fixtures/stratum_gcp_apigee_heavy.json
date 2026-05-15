@@ -37,5 +37,6 @@
       "primary_name": "Apigee",
       "primary_tier": "application"
     }
-  ]
+  ],
+  "_stratum": "gcp"
 }

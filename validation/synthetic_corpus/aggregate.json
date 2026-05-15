@@ -28,40 +28,40 @@
     "subdomain_count_max": 0
   },
   "per_stratum": {
-    "ali": {
+    "alibaba": {
       "counted": 10,
       "multi_cloud_rendered": 1,
       "multi_cloud_share": 0.1,
       "ceiling_rendered": 9,
       "ceiling_share": 0.9
     },
-    "az": {
-      "counted": 11,
+    "azure": {
+      "counted": 10,
       "multi_cloud_rendered": 1,
-      "multi_cloud_share": 0.091,
-      "ceiling_rendered": 11,
+      "multi_cloud_share": 0.1,
+      "ceiling_rendered": 10,
       "ceiling_share": 1.0
     },
     "baseline": {
-      "counted": 20,
-      "multi_cloud_rendered": 9,
-      "multi_cloud_share": 0.45,
-      "ceiling_rendered": 12,
-      "ceiling_share": 0.6
+      "counted": 19,
+      "multi_cloud_rendered": 8,
+      "multi_cloud_share": 0.421,
+      "ceiling_rendered": 11,
+      "ceiling_share": 0.579
     },
     "gcp": {
-      "counted": 9,
+      "counted": 10,
       "multi_cloud_rendered": 3,
-      "multi_cloud_share": 0.333,
-      "ceiling_rendered": 9,
+      "multi_cloud_share": 0.3,
+      "ceiling_rendered": 10,
       "ceiling_share": 1.0
     },
     "oracle": {
-      "counted": 9,
-      "multi_cloud_rendered": 2,
-      "multi_cloud_share": 0.222,
-      "ceiling_rendered": 7,
-      "ceiling_share": 0.778
+      "counted": 10,
+      "multi_cloud_rendered": 3,
+      "multi_cloud_share": 0.3,
+      "ceiling_rendered": 8,
+      "ceiling_share": 0.8
     },
     "paas": {
       "counted": 10,

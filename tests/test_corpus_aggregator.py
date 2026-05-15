@@ -27,6 +27,7 @@ from validation.corpus_aggregator import (
     _ceiling_fired,
     _estimate_categorized_count,
     _multi_cloud_fired,
+    _stratum_for_entry,
     aggregate,
 )
 
@@ -171,3 +172,58 @@ class TestAggregateOverCorpus:
         results = [_make_dict(slugs=["aws-cloudfront", "cloudflare"])]
         agg = aggregate(results)
         json.dumps(agg)  # Must not raise
+
+
+class TestStratumDerivation:
+    """The aggregator buckets entries by the ``_stratum`` tag the
+    synthetic-corpus generator injects (v1.9.11+). The previous
+    tenant_id-substring matcher misbucketed brand-style fixtures like
+    ``tailspin-firebase`` (GCP) and ``northwind-oci`` (Oracle), and a
+    baseline fixture (``wingtip-azure``) was misbucketed into the
+    Azure stratum because its tenant_id happened to contain the
+    ``-az`` token. These tests pin the new derivation."""
+
+    def test_explicit_stratum_tag_wins(self):
+        entry = _make_dict(tenant_id="tailspin-firebase", _stratum="gcp")
+        assert _stratum_for_entry(entry) == "gcp"
+
+    def test_missing_tag_falls_back_to_baseline(self):
+        entry = _make_dict(tenant_id="tailspin-firebase")
+        assert _stratum_for_entry(entry) == "baseline"
+
+    def test_invalid_tag_falls_back_to_baseline(self):
+        entry = _make_dict(tenant_id="tailspin-firebase", _stratum="not-a-stratum")
+        assert _stratum_for_entry(entry) == "baseline"
+
+    def test_brand_style_oracle_tenant_id_no_longer_misbucketed(self):
+        """``northwind-oci`` has no ``-oracle-`` substring; the
+        previous matcher binned it under baseline. The new derivation
+        reads the explicit tag emitted by the generator."""
+        entry = _make_dict(tenant_id="northwind-oci", _stratum="oracle")
+        assert _stratum_for_entry(entry) == "oracle"
+
+    def test_baseline_with_azure_in_tenant_id_no_longer_misbucketed(self):
+        """``wingtip-azure`` is a baseline fixture whose tenant_id
+        coincidentally contains ``-az``. The previous matcher binned
+        it under the Azure stratum; the new derivation reads the
+        explicit tag (``baseline``)."""
+        entry = _make_dict(tenant_id="wingtip-azure", _stratum="baseline")
+        assert _stratum_for_entry(entry) == "baseline"
+
+
+class TestPerStratumAggregation:
+    """End-to-end: the aggregate output's ``per_stratum`` map respects
+    the explicit ``_stratum`` tags on each entry."""
+
+    def test_per_stratum_groups_by_explicit_tag(self):
+        results = [
+            _make_dict(tenant_id="contoso-mid", _stratum="baseline", slugs=["m365"]),
+            _make_dict(tenant_id="contoso-gcp-pure", _stratum="gcp", slugs=["gcp-compute"]),
+            _make_dict(tenant_id="northwind-oci", _stratum="oracle", slugs=["oracle-cloud"]),
+            _make_dict(tenant_id="tailspin-firebase", _stratum="gcp", slugs=["gcp-firebase"]),
+        ]
+        agg = aggregate(results)
+        per = agg["per_stratum"]
+        assert per["baseline"]["counted"] == 1
+        assert per["gcp"]["counted"] == 2  # both GCP fixtures bucket here, including the brand-style one
+        assert per["oracle"]["counted"] == 1

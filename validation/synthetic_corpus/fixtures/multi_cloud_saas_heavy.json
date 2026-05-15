@@ -62,5 +62,6 @@
       "primary_name": "Atlassian Statuspage",
       "primary_tier": "application"
     }
-  ]
+  ],
+  "_stratum": "baseline"
 }

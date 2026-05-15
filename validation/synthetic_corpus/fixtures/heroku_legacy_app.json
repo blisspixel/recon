@@ -31,5 +31,6 @@
       "primary_name": "Heroku",
       "primary_tier": "application"
     }
-  ]
+  ],
+  "_stratum": "baseline"
 }

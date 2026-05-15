@@ -35,5 +35,6 @@
       "primary_name": "Netlify",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "paas"
 }

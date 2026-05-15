@@ -41,5 +41,6 @@
       "primary_name": "Azure App Service",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "azure"
 }

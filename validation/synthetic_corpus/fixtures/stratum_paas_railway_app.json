@@ -29,5 +29,6 @@
       "primary_name": "Railway",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "paas"
 }

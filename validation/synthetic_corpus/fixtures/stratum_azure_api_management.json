@@ -31,5 +31,6 @@
       "primary_name": "Azure API Management",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "azure"
 }

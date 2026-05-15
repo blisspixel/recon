@@ -23,5 +23,6 @@
     "aws-route53"
   ],
   "sources": [],
-  "surface_attributions": []
+  "surface_attributions": [],
+  "_stratum": "sse"
 }

@@ -30,5 +30,6 @@
       "primary_name": "Okta",
       "primary_tier": "application"
     }
-  ]
+  ],
+  "_stratum": "oracle"
 }

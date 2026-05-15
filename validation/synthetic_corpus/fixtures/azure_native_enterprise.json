@@ -40,5 +40,6 @@
       "primary_name": "Azure CDN",
       "primary_tier": "infrastructure"
     }
-  ]
+  ],
+  "_stratum": "baseline"
 }

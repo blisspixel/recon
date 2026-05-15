@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — v2.0 prep
+
+Tooling-only corrections after the v1.9.11 audit pass. None of
+these changes ship in the recon-tool wheel: the affected files
+live under `validation/` and `tests/`, which are excluded from
+the published package. Folded into v2.0.
+
+### Fixed
+
+- **Per-stratum aggregator misbucketing.** `validation/corpus_aggregator.py`
+  classified strata from a tenant_id substring matcher
+  (`_stratum_for_tenant`). Three v1.9.10 fixtures landed in the
+  wrong bucket: `tailspin-firebase` (GCP) and `northwind-oci`
+  (Oracle) fell into `baseline` because their tenant_ids lacked
+  the `-gcp-` / `-oracle-` substring; `wingtip-azure` (baseline)
+  was pulled into the Azure bucket because its tenant_id
+  coincidentally contained `-az`. The v1.9.10 aggregate output
+  read baseline=20, gcp=9, azure=11, oracle=9 instead of the
+  intended baseline=19 + 10 per stratum. Overall multi-cloud and
+  ceiling rates (29.1% / 86.1%) were correct; only the
+  per-stratum allocation needed correction.
+
+  The fix injects an explicit `_stratum` tag at fixture-generation
+  time in `validation/synthetic_corpus/generator.py`, derived from
+  the REGISTRY key (the authoritative grouping signal). The
+  aggregator now reads `_stratum` from each entry; legacy entries
+  and real-corpus entries without the tag bucket as `baseline`.
+  `validation/synthetic_corpus/results.json` and `aggregate.json`
+  regenerated.
+
+  Pinned by `tests/test_corpus_aggregator.py::TestStratumDerivation`
+  and `TestPerStratumAggregation`, covering each historical
+  misbucketing path.
+
+### Changed
+
+- **`validation/v1.9.10-pre-lock.md`.** Corrected per-stratum
+  table is the live numbers section; the original v1.9.10
+  ship-time table is preserved under "Appendix — original
+  (v1.9.10 ship-time) per-stratum numbers" so the historical
+  receipt remains traceable.
+- **`validation/v2.0-corpus-run.md`.** Comparison line updated to
+  cite the corrected per-stratum baseline.
+
 ## [1.9.11] - 2026-05-15
 
 **v1.9.11 bridge milestone: documentation polish dry-run.** Last
