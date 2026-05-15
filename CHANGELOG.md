@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.10.1] - 2026-05-15
+
+**Docs-only patch.** v1.9.10's sdist shipped with three Mermaid
+blocks and one display-math block in `docs/correlation.md` that
+GitHub's renderer rejected (the wheel does not bundle docs and is
+unaffected). The render errors are visible to anyone unpacking the
+sdist or browsing the file via the v1.9.10 git tag. v1.9.10.1
+ships the fixed correlation.md in both wheel and sdist so the
+release artifacts match the polished version visible on `main`.
+
+### Fixed
+
+- **correlation.md §1 Mermaid block.** The flowchart used `graph`
+  as a node id; `graph` is a reserved Mermaid keyword and GitHub's
+  parser rejected the entire block. Renamed the node id to
+  `graphL`.
+- **correlation.md §4.8.3 display math.** The DRO formula
+  `$$P^*(X \mid E^* = \text{missing}) \;=\; ...$$` confused
+  GitHub's markdown→MathJax pipeline because the asterisks were
+  eaten as italic-emphasis delimiters across math boundaries.
+  Rewritten as `^{\ast}` which MathJax handles unambiguously. The
+  same fix applied to every inline `E^{\ast}` in the same section
+  (6 occurrences total).
+- **CONTRIBUTING.md placeholder syntax.** The "Common framings"
+  examples used `$X` / `$Y` / `$TENANT` template-variable
+  placeholders that GitHub's MathJax tried to parse as math
+  expressions. Replaced with backticks so they render as inline
+  code.
+
+### Changed
+
+- **correlation.md redundancy trim** (82 lines cut, formal content
+  unchanged). The §4.8.3 literature parade (Manski + Jeffrey +
+  Walley + Augustin + Taroni) compressed to one paragraph with
+  inline citations preserved. §4.8.13 (v1.9.7/v1.9.8 narrative)
+  and §4.8.14 (v1.9.9 panel surfaces) collapsed; per-release
+  detail moved to the linked validation memos.
+
+### Validation
+
+- All 2497 tests pass (2 skipped, 4 deselected). No code changes
+  in this patch.
+- ruff + format + pyright clean.
+- Doc-only changes; PyPI v1.9.10's wheel is functionally
+  identical to v1.9.10.1's wheel.
+
 ## [1.9.10] - 2026-05-15
 
 **v1.9.10 bridge milestone: stratified-corpus pre-lock validation.**
