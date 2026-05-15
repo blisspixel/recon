@@ -12,49 +12,24 @@ schema changes; full cosmic-ray sweep slipped to v2.0 lock with
 rationale, real-corpus run remains standing work). Cumulative
 pre-v2.0 work since v1.9.3:
 
-- **v1.9.3** Bayesian-network topology surgery (`email_security_strong`
-  split into `modern_provider` + `policy_enforcing`; expanded
-  `federated_identity` parents); see `validation/v1.9.3-calibration.md`.
-- **v1.9.4** Hardened-adversarial validation (50-domain stratified
-  corpus across 5 hardening postures, 100% spot-check agreement,
-  64.0% sparse-flag rate, asymmetric-likelihood design property
-  validated; failure-mode catalog `correlation.md` §4.8.10;
-  A/AAAA internal-DNS leak fixed in CNAME chain walker; Splunk SPL
-  switched from regex to literal set-membership). See
-  `validation/v1.9.4-calibration.md`.
-- **v1.9.5** Per-node stability dispositions (8 of 9 nodes `stable`;
-  parametrized regression test
-  `tests/test_node_stability_criteria.py`). See
-  `validation/v1.9.5-stability.md`.
-- **v1.9.6** CPT-change discipline (`dkim_present` removed as
-  binding for `email_security_policy_enforcing`; closes the v1.9.5
-  `not yet` disposition; CONTRIBUTING.md gains the three-category
-  discipline). See `validation/v1.9.6-stability-update.md` and
-  `docs/security-audit-resolutions.md`.
-- **v1.9.7** Metadata-coverage gate flip + 298-detection backfill.
-  See `CHANGELOG.md` v1.9.7 entry.
-- **v1.9.8** Catalog metadata richness: every detection at 100
-  percent on all three richness signals (long-desc, scope-narrow,
-  reference) across every category; advisory richness audit shipped;
-  inline rationale on all non-default weights. See
-  `validation/v1.9.8-metadata-audit.md`.
-- **v1.9.9** Detection-gap UX surfaces: passive-DNS ceiling phrasing
-  in the default panel (fires on sparse-services + multi-domain
-  apexes), apex-level multi-cloud rollup indicator (canonicalized
-  vendor count across apex and surface slugs), common-prefix
-  wordlist extensions across four stack tiers (data, AI/ML,
-  internal-tooling, security); MCP fallback shadow-load attack
-  fully closed on Python 3.10. See
-  `validation/v1.9.9-detection-gap-ux.md` and the v1.9.9 Security
-  entry in `CHANGELOG.md`.
-- **v1.9.10** Stratified-corpus pre-lock validation: 60-fixture
-  publicly-reproducible synthetic corpus across six cloud strata
-  (GCP, Azure non-O365, Oracle, Alibaba, PaaS, SSE/SASE), per-
-  stratum aggregator, Bayesian network re-validated against the
-  v1.9.9 evidence-distribution shift (v1.9.6 disposition table
-  holds), cosmic-ray full sweep slipped to v2.0 lock with
-  rationale (this release). See
-  `validation/v1.9.10-pre-lock.md`.
+Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
+detail in `CHANGELOG.md` and the per-release validation memos):
+
+| Release | Theme | Reference |
+|---|---|---|
+| v1.9.3 | Bayesian-network topology surgery | `validation/v1.9.3-calibration.md` |
+| v1.9.4 | Hardened-adversarial validation | `validation/v1.9.4-calibration.md` |
+| v1.9.5 | Per-node stability dispositions (8 of 9 stable; `okta_idp` `not yet`) | `validation/v1.9.5-stability.md` |
+| v1.9.6 | CPT-change discipline + audit-finding closures | `validation/v1.9.6-stability-update.md` |
+| v1.9.7 | Metadata-coverage gate flip + 298-detection backfill | `CHANGELOG.md` |
+| v1.9.8 | Catalog metadata richness (100% on three signals) | `validation/v1.9.8-metadata-audit.md` |
+| v1.9.9 | Detection-gap UX surfaces; MCP shadow-load Python 3.10 close-out | `validation/v1.9.9-detection-gap-ux.md` |
+| v1.9.10 | Stratified-corpus pre-lock validation; Bayesian re-validation | `validation/v1.9.10-pre-lock.md` |
+| v1.9.10.1 | Docs render fixes (Mermaid + MathJax in correlation.md) | `CHANGELOG.md` |
+
+**Outstanding before v2.0:** v1.9.11 (next) and the v2.0 lock-and-
+polish ceremony. v1.9.11's full quality bar lives in its section
+below; v2.0's mechanical checklist lives in the v2.0.0 section.
 
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
@@ -1042,7 +1017,7 @@ per stratum because synthetic fixtures are sparse-by-design). The
 gitignored-private-corpus run will produce the truth-of-record
 numbers.
 
-#### v1.9.11 — Documentation polish dry-run
+#### v1.9.11 — Documentation polish dry-run (next)
 
 **What ships.** Every doc reviewed against the v2.0 quality bar
 before v2.0 actually tags. correlation.md polished to the v2.0
@@ -1051,42 +1026,62 @@ comparison, dependency-floor manifesto, failure-mode catalog).
 README, CONTRIBUTING, AGENTS.md, docs/mcp.md, docs/legal.md,
 docs/security.md cross-checked for stale references, dead links,
 EXPERIMENTAL labels in user-facing text. Migration guide for
-v1.x → v2.0 consumers added (`docs/migration-v2.md`) covering the
-EXPERIMENTAL → stable field promotions, the dropped Bayesian-
-network nodes that didn't clear v1.9.5, and the schema-version
-bump.
+v1.x → v2.0 consumers (`docs/migration-v2.md`, skeleton already
+in place) populated with the field-by-field promotion list and
+the Bayesian-network node disposition.
 
-**Why this is next.** v2.0 should be a *mechanical* lock-and-tag
+**Why this is next.** v2.0 should be a mechanical lock-and-tag
 event, not a "let's also rewrite docs" event. If the v2.0 docs are
 already polished, the lock just bumps the schema version, strips
 EXPERIMENTAL labels from code/JSON descriptions, and tags. Doing
 the doc work as v1.9.11 separates the rewriting from the
 mechanical lock.
 
-**Quality bar.**
-- [ ] Zero EXPERIMENTAL labels in any doc, panel string, CLI help
-  text, MCP tool description, or schema field description.
-  Verified by `grep -ri experimental` returning zero user-facing
-  hits (internal test markers excepted).
-- [ ] All v1.9.x backlog items either shipped or moved to the
-  post-v2.0 Backlog. No "we'll fix this in v1.9.x" forward-looking
-  text remaining in user-facing docs.
-- [ ] Every cited prior-art reference in correlation.md is
-  reachable (no dead links); every dependency in the
-  dependency-floor manifesto matches `pyproject.toml`'s actual
-  dependency list (no manifesto/code drift).
-- [ ] Every CONTRIBUTING.md procedure is tested by following it
-  literally — a maintainer walks through "add a new fingerprint"
-  using only the CONTRIBUTING.md text; gaps in the procedure
-  surface here, not after v2.0 ships.
-- [ ] Migration guide covers (a) the EXPERIMENTAL field promotions
-  by name, (b) dropped Bayesian-network nodes from v1.9.5
-  dispositions, (c) schema-version bump, and (d) a downgrade-path
-  recommendation for consumers who can't move yet.
+**Quality bar (each item links to a concrete artefact).**
 
-**Validation.** Run the entire v1.9.3.10 empirical sample plus the
-v1.9.10 stratified suite ONE MORE TIME on the v1.9.11 build with
-all docs reflecting v2.0 state. No code change between v1.9.11 and
+- [ ] **Zero EXPERIMENTAL labels in user-facing surfaces.**
+  Current baseline: 38 hits across 14 files
+  (`validation/v2.0-prep-baseline.md` §1). v1.9.11 brings this to
+  zero. Verified by a CI `grep -ri experimental` gate added in
+  the release workflow.
+- [ ] **Migration guide populated.** Skeleton at
+  `docs/migration-v2.md` lists the field-promotion table,
+  Bayesian-node disposition section, schema-version bump notes,
+  and downgrade-path recommendation. v1.9.11 fills in any
+  per-field details that depended on the v1.9.10 → v1.9.11
+  decisions (specifically the `okta_idp` disposition outcome).
+- [ ] **Trend table v1.6 → v1.9.11 per Bayesian-network node.**
+  Compiled from `validation/v1.9.*-calibration.md` per-release
+  numbers and the v1.9.10 stratified-corpus aggregate. Anchors
+  the v2.0 "engine got better" claim with public per-release
+  numbers. Lives in `validation/v1.9.11-trend-table.md`.
+- [ ] **Schema disposition test green.** `tests/test_v2_schema_disposition.py`
+  (added in v1.9.10.1 prep) passes with zero entries in
+  `_V2_KNOWN_SCHEMA_GAPS`. The current single entry
+  (`ecosystem_hyperedges` — batch-wrapper field not in schema)
+  is the v1.9.11 worklist item.
+- [ ] **`okta_idp` disposition applied.** Decision in
+  `validation/v2.0-prep-baseline.md` §3 (keep + corpus-expansion,
+  deprecate, or split). Whichever is chosen, the
+  `bayesian_network.yaml` and the migration guide reflect the
+  final disposition.
+- [ ] **Real-corpus aggregator run.** Decision in
+  `validation/v2.0-prep-baseline.md` §4 (v2.0 blocker vs.
+  maintainer attestation). Whichever is chosen, the artefact or
+  attestation is in place before v2.0 tags.
+- [ ] **Every cited prior-art reference in correlation.md is
+  reachable.** No dead links.
+- [ ] **Dependency-floor manifesto matches `pyproject.toml`.**
+  Every listed dependency is in the lockfile; every excluded
+  dependency is genuinely not pulled in transitively.
+- [ ] **CONTRIBUTING.md procedure walkthrough.** A maintainer
+  follows the "add a new fingerprint" steps end-to-end using only
+  the doc text. Gaps surface here, not after v2.0 ships.
+
+**Validation.** Re-run the synthetic corpus aggregator
+(`validation/corpus_aggregator.py`) plus the v1.9.3.10 empirical
+sample on the v1.9.11 build. Confirm the trend table numbers
+match the per-release memos. No code change between v1.9.11 and
 v2.0 should be required.
 
 **Refinement.** If the docs review surfaces gaps in the code (e.g.
