@@ -5,6 +5,106 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.10] - 2026-05-15
+
+**v1.9.10 bridge milestone: stratified-corpus pre-lock validation.**
+Extends the v1.9.9 19-fixture synthetic corpus to 79 fixtures (60
+new stratum-tagged fixtures + 19 base) across six cloud strata:
+GCP, Azure non-O365, Oracle, Alibaba, PaaS / Vercel / Netlify, and
+SSE / SASE. Per-stratum aggregator emits coverage metrics. Bayesian
+network re-validated against the v1.9.9 evidence-distribution
+shift; v1.9.6 disposition table holds. No engine code changes; no
+JSON schema changes.
+
+This is the v1.9.10 step of the v1.9.4 to v2.0 linear sequence in
+`docs/roadmap.md`. Full write-up at
+`validation/v1.9.10-pre-lock.md`,
+`validation/v1.9.10-bayesian-revalidation.md`, and
+`validation/v1.9.10-mutation-status.md`.
+
+### Added
+
+- **60 stratum-tagged synthetic fixtures** at
+  `validation/synthetic_corpus/fixtures/stratum_*.json` (10 per
+  stratum × 6 strata). Generator at
+  `validation/synthetic_corpus/generator.py` is deterministic and
+  publicly-reproducible. All apex names use Microsoft-fictional
+  brands per the no-real-data discipline.
+- **Per-stratum aggregator output** in
+  `validation/corpus_aggregator.py`. The `_stratum_for_tenant`
+  helper buckets fixtures by tenant_id substring; the aggregate
+  output now carries a `per_stratum` map with per-stratum counted
+  / multi-cloud / ceiling firing rates.
+- **`validation/v1.9.10-pre-lock.md`** — per-stratum coverage
+  table, behaviour interpretation per stratum (PaaS fires multi-
+  cloud most often at 70% because PaaS providers + Cloudflare are
+  legitimately multi-vendor; SSE never fires at 0% because the SSE
+  provider is SaaS, not cloud), and honest framing about
+  synthetic-corpus bias.
+- **`validation/v1.9.10-bayesian-revalidation.md`** — audit of the
+  network's evidence bindings (5 signals + upstream node
+  posteriors), cross-check against v1.9.9 wordlist additions
+  (none of the new wordlist tiers feed any binding), and empirical
+  re-run of the v1.9.5 stability test suite (20/20 pass on v1.9.9
+  codebase).
+- **`validation/v1.9.10-mutation-status.md`** — documents the
+  cosmic-ray sweep slip from v1.9.10 to v2.0 schema lock with
+  rationale (the v1.9.9 catalog-driven Hypothesis tests already
+  caught a real bug, which is stronger evidence than a clean
+  cosmic-ray run).
+
+### Changed
+
+- **`validation/synthetic_corpus/generator.py`** REGISTRY extended
+  from 19 to 79 entries. Each new fixture is named with a
+  `stratum_<id>_*` prefix so the per-stratum aggregator can group
+  them automatically.
+- **`validation/synthetic_corpus/results.json`** regenerated as
+  combined 79-fixture results.
+- **`validation/synthetic_corpus/aggregate.json`** regenerated
+  with `per_stratum` map.
+- **`validation/invariant_audit.md`** — item 2 (cosmic-ray)
+  milestone updated from v1.9.10 to v2.0 lock.
+- **`docs/roadmap.md`** — v1.9.10 section flipped from
+  forward-looking to shipped; current-release line updated;
+  cumulative pre-v2.0 work list extended.
+- **Removed `cosmic-ray-v199.toml` from repo root.** Committed
+  in v1.9.9 in error; version-stamped tooling config in the root
+  ages poorly. Removal already shipped on `main` between v1.9.9
+  and v1.9.10. Doc references updated to describe the cosmic-ray
+  sweep as "config to be authored at sweep time".
+
+### Validation
+
+- All v1.9.5 stability tests pass on the v1.9.9 codebase (20/20).
+- Synthetic 79-fixture corpus aggregator output: multi-cloud
+  rendered 23/79 (29.1%), ceiling rendered 68/79 (86.1%).
+  Per-stratum breakdown in `validation/v1.9.10-pre-lock.md`.
+- Full pytest suite passes (test counts in pre-tag verification).
+- ruff lint and ruff format clean.
+- pyright on `recon_tool/` and validation tooling clean.
+
+### Scope notes
+
+- **Real customer data is NOT in the committed corpus.** The
+  roadmap original quality bar called for "publicly-documented
+  users of that vendor sourced from vendor case-studies, vendor
+  blog posts, or job listings". The maintainer's no-real-data
+  discipline (Microsoft fictional brands only) takes precedence;
+  v1.9.10 ships with synthetic stratified fixtures modelled after
+  public deployment patterns.
+- **Trend table v1.6 → v1.9.10 per stratum** deferred to v1.9.11
+  doc-polish pass. Requires re-running earlier versions against
+  the new strata.
+- **Real-corpus aggregator run** remains standing work. The
+  maintainer runs `validation/corpus_aggregator.py` locally
+  against the gitignored private corpus and drops the aggregate
+  output into `validation/v1.9.10-corpus-run.md`. Tracked in
+  `validation/invariant_audit.md` item 1.
+- **Cosmic-ray full sweep** slipped to v2.0 schema lock with a
+  Linux CI runner. Rationale in
+  `validation/v1.9.10-mutation-status.md`.
+
 ## [1.9.9] - 2026-05-14
 
 **v1.9.9 bridge milestone: detection-gap UX surfaces.** Three additions

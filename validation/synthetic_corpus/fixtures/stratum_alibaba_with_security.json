@@ -1,0 +1,26 @@
+{
+  "cache_version": 1,
+  "tenant_id": "fabrikam-ali",
+  "display_name": "Fabrikam Alibaba Secured",
+  "default_domain": "fabrikam-ali.com",
+  "queried_domain": "fabrikam-ali.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "fabrikam-ali.com",
+    "fabrikam-cn.com",
+    "fabrikam-corp.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Alibaba Cloud",
+    "Wiz"
+  ],
+  "slugs": [
+    "microsoft365",
+    "alibaba-cloud",
+    "wiz"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

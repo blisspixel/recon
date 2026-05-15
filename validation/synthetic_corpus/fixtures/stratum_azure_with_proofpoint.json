@@ -1,0 +1,32 @@
+{
+  "cache_version": 1,
+  "tenant_id": "adatum-az-pp",
+  "display_name": "Adatum Azure with Proofpoint",
+  "default_domain": "adatum-az.com",
+  "queried_domain": "adatum-az.com",
+  "confidence": "high",
+  "domain_count": 5,
+  "tenant_domains": [
+    "adatum-az.com",
+    "adatum-azure.com",
+    "adatum-cloud.com",
+    "adatum-corp.com",
+    "adatum-eu.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Proofpoint",
+    "Azure DNS",
+    "Azure App Service",
+    "Azure Container Apps"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "proofpoint",
+    "azure-dns",
+    "azure-appservice",
+    "azure-container-apps"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

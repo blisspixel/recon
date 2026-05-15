@@ -1,0 +1,27 @@
+{
+  "cache_version": 1,
+  "tenant_id": "tailspin-az-gov",
+  "display_name": "Tailspin Government Cloud",
+  "default_domain": "tailspin-gov.gov",
+  "queried_domain": "tailspin-gov.gov",
+  "confidence": "medium",
+  "domain_count": 4,
+  "tenant_domains": [
+    "tailspin-gov.gov",
+    "tailspin-state.gov",
+    "tailspin-fed.gov",
+    "tailspin-portal.gov"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Azure DNS",
+    "Azure App Service"
+  ],
+  "slugs": [
+    "microsoft365",
+    "azure-dns",
+    "azure-appservice"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

@@ -1,0 +1,22 @@
+{
+  "cache_version": 1,
+  "tenant_id": "adatum-ali-min",
+  "display_name": "Adatum Alibaba Minimal",
+  "default_domain": "adatum-ali.com",
+  "queried_domain": "adatum-ali.com",
+  "confidence": "low",
+  "domain_count": 3,
+  "tenant_domains": [
+    "adatum-ali.com",
+    "adatum-cn.com",
+    "adatum-corp.com"
+  ],
+  "services": [
+    "Alibaba Cloud"
+  ],
+  "slugs": [
+    "alibaba-cloud"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

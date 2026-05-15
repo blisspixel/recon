@@ -1,0 +1,44 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-az-noM365",
+  "display_name": "Contoso Azure Native",
+  "default_domain": "contoso-az.com",
+  "queried_domain": "contoso-az.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "contoso-az.com",
+    "contoso-azure.com",
+    "contoso-eastus.com",
+    "contoso-eu.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Azure DNS",
+    "Azure App Service",
+    "Azure CDN",
+    "Azure Blob Storage"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "azure-dns",
+    "azure-appservice",
+    "azure-cdn",
+    "azure-blob"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "api.contoso-az.com",
+      "primary_slug": "azure-appservice",
+      "primary_name": "Azure App Service",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "static.contoso-az.com",
+      "primary_slug": "azure-cdn",
+      "primary_name": "Azure CDN",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

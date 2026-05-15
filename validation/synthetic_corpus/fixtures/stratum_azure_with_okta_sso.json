@@ -1,0 +1,31 @@
+{
+  "cache_version": 1,
+  "tenant_id": "northwind-az-okta",
+  "display_name": "Northwind Azure SSO",
+  "default_domain": "northwind-az.com",
+  "queried_domain": "northwind-az.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "northwind-az.com",
+    "nw-az-east.com",
+    "nw-az-west.com",
+    "nw-az-eu.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Okta",
+    "Azure DNS",
+    "Azure App Service",
+    "Azure Front Door"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "okta",
+    "azure-dns",
+    "azure-appservice",
+    "azure-fd"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

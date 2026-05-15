@@ -1,0 +1,40 @@
+{
+  "cache_version": 1,
+  "tenant_id": "wingtip-ali-shop",
+  "display_name": "Wingtip Alibaba Commerce",
+  "default_domain": "wingtip-shop.com",
+  "queried_domain": "wingtip-shop.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "wingtip-shop.com",
+    "wingtip-cn.com",
+    "wingtip-store.com",
+    "wingtip-corp.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Alibaba Cloud",
+    "Alibaba CDN"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "alibaba-cloud",
+    "alibaba-cdn"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "shop.wingtip-shop.com",
+      "primary_slug": "alibaba-cdn",
+      "primary_name": "Alibaba CDN",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "store.wingtip-shop.com",
+      "primary_slug": "alibaba-cdn",
+      "primary_name": "Alibaba CDN",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

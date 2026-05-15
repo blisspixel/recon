@@ -1,0 +1,24 @@
+{
+  "cache_version": 1,
+  "tenant_id": "wingtip-sse-zs-min",
+  "display_name": "Wingtip Zscaler Minimal",
+  "default_domain": "wingtip-zs.com",
+  "queried_domain": "wingtip-zs.com",
+  "confidence": "medium",
+  "domain_count": 3,
+  "tenant_domains": [
+    "wingtip-zs.com",
+    "wingtip-corp.com",
+    "wingtip-eu.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Zscaler"
+  ],
+  "slugs": [
+    "microsoft365",
+    "zscaler"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

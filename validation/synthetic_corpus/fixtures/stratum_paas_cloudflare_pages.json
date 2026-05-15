@@ -1,0 +1,33 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-paas-cfp",
+  "display_name": "Contoso Cloudflare Pages",
+  "default_domain": "contoso-cfp.com",
+  "queried_domain": "contoso-cfp.com",
+  "confidence": "medium",
+  "domain_count": 3,
+  "tenant_domains": [
+    "contoso-cfp.com",
+    "contoso-pages.com",
+    "contoso-app.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Cloudflare",
+    "Cloudflare Pages"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "cloudflare",
+    "cloudflare-pages"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "www.contoso-cfp.com",
+      "primary_slug": "cloudflare-pages",
+      "primary_name": "Cloudflare Pages",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

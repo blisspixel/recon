@@ -1,0 +1,24 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-sse-pa-only",
+  "display_name": "Contoso PA Only",
+  "default_domain": "contoso-pa.com",
+  "queried_domain": "contoso-pa.com",
+  "confidence": "medium",
+  "domain_count": 3,
+  "tenant_domains": [
+    "contoso-pa.com",
+    "contoso-firewall.com",
+    "contoso-corp.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Palo Alto Networks"
+  ],
+  "slugs": [
+    "microsoft365",
+    "paloalto"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

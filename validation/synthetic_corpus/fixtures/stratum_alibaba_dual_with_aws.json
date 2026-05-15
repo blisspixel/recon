@@ -1,0 +1,32 @@
+{
+  "cache_version": 1,
+  "tenant_id": "tailspin-ali-aws",
+  "display_name": "Tailspin Alibaba-AWS",
+  "default_domain": "tailspin-ali-aws.com",
+  "queried_domain": "tailspin-ali-aws.com",
+  "confidence": "high",
+  "domain_count": 5,
+  "tenant_domains": [
+    "tailspin-ali-aws.com",
+    "tailspin-cn.com",
+    "tailspin-us.com",
+    "tailspin-eu.com",
+    "tailspin-corp.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Alibaba Cloud",
+    "Alibaba CDN",
+    "AWS S3",
+    "AWS CloudFront"
+  ],
+  "slugs": [
+    "microsoft365",
+    "alibaba-cloud",
+    "alibaba-cdn",
+    "aws-s3",
+    "aws-cloudfront"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

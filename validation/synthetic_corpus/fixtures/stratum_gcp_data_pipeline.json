@@ -1,0 +1,30 @@
+{
+  "cache_version": 1,
+  "tenant_id": "trey-gcp-data",
+  "display_name": "Trey Data Sciences",
+  "default_domain": "trey-data.com",
+  "queried_domain": "trey-data.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "trey-data.com",
+    "trey-bi.com",
+    "trey-ml.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "GCP Compute Engine",
+    "GCP Storage",
+    "Snowflake",
+    "Databricks"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "gcp-compute",
+    "gcp-storage",
+    "snowflake",
+    "databricks"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

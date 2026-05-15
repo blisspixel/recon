@@ -1,0 +1,34 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-oracle-okta",
+  "display_name": "Contoso Oracle Identity",
+  "default_domain": "contoso-oid.com",
+  "queried_domain": "contoso-oid.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "contoso-oid.com",
+    "contoso-sso.com",
+    "contoso-fed.com",
+    "contoso-corp.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Okta",
+    "Oracle Cloud"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "okta",
+    "oracle-cloud"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "sso.contoso-oid.com",
+      "primary_slug": "okta",
+      "primary_name": "Okta",
+      "primary_tier": "application"
+    }
+  ]
+}

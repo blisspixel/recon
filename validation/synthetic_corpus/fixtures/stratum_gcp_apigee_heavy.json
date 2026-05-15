@@ -1,0 +1,41 @@
+{
+  "cache_version": 1,
+  "tenant_id": "adatum-gcp-apigee",
+  "display_name": "Adatum API Platform",
+  "default_domain": "adatum-api.com",
+  "queried_domain": "adatum-api.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "adatum-api.com",
+    "adatum-gateway.com",
+    "adatum-services.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Apigee",
+    "GCP Compute Engine",
+    "GCP Cloud Functions"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "apigee",
+    "gcp-compute",
+    "gcp-cloud-functions"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "api.adatum-api.com",
+      "primary_slug": "apigee",
+      "primary_name": "Apigee",
+      "primary_tier": "application"
+    },
+    {
+      "subdomain": "v2.adatum-api.com",
+      "primary_slug": "apigee",
+      "primary_name": "Apigee",
+      "primary_tier": "application"
+    }
+  ]
+}

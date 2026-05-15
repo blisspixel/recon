@@ -1,0 +1,42 @@
+{
+  "cache_version": 1,
+  "tenant_id": "litware-gcp-aws",
+  "display_name": "Litware Multi-Cloud",
+  "default_domain": "litware-mc.com",
+  "queried_domain": "litware-mc.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "litware-mc.com",
+    "litware-east.com",
+    "litware-west.com",
+    "litware-eu.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "GCP Compute Engine",
+    "AWS S3",
+    "AWS CloudFront"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "gcp-compute",
+    "aws-s3",
+    "aws-cloudfront"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "backup.litware-mc.com",
+      "primary_slug": "aws-s3",
+      "primary_name": "AWS S3",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "static.litware-mc.com",
+      "primary_slug": "aws-cloudfront",
+      "primary_name": "AWS CloudFront",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

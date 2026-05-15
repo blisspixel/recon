@@ -1,0 +1,24 @@
+{
+  "cache_version": 1,
+  "tenant_id": "litware-ali-oss",
+  "display_name": "Litware Alibaba OSS",
+  "default_domain": "litware-ali.com",
+  "queried_domain": "litware-ali.com",
+  "confidence": "medium",
+  "domain_count": 3,
+  "tenant_domains": [
+    "litware-ali.com",
+    "litware-cn.com",
+    "litware-storage.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Alibaba Cloud"
+  ],
+  "slugs": [
+    "microsoft365",
+    "alibaba-cloud"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

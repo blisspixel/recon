@@ -1,0 +1,33 @@
+{
+  "cache_version": 1,
+  "tenant_id": "fabrikam-gcp-sec",
+  "display_name": "Fabrikam Cloud Security",
+  "default_domain": "fabrikam-cs.com",
+  "queried_domain": "fabrikam-cs.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "fabrikam-cs.com",
+    "fabrikam-soc.com",
+    "fabrikam-ir.com",
+    "fabrikam-vuln.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "GCP Compute Engine",
+    "GCP Storage",
+    "Wiz",
+    "CrowdStrike",
+    "Snyk"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "gcp-compute",
+    "gcp-storage",
+    "wiz",
+    "crowdstrike",
+    "snyk"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

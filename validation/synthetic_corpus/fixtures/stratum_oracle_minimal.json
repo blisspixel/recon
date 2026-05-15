@@ -1,0 +1,22 @@
+{
+  "cache_version": 1,
+  "tenant_id": "tailspin-oracle-min",
+  "display_name": "Tailspin Oracle Minimal",
+  "default_domain": "tailspin-oracle.com",
+  "queried_domain": "tailspin-oracle.com",
+  "confidence": "low",
+  "domain_count": 3,
+  "tenant_domains": [
+    "tailspin-oracle.com",
+    "tailspin-erp.com",
+    "tailspin-corp.com"
+  ],
+  "services": [
+    "Oracle Cloud"
+  ],
+  "slugs": [
+    "oracle-cloud"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

@@ -1,0 +1,39 @@
+{
+  "cache_version": 1,
+  "tenant_id": "tailspin-firebase",
+  "display_name": "Tailspin Mobile",
+  "default_domain": "tailspin-mobile.com",
+  "queried_domain": "tailspin-mobile.com",
+  "confidence": "medium",
+  "domain_count": 3,
+  "tenant_domains": [
+    "tailspin-mobile.com",
+    "tailspin-app.com",
+    "tailspin-api.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Firebase Hosting",
+    "Firebase Realtime Database"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "firebase-hosting",
+    "firebase-realtime"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "app.tailspin-mobile.com",
+      "primary_slug": "firebase-hosting",
+      "primary_name": "Firebase Hosting",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "api.tailspin-mobile.com",
+      "primary_slug": "firebase-realtime",
+      "primary_name": "Firebase Realtime",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

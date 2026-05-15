@@ -1,0 +1,36 @@
+{
+  "cache_version": 1,
+  "tenant_id": "adatum-az-idp",
+  "display_name": "Adatum Azure IdP",
+  "default_domain": "adatum-idp.com",
+  "queried_domain": "adatum-idp.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "adatum-idp.com",
+    "adatum-sso.com",
+    "adatum-mfa.com",
+    "adatum-portal.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Azure DNS",
+    "Azure App Service",
+    "Auth0"
+  ],
+  "slugs": [
+    "microsoft365",
+    "azure-dns",
+    "azure-appservice",
+    "auth0"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "login.adatum-idp.com",
+      "primary_slug": "auth0",
+      "primary_name": "Auth0",
+      "primary_tier": "application"
+    }
+  ]
+}

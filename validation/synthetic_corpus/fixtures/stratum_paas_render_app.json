@@ -1,0 +1,26 @@
+{
+  "cache_version": 1,
+  "tenant_id": "tailspin-paas-rd",
+  "display_name": "Tailspin Render",
+  "default_domain": "tailspin-rd.com",
+  "queried_domain": "tailspin-rd.com",
+  "confidence": "medium",
+  "domain_count": 3,
+  "tenant_domains": [
+    "tailspin-rd.com",
+    "tailspin-app.com",
+    "tailspin-svc.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Render",
+    "Cloudflare"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "render",
+    "cloudflare"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

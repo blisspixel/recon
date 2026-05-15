@@ -1,0 +1,22 @@
+{
+  "cache_version": 1,
+  "tenant_id": "litware-paas-vc-min",
+  "display_name": "Litware Vercel Minimal",
+  "default_domain": "litware-vc.com",
+  "queried_domain": "litware-vc.com",
+  "confidence": "low",
+  "domain_count": 3,
+  "tenant_domains": [
+    "litware-vc.com",
+    "litware-blog.com",
+    "litware-corp.com"
+  ],
+  "services": [
+    "Vercel"
+  ],
+  "slugs": [
+    "vercel"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

@@ -1,0 +1,22 @@
+{
+  "cache_version": 1,
+  "tenant_id": "trey-paas-nl-min",
+  "display_name": "Trey Netlify Minimal",
+  "default_domain": "trey-nl.com",
+  "queried_domain": "trey-nl.com",
+  "confidence": "low",
+  "domain_count": 3,
+  "tenant_domains": [
+    "trey-nl.com",
+    "trey-blog.com",
+    "trey-corp.com"
+  ],
+  "services": [
+    "Netlify"
+  ],
+  "slugs": [
+    "netlify"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

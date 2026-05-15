@@ -1,0 +1,28 @@
+{
+  "cache_version": 1,
+  "tenant_id": "contoso-sse-zs",
+  "display_name": "Contoso Zscaler",
+  "default_domain": "contoso-zs.com",
+  "queried_domain": "contoso-zs.com",
+  "confidence": "high",
+  "domain_count": 5,
+  "tenant_domains": [
+    "contoso-zs.com",
+    "contoso-portal.com",
+    "contoso-svc.com",
+    "contoso-corp.com",
+    "contoso-eu.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Zscaler",
+    "AWS Route 53"
+  ],
+  "slugs": [
+    "microsoft365",
+    "zscaler",
+    "aws-route53"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

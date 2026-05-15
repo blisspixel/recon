@@ -1,0 +1,45 @@
+{
+  "cache_version": 1,
+  "tenant_id": "northwind-gcp-okta",
+  "display_name": "Northwind Engineering",
+  "default_domain": "northwind-eng.com",
+  "queried_domain": "northwind-eng.com",
+  "confidence": "high",
+  "domain_count": 5,
+  "tenant_domains": [
+    "northwind-eng.com",
+    "northwind.dev",
+    "northwind-prod.com",
+    "nw-eng.io",
+    "nw-stage.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Okta",
+    "GCP Compute Engine",
+    "GCP Storage",
+    "Cloudflare"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "okta",
+    "gcp-compute",
+    "gcp-storage",
+    "cloudflare"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "api.northwind-eng.com",
+      "primary_slug": "gcp-compute",
+      "primary_name": "GCP Compute Engine",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "portal.northwind-eng.com",
+      "primary_slug": "okta",
+      "primary_name": "Okta",
+      "primary_tier": "application"
+    }
+  ]
+}

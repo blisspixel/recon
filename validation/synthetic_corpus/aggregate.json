@@ -1,31 +1,82 @@
 {
-  "corpus_size": 19,
-  "counted": 19,
+  "corpus_size": 79,
+  "counted": 79,
   "skipped_load_errors": 0,
   "multi_cloud": {
-    "fired": 8,
-    "suppressed": 11,
-    "fired_share": 0.421,
+    "fired": 23,
+    "suppressed": 56,
+    "fired_share": 0.291,
     "vendor_count_distribution": {
-      "3": 3,
+      "3": 5,
       "4": 1,
-      "2": 4
+      "2": 17
     },
-    "rendered_fired": 8,
-    "rendered_fired_share": 0.421
+    "rendered_fired": 23,
+    "rendered_fired_share": 0.291
   },
   "ceiling": {
-    "fired": 13,
+    "fired": 73,
     "suppressed": 6,
-    "fired_share": 0.684,
-    "fired_with_zero_attribs": 4,
-    "rendered_fired": 11,
-    "rendered_fired_share": 0.579
+    "fired_share": 0.924,
+    "fired_with_zero_attribs": 43,
+    "rendered_fired": 68,
+    "rendered_fired_share": 0.861
   },
   "wordlist_breadth_proxy": {
     "subdomain_count_mean": 0,
     "subdomain_count_median": 0,
     "subdomain_count_max": 0
+  },
+  "per_stratum": {
+    "ali": {
+      "counted": 10,
+      "multi_cloud_rendered": 1,
+      "multi_cloud_share": 0.1,
+      "ceiling_rendered": 9,
+      "ceiling_share": 0.9
+    },
+    "az": {
+      "counted": 11,
+      "multi_cloud_rendered": 1,
+      "multi_cloud_share": 0.091,
+      "ceiling_rendered": 11,
+      "ceiling_share": 1.0
+    },
+    "baseline": {
+      "counted": 20,
+      "multi_cloud_rendered": 9,
+      "multi_cloud_share": 0.45,
+      "ceiling_rendered": 12,
+      "ceiling_share": 0.6
+    },
+    "gcp": {
+      "counted": 9,
+      "multi_cloud_rendered": 3,
+      "multi_cloud_share": 0.333,
+      "ceiling_rendered": 9,
+      "ceiling_share": 1.0
+    },
+    "oracle": {
+      "counted": 9,
+      "multi_cloud_rendered": 2,
+      "multi_cloud_share": 0.222,
+      "ceiling_rendered": 7,
+      "ceiling_share": 0.778
+    },
+    "paas": {
+      "counted": 10,
+      "multi_cloud_rendered": 7,
+      "multi_cloud_share": 0.7,
+      "ceiling_rendered": 10,
+      "ceiling_share": 1.0
+    },
+    "sse": {
+      "counted": 10,
+      "multi_cloud_rendered": 0,
+      "multi_cloud_share": 0.0,
+      "ceiling_rendered": 10,
+      "ceiling_share": 1.0
+    }
   },
   "_notes": [
     "Both an estimator-based and a render-based firing count are reported. The estimator (``fired`` / ``fired_share``) uses a slug-only lower-bound on the categorized count and therefore over-fires the ceiling vs reality. The render-based number (``rendered_fired`` / ``rendered_fired_share``) drives the actual panel and is the authoritative measurement.",

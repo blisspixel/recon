@@ -1,0 +1,27 @@
+{
+  "cache_version": 1,
+  "tenant_id": "northwind-ali-dt",
+  "display_name": "Northwind Alibaba Collab",
+  "default_domain": "northwind-ad.com",
+  "queried_domain": "northwind-ad.com",
+  "confidence": "high",
+  "domain_count": 4,
+  "tenant_domains": [
+    "northwind-ad.com",
+    "northwind-cn-team.com",
+    "northwind-collab.com",
+    "northwind-corp.com"
+  ],
+  "services": [
+    "Microsoft 365",
+    "Alibaba Cloud",
+    "Slack"
+  ],
+  "slugs": [
+    "microsoft365",
+    "alibaba-cloud",
+    "slack"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

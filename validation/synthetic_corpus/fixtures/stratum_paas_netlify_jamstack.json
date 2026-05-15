@@ -1,0 +1,39 @@
+{
+  "cache_version": 1,
+  "tenant_id": "northwind-paas-nl",
+  "display_name": "Northwind Netlify",
+  "default_domain": "northwind-nl.com",
+  "queried_domain": "northwind-nl.com",
+  "confidence": "high",
+  "domain_count": 3,
+  "tenant_domains": [
+    "northwind-nl.com",
+    "northwind-marketing.com",
+    "northwind-docs.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Netlify",
+    "Cloudflare"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "netlify",
+    "cloudflare"
+  ],
+  "sources": [],
+  "surface_attributions": [
+    {
+      "subdomain": "www.northwind-nl.com",
+      "primary_slug": "netlify",
+      "primary_name": "Netlify",
+      "primary_tier": "infrastructure"
+    },
+    {
+      "subdomain": "docs.northwind-nl.com",
+      "primary_slug": "netlify",
+      "primary_name": "Netlify",
+      "primary_tier": "infrastructure"
+    }
+  ]
+}

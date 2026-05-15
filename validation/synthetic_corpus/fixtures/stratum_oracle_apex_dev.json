@@ -1,0 +1,24 @@
+{
+  "cache_version": 1,
+  "tenant_id": "adatum-oracle-apex",
+  "display_name": "Adatum Oracle APEX",
+  "default_domain": "adatum-apex.com",
+  "queried_domain": "adatum-apex.com",
+  "confidence": "medium",
+  "domain_count": 3,
+  "tenant_domains": [
+    "adatum-apex.com",
+    "adatum-dev.com",
+    "adatum-app.com"
+  ],
+  "services": [
+    "Google Workspace",
+    "Oracle Cloud"
+  ],
+  "slugs": [
+    "googleworkspace",
+    "oracle-cloud"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

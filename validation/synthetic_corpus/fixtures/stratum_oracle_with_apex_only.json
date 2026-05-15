@@ -1,0 +1,22 @@
+{
+  "cache_version": 1,
+  "tenant_id": "northwind-oracle-bare",
+  "display_name": "Northwind Oracle Bare",
+  "default_domain": "northwind-or.com",
+  "queried_domain": "northwind-or.com",
+  "confidence": "medium",
+  "domain_count": 3,
+  "tenant_domains": [
+    "northwind-or.com",
+    "northwind-svc.com",
+    "northwind-internal.com"
+  ],
+  "services": [
+    "Oracle Cloud"
+  ],
+  "slugs": [
+    "oracle-cloud"
+  ],
+  "sources": [],
+  "surface_attributions": []
+}

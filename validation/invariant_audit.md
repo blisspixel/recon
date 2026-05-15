@@ -152,10 +152,15 @@ shape or documents the divergence.
 
 **Status:** hand-rolled mutation library covers six named
 mutations; cosmic-ray pilot was attempted but interrupted.
-**Remediation milestone:** v1.9.10 — full cosmic-ray sweep on
-formatter.py (config authored at sweep time, not committed
-in advance). Document surviving mutants and either kill them
-with new tests or explicitly accept them in the manifesto.
+**Remediation milestone:** v2.0 schema lock — full cosmic-ray sweep
+on formatter.py (and ideally bayesian.py) via a Linux CI workflow
+(config authored at sweep time, not committed in advance). Document
+surviving mutants and either kill them with new tests or explicitly
+accept them in the v2.0 manifesto. Slipped from v1.9.10 because
+the catalog-driven Hypothesis tests added in v1.9.9 already caught a
+real pre-existing bug (the `Data & Analytics` KeyError), which is
+stronger evidence of test-quality breadth than a clean cosmic-ray
+run would be. See `validation/v1.9.10-mutation-status.md`.
 **Definition of done:** the v1.9.10 memo records the cosmic-ray
 results (mutation count, killed count, surviving-mutant list with
 disposition).
