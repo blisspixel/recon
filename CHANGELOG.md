@@ -5,15 +5,79 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — v2.0 prep
+## [Unreleased]
 
-Tooling-only corrections after the v1.9.11 audit pass. None of
-these changes ship in the recon-tool wheel: the affected files
-live under `validation/` and `tests/`, which are excluded from
-the published package. Folded into v2.0.
+No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
+is the next planned event; see `docs/roadmap.md`.
+
+## [1.9.12] - 2026-05-16
+
+**v1.9.12 bridge milestone: panel-display polish + doctor schema
+verification + Mermaid evidence-DAG output.** Second bridge release
+after v1.9.11's documentation polish dry-run. v2.0 remains the
+mechanical schema-lock-and-tag event; this release ships the panel
+correctness fixes and the doctor schema-fields verification that
+the v2.0 quality bar requires.
+
+### Added
+
+- **Mermaid output for `--explain-dag`.** Third format alongside
+  `text` and `dot`: `recon <domain> --explain-dag --explain-dag-format
+  mermaid` emits raw Mermaid.js syntax. Renders inline in GitHub,
+  GitLab, Notion, Obsidian, and most AI chat clients without a
+  Graphviz pipe step. Same hedged labels, sparse/dense stroke
+  discipline, and top-influence ranking as the DOT renderer. Pure
+  text emission; no new dependencies. Pinned by
+  `tests/test_bayesian_dag.py::TestMermaidRenderer` (8 cases
+  covering header, edge structure, sparse-dash styling, HTML
+  escaping, and posterior label inclusion).
+- **`recon doctor` schema-fields verification.** Wires up the
+  half of the v2.0 quality bar that was print-only: doctor now
+  synthesises a minimal `TenantInfo`, runs it through
+  `format_tenant_json`, and confirms every required top-level
+  field from `recon_tool/schema_contract.REQUIRED_TOP_LEVEL_FIELDS`
+  is present in the output. Reports `Schema fields  ok  46 locked
+  top-level fields present` on a healthy build. The 46-field
+  tuple is pinned to `docs/recon-schema.json#/required` by a new
+  drift-guard test, so it fails CI if the schema and the runtime
+  mirror disagree.
+- **Catalog growth invariant test
+  (`tests/test_slug_category_invariant.py`).** Every fingerprint
+  slug must either appear in `_CATEGORY_BY_SLUG` (explicit user-
+  facing category) or in an allowlist of legacy fall-through
+  slugs (`EXPECTED_BUSINESS_APPS_FALLBACK`). A new slug shipped
+  without an explicit decision now fails CI rather than silently
+  bucketing under "Business Apps" — the same shape of bug the
+  28-slug categorization fix below addressed.
 
 ### Fixed
 
+- **Slug-categorization regression on the v2.0-prep catalog
+  growth.** All 28 new `cname_target` slugs from the 4,270-apex
+  scan were missing from `recon_tool/formatter._CATEGORY_BY_SLUG`,
+  so detections for AWS regional endpoints, Azion / Baidu / Naver
+  / Tencent CDNs, Microsoft Edge Front Door, Adobe Analytics,
+  Socrata, Vanta, SafeBase, WeChat, etc. silently bucketed as
+  "Business Apps" in the panel. Each now maps to its correct
+  user-facing category (Cloud / Data & Analytics / Security /
+  Collaboration / Email). Cloud-categorized slugs received the
+  required rollup decision in `_CLOUD_VENDOR_BY_SLUG` (AWS,
+  Azure, Naver Cloud Platform, Tencent Cloud) or
+  `_CLOUD_VENDOR_ROLLUP_EXCLUSIONS` (specialty regional CDNs).
+- **Legacy slug miscategorizations.** Sweep of pre-existing slugs
+  that fell through to the Business Apps default but were
+  unambiguous: observability and data-warehouse slugs (datadog,
+  dynatrace, newrelic, sumologic, splunk, sentry, honeycomb,
+  grafana-cloud, snowflake, databricks, mongodb, mixpanel,
+  amplitude, heap, pendo, segment) now bucket as Data &
+  Analytics; MDM and privacy slugs (jamf, kandji, onetrust, hibp)
+  as Security; standalone CDN/DNS slugs (imgix, keycdn, stackpath,
+  ns1, ultradns) as Cloud (with rollup-exclusion decisions for
+  each). 25 legacy slugs corrected.
+- **`surface.yaml` comment miscount.** Header for the 4,270-apex
+  catalog growth said "30 new cname_target entries"; the actual
+  count is 28 unique slugs (one cname_target was added to the
+  existing HubSpot slug). Comment now matches.
 - **Per-stratum aggregator misbucketing.** `validation/corpus_aggregator.py`
   classified strata from a tenant_id substring matcher
   (`_stratum_for_tenant`). Three v1.9.10 fixtures landed in the

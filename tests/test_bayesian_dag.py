@@ -1,4 +1,4 @@
-"""Tests for the v1.9 Bayesian DAG renderers (text and DOT)."""
+"""Tests for the v1.9 Bayesian DAG renderers (text, DOT, and Mermaid)."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from recon_tool.bayesian_dag import (
     _confidence_label,
     _node_evidence_phrase,
     render_dag_dot,
+    render_dag_mermaid,
     render_dag_text,
 )
 
@@ -207,3 +208,61 @@ class TestHelpers:
         out = _node_evidence_phrase(p)
         # Unknown-kind binding renders as-is rather than crashing
         assert "custom:xyz" in out
+
+
+class TestMermaidRenderer:
+    def test_starts_with_graph_lr_header(self, network, dense_inference):
+        out = render_dag_mermaid(network, dense_inference, domain="contoso.com")
+        # Mermaid requires the direction directive on the first non-comment line.
+        # Header comment (`%% ...`) carries the domain so an agent can identify the run.
+        assert "%% recon Bayesian DAG for contoso.com" in out
+        assert "graph LR" in out
+
+    def test_includes_every_network_node(self, network, dense_inference):
+        out = render_dag_mermaid(network, dense_inference, domain="x")
+        for node in network.nodes:
+            # Node lines look like `m365_tenant["label..."]`
+            assert f"{node.name}[" in out
+
+    def test_edges_render_parent_to_child(self, network, dense_inference):
+        out = render_dag_mermaid(network, dense_inference, domain="x")
+        # Same structural edges the DOT renderer asserts on.
+        assert "m365_tenant --> federated_identity" in out
+        assert "google_workspace_tenant --> federated_identity" in out
+        assert "federated_identity --> okta_idp" in out
+
+    def test_sparse_nodes_get_dashed_style(self, network, sparse_inference):
+        out = render_dag_mermaid(network, sparse_inference, domain="x")
+        # Sparse → dashed border via Mermaid `style ... stroke-dasharray`.
+        dashed_count = out.count("stroke-dasharray:5 5")
+        assert dashed_count == len(network.nodes)
+
+    def test_dense_nodes_have_no_dash(self, network, dense_inference):
+        out = render_dag_mermaid(network, dense_inference, domain="x")
+        # The m365_tenant style line should not carry a dash directive
+        m365_style = [line for line in out.splitlines() if line.strip().startswith("style m365_tenant ")]
+        assert len(m365_style) == 1
+        assert "stroke-dasharray" not in m365_style[0]
+
+    def test_labels_use_html_br_for_line_breaks(self, network, dense_inference):
+        out = render_dag_mermaid(network, dense_inference, domain="x")
+        # Mermaid quoted labels render `<br/>` as a line break.
+        assert "<br/>" in out
+        # Raw \n inside a quoted label would break the renderer.
+        # Find any quoted label and confirm no literal newline inside it.
+        # (We just check the file as a whole has the html break form.)
+        assert "posterior " in out
+
+    def test_label_includes_posterior(self, network, dense_inference):
+        out = render_dag_mermaid(network, dense_inference, domain="x")
+        for p in dense_inference.posteriors:
+            assert f"posterior {p.posterior:.3f}" in out
+
+    def test_double_quote_in_description_is_html_escaped(self):
+        from recon_tool.bayesian_dag import _mermaid_escape_label
+
+        # Mermaid's quoted-label form requires HTML entity for `"`.
+        escaped = _mermaid_escape_label('a "quoted" thing\nsecond line')
+        assert '"' not in escaped.replace("&quot;", "")  # all `"` became entities
+        assert "&quot;" in escaped
+        assert "<br/>" in escaped

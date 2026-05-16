@@ -92,6 +92,15 @@ what it does not.
 > failure-mode catalog across five hardening postures live in
 > [docs/correlation.md](docs/correlation.md).
 
+The fingerprint catalog is shaped by passive-DNS observation of real
+corpora. The built-in catalog ships with the package; operators can
+extend it for their own environment by dropping additions into
+`~/.recon/fingerprints.yaml` (additive only, cannot override
+built-ins). Anything broadly useful can be contributed upstream via
+the workflow in [CONTRIBUTING.md](CONTRIBUTING.md). The maintainer
+runs the same scan-triage loop against a private corpus before each
+release; the catalog grows from observed gaps, not invented entries.
+
 ## Install
 
 Requires Python 3.10+.

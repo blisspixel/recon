@@ -4,13 +4,13 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.10** (stratified-corpus pre-lock validation:
-60-fixture publicly-reproducible synthetic corpus across six cloud
-strata, per-stratum aggregator, Bayesian network re-validated
-against the v1.9.9 evidence-distribution shift, no engine code or
-schema changes; full cosmic-ray sweep slipped to v2.0 lock with
-rationale, real-corpus run remains standing work). Cumulative
-pre-v2.0 work since v1.9.3:
+Current release: **v1.9.12** (panel-display polish, `recon doctor`
+schema-fields verification, Mermaid evidence-DAG output, slug-
+categorization regression fix covering the v2.0-prep catalog
+growth plus 25 legacy slugs, new invariant test against future
+silent fall-through to the Business Apps default). Second bridge
+release after v1.9.11; v2.0 remains the mechanical schema-lock-
+and-tag event. Cumulative pre-v2.0 work since v1.9.3:
 
 Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
 detail in `CHANGELOG.md` and the per-release validation memos):
@@ -26,10 +26,19 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.9 | Detection-gap UX surfaces; MCP shadow-load Python 3.10 close-out | `validation/v1.9.9-detection-gap-ux.md` |
 | v1.9.10 | Stratified-corpus pre-lock validation; Bayesian re-validation | `validation/v1.9.10-pre-lock.md` |
 | v1.9.10.1 | Docs render fixes (Mermaid + MathJax in correlation.md) | `CHANGELOG.md` |
+| v1.9.11 | Documentation polish dry-run; v2.0 prep worklist cleared | `CHANGELOG.md`, `validation/v1.9.11-trend-table.md` |
+| v1.9.12 | Panel-display polish + doctor schema-fields verification + Mermaid evidence-DAG output | `CHANGELOG.md` |
 
-**Outstanding before v2.0:** v1.9.11 (next) and the v2.0 lock-and-
-polish ceremony. v1.9.11's full quality bar lives in its section
-below; v2.0's mechanical checklist lives in the v2.0.0 section.
+**Outstanding before v2.0:**
+
+1. Codex security scans (operator-paced, a few days).
+2. Fix anything codex flags. The previous May-2026 audits closed in
+   v1.9.4 (CNAME walker) and v1.9.9 (MCP shadow-load full closure);
+   `docs/security-audit-resolutions.md` records the closure trail.
+3. Mechanical lock ceremony: bump `docs/recon-schema.json` to v2.0;
+   draft v2.0 release notes (inventory-style, not feature-list);
+   compile `validation/v2.0-validation-summary.md` packaging the
+   per-release trend evidence.
 
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
@@ -1260,12 +1269,27 @@ without overclaiming.
   present in a sample lookup output. The user installing v2.0 sees
   the polish, not just the version number.
 
-### v2.1.0 — Closed-loop fingerprint mining + validation runner (sketch)
+### v2.1.0 — Operator-driven catalog growth (closed-loop fingerprint mining)
 
 The first slot after v2.0 lock. Composability is next in priority
 order (correctness → reliability → explainability → composability →
 features), and v2.0 doesn't advance it — v2.0 is pure
 lock-and-polish on what already works.
+
+**Framing.** The recon catalog is shaped by passive-DNS observation
+of real corpora. Today, that observation is maintainer-side: the
+maintainer runs `validation/scan.py` against a private corpus, the
+post-triage gap list surfaces unfingerprinted CNAME terminals, and
+catalog patches land in `recon_tool/data/fingerprints/`. The v1.9.11
+4,270-apex pre-v2.0 scan was the most recent execution of this
+pattern (28 new slugs in one batch, see CHANGELOG). v2.1 promotes
+this from maintainer-only tooling to a public operator workflow:
+any operator with a private domain list of their own can run the
+same scan-aggregate-triage loop locally, add catalog entries to
+`~/.recon/fingerprints.yaml` for their environment, and contribute
+broadly-useful ones back upstream. This is a composability win
+(the catalog becomes user-extendable along the same primitive the
+maintainer uses) rather than a feature addition.
 
 The mining primitive already ships. The MCP tool
 `discover_fingerprint_candidates(domain)` (live in `server.py`
@@ -1588,6 +1612,27 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   into a pre-v2.0 patch if v1.9.4 hardened-adversarial findings +
   the existing sensitivity test surface nodes whose interval shape
   only makes sense with per-node scaling.
+- **Per-binding conflict penalty (localize the global `n_eff`
+  conflict deduction).** Today's
+  `_CONFLICT_N_EFF_PENALTY = 1.5` in `recon_tool/bayesian.py`
+  applies globally: any cross-source conflict in the merged
+  `TenantInfo` widens every node's credible interval, not only the
+  nodes whose bindings overlap the conflicting field. The behavior
+  is conservative (never under-reports uncertainty) but coarser
+  than ideal — a conflict over `display_name` should not widen the
+  posterior on `aws_hosting`. The localized form would thread per-
+  node conflict overlap so the penalty only fires on nodes whose
+  evidence set actually depends on the conflicted field, sharpening
+  the layer's output on messy real-world inputs without weakening
+  the calibration guarantee. The limitation is already called out
+  in `docs/correlation.md` (§ "We acknowledge two open issues") so
+  the design rationale and acceptance shape are already documented;
+  the missing piece is the implementation plus a falsifiable
+  regression test that the global-penalty behavior is preserved as
+  the conservative floor when the per-binding analysis returns no
+  overlap. Candidate for v2.1 alongside the operator-driven catalog
+  growth if a corpus run surfaces nodes whose widening is dominated
+  by unrelated conflicts; otherwise v2.2.
 - **Corpus-driven Hypothesis tests** — extend
   `tests/test_bayesian_hypothesis.py` with property tests over real
   corpus output. Strengthens the test floor.

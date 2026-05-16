@@ -3205,7 +3205,7 @@ fingerprints:
 
 # ── Post-v1.9.11 corpus-observed catalog growth (4270-apex scan) ─────────────
 #
-# 30 new cname_target entries surfaced by the v2.0-prep real-corpus aggregate.
+# 28 new cname_target slugs surfaced by the v2.0-prep real-corpus aggregate.
 # Triaged from the gap list against vendor-doc-sourced references. Each entry
 # carries the 3-part rubric description and a public reference URL.
 

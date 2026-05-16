@@ -565,6 +565,65 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "uberflip": "Business Apps",
     "weglot": "Collaboration",
     "wordpress-com": "Business Apps",
+    # v2.0-prep catalog growth from the 4270-apex real-corpus scan.
+    # Without these mappings, panel display falls through to the
+    # "Business Apps" default, which miscategorizes CDNs, analytics,
+    # and security tooling.
+    "250ok": "Email",
+    "adobe-analytics": "Data & Analytics",
+    "adobe-analytics-legacy": "Data & Analytics",
+    "adobe-experience-cloud": "Data & Analytics",
+    "arcgis-hub": "Data & Analytics",
+    "aws-region-endpoint": "Cloud",
+    "azion-cdn": "Cloud",
+    "baidu-cdn": "Cloud",
+    "bilibili-cdn": "Cloud",
+    "blink-app": "Collaboration",
+    "gooddata": "Data & Analytics",
+    "jd-gslb": "Cloud",
+    "microsoft-edge-cdn": "Cloud",
+    "naver-cdn": "Cloud",
+    "naver-cloud-platform": "Cloud",
+    "ovs-cdn": "Cloud",
+    "red-shield": "Security",
+    "safebase": "Security",
+    "socrata": "Data & Analytics",
+    "taobao-cache": "Cloud",
+    "tencent-edgeone": "Cloud",
+    "tencent-wechat": "Collaboration",
+    "vanta": "Security",
+    "yahoo-japan-cdn": "Cloud",
+    # v2.0-prep: legacy slugs that the v1.9.x pipeline mis-bucketed
+    # under "Business Apps" because they were never explicitly mapped.
+    # Each one is unambiguous in the operator's mental model:
+    # observability / data warehouses / product analytics belong in
+    # Data & Analytics; MDM and privacy-management belong in Security;
+    # standalone CDN and DNS providers belong in Cloud.
+    "amplitude": "Data & Analytics",
+    "databricks": "Data & Analytics",
+    "datadog": "Data & Analytics",
+    "dynatrace": "Data & Analytics",
+    "grafana-cloud": "Data & Analytics",
+    "heap": "Data & Analytics",
+    "honeycomb": "Data & Analytics",
+    "mixpanel": "Data & Analytics",
+    "mongodb": "Data & Analytics",
+    "newrelic": "Data & Analytics",
+    "pendo": "Data & Analytics",
+    "segment": "Data & Analytics",
+    "sentry": "Data & Analytics",
+    "snowflake": "Data & Analytics",
+    "splunk": "Data & Analytics",
+    "sumologic": "Data & Analytics",
+    "hibp": "Security",
+    "jamf": "Security",
+    "kandji": "Security",
+    "onetrust": "Security",
+    "imgix": "Cloud",
+    "keycdn": "Cloud",
+    "ns1": "Cloud",
+    "stackpath": "Cloud",
+    "ultradns": "Cloud",
 }
 
 # Email service-name prefixes that bypass slug lookup. These catch
@@ -770,6 +829,13 @@ _CLOUD_VENDOR_BY_SLUG: dict[str, str] = {
     "edgio-cdn": "Edgio",
     "lumen-cdn": "Lumen",
     "f5-xc": "F5 Distributed Cloud",
+    # v2.0-prep additions from the 4270-apex real-corpus scan. Each
+    # represents a cloud-vendor binding the operator would expect to
+    # count in a multi-cloud summary.
+    "aws-region-endpoint": "AWS",
+    "microsoft-edge-cdn": "Azure",
+    "naver-cloud-platform": "Naver Cloud Platform",
+    "tencent-edgeone": "Tencent Cloud",
 }
 
 # v1.9.9: cloud-categorized slugs that are intentionally NOT counted
@@ -821,6 +887,27 @@ _CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         # API management not tied to a major cloud at the rollup level
         "apigee",
         "mulesoft",
+        # v2.0-prep additions: specialty / regional CDNs and partner-
+        # integration markers where the chain does not by itself
+        # establish a direct customer relationship with the vendor.
+        "azion-cdn",
+        "baidu-cdn",
+        "bilibili-cdn",
+        "jd-gslb",
+        "naver-cdn",
+        "ovs-cdn",
+        "taobao-cache",
+        "yahoo-japan-cdn",
+        # Legacy specialty CDNs and standalone DNS providers — same
+        # reasoning as the existing entries above (azion, cloudinary,
+        # easydns). Operators do not list these alongside AWS/Azure/GCP
+        # when describing a cloud footprint, but they are still
+        # cloud-categorized for the panel display.
+        "imgix",
+        "keycdn",
+        "ns1",
+        "stackpath",
+        "ultradns",
     }
 )
 

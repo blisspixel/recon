@@ -90,3 +90,27 @@ def test_internal_refs_resolve(schema: dict) -> None:
 def test_delta_report_def_present(schema: dict) -> None:
     """DeltaReport is documented in $defs so consumers can validate `recon delta` output."""
     assert "DeltaReport" in schema.get("$defs", {})
+
+
+def test_schema_contract_constant_matches_required(schema: dict) -> None:
+    """Drift guard for the runtime mirror used by ``recon doctor``.
+
+    ``recon_tool.schema_contract.REQUIRED_TOP_LEVEL_FIELDS`` is a tuple
+    of the same fields the schema marks required. Doctor reads it at
+    runtime to verify the emitter still produces the locked contract.
+    If the schema file gains/loses a required field but the constant
+    is not updated, this test fails so the doctor stops lying about
+    coverage.
+    """
+    from recon_tool.schema_contract import REQUIRED_TOP_LEVEL_FIELDS
+
+    constant_set = set(REQUIRED_TOP_LEVEL_FIELDS)
+    schema_required = set(schema["required"])
+    only_in_constant = constant_set - schema_required
+    only_in_schema = schema_required - constant_set
+    assert not only_in_constant and not only_in_schema, (
+        f"REQUIRED_TOP_LEVEL_FIELDS drift from docs/recon-schema.json. "
+        f"In constant only: {sorted(only_in_constant)}. "
+        f"In schema only: {sorted(only_in_schema)}. "
+        "Update recon_tool/schema_contract.py to match."
+    )

@@ -69,6 +69,33 @@ class TestDoctorCommandHappyPath:
         result = runner.invoke(app, ["doctor"])
         assert sys.version.split()[0] in result.stdout
 
+    def test_doctor_prints_schema_stability_label(self, patched_doctor_environment) -> None:
+        """The v2.0 quality bar wants the schema-stability indicator
+        on the first version line so operators can tell at a glance
+        whether the build is pre-v2.0 or v2.0+."""
+        from recon_tool import __version__
+
+        result = runner.invoke(app, ["doctor"])
+        # v1.9.x builds show "pre-v2.0 schema"; v2.x builds show "v2.0 stable schema".
+        if __version__.startswith("2."):
+            expected = "v2.0 stable schema"
+        else:
+            expected = "pre-v2.0 schema"
+        assert expected in result.stdout, (
+            f"Expected schema-stability label {expected!r} not found in doctor output for v{__version__}"
+        )
+
+    def test_doctor_reports_schema_fields_check(self, patched_doctor_environment) -> None:
+        """v1.9.11+: doctor verifies the locked top-level fields are
+        all emitted by ``format_tenant_json``. The "Schema fields" row
+        must appear in the doctor output and report the count."""
+        from recon_tool.schema_contract import REQUIRED_TOP_LEVEL_FIELDS
+
+        result = runner.invoke(app, ["doctor"])
+        assert "Schema fields" in result.output
+        # When the contract holds, the row reports the count of locked fields.
+        assert f"{len(REQUIRED_TOP_LEVEL_FIELDS)} locked top-level fields present" in result.output
+
 
 class TestDoctorCommandFailures:
     """When various probes fail, doctor reports them and continues."""
