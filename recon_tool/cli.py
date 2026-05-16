@@ -252,7 +252,11 @@ def lookup(
     explain_dag_format: str = typer.Option(
         "text",
         "--explain-dag-format",
-        help="Output format for --explain-dag: 'text' (default) or 'dot'.",
+        help=(
+            "Output format for --explain-dag: 'text' (default), 'dot' "
+            "(Graphviz), or 'mermaid' (renders inline in GitHub, "
+            "Notion, and most AI chat clients)."
+        ),
     ),
     include_unclassified: bool = typer.Option(
         False,
@@ -1917,6 +1921,51 @@ async def _doctor() -> None:
     except Exception as exc:
         checks.append(("Signal database", "fail", _fmt_exc(exc)))
 
+    # v1.9.11+: verify the locked-schema top-level fields are still
+    # emitted by ``format_tenant_json``. This is the v2.0 quality bar
+    # asking for the operator to see, at doctor time, that the build's
+    # emitter matches the locked contract. We synthesise a minimal
+    # TenantInfo with the dataclass defaults, render it through the
+    # JSON formatter, and confirm every required top-level field
+    # from ``recon_tool.schema_contract.REQUIRED_TOP_LEVEL_FIELDS``
+    # appears in the output. Drift between this tuple and
+    # ``docs/recon-schema.json#/required`` is caught at PR time by
+    # ``tests/test_json_schema_file.py``.
+    try:
+        import json as _json
+
+        from recon_tool.formatter import format_tenant_json
+        from recon_tool.models import ConfidenceLevel, TenantInfo
+        from recon_tool.schema_contract import REQUIRED_TOP_LEVEL_FIELDS
+
+        sample = TenantInfo(
+            tenant_id="recon-doctor-sample",
+            display_name="recon doctor synthetic",
+            default_domain="example.invalid",
+            queried_domain="example.invalid",
+            confidence=ConfidenceLevel.LOW,
+        )
+        payload = _json.loads(format_tenant_json(sample))
+        missing = sorted(set(REQUIRED_TOP_LEVEL_FIELDS) - set(payload.keys()))
+        if missing:
+            checks.append(
+                (
+                    "Schema fields",
+                    "fail",
+                    f"{len(missing)} locked field(s) missing from emitter output: {missing}",
+                )
+            )
+        else:
+            checks.append(
+                (
+                    "Schema fields",
+                    "ok",
+                    f"{len(REQUIRED_TOP_LEVEL_FIELDS)} locked top-level fields present",
+                )
+            )
+    except Exception as exc:
+        checks.append(("Schema fields", "fail", _fmt_exc(exc)))
+
     # Check custom signals path
     custom_signals_path = Path(custom_dir) / "signals.yaml" if custom_dir else Path.home() / ".recon" / "signals.yaml"
     if custom_signals_path.exists():
@@ -2404,17 +2453,21 @@ async def _lookup(
 
         if explain_dag:
             from recon_tool.bayesian import infer_from_tenant_info, load_network
-            from recon_tool.bayesian_dag import render_dag_dot, render_dag_text
+            from recon_tool.bayesian_dag import render_dag_dot, render_dag_mermaid, render_dag_text
 
             network = load_network()
             inference = infer_from_tenant_info(info, network=network)
             fmt = (explain_dag_format or "text").lower()
             if fmt == "dot":
                 typer.echo(render_dag_dot(network, inference, domain=validated))
+            elif fmt == "mermaid":
+                typer.echo(render_dag_mermaid(network, inference, domain=validated))
             elif fmt == "text":
                 typer.echo(render_dag_text(network, inference, domain=validated))
             else:
-                render_error(f"--explain-dag-format must be 'text' or 'dot', got {explain_dag_format!r}")
+                render_error(
+                    f"--explain-dag-format must be 'text', 'dot', or 'mermaid', got {explain_dag_format!r}"
+                )
                 raise typer.Exit(code=EXIT_VALIDATION) from None
             return
 

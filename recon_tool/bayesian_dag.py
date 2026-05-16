@@ -1,6 +1,6 @@
 """DAG rendering for the v1.9 Bayesian fusion layer (stable v2.0+).
 
-Two outputs:
+Three outputs:
 
 * ``render_dag_text`` — plain-English narrative describing each node's
   posterior, the evidence that fired, and the parent dependencies that
@@ -9,8 +9,13 @@ Two outputs:
   labels carry the conditional dependency, node labels carry the
   posterior + 80% credible interval. Pipe through ``dot -Tpng`` or
   paste into a Graphviz online viewer.
+* ``render_dag_mermaid`` — Mermaid.js directed-graph syntax. Renders
+  natively in GitHub, GitLab, Notion, and most AI chat clients
+  (Claude, ChatGPT) so an agent receiving the output can show the
+  DAG inline without an external Graphviz step. Same hedged labels
+  and sparse/dense node-style discipline as the DOT renderer.
 
-Neither renderer makes a network call; both operate on already-
+No renderer makes a network call; all three operate on already-
 computed inference output. Per the v1.9 invariants, the renderers
 emit hedged language: "the posterior places X at probability ..."
 rather than "X is true".
@@ -22,6 +27,7 @@ from recon_tool.bayesian import BayesianNetwork, InferenceResult, NodePosterior
 
 __all__ = [
     "render_dag_dot",
+    "render_dag_mermaid",
     "render_dag_text",
 ]
 
@@ -294,3 +300,102 @@ def _color_for_posterior(posterior: float) -> str:
     if posterior >= 0.20:
         return "gray60"
     return "gray80"
+
+
+def _mermaid_color_for_posterior(posterior: float) -> str:
+    """Mermaid-compatible hex for the same hedged palette as DOT.
+
+    Mermaid `style` directives take CSS-style hex, not Graphviz color
+    names. We map the same five posterior bands to visually-equivalent
+    hex values.
+    """
+    if posterior >= 0.85:
+        return "#000080"
+    if posterior >= 0.60:
+        return "#4682b4"
+    if posterior >= 0.40:
+        return "#666666"
+    if posterior >= 0.20:
+        return "#999999"
+    return "#cccccc"
+
+
+def _mermaid_escape_label(label: str) -> str:
+    """Escape a label for inclusion inside a Mermaid quoted-node label.
+
+    Mermaid quoted labels use double quotes as the delimiter and allow
+    HTML-style ``<br/>`` for line breaks. We need to:
+
+    * Replace ``\\n`` with ``<br/>`` so multi-line labels render.
+    * Escape any literal double quotes via the HTML entity ``&quot;``.
+      Mermaid does not support backslash-escaped quotes inside the
+      quoted form — the entity is the only safe form.
+    * Leave ``<br/>`` itself untouched (we inserted it deliberately).
+    """
+    return label.replace('"', "&quot;").replace("\n", "<br/>")
+
+
+def render_dag_mermaid(
+    network: BayesianNetwork,
+    result: InferenceResult,
+    domain: str | None = None,
+) -> str:
+    """Render the network + inference result as a Mermaid.js graph.
+
+    Output is Mermaid v10+ syntax, accepted by GitHub, GitLab, Notion,
+    Obsidian, and most AI chat clients. Mirrors ``render_dag_dot`` in
+    information density: each node carries posterior, interval, top
+    influential bindings, and conflict provenance; sparse nodes get a
+    dashed border via the ``style`` directive.
+
+    The header line includes the domain comment so an agent that
+    captures the output can identify which run it came from.
+    """
+    posteriors_by_name = {p.name: p for p in result.posteriors}
+    title = domain or "domain"
+    lines: list[str] = []
+    lines.append(f"%% recon Bayesian DAG for {title}")
+    lines.append("graph LR")
+
+    style_lines: list[str] = []
+    for node in network.nodes:
+        post = posteriors_by_name.get(node.name)
+        if post is None:
+            label = node.name
+            stroke_color = "#888888"
+            stroke_dash = ""
+        else:
+            conflict_suffix = ""
+            if post.conflict_provenance:
+                conflict_suffix = "\nconflicts: " + ", ".join(c.field for c in post.conflict_provenance)
+            influence_suffix = ""
+            if post.evidence_ranked:
+                top = post.evidence_ranked[:_TOP_K_INFLUENTIAL]
+                influence_suffix = "\ntop influences: " + ", ".join(
+                    f"{ec.name} (LLR {ec.llr:+.2f}, {ec.influence_pct:.0f}%)" for ec in top
+                )
+            label = (
+                f"{node.name}\n"
+                f"{node.description}\n"
+                f"posterior {post.posterior:.3f}\n"
+                f"[{post.interval_low:.3f}, {post.interval_high:.3f}]"
+                f"{' (sparse)' if post.sparse else ''}"
+                f"{conflict_suffix}"
+                f"{influence_suffix}"
+            )
+            stroke_color = _mermaid_color_for_posterior(post.posterior)
+            stroke_dash = ",stroke-dasharray:5 5" if post.sparse else ""
+        safe_label = _mermaid_escape_label(label)
+        lines.append(f'  {node.name}["{safe_label}"]')
+        style_lines.append(f"  style {node.name} stroke:{stroke_color},stroke-width:2px{stroke_dash}")
+
+    lines.append("")
+    for node in network.nodes:
+        for parent in node.parents:
+            lines.append(f"  {parent} --> {node.name}")
+
+    if style_lines:
+        lines.append("")
+        lines.extend(style_lines)
+
+    return "\n".join(lines) + "\n"
