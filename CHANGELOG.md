@@ -10,6 +10,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
 is the next planned event; see `docs/roadmap.md`.
 
+## [1.9.14] - 2026-05-17
+
+**v1.9.14 security bridge: revert the v1.9.13 terminus-only A/AAAA
+check.** A follow-up scanner pass against the v1.9.13 walker
+flagged the new terminus-only A/AAAA check as reintroducing the
+v1.9.4 internal-DNS leak through a type-dependent-answer path. The
+v1.9.13 safety argument was that a prior CNAME-query NoAnswer
+proved the terminus had no CNAME to chase on a subsequent A/AAAA
+query. Authoritative DNS servers can return type-dependent
+answers, so the argument does not hold: a malicious server can
+answer the CNAME query for the terminus with NoAnswer while
+returning a CNAME to an internal/split-horizon name on the A or
+AAAA query. The recursive resolver follows that CNAME during A
+resolution, re-introducing the v1.9.4 leak.
+
+v1.9.14 reverts the terminus-only check. The walker now issues
+CNAME queries only, restoring the v1.9.4 invariant
+unconditionally. The v1.9.13 entry-point validation and the
+M365 `redirect_domain` suffix filter are preserved (neither
+depends on A/AAAA). The split-horizon detection the terminus
+check was meant to add is left as a documented residual; see
+`docs/security-audit-resolutions.md` for the closure trail and
+options (a) / (b) for further reduction.
+
+This is the v1.9.14 step of the v1.9.4 → v2.0 linear sequence in
+`docs/roadmap.md`.
+
+### Security
+
+- **Reverted the terminus-only A/AAAA check in
+  `_resolve_cname_chain` (`recon_tool/sources/dns.py`).** The
+  v1.9.13 docstring's claim that "asking A/AAAA on a name that
+  has no CNAME cannot cause a CNAME chase" assumed authoritative
+  DNS responses are consistent across query types. They are not.
+  The walker no longer calls `_hop_resolves_publicly`. The
+  helper itself is preserved with `# pyright: ignore` for future
+  callers that can guarantee a type-independent resolver path,
+  but no current caller uses it.
+- **Updated `_resolve_cname_chain` docstring and
+  `_hop_resolves_publicly` docstring** to record the v1.9.13
+  attempt, the 2026-05-17 scanner finding, and the v1.9.14
+  reversion. The docstring is the on-call reference for anyone
+  considering reviving the helper.
+- **Updated `docs/security-audit-resolutions.md`** with the
+  re-flag trail. The "Closed: A/AAAA CNAME validation can
+  trigger internal DNS lookups" entry now records v1.9.13's
+  reintroduction and v1.9.14's re-closure. The "Mitigated: CNAME
+  chain walking can query and leak internal DNS names" entry's
+  layer list drops the terminus-only A/AAAA check and notes the
+  reversion as a documented design choice.
+
+### Tests
+
+- **`tests/test_cname_chain_validation.py`.** Replaced
+  `TestTerminusOnlyAAAACheck` (which pinned the v1.9.13
+  behavior) with `TestNoAAAAQueriesFromWalker`, which asserts no
+  A or AAAA query fires on any of the three walker exit paths
+  (natural exit, `max_hops` exit, suffix-rejection exit).
+  Renamed `test_walker_does_not_resolve_a_aaaa_on_intermediate_hops`
+  to `test_walker_does_not_resolve_a_aaaa_during_walk` and
+  tightened the assertion to "no A/AAAA queries at all from the
+  walker," matching the restored v1.9.4 + v1.9.14 invariant.
+
 ## [1.9.13] - 2026-05-17
 
 **v1.9.13 security bridge: CNAME chain walker hardening (third

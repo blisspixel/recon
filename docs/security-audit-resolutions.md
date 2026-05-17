@@ -129,7 +129,9 @@ return {
 | **Severity (as audited)** | Medium |
 | **Introduced** | v1.9.3.5 (`_hop_resolves_publicly` added to chain walker) |
 | **Closed** | **v1.9.4** - commit `6abbae1` |
-| **Pinned by** | `tests/test_cname_chain_validation.py::test_walker_does_not_resolve_a_aaaa_during_walk` |
+| **Re-introduced** | v1.9.13 (terminus-only A/AAAA check added on the assumption that a prior CNAME NoAnswer proved no chase was possible on a subsequent A/AAAA query) |
+| **Re-closed** | **v1.9.14** - terminus-only A/AAAA check reverted after 2026-05-17 scanner pass flagged the type-dependent-answer attack path |
+| **Pinned by** | `tests/test_cname_chain_validation.py::TestNoAAAAQueriesFromWalker` (natural exit, max_hops exit, suffix-rejection exit) and `test_walker_does_not_resolve_a_aaaa_during_walk` |
 
 **Summary.** The v1.9.3.5 fix added a second defensive check
 (`_hop_resolves_publicly`) that resolved A/AAAA records for every
@@ -137,19 +139,20 @@ intermediate hop in a CNAME chain. The original intent was to detect
 split-horizon DNS where a public-suffix-looking hostname resolves to
 a private IP. The audit found that calling A/AAAA on attacker-
 influenced hops causes recursive resolvers to chase deeper CNAMEs
-internally while answering the address query - leaking the internal
+internally while answering the address query, leaking the internal
 names recon was specifically trying to avoid querying. The check
 itself reintroduced the leak it was added to prevent.
 
-**Fix shape.** The walker in `_resolve_cname_chain` is now
+**Fix shape.** The walker in `_resolve_cname_chain` is
 **suffix-only**: every hop's name is validated against the private-
-suffix denylist (`_is_public_dns_name`), but no A/AAAA queries are
-issued during the walk. CNAME queries are the safe primitive -
+suffix denylist (`_is_public_dns_name`), and no A/AAAA queries are
+issued during the walk. CNAME queries are the safe primitive:
 recursive resolvers do not chase further records when answering a
 CNAME-only query. The `_hop_resolves_publicly` helper is preserved
 in `dns.py` (marked `# pyright: ignore[reportUnusedFunction]`) for
-future callers who can guarantee a fully-suffix-validated name; no
-current callers use it.
+future callers who can guarantee a fully-suffix-validated name and
+a resolver path immune to type-dependent answers; no current
+callers use it.
 
 **Documented tradeoff.** Removing the A/AAAA check trades zero
 internal-DNS leakage during the walk against the loss of split-
@@ -161,23 +164,39 @@ DNS leakage. A future patch may add a terminus-only A/AAAA check
 validated, and only on the last hop) if the split-horizon attack
 pattern proves common enough to warrant the bounded leak risk."
 
+**v1.9.13 deferred-future attempt and v1.9.14 reversion.** v1.9.13
+shipped the deferred terminus-only A/AAAA check the v1.9.4 note
+described, on the assumption that "no CNAME in the previous
+CNAME-query response" implied "no CNAME chase possible on a
+subsequent A/AAAA query." A 2026-05-17 scanner pass against the
+v1.9.13 walker showed the assumption does not hold: authoritative
+DNS servers can return type-dependent answers, so a malicious
+server can answer the CNAME query for the terminus with NoAnswer
+while returning a CNAME to an internal/split-horizon name on the
+A or AAAA query. The recursive resolver follows that CNAME during
+A resolution, re-introducing the v1.9.4 leak through the same
+helper. v1.9.14 reverts the terminus check; the walker again
+issues CNAME queries only. The v1.9.13 entry-point validation and
+the M365 `redirect_domain` suffix filter are preserved (neither
+depends on A/AAAA).
+
 **Receipt (current code state).**
 
 ```python
-# recon_tool/sources/dns.py - _resolve_cname_chain
-# v1.9.4: removed the A/AAAA resolution check that v1.9.3.5
-# added here. A security audit established that calling
-# _hop_resolves_publicly on an attacker-influenced target
-# causes the recursive resolver to chase deeper CNAMEs while
-# answering the A/AAAA query.
-# (No call to _hop_resolves_publicly remains in the walk loop.)
+# recon_tool/sources/dns.py - _resolve_cname_chain (v1.9.14)
+# No call to _hop_resolves_publicly remains. The walker issues
+# only CNAME queries during the walk loop. The v1.9.13
+# terminus-only check was reverted after the type-dependent-
+# answer attack path was demonstrated.
 ```
 
-The regression test
-(`test_walker_does_not_resolve_a_aaaa_during_walk`) tracks every
-DNS query the walker issues and asserts only `CNAME` queries fire -
-never `A` or `AAAA`. A future regression that re-introduces inline
-A/AAAA fails this test before reaching a release tag.
+The regression tests in
+`tests/test_cname_chain_validation.py::TestNoAAAAQueriesFromWalker`
+track every DNS query the walker issues on each exit path
+(natural exit, `max_hops` exit, suffix-rejection exit) and assert
+no A or AAAA query ever fires. A future regression that
+re-introduces inline A/AAAA fails these tests before reaching a
+release tag.
 
 ---
 
@@ -187,10 +206,10 @@ A/AAAA fails this test before reaching a release tag.
 |---|---|
 | **Severity (as audited)** | Medium |
 | **Introduced** | **v1.5.0** (`722220f`, 2026-05-01) - first CNAME surface-attribution commit, no defenses |
-| **Mitigated** | **v1.9.3.5** (`f8b12dd`), **v1.9.4** (`6abbae1`), **v1.9.13** (entry-point + terminus-only check + redirect_domain filter) |
-| **Current receipt** | `recon_tool/sources/dns.py:1732` (`_is_public_dns_name`), `recon_tool/sources/dns.py:1827` (`_resolve_cname_chain`), `recon_tool/sources/dns.py:547-562` (`_detect_m365_cnames` redirect_domain filter) |
-| **Pinned by** | `tests/test_cname_chain_validation.py` (59 tests, including `test_walker_does_not_resolve_a_aaaa_on_intermediate_hops`, `TestEntryPointValidation`, `TestTerminusOnlyAAAACheck`, `TestM365RedirectDomainFilter`) |
-| **Re-flagged** | 2026-05-17 - scanner pinned to introducing commit `722220f`. Re-flag prompted the v1.9.13 hardening pass even though the audit pointed at the v1.5.0 pre-defense commit. |
+| **Mitigated** | **v1.9.3.5** (`f8b12dd`), **v1.9.4** (`6abbae1`), **v1.9.13** (entry-point validation + redirect_domain filter), **v1.9.14** (terminus-only A/AAAA check reverted after type-dependent-answer attack path demonstrated) |
+| **Current receipt** | `recon_tool/sources/dns.py:1732` (`_is_public_dns_name`), `recon_tool/sources/dns.py:1857` (`_resolve_cname_chain`), `recon_tool/sources/dns.py:547-562` (`_detect_m365_cnames` redirect_domain filter) |
+| **Pinned by** | `tests/test_cname_chain_validation.py` (including `test_walker_does_not_resolve_a_aaaa_during_walk`, `TestEntryPointValidation`, `TestNoAAAAQueriesFromWalker`, `TestM365RedirectDomainFilter`) |
+| **Re-flagged** | 2026-05-17 - scanner pinned to introducing commit `722220f`. Re-flag prompted the v1.9.13 hardening pass even though the audit pointed at the v1.5.0 pre-defense commit. A subsequent scanner pass against v1.9.13 itself flagged the new terminus-only A/AAAA check on the type-dependent-answer path, prompting the v1.9.14 reversion documented above. |
 
 **Summary.** The original CNAME walker followed attacker-controlled
 CNAME targets recursively without validating the resulting names.
@@ -222,19 +241,22 @@ ambient bounds:
    `_is_public_dns_name(host)` before issuing the first CNAME
    query. Catches the rare case where an unvalidated entry made it
    into `ctx.related_domains` (e.g. from a populator that didn't
-   suffix-check before adding) - that name is rejected at the door
+   suffix-check before adding); that name is rejected at the door
    without touching the resolver.
-4. **Terminus-only A/AAAA check (v1.9.13).** When the walk
-   terminates naturally (resolver returns no further CNAME for the
-   current name, or returns a self-loop), the walker resolves A
-   and AAAA on the terminus only. If every resolved address is in
-   private/loopback/link-local/reserved space, the entire chain is
-   dropped - the intermediate hop names (which include
-   attacker-chosen text) never reach `EvidenceRecord.raw_value`.
-   The check runs only when the walker has established the
-   terminus has no further CNAME, so no recursive chase is
-   possible; the v1.9.4 ban on A/AAAA during the walk loop is
-   preserved.
+4. **Terminus-only A/AAAA check attempted in v1.9.13, reverted
+   in v1.9.14.** v1.9.13 added an A/AAAA query on the chain
+   terminus after the walk completed naturally, intending to drop
+   chains whose terminus resolved only to private space. The
+   safety argument was that a prior CNAME-query NoAnswer proved
+   the terminus had no CNAME, so no chase was possible. A
+   2026-05-17 scanner pass showed the argument is wrong:
+   authoritative DNS can return type-dependent answers, so the
+   subsequent A/AAAA query can trigger a CNAME chase to an
+   internal name even when the CNAME-only query returned nothing.
+   v1.9.14 reverted the terminus check. The v1.9.4 ban on A/AAAA
+   during the walk is restored unconditionally, and the
+   split-horizon detection the terminus check was meant to add is
+   left as a documented residual (see below).
 5. **Per-call bounds.** 5-hop maximum (`_SURFACE_MAX_HOPS`),
    100-host surface cap (`_SURFACE_MAX_HOSTS`), 30-concurrent-query
    cap (`_SURFACE_CONCURRENCY`), and 5-second per-query timeout.
@@ -268,49 +290,47 @@ ambient bounds:
 
 **Residual surface (real, by design).** The audit text the
 scanner re-prints describes the v1.5.0 state. The residual that
-remains under the v1.9.13 defenses is narrower:
+remains under the v1.9.14 defenses is narrower:
 
 - An attacker who controls the queried apex (e.g. operator runs
   recon during diligence on `attacker.example`) can return a
   CNAME chain whose every hop is a public-suffix name of their
-  choosing AND whose terminus resolves to a public IP they
-  control. Those hops are walked, and their names appear in
+  choosing. Those hops are walked, and their names appear in
   `EvidenceRecord.raw_value` when the chain terminus matches a
-  built-in `cname_target` fingerprint.
-- The v1.9.13 terminus-only A/AAAA check drops chains whose
-  terminus resolves only to private space. Attacks that try to
-  end a chain on a split-horizon-internal target are now caught.
-- The narrower residual: an attacker can still emit intermediate
-  hop names of their choosing into evidence output by pointing a
-  legitimate-fingerprinted terminus (auth0.com, cloudflare.net,
-  etc.) behind attacker-chosen intermediate names. Those
-  intermediate names land in DNS logs and in `--explain` /
-  `--json` chain traces. The information disclosed is text the
-  attacker already chose to put in their own DNS records, not
-  internal-DNS topology of any third party.
+  built-in `cname_target` fingerprint. The information disclosed
+  is text the attacker already chose to put in their own DNS
+  records, not internal-DNS topology of any third party.
+- Split-horizon termini are not dropped by the walker. The
+  v1.9.13 terminus-only A/AAAA check was the planned defense for
+  this case but was reverted in v1.9.14 after the
+  type-dependent-answer attack path was demonstrated against the
+  check itself. Closing this residual requires either redaction
+  by default (option (a) below) or a dedicated public-DNS
+  resolver path (option (b) below); neither is currently shipped.
 - If the operator runs a split-horizon resolver where one of
-  those public-suffix intermediate names happens to resolve in a
-  private zone, the walker's CNAME query for that name does
-  reach internal DNS (one CNAME query per hop, no recursive A
-  chase). The query is observable in internal DNS logs. The
-  v1.9.13 terminus check does not catch this case directly
-  because the terminus is the chain's last hop, not the
-  intermediate one. Per-call bounds (5 hops, 100 hosts) limit
-  the guess rate per recon invocation.
+  those public-suffix names happens to resolve in a private zone,
+  the walker's CNAME query for that name does reach internal DNS
+  (one CNAME query per hop, no recursive A chase). The query is
+  observable in internal DNS logs. Per-call bounds (5 hops, 100
+  hosts) limit the guess rate per recon invocation.
 
 **Why this residual is not closed further.** Distinguishing
 "attacker-influenced public name" from "legitimate public name"
-passively is not feasible - every CDN and SaaS chain crosses
+passively is not feasible: every CDN and SaaS chain crosses
 apexes routinely, and the walker cannot tell them apart without
 an off-channel signal. The v1.9.3.5 attempt to add a
 resolved-address check on each intermediate hop
 (`_hop_resolves_publicly` called inside the walk loop)
 re-introduced the leak it was added to prevent by causing the
 recursive resolver to chase deeper CNAMEs while answering A/AAAA.
-v1.9.4 removed that helper from the walk loop, and v1.9.13
-brought it back in the only place where it is provably safe: on
-the terminus only, after the walker has established the terminus
-has no further CNAME.
+v1.9.4 removed that helper from the walk loop. v1.9.13 brought
+it back in a position the docstring described as "provably safe":
+on the terminus only, after the walker had established the
+terminus had no further CNAME. The 2026-05-17 scanner pass
+showed that argument was wrong because authoritative DNS can
+answer the CNAME and A/AAAA queries differently for the same
+name. v1.9.14 reverted the terminus check; A/AAAA is now banned
+on every hop in the walker.
 
 A further reduction would either (a) emit only the terminal hop
 in `EvidenceRecord.raw_value` by default and gate full-chain
@@ -377,16 +397,19 @@ own input would change that contract. The position we land on is
 that data from the internet is data from the internet, and the
 same OpSec that applies to running `curl` or `dig` against an
 adversary-controlled hostname applies to running recon against
-one. The v1.9.13 hardening pass closes the specific harm class
+one. The v1.9.13 hardening pass closed the specific harm class
 the audit identified (internal-DNS topology leak via the chain
-walker). The remaining residual is a property of doing DNS
-lookups at all and is bounded by the per-call caps. We document
-it here rather than hide it in the implementation.
+walker); v1.9.14 reverted the terminus-only A/AAAA layer after a
+follow-up scanner pass showed it had reopened the v1.9.4 leak
+through a type-dependent-answer path. The remaining residual is
+a property of doing DNS lookups at all and is bounded by the
+per-call caps. We document it here rather than hide it in the
+implementation.
 
 **Receipt (current code state).**
 
 ```python
-# recon_tool/sources/dns.py:1827 - _resolve_cname_chain (v1.9.13)
+# recon_tool/sources/dns.py - _resolve_cname_chain (v1.9.14)
 if not _is_public_dns_name(host):
     logger.debug(
         "CNAME chain walker: refusing non-public-suffix entry point %s",
@@ -396,24 +419,18 @@ if not _is_public_dns_name(host):
 
 chain: list[str] = []
 cur = host
-terminated_cleanly = False
 for _ in range(max_hops):
     results = await _safe_resolve(cur, "CNAME")
     if not results:
-        terminated_cleanly = True
         break
     target = results[0].lower().rstrip(".")
     if not target or target == cur:
-        terminated_cleanly = True
         break
     if not _is_public_dns_name(target):
-        # cur has CNAME to rejected target; terminus check skipped.
         break
     chain.append(target)
     cur = target
 
-if chain and terminated_cleanly and not await _hop_resolves_publicly(chain[-1]):
-    return []
 return chain
 ```
 
@@ -432,14 +449,14 @@ elif cl and not cl.endswith(domain.lower()):
 
 The regression tests in
 `tests/test_cname_chain_validation.py` track every DNS query
-the walker issues. `test_walker_does_not_resolve_a_aaaa_on_intermediate_hops`
-pins the v1.9.4 invariant (no A/AAAA on intermediate hops);
+the walker issues. `test_walker_does_not_resolve_a_aaaa_during_walk`
+pins the v1.9.4 + v1.9.14 invariant (no A/AAAA on any hop);
 `TestEntryPointValidation` pins the v1.9.13 entry-point check
-(no DNS query on private-suffix host); `TestTerminusOnlyAAAACheck`
-pins the v1.9.13 terminus check including the skip-when-unsafe
-behavior on max_hops and suffix-rejection exits;
-`TestM365RedirectDomainFilter` pins the v1.9.13 redirect_domain
-suffix filter. 59 tests in that file pass on current main.
+(no DNS query on private-suffix host);
+`TestNoAAAAQueriesFromWalker` pins the v1.9.14 reversion across
+all three exit paths (natural exit, `max_hops` exit, suffix
+rejection); `TestM365RedirectDomainFilter` pins the v1.9.13
+redirect_domain suffix filter.
 
 ---
 

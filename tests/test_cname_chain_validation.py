@@ -1,23 +1,38 @@
-"""v1.9.3.5 - CNAME chain target validation regression tests.
+"""CNAME chain target validation regression tests.
 
-Pins the two-layer attacker-controlled-target defense in
+Pins the chain-walker defenses in
 ``recon_tool.sources.dns._resolve_cname_chain``:
 
-  1. Suffix denylist via ``_is_public_dns_name`` - catches hops whose
-     name ends in obvious private suffixes (``.local``, ``.corp``,
-     ``.internal``, ``.home.arpa``, etc.) and IP literals.
+  1. **Entry-point validation (v1.9.13).** The walker checks
+     ``_is_public_dns_name(host)`` before issuing the first CNAME
+     query. Private suffixes, IP literals, and single-label names
+     are rejected without touching the resolver.
 
-  2. Resolved-address check via ``_hop_resolves_publicly`` - for hops
-     that pass the suffix check, resolves A and AAAA records and
-     refuses to walk further when every resolved address is in
-     private / loopback / link-local / reserved space.
+  2. **Per-hop suffix denylist (v1.9.3.5).** Every CNAME target is
+     validated against ``_is_public_dns_name`` before the walker
+     continues. Hops with obvious private suffixes (``.local``,
+     ``.corp``, ``.internal``, ``.home.arpa``, etc.) and IP literals
+     are rejected.
+
+  3. **CNAME-only walk (v1.9.4 + v1.9.14).** The walker issues only
+     CNAME queries during the walk. A/AAAA queries on
+     attacker-influenced names cause recursive resolvers to chase
+     deeper CNAMEs, potentially querying private/internal names
+     before the suffix denylist has seen them. The v1.9.13
+     terminus-only A/AAAA check was reverted in v1.9.14 after a
+     scanner pass showed authoritative DNS servers can return
+     type-dependent answers, defeating the v1.9.13 assumption that
+     a prior CNAME NoAnswer implied no chase on a subsequent A/AAAA
+     query.
+
+The ``_hop_resolves_publicly`` helper is preserved in ``dns.py`` for
+possible future callers but is not called by the walker. Tests below
+exercise it as a unit because it remains part of the module's public
+defensive surface.
 
 The audit finding ("CNAME chain walking can query and leak internal
 DNS names", MEDIUM) covers the case where attacker-controlled public
-DNS returns a CNAME to an internal split-horizon name. Layer 1
-catches the easy case (clearly-internal name); layer 2 catches the
-harder case (publicly-named host that happens to resolve into
-private space via split-horizon).
+DNS returns a CNAME to an internal split-horizon name.
 
 These tests stub ``_safe_resolve`` so the walker sees deterministic
 DNS answers without making real network calls.
@@ -234,24 +249,24 @@ class TestResolveCnameChainBlocksPrivateTargets:
         assert chain == [], f"walker should not record a hop whose suffix marks it as private; got chain={chain!r}"
 
     @pytest.mark.asyncio
-    async def test_walker_does_not_resolve_a_aaaa_on_intermediate_hops(self, monkeypatch):
-        # v1.9.4 invariant: the walker MUST NOT issue A/AAAA queries
-        # on intermediate hops (entry-point or any hop other than the
-        # terminus) during the walk loop. Doing so causes the
-        # recursive resolver to chase deeper CNAMEs while answering,
-        # potentially querying private/internal names before the
-        # walker's suffix denylist has seen them.
-        #
-        # v1.9.13 addition: the walker MAY issue A/AAAA on the
-        # terminus only, AFTER the walk has completed naturally
-        # (chain[-1] has no further CNAME). That is safe (no chase
-        # possible) and lets the walker drop chains whose terminus
-        # resolves only to private space.
+    async def test_walker_does_not_resolve_a_aaaa_during_walk(self, monkeypatch):
+        # v1.9.4 + v1.9.14 invariant: the walker MUST NOT issue any
+        # A or AAAA queries during the walk - not on the entry point,
+        # not on intermediate hops, not on the terminus. A/AAAA on an
+        # attacker-influenced name causes the recursive resolver to
+        # chase deeper CNAMEs while answering, potentially querying
+        # private/internal names before the walker's suffix denylist
+        # has seen them. v1.9.13 added a terminus-only A/AAAA check
+        # on the (incorrect) assumption that a CNAME NoAnswer proved
+        # no chase was possible on a subsequent A/AAAA query;
+        # authoritative DNS can return type-dependent answers, so the
+        # assumption does not hold. v1.9.14 reverted the check and
+        # this test pins the restored invariant.
         queries_made: list[tuple[str, str]] = []
         plan: dict[tuple[str, str], list[str]] = {
             ("attacker.example.com", "CNAME"): ["split.attacker-domain.com"],
-            # Terminus has a public A record so the v1.9.13 check
-            # accepts the chain.
+            # If the walker were to query A on the terminus, this
+            # answer would be served - but the walker must not query.
             ("split.attacker-domain.com", "A"): ["8.8.8.8"],
         }
 
@@ -262,27 +277,13 @@ class TestResolveCnameChainBlocksPrivateTargets:
         monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
         chain = await dns_mod._resolve_cname_chain("attacker.example.com")
 
-        assert chain == ["split.attacker-domain.com"], (
-            f"walker should accept a public-suffix hop; got chain={chain!r}"
-        )
-        # The entry-point name must NEVER be A/AAAA queried - this is
-        # the v1.9.4 invariant that closes the original audit finding.
-        intermediate_a_aaaa = [
-            q for q in queries_made
-            if q[1] in ("A", "AAAA") and q[0] == "attacker.example.com"
-        ]
-        assert intermediate_a_aaaa == [], (
-            "v1.9.4 invariant: walker must not issue A/AAAA on "
-            "intermediate or entry-point hops. A/AAAA on an "
-            "attacker-influenced name causes the recursive resolver "
-            "to chase deeper CNAMEs internally, potentially querying "
-            f"private names. Got: {intermediate_a_aaaa!r}"
-        )
-        # v1.9.13: any A/AAAA queries issued must target the terminus only.
-        a_aaaa_targets = {q[0] for q in queries_made if q[1] in ("A", "AAAA")}
-        assert a_aaaa_targets <= {"split.attacker-domain.com"}, (
-            "v1.9.13 invariant: A/AAAA may target only the terminus, "
-            f"not intermediate hops. Got targets: {a_aaaa_targets!r}"
+        assert chain == ["split.attacker-domain.com"], f"walker should accept a public-suffix hop; got chain={chain!r}"
+        a_aaaa = [q for q in queries_made if q[1] in ("A", "AAAA")]
+        assert a_aaaa == [], (
+            "v1.9.4 + v1.9.14 invariant: walker must not issue A/AAAA "
+            "on any hop. A/AAAA on an attacker-influenced name causes "
+            "the recursive resolver to chase deeper CNAMEs internally. "
+            f"Got: {a_aaaa!r}"
         )
 
     @pytest.mark.asyncio
@@ -342,8 +343,7 @@ class TestEntryPointValidation:
         chain = await dns_mod._resolve_cname_chain("internal.corp")
         assert chain == [], f"private-suffix entry point should return empty chain; got {chain!r}"
         assert queries_made == [], (
-            f"walker must not issue any DNS query on a private-suffix entry point; "
-            f"got queries={queries_made!r}"
+            f"walker must not issue any DNS query on a private-suffix entry point; got queries={queries_made!r}"
         )
 
     @pytest.mark.asyncio
@@ -387,83 +387,46 @@ class TestEntryPointValidation:
         monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
         chain = await dns_mod._resolve_cname_chain("Attacker.example.com")
         # Self-loop detected immediately; no hops recorded.
-        assert chain == [], (
-            f"case-mismatched self-loop should be detected without recording a hop; "
-            f"got chain={chain!r}"
-        )
+        assert chain == [], f"case-mismatched self-loop should be detected without recording a hop; got chain={chain!r}"
 
 
-# ── v1.9.13: terminus-only A/AAAA check ────────────────────────────
+# ── v1.9.14: CNAME-only walk invariant (no A/AAAA from the walker) ─
 
 
-class TestTerminusOnlyAAAACheck:
-    """v1.9.13: after the walk completes naturally, the walker
-    resolves A/AAAA on the terminus only and drops the chain when
-    every resolved address is in private space. The check runs only
-    on the natural-exit path; max_hops and suffix-rejection exits
-    skip the check (terminus has unfollowed CNAME → recursive chase
-    would re-introduce the v1.9.4 leak).
+class TestNoAAAAQueriesFromWalker:
+    """v1.9.14: the walker issues only CNAME queries. The v1.9.13
+    terminus-only A/AAAA check was reverted after a 2026-05-17
+    scanner pass showed authoritative DNS can return type-dependent
+    answers, so a prior CNAME NoAnswer does not prove a subsequent
+    A/AAAA query on the same name will not trigger a chase.
     """
 
     @pytest.mark.asyncio
-    async def test_drops_chain_with_all_private_terminus(self, monkeypatch):
+    async def test_no_aaaa_on_natural_exit(self, monkeypatch):
+        queries_made: list[tuple[str, str]] = []
         plan: dict[tuple[str, str], list[str]] = {
             ("attacker.example.com", "CNAME"): ["hop1.attacker.example.com"],
             ("hop1.attacker.example.com", "CNAME"): ["terminus.something.com"],
-            # Terminus has no further CNAME → natural exit.
-            ("terminus.something.com", "A"): ["10.0.0.5"],
-            ("terminus.something.com", "AAAA"): ["fc00::1"],
+            # Terminus has no further CNAME → natural exit. If the
+            # walker queried A here, a malicious authoritative server
+            # could return a CNAME to internal space.
         }
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
+
+        async def _tracking_resolve(domain: str, rdtype: str, **kwargs: Any) -> list[str]:
+            queries_made.append((domain, rdtype))
+            return list(plan.get((domain, rdtype), []))
+
+        monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
         chain = await dns_mod._resolve_cname_chain("attacker.example.com")
-        assert chain == [], (
-            f"chain whose terminus resolves only to private space must be dropped entirely; "
-            f"got {chain!r}"
-        )
+        assert chain == [
+            "hop1.attacker.example.com",
+            "terminus.something.com",
+        ]
+        a_aaaa = [q for q in queries_made if q[1] in ("A", "AAAA")]
+        assert a_aaaa == [], f"walker must not issue A/AAAA on natural exit. Got: {a_aaaa!r}"
 
     @pytest.mark.asyncio
-    async def test_keeps_chain_with_public_terminus(self, monkeypatch):
-        plan: dict[tuple[str, str], list[str]] = {
-            ("contoso.com", "CNAME"): ["contoso.azurewebsites.net"],
-            ("contoso.azurewebsites.net", "A"): ["20.50.2.50"],
-            ("contoso.azurewebsites.net", "AAAA"): [],
-        }
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
-        chain = await dns_mod._resolve_cname_chain("contoso.com")
-        assert chain == ["contoso.azurewebsites.net"]
-
-    @pytest.mark.asyncio
-    async def test_keeps_chain_with_dangling_terminus_no_a_records(self, monkeypatch):
-        # Terminus has no A or AAAA records (dangling CNAME). The
-        # check is fail-open: we don't know whether the terminus is
-        # public or private, so we keep the chain. Many real targets
-        # have CNAME-only terminuses with no direct A record.
-        plan: dict[tuple[str, str], list[str]] = {
-            ("apex.example.com", "CNAME"): ["dangling.example.com"],
-        }
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
-        chain = await dns_mod._resolve_cname_chain("apex.example.com")
-        assert chain == ["dangling.example.com"]
-
-    @pytest.mark.asyncio
-    async def test_keeps_chain_with_mixed_public_and_private_terminus(self, monkeypatch):
-        # At least one public address → keep. Mirrors
-        # _hop_resolves_publicly's "any public" semantics.
-        plan: dict[tuple[str, str], list[str]] = {
-            ("apex.example.com", "CNAME"): ["mixed.example.com"],
-            ("mixed.example.com", "A"): ["10.0.0.5", "8.8.8.8"],
-            ("mixed.example.com", "AAAA"): [],
-        }
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
-        chain = await dns_mod._resolve_cname_chain("apex.example.com")
-        assert chain == ["mixed.example.com"]
-
-    @pytest.mark.asyncio
-    async def test_skips_terminus_check_when_max_hops_hit(self, monkeypatch):
-        # Walker hits max_hops with the last recorded hop still
-        # having an unfollowed CNAME. A recursive A/AAAA query on
-        # that hop would chase the unfollowed CNAME - re-introducing
-        # the v1.9.4 leak. Walker MUST NOT do the terminus check.
+    async def test_no_aaaa_on_max_hops_exit(self, monkeypatch):
         queries_made: list[tuple[str, str]] = []
         plan: dict[tuple[str, str], list[str]] = {
             ("h0.example.com", "CNAME"): ["h1.example.com"],
@@ -471,7 +434,6 @@ class TestTerminusOnlyAAAACheck:
             ("h2.example.com", "CNAME"): ["h3.example.com"],
             ("h3.example.com", "CNAME"): ["h4.example.com"],
             ("h4.example.com", "CNAME"): ["h5.example.com"],
-            # h5 still has a further CNAME the walker won't follow.
             ("h5.example.com", "CNAME"): ["h6.example.com"],
         }
 
@@ -488,18 +450,11 @@ class TestTerminusOnlyAAAACheck:
             "h4.example.com",
             "h5.example.com",
         ]
-        non_cname = [q for q in queries_made if q[1] != "CNAME"]
-        assert non_cname == [], (
-            "walker must NOT issue A/AAAA after a max_hops exit "
-            "(terminus may have an unfollowed CNAME, causing recursive chase). "
-            f"Got: {non_cname!r}"
-        )
+        a_aaaa = [q for q in queries_made if q[1] in ("A", "AAAA")]
+        assert a_aaaa == [], f"got: {a_aaaa!r}"
 
     @pytest.mark.asyncio
-    async def test_skips_terminus_check_after_suffix_rejection(self, monkeypatch):
-        # Walker breaks on suffix rejection. The current name has a
-        # CNAME to the rejected private target. A recursive A/AAAA
-        # query on cur would chase to the rejected target.
+    async def test_no_aaaa_after_suffix_rejection(self, monkeypatch):
         queries_made: list[tuple[str, str]] = []
         plan: dict[tuple[str, str], list[str]] = {
             ("apex.example.com", "CNAME"): ["edge.fastly.net"],
@@ -513,12 +468,8 @@ class TestTerminusOnlyAAAACheck:
         monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
         chain = await dns_mod._resolve_cname_chain("apex.example.com")
         assert chain == ["edge.fastly.net"]
-        non_cname = [q for q in queries_made if q[1] != "CNAME"]
-        assert non_cname == [], (
-            "walker must NOT issue A/AAAA after a suffix-rejection break "
-            "(current name has CNAME to rejected private target). "
-            f"Got: {non_cname!r}"
-        )
+        a_aaaa = [q for q in queries_made if q[1] in ("A", "AAAA")]
+        assert a_aaaa == [], f"got: {a_aaaa!r}"
 
 
 # ── v1.9.13: _detect_m365_cnames redirect_domain filter ────────────

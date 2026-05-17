@@ -1817,32 +1817,29 @@ def _is_private_ip_literal(ip: str) -> bool:
     )
 
 
-async def _hop_resolves_publicly(host: str) -> bool:
+async def _hop_resolves_publicly(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
     """Return True when *host* has at least one public A/AAAA record.
 
-    **Caller contract (v1.9.13):** safe to call ONLY on a fully
-    suffix-validated chain terminus that the walker has established
-    has no further CNAME (the natural-exit case in
-    ``_resolve_cname_chain``). The v1.9.4 audit established that
-    calling A/AAAA on an intermediate hop is unsafe: the recursive
-    resolver chases deeper CNAMEs while answering, potentially
-    querying private/split-horizon names before the walker's suffix
-    denylist has seen them. On a terminus with no CNAME, no chase is
-    possible, so the call is safe.
+    **Not called by ``_resolve_cname_chain`` as of v1.9.14.** The
+    v1.9.13 hardening pass added a terminus-only A/AAAA check on the
+    assumption that "no CNAME in the previous CNAME-query response"
+    implied "no CNAME chase possible during a subsequent A/AAAA
+    query on the same name." A 2026-05-17 scanner pass flagged the
+    assumption as unsafe: authoritative DNS servers can return
+    type-dependent answers, so a malicious server can answer the
+    CNAME query for the terminus with NoAnswer while returning a
+    CNAME to an internal/split-horizon name on the A or AAAA query.
+    The recursive resolver follows that CNAME during A resolution,
+    re-introducing the v1.9.4 leak.
 
-    Called by ``_resolve_cname_chain`` once per classified chain to
-    drop chains whose terminus resolves only to private space
-    (RFC1918 / loopback / link-local / reserved / multicast). The
-    walker MUST NOT call this helper after a max-hops exit or after
-    a suffix-rejection break: in both cases the current name has an
-    unfollowed CNAME, and a recursive A/AAAA chase would re-introduce
-    the v1.9.4 leak.
-
-    Resolves A and AAAA in parallel; returns True iff at least one
-    resolved address is in public space; returns True (fail-open)
-    when no addresses resolve (dangling CNAME terminus is still a
-    legitimate chain shape - many real targets have no direct
-    A record on the terminus).
+    The helper is preserved for possible future callers that can
+    guarantee a fully-suffix-validated terminus where the operator
+    resolver is known to honor type-only responses (for example, a
+    dedicated public-DNS path), but no caller in the current code
+    uses it. The original behavior follows: resolves A and AAAA in
+    parallel; returns True iff at least one resolved address is in
+    public space; returns True (fail-open) when no addresses
+    resolve.
     """
     a_records, aaaa_records = await asyncio.gather(
         _safe_resolve(host, "A"),
@@ -1861,7 +1858,7 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
     with direct A records, or for stale CT entries that no longer
     resolve). Stops at *max_hops* to defend against pathological loops.
 
-    **Attacker-controlled-target defenses (three layers).**
+    **Attacker-controlled-target defenses (two layers).**
 
     1. **Entry-point validation (v1.9.13).** ``host`` is checked
        against ``_is_public_dns_name`` before any query is issued.
@@ -1877,43 +1874,30 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
        returned by the resolver is validated against
        ``_is_public_dns_name`` before the walker continues. When the
        check fails, the walker stops at that hop without recording
-       the rejected target, AND skips the terminus A/AAAA check
-       (see step 3) because the current name has an unfollowed
-       CNAME to the rejected private target.
+       the rejected target.
 
-    3. **Terminus-only A/AAAA check (v1.9.13).** When the walk
-       terminates naturally (the resolver returns no further CNAME
-       for the current name, or returns a self-loop or empty target),
-       the walker resolves A and AAAA on the terminus only. If every
-       resolved address is in private/loopback/link-local/reserved
-       space, the entire chain is dropped - this catches the
-       split-horizon case where an attacker has crafted a chain
-       whose terminus resolves internally via the operator's
-       resolver. The intermediate hop names (which include
-       attacker-chosen text) never reach the caller.
+    **Why this walker issues only CNAME queries (v1.9.4 + v1.9.14).**
+    The v1.9.4 audit established that calling A or AAAA on an
+    attacker-influenced name causes the recursive resolver to chase
+    deeper CNAMEs while answering, potentially querying
+    private/internal names before the walker's suffix denylist has
+    seen them. The v1.9.13 hardening pass added a terminus-only
+    A/AAAA check, on the assumption that a prior CNAME query
+    returning no results proved the terminus had no CNAME to chase.
+    A 2026-05-17 scanner pass showed the assumption is wrong:
+    authoritative DNS servers can return type-dependent answers, so
+    a malicious server can answer the CNAME query for the terminus
+    with NoAnswer while returning a CNAME to an internal name on
+    the A or AAAA query. v1.9.14 reverts the terminus check and
+    restores the v1.9.4 invariant: the walker issues CNAME queries
+    only. CNAME queries do not cause recursive resolvers to chase
+    further records; they return the immediate CNAME or nothing.
 
-    **Why the terminus check is safe even though v1.9.4 banned
-    A/AAAA during the walk.** The v1.9.4 audit established that
-    calling A/AAAA on an intermediate hop causes the recursive
-    resolver to chase deeper CNAMEs while answering - potentially
-    querying private/internal names before the walker's suffix
-    denylist has seen them. The terminus check runs AFTER the walk
-    has completed and only when the loop exited via "no further
-    CNAME for the current name." Asking A/AAAA on a name that has
-    no CNAME cannot cause a CNAME chase: there is nothing to chase.
-
-    The walker explicitly does NOT run the terminus check when the
-    loop exits via max_hops (the current name may still have an
-    unfollowed CNAME the walker chose not to record) or via
-    suffix-rejection (the current name has a CNAME to the rejected
-    private target). In both cases a recursive A/AAAA query would
-    re-introduce the v1.9.4 leak. The ``terminated_cleanly`` flag
-    below tracks which exit fired.
-
-    The CNAME chain walker queries CNAME records only during the
-    walk loop itself. CNAME queries do not cause recursive resolvers
-    to chase further records; they return the immediate CNAME or
-    nothing. This is the safe primitive for traversing chains.
+    The tradeoff is the same one v1.9.4 disclosed: dropping the
+    A/AAAA check trades zero internal-DNS leakage during the walk
+    against the loss of split-horizon detection on hops with
+    public-looking suffixes that resolve to private addresses. The
+    project errs on the side of zero leakage.
     """
     # v1.9.13: normalize the entry-point name before any further
     # use. Subsequent iterations work with lowercased targets
@@ -1932,26 +1916,12 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
 
     chain: list[str] = []
     cur = host
-    # terminated_cleanly is True only when the loop exits via the
-    # natural "no further CNAME" path. It stays False when the loop
-    # exits via suffix-rejection (cur has CNAME to a rejected
-    # private target) or when range(max_hops) is exhausted (cur may
-    # have an unfollowed CNAME). The terminus A/AAAA check below
-    # runs only when terminated_cleanly is True.
-    terminated_cleanly = False
     for _ in range(max_hops):
         results = await _safe_resolve(cur, "CNAME")
         if not results:
-            terminated_cleanly = True
             break
         target = results[0].lower().rstrip(".")
         if not target or target == cur:
-            # Self-loop or empty target - chain has effectively
-            # ended. No CNAME chase is possible (a self-loop is
-            # detected by the resolver and returns SERVFAIL on a
-            # subsequent A query, not a deeper chase), so the
-            # terminus check is safe.
-            terminated_cleanly = True
             break
         if not _is_public_dns_name(target):
             logger.debug(
@@ -1959,27 +1929,9 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
                 cur,
                 target,
             )
-            # NOT a clean termination: cur has a CNAME to the
-            # rejected private target. The terminus check below is
-            # skipped because a recursive A query on cur would
-            # chase the CNAME to the rejected name.
             break
         chain.append(target)
         cur = target
-    # If the loop fell through without break, range(max_hops) is
-    # exhausted; terminated_cleanly stays False because cur may have
-    # a further CNAME the walker chose not to follow.
-
-    # v1.9.13: terminus-only A/AAAA check. Safe to run only when
-    # the walk ended via "no further CNAME for cur" - see docstring
-    # above for the case analysis.
-    if chain and terminated_cleanly and not await _hop_resolves_publicly(chain[-1]):
-        logger.debug(
-            "CNAME chain walker: terminus %s resolves only to private space - dropping chain %r",
-            chain[-1],
-            chain,
-        )
-        return []
 
     return chain
 

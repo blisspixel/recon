@@ -4,11 +4,13 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.13** (CNAME chain walker hardening pass:
-entry-point validation, terminus-only A/AAAA check, M365
-redirect_domain suffix filter). Third bridge release after
-v1.9.11; v2.0 remains the mechanical schema-lock-and-tag event.
-Cumulative pre-v2.0 work since v1.9.3:
+Current release: **v1.9.14** (revert the v1.9.13 terminus-only
+A/AAAA check after a follow-up scanner pass flagged the
+type-dependent-answer attack path). The v1.9.13 entry-point
+validation and the M365 redirect_domain suffix filter are
+preserved. Fourth bridge release after v1.9.11; v2.0 remains
+the mechanical schema-lock-and-tag event. Cumulative pre-v2.0
+work since v1.9.3:
 
 Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
 detail in `CHANGELOG.md` and the per-release validation memos):
@@ -27,16 +29,20 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.11 | Documentation polish dry-run; v2.0 prep worklist cleared | `CHANGELOG.md`, `validation/v1.9.11-trend-table.md` |
 | v1.9.12 | Panel-display polish + doctor schema-fields verification + Mermaid evidence-DAG output | `CHANGELOG.md` |
 | v1.9.13 | CNAME chain walker hardening (entry-point + terminus-only A/AAAA + redirect_domain filter) | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
+| v1.9.14 | Revert the v1.9.13 terminus-only A/AAAA check (type-dependent-answer path re-opened the v1.9.4 leak); entry-point + redirect_domain filter preserved | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 
 **Outstanding before v2.0:**
 
 1. Codex security scans (operator-paced, a few days).
 2. Fix anything codex flags. The May-2026 audits closed in
    v1.9.4 (CNAME walker A/AAAA leak), v1.9.9 (MCP shadow-load full
-   closure), and v1.9.13 (CNAME walker entry-point + terminus
-   check after a 2026-05-17 scanner re-flag pinned to the v1.5.0
-   introducing commit); `docs/security-audit-resolutions.md`
-   records the closure trail.
+   closure), v1.9.13 (CNAME walker entry-point + redirect_domain
+   filter after a 2026-05-17 scanner re-flag pinned to the v1.5.0
+   introducing commit), and v1.9.14 (revert of the v1.9.13
+   terminus-only A/AAAA check after a follow-up scanner pass
+   showed it had reopened the v1.9.4 leak on a type-dependent-
+   answer path); `docs/security-audit-resolutions.md` records
+   the closure trail.
 3. Mechanical lock ceremony: bump `docs/recon-schema.json` to v2.0;
    draft v2.0 release notes (inventory-style, not feature-list);
    compile `validation/v2.0-validation-summary.md` packaging the
