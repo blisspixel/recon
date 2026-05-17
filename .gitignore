@@ -85,6 +85,8 @@ docs/accuracy.md
 !/validation/v2.0-corpus-run-runbook.md
 !/validation/v2.0-corpus-run.md
 !/validation/v1.9.11-trend-table.md
+!/validation/v2.0-validation-summary.md
+!/validation/v2.0-release-notes-draft.md
 !/validation/corpus_aggregator.py
 !/validation/synthetic_corpus/
 !/validation/synthetic_corpus/**
