@@ -1,6 +1,6 @@
 """DNS record lookup source for domain intelligence and tech stack fingerprinting.
 
-Loads patterns from data/fingerprints.yaml — add new services there, no code changes needed.
+Loads patterns from data/fingerprints.yaml - add new services there, no code changes needed.
 
 Detection is split into focused async functions (_detect_txt, _detect_mx, etc.) to keep
 each concern isolated and testable. The top-level _detect_services orchestrates them
@@ -66,7 +66,7 @@ logger = logging.getLogger("recon")
 
 # Per-query timeout in seconds. Prevents a single slow/hanging DNS server
 # from stalling the entire detection chain. Each _safe_resolve call gets
-# this as the `lifetime` parameter — total wall-clock time for the query
+# this as the `lifetime` parameter - total wall-clock time for the query
 # including retries across all configured nameservers.
 DNS_QUERY_TIMEOUT = 5.0
 
@@ -76,7 +76,7 @@ def _get_resolver() -> dns.asyncresolver.Resolver:
     return _default_resolver
 
 
-# Default async resolver instance — reused across queries within a lookup.
+# Default async resolver instance - reused across queries within a lookup.
 _default_resolver = dns.asyncresolver.Resolver()
 
 
@@ -92,11 +92,11 @@ def _parse_rdata(raw: str) -> str:
     to FQDNs. We strip it for cleaner downstream matching.
     """
     if raw.startswith('"'):
-        # TXT record — join multi-part chunks, don't strip trailing dots
+        # TXT record - join multi-part chunks, don't strip trailing dots
         # (dots can be meaningful in TXT values like SPF includes)
         parts = raw.split('" "')
         return "".join(p.strip('"') for p in parts)
-    # Non-TXT (CNAME, MX, NS, etc.) — strip trailing FQDN dot
+    # Non-TXT (CNAME, MX, NS, etc.) - strip trailing FQDN dot
     return raw.strip('"').rstrip(".")
 
 
@@ -128,7 +128,7 @@ async def _safe_resolve(domain: str, rdtype: str, timeout: float = DNS_QUERY_TIM
 # ── Detection context ───────────────────────────────────────────────────
 # Mutable accumulator passed through all _detect_* functions to avoid
 # returning and merging multiple tuples from each sub-detector.
-# Thread-safe is NOT required — all sub-detectors run on the event loop,
+# Thread-safe is NOT required - all sub-detectors run on the event loop,
 # not in separate threads.
 
 
@@ -142,7 +142,7 @@ class _DetectionCtx:
 
     THREAD SAFETY: This class is NOT thread-safe. All sub-detectors MUST run on
     the same event loop (asyncio.gather), not in separate threads. Do NOT wrap
-    sub-detectors in asyncio.to_thread() or use thread-based executors — the
+    sub-detectors in asyncio.to_thread() or use thread-based executors - the
     shared mutable state will race. If threading is ever needed, replace this
     with a lock-protected accumulator or per-detector return values.
     """
@@ -213,7 +213,7 @@ class _DetectionCtx:
         self.unclassified_cname_chains: list[UnclassifiedCnameChain] = []
         # v1.7: motif observations from data/motifs.yaml. Each entry
         # records a CDN/origin shape that fired on a related subdomain's
-        # CNAME chain — never an ownership claim.
+        # CNAME chain - never an ownership claim.
         self.chain_motifs: list[ChainMotifObservation] = []
         # v1.8: CT co-occurrence community detection report. Built from
         # the same cert entries that produce cert_summary; surfaced as
@@ -270,10 +270,10 @@ class _DetectionCtx:
             # Check if ALL detection rules for this fingerprint matched
             all_matched = all((fp.slug, det.type, det.pattern) in self._matched_fp_detections for det in fp.detections)
             if all_matched:
-                # All detections matched — keep the fingerprint's results
+                # All detections matched - keep the fingerprint's results
                 continue
 
-            # Partial match — remove this fingerprint's contributions.
+            # Partial match - remove this fingerprint's contributions.
             slug = fp.slug
             name = fp.name
 
@@ -286,7 +286,7 @@ class _DetectionCtx:
                 if other_fp is fp or other_fp.slug != slug:
                     continue
                 if other_fp.match_mode == "any":
-                    # match_mode: any — any single detection match is enough
+                    # match_mode: any - any single detection match is enough
                     if any(
                         (other_fp.slug, det.type, det.pattern) in self._matched_fp_detections
                         for det in other_fp.detections
@@ -294,7 +294,7 @@ class _DetectionCtx:
                         other_has_slug = True
                         break
                 else:
-                    # match_mode: all — all detections must match
+                    # match_mode: all - all detections must match
                     if all(
                         (other_fp.slug, det.type, det.pattern) in self._matched_fp_detections
                         for det in other_fp.detections
@@ -342,7 +342,7 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
         if txt_lower.startswith("v=spf1"):
             ctx.spf_include_count = txt_lower.count("include:")
             # SPF patterns use substring matching on the include: values.
-            # This is intentional — SPF includes are domain names, and we
+            # This is intentional - SPF includes are domain names, and we
             # match on the authoritative portion (e.g. "spf.protection.outlook.com").
             # Unlike TXT patterns (which use regex), SPF patterns are plain
             # substrings because the YAML values are literal domain fragments.
@@ -356,7 +356,7 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
                 ctx.services.add(SVC_SPF_SOFTFAIL)
             # v0.9.3: follow SPF redirect= chains. A record like
             # "v=spf1 redirect=_spf.mail.umich.edu" means "use that
-            # domain's SPF as mine" — RFC 7208 §6.1. Higher-ed and
+            # domain's SPF as mine" - RFC 7208 §6.1. Higher-ed and
             # enterprise domains commonly use redirect to point at
             # a shared SPF zone they manage separately. Without
             # following the chain, we score the redirected domain
@@ -367,7 +367,7 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
             if "redirect=" in txt_lower and not txt_lower.rstrip().endswith(("-all", "~all")):
                 await _follow_spf_redirect(ctx, txt_lower, depth=0, max_depth=3)
 
-    # SPF complexity summary — runs once per domain after the TXT
+    # SPF complexity summary - runs once per domain after the TXT
     # record scan, regardless of how many SPF variants the loop saw.
     # This block belongs to _detect_txt, not _follow_spf_redirect.
     if ctx.spf_include_count >= 8:
@@ -383,13 +383,13 @@ async def _follow_spf_redirect(ctx: _DetectionCtx, spf_text: str, depth: int, ma
     query the redirected domain's SPF to know whether the chain
     ultimately ends in ``-all`` (strict) or ``~all`` (softfail).
     Without following the chain, recon scores 0 on SPF strict for
-    every domain that uses the redirect pattern — and that pattern
+    every domain that uses the redirect pattern - and that pattern
     is extremely common in higher-ed and enterprise deployments
     where SPF is managed as a single zone across many brand
     domains.
 
     Any failure (network error, parse error, missing pattern)
-    silently no-ops — this is an enrichment path, not a critical
+    silently no-ops - this is an enrichment path, not a critical
     detection, and it must never break the parent DNS source.
     """
     if depth >= max_depth:
@@ -415,7 +415,7 @@ async def _follow_spf_redirect(ctx: _DetectionCtx, spf_text: str, depth: int, ma
                     ctx.add(det.name, det.slug)
                     ctx.record_fp_match(det.slug, "spf", det.pattern)
             # Propagate the policy qualifier from the redirect
-            # target up to the origin — if _spf.mail.umich.edu
+            # target up to the origin - if _spf.mail.umich.edu
             # ends in -all, then umich.edu's SPF effectively ends
             # in -all via the redirect, and we credit the origin
             # with SPF strict.
@@ -437,7 +437,7 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
     """Scan MX records for email provider and gateway detection.
 
     Passes source_type="MX" and the raw record so an EvidenceRecord is
-    created — the email topology computation in merger.py filters evidence
+    created - the email topology computation in merger.py filters evidence
     by source_type == "MX" to distinguish true primary providers (direct
     MX) from secondary residue (DKIM/TXT/identity endpoint).
 
@@ -447,7 +447,7 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
     email) from "MX records exist but the host isn't in our fingerprint
     set" (domain has custom / self-hosted email like Apache's own mail
     servers). Previously, apache.org looked identical to
-    balcaninnovations.com from the evidence perspective — both had
+    balcaninnovations.com from the evidence perspective - both had
     zero MX evidence records even though apache.org has three real
     MX hosts. The "generic MX evidence" carries an empty slug so it
     doesn't pollute the detected_slugs set.
@@ -482,7 +482,7 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
                 )
             )
             # Track unmatched MX hosts for self-hosted-mail inference.
-            # MX record format is ``<priority> <host>`` — extract host.
+            # MX record format is ``<priority> <host>`` - extract host.
             parts = mx.strip().split()
             if len(parts) >= 2:
                 unmatched_hosts.append(parts[-1].rstrip(".").lower())
@@ -491,10 +491,10 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
     # them match a known cloud provider or gateway, attribute the
     # primary provider as "Self-hosted mail". This rescues orgs whose
     # MX targets live under the queried apex or under an operator-owned
-    # sibling domain — they otherwise fall through to the weaker
+    # sibling domain - they otherwise fall through to the weaker
     # ``exchange-onprem`` attribution driven by ``owa.`` / ``autodiscover.``
     # probes. ``Self-hosted`` is a conservative label that may in rare
-    # cases cover obscure cloud providers we don't yet fingerprint — in
+    # cases cover obscure cloud providers we don't yet fingerprint - in
     # both cases the MX hosts are surfaced in the evidence so the user
     # can see what's actually being used.
     if unmatched_hosts and not any_matched:
@@ -509,7 +509,7 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
 async def _detect_m365_cnames(ctx: _DetectionCtx, domain: str) -> None:
     """Check M365-specific CNAME and SRV records (autodiscover, teams, intune, msoid).
 
-    Also checks _sipfederationtls._tcp SRV for Teams/Skype federation — a strong
+    Also checks _sipfederationtls._tcp SRV for Teams/Skype federation - a strong
     M365 signal that persists even when CNAME records have been cleaned up.
 
     Sub-queries within this detector are gathered concurrently since they
@@ -546,8 +546,18 @@ async def _detect_m365_cnames(ctx: _DetectionCtx, domain: str) -> None:
             ctx.m365 = True
         elif cl and not cl.endswith(domain.lower()):
             redirect_domain = cl.split(".", 1)[1] if "." in cl else None
-            # Validate: must have at least one dot (real domain, not single-label)
-            if redirect_domain and "." in redirect_domain and redirect_domain != domain.lower():
+            # Validate: must have at least one dot (real domain, not
+            # single-label) and must pass the public-suffix check
+            # (v1.9.13). The latter prevents an attacker-controlled
+            # autodiscover CNAME (e.g. autodiscover.attacker.example
+            # → something.internal.corp) from planting an
+            # internal-looking apex in related_domains.
+            if (
+                redirect_domain
+                and "." in redirect_domain
+                and redirect_domain != domain.lower()
+                and _is_public_dns_name(redirect_domain)
+            ):
                 ctx.related_domains.add(redirect_domain)
 
     for cname_list in (lyncdiscover_results, sip_results):
@@ -615,7 +625,7 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
     use 's1'/'s2', 'k1', 'default', 'dkim', 'mail', or 'em' selectors.
     We check all common selectors and record which type of DKIM we found.
 
-    Also extracts the onmicrosoft.com domain from Exchange DKIM CNAMEs —
+    Also extracts the onmicrosoft.com domain from Exchange DKIM CNAMEs -
     this reveals the tenant's internal domain name.
     """
     # Common ESP DKIM selectors beyond Exchange/Google.
@@ -640,7 +650,7 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
     # Also fire ESP selector queries concurrently
     esp_tasks = [_safe_resolve(f"{sel}._domainkey.{domain}", "CNAME") for sel, _, _, _ in _ESP_SELECTORS]
 
-    # v0.10.1: generic enterprise DKIM selectors — large enterprises use
+    # v0.10.1: generic enterprise DKIM selectors - large enterprises use
     # non-standard selector names. These TXT probes confirm DKIM exists
     # even when we can't attribute it to a specific provider.
     _GENERIC_DKIM_SELECTORS: tuple[str, ...] = ("s2", "dkim", "mail", "k2")
@@ -676,7 +686,7 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
                         ctx.related_domains.add(parts[1])
                 break
 
-    # Google DKIM selector — proves Google handles email signing.
+    # Google DKIM selector - proves Google handles email signing.
     # Check TXT first; if no TXT match, fall back to CNAME delegation.
     # When found, add both generic DKIM and Google Workspace attribution
     # so the signal fires even when MX points to a gateway (Proofpoint, etc.).
@@ -707,7 +717,7 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
                 )
                 break
 
-    # ESP DKIM selectors — attribute to specific services when CNAME matches
+    # ESP DKIM selectors - attribute to specific services when CNAME matches
     for (_, hint, svc_name, slug), cname_results in zip(_ESP_SELECTORS, esp_results, strict=True):
         for cname in cname_results:
             if hint in cname.lower():
@@ -715,7 +725,7 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
                 ctx.services.add(SVC_DKIM)
                 break
 
-    # v0.10.1: generic enterprise DKIM — if no provider-specific DKIM was
+    # v0.10.1: generic enterprise DKIM - if no provider-specific DKIM was
     # found above, check generic selectors for inline TXT DKIM keys. This
     # only confirms DKIM exists (feeds the email security score) without
     # attributing it to a specific provider.
@@ -895,13 +905,13 @@ async def _detect_email_security(ctx: _DetectionCtx, domain: str) -> None:
                             ctx.dmarc_pct = pct_val
                         else:
                             logger.warning(
-                                "DMARC pct= value %d out of range for %s — ignored",
+                                "DMARC pct= value %d out of range for %s - ignored",
                                 pct_val,
                                 domain,
                             )
                     except ValueError:
                         logger.warning(
-                            "DMARC pct= value %r is not a valid integer for %s — ignored",
+                            "DMARC pct= value %r is not a valid integer for %s - ignored",
                             raw_pct,
                             domain,
                         )
@@ -989,7 +999,7 @@ async def _detect_domain_connect(ctx: _DetectionCtx, domain: str) -> None:
 # publish predictable PTR records for their IP ranges that encode
 # both the provider and (for AWS / Azure / GCP) the region.
 #
-# Pattern table — checked in order, first match wins. Each entry is
+# Pattern table - checked in order, first match wins. Each entry is
 # a substring matched against the PTR hostname's lowercased form.
 # The region extractor is an optional regex that runs against the
 # full PTR hostname to pull a region token; when present and
@@ -1036,7 +1046,7 @@ async def _detect_hosting_from_a_record(ctx: _DetectionCtx, domain: str) -> None
     """Reverse-resolve the apex A record and match the PTR hostname
     against known cloud-provider patterns.
 
-    On web-only domains this is the primary detection signal — the
+    On web-only domains this is the primary detection signal - the
     domain may have no MX, no DMARC, no TXT verification tokens,
     but the A record still points somewhere and the hosting
     provider's PTR tells us where. All work is passive DNS:
@@ -1055,7 +1065,7 @@ async def _detect_hosting_from_a_record(ctx: _DetectionCtx, domain: str) -> None
         return
     ctx.raw_dns_records.setdefault("A", []).extend(a_records)
 
-    # Use the first IP only — multi-A domains are usually
+    # Use the first IP only - multi-A domains are usually
     # load-balanced within the same provider, so one PTR is enough.
     try:
         ip = ipaddress.ip_address(a_records[0])
@@ -1100,7 +1110,7 @@ async def _detect_hosting_from_a_record(ctx: _DetectionCtx, domain: str) -> None
         # The display name is always the bare provider. The region
         # (when extractable) goes into the raw_value of the
         # evidence record so --explain and --json still carry it,
-        # but the default panel stays compact — it'd get noisy if
+        # but the default panel stays compact - it'd get noisy if
         # every Cloud row grew a free-form region parenthetical.
         region_note = ""
         if region_regex:
@@ -1172,7 +1182,7 @@ async def _detect_srv(ctx: _DetectionCtx, domain: str) -> None:
     """Check common SRV records for collaboration and identity services.
 
     SRV records reveal services that don't leave TXT/SPF/MX footprints.
-    Only checks a focused set of high-signal SRV names — not brute-forcing.
+    Only checks a focused set of high-signal SRV names - not brute-forcing.
     """
     # (srv_name, target_hint, service_name, slug)
     # NOTE: _sip._tls and _sipfederationtls._tcp SRV records pointing to
@@ -1194,7 +1204,7 @@ async def _detect_srv(ctx: _DetectionCtx, domain: str) -> None:
 
     for (_, hint, svc_name, slug), srv_records in zip(_SRV_CHECKS, results, strict=True):
         for record in srv_records:
-            # SRV records with target "." mean "service not available" — skip
+            # SRV records with target "." mean "service not available" - skip
             if record.strip().rstrip(".") == "":
                 continue
             if hint is None or hint in record.lower():
@@ -1214,14 +1224,14 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
     makes enrichment asymmetry between runs visible instead of silent.
 
     When all live providers fail, the per-domain CT cache serves as a
-    final fallback — returning the last known subdomain set with an
+    final fallback - returning the last known subdomain set with an
     explicit cache age annotation so the panel can show "from local
     cache, N days old".
 
     Empty-but-not-error responses (v1.8.1): a provider that returns
     ``([], None, None)`` is treated as a soft failure, not as a
     successful empty answer. CertSpotter rate-limited responses look
-    like that — HTTP 200 with an empty issuance list — and prior to
+    like that - HTTP 200 with an empty issuance list - and prior to
     this they prevented the next provider AND the CT-cache fallback
     from running. The 10-domain v1.8 validation found 7/10 cases
     where both providers returned this shape and `cert_summary` was
@@ -1242,12 +1252,12 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
             continue
 
         if not subdomains and cert_summary is None and infrastructure_clusters is None:
-            # Empty success — treat as a soft failure. Remember the
+            # Empty success - treat as a soft failure. Remember the
             # provider name so the cache-fallback path below can still
             # surface it in the panel ("certspotter (cached)") instead
             # of attributing the result to a provider that never tried.
             logger.debug(
-                "cert intel provider %s returned empty for %s — treating as soft failure",
+                "cert intel provider %s returned empty for %s - treating as soft failure",
                 provider.name,
                 domain,
             )
@@ -1267,7 +1277,7 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
         ct_cache_put(domain, subdomains, cert_summary, provider.name)
         return
 
-    # All live providers failed (hard error or empty) — try per-domain
+    # All live providers failed (hard error or empty) - try per-domain
     # CT cache as final fallback.
     cached = ct_cache_get(domain)
     if cached is not None and cached.subdomains:
@@ -1288,7 +1298,7 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
         )
     elif soft_provider is not None:
         # No cache available, but at least one provider returned an
-        # empty response — surface that in the panel rather than
+        # empty response - surface that in the panel rather than
         # leaving ct_provider_used unset.
         ctx.ct_provider_used = soft_provider
         ctx.ct_subdomain_count = 0
@@ -1297,7 +1307,7 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
 # ── Common subdomain probing ───────────────────────────────────────────
 
 # High-signal subdomain prefixes that commonly CNAME to SaaS providers.
-# These are probed directly via DNS — no external service dependency.
+# These are probed directly via DNS - no external service dependency.
 # Kept intentionally focused: each prefix has a high probability of
 # revealing a SaaS CNAME (auth→Okta, shop→Shopify, status→Statuspage, etc.).
 _COMMON_SUBDOMAIN_PREFIXES = (
@@ -1387,11 +1397,11 @@ _COMMON_SUBDOMAIN_PREFIXES = (
 async def _detect_common_subdomains(ctx: _DetectionCtx, domain: str) -> None:
     """Probe common subdomain prefixes for CNAME targets that reveal SaaS usage.
 
-    This is the fallback/complement to crt.sh — works even when crt.sh is
+    This is the fallback/complement to crt.sh - works even when crt.sh is
     down, and catches high-signal subdomains that may not appear in CT logs
     (e.g., internal auth endpoints with private certs).
 
-    Only checks CNAME records (not A/AAAA) — we want to discover what service
+    Only checks CNAME records (not A/AAAA) - we want to discover what service
     the subdomain points to, not just that it exists. Subdomains that resolve
     to a CNAME are added to ctx.related_domains for enrichment.
     """
@@ -1437,7 +1447,7 @@ _IDP_SUBDOMAIN_PREFIXES: tuple[str, ...] = (
     # Vendor IdPs
     "okta",
     "adfs",
-    # CAS (Central Authentication Service — common in higher ed)
+    # CAS (Central Authentication Service - common in higher ed)
     "cas",
     # University-specific SSO names (Raven=Cambridge, WebAuth=Oxford,
     # HarvardKey=Harvard, Kerberos=MIT-style). These are visible as
@@ -1458,7 +1468,7 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
     specific endpoints resolve, it's a strong signal that the org
     runs on-prem / hybrid Exchange (not Exchange Online). These
     orgs often self-host mail while still having an Entra ID /
-    Azure AD tenant for identity — a very common higher-ed and
+    Azure AD tenant for identity - a very common higher-ed and
     institutional-nonprofit pattern.
 
     Without this detection, a domain with custom MX records and an
@@ -1466,7 +1476,7 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
     answer ("runs Exchange on-prem") is observable from DNS alone.
     This fills that gap.
 
-    Accepts A or CNAME resolution — on-prem Exchange typically
+    Accepts A or CNAME resolution - on-prem Exchange typically
     resolves via A to an internal-facing IP or via CNAME to a
     load-balanced frontend. Checks a narrow set of strictly-
     Exchange subdomain prefixes to avoid false positives on
@@ -1482,7 +1492,7 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
         "exchange",  # Named Exchange endpoint
         "mail-ex",  # Less common but unambiguous
         "webmail",  # Often Exchange but could be Horde / Roundcube
-        "autodiscover",  # Exchange autodiscover — standard Exchange
+        "autodiscover",  # Exchange autodiscover - standard Exchange
         # protocol, returned as CNAME for M365
         # (already detected) or as A for on-prem.
     )
@@ -1490,11 +1500,11 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
     # Probe strategy:
     # - For `autodiscover`: query CNAME first. If the immediate CNAME
     #   target points to the M365 cloud (autodiscover.outlook.com or an
-    #   outlook.com / office.com / cloud.microsoft suffix), suppress —
+    #   outlook.com / office.com / cloud.microsoft suffix), suppress -
     #   that's Exchange Online, not on-prem. Only fall through to A when
     #   there's no CNAME (self-hosted autodiscover responder). Note that
     #   a plain A query chases CNAMEs through dnspython, so an A query
-    #   alone returns IPs even for M365 cloud endpoints — that's why the
+    #   alone returns IPs even for M365 cloud endpoints - that's why the
     #   CNAME check has to come first.
     # - For other prefixes (owa / outlook / exchange / mail-ex / webmail):
     #   A-or-CNAME. Those names are typically on-prem-only when they
@@ -1519,10 +1529,10 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
             if cname_results:
                 if _is_m365_cloud_target(cname_results[0]):
                     return None  # M365 cloud autodiscover, not on-prem
-                return fqdn  # CNAME to non-Microsoft target — self-operated
+                return fqdn  # CNAME to non-Microsoft target - self-operated
             a_results = await _safe_resolve(fqdn, "A")
             if a_results:
-                return fqdn  # direct A — self-operated on-prem autodiscover
+                return fqdn  # direct A - self-operated on-prem autodiscover
             return None
         a_results = await _safe_resolve(fqdn, "A")
         if a_results:
@@ -1538,9 +1548,9 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
         return
 
     # The strongest signals are owa / outlook / exchange /
-    # autodiscover (A-only) — any of them means on-prem or
+    # autodiscover (A-only) - any of them means on-prem or
     # hybrid Exchange. `webmail` alone is too weak (could be
-    # Roundcube / Horde / SquirrelMail) — skip when only it
+    # Roundcube / Horde / SquirrelMail) - skip when only it
     # is present.
     found_prefixes = {f.split(".", 1)[0] for f in found}
     strong_signals = {"owa", "outlook", "exchange", "mail-ex", "autodiscover"}
@@ -1550,7 +1560,7 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
 
     # Wildcard-DNS guard. Some apexes point ``*.<apex>`` at a single IP,
     # which causes every Exchange prefix above to resolve to the same
-    # address. That's not Exchange — it's wildcard DNS, and firing on
+    # address. That's not Exchange - it's wildcard DNS, and firing on
     # it mislabels a web-only domain as running Exchange Server. Probe
     # a nonsense prefix: if it also
     # resolves, assume wildcard and suppress the detection.
@@ -1614,7 +1624,7 @@ async def _detect_idp_hub(ctx: _DetectionCtx, domain: str) -> None:
         service_name = "ADFS SSO hub"
         slug = "adfs-sso-hub"
     else:
-        # Generic SSO hub — could be Entra ID, Okta, Shibboleth, CAS, or
+        # Generic SSO hub - could be Entra ID, Okta, Shibboleth, CAS, or
         # anything else. A DNS A record can't distinguish the product.
         service_name = "SSO hub"
         slug = "federated-sso-hub"
@@ -1630,11 +1640,11 @@ async def _detect_idp_hub(ctx: _DetectionCtx, domain: str) -> None:
 
 
 async def lightweight_subdomain_lookup(subdomain: str) -> SourceResult:
-    """Check only CNAME and TXT records for a subdomain — skip MX/NS/DKIM/SRV/crt.sh.
+    """Check only CNAME and TXT records for a subdomain - skip MX/NS/DKIM/SRV/crt.sh.
 
     Public API for the resolver's two-tier enrichment pipeline. Subdomains
     discovered via crt.sh or common-prefix probing don't need full DNS
-    fingerprinting — CNAME and TXT are the high-signal record types.
+    fingerprinting - CNAME and TXT are the high-signal record types.
     """
     ctx = _DetectionCtx()
     try:
@@ -1661,7 +1671,7 @@ async def medium_subdomain_lookup(subdomain: str) -> SourceResult:
     `sso.*`, `login.*`, `idp.*`, `api.*`, `mail.*`. v0.10.2 tier between
     lightweight (everything else) and full lookup (separate domains).
 
-    Still passive, still zero-creds — just probes more record types on a
+    Still passive, still zero-creds - just probes more record types on a
     small cap of subdomains that reliably publish verification data.
     """
     ctx = _DetectionCtx()
@@ -1687,12 +1697,12 @@ async def medium_subdomain_lookup(subdomain: str) -> SourceResult:
 # Hard caps for surface-attribution work. The DNS classifier is cheap (one
 # CNAME query per related domain, 1-3 hops typical) but unbounded inputs
 # warrant ceilings:
-#   _SURFACE_MAX_HOSTS — most lookups stay under this; pathological CT
+#   _SURFACE_MAX_HOSTS - most lookups stay under this; pathological CT
 #     responses with thousands of subdomains get truncated rather than
 #     paying full DNS cost.
-#   _SURFACE_MAX_HOPS  — defends against CNAME chains that loop or stall
+#   _SURFACE_MAX_HOPS  - defends against CNAME chains that loop or stall
 #     by giving up after a small number of hops.
-#   _SURFACE_CONCURRENCY — bounds simultaneous DNS in flight so a large
+#   _SURFACE_CONCURRENCY - bounds simultaneous DNS in flight so a large
 #     related-domain set does not exhaust file descriptors or trip
 #     resolver rate limits.
 _SURFACE_MAX_HOSTS = 100
@@ -1734,8 +1744,10 @@ def _is_public_dns_name(name: str) -> bool:
 
     Rejects single-label names, IP literals, RFC 6761 special-use
     suffixes, reverse-DNS arpa zones, common private-network
-    conventions (.local/.corp/.lan/etc.), and the Tor namespace. The
-    check is suffix-based and case-insensitive.
+    conventions (.local/.corp/.lan/etc.), the Tor namespace, and
+    names containing characters outside the DNS letter-digit-hyphen
+    alphabet (plus dot as separator and underscore for DKIM/SRV).
+    The check is suffix-based and case-insensitive.
 
     The CNAME chain walker uses this to refuse to follow attacker-
     controlled CNAME hops that target internal/split-horizon DNS,
@@ -1750,12 +1762,25 @@ def _is_public_dns_name(name: str) -> bool:
         # Single-label names are either internal hostnames or root-
         # zone TLDs; neither is a sensible CNAME target.
         return False
+    # v1.9.13: character-class restriction. DNS names use a limited
+    # alphabet (RFC 1035: ASCII alphanumeric, hyphen, dot) plus
+    # underscore for DKIM and SRV selectors. Reject anything outside
+    # this set - adversarial DNS responses or lax resolver parsing
+    # could otherwise smuggle HTML / shell / control characters
+    # through to evidence output where downstream renderers
+    # (terminal escape codes, markdown, HTML-aware JSON viewers)
+    # might interpret them. dnspython's strict parser usually
+    # rejects such names before we see them; this check is
+    # defense-in-depth in case the parser ever relaxes or a future
+    # caller passes a name from a non-DNS source.
+    if not all(c.isascii() and (c.isalnum() or c in "-._") for c in n):
+        return False
     # IP literals (IPv4 dotted-quad or IPv6 with hex+colons). CNAMEs
     # cannot legally target IPs in DNS, but defensive resolvers may
-    # still see something interpretable as one.
+    # still see something interpretable as one. The IPv6 ``:`` is
+    # already covered by the character-class check above, but we
+    # keep the explicit IPv4 (all-digit-labels) check for clarity.
     if all(part.isdigit() for part in n.split(".")):
-        return False
-    if ":" in n:
         return False
     return all(not n.endswith(suffix) for suffix in _PRIVATE_DNS_SUFFIXES)
 
@@ -1768,7 +1793,7 @@ def _is_private_ip_literal(ip: str) -> bool:
     space. This catches the attacker pattern: own a public domain,
     return a CNAME to a publicly-named host that happens to resolve
     to 10.x.x.x or 192.168.x.x in the operator's resolver context
-    (split-horizon). The suffix check alone cannot see that — only
+    (split-horizon). The suffix check alone cannot see that - only
     resolving the A record can.
 
     Defensive on parse failures: anything we cannot recognize as a
@@ -1792,27 +1817,32 @@ def _is_private_ip_literal(ip: str) -> bool:
     )
 
 
-async def _hop_resolves_publicly(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
+async def _hop_resolves_publicly(host: str) -> bool:
     """Return True when *host* has at least one public A/AAAA record.
 
-    **WARNING — v1.9.4: not called by the chain walker.** The walker
-    in ``_resolve_cname_chain`` used to invoke this helper after the
-    suffix check. A security audit established that doing so caused
-    the recursive resolver to chase intermediate CNAMEs internally
-    while answering the A/AAAA query, potentially querying private/
-    split-horizon names *before* the explicit walker had a chance to
-    apply its suffix denylist. Calling this helper on attacker-
-    influenced names defeats the suffix-denylist protection.
+    **Caller contract (v1.9.13):** safe to call ONLY on a fully
+    suffix-validated chain terminus that the walker has established
+    has no further CNAME (the natural-exit case in
+    ``_resolve_cname_chain``). The v1.9.4 audit established that
+    calling A/AAAA on an intermediate hop is unsafe: the recursive
+    resolver chases deeper CNAMEs while answering, potentially
+    querying private/split-horizon names before the walker's suffix
+    denylist has seen them. On a terminus with no CNAME, no chase is
+    possible, so the call is safe.
 
-    The function is preserved for callers who already know the name
-    is trusted (e.g. fully suffix-validated chain terminuses chosen
-    by recon's own catalog, not by attacker DNS). New callers must
-    confirm the name's entire CNAME chain has been suffix-validated
-    by the explicit walker first.
+    Called by ``_resolve_cname_chain`` once per classified chain to
+    drop chains whose terminus resolves only to private space
+    (RFC1918 / loopback / link-local / reserved / multicast). The
+    walker MUST NOT call this helper after a max-hops exit or after
+    a suffix-rejection break: in both cases the current name has an
+    unfollowed CNAME, and a recursive A/AAAA chase would re-introduce
+    the v1.9.4 leak.
 
     Resolves A and AAAA in parallel; returns True iff at least one
     resolved address is in public space; returns True (fail-open)
-    when no addresses resolve.
+    when no addresses resolve (dangling CNAME terminus is still a
+    legitimate chain shape - many real targets have no direct
+    A record on the terminus).
     """
     a_records, aaaa_records = await asyncio.gather(
         _safe_resolve(host, "A"),
@@ -1820,7 +1850,7 @@ async def _hop_resolves_publicly(host: str) -> bool:  # pyright: ignore[reportUn
     )
     addresses = [*a_records, *aaaa_records]
     if not addresses:
-        return True  # no addresses → can't classify; allow the walk to continue
+        return True  # no addresses → can't classify; allow the chain to stand
     return any(not _is_private_ip_literal(addr) for addr in addresses)
 
 
@@ -1831,55 +1861,97 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
     with direct A records, or for stale CT entries that no longer
     resolve). Stops at *max_hops* to defend against pathological loops.
 
-    **Attacker-controlled-target defense (v1.9.4 — suffix-only):**
+    **Attacker-controlled-target defenses (three layers).**
 
-    The walker validates each hop's *name* against the private-suffix
-    denylist (``_is_public_dns_name``). It does NOT resolve A/AAAA
-    during the walk.
+    1. **Entry-point validation (v1.9.13).** ``host`` is checked
+       against ``_is_public_dns_name`` before any query is issued.
+       Names with private suffixes, IP literals, or single-label
+       form are rejected without touching the resolver. The walker
+       is invoked on entries from ``ctx.related_domains``, which is
+       populated by several detectors; not every populator validates
+       names before adding (see ``_detect_m365_cnames``
+       redirect_domain extraction). Rejecting at the entry point
+       removes the dependency on every populator getting it right.
 
-    Why suffix-only: the v1.9.3.5 design called for a second
-    resolved-address check (``_hop_resolves_publicly``) on top of the
-    suffix denylist, intended to catch attacker-controlled
-    public-suffix names whose split-horizon resolution lands inside
-    the operator's private network. A security audit established
-    that calling A/AAAA on an intermediate hop causes the recursive
-    resolver to chase deeper CNAMEs internally while answering —
-    potentially querying private/internal names *before* the walker
-    has applied its suffix denylist to those deeper hops. That is
-    the original CNAME-chain-leakage vulnerability the chain walker
-    was supposed to prevent.
+    2. **Per-hop suffix denylist (v1.9.3.5).** Every CNAME target
+       returned by the resolver is validated against
+       ``_is_public_dns_name`` before the walker continues. When the
+       check fails, the walker stops at that hop without recording
+       the rejected target, AND skips the terminus A/AAAA check
+       (see step 3) because the current name has an unfollowed
+       CNAME to the rejected private target.
 
-    The split-horizon protection that v1.9.3.5 added is therefore
-    removed in v1.9.4. The suffix denylist alone is the right
-    primary defense: any attacker pattern that points at a clearly
-    private suffix (.local, .corp, .internal, etc.) is rejected
-    without a single A/AAAA query, and any attacker pattern that
-    points at a publicly-suffixed name whose resolved IP is private
-    (the split-horizon case) is no longer chased — because we don't
-    chase by A/AAAA at all during the walk.
+    3. **Terminus-only A/AAAA check (v1.9.13).** When the walk
+       terminates naturally (the resolver returns no further CNAME
+       for the current name, or returns a self-loop or empty target),
+       the walker resolves A and AAAA on the terminus only. If every
+       resolved address is in private/loopback/link-local/reserved
+       space, the entire chain is dropped - this catches the
+       split-horizon case where an attacker has crafted a chain
+       whose terminus resolves internally via the operator's
+       resolver. The intermediate hop names (which include
+       attacker-chosen text) never reach the caller.
 
-    The CNAME chain walker queries CNAME records only. CNAME queries
-    do not cause recursive resolvers to chase further records; they
-    return the immediate CNAME or nothing. This is the safe primitive.
+    **Why the terminus check is safe even though v1.9.4 banned
+    A/AAAA during the walk.** The v1.9.4 audit established that
+    calling A/AAAA on an intermediate hop causes the recursive
+    resolver to chase deeper CNAMEs while answering - potentially
+    querying private/internal names before the walker's suffix
+    denylist has seen them. The terminus check runs AFTER the walk
+    has completed and only when the loop exited via "no further
+    CNAME for the current name." Asking A/AAAA on a name that has
+    no CNAME cannot cause a CNAME chase: there is nothing to chase.
 
-    A future patch may add a terminus-only A/AAAA check (resolve
-    A/AAAA only after the entire chain has been suffix-validated, and
-    only on the last hop) if the split-horizon attack pattern proves
-    common enough to warrant the bounded leak risk. v1.9.4 errs on
-    the side of zero internal-DNS leakage.
+    The walker explicitly does NOT run the terminus check when the
+    loop exits via max_hops (the current name may still have an
+    unfollowed CNAME the walker chose not to record) or via
+    suffix-rejection (the current name has a CNAME to the rejected
+    private target). In both cases a recursive A/AAAA query would
+    re-introduce the v1.9.4 leak. The ``terminated_cleanly`` flag
+    below tracks which exit fired.
 
-    Either check failing halts the walk at that hop without recording
-    it: the operator's resolver is not pointed at internal/split-horizon
-    targets, and evidence output cannot leak internal topology.
+    The CNAME chain walker queries CNAME records only during the
+    walk loop itself. CNAME queries do not cause recursive resolvers
+    to chase further records; they return the immediate CNAME or
+    nothing. This is the safe primitive for traversing chains.
     """
+    # v1.9.13: normalize the entry-point name before any further
+    # use. Subsequent iterations work with lowercased targets
+    # (the resolver's response is lowercased by ``_safe_resolve``),
+    # so an unnormalized mixed-case host would slip through the
+    # ``target == cur`` self-loop check on the first iteration.
+    host = host.strip().lower().rstrip(".")
+    # v1.9.13: entry-point validation. Reject the walk before issuing
+    # any DNS query when ``host`` itself fails the public-suffix check.
+    if not _is_public_dns_name(host):
+        logger.debug(
+            "CNAME chain walker: refusing non-public-suffix entry point %s",
+            host,
+        )
+        return []
+
     chain: list[str] = []
     cur = host
+    # terminated_cleanly is True only when the loop exits via the
+    # natural "no further CNAME" path. It stays False when the loop
+    # exits via suffix-rejection (cur has CNAME to a rejected
+    # private target) or when range(max_hops) is exhausted (cur may
+    # have an unfollowed CNAME). The terminus A/AAAA check below
+    # runs only when terminated_cleanly is True.
+    terminated_cleanly = False
     for _ in range(max_hops):
         results = await _safe_resolve(cur, "CNAME")
         if not results:
+            terminated_cleanly = True
             break
         target = results[0].lower().rstrip(".")
         if not target or target == cur:
+            # Self-loop or empty target - chain has effectively
+            # ended. No CNAME chase is possible (a self-loop is
+            # detected by the resolver and returns SERVFAIL on a
+            # subsequent A query, not a deeper chase), so the
+            # terminus check is safe.
+            terminated_cleanly = True
             break
         if not _is_public_dns_name(target):
             logger.debug(
@@ -1887,19 +1959,28 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
                 cur,
                 target,
             )
+            # NOT a clean termination: cur has a CNAME to the
+            # rejected private target. The terminus check below is
+            # skipped because a recursive A query on cur would
+            # chase the CNAME to the rejected name.
             break
-        # v1.9.4: removed the A/AAAA resolution check that v1.9.3.5
-        # added here. A security audit established that calling
-        # _hop_resolves_publicly on an attacker-influenced target
-        # causes the recursive resolver to chase deeper CNAMEs while
-        # answering A/AAAA — potentially querying private/internal
-        # names before this walker has applied its suffix denylist
-        # to those deeper hops. The CNAME-only walk (above) is the
-        # safe primitive: CNAME queries do not cause recursive
-        # resolvers to chase further records. Suffix denylist alone
-        # is the primary defense.
         chain.append(target)
         cur = target
+    # If the loop fell through without break, range(max_hops) is
+    # exhausted; terminated_cleanly stays False because cur may have
+    # a further CNAME the walker chose not to follow.
+
+    # v1.9.13: terminus-only A/AAAA check. Safe to run only when
+    # the walk ended via "no further CNAME for cur" - see docstring
+    # above for the case analysis.
+    if chain and terminated_cleanly and not await _hop_resolves_publicly(chain[-1]):
+        logger.debug(
+            "CNAME chain walker: terminus %s resolves only to private space - dropping chain %r",
+            chain[-1],
+            chain,
+        )
+        return []
+
     return chain
 
 
@@ -1953,7 +2034,7 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
       * emits an EvidenceRecord with the full chain for --explain.
 
     Application-tier matches always beat infrastructure-tier matches when
-    a chain produces both — the primary attribution is the meaningful
+    a chain produces both - the primary attribution is the meaningful
     layer, and CDNs / load balancers fall to the supplementary slot.
     """
     rules = get_cname_target_rules()
@@ -1966,7 +2047,7 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
     sorted_rules: tuple[Any, ...] = tuple(sorted(rules, key=lambda r: -len(r.pattern)))
 
     # Wildcard-DNS guard. Some apexes (kayak.com, certain higher-ed orgs)
-    # answer every ``*.<apex>`` query with the same CNAME — typically a
+    # answer every ``*.<apex>`` query with the same CNAME - typically a
     # CDN. Without this guard the common-subdomain and IDP-hub probes
     # generate dozens of fake "subdomains" that all CNAME to the same
     # target, and we mis-attribute every probed prefix as if the
@@ -1980,7 +2061,7 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
     if wildcard_chain:
         wildcard_terminal = wildcard_chain[-1]
         logger.debug(
-            "Surface classifier: wildcard DNS detected on %s (terminal=%s) — filtering",
+            "Surface classifier: wildcard DNS detected on %s (terminal=%s) - filtering",
             queried_domain,
             wildcard_terminal,
         )
@@ -1988,7 +2069,7 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
     targets = sorted(h for h in ctx.related_domains if h and "*" not in h and h != queried_domain.lower())
     if len(targets) > _SURFACE_MAX_HOSTS:
         logger.debug(
-            "Surface classifier: %d related domains exceeds cap %d — truncating",
+            "Surface classifier: %d related domains exceeds cap %d - truncating",
             len(targets),
             _SURFACE_MAX_HOSTS,
         )
@@ -2003,7 +2084,7 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
                 return None
             # Filter wildcard echoes: when a host's terminal matches the
             # wildcard probe's terminal, the host is not genuinely
-            # delegated — it just got the wildcard answer. Skip.
+            # delegated - it just got the wildcard answer. Skip.
             if wildcard_terminal is not None and chain[-1] == wildcard_terminal:
                 return None
             return host, chain
@@ -2017,7 +2098,7 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
 
         # v1.7: motif matching runs alongside the rule-based classifier.
         # Motifs describe chain-shape (Cloudflare → AWS origin, etc.) and
-        # complement single-hop application detection — they never
+        # complement single-hop application detection - they never
         # override it.
         if motifs_catalog and len(ctx.chain_motifs) < _MAX_CHAIN_MOTIF_OBSERVATIONS:
             for match in match_chain_motifs(chain, motifs_catalog, subdomain=host):
@@ -2035,7 +2116,7 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
 
         application, infrastructure = _classify_chain(chain, sorted_rules)
         if application is None and infrastructure is None:
-            # Genuinely unclassified — preserve for the fingerprint-discovery
+            # Genuinely unclassified - preserve for the fingerprint-discovery
             # loop. The chain is real (wildcard echoes were filtered upstream)
             # and didn't match any cname_target rule, so it is a candidate
             # for a new fingerprint.
@@ -2097,7 +2178,7 @@ class DNSSource:
         instead of sequentially.
 
         Recognized kwargs:
-          * ``skip_ct`` — when True, skip the cert-transparency providers
+          * ``skip_ct`` - when True, skip the cert-transparency providers
             (crt.sh, CertSpotter). Discovery still runs the common-subdomain
             probe and apex CNAME walks. Useful for high-volume validation
             runs where users want zero CT load.
@@ -2166,7 +2247,7 @@ class DNSSource:
 
     @staticmethod
     async def _detect_services(domain: str, skip_ct: bool = False) -> _DetectionCtx:
-        """Async service detection — runs all sub-detectors concurrently.
+        """Async service detection - runs all sub-detectors concurrently.
 
         Each sub-detector handles one DNS record type and writes results
         into the shared _DetectionCtx. Since all coroutines run on the
@@ -2212,7 +2293,7 @@ class DNSSource:
         # common-subdomain probe.
         await _classify_related_surface(ctx, domain)
 
-        # Post-process: enforce match_mode: all — remove partial matches
+        # Post-process: enforce match_mode: all - remove partial matches
         ctx.enforce_match_mode_all()
 
         return ctx

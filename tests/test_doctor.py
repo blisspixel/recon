@@ -77,10 +77,7 @@ class TestDoctorCommandHappyPath:
 
         result = runner.invoke(app, ["doctor"])
         # v1.9.x builds show "pre-v2.0 schema"; v2.x builds show "v2.0 stable schema".
-        if __version__.startswith("2."):
-            expected = "v2.0 stable schema"
-        else:
-            expected = "pre-v2.0 schema"
+        expected = "v2.0 stable schema" if __version__.startswith("2.") else "pre-v2.0 schema"
         assert expected in result.stdout, (
             f"Expected schema-stability label {expected!r} not found in doctor output for v{__version__}"
         )
