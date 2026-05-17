@@ -1302,7 +1302,7 @@ wheels = [
 
 [[package]]
 name = "recon-tool"
-version = "1.9.12"
+version = "1.9.14"
 source = { editable = "." }
 dependencies = [
     { name = "defusedxml" },
