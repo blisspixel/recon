@@ -10,6 +10,114 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
 is the next planned event; see `docs/roadmap.md`.
 
+## [1.9.13] - 2026-05-17
+
+**v1.9.13 security bridge: CNAME chain walker hardening (third
+layer).** Tightens the surface-attribution pipeline after a fresh
+scanner pass against the v1.5.0 introducing commit
+(`722220f`) re-flagged the previously-mitigated chain-walker
+finding. The v1.9.3.5 + v1.9.4 closure (suffix denylist +
+CNAME-only-during-walk) was already authoritative; v1.9.13 adds
+two further layers and one defense-in-depth tightening to reduce
+the documented residual surface.
+
+This is the v1.9.13 step of the v1.9.4 → v2.0 linear sequence in
+`docs/roadmap.md`. Full closure trail in
+`docs/security-audit-resolutions.md` and the threat model in
+`docs/security.md`.
+
+### Security
+
+- **Entry-point validation in `_resolve_cname_chain`
+  (`recon_tool/sources/dns.py:1827`).** The walker now checks
+  `_is_public_dns_name(host)` before issuing the first CNAME
+  query. Names with private suffixes, IP literals, or single-label
+  form are rejected without touching the resolver. Closes a gap
+  where unvalidated entries in `ctx.related_domains` (e.g. from
+  `_detect_m365_cnames` redirect_domain extraction) would otherwise
+  cause one DNS query through the operator's resolver against an
+  attacker-influenced name.
+- **Terminus-only A/AAAA check in `_resolve_cname_chain`
+  (same file).** After the walk completes naturally (the resolver
+  returns no further CNAME for the current name, or returns a
+  self-loop), the walker now resolves A and AAAA on the terminus
+  only. When every resolved address is in private/loopback/
+  link-local/reserved space, the entire chain is dropped - the
+  intermediate hop names (which include attacker-chosen text) never
+  reach `EvidenceRecord.raw_value`. The v1.9.4 ban on A/AAAA
+  during the walk loop is preserved: the new check runs only on
+  the natural-exit path where the terminus has been established to
+  have no further CNAME, so no recursive CNAME chase is possible.
+  Skipped explicitly when the walker exited via `max_hops` or a
+  suffix-rejection break (terminus has unfollowed CNAME → chase
+  would re-introduce the v1.9.4 leak). The deferred-future option
+  from the v1.9.4 `_resolve_cname_chain` docstring is now shipped.
+- **Suffix filter on M365 redirect_domain
+  (`recon_tool/sources/dns.py:547-562`).** `_detect_m365_cnames`
+  now suffix-validates the redirect_domain extracted from a
+  non-Microsoft autodiscover CNAME response before adding it to
+  `ctx.related_domains`. Defense-in-depth against an
+  attacker-controlled autodiscover response that would otherwise
+  plant a private-suffix apex in related_domains (the chain walker
+  would reject it at entry, but rejecting at the addition point
+  keeps related_domains clean for panel/JSON consumers too).
+- **Character-class restriction in `_is_public_dns_name`.** Names
+  are now required to contain only ASCII alphanumerics, hyphen,
+  dot, and underscore (the underscore covers legitimate DKIM and
+  SRV selectors). Rejects names with HTML / shell / control /
+  whitespace / non-ASCII characters that a lax DNS parser or
+  adversarial response could otherwise smuggle into evidence
+  output where a downstream renderer might interpret them. The
+  v1.9.4-era explicit IPv6 colon check is folded into the
+  character-class check (colons are no longer in the allowed set).
+- **Entry-point case normalization in `_resolve_cname_chain`.**
+  `host` is now lowercased and trailing-dot-stripped before the
+  entry-point check and the walk loop, so a mixed-case input
+  followed by a lowercased self-loop CNAME is detected on iteration
+  1 (the previous behavior wasted one iteration before the
+  case-mismatched self-loop was caught). Functional fix; not a
+  security gap on its own but tightens the walker's invariants.
+
+### Documentation
+
+- **`docs/security-audit-resolutions.md`.** Closure record for the
+  CNAME-walker finding rewritten to enumerate the residual surface
+  precisely (three named cases), cite line numbers in current main,
+  and add a *Re-flagged* row format for future stale-scanner
+  reports. New *Mitigated vs Closed* glossary in process notes.
+- **`docs/security.md`.** New dedicated "Malicious CNAME chains
+  (surface-attribution walker)" section under the threat model
+  listing the three-layer defense, the reduced residual surface,
+  and the pinning test. Previous coverage was generic under
+  "Malicious DNS responses."
+
+### Tests
+
+- **11 new regression tests** in
+  `tests/test_cname_chain_validation.py` (59 total, up from 48):
+  three for entry-point validation (private suffix, IP literal,
+  single-label all rejected without queries), six for the
+  terminus-only A/AAAA check (private terminus drops chain, public
+  terminus keeps chain, dangling terminus fails open, mixed
+  public/private terminus keeps chain, max_hops case skips
+  terminus check, suffix-rejection case skips terminus check), and
+  two for the M365 redirect_domain filter (private suffix dropped,
+  public suffix still added). Full suite: 2,533 tests pass.
+- **Existing
+  `test_walker_does_not_resolve_a_aaaa_during_walk` renamed** to
+  `test_walker_does_not_resolve_a_aaaa_on_intermediate_hops` and
+  updated to allow A/AAAA on the terminus only - the v1.9.4
+  invariant (no A/AAAA on intermediate hops during the walk loop)
+  remains pinned.
+
+### Changed
+
+- **`_hop_resolves_publicly` docstring rewritten.** Function is
+  no longer marked as unused; `# pyright: ignore` removed. New
+  contract documented: safe to call only on a fully suffix-
+  validated terminus that the walker has established has no
+  further CNAME.
+
 ## [1.9.12] - 2026-05-16
 
 **v1.9.12 bridge milestone: panel-display polish + doctor schema
@@ -47,7 +155,7 @@ the v2.0 quality bar requires.
   facing category) or in an allowlist of legacy fall-through
   slugs (`EXPECTED_BUSINESS_APPS_FALLBACK`). A new slug shipped
   without an explicit decision now fails CI rather than silently
-  bucketing under "Business Apps" — the same shape of bug the
+  bucketing under "Business Apps" - the same shape of bug the
   28-slug categorization fix below addressed.
 
 ### Fixed
@@ -107,7 +215,7 @@ the v2.0 quality bar requires.
 
 - **`validation/v1.9.10-pre-lock.md`.** Corrected per-stratum
   table is the live numbers section; the original v1.9.10
-  ship-time table is preserved under "Appendix — original
+  ship-time table is preserved under "Appendix - original
   (v1.9.10 ship-time) per-stratum numbers" so the historical
   receipt remains traceable.
 - **`validation/v2.0-corpus-run.md`.** Comparison line updated to
@@ -181,7 +289,7 @@ This is the v1.9.11 step of the v1.9.4 → v2.0 linear sequence in
   replaces the per-release running-commentary framing).
   Past-tense prose discussion of the historical label survives
   in `docs/roadmap.md`, `docs/migration-v2.md`, and
-  `docs/release-process.md` — the CI gate pattern-matches for
+  `docs/release-process.md` - the CI gate pattern-matches for
   active labels (parens, brackets, prefixes), not prose.
 - **`okta_idp` disposition applied** per
   `validation/v2.0-prep-baseline.md` §3. Node ships in v2.0 with
@@ -304,19 +412,19 @@ This is the v1.9.10 step of the v1.9.4 to v2.0 linear sequence in
   helper buckets fixtures by tenant_id substring; the aggregate
   output now carries a `per_stratum` map with per-stratum counted
   / multi-cloud / ceiling firing rates.
-- **`validation/v1.9.10-pre-lock.md`** — per-stratum coverage
+- **`validation/v1.9.10-pre-lock.md`** - per-stratum coverage
   table, behaviour interpretation per stratum (PaaS fires multi-
   cloud most often at 70% because PaaS providers + Cloudflare are
   legitimately multi-vendor; SSE never fires at 0% because the SSE
   provider is SaaS, not cloud), and honest framing about
   synthetic-corpus bias.
-- **`validation/v1.9.10-bayesian-revalidation.md`** — audit of the
+- **`validation/v1.9.10-bayesian-revalidation.md`** - audit of the
   network's evidence bindings (5 signals + upstream node
   posteriors), cross-check against v1.9.9 wordlist additions
   (none of the new wordlist tiers feed any binding), and empirical
   re-run of the v1.9.5 stability test suite (20/20 pass on v1.9.9
   codebase).
-- **`validation/v1.9.10-mutation-status.md`** — documents the
+- **`validation/v1.9.10-mutation-status.md`** - documents the
   cosmic-ray sweep slip from v1.9.10 to v2.0 schema lock with
   rationale (the v1.9.9 catalog-driven Hypothesis tests already
   caught a real bug, which is stronger evidence than a clean
@@ -332,9 +440,9 @@ This is the v1.9.10 step of the v1.9.4 to v2.0 linear sequence in
   combined 79-fixture results.
 - **`validation/synthetic_corpus/aggregate.json`** regenerated
   with `per_stratum` map.
-- **`validation/invariant_audit.md`** — item 2 (cosmic-ray)
+- **`validation/invariant_audit.md`** - item 2 (cosmic-ray)
   milestone updated from v1.9.10 to v2.0 lock.
-- **`docs/roadmap.md`** — v1.9.10 section flipped from
+- **`docs/roadmap.md`** - v1.9.10 section flipped from
   forward-looking to shipped; current-release line updated;
   cumulative pre-v2.0 work list extended.
 - **Removed `cosmic-ray-v199.toml` from repo root.** Committed
@@ -520,10 +628,10 @@ self-contained.
 - **AWS rollup family expanded.** Added `aws-nlb`, `aws-api-gateway`,
   `aws-app-runner`, `aws-global-accelerator` to the AWS family so the
   rollup catches them. Added `cloudflare-pages` to the Cloudflare
-  family. Removed `aws-waf` (Security-categorized, not Cloud — the
+  family. Removed `aws-waf` (Security-categorized, not Cloud - the
   coverage-gap test caught this at introduction).
 - **Standalone vendor coverage expanded** to include Heroku, VMware
-  Cloud, Cloud.gov, Edgio, Lumen, F5 Distributed Cloud — each
+  Cloud, Cloud.gov, Edgio, Lumen, F5 Distributed Cloud - each
   represents a cloud vendor an operator would name alongside AWS or
   Azure when describing a footprint at the rollup level.
 - **`recon_tool/sources/dns.py`**'s `_COMMON_SUBDOMAIN_PREFIXES` grew
@@ -542,7 +650,7 @@ self-contained.
   ``PYTHONSAFEPATH=1``. On Python 3.10 the env var is a no-op, so a
   malicious workspace containing ``recon_tool/server.py`` could
   shadow the installed package and execute attacker code at module
-  import time — before the runtime guard in ``server.py`` could
+  import time - before the runtime guard in ``server.py`` could
   fire. The v1.9.3.4 mitigation closed this for ``mcp_doctor``
   (which sets a safe tempdir cwd) but left the persisted
   installer block reliant on PYTHONSAFEPATH on 3.10.
@@ -629,41 +737,41 @@ self-contained.
   remediation plan for each "what we honestly do not test" item.
   Test files:
   1. Fixture behaviour on the ceiling trigger
-     (`test_formatter_ceiling.py` — 7 tests).
+     (`test_formatter_ceiling.py` - 7 tests).
   2. Fixture behaviour on the multi-cloud rollup, including
-     canonicalization (`test_multi_cloud_rollup.py` — 16 tests).
+     canonicalization (`test_multi_cloud_rollup.py` - 16 tests).
   3. Wordlist extensions in both the active probe and the CT priority
-     tuple (`test_subdomain_enumeration_breadth.py` — 10 tests).
+     tuple (`test_subdomain_enumeration_breadth.py` - 10 tests).
   4. Coverage-gap enforcement on the rollup map versus
      `_CATEGORY_BY_SLUG`, with explicit exclusion-set discipline
-     (`test_cloud_vendor_coverage.py` — 4 tests). Caught one real
+     (`test_cloud_vendor_coverage.py` - 4 tests). Caught one real
      bug at introduction: `aws-waf` was wrongly in the rollup map.
   5. Off-by-one boundaries on the ceiling trigger's three numeric
-     thresholds (`test_formatter_ceiling_boundary.py` — 8 tests).
+     thresholds (`test_formatter_ceiling_boundary.py` - 8 tests).
   6. Hypothesis property invariants on `count_cloud_vendors`
-     (`test_count_cloud_vendors_properties.py` — 5 tests).
+     (`test_count_cloud_vendors_properties.py` - 5 tests).
   7. End-to-end render snapshots across two reference TenantInfo
-     fixtures (`test_panel_render_snapshots.py` — 12 tests).
+     fixtures (`test_panel_render_snapshots.py` - 12 tests).
   8. Render-fuzz: arbitrary TenantInfo through
      `render_tenant_panel` must not raise
-     (`test_render_fuzz.py` — 3 tests, 500 Hypothesis examples).
+     (`test_render_fuzz.py` - 3 tests, 500 Hypothesis examples).
   9. v1.9.2 agentic-UX fixture compatibility under the v1.9.9
-     panel (`test_agentic_ux_compatibility.py` — 7 tests).
+     panel (`test_agentic_ux_compatibility.py` - 7 tests).
   10. JSON-absence contract: v1.9.9 surfaces are panel-only
-      (`test_panel_only_surfaces_json_absence.py` — 6 tests).
+      (`test_panel_only_surfaces_json_absence.py` - 6 tests).
   11. Rendered-output sanity: no vendor duplication, no orphan
       punctuation, no overclaim words, bounded line length
-      (`test_panel_output_sanity.py` — 7 tests).
+      (`test_panel_output_sanity.py` - 7 tests).
   12. Wordlist hygiene: deduplication, lowercase, no whitespace,
       parity between active probe and CT priority tuples
-      (`test_wordlist_sanity.py` — 8 tests).
+      (`test_wordlist_sanity.py` - 8 tests).
   13. Corpus-aggregator script behaviour, mirroring the renderer's
       trigger logic on serialized TenantInfo dicts
-      (`test_corpus_aggregator.py` — 11 tests).
+      (`test_corpus_aggregator.py` - 11 tests).
   14. **Targeted mutation resistance** on the v1.9.9 helpers. Five
       named mutations (None-guard drop, unknown-slug leak, double
       count, comparator flip, threshold flip) confirmed caught by
-      the existing test suite (`test_mutation_resistance.py` — 9
+      the existing test suite (`test_mutation_resistance.py` - 9
       tests). Honest framing: this is a hand-rolled pilot, not a
       full ``mutmut`` sweep. The bar is "the most likely mutations
       to slip past careful review are caught"; broader coverage
@@ -671,44 +779,44 @@ self-contained.
   15. **CLI integration smoke** for the Typer entry point.
       ``--help``, ``--version``, every subcommand's help, the
       installed-entry-point shape via subprocess
-      (`test_cli_integration_smoke.py` — 15 tests).
+      (`test_cli_integration_smoke.py` - 15 tests).
   16. **Render determinism** in-process and across processes with
       distinct ``PYTHONHASHSEED`` values. 30 in-process renders
       byte-identical; subprocess renders with three distinct seeds
-      identical to each other (`test_render_determinism.py` —
+      identical to each other (`test_render_determinism.py` -
       5 tests).
   17. **Adversarial-input robustness**: unicode display names
       (CJK, RTL, accented, emoji), control characters and ANSI
       escapes in slugs and subdomains, 1000-char display names,
       200-slug and 200-attribution inputs, punycode IDN subdomains
-      (`test_adversarial_render.py` — 13 tests). Threat model:
+      (`test_adversarial_render.py` - 13 tests). Threat model:
       data-quality robustness, not security boundary enforcement.
   18. **Cross-version cache compatibility**: synthesized v1.9.8-
       shape cache loads through v1.9.9 reader; new v1.9.9 surfaces
       derive from existing cache fields without re-collection;
       ``_CACHE_VERSION`` constant pinning prevents silent schema
-      bumps (`test_cache_cross_version_compatibility.py` — 7 tests).
+      bumps (`test_cache_cross_version_compatibility.py` - 7 tests).
   19. **Render-time performance bounds**: typical (10 slugs), large
       (100), and stress (1000) inputs render under generous time
       budgets; ratio of large-input time to small-input time is
-      sub-quadratic (`test_render_performance.py` — 8 tests; 1
+      sub-quadratic (`test_render_performance.py` - 8 tests; 1
       skip on machines too fast for a stable ratio).
   20. **Expanded mutation library**: 6 named mutations beyond the
       original 3 (stream swap, empty-string-vs-None contract,
       case-sensitivity invariant). All caught by the existing test
-      suite (`test_mutation_resistance.py` — 15 tests total).
+      suite (`test_mutation_resistance.py` - 15 tests total).
   21. **Three-way trigger differential agreement**: renderer +
       aggregator + regex-parser must agree on every fixture
-      (`test_trigger_differential_agreement.py` — 6 tests).
+      (`test_trigger_differential_agreement.py` - 6 tests).
       Breaks the two-implementation circularity by adding a third
       independent code path.
   22. **Catalog-driven Hypothesis property tests**: inputs drawn
       from the live fingerprint catalog rather than hand-curated
-      fixtures (`test_catalog_driven_corpus.py` — 5 tests).
+      fixtures (`test_catalog_driven_corpus.py` - 5 tests).
       Caught the `Data & Analytics` KeyError bug at first run.
   23. **Suite-wide humble-tone enforcement**: catalog descriptions
       and formatter top-level constants must avoid overclaim words
-      (`test_humble_tone_global.py` — 4 tests). Caught the okta
+      (`test_humble_tone_global.py` - 4 tests). Caught the okta
       "strong" violation at first run.
 - **Synthetic 19-fixture corpus** at
   `validation/synthetic_corpus/fixtures/` (M365+Okta, GWS+AWS,
@@ -858,7 +966,7 @@ This is the v1.9.8 step of the v1.9.4 to v2.0 linear sequence in
   from `AsyncIterator` to `AsyncGenerator` per the typeshed change;
   no runtime behavior difference.
 - **`tests/test_mcp_path_isolation.py`** subprocess.run call now
-  carries the `# noqa: S603 — argv list, no shell.` annotation
+  carries the `# noqa: S603 - argv list, no shell.` annotation
   matching the pattern in `tests/test_metadata_coverage.py` and
   `scripts/release.py`.
 
@@ -874,8 +982,8 @@ In scope:
 
 Out of scope (stays out by design):
 - Engine changes (`signals.py`, `merger.py`, `absence.py`,
-  `fusion.py`) — v1.9.8 is data + tooling only.
-- New fingerprints — v1.9.8 does not add or remove detections.
+  `fusion.py`) - v1.9.8 is data + tooling only.
+- New fingerprints - v1.9.8 does not add or remove detections.
 
 ### Quality gate
 
@@ -1046,14 +1154,14 @@ customer identities.
 
 ## [1.9.6] - 2026-05-13
 
-**v1.9.6 bridge milestone — CPT-change discipline (concept, not
+**v1.9.6 bridge milestone - CPT-change discipline (concept, not
 parameter).** Ships the discipline that distinguishes "the corpus
 disagrees, so the number must be wrong" (corpus-fitting, prohibited)
 from "the corpus disagrees, so the topology must be asking the wrong
 question" (concept-driven, the right cycle). Bundles the first
 canonical application: the v1.9.5 `email_security_policy_enforcing`
 "not yet" disposition closes by removing `dkim_present` as an
-evidence binding — DKIM publication is a deliverability hygiene
+evidence binding - DKIM publication is a deliverability hygiene
 signal, not a policy-enforcement signal.
 
 This is the v1.9.6 step of the v1.9.4 → v2.0 linear sequence in
@@ -1070,7 +1178,7 @@ audit-resolution document closing four external-audit findings.
 **stable**. Binary criterion (b1) goes from 119/129 to 119/119;
 criterion (b2) eligible set grows by 10 as the dkim-only domains
 correctly move to det-silent + sparse. Total stability verdict count:
-**8 stable, 1 not yet** (`okta_idp`, unchanged — corpus-limited).
+**8 stable, 1 not yet** (`okta_idp`, unchanged - corpus-limited).
 
 ### Added
 
@@ -1080,19 +1188,19 @@ correctly move to det-silent + sparse. Total stability verdict count:
   (4 reviewer rejection examples), decision tree, and the concept-
   comment requirement. Stays terse; the rubric makes future
   contributors pause before number-driven CPT changes.
-- **`.github/pull_request_template.md`** — new root-level default PR
+- **`.github/pull_request_template.md`** - new root-level default PR
   template (the existing `PULL_REQUEST_TEMPLATE/fingerprint.md` is
   preserved for fingerprint-only PRs via the `?template=` URL
   parameter). Carries the CPT-change-discipline non-blocking
   checkbox plus the fingerprint, no-real-company-data, and
   no-Claude-trailer reviewer prompts. The checkbox is the
-  conversation starter, not a CI gate — reviewer judgement is the
+  conversation starter, not a CI gate - reviewer judgement is the
   enforcement.
-- **`validation/v1.9.6-stability-update.md`** — short delta report
+- **`validation/v1.9.6-stability-update.md`** - short delta report
   against `v1.9.5-stability.md`, showing the per-metric movement on
   `email_security_policy_enforcing` and confirming all other nodes'
   verdicts unchanged. Includes "what this does not validate" notes.
-- **`docs/security-audit-resolutions.md`** — closure record for
+- **`docs/security-audit-resolutions.md`** - closure record for
   external audit findings. Keyed by *topic* rather than vendor-
   specific ID so the record is portable across audit tools. Four
   initial entries closing (HIGH) MCP doctor/install shadow-load via
@@ -1103,7 +1211,7 @@ correctly move to det-silent + sparse. Total stability verdict count:
   file:line receipt against current code. SECURITY.md gets a
   forward pointer.
 
-### Changed — engine
+### Changed - engine
 
 - **`recon_tool/data/bayesian_network.yaml`:
   `email_security_policy_enforcing` evidence list shrinks from 5
@@ -1118,16 +1226,16 @@ correctly move to det-silent + sparse. Total stability verdict count:
   > absent case from 0.30 to 0.20, lifting the dkim-only posterior
   > to 0.59. That would have improved the criterion number while
   > making the node a worse predictor of what its name says. The
-  > right answer was removing the binding — the node's claim is
+  > right answer was removing the binding - the node's claim is
   > enforcement, and DKIM doesn't speak to enforcement."
 
   Node description also tightened: "Observable email-authentication
   policy is enforcing (DMARC reject/quarantine + strict SPF +
-  optional MTA-STS enforce)." — removed "+ DKIM" since DKIM is no
+  optional MTA-STS enforce)." - removed "+ DKIM" since DKIM is no
   longer evidence.
 
 - **`tests/test_node_stability_criteria.py`:
-  `email_security_policy_enforcing` binding list mirrored** — the
+  `email_security_policy_enforcing` binding list mirrored** - the
   parametrized test's directory must stay in sync with the YAML so
   the directory-completeness sanity check passes. Inline comment in
   the test file cross-references the YAML concept comment.
@@ -1138,12 +1246,12 @@ correctly move to det-silent + sparse. Total stability verdict count:
   criterion number.** The 10 dkim-only domains in the v1.9.5
   corpus genuinely don't have an enforcing posture (DKIM alone,
   no DMARC, no MTA-STS, no strict SPF). The v1.9.5 layer reported
-  them with posterior ≈ 0.486 and non-sparse — confidently
+  them with posterior ≈ 0.486 and non-sparse - confidently
   uncertain, in a way that hurts the (b1) criterion. The v1.9.6
-  layer reports them sparse=true with no firings — explicitly
+  layer reports them sparse=true with no firings - explicitly
   hedged. Both criterion (b1) and the layer's truthfulness
   improve simultaneously.
-- **Diagnostic ECE rises slightly (0.128 → 0.154) — this is a
+- **Diagnostic ECE rises slightly (0.128 → 0.154) - this is a
   numerator artifact, not a regression.** Removing 10
   well-classified non-sparse observations from a small eligible
   set raises per-bin variance. Brier improves (0.0346 → 0.0331).
@@ -1166,23 +1274,23 @@ correctly move to det-silent + sparse. Total stability verdict count:
   v1.9.6 stability comparison is fully isolated from upstream DNS
   drift.
 - `docs/security-audit-resolutions.md` uses generic placeholder
-  hostnames (`internal.example`, `attacker.example`) — no real
+  hostnames (`internal.example`, `attacker.example`) - no real
   internal infrastructure of any organization, consistent with the
   project's no-real-company-data policy.
 
 ### Quality bar verification
 
-- [x] **Worked example in CONTRIBUTING.md** — v1.9.3 surgery is the
+- [x] **Worked example in CONTRIBUTING.md** - v1.9.3 surgery is the
   historical case; v1.9.6 surgery on `policy_enforcing` is the
   live case shipping in this release.
-- [x] **PR-template addition** — non-blocking CPT-change-discipline
+- [x] **PR-template addition** - non-blocking CPT-change-discipline
   checkbox added to a new root-level
   `.github/pull_request_template.md`.
-- [x] **Anti-pattern catalog** — four worked reviewer rejections in
+- [x] **Anti-pattern catalog** - four worked reviewer rejections in
   `CONTRIBUTING.md` (corpus-rate tuning without concept comment,
   ECE-driven likelihood adjustment, priors-override
   miscalibration patch, automated CPT fitting).
-- [x] **No automated CPT-fitting tooling** — confirmed by grep for
+- [x] **No automated CPT-fitting tooling** - confirmed by grep for
   `def (learn_cpt|fit_cpt|auto_tune|optimize_cpt|empirical_bayes|
   fit_likelihood|tune_likelihood)` across the repo (zero matches)
   and for write-paths against `bayesian_network.yaml` (zero
@@ -1191,7 +1299,7 @@ correctly move to det-silent + sparse. Total stability verdict count:
 ### Tests
 
 - Total: 2314 passed, 1 skipped, 4 deselected (unchanged test count
-  — the v1.9.6 fix is a data-file change; the criterion-(a) test's
+  - the v1.9.6 fix is a data-file change; the criterion-(a) test's
   binding directory updates without adding new tests).
 - Coverage: 83.43% (≥ 80% gate, unchanged).
 - ruff + pyright clean on `recon_tool/` + `tests/` + `validation/`.
@@ -1201,7 +1309,7 @@ correctly move to det-silent + sparse. Total stability verdict count:
 ### Roadmap
 
 - v1.9.6 bridge milestone **closed**.
-- Next in sequence: v1.9.7 (metadata-coverage gate flip — replace
+- Next in sequence: v1.9.7 (metadata-coverage gate flip - replace
   the percentage threshold with a binary "every detection in
   identity/security/infrastructure has a non-empty description"
   presence check; flip from advisory to enforcing once backfill
@@ -1209,7 +1317,7 @@ correctly move to det-silent + sparse. Total stability verdict count:
 
 ## [1.9.5] - 2026-05-13
 
-**v1.9.5 bridge milestone — per-node stability dispositions for the
+**v1.9.5 bridge milestone - per-node stability dispositions for the
 v1.9 Bayesian layer.** Decides, does not ship, per-node stability
 criteria for the 9-node v1.9.3+ topology. The atomic EXPERIMENTAL
 label that covered the whole `--fusion` layer through v1.9.4 was
@@ -1223,7 +1331,7 @@ immediately qualify as `stable`.
 
 This is the v1.9.5 step of the v1.9.4 → v2.0 linear sequence in
 `docs/roadmap.md`. The deliverable is the verdict report, the
-parametrized regression test, and the disposition decisions — no
+parametrized regression test, and the disposition decisions - no
 engine changes, no schema changes, one new validation script and
 one new test file.
 
@@ -1232,7 +1340,7 @@ one new test file.
 | Verdict | Count | Nodes |
 |---|---|---|
 | **stable** | 7 | `m365_tenant`, `google_workspace_tenant`, `federated_identity`, `email_gateway_present`, `email_security_modern_provider`, `cdn_fronting`, `aws_hosting` |
-| **not yet** | 2 | `okta_idp` (criterion (c) — only 7 firings on the 141-domain combined corpus, threshold 10), `email_security_policy_enforcing` (criterion (b1) — 10 of 129 det-positive-HIGH non-sparse observations have posterior ≤ 0.5, all driven by `signal:dkim_present` alone) |
+| **not yet** | 2 | `okta_idp` (criterion (c) - only 7 firings on the 141-domain combined corpus, threshold 10), `email_security_policy_enforcing` (criterion (b1) - 10 of 129 det-positive-HIGH non-sparse observations have posterior ≤ 0.5, all driven by `signal:dkim_present` alone) |
 
 Both `not yet` nodes carry explicit dispositions in
 `validation/v1.9.5-stability.md`. Neither disposition is *Split*
@@ -1240,7 +1348,7 @@ or *Remove*; both stay in the network as v2.0 ships.
 
 ### Added
 
-- **`validation/v1.9.5-stability.md`** — full per-node verdict
+- **`validation/v1.9.5-stability.md`** - full per-node verdict
   report: methodology, per-node table joining the (a) test result
   with the (b1)(b2)(c) analyzer outputs, prose interpretation for
   each `stable` cluster, and explicit dispositions for the two
@@ -1250,7 +1358,7 @@ or *Remove*; both stay in the network as v2.0 ships.
   the prior, widening the sparse threshold, or tightening the
   weak-likelihood signals). Anonymized aggregates only; no
   per-domain detail.
-- **`validation/compute_node_stability.py`** — analyzer for
+- **`validation/compute_node_stability.py`** - analyzer for
   criterion (b) and (c). Reads the v1.9.4 hardened + soft NDJSON,
   computes per-node firing count, (b1) ratio (det-positive-HIGH
   non-sparse → posterior > 0.5), (b2) ratio (det-silent → sparse),
@@ -1259,7 +1367,7 @@ or *Remove*; both stay in the network as v2.0 ships.
   bindings are binary. Pure-propagation nodes have criterion (c)
   marked `n/a`. Output is publicly-reproducible from the corpus
   NDJSON.
-- **`tests/test_node_stability_criteria.py`** — parametrized
+- **`tests/test_node_stability_criteria.py`** - parametrized
   regression test for criterion (a) (evidence-response
   correctness). 20 assertions covering all 9 nodes:
   bound-evidence sensitivity (any evidence binding raises the
@@ -1267,7 +1375,7 @@ or *Remove*; both stay in the network as v2.0 ships.
   inertia (a d-separated binding leaves the posterior at baseline
   within 1e-9). Pure-propagation nodes
   (`email_security_modern_provider`) get the bound-evidence test
-  via each parent's evidence — the CPT must propagate. Plus two
+  via each parent's evidence - the CPT must propagate. Plus two
   sanity tests pinning root-baseline = prior and directory
   completeness against the shipped network. The test failing is
   a regression signal that future patches must satisfy before
@@ -1279,7 +1387,7 @@ or *Remove*; both stay in the network as v2.0 ships.
   one pattern, 10 times.** Every one of the 10 failing
   observations has `evidence_used = ('signal:dkim_present',)`
   and nothing else. With prior 0.25 and likelihood [0.85, 0.30],
-  the resulting posterior is ≈ 0.486 — just below the 0.5
+  the resulting posterior is ≈ 0.486 - just below the 0.5
   threshold. The n_eff threshold for sparse is satisfied by the
   single binding, so the layer doesn't hedge either. This is the
   exact calibration gap v1.9.6's CPT-change discipline exists to
@@ -1296,7 +1404,7 @@ or *Remove*; both stay in the network as v2.0 ships.
   change the engine.
 - **Pure-propagation node criterion-(c) handling.**
   `email_security_modern_provider` has no direct evidence
-  bindings by design — provider presence is captured entirely
+  bindings by design - provider presence is captured entirely
   through CPT propagation from `m365_tenant`,
   `google_workspace_tenant`, and `email_gateway_present`. The
   analyzer marks (c) `n/a` for this node and gates stability on
@@ -1320,10 +1428,10 @@ policy:
 - Corpus files (`v1.9.4-hardened.txt`, `v1.9.0-soft.txt`) and
   NDJSON results are gitignored.
 - `validation/v1.9.5-stability.md` carries only per-node
-  aggregates — no per-organization detail.
+  aggregates - no per-organization detail.
 - The analyzer (`validation/compute_node_stability.py`)
   anonymizes by design; no domain names print to stdout.
-- The criterion-(a) test uses no corpus data — it operates on
+- The criterion-(a) test uses no corpus data - it operates on
   synthetic inputs against the shipped network.
 
 ### Quality bar verification
@@ -1337,7 +1445,7 @@ policy:
 - [x] Independent-firing threshold (c) explicit: N ≥ 10 from
   roadmap §v1.9.5; per-node firing count from the v1.9.4 corpus,
   not a self-report.
-- [x] Criterion-(a) test in code as parametrized pytest test —
+- [x] Criterion-(a) test in code as parametrized pytest test -
   20 assertions covering both directions (bound-evidence raises,
   unrelated-evidence inert) across all 9 nodes plus 2 sanity
   tests.
@@ -1361,7 +1469,7 @@ policy:
 ### Roadmap
 
 - v1.9.5 bridge milestone **closed**.
-- Next in sequence: v1.9.6 (CPT-change discipline) — the
+- Next in sequence: v1.9.6 (CPT-change discipline) - the
   `email_security_policy_enforcing` disposition routes directly
   into v1.9.6's milestone scope: pick one of the three candidate
   changes (raise prior / widen sparse threshold / tighten weak
@@ -1371,11 +1479,11 @@ policy:
 
 ## [1.9.4] - 2026-05-12
 
-**v1.9.4 bridge milestone — hardened-adversarial behavior validation.**
+**v1.9.4 bridge milestone - hardened-adversarial behavior validation.**
 Validates the **design property** behind the v1.9 asymmetric-
 likelihood Bayesian layer (`docs/correlation.md` §4.8.3): on
 minimal-DNS / wildcard-cert / heavily-fronted apexes, the layer
-must hedge — flagging `sparse=true`, reporting wide credible
+must hedge - flagging `sparse=true`, reporting wide credible
 intervals, and refusing to assert high-confidence posteriors on
 evidence-binding-silent nodes. The corpus stratifies across five
 hardening postures (heavy edge-proxied, privacy-focused, major
@@ -1383,7 +1491,7 @@ financial, defense / national-security, major government).
 
 This is the v1.9.4 step of the v1.9.4 → v2.0 linear sequence in
 `docs/roadmap.md`. The deliverable is the validation report and
-the failure-mode catalog in `correlation.md` — no engine or
+the failure-mode catalog in `correlation.md` - no engine or
 schema changes.
 
 ### Headline result
@@ -1401,18 +1509,18 @@ hedges on hardened targets without over-claiming.
 
 ### Added
 
-- **`validation/v1.9.4-calibration.md`** — full calibration
+- **`validation/v1.9.4-calibration.md`** - full calibration
   report: per-node sparse-rate trend (v1.9.0 → v1.9.3+ →
   v1.9.4-hardened), high-confidence survival ratios (soft →
   hardened), per-category breakdown across five hardening postures,
   soft-corpus regression tripwire, defensive value interpretation,
   reproducibility instructions. Anonymized aggregates only; no
   per-domain detail.
-- **`validation/analyze_v19_4_hardened.py`** — analyzer for the
+- **`validation/analyze_v19_4_hardened.py`** - analyzer for the
   trend, survival-ratio, and per-category aggregates from the
   hardened + soft-current + soft-original NDJSON runs. Output is
   publicly-reproducible (no proprietary data).
-- **`docs/correlation.md` §4.8.10 — Failure-mode catalog:
+- **`docs/correlation.md` §4.8.10 - Failure-mode catalog:
   hardening pattern fingerprints.** Documents the distinctive
   sparse-rate fingerprint each hardening pattern produces at the
   Bayesian layer, with per-pattern defensive read. Patterns
@@ -1424,10 +1532,10 @@ hedges on hardened targets without over-claiming.
   Agent guidance for synthesizing a unified report across an
   operator-supplied set of related apexes (parent + subsidiaries,
   M&A brand portfolio, holding-company structure). The operator
-  owns the relationship — recon never infers ownership. Five
+  owns the relationship - recon never infers ownership. Five
   rollup axes: identity stack consistency, email gateway
   consistency, cloud footprint overlap, posture divergence
-  (the highest-signal output — outlier siblings are the
+  (the highest-signal output - outlier siblings are the
   actionable finding), and per-brand notable findings.
   Lightweight agent-side precursor to the heavier
   `recon batch --self-audit` Python rollup in
@@ -1450,8 +1558,8 @@ hedges on hardened targets without over-claiming.
   policy is a public TXT record that defenders publish regardless
   of other hardening. Fires routinely; no posture hides this.
 - **Two hardening categories (financial, government) produce an
-  identical signature** from the Bayesian layer's perspective —
-  "M365 + CDN-fronted + strong DMARC, everything else sparse" —
+  identical signature** from the Bayesian layer's perspective -
+  "M365 + CDN-fronted + strong DMARC, everything else sparse" -
   even though their internal stacks differ. The layer cannot
   distinguish posture from posture when both apply the same
   public-DNS hygiene.
@@ -1466,7 +1574,7 @@ noise). The 17-posterior reduction in high-confidence count is
 fully accounted for by the v1.9.3 `email_security_strong` split:
 the original node (78 high-conf at 52.6% deterministic agreement,
 the calibration weak spot v1.9.3 fixed) became `modern_provider`
-(0 high-conf, always sparse — by design) + `policy_enforcing`
+(0 high-conf, always sparse - by design) + `policy_enforcing`
 (62 high-conf at 100% agreement). No node had its calibration
 *degraded* by the topology surgery.
 
@@ -1520,7 +1628,7 @@ Per the project's no-real-company-data policy:
   `tests/test_exposure.py`.** The Hypothesis strategy for
   `EvidenceRecord.raw_value` previously used an over-permissive
   alphabet (Unicode `L|N|P` categories), allowing draws like the
-  literal English word ``"should"`` — which is in
+  literal English word ``"should"`` - which is in
   `EXPOSURE_DISCOURAGED_COPY_TERMS`. The Property-8 neutral-copy
   test then walked every string field of the exposure assessment,
   including the *echoed* evidence value, and the natural-English
@@ -1530,7 +1638,7 @@ Per the project's no-real-company-data policy:
   any draw containing a discouraged-copy term. The fix narrows the
   strategy toward realistic DNS record content; genuine coverage of
   the discouraged-term gate is unaffected because the test's true
-  surface — recon-authored prose — was never the source of the
+  surface - recon-authored prose - was never the source of the
   failure.
 
 ### Security fixes (bundled with the v1.9.4 validation milestone)
@@ -1554,7 +1662,7 @@ was supposed to prevent.
 
 **Fix:** removed the inline A/AAAA call from
 `_resolve_cname_chain`. The walker now uses **suffix-only**
-defense — every hop's name is validated against the private-suffix
+defense - every hop's name is validated against the private-suffix
 denylist, but no A/AAAA queries are issued during the walk. CNAME
 queries do not cause recursive resolvers to chase further records,
 making them the safe primitive for attacker-influenced names.
@@ -1570,7 +1678,7 @@ v1.9.4 errs on the side of zero internal-DNS leakage.
 
 **Tests:** `tests/test_cname_chain_validation.py::TestResolveCnameChainBlocksPrivateTargets::test_walker_does_not_resolve_a_aaaa_during_walk`
 pins the v1.9.4 security invariant by tracking every DNS query
-the walker issues and asserting only `CNAME` queries fire — never
+the walker issues and asserting only `CNAME` queries fire - never
 `A` or `AAAA`. Future regression that re-introduces inline A/AAAA
 fails this test before it can reach a release tag. The
 `_hop_resolves_publicly` helper is preserved for callers who already
@@ -1595,7 +1703,7 @@ pins the safe pattern (3 tests covering the conf, the README, and
 absence-of-unsafe-pattern in executable SPL). Future regression
 that reverts to the unsafe form fails this test.
 
-#### MCP doctor/install path isolation (audit finding, HIGH — already fixed)
+#### MCP doctor/install path isolation (audit finding, HIGH - already fixed)
 
 The audit also flagged the v1.9.2.1 MCP doctor/install code path
 that called `python -m recon_tool.server` with inherited cwd/env,
@@ -1623,7 +1731,7 @@ clean tree rather than carrying the drift forward into v1.9.5.
   was parsed as a filename, producing
   `E902 The system cannot find the file specified` on every
   run. Reduced args to `[--fix]`.
-- **64 files reformatted by `ruff-format`** — line-ending
+- **64 files reformatted by `ruff-format`** - line-ending
   normalization (Windows working-copy LF/CRLF drift) plus minor
   whitespace cleanups. No behavioral changes; the diffs are
   whitespace-only.
@@ -1636,8 +1744,8 @@ clean tree rather than carrying the drift forward into v1.9.5.
   `test_server_resources.py`). `isinstance(x, (A, B))` is rewritten
   to `isinstance(x, A | B)` per `UP038` (semantically equivalent on
   Python 3.10+). The single `S603` site in
-  `test_mcp_path_isolation.py` — a deliberate subprocess invocation
-  that *is* the test's subject — gets a targeted
+  `test_mcp_path_isolation.py` - a deliberate subprocess invocation
+  that *is* the test's subject - gets a targeted
   `# noqa: S603` with a justification comment rather than a code
   change, because rewriting away the subprocess call would defeat
   the test.
@@ -1650,7 +1758,7 @@ up tree.
 ### Roadmap
 
 - v1.9.4 bridge milestone **closed**.
-- Next in sequence: v1.9.5 (per-node stability dispositions —
+- Next in sequence: v1.9.5 (per-node stability dispositions -
   takes the per-node firing counts from this run + the soft-corpus
   re-run as raw inputs).
 
@@ -1680,24 +1788,24 @@ counts."
   hint pointing at `recon discover <domain>` for triage. Renders only
   when `unclassified_cname_chains` is non-empty; absent otherwise.
   Coexists with the existing `--full`-mode unclassified-chain
-  surface — the new section is gated by `not show_domains` so the
+  surface - the new section is gated by `not show_domains` so the
   two paths stay mutually exclusive.
 - **Per-provider counts in the Subdomain line.** Previously listed
   surface-attributed services as a flat name list (`AWS CloudFront,
   Fastly, Stripe`); now shows counts (`Stripe (18), Fastly (12), AWS
   CloudFront (10)`) sorted by count descending. Dropped the apex-
   evidence filter that hid the multi-cloud picture on tenants whose
-  apex and subdomains share a provider — the Subdomain line answers
+  apex and subdomains share a provider - the Subdomain line answers
   a different question from the Cloud line (provider distribution
   across the surface vs apex provider), so the duplication is
   intentional surfacing, not noise.
-- **`tests/test_unclassified_surface_panel.py`** — 11 tests pinning
+- **`tests/test_unclassified_surface_panel.py`** - 11 tests pinning
   the new section: singular/plural noun handling, discovery-hint
   presence, example count cap, terminus is chain's last hop, absence
   when field empty, `--domains` mode mutual exclusion, isolation from
   related-domains rendering.
 
-### Changed — documentation
+### Changed - documentation
 
 - **`docs/roadmap.md` substantially compressed.** Shipped milestones
   (v1.7.0, v1.8.0, v1.9.0, v1.9.2, v1.9.3) collapsed from full prose
@@ -1750,12 +1858,12 @@ detection but missed several known GCP-customer service categories.
 Diagnosis: the historical corpus-observed catalog-growth path
 (scan a private corpus, fingerprint unclassified CNAME patterns)
 has a built-in bias toward the segments our corpus already
-represents — heavy GCP, Azure non-O365, Oracle Cloud, IBM Cloud,
+represents - heavy GCP, Azure non-O365, Oracle Cloud, IBM Cloud,
 Alibaba, the SaaS-PaaS galaxy, and SSE/SASE vendors get
 systematically under-classified even when the chain walker
 follows CNAMEs to the right terminus.
 
-### Added — vendor-doc-sourced fingerprints in `surface.yaml`
+### Added - vendor-doc-sourced fingerprints in `surface.yaml`
 
 Each entry cites the canonical vendor documentation URL in its
 `reference` field. The methodology (vendor-doc-sourced as a
@@ -1763,60 +1871,60 @@ complement to corpus-observed) is documented in `CONTRIBUTING.md`
 as standing practice for future catalog growth.
 
 **Google Cloud Platform (5 slugs, 6 detections):**
-- `firebase-hosting` — `firebaseapp.com`, `web.app`
-- `gcp-cloud-functions` — `cloudfunctions.net`
-- `firebase-realtime` — `firebaseio.com`
-- `looker-studio` — `lookerstudio.google.com`, `looker.com`
-- `gcp-storage` — `c.storage.googleapis.com`
+- `firebase-hosting` - `firebaseapp.com`, `web.app`
+- `gcp-cloud-functions` - `cloudfunctions.net`
+- `firebase-realtime` - `firebaseio.com`
+- `looker-studio` - `lookerstudio.google.com`, `looker.com`
+- `gcp-storage` - `c.storage.googleapis.com`
 
 **AWS (3 slugs, 3 detections):**
-- `aws-amplify` — `amplifyapp.com`
-- `aws-cognito` — `amazoncognito.com`
-- `aws-waf` — `awswaf.com`
+- `aws-amplify` - `amplifyapp.com`
+- `aws-cognito` - `amazoncognito.com`
+- `aws-waf` - `awswaf.com`
 
 **Azure non-O365 (5 slugs, 6 detections):**
-- `azure-blob` — `blob.core.windows.net`, `web.core.windows.net`
-- `azure-static-web-apps` — `azurestaticapps.net`
-- `azure-container-apps` — `azurecontainerapps.io`
-- `azure-api-management` — `azure-api.net`
+- `azure-blob` - `blob.core.windows.net`, `web.core.windows.net`
+- `azure-static-web-apps` - `azurestaticapps.net`
+- `azure-container-apps` - `azurecontainerapps.io`
+- `azure-api-management` - `azure-api.net`
 - `azure-appservice` extended with `azurewebsites.net`
 
 **Oracle Cloud (2 slugs, 2 detections):**
-- `oracle-cloud` — `oraclecloud.com`
-- `oracle-fusion` — `fa.oraclecloud.com`
+- `oracle-cloud` - `oraclecloud.com`
+- `oracle-fusion` - `fa.oraclecloud.com`
 
 **IBM Cloud (1 slug, 2 detections):**
-- `ibm-cloud` — `appdomain.cloud`, `bluemix.net`
+- `ibm-cloud` - `appdomain.cloud`, `bluemix.net`
 
 **Alibaba Cloud (3 slugs, 4 detections):**
-- `alibaba-api` — `alicloudapi.com`
-- `alibaba-cdn` — `alikunlun.com`, `cdngslb.com`
-- `alibaba-cloud` — `aliyuncs.com`
+- `alibaba-api` - `alicloudapi.com`
+- `alibaba-cdn` - `alikunlun.com`, `cdngslb.com`
+- `alibaba-cloud` - `aliyuncs.com`
 
 **Additional PaaS (3 slugs, 4 detections):**
 - `railway` extended with `up.railway.app`
-- `replit` — `replit.app`, `repl.co`
-- `glitch` — `glitch.me`
+- `replit` - `replit.app`, `repl.co`
+- `glitch` - `glitch.me`
 
 **SSE / SASE / CASB (4 slugs, 6 detections):**
 - `zscaler` extended with `zscaler.net`, `zscalerthree.net`,
   `zscalertwo.net`
 - `netskope` extended with `netskope.com`, `goskope.com`
-- `cato-networks` — `cato-networks.com`
-- `prisma-access` — `prismaaccess.com`
+- `cato-networks` - `cato-networks.com`
+- `prisma-access` - `prismaaccess.com`
 
 **Identity (3 slugs, 3 detections):**
 - `onelogin` extended with `onelogin.com`
-- `jumpcloud` — `jumpcloud.com`
+- `jumpcloud` - `jumpcloud.com`
 - `duo` extended with `duosecurity.com`
 
 ### Changed
 
-- **`recon_tool/formatter.py`** — `_CATEGORY_BY_SLUG` updated with
+- **`recon_tool/formatter.py`** - `_CATEGORY_BY_SLUG` updated with
   the 22 new slugs that didn't already have a category mapping
   from prior fingerprints (Cloud / Security / Identity / Business
   Apps / Data & Analytics buckets).
-- **`CONTRIBUTING.md`** — adds a "Vendor-doc-sourced `cname_target`
+- **`CONTRIBUTING.md`** - adds a "Vendor-doc-sourced `cname_target`
   rules" subsection codifying the methodology: every new rule
   cites a vendor doc URL in `reference`; corpus-observed and
   vendor-doc-sourced are both encouraged paths; rules without a
@@ -1834,7 +1942,7 @@ as standing practice for future catalog growth.
 
 This patch closes the biggest visible cloud-vendor gaps but is not
 exhaustive. Real-world coverage still depends on the operator
-running recon against the right subdomains — a tenant that uses
+running recon against the right subdomains - a tenant that uses
 Firebase Hosting only on `app.example.com` requires that subdomain
 to be in scope of the lookup (CT-log enumeration or known-prefix
 probing) before the new fingerprint can fire. The catalog now
@@ -1851,7 +1959,7 @@ methodology now documented in CONTRIBUTING.md.
 
 ### Tests
 
-- 2278 passed, 1 skipped (same headline as v1.9.3.8 — no new tests
+- 2278 passed, 1 skipped (same headline as v1.9.3.8 - no new tests
   added; the existing slug-uniqueness and metadata-coverage tests
   exercise the additions).
 - Coverage 83.32% (≥ 80% gate).
@@ -1861,7 +1969,7 @@ methodology now documented in CONTRIBUTING.md.
 
 ## [1.9.3.8] - 2026-05-11
 
-**Track B quality work — downstream SIEM consumption examples.**
+**Track B quality work - downstream SIEM consumption examples.**
 Ships the v2.0 pre-condition for "downstream consumption examples
 (at least two SIEMs)" from the v1.9.x quality bar (see
 `docs/roadmap.md`). recon's `--json` shape is the v2.0 schema-lock
@@ -1872,23 +1980,23 @@ mappings against future schema drift via a CI gate.
 
 ### Added
 
-- **`examples/siem/`** — cross-SIEM consumption index, plus two
+- **`examples/siem/`** - cross-SIEM consumption index, plus two
   per-SIEM subdirectories.
-- **`examples/siem/splunk/`** — `README.md` (field-mapping table,
+- **`examples/siem/splunk/`** - `README.md` (field-mapping table,
   severity mapping, three use-case SPL snippets: shadow-IT
   alerting, DMARC drift, federation discovery), `props.conf`
   (sourcetype definition for `recon:lookup`), `savedsearches.conf`
   (three example saved searches matching the use cases), and
   `expected-splunk-event.json` (the worked output the CI gate
   verifies).
-- **`examples/siem/elastic/`** — `README.md` (ECS-aligned field
+- **`examples/siem/elastic/`** - `README.md` (ECS-aligned field
   mapping table, severity mapping, same use-case framing),
   `ingest-pipeline.json` (Elasticsearch ingest pipeline that
   rewrites recon JSON to ECS namespaces), `index-template.json`
   (field-type pinning so Kibana visualizations don't drift on
   first-write surprises), and `expected-elastic-document.json`
   (worked output).
-- **`tests/test_siem_examples.py`** — 33 contract tests pinning
+- **`tests/test_siem_examples.py`** - 33 contract tests pinning
   the worked examples against schema regression. Verifies: the
   shared sample input parses and carries every always-present
   field the SIEM READMEs claim to map; each SIEM's
@@ -1904,7 +2012,7 @@ mappings against future schema drift via a CI gate.
   `slugs`, `email_security_score`, `cloud_instance`,
   `msgraph_host`, `primary_email_provider`. Still fictional
   Northwind Traders; no real-company data. Existing consumers of
-  the sample see additional fields, not renamed ones —
+  the sample see additional fields, not renamed ones -
   schema-additive.
 
 ### Notes for downstream consumers
@@ -1920,7 +2028,7 @@ mappings against future schema drift via a CI gate.
   review. Operators are expected to tune this for their context;
   the mapping is policy, not derivation.
 - The CI gate verifies the worked-example file shapes against the
-  shared input — a future schema rename that breaks SIEM ingestion
+  shared input - a future schema rename that breaks SIEM ingestion
   fails the test before the schema change can reach a release tag.
 
 ### Roadmap
@@ -1955,7 +2063,7 @@ pattern.
 
 ### Changed
 
-- **`tests/test_mcp_path_isolation.py`** — the shadow-workspace
+- **`tests/test_mcp_path_isolation.py`** - the shadow-workspace
   integration test now carries an explicit
   `@pytest.mark.skipif(sys.version_info < (3, 11), ...)` with a
   reason explaining the architectural limit. The skip reason
@@ -1963,7 +2071,7 @@ pattern.
   via the script entry point, not `python -m recon_tool.server`
   from an untrusted cwd). Unit tests in `TestServerRuntimeGuard`
   and source-inspection tests in `TestMcpDoctorSpawnsSafely`
-  continue to run on every Python version — they cover the
+  continue to run on every Python version - they cover the
   runtime guard and the safe-cwd + env-var contract
   independently.
 
@@ -1974,7 +2082,7 @@ pattern.
   `mcp_install` fallback configs, runtime guard in
   `recon_tool/server.py`) are unchanged.
 - On Python 3.10, the safe MCP launch pattern is `recon mcp`
-  (the script entry point — has no `-m` and therefore no
+  (the script entry point - has no `-m` and therefore no
   cwd-prepend risk). `mcp_install`'s `warn_if_fallback` already
   recommends this when `recon` is not on PATH.
 
@@ -1996,8 +2104,8 @@ informational).** Closes the audit finding *"Validation runner
 permits local fixture/persona file exfiltration"* against
 `validation/agentic_ux/run.py`. The finding is informational
 because the affected code is the maintainer-only validation
-harness — not packaged in the wheel, not invoked by CI, not on a
-recon end-user's product path — but the gap was real: a future
+harness - not packaged in the wheel, not invoked by CI, not on a
+recon end-user's product path - but the gap was real: a future
 wrapper or agent calling `python -m validation.agentic_ux.run`
 with unvalidated `--personas` / `--fixtures` arguments could have
 caused arbitrary local `.md` / `.json` files to be read and
@@ -2007,16 +2115,16 @@ This is the fourth and final patch addressing the security audit.
 
 ### Added
 
-- **`validation.agentic_ux.run._validate_name`** — strict
+- **`validation.agentic_ux.run._validate_name`** - strict
   identifier validator (`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`) that
   rejects every selector with a separator, traversal sequence,
   leading dot, leading dash, whitespace, or non-ASCII character.
   Accepts every legitimate in-repo persona/fixture name; raises
   `ValueError` on anything else.
-- **`_SAFE_NAME_RE`** — the compiled regex, exposed as a module
+- **`_SAFE_NAME_RE`** - the compiled regex, exposed as a module
   attribute so a future maintainer adding a new persona/fixture
   can see the format contract without re-deriving it.
-- **`tests/test_validation_harness_path_containment.py`** — 48
+- **`tests/test_validation_harness_path_containment.py`** - 48
   tests covering: 12 legitimate names accepted, 16 unsafe shapes
   rejected (empty, traversal, absolute paths, separators, dots,
   null bytes, over-length), regex anchoring, both loader entry
@@ -2028,7 +2136,7 @@ This is the fourth and final patch addressing the security audit.
 - **`_load_persona`** and **`_load_fixture`** now run the new
   validator on the input name *before* building the file path,
   and confirm the resolved path is still under the intended
-  directory (`is_relative_to`) — defense-in-depth in case a future
+  directory (`is_relative_to`) - defense-in-depth in case a future
   edit loosens the regex.
 
 ### Notes for downstream consumers
@@ -2052,10 +2160,10 @@ This is the fourth and final patch addressing the security audit.
 This patch closes the fourth and final finding from the v1.9.3.x
 security audit:
 
-  1. v1.9.3.3 — Release workflow supply-chain isolation (HIGH).
-  2. v1.9.3.4 — MCP doctor/install path isolation (HIGH).
-  3. v1.9.3.5 — CNAME chain target validation, layer 2 (MEDIUM).
-  4. v1.9.3.6 — Validation harness path containment
+  1. v1.9.3.3 - Release workflow supply-chain isolation (HIGH).
+  2. v1.9.3.4 - MCP doctor/install path isolation (HIGH).
+  3. v1.9.3.5 - CNAME chain target validation, layer 2 (MEDIUM).
+  4. v1.9.3.6 - Validation harness path containment
      (informational, this patch).
 
 Each shipped as its own tag through the v1.9.3.3 hardened release
@@ -2073,22 +2181,22 @@ layer 2 (resolved-address private check).
 The remaining gap: an attacker who controls a public domain returns
 a CNAME to a publicly-named host (passes the suffix denylist) whose
 A record resolves to RFC1918 or other private space via split-horizon
-DNS. The suffix check alone cannot see this — only resolving the
+DNS. The suffix check alone cannot see this - only resolving the
 target's A/AAAA records can.
 
 ### Added
 
-- **`recon_tool/sources/dns._is_private_ip_literal`** — returns True
+- **`recon_tool/sources/dns._is_private_ip_literal`** - returns True
   for RFC1918, loopback, link-local, ULA, reserved, multicast, and
   unspecified IPv4/IPv6 addresses. Defensive on parse failure
   (returns False so the caller falls back to other checks rather
   than dropping legitimate hops on garbage input).
-- **`recon_tool/sources/dns._hop_resolves_publicly`** — resolves a
+- **`recon_tool/sources/dns._hop_resolves_publicly`** - resolves a
   target's A and AAAA records in parallel and returns True iff at
   least one resolved address is in public space. Fail-open on
   unresolved cases (no A/AAAA records) so CNAME-only intermediate
   hops in legitimate chains continue to walk.
-- **`tests/test_cname_chain_validation.py`** — 47 tests covering
+- **`tests/test_cname_chain_validation.py`** - 47 tests covering
   both defense layers plus end-to-end walker behaviour: suffix
   denylist on 17 private/malformed names and 5 public names,
   IP-literal classification across RFC1918/loopback/link-local/ULA
@@ -2102,7 +2210,7 @@ target's A/AAAA records can.
 - **`recon_tool/sources/dns._resolve_cname_chain`** now calls
   ``_hop_resolves_publicly`` after the suffix check passes. A hop
   whose suffix passes but whose A/AAAA records are all in private
-  space is dropped without recording — the walker halts at that
+  space is dropped without recording - the walker halts at that
   point. Adds at most two DNS queries per accepted hop (A + AAAA),
   well inside the existing ``_SURFACE_MAX_HOPS=5`` and
   ``_SURFACE_CONCURRENCY=30`` budgets.
@@ -2112,7 +2220,7 @@ target's A/AAAA records can.
 - Legitimate public CNAME chains continue to walk identically.
 - An operator behind split-horizon DNS will see fewer CNAME hops
   recorded when an attacker-controlled public name resolves to
-  their internal range — this is the intended defensive behaviour;
+  their internal range - this is the intended defensive behaviour;
   the previously-leaking internal name no longer appears in
   evidence output.
 - The new helpers (`_is_private_ip_literal`, `_hop_resolves_publicly`)
@@ -2148,37 +2256,37 @@ The fix is defense-in-depth across three layers:
 
 ### Changed
 
-- **`recon_tool/mcp_doctor.py`** — the subprocess is now spawned
+- **`recon_tool/mcp_doctor.py`** - the subprocess is now spawned
   with `cwd` pointing at an empty `tempfile.TemporaryDirectory` and
   `env["PYTHONSAFEPATH"] = "1"` set. The empty cwd guarantees no
   `recon_tool/` directory is reachable via cwd-prepend on any Python
   version; the env var disables cwd-prepend entirely on Python 3.11+.
   Both safeguards together close the attack on every supported
   Python version, including 3.10 where the env var alone is a no-op.
-- **`recon_tool/mcp_install.py` — `build_recon_block`** now persists
+- **`recon_tool/mcp_install.py` - `build_recon_block`** now persists
   `env: {"PYTHONSAFEPATH": "1"}` in the fallback launch block so
   future MCP-client launches on Python 3.11+ inherit the protection.
-  The preferred form (when `recon` is on PATH) is unchanged — it
+  The preferred form (when `recon` is on PATH) is unchanged - it
   invokes the script entry point, which has no cwd-prepend concern,
   so the env block stays clean.
-- **`recon_tool/mcp_install.py` — `warn_if_fallback`** (new) exposes
+- **`recon_tool/mcp_install.py` - `warn_if_fallback`** (new) exposes
   a warning when the fallback launch form would be persisted.
   Surfaced by `recon mcp install` so operators on Python 3.10 see
   the residual-risk hint and can install `recon` to PATH for the
   safer launch form.
-- **`recon_tool/server.py` — `_detect_cwd_shadow_install`** (new)
+- **`recon_tool/server.py` - `_detect_cwd_shadow_install`** (new)
   runs at server startup before any tool handlers register. It
   resolves `recon_tool.__file__` and refuses to start when the
   package was loaded from a path under the current working
   directory unless cwd contains a legitimate `recon-tool` named
   `pyproject.toml` (the source-checkout case). The runtime guard
-  is the final defense — it catches the attack regardless of how
+  is the final defense - it catches the attack regardless of how
   the server was launched, including any MCP client config that
   pre-dates the v1.9.3.4 mitigations.
 
 ### Added
 
-- **`tests/test_mcp_path_isolation.py`** — 10 tests across the
+- **`tests/test_mcp_path_isolation.py`** - 10 tests across the
   three defense layers: (a) source inspection asserts `mcp_doctor.py`
   sets `PYTHONSAFEPATH=1` and passes a safe `cwd`; (b) unit tests
   prove the install fallback persists the env var and the preferred
@@ -2228,7 +2336,7 @@ of pip-audit) executing during SBOM generation could have modified
 the release artifacts; those modified artifacts would then have been
 published to PyPI under the project's trusted-publisher identity.
 
-The fix is structural — workspace isolation, not just ordering.
+The fix is structural - workspace isolation, not just ordering.
 
 ### Changed
 
@@ -2247,25 +2355,25 @@ The fix is structural — workspace isolation, not just ordering.
     release artifacts because they are sealed in GitHub storage and
     not present on this filesystem.
   - **`sbom` depends on `test`, not on `build`.** This makes the
-    parallel-runner isolation structurally obvious — the two jobs
+    parallel-runner isolation structurally obvious - the two jobs
     run on different workspaces with no shared state. A future
     contributor adding `needs: build` to `sbom` would be regressing
     the threat model; the new contract test catches this.
   - **`github-release`** now `needs: [build, sbom]` so the release
-    cannot ship without an SBOM. `publish-pypi` is unchanged —
+    cannot ship without an SBOM. `publish-pypi` is unchanged -
     still the only job with `id-token: write`, still only downloads
     `dist/` and publishes.
 
 ### Added
 
-- **`tests/test_release_workflow_contract.py`** — 13 contract tests
+- **`tests/test_release_workflow_contract.py`** - 13 contract tests
   that parse `release.yml` and assert the isolation properties hold:
   build job has no `--extra dev`, no `pip-audit`, no SBOM steps;
   no `run:` step between `uv build` and dist upload; sbom job does
   not depend on build; sbom job does not download `dist/`;
   `id-token: write` is restricted to `publish-pypi`; github-release
-  attaches both `dist/` and `sbom/`. The test is structural — it
-  inspects the workflow YAML, not the runtime — so it runs in
+  attaches both `dist/` and `sbom/`. The test is structural - it
+  inspects the workflow YAML, not the runtime - so it runs in
   ~1 second on every pytest invocation and catches regressions
   that would otherwise only surface after a tampered release.
 
@@ -2287,10 +2395,10 @@ The fix is structural — workspace isolation, not just ordering.
 
 ## [1.9.3.2] - 2026-05-10
 
-**Track B quality work — Top-3 influential edges in `--explain-dag`.**
+**Track B quality work - Top-3 influential edges in `--explain-dag`.**
 Closes the v2.0 explainability gap on the `--explain-dag` surface.
 The v1.9.0 renderer reported a posterior and a flat evidence list but
-didn't show *which* evidence drove the answer — exactly the question
+didn't show *which* evidence drove the answer - exactly the question
 a defending operator asks when disputing a verdict. v1.9.3.2 surfaces
 each fired binding's log-likelihood-ratio contribution + its share of
 total |LLR| influence, ranked top-3 per node, inline in both the text
@@ -2304,15 +2412,15 @@ targets, no section emitted when zero bindings fired.
 
 ### Added
 
-- **`recon_tool.bayesian.EvidenceContribution`** dataclass — engine-side
+- **`recon_tool.bayesian.EvidenceContribution`** dataclass - engine-side
   representation of a fired binding's LLR + influence_pct.
-- **`recon_tool.models.NodeEvidence`** dataclass — public-facing
+- **`recon_tool.models.NodeEvidence`** dataclass - public-facing
   counterpart, surfaced through `PosteriorObservation.evidence_ranked`
   in the cache, JSON output, and renderer.
-- **`PosteriorObservation.evidence_ranked: tuple[NodeEvidence, ...]`** —
+- **`PosteriorObservation.evidence_ranked: tuple[NodeEvidence, ...]`** -
   schema-additive field. Default empty tuple preserves v1.9.0 / v1.9.3
   JSON shape for consumers that don't read this field.
-- **`tests/test_explain_dag_top3.py`** — 16 tests covering LLR
+- **`tests/test_explain_dag_top3.py`** - 16 tests covering LLR
   correctness (hand-verified against three canonical bindings from
   the seed network), ranking determinism (sort key, tie-break),
   sparse/zero-binding behaviour, and a snapshot pinning the rendered
@@ -2354,7 +2462,7 @@ targets, no section emitted when zero bindings fired.
 
 ## [1.9.3.1] - 2026-05-10
 
-**Track B quality work — SECURITY.md and supply-chain hardening.**
+**Track B quality work - SECURITY.md and supply-chain hardening.**
 Closes four entries from the roadmap "Known gaps" section in one
 patch: SECURITY.md (already shipped pre-v1.9.3.1, audited and
 left in place), CycloneDX SBOM as a release asset, gitleaks
@@ -2372,13 +2480,13 @@ explicit acceptance criteria a reviewer can verify.
   written to a separate `sbom/` directory so the PyPI publish job
   only sees wheels and sdists. Includes runtime + transitive
   dependencies with their licenses.
-- **`.github/workflows/secrets-scan.yml`** — gitleaks runs on
+- **`.github/workflows/secrets-scan.yml`** - gitleaks runs on
   every PR, every push to main, and a weekly Sunday 06:00 UTC
   scheduled scan against the historical branch tree. Read-only
   workflow permissions; failures non-bypassable. Three triggers
   cover the realistic leak surfaces: pre-merge (PR), bypassed-PR
   (push to main), and historical-leak rotation (weekly).
-- **`tests/test_cache_forward_compat.py`** — 10 regression tests
+- **`tests/test_cache_forward_compat.py`** - 10 regression tests
   pinning the implicit "ignore unknown fields, load known fields
   cleanly" contract that `recon_tool.cache.tenant_info_from_dict`
   has always honoured but never tested. Covers unknown top-level
@@ -2387,7 +2495,7 @@ explicit acceptance criteria a reviewer can verify.
   `_cache_version`, and confirms malformed-input rejection still
   works. The contract matters because a v1.10 cache writer that
   adds a new field must not require a v1.9 reader to crash on the
-  file — operators upgrading and downgrading recon between
+  file - operators upgrading and downgrading recon between
   machines hit this case routinely.
 
 ### Changed
@@ -2423,11 +2531,11 @@ explicit acceptance criteria a reviewer can verify.
 
 ## [1.9.3] - 2026-05-09
 
-**v1.9.3 bridge milestone — Bayesian-network topology surgery.**
+**v1.9.3 bridge milestone - Bayesian-network topology surgery.**
 Resolves the `email_security_strong` definitional gap that produced
 the 52.6% v1.9.0 calibration disagreement. Per
 [docs/roadmap.md §v1.9.3](docs/roadmap.md), this is topology surgery,
-not CPT tuning — the v1.9.0 node parameterized its CPT on
+not CPT tuning - the v1.9.0 node parameterized its CPT on
 modern-mail-provider presence (M365 / GWS / gateway) but tested
 policy-enforcement signals (DMARC / DKIM / SPF / MTA-STS) via its
 evidence bindings. Different claims; no parameter tuning could
@@ -2448,7 +2556,7 @@ for the full calibration aggregate and reproducibility instructions.
   `recon_tool/data/bayesian_network.yaml`. Consumers pinning the
   v1.9.0 node name in `posterior_observations[]` must update. The
   EXPERIMENTAL label on the whole `--fusion` surface accommodates
-  this; no separate deprecation patch — the node's calibration was
+  this; no separate deprecation patch - the node's calibration was
   the explicit weak spot v1.9.x was committed to fixing.
 - **`federated_identity` parents expanded** from `[m365_tenant]` to
   `[m365_tenant, google_workspace_tenant]`. The v1.9.0 single-parent
@@ -2459,23 +2567,23 @@ for the full calibration aggregate and reproducibility instructions.
 
 ### Added
 
-- **`email_security_modern_provider`** node — provider-presence
+- **`email_security_modern_provider`** node - provider-presence
   claim. Parents `[m365_tenant, google_workspace_tenant,
   email_gateway_present]`; no evidence bindings (pure CPT
   propagation). Provider presence is fully observable through the
   parent slugs.
-- **`email_security_policy_enforcing`** node — policy-enforcement
+- **`email_security_policy_enforcing`** node - policy-enforcement
   claim. Root node, prior 0.25. Evidence bindings carried over from
   the v1.9.0 node: `dmarc_reject`, `dmarc_quarantine`,
   `mta_sts_enforce`, `dkim_present`, `spf_strict`. Provider-
-  independent — a Zoho or Fastmail tenant with a strict DMARC
+  independent - a Zoho or Fastmail tenant with a strict DMARC
   reject policy fires this node identically to an M365 one.
-- **`tests/test_bayesian_v193_topology.py`** — 11 regression tests
+- **`tests/test_bayesian_v193_topology.py`** - 11 regression tests
   pinning the new topology against silent reversion.
-- **`validation/v1.9.3-calibration.md`** — per-release calibration
+- **`validation/v1.9.3-calibration.md`** - per-release calibration
   aggregate (sensitivity, synthetic ECE, spot-check); part of the
   standing per-release publish discipline.
-- **`docs/correlation.md §4.8.9`** — *Definitional discipline: the
+- **`docs/correlation.md §4.8.9`** - *Definitional discipline: the
   v1.9.3 split.* The v1.9.3 gate the roadmap required: explicit
   definitions of both new nodes, why they are separate claims, and
   the principle behind questioning topology before tuning numbers.
@@ -2486,8 +2594,8 @@ for the full calibration aggregate and reproducibility instructions.
   behavior validation) is next. The full v1.9.0 corpus will be
   re-run against the v1.9.3 topology as part of v1.9.4 to certify
   cross-vertical calibration.
-- **Roadmap restructured** — items previously in
-  *v1.9.x — Optional feature additions* that v2.0 polish requires
+- **Roadmap restructured** - items previously in
+  *v1.9.x - Optional feature additions* that v2.0 polish requires
   (catalog metadata richness, SECURITY.md + supply-chain hardening,
   downstream consumption examples, top-3 influential edges in
   `--explain-dag`) moved to a new *Required quality work for v2.0*
@@ -2497,7 +2605,7 @@ for the full calibration aggregate and reproducibility instructions.
 
 ## [1.9.2.2] - 2026-05-08
 
-**Catalog growth from the v1.9.2-pre-release corpus scan — 39 new
+**Catalog growth from the v1.9.2-pre-release corpus scan - 39 new
 fingerprints.** The 4,270-domain scan that gated v1.9.2 surfaced 86
 unclassified CNAME patterns. v1.9.2.2 ships the **39 new fingerprints**
 (33 application-tier SaaS + 6 infrastructure-tier CDNs) that survived
@@ -2542,14 +2650,14 @@ user-facing story.
     extending the existing `gcp-app` slug).
 - **36 new formatter category mappings** in
   `recon_tool/formatter.py:_CATEGORY_BY_SLUG` for the new slugs
-  (three slugs — okta, ping-identity, gcp-app — reuse existing
+  (three slugs - okta, ping-identity, gcp-app - reuse existing
   entries rather than introducing duplicate names).
-- **`validation/triage_llm.py`** — programmatic LLM-assisted
+- **`validation/triage_llm.py`** - programmatic LLM-assisted
   triage runner. Reads a `candidates.json` produced by
   `validation/triage_candidates.py`, batches the entries to an
   Anthropic chat model with the project's triage rubric as the
   system prompt, parses the structured response into a markdown
-  triage report (kept local — references real sample subdomains)
+  triage report (kept local - references real sample subdomains)
   plus a proposed-stanzas YAML diff (only generic patterns,
   safe to commit). Dev tool only; not a runtime dependency.
   End users do not need an LLM API key for any recon CLI
@@ -2557,14 +2665,14 @@ user-facing story.
 
 ### Changed
 
-- `recon_tool/data/fingerprints/surface.yaml` — appended catalog-
+- `recon_tool/data/fingerprints/surface.yaml` - appended catalog-
   growth section under the existing Microsoft 365 entry. Catalog
   validator confirms **385 / 385 entries pass** schema (was 346).
 
 ### Tests
 
 - Existing 2091 tests still pass at 84.03% coverage. No new tests
-  added — fingerprint behavior is data-driven and exercised by the
+  added - fingerprint behavior is data-driven and exercised by the
   catalog validator (`recon fingerprints check`), the match-mode
   audit (`validation/audit_fingerprints.py`), and the existing
   per-detection unit tests in `tests/test_fingerprints*.py`.
@@ -2601,7 +2709,7 @@ user-facing story.
 
 ## [1.9.2.1] - 2026-05-08
 
-**MCP works by default — interactive misuse caught, install + live
+**MCP works by default - interactive misuse caught, install + live
 self-check shipped.** Three independent UX patches bundled because
 they share a single user-facing story: "I ran the MCP server and it
 either confused me or didn't connect." Operators who launched
@@ -2617,12 +2725,12 @@ actually worked had only static-shape diagnostics; `recon mcp
 doctor` now spawns the server and walks a real initialize +
 tools/list handshake the way a client would.
 
-These are roadmap "v1.9.x — Optional feature additions (parallel
-to the bridge milestones)" entries — they ship as a bundle here
+These are roadmap "v1.9.x - Optional feature additions (parallel
+to the bridge milestones)" entries - they ship as a bundle here
 rather than as three separate patches because the underlying
 narrative is one user-facing change, and CHANGELOG readers benefit
 from seeing the three components together. The next bridge
-milestone (v1.9.3 — `email_security_strong` definitional gap) is
+milestone (v1.9.3 - `email_security_strong` definitional gap) is
 unaffected.
 
 ### Added
@@ -2631,9 +2739,9 @@ unaffected.
   When `sys.stdin.isatty()` returns True and the
   `RECON_MCP_FORCE_STDIO` env var is unset, `main()` prints a
   human-readable panel explaining that the server speaks JSON-RPC
-  over stdio and exits cleanly. The previous behavior — feeding
+  over stdio and exits cleanly. The previous behavior - feeding
   the user's stray newlines into the FastMCP JSON parser and
-  surfacing a Pydantic stack trace — is preserved behind
+  surfacing a Pydantic stack trace - is preserved behind
   `RECON_MCP_FORCE_STDIO=1` (case-insensitive; `1`, `true`,
   `yes`, `on` all enable the bypass). The TTY check itself
   catches `AttributeError`, `ValueError`, and `OSError` from
@@ -2662,15 +2770,15 @@ unaffected.
   `mcpServers` entries; falls back from `recon` to `python -m recon_tool.server`
   when `recon` is not on PATH so GUI clients (Claude Desktop,
   Windsurf) that don't inherit the shell PATH still launch the
-  server. Idempotent rerun is genuinely free — when no canonical
+  server. Idempotent rerun is genuinely free - when no canonical
   field would change, the file is not rewritten and its mtime is
   not bumped, avoiding spurious file-watcher reloads in clients
-  like Cursor and VS Code. Writes are atomic — content goes to a
+  like Cursor and VS Code. Writes are atomic - content goes to a
   sibling tempfile in the same directory, gets ``fsync``'d where
   the filesystem supports it, then ``os.replace``'d into place,
   so a partial-write failure (disk full, antivirus mid-scan,
   network drive drop, OS crash) leaves either the old config
-  intact or the new config fully on disk — never a half-written
+  intact or the new config fully on disk - never a half-written
   truncation.
 - **`recon mcp doctor` (`recon_tool/mcp_doctor.py`).** End-to-end
   self-check: spawns the server through the running interpreter
@@ -2693,7 +2801,7 @@ unaffected.
 ### Changed
 
 - **`recon mcp` is now a typer sub-typer instead of a leaf command.**
-  Bare `recon mcp` (no subcommand) still starts the server — the
+  Bare `recon mcp` (no subcommand) still starts the server - the
   callback uses `invoke_without_command=True` so backward
   compatibility is preserved. New subcommands (`install`,
   `doctor`) live under it. No change to existing scripts or MCP
@@ -2719,12 +2827,12 @@ unaffected.
 
 ### Roadmap
 
-- Closes three "v1.9.x — Optional feature additions" entries.
+- Closes three "v1.9.x - Optional feature additions" entries.
   Bridge sequence (v1.9.3 → v1.9.7 → v2.0) unaffected.
 
 ## [1.9.2] - 2026-05-08
 
-**Agentic UX validation harness — first v1.9.x bridge milestone toward
+**Agentic UX validation harness - first v1.9.x bridge milestone toward
 v2.0.** Operators are not the only persona that reads recon's `--fusion`
 output: the MCP server is a primary surface, and an AI agent reading
 recon JSON is itself a production user. v1.9.2 ships a reproducible
@@ -2732,7 +2840,7 @@ harness that drives three persona prompts (security analyst,
 due-diligence researcher, ops engineer) across two fixtures
 (`contoso.com` dense lookup and a hand-stripped `northwindtraders.com`
 hardened-sparse variant) under both `--fusion`-on and `--fusion`-off
-arms — twelve sessions per run — and scores the transcripts against
+arms - twelve sessions per run - and scores the transcripts against
 the five-check rubric defined in `docs/roadmap.md`. The shipped
 artifact (`validation/v1.9.2-agentic-ux.md`) is the first calibration
 input for the v2.0 schema-lock disposition decisions; subsequent runs
@@ -2749,7 +2857,7 @@ against other providers append to that record.
   responses, and writes a self-contained markdown report. The
   module is decoupled from `recon_tool` so the harness can run
   against captured recon JSON from any version.
-- **Persona scaffolds.** `personas/{analyst,researcher,ops}.md` —
+- **Persona scaffolds.** `personas/{analyst,researcher,ops}.md` -
   none mention `posterior_observations`, `sparse=true`,
   `--explain-dag`, or credible intervals; the rubric measures
   whether the agent finds those affordances unprompted.
@@ -2759,12 +2867,12 @@ against other providers append to that record.
   slug for `northwindtraders.com`, also Microsoft fictional). Real
   apexes never get committed, per the no-real-company-data
   invariant in `validation/README.md`.
-- **`validation/v1.9.2-agentic-ux.md`** — the first canonical run
+- **`validation/v1.9.2-agentic-ux.md`** - the first canonical run
   artifact (Anthropic Claude Sonnet 4.6). Subsequent runs append.
 
 ### Changed
 
-- **`docs/roadmap.md`** — bridge milestones renumbered. v1.9.1 was
+- **`docs/roadmap.md`** - bridge milestones renumbered. v1.9.1 was
   consumed by the conflict-provenance optional feature, so the
   bridge sequence now reads v1.9.2 (this release) → v1.9.3
   (`email_security_strong` topology surgery) → v1.9.4
@@ -2774,7 +2882,7 @@ against other providers append to that record.
   pre-conditions table updated to match. The introductory
   paragraph of the bridge section now explains the renumbering
   explicitly.
-- **`validation/__init__.py`** — added so `validation` is a proper
+- **`validation/__init__.py`** - added so `validation` is a proper
   package rather than an implicit namespace package. Defeats
   pyright import-resolution flakiness without changing the
   runtime contract (existing `python -m validation.<name>`
@@ -2782,7 +2890,7 @@ against other providers append to that record.
 
 ### Tests
 
-- **`tests/test_agentic_ux.py`** — 26 new tests covering the
+- **`tests/test_agentic_ux.py`** - 26 new tests covering the
   provider-adapter shape with mocked SDK clients (no network),
   rubric scoring on synthetic transcripts (positive and negative
   cases for every check), runner orchestration (12-session matrix,
@@ -2793,7 +2901,7 @@ Total: 2012 tests passing.
 
 ### Roadmap
 
-- Closes the **v1.9.2 — UX validation via agentic QA** bridge
+- Closes the **v1.9.2 - UX validation via agentic QA** bridge
   milestone toward v2.0. Findings from the first canonical run map
   directly to the v2.0 schema-lock disposition decisions in
   `docs/roadmap.md`.
@@ -2807,7 +2915,7 @@ fusion layer rolled this into a uniform n_eff penalty and dropped the
 detail. v1.9.1 carries the structured provenance through to every
 `PosteriorObservation` so both `--explain-dag` and the `--json` output
 can name the disagreeing sources alongside the existing top-level
-`evidence_conflicts` array. Schema-additive — required key added to
+`evidence_conflicts` array. Schema-additive - required key added to
 `PosteriorObservation`; emits `[]` when no conflicts dampened the
 interval. EXPERIMENTAL alongside the rest of the v1.9 fusion surface.
 
@@ -2840,20 +2948,20 @@ interval. EXPERIMENTAL alongside the rest of the v1.9 fusion surface.
 
 ### Changed
 
-- **`PosteriorObservation` schema** in `docs/recon-schema.json` —
+- **`PosteriorObservation` schema** in `docs/recon-schema.json` -
   `conflict_provenance` added as a required key (always present, empty
   array when no conflicts). `NodeConflict` `$def` added alongside.
-- **`recon_tool/bayesian.py`** — `_conflict_provenance(info)` extracts
+- **`recon_tool/bayesian.py`** - `_conflict_provenance(info)` extracts
   structured records from `MergeConflicts`; the legacy
   `_conflict_count(info)` helper is removed (its single caller now
   uses the structured path).
-- **`recon_tool/cli.py`** — fusion construction site maps
+- **`recon_tool/cli.py`** - fusion construction site maps
   `ConflictProvenance` → `NodeConflict` when populating
   `PosteriorObservation.conflict_provenance`.
 
 ### Tests
 
-- **`tests/test_conflict_provenance.py`** — 12 new tests covering:
+- **`tests/test_conflict_provenance.py`** - 12 new tests covering:
   empty provenance when no merge_conflicts; populated provenance with
   field/source/magnitude detail; source deduplication; explicit
   `conflicts=` argument overriding `conflict_field_count`; legacy
@@ -2888,37 +2996,37 @@ formal model and citations in
 
 ### Added
 
-- **`recon_tool/data/bayesian_network.yaml`** — committed network
+- **`recon_tool/data/bayesian_network.yaml`** - committed network
   topology and CPTs (8-node seed: m365_tenant, google_workspace_tenant,
   federated_identity, okta_idp, email_gateway_present,
   email_security_strong, cdn_fronting, aws_hosting). Schema v1,
   network topology v1.9.0 (frozen 2026-05-04). Likelihoods
   strictly in `(0, 1)`; degenerate hard-evidence factors rejected.
-- **`recon_tool/bayesian.py`** — pure-Python variable-elimination
+- **`recon_tool/bayesian.py`** - pure-Python variable-elimination
   inference engine. Topology validation (DAG, complete CPTs,
   parent reachability), TenantInfo adapter, posterior + 80% credible
   interval per node, n_eff calibration with conflict dampener.
   Asymmetric one-sided likelihoods (Jeffrey-style updating;
   cautious-updating literature: Walley 1991, Augustin et al. 2014,
   Taroni et al. 2014).
-- **`recon_tool/bayesian_dag.py`** — plain-English narrative
+- **`recon_tool/bayesian_dag.py`** - plain-English narrative
   renderer + Graphviz DOT export for the inference DAG.
-- **`PosteriorObservation` model** — new dataclass on TenantInfo;
+- **`PosteriorObservation` model** - new dataclass on TenantInfo;
   populates `posterior_observations` in `--json` output when
   `--fusion` is on. Empty array otherwise. Round-trips through cache.
 - **`--explain-dag`** CLI flag with `--explain-dag-format text|dot`.
   Implies `--fusion`. 4 worked examples in correlation.md §4.8a.
-- **`get_posteriors`** and **`explain_dag`** MCP tools — read-only,
+- **`get_posteriors`** and **`explain_dag`** MCP tools - read-only,
   cache-aware, rate-limited like `lookup_tenant`.
-- **`~/.recon/priors.yaml`** — operator-supplied root-node prior
+- **`~/.recon/priors.yaml`** - operator-supplied root-node prior
   override. Local-only, never shipped, never sent over the wire,
   never persisted in cache. Loader logs an info-level message when
   applied so operators see when an override is shaping output.
-- **`scripts/check_metadata_coverage.py`** — per-category description
+- **`scripts/check_metadata_coverage.py`** - per-category description
   / reference / weight coverage report. Wired into CI as advisory
   (will flip to enforcing once the catalog reaches the 70% target on
   identity / security / infrastructure).
-- **`validation/synthetic_calibration.py`** — publicly-reproducible
+- **`validation/synthetic_calibration.py`** - publicly-reproducible
   ground-truth calibration experiment using the network's own joint
   distribution. Reports marginal vs conditional ECE, per-node
   reliability tables, and identifies calibration weak spots
@@ -2933,7 +3041,7 @@ formal model and citations in
 
 ### Changed
 
-- **`docs/correlation.md`** — substantial expansion of §4.8 with the
+- **`docs/correlation.md`** - substantial expansion of §4.8 with the
   full v1.9 derivation: generative model, variable elimination
   (citations: Zhang & Poole 1994; Koller & Friedman 2009),
   asymmetric likelihood with literature grounding, credible-interval
@@ -2944,32 +3052,32 @@ formal model and citations in
   of repetitive boilerplate. Citations added throughout (Pearl 1988,
   Russell & Norvig, Blondel et al. 2008, Traag et al. 2019,
   Naeini et al. 2015, Jeffrey 1965, Walley 1991, etc.).
-- **`docs/roadmap.md`** — v1.9 status updated to shipped.
+- **`docs/roadmap.md`** - v1.9 status updated to shipped.
 
 ### Tests
 
 - **244 new tests** added across:
-  - `test_bayesian_canonical.py` — verifies engine matches Pearl
+  - `test_bayesian_canonical.py` - verifies engine matches Pearl
     Burglary-Earthquake-Alarm and the medical-test example to four
     decimal places under the noisy-likelihood model.
-  - `test_bayesian_inference.py` — schema validation, priors override,
+  - `test_bayesian_inference.py` - schema validation, priors override,
     variable elimination correctness on a hand-checked toy network,
     credible interval shape, TenantInfo adapter.
-  - `test_bayesian_dag.py` — text + DOT renderer correctness,
+  - `test_bayesian_dag.py` - text + DOT renderer correctness,
     confidence-label thresholds, sparse-flag rendering.
-  - `test_bayesian_fuzz.py` — 39 adversarial schema inputs (empty,
+  - `test_bayesian_fuzz.py` - 39 adversarial schema inputs (empty,
     null, cycles, unicode, boundary likelihoods).
-  - `test_bayesian_hypothesis.py` — property-based testing with
+  - `test_bayesian_hypothesis.py` - property-based testing with
     Hypothesis: 550 random valid networks + evidence sets verify
     closed-form Bayes match, prior recovery on no evidence,
     invariants under random conflicts, determinism.
-  - `test_bayesian_sensitivity.py` — CPT ±0.10 perturbation bound.
-  - `test_bayesian_validation_rounds.py` — 24 inference invariants.
-  - `test_v19_robustness.py` — cache round-trip with malformed
+  - `test_bayesian_sensitivity.py` - CPT ±0.10 perturbation bound.
+  - `test_bayesian_validation_rounds.py` - 24 inference invariants.
+  - `test_v19_robustness.py` - cache round-trip with malformed
     entries, CLI flag combinations, MCP error paths, determinism +
     concurrency, scale stress (15-node chain, 10-child wide network).
-  - `test_fusion_integration.py` — end-to-end --fusion path.
-  - `test_metadata_coverage.py` — CI gate behavior.
+  - `test_fusion_integration.py` - end-to-end --fusion path.
+  - `test_metadata_coverage.py` - CI gate behavior.
 
 Total: 1938 tests passing. Coverage on new modules:
 `recon_tool/bayesian.py` 98%, `recon_tool/bayesian_dag.py` 92%.
@@ -2999,7 +3107,7 @@ Full report at
   `chain_motifs`, `wildcard_sibling_clusters`, or
   `deployment_bursts` in its serialized form, so cache-served
   lookups always returned zero motifs and empty wildcard / burst
-  collections — even when the original resolve produced matches.
+  collections - even when the original resolve produced matches.
   Both directions of the round-trip now preserve them. Round-trip
   regression tests in `tests/test_cache_roundtrip.py`.
 
@@ -3026,7 +3134,7 @@ Full report at
 - **FastMCP transport smoke test for the v1.8 graph tools.**
   `tests/test_mcp_graph_tools.py::TestMcpToolRegistry` invokes
   `get_infrastructure_clusters` and `export_graph` through
-  `mcp.call_tool` — the same dispatch the stdio JSON-RPC handler
+  `mcp.call_tool` - the same dispatch the stdio JSON-RPC handler
   uses on `tools/call`. Confirms registration + reachability beyond
   the unit tests.
 
@@ -3058,7 +3166,7 @@ Full report at
 of the v1.7 cert intelligence: SAN co-occurrence becomes communities,
 fingerprint metadata becomes ecosystem hyperedges, and absence rules
 turn vertical profiles into hedged baseline checks. Zero new network
-surface — every new field is a re-projection of evidence already in
+surface - every new field is a re-projection of evidence already in
 the pipeline. See [`docs/correlation.md`](docs/correlation.md) for the
 formal framing.
 
@@ -3069,7 +3177,7 @@ formal framing.
   CertSpotter `not_before` / `not_after` strings, which end in `Z`.
   Python 3.10's parser rejects `Z` (only 3.11+ accepts it), so every
   CertSpotter cert entry was silently skipped and `cert_summary`
-  returned None — disabling `top_issuers`,
+  returned None - disabling `top_issuers`,
   `wildcard_sibling_clusters`, `deployment_bursts`, and the
   `top_issuer` ecosystem hyperedge. New `_parse_iso_datetime()`
   helper in `recon_tool/sources/cert_providers.py` normalizes `Z` →
@@ -3082,34 +3190,34 @@ formal framing.
   raised 2 → 3, and a new `_baseline_slugs()` filter strips slugs
   with >50 % corpus prevalence (`_BASELINE_FREQ_THRESHOLD = 0.5`)
   from the overlap intersection before the threshold check. Adaptive
-  per-batch — engages only when the batch exceeds
+  per-batch - engages only when the batch exceeds
   `_MIN_BATCH_FOR_BASELINE = 5` so synthetic test fixtures stay
   deterministic. Two new tests in `tests/test_ecosystem.py`.
 
 ### Added
 
-- **CT co-occurrence graph + Louvain communities** — new
+- **CT co-occurrence graph + Louvain communities** - new
   `recon_tool/infra_graph.py` builds an in-memory graph from cert
   entries (nodes = SAN hostnames, edges = shared-cert co-occurrence,
   attributes carry issuer name) and runs Louvain via pure-Python
-  `networkx`. The report — algorithm, modularity, node/edge counts,
-  cluster list — surfaces as the always-present top-level
+  `networkx`. The report - algorithm, modularity, node/edge counts,
+  cluster list - surfaces as the always-present top-level
   `infrastructure_clusters` envelope in `--json`. Capped at 500 nodes
   with deterministic connected-components fallback above the cap.
   Skipped envelope when no graph could be built.
-- **`get_infrastructure_clusters` + `export_graph` MCP tools** —
+- **`get_infrastructure_clusters` + `export_graph` MCP tools** -
   read-only exposure of the already-computed graph. The first emits
   the cluster envelope; the second emits the raw co-occurrence graph
   (nodes + weighted edges + cluster_assignment) for downstream Mermaid
   / GraphViz / CSV pipelines. Edges retained on the report up to
   `MAX_EDGES_RETAINED = 2000`, sorted by weight desc.
-- **Fingerprint relationship metadata** — fingerprint YAML schema gains
+- **Fingerprint relationship metadata** - fingerprint YAML schema gains
   three optional fields: `product_family`, `parent_vendor`, and
   `bimi_org`. Eight built-in slugs now carry metadata (Microsoft 365,
   Google Workspace, GitHub, Cloudflare, Slack, AWS Route 53,
   AWS CloudFront, AWS SES). Surfaced as the always-present
   `fingerprint_metadata` map in `--json`, keyed by slug.
-- **Ecosystem hypergraph (`recon batch --json --include-ecosystem`)** —
+- **Ecosystem hypergraph (`recon batch --json --include-ecosystem`)** -
   new `recon_tool/ecosystem.py` builds cross-domain hyperedges of four
   types: shared CT top issuer, shared BIMI VMC organization, shared
   fingerprint parent_vendor, and pairwise fingerprint-slug overlap
@@ -3117,7 +3225,7 @@ formal framing.
   per-domain `domains` array in the batch JSON wrapper. Off by default;
   flag is mutually-exclusive with `--md`/`--csv`/`--ndjson`. Capped at
   `MAX_HYPEREDGES = 200`.
-- **Vertical-baseline anomaly rules** — profile YAML gains
+- **Vertical-baseline anomaly rules** - profile YAML gains
   `expected_categories` and `expected_motifs`. The new
   `compute_baseline_anomalies()` in `recon_tool/profiles.py` surfaces
   hedged "absence is observable, not a verdict" observations when an
@@ -3129,9 +3237,9 @@ formal framing.
 ### Schema
 
 - New top-level fields (always emitted on per-domain `--json`):
-  - `infrastructure_clusters` (object) — see
+  - `infrastructure_clusters` (object) - see
     [`docs/recon-schema.json#/$defs/InfrastructureClusterReport`](docs/recon-schema.json).
-  - `fingerprint_metadata` (object) — see
+  - `fingerprint_metadata` (object) - see
     [`docs/recon-schema.json#/$defs/FingerprintMetadata`](docs/recon-schema.json).
 - New batch wrapper shape (only when `--include-ecosystem` is set):
   `{ ecosystem_hyperedges: [...], domains: [...] }`. The hyperedge
@@ -3143,14 +3251,14 @@ formal framing.
 
 ### Changed
 
-- **Repo layout** — `claude-code/` and `clients/` consolidated into a
+- **Repo layout** - `claude-code/` and `clients/` consolidated into a
   unified `agents/` directory: `agents/claude-code/` (full plugin),
   plus per-client folders for Cursor, Windsurf, Kiro, and VS Code.
   Each agent folder ships its own MCP config + README. The unified
   index at [`agents/README.md`](agents/README.md) lists every
   supported client. README, `docs/mcp.md`, and `validation/README.md`
   link references updated; old `clients/` directory removed.
-- **CT provider Protocol** — `CertIntelProvider.query()` now returns a
+- **CT provider Protocol** - `CertIntelProvider.query()` now returns a
   3-tuple `(subdomains, cert_summary, infrastructure_clusters)`. Both
   built-in providers (`CrtshProvider`, `CertSpotterProvider`) compute
   the cluster report alongside the summary so the graph layer is
@@ -3180,7 +3288,7 @@ formal framing.
   buildable graphs: **mean modularity 0.563, max 0.883**. Fingerprint
   relationship metadata fired on **91 / 105** domains. The run
   surfaced two pre-tag hardening items (CertSpotter `Z`-suffix
-  parsing, `shared_slugs` noise floor — see *Fixed* above); both
+  parsing, `shared_slugs` noise floor - see *Fixed* above); both
   were resolved and re-validated against the same corpus before
   tagging. Full report at
   [`validation/v1.8-validation-summary.md`](validation/v1.8-validation-summary.md).
@@ -3190,25 +3298,25 @@ formal framing.
 **Hardened-target signal recovery.** The first of the v1.7–v1.9 build plan
 in [`docs/roadmap.md`](docs/roadmap.md). This release squeezes more usable
 defensive intelligence out of CT logs and resolution chains we already
-collect — every new field is a post-processing layer on existing passive
+collect - every new field is a post-processing layer on existing passive
 observables. Zero new network surface, zero new credentials, zero
 ownership claims. See [`docs/correlation.md`](docs/correlation.md) for
 the latent-variable framing.
 
 ### Added
 
-- **Wildcard SAN sibling expansion** — when a CT cert covers `*.example.com`,
+- **Wildcard SAN sibling expansion** - when a CT cert covers `*.example.com`,
   recon now harvests every concrete (non-wildcard) SAN from that same
   cert as a candidate sibling cluster. Surfaced under
   `cert_summary.wildcard_sibling_clusters` in `--json`. Bounded
   (≤10 clusters, ≤20 names per cluster). Works for both crt.sh and
   CertSpotter providers.
-- **Temporal CT issuance bursts** — co-issued cohorts inside a 60-second
+- **Temporal CT issuance bursts** - co-issued cohorts inside a 60-second
   window with ≥3 distinct names become `cert_summary.deployment_bursts`
   entries: relative window deltas + name list. Output is intentionally
-  relative — co-issuance is observable; "same owner" is not.
+  relative - co-issuance is observable; "same owner" is not.
   Bounded (≤8 bursts, ≤25 names per burst).
-- **CNAME chain motif library** — new `recon_tool/data/motifs.yaml` and
+- **CNAME chain motif library** - new `recon_tool/data/motifs.yaml` and
   loader at `recon_tool/motifs.py`. Each motif names an ordered
   proxy/CDN/origin shape (e.g. Cloudflare → AWS origin, Akamai → Azure
   origin); fires on a related subdomain's CNAME chain when its markers
@@ -3216,7 +3324,7 @@ the latent-variable framing.
   `--json`. Catalog ships with 11 CDN→origin shapes covering the major
   cloud providers; users extend additively via `~/.recon/motifs.yaml`.
   Chain length capped at 4. Per-lookup observation cap at 50.
-- **Cross-source evidence conflicts in `--json`** — top-level
+- **Cross-source evidence conflicts in `--json`** - top-level
   `evidence_conflicts` array (always present, empty when no conflicts).
   Each entry names a merged field where 2+ sources gave different
   values, with all candidates preserved. The legacy `conflicts` dict
@@ -3263,7 +3371,7 @@ discovered during the corpus run.
 
 ### Added
 
-- ``recon batch --ndjson`` — streams one JSON object per line, flushed as
+- ``recon batch --ndjson`` - streams one JSON object per line, flushed as
   each domain completes. Eliminates the buffer-everything-then-emit
   pattern of ``--json``. Recommended for any batch over a few hundred
   domains; gives visible progress and constant memory use. Mutually
@@ -3334,7 +3442,7 @@ invocation suitable for monthly-cadence runs.
   ``recon discover`` pipeline so AI agents can mine fingerprint
   candidates without shelling out. Same input/output shape as the
   CLI subcommand.
-- New ``validation/scan.py`` — bundles
+- New ``validation/scan.py`` - bundles
   ``recon batch`` + ``find_gaps`` + ``triage_candidates`` +
   ``diff_runs`` into one timestamped invocation. Each scan writes
   ``results.json``, ``gaps.json``, ``candidates.json``, optional
@@ -3359,7 +3467,7 @@ invocation suitable for monthly-cadence runs.
 
 ### Notes
 
-- The corpus run wasn't shipped to GitHub — only the framework is
+- The corpus run wasn't shipped to GitHub - only the framework is
   generic and committed; real corpora and run outputs stay local
   under ``validation/corpus-private/`` and ``validation/runs-private/``
   (gitignored).
@@ -3448,13 +3556,13 @@ YAML stanzas.
   probes + apex CNAME walks. For high-volume validation runs where
   you want zero load on public CT services. Threaded through the
   resolver to the DNS source.
-- New `validation/find_gaps.py` — reads a run (single JSON file or
+- New `validation/find_gaps.py` - reads a run (single JSON file or
   directory) and surfaces unclassified terminal hostname suffixes
   ranked by frequency. Filters intra-org chains.
-- New `validation/diff_runs.py` — compares two run directories.
+- New `validation/diff_runs.py` - compares two run directories.
   Reports new attributions, lost slugs, aggregate slug-frequency
   changes. Use after adding fingerprints to confirm uplift.
-- New `validation/triage_candidates.py` — programmatic filter on
+- New `validation/triage_candidates.py` - programmatic filter on
   `gaps.json`: drops already-fingerprinted patterns (substring
   match against the catalog), intra-org chains, and one-off noise
   below `--min-count`. Output is the LLM-triage-ready candidate
@@ -3549,7 +3657,7 @@ consumers.
   those requires ASN/IP intelligence, which the project's invariants
   exclude.
 - The classifier adds at most 100 CNAME queries per lookup, run with
-  concurrency 30 — roughly a 2-5x increase in DNS volume on domains
+  concurrency 30 - roughly a 2-5x increase in DNS volume on domains
   with sprawling CT footprints. Observed wall-clock impact on the
   validation corpus was under 1s per domain.
 
@@ -3590,14 +3698,14 @@ runs. No behavior, fingerprint, or formatter changes.
 
 ### Added
 
-- `docs/recon-schema.json` — JSON Schema 2020-12 description of the
+- `docs/recon-schema.json` - JSON Schema 2020-12 description of the
   `recon <domain> --json` v1.0 contract, including a `$defs/DeltaReport`
   entry consumers can target for `recon delta` validation.
-- `tests/test_json_schema_file.py` — drift guard that fails CI when the
+- `tests/test_json_schema_file.py` - drift guard that fails CI when the
   emitted JSON output and the committed schema fall out of sync in
   either direction (extra output key not declared, or required schema
   field not emitted).
-- README — agent-driven install snippet ("paste this prompt to your AI"
+- README - agent-driven install snippet ("paste this prompt to your AI"
   with the stable raw.githubusercontent.com SKILL.md URL) so users with
   AI clients that have file-write tools can wire up the skill in one
   exchange. Pointer to the new schema artifact for downstream
@@ -3605,7 +3713,7 @@ runs. No behavior, fingerprint, or formatter changes.
 
 ### Changed
 
-- `tests/conftest.py` — promoted the fully-populated `TenantInfo`
+- `tests/conftest.py` - promoted the fully-populated `TenantInfo`
   fixture from `test_json_schema_contract.py` to a shared pytest
   fixture so the new drift-guard tests use the same object without
   cross-test imports.
@@ -3622,12 +3730,12 @@ guidance and the `anthropics/skills` reference repo.
 - `agents/claude-code/skills/recon/SKILL.md`: `argument-hint` and `allowed-tools`
   fields in skill frontmatter (per Claude Code skill spec).
 - "Before first invocation" section: install probe via `recon --version`
-  with explicit user approval before `pip install` — useful when the skill
+  with explicit user approval before `pip install` - useful when the skill
   is loaded outside the bundled plugin (e.g., copied into Kiro skills).
 - "Two invocation modes" section: default mode relays the CLI panel
   verbatim; `--full --json` mode writes to disk and replies with a 3-line
   headline so structured output never floods the conversation context.
-- Evidence-citation guidance in the output-voice rules — fingerprint
+- Evidence-citation guidance in the output-voice rules - fingerprint
   claims should reference the record type (MX, TXT, CNAME, etc.).
 
 ### Changed
@@ -3646,17 +3754,17 @@ MCP server and pick up agent guidance without re-deriving it per session.
 
 ### Added
 
-- `agents/claude-code/` — full Claude Code plugin scaffold with `.claude-plugin/plugin.json`,
+- `agents/claude-code/` - full Claude Code plugin scaffold with `.claude-plugin/plugin.json`,
   `.mcp.json` MCP server registration, and a `skills/recon/SKILL.md` skill that
   teaches Claude when and how to use recon in recon's neutral-observation voice.
-- `agents/{kiro,windsurf,cursor,vscode}/` — copy-pasteable MCP config snippets
+- `agents/{kiro,windsurf,cursor,vscode}/` - copy-pasteable MCP config snippets
   and per-client install matrix for non-Claude-Code agents. (Originally
   shipped under `clients/`; consolidated into `agents/` in v1.8.0.)
-- `AGENTS.md` at repo root — portable agent guidance in the
+- `AGENTS.md` at repo root - portable agent guidance in the
   [agents.md](https://agents.md) format. Auto-detected by Kiro and other
   agents.md-aware tools; can be referenced from `.windsurfrules`,
   `.cursor/rules/`, or `.github/copilot-instructions.md`.
-- `docs/mcp.md` — Kiro added to the per-client config table; PATH gotcha
+- `docs/mcp.md` - Kiro added to the per-client config table; PATH gotcha
   expanded to cover all GUI Electron clients.
 
 ### Changed
@@ -3728,9 +3836,9 @@ found during review.
 - Subdomain TXT fingerprints now require `subdomain:regex` format, and the
   affected built-in records use explicit subdomain prefixes.
 
-## [1.4.2] — 2026-04-26
+## [1.4.2] - 2026-04-26
 
-**Patch release — doctor status calibration and documentation cleanup.**
+**Patch release - doctor status calibration and documentation cleanup.**
 Keeps runtime behavior stable while making optional enrichment outages less
 alarming and tightening public documentation organization.
 
@@ -3750,9 +3858,9 @@ alarming and tightening public documentation organization.
 - Removed tracked `CLAUDE.md` and added it to `.gitignore`; agent-local guidance
   should stay local instead of shipping in the public repository.
 
-## [1.4.1] — 2026-04-26
+## [1.4.1] - 2026-04-26
 
-**Quality release — sparse-result diagnosis and validation-driven
+**Quality release - sparse-result diagnosis and validation-driven
 hardening.** Keeps the public product surface stable while improving how
 thin passive evidence is explained, compared, and audited.
 
@@ -3783,16 +3891,16 @@ thin passive evidence is explained, compared, and audited.
 - Version metadata fallback and `uv.lock` now track the package version
   consistently.
 
-## [1.4.0] — 2026-04-21
+## [1.4.0] - 2026-04-21
 
-**Hardening release — parser, cache, MCP server coherence, and a
+**Hardening release - parser, cache, MCP server coherence, and a
 sharper sense of scope.** Targets the three hot paths that real
 validation runs have stressed most (malformed upstream responses,
 cache round-trips under adversarial inputs, MCP server state
 transitions), rebundles the MCP server into the default install,
 exposes the fingerprint / signal / profile catalogs as MCP
 resources, adds staleness timestamps to every result, and uses the
-roadmap to state plainly what recon is — and what it deliberately
+roadmap to state plainly what recon is - and what it deliberately
 leaves to sister tooling.
 
 ### Changed
@@ -3836,20 +3944,20 @@ leaves to sister tooling.
 
 ### Added
 
-- **MCP resources — `recon://fingerprints`, `recon://signals`,
+- **MCP resources - `recon://fingerprints`, `recon://signals`,
   `recon://profiles`.** Agents can browse the three catalogs as
   read-only JSON without spending a tool invocation on introspection.
   Each resource is a deterministic projection over the already-loaded
-  YAML catalogs (no network calls) — the same data that powers
+  YAML catalogs (no network calls) - the same data that powers
   `recon fingerprints list` / `recon signals list` / `recon profiles
   list` in the CLI. Changes require `reload_data` to take effect.
-- **Staleness timestamps — `resolved_at` and `cached_at` on every
+- **Staleness timestamps - `resolved_at` and `cached_at` on every
   `TenantInfo`.** `resolved_at` is stamped when live resolution
   produces the result; `cached_at` is populated only by the on-disk
   cache read path. Both flow through the JSON serializer so agents
   can tell at a glance whether they are looking at fresh data or a
   2-minute-old cache hit, and decide whether to re-resolve. Cache
-  round-trips preserve `resolved_at` — it reflects when the data was
+  round-trips preserve `resolved_at` - it reflects when the data was
   first produced, not when the cache entry was last written.
 - Reusable live-validation tooling around the existing diverse 50-domain
   corpus. `recon_tool.validation_runner` now summarizes batch JSON,
@@ -3893,9 +4001,9 @@ leaves to sister tooling.
 - Quality gate green on release prep: `pytest tests` (1585 passed, 4
   deselected), `ruff check .`, and `pyright recon_tool tests`.
 
-## [1.3.1] — 2026-04-21
+## [1.3.1] - 2026-04-21
 
-**Security patch — six findings resolved.** External static-analysis
+**Security patch - six findings resolved.** External static-analysis
 pass surfaced a cluster of low-to-medium issues, mostly reachable only
 via local CLI or MCP stdio, but all worth closing. No behavior changes
 for legitimate use; each fix tightens a containment boundary that was
@@ -3903,14 +4011,14 @@ previously relying on trust rather than enforcement.
 
 ### Fixed
 
-- **Unbounded ephemeral fingerprint injection (MCP DoS)** — Medium.
+- **Unbounded ephemeral fingerprint injection (MCP DoS)** - Medium.
   ``inject_ephemeral_fingerprint`` had no cap; a long-running MCP
   server could be driven into unbounded memory growth by a
   prompt-injected client calling the tool in a loop. Added a
   ``_MAX_EPHEMERAL_FINGERPRINTS = 100`` cap in
   ``recon_tool.fingerprints``; the MCP tool surfaces capacity
   errors as clean JSON rejections (``EphemeralCapacityError``).
-- **Release workflow OIDC scope** — Medium. ``id-token: write`` was
+- **Release workflow OIDC scope** - Medium. ``id-token: write`` was
   granted at the workflow level, meaning ``test`` and ``build`` jobs
   (which install and execute dependency code) could mint PyPI
   trusted-publisher tokens. Compromised dependency = publishing
@@ -3918,7 +4026,7 @@ previously relying on trust rather than enforcement.
   ``contents: read``; each job opts into the scope it actually needs.
   Only ``publish-pypi`` and ``github-release`` request elevated
   permissions.
-- **CSV formula injection** — Medium. ``display_name`` originates
+- **CSV formula injection** - Medium. ``display_name`` originates
   from the attacker-influencable ``FederationBrandName`` response
   and was written verbatim to CSV cells. A value starting with ``=``
   / ``+`` / ``-`` / ``@`` / ``\t`` / ``\r`` would execute as a
@@ -3926,7 +4034,7 @@ previously relying on trust rather than enforcement.
   ``_csv_safe`` which prefixes unsafe leading characters with a
   single quote; applied to every textual field in
   ``format_tenant_csv_row``.
-- **Specificity gate unbounded regex** — Low. ``evaluate_pattern``
+- **Specificity gate unbounded regex** - Low. ``evaluate_pattern``
   compiled and searched regexes against the synthetic corpus
   without the length cap that ``_validate_regex`` enforces at
   schema-validation time. A pathological regex submitted via PR,
@@ -3934,7 +4042,7 @@ previously relying on trust rather than enforcement.
   hang CI or the local wizard. Added a 500-char length guard in
   ``evaluate_pattern`` itself so the gate is safe even when called
   outside the schema validator.
-- **Cache clear path traversal** — Low. ``recon cache clear
+- **Cache clear path traversal** - Low. ``recon cache clear
   <domain>`` forwarded the raw domain to ``cache.cache_clear``
   which built a path directly from it. A crafted argument like
   ``../../.config/settings`` escaped the cache directory and
@@ -3942,27 +4050,27 @@ previously relying on trust rather than enforcement.
   ``_safe_cache_path`` using ``Path.is_relative_to`` plus an input
   character guard; traversal attempts now return ``False``
   (nothing deleted) rather than following the path.
-- **CT cache ``_safe_path`` prefix-bypass** — Low. The containment
-  check used ``str(path).startswith(str(cache_dir.resolve()))`` —
+- **CT cache ``_safe_path`` prefix-bypass** - Low. The containment
+  check used ``str(path).startswith(str(cache_dir.resolve()))`` -
   path-prefix rather than path-aware. A crafted domain like
   ``../ct-cache-malice/evil`` resolved to a sibling directory whose
   path string still matched the prefix. Replaced with
   ``Path.is_relative_to`` and added a character-level input guard.
   Same class of bug as the cache-clear traversal; same fix shape.
-- **PTR lookup on private IPs** — Low. ``_detect_hosting_from_a_record``
+- **PTR lookup on private IPs** - Low. ``_detect_hosting_from_a_record``
   unconditionally reverse-resolved the apex A-record IP, including
   RFC1918 / loopback / link-local addresses. A malicious domain
   could publish an A record pointing to an internal IP and the
-  tool would ask the operator's resolver for the internal PTR —
+  tool would ask the operator's resolver for the internal PTR -
   leaking internal DNS names into recon's output. Added
   ``ip.is_private or ip.is_loopback or ip.is_link_local or
   ip.is_reserved or ip.is_multicast`` check before the PTR query.
-- **crt.sh unbounded accumulation** — Low. ``filter_subdomains``
+- **crt.sh unbounded accumulation** - Low. ``filter_subdomains``
   added every matching name into a set, then sorted the full set
   before slicing to ``MAX_SUBDOMAINS``. A domain with a very large
   CT history (tens of thousands of entries) would force the whole
   set into memory and sort it. Added a ``hard_cap = max_count * 10``
-  break during accumulation — enough headroom to still prioritize
+  break during accumulation - enough headroom to still prioritize
   high-signal subdomains correctly, bounded enough that no single
   domain can spike CPU.
 
@@ -3975,13 +4083,13 @@ previously relying on trust rather than enforcement.
   observable behavior for legitimate input (no CHANGELOG entries
   needed in user-facing docs beyond this one).
 
-## [1.3.0] — 2026-04-21
+## [1.3.0] - 2026-04-21
 
 **Portfolio discovery in batch mode.** When ``recon batch`` resolves
 multiple domains, the JSON output now surfaces two new correlation
 signals: cryptographically-strong tenant-ID sharing (same M365
 customer account) and hedged display-name overlap (same brand after
-normalization). Uses data already collected — zero new network
+normalization). Uses data already collected - zero new network
 calls, zero new sources.
 
 ### Added
@@ -3989,7 +4097,7 @@ calls, zero new sources.
 - **Tenant-ID clustering (``shared_tenant``)**: When 2+ domains in a
   batch share the same Microsoft 365 tenant ID, each domain's JSON
   entry carries a ``shared_tenant`` list naming the other peers.
-  Cryptographically strong — same tenant ID = same M365 customer
+  Cryptographically strong - same tenant ID = same M365 customer
   account. Not hedged; this is provable via OIDC discovery. Three
   sibling apexes belonging to the same corporate group collapse to a
   shared peer set in the batch output.
@@ -3997,13 +4105,13 @@ calls, zero new sources.
   domains' tenant display names normalize to the same key,
   each entry carries a ``shared_display_name`` list with the raw
   display names (for audit), the normalized key, and the peer
-  domains. Conservative match — exact normalized equality only
+  domains. Conservative match - exact normalized equality only
   (``Acme Corp`` + ``Acme Corp.`` cluster; ``Acme`` + ``Acme Holdings``
   do not). Normalization strips one trailing corporate suffix
   (``inc`` / ``llc`` / ``gmbh`` / etc.) and collapses whitespace /
   punctuation.
 - ``recon_tool.clustering.compute_tenant_clusters`` and
-  ``compute_display_name_clusters`` — pure functions exposed for
+  ``compute_display_name_clusters`` - pure functions exposed for
   the MCP server and external consumers who want to run the
   clustering on their own ``TenantInfo`` lists. 11 new unit tests
   covering the tenant / display-name paths.
@@ -4016,12 +4124,12 @@ names which apexes belong to the same corporate group, without any
 additional lookups. Pairs well with the existing
 ``shared_verification_tokens`` clustering for a three-tiered signal:
 
-- **Tenant-ID match** — provable, same customer account.
-- **Display-name match** — hedged, same brand text.
-- **Verification-token match** — hedged, same operator-scoped
+- **Tenant-ID match** - provable, same customer account.
+- **Display-name match** - hedged, same brand text.
+- **Verification-token match** - hedged, same operator-scoped
   credential.
 
-The JSON fields are independent — a pair can appear in one, two, or
+The JSON fields are independent - a pair can appear in one, two, or
 all three. Downstream consumers rank them however they like.
 
 ### Validation
@@ -4033,7 +4141,7 @@ all three. Downstream consumers rank them however they like.
 - Static gate: ruff + format + pyright + bandit + actionlint all
   clean.
 
-## [1.2.1] — 2026-04-21
+## [1.2.1] - 2026-04-21
 
 **Security patch.** The MCP ``inject_ephemeral_fingerprint`` tool
 validated schema but bypassed the v1.2 specificity gate. A caller
@@ -4063,7 +4171,7 @@ is cheap and worth enforcing everywhere the catalog accepts input.
   limiter (monotonic clock, soft cap, no bypass via table-flood).
   No other findings.
 
-## [1.2.0] — 2026-04-21
+## [1.2.0] - 2026-04-21
 
 **Contribution trust.** v1.1 gave contributors the plumbing; v1.2 adds
 the guards that make contributions *safe to merge*. A
@@ -4071,7 +4179,7 @@ pattern-specificity gate rejects over-broad regexes before review; a
 scaffolding wizard runs every check before emitting YAML; a test
 command resolves a new fingerprint against a public domain corpus so
 contributors can see what it actually matches. No engine changes, no
-new detections — the point is that the next wave of detections
+new detections - the point is that the next wave of detections
 (community or solo) can't accidentally poison the catalog.
 
 ### Added
@@ -4084,42 +4192,42 @@ new detections — the point is that the next wave of detections
   227 built-in entries pass, while a deliberately-broad pattern like
   `cname:\.com$` fails with a clear diagnostic. Off by default with
   `--skip-specificity` for debugging; on by default for PRs and CI.
-- **`recon fingerprints new <slug>`** — scaffolding wizard. Prompts
+- **`recon fingerprints new <slug>`** - scaffolding wizard. Prompts
   for name, category, detection type, pattern, optional description
   and reference. Runs three guards before emitting YAML: (1) slug
   uniqueness against the built-in catalog, (2) schema validity,
   (3) specificity. Prints a paste-ready entry or writes to a file
   via `--output`.
-- **`recon fingerprints test <slug>`** — runs one fingerprint against
+- **`recon fingerprints test <slug>`** - runs one fingerprint against
   a domain corpus and reports which match. Contributors point at their
   own corpus with `--corpus path/to/file` or drop a list at
   `~/.recon/corpus.txt`. Helps answer "is my regex too loose or too
   tight" without hand-resolving DNS.
-- **`tests/fixtures/corpus-example.txt`** — fictional-company example
+- **`tests/fixtures/corpus-example.txt`** - fictional-company example
   corpus showing the expected file format. Real-company corpora are
   never committed; see CONTRIBUTING.md for the rationale. (Note:
   earlier point releases bundled a public-companies corpus; it was
   removed in v1.4.0.)
-- **`docs/weak-areas.md`** — honest list of deployment shapes where
+- **`docs/weak-areas.md`** - honest list of deployment shapes where
   recon looks sparse by design (heavy-CDN orgs, Chinese / APAC tech
   stacks, regulated verticals behind web proxies, fully self-hosted
   shops, parked / portfolio apexes). Names what the sparse result
   actually means and what to do instead of over-interpreting it.
   Linked from limitations.md.
-- **`docs/performance.md`** — published batch wall-clock and memory
+- **`docs/performance.md`** - published batch wall-clock and memory
   numbers (50 / 100 / 500 domains), methodology for reproducing,
   per-step time budget. Stops users from guessing where the latency
   goes.
 
 ### Changed
 
-- **`scripts/validate_fingerprint.py`** — now runs the specificity
+- **`scripts/validate_fingerprint.py`** - now runs the specificity
   gate on every pattern in addition to the runtime schema check and
   cross-file duplicate-slug check. `--skip-specificity` opts out
   when debugging.
-- **CONTRIBUTING.md** — fingerprint PR section updated for the new
+- **CONTRIBUTING.md** - fingerprint PR section updated for the new
   `fingerprints new` / `test` / `check` workflow. New "engine changes
-  go through a design doc" heads-up before the signals section —
+  go through a design doc" heads-up before the signals section -
   fingerprints are data and can iterate freely; signal / fusion /
   absence engines are inference code and bad changes affect every
   domain recon analyses.
@@ -4129,7 +4237,7 @@ new detections — the point is that the next wave of detections
 - **Bulk fingerprint additions.** Each QA round during v1.2 planning
   suggested 20-100 new fingerprints, mostly based on pattern-matching
   `<vendor>-domain-verification=` by analogy. Spot-checks showed
-  most of those patterns don't exist — the SaaS in question uses
+  most of those patterns don't exist - the SaaS in question uses
   account-based verification or API-key auth rather than DNS.
   Catalog growth is welcome but each entry needs vendor-doc
   verification, which is proper v1.2+ work. The infrastructure in
@@ -4140,23 +4248,23 @@ category, new CLI inspect commands let contributors audit the data
 without opening YAML, and CI gained an `actionlint` gate so the kind
 of unresolvable-action-ref regression that broke the first v1.0.2 tag
 can't reach `main` again. No user-visible detection or output changes
-in this release — this is infrastructure for everything that comes
+in this release - this is infrastructure for everything that comes
 next.
 
 ### Added
 
-- **Per-category fingerprint layout** — ``recon_tool/data/fingerprints.yaml``
+- **Per-category fingerprint layout** - ``recon_tool/data/fingerprints.yaml``
   (one 60KB file, 235 entries, 8 duplicate slugs) is now
   ``recon_tool/data/fingerprints/`` (8 per-category files, 227 unique
   slugs, zero duplicates). The eight files:
-  - ``ai.yaml`` — AI / LLM providers, agent frameworks.
-  - ``email.yaml`` — email platforms, gateways, DMARC / DKIM tooling.
-  - ``security.yaml`` — EDR, SIEM, IdP, zero-trust, credential hygiene.
-  - ``infrastructure.yaml`` — cloud, CDN, DNS, CAs, CI/CD.
-  - ``productivity.yaml`` — suites, helpdesk, HR, knowledge.
-  - ``crm-marketing.yaml`` — CRM, sales intel, ad platforms.
-  - ``data-analytics.yaml`` — warehouses, BI, observability.
-  - ``verticals.yaml`` — education, nonprofit, payments, misc.
+  - ``ai.yaml`` - AI / LLM providers, agent frameworks.
+  - ``email.yaml`` - email platforms, gateways, DMARC / DKIM tooling.
+  - ``security.yaml`` - EDR, SIEM, IdP, zero-trust, credential hygiene.
+  - ``infrastructure.yaml`` - cloud, CDN, DNS, CAs, CI/CD.
+  - ``productivity.yaml`` - suites, helpdesk, HR, knowledge.
+  - ``crm-marketing.yaml`` - CRM, sales intel, ad platforms.
+  - ``data-analytics.yaml`` - warehouses, BI, observability.
+  - ``verticals.yaml`` - education, nonprofit, payments, misc.
   The loader globs ``data/fingerprints/*.yaml`` in sorted order; custom
   ``~/.recon/fingerprints.yaml`` still works as a single file and a
   new ``~/.recon/fingerprints/`` directory is also accepted for users
@@ -4164,7 +4272,7 @@ next.
   after load is deterministic and identical to the monolith except
   for the 8 duplicates, which are now collapsed into single entries
   with their detection rules merged.
-- **``recon fingerprints list`` / ``show`` / ``check``** — contributor
+- **``recon fingerprints list`` / ``show`` / ``check``** - contributor
   and user inspection commands for the fingerprint catalog.
   - ``list`` supports ``--category`` substring and ``--type`` exact
     filters, plus ``--json`` for scripting.
@@ -4172,15 +4280,15 @@ next.
     descriptions, references) for a single slug. Synthetic slugs
     (``exchange-onprem``, ``self-hosted-mail``) that are emitted by
     source-layer probes rather than loaded from YAML are documented
-    here too — users who see those slugs in their output can always
+    here too - users who see those slugs in their output can always
     find provenance without grepping code.
   - ``check`` validates the catalog against the runtime schema and
     surfaces cross-file duplicate slugs. Wraps
     ``scripts/validate_fingerprint.py`` with sane defaults.
-- **``recon signals list`` / ``show``** — same pattern for the signal
+- **``recon signals list`` / ``show``** - same pattern for the signal
   catalog. ``show`` surfaces candidates, metadata conditions,
   contradictions, requires-signals chains, expected-counterparts,
-  and positive-when-absent lists — everything the absence and
+  and positive-when-absent lists - everything the absence and
   two-pass evaluators look at.
 - **``actionlint`` in pre-commit and CI.** Catches unresolved action
   refs, bad shell in ``run:`` blocks, and deprecated expressions at
@@ -4188,7 +4296,7 @@ next.
   v1.0.2 release regressed because ``astral-sh/setup-uv@v8`` isn't a
   real floating tag; ``actionlint`` catches that class of error
   locally and in CI. Pinned to ``actionlint@v1.7.12``.
-- **``scripts/split_fingerprints.py``** — the one-shot migration
+- **``scripts/split_fingerprints.py``** - the one-shot migration
   script that produced the split, kept in the repo for audit. A
   reviewer can re-run it against the pre-split monolith to verify
   the split is reproducible.
@@ -4197,12 +4305,12 @@ next.
 
 - **``scripts/validate_fingerprint.py`` now accepts a directory** and
   pools slugs across files for a cross-file duplicate-slug check.
-  Single-file invocation is unchanged — directories are an additive
+  Single-file invocation is unchanged - directories are an additive
   capability for the split-catalog layout.
 
 ### Docs
 
-- **CONTRIBUTING.md** updated for the split-catalog layout —
+- **CONTRIBUTING.md** updated for the split-catalog layout -
   "find the right file" step added, PR template checklist swapped to
   the new ``recon fingerprints check`` command, fingerprint-add
   recipe now shows ``recon fingerprints show <slug>`` as the
@@ -4213,7 +4321,7 @@ next.
 ### Process guards
 
 The first v1.0.2 tag push failed because ``astral-sh/setup-uv@v8``
-isn't a published floating tag — only ``v8.0.0`` and ``v8.1.0`` exist.
+isn't a published floating tag - only ``v8.0.0`` and ``v8.1.0`` exist.
 Two guards now prevent that class of regression:
 
 1. ``actionlint`` runs in pre-commit on every commit touching
@@ -4223,10 +4331,10 @@ Two guards now prevent that class of regression:
    work executes.
 
 Before future tag pushes, verify each bumped action ref exists with
-``gh api repos/<owner>/<repo>/git/refs/tags/<ref>`` — especially for
+``gh api repos/<owner>/<repo>/git/refs/tags/<ref>`` - especially for
 actions that don't publish floating majors.
 
-## [1.0.2] — 2026-04-20
+## [1.0.2] - 2026-04-20
 
 **Polish pass.** Toolchain current, test suite pyright-clean, dead code
 removed, seven bug fixes surfaced by CLI edge-path audits, provider
@@ -4244,7 +4352,7 @@ aerospace, and retail) with zero errors and zero regressions.
   classifiers. Supported runtimes are now 3.10 / 3.11 / 3.12 / 3.13.
 - **Dependabot** configured for GitHub Actions and Python dependencies
   with weekly cadence and patch/minor grouping.
-- **README badges** — CI status, PyPI version, supported Python
+- **README badges** - CI status, PyPI version, supported Python
   versions, license.
 - **CI pyright scope now covers `tests/`** so type-annotation drift
   can't re-accumulate the way it did (652 errors pre-polish → 0 now).
@@ -4256,7 +4364,7 @@ aerospace, and retail) with zero errors and zero regressions.
   SPF strict)` → `Email security 3/5: DMARC reject, DKIM, SPF strict`
   → `Email security: DMARC reject, DKIM, SPF strict`. The verdict
   adjectives (`weak` / `basic` / `moderate` / `good` / `strong` /
-  `excellent`) came out first — we see apex DNS, not the full posture,
+  `excellent`) came out first - we see apex DNS, not the full posture,
   so a graded assertion is more than the tool can honestly make. The
   `N/5` fraction came out next: even without the adjective, `3/5` was
   read as "mediocre" and the controls aren't equally weighted anyway
@@ -4277,7 +4385,7 @@ aerospace, and retail) with zero errors and zero regressions.
   recognized as a primary email provider in the topology computation.
   The Exchange on-prem detection still fires as a secondary service
   signal in the same output, so the hybrid-identity reality of these
-  orgs is still visible — it's just no longer promoted to the
+  orgs is still visible - it's just no longer promoted to the
   Provider line. Roughly a third of the diverse 50-domain validation
   corpus got more accurate Provider lines as a result, most of them
   large industrial and APAC orgs running self-operated mail.
@@ -4286,20 +4394,20 @@ aerospace, and retail) with zero errors and zero regressions.
   Barracuda, Trend Micro, Trellix, Symantec) AND DMARC is enforcing
   (`quarantine` or `reject`), the score now credits DKIM with the
   annotation `DKIM (inferred via Proofpoint)` (etc.). Fortune-500
-  orgs with enforcing DMARC almost always DO sign with DKIM — just at
+  orgs with enforcing DMARC almost always DO sign with DKIM - just at
   custom selectors the tool can't enumerate. Without this inference
   the apex score penalized orgs for a control they effectively have.
   The inference chain is visible in the score string so the user can
   audit it.
 - **`partial=True` semantic tightened.** The JSON `partial` flag now
   fires only when a core source (OIDC, UserRealm, Google Identity,
-  DNS) is degraded — not when a CT provider (crt.sh, CertSpotter) is
+  DNS) is degraded - not when a CT provider (crt.sh, CertSpotter) is
   degraded. CT pipelines are chronically flaky and the code handles
   their degradation gracefully via fallback + cache, so they shouldn't
   flip the global `partial` bit. The per-source status is still
   surfaced in the `degraded_sources` list for consumers who want the
   detail.
-- **GitHub Actions bumped to current majors** — `checkout v4 → v6`,
+- **GitHub Actions bumped to current majors** - `checkout v4 → v6`,
   `setup-python v5 → v6`, `setup-node v4 → v6`, `upload-artifact v4 →
   v7`, `download-artifact v4 → v8`, `setup-uv v5 → v8`,
   `action-gh-release v2 → v3`. Node 20 deprecation warnings are now
@@ -4318,18 +4426,18 @@ aerospace, and retail) with zero errors and zero regressions.
 
 - **Three more narrative-judgment signals** in the same class as
   Shadow IT Risk / Complex Migration Window / Governance Sprawl
-  (retired in v1.0.1). None were observation — they stitched two
+  (retired in v1.0.1). None were observation - they stitched two
   observable facts into a critique that only DNS can't actually make.
-  - `Security Stack Without Governance` — "security investment may
+  - `Security Stack Without Governance` - "security investment may
     lack email-layer controls" is opinion; the two underlying
     observations (security tools + DMARC not enforcing) are already
     visible on their own lines.
-  - `AI Adoption Without Governance` — inferred "shadow AI
+  - `AI Adoption Without Governance` - inferred "shadow AI
     deployment" from absence of specific IDPs; speculative.
-  - `DevSecOps Investment Without Email Governance` — inferred that
+  - `DevSecOps Investment Without Email Governance` - inferred that
     engineering security investment "hasn't extended to email";
     pure narrative.
-- **Dead code in `sources/dns.py`** — `_safe_resolve_sync` and
+- **Dead code in `sources/dns.py`** - `_safe_resolve_sync` and
   `_set_resolver` had no callers (including tests). The sync resolver
   helper was for a testing pattern that's no longer in use; the
   resolver override was never wired up.
@@ -4341,7 +4449,7 @@ aerospace, and retail) with zero errors and zero regressions.
   the post-1.0 ethos and "intentionally out of scope" sections kept
   but tightened. Invariants and priority order stay front and center.
   Added a concrete v1.1 target describing the planned split of
-  `fingerprints.yaml` into per-category files — design sketch, scope
+  `fingerprints.yaml` into per-category files - design sketch, scope
   breakdown, non-goals, and the reason it waits for v1.1 (coherent
   with the community-contribution pipeline).
 - **`docs/signals.md` trimmed from 130 → 74 lines.** Large
@@ -4368,7 +4476,7 @@ aerospace, and retail) with zero errors and zero regressions.
   Previously it only cleared the CT subdomain cache at
   `~/.recon/ct-cache/`; the TenantInfo result cache at
   `~/.recon/cache/` was left untouched and silently served stale
-  JSON on subsequent runs. This surfaced during validation — after
+  JSON on subsequent runs. This surfaced during validation - after
   updating recon, a cached TenantInfo result kept showing retired
   signals like "AI Adoption Without Governance" even after a
   `cache clear <apex>`. The command now clears both caches and
@@ -4377,7 +4485,7 @@ aerospace, and retail) with zero errors and zero regressions.
 - **`recon doctor` no longer emits empty error messages.** Many
   `httpx` exception classes (`ReadTimeout`, `ConnectTimeout`) raise
   with an empty message string, so `str(exc)` rendered as
-  `FAIL  crt.sh (cert transparency) — ` with nothing after the em-
+  `FAIL  crt.sh (cert transparency) - ` with nothing after the em-
   dash. A module-level `_fmt_exc(exc)` helper falls back to
   `type(exc).__name__` when the message is empty; applied
   everywhere in `cli.py` that previously did `render_error(str(exc))`
@@ -4387,7 +4495,7 @@ aerospace, and retail) with zero errors and zero regressions.
   the same address) used to trigger every probed prefix in
   `_detect_exchange_onprem` and get mislabelled as running Exchange
   Server. The detector now probes a nonsense prefix and bails when
-  it also resolves — an unambiguous wildcard signature.
+  it also resolves - an unambiguous wildcard signature.
 - **IDN / Punycode domains accepted.** The validator regex anchored
   the TLD at `[a-z]{2,}`, which rejected every `xn--`-prefixed TLD
   (e.g. `xn--p1ai` for Russian, `xn--fiqs8s` for Chinese). The
@@ -4413,11 +4521,11 @@ aerospace, and retail) with zero errors and zero regressions.
   `test_v090_absence.py`, `test_v093_clustering.py`) renamed to
   their subject matter (`test_absence_engine.py`,
   `test_clustering.py`, etc.) via `git mv` so history is preserved.
-  Docstring leading lines also stripped of the `v0.9.x — QA Round
+  Docstring leading lines also stripped of the `v0.9.x - QA Round
   N:` preamble. Post-1.0 the version of introduction is no longer
   meaningful context for where tests live.
 
-## [1.0.1] — 2026-04-20
+## [1.0.1] - 2026-04-20
 
 **Accuracy & reliability pass** driven by a 150-domain validation sweep
 across large, mid-size, and regional targets in multiple regions and
@@ -4437,7 +4545,7 @@ industries. All fixes stayed inside the project invariants
   `*.mail.protection.outlook.com` / `*.office365.com`). Genuine
   hybrid Exchange (CNAME to org-owned infra, or direct A) still
   fires. Other prefixes (`owa`, `outlook`, `exchange`, `mail-ex`,
-  `webmail`) keep the A-or-CNAME path — those names are on-prem-only
+  `webmail`) keep the A-or-CNAME path - those names are on-prem-only
   when they resolve. See `sources/dns.py::_detect_exchange_onprem`,
   regression tests in `test_dns_subdetectors.py::TestExchangeOnpremAutodiscover`.
 
@@ -4447,7 +4555,7 @@ industries. All fixes stayed inside the project invariants
   parameter and the word `"identifier"`. Both are always present in
   Google's sign-in page (the URL parameter is echoed verbatim into
   the body, and the page is an identifier-capture form), so the
-  check returned `True` for every queryable domain — including
+  check returned `True` for every queryable domain - including
   fabricated ones. The body heuristic is removed. Managed Workspace
   customers are still detected via the DNS fingerprint path (MX
   `aspmx.l.google.com`, SPF `_spf.google.com`, DKIM
@@ -4460,14 +4568,14 @@ industries. All fixes stayed inside the project invariants
 - **`cisco-identity` TXT no longer mis-attributed as the SSO IdP.**
   The slug fires on the `cisco-ci-domain-verification=` TXT token,
   used by many Cisco products (Duo, Customer Identity, Secure Email,
-  Intersight) — not specifically the org's SSO IdP. Removed from
+  Intersight) - not specifically the org's SSO IdP. Removed from
   `_IDP_SLUG_MAP` in `insights.py`; the federated-auth insight now
   correctly falls back to the generic `ADFS/Okta/Ping` line when
   no dedicated IdP evidence is present. The slug still emits the
   `Cisco (Identity)` service fact.
 
 - **12% of big-enterprise lookups timed out at the 120s aggregate
-  budget — now 0%.** Root cause: when CertSpotter rate-limited with
+  budget - now 0%.** Root cause: when CertSpotter rate-limited with
   HTTP 429, `_RetryTransport` slept **30s × 3 retries = 90s** per
   query while CertSpotter's own application code already handled 429
   by breaking the pagination loop. HTTP-layer retry was fighting
@@ -4502,10 +4610,10 @@ industries. All fixes stayed inside the project invariants
 - **`Governance Sprawl` signal.** Depended on `Shadow IT Risk`.
 - **`expected_counterparts` on `AI Adoption` and
   `Agentic AI Infrastructure`.** Produced "Missing Counterparts"
-  absence insights like `AI Adoption — Missing Counterparts: Lakera,
+  absence insights like `AI Adoption - Missing Counterparts: Lakera,
   Okta, CyberArk, Beyond Identity` on nearly every AI-adopting
   target. The listed slugs were vendor recommendations, not
-  observable co-occurrence relationships — their absence does not
+  observable co-occurrence relationships - their absence does not
   constitute a defect observable from DNS. The
   `expected_counterparts` mechanism itself remains available for
   user-customised signals in `~/.recon/signals.yaml`; no built-in
@@ -4531,15 +4639,15 @@ matched) previously raised `ReconLookupError` in the CLI path, printed
 - `google_auth_type` is now `None` more often: the source only
   populates it on a genuine federated redirect. Any consumer that
   depended on the previous "Managed" default on every domain was
-  consuming a bogus signal — switch to the DNS-backed
+  consuming a bogus signal - switch to the DNS-backed
   `primary_email_provider` / slug set instead.
 - Consumers relying on `Shadow IT Risk`, `Complex Migration Window`,
   or `Governance Sprawl` in the signals output will no longer see
-  those names. No replacement — the underlying observations (consumer
+  those names. No replacement - the underlying observations (consumer
   SaaS slugs, dual-provider detection, security stack) are still
   present in the slug/service set.
 
-## [1.0.0] — 2026-04-17
+## [1.0.0] - 2026-04-17
 
 **Stability commitment.** recon is now 1.0. From this release forward,
 all surfaces tagged **stable** in `docs/stability.md` will not break
@@ -4548,46 +4656,46 @@ version bump and a deprecation window.
 
 ### Added
 
-- **`docs/security.md`** — engineering-level threat model. Trust
+- **`docs/security.md`** - engineering-level threat model. Trust
   boundaries, attack surface, mitigations with file:line refs
   (validator.py domain regex, http.py SSRF protections, fingerprints.py
   ReDoS heuristic, ct_cache.py path-traversal guard), known limitations
   (DNS rebinding with sub-second TTLs), out-of-scope.
-- **`docs/limitations.md`** — honest inventory. What recon can't see
+- **`docs/limitations.md`** - honest inventory. What recon can't see
   (Copilot/Gemini, heavily proxied domains, internal services,
   network-level facts), what it underclaims on (bundled AI, dormant
   dual-provider, sovereignty when OIDC is silent), known noise
   patterns, when to reach for something else.
-- **`docs/schema.md`** — JSON output contract. ~45 stable fields
+- **`docs/schema.md`** - JSON output contract. ~45 stable fields
   documented with types, nullability, allowed values. Nested object
   shapes for `cert_summary` and `bimi_identity`. Experimental fields
   (`slug_confidences`) separately tagged.
-- **`tests/test_json_schema_contract.py`** — conformance tests that
+- **`tests/test_json_schema_contract.py`** - conformance tests that
   assert every stable field is present and correctly typed on both
   rich and sparse fixtures.
-- **`scripts/release.py`** — semi-automated release flow. Clean-tree
+- **`scripts/release.py`** - semi-automated release flow. Clean-tree
   check, version-bump consistency, CHANGELOG entry check, quality gate
   (ruff + pyright + pytest + coverage), git commit + tag, confirm-to-push.
   `--dry-run` flag for testing.
-- **`docs/release-process.md`** — full release documentation. Human
+- **`docs/release-process.md`** - full release documentation. Human
   half (`scripts/release.py`), automated half (GH Actions), pre-release
   checklist, hotfix workflow, yanking a broken release, SemVer
   commitment, Python support policy.
 
 ### Changed
 
-- **`docs/stability.md`** — fully expanded. Full CLI flag table, all 17
+- **`docs/stability.md`** - fully expanded. Full CLI flag table, all 17
   MCP tools (stable), full list of stable JSON fields, CLI exit codes,
   YAML schema commitments, Python support policy (CPython N-2 = 3.10,
   3.11, 3.12).
-- **JSON output — always-present fields.** `detection_scores`,
+- **JSON output - always-present fields.** `detection_scores`,
   `cert_summary`, and `bimi_identity` are now always present in
   `--json` output (null when unavailable) rather than conditionally
   emitted. Backward compatible for consumers that check
   `field is not None`; slight breaking change for consumers that
   relied on `field in payload` as a presence check. This was a
   schema-conformance fix for 1.0.
-- **Dev Status classifier** — `pyproject.toml` updated from
+- **Dev Status classifier** - `pyproject.toml` updated from
   `Development Status :: 4 - Beta` to
   `Development Status :: 5 - Production/Stable`.
 
@@ -4598,7 +4706,7 @@ version bump and a deprecation window.
   evidence, feedback-driven posterior tuning) remain in the roadmap as
   non-commitments.
 
-## [0.11.0] — 2026-04-17
+## [0.11.0] - 2026-04-17
 
 Community & confidence. The biggest build yet. Three themes:
 (1) `--confidence-mode strict` drops hedging qualifiers when evidence
@@ -4612,29 +4720,29 @@ with a principled per-slug posterior.
 - **`--confidence-mode {hedged,strict}`** CLI flag. Default `hedged`
   (unchanged). `strict` drops hedging qualifiers ("observed",
   "likely", "indicators") on dense-evidence targets (High confidence
-  + 3+ corroborating sources). Sparse-data output is never touched —
+  + 3+ corroborating sources). Sparse-data output is never touched -
   the "never overclaim when evidence is thin" invariant stays
   load-bearing. New module `recon_tool/strict_mode.py`.
 - **Community fingerprint pipeline.**
-  - `scripts/validate_fingerprint.py` — local validator that runs the
+  - `scripts/validate_fingerprint.py` - local validator that runs the
     same checks recon uses at runtime (regex safety, required fields,
     detection types, weight range, `match_mode`). Exits 0/1 with
     per-entry error messages.
-  - `CONTRIBUTING.md` — new fingerprint submission section with
+  - `CONTRIBUTING.md` - new fingerprint submission section with
     validate command, chained-pattern guidance, PR checklist.
-  - `.github/ISSUE_TEMPLATE/fingerprint_request.md` — structured
+  - `.github/ISSUE_TEMPLATE/fingerprint_request.md` - structured
     template for requesting new fingerprints.
-  - `.github/PULL_REQUEST_TEMPLATE/fingerprint.md` — structured
+  - `.github/PULL_REQUEST_TEMPLATE/fingerprint.md` - structured
     template for fingerprint PRs.
-  - `.github/workflows/ci.yml` — new `validate-fingerprints` job that
+  - `.github/workflows/ci.yml` - new `validate-fingerprints` job that
     runs on every PR.
 - **Bayesian fusion (experimental).** New module `recon_tool/fusion.py`.
   Pure-Python Beta conjugate update. Per-source priors ranked by
   informational content (OIDC > DKIM > MX > TXT > A/CNAME). Opt-in
   via `--fusion`. Emits `slug_confidences` tuple on TenantInfo and
-  in `--json` output. Tagged **experimental** — algorithm and field
+  in `--json` output. Tagged **experimental** - algorithm and field
   shape may evolve.
-- **`docs/stability.md`** — stability policy for 1.0. Lists stable
+- **`docs/stability.md`** - stability policy for 1.0. Lists stable
   vs experimental surfaces. Documents what "stable" means
   (backward-compat guarantee between patch and minor releases).
 
@@ -4643,11 +4751,11 @@ with a principled per-slug posterior.
 - No behavior change by default. Strict mode, fusion, and the
   community pipeline are all opt-in or additive.
 
-## [0.10.3] — 2026-04-17
+## [0.10.3] - 2026-04-17
 
 MCP agent ergonomics. The server now self-documents so AI clients
 call tools correctly without prompt babysitting. All changes stay
-inside the local-stdio-only invariant — no HTTP transport, no
+inside the local-stdio-only invariant - no HTTP transport, no
 hosted mode, no server mode.
 
 ### Added
@@ -4674,7 +4782,7 @@ hosted mode, no server mode.
 - No behavior change in the MCP tools themselves. Just better
   agent ergonomics on top of the existing surface.
 
-## [0.10.2] — 2026-04-17
+## [0.10.2] - 2026-04-17
 
 Passive coverage depth. Three targeted expansions to detection
 coverage and run-over-run intelligence, all staying inside the
@@ -4709,10 +4817,10 @@ passive / zero-creds / per-domain-storage invariants.
 
 ### Roadmap
 
-- Added **v0.10.3 — MCP agent ergonomics** (Server Instructions, tool
+- Added **v0.10.3 - MCP agent ergonomics** (Server Instructions, tool
   docstring polish, `recon doctor --mcp`).
 
-## [0.10.1] — 2026-04-16
+## [0.10.1] - 2026-04-16
 
 Provider accuracy + UX depth. Follow-up to v0.10 that addresses
 structural detection issues exposed during real-world validation:
@@ -4730,7 +4838,7 @@ noise problem.
   "No DKIM selectors observed" false negatives.
 - **`email_confirmed_slugs` parameter** in `detect_provider()`.
   Filters slug-based secondary providers to only those with MX
-  or DKIM evidence — dormant account registrations no longer
+  or DKIM evidence - dormant account registrations no longer
   clutter the Provider line.
 
 ### Changed
@@ -4738,7 +4846,7 @@ noise problem.
 - **SSO hub label.** `federated-sso-hub` slug display changed
   from "Shibboleth / SAML SSO hub" to "SSO hub". A DNS A record
   at `sso.domain.com` can't distinguish Entra ID from Okta from
-  Shibboleth — the previous label overstated what the tool
+  Shibboleth - the previous label overstated what the tool
   knows. Okta and ADFS specific detections (via `okta.*` /
   `adfs.*` subdomains) keep their specific labels.
 - **Service categories rethink.**
@@ -4752,7 +4860,7 @@ noise problem.
   now promotes gateway+DKIM evidence to `primary_email_provider`
   (confirmed) instead of `likely_primary_email_provider`
   (inferred). DKIM proves the provider signs mail for this
-  domain — that's not inference, it's confirmation. Weaker non-MX
+  domain - that's not inference, it's confirmation. Weaker non-MX
   evidence (TXT, OIDC, UserRealm) still sets `likely_primary`.
 - **Provider-line secondaries filtered.** Dormant account
   detections (M365 tenant exists but no DKIM or MX evidence) no
@@ -4763,17 +4871,17 @@ noise problem.
 
 Hybrid-Exchange target before: `Provider     Exchange Server (on-prem / hybrid) behind Trend Micro gateway + Microsoft 365 (account detected) + Google Workspace (account detected)`
 
-Hybrid-Exchange target after: `Provider     Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)` — M365 confirmed via DKIM, GWS confirmed via DKIM too.
+Hybrid-Exchange target after: `Provider     Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)` - M365 confirmed via DKIM, GWS confirmed via DKIM too.
 
 GWS-primary target before: `Provider     Google Workspace (primary) + Microsoft 365 (secondary)`
 
-GWS-primary target after: `Provider     Google Workspace (primary)` — M365 tenant exists but has no MX/DKIM evidence, so it's not shown in the default Provider line.
+GWS-primary target after: `Provider     Google Workspace (primary)` - M365 tenant exists but has no MX/DKIM evidence, so it's not shown in the default Provider line.
 
-## [0.10.0] — 2026-04-16
+## [0.10.0] - 2026-04-16
 
 CT resilience + UX overhaul. Two themes: (1) when live CT providers
 both fail, a per-domain cache serves as fallback; (2) the default
-panel output is now tight enough for a CEO glance — zero redundancy
+panel output is now tight enough for a CEO glance - zero redundancy
 between header, services, and insights.
 
 ### Added
@@ -4787,15 +4895,15 @@ between header, services, and insights.
   before returning an empty subdomain set. The panel shows "CT: from
   local cache, N days old" so users know they're seeing cached data.
 - **Cache CLI commands.**
-  - `recon cache show [domain]` — inspect cache state for a domain
+  - `recon cache show [domain]` - inspect cache state for a domain
     or list all cached domains with subdomain counts and age.
-  - `recon cache clear [domain]` — remove cache for a specific domain.
-  - `recon cache clear --all` — remove all cached CT data.
+  - `recon cache clear [domain]` - remove cache for a specific domain.
+  - `recon cache clear --all` - remove all cached CT data.
 - **Cache age in panel output.** When CT data comes from cache, the
   Note section shows "CT: from local cache, N days old (M subdomains)"
   in info tone (not warning) so it reads as a recovery event, not an
   error.
-- **`ct_cache_age_days` field** in JSON output — `null` when data
+- **`ct_cache_age_days` field** in JSON output - `null` when data
   comes from a live provider, integer when from cache.
 
 ### Changed
@@ -4806,22 +4914,22 @@ between header, services, and insights.
 - **Degraded-source rendering** updated to distinguish live fallback
   ("CT fallback: crt.sh → certspotter") from cache fallback ("CT:
   from local cache, 3 days old").
-- **UX overhaul — insight curation.** Aggressive dedup: 18
+- **UX overhaul - insight curation.** Aggressive dedup: 18
   restatement prefixes dropped (insights that just re-list services
   already visible in the categorized block). Default mode caps at 5
   insights + email score; `--full` shows all. Vague labels like
   "Complex Migration Window" and "Governance Sprawl" cut entirely.
-- **UX — Email row cleanup.** Protocol config (DKIM, DMARC, SPF,
+- **UX - Email row cleanup.** Protocol config (DKIM, DMARC, SPF,
   MTA-STS, BIMI, TLS-RPT, Exchange Autodiscover) removed from the
-  default Email services row — the email security score insight
+  default Email services row - the email security score insight
   already covers these. Provider-line services (M365, Google
   Workspace, gateway) also stripped from Email to eliminate
   duplication. `--full` still shows everything.
-- **UX — no decorative color.** Section headers changed from
+- **UX - no decorative color.** Section headers changed from
   `bold cyan` to `bold`. Color reserved for functional meaning
   (green=high confidence, yellow=warning) per modern CLI norms.
-- **UX — CT note suppressed.** Routine "CT fallback: crt.sh →
-  certspotter" notes suppressed in default output — infrastructure
+- **UX - CT note suppressed.** Routine "CT fallback: crt.sh →
+  certspotter" notes suppressed in default output - infrastructure
   plumbing that added noise on nearly every run. Cache fallback
   and actual warnings still surface.
 - **Provider accuracy.** When Exchange Autodiscover AND an M365
@@ -4833,23 +4941,23 @@ between header, services, and insights.
   (likely)". Hedged with "(likely)" to distinguish from DNS-
   confirmed detections like Anthropic.
 
-## [0.9.4] — 2026-04-16
+## [0.9.4] - 2026-04-16
 
 Infrastructure-only release. No feature changes. Toolchain and release
 hygiene to make the 1.0 stability commitment credible.
 
 ### Added
 
-- **`SECURITY.md`** — vulnerability reporting policy at the repo root
+- **`SECURITY.md`** - vulnerability reporting policy at the repo root
   (GitHub's standard location). Separate from the `docs/security.md`
   threat model planned for 1.0.
-- **Pre-commit hooks** — `.pre-commit-config.yaml` with Ruff (lint +
+- **Pre-commit hooks** - `.pre-commit-config.yaml` with Ruff (lint +
   format) and Pyright. Prevents bad code from reaching CI.
-- **`pip-audit` in CI** — dependency vulnerability scanning runs on
+- **`pip-audit` in CI** - dependency vulnerability scanning runs on
   every PR and every release build.
-- **Coverage gate** — CI now fails if test coverage drops below 80%.
+- **Coverage gate** - CI now fails if test coverage drops below 80%.
   Current coverage: 87%.
-- **`uv.lock`** — reproducible builds via uv lockfile. Development
+- **`uv.lock`** - reproducible builds via uv lockfile. Development
   workflow uses `uv sync --extra dev`; end-user install instructions
   (`pip install recon-tool`) are unchanged.
 
@@ -4861,7 +4969,7 @@ hygiene to make the 1.0 stability commitment credible.
   for up-to-date packaging guidance.
 - **CI migrated from pip to uv.** Both `ci.yml` and `release.yml` now
   use `astral-sh/setup-uv@v5` for faster, reproducible installs.
-- **Trusted Publisher on PyPI** — release pipeline already uses
+- **Trusted Publisher on PyPI** - release pipeline already uses
   OIDC-based publishing via `pypa/gh-action-pypi-publish`; no static
   API tokens.
 
@@ -4872,10 +4980,10 @@ hygiene to make the 1.0 stability commitment credible.
 - Pre-commit can be activated with `pre-commit install` after cloning.
 - `pip-audit` is included in the `[dev]` extra for local use.
 
-## [0.9.3] — 2026-04-15
+## [0.9.3] - 2026-04-15
 
 This release is the *Sparse-Target Amplification + UX Refinement* pass.
-Themes: (1) extract more hedged signal from the same passive sources —
+Themes: (1) extract more hedged signal from the same passive sources -
 especially on heavily-proxied, minimal-DNS, managed-auth targets where
 older releases went silent; (2) redesign the default CLI output so
 professional users never feel like they're looking at hobbyist-grade dump
@@ -4903,7 +5011,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   - Exchange Autodiscover classified as Email instead of Other.
   - Verification-token artefacts (`"(site verified)"`,
     `"(domain verified)"`, `"Domain Connect (…)"`) filtered from
-    the categorized Services block — they're ownership receipts,
+    the categorized Services block - they're ownership receipts,
     not deployed products.
   - Identity row dropped when its only entry is a
     `"<provider> (managed identity)"` echo of an Email row.
@@ -4917,16 +5025,16 @@ within the passive / zero-creds / zero-additional-network invariants.
     version fires.
   - On sparse targets (`Email security 0/5` / `1/5` / `2/5`), the
     subsequent `"No DMARC record"`, `"No DKIM selectors"`, and
-    `"DMARC: none"` lines are dropped as redundant — the score
+    `"DMARC: none"` lines are dropped as redundant - the score
     line already says it.
   - `"Cloud-managed identity indicators (Entra ID native)"` only
-    fires on pure M365 targets (no Google Workspace present) —
+    fires on pure M365 targets (no Google Workspace present) -
     on dual-provider targets the Auth line already says
     `"Managed (Entra ID + Google Workspace)"` so the insight
     would be pure restatement.
   - Meta-signals (`requires_signals` only, no candidates) that
-    fire with an empty `matched` list — for example
-    `"Complex Migration Window"` — render as a bare name instead
+    fire with an empty `matched` list - for example
+    `"Complex Migration Window"` - render as a bare name instead
     of a `"Name: "` dead-end with nothing after the colon.
   - Raw slugs in signal insight text now humanize through a
     ~90-entry map: `"sendgrid, mailchimp"` → `"SendGrid, Mailchimp"`,
@@ -4938,7 +5046,7 @@ within the passive / zero-creds / zero-additional-network invariants.
     `"Google Workspace, Google Workspace (managed)"`.
 - **Sparse-signal observation**: new hedged two-sided insight that
   fires when service density is low and the target isn't an M365
-  tenant. States explicitly: *"Sparse public signal — few
+  tenant. States explicitly: *"Sparse public signal - few
   observable records beyond MX and identity. Consistent with a
   small organization, a parked or dormant domain, or a
   heavily-proxied target. Observation, not a verdict."* This is
@@ -4946,7 +5054,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   previous output left the user guessing about.
 - **Provider line / Auth line consistency**:
   - Slug-only fallback in `detect_provider` always adds the
-    `"(primary)"` qualifier now (was inconsistent before —
+    `"(primary)"` qualifier now (was inconsistent before -
     topology path labelled, fallback path didn't). Multi-provider
     fallback follows the same `"primary + secondary"` format as
     the topology path.
@@ -4957,14 +5065,14 @@ within the passive / zero-creds / zero-additional-network invariants.
     leaking the "Unknown" token.
   - Auth line `"(GWS)"` abbreviation replaced with
     `"(Google Workspace)"` in the mismatched-auth branch (the
-    same-auth compound branch already used the full name —
+    same-auth compound branch already used the full name -
     inconsistent before).
   - Auth line `"Entra ID"` claim only fires when `microsoft365`
     is in `slugs`, not just when `tenant_id` is set. A domain
     with a registered but inactive M365 tenant no longer gets
     a false "Entra ID" label on the Auth line.
 - **Panel layout**:
-  - Hero header shows `display_name` once — when it falls back to
+  - Hero header shows `display_name` once - when it falls back to
     the raw domain (no company name extractable), the duplicated
     hostname line that looked like a bug is gone.
   - Long Provider-line values wrap with an explicit continuation
@@ -4981,7 +5089,7 @@ within the passive / zero-creds / zero-additional-network invariants.
     warning); **warning tone** (yellow) when a non-CT source is
     down or every CT provider failed.
   - When CT fallback succeeded with zero subdomains, the Note
-    line is suppressed entirely — the outcome is identical to a
+    line is suppressed entirely - the outcome is identical to a
     clean run on a domain with no related CT data, so mentioning
     the fallback every time was persistent noise.
   - Wording changed from `"Some sources unavailable"` (false
@@ -5002,7 +5110,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   the top-level `slugs` field was missing from the output.
   Also added `cloud_instance`, `tenant_region_sub_scope`,
   `msgraph_host`, and `lexical_observations` to the emitted
-  dict — they were on `TenantInfo` but not surfaced in
+  dict - they were on `TenantInfo` but not surfaced in
   `--json`.
 
 ### Docs and roadmap
@@ -5011,7 +5119,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   original 191-line, four-release (`v0.9.3 → v0.9.4 → v0.9.5 →
   v1.0`) gold-plated plan into a tighter ~150-line priority-
   ordered list. CT source resilience promoted from "Later/maybe"
-  to `What's next #1` — three-provider fallback chain + local
+  to `What's next #1` - three-provider fallback chain + local
   per-domain JSON cache with 7-day TTL. Community fingerprint
   pipeline elevated from "Later/maybe" to 1.0 scope.
   `--confidence-mode strict` flag added as a future item for the
@@ -5023,18 +5131,18 @@ within the passive / zero-creds / zero-additional-network invariants.
   sparse-evidence fixtures, MCP idempotent/cache-aware, stability
   tags on every public surface).
 - **README example panel updated** to the v0.9.3 hero layout. The
-  old bordered-panel example no longer matched reality — a new
+  old bordered-panel example no longer matched reality - a new
   user reading the README would see an example format the tool
   doesn't produce anymore.
 
-### Added — Sparse-target inference
+### Added - Sparse-target inference
 
 - **`positive_when_absent` absence-engine extension + hedged
   hardening observations.** The `Signal` schema gains a new
   `positive_when_absent` field. When a parent signal fires AND none
   of the listed adversary-friendly / consumer-SaaS slugs are
   detected, the absence engine emits a hedged two-sided positive
-  observation: *"Edge Layering — Hardening Pattern Observed: fits a
+  observation: *"Edge Layering - Hardening Pattern Observed: fits a
   deliberately hardened target, a dormant / parked domain, or a
   small shop behind an edge proxy. Hedged observation, not a
   verdict."* The v0.9.3 `Edge Layering` signal carries a 14-slug
@@ -5054,7 +5162,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   embeddings, no generated candidates. Emits hedged
   ``LexicalObservation`` entries on the standard insights list:
   "Mature environment separation pattern observed (3 env-prefixed
-  subdomains e.g. dev, stg, prod) — consistent with multi-environment
+  subdomains e.g. dev, stg, prod) - consistent with multi-environment
   deployment pipelines. Observation, not a verdict." A threshold of
   `MIN_MATCHES=2` prevents single-subdomain coincidences from firing
   the signal; sample labels are capped at 3 so `--explain` shows
@@ -5063,7 +5171,7 @@ within the passive / zero-creds / zero-additional-network invariants.
 - **OIDC tenant metadata enrichment** (`sources/oidc.py`). The
   `parse_tenant_info_from_oidc` parser now extracts the Microsoft
   extensions `cloud_instance_name`, `tenant_region_sub_scope`, and
-  `msgraph_host` from the discovery response — fields that were
+  `msgraph_host` from the discovery response - fields that were
   already in the JSON we fetched but silently discarded. These
   distinguish commercial M365 (`microsoftonline.com`), US Government
   Community Cloud (`microsoftonline.us` + `GCC`), GCC High / DoD
@@ -5085,9 +5193,9 @@ within the passive / zero-creds / zero-additional-network invariants.
   with per-token peer attribution. Exposed programmatically via a
   new read-only `cluster_verification_tokens` MCP tool that accepts
   a list of domains and returns the cluster map from cached
-  `TenantInfo` — zero extra network calls. Shared tokens are
+  `TenantInfo` - zero extra network calls. Shared tokens are
   **hedged "possible relationship (observed)"** signals, never
-  acquisition verdicts — a reused token implies a shared SaaS
+  acquisition verdicts - a reused token implies a shared SaaS
   account operator, not corporate identity. 21 unit tests cover
   normalization, symmetry, multi-peer clusters, and deterministic
   ordering.
@@ -5097,26 +5205,26 @@ within the passive / zero-creds / zero-additional-network invariants.
   directory) define a lens: `category_boost` multipliers,
   `signal_boost` per-signal multipliers, `focus_categories` filters,
   `exclude_signals` blocklists, and a `prepend_note` header.
-  Profiles are additive-only — they reweight and reorder existing
+  Profiles are additive-only - they reweight and reorder existing
   observations, never add new intelligence. Six built-in profiles
   ship in `data/profiles/`: `fintech`, `healthcare`, `saas-b2b`,
   `high-value-target`, `public-sector`, `higher-ed`. The CLI gains `--profile
   <name>` on the lookup command; the MCP `analyze_posture` tool
   gains an optional `profile` argument. Custom profiles override
-  built-ins when the name matches — one of the few exceptions to
+  built-ins when the name matches - one of the few exceptions to
   the usual additive-only invariant, on the grounds that profiles
   are explicitly user-facing lenses and explicit override is the
   expected mode. 25 unit tests cover built-in discovery, custom
   profile loading, invalid YAML handling, boost multipliers,
   category filtering, and deterministic ordering.
-- **DMARC aggregator fingerprinting** — four new vendors added to
+- **DMARC aggregator fingerprinting** - four new vendors added to
   the existing `dmarc_rua` detection pipeline: URIports,
   DMARC Advisor, PowerDMARC, Mimecast DMARC Analyzer. Total
   fingerprint count now **227** (was 208). The `DMARC Governance
   Investment` signal's `requires.any` list was expanded to cover
   the new slugs, so RUA addresses pointing to these vendors now
   fire the governance-maturity signal end-to-end.
-- **EDU / nonprofit / marketing fingerprints** — 15 new
+- **EDU / nonprofit / marketing fingerprints** - 15 new
   fingerprints: Canvas LMS, Blackboard, Moodle, Ellucian
   Banner, Handshake, Top Hat (higher-ed LMS/SIS), Dynamics 365
   Marketing, Salesforce Marketing Cloud (SFMC), Emma, iContact,
@@ -5128,7 +5236,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   (`dns._detect_exchange_onprem`). Probes `owa.`, `outlook.`,
   `exchange.`, `mail-ex.`, `webmail.`, `autodiscover.` subdomains.
   `autodiscover` uses A-only resolution (not CNAME) to avoid
-  M365 false-positives — M365 autodiscover is CNAME to
+  M365 false-positives - M365 autodiscover is CNAME to
   `outlook.com`. Emits `exchange-onprem` slug. Wired into the
   parallel `asyncio.gather` detector set.
 - **Federated SSO hub detection** (`dns._detect_idp_hub`).
@@ -5162,7 +5270,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   outbound-email slug) before scoring. Domains with zero email
   infrastructure no longer get a misleading `0/5 weak` label.
   Score `0` with monitoring records reads "DMARC monitoring
-  mode, SPF soft/neutral — no strict controls" instead of
+  mode, SPF soft/neutral - no strict controls" instead of
   "no protections detected".
 - **Provider "account detected" variants**. When identity
   endpoints show a registered account but MX records don't
@@ -5178,7 +5286,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   path (asserted by the v0.9.3 property-based harness). `--explain
   --json` on the CLI and the MCP `lookup_tenant` with `explain=true`
   both emit the DAG under a new `explanation_dag` key alongside
-  the existing flat `explanations` list — old consumers stay
+  the existing flat `explanations` list - old consumers stay
   working, new consumers get the structured view. 17 unit tests
   pin the shape, the node types, the edge semantics, and
   determinism.
@@ -5196,10 +5304,10 @@ within the passive / zero-creds / zero-additional-network invariants.
   (`definitely`, `proven`, `confirmed `, `guaranteed`). Runs in
   under 5 seconds on default settings so it's always on. This is
   the mechanical floor that makes every other v0.9.3 item safe to
-  ship — a future PR that reintroduces confident-wrong language
+  ship - a future PR that reintroduces confident-wrong language
   fails CI before merge.
 
-### Added — UI/X refinements
+### Added - UI/X refinements
 
 - **Default panel redesign** (`formatter.render_tenant_panel`).
   Complete visual rewrite of the lookup output. The old bordered
@@ -5210,8 +5318,8 @@ within the passive / zero-creds / zero-additional-network invariants.
   hierarchical Services section broken into seven display
   categories (Email, Identity, Cloud, Security, AI, Collaboration,
   Other), then a compact 1–2 line High-Signal Related Domains
-  section, then curated Insights, and — only when sources are
-  actually degraded — a subtle yellow Note line. `--full`,
+  section, then curated Insights, and - only when sources are
+  actually degraded - a subtle yellow Note line. `--full`,
   `--verbose`, `--explain`, and `--domains` add additional
   sections (full tenant_domains list, evidence chain, conflict
   annotations, cert summary) after the core layout without
@@ -5222,7 +5330,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   Medium/Low confidence (no alarmist yellow, no red, no
   high-chroma anywhere), subtle yellow for the degraded-sources
   Note line (only when it appears). Graceful monochrome fallback
-  — terminals without color support still render the full layout
+  - terminals without color support still render the full layout
   as plain text.
 - **Categorized services classifier**. A 120+ slug → category
   lookup table (`_CATEGORY_BY_SLUG`) gives every detected slug a
@@ -5243,9 +5351,9 @@ within the passive / zero-creds / zero-additional-network invariants.
   subdomains (prefixes `login.`, `sso.`, `auth.`, `idp.`, `api.`,
   `admin.`, `portal.`, `dashboard.`, `support.`, `status.`,
   `app.`, `cdn.`) and displays them as a wrapped 1–2 line comma
-  list with a `(N total — M more, use --full to see all)`
+  list with a `(N total - M more, use --full to see all)`
   footer. The old panel's 10-entry vertical list is replaced
-  entirely — it was the single biggest consumer of vertical
+  entirely - it was the single biggest consumer of vertical
   space on enterprise targets.
 - **Fixed misleading Provider line** (`formatter.detect_provider`
   + new `_pick_single_primary` helper). The old format
@@ -5256,7 +5364,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   then Google Workspace, then list-order fallback. Target
   output: `"Microsoft 365 (primary) via Trend Micro gateway +
   Google Workspace (secondary)"`. The word `(dual)` never
-  appears anywhere in provider output — and the v0.9.3 property
+  appears anywhere in provider output - and the v0.9.3 property
   tests assert this.
 - **Elevated bare `recon` command**. Running `recon` with no
   arguments no longer dumps the raw Typer help. Instead it
@@ -5281,27 +5389,27 @@ within the passive / zero-creds / zero-additional-network invariants.
   **stderr** so `stdout` stays clean for the stdio transport's
   JSON-RPC framing.
 
-### Added — Models / storage plumbing
+### Added - Models / storage plumbing
 
 - `SourceResult` gains `cloud_instance`, `tenant_region_sub_scope`,
   `msgraph_host` (all `str | None`, default `None`).
 - `TenantInfo` gains `cloud_instance`, `tenant_region_sub_scope`,
   `msgraph_host`, `shared_verification_tokens` (tuple of
-  `(token, peer_domain)` pairs — batch-scope only, not cached),
+  `(token, peer_domain)` pairs - batch-scope only, not cached),
   and `lexical_observations` (tuple of hedged observation
   statements).
 - `Signal` gains `positive_when_absent: tuple[str, ...]`.
 - `cache.py` round-trips every new field except
-  `shared_verification_tokens` — that one is intentionally
+  `shared_verification_tokens` - that one is intentionally
   batch-scope-only to prevent a single-domain lookup from
   inheriting peers from a previous batch run.
-- New `recon_tool/clustering.py` — `ClusterEntry` frozen
+- New `recon_tool/clustering.py` - `ClusterEntry` frozen
   dataclass + `cluster_tokens` + `compute_shared_tokens` pure
   functions.
-- New `recon_tool/lexical.py` — `LexicalObservation` frozen
+- New `recon_tool/lexical.py` - `LexicalObservation` frozen
   dataclass + `classify_subdomains` + `lexical_observations`
   pure functions.
-- New `recon_tool/profiles.py` — `Profile` frozen dataclass +
+- New `recon_tool/profiles.py` - `Profile` frozen dataclass +
   `load_profile` / `list_profiles` / `reload_profiles` /
   `apply_profile`.
 
@@ -5329,7 +5437,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   from non-MX evidence the label becomes `"(likely primary)"`.
 - **Gateway-only format**: the v0.9.2 `"{gateway} (email
   gateway)"` is replaced with `"{gateway} gateway (no
-  inferable downstream)"` — more explicit about why no primary
+  inferable downstream)"` - more explicit about why no primary
   is shown.
 - **Insights curation**: the v0.9.2 panel dumped every generated
   insight verbatim. v0.9.3 curates out repetitive laundry lists
@@ -5347,13 +5455,13 @@ within the passive / zero-creds / zero-additional-network invariants.
   new `_pick_single_primary` helper promotes one primary and
   demotes the rest, eliminating the ambiguous "dual" reading.
 - **Bare `recon` UX failure**. Running `recon` with no arguments
-  used to dump the raw Typer help — ~30 lines of
+  used to dump the raw Typer help - ~30 lines of
   machine-generated flag documentation with no value
   proposition, no examples, no suggested first command. Now
   emits a curated banner that tells users what the tool does
   and gives them the exact command to run next.
 - **`recon mcp` silent-start failure**. Running `recon mcp`
-  used to produce no output at all — just a silent hang on
+  used to produce no output at all - just a silent hang on
   stdio. First-time users reported thinking the command had
   crashed. Now prints a professional startup banner to stderr
   with the tool list and config hint, and catches `KeyboardInterrupt`
@@ -5370,7 +5478,7 @@ within the passive / zero-creds / zero-additional-network invariants.
 ### Internal
 
 - **Test count**: 1479 passing (1483 total, 4 integration tests
-  deselected by default). 123 net new tests across v0.9.3 — 14
+  deselected by default). 123 net new tests across v0.9.3 - 14
   for positive-absence, 30 for lexical, 21 for clustering, 13
   for OIDC enrichment, 25 for profiles, 17 for explanation DAG,
   1 compound test class (TestHardeningObservationIsHedged et
@@ -5394,7 +5502,7 @@ within the passive / zero-creds / zero-additional-network invariants.
 
 - **Panel output format**. If your tooling parses the default
   `recon <domain>` terminal output (text scraping), it will
-  break — the layout is entirely redesigned. Use `--json` for
+  break - the layout is entirely redesigned. Use `--json` for
   programmatic consumers; the `--json` shape is unchanged
   except for the new additive fields (`cloud_instance`,
   `tenant_region_sub_scope`, `msgraph_host`,
@@ -5405,7 +5513,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   above. Consumers matching on the exact v0.9.2 string
   `"(primary email via X gateway)"` need to update.
 
-## [0.9.2] — 2026-04-14
+## [0.9.2] - 2026-04-14
 
 This release is a reliability and honesty pass driven by real-world batch
 runs across 15 diverse enterprise domains. v0.9.1 was catastrophically
@@ -5418,7 +5526,7 @@ exactly what went wrong when a lookup is incomplete.
 
 - The signal **"Legacy Provider Residue"** has been renamed to
   **"Secondary Email Provider Observed"**. The detection logic and
-  `exclude_matches_in_primary` guard are unchanged — only the surface
+  `exclude_matches_in_primary` guard are unchanged - only the surface
   name and description differ. Any downstream tool matching on the old
   signal name (in `--json` output's `signals[].name`, in MCP tool
   responses, or in `signals.yaml` overrides) needs to update its
@@ -5442,13 +5550,13 @@ exactly what went wrong when a lookup is incomplete.
 - **No source-level retry for transient network failures.** The HTTP
   transport layer retried 429/503 status codes, but timeouts and
   connection resets caused individual sources to return immediately
-  with an error — cascading up to a false "no information" verdict on
+  with an error - cascading up to a false "no information" verdict on
   domains that would have resolved fine on a retry. A new
   `retry_on_transient` decorator in `recon_tool/retry.py` retries up to
   two times on `httpx.TimeoutException`, `ConnectError`, `ConnectTimeout`,
   `ReadError`, `WriteError`, `RemoteProtocolError`, `asyncio.TimeoutError`,
   and `OSError`, with 0.5s and 1.5s backoff. Applied to `OIDCSource`
-  and `GoogleIdentitySource` — the two single-point-of-failure sources
+  and `GoogleIdentitySource` - the two single-point-of-failure sources
   most sensitive to transient failures. UserRealm and DNS already have
   internal fallback paths.
 - **CertSpotter pagination missing.** The provider sent a single GET
@@ -5456,7 +5564,7 @@ exactly what went wrong when a lookup is incomplete.
   Large enterprise domains silently truncated to a fraction of their CT
   footprint, and the caller had no idea the response was partial. Added
   a pagination loop capped at 4 pages (controlled by `_MAX_PAGES`) with
-  graceful handling of HTTP 429 — on rate limit, the provider returns
+  graceful handling of HTTP 429 - on rate limit, the provider returns
   what's been collected rather than raising.
 - **CT provider attribution invisible.** When crt.sh was degraded and
   CertSpotter picked up the fallback, users saw the same generic
@@ -5464,13 +5572,13 @@ exactly what went wrong when a lookup is incomplete.
   fallback produced 0 or 100 subdomains. New `ct_provider_used` and
   `ct_subdomain_count` fields on `SourceResult` and `TenantInfo` track
   which provider actually contributed, and the panel bottom Note line
-  now reads e.g. *"Some sources unavailable (crt.sh) — CT data via
+  now reads e.g. *"Some sources unavailable (crt.sh) - CT data via
   certspotter (87 subdomains)"*. Plumbed through the disk cache too.
 - **"Legacy Provider Residue" mislabeled active dual-use.** On a major
   dev platform owned by a major tech company (M365 primary + Google
   Workspace secondary via DKIM), the signal fired as "Legacy Provider
   Residue: google-workspace". But in that case, both providers are
-  actively used — not legacy residue at all. Renamed to **"Secondary
+  actively used - not legacy residue at all. Renamed to **"Secondary
   Email Provider Observed"** with neutral two-sided wording that
   describes the observation without asserting whether it's active dual
   use, migration residue, or a legacy tenant.
@@ -5482,48 +5590,48 @@ exactly what went wrong when a lookup is incomplete.
   silently skipping MX analysis.
 - **`compute_inference_confidence` missed non-Microsoft corroboration.**
   The corroboration check required `m365_detected`, `display_name`, or
-  `auth_type` on a non-OIDC source — fields that only populate for
+  `auth_type` on a non-OIDC source - fields that only populate for
   Microsoft-side sources. A domain with a tenant_id from OIDC and
   Google Workspace auth confirmation couldn't reach HIGH inference
   confidence because the Google-side fields weren't recognized as
   corroboration. Expanded the check to include `google_auth_type` and
   `tenant_domains` as valid signals.
 - **Related-domains list indent regression.** (Carried over from
-  v0.9.1 — not a v0.9.2 change, but the bank-run validation exposed a
+  v0.9.1 - not a v0.9.2 change, but the bank-run validation exposed a
   latent edge case where the footer line's text was slightly too long
   for the panel, causing Rich to wrap the last word to the panel
   margin. Shortened the footer text.)
 
 ### Added
 
-- **`--timeout` CLI flag** — configurable per-lookup aggregate timeout,
+- **`--timeout` CLI flag** - configurable per-lookup aggregate timeout,
   defaults to 120s (was 60s hardcoded). The batch pipeline and every
   resolve path honors the override.
-- **`retry_on_transient` decorator** (`recon_tool/retry.py`) — shared
+- **`retry_on_transient` decorator** (`recon_tool/retry.py`) - shared
   async retry helper for source-level transient failures. Narrow
   exception list, short backoff, bounded attempts. 12 unit tests
   covering every transient exception class and the non-retry path.
-- **CertSpotter pagination loop** — `CertSpotterProvider.query` now
+- **CertSpotter pagination loop** - `CertSpotterProvider.query` now
   iterates up to `_MAX_PAGES` pages via the `after=<id>` cursor,
   accumulating subdomains and cert metadata across the full response.
   Stops early on 429, empty page, or missing issuance id.
 - **CT provider attribution fields** on `SourceResult` and `TenantInfo`:
   `ct_provider_used` (which CT provider actually succeeded) and
   `ct_subdomain_count` (how many came back after filtering). The count
-  is the **filtered** subdomain count — what's left after the wildcard
+  is the **filtered** subdomain count - what's left after the wildcard
   removal, noise-prefix skip, and `MAX_SUBDOMAINS` cap in
-  `filter_subdomains` — not the raw issuance count returned by the API.
+  `filter_subdomains` - not the raw issuance count returned by the API.
   Surfaced in the JSON output, the disk cache, and the panel bottom
   Note (panel only when degraded sources are also present, so clean
   runs aren't cluttered with reassurance text).
-- **`render_source_status_panel()`** in `formatter.py` — compact
+- **`render_source_status_panel()`** in `formatter.py` - compact
   per-source status panel (✓/✗ with brief reason) rendered under
   `--explain` so users can see which sources succeeded and which
   failed without needing `--verbose`. Previously only available in
   the verbose status-line stream during resolution.
 - **Partial-success rendering at the merger boundary.** `merge_results`
   already returned a partial `TenantInfo` when `tenant_id` was `None`
-  but any source produced services — v0.9.2 tightens the rejection
+  but any source produced services - v0.9.2 tightens the rejection
   path so that when every source returns zero services AND zero
   tenant_id, the raised `ReconLookupError` carries the concrete
   per-source reasons instead of a generic message.
@@ -5548,7 +5656,7 @@ exactly what went wrong when a lookup is incomplete.
 - **25 new tests in `tests/test_explanation_coverage.py`** covering
   explanation insight classification branches, `explain_confidence`,
   `explain_observations`, and `serialize_explanation` round-trip.
-- **4 new tests in `tests/test_merger_error_surfacing.py`** — R2
+- **4 new tests in `tests/test_merger_error_surfacing.py`** - R2
   regression guards: source errors carried on the exception, partial
   success when any source produced services, neutral message when
   sources returned empty without errors.
@@ -5560,22 +5668,22 @@ exactly what went wrong when a lookup is incomplete.
 
 ### Changed
 
-- `ReconLookupError` — added `source_errors: tuple[tuple[str, str], ...]`
+- `ReconLookupError` - added `source_errors: tuple[tuple[str, str], ...]`
   field carrying per-source failure reasons. Backward compatible
   (defaults to empty tuple).
-- `TenantInfo` — added `ct_provider_used: str | None` and
+- `TenantInfo` - added `ct_provider_used: str | None` and
   `ct_subdomain_count: int` fields. Backward compatible.
-- `SourceResult` — added matching `ct_provider_used` and
+- `SourceResult` - added matching `ct_provider_used` and
   `ct_subdomain_count` fields.
-- `detect_provider()` in `formatter.py` — when nothing matches, returns
+- `detect_provider()` in `formatter.py` - when nothing matches, returns
   *"Unknown (no known provider pattern matched)"* instead of the bare
   "Unknown" label, so users know the tool looked and came up empty.
-- `compute_inference_confidence()` in `merger.py` — corroboration check
+- `compute_inference_confidence()` in `merger.py` - corroboration check
   now accepts `google_auth_type` and `tenant_domains` as valid signals
   in addition to the existing Microsoft-side fields. Raises HIGH
   inference confidence on domains where tenant_id comes from OIDC and
   corroboration comes from Google Identity.
-- `OIDCSource.lookup` and `GoogleIdentitySource.lookup` — refactored to
+- `OIDCSource.lookup` and `GoogleIdentitySource.lookup` - refactored to
   use a `_fetch` inner coroutine decorated with `retry_on_transient`.
   External API is unchanged (still never raises; always returns a
   `SourceResult`).
@@ -5585,7 +5693,7 @@ exactly what went wrong when a lookup is incomplete.
   All tests referencing the old name updated.
 - `docs/signals.md` and `tests/test_v090_provider.py` updated for the
   rename.
-- `render_warning(domain, error=None)` in `formatter.py` — accepts an
+- `render_warning(domain, error=None)` in `formatter.py` - accepts an
   optional `ReconLookupError` argument and renders its `source_errors`
   as dim second lines. All CLI call sites updated.
 - Console initialization: `get_console()` now uses `cast(Any, ...)` on
@@ -5606,62 +5714,62 @@ changing the core architecture.
 
 ### Fixed
 
-- **DKIM wording overclaim** — insights, exposure gaps, and the exposure
+- **DKIM wording overclaim** - insights, exposure gaps, and the exposure
   panel all said "DKIM not configured" when the tool had only checked
   common selector names (mail, selector1, google, k1, etc.). Rewrote to
-  "No DKIM selectors observed at common names — actual DKIM status
+  "No DKIM selectors observed at common names - actual DKIM status
   unknown" so the absence of a match at known selectors is never
   reported as a configured-or-not claim. 3 files touched.
-- **Legacy Provider Residue false positives** — the signal was firing
+- **Legacy Provider Residue false positives** - the signal was firing
   on the *current* primary email provider, so a GWS-primary domain
   would show "Legacy Provider Residue: google-workspace" and a
   dual-M365+GWS domain would show both primaries flagged as residue.
   New `exclude_matches_in_primary` field on the Signal schema filters
   matched slugs whose display name appears in either
   `primary_email_provider` or the new `likely_primary_email_provider`.
-  When neither primary is known, the signal refuses to fire — a
+  When neither primary is known, the signal refuses to fire - a
   residue claim is meaningless without a known primary to be residue
   against.
-- **Multi-Cloud miscategorizing CDNs** — Cloudflare, Akamai, Fastly,
+- **Multi-Cloud miscategorizing CDNs** - Cloudflare, Akamai, Fastly,
   and Imperva were triggering a "Multi-Cloud" signal despite being
   edge/CDN providers, not cloud providers. Split into two signals:
   `Multi-Cloud` (AWS/Azure/GCP/fly.io only) and new `Edge Layering`
   (CF/Akamai/Fastly/Imperva). New `edge_layering` posture rule.
-- **Absence engine treating competitors as missing counterparts** —
+- **Absence engine treating competitors as missing counterparts** -
   `expected_counterparts` entries on Enterprise Security Stack,
   Enterprise IT Maturity, and DMARC Governance Investment listed
   alternative vendors (Proofpoint/Mimecast/Barracuda for one;
   Jamf/Kandji and CrowdStrike/SentinelOne for another). Removed
   those three entries. The two remaining entries (AI Adoption,
   Agentic AI Infrastructure) describe genuine complements.
-- **"Split-Brain Email Config" pejorative framing** — renamed to
+- **"Split-Brain Email Config" pejorative framing** - renamed to
   "Dual Email Delivery Path" (phrase already used in insights).
   Common deliberate enterprise pattern; previous name read as a
   defect.
-- **Confidence overclaiming on degraded sources** — headline confidence
+- **Confidence overclaiming on degraded sources** - headline confidence
   now downgrades one rung (High→Medium→Low) when any source is in
   `degraded_sources`. Previously "High (4 sources)" would render
-  while the bottom note said "crt.sh unavailable" — a self-contradiction.
-- **v0.9.0 email topology fields were silently broken** —
+  while the bottom note said "crt.sh unavailable" - a self-contradiction.
+- **v0.9.0 email topology fields were silently broken** -
   `_detect_mx` in the DNS source never passed `source_type` or
   `raw_value` to `ctx.add()`, so no MX EvidenceRecords were ever
   created. `_compute_email_topology` filters evidence by
   `source_type == "MX"` and consequently always returned
   `(None, None)` on live data. The v0.9.0 `primary_email_provider`
   and `email_gateway` fields have never populated from a real
-  lookup. Same issue on Google DKIM detections. Fixed both — MX,
+  lookup. Same issue on Google DKIM detections. Fixed both - MX,
   Exchange DKIM, Google DKIM, and ESP DKIM all now create
   EvidenceRecords with correct source types.
-- **v0.9.0 topology fields were never serialized to disk cache** —
+- **v0.9.0 topology fields were never serialized to disk cache** -
   `primary_email_provider`, `email_gateway`, `dmarc_pct`, and the
   new `likely_primary_email_provider` are now persisted and restored
   from `~/.recon/cache/*.json`.
-- **Related-domain dump indent regression** — continuation lines on
+- **Related-domain dump indent regression** - continuation lines on
   the Related: section wrapped to the panel border (column 2)
   instead of the value column (column 14). Same issue on the
   bottom degraded-sources note. Both now wrap cleanly with manual
   column-aware indent.
-- **Windows cp1252 Unicode crash** — the panel uses `●` confidence
+- **Windows cp1252 Unicode crash** - the panel uses `●` confidence
   dots, `→` arrows, `—` em-dashes, and box-drawing glyphs that
   cp1252 cannot encode. On Windows terminals with the default
   codepage this crashed with `UnicodeEncodeError`. The console
@@ -5670,7 +5778,7 @@ changing the core architecture.
 
 ### Added
 
-- **`likely_primary_email_provider` — hedged downstream inference**
+- **`likely_primary_email_provider` - hedged downstream inference**
   for gateway-fronted domains. When MX points to an enterprise email
   gateway (Proofpoint, Mimecast, Symantec, Barracuda, Trellix, Trend
   Micro, Cisco IronPort / Secure Email) and no direct provider
@@ -5684,21 +5792,21 @@ changing the core architecture.
   fields do not contradict each other. Plumbed through `TenantInfo`,
   `SignalContext`, the formatter `detect_provider` helper, the
   residue-guard filter, the JSON output, and the disk cache.
-- **New `Edge Layering` signal** — fires on 2+ CDN/edge providers
+- **New `Edge Layering` signal** - fires on 2+ CDN/edge providers
   (Cloudflare/Akamai/Fastly/Imperva) as a deliberate hardening
   indicator. Also added `edge_layering` posture rule.
-- **B1: single-source detection annotation in the default panel** —
+- **B1: single-source detection annotation in the default panel** -
   service names backed by only one weak evidence type render with a
   dim `*` suffix and a one-line footnote explaining the marker.
   No information loss. Uses the existing v0.3.0 per-detection
   corroboration scoring.
-- **B2: related-domains truncation** — default panel shows the first
+- **B2: related-domains truncation** - default panel shows the first
   10 priority-sorted related domains (via existing HIGH_SIGNAL_PREFIXES
-  ordering) with a dim footer `…and N more — use --full for the
+  ordering) with a dim footer `…and N more - use --full for the
   complete list`. Full list still renders behind `--domains` or
   `--full`. Continuation lines and footer manually wrapped to the
   value column.
-- **B3: panel color hierarchy for insights** — neutral insights
+- **B3: panel color hierarchy for insights** - neutral insights
   render in dim so they read as a scannable secondary column below
   the services list. `Label: value`–shaped insights get a bold-dim
   label with the value in normal-dim. Warnings and hedged insights
@@ -5707,18 +5815,18 @@ changing the core architecture.
   across six archetypes (hardened edge, dual-provider baseline, true
   legacy residue, dormant/parked, small-shop-on-CDN, and the new
   likely-primary inference cases). Every fixture uses fabricated
-  slugs — no real company names anywhere.
+  slugs - no real company names anywhere.
 - **6 new regression guards** for `_compute_email_topology` covering
   the likely-primary inference paths.
 - 1165 total tests (was 1147), 100% passing.
 
 ### Changed
 
-- `TenantInfo.likely_primary_email_provider` — new field, defaults to
+- `TenantInfo.likely_primary_email_provider` - new field, defaults to
   `None`, backward compatible.
-- `SignalContext.likely_primary_email_provider` — new field, defaults
+- `SignalContext.likely_primary_email_provider` - new field, defaults
   to `None`, backward compatible.
-- `Signal.exclude_matches_in_primary` — new field, defaults to `False`,
+- `Signal.exclude_matches_in_primary` - new field, defaults to `False`,
   backward compatible. When `True`, `_evaluate_single_signal` filters
   matched slugs whose display name appears in the combined
   primary/likely-primary string, and refuses to fire when neither is
@@ -5733,7 +5841,7 @@ changing the core architecture.
   `slug="google-workspace"` (in addition to `google-federated` or
   `google-managed`) so the inference path can see Google as a
   downstream provider on gateway-fronted domains.
-- `tests/test_integration.py` — replaced real corporate apex
+- `tests/test_integration.py` - replaced real corporate apex
   references with RFC-2606 reserved `example.com` / `example.org`.
   Repo is now clean of real company names outside of fingerprint
   detection targets and the Contoso/Northwind/Fabrikam fictional-
@@ -5748,14 +5856,14 @@ changing the core architecture.
   Tests rewritten as regression guards that pin the *absence* of
   those counterparts.
 
-## [0.9.0] — 2026-04-14
+## [0.9.0] - 2026-04-14
 
 ### Added
 
-- **Primary Email Provider Detection** — MX-based topology computation distinguishes primary email providers from secondary/legacy detections. New `primary_email_provider` and `email_gateway` fields on TenantInfo. Enhanced Provider line formatting shows email delivery path (e.g., "Microsoft 365 (primary email via Proofpoint gateway)"). New "Email Gateway Topology" and "Legacy Provider Residue" signals. New email topology insights.
-- **Negative-Space Analysis** — new `absence.py` module evaluates `expected_counterparts` on signal definitions. When a signal fires but expected companion services are absent, an absence signal is produced with hedged language. 5 built-in signals ship with `expected_counterparts` definitions for out-of-the-box absence detection. Absence signals appear alongside standard signals in all output formats.
-- **DMARC Intelligence Expansion** — `rua=mailto:` extraction identifies paid DMARC report vendors (Agari, Proofpoint EFD, OnDMARC, dmarcian, Valimail, EasyDMARC). `pct=` parsing surfaces phased DMARC rollout. 6 new DMARC vendor fingerprints (detection type `dmarc_rua`). New "DMARC Governance Investment" signal. New `dmarc_phased_rollout` posture observation.
-- **Ephemeral Fingerprints via MCP** — 4 new MCP tools: `inject_ephemeral_fingerprint` (inject temporary detection patterns), `reevaluate_domain` (re-evaluate cached data with zero network calls), `list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`. Session-scoped, in-memory, thread-safe. Validated through the same regex/ReDoS pipeline as built-in fingerprints.
+- **Primary Email Provider Detection** - MX-based topology computation distinguishes primary email providers from secondary/legacy detections. New `primary_email_provider` and `email_gateway` fields on TenantInfo. Enhanced Provider line formatting shows email delivery path (e.g., "Microsoft 365 (primary email via Proofpoint gateway)"). New "Email Gateway Topology" and "Legacy Provider Residue" signals. New email topology insights.
+- **Negative-Space Analysis** - new `absence.py` module evaluates `expected_counterparts` on signal definitions. When a signal fires but expected companion services are absent, an absence signal is produced with hedged language. 5 built-in signals ship with `expected_counterparts` definitions for out-of-the-box absence detection. Absence signals appear alongside standard signals in all output formats.
+- **DMARC Intelligence Expansion** - `rua=mailto:` extraction identifies paid DMARC report vendors (Agari, Proofpoint EFD, OnDMARC, dmarcian, Valimail, EasyDMARC). `pct=` parsing surfaces phased DMARC rollout. 6 new DMARC vendor fingerprints (detection type `dmarc_rua`). New "DMARC Governance Investment" signal. New `dmarc_phased_rollout` posture observation.
+- **Ephemeral Fingerprints via MCP** - 4 new MCP tools: `inject_ephemeral_fingerprint` (inject temporary detection patterns), `reevaluate_domain` (re-evaluate cached data with zero network calls), `list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`. Session-scoped, in-memory, thread-safe. Validated through the same regex/ReDoS pipeline as built-in fingerprints.
 - 6 new DMARC vendor fingerprints: Agari, Proofpoint EFD, OnDMARC, dmarcian, Valimail, EasyDMARC. 208 fingerprints total.
 - 3 new signals: Email Gateway Topology, Legacy Provider Residue, DMARC Governance Investment. 44 signals total.
 - 1 new posture observation: `dmarc_phased_rollout`.
@@ -5772,13 +5880,13 @@ changing the core architecture.
 - `merge_results()` in `merger.py` computes email topology, propagates DMARC metadata, and runs absence evaluation.
 - `_detect_email_security()` in `dns.py` extracts `rua=` and `pct=` from DMARC records.
 - MCP server now exposes 16 tools (was 12).
-- All backward compatible with existing YAML files — new fields default to safe values.
+- All backward compatible with existing YAML files - new fields default to safe values.
 
-## [0.8.1] — 2026-04-13
+## [0.8.1] - 2026-04-13
 
 ### Changed
 
-- README: removed `~` approximation from fingerprint counts — exact 206 fingerprints, 41 signals throughout. Added `--explain` example after the panel. Added multi-step MCP prompt example.
+- README: removed `~` approximation from fingerprint counts - exact 206 fingerprints, 41 signals throughout. Added `--explain` example after the panel. Added multi-step MCP prompt example.
 - docs/fingerprints.md: added YAML snippet example for custom fingerprints. Added "Best for" column to detection types table.
 - docs/signals.md: added two-pass evaluation note. Updated Layer 1/2/4 tables with all v0.8.0 signals and updated slug lists.
 - docs/mcp.md: added multi-step example prompt for deeper analysis workflows.
@@ -5786,7 +5894,7 @@ changing the core architecture.
 - CHANGELOG.md: added standard [Unreleased] section.
 - CLAUDE.md: updated stale fingerprint/signal/test counts to current values.
 
-## [0.8.0] — 2026-04-13
+## [0.8.0] - 2026-04-13
 
 ### Added
 
@@ -5805,35 +5913,35 @@ changing the core architecture.
 - "Multi-Cloud" signal updated with fastly, flyio.
 - `ai_tooling_detected` posture rule updated with new agentic AI slugs.
 
-## [0.7.3] — 2026-04-12
+## [0.7.3] - 2026-04-12
 
 ### Changed
 
-- README: restored "the art is in the correlation" in "What it does" section — it's the thesis, not hype.
-- README: Limitations section sharpened — more direct about Cloudflare/proxy gaps producing near-empty results, fingerprint staleness being inevitable without community contributions, and confident-looking output sometimes being wrong.
+- README: restored "the art is in the correlation" in "What it does" section - it's the thesis, not hype.
+- README: Limitations section sharpened - more direct about Cloudflare/proxy gaps producing near-empty results, fingerprint staleness being inevitable without community contributions, and confident-looking output sometimes being wrong.
 
-## [0.7.2] — 2026-04-12
+## [0.7.2] - 2026-04-12
 
 ### Changed
 
 - README rewritten with honest, grounded tone. Removed "leading platform" positioning, "Explainable Correlation Engine" branding, inflated comparison table, and repetitive zero-credentials copy. Added Limitations section acknowledging project maturity, fingerprint staleness risk, lack of accuracy benchmarks, and heuristic nature of signal rules. Comparison table now honestly notes paid tools typically have broader coverage.
-- Roadmap intro simplified — removed aspirational "signal intelligence" branding.
+- Roadmap intro simplified - removed aspirational "signal intelligence" branding.
 - Fingerprint count normalized to "~190" across all docs (was inconsistent between 187/194).
 - Changelog: removed "Explainable Correlation Engine" branding from v0.7.0 entry.
 
-## [0.7.0] — 2026-04-12
+## [0.7.0] - 2026-04-12
 
 ### Added
 
-- `--explain` CLI flag — shows why each insight and signal was produced, including matched evidence, fired rules, confidence derivation, and weakening conditions. Works with `--json` (adds `explanations` key), `--md` (adds Explanations section), and `--chain` (per-domain explanations).
-- Explanation module (`recon_tool/explanation.py`) — generates `ExplanationRecord` frozen dataclasses with provenance chains for signals, insights, confidence, and posture observations.
-- Enhanced YAML signal engine: `contradicts` key (negation logic — suppress signal when specific slugs are present), `requires_signals` key (meta-signals that fire when other named signals are active), `explain` field (curated human-written explanation text per signal/posture rule).
-- Enhanced YAML fingerprint engine: `match_mode: all` (AND logic — require all detections to match), detection `weight` (0.0–1.0 evidence strength per detection rule).
+- `--explain` CLI flag - shows why each insight and signal was produced, including matched evidence, fired rules, confidence derivation, and weakening conditions. Works with `--json` (adds `explanations` key), `--md` (adds Explanations section), and `--chain` (per-domain explanations).
+- Explanation module (`recon_tool/explanation.py`) - generates `ExplanationRecord` frozen dataclasses with provenance chains for signals, insights, confidence, and posture observations.
+- Enhanced YAML signal engine: `contradicts` key (negation logic - suppress signal when specific slugs are present), `requires_signals` key (meta-signals that fire when other named signals are active), `explain` field (curated human-written explanation text per signal/posture rule).
+- Enhanced YAML fingerprint engine: `match_mode: all` (AND logic - require all detections to match), detection `weight` (0.0–1.0 evidence strength per detection rule).
 - Two-pass signal evaluation: non-meta signals first, then meta-signals against first-pass results. Cycle prevention at load time.
-- Weighted `compute_detection_scores()` — incorporates detection weights into per-slug confidence scoring.
-- Conflict-aware merge — `MergeConflicts` frozen dataclass on `TenantInfo` tracks disagreements between sources. Surfaced in `--json` (`conflicts` key) and Rich panel (dim annotations with `--explain`).
+- Weighted `compute_detection_scores()` - incorporates detection weights into per-slug confidence scoring.
+- Conflict-aware merge - `MergeConflicts` frozen dataclass on `TenantInfo` tracks disagreements between sources. Surfaced in `--json` (`conflicts` key) and Rich panel (dim annotations with `--explain`).
 - 5 new MCP tools: `get_fingerprints` (list loaded fingerprints with filters), `get_signals` (list loaded signals with layer/category filters), `explain_signal` (query signal definition + live evaluation against a domain), `test_hypothesis` (agent proposes theory, gets likelihood + evidence assessment), `simulate_hardening` (what-if exposure re-scoring with hypothetical fixes).
-- `explain` parameter on `lookup_tenant` and `analyze_posture` MCP tools — when true, includes structured explanations in JSON response.
+- `explain` parameter on `lookup_tenant` and `analyze_posture` MCP tools - when true, includes structured explanations in JSON response.
 - 7 new fingerprints: n8n, Dify, AutoGen, Snyk, GitHub Advanced Security, Sonatype, Beyond Identity. ~190 fingerprints total.
 - 5 new signals using v0.7.0 engine features: "Incomplete Identity Migration" (contradicts), "Split-Brain Email Config" (contradicts), "Security Stack Without Governance" (contradicts + metadata), "Complex Migration Window" (meta-signal), "Governance Sprawl" (meta-signal). 34 signals total.
 - 173 new tests: unit tests for all engine changes, 10 Hypothesis property-based tests covering all correctness properties, CLI/MCP integration tests, backward compatibility tests. 896 tests total, 84% coverage.
@@ -5847,27 +5955,27 @@ changing the core architecture.
 - `_PostureRule` dataclass extended with `explain` field.
 - `render_tenant_panel()` accepts `explain` parameter for conflict annotations.
 - MCP server now exposes 12 tools (was 7).
-- All backward compatible with existing YAML files — new fields default to safe values.
+- All backward compatible with existing YAML files - new fields default to safe values.
 
-## [0.6.1] — 2026-04-12
+## [0.6.1] - 2026-04-12
 
 ### Changed
 
 - README panel alignment fixed (all lines exactly 72 characters).
 - All test fixtures and examples use fictional company names only (Contoso, Northwind Traders, Fabrikam). Zero real company names in the repository.
-- Validation corpus fixtures are gitignored — never committed.
+- Validation corpus fixtures are gitignored - never committed.
 - Release workflow: `skip-existing: true` prevents PyPI duplicate upload failures on tag re-pushes.
 
-## [0.6.0] — 2026-04-12
+## [0.6.0] - 2026-04-12
 
 ### Added
 
-- CertIntelProvider protocol — abstracts certificate transparency querying behind a clean interface. Two implementations: CrtshProvider (primary) and CertSpotterProvider (fallback). Shared filtering helpers ensure behavioral parity.
-- CertSpotter fallback — when crt.sh is down (slow, rate-limited, or unreachable), the tool automatically falls back to CertSpotter's free, unauthenticated API. Zero API keys, zero accounts.
-- Generalized `degraded_sources` — replaces the single-boolean `crtsh_degraded` with a `degraded_sources: tuple[str, ...]` field on both SourceResult and TenantInfo. Users and agents always know which public data sources were unavailable and how that affects result quality.
+- CertIntelProvider protocol - abstracts certificate transparency querying behind a clean interface. Two implementations: CrtshProvider (primary) and CertSpotterProvider (fallback). Shared filtering helpers ensure behavioral parity.
+- CertSpotter fallback - when crt.sh is down (slow, rate-limited, or unreachable), the tool automatically falls back to CertSpotter's free, unauthenticated API. Zero API keys, zero accounts.
+- Generalized `degraded_sources` - replaces the single-boolean `crtsh_degraded` with a `degraded_sources: tuple[str, ...]` field on both SourceResult and TenantInfo. Users and agents always know which public data sources were unavailable and how that affects result quality.
 - Degraded sources surfaced in all output formats: Rich panel, JSON (`degraded_sources` list + backward-compatible `partial` key), markdown, and MCP text.
 - 61 new tests: unit tests for providers, fallback chain, degraded_sources propagation, and 6 property-based tests (Hypothesis). 723 tests total, 84% coverage.
-- Validation corpus — integration test runner (`pytest -m integration`) and accuracy report generator (`python -m tests.validation.generate_report` → `docs/accuracy.md`). Fixture files are local-only (gitignored).
+- Validation corpus - integration test runner (`pytest -m integration`) and accuracy report generator (`python -m tests.validation.generate_report` → `docs/accuracy.md`). Fixture files are local-only (gitignored).
 
 ### Changed
 
@@ -5878,7 +5986,7 @@ changing the core architecture.
 - Legal docs: "What sees your queries" table showing exactly which services see your IP.
 - Roadmap: dependency-ordered Now/Soon sections, custom profiles and `--explain` in Soon.
 
-## [0.5.1] — 2026-04-12
+## [0.5.1] - 2026-04-12
 
 ### Added
 
@@ -5886,30 +5994,30 @@ changing the core architecture.
 
 ### Removed
 
-- `--html` output flag — markdown renders everywhere that matters. HTML was bloat for a focused CLI tool.
+- `--html` output flag - markdown renders everywhere that matters. HTML was bloat for a focused CLI tool.
 
 ### Changed
 
 - All test tasks are mandatory, not optional. No skipping.
 
-## [0.5.0] — 2026-04-11
+## [0.5.0] - 2026-04-11
 
 ### Added
 
-- `assess_exposure` MCP tool — structured security posture summary with email/identity/infrastructure sections, hardening control inventory, and 0–100 posture score based on publicly observable controls. For defensive security posture assessment only.
-- `find_hardening_gaps` MCP tool — identifies missing or weak security configurations with categorized gaps (email, identity, infrastructure, consistency), severity levels, and "Consider ..." recommendations. For defensive security posture assessment only.
-- `compare_postures` MCP tool — side-by-side comparison of two domains' security postures with metrics, control differences, and relative assessment. For defensive security posture assessment only.
-- `--exposure` CLI flag — runs exposure assessment from the terminal.
-- `--gaps` CLI flag — runs hardening gap analysis from the terminal.
-- New `recon_tool/exposure.py` module — pure analysis functions operating exclusively on existing TenantInfo data. Zero new network calls. 14 frozen dataclasses for structured output.
-- Extended banned terms enforcement — all new tool output validated against 16 banned terms to ensure neutral, defensive language throughout.
+- `assess_exposure` MCP tool - structured security posture summary with email/identity/infrastructure sections, hardening control inventory, and 0–100 posture score based on publicly observable controls. For defensive security posture assessment only.
+- `find_hardening_gaps` MCP tool - identifies missing or weak security configurations with categorized gaps (email, identity, infrastructure, consistency), severity levels, and "Consider ..." recommendations. For defensive security posture assessment only.
+- `compare_postures` MCP tool - side-by-side comparison of two domains' security postures with metrics, control differences, and relative assessment. For defensive security posture assessment only.
+- `--exposure` CLI flag - runs exposure assessment from the terminal.
+- `--gaps` CLI flag - runs hardening gap analysis from the terminal.
+- New `recon_tool/exposure.py` module - pure analysis functions operating exclusively on existing TenantInfo data. Zero new network calls. 14 frozen dataclasses for structured output.
+- Extended banned terms enforcement - all new tool output validated against 16 banned terms to ensure neutral, defensive language throughout.
 - Legal documentation updated with "Defensive Security Assessment Tools" section covering intended use cases, data source constraints, and language policy.
 
 ### Changed
 
 - MCP server now exposes 7 tools (was 4): `lookup_tenant`, `analyze_posture`, `chain_lookup`, `reload_data`, `assess_exposure`, `find_hardening_gaps`, `compare_postures`.
 
-## [0.4.1] — 2026-04-11
+## [0.4.1] - 2026-04-11
 
 ### Changed
 
@@ -5917,38 +6025,38 @@ changing the core architecture.
 - Added package metadata: classifiers, keywords, project URLs for PyPI listing.
 - Fixed duplicate file warnings in wheel build by removing redundant `force-include`.
 
-## [0.4.0] — 2026-04-11
+## [0.4.0] - 2026-04-11
 
 ### Added
 
-- `--csv` output for batch mode — flat CSV with one row per domain. Columns: domain, provider, display_name, tenant_id, auth_type, confidence, email_security_score, service_count, dmarc_policy, mta_sts_mode, google_auth_type.
-- Lightweight local disk cache — `~/.recon/cache/` with configurable TTL (default 24h). CLI flags: `--no-cache` to bypass, `--cache-ttl` to override. JSON files on disk, lazy eviction, no external dependencies.
-- `recon mcp` subcommand — start the MCP server from the CLI instead of `python -m recon_tool.server`.
-- `recon doctor --fix` — scaffolds template `~/.recon/fingerprints.yaml` and `~/.recon/signals.yaml` with inline YAML comments explaining the format.
+- `--csv` output for batch mode - flat CSV with one row per domain. Columns: domain, provider, display_name, tenant_id, auth_type, confidence, email_security_score, service_count, dmarc_policy, mta_sts_mode, google_auth_type.
+- Lightweight local disk cache - `~/.recon/cache/` with configurable TTL (default 24h). CLI flags: `--no-cache` to bypass, `--cache-ttl` to override. JSON files on disk, lazy eviction, no external dependencies.
+- `recon mcp` subcommand - start the MCP server from the CLI instead of `python -m recon_tool.server`.
+- `recon doctor --fix` - scaffolds template `~/.recon/fingerprints.yaml` and `~/.recon/signals.yaml` with inline YAML comments explaining the format.
 
 ### Changed
 
 - Inference language tightened across insights and signals. Derived claims now use hedged language ("suggests," "indicators," "likely") instead of declarative phrasing. Factual observations (DMARC values, DKIM presence, email security scores) remain declarative.
-- Removed `_preprocess_args()` sys.argv mutation hack. Domain shorthand routing (`recon contoso.com`) now uses a custom Typer group with `resolve_command()` override — cleaner, safer for library imports, no global state mutation.
+- Removed `_preprocess_args()` sys.argv mutation hack. Domain shorthand routing (`recon contoso.com`) now uses a custom Typer group with `resolve_command()` override - cleaner, safer for library imports, no global state mutation.
 - `_SUBCOMMANDS` now includes `"mcp"`.
 - Mutual exclusion enforced for output format flags (`--json`, `--md`, `--csv`).
 
-## [0.3.0] — 2026-04-11
+## [0.3.0] - 2026-04-11
 
 ### Added
 
-- Google Workspace identity routing — new `GoogleIdentitySource` detects federated vs. managed auth by querying Google's public login flow. Extracts IdP name (Okta, Ping, Entra, etc.) for federated domains. Produces `google-federated`/`google-managed` slugs.
-- Google Workspace CNAME module probing — detects active GWS modules (Mail, Calendar, Docs, Drive, Sites, Groups) via `ghs.googlehosted.com` CNAME resolution. Concurrent queries for all 6 prefixes.
-- BIMI/VMC corporate identity extraction — fetches VMC certificates from BIMI `a=` URLs and extracts legally verified organization name, country, state, locality. Falls back to regex parsing when `cryptography` library is unavailable.
-- Google site-verification token extraction — captures `google-site-verification` token values from TXT records for cross-domain organizational relationship mapping.
-- MTA-STS policy fetch — when `_mta-sts` TXT record is found, fetches the policy file and extracts the mode (enforce/testing/none). Adds `mta-sts-enforce` slug for enforcing domains.
-- TLS-RPT detection — detects `v=TLSRPTv1` records at `_smtp._tls.{domain}` with `tls-rpt` slug.
-- Enhanced CSE config probing — extracts KACLS URL and multiple key service provider names from Google Workspace CSE configuration.
-- Evidence traceability — new `EvidenceRecord` frozen dataclass captures source type, raw value, rule name, and slug for every detection. Propagated through the merge pipeline to `TenantInfo`. Included in `--json` output and `--verbose` display.
-- Confidence separation — dual confidence model: `evidence_confidence` (how many sources contributed) and `inference_confidence` (strength of logical chain). Backward-compatible `confidence` field = min of both.
-- Per-detection corroboration scoring — each detected slug gets a confidence score (high/medium/low) based on how many independent record types corroborate it.
-- Fingerprint metadata enrichment — `provider_group` and `display_group` fields on fingerprint YAML entries. Formatter uses these for categorization, falling back to keyword heuristics.
-- Cross-domain site-verification correlation in chain mode — domains sharing identical `google-site-verification` tokens are surfaced as organizationally related.
+- Google Workspace identity routing - new `GoogleIdentitySource` detects federated vs. managed auth by querying Google's public login flow. Extracts IdP name (Okta, Ping, Entra, etc.) for federated domains. Produces `google-federated`/`google-managed` slugs.
+- Google Workspace CNAME module probing - detects active GWS modules (Mail, Calendar, Docs, Drive, Sites, Groups) via `ghs.googlehosted.com` CNAME resolution. Concurrent queries for all 6 prefixes.
+- BIMI/VMC corporate identity extraction - fetches VMC certificates from BIMI `a=` URLs and extracts legally verified organization name, country, state, locality. Falls back to regex parsing when `cryptography` library is unavailable.
+- Google site-verification token extraction - captures `google-site-verification` token values from TXT records for cross-domain organizational relationship mapping.
+- MTA-STS policy fetch - when `_mta-sts` TXT record is found, fetches the policy file and extracts the mode (enforce/testing/none). Adds `mta-sts-enforce` slug for enforcing domains.
+- TLS-RPT detection - detects `v=TLSRPTv1` records at `_smtp._tls.{domain}` with `tls-rpt` slug.
+- Enhanced CSE config probing - extracts KACLS URL and multiple key service provider names from Google Workspace CSE configuration.
+- Evidence traceability - new `EvidenceRecord` frozen dataclass captures source type, raw value, rule name, and slug for every detection. Propagated through the merge pipeline to `TenantInfo`. Included in `--json` output and `--verbose` display.
+- Confidence separation - dual confidence model: `evidence_confidence` (how many sources contributed) and `inference_confidence` (strength of logical chain). Backward-compatible `confidence` field = min of both.
+- Per-detection corroboration scoring - each detected slug gets a confidence score (high/medium/low) based on how many independent record types corroborate it.
+- Fingerprint metadata enrichment - `provider_group` and `display_group` fields on fingerprint YAML entries. Formatter uses these for categorization, falling back to keyword heuristics.
+- Cross-domain site-verification correlation in chain mode - domains sharing identical `google-site-verification` tokens are surfaced as organizationally related.
 - 5 new Google Workspace signals: Google Workspace Full Suite, Google Federated Identity, Google MTA-STS Enforcing, plus updates to Google-Native Identity and Google Cloud Investment.
 - 4 new posture rules: google_federated_identity, google_managed_identity, mta_sts_enforcing, tls_rpt_configured.
 - Google Workspace insight generators: federated/managed identity insights, module summary insights.
@@ -5969,15 +6077,15 @@ changing the core architecture.
 - Fingerprints YAML: added `provider_group`/`display_group` to Microsoft 365, Google Workspace, and other key entries. Added TLS-RPT fingerprint.
 - 29 signals (was 26). 22 posture rules (was 18).
 
-## [0.2.0] — 2026-04-11
+## [0.2.0] - 2026-04-11
 
 ### Added
 
-- Certificate intelligence — crt.sh metadata extraction (issuance velocity, issuer diversity, cert age, top issuers) from the existing crt.sh JSON response. No additional HTTP requests. Surfaced in panel, JSON, and markdown output.
-- Metadata-aware signal engine — signals can now match on `dmarc_policy`, `auth_type`, `email_security_score`, `spf_include_count`, and `issuance_velocity` via YAML `metadata` conditions. Supports slug-only, metadata-only, and conjunction signals. 23 → 26 signals (4 layers).
-- Neutral posture analysis — new `--posture` flag and `analyze_posture` MCP tool. Produces factual observations about domain configuration (email, identity, infrastructure, SaaS footprint, certificates, consistency) without attack/defense framing. YAML-driven rules in `data/posture.yaml` with `~/.recon/posture.yaml` additive override.
-- Delta mode — `--compare previous.json` compares a live lookup against a previous JSON export. Surfaces added/removed services, slugs, signals, and scalar field changes (auth type, DMARC, confidence, domain count). Panel output with +/- markers, JSON output with structured diff.
-- Recursive domain chaining — `--chain --depth N` (max 3) follows related domains via CNAME/CT breadcrumbs using BFS. 50-domain cap, visited-set deduplication, aggregate timeout. New `chain_lookup` MCP tool.
+- Certificate intelligence - crt.sh metadata extraction (issuance velocity, issuer diversity, cert age, top issuers) from the existing crt.sh JSON response. No additional HTTP requests. Surfaced in panel, JSON, and markdown output.
+- Metadata-aware signal engine - signals can now match on `dmarc_policy`, `auth_type`, `email_security_score`, `spf_include_count`, and `issuance_velocity` via YAML `metadata` conditions. Supports slug-only, metadata-only, and conjunction signals. 23 → 26 signals (4 layers).
+- Neutral posture analysis - new `--posture` flag and `analyze_posture` MCP tool. Produces factual observations about domain configuration (email, identity, infrastructure, SaaS footprint, certificates, consistency) without attack/defense framing. YAML-driven rules in `data/posture.yaml` with `~/.recon/posture.yaml` additive override.
+- Delta mode - `--compare previous.json` compares a live lookup against a previous JSON export. Surfaces added/removed services, slugs, signals, and scalar field changes (auth type, DMARC, confidence, domain count). Panel output with +/- markers, JSON output with structured diff.
+- Recursive domain chaining - `--chain --depth N` (max 3) follows related domains via CNAME/CT breadcrumbs using BFS. 50-domain cap, visited-set deduplication, aggregate timeout. New `chain_lookup` MCP tool.
 - 3 new metadata-aware signals: Federated Identity with Complex Email Delegation, Active Email Sending with Minimal Security, High Certificate Issuance Activity.
 - 18 posture observation rules across 6 categories.
 - 7 new frozen dataclasses: `CertSummary`, `MetadataCondition`, `SignalContext`, `Observation`, `DeltaReport`, `ChainResult`, `ChainReport`.
@@ -5987,19 +6095,19 @@ changing the core architecture.
 
 - `--full` now implies `--posture` in addition to `--services`, `--domains`, `--verbose`.
 - `evaluate_signals()` now accepts a `SignalContext` instead of positional args. All callers updated.
-- "Security Gap — Gateway Without DMARC Enforcement" signal moved from hardcoded Python check to YAML metadata conditions.
+- "Security Gap - Gateway Without DMARC Enforcement" signal moved from hardcoded Python check to YAML metadata conditions.
 - `reload_data` MCP tool now also clears posture rule cache and reports posture rule count.
 - README updated: broader audience description, new feature table rows, new CLI examples, new MCP tools listed.
 - Roadmap updated: completed items marked, new future items added.
 
-## [0.1.3] — 2026-04-11
+## [0.1.3] - 2026-04-11
 
 ### Added
 
-- Common subdomain probing — ~35 high-signal prefixes (auth, login, sso, shop, api, status, cdn, etc.) are probed directly via DNS CNAME lookups. Works even when crt.sh is down.
+- Common subdomain probing - ~35 high-signal prefixes (auth, login, sso, shop, api, status, cdn, etc.) are probed directly via DNS CNAME lookups. Works even when crt.sh is down.
 - 30 new CNAME-based fingerprints for SaaS services discovered via subdomain CNAMEs: Okta (CNAME), Auth0, OneLogin, Salesforce Marketing Cloud, AWS ELB/S3/Elastic Beanstalk, Azure Front Door, Google Cloud Run/App Engine, Zendesk/Freshdesk (hosted), Contentful, Braze, Segment, Statuspage, LaunchDarkly, Cloudinary, Imgix, Optimizely, WalkMe, and more (156 → 186 total).
-- crt.sh degraded notice — when crt.sh is unreachable, a subtle note appears in panel, markdown, and JSON output (`"partial": true`) so users know results may be incomplete.
-- Lightweight subdomain enrichment — subdomains get CNAME+TXT-only lookups (2 queries each) instead of full DNS fingerprinting (~20 queries each), keeping enrichment fast.
+- crt.sh degraded notice - when crt.sh is unreachable, a subtle note appears in panel, markdown, and JSON output (`"partial": true`) so users know results may be incomplete.
+- Lightweight subdomain enrichment - subdomains get CNAME+TXT-only lookups (2 queries each) instead of full DNS fingerprinting (~20 queries each), keeping enrichment fast.
 
 ### Changed
 
@@ -6008,16 +6116,16 @@ changing the core architecture.
 - Two-tier enrichment: subdomains get lightweight CNAME+TXT lookups, separate domains get full DNS fingerprinting.
 - Updated 8 signal rules to include new CNAME-detected slugs (imperva, auth0, onelogin, salesforce-mc, aws-elb, aws-s3, gcp-app, azure-fd, optimizely, walkme, braze, iterable, customerio, launchdarkly, contentful, etc.).
 
-## [0.1.2] — 2026-04-11
+## [0.1.2] - 2026-04-11
 
 ### Added
 
-- Google Workspace source — passive CSE config probing (`cse.{domain}/.well-known/cse-configuration`) for detecting Client-Side Encryption and external key managers.
-- Google DKIM attribution — `google._domainkey` now adds the `google-workspace` slug, so Google Workspace is detected even when MX points to an email gateway (Proofpoint, Mimecast, Trend Micro, etc.).
+- Google Workspace source - passive CSE config probing (`cse.{domain}/.well-known/cse-configuration`) for detecting Client-Side Encryption and external key managers.
+- Google DKIM attribution - `google._domainkey` now adds the `google-workspace` slug, so Google Workspace is detected even when MX points to an email gateway (Proofpoint, Mimecast, Trend Micro, etc.).
 - 4 new signal rules: Google-Native Identity, High-Security Posture (CSE), Google Cloud Investment, Dual Email Provider (13 → 24 total).
 - Custom signals support via `~/.recon/signals.yaml` (additive, mirrors fingerprint extensibility).
 - Certificate transparency integration via crt.sh for passive subdomain discovery.
-- Expanded DKIM selector coverage — now checks common ESP selectors (Mailchimp, SendGrid, Mailgun, Postmark, Mimecast) in addition to Exchange and Google.
+- Expanded DKIM selector coverage - now checks common ESP selectors (Mailchimp, SendGrid, Mailgun, Postmark, Mimecast) in addition to Exchange and Google.
 - SRV record detection for Microsoft Teams (legacy SIP/federation), XMPP, CalDAV, CardDAV.
 - 13 new fingerprints: Box, Egnyte, Glean, Datadog, New Relic, PagerDuty, Render, Ping Identity, CyberArk, Lakera, Cato Networks, Rippling, Deel (143 → 156 total).
 - `recon doctor` now checks crt.sh connectivity, signal database loading, and custom signals path.
@@ -6030,18 +6138,18 @@ changing the core architecture.
 
 ### Changed
 
-- Confidence scoring — M365 domains now reach High when OIDC tenant ID is corroborated by UserRealm (display name, auth type, or tenant domains). Previously required 2+ sources returning the same tenant ID, which never happened in practice.
-- Non-M365 confidence — domains with 8+ DNS services and 2+ successful sources now reach High. Thresholds adjusted (was: 5 services for Medium, High unreachable).
-- Skype for Business / Lync → Microsoft Teams — SRV records `_sip._tls` and `_sipfederationtls._tcp` pointing to `lync.com` now labeled as "Microsoft Teams" (deduplicated with CNAME-based detection). Microsoft retired Skype for Business Online in July 2021.
-- Dual provider insight — shortened from "Hybrid/migration signal: Google email + Microsoft services detected" to "Dual provider: Google + Microsoft coexistence". No longer styled as a warning.
-- Panel color palette — muted, modern tones replacing harsh ANSI primaries. Labels use `dim` instead of `bold`. Panel border is `dim`. Confidence colors: sage green (High), sky blue (Medium), terracotta (Low).
-- Panel alignment — services and insights now use consistent label:value column alignment. Service continuation lines align under the first service name. Long insights word-wrap within the panel.
+- Confidence scoring - M365 domains now reach High when OIDC tenant ID is corroborated by UserRealm (display name, auth type, or tenant domains). Previously required 2+ sources returning the same tenant ID, which never happened in practice.
+- Non-M365 confidence - domains with 8+ DNS services and 2+ successful sources now reach High. Thresholds adjusted (was: 5 services for Medium, High unreachable).
+- Skype for Business / Lync → Microsoft Teams - SRV records `_sip._tls` and `_sipfederationtls._tcp` pointing to `lync.com` now labeled as "Microsoft Teams" (deduplicated with CNAME-based detection). Microsoft retired Skype for Business Online in July 2021.
+- Dual provider insight - shortened from "Hybrid/migration signal: Google email + Microsoft services detected" to "Dual provider: Google + Microsoft coexistence". No longer styled as a warning.
+- Panel color palette - muted, modern tones replacing harsh ANSI primaries. Labels use `dim` instead of `bold`. Panel border is `dim`. Confidence colors: sage green (High), sky blue (Medium), terracotta (Low).
+- Panel alignment - services and insights now use consistent label:value column alignment. Service continuation lines align under the first service name. Long insights word-wrap within the panel.
 - All README examples now use fictional companies (Northwind Traders, Contoso, Fabrikam).
 - README tagline updated to be more precise and humble.
 - Panel output: fixed width (80 chars), related domains now dim instead of cyan.
 - Updated Enterprise Security Stack, Zero Trust Posture, and Enterprise IT Maturity signals to include new security slugs.
 
-## [0.1.0] — 2026-04-10
+## [0.1.0] - 2026-04-10
 
 ### Added
 

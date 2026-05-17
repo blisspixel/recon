@@ -4,7 +4,7 @@ This is the engineering-level threat model. For **how to report a
 vulnerability**, see [`SECURITY.md`](../SECURITY.md) in the repository root.
 
 recon is a passive, read-only CLI tool plus local MCP server. Its threat
-surface is small by design — no active scanning, no credential handling,
+surface is small by design - no active scanning, no credential handling,
 no inbound network listeners, no user-code execution.
 
 ---
@@ -20,10 +20,10 @@ no inbound network listeners, no user-code execution.
 
 | What recon does NOT trust | Mitigation location |
 |---|---|
-| User-supplied domain strings | `recon_tool/validator.py` — regex + length cap + scheme stripping |
+| User-supplied domain strings | `recon_tool/validator.py` - regex + length cap + scheme stripping |
 | Raw DNS responses (TXT values, MX hostnames, CNAME targets) | Length caps + structured parsing in `recon_tool/sources/dns.py` |
-| Environment variables (`RECON_CONFIG_DIR`) | Treated as arbitrary user input — CT and result cache path helpers validate resolved paths stay inside their cache dirs |
-| Custom YAML at `~/.recon/fingerprints.yaml` and friends | Validated by `_validate_fingerprint`, `_validate_signal`, `_validate_profile` — regex compilation + ReDoS heuristic + required-field checks. Additive-only (cannot override built-ins). |
+| Environment variables (`RECON_CONFIG_DIR`) | Treated as arbitrary user input - CT and result cache path helpers validate resolved paths stay inside their cache dirs |
+| Custom YAML at `~/.recon/fingerprints.yaml` and friends | Validated by `_validate_fingerprint`, `_validate_signal`, `_validate_profile` - regex compilation + ReDoS heuristic + required-field checks. Additive-only (cannot override built-ins). |
 | CT provider response bodies | Size-capped, filtered for wildcards and malformed entries in `sources/cert_providers.py` |
 | Malicious HTTP redirect targets / private-IP redirects | `recon_tool/http.py` `_SSRFSafeTransport` validates every hop |
 
@@ -56,12 +56,38 @@ no inbound network listeners, no user-code execution.
 - JSON output uses `json.dumps` (escapes)
 - No DNS value is interpolated into shell, SQL, or exec contexts anywhere in the codebase
 
+### Malicious CNAME chains (surface-attribution walker)
+
+**Surface:** The surface-attribution pipeline (`_classify_related_surface` in `sources/dns.py`) walks the CNAME chain for every related subdomain it discovers, up to five hops per chain and one hundred chains per lookup. Each hop is a separate CNAME query through the operator's resolver, and successful chains are emitted in `EvidenceRecord.raw_value` for `--explain` consumers. An attacker who controls the queried apex (operator runs recon during diligence on `attacker.example`) controls every CNAME response and can in principle aim the walker at names of their choosing.
+
+**Mitigation (three layers + ambient bounds):**
+- **Entry-point validation (v1.9.13).** The walker checks `_is_public_dns_name(host)` before issuing the first CNAME query. Catches the rare case where an unvalidated name made it into `ctx.related_domains` (e.g. from a populator that didn't suffix-check before adding) - that name is rejected at the door without touching the resolver.
+- **Per-hop suffix denylist (v1.9.3.5).** Every CNAME target returned by the resolver is validated against `_is_public_dns_name` before the walker continues. Names ending in `.local`, `.localhost`, `.intranet`, `.private`, `.corp`, `.lan`, `.home`, `.home.arpa`, `.internal`, `.test`, `.example`, `.invalid`, `.onion`, and the `.arpa` family are rejected. Single-label names and IP literals are also rejected.
+- **Query type restriction during the walk loop (v1.9.4).** The walker issues CNAME queries only on intermediate hops - no A/AAAA queries inside the walk. CNAME responses are returned directly by the authoritative server for the parent zone; the recursive resolver does not chase further records while answering. This closes a leak from the v1.9.3.5 design where an A/AAAA-on-each-hop check caused the resolver to chase deeper CNAMEs internally before the walker's suffix denylist could reject them.
+- **Terminus-only A/AAAA check (v1.9.13).** When the walk terminates naturally (resolver returns no further CNAME for the current name, or returns a self-loop), the walker resolves A and AAAA on the terminus only. If every resolved address is in private/loopback/link-local/reserved space, the entire chain is dropped - the intermediate hop names (which include attacker-chosen text) never reach `EvidenceRecord.raw_value`. The check runs only when the walker has established the terminus has no further CNAME, so no recursive CNAME chase is possible. The walker explicitly skips the check when the loop exited via `max_hops` or suffix-rejection (current name has unfollowed CNAME → recursive A would re-introduce the v1.9.4 leak).
+- **Defense-in-depth on M365 redirect_domain extraction (v1.9.13).** `_detect_m365_cnames` suffix-validates the redirect_domain extracted from a non-Microsoft autodiscover CNAME response before adding it to `ctx.related_domains`. Prevents a private-suffix apex from being planted in the related-domains set even though the walker's own entry-point check would reject it subsequently.
+- **Source scoping for CT-derived related domains.** `filter_subdomains` (`sources/cert_providers.py:197`) drops every CT entry that does not end in `.<queried_domain>`. An attacker cannot put `internal.victim.example` in their own cert and have it picked up by recon - the filter requires the name to be under the queried apex.
+- **Per-call bounds.** Five-hop maximum, 100-host surface cap, 30-concurrent-query cap, five-second per-query timeout.
+
+**Residual surface (documented, by design):**
+- The walker still follows cross-apex CNAMEs the attacker returns at query time (`attacker.example → vault.victim.example → cdn.cloudflare.com`). Cross-apex following is intentional - legitimate CDN and SaaS chains cross apexes routinely. The intermediate hop names are attacker-controllable text and land in evidence output when the terminus matches a fingerprint.
+- The v1.9.13 terminus check drops chains whose terminus resolves only to private space. Attacks that try to end a chain on a split-horizon-internal target are now caught. The remaining narrower residual: an attacker can still emit intermediate-hop names of their choosing into evidence by pointing a real public-IP terminus (auth0.com, cloudflare.net, etc.) behind attacker-chosen intermediate names. The data disclosed is text the attacker already put in their own DNS records, not internal-DNS topology of any third party.
+- If the operator runs a split-horizon resolver where one of those attacker-named intermediate hops happens to resolve in a private zone, the walker's CNAME query for that intermediate name reaches internal DNS (one CNAME query per hop, no recursive A chase). The query is observable in internal DNS logs; the v1.9.13 terminus check does not catch this because the leak is at an intermediate hop, not at the terminus.
+
+**Further defenses not yet shipped:**
+- Evidence redaction (emit only the terminal hop in the default panel, full chain only under `--explain`) - would remove intermediate attacker-chosen names from default output at the cost of `--json` consumers losing the chain trace.
+- Dedicated public-DNS resolver for the chain walker (1.1.1.1 / 8.8.8.8) - would eliminate split-horizon landing entirely at the cost of an external dependency operators behind air-gapped networks could not satisfy.
+
+Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigated: CNAME chain walking can query and leak internal DNS names") for the closure-precedence record and tradeoff discussion.
+
+**Pinned by:** `tests/test_cname_chain_validation.py` (59 tests, including `test_walker_does_not_resolve_a_aaaa_on_intermediate_hops` for the v1.9.4 invariant, `TestEntryPointValidation` for the v1.9.13 entry-point check, `TestTerminusOnlyAAAACheck` for the v1.9.13 terminus check including its skip-when-unsafe behavior, and `TestM365RedirectDomainFilter` for the v1.9.13 redirect_domain filter).
+
 ### Malicious YAML / user-supplied regex
 
 **Surface:** Custom fingerprint/signal YAML files under `~/.recon/` can contain arbitrary regex patterns.
 
 **Mitigation:** [`recon_tool/fingerprints.py`](../recon_tool/fingerprints.py):
-- `yaml.safe_load` (not `yaml.load`) — no arbitrary constructor execution
+- `yaml.safe_load` (not `yaml.load`) - no arbitrary constructor execution
 - Pattern length capped at 500 chars (line 56)
 - ReDoS heuristic (`_REDOS_RE` line 68–74) rejects nested quantifiers like
   `(a+)+`, `(a*)+`, and `(\w+)+`, plus polynomial-backtracking shapes such as
@@ -69,14 +95,14 @@ no inbound network listeners, no user-code execution.
   verifier.
 - All patterns compile-validated via `re.compile` before use
 - Same checks run on `~/.recon/signals.yaml` via `_validate_signal` in `signals.py`
-- Custom entries are **additive only** — cannot override built-ins (design invariant)
+- Custom entries are **additive only** - cannot override built-ins (design invariant)
 
 ### SSRF via malicious HTTP redirects
 
 **Surface:** An adversarial upstream (or a DNS-rebound attacker) could redirect an HTTP request to a private/internal IP, potentially exposing cloud-metadata services (169.254.169.254) or internal infrastructure.
 
 **Mitigation:** [`recon_tool/http.py`](../recon_tool/http.py) `_SSRFSafeTransport`:
-- Every hop — initial request AND every redirect — validated
+- Every hop - initial request AND every redirect - validated
 - Blocked networks: `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16` (link-local/cloud metadata), IPv6 `fc00::/7`, `fe80::/10`
 - Literal IP check on URL host
 - Asynchronous DNS resolution check (IP from resolver vs allowlist)

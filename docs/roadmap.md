@@ -4,13 +4,11 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.12** (panel-display polish, `recon doctor`
-schema-fields verification, Mermaid evidence-DAG output, slug-
-categorization regression fix covering the v2.0-prep catalog
-growth plus 25 legacy slugs, new invariant test against future
-silent fall-through to the Business Apps default). Second bridge
-release after v1.9.11; v2.0 remains the mechanical schema-lock-
-and-tag event. Cumulative pre-v2.0 work since v1.9.3:
+Current release: **v1.9.13** (CNAME chain walker hardening pass:
+entry-point validation, terminus-only A/AAAA check, M365
+redirect_domain suffix filter). Third bridge release after
+v1.9.11; v2.0 remains the mechanical schema-lock-and-tag event.
+Cumulative pre-v2.0 work since v1.9.3:
 
 Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
 detail in `CHANGELOG.md` and the per-release validation memos):
@@ -28,13 +26,17 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.10.1 | Docs render fixes (Mermaid + MathJax in correlation.md) | `CHANGELOG.md` |
 | v1.9.11 | Documentation polish dry-run; v2.0 prep worklist cleared | `CHANGELOG.md`, `validation/v1.9.11-trend-table.md` |
 | v1.9.12 | Panel-display polish + doctor schema-fields verification + Mermaid evidence-DAG output | `CHANGELOG.md` |
+| v1.9.13 | CNAME chain walker hardening (entry-point + terminus-only A/AAAA + redirect_domain filter) | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 
 **Outstanding before v2.0:**
 
 1. Codex security scans (operator-paced, a few days).
-2. Fix anything codex flags. The previous May-2026 audits closed in
-   v1.9.4 (CNAME walker) and v1.9.9 (MCP shadow-load full closure);
-   `docs/security-audit-resolutions.md` records the closure trail.
+2. Fix anything codex flags. The May-2026 audits closed in
+   v1.9.4 (CNAME walker A/AAAA leak), v1.9.9 (MCP shadow-load full
+   closure), and v1.9.13 (CNAME walker entry-point + terminus
+   check after a 2026-05-17 scanner re-flag pinned to the v1.5.0
+   introducing commit); `docs/security-audit-resolutions.md`
+   records the closure trail.
 3. Mechanical lock ceremony: bump `docs/recon-schema.json` to v2.0;
    draft v2.0 release notes (inventory-style, not feature-list);
    compile `validation/v2.0-validation-summary.md` packaging the
@@ -52,8 +54,8 @@ observations about the organization's public technology stack and identity
 posture using public DNS, certificate transparency, and unauthenticated
 identity-discovery endpoints.
 
-It is designed to be consumed by other tools — active scanners, company
-research enrichers, GTM systems, agent workflows — not to become those tools.
+It is designed to be consumed by other tools - active scanners, company
+research enrichers, GTM systems, agent workflows - not to become those tools.
 Humility over completeness is the product line: if a feature would make sparse
 evidence sound more certain than it is, it does not belong here.
 
@@ -64,9 +66,9 @@ composable building block, not a standalone source of truth.
 
 ## What recon can and can't do against a hardened target
 
-Honest framing: a disciplined paranoid setup — wildcard certs everywhere,
+Honest framing: a disciplined paranoid setup - wildcard certs everywhere,
 short-lived rotation, multi-hop randomized proxy chains, decoy noise, minimal
-public DNS, hardened IdP metadata — will always produce sparse, low-confidence
+public DNS, hardened IdP metadata - will always produce sparse, low-confidence
 output. That is physics, not a bug. The "obscurity is not security" critique
 cuts both ways: a defender can choose to publish very little, and recon will
 report very little.
@@ -76,8 +78,8 @@ still leak sibling SAN sets within the same issuance batch. Short-lived certs
 still land in CT logs with timestamps. Randomized CNAME chains still expose
 recurring proxy motifs and intermediate-vendor markers. Multi-hop chains have
 structure even when individual hops look bespoke. Treating the noisy
-remainder as an inference problem — graph structure, temporal proximity,
-chain motif libraries, vertical baselines — recovers usable defensive
+remainder as an inference problem - graph structure, temporal proximity,
+chain motif libraries, vertical baselines - recovers usable defensive
 intelligence that single-hop fingerprinting misses, while staying inside the
 invariants.
 
@@ -115,13 +117,13 @@ SSE-SASE) via vendor-doc-sourced fingerprints. Empirical validation
 against a stratified sample of known-rich-stack public companies
 (Stripe, Shopify, Slack, Atlassian, Datadog, HashiCorp; gitignored
 private corpus) showed **zero unclassified CNAME chain termini** on
-these targets — the catalog is comprehensive for top-tier enterprise
+these targets - the catalog is comprehensive for top-tier enterprise
 vendors. Residual coverage gaps live in lesser-known regional clouds
 (Yandex, OVH, Kakao), SAP / Oracle SaaS apps beyond Fusion, and the
 long-tail SSE/SASE vendors (iboss, Versa, Aryaka).
 
 **What remains.** The metadata richness pass is the largest pending
-catalog-quality item — see Track B below. Description and reference
+catalog-quality item - see Track B below. Description and reference
 coverage targets (≥ 80% / ≥ 25%) before v2.0; the vendor-doc-sourced
 methodology codified in `CONTRIBUTING.md` advances reference coverage
 on every new `cname_target` rule shipped under it.
@@ -160,9 +162,9 @@ growth is welcome; engine growth needs stronger justification.
 
 ## Engineering quality posture
 
-Standing engineering practices — type checking, lint gates, test
+Standing engineering practices - type checking, lint gates, test
 coverage, dependency audit, trusted-publisher releases, structured
-logging, schema versioning, property-based fuzzing — are the floor
+logging, schema versioning, property-based fuzzing - are the floor
 this roadmap assumes. They are documented in `CONTRIBUTING.md` and
 exercised by CI; the v1.9.x and v2.0 plans below build on top of
 them.
@@ -187,23 +189,23 @@ The list of things a security-focused project ideally has but we
 do not yet ship. Listed publicly so an evaluator can see what we
 know is missing rather than only what we know is present:
 
-- ~~No SBOM attached to releases.~~ **Shipped in v1.9.3.1** —
+- ~~No SBOM attached to releases.~~ **Shipped in v1.9.3.1** -
   CycloneDX SBOM (`recon-tool-<version>.cdx.json`) attached to
   every GitHub Release as an artifact, generated by the release
   workflow from the same locked dependency set the audit gate
   validates.
 - ~~No SECURITY.md / vulnerability disclosure policy.~~ **Shipped
-  pre-v1.9.3.1** — see `SECURITY.md` for scope, response SLA,
+  pre-v1.9.3.1** - see `SECURITY.md` for scope, response SLA,
   reporting channel, and the MCP-specific threat model.
-- ~~No secrets-scanning in CI.~~ **Shipped in v1.9.3.1** —
+- ~~No secrets-scanning in CI.~~ **Shipped in v1.9.3.1** -
   gitleaks runs on every PR, every push to main, and on a weekly
   scheduled scan against the historical branch tree. Read-only
   workflow permissions; failures are non-bypassable.
-- ~~No forward-compat cache test.~~ **Shipped in v1.9.3.1** —
+- ~~No forward-compat cache test.~~ **Shipped in v1.9.3.1** -
   `tests/test_cache_forward_compat.py` pins the implicit "ignore
   unknown fields, load known fields cleanly" contract that the
   reader has always honoured but never tested.
-- No mutation testing — line coverage measures execution, not
+- No mutation testing - line coverage measures execution, not
   test quality. Open; tracked for post-v2.0 if line coverage
   starts feeling like a false-positive signal.
 - No SLSA provenance or reproducible-build verification.
@@ -212,7 +214,7 @@ know is missing rather than only what we know is present:
 
 These do not block v1.9.x or v2.0. The four cheap ones
 (SECURITY.md, SBOM, secrets-scanning, forward-compat test) all
-shipped by v1.9.3.1 — the engineering-quality "what's still
+shipped by v1.9.3.1 - the engineering-quality "what's still
 missing" list shrunk meaningfully in one patch. The expensive
 ones (SLSA, reproducible builds, mutation testing) wait.
 
@@ -220,7 +222,7 @@ ones (SLSA, reproducible builds, mutation testing) wait.
 
 These are directional measures, not product OKRs:
 
-- **Multi-signal correlation depth** — north-star metric. Share of
+- **Multi-signal correlation depth** - north-star metric. Share of
   `--explain` outputs whose evidence DAG references more than one source
   per high-confidence slug. The lens for "did the new correlation work
   do something single-source detection could not?". Tracked per release
@@ -245,7 +247,7 @@ These are directional measures, not product OKRs:
 The plan is grouped into a small number of meaningful releases, not a long
 trail of patches. Each release ships as a complete unit: a coherent feature
 set, a catalog growth pass, and a private-corpus validation run that proves
-the new behavior on real targets. Build order respects dependencies — the
+the new behavior on real targets. Build order respects dependencies - the
 graph layer needs the signal coverage that comes before it; the
 probabilistic layer needs the signals to feed posteriors. Patches happen
 when something actually breaks, not as a way to chunk work.
@@ -272,7 +274,7 @@ Standing work that runs alongside every release:
   calibration claims are falsifiable across time, not just at the
   v2.0 lock moment.
 
-### v1.7.0 — Hardened-target signal recovery *(shipped — see [CHANGELOG](../CHANGELOG.md))*
+### v1.7.0 - Hardened-target signal recovery *(shipped - see [CHANGELOG](../CHANGELOG.md))*
 
 Squeezed more out of CT logs and resolution chains, and surfaced what
 we already tracked but didn't expose. Surfaces: wildcard SAN sibling
@@ -283,7 +285,7 @@ surfacing (`evidence_conflicts` array). All shipped as YAML data
 files plus minimal engine extension; the v2.0 schema lock promotes
 each to stable per the disposition table below.
 
-### v1.8.0 — Graph correlation *(shipped — see [CHANGELOG](../CHANGELOG.md))*
+### v1.8.0 - Graph correlation *(shipped - see [CHANGELOG](../CHANGELOG.md))*
 
 Built the structural layer on top of the v1.7 cert intelligence.
 Surfaces: CT co-occurrence graph + Louvain communities
@@ -297,7 +299,7 @@ vertical-baseline anomaly rules (`expected_categories` /
 Zero new network surface; all derived from already-collected
 observables. v2.0 promotes each to stable per the disposition table.
 
-### v1.9.0 — Probabilistic fusion *(shipped, EXPERIMENTAL surfaces — see [CHANGELOG](../CHANGELOG.md), `docs/correlation.md` §4.8, `validation/v1.9-validation-summary.md`)*
+### v1.9.0 - Probabilistic fusion *(shipped, EXPERIMENTAL surfaces - see [CHANGELOG](../CHANGELOG.md), `docs/correlation.md` §4.8, `validation/v1.9-validation-summary.md`)*
 
 Layered Bayesian inference on top of the deterministic engine, gated
 behind `--fusion`. Surfaces (`posterior_observations`, `slug_confidences`,
@@ -310,7 +312,7 @@ across releases; high-posterior calibration; interval coverage on
 sparse-evidence cases) cleared on the v1.9.0 corpus run; per-node
 calibration findings drove the v1.9.3 surgery.
 
-### The path to v2.0 — a numbered sequence
+### The path to v2.0 - a numbered sequence
 
 v2.0 is the "polished and excellent everywhere" release: schema
 lock + doc snapshot + zero EXPERIMENTAL labels anywhere. It is not
@@ -341,10 +343,10 @@ Standing work runs alongside every version: catalog growth
 (corpus-observed + vendor-doc-sourced), per-release calibration
 aggregate published, CI / lint / typecheck / coverage gates.
 
-#### v1.9.2 — UX validation via agentic QA *(shipped — see [CHANGELOG](../CHANGELOG.md) and `validation/v1.9.2-agentic-ux.md`)*
+#### v1.9.2 - UX validation via agentic QA *(shipped - see [CHANGELOG](../CHANGELOG.md) and `validation/v1.9.2-agentic-ux.md`)*
 
 <details>
-<summary>Shipped detail — methodology + findings</summary>
+<summary>Shipped detail - methodology + findings</summary>
 
 We have not validated that operators benefit from credible
 intervals. The entire calibration argument is academic if no one
@@ -356,7 +358,7 @@ unproven.
 The original framing called for three human operator interviews
 (SOC analyst, security architect, due-diligence reviewer). We
 keep that as a future option, but the **primary v1.9.2
-methodology is agentic QA** — one of recon's main user personas
+methodology is agentic QA** - one of recon's main user personas
 *is* the AI agent (the entire MCP integration story), so
 simulating that persona with a script gives us:
 
@@ -371,14 +373,14 @@ simulating that persona with a script gives us:
 
 **Method.**
 
-- **Personas as prompt scaffolds.** Three personas — security
+- **Personas as prompt scaffolds.** Three personas - security
   analyst triaging an alert, due-diligence researcher writing a
   vendor assessment, ops engineer comparing two domains. Each
   gets a system prompt that defines their role, the question
   they're trying to answer, and the artifacts available
   (`recon <domain> --fusion --json`, `--explain-dag`, MCP tool
   output). No mention of credible intervals, sparse flags, or
-  evidence DAGs in the prompt — we want to see whether the
+  evidence DAGs in the prompt - we want to see whether the
   agent finds and uses those affordances on its own.
 - **Test domains.** Two fictional Microsoft examples
   (`contoso.com` for dense, a deliberately-hardened scenario
@@ -417,28 +419,28 @@ validation for the agent persona, not a placeholder for it.
 
 </details>
 
-#### v1.9.3 — Resolve the `email_security_strong` definitional gap *(shipped — see [CHANGELOG](../CHANGELOG.md) and `validation/v1.9.3-calibration.md`)*
+#### v1.9.3 - Resolve the `email_security_strong` definitional gap *(shipped - see [CHANGELOG](../CHANGELOG.md) and `validation/v1.9.3-calibration.md`)*
 
 <details>
-<summary>Shipped detail — topology surgery rationale</summary>
+<summary>Shipped detail - topology surgery rationale</summary>
 
 This is *topology surgery*, not parameter tuning. The v1.9.0
 spot-check showed 52.6% agreement on this single node; all other
 nodes were at 100%. The cause is not miscalibration. The Bayesian
 network's CPT for `email_security_strong` is parameterized over
-`{m365_tenant, google_workspace_tenant, email_gateway_present}` —
+`{m365_tenant, google_workspace_tenant, email_gateway_present}` -
 modern-mail-provider presence. The spot-check tested it against
-`dmarc=reject + dkim + spf-strict + mta-sts (≥2 of 4)` — policy
+`dmarc=reject + dkim + spf-strict + mta-sts (≥2 of 4)` - policy
 enforcement. **These are different claims.** No CPT tuning makes
 them agree. Two principled fixes:
 
-- **Option A — Split the node.** Replace `email_security_strong`
+- **Option A - Split the node.** Replace `email_security_strong`
   with two nodes: `email_security_modern_provider` (parameterized
   on M365 / GWS as today) and `email_security_policy_enforcing`
   (parameterized on observed DMARC / DKIM / SPF / MTA-STS signals).
   Defenders care about both, but for different reasons. Two nodes
   with two clear definitions beat one with a muddled one.
-- **Option B — Pick a definition and align both layers.** Choose
+- **Option B - Pick a definition and align both layers.** Choose
   whichever definition matches the question defenders actually ask
   (likely policy-enforcing), align the deterministic pipeline check
   and the Bayesian CPT to that definition, and live with the choice.
@@ -449,7 +451,7 @@ change, not a CPT tune. **Gate:** both new nodes ship with explicit
 definitions in `docs/correlation.md` and a re-run corpus
 spot-check matches the definitions.
 
-**Adjacent suspect — `federated_identity`.** The current model
+**Adjacent suspect - `federated_identity`.** The current model
 parameterizes federation only on `m365_tenant`, but federation
 exists without M365 (Okta + GWS, Auth0 + custom IdP, standalone
 SAML setups). The current network systematically under-attributes
@@ -460,16 +462,16 @@ its CPT, or (b) keep it `experimental` until corpus evidence
 shows the under-attribution rate is acceptable. Decide as part
 of this milestone.
 
-**Audit-every-node — backlog, not commitment.** The pragmatic
+**Audit-every-node - backlog, not commitment.** The pragmatic
 choice is to fix the one we know is broken, ship, and let the
 next corpus run tell us which node is broken next. Sequential
-model improvement. The rigorous-but-open-ended alternative — audit
-every node for definitional clarity in one pass — is in
+model improvement. The rigorous-but-open-ended alternative - audit
+every node for definitional clarity in one pass - is in
 [Backlog (after v2.0)](#backlog-after-v20) below.
 
 </details>
 
-#### v1.9.4 — Hardened-adversarial behavior validation
+#### v1.9.4 - Hardened-adversarial behavior validation
 
 The v1.9.0 corpus skewed enterprise. The asymmetric-likelihood
 design (§4.8.3) was justified specifically for hardened targets,
@@ -493,7 +495,7 @@ which v1.9.0 did not exercise. This milestone validates the
   sparse on this pattern"). Honest framing of where the public
   channel really cannot resolve uncertainty.
 
-**Quality bar — exceptionally well (every item must be checked):**
+**Quality bar - exceptionally well (every item must be checked):**
 
 - [ ] Hardened corpus has explicit *inclusion criteria* documented
   at the top of `validation/corpus-private/hardened.txt`: a domain
@@ -514,9 +516,9 @@ which v1.9.0 did not exercise. This milestone validates the
   hits, otherwise sparse; etc." One row per hardening pattern.
 - [ ] **Survival rate** quantified: what fraction of high-confidence
   posteriors *survive* migration from soft-target corpus to
-  hardened-target corpus, per node. The honest number — most should
+  hardened-target corpus, per node. The honest number - most should
   vanish; the ones that don't are the leak surfaces.
-- [ ] **No new code-path regressions on the soft corpus** —
+- [ ] **No new code-path regressions on the soft corpus** -
   re-running the v1.9.0 corpus shows the same 100% per-node
   agreement (other than `email_security_strong` which is gone).
 - [ ] **Failure-mode catalog cross-referenced** to specific
@@ -528,9 +530,9 @@ which v1.9.0 did not exercise. This milestone validates the
   from public sources (CT-log queries against short-lived issuers,
   filter for wildcard SANs, etc.). Anonymized aggregates only.
 
-#### v1.9.5 — Per-node stability criteria (decide, don't ship the field)
+#### v1.9.5 - Per-node stability criteria (decide, don't ship the field)
 
-The current EXPERIMENTAL label is atomic — the whole `--fusion`
+The current EXPERIMENTAL label is atomic - the whole `--fusion`
 layer carries it. That's over-broad. `m365_tenant`, `cdn_fronting`,
 `aws_hosting`, `google_workspace_tenant` were validated at 100%
 spot-check on the v1.9.0 corpus. `email_security_strong` was not.
@@ -540,7 +542,7 @@ This patch is about *deciding the criteria*, not shipping a
 field. v2.0 ships with no `experimental` labels anywhere
 (see v2.0.0 below), so the `stability: stable | experimental |
 deprecated` field has nothing to express at v2.0 release time.
-Ship the field when it's actually needed — which is the first
+Ship the field when it's actually needed - which is the first
 time a post-v2.0 patch adds a node that doesn't immediately
 qualify as `stable`.
 
@@ -572,7 +574,7 @@ qualify as `stable`.
     enough data to support promotion regardless of point-spot-
     check rates.
 - **Apply the criteria to the v1.9.0 seed network.** Each node
-  gets a verdict — `stable` (clears all three) or `not yet`
+  gets a verdict - `stable` (clears all three) or `not yet`
   (one or more criteria unmet). The `not yet` verdicts feed
   the v2.0 disposition decisions: split the node, redefine it,
   remove it after a deprecation patch, or keep working on it
@@ -582,11 +584,11 @@ qualify as `stable`.
   value. v2.0 ships without the field; the schema disposition
   table accounts for nodes by name, not by per-node label.
 
-**Quality bar — exceptionally well:**
+**Quality bar - exceptionally well:**
 
 - [ ] **Per-node verdict table** in `validation/v1.9.5-stability.md`.
   One row per node, three columns (a / b / c), explicit pass/fail.
-  Pass requires *all three* — partial-pass nodes are `not yet`.
+  Pass requires *all three* - partial-pass nodes are `not yet`.
 - [ ] **Numeric backing for criterion (b)**: per-node Brier score,
   log-score, and ECE on the v1.9.4 corpus run, with ranges
   documented (e.g., "ECE ≤ 0.20 considered acceptable for
@@ -595,7 +597,7 @@ qualify as `stable`.
   independent domains for stable; the table records the actual
   firing count per node from the v1.9.4 corpus, not a self-report.
 - [ ] **Criterion-(a) test exists in code** as a parametrized
-  test (`tests/test_node_stability_criteria.py`) — for every
+  test (`tests/test_node_stability_criteria.py`) - for every
   node, an assertion that varying its bound evidence moves its
   posterior and that varying unbound evidence does *not*. The
   test failing is a regression signal, not a v1.9.5-only check.
@@ -608,9 +610,9 @@ qualify as `stable`.
   Each `not yet` node carries its disposition decision in the
   same v1.9.5-stability.md row.
 - [ ] **No fast-tracking on numbers alone.** A node with great ECE
-  but only 4 firings does not pass — the threshold is *all three*.
+  but only 4 firings does not pass - the threshold is *all three*.
 
-#### v1.9.6 — CPT-change discipline (concept, then parameter)
+#### v1.9.6 - CPT-change discipline (concept, then parameter)
 
 The v1.9.0 validation report initially recommended "lower
 `P(strong|M365+gateway)` from 0.75 → ~0.55 because the corpus
@@ -686,7 +688,7 @@ less subject to the cognitive biases of the human tuner.
   without measuring whether the concept-questioning actually
   happened.
 
-**Quality bar — exceptionally well:**
+**Quality bar - exceptionally well:**
 
 - [ ] **Worked example in CONTRIBUTING.md**: the v1.9.3 surgery
   used as the canonical case. "We almost tuned a CPT and shipped;
@@ -700,7 +702,7 @@ less subject to the cognitive biases of the human tuner.
   Pre-filled in `.github/pull_request_template.md`. Reviewer
   enforces; checkbox is the prompt.
 - [ ] **Anti-pattern catalog**: explicit list of changes the
-  reviewer should reject — "lowered P(X|Y) from 0.75 to 0.55 to
+  reviewer should reject - "lowered P(X|Y) from 0.75 to 0.55 to
   match corpus rate" without a concept comment is the canonical
   rejection. Three or four worked rejections in CONTRIBUTING.md.
 - [ ] **No automated CPT-fitting tooling**: confirm no script
@@ -708,7 +710,7 @@ less subject to the cognitive biases of the human tuner.
   CPT values from corpus statistics. Periodic audit, not a
   test (the audit is the discipline).
 
-#### v1.9.7 — Metadata-coverage gate (presence, not coverage)
+#### v1.9.7 - Metadata-coverage gate (presence, not coverage)
 
 The v1.9.0 advisory gate measures description coverage as a
 percentage. Forcing 70% coverage means writing ~190 description
@@ -727,7 +729,7 @@ clear the gate. That's gate-gaming.
   percentage. Flip from advisory to enforcing when the count for
   gated categories is zero.
 
-**Quality bar — exceptionally well:**
+**Quality bar - exceptionally well:**
 
 - [ ] **Per-category gap report**: when the script fails, output
   lists the exact slug + detection-rule pair missing a
@@ -759,7 +761,7 @@ Each v1.9.x patch ships when *that one milestone* is complete.
 This is intentional:
 
 - **One milestone per patch** keeps the diff small and the changelog
-  honest. A user reading "v1.9.4 — hardened-adversarial validation"
+  honest. A user reading "v1.9.4 - hardened-adversarial validation"
   knows exactly what shipped and what to test.
 - **No bundling.** Two milestones completing on the same day is
   fine; they still ship as separate patches with separate tags.
@@ -777,7 +779,7 @@ This is intentional:
   just decided to think about.
 - **Bug-fix patches use the next available number.** A regression
   fix that lands between v1.9.5 and v1.9.6 ships as `v1.9.5.1`
-  or claims the next minor number — whichever the project's
+  or claims the next minor number - whichever the project's
   versioning strategy prefers at that moment. Bug fixes do not
   block bridge milestones, and bridge milestones do not block
   bug fixes; both make linear progress through their own number
@@ -810,7 +812,7 @@ allowed `experimental` per-node at v2.0; we removed that
 allowance. If a node can't earn `stable`, it doesn't belong in
 v2.0, full stop.
 
-#### v1.9.8 — Catalog metadata richness pass (shipped)
+#### v1.9.8 - Catalog metadata richness pass (shipped)
 
 **What shipped.** Description quality and reference coverage lifted
 across the entire catalog. After this pass every detection in every
@@ -822,7 +824,7 @@ richness audit:
   proxies signal 1 of the rubric ("what the slug detects").
 - 100 percent of descriptions contain scope-narrowing language
   (proxies signal 2: "what it does not detect"). The audit's token
-  set was tuned to the catalog's actual writing style — explicit
+  set was tuned to the catalog's actual writing style - explicit
   negation (`not`, `does not`) plus the idioms the catalog uses to
   narrow scope (`alternative`, `legacy`, `functionally equivalent`,
   `typically paired`, `same semantics`, `cname through`, `chain
@@ -858,7 +860,7 @@ end-state numbers, weight-rationale table, and scope decisions.
 `scripts/check_metadata_coverage.py --report-richness` shows 100
 percent on every category and every signal.
 
-#### v1.9.9 — Detection-gap UX surfaces (shipped)
+#### v1.9.9 - Detection-gap UX surfaces (shipped)
 
 **What shipped.** Three operator-facing surfaces in the default panel
 that make the architectural limits of passive DNS collection visible.
@@ -914,7 +916,7 @@ cannot see (the ceiling), casts a wider net for what it can see
 indicator). After v1.9.9 the default panel is honest about both its
 findings and its limits, which is the v2.0 polish target.
 
-**Quality bar — verified at ship.**
+**Quality bar - verified at ship.**
 - Ceiling phrasing fires only on sparse-services + multi-domain
   apexes. Both `len(categorized) < 5` and `len(surface_attributions) <
   5` must hold; `domain_count >= 3` gates the multi-domain check.
@@ -933,12 +935,12 @@ findings and its limits, which is the v2.0 polish target.
   under both `--cov` and non-`--cov` runs.
 
 **Validation.** Two memos:
-- `validation/v1.9.9-detection-gap-ux.md` — per-fixture trigger
+- `validation/v1.9.9-detection-gap-ux.md` - per-fixture trigger
   behaviour, wordlist rationale, canonicalization decisions
   (Firebase under GCP, Replit and Glitch excluded), test-quality
   manifesto with explicit "what we test and what we honestly do not"
   framing.
-- `validation/v1.9.9-corpus-run.md` — synthetic 19-fixture corpus
+- `validation/v1.9.9-corpus-run.md` - synthetic 19-fixture corpus
   results: 8/19 multi-cloud fires (42.1%), 11/19 ceiling fires
   (57.9%). The corpus is publicly reproducible from
   `validation/synthetic_corpus/generator.py`; the aggregator at
@@ -953,7 +955,7 @@ findings and its limits, which is the v2.0 polish target.
 - CT-by-org-name search when an organization name is available from a
   prior lookup. Same external-HTTP rationale.
 
-#### v1.9.10 — Stratified-corpus pre-lock validation (shipped)
+#### v1.9.10 - Stratified-corpus pre-lock validation (shipped)
 
 **What shipped.** A 60-fixture publicly-reproducible synthetic
 corpus across six cloud strata (GCP, Azure non-O365, Oracle,
@@ -983,7 +985,7 @@ names. The corpus aggregator is reusable against the maintainer's
 gitignored private corpus; that real-corpus run produces the
 truth-of-record numbers and remains standing work.
 
-**Quality bar — verified at ship.**
+**Quality bar - verified at ship.**
 - 60 stratified synthetic fixtures (10 per stratum) all
   Microsoft-fictional, deterministic generator at
   `validation/synthetic_corpus/generator.py`.
@@ -1026,7 +1028,7 @@ per stratum because synthetic fixtures are sparse-by-design). The
 gitignored-private-corpus run will produce the truth-of-record
 numbers.
 
-#### v1.9.11 — Documentation polish dry-run (next)
+#### v1.9.11 - Documentation polish dry-run (next)
 
 **What ships.** Every doc reviewed against the v2.0 quality bar
 before v2.0 actually tags. correlation.md polished to the v2.0
@@ -1067,7 +1069,7 @@ mechanical lock.
 - [ ] **Schema disposition test green.** `tests/test_v2_schema_disposition.py`
   (added in v1.9.10.1 prep) passes with zero entries in
   `_V2_KNOWN_SCHEMA_GAPS`. The current single entry
-  (`ecosystem_hyperedges` — batch-wrapper field not in schema)
+  (`ecosystem_hyperedges` - batch-wrapper field not in schema)
   is the v1.9.11 worklist item.
 - [ ] **`okta_idp` disposition applied.** Decision in
   `validation/v2.0-prep-baseline.md` §3 (keep + corpus-expansion,
@@ -1097,7 +1099,7 @@ v2.0 should be required.
 a docstring describes behaviour the code doesn't implement),
 v1.9.11 ships a follow-up code patch before v2.0 starts. The
 v2.0 release notes should read like an inventory, not a feature
-list — every claim should already be true at v1.9.11 tag time.
+list - every claim should already be true at v1.9.11 tag time.
 
 _Additive feature candidates (BIMI VMC clustering, MCP delta helper,
 self-audit batch mode, non-MCP graph exports, per-node
@@ -1111,37 +1113,37 @@ the path-to-v2.0 plan. Any of them may be promoted into a
 post-v2.0 v2.x.y patch when there's a falsifiable defensive case
 and corpus evidence to back it._
 
-### v2.0.0 — Maturity
+### v2.0.0 - Maturity
 
 Lock in what the previous releases proved. Promote stable experimental
 fields to the v2.0 schema contract; make the catalog community-PR-
 friendly; ensure the framework is suitable for sustained corpus-driven
 operation.
 
-**Pre-conditions** — the v1.9.4 → v1.9.11 linear sequence has
+**Pre-conditions** - the v1.9.4 → v1.9.11 linear sequence has
 completed, in order:
 
-1. **v1.9.4** — Hardened-adversarial behaviour validated; 50-domain
+1. **v1.9.4** - Hardened-adversarial behaviour validated; 50-domain
    minimal-DNS corpus exercises the asymmetric-likelihood design.
-2. **v1.9.5** — Per-node stability dispositions decided for every
+2. **v1.9.5** - Per-node stability dispositions decided for every
    Bayesian-network node; "not yet" nodes either redefined,
    deprecated, or removed.
-3. **v1.9.6** — CPT-change discipline documented in
+3. **v1.9.6** - CPT-change discipline documented in
    `CONTRIBUTING.md` and enforced in review.
-4. **v1.9.7** — Metadata-coverage gate flipped from advisory to
+4. **v1.9.7** - Metadata-coverage gate flipped from advisory to
    presence-enforcing.
-5. **v1.9.8** — Catalog metadata richness: 100 percent of detections
+5. **v1.9.8** - Catalog metadata richness: 100 percent of detections
    carry substantive descriptions, scope-narrowing language, and a
    canonical vendor `reference` URL across every category;
    advisory `--report-richness` audit shipped.
-6. **v1.9.9** — Detection-gap UX surfaces shipped: passive-DNS
+6. **v1.9.9** - Detection-gap UX surfaces shipped: passive-DNS
    ceiling phrasing, expanded subdomain enumeration breadth,
    apex-level multi-cloud rollup indicator.
-7. **v1.9.10** — Stratified-corpus pre-lock validation passed:
+7. **v1.9.10** - Stratified-corpus pre-lock validation passed:
    60-domain stratified suite (per-cloud × 6 strata) shows the
    engine works across cloud customers, not just the
    enterprise-M365/AWS-skewed historical corpus.
-8. **v1.9.11** — Documentation polish dry-run: every doc reviewed
+8. **v1.9.11** - Documentation polish dry-run: every doc reviewed
    against v2.0 quality bar; migration guide drafted; zero
    EXPERIMENTAL labels remain in any user-facing text.
 
@@ -1150,21 +1152,21 @@ validation step, and refinement check.
 
 Already cleared en route to this sequence:
 
-- ~~v1.9.2 (operator UX validation via agentic QA)~~ — see
+- ~~v1.9.2 (operator UX validation via agentic QA)~~ - see
   `validation/v1.9.2-agentic-ux.md`.
-- ~~v1.9.3 (email_security_strong definitional gap)~~ — see
+- ~~v1.9.3 (email_security_strong definitional gap)~~ - see
   `validation/v1.9.3-calibration.md`.
 - ~~Supply-chain hardening, SBOM, secrets-scanning, forward-compat
-  cache test~~ — shipped in v1.9.3.1.
-- ~~Top-3 influential edges in --explain-dag~~ — shipped in v1.9.3.2.
+  cache test~~ - shipped in v1.9.3.1.
+- ~~Top-3 influential edges in --explain-dag~~ - shipped in v1.9.3.2.
 - ~~Cloud-vendor coverage gap fill (GCP / Azure non-O365 / Oracle
   / IBM / Alibaba / PaaS / SSE-SASE / identity extras; 29 new
-  fingerprints)~~ — shipped in v1.9.3.9.
+  fingerprints)~~ - shipped in v1.9.3.9.
 - ~~Subdomain-level surface intelligence in default panel
-  (unclassified-surface section + per-provider counts)~~ —
+  (unclassified-surface section + per-provider counts)~~ -
   shipped in v1.9.3.10.
 - ~~Downstream consumption examples (Splunk + Elasticsearch field
-  mappings, CI gate against schema drift)~~ — shipped in v1.9.3.8.
+  mappings, CI gate against schema drift)~~ - shipped in v1.9.3.8.
 
 **Schema-lock disposition** (every EXPERIMENTAL field gets a verdict):
 
@@ -1186,7 +1188,7 @@ Already cleared en route to this sequence:
 | Bayesian-network nodes that do NOT clear v1.9.5 criteria | Remove via deprecation: a v1.9.x patch marks the node deprecated in CHANGELOG and emits a one-time stderr warning when it's used; the next patch removes it from `bayesian_network.yaml`. v2.0 ships without the node. **No node goes from `experimental` directly to "removed" without a deprecated stop in between.** |
 | Per-node `stability` field | Not shipped at v2.0. Reserved for v2.1+ when a new node first needs the `experimental` value. |
 
-**v2.0 itself is purely the lock-and-polish ceremony — two items:**
+**v2.0 itself is purely the lock-and-polish ceremony - two items:**
 
 - **Schema lock.** Apply the disposition table above. Bump
   `docs/recon-schema.json` to v2.0; remove EXPERIMENTAL language
@@ -1202,7 +1204,7 @@ Already cleared en route to this sequence:
     surfaces it" (rules, wildcard SAN siblings, temporal bursts,
     chain motifs, community detection, posterior shift).
   - **Prior-art comparison.** Existing probabilistic libraries
-    (pgmpy, pomegranate, PyMC / Stan / Pyro) — what they are,
+    (pgmpy, pomegranate, PyMC / Stan / Pyro) - what they are,
     what they do well, and the specific reasons we did not
     import them. Concepts we adopted are already cited inline
     (Jeffrey 1965, Walley 1991, Augustin et al. 2014, Taroni
@@ -1225,24 +1227,24 @@ Already cleared en route to this sequence:
   - **Engineering quality posture** carried forward from this
     roadmap, edited for the polished-doc voice.
 
-That is v2.0. Everything else — feature additions, MCP tools,
-exports — ships in v1.9.x patch releases as work completes,
+That is v2.0. Everything else - feature additions, MCP tools,
+exports - ships in v1.9.x patch releases as work completes,
 under the same EXPERIMENTAL labelling discipline. By the time the
 schema lock runs, the features are already in the wild and their
 shapes are known.
 
-**Validation gate for v2.0** — re-run the full corpus with the
+**Validation gate for v2.0** - re-run the full corpus with the
 locked schema; confirm no field-shape regressions. Trend metrics
 across v1.6 → v2.0 demonstrate the correlation engine got better
 without overclaiming.
 
-**Quality bar for v2.0 itself — exceptionally well:**
+**Quality bar for v2.0 itself - exceptionally well:**
 
 - [ ] **Schema lock validates against published consumers.** The
   Track B SIEM examples re-parse without modification on the v2.0
   schema. If a SIEM example breaks, the schema-lock decision was
-  wrong (or the example was) — fix one of them before tagging.
-- [ ] **`validation/v2.0-validation-summary.md` published** —
+  wrong (or the example was) - fix one of them before tagging.
+- [ ] **`validation/v2.0-validation-summary.md` published** -
   full corpus results, trend table v1.6 → v1.7 → v1.8 → v1.9.0 →
   v1.9.3 → v1.9.4 → v2.0 per node. The trend table is the public
   evidence the engine got better.
@@ -1269,11 +1271,11 @@ without overclaiming.
   present in a sample lookup output. The user installing v2.0 sees
   the polish, not just the version number.
 
-### v2.1.0 — Operator-driven catalog growth (closed-loop fingerprint mining)
+### v2.1.0 - Operator-driven catalog growth (closed-loop fingerprint mining)
 
 The first slot after v2.0 lock. Composability is next in priority
 order (correctness → reliability → explainability → composability →
-features), and v2.0 doesn't advance it — v2.0 is pure
+features), and v2.0 doesn't advance it - v2.0 is pure
 lock-and-polish on what already works.
 
 **Framing.** The recon catalog is shaped by passive-DNS observation
@@ -1313,7 +1315,7 @@ hand-tuning exercise.
 
 - **One new MCP skill:**
   - `run_fingerprint_mining(seed_domains, max_candidates_per_domain=20,
-    dry_run=True)` — for each seed, runs the existing chain →
+    dry_run=True)` - for each seed, runs the existing chain →
     discovery → hypothesis-test pipeline and draws candidates
     from three already-shipped graph layers: chain motifs (v1.7
     `motifs.yaml` + `discover_fingerprint_candidates`), Louvain
@@ -1426,25 +1428,25 @@ silently undermines the project's downstream calibration claims.
 **Candidate schema (machine-readable).** Each candidate emitted
 by the runner is a dict with these fields:
 
-  - `pattern` (str) — the suffix or substring to match.
-  - `tier` (`"application" | "infrastructure"`) — attribution
+  - `pattern` (str) - the suffix or substring to match.
+  - `tier` (`"application" | "infrastructure"`) - attribution
     precedence layer.
-  - `suggested_slug` (str) — slug-shaped identifier proposed for
+  - `suggested_slug` (str) - slug-shaped identifier proposed for
     the new fingerprint.
-  - `count` (int) — how many distinct domains in the corpus
+  - `count` (int) - how many distinct domains in the corpus
     showed this pattern.
-  - `samples` (list of `{subdomain, terminal}`) — up to five
+  - `samples` (list of `{subdomain, terminal}`) - up to five
     representative chains for human review.
-  - `projected_delta` (dict) — `{correlation_depth, entropy_reduction,
+  - `projected_delta` (dict) - `{correlation_depth, entropy_reduction,
     conflict_rate}` from the empirical re-run.
   - `clue_source` (`"chain_motif" | "graph_community" | "hyperedge"`)
-    — which already-shipped layer surfaced the candidate. Lets
+    - which already-shipped layer surfaced the candidate. Lets
     PR review trace each candidate back to a specific motif
     match, Louvain community ID, or hyperedge type rather than
     treating the runner as a black box. Carry the source ID in
     the YAML triage stanza so the provenance chain stays intact
     after merge.
-  - `triage_yaml` (str) — pre-formatted YAML stanza ready for
+  - `triage_yaml` (str) - pre-formatted YAML stanza ready for
     pasting into `recon_tool/data/fingerprints/surface.yaml`
     pending human review.
 
@@ -1456,19 +1458,19 @@ human can review and apply (or reject) by hand.
 
 **Secondary v2.1 surface (only if the primary proves out):**
 
-- `run_validation_suite(domains, metrics=[...])` — packages the
+- `run_validation_suite(domains, metrics=[...])` - packages the
   existing corpus metrics into a reproducible call.
-- `batch_posterior_query(domains, nodes=[...])` — parallel
+- `batch_posterior_query(domains, nodes=[...])` - parallel
   `get_posteriors` with aggregated stats.
 
 These are wrappers over capabilities the MCP server already
 ships. They land only after v2.1 mining itself ships and proves
-useful — not preemptively.
+useful - not preemptively.
 
 **Invariants this preserves:**
 
-- 100% passive — runner only calls existing public-signal tools.
-- Data-file only — discovered candidates land in a review queue,
+- 100% passive - runner only calls existing public-signal tools.
+- Data-file only - discovered candidates land in a review queue,
   never in a committed catalog. **`run_fingerprint_mining` ships
   with `dry_run=True` as the only supported value in v2.1.** Any
   future "auto-apply" mode requires its own invariant review and
@@ -1511,8 +1513,8 @@ useful — not preemptively.
 - It directly advances the north-star metric (multi-signal
   correlation depth) without new math, new network code, or new
   fingerprint surfaces.
-- It uses what's already shipped — `discover_fingerprint_candidates`,
-  `chain_lookup`, `test_hypothesis`, `get_posteriors` — and
+- It uses what's already shipped - `discover_fingerprint_candidates`,
+  `chain_lookup`, `test_hypothesis`, `get_posteriors` - and
   packages them into a feedback loop that measures its own
   impact.
 - It is the natural composability move the priority order
@@ -1527,7 +1529,7 @@ Tedious tasks don't get done. v2.2 considers a
 `--propose-pr` mode that opens a draft GitHub PR with the
 candidate stanza added, requires human merge, and never auto-
 merges. The audit trail moves from local YAML diff → reviewable
-PR. Auto-merge is *never* shipped — that line is permanent. We
+PR. Auto-merge is *never* shipped - that line is permanent. We
 articulate the v2.2 path here so the v2.1 friction has a known
 answer rather than an open question.
 
@@ -1568,7 +1570,7 @@ companies):*
 - **Stratified-corpus validation as standing practice.** Single
   private corpus has bias; stratified samples (known GCP-customer set,
   known Azure-customer set, etc.) surface the bias by design. Process
-  change in `validation/` — not code. Backlog because the per-cloud
+  change in `validation/` - not code. Backlog because the per-cloud
   10-domain reference sets need curation; vendor case-studies are the
   starting input.
 - **Cloud-provider rollup at the apex level.** When subdomains span
@@ -1583,29 +1585,29 @@ companies):*
 restructured to a flat sequence; any of these may be promoted into
 a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
 
-- **BIMI VMC legal-name clustering** — pairs with the v1.8
+- **BIMI VMC legal-name clustering** - pairs with the v1.8
   hypergraph view; demonstrates real multi-brand identification on
   a private corpus.
-- **MCP delta helper** — `recon_delta(domain_or_json_a,
+- **MCP delta helper** - `recon_delta(domain_or_json_a,
   domain_or_json_b)` MCP tool. Compares supplied or cached JSON
   only; no hidden network. Optional `include_fusion` flag surfaces
   v1.9 posterior shifts alongside the deterministic diff.
-- **Portfolio / self-audit batch mode** — `recon batch --self-audit`
+- **Portfolio / self-audit batch mode** - `recon batch --self-audit`
   aggregating vertical-baseline hits, anomaly rules, correlation-
   depth distribution, and gateway / sovereignty consistency across
   many domains in one summary. A lightweight agent-side precursor
   ships today in `AGENTS.md` / `SKILL.md` under the
-  "Family-of-companies / portfolio rollup" workflow — agents
+  "Family-of-companies / portfolio rollup" workflow - agents
   synthesize the rollup from per-domain JSON returned by
   `recon batch --json --include-ecosystem`. Promoting to Python
   gives deterministic, testable output emitted as schema fields;
   worth doing once the agent-side rollup has validated the report
   shape on a private corpus. Operator-supplied apex list in both
   versions; recon never infers the corporate-family relationship.
-- **Non-MCP graph exports** — Mermaid diagram output for the v1.8
+- **Non-MCP graph exports** - Mermaid diagram output for the v1.8
   cluster graph, plus CSV exports for relationship metadata and
   chain motifs.
-- **Per-node `n_eff_multiplier` in `bayesian_network.yaml`** —
+- **Per-node `n_eff_multiplier` in `bayesian_network.yaml`** -
   schema-additive field that scales effective sample size on a
   per-node basis. Lets weak-calibration nodes widen their credible
   intervals without globally widening every node. May be promoted
@@ -1619,7 +1621,7 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   `TenantInfo` widens every node's credible interval, not only the
   nodes whose bindings overlap the conflicting field. The behavior
   is conservative (never under-reports uncertainty) but coarser
-  than ideal — a conflict over `display_name` should not widen the
+  than ideal - a conflict over `display_name` should not widen the
   posterior on `aws_hosting`. The localized form would thread per-
   node conflict overlap so the penalty only fires on nodes whose
   evidence set actually depends on the conflicted field, sharpening
@@ -1633,23 +1635,23 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   overlap. Candidate for v2.1 alongside the operator-driven catalog
   growth if a corpus run surfaces nodes whose widening is dominated
   by unrelated conflicts; otherwise v2.2.
-- **Corpus-driven Hypothesis tests** — extend
+- **Corpus-driven Hypothesis tests** - extend
   `tests/test_bayesian_hypothesis.py` with property tests over real
   corpus output. Strengthens the test floor.
-- **Hawkes-kernel CT burst classification** — fit a one-parameter
+- **Hawkes-kernel CT burst classification** - fit a one-parameter
   exponential-decay kernel to each cluster's CT timestamps and
   classify `automated_renewal` vs `manual_deployment`. Surface as
   `cert_summary.deployment_bursts[].kernel_class`.
-- **Asynchronous Label Propagation fallback for `infra_graph`** —
+- **Asynchronous Label Propagation fallback for `infra_graph`** -
   pure-Python LPA replaces the connected-components fallback above
   the 500-node Louvain cap, keeping community structure visible on
   10k+-node graphs.
-- **Explicit ignorance mass (epistemic vs aleatoric)** — Dempster-
+- **Explicit ignorance mass (epistemic vs aleatoric)** - Dempster-
   Shafer-style mass on the "don't know" state, computed from the
   ratio of unbound to bound evidence nodes for that posterior;
   surfaces in `--explain-dag` as a third quantity alongside
   posterior and interval.
-- **Noisy-OR / noisy-AND CPT gates** — schema-additive
+- **Noisy-OR / noisy-AND CPT gates** - schema-additive
   `gate: noisy_or | noisy_and | custom` on multi-parent CPTs in
   `bayesian_network.yaml`. Compact and human-reviewable as the
   network grows beyond ~10 nodes.
@@ -1983,7 +1985,7 @@ create a standalone refactor milestone without behavioral payoff.
 embedding weights, bundled ASN/GeoIP datasets, aggregate local databases,
 user-code plugins, remote/HTTP MCP transport. The Bayesian and graph
 extensions stay inside the box because they ship as data-file CPTs and
-algorithms over already-collected observables — never as learned weights or
+algorithms over already-collected observables - never as learned weights or
 imported intelligence.
 
 **Statistical methods we deliberately don't use.** External reviews regularly
@@ -2010,8 +2012,8 @@ proposal:
   acceptable.
 - *ML structure learning that auto-applies* (PC algorithm or FCI run as part
   of a build pipeline). Constraint-based causal-discovery output as an
-  *operator-facing proposal tool* — a human reads the candidate edges and
-  decides whether to add them to YAML — is acceptable; the auto-apply step
+  *operator-facing proposal tool* - a human reads the candidate edges and
+  decides whether to add them to YAML - is acceptable; the auto-apply step
   is what crosses the invariant.
 - *Cross-organization hierarchical models that share evidence between domains
   the operator did not look up together.* Crosses "no aggregate local
@@ -2029,14 +2031,14 @@ proposal:
   bug. Approximate inference imports complexity that current scale doesn't
   justify.
 - *Tractable-circuit compilation* (SPNs, arithmetic circuits) as a v1.x
-  upgrade. Real technique, real scaling story — but solves a problem we
+  upgrade. Real technique, real scaling story - but solves a problem we
   don't yet have. Noted as a known option for post-v2.0 if the CPT space
   grows past what VE handles.
 - *Replacing rule-based signals with a single unified PGM.* Misreads the
   layering: slugs are the evidence layer, the Bayesian network is the
   inference layer, signals are the *presentation* layer (operator-facing
   views over slug evidence). Each abstraction is intentionally addressable
-  on its own — collapsing them into one model would lose the audit surface
+  on its own - collapsing them into one model would lose the audit surface
   the project's defensive posture depends on. See
   [correlation.md § Vocabulary](correlation.md#vocabulary).
 - *LLM-driven coherence-graph construction in the inference path*
@@ -2146,8 +2148,8 @@ Any item promoted from "Ideas Worth Prototyping" into shipped behavior must:
 2. Carry a live-corpus before/after delta in the PR description, run on
    the private validation corpus with the discovery loop tooling
    (`validation/scan.py`, `find_gaps.py`, `triage_candidates.py`).
-3. Document the sparse-result behavior — when this rule does NOT fire and
-   why — alongside the positive case. Output language must remain hedged
+3. Document the sparse-result behavior - when this rule does NOT fire and
+   why - alongside the positive case. Output language must remain hedged
    under sparse evidence even when the new feature surfaces nothing.
 4. Update `docs/recon-schema.json` and the schema drift test if the JSON
    shape changes. Mark experimental fields explicitly; the v1.0 contract

@@ -108,9 +108,11 @@ def test_schema_contract_constant_matches_required(schema: dict) -> None:
     schema_required = set(schema["required"])
     only_in_constant = constant_set - schema_required
     only_in_schema = schema_required - constant_set
-    assert not only_in_constant and not only_in_schema, (
+    drift_message = (
         f"REQUIRED_TOP_LEVEL_FIELDS drift from docs/recon-schema.json. "
         f"In constant only: {sorted(only_in_constant)}. "
         f"In schema only: {sorted(only_in_schema)}. "
         "Update recon_tool/schema_contract.py to match."
     )
+    assert not only_in_constant, drift_message
+    assert not only_in_schema, drift_message
