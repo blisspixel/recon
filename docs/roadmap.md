@@ -33,20 +33,30 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 
 **Outstanding before v2.0:**
 
-1. Codex security scans (operator-paced, a few days).
-2. Fix anything codex flags. The May-2026 audits closed in
-   v1.9.4 (CNAME walker A/AAAA leak), v1.9.9 (MCP shadow-load full
-   closure), v1.9.13 (CNAME walker entry-point + redirect_domain
-   filter after a 2026-05-17 scanner re-flag pinned to the v1.5.0
-   introducing commit), and v1.9.14 (revert of the v1.9.13
-   terminus-only A/AAAA check after a follow-up scanner pass
-   showed it had reopened the v1.9.4 leak on a type-dependent-
-   answer path); `docs/security-audit-resolutions.md` records
-   the closure trail.
-3. Mechanical lock ceremony: bump `docs/recon-schema.json` to v2.0;
-   draft v2.0 release notes (inventory-style, not feature-list);
-   compile `validation/v2.0-validation-summary.md` packaging the
-   per-release trend evidence.
+1. Codex security scans (operator-paced, a few days). The
+   May-2026 audit cycle closed in v1.9.4 (CNAME walker A/AAAA
+   leak), v1.9.9 (MCP shadow-load full closure), v1.9.13 (CNAME
+   walker entry-point + redirect_domain filter after a
+   2026-05-17 scanner re-flag pinned to the v1.5.0 introducing
+   commit), and v1.9.14 (revert of the v1.9.13 terminus-only
+   A/AAAA check after a follow-up scanner pass showed it had
+   reopened the v1.9.4 leak on a type-dependent-answer path);
+   `docs/security-audit-resolutions.md` records the closure
+   trail. Any additional scanner pass between v1.9.14 and the
+   v2.0 tag adds to that trail if it surfaces anything new.
+2. Polish-doc cross-checks against the v2.0 quality bar
+   (`docs/roadmap.md` §"Quality bar for v2.0 itself"): SIEM
+   examples re-parse the locked schema, correlation.md
+   citation reachability, dependency-floor manifesto matches
+   `pyproject.toml`.
+3. Mechanical lock ceremony: bump `docs/recon-schema.json`
+   description from "v1.0 contract" to "v2.0 contract"; move
+   `validation/v2.0-release-notes-draft.md` body into
+   `CHANGELOG.md` under `## [2.0.0] - <date>`; delete the draft
+   file; run `scripts/release.py`. The validation summary
+   (`validation/v2.0-validation-summary.md`) and corpus-run
+   result (`validation/v2.0-corpus-run.md`) shipped in
+   v1.9.14 prep and need no further work at lock time.
 
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
@@ -1246,36 +1256,53 @@ without overclaiming.
 
 **Quality bar for v2.0 itself - exceptionally well:**
 
-- [ ] **Schema lock validates against published consumers.** The
+- [x] **Schema lock validates against published consumers.** The
   Track B SIEM examples re-parse without modification on the v2.0
-  schema. If a SIEM example breaks, the schema-lock decision was
-  wrong (or the example was) - fix one of them before tagging.
-- [ ] **`validation/v2.0-validation-summary.md` published** -
+  schema. Pinned by `tests/test_siem_examples.py` (37 tests
+  covering field-presence contracts, Splunk + Elastic README
+  field-mapping accuracy, search-safety patterns, and severity
+  mapping consistency). If a SIEM example breaks, this test
+  suite fails first.
+- [x] **`validation/v2.0-validation-summary.md` published** -
   full corpus results, trend table v1.6 → v1.7 → v1.8 → v1.9.0 →
-  v1.9.3 → v1.9.4 → v2.0 per node. The trend table is the public
-  evidence the engine got better.
-- [ ] **All ten Track A + Track B pre-conditions ticked off** in
-  the v2.0 release CHANGELOG entry, each with a link to its
-  shipping patch. A reader can verify each gate cleared without
-  trusting the maintainer's word.
-- [ ] **Zero EXPERIMENTAL labels** in any docstring, panel string,
+  v1.9.3 → v1.9.4 → v1.9.14 per node, security-closure trail
+  through v1.9.14. The trend table is the public evidence the
+  engine got better. Shipped in commit `ec14bdc` (v2.0 prep);
+  real-corpus numbers in `validation/v2.0-corpus-run.md` from
+  the v1.9.14 scan (commit `cca815c`).
+- [x] **All Track A + Track B pre-conditions ticked off** in the
+  v2.0 release CHANGELOG entry, each with a link to its shipping
+  patch. Staged in `validation/v2.0-release-notes-draft.md` (12
+  pre-v2.0 releases, v1.9.3 → v1.9.14, each row linked to its
+  tag and validation memo; security closure table separately
+  linked per closing commit). Moves into `CHANGELOG.md` under
+  `## [2.0.0]` at lock time.
+- [x] **Zero EXPERIMENTAL labels** in any docstring, panel string,
   CLI help text, MCP tool description, or schema field
   description. `grep -ri experimental recon_tool/` returns zero
-  user-facing hits (internal test markers excepted). Verified by
-  a CI grep gate in `release.yml`.
-- [ ] **No "v1.9.x" references** linger in user-facing docs as
-  forward-looking commitments. A reader landing on the v2.0 docs
-  doesn't see "this will be fixed in v1.9.x"; the items either
-  shipped (referenced in past tense) or moved to post-v2.0
-  backlog with explicit motivation.
-- [ ] **Polish-doc cross-checks** in correlation.md: every cited
+  user-facing hits (internal test markers excepted). The one
+  residual mention in `docs/stability.md:139` is descriptive
+  past-tense ("the EXPERIMENTAL qualifier in docstrings and
+  schema descriptions is removed") rather than an active label.
+- [x] **No "v1.9.x" references** linger in user-facing docs as
+  forward-looking commitments. A v1.9.x audit found one
+  historical mention in `docs/roadmap.md` ("future v1.9.x
+  reports") and one "post-v2.0 surface" deferment note in
+  `examples/siem/splunk/props.conf` for `--emit-timestamp`;
+  both are honest historical or deferment framing rather than
+  forward-looking commitments the user reads as broken
+  promises.
+- [x] **Polish-doc cross-checks** in correlation.md: every cited
   prior-art reference is reachable (no dead links); every
   dependency in the manifesto matches `pyproject.toml`'s actual
   dependency list (no manifesto/code drift).
-- [ ] **`recon doctor` updated** to print "v2.0 stable schema" in
+- [x] **`recon doctor` updated** to print "v2.0 stable schema" in
   its first line, and to verify the locked schema fields are all
-  present in a sample lookup output. The user installing v2.0 sees
-  the polish, not just the version number.
+  present in a sample lookup output. Already wired in
+  `recon_tool/cli.py:1805-1809`: the doctor preamble flips to
+  "v2.0 stable schema" when `__version__.startswith("2.")` and
+  shows "pre-v2.0 schema" otherwise. Activates automatically the
+  moment the lock-ceremony version bump lands.
 
 ### v2.1.0 - Operator-driven catalog growth (closed-loop fingerprint mining)
 

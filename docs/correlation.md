@@ -910,10 +910,11 @@ For recon's setting the $R_E$ variable is *under adversarial
 control*. The hardened operator chooses what to publish and what
 to hide; their hiding choice is a function of $X$ (they hide
 $E$ specifically because $X$ is present). The recent ML treatment
-of this regime is [Dong et al. 2024, "Fair Graph Machine Learning
-under Adversarial Missingness Processes" (ICLR)](https://openreview.net/forum?id=adversarial-missingness),
-which formalises the case where an adversary optimises $R_E$ to
-decouple the observed $E^{\ast}$ from the true latent $X$.
+of this regime is [Halder Lina and Silva 2024, "Fair Graph
+Machine Learning under Adversarial Missingness Processes"
+(ICLR)](https://arxiv.org/abs/2311.01591), which formalises the
+case where an adversary optimises $R_E$ to decouple the observed
+$E^{\ast}$ from the true latent $X$.
 
 Under that adversarial optimisation, the robust-observer choice is
 to treat the missingness mechanism as perfectly uninformative.
@@ -2206,24 +2207,37 @@ recon's adversarial-public-channel setting.
 
 ## 4c. Dependency-floor manifesto
 
-recon ships with eight runtime dependencies. Each is named below
-with the role it plays. The list of widely-used libraries we
-*deliberately do not depend on* follows; each exclusion is a
-positive commitment the project makes about complexity bounds,
-audit surface, and supply-chain risk.
+recon ships with eight runtime imports plus one transitive-
+dependency security pin. Each is named below with the role it
+plays. The list of widely-used libraries we *deliberately do not
+depend on* follows; each exclusion is a positive commitment the
+project makes about complexity bounds, audit surface, and
+supply-chain risk.
 
-**Runtime dependencies (pinned in `pyproject.toml`):**
+**Runtime dependencies (imported at runtime; pinned in `pyproject.toml`):**
 
 | Dependency | Role |
 |---|---|
 | `httpx` | Single async HTTP client for all live transports (OIDC, GetUserRealm, CT providers). |
 | `dnspython` | DNS resolution. |
 | `pyyaml` | Catalog file format. |
+| `defusedxml` | Safe XML parsing for the GetUserRealm response (`recon_tool/sources/userrealm.py`). Hardened replacement for the standard `xml.etree.ElementTree`. |
 | `typer` | CLI dispatch. |
 | `rich` | Terminal rendering. |
 | `mcp` | Model Context Protocol server. |
 | `networkx` | Graph correlation layer (Louvain, community detection). |
-| `hatchling` | Build backend only — not imported at runtime. |
+
+**Transitive-dependency security pin (not imported at runtime):**
+
+| Dependency | Role |
+|---|---|
+| `python-multipart` | Floor on a transitive dependency of `mcp`. The 0.0.26 release carries CVE-2026-42561; pinned to `>=0.0.27` here so resolvers and `pip-audit` stay green until `mcp`'s own floor catches up. Removed once `mcp` ships with the floor itself. |
+
+**Build backend (not a runtime dependency):**
+
+`hatchling` is the build backend declared under `[build-system]
+requires`. It runs at wheel/sdist build time only and is not
+shipped to runtime environments.
 
 **Deliberately not depended on:**
 
