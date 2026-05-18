@@ -1204,12 +1204,15 @@ Already cleared en route to this sequence:
 | Bayesian-network nodes that do NOT clear v1.9.5 criteria | Remove via deprecation: a v1.9.x patch marks the node deprecated in CHANGELOG and emits a one-time stderr warning when it's used; the next patch removes it from `bayesian_network.yaml`. v2.0 ships without the node. **No node goes from `experimental` directly to "removed" without a deprecated stop in between.** |
 | Per-node `stability` field | Not shipped at v2.0. Reserved for v2.1+ when a new node first needs the `experimental` value. |
 
-**v2.0 itself is purely the lock-and-polish ceremony - two items:**
+**v2.0 itself is purely the lock-and-polish ceremony - three items:**
 
 - **Schema lock.** Apply the disposition table above. Bump
   `docs/recon-schema.json` to v2.0; remove EXPERIMENTAL language
   from the promoted fields' descriptions. This is mechanical
   once the v1.9.x patches have validated everything.
+- **Bayesian fusion goes default-on with a clean-panel
+  disclosure rule.** See the design-decision subsection
+  immediately below this list.
 - **Documentation snapshot.** [`correlation.md`](correlation.md)
   (currently a living draft) promoted to a polished reference.
   Sections required for the snapshot:
@@ -1242,6 +1245,104 @@ Already cleared en route to this sequence:
     additional examples accumulated from corpus runs.
   - **Engineering quality posture** carried forward from this
     roadmap, edited for the polished-doc voice.
+
+**v2.0 design decision: Bayesian fusion goes default-on with a
+clean-panel disclosure rule.**
+
+Through v1.9.x the Bayesian inference layer was gated behind
+`--fusion` because the math was EXPERIMENTAL. The v1.9.4 →
+v1.9.10 stability work was specifically the path from experimental
+to "stable enough to ship by default." Once that path completed,
+keeping the layer opt-in became a half-promotion that contradicted
+correlation.md §5.1 ("hedging is a calibration choice, not
+politeness") and made the default panel less honest than the
+inference engine knew how to be.
+
+v2.0 flips the default. The math runs unconditionally; the panel
+stays clean; users who want a purist rule-based view can opt
+out.
+
+*Default behavior at v2.0:*
+
+- **Compute always.** Bayesian inference runs on every lookup.
+  Cost is zero network calls (the comment at `cli.py:2365`
+  already documents this: "Costs nothing — no network calls —
+  so the recompute is cheap").
+- **`--json` always emits** `posterior_observations` and
+  `slug_confidences`. Schema-additive per the v2.0 contract; no
+  consumer that ignores unknown fields breaks.
+- **Default panel stays clean.** The rule-based verdict
+  (Provider, Tenant, Confidence dots, Services) renders exactly
+  as it does today. The credible interval is computed but not
+  rendered in the default panel.
+- **Default panel speaks up when the layers disagree.** When
+  `sparse=true` fires on a node the panel is reporting a
+  verdict for, or when the posterior mode disagrees with the
+  deterministic slug, the panel surfaces the interval inline
+  and demotes the confidence-dot indicator. This is the
+  operator-actionable case: the deterministic engine says one
+  thing, the Bayesian layer says "but the evidence is thin."
+  Quiet on the easy cases, loud when it matters.
+
+*User control surfaces at v2.0:*
+
+- `--verbose` (existing flag): always render the credible
+  interval inline in the panel, including on easy cases. For
+  operators who want the math visible by default.
+- `--explain` (existing flag): full evidence-DAG provenance.
+  Unchanged from v1.9.x.
+- `--explain-dag` (existing flag): render the Bayesian DAG.
+  Unchanged.
+- `--no-fusion` (new at v2.0): disables Bayesian computation
+  entirely. The `--json` output omits `posterior_observations`
+  and `slug_confidences`. Output reverts to the v1.x rule-based
+  shape. For SIEM consumers who want stable rule-based output
+  without the additive Bayesian fields, and for purists who
+  want only the deterministic engine. Documents the opt-out as
+  a stable surface; not a deprecation path.
+- `--fusion` (existing flag): kept as a deprecated no-op for
+  v2.0.x to preserve back-compat with automation that flips it
+  on explicitly. Removed in v2.1.
+
+*Why the disagreement-detection rule rather than always-show or
+never-show:*
+
+Always-show clutters the default panel for the 70 percent of
+cases where rule-based and Bayesian agree (a Microsoft 365 tenant
+with 4 sources of evidence does not need a credible interval to
+be readable). Never-show contradicts the doc's epistemology and
+hides the load-bearing field. The middle path surfaces the math
+precisely when it changes the operator's read of the situation:
+hardened targets, sparse evidence, conflicting signals. The
+v1.9.4 hardened-adversarial validation showed 64 percent
+sparse-flag firing on hardened targets, which is exactly the
+population this rule is designed to escalate.
+
+*Implementation surface (lock-ceremony work, not earlier):*
+
+- Remove the `if fusion or explain_dag:` gate at `cli.py:2374`.
+  Compute Bayesian inference unconditionally.
+- Add `--no-fusion` (typer.Option with `--fusion/--no-fusion`
+  pair semantics; default True).
+- Gate panel-rendering of the credible interval in
+  `formatter.py` on `--verbose` OR on the disagreement rule
+  (`sparse=true` on a reported node, or posterior-mode/slug
+  disagreement).
+- Update `docs/stability.md` `--fusion` row from "Opt-in
+  Bayesian fusion" to "Bayesian fusion control (default on
+  v2.0+; `--no-fusion` opts out)."
+- Update the README example panel to show what happens in the
+  disagreement case (operator sees the credible interval
+  inline) versus the easy case (panel unchanged from today).
+- Document `--no-fusion` in `docs/stability.md` as a stable
+  surface at v2.0.
+
+This is the only behavioral change in v2.0 beyond the schema
+lock. Tests already exercise both code paths (the `--fusion`
+code path runs in the test suite); the change is moving the
+default and adding the inverse flag, not adding new logic.
+
+---
 
 That is v2.0. Everything else - feature additions, MCP tools,
 exports - ships in v1.9.x patch releases as work completes,
