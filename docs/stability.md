@@ -69,15 +69,19 @@ For the JSON output contract in full field-by-field detail, see
 
 ### MCP tools
 
-All 17 MCP tools are **stable** — names, parameter names, parameter types,
+All 22 MCP tools are **stable** — names, parameter names, parameter types,
 and return-payload shapes will not change between patch or minor releases.
-New optional parameters may be added.
+New optional parameters may be added. The Bayesian-fusion tools
+(`get_posteriors`, `explain_dag`) ship pre-v2.0 under experimental
+labels and graduate to stable in v2.0 per the disposition table in
+[`roadmap.md`](roadmap.md#v200--maturity).
 
 | Tool | Parameters |
 |---|---|
 | `lookup_tenant` | `domain`, `format` ("text"\|"json"\|"markdown"), `explain` (bool) |
 | `analyze_posture` | `domain`, `explain` (bool), `profile` (str, optional) |
 | `chain_lookup` | `domain`, `depth` (1-3, default 1) |
+| `discover_fingerprint_candidates` | `domain`, `skip_ct` (bool, default False), `keep_intra_org` (bool, default False), `min_count` (int, default 1) |
 | `reload_data` | (none) |
 | `assess_exposure` | `domain` |
 | `find_hardening_gaps` | `domain` |
@@ -92,6 +96,10 @@ New optional parameters may be added.
 | `clear_ephemeral_fingerprints` | (none) |
 | `reevaluate_domain` | `domain` |
 | `cluster_verification_tokens` | `domains` (list[str]) |
+| `get_infrastructure_clusters` | `domain` |
+| `export_graph` | `domain` |
+| `get_posteriors` | `domain` |
+| `explain_dag` | `domain`, `output_format` (str, default "text") |
 
 All MCP tools are stability-covered, but not all are read-only. The
 lookup/analysis tools are read-only; `reload_data`,

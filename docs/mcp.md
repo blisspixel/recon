@@ -112,6 +112,8 @@ If you genuinely need to drive the JSON-RPC loop by hand (e.g. piping crafted re
 | `clear_ephemeral_fingerprints` | No | Remove all ephemeral fingerprints from the session | none |
 | `get_infrastructure_clusters` *(v1.8+)* | Cache first; may resolve | Surfaces the CT co-occurrence community-detection report already computed during lookup — algorithm, modularity score, cluster list. Read-only exposure of computed state. | `domain` |
 | `export_graph` *(v1.8+)* | Cache first; may resolve | Companion to `get_infrastructure_clusters`. Returns the underlying graph as nodes + weighted edges + cluster_assignment for downstream Mermaid / GraphViz / CSV rendering. | `domain` |
+| `get_posteriors` *(v1.9.0; stable v2.0+)* | Cache first; may resolve | Exposes the Bayesian-network posterior credible intervals for the nine high-level claim nodes (m365_tenant, google_workspace_tenant, federated_identity, okta_idp, email_security_modern_provider, email_security_policy_enforcing, email_gateway_present, cdn_fronting, aws_hosting). Read-only exposure of the inference computed during lookup. See [correlation.md](correlation.md) for the inference model. | `domain` |
+| `explain_dag` *(v1.9.0; stable v2.0+)* | Cache first; may resolve | Renders the Bayesian evidence DAG for a domain. `output_format` selects between `text` (Rich-rendered tree) and structured output for downstream tools. Pairs with `get_posteriors` for full audit-trail inspection. | `domain`, `output_format`: str (default `text`) |
 
 The lookup and analysis tools are read-only. The ephemeral fingerprint tools
 mutate only in-memory session state for the current server process; they do not
