@@ -25,14 +25,17 @@ Pins the chain-walker defenses in
      a prior CNAME NoAnswer implied no chase on a subsequent A/AAAA
      query.
 
-The ``_hop_resolves_publicly`` helper is preserved in ``dns.py`` for
-possible future callers but is not called by the walker. Tests below
-exercise it as a unit because it remains part of the module's public
-defensive surface.
-
 The audit finding ("CNAME chain walking can query and leak internal
 DNS names", MEDIUM) covers the case where attacker-controlled public
 DNS returns a CNAME to an internal split-horizon name.
+
+The same internal-DNS-oracle class reaches the SPF ``redirect=``
+chaser (``_follow_spf_redirect``): the owner of the queried domain
+authors their own SPF record, so ``v=spf1 redirect=secret.internal.corp``
+would otherwise drive the operator's resolver to an internal name.
+``TestSpfRedirectBlocksPrivateTargets`` pins that the chaser reuses
+the same ``_is_public_dns_name`` suffix denylist and refuses the hop
+before any query.
 
 These tests stub ``_safe_resolve`` so the walker sees deterministic
 DNS answers without making real network calls.
@@ -111,54 +114,6 @@ class TestPublicDnsNameSuffix:
         assert dns_mod._is_public_dns_name(name) is True, f"{name!r} should be classified as public DNS"
 
 
-# ── Layer 2: resolved-address private check ────────────────────────
-
-
-class TestPrivateIpLiteralCheck:
-    """``_is_private_ip_literal`` returns True for RFC1918, loopback,
-    link-local, and ULA addresses; False for public addresses and for
-    anything unparseable."""
-
-    @pytest.mark.parametrize(
-        "ip",
-        [
-            "10.0.0.1",
-            "172.16.0.1",
-            "192.168.1.1",
-            "127.0.0.1",
-            "169.254.1.1",  # link-local
-            "0.0.0.0",  # unspecified  # noqa: S104
-            "fc00::1",  # ULA
-            "fe80::1",  # link-local v6
-            "::1",  # loopback v6
-            "224.0.0.1",  # multicast
-        ],
-    )
-    def test_recognizes_private_addresses(self, ip):
-        assert dns_mod._is_private_ip_literal(ip) is True, f"{ip} should be classified as private"
-
-    @pytest.mark.parametrize(
-        "ip",
-        [
-            "8.8.8.8",
-            "1.1.1.1",
-            "151.101.1.10",
-            "2606:4700:4700::1111",  # public IPv6 (Cloudflare)
-        ],
-    )
-    def test_recognizes_public_addresses(self, ip):
-        assert dns_mod._is_private_ip_literal(ip) is False, f"{ip} should be classified as public"
-
-    @pytest.mark.parametrize("garbage", ["not-an-ip", "999.999.999.999", "", "::xyz::"])
-    def test_unparseable_returns_false(self, garbage):
-        # Defensive: garbage gets treated as not-private so the caller
-        # falls back to other checks.
-        assert dns_mod._is_private_ip_literal(garbage) is False
-
-
-# ── _hop_resolves_publicly ─────────────────────────────────────────
-
-
 def _stub_safe_resolve(plan: dict[tuple[str, str], list[str]]) -> Callable[..., Any]:
     """Build a monkeypatch replacement for ``_safe_resolve``.
 
@@ -173,69 +128,12 @@ def _stub_safe_resolve(plan: dict[tuple[str, str], list[str]]) -> Callable[..., 
     return fake
 
 
-class TestHopResolvesPublicly:
-    """The hop-classification helper that the walker uses."""
-
-    @pytest.mark.asyncio
-    async def test_public_a_record_returns_true(self, monkeypatch):
-        monkeypatch.setattr(
-            dns_mod,
-            "_safe_resolve",
-            _stub_safe_resolve({("host.example.com", "A"): ["151.101.1.10"]}),
-        )
-        assert await dns_mod._hop_resolves_publicly("host.example.com") is True
-
-    @pytest.mark.asyncio
-    async def test_all_private_addresses_returns_false(self, monkeypatch):
-        monkeypatch.setattr(
-            dns_mod,
-            "_safe_resolve",
-            _stub_safe_resolve(
-                {
-                    ("split-horizon.example.com", "A"): ["10.0.0.5", "10.0.0.6"],
-                    ("split-horizon.example.com", "AAAA"): ["fc00::1"],
-                },
-            ),
-        )
-        assert await dns_mod._hop_resolves_publicly("split-horizon.example.com") is False, (
-            "split-horizon target with only private A/AAAA records must be classified as not-publicly-resolving"
-        )
-
-    @pytest.mark.asyncio
-    async def test_mixed_public_and_private_returns_true(self, monkeypatch):
-        # A target with at least one public address is considered public-
-        # facing - the operator's resolver query is reaching public space,
-        # and the public address is the actual leak surface.
-        monkeypatch.setattr(
-            dns_mod,
-            "_safe_resolve",
-            _stub_safe_resolve(
-                {
-                    ("dual.example.com", "A"): ["10.0.0.5", "8.8.8.8"],
-                },
-            ),
-        )
-        assert await dns_mod._hop_resolves_publicly("dual.example.com") is True
-
-    @pytest.mark.asyncio
-    async def test_no_a_records_returns_true_fail_open(self, monkeypatch):
-        # CNAME-only intermediate hops resolve to nothing on direct A
-        # query. The walker must continue (next iteration's CNAME query
-        # will resolve or fail naturally). "Fail open" here is correct.
-        monkeypatch.setattr(
-            dns_mod,
-            "_safe_resolve",
-            _stub_safe_resolve({}),
-        )
-        assert await dns_mod._hop_resolves_publicly("cname-only.example.com") is True
-
-
 # ── Chain walker integration ───────────────────────────────────────
 
 
 class TestResolveCnameChainBlocksPrivateTargets:
     """End-to-end: the walker drops attacker-controlled CNAME hops that
-    target private space, by either suffix or resolved-address path."""
+    target private space by suffix before issuing the next resolver query."""
 
     @pytest.mark.asyncio
     async def test_walker_drops_suffix_private_target(self, monkeypatch):
@@ -288,12 +186,9 @@ class TestResolveCnameChainBlocksPrivateTargets:
 
     @pytest.mark.asyncio
     async def test_walker_accepts_legitimate_public_chain(self, monkeypatch):
-        # contoso.com CNAME -> contoso.azurewebsites.net (public, public A)
-        # azurewebsites.net resolves to a public Microsoft IP.
+        # contoso.com CNAME -> contoso.azurewebsites.net (public suffix).
         plan: dict[tuple[str, str], list[str]] = {
             ("contoso.com", "CNAME"): ["contoso.azurewebsites.net"],
-            ("contoso.azurewebsites.net", "A"): ["20.50.2.50"],
-            ("contoso.azurewebsites.net", "AAAA"): [],
         }
         monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
         chain = await dns_mod._resolve_cname_chain("contoso.com")
@@ -319,6 +214,70 @@ class TestResolveCnameChainBlocksPrivateTargets:
         assert chain == ["edge.fastly.net"], (
             f"walker should keep legitimate hops up to but not including "
             f"the first suffix-failing hop; got chain={chain!r}"
+        )
+
+
+# ── SPF redirect= target validation (same internal-DNS leak class) ──
+
+
+class TestSpfRedirectBlocksPrivateTargets:
+    """The SPF ``redirect=`` chaser validates its target against
+    ``_is_public_dns_name`` before querying. An attacker who controls
+    the queried domain's SPF record (``v=spf1 redirect=<target>``) must
+    not be able to drive the operator's resolver to an internal or
+    split-horizon name. This is the same internal-DNS-oracle class as
+    the CNAME walker, reached through a different record type.
+    """
+
+    @pytest.mark.asyncio
+    async def test_private_redirect_target_is_not_queried(self, monkeypatch):
+        # Attacker SPF: redirect= to an internal .corp name. The guard
+        # must reject it by suffix before any resolver query, so the
+        # internal name is never looked up and never credits SPF strict.
+        queries_made: list[tuple[str, str]] = []
+
+        async def _tracking_resolve(domain: str, rdtype: str, **kwargs: Any) -> list[str]:
+            queries_made.append((domain, rdtype))
+            # If the guard failed and the chaser queried the internal
+            # name, this -all answer would wrongly credit SPF strict.
+            return ["v=spf1 -all"]
+
+        monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
+        ctx = dns_mod._DetectionCtx()
+        await dns_mod._follow_spf_redirect(
+            ctx,
+            "v=spf1 redirect=secret.internal.corp",
+            depth=0,
+            max_depth=3,
+        )
+
+        assert queries_made == [], (
+            f"SPF redirect chaser must not issue any query for a private-suffix target; queries={queries_made!r}"
+        )
+        assert dns_mod.SVC_SPF_STRICT not in ctx.services, (
+            "a rejected internal redirect target must not credit SPF strict"
+        )
+
+    @pytest.mark.asyncio
+    async def test_public_redirect_target_is_followed(self, monkeypatch):
+        # Legitimate use (RFC 7208 6.1): redirect= to a public shared
+        # SPF zone that ends in -all. The chaser follows it and credits
+        # SPF strict, confirming the guard does not block normal traffic.
+        plan: dict[tuple[str, str], list[str]] = {
+            ("_spf.mail.contoso.com", "TXT"): [
+                "v=spf1 include:spf.protection.outlook.com -all",
+            ],
+        }
+        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
+        ctx = dns_mod._DetectionCtx()
+        await dns_mod._follow_spf_redirect(
+            ctx,
+            "v=spf1 redirect=_spf.mail.contoso.com",
+            depth=0,
+            max_depth=3,
+        )
+        assert dns_mod.SVC_SPF_STRICT in ctx.services, (
+            "a legitimate public redirect target ending in -all must credit SPF strict"
         )
 
 

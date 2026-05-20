@@ -10,6 +10,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
 is the next planned event; see `docs/roadmap.md`.
 
+## [1.9.15] - 2026-05-20
+
+### Security
+
+- Hardened the SPF `redirect=` chaser (`_follow_spf_redirect` in
+  `recon_tool/sources/dns.py`) against the same internal-DNS leak
+  class as the CNAME walker. The chaser now validates each
+  `redirect=` target against `_is_public_dns_name` before resolving
+  it, so a queried domain whose SPF record reads
+  `v=spf1 redirect=secret.internal.corp` can no longer drive the
+  operator's resolver to query an internal or split-horizon name.
+  The guard sits at the top of the function, so it also covers the
+  recursive hop. Legitimate public targets such as
+  `_spf.mail.example.edu` resolve unchanged. This closes a second
+  instance of the "query and leak internal DNS names" finding that
+  was first addressed for the CNAME walker; the SPF `include:`
+  mechanism is only counted, never resolved, so it is not affected.
+- Removed the dormant `_hop_resolves_publicly` /
+  `_is_private_ip_literal` A/AAAA helper path from
+  `recon_tool/sources/dns.py`. The CNAME walker remains strictly
+  CNAME-only; deleting the unused helper removes an attractive
+  future regression path for the internal-DNS leak class.
+
+### Tests
+
+- Added `TestSpfRedirectBlocksPrivateTargets` in
+  `tests/test_cname_chain_validation.py`: a private-suffix
+  `redirect=` target is not queried and does not credit SPF strict,
+  while a legitimate public target ending in `-all` still does.
+- Added a surface-attribution regression proving that an
+  attacker-controlled CNAME to an internal/private suffix is not
+  followed and cannot be emitted through `EvidenceRecord.raw_value`
+  even when a later mocked hop would match a built-in provider
+  fingerprint.
+
 ## [1.9.14] - 2026-05-17
 
 **v1.9.14 security bridge: revert the v1.9.13 terminus-only A/AAAA

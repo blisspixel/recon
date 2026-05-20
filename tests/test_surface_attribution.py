@@ -187,6 +187,38 @@ async def test_surface_attribution_does_not_pollute_apex_slugs(mock_resolve):
     assert any(ev.slug == "zendesk" and ": " in ev.raw_value for ev in result.evidence)
 
 
+@pytest.mark.asyncio
+@patch("recon_tool.sources.dns._safe_resolve")
+async def test_surface_classifier_drops_private_cname_target_without_evidence(mock_resolve):
+    """Private CNAME targets are not followed or emitted in surface evidence."""
+
+    queries_made: list[tuple[str, str]] = []
+    plan = {
+        "example.com/TXT": [],
+        "example.com/MX": ["1 example-com.mail.protection.outlook.com."],
+        # Pretend the normal common-subdomain probe found help.example.com.
+        # The attacker tries to route the walker through an internal name,
+        # then onward to a provider fingerprint that would otherwise emit
+        # an EvidenceRecord.
+        "help.example.com/CNAME": ["internal.corp"],
+        "internal.corp/CNAME": ["example.auth0.com"],
+        "example.auth0.com/CNAME": [],
+    }
+
+    async def tracking_resolve(domain, rdtype, **kwargs):
+        queries_made.append((domain, rdtype))
+        return plan.get(f"{domain}/{rdtype}", [])
+
+    mock_resolve.side_effect = tracking_resolve
+
+    result = await DNSSource().lookup("example.com")
+
+    assert ("internal.corp", "CNAME") not in queries_made
+    assert not any(sa.subdomain == "help.example.com" for sa in result.surface_attributions)
+    assert not any("internal.corp" in ev.raw_value for ev in result.evidence)
+    assert not any(ev.slug == "auth0" and "help.example.com" in ev.raw_value for ev in result.evidence)
+
+
 # ── Ephemeral fingerprint round-trip ───────────────────────────────────
 
 

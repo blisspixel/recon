@@ -403,6 +403,23 @@ async def _follow_spf_redirect(ctx: _DetectionCtx, spf_text: str, depth: int, ma
         target = match.group(1).strip().rstrip(".")
         if not target or "." not in target:
             return
+        # Security: the redirect= target is attacker-controlled. The owner
+        # of the queried domain authors their own SPF record, so a record
+        # like "v=spf1 redirect=secret.internal.corp" would otherwise make
+        # the operator's resolver query an internal/split-horizon name and
+        # turn recon into an internal-DNS oracle. This is the same class as
+        # the CNAME chain-walker leak; we reuse the same suffix denylist
+        # (_is_public_dns_name) and refuse the hop before any query. The
+        # check covers the recursive hop below too, since each recursion
+        # re-enters here with the next target. Legitimate public targets
+        # such as "_spf.mail.example.edu" pass unchanged. See
+        # docs/security-audit-resolutions.md.
+        if not _is_public_dns_name(target):
+            logger.debug(
+                "SPF redirect chain: refusing non-public-suffix target %s",
+                target,
+            )
+            return
         target_records = await _safe_resolve(target, "TXT")
         patterns = get_spf_patterns()
         for record in target_records:
@@ -1783,72 +1800,6 @@ def _is_public_dns_name(name: str) -> bool:
     if all(part.isdigit() for part in n.split(".")):
         return False
     return all(not n.endswith(suffix) for suffix in _PRIVATE_DNS_SUFFIXES)
-
-
-def _is_private_ip_literal(ip: str) -> bool:
-    """Return True when *ip* is RFC1918 / loopback / link-local / ULA.
-
-    Used by the CNAME chain walker (v1.9.3.5) to drop hops whose name
-    passes the public-suffix check but resolves to private address
-    space. This catches the attacker pattern: own a public domain,
-    return a CNAME to a publicly-named host that happens to resolve
-    to 10.x.x.x or 192.168.x.x in the operator's resolver context
-    (split-horizon). The suffix check alone cannot see that - only
-    resolving the A record can.
-
-    Defensive on parse failures: anything we cannot recognize as a
-    valid IP returns ``False`` (treated as not-private, so the caller
-    falls back to other checks). The chain walker's caller already
-    handles the not-private branch correctly.
-    """
-    import ipaddress
-
-    try:
-        addr = ipaddress.ip_address(ip.strip())
-    except (ValueError, TypeError):
-        return False
-    return bool(
-        addr.is_private
-        or addr.is_loopback
-        or addr.is_link_local
-        or addr.is_reserved
-        or addr.is_multicast
-        or addr.is_unspecified,
-    )
-
-
-async def _hop_resolves_publicly(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
-    """Return True when *host* has at least one public A/AAAA record.
-
-    **Not called by ``_resolve_cname_chain`` as of v1.9.14.** The
-    v1.9.13 hardening pass added a terminus-only A/AAAA check on the
-    assumption that "no CNAME in the previous CNAME-query response"
-    implied "no CNAME chase possible during a subsequent A/AAAA
-    query on the same name." A 2026-05-17 scanner pass flagged the
-    assumption as unsafe: authoritative DNS servers can return
-    type-dependent answers, so a malicious server can answer the
-    CNAME query for the terminus with NoAnswer while returning a
-    CNAME to an internal/split-horizon name on the A or AAAA query.
-    The recursive resolver follows that CNAME during A resolution,
-    re-introducing the v1.9.4 leak.
-
-    The helper is preserved for possible future callers that can
-    guarantee a fully-suffix-validated terminus where the operator
-    resolver is known to honor type-only responses (for example, a
-    dedicated public-DNS path), but no caller in the current code
-    uses it. The original behavior follows: resolves A and AAAA in
-    parallel; returns True iff at least one resolved address is in
-    public space; returns True (fail-open) when no addresses
-    resolve.
-    """
-    a_records, aaaa_records = await asyncio.gather(
-        _safe_resolve(host, "A"),
-        _safe_resolve(host, "AAAA"),
-    )
-    addresses = [*a_records, *aaaa_records]
-    if not addresses:
-        return True  # no addresses → can't classify; allow the chain to stand
-    return any(not _is_private_ip_literal(addr) for addr in addresses)
 
 
 async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> list[str]:
