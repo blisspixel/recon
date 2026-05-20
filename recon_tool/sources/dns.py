@@ -100,11 +100,39 @@ def _parse_rdata(raw: str) -> str:
     return raw.strip('"').rstrip(".")
 
 
+# Query types that are exempt from the canonical-name leak guard below.
+# A CNAME query returns the immediate record without the recursive
+# resolver chasing further (the CNAME walker validates that target
+# itself), and PTR records legitimately CNAME within the .arpa tree
+# (RFC 2317 classless reverse delegation), so a private-looking .arpa
+# canonical there is normal, not a leak. Every other query type (A,
+# AAAA, TXT, MX, SRV, NS, CAA) makes a recursive resolver chase a CNAME
+# on the queried name before answering, which is the leak vector.
+_CANONICAL_GUARD_SKIP_RDTYPES = frozenset({"CNAME", "PTR"})
+
+
 async def _safe_resolve(domain: str, rdtype: str, timeout: float = DNS_QUERY_TIMEOUT) -> list[str]:
     """Resolve DNS records asynchronously, returning empty list on any error.
 
     Uses dns.asyncresolver for non-blocking DNS queries, allowing multiple
     queries to run concurrently via asyncio.gather.
+
+    **Internal-DNS leak guard.** For every query type other than CNAME
+    and PTR, the answer is discarded when the recursive resolver chased
+    a CNAME to a non-public canonical name (a ``.corp`` / ``.internal``
+    / ``.local`` / IP-literal / other private-suffix target). recon
+    queries many subdomains of a domain whose DNS the looked-up party
+    controls (DKIM selectors, SRV records, IdP and Exchange probe
+    prefixes), and any non-CNAME query on such a name makes the
+    operator's resolver chase a CNAME server-side before recon sees
+    anything. Discarding private-canonical answers means an internal
+    name is never returned in records (no disclosure) and a query that
+    chased to a private name yields the same empty result as a name
+    that does not resolve (no observable oracle). This generalizes the
+    CNAME walker's per-hop suffix denylist to every other query path.
+    The residual is a single blind query in the type-dependent-answer
+    case, which returns nothing observable. See
+    docs/security-audit-resolutions.md.
 
     Args:
         domain: The domain name to query.
@@ -114,6 +142,17 @@ async def _safe_resolve(domain: str, rdtype: str, timeout: float = DNS_QUERY_TIM
     try:
         resolver = _get_resolver()
         answers = await resolver.resolve(domain, rdtype, lifetime=timeout)
+        if rdtype not in _CANONICAL_GUARD_SKIP_RDTYPES:
+            queried = domain.strip().rstrip(".").lower()
+            canonical = str(answers.canonical_name).rstrip(".").lower()  # pyright: ignore[reportGeneralTypeIssues]
+            if canonical != queried and not _is_public_dns_name(canonical):
+                logger.debug(
+                    "DNS %s answer for %s discarded: resolver chased CNAME to non-public canonical %s",
+                    rdtype,
+                    domain,
+                    canonical,
+                )
+                return []
         return [_parse_rdata(rdata.to_text()) for rdata in answers]  # pyright: ignore[reportGeneralTypeIssues]
     except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers):
         return []
@@ -1542,22 +1581,23 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
     async def _probe(prefix: str) -> str | None:
         fqdn = f"{prefix}.{domain}"
         if prefix == "autodiscover":
+            # autodiscover keeps its CNAME-first M365-cloud suppression.
             cname_results = await _safe_resolve(fqdn, "CNAME")
             if cname_results:
-                if _is_m365_cloud_target(cname_results[0]):
+                target = cname_results[0].strip().lower().rstrip(".")
+                if _is_m365_cloud_target(target):
                     return None  # M365 cloud autodiscover, not on-prem
-                return fqdn  # CNAME to non-Microsoft target - self-operated
-            a_results = await _safe_resolve(fqdn, "A")
-            if a_results:
-                return fqdn  # direct A - self-operated on-prem autodiscover
-            return None
-        a_results = await _safe_resolve(fqdn, "A")
-        if a_results:
-            return fqdn
-        cname_results = await _safe_resolve(fqdn, "CNAME")
-        if cname_results:
-            return fqdn
-        return None
+                # Non-Microsoft CNAME: count it only when the target is a
+                # public name. An internal-suffix target is a leak, not a
+                # self-operated endpoint.
+                return fqdn if _is_public_dns_name(target) else None
+            # No CNAME: direct-A self-operated autodiscover. The A query
+            # runs through _safe_resolve's canonical-name guard.
+            return fqdn if await _safe_resolve(fqdn, "A") else None
+        # owa / outlook / exchange / mail-ex / webmail: CNAME-first safe
+        # resolution so an attacker-pointed prefix cannot drive an
+        # A-query CNAME chase to an internal name.
+        return fqdn if await _resolves_to_public_endpoint(fqdn) else None
 
     probes = await asyncio.gather(*(_probe(p) for p in exchange_prefixes))
     found = [fqdn for fqdn in probes if fqdn is not None]
@@ -1582,9 +1622,7 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
     # a nonsense prefix: if it also
     # resolves, assume wildcard and suppress the detection.
     nonsense = f"this-is-not-a-real-host-xyz123.{domain}"
-    wildcard_a = await _safe_resolve(nonsense, "A")
-    wildcard_cname = await _safe_resolve(nonsense, "CNAME") if not wildcard_a else ()
-    if wildcard_a or wildcard_cname:
+    if await _resolves_to_public_endpoint(nonsense):
         return
 
     ctx.add(
@@ -1612,14 +1650,12 @@ async def _detect_idp_hub(ctx: _DetectionCtx, domain: str) -> None:
 
     async def _probe(prefix: str) -> str | None:
         fqdn = f"{prefix}.{domain}"
-        # Try A first (self-hosted IdPs), then CNAME (SaaS vendors)
-        a_results = await _safe_resolve(fqdn, "A")
-        if a_results:
-            return fqdn
-        cname_results = await _safe_resolve(fqdn, "CNAME")
-        if cname_results:
-            return fqdn
-        return None
+        # CNAME-first via the safe helper. Self-hosted IdPs (direct A)
+        # and SaaS-vendor IdPs (public CNAME) both count as resolving,
+        # but a prefix the domain owner has delegated to an internal
+        # name is not followed and does not leak. See
+        # _resolves_to_public_endpoint.
+        return fqdn if await _resolves_to_public_endpoint(fqdn) else None
 
     probes = await asyncio.gather(*(_probe(p) for p in _IDP_SUBDOMAIN_PREFIXES))
     found = [fqdn for fqdn in probes if fqdn is not None]
@@ -1800,6 +1836,44 @@ def _is_public_dns_name(name: str) -> bool:
     if all(part.isdigit() for part in n.split(".")):
         return False
     return all(not n.endswith(suffix) for suffix in _PRIVATE_DNS_SUFFIXES)
+
+
+async def _resolves_to_public_endpoint(host: str) -> bool:
+    """Return True when *host* resolves to a public endpoint, without
+    turning an attacker-controlled subdomain into an internal-DNS oracle.
+
+    Safe replacement for the A-first subdomain probes (IdP hub, on-prem
+    Exchange, the wildcard guard). Those probes only need a yes/no
+    "does this name resolve" signal, but an ``A`` / ``AAAA`` query makes
+    the recursive resolver chase a CNAME server-side, so probing
+    ``owa.<looked-up-domain>`` when the domain owner has pointed it at an
+    internal name would query that internal name. Resolution discipline,
+    mirroring the CNAME walker:
+
+      1. Reject a non-public entry name before any query.
+      2. CNAME query first (a CNAME query does not chase). A private
+         CNAME target is rejected here, before any A/AAAA query fires,
+         so the obvious attack costs zero internal queries. A public
+         CNAME target means the name resolves publicly.
+      3. Only when there is no CNAME do we issue A/AAAA, and that runs
+         through ``_safe_resolve``'s canonical-name guard, so a
+         type-dependent CNAME chase to a private name returns empty and
+         is not reported.
+
+    The boolean answer never carries the resolved name or address, so a
+    rejected hop produces the same ``False`` as a name that does not
+    resolve: no disclosure, no observable oracle.
+    """
+    if not _is_public_dns_name(host):
+        return False
+    cname = await _safe_resolve(host, "CNAME")
+    if cname:
+        target = cname[0].strip().lower().rstrip(".")
+        return _is_public_dns_name(target)
+    for rdtype in ("A", "AAAA"):
+        if await _safe_resolve(host, rdtype):
+            return True
+    return False
 
 
 async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> list[str]:

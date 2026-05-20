@@ -37,8 +37,17 @@ would otherwise drive the operator's resolver to an internal name.
 the same ``_is_public_dns_name`` suffix denylist and refuses the hop
 before any query.
 
-These tests stub ``_safe_resolve`` so the walker sees deterministic
-DNS answers without making real network calls.
+v1.9.17 generalizes the class to every other query path. The central
+guard inside ``_safe_resolve`` discards any non-CNAME/non-PTR answer
+whose recursive-resolver canonical name chased a CNAME to a non-public
+suffix (``TestSafeResolveCanonicalGuard``), and the A-presence probes
+(IdP hub, on-prem Exchange, wildcard guard) resolve through the
+CNAME-first ``_resolves_to_public_endpoint`` helper
+(``TestResolvesToPublicEndpoint``).
+
+Most tests stub ``_safe_resolve`` so the walker sees deterministic DNS
+answers without real network calls; the canonical-guard tests stub the
+resolver itself, because that decision lives inside ``_safe_resolve``.
 """
 
 from __future__ import annotations
@@ -478,3 +487,148 @@ class TestM365RedirectDomainFilter:
         ctx = dns_mod._DetectionCtx()
         await dns_mod._detect_m365_cnames(ctx, "legit.example")
         assert "partner.com" in ctx.related_domains
+
+
+# ── v1.9.17: _safe_resolve canonical-name guard + safe endpoint probe ──
+#
+# The chain-walker tests above mock _safe_resolve. The guard tests below
+# mock the resolver itself, because the canonical-name decision lives
+# inside _safe_resolve: for every non-CNAME/non-PTR query it discards an
+# answer whose recursive-resolver canonical name chased a CNAME to a
+# non-public suffix. _resolves_to_public_endpoint is the CNAME-first
+# helper the A-presence probes (IdP hub, on-prem Exchange, wildcard
+# guard) use so they never drive an A-query CNAME chase to an internal
+# name.
+
+
+class _FakeRdata:
+    def __init__(self, text: str) -> None:
+        self._text = text
+
+    def to_text(self) -> str:
+        return self._text
+
+
+class _FakeAnswer:
+    """Minimal stand-in for ``dns.resolver.Answer``: an iterable of rdata
+    plus the ``canonical_name`` the query resolved to after any CNAME
+    chase the recursive resolver performed."""
+
+    def __init__(self, canonical: str, records: list[str]) -> None:
+        self.canonical_name = canonical
+        self._rdata = [_FakeRdata(r) for r in records]
+
+    def __iter__(self) -> Any:
+        return iter(self._rdata)
+
+
+def _fake_resolver(answer: _FakeAnswer) -> Any:
+    class _Resolver:
+        async def resolve(self, domain: str, rdtype: str, lifetime: float | None = None) -> _FakeAnswer:
+            return answer
+
+    return _Resolver()
+
+
+class TestSafeResolveCanonicalGuard:
+    """v1.9.17: ``_safe_resolve`` discards a non-CNAME/non-PTR answer
+    whose recursive-resolver canonical name chased to a non-public
+    suffix, so an internal name never reaches output and a private-chased
+    query is indistinguishable from a name that does not resolve."""
+
+    @pytest.mark.asyncio
+    async def test_private_canonical_chase_is_discarded(self, monkeypatch):
+        # owa.example.com A-query chases a (type-dependent) CNAME to
+        # internal.corp. The resolver answers with IPs whose canonical
+        # name is internal.corp; the guard discards the whole answer.
+        answer = _FakeAnswer("internal.corp.", ["10.0.0.1"])
+        monkeypatch.setattr(dns_mod, "_get_resolver", lambda: _fake_resolver(answer))
+        result = await dns_mod._safe_resolve("owa.example.com", "A")
+        assert result == [], (
+            f"A answer whose canonical name chased to a private suffix must be discarded; got {result!r}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_public_canonical_chase_is_kept(self, monkeypatch):
+        # Legitimate public CNAME delegation (DKIM selector -> provider).
+        answer = _FakeAnswer("sel._domainkey.provider.net.", ["v=DKIM1; k=rsa; p=AAA"])
+        monkeypatch.setattr(dns_mod, "_get_resolver", lambda: _fake_resolver(answer))
+        result = await dns_mod._safe_resolve("sel._domainkey.example.com", "TXT")
+        assert result == ["v=DKIM1; k=rsa; p=AAA"]
+
+    @pytest.mark.asyncio
+    async def test_no_chase_direct_record_is_kept(self, monkeypatch):
+        # canonical == queried name: no CNAME chase, keep the record.
+        answer = _FakeAnswer("example.com.", ["v=spf1 -all"])
+        monkeypatch.setattr(dns_mod, "_get_resolver", lambda: _fake_resolver(answer))
+        result = await dns_mod._safe_resolve("example.com", "TXT")
+        assert result == ["v=spf1 -all"]
+
+    @pytest.mark.asyncio
+    async def test_cname_query_is_exempt(self, monkeypatch):
+        # CNAME queries are exempt: the walker validates targets itself,
+        # and a CNAME query returns the immediate record without chasing.
+        answer = _FakeAnswer("x.example.com.", ["internal.corp"])
+        monkeypatch.setattr(dns_mod, "_get_resolver", lambda: _fake_resolver(answer))
+        result = await dns_mod._safe_resolve("x.example.com", "CNAME")
+        assert result == ["internal.corp"]
+
+    @pytest.mark.asyncio
+    async def test_ptr_query_is_exempt(self, monkeypatch):
+        # PTR is exempt: RFC 2317 classless reverse delegation
+        # legitimately CNAMEs within the .arpa tree.
+        answer = _FakeAnswer("1.0.0.10.in-addr.arpa.", ["host.example.com."])
+        monkeypatch.setattr(dns_mod, "_get_resolver", lambda: _fake_resolver(answer))
+        result = await dns_mod._safe_resolve("1.0.0.10.in-addr.arpa", "PTR")
+        assert result == ["host.example.com"]
+
+
+class TestResolvesToPublicEndpoint:
+    """v1.9.17: ``_resolves_to_public_endpoint`` gives the A-presence
+    probes a yes/no resolve signal without leaking. CNAME-first, a
+    private CNAME target is rejected before any A/AAAA query fires, and
+    the boolean answer never carries the resolved name or address."""
+
+    @pytest.mark.asyncio
+    async def test_public_cname_target_is_true(self, monkeypatch):
+        plan = {("sso.example.com", "CNAME"): ["edge.okta.com"]}
+        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
+        assert await dns_mod._resolves_to_public_endpoint("sso.example.com") is True
+
+    @pytest.mark.asyncio
+    async def test_private_cname_target_is_false_without_a_query(self, monkeypatch):
+        queries: list[tuple[str, str]] = []
+
+        async def _track(domain: str, rdtype: str, **kwargs: Any) -> list[str]:
+            queries.append((domain, rdtype))
+            return ["internal.corp"] if rdtype == "CNAME" else ["10.0.0.1"]
+
+        monkeypatch.setattr(dns_mod, "_safe_resolve", _track)
+        result = await dns_mod._resolves_to_public_endpoint("sso.example.com")
+        assert result is False
+        assert ("sso.example.com", "A") not in queries, (
+            "a private CNAME target must be rejected before any A query fires"
+        )
+
+    @pytest.mark.asyncio
+    async def test_direct_a_record_is_true(self, monkeypatch):
+        plan = {("idp.example.com", "A"): ["203.0.113.10"]}
+        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
+        assert await dns_mod._resolves_to_public_endpoint("idp.example.com") is True
+
+    @pytest.mark.asyncio
+    async def test_no_records_is_false(self, monkeypatch):
+        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve({}))
+        assert await dns_mod._resolves_to_public_endpoint("idp.example.com") is False
+
+    @pytest.mark.asyncio
+    async def test_non_public_entry_is_false_without_queries(self, monkeypatch):
+        queries: list[tuple[str, str]] = []
+
+        async def _track(domain: str, rdtype: str, **kwargs: Any) -> list[str]:
+            queries.append((domain, rdtype))
+            return []
+
+        monkeypatch.setattr(dns_mod, "_safe_resolve", _track)
+        assert await dns_mod._resolves_to_public_endpoint("host.corp") is False
+        assert queries == [], "non-public entry name must be rejected before any query"
