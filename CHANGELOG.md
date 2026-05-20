@@ -10,6 +10,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
 is the next planned event; see `docs/roadmap.md`.
 
+## [1.9.17] - 2026-05-20
+
+### Security
+
+- Generalized the internal-DNS-leak guard from the CNAME walker to
+  every other resolver path. `_safe_resolve` now discards any
+  non-CNAME, non-PTR answer whose recursive-resolver canonical name
+  chased a CNAME to a non-public suffix (`.corp`, `.internal`,
+  `.local`, an IP literal, and so on). recon queries many subdomains
+  of a domain whose DNS the looked-up party controls (DKIM selectors,
+  SRV records, IdP and Exchange probe prefixes); any non-CNAME query
+  on such a name makes the operator's resolver chase a CNAME
+  server-side before recon sees it. Discarding private-canonical
+  answers means an internal name is never returned in records (no
+  disclosure) and a private-chased query yields the same empty result
+  as a name that does not resolve (no observable oracle). CNAME and
+  PTR are exempt: the walker validates CNAME targets itself, and
+  RFC 2317 reverse delegation legitimately CNAMEs within `.arpa`. The
+  residual is a single blind query in the type-dependent-answer case,
+  which returns nothing observable; see
+  `docs/security-audit-resolutions.md`.
+- Converted the A-presence subdomain probes (`_detect_idp_hub`,
+  `_detect_exchange_onprem`, and the on-prem wildcard guard) to a
+  CNAME-first `_resolves_to_public_endpoint` helper. A prefix the
+  domain owner has delegated to an internal name is now rejected by
+  suffix before any `A` or `AAAA` query fires, so the common attack
+  costs zero internal queries rather than one blind chased query.
+  Detection of self-hosted IdPs and on-prem Exchange via direct A
+  records is unchanged.
+- Synced the release workflow's dependency-audit gate with ci.yml.
+  `release.yml`'s gating `pip-audit` step now carries the same
+  `--ignore-vuln PYSEC-2025-183` that v1.9.16 added to ci.yml. Without
+  this, a tagged release would fail the audit on the disputed no-fix
+  pyjwt advisory and never reach PyPI, even though ci.yml accepts it.
+  The two gates are now in lockstep.
+
+### Tests
+
+- `TestSafeResolveCanonicalGuard` (mocks the resolver) pins the
+  canonical-name guard across the discard, keep-public-chase, and
+  no-chase paths plus the CNAME and PTR exemptions.
+- `TestResolvesToPublicEndpoint` pins the CNAME-first helper: a public
+  CNAME and a direct A record resolve true; a private CNAME target
+  returns false with no A query; a non-public entry returns false
+  with no query at all.
+
 ## [1.9.16] - 2026-05-20
 
 ### Security

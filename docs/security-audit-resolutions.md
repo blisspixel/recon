@@ -501,6 +501,67 @@ path. Regression coverage:
 target is never queried and does not credit SPF strict, while a
 legitimate public target ending in `-all` still does.
 
+### Third layer: generalized canonical-name guard (v1.9.17)
+
+The CNAME walker (CNAME-only) and the SPF chaser (per-target suffix
+check) each close one path. v1.9.17 closes the rest of the class at a
+single choke point. recon issues many non-CNAME queries on subdomains
+of a domain whose DNS the looked-up party controls: DKIM-selector TXT,
+SRV records, and the IdP / Exchange / wildcard probe prefixes. Any
+non-CNAME query (A, AAAA, TXT, MX, SRV, ...) makes the recursive
+resolver chase a CNAME on the queried name server-side before recon
+sees the answer, so a prefix delegated to an internal name would be
+queried by the operator's resolver.
+
+**The guard.** `_safe_resolve` inspects `answers.canonical_name` (the
+name the query resolved to after any chase) for every query type
+except CNAME and PTR. When a chase occurred (`canonical != queried`)
+and the canonical name fails `_is_public_dns_name`, the whole answer
+is discarded:
+
+```python
+# recon_tool/sources/dns.py - _safe_resolve (v1.9.17)
+answers = await resolver.resolve(domain, rdtype, lifetime=timeout)
+if rdtype not in _CANONICAL_GUARD_SKIP_RDTYPES:  # {"CNAME", "PTR"}
+    queried = domain.strip().rstrip(".").lower()
+    canonical = str(answers.canonical_name).rstrip(".").lower()
+    if canonical != queried and not _is_public_dns_name(canonical):
+        return []  # resolver chased to a non-public canonical
+```
+
+Discarding (rather than inspecting and reporting) means an internal
+name is never returned in records (no disclosure) and a private-chased
+query is indistinguishable from a name that does not resolve (no
+observable oracle, since the detection that would have fired does not).
+
+**Why CNAME and PTR are exempt.** A CNAME query returns the immediate
+record without the resolver chasing further, and the walker validates
+that target itself. PTR records legitimately CNAME within the `.arpa`
+tree (RFC 2317 classless reverse delegation), so a private-looking
+`.arpa` canonical there is normal, not a leak; the PTR caller already
+guards on global-IP scope (see the hosting-PTR path).
+
+**A-presence probes.** `_detect_idp_hub`, `_detect_exchange_onprem`,
+and the on-prem wildcard guard now resolve through
+`_resolves_to_public_endpoint`, which is CNAME-first: a private CNAME
+target is rejected by suffix before any A/AAAA query, so the obvious
+attack costs zero internal queries. Direct-A self-hosted IdP and
+on-prem Exchange detection is unchanged because a name with no CNAME
+still falls through to the canonical-guarded A query.
+
+**Documented residual.** In the type-dependent-answer case (the
+authoritative server answers the CNAME query with no record but
+returns a CNAME on the A query, the same trick that defeated the
+v1.9.13 terminus check) a single A query still fires and the resolver
+chases it once. The guard discards the result, so there is no
+disclosure and no observable oracle, but one blind query reaches the
+operator's resolver. Eliminating even that would require dropping
+direct-A detection entirely, which would remove self-hosted IdP and
+on-prem Exchange detection; the project keeps the detection and
+accepts the blind, feedback-free query. Regression coverage:
+`TestSafeResolveCanonicalGuard` and `TestResolvesToPublicEndpoint` in
+`tests/test_cname_chain_validation.py`.
+
 ---
 
 ## Closed: Splunk SIEM example uses unescaped regex slugs
@@ -574,6 +635,14 @@ The ignore is scoped to the single advisory ID
 without an ID, and it is not a global pip-audit disable. Re-evaluate
 and drop the ignore the moment a fixed pyjwt ships, or if recon ever
 adds an HTTP MCP transport that would exercise the JWT path.
+
+The same gating `pip-audit` runs in the release workflow
+(`.github/workflows/release.yml`, the `test` job that gates the PyPI
+publish), so that step carries the identical ignore (added v1.9.17).
+The two gates are kept in lockstep: an advisory CI accepts must not
+silently block a tagged release, and an advisory that should block a
+release must also fail CI. The release SBOM job runs `pip-audit`
+non-gating (`|| true`) and is unaffected.
 
 ---
 
