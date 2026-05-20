@@ -4,13 +4,12 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.17** (generalize the internal-DNS-leak
-guard to every resolver path: `_safe_resolve` discards any
-non-CNAME/non-PTR answer whose recursive-resolver canonical name
-chased to a non-public suffix, and the A-presence probes resolve
-through a CNAME-first helper). Seventh bridge release after
-v1.9.11; v2.0 remains the mechanical schema-lock-and-tag event.
-Cumulative pre-v2.0 work since v1.9.3:
+Current release: **v1.9.18** (round-two ingestion audit: close a
+BIMI VMC fetch SSRF, and stop ANSI-escape / newline injection from
+attacker-controlled CT SAN names and issuer names by validating SAN
+values and scrubbing free-text fields at ingestion). Eighth bridge
+release after v1.9.11; v2.0 remains the mechanical
+schema-lock-and-tag event. Cumulative pre-v2.0 work since v1.9.3:
 
 Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
 detail in `CHANGELOG.md` and the per-release validation memos):
@@ -33,6 +32,7 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.15 | SPF `redirect=` chaser suffix-denylist guard (second instance of the internal-DNS-leak finding); dormant A/AAAA helper removed | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 | v1.9.16 | Dependency-advisory hygiene: idna 3.11 to 3.15 (CVE-2026-45409); documented ignore for disputed no-fix pyjwt PYSEC-2025-183 | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 | v1.9.17 | Generalized internal-DNS-leak guard: `_safe_resolve` canonical-name discard on non-CNAME/non-PTR chases; CNAME-first A-presence probes | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
+| v1.9.18 | Round-two ingestion audit: BIMI VMC fetch SSRF closed; CT SAN / issuer ANSI-escape and newline injection blocked at ingestion | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 
 **Outstanding before v2.0:**
 

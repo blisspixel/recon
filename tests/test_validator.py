@@ -2,7 +2,7 @@
 
 import pytest
 
-from recon_tool.validator import validate_domain
+from recon_tool.validator import strip_control_chars, validate_domain
 
 
 class TestValidateDomain:
@@ -217,3 +217,40 @@ class TestSchemeStrippingPreservesDomain:
     @settings(max_examples=100)
     def test_bare_domain_idempotent(self, domain: str):
         assert validate_domain(domain) == domain.lower()
+
+
+class TestStripControlChars:
+    """strip_control_chars removes C0/C1 control bytes and bounds length,
+    so attacker-derived display strings (CT issuer names, VMC subject
+    fields) cannot inject ANSI escapes or extra lines into terminal,
+    markdown, or MCP output."""
+
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("DigiCert Inc", "DigiCert Inc"),  # printable preserved
+            ("Contoso, Ltd.", "Contoso, Ltd."),  # punctuation preserved
+            ("evil\x1b[31mred", "evil[31mred"),  # ESC removed, rest kept
+            ("a\x00b", "ab"),  # NUL removed
+            ("line1\nline2", "line1line2"),  # newline removed
+            ("a\r\nb\tc\x07d", "abcd"),  # CR / LF / TAB / BEL removed
+            ("x\x9bCSI", "xCSI"),  # C1 control (0x9b) removed
+            ("café résumé", "café résumé"),  # non-control Unicode preserved
+        ],
+    )
+    def test_strips_controls_preserves_printable(self, raw: str, expected: str):
+        assert strip_control_chars(raw) == expected
+
+    def test_bounds_default_length(self):
+        assert len(strip_control_chars("a" * 5000)) == 200
+
+    def test_custom_max_len(self):
+        assert strip_control_chars("abcdef", max_len=3) == "abc"
+
+    def test_empty(self):
+        assert strip_control_chars("") == ""
+
+    def test_no_escape_survives(self):
+        # The load-bearing property: no ESC byte is ever returned.
+        nasty = "name\x1b]0;title\x07\x1b[2J"
+        assert "\x1b" not in strip_control_chars(nasty)

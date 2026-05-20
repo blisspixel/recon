@@ -10,6 +10,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
 is the next planned event; see `docs/roadmap.md`.
 
+## [1.9.18] - 2026-05-20
+
+### Security
+
+Round-two audit pass over the data recon ingests from sources it does
+not control (CT logs and the BIMI VMC fetch). Three findings, all
+reachable on a normal lookup of a domain whose DNS or certificates an
+attacker controls:
+
+- **VMC fetch SSRF.** `_parse_bimi_vmc` fetched the BIMI TXT record's
+  `a=` URL with only an `.endswith(".pem")` check, so a record like
+  `a=https://attacker.example/x.pem` (or an internal / IP-literal host)
+  drove recon's HTTP client to an attacker-named host, with redirects
+  on. This was the one outbound call whose host came from
+  attacker-controlled data. The URL is now validated before any fetch:
+  https only, a public-DNS host (no IP literals, no internal suffixes),
+  no embedded credentials, the default port, and `follow_redirects=False`.
+  The shared client's transport already blocks private-IP destinations;
+  this closes the attacker-chosen public-host case as well.
+- **ANSI-escape / newline injection via CT SAN names.** Certificate SAN
+  values from crt.sh / CertSpotter flowed into `related_domains` and the
+  wildcard / burst surfaces with no character validation, and rich does
+  not strip ESC, so a SAN carrying raw control bytes could drive
+  terminal escape sequences when rendered, or inject lines into MCP /
+  markdown output an agent consumes. SAN values are now rejected at
+  ingestion unless they are clean DNS names (`_is_safe_san_name`).
+- **ANSI-escape injection via certificate issuer names.** Issuer names
+  are free text from the CT log and render under `--verbose`. They now
+  pass through the new `strip_control_chars` (drops C0 / C1 control
+  bytes, bounds length) before counting and display, as do the VMC
+  subject fields.
+
+New shared helper `recon_tool.validator.strip_control_chars`. See
+`docs/security-audit-resolutions.md` for the full write-up.
+
+### Tests
+
+- `tests/test_bimi_vmc.py`: the VMC `a=` URL is refused for http,
+  IP-literal, internal-suffix, credentialed, non-default-port, and
+  single-label hosts (no fetch), and fetched with redirects disabled
+  for a public https URL, with the subject control-char scrubbed.
+- `TestCertDataSanitization` in `test_cert_providers.py` and
+  `TestStripControlChars` in `test_validator.py` pin SAN rejection,
+  issuer scrubbing, and the helper's behavior.
+
 ## [1.9.17] - 2026-05-20
 
 ### Security

@@ -646,6 +646,88 @@ non-gating (`|| true`) and is unaffected.
 
 ---
 
+## Closed: round-two ingestion audit (CT data + VMC fetch, v1.9.18)
+
+After the DNS internal-name leak class was closed, a second audit pass
+looked at the other attacker-controlled data recon ingests: certificate
+fields from CT logs (SAN names, issuer names) and the BIMI VMC fetch.
+The looked-up domain's owner controls all of these (anyone can log a
+certificate for a domain they own to a public CT log, and they author
+their own BIMI TXT record). Three findings, each reachable on a normal
+lookup.
+
+### VMC fetch SSRF (HIGH) - closed
+
+`_parse_bimi_vmc` extracts an `a=` URL from the BIMI TXT record and
+fetched it with only an `.endswith(".pem")` check. The host came
+straight from attacker-controlled DNS, so `a=https://attacker.example/x.pem`
+(or an internal / split-horizon / IP-literal host) turned recon into an
+attacker-directed outbound GET, with the shared client's
+`follow_redirects=True` allowing a redirect onward. This was the only
+outbound call in the tool whose host was attacker-chosen.
+
+Fix: validate the URL before any fetch and disable redirects.
+
+```python
+# recon_tool/sources/dns.py - _parse_bimi_vmc (v1.9.18)
+parsed = urlparse(a_url)
+host = (parsed.hostname or "").lower()
+if (
+    parsed.scheme != "https"
+    or parsed.username
+    or parsed.password
+    or parsed.port not in (None, 443)
+    or not _is_public_dns_name(host)
+):
+    return
+resp = await client.get(a_url, follow_redirects=False)
+```
+
+`_is_public_dns_name` (the same denylist the CNAME walker uses) rejects
+IP literals and internal suffixes; the https / credential / port checks
+reject the other URL-shape tricks; redirects are off; and the client's
+transport still blocks private-IP destinations as defense in depth.
+Legitimate VMCs are served over https from public hosts, so there is no
+false negative.
+
+### ANSI-escape / newline injection via CT data (HIGH) - closed
+
+Certificate SAN names flowed into `related_domains` (and the wildcard /
+burst surfaces) and issuer names into `top_issuers` with no character
+validation. rich's `strip_control_codes` does not remove ESC (0x1B), so
+a SAN or issuer carrying raw control bytes would emit ANSI escape
+sequences to the operator's terminal when rendered (cursor moves, screen
+clear, OSC sequences), and an interior newline would inject extra lines
+into the markdown / MCP output an agent or SIEM consumes.
+
+Fix at ingestion, two complementary tools:
+
+- **SAN names** must be clean DNS names. `filter_subdomains` and the
+  per-provider SAN extraction now drop any value failing
+  `_is_safe_san_name` (ASCII letter-digit-hyphen plus dot, underscore,
+  and the wildcard label). A malformed name is not a real related
+  domain, so rejection (not sanitization) is correct.
+- **Issuer and VMC subject names** are free text, not DNS names, so they
+  are scrubbed with `recon_tool.validator.strip_control_chars` (removes
+  C0 0x00-0x1F, DEL 0x7F, and C1 0x80-0x9F, bounds length) before
+  counting and display. "DigiCert Inc" is unchanged; an ESC-laden
+  payload is neutralized.
+
+Regression coverage: `tests/test_bimi_vmc.py`,
+`TestCertDataSanitization` in `tests/test_cert_providers.py`, and
+`TestStripControlChars` in `tests/test_validator.py`.
+
+### Lower-severity items noted, not yet changed
+
+The audit also noted defense-in-depth items that are not exploitable
+under the threat model and are left for a later polish pass: restrictive
+`0o700` / `0o600` permissions on the `~/.recon` cache and config
+directories (currently umask-dependent; local filesystem access is out
+of scope), and a one-line note that `RECON_CONFIG_DIR` is a trust
+boundary.
+
+---
+
 ## Process notes
 
 * **Closure precedence.** If a scanner flags a finding listed here
