@@ -148,11 +148,10 @@ itself reintroduced the leak it was added to prevent.
 suffix denylist (`_is_public_dns_name`), and no A/AAAA queries are
 issued during the walk. CNAME queries are the safe primitive:
 recursive resolvers do not chase further records when answering a
-CNAME-only query. The `_hop_resolves_publicly` helper is preserved
-in `dns.py` (marked `# pyright: ignore[reportUnusedFunction]`) for
-future callers who can guarantee a fully-suffix-validated name and
-a resolver path immune to type-dependent answers; no current
-callers use it.
+CNAME-only query. The unused `_hop_resolves_publicly` /
+`_is_private_ip_literal` path was later removed entirely, so there
+is no dormant A/AAAA helper in `dns.py` for future callers to
+accidentally revive.
 
 **Documented tradeoff.** Removing the A/AAAA check trades zero
 internal-DNS leakage during the walk against the loss of split-
@@ -184,19 +183,24 @@ depends on A/AAAA).
 
 ```python
 # recon_tool/sources/dns.py - _resolve_cname_chain (v1.9.14)
-# No call to _hop_resolves_publicly remains. The walker issues
-# only CNAME queries during the walk loop. The v1.9.13
-# terminus-only check was reverted after the type-dependent-
-# answer attack path was demonstrated.
+# The walker issues only CNAME queries during the walk loop. The
+# v1.9.13 terminus-only A/AAAA check was reverted after the
+# type-dependent-answer attack path was demonstrated, and the
+# unused A/AAAA helper was removed so it cannot be reused by
+# accident.
 ```
 
 The regression tests in
 `tests/test_cname_chain_validation.py::TestNoAAAAQueriesFromWalker`
 track every DNS query the walker issues on each exit path
 (natural exit, `max_hops` exit, suffix-rejection exit) and assert
-no A or AAAA query ever fires. A future regression that
-re-introduces inline A/AAAA fails these tests before reaching a
-release tag.
+no A or AAAA query ever fires. The surface-attribution regression
+`tests/test_surface_attribution.py::test_surface_classifier_drops_private_cname_target_without_evidence`
+also pins the original scanner claim: an internal-looking CNAME
+target is not followed and is not emitted in `EvidenceRecord.raw_value`.
+A future regression that re-introduces inline A/AAAA or evidence
+emission for rejected private hops fails before reaching a release
+tag.
 
 ---
 
@@ -456,7 +460,46 @@ pins the v1.9.4 + v1.9.14 invariant (no A/AAAA on any hop);
 `TestNoAAAAQueriesFromWalker` pins the v1.9.14 reversion across
 all three exit paths (natural exit, `max_hops` exit, suffix
 rejection); `TestM365RedirectDomainFilter` pins the v1.9.13
-redirect_domain suffix filter.
+redirect_domain suffix filter. The classifier-level regression
+`test_surface_classifier_drops_private_cname_target_without_evidence`
+pins that rejected private hops do not reach
+`EvidenceRecord.raw_value`.
+
+### Second instance: SPF `redirect=` chasing (v1.9.15)
+
+A follow-up review found the same internal-DNS leak class on a
+different code path. The SPF `redirect=` chaser
+(`_follow_spf_redirect`) resolves the redirect target of the
+queried domain's SPF record to determine whether the chain ends in
+`-all` (RFC 7208 6.1). Because the owner of the queried domain
+authors their own SPF record, the redirect target is
+attacker-controlled, and unlike a CNAME target it can name an
+arbitrary zone rather than a subdomain of the queried apex. A
+record such as `v=spf1 redirect=secret.internal.corp` would have
+driven the operator's resolver to query the internal name, the
+same DNS-oracle behavior as the original CNAME finding.
+
+v1.9.15 adds the same suffix denylist guard the CNAME walker uses:
+
+```python
+# recon_tool/sources/dns.py - _follow_spf_redirect (v1.9.15)
+target = match.group(1).strip().rstrip(".")
+if not target or "." not in target:
+    return
+if not _is_public_dns_name(target):
+    return  # refuse before any query; covers the recursive hop too
+target_records = await _safe_resolve(target, "TXT")
+```
+
+The guard sits at the top of the function, so each recursive hop
+(up to the existing `max_depth=3` cap) re-enters and is validated.
+The SPF `include:` mechanism is only counted
+(`spf_include_count`), never resolved, so it does not share this
+path. Regression coverage:
+`TestSpfRedirectBlocksPrivateTargets` in
+`tests/test_cname_chain_validation.py` asserts a private-suffix
+target is never queried and does not credit SPF strict, while a
+legitimate public target ending in `-all` still does.
 
 ---
 
