@@ -816,9 +816,31 @@ async def _parse_bimi_vmc(ctx: _DetectionCtx, bimi_txt: str) -> None:
     if not a_url:
         return
 
+    # Security: the a= URL is attacker-controlled (the looked-up domain
+    # owner authors their own BIMI TXT record). Fetching it unvalidated
+    # is an SSRF primitive: the value's host could name any server, an
+    # internal/split-horizon name, or an IP literal. Require https, a
+    # public-DNS host, no embedded credentials, and the default port,
+    # and do not follow redirects (a VMC a= URL is a direct .pem). The
+    # shared client's transport additionally blocks private-IP
+    # destinations. See docs/security-audit-resolutions.md.
+    from urllib.parse import urlparse
+
+    parsed = urlparse(a_url)
+    host = (parsed.hostname or "").lower()
+    if (
+        parsed.scheme != "https"
+        or parsed.username
+        or parsed.password
+        or parsed.port not in (None, 443)
+        or not _is_public_dns_name(host)
+    ):
+        logger.debug("BIMI VMC a= URL refused (requires https + public host): %s", a_url)
+        return
+
     try:
         async with _http_client(timeout=5.0) as client:
-            resp = await client.get(a_url)
+            resp = await client.get(a_url, follow_redirects=False)
             if resp.status_code != 200:
                 return
             pem_data = resp.text
@@ -860,6 +882,15 @@ async def _parse_bimi_vmc(ctx: _DetectionCtx, bimi_txt: str) -> None:
                         country = m.group(1).strip()
 
         if org:
+            # The VMC subject fields come from a PEM served at the
+            # attacker-influenced a= URL. Strip control bytes and bound
+            # length before they reach any panel / markdown / MCP sink.
+            from recon_tool.validator import strip_control_chars
+
+            org = strip_control_chars(org)
+            country = strip_control_chars(country) if country else None
+            state = strip_control_chars(state) if state else None
+            locality = strip_control_chars(locality) if locality else None
             ctx.bimi_identity = BIMIIdentity(
                 organization=org,
                 country=country,

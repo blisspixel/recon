@@ -811,3 +811,58 @@ class TestCertSpotterPagination:
             pytest.raises(httpx.ConnectError),
         ):
             await provider.query("example.com")
+
+
+# ── v1.9.18: attacker-controlled CT data sanitization ───────────────────
+
+
+class TestCertDataSanitization:
+    """CT SAN values and issuer names are attacker-influenceable (anyone
+    can log a cert for a domain they own to a public CT log). These pin
+    that control bytes and non-DNS characters cannot flow into
+    related_domains or top_issuers, where they would be an ANSI-escape /
+    newline injection vector in the rendered panel and MCP output."""
+
+    def test_is_safe_san_name_allows_dns_chars(self):
+        from recon_tool.sources.cert_providers import _is_safe_san_name
+
+        assert _is_safe_san_name("app.example.com")
+        assert _is_safe_san_name("sel._domainkey.example.com")  # underscore
+        assert _is_safe_san_name("*.example.com")  # wildcard label
+        assert _is_safe_san_name("App.Example.Com")  # case-insensitive
+
+    def test_is_safe_san_name_rejects_control_and_non_dns(self):
+        from recon_tool.sources.cert_providers import _is_safe_san_name
+
+        assert not _is_safe_san_name("evil\x1b[2Kx.example.com")  # ESC
+        assert not _is_safe_san_name("a\nb.example.com")  # newline
+        assert not _is_safe_san_name("a\x00b.example.com")  # NUL
+        assert not _is_safe_san_name("a b.example.com")  # space
+        assert not _is_safe_san_name("")
+
+    def test_filter_subdomains_drops_ansi_escape_san(self):
+        raw = ["good.example.com", "evil\x1b[2Kx.example.com"]
+        result = filter_subdomains(raw, "example.com")
+        assert "good.example.com" in result
+        assert all("\x1b" not in r for r in result)
+        assert not any("evil" in r for r in result)
+
+    def test_filter_subdomains_drops_newline_san(self):
+        raw = ["ok.example.com", "a\nb.example.com"]
+        result = filter_subdomains(raw, "example.com")
+        assert result == ["ok.example.com"]
+
+    def test_build_cert_summary_strips_issuer_control_chars(self):
+        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        entries: list[dict[str, str | int | list[str] | None]] = [
+            {
+                "issuer_id": "1",
+                "issuer_name": "Evil\x1b[31m CA\x00",
+                "not_before": "2024-03-01T00:00:00",
+                "not_after": "2024-06-01T00:00:00",
+            },
+        ]
+        summary = build_cert_summary(entries, now)
+        assert summary is not None
+        assert all("\x1b" not in name and "\x00" not in name for name in summary.top_issuers)
+        assert "Evil[31m CA" in summary.top_issuers

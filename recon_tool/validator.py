@@ -4,8 +4,40 @@ import re
 
 __all__ = [
     "UUID_RE",
+    "strip_control_chars",
     "validate_domain",
 ]
+
+# Max length for a sanitized free-text display field (certificate issuer
+# or subject name, VMC organization, etc.) pulled from a source recon
+# does not control. Long enough for any real CA or company name, short
+# enough to bound a hostile payload.
+_MAX_DISPLAY_LEN = 200
+
+
+def strip_control_chars(value: str, max_len: int = _MAX_DISPLAY_LEN) -> str:
+    """Remove control characters from an attacker-derived display string and
+    bound its length.
+
+    recon renders strings pulled from public sources it does not control
+    (certificate issuer and subject names from CT logs, VMC subject fields
+    fetched over HTTP) to the operator's terminal and into JSON, markdown,
+    and MCP output. Terminal emulators act on C0 / C1 control bytes
+    (ESC-introduced ANSI sequences, NUL, CR, LF, BEL), and the rich
+    library does not strip ESC, so an unsanitized issuer or subject name
+    carrying a raw ESC could move the cursor, recolor, clear the screen,
+    or drive OSC escapes. An interior newline also lets such a value
+    inject extra lines into the line-oriented output an agent or SIEM
+    consumes.
+
+    This removes every C0 control (0x00-0x1F), DEL (0x7F), and C1 control
+    (0x80-0x9F), then truncates to *max_len*. Printable content (letters,
+    digits, spaces, punctuation, non-control Unicode) is preserved, so a
+    legitimate "DigiCert Inc" or "Contoso, Ltd." is unchanged.
+    """
+    cleaned = "".join(c for c in value if not (ord(c) < 0x20 or ord(c) == 0x7F or 0x80 <= ord(c) <= 0x9F))
+    return cleaned[:max_len]
+
 
 # Shared UUID format regex — used by oidc.py and azure_metadata.py
 # to validate tenant IDs before URL interpolation.

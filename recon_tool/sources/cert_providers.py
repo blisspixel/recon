@@ -19,6 +19,24 @@ import httpx
 from recon_tool.http import http_client
 from recon_tool.infra_graph import build_infrastructure_clusters
 from recon_tool.models import CertBurst, CertSummary, InfrastructureClusterReport
+from recon_tool.validator import strip_control_chars
+
+# CT SAN values are attacker-controlled: anyone can log a certificate for
+# a domain they own, with arbitrary SAN strings, to a public CT log, and
+# crt.sh / CertSpotter return them verbatim. A SAN carrying raw control
+# bytes (ESC, NUL, an interior newline) would otherwise flow into
+# related_domains and the wildcard / burst surfaces, then render to the
+# operator's terminal (rich does not strip ESC) or into MCP / markdown
+# output. A real DNS name uses only the letter-digit-hyphen alphabet plus
+# dot, underscore (DKIM / SRV selectors), and a leading wildcard label;
+# reject anything else rather than try to sanitize a malformed name.
+_SAFE_SAN_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-._*")
+
+
+def _is_safe_san_name(name: str) -> bool:
+    """True when *name* contains only DNS-safe characters (case-insensitive)."""
+    return bool(name) and all(c in _SAFE_SAN_CHARS for c in name.lower())
+
 
 # ── v1.7 caps for derived cert intelligence ──────────────────────────────
 # Wildcard SAN sibling clusters: each cert that contains ≥1 wildcard SAN
@@ -230,6 +248,12 @@ def filter_subdomains(
         name = raw_name.lower().strip()
         if not name or name == domain_lower:
             continue
+        # Drop SAN values that are not clean DNS names. Anything carrying
+        # control bytes or other non-DNS characters is not a real related
+        # domain and would be an ANSI-escape / newline injection vector in
+        # the rendered panel and MCP output.
+        if not _is_safe_san_name(name):
+            continue
         if any(name.startswith(prefix) for prefix in skip_prefixes):
             continue
         if not name.endswith(f".{domain_lower}"):
@@ -410,7 +434,11 @@ def build_cert_summary(
 
         cert_meta_count += 1
         issuer_ids.add(str(issuer_id))
-        issuer_name_counter[str(issuer_name)] += 1
+        # Issuer names are free text from the CT log (attacker-influenceable
+        # for a self-logged cert) and render to the terminal under --verbose
+        # and into markdown. Unlike SAN names they are not DNS names, so we
+        # cannot charset-reject; strip control bytes and bound length.
+        issuer_name_counter[strip_control_chars(str(issuer_name))] += 1
         not_before_dates.append(not_before_dt)
 
     if cert_meta_count == 0 or not not_before_dates:
@@ -496,7 +524,7 @@ class CrtshProvider:
                     if len(cert_sans) >= _MAX_SANS_PER_CERT:
                         break
                     n = raw_name.strip()
-                    if n:
+                    if n and _is_safe_san_name(n):
                         cert_sans.append(n)
 
             if len(cert_entries) < _MAX_CRTSH_CERT_SUMMARY_ENTRIES:
@@ -652,8 +680,8 @@ class CertSpotterProvider:
                                 break
                             if isinstance(name, str):
                                 stripped = name.strip()
-                                all_raw_names.append(stripped)
-                                if stripped:
+                                if stripped and _is_safe_san_name(stripped):
+                                    all_raw_names.append(stripped)
                                     cert_sans.append(stripped)
 
                     issuer = issuance.get("issuer")
