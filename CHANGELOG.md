@@ -10,6 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
 is the next planned event; see `docs/roadmap.md`.
 
+## [1.9.16] - 2026-05-20
+
+### Security
+
+- Upgraded the locked `idna` from 3.11 to 3.15 to clear
+  CVE-2026-45409. `idna` is a transitive dependency (via httpx and
+  anyio); the lockfile bump is the fix and the CI dependency audit
+  passes on it without an ignore.
+- Added a documented, single-advisory ignore for pyjwt
+  PYSEC-2025-183 (CVE-2025-45768) in the CI dependency-audit step.
+  This is not a blanket suppression: `pyjwt` is pulled transitively
+  by `mcp[crypto]` for MCP's HTTP/OAuth transport, no fixed version
+  exists (2.12.1 is the latest and the whole 0.1.1-2.12.1 range is
+  affected), the maintainer disputes the finding (key length is the
+  calling application's responsibility), and recon runs the MCP
+  server over stdio only, so pyjwt's signing path is never invoked.
+  The ignore is scoped to that one advisory ID with an inline
+  rationale and a note to drop it when a fixed pyjwt ships. See
+  `docs/security-audit-resolutions.md`.
+
 ## [1.9.15] - 2026-05-20
 
 ### Security

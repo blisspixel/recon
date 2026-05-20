@@ -115,7 +115,20 @@ jobs:
         run: uv export --frozen --no-dev --no-emit-project --no-hashes --format requirements.txt --output-file .ci-audit-requirements.txt
 
       - name: Audit dependencies
-        run: uv run pip-audit -r .ci-audit-requirements.txt
+        # PYSEC-2025-183 (CVE-2025-45768) is ignored deliberately, not
+        # swept under the rug. It flags pyjwt, pulled transitively by
+        # mcp[crypto] for MCP's HTTP/OAuth transport. Three reasons it
+        # cannot be fixed by upgrading and is not reachable here:
+        #   1. No fixed version exists. 2.12.1 is the latest release and
+        #      is still flagged; the whole 0.1.1-2.12.1 range is affected.
+        #   2. The maintainer disputes it (key length is the calling
+        #      application's responsibility, not the library's).
+        #   3. recon runs the MCP server over stdio only, with no auth
+        #      transport, so pyjwt's signing/encryption path is never
+        #      invoked. The vulnerable surface is unreachable.
+        # Tracked in docs/security-audit-resolutions.md; drop the ignore
+        # the moment a fixed pyjwt ships.
+        run: uv run pip-audit -r .ci-audit-requirements.txt --ignore-vuln PYSEC-2025-183
 
   validate-fingerprints:
     runs-on: ubuntu-latest
