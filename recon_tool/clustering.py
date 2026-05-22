@@ -175,6 +175,14 @@ def cluster_tokens(
     return dict(token_map)
 
 
+# A single token shared by more than this many domains is treated as
+# low-signal noise (e.g. a managed-DNS provider's common verification
+# record) and skipped. It also bounds the per-token peer cross-product
+# below: the CLI batch path allows up to 10k domains, and a token shared
+# across all of them would otherwise materialize ~k^2 ClusterEntry objects.
+_MAX_CLUSTER_DOMAINS_PER_TOKEN = 200
+
+
 def compute_shared_tokens(
     domain_tokens: dict[str, tuple[str, ...]],
 ) -> dict[str, tuple[ClusterEntry, ...]]:
@@ -204,6 +212,12 @@ def compute_shared_tokens(
     per_domain: dict[str, list[ClusterEntry]] = defaultdict(list)
     for token, domains in token_map.items():
         if len(domains) < 2:
+            continue
+        # Skip very high-cardinality tokens: a token shared by hundreds of
+        # domains is noise (a shared provider record), not a meaningful
+        # relationship, and the peer cross-product below is O(k^2). Skipping
+        # keeps a 10k-domain CLI batch from spiking CPU/memory on one token.
+        if len(domains) > _MAX_CLUSTER_DOMAINS_PER_TOKEN:
             continue
         # For each domain in the cluster, every other domain is a peer
         # via this token.

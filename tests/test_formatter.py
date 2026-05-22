@@ -224,3 +224,16 @@ class TestMarkdownEscaping:
     def test_display_name_escaped_in_markdown(self, fully_populated_tenant_info):
         info = dataclasses.replace(fully_populated_tenant_info, display_name="Evil [x](http://e)")
         assert "[x](http://e)" not in format_tenant_markdown(info)
+
+    def test_auth_type_and_region_escaped_in_markdown(self, fully_populated_tenant_info):
+        # auth_type (GetUserRealm NameSpaceType) and region are
+        # attacker-influenced free text; they must be markdown-escaped too,
+        # not just display_name / issuers.
+        info = dataclasses.replace(
+            fully_populated_tenant_info,
+            auth_type="Managed](http://evil)",
+            region="EU`code`",
+        )
+        md = format_tenant_markdown(info)
+        assert "](http://evil)" not in md
+        assert "`code`" not in md

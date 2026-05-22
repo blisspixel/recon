@@ -10,6 +10,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
 is the next planned event; see `docs/roadmap.md`.
 
+## [1.9.20] - 2026-05-22
+
+### Security
+
+Round-four audit pass (data-file / config loading, analysis modules,
+detector exception-safety, and a regression re-audit of v1.9.19), plus
+the dependency advisory that blocked the v1.9.19 publish.
+
+- **Detector exception isolation (generalizes the BIMI-port fix).**
+  `_detect_services` and the surface-classification pass gathered
+  detectors with no isolation, so any single detector raising on crafted
+  input propagated through `asyncio.gather` to `DNSSource.lookup`, which
+  turned it into a whole-source error and discarded every other
+  detector's DNS intelligence. The v1.9.19 BIMI fix patched one detector;
+  this isolates every detector at the gather boundary (and the surface
+  `_process` gather) so one failure degrades gracefully. (HIGH)
+- **starlette 1.0.0 to 1.0.1** (PYSEC-2026-161), a transitive dependency
+  via mcp. This advisory was published after v1.9.19's CI passed but
+  before its release pipeline ran, so the release audit failed and
+  v1.9.19 never reached PyPI. The lockfile upgrade clears it; v1.9.20 is
+  the published successor and is cumulative over v1.9.19.
+- **Uncapped TXT length into a user regex.** `_detect_subdomain_txt` ran
+  an operator / ephemeral regex against an attacker-controlled TXT value
+  with no length bound, the only DNS path that lacked one. A crafted
+  multi-KB TXT plus a greedy regex amplified backtracking. Now capped at
+  4096, matching `match_txt`. (MED)
+- **Quadratic clustering blowup.** `compute_shared_tokens` built a
+  k*(k-1) peer cross-product per shared token; the CLI batch path allows
+  up to 10k domains, so one common token could materialize ~100M
+  objects. Tokens shared by more than 200 domains (noise / abuse) are now
+  skipped. (MED)
+- **ReDoS heuristic gaps.** `_REDOS_RE` missed bounded-repetition
+  blowups like `(a+){20}`, and its comment falsely claimed it caught
+  `(a|a)+`. Extended to flag the `{n}` form; the comment is now honest
+  that overlapping-alternation and nested-group ReDoS are bounded by the
+  input length caps above (not by the heuristic), since distinguishing
+  safe `(foo|bar)+` from dangerous `(a|a)+` needs analysis a regex cannot
+  do. (MED)
+- **Markdown / token sanitization completed.** `auth_type`, `region`,
+  `google_auth_type`, `google_idp_name`, and insights are now
+  markdown-escaped in the markdown report (the v1.9.19 escape covered
+  only `display_name` and issuer names); `google-site-verification`
+  tokens are control-stripped at extraction. (LOW-MED)
+
+Audit items left unchanged, with rationale in
+`docs/security-audit-resolutions.md`: the priors-override `0.0`/`1.0`
+root prior (likely an intended operator capability, distinct from the
+likelihood `{0,1}` ban); catalog-size caps on the file loaders; the
+`_RetryTransport` unused base pool; the over-1024-byte batch-line split;
+and the PyYAML alias-bomb (all operator-trust-boundary or cosmetic).
+
+### Tests
+
+- Per-module regressions in the file each one exercises: detector gather
+  isolation (`test_sources/test_dns.py`), the `compute_shared_tokens`
+  cap (`test_clustering.py`), `{n}` ReDoS rejection (`test_security.py`),
+  and markdown `auth_type` / `region` escaping (`test_formatter.py`).
+
 ## [1.9.19] - 2026-05-21
 
 ### Security

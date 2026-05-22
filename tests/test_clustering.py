@@ -330,3 +330,20 @@ class TestDisplayNameClusters:
         )
         assert len(clusters) == 1
         assert set(clusters[0].raw_names) == {"Acme Corp", "Acme Corp."}
+
+
+def test_compute_shared_tokens_skips_high_cardinality_token():
+    # A token shared by more than the per-token cap is treated as noise and
+    # yields no peer relationships, bounding the O(k^2) cross-product that a
+    # large CLI batch would otherwise materialize.
+    from recon_tool.clustering import _MAX_CLUSTER_DOMAINS_PER_TOKEN, compute_shared_tokens
+
+    n = _MAX_CLUSTER_DOMAINS_PER_TOKEN + 5
+    over_cap = {f"d{i}.example.com": ("shared-token",) for i in range(n)}
+    assert compute_shared_tokens(over_cap) == {}
+
+    # A small cluster sharing the same token still clusters normally.
+    small = {"a.example.com": ("tok",), "b.example.com": ("tok",)}
+    result = compute_shared_tokens(small)
+    assert "a.example.com" in result
+    assert "b.example.com" in result

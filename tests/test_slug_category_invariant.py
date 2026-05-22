@@ -173,6 +173,5 @@ def test_mapped_and_fallback_sets_are_disjoint() -> None:
     two stay in sync."""
     overlap = sorted(set(_CATEGORY_BY_SLUG.keys()) & EXPECTED_BUSINESS_APPS_FALLBACK)
     assert not overlap, (
-        f"Slugs in BOTH _CATEGORY_BY_SLUG and EXPECTED_BUSINESS_APPS_FALLBACK "
-        f"(contradictory decisions): {overlap}"
+        f"Slugs in BOTH _CATEGORY_BY_SLUG and EXPECTED_BUSINESS_APPS_FALLBACK (contradictory decisions): {overlap}"
     )
