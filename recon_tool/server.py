@@ -22,7 +22,7 @@ from mcp.types import ToolAnnotations
 from recon_tool.formatter import detect_provider, format_tenant_json, format_tenant_markdown
 from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
 from recon_tool.resolver import resolve_tenant
-from recon_tool.validator import validate_domain
+from recon_tool.validator import strip_control_chars, validate_domain
 
 logger = logging.getLogger("recon")
 
@@ -753,12 +753,22 @@ async def chain_lookup(domain: str, depth: int = 1) -> str:
         )
         return f"Error: {exc}"
 
+    # Rate limit: chain_lookup is the most expensive tool (up to
+    # MAX_CHAIN_DOMAINS resolves per call), so an untrusted MCP caller
+    # could otherwise use it to amplify outbound DNS/HTTP. Gate it on the
+    # same per-domain limiter the single-domain tools use; release the
+    # slot on error so a transient failure does not block a legitimate
+    # retry.
+    if not _rate_limit_try_acquire(validated):
+        return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+
     try:
         from recon_tool.chain import chain_resolve
         from recon_tool.formatter import format_chain_json
 
         report = await chain_resolve(validated, depth=depth)
     except Exception:
+        _rate_limit_release(validated)
         logger.exception(
             "Unexpected error in chain lookup for %s (request_id=%s)",
             domain,
@@ -929,7 +939,10 @@ async def reload_data() -> str:
     reload_signals()
     reload_posture()
     _cache_clear()
-    _rate_limit_clear()
+    # The result cache is cleared because definitions changed. The
+    # per-domain rate limiter is intentionally NOT cleared: resetting it
+    # here would let a caller bypass the limiter by calling reload_data
+    # between lookups of the same domain.
 
     from recon_tool.fingerprints import load_fingerprints
     from recon_tool.posture import load_posture_rules
@@ -948,7 +961,7 @@ async def reload_data() -> str:
     )
     return (
         f"Reloaded: {fp_count} fingerprints, {sig_count} signals, {posture_count} posture rules. "
-        "Cache and rate limiter cleared."
+        "Lookup cache cleared (rate limiter preserved)."
     )
 
 
@@ -1700,6 +1713,9 @@ async def test_hypothesis(domain: str, hypothesis: str) -> str:
         JSON object with likelihood, supporting_signals, contradicting_signals,
         missing_evidence, and confidence.
     """
+    # Bound the free-text hypothesis so a multi-megabyte argument cannot
+    # multiply the per-signal substring scan cost.
+    hypothesis = hypothesis[:4000]
     resolved = await _resolve_or_cache(domain)
     if isinstance(resolved, str):
         return resolved
@@ -1837,6 +1853,9 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> str:
         JSON object with current_score, simulated_score, score_delta,
         applied_fixes, and remaining_gaps.
     """
+    # Bound the fix list so a multi-million-element argument cannot drive
+    # O(n) work and a proportionally huge response.
+    fixes = fixes[:100]
     resolved = await _resolve_or_cache(domain)
     if isinstance(resolved, str):
         return resolved
@@ -2208,6 +2227,23 @@ async def cluster_verification_tokens(domains: list[str]) -> str:
     if not domains:
         return json_mod.dumps({"error": "At least one domain is required"})
 
+    # Cap and dedup the input, matching the CLI batch path. Without this
+    # the MCP tool lets a caller drive unbounded sequential resolves (each
+    # distinct domain gets its own rate-limit slot, so the per-domain
+    # limiter does not throttle a many-distinct-domain flood) and build a
+    # proportionally large response.
+    _MAX_CLUSTER_DOMAINS = 100
+    seen_keys: set[str] = set()
+    deduped: list[str] = []
+    for raw in domains:
+        key = raw.strip().lower()
+        if key and key not in seen_keys:
+            seen_keys.add(key)
+            deduped.append(raw)
+    if len(deduped) > _MAX_CLUSTER_DOMAINS:
+        return json_mod.dumps({"error": f"Too many domains: {len(deduped)} distinct (max {_MAX_CLUSTER_DOMAINS})"})
+    domains = deduped
+
     domain_tokens: dict[str, tuple[str, ...]] = {}
     errors: list[dict[str, str]] = []
 
@@ -2411,7 +2447,12 @@ def domain_report(domain: str) -> str:
     Use this to get a comprehensive analysis of a company's email provider,
     tech stack, email security posture, and infrastructure.
     """
-    return f"Look up {domain} using the lookup_tenant tool with format='markdown', then summarize the key findings."
+    # Strip control bytes so a crafted domain cannot inject newlines or
+    # escape sequences into the rendered prompt the agent consumes.
+    safe_domain = strip_control_chars(domain)
+    return (
+        f"Look up {safe_domain} using the lookup_tenant tool with format='markdown', then summarize the key findings."
+    )
 
 
 def _print_mcp_banner() -> None:

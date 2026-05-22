@@ -4,12 +4,14 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.18** (round-two ingestion audit: close a
-BIMI VMC fetch SSRF, and stop ANSI-escape / newline injection from
-attacker-controlled CT SAN names and issuer names by validating SAN
-values and scrubbing free-text fields at ingestion). Eighth bridge
-release after v1.9.11; v2.0 remains the mechanical
-schema-lock-and-tag event. Cumulative pre-v2.0 work since v1.9.3:
+Current release: **v1.9.19** (round-three audit hardening: HTTP
+response-body size cap, completion of the attacker-free-text
+sanitization class across the fields rounds 1-2 missed
+(display_name / auth_type / region, dominant_issuer), markdown
+escaping, and MCP / resource bounds including chain_lookup
+rate-limiting). Ninth bridge release after v1.9.11; v2.0 remains
+the mechanical schema-lock-and-tag event. Cumulative pre-v2.0 work
+since v1.9.3:
 
 Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
 detail in `CHANGELOG.md` and the per-release validation memos):
@@ -33,6 +35,7 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.16 | Dependency-advisory hygiene: idna 3.11 to 3.15 (CVE-2026-45409); documented ignore for disputed no-fix pyjwt PYSEC-2025-183 | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 | v1.9.17 | Generalized internal-DNS-leak guard: `_safe_resolve` canonical-name discard on non-CNAME/non-PTR chases; CNAME-first A-presence probes | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 | v1.9.18 | Round-two ingestion audit: BIMI VMC fetch SSRF closed; CT SAN / issuer ANSI-escape and newline injection blocked at ingestion | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
+| v1.9.19 | Round-three audit: HTTP body-size cap; free-text sanitization completed (display_name / dominant_issuer); markdown escaping; MCP / resource bounds (chain_lookup rate-limit, cluster cap) | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 
 **Outstanding before v2.0:**
 
@@ -1085,7 +1088,7 @@ mechanical lock.
   numbers and the v1.9.10 stratified-corpus aggregate. Anchors
   the v2.0 "engine got better" claim with public per-release
   numbers. Lives in `validation/v1.9.11-trend-table.md`.
-- [ ] **Schema disposition test green.** `tests/test_v2_schema_disposition.py`
+- [ ] **Schema disposition test green.** `tests/test_schema_disposition.py`
   (added in v1.9.10.1 prep) passes with zero entries in
   `_V2_KNOWN_SCHEMA_GAPS`. The current single entry
   (`ecosystem_hyperedges` - batch-wrapper field not in schema)

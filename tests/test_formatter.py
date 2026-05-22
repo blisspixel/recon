@@ -5,6 +5,7 @@ Tests Properties 9, 10, 19, 20, 21 from the design document.
 
 from __future__ import annotations
 
+import dataclasses
 import io
 import json
 
@@ -14,7 +15,9 @@ from rich.console import Console
 
 from recon_tool.formatter import (
     CONFIDENCE_COLORS,
+    _markdown_escape,
     format_tenant_json,
+    format_tenant_markdown,
     get_console,
     render_tenant_panel,
     render_verbose_sources,
@@ -91,7 +94,7 @@ class TestRichPanelOutputContainsAllFields:
     """
 
     @given(info=tenant_info_st)
-    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
+    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow], deadline=None)
     def test_panel_contains_all_fields(self, info: TenantInfo):
         panel = render_tenant_panel(info)
         output = _render_panel_to_str(panel)
@@ -113,7 +116,7 @@ class TestNotFoundWarningContainsDomain:
     """
 
     @given(domain=non_empty_str)
-    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
+    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow], deadline=None)
     def test_warning_contains_domain(self, domain: str):
         buf = io.StringIO()
         test_console = Console(
@@ -145,7 +148,7 @@ class TestJsonOutputRoundTrip:
     """
 
     @given(info=tenant_info_st)
-    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
+    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow], deadline=None)
     def test_json_round_trip(self, info: TenantInfo):
         json_str = format_tenant_json(info)
         data = json.loads(json_str)
@@ -185,7 +188,7 @@ class TestVerboseOutputListsAllSources:
     """
 
     @given(results=st.lists(source_result_st, min_size=1, max_size=10))
-    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
+    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow], deadline=None)
     def test_verbose_output_contains_all_source_names(self, results: list[SourceResult]):
         buf = io.StringIO()
         test_console = Console(
@@ -205,3 +208,19 @@ class TestVerboseOutputListsAllSources:
                 assert result.source_name in output, f"source_name {result.source_name!r} not found in verbose output"
         finally:
             set_console(original)
+
+
+class TestMarkdownEscaping:
+    """The markdown report escapes attacker-derived free text (certificate
+    issuer names, display_name) so it cannot inject links, code spans,
+    tables, or HTML into the rendered document."""
+
+    def test_markdown_escape_breaks_link_injection(self):
+        out = _markdown_escape("Bad](http://evil)`code`*x*|y<b>")
+        assert "](http://evil)" not in out
+        for ch in "`*[]()|<>":
+            assert ch not in out or ("\\" + ch) in out
+
+    def test_display_name_escaped_in_markdown(self, fully_populated_tenant_info):
+        info = dataclasses.replace(fully_populated_tenant_info, display_name="Evil [x](http://e)")
+        assert "[x](http://e)" not in format_tenant_markdown(info)

@@ -19,7 +19,7 @@ import httpx
 from recon_tool.http import http_client
 from recon_tool.infra_graph import build_infrastructure_clusters
 from recon_tool.models import CertBurst, CertSummary, InfrastructureClusterReport
-from recon_tool.validator import strip_control_chars
+from recon_tool.validator import is_safe_dns_name, strip_control_chars
 
 # CT SAN values are attacker-controlled: anyone can log a certificate for
 # a domain they own, with arbitrary SAN strings, to a public CT log, and
@@ -30,12 +30,9 @@ from recon_tool.validator import strip_control_chars
 # output. A real DNS name uses only the letter-digit-hyphen alphabet plus
 # dot, underscore (DKIM / SRV selectors), and a leading wildcard label;
 # reject anything else rather than try to sanitize a malformed name.
-_SAFE_SAN_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-._*")
-
-
-def _is_safe_san_name(name: str) -> bool:
-    """True when *name* contains only DNS-safe characters (case-insensitive)."""
-    return bool(name) and all(c in _SAFE_SAN_CHARS for c in name.lower())
+# Canonical implementation lives in recon_tool.validator; aliased here for
+# the cert-ingestion call sites and the round-2 regression tests.
+_is_safe_san_name = is_safe_dns_name
 
 
 # ── v1.7 caps for derived cert intelligence ──────────────────────────────

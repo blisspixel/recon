@@ -20,6 +20,7 @@ from recon_tool.infra_graph import (
     MAX_GRAPH_NODES,
     MAX_MEMBERS_PER_CLUSTER,
     MIN_CLUSTER_SIZE,
+    _clean_sans,
     build_infrastructure_clusters,
 )
 from recon_tool.models import InfrastructureClusterReport
@@ -227,3 +228,19 @@ class TestReportShape:
         # the build did not raise.
         if report.clusters:
             assert report.clusters[0].dominant_issuer in (None, "", str(issuer_value))
+
+
+class TestSanAndIssuerSanitization:
+    """The graph layer is self-protecting: SAN names with control bytes are
+    dropped, and a control-byte issuer does not survive into
+    dominant_issuer (the issuer path the cert-summary strip does not cover)."""
+
+    def test_clean_sans_drops_control_byte_names(self):
+        out = _clean_sans(["evil\x1bx.example.com", "ok.example.com", "a b.example.com"])
+        assert out == ["ok.example.com"]
+
+    def test_dominant_issuer_control_chars_stripped(self):
+        report = build_infrastructure_clusters([_entry(["a.example.com", "b.example.com"], issuer="Evil\x1b[31m CA")])
+        assert report.clusters, "a 2-SAN cert should form one cluster"
+        for cluster in report.clusters:
+            assert cluster.dominant_issuer is None or "\x1b" not in cluster.dominant_issuer

@@ -4,9 +4,23 @@ import re
 
 __all__ = [
     "UUID_RE",
+    "is_safe_dns_name",
     "strip_control_chars",
     "validate_domain",
 ]
+
+# Characters allowed in a DNS name recon will display or follow: the
+# letter-digit-hyphen alphabet plus dot, underscore (DKIM / SRV
+# selectors), and the leading wildcard label. Used to reject SAN values
+# and other DNS-derived names that carry control bytes or other non-DNS
+# characters before they reach output or further processing.
+_SAFE_DNS_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-._*")
+
+
+def is_safe_dns_name(name: str) -> bool:
+    """True when *name* contains only DNS-safe characters (case-insensitive)."""
+    return bool(name) and all(c in _SAFE_DNS_CHARS for c in name.lower())
+
 
 # Max length for a sanitized free-text display field (certificate issuer
 # or subject name, VMC organization, etc.) pulled from a source recon

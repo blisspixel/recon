@@ -433,7 +433,11 @@ class TestReevaluateDomain:
 
 class TestReloadData:
     @pytest.mark.asyncio
-    async def test_reload_clears_cache_and_rate_limiter(self, fresh_server_cache: None) -> None:
+    async def test_reload_clears_cache_but_preserves_rate_limiter(self, fresh_server_cache: None) -> None:
+        # reload_data clears the result cache (definitions changed) but must
+        # NOT clear the per-domain rate limiter: resetting it would let a
+        # caller bypass the limiter by calling reload_data between lookups
+        # (v1.9.19 hardening).
         import time
 
         from recon_tool.server import _cache, _rate_limit, reload_data
@@ -444,6 +448,20 @@ class TestReloadData:
         result = await reload_data()
 
         assert result.startswith("Reloaded:")
-        assert "Cache and rate limiter cleared" in result
+        assert "rate limiter preserved" in result.lower()
         assert _cache == {}
-        assert _rate_limit == {}
+        # The rate-limit entry survives the reload.
+        assert "contoso.com" in _rate_limit
+
+
+class TestClusterVerificationTokensCap:
+    @pytest.mark.asyncio
+    async def test_rejects_oversized_distinct_input(self) -> None:
+        # The MCP tool caps and dedups its input like the CLI batch path,
+        # so a caller cannot drive unbounded sequential resolves.
+        from recon_tool.server import cluster_verification_tokens
+
+        domains = [f"d{i}.example.com" for i in range(101)]  # > 100 distinct
+        payload = json.loads(await cluster_verification_tokens(domains))
+        assert "error" in payload
+        assert "max" in payload["error"].lower()

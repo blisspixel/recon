@@ -1381,7 +1381,7 @@ publicly reproducible:
    over identical inputs produce float-bit-identical posteriors
    and intervals. Verified across 100 sequential runs and 50
    concurrent `asyncio.gather` runs in
-   `tests/test_v19_robustness.py`.
+   `tests/test_fusion_robustness.py`.
 6. **Per-node behavioural stability (publicly reproducible).**
    `tests/test_node_stability_criteria.py` (v1.9.5) is a
    parametrized regression test asserting that for every node, a

@@ -2,7 +2,7 @@
 
 import pytest
 
-from recon_tool.validator import strip_control_chars, validate_domain
+from recon_tool.validator import is_safe_dns_name, strip_control_chars, validate_domain
 
 
 class TestValidateDomain:
@@ -254,3 +254,23 @@ class TestStripControlChars:
         # The load-bearing property: no ESC byte is ever returned.
         nasty = "name\x1b]0;title\x07\x1b[2J"
         assert "\x1b" not in strip_control_chars(nasty)
+
+
+class TestIsSafeDnsName:
+    """is_safe_dns_name accepts DNS-shaped names and rejects names carrying
+    control bytes or other non-DNS characters. Used to drop unsafe CT SAN
+    values before they reach output or further processing."""
+
+    @pytest.mark.parametrize(
+        "name",
+        ["app.example.com", "sel._domainkey.example.com", "*.example.com", "App.Example.Com"],
+    )
+    def test_accepts_dns_safe(self, name: str):
+        assert is_safe_dns_name(name)
+
+    @pytest.mark.parametrize(
+        "name",
+        ["evil\x1bx.example.com", "a b.example.com", "a\nb.example.com", "a\x00b.example.com", ""],
+    )
+    def test_rejects_control_and_non_dns(self, name: str):
+        assert not is_safe_dns_name(name)

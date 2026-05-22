@@ -58,6 +58,7 @@ from recon_tool.models import (
     InfrastructureClusterReport,
     InfrastructureEdge,
 )
+from recon_tool.validator import is_safe_dns_name, strip_control_chars
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +103,13 @@ def _clean_sans(raw: Any) -> list[str]:
             continue
         n = item.strip().lower()
         if not n or n.startswith("*."):
+            continue
+        # Defense in depth: SAN sets reaching this layer are already
+        # charset-filtered by cert_providers, but the graph must not depend
+        # on a non-local invariant. Drop any name with non-DNS characters
+        # so a future caller passing unfiltered entries cannot inject
+        # control bytes into cluster members / graph nodes.
+        if not is_safe_dns_name(n):
             continue
         if n in seen:
             continue
@@ -150,7 +158,10 @@ def _build_graph(
         if len(sans) > _MAX_SANS_PER_CERT_FOR_EDGES:
             sans = sorted(sans)[:_MAX_SANS_PER_CERT_FOR_EDGES]
         issuer_raw = entry.get("issuer_name")
-        issuer = str(issuer_raw) if isinstance(issuer_raw, str) else ""
+        # Strip control bytes: the issuer becomes a cluster's dominant_issuer,
+        # which is emitted in --json and the get_infrastructure_clusters MCP
+        # tool. This is the issuer path the build_cert_summary strip misses.
+        issuer = strip_control_chars(str(issuer_raw)) if isinstance(issuer_raw, str) else ""
 
         for a, b in combinations(sorted(sans), 2):
             if g.has_edge(a, b):

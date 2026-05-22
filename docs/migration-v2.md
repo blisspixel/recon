@@ -64,7 +64,7 @@ absence of "experimental" in field descriptions.
 
 The CI gate
 (`tests/test_json_schema_file.py`,
-`tests/test_v2_schema_disposition.py`) verifies the v2.0 schema
+`tests/test_schema_disposition.py`) verifies the v2.0 schema
 matches the disposition table exactly.
 
 ## What v2.0 does NOT change

@@ -36,6 +36,7 @@ from recon_tool.models import (
     TenantInfo,
     serialize_conflicts_array,
 )
+from recon_tool.validator import strip_control_chars
 
 logger = logging.getLogger(__name__)
 
@@ -2849,10 +2850,25 @@ def format_tenant_json(info: TenantInfo, *, include_unclassified: bool = False) 
     return json.dumps(format_tenant_dict(info, include_unclassified=include_unclassified), indent=2)
 
 
+# Backslash-escape the Markdown structural characters most useful for
+# injection (links, emphasis, code spans, tables, inline HTML). Applied to
+# attacker-derived free text (issuer names, display_name) in the markdown
+# report so a self-logged-cert issuer or a federation brand name cannot
+# inject a `[label](url)` link, a `|` table cell, a code-span breakout, or
+# an HTML tag. Control bytes are already removed upstream by
+# strip_control_chars; this only neutralizes printable metacharacters.
+_MARKDOWN_ESCAPE = str.maketrans({c: "\\" + c for c in "`*_[]()|<>"})
+
+
+def _markdown_escape(value: str) -> str:
+    """Neutralize Markdown structural characters in attacker-derived text."""
+    return value.translate(_MARKDOWN_ESCAPE)
+
+
 def format_tenant_markdown(info: TenantInfo) -> str:
     """Format TenantInfo as a markdown report."""
     lines: list[str] = []
-    lines.append(f"# Tenant Report: {info.display_name}")
+    lines.append(f"# Tenant Report: {_markdown_escape(info.display_name)}")
     lines.append("")
     lines.append(f"**Domain:** {info.queried_domain}  ")
     if info.tenant_id:
@@ -2935,7 +2951,7 @@ def format_tenant_markdown(info: TenantInfo) -> str:
         lines.append(f"- **Newest Cert Age:** {cs.newest_cert_age_days} days")
         lines.append(f"- **Oldest Cert Age:** {cs.oldest_cert_age_days} days")
         if cs.top_issuers:
-            lines.append(f"- **Top Issuers:** {', '.join(cs.top_issuers)}")
+            lines.append(f"- **Top Issuers:** {', '.join(_markdown_escape(i) for i in cs.top_issuers)}")
         lines.append("")
 
     # Domains
@@ -3108,7 +3124,11 @@ def render_delta_panel(report: DeltaReport) -> Panel:
         if report.changed_auth_type is not None:
             text.append("\n  ")
             text.append("~ ", style="yellow bold")
-            text.append(f"Auth: {report.changed_auth_type[0]} → {report.changed_auth_type[1]}", style="yellow")
+            # auth_type is free text from a prior snapshot (operator-supplied
+            # compare file or cache); strip control bytes before rendering.
+            _auth_prev = strip_control_chars(str(report.changed_auth_type[0]))
+            _auth_curr = strip_control_chars(str(report.changed_auth_type[1]))
+            text.append(f"Auth: {_auth_prev} → {_auth_curr}", style="yellow")
         if report.changed_dmarc_policy is not None:
             text.append("\n  ")
             text.append("~ ", style="yellow bold")

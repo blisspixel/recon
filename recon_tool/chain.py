@@ -30,6 +30,11 @@ __all__ = [
 MAX_CHAIN_DEPTH = 3
 MAX_CHAIN_DOMAINS = 50
 
+# Cap the next-level discovery queue so a pathological per-domain fan-out
+# cannot grow it without bound before the dedup + MAX_CHAIN_DOMAINS gate.
+# Generous relative to the resolution cap; only guards memory.
+_MAX_NEXT_LEVEL_QUEUE = MAX_CHAIN_DOMAINS * 20
+
 
 async def chain_resolve(
     domain: str,
@@ -123,8 +128,10 @@ async def chain_resolve(
                 )
                 max_depth_reached = max(max_depth_reached, current_depth)
 
-                # Collect related domains for next level
+                # Collect related domains for next level (queue bounded).
                 for related in info.related_domains:
+                    if len(next_level) >= _MAX_NEXT_LEVEL_QUEUE:
+                        break
                     r_lower = related.lower()
                     if r_lower not in visited:
                         next_level.append(r_lower)

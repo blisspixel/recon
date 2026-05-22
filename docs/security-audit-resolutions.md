@@ -728,6 +728,111 @@ boundary.
 
 ---
 
+## Closed: round-three audit (MCP, CLI, output, DoS - v1.9.19)
+
+A third pass ran four parallel reviews: the MCP server surface, the CLI
+/ batch / cache paths, output-format injection, and DoS / resource
+exhaustion. It confirmed rounds 1-2 held and found a further set of
+issues, all fixed in v1.9.19.
+
+### HTTP response-body size cap (HIGH) - closed
+
+The shared client read whole bodies into memory (`resp.json()` /
+`resp.text`). Several fetched endpoints have a host influenced by the
+looked-up domain (`cse.<domain>`, `mta-sts.<domain>`, the BIMI `a=`
+URL, an autodiscover redirect), so an oversized or gzip-decompression-
+bomb response could grow memory without bound before the per-cert /
+per-name caps applied. `recon_tool/http.py` now wraps every response
+stream in `_MaxBytesStream`, which aborts the read past a 10 MB cap.
+One choke point in `http_client()`; all call sites inherit it.
+
+### Malformed BIMI port aborted the DNS source (MED, v1.9.18 regression) - closed
+
+The SSRF validation added in v1.9.18 (round 2) read
+`urlparse(a_url).port` before `_parse_bimi_vmc`'s `try`/`except`.
+`urllib` raises `ValueError` on a malformed or out-of-range port
+(`:bad`, `:99999`), so a crafted BIMI `a=` URL made the helper raise.
+`_detect_email_security` awaited it without a local catch and
+`_detect_services` gathers detectors, so the exception reached
+`DNSSource.lookup`, which converts a propagated detector error into a
+whole-source error - dropping otherwise valid SPF / DMARC / MX / CNAME
+intelligence for that domain. Not SSRF and not a process crash, but an
+attacker-controlled per-lookup availability / integrity bug introduced
+by the round-2 fix.
+
+Two-layer fix: the port is now read inside a `try`/`except ValueError`
+that refuses the URL cleanly, and the `_parse_bimi_vmc` call in
+`_detect_email_security` is wrapped in `try`/`except` so this
+best-effort VMC enrichment can never abort the source (defense in depth
+against any future unguarded raise in the helper). Regression coverage
+adds malformed-port cases to `tests/test_bimi_vmc.py` plus a test that
+a raising `_parse_bimi_vmc` does not abort `_detect_email_security`.
+
+### Attacker-free-text sanitization, completed (MED) - closed
+
+Rounds 1-2 sanitized CT SAN / issuer names and the BIMI subject. The
+round-3 reviews found the free-text fields those passes missed, each
+reaching a sink that does not neutralize control bytes (`rich`'s
+`Text.append` does not strip ESC) or markdown / MCP output:
+
+- `display_name` (GetUserRealm `FederationBrandName`), `auth_type`,
+  `region`: stripped in `merger.py` at `TenantInfo` finalization. This
+  fires on a normal lookup, so it was the highest-priority residual.
+- `dominant_issuer`: the cert `issuer_name` reaches `infra_graph`
+  cluster output on a path separate from `build_cert_summary` (which
+  round 2 stripped). Now stripped in `_build_graph`;
+  `_clean_sans` additionally drops non-DNS SAN names via
+  `is_safe_dns_name` so the graph layer self-protects.
+- `cache show` (`provider_used` / `cached_at`) and `test-fingerprint`
+  (evidence `raw_value`): markup-escaped (`rich.markup.escape`) and
+  control-stripped; the delta panel strips its prior-snapshot
+  `auth_type`.
+
+`strip_control_chars` removes control bytes but keeps printable
+metacharacters, which is sufficient for JSON (the encoder escapes
+structure) and `rich` `Text.append` (no markup parse) but not for
+markdown. `format_tenant_markdown` now also markdown-escapes the issuer
+and display-name fields (`_markdown_escape`), closing link / code-span /
+table / HTML injection in the markdown report.
+
+### MCP and resource bounds (MED / LOW) - closed
+
+- `chain_lookup` (the most expensive tool) now goes through the
+  per-domain rate limiter, removing a request-amplification lever.
+- `cluster_verification_tokens` caps and deduplicates its input (100
+  distinct domains), matching the CLI batch path.
+- `reload_data` no longer clears the rate limiter (which let a caller
+  reset it between lookups); it still clears the result cache.
+- Cumulative retry-sleep cap; `test_hypothesis` / `simulate_hardening`
+  argument-length caps; `domain_report` prompt control-strip; chain BFS
+  queue cap; batch-file byte / line bound.
+
+### Intentionally not changed (rationale)
+
+- **Shared async resolver** (`_default_resolver`): safe to share across
+  concurrent lookups. It is constructed with no answer cache
+  (dnspython defaults `cache=None`), so concurrent `resolve()` calls
+  share no mutable answer state; the only shared field is the
+  benign nameserver-rotation index. Documented in `dns.py`.
+- **`raw_dns_records` accumulation**: already bounded by the DNS
+  response size per query (a TCP DNS answer caps near 64 KB), across a
+  fixed set of queries. A further per-type cap is low value.
+- **`discover_fingerprint_candidates(skip_ct=True)` cache sharing**: a
+  correctness nicety (a CT-less discover run can serve a cache hit to a
+  later full-fidelity tool within the TTL). Deferred so a security
+  release does not also change the cache-key contract; tracked for a
+  follow-up.
+- **Negative `--timeout` / `--cache-ttl`**: cosmetic robustness only
+  (no crash, no security impact); `--depth` and `--concurrency` are
+  already clamped.
+
+Regression coverage lives in the per-module test files each fix
+exercises (`test_validator.py`, `test_http.py`, `test_infra_graph.py`,
+`test_formatter.py`, `test_server_agentic.py`, `test_bimi_vmc.py`) plus
+the updated `reload_data` test.
+
+---
+
 ## Process notes
 
 * **Closure precedence.** If a scanner flags a finding listed here
