@@ -17,6 +17,12 @@ import httpx
 
 from recon_tool.http import http_client
 from recon_tool.models import EvidenceRecord, SourceResult
+from recon_tool.validator import strip_control_chars
+
+# Bound the federated-domain list parsed from an Autodiscover response. Real
+# tenants have at most a few hundred federated domains; the cap stops a large
+# (Microsoft-returned, but body-capped) response from inflating the list.
+_MAX_AUTODISCOVER_DOMAINS = 1000
 
 logger = logging.getLogger("recon")
 
@@ -72,11 +78,17 @@ def _parse_autodiscover_domains(xml_text: str) -> tuple[list[str], str | None]:
         # Strip namespace: "{http://...}Domain" -> "Domain"
         local_name = tag.split("}")[-1] if "}" in tag else tag
         if local_name == "Domain" and elem.text:
-            domain_val = elem.text.strip().lower()
+            # Strip control bytes (defense in depth: these reach output) and
+            # cap the count. We do not charset-restrict to DNS-only here, to
+            # preserve legitimate entity-decoded values; the body cap and this
+            # count cap bound the list.
+            domain_val = strip_control_chars(elem.text.strip().lower())
             if domain_val:
                 all_domains.append(domain_val)
                 if domain_val.endswith(".onmicrosoft.com") and default_domain is None:
                     default_domain = domain_val
+            if len(all_domains) >= _MAX_AUTODISCOVER_DOMAINS:
+                break
 
     return sorted(set(all_domains)), default_domain
 

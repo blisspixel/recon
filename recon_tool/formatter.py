@@ -2567,8 +2567,13 @@ def render_sources_detail(results: list[SourceResult]) -> Table:
     for result in results:
         status = Text("✓ success", style="green") if result.is_success else Text("✗ failed", style="red")
         tenant_id = result.tenant_id or "—"
-        region = result.region or "—"
-        details = result.error or ("M365 detected" if result.m365_detected else "—")
+        # region and error can carry attacker-influenced text (a federation
+        # region value, or a domain / exception interpolated into an error
+        # string); strip control bytes for parity with the primary panel.
+        region = strip_control_chars(result.region) if result.region else "—"
+        details = (
+            strip_control_chars(result.error) if result.error else ("M365 detected" if result.m365_detected else "—")
+        )
         table.add_row(result.source_name, status, tenant_id, region, details)
 
     return table

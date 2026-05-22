@@ -11,6 +11,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
+from hypothesis import HealthCheck, settings
 
 from recon_tool.models import (
     BIMIIdentity,
@@ -21,6 +22,19 @@ from recon_tool.models import (
     MergeConflicts,
     TenantInfo,
 )
+
+# These property tests verify correctness invariants, not performance, so a
+# per-example wall-clock deadline only produces machine-load-dependent flakes
+# (a slow CI box or a busy local run trips DeadlineExceeded / the too_slow
+# health check on logic that is actually fast). Register and load a profile
+# that drops the deadline and that health check suite-wide; correctness
+# assertions still run on every generated example.
+settings.register_profile(
+    "recon",
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
+)
+settings.load_profile("recon")
 
 
 @pytest.fixture

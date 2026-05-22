@@ -383,3 +383,7 @@ class TestDNSSourceErrorHandling:
         assert isinstance(result, SourceResult)
         # A non-failing detector's work survived (SPF strict from the TXT).
         assert "SPF: strict (-all)" in result.detected_services
+        # The failure is observable (v1.9.21): the failed detector is recorded
+        # in degraded_sources rather than silently dropped, so a real
+        # regression breaking a detector for all inputs is visible in output.
+        assert "detector:mx" in result.degraded_sources
