@@ -20,8 +20,10 @@ from typing import Any, Literal, TypeAlias
 
 import click
 import typer
+from rich.markup import escape
 
 from recon_tool.formatter import get_console
+from recon_tool.validator import strip_control_chars
 
 McpCheck: TypeAlias = tuple[str, bool, str]
 DoctorStatus: TypeAlias = Literal["ok", "warn", "fail"]
@@ -886,9 +888,12 @@ def cache_show(
         age_str = "today" if info.age_days == 0 else f"{info.age_days} day{'s' if info.age_days != 1 else ''} old"
         console.print()
         console.print(f"  [bold]{info.domain}[/bold]")
-        console.print(f"    Provider:   {info.provider_used}")
+        # provider_used / cached_at come from the cache file; escape markup
+        # and strip control bytes so a poisoned entry cannot inject ANSI or
+        # Rich markup (or crash the command on unbalanced tags).
+        console.print(f"    Provider:   {escape(strip_control_chars(str(info.provider_used)))}")
         console.print(f"    Subdomains: {info.subdomain_count}")
-        console.print(f"    Cached:     {info.cached_at}")
+        console.print(f"    Cached:     {escape(strip_control_chars(str(info.cached_at)))}")
         console.print(f"    Age:        {age_str}")
         console.print(f"    Size:       {info.file_size_bytes:,} bytes")
         console.print()
@@ -902,7 +907,10 @@ def cache_show(
         console.print()
         for e in entries:
             age_str = "today" if e.age_days == 0 else f"{e.age_days}d"
-            console.print(f"    {e.domain:<30s}  {e.subdomain_count:>4d} subs  {age_str:>5s}  {e.provider_used}")
+            console.print(
+                f"    {e.domain:<30s}  {e.subdomain_count:>4d} subs  {age_str:>5s}  "
+                f"{escape(strip_control_chars(str(e.provider_used)))}"
+            )
         console.print()
 
 
@@ -1475,7 +1483,10 @@ def fingerprints_test(
     hits = [(d, detail) for d, m, detail in results if m]
     misses = [d for d, m, _ in results if not m]
     for d, detail in hits:
-        console.print(f"    [green]MATCH[/green]  {d}    {detail}")
+        # detail carries evidence raw_value (e.g. BIMI VMC org); escape
+        # markup and strip control bytes so it cannot inject Rich markup
+        # or ANSI into the operator's terminal.
+        console.print(f"    [green]MATCH[/green]  {escape(d)}    {escape(strip_control_chars(detail))}")
     console.print()
     console.print(f"  [bold]{len(hits)} of {len(domains)} matched[/bold]  ({len(misses)} did not)")
     if hits:
@@ -2465,9 +2476,7 @@ async def _lookup(
             elif fmt == "text":
                 typer.echo(render_dag_text(network, inference, domain=validated))
             else:
-                render_error(
-                    f"--explain-dag-format must be 'text', 'dot', or 'mermaid', got {explain_dag_format!r}"
-                )
+                render_error(f"--explain-dag-format must be 'text', 'dot', or 'mermaid', got {explain_dag_format!r}")
                 raise typer.Exit(code=EXIT_VALIDATION) from None
             return
 
@@ -2717,11 +2726,26 @@ async def _batch(
         render_error(f"File not found: {file}")
         raise typer.Exit(code=EXIT_VALIDATION)
 
-    # Stream lines instead of reading entire file to avoid OOM on huge files
+    # Stream lines instead of reading entire file to avoid OOM on huge
+    # files. Bound both the per-line read (so a newline-free multi-GB
+    # "line" cannot be buffered whole) and the cumulative bytes (so a file
+    # of millions of blank/comment lines, which never increments the
+    # domain count, cannot loop unbounded). A real domain line is well
+    # under the per-line cap and a real batch file well under the total.
+    _MAX_BATCH_LINE_BYTES = 1024
+    _MAX_BATCH_FILE_BYTES = 10 * 1024 * 1024
     domain_list: list[str] = []
     try:
         with path.open(encoding="utf-8") as f:
-            for line in f:
+            total_bytes = 0
+            while True:
+                line = f.readline(_MAX_BATCH_LINE_BYTES)
+                if not line:
+                    break
+                total_bytes += len(line)
+                if total_bytes > _MAX_BATCH_FILE_BYTES:
+                    render_error(f"Batch file exceeds maximum size of {_MAX_BATCH_FILE_BYTES // (1024 * 1024)} MB")
+                    raise typer.Exit(code=EXIT_VALIDATION)
                 stripped = line.strip()
                 if stripped and not stripped.startswith("#"):
                     domain_list.append(stripped)

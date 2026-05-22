@@ -57,15 +57,48 @@ def _fake_http_client(resp: _Resp, calls: list[tuple[str, dict[str, Any]]]) -> A
         "https://user:pass@attacker.example/vmc.pem",  # embedded credentials
         "https://attacker.example:8443/vmc.pem",  # non-default port
         "https://localhost/vmc.pem",  # single-label, not a public DNS name
+        # Malformed / out-of-range ports: urllib's .port raises ValueError.
+        # These must be refused cleanly, not raise out of the helper and
+        # abort the whole DNS source (regression for the v1.9.18 port bug).
+        "https://attacker.example:bad/vmc.pem",
+        "https://attacker.example:99999/vmc.pem",
     ],
 )
 async def test_refuses_unsafe_a_url(a_url: str):
     ctx = dns_mod._DetectionCtx()
     calls: list[tuple[str, dict[str, Any]]] = []
     with patch.object(dns_mod, "_http_client", _fake_http_client(_Resp(200, "x"), calls)):
+        # Must not raise: a crafted a= URL is an enrichment input, never a
+        # source-aborting exception.
         await dns_mod._parse_bimi_vmc(ctx, f"v=BIMI1; l=https://logo.example/l.svg; a={a_url}")
     assert calls == [], f"must not fetch unsafe a= URL: {a_url}"
     assert ctx.bimi_identity is None
+
+
+@pytest.mark.asyncio
+async def test_malformed_port_does_not_abort_email_security():
+    # Defense in depth: even if BIMI VMC parsing raised, _detect_email_security
+    # must keep the BIMI service detection and not propagate (which would turn
+    # the whole DNS source into an error and drop valid SPF/DMARC/MX data).
+    ctx = dns_mod._DetectionCtx()
+
+    async def _boom(_ctx: Any, _txt: str) -> None:
+        raise ValueError("simulated BIMI parse failure")
+
+    async def _txt_for(domain: str, rdtype: str, **_kw: Any) -> list[str]:
+        # Return a BIMI record only for the default._bimi.<domain> name.
+        if rdtype == "TXT" and domain.startswith("default._bimi."):
+            return ["v=BIMI1; a=https://attacker.example:bad/vmc.pem"]
+        return []
+
+    with (
+        patch.object(dns_mod, "_parse_bimi_vmc", _boom),
+        patch.object(dns_mod, "_safe_resolve", _txt_for),
+    ):
+        # Must complete without raising; BIMI service still recorded.
+        await dns_mod._detect_email_security(ctx, "example.com")
+
+    assert dns_mod.SVC_BIMI in ctx.services
 
 
 @pytest.mark.asyncio

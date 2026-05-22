@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+
+import httpx
 import pytest
 
-from recon_tool.http import _is_private_ip, http_client
+from recon_tool.http import _is_private_ip, _MaxBytesStream, http_client
 
 
 class TestSSRFProtection:
@@ -65,3 +68,36 @@ class TestHttpClientLifecycle:
             pass
         # After exiting context, client should be closed
         assert client.is_closed
+
+
+class _FakeStream(httpx.AsyncByteStream):
+    def __init__(self, chunks: list[bytes]) -> None:
+        self._chunks = chunks
+
+    async def __aiter__(self) -> AsyncGenerator[bytes]:
+        for chunk in self._chunks:
+            yield chunk
+
+    async def aclose(self) -> None:
+        return None
+
+
+class TestResponseBodyCap:
+    """_MaxBytesStream aborts an oversized response body during the read, so
+    a hostile or decompression-bomb endpoint cannot force recon to buffer
+    an unbounded body into memory."""
+
+    @pytest.mark.asyncio
+    async def test_aborts_oversized_body(self):
+        wrapped = _MaxBytesStream(_FakeStream([b"x" * 4096] * 4), max_bytes=8192)
+        with pytest.raises(httpx.ReadError):
+            async for _chunk in wrapped:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_allows_body_within_cap(self):
+        wrapped = _MaxBytesStream(_FakeStream([b"hello", b"world"]), max_bytes=1024)
+        out = b""
+        async for chunk in wrapped:
+            out += chunk
+        assert out == b"helloworld"

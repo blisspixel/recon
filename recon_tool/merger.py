@@ -32,6 +32,7 @@ from recon_tool.models import (
     UnclassifiedCnameChain,
 )
 from recon_tool.signals import evaluate_signals, load_signals
+from recon_tool.validator import strip_control_chars
 
 __all__ = [
     "build_insights_with_signals",
@@ -794,6 +795,21 @@ def merge_results(
             display_name = queried_domain
     if default_domain is None:
         default_domain = queried_domain
+
+    # Security: scrub free-text fields that originate from sources recon
+    # does not control before they enter TenantInfo and reach the panel /
+    # JSON / MCP output. display_name (GetUserRealm FederationBrandName),
+    # auth_type (NameSpaceType), and region are influenced by the looked-up
+    # domain's federation configuration; rich's Text.append does not strip
+    # ESC, so an unscrubbed value here is an ANSI-injection vector on a
+    # normal lookup. queried_domain and the already-stripped BIMI VMC org
+    # are idempotent under this.
+    if display_name:
+        display_name = strip_control_chars(display_name)
+    if auth_type:
+        auth_type = strip_control_chars(auth_type)
+    if region:
+        region = strip_control_chars(region)
 
     confidence, has_id_conflict = compute_confidence(results)
     sources = tuple(r.source_name for r in results if r.is_success)

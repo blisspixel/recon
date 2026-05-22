@@ -37,6 +37,23 @@ MAX_RETRIES = 3
 RETRY_BACKOFF_BASE = 1.0  # seconds — doubles each retry (1s, 2s, 4s)
 RETRYABLE_STATUS_CODES = frozenset({429, 503})
 
+# Cumulative cap on retry sleeping for a single request. The per-attempt
+# Retry-After is capped at 30s, but three attempts could otherwise stack
+# to ~90s and consume most of the 120s aggregate resolve budget when an
+# attacker-influenced endpoint returns 429 repeatedly. Bound the total.
+_MAX_TOTAL_RETRY_SLEEP = 30.0
+
+# Hard ceiling on a single HTTP response body. Several endpoints recon
+# fetches have a host influenced by the looked-up domain owner
+# (cse.<domain>, mta-sts.<domain>, the BIMI a= VMC URL, autodiscover
+# redirects), and CT providers are third parties. resp.json() / resp.text
+# buffer the whole body into memory, so without a cap a multi-GB or
+# gzip-decompression-bomb response could OOM the process (or the MCP
+# server). 10 MB is far above any legitimate response recon reads (CT
+# JSON pages are bounded by their own entry caps; policy/config files are
+# tiny). Enforced by _MaxBytesStream during the body read.
+_MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+
 # IP networks that must never be reached via redirects (SSRF protection).
 # Covers loopback, private RFC1918, link-local, and cloud metadata ranges.
 _BLOCKED_NETWORKS = [
@@ -134,6 +151,31 @@ def _is_private_ip(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
     return False
 
 
+class _MaxBytesStream(httpx.AsyncByteStream):
+    """Wrap a response byte stream and abort once it exceeds *max_bytes*.
+
+    Counts bytes as the client reads the body (resp.json() / resp.text /
+    resp.aread() all iterate this stream) and raises once the cap is
+    exceeded, so a hostile endpoint cannot force recon to buffer an
+    unbounded body into memory. Closing delegates to the wrapped stream.
+    """
+
+    def __init__(self, stream: httpx.AsyncByteStream, max_bytes: int) -> None:
+        self._stream = stream
+        self._max_bytes = max_bytes
+
+    async def __aiter__(self) -> AsyncGenerator[bytes]:
+        total = 0
+        async for chunk in self._stream:
+            total += len(chunk)
+            if total > self._max_bytes:
+                raise httpx.ReadError(f"response body exceeded {self._max_bytes}-byte cap")
+            yield chunk
+
+    async def aclose(self) -> None:
+        await self._stream.aclose()
+
+
 class _SSRFSafeTransport(httpx.AsyncHTTPTransport):
     """Transport wrapper that blocks requests to private/internal IPs.
 
@@ -142,15 +184,20 @@ class _SSRFSafeTransport(httpx.AsyncHTTPTransport):
     open redirects on upstream endpoints, including DNS rebinding attacks
     where a hostname resolves to an internal IP.
 
-    Uses async DNS resolution to avoid blocking the event loop.
-    See module docstring for TOCTOU limitations.
+    It also wraps the response body in _MaxBytesStream so an oversized or
+    decompression-bomb response is aborted during the read rather than
+    buffered whole. Uses async DNS resolution to avoid blocking the event
+    loop. See module docstring for TOCTOU limitations.
     """
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         host = request.url.host or ""
         if await _is_private_ip_async(host):
             raise httpx.ConnectError(f"SSRF blocked: request to private/internal IP {host}")
-        return await super().handle_async_request(request)
+        response = await super().handle_async_request(request)
+        if isinstance(response.stream, httpx.AsyncByteStream):
+            response.stream = _MaxBytesStream(response.stream, _MAX_RESPONSE_BYTES)
+        return response
 
 
 class _RetryTransport(httpx.AsyncHTTPTransport):
@@ -170,6 +217,7 @@ class _RetryTransport(httpx.AsyncHTTPTransport):
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         last_response: httpx.Response | None = None
+        total_slept = 0.0
         for attempt in range(MAX_RETRIES + 1):
             response = await self._wrapped.handle_async_request(request)
             if response.status_code not in RETRYABLE_STATUS_CODES:
@@ -192,6 +240,14 @@ class _RetryTransport(httpx.AsyncHTTPTransport):
                         delay = RETRY_BACKOFF_BASE * (2**attempt)
                 else:
                     delay = RETRY_BACKOFF_BASE * (2**attempt)
+                # Bound cumulative sleeping so repeated 429s on an
+                # attacker-influenced endpoint cannot stack toward the
+                # aggregate resolve budget. Once the total cap is reached,
+                # stop retrying and return the last response.
+                delay = min(delay, max(0.0, _MAX_TOTAL_RETRY_SLEEP - total_slept))
+                if delay <= 0.0:
+                    break
+                total_slept += delay
                 logger.debug(
                     "HTTP %d from %s — retrying in %.1fs (attempt %d/%d)",
                     response.status_code,

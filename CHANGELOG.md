@@ -10,6 +10,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
 is the next planned event; see `docs/roadmap.md`.
 
+## [1.9.19] - 2026-05-21
+
+### Security
+
+Round-three audit pass (four parallel reviews: MCP server, CLI / batch,
+output-format injection, DoS / resource). Findings and fixes:
+
+- **HTTP response-body size cap.** The shared client buffered whole
+  response bodies (`resp.json()` / `resp.text`), so an attacker-influenced
+  endpoint (`cse.<domain>`, `mta-sts.<domain>`, the BIMI `a=` URL, an
+  autodiscover redirect) or a decompression bomb could grow memory
+  without bound. Responses are now aborted past a 10 MB cap during the
+  read (`_MaxBytesStream`), inherited by every call site.
+- **Fixed a v1.9.18 regression: a malformed BIMI port aborted the DNS
+  source.** The SSRF validation added in v1.9.18 read
+  `urlparse(a_url).port`, which raises `ValueError` on a malformed or
+  out-of-range port (`:bad`, `:99999`), and that access sat before the
+  helper's `try`/`except`. A crafted BIMI `a=` URL therefore made
+  `_parse_bimi_vmc` raise, which propagated through `_detect_services`
+  and turned the whole DNS source into an error, dropping otherwise
+  valid SPF / DMARC / MX / CNAME intelligence for that domain. The port
+  is now read inside a guard that refuses the URL cleanly, and the
+  `_parse_bimi_vmc` call in `_detect_email_security` is wrapped so this
+  best-effort enrichment can never abort the source.
+- **Completed the attacker-free-text sanitization class.** Round 2
+  scrubbed CT SANs / issuers and the BIMI subject; round 3 found the
+  fields it missed, all of which reach the terminal (rich does not strip
+  ESC) or markdown / MCP output:
+  - `display_name` (GetUserRealm `FederationBrandName`), `auth_type`, and
+    `region` are control-char stripped in `merger.py` before they enter
+    `TenantInfo` (this one fires on a normal lookup).
+  - `dominant_issuer` (the cert issuer feeding `infra_graph` clusters) is
+    stripped at the graph layer, closing the issuer path the round-2
+    `build_cert_summary` strip missed; `infra_graph._clean_sans` also
+    drops non-DNS SAN names so the graph layer is self-protecting.
+  - cache `provider_used` / `cached_at` (`cache show`) and the
+    `test-fingerprint` evidence detail are markup-escaped and
+    control-stripped; the delta panel strips its prior-snapshot
+    `auth_type`.
+- **Markdown structure injection.** `strip_control_chars` preserves
+  printable metacharacters, so an issuer or display name could still
+  inject `[](url)` links, code spans, tables, or HTML into the markdown
+  report (CLI and MCP). `format_tenant_markdown` now markdown-escapes
+  those fields.
+- **`chain_lookup` request amplification.** The most expensive MCP tool
+  bypassed the per-domain rate limiter; it is now gated like the
+  single-domain tools.
+- **`cluster_verification_tokens`** caps and deduplicates its input (100
+  distinct domains), matching the CLI batch path, so an MCP caller cannot
+  drive unbounded sequential resolves.
+- **`reload_data`** no longer clears the rate limiter (which let a caller
+  bypass it between lookups); it still clears the result cache.
+- Smaller bounds: cumulative retry-sleep cap (was up to roughly 90s per
+  request); `test_hypothesis` / `simulate_hardening` argument-length
+  caps; `domain_report` prompt control-char strip; chain BFS queue cap;
+  batch input byte / line bound (a newline-free or all-comment file no
+  longer loops or buffers without limit).
+- New shared validator helper `is_safe_dns_name`; the cert-provider SAN
+  check now aliases it.
+
+Audit items intentionally left unchanged, with rationale in
+`docs/security-audit-resolutions.md`: the shared async resolver (safe,
+no answer cache to race); `raw_dns_records` accumulation (already bounded
+by DNS response size); the `discover` `skip_ct` cache-key sharing
+(correctness nicety, deferred to avoid changing the cache contract in a
+security release); negative `--timeout` / `--cache-ttl` (cosmetic, no
+security impact).
+
+### Tests
+
+- Regressions added in the per-module test file each one exercises:
+  `is_safe_dns_name` (`test_validator.py`), the HTTP body cap
+  (`test_http.py`), the `dominant_issuer` strip and `_clean_sans` charset
+  drop (`test_infra_graph.py`), markdown escaping (`test_formatter.py`),
+  the `cluster_verification_tokens` cap (`test_server_agentic.py`), and
+  the malformed-BIMI-port cases (`test_bimi_vmc.py`).
+- Updated the `reload_data` test to assert the rate limiter is preserved.
+
 ## [1.9.18] - 2026-05-20
 
 ### Security
@@ -453,7 +531,7 @@ This is the v1.9.11 step of the v1.9.4 → v2.0 linear sequence in
   one known schema gap (`ecosystem_hyperedges` was previously a
   typed property only in description text; now formally a
   property of the BatchResult def). The schema-disposition test
-  `tests/test_v2_schema_disposition.py` is fully green with zero
+  `tests/test_schema_disposition.py` is fully green with zero
   known gaps.
 - **`scripts/check_no_experimental_labels.py`.** Targeted CI gate
   that pattern-matches active EXPERIMENTAL labels (parentheticals,
@@ -507,7 +585,7 @@ This is the v1.9.11 step of the v1.9.4 → v2.0 linear sequence in
   corpus with 8+ fixtures firing the node; real-corpus
   authoritative number recorded in `validation/v2.0-corpus-run.md`
   per the v2.0 gate).
-- **`tests/test_v2_schema_disposition.py`** updated:
+- **`tests/test_schema_disposition.py`** updated:
   `ecosystem_hyperedges` moved from `_V2_KNOWN_SCHEMA_GAPS` to
   `_V2_PROMOTED_FIELDS` once the BatchResult schema definition
   shipped. Gap list is empty at v1.9.11 ship; the v2.0 check
@@ -523,7 +601,7 @@ This is the v1.9.11 step of the v1.9.4 → v2.0 linear sequence in
   `scripts/check_no_experimental_labels.py` reports 0/0/0.
 - `scripts/check_no_experimental_labels.py` returns 0 active
   labels.
-- `tests/test_v2_schema_disposition.py` 6 tests all green; the
+- `tests/test_schema_disposition.py` 6 tests all green; the
   v2.0-blocks-on-unresolved-gap test confirms the gap list is
   empty.
 
@@ -2787,7 +2865,7 @@ for the full calibration aggregate and reproducibility instructions.
   `mta_sts_enforce`, `dkim_present`, `spf_strict`. Provider-
   independent - a Zoho or Fastmail tenant with a strict DMARC
   reject policy fires this node identically to an M365 one.
-- **`tests/test_bayesian_v193_topology.py`** - 11 regression tests
+- **`tests/test_bayesian_topology.py`** - 11 regression tests
   pinning the new topology against silent reversion.
 - **`validation/v1.9.3-calibration.md`** - per-release calibration
   aggregate (sensitivity, synthetic ECE, spot-check); part of the
@@ -3282,7 +3360,7 @@ formal model and citations in
     invariants under random conflicts, determinism.
   - `test_bayesian_sensitivity.py` - CPT ±0.10 perturbation bound.
   - `test_bayesian_validation_rounds.py` - 24 inference invariants.
-  - `test_v19_robustness.py` - cache round-trip with malformed
+  - `test_fusion_robustness.py` - cache round-trip with malformed
     entries, CLI flag combinations, MCP error paths, determinism +
     concurrency, scale stress (15-node chain, 10-child wide network).
   - `test_fusion_integration.py` - end-to-end --fusion path.

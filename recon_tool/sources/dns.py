@@ -76,7 +76,14 @@ def _get_resolver() -> dns.asyncresolver.Resolver:
     return _default_resolver
 
 
-# Default async resolver instance - reused across queries within a lookup.
+# Default async resolver instance - reused across queries within a lookup
+# and across concurrent lookups. This is safe to share: the resolver is
+# constructed with no answer cache (dnspython defaults cache=None), so
+# concurrent resolve() calls from many asyncio tasks share no mutable
+# answer state. The only shared mutable field is the nameserver-rotation
+# index, whose races are benign (they only affect which configured
+# nameserver a query picks). A per-lookup resolver would add construction
+# cost on the hot path without a correctness benefit.
 _default_resolver = dns.asyncresolver.Resolver()
 
 
@@ -826,13 +833,22 @@ async def _parse_bimi_vmc(ctx: _DetectionCtx, bimi_txt: str) -> None:
     # destinations. See docs/security-audit-resolutions.md.
     from urllib.parse import urlparse
 
-    parsed = urlparse(a_url)
-    host = (parsed.hostname or "").lower()
+    try:
+        parsed = urlparse(a_url)
+        host = (parsed.hostname or "").lower()
+        # ``.port`` raises ValueError on a malformed or out-of-range port
+        # (e.g. ":bad", ":99999"). Read it inside the guard so a crafted
+        # BIMI record is refused cleanly rather than raising out of this
+        # enrichment helper and aborting the whole DNS source.
+        port = parsed.port
+    except ValueError:
+        logger.debug("BIMI VMC a= URL refused (unparseable URL/port): %s", a_url)
+        return
     if (
         parsed.scheme != "https"
         or parsed.username
         or parsed.password
-        or parsed.port not in (None, 443)
+        or port not in (None, 443)
         or not _is_public_dns_name(host)
     ):
         logger.debug("BIMI VMC a= URL refused (requires https + public host): %s", a_url)
@@ -1009,8 +1025,14 @@ async def _detect_email_security(ctx: _DetectionCtx, domain: str) -> None:
     for txt in bimi_results:
         if "v=bimi1" in txt.lower():
             ctx.services.add(SVC_BIMI)
-            # Attempt VMC corporate identity extraction
-            await _parse_bimi_vmc(ctx, txt)
+            # Attempt VMC corporate identity extraction. This is best-effort
+            # enrichment over an attacker-authored record, so it must never
+            # abort the DNS source: catch anything it raises and keep the
+            # BIMI service detection plus the rest of the DNS intelligence.
+            try:
+                await _parse_bimi_vmc(ctx, txt)
+            except Exception as exc:
+                logger.debug("BIMI VMC enrichment failed for %s: %s", domain, exc)
 
     mta_sts_detected = False
     for txt in mta_sts_results:
