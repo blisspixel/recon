@@ -60,6 +60,7 @@ from recon_tool.models import (
 )
 from recon_tool.motifs import load_motifs, match_chain_motifs
 from recon_tool.sources.cert_providers import CertIntelProvider, CertSpotterProvider, CrtshProvider
+from recon_tool.validator import strip_control_chars
 
 logger = logging.getLogger("recon")
 
@@ -69,6 +70,11 @@ logger = logging.getLogger("recon")
 # this as the `lifetime` parameter - total wall-clock time for the query
 # including retries across all configured nameservers.
 DNS_QUERY_TIMEOUT = 5.0
+
+# Max length of an attacker-controlled TXT value we will run a user-supplied
+# regex against (subdomain_txt detections). Mirrors fingerprints._MAX_TXT_MATCH_LENGTH;
+# bounds backtracking amplification from a crafted multi-KB TXT record.
+_MAX_SUBDOMAIN_TXT_MATCH_LEN = 4096
 
 
 def _get_resolver() -> dns.asyncresolver.Resolver:
@@ -379,9 +385,14 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
             ctx.add(result.name, result.slug, source_type="TXT", raw_value=txt)
             ctx.record_fp_match(result.slug, "txt", result.pattern)
 
-        # Extract google-site-verification tokens for relationship mapping
+        # Extract google-site-verification tokens for relationship mapping.
+        # Strip control bytes: the token is attacker-controlled and is
+        # serialized into JSON / MCP output and clustering. JSON escaping
+        # contains it today, but stripping at ingestion keeps any future
+        # non-JSON renderer safe by construction (tokens are base64/hex, so
+        # this is lossless for legitimate values).
         if txt_lower.startswith("google-site-verification="):
-            token = txt[len("google-site-verification=") :].strip()
+            token = strip_control_chars(txt[len("google-site-verification=") :].strip())
             if token:
                 ctx.site_verification_tokens.add(token)
 
@@ -901,8 +912,6 @@ async def _parse_bimi_vmc(ctx: _DetectionCtx, bimi_txt: str) -> None:
             # The VMC subject fields come from a PEM served at the
             # attacker-influenced a= URL. Strip control bytes and bound
             # length before they reach any panel / markdown / MCP sink.
-            from recon_tool.validator import strip_control_chars
-
             org = strip_control_chars(org)
             country = strip_control_chars(country) if country else None
             state = strip_control_chars(state) if state else None
@@ -1267,6 +1276,13 @@ async def _detect_subdomain_txt(ctx: _DetectionCtx, domain: str) -> None:
 
     for (_, regex, name, slug, original_pattern), txt_records in zip(parsed, results, strict=True):
         for txt in txt_records:
+            # Bound the attacker-controlled TXT value before running a
+            # user-supplied regex against it, mirroring match_txt. Without
+            # this cap a crafted multi-KB TXT plus a greedy / catastrophic
+            # operator regex would amplify backtracking. This is the only
+            # user-regex DNS path that previously lacked the length bound.
+            if len(txt) > _MAX_SUBDOMAIN_TXT_MATCH_LEN:
+                continue
             try:
                 if re.search(regex, txt, re.IGNORECASE):
                     ctx.add(name, slug)
@@ -2108,16 +2124,24 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
     sem = asyncio.Semaphore(_SURFACE_CONCURRENCY)
 
     async def _process(host: str) -> tuple[str, list[str]] | None:
-        async with sem:
-            chain = await _resolve_cname_chain(host)
-            if not chain:
-                return None
-            # Filter wildcard echoes: when a host's terminal matches the
-            # wildcard probe's terminal, the host is not genuinely
-            # delegated - it just got the wildcard answer. Skip.
-            if wildcard_terminal is not None and chain[-1] == wildcard_terminal:
-                return None
-            return host, chain
+        # Isolate per-host failures: this gather runs after the main
+        # detector gather and is awaited by _detect_services, so an
+        # unhandled raise here would still abort the whole DNS source.
+        # A failed host returns None and is skipped, like a no-chain host.
+        try:
+            async with sem:
+                chain = await _resolve_cname_chain(host)
+                if not chain:
+                    return None
+                # Filter wildcard echoes: when a host's terminal matches
+                # the wildcard probe's terminal, the host is not genuinely
+                # delegated - it just got the wildcard answer. Skip.
+                if wildcard_terminal is not None and chain[-1] == wildcard_terminal:
+                    return None
+                return host, chain
+        except Exception as exc:
+            logger.debug("surface classifier failed for %s: %s", host, exc)
+            return None
 
     results = await asyncio.gather(*(_process(h) for h in targets))
 
@@ -2313,7 +2337,23 @@ class DNSSource:
         if not skip_ct:
             detectors.append(_detect_cert_intel(ctx, domain))
 
-        await asyncio.gather(*detectors)
+        # Isolate each detector so one failure on crafted input degrades
+        # gracefully instead of aborting the whole DNS source. A bare
+        # asyncio.gather propagates the first exception up to
+        # DNSSource.lookup, which converts it into a whole-source error and
+        # discards every other detector's intelligence (this is the
+        # v1.9.18 BIMI-port bug generalized: any detector raise nukes the
+        # source). Each detector mutates the shared ctx in place, so a
+        # partial contribution from a failing detector still survives.
+        # BaseException (cancellation / KeyboardInterrupt) still propagates.
+        async def _isolate(coro: Any) -> None:
+            name = getattr(getattr(coro, "cr_code", None), "co_name", "detector")
+            try:
+                await coro
+            except Exception as exc:
+                logger.debug("DNS detector %s failed: %s", name, exc)
+
+        await asyncio.gather(*(_isolate(d) for d in detectors))
 
         # Remove the queried domain itself from related_domains
         ctx.related_domains.discard(domain.lower())

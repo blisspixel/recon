@@ -833,6 +833,103 @@ the updated `reload_data` test.
 
 ---
 
+## Closed: round-four audit (config loading, analysis, detector safety - v1.9.20)
+
+A fourth pass ran four parallel reviews (data-file / config loading,
+analysis modules, detector exception-safety, and a regression re-audit
+of the v1.9.19 changes) plus surfaced a dependency advisory.
+
+### Detector exception isolation (HIGH) - closed
+
+The BIMI-port fix (v1.9.19) restored exception-safety for one detector,
+but `_detect_services` gathered all ~17 detectors with a bare
+`asyncio.gather` (no `return_exceptions`, no per-task wrap), and the
+surface-classification pass did the same for its `_process` gather.
+`asyncio.gather` propagates the first exception, which `DNSSource.lookup`
+converts into a whole-source error - so any single detector raising on
+crafted input still discarded all other DNS intelligence. This is the
+generalization the round-three doc noted it had stopped short of.
+
+Fix: each detector now runs through a local `_isolate` wrapper that logs
+and swallows `Exception` (BaseException / cancellation still
+propagates), so one detector's failure degrades gracefully and every
+other detector's contribution to the shared ctx survives. The surface
+`_process` gather is wrapped the same way. This removes the dependency
+on every detector being individually exception-proof, which is how the
+v1.9.18 regression happened.
+
+### starlette PYSEC-2026-161 (MED) - closed, and why v1.9.19 did not publish
+
+`starlette` 1.0.0 (transitive via `mcp`) gained advisory PYSEC-2026-161
+(fixed in 1.0.1). It was published after v1.9.19's CI ran but before its
+release pipeline ran, so the release `test` job's `pip-audit` failed and
+v1.9.19's build / publish / GitHub-release jobs were skipped - the tag
+exists but never reached PyPI. The lockfile upgrade to 1.0.1 clears it.
+v1.9.20 is the published successor and is cumulative over v1.9.19.
+
+### Uncapped TXT length into a user regex (MED) - closed
+
+`_detect_subdomain_txt` ran an operator / ephemeral regex against an
+attacker-controlled TXT value with no length bound (the one DNS path
+that lacked one; `match_txt` and the substring paths were already
+bounded). A crafted multi-KB TXT plus a greedy or catastrophic regex
+amplified backtracking. Now capped at 4096 chars before `re.search`,
+matching `match_txt`, and aligning with the threat-model doc's "length
+caps on all DNS string values" claim.
+
+### Quadratic clustering blowup (MED) - closed
+
+`compute_shared_tokens` built a `k*(k-1)` peer cross-product per shared
+token; the CLI batch path allows up to 10k domains, so one widely-shared
+token (a managed-DNS provider record, or an attacker registering many
+domains with one crafted token) could materialize ~100M objects. Tokens
+shared by more than 200 domains are now skipped as noise, bounding the
+work. The MCP equivalent was already capped at 100.
+
+### ReDoS heuristic gaps (MED) - partially closed + documented
+
+`_REDOS_RE` missed bounded-repetition blowups like `(a+){20}` and its
+comment falsely claimed it caught `(a|a)+`. The heuristic now flags the
+`{n}` form. It deliberately does NOT flag quantified alternation,
+because safe `(foo|bar)+` is common in real fingerprints and
+distinguishing it from dangerous overlapping `(a|a)+` needs analysis a
+regex cannot do. Overlapping-alternation and nested-group ReDoS are
+instead bounded by the input length caps (the TXT cap above and
+`_MAX_TXT_MATCH_LENGTH`), which cap worst-case backtracking regardless
+of pattern. A linear-time engine (google-re2) would remove the heuristic
+but crosses the pure-Python dependency floor.
+
+### Markdown / token sanitization completed (LOW-MED) - closed
+
+The v1.9.19 markdown escape covered `display_name` and issuer names but
+missed `auth_type`, `region`, `google_auth_type`, `google_idp_name`, and
+the `insights` list - all attacker-influenced free text rendered into
+the markdown report. All now go through `_markdown_escape`.
+`google-site-verification` tokens are control-stripped at extraction
+(they reach JSON / MCP output and clustering; JSON encoding contained
+them, but stripping at ingestion keeps any future renderer safe).
+
+### Intentionally not changed (rationale)
+
+- **Priors-override `0.0` / `1.0` root prior**: a degenerate root prior
+  pins a node, but this is plausibly an intended operator capability in
+  `~/.recon/priors.yaml`, and is distinct from the likelihood `{0,1}`
+  ban (which exists so one mis-fingerprint cannot pin a node). Left as a
+  documented operator choice rather than removing the capability.
+- **Catalog-size caps on the fingerprint / signal / posture file
+  loaders**, the **`_RetryTransport` unused base pool**, the
+  **over-1024-byte batch-line split** (cosmetic spurious error rows),
+  and the **PyYAML alias-bomb**: all operator-trust-boundary or
+  cosmetic; deferred.
+
+Regression coverage: detector gather isolation in
+`tests/test_sources/test_dns.py`, the cluster cap in
+`tests/test_clustering.py`, `{n}` ReDoS rejection in
+`tests/test_security.py`, and markdown escaping in
+`tests/test_formatter.py`.
+
+---
+
 ## Process notes
 
 * **Closure precedence.** If a scanner flags a finding listed here

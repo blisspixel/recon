@@ -2875,9 +2875,9 @@ def format_tenant_markdown(info: TenantInfo) -> str:
         lines.append(f"**Tenant ID:** `{info.tenant_id}`  ")
     lines.append(f"**Default Domain:** {info.default_domain}  ")
     if info.region:
-        lines.append(f"**Region:** {info.region}  ")
+        lines.append(f"**Region:** {_markdown_escape(info.region)}  ")
     if info.auth_type:
-        lines.append(f"**Auth Type:** {info.auth_type}  ")
+        lines.append(f"**Auth Type:** {_markdown_escape(info.auth_type)}  ")
     lines.append(f"**Confidence:** {info.confidence.value} ({len(info.sources)} sources)  ")
     lines.append(
         f"**Evidence Confidence:** {info.evidence_confidence.value}  \n"
@@ -2919,9 +2919,9 @@ def format_tenant_markdown(info: TenantInfo) -> str:
         lines.append("## Google Workspace")
         lines.append("")
         if info.google_auth_type:
-            lines.append(f"**Auth Type:** {info.google_auth_type}  ")
+            lines.append(f"**Auth Type:** {_markdown_escape(info.google_auth_type)}  ")
         if info.google_idp_name:
-            lines.append(f"**Identity Provider:** {info.google_idp_name}  ")
+            lines.append(f"**Identity Provider:** {_markdown_escape(info.google_idp_name)}  ")
         # Active modules from GWS CNAME detections
         gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
         if gws_modules:
@@ -2937,7 +2937,11 @@ def format_tenant_markdown(info: TenantInfo) -> str:
         lines.append("## Insights")
         lines.append("")
         for insight in info.insights:
-            lines.append(f"- {insight}")
+            # Defense in depth: insight text is built from charset-constrained
+            # labels and closed-vocab provider names today, but escape it so
+            # the markdown report's safety does not depend on every current
+            # and future insight contributor staying within a safe alphabet.
+            lines.append(f"- {_markdown_escape(insight)}")
         lines.append("")
 
     # Certificate Intelligence

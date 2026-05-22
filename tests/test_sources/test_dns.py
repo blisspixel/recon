@@ -357,3 +357,29 @@ class TestDNSSourceErrorHandling:
             result = await DNSSource().lookup("contoso.com")
             assert result.error is not None
             assert isinstance(result, SourceResult)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns._safe_resolve")
+    async def test_one_failing_detector_does_not_abort_source(self, mock_resolve):
+        """A single detector raising on crafted input must NOT abort the whole
+        DNS source. The gather isolates per-detector failures (v1.9.20),
+        generalizing the v1.9.18 BIMI-port fix: other detectors' work and the
+        rest of the DNS intelligence survive."""
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": ["v=spf1 -all"],
+                "example.com/MX": ["10 mail.example.com"],
+            }
+        )
+
+        async def _boom(ctx, domain):
+            raise ValueError("simulated detector failure on crafted input")
+
+        # Patch one detector to raise; the source must still succeed.
+        with patch("recon_tool.sources.dns._detect_mx", _boom):
+            result = await DNSSource().lookup("example.com")
+
+        assert result.error is None, "a single detector raise must not error the whole source"
+        assert isinstance(result, SourceResult)
+        # A non-failing detector's work survived (SPF strict from the TXT).
+        assert "SPF: strict (-all)" in result.detected_services

@@ -70,13 +70,20 @@ _VALID_CONFIDENCE_LEVELS = frozenset({"high", "medium", "low"})
 _VALID_MATCH_MODES = frozenset({"any", "all"})
 
 # Structural patterns known to cause catastrophic backtracking.
-# Matches nested quantifiers like (a+)+, (a*)+, (a+)*, (\w+)+, etc.
-# Also catches overlapping alternation patterns like (a|a)+ and
-# polynomial backtracking like \w+\w+\w+ (3+ adjacent quantifiers).
-# This is a heuristic — not exhaustive — but catches the most common
-# ReDoS vectors from user-supplied custom fingerprints.
+# Catches: nested quantifiers like (a+)+, (a*)+, (\w+)+ and the bounded
+# form (a+){20}; and polynomial backtracking like \w+\w+\w+ (3+ adjacent
+# quantifiers). This is a heuristic, not exhaustive: it deliberately does
+# NOT flag quantified alternation like (foo|bar)+, because non-overlapping
+# alternation is safe and common in real fingerprints, and distinguishing
+# the dangerous overlapping form (a|a)+ from the safe form needs real
+# analysis a regex cannot do. Overlapping-alternation and nested-group
+# ReDoS are instead bounded by the independent input length caps
+# (_MAX_TXT_MATCH_LENGTH here and the subdomain_txt cap in dns.py), which
+# cap worst-case backtracking regardless of pattern. A linear-time engine
+# (google-re2) would remove the heuristic but crosses the pure-Python
+# dependency floor.
 _REDOS_RE = re.compile(
-    r"\([^)]*[+*][^)]*\)[+*]"  # (group-with-quantifier) followed by quantifier
+    r"\([^)]*[+*][^)]*\)[+*{]"  # (group-with-quantifier) then + * or {n}
     r"|"
     r"(?:[+*]\??\.\*[+*])"  # quantifier + .* + quantifier
     r"|"

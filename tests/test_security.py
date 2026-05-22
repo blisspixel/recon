@@ -45,6 +45,12 @@ class TestReDoSPrevention:
         assert _validate_regex("[a-z]+", "test") is True
         assert _validate_regex("(foo|bar)+", "test") is True
 
+    def test_bounded_nested_quantifier_rejected(self):
+        # Bounded repetition of a quantified group, e.g. (a+){20}, is also
+        # catastrophic; the heuristic now flags the {n} form, not just (a+)+.
+        assert _validate_regex("(a+){20}", "test") is False
+        assert _validate_regex("([a-z]+){15}", "test") is False
+
     def test_excessively_long_pattern_rejected(self):
         assert _validate_regex("a" * 501, "test") is False
 
