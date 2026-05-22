@@ -930,6 +930,71 @@ Regression coverage: detector gather isolation in
 
 ---
 
+## Round-five audit (response parsing, async, bug-hunt - v1.9.21)
+
+A fifth pass ran three reviews: attacker-controlled HTTP response
+parsing, async / concurrency / resource lifecycle, and a correctness
+bug-hunt with a regression re-audit of the v1.9.20 changes. The headline
+result is a negative one worth recording: no new reachable vulnerability
+or correctness bug was found. The items below are observability and
+defense-in-depth hardening.
+
+### Response parsing - confirmed safe
+
+Every parser of an attacker-influenced response was traced to its sink.
+`cse.<domain>` config JSON (google.py), `mta-sts.<domain>` text and the
+BIMI VMC PEM (dns.py), and the crt.sh / CertSpotter JSON
+(cert_providers.py) are all `isinstance`-guarded on every field, parse
+timestamps inside try/except, length- or prefix-check every split / index,
+bound post-parse expansion before the public caps, and run under either
+the detector gather isolation or resolver `_safe_lookup`. The only XML
+parse (Autodiscover) uses defusedxml. The 10 MB body cap bounds every
+response. One reported "control bytes via GetUserRealm display_name"
+concern was a false positive: merger.py already control-strips
+`display_name` / `auth_type` / `region` before they reach `TenantInfo`
+(the round-3 fix), so the terminal renderer receives stripped values.
+
+### Async / concurrency - confirmed safe
+
+The single-event-loop design holds: the rate-limiter check-then-set is
+synchronous (atomic, no double-resolve race), the server-state methods
+are all await-free (no TOCTOU), the surface semaphore releases on every
+path, and the `_isolate` / `_process` / `_safe_lookup` wrappers catch
+`Exception` so `CancelledError` still propagates. All HTTP clients are
+context-managed and closed.
+
+### Observability fix (v1.9.21) - closed
+
+The v1.9.20 gather isolation logged a failed detector at debug level and
+dropped its contribution silently. A regression breaking a detector for
+all inputs would therefore ship undetected. Failed detectors are now
+added to `degraded_sources` (`detector:<name>`) and logged at warning
+level, and the detector list carries stable names instead of coroutine
+introspection. This keeps the crafted-input resilience while making a
+real regression visible in output.
+
+### Defense-in-depth (v1.9.21) - closed
+
+- Verbose source-detail table control-strips `region` and `error`
+  (parity with the primary panel).
+- Autodiscover federated-domain list is control-stripped and capped
+  (`_MAX_AUTODISCOVER_DOMAINS`). It is not DNS-charset-restricted, to
+  preserve legitimate entity-decoded values; the body and count caps
+  bound it.
+- CertSpotter `issuer` friendly_name / name is `isinstance(str)`-checked
+  before use.
+
+### Deferred (operator-trust-boundary or cosmetic)
+
+The `_RetryTransport` unused base transport pool (leaks nothing - the
+pool never opens a socket); synchronous YAML parse on the event loop
+during `reload_data` (rare, admin-triggered; `to_thread` is the eventual
+fix); and the over-1024-byte batch-line split (cosmetic extra error
+rows). The latent fingerprints lock-on-event-loop note applies only if
+loads are ever moved to `asyncio.to_thread`.
+
+---
+
 ## Process notes
 
 * **Closure precedence.** If a scanner flags a finding listed here

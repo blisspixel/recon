@@ -4,14 +4,14 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.20** (round-four audit hardening: detector
-exception isolation so one detector raise cannot abort the DNS
-source, starlette PYSEC-2026-161 upgrade that had blocked the
-v1.9.19 publish, a TXT length cap and a quadratic-clustering cap,
-ReDoS-heuristic and markdown-escaping completion). Tenth bridge
-release after v1.9.11; supersedes the tagged-but-unpublished
-v1.9.19. v2.0 remains the mechanical schema-lock-and-tag event.
-Cumulative pre-v2.0 work since v1.9.3:
+Current release: **v1.9.21** (round-five audit: response-parsing,
+async / concurrency, and bug-hunt reviews found no new reachable
+bug, so this release lands the observability and defense-in-depth
+items the pass surfaced: failed detectors now report into
+degraded_sources instead of being dropped silently, plus
+verbose-table / Autodiscover / CertSpotter output hygiene).
+Eleventh bridge release after v1.9.11. v2.0 remains the mechanical
+schema-lock-and-tag event. Cumulative pre-v2.0 work since v1.9.3:
 
 Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
 detail in `CHANGELOG.md` and the per-release validation memos):
@@ -37,6 +37,7 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.18 | Round-two ingestion audit: BIMI VMC fetch SSRF closed; CT SAN / issuer ANSI-escape and newline injection blocked at ingestion | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 | v1.9.19 | Round-three audit: HTTP body-size cap; free-text sanitization completed (display_name / dominant_issuer); markdown escaping; MCP / resource bounds (chain_lookup rate-limit, cluster cap) | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 | v1.9.20 | Round-four audit: detector gather exception isolation; starlette PYSEC-2026-161; TXT length cap; quadratic-clustering cap; ReDoS + markdown-escape completion | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
+| v1.9.21 | Round-five audit (no new bug found): detector-failure observability via degraded_sources; verbose-table / Autodiscover / CertSpotter output hygiene | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 
 **Outstanding before v2.0:**
 

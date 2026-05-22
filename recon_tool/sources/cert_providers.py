@@ -684,7 +684,12 @@ class CertSpotterProvider:
                     issuer = issuance.get("issuer")
                     issuer_name = None
                     if isinstance(issuer, dict):
-                        issuer_name = issuer.get("friendly_name") or issuer.get("name")
+                        candidate = issuer.get("friendly_name") or issuer.get("name")
+                        # Only accept a string; a non-str (e.g. {"name": 123})
+                        # otherwise breaks the isinstance(str) discipline the
+                        # rest of this ingestion path relies on.
+                        if isinstance(candidate, str):
+                            issuer_name = candidate
                     not_before = issuance.get("not_before")
                     not_after = issuance.get("not_after")
                     all_cert_entries.append(

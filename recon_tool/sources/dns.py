@@ -2314,28 +2314,30 @@ class DNSSource:
         """
         ctx = _DetectionCtx()
 
-        # Build the detector list. _detect_cert_intel is skipped when
-        # skip_ct is True; the other sub-detectors run unchanged.
-        detectors = [
-            _detect_txt(ctx, domain),
-            _detect_mx(ctx, domain),
-            _detect_m365_cnames(ctx, domain),
-            _detect_gws_cnames(ctx, domain),
-            _detect_dkim(ctx, domain),
-            _detect_email_security(ctx, domain),
-            _detect_ns(ctx, domain),
-            _detect_cname_infra(ctx, domain),
-            _detect_domain_connect(ctx, domain),
-            _detect_subdomain_txt(ctx, domain),
-            _detect_caa(ctx, domain),
-            _detect_srv(ctx, domain),
-            _detect_common_subdomains(ctx, domain),
-            _detect_hosting_from_a_record(ctx, domain),
-            _detect_idp_hub(ctx, domain),
-            _detect_exchange_onprem(ctx, domain),
+        # Build the detector list as (name, coroutine) pairs. The name is a
+        # stable label used for logging and degraded-source reporting (it
+        # replaces fragile coroutine introspection). _detect_cert_intel is
+        # skipped when skip_ct is True; the other sub-detectors run unchanged.
+        detectors: list[tuple[str, Any]] = [
+            ("txt", _detect_txt(ctx, domain)),
+            ("mx", _detect_mx(ctx, domain)),
+            ("m365_cnames", _detect_m365_cnames(ctx, domain)),
+            ("gws_cnames", _detect_gws_cnames(ctx, domain)),
+            ("dkim", _detect_dkim(ctx, domain)),
+            ("email_security", _detect_email_security(ctx, domain)),
+            ("ns", _detect_ns(ctx, domain)),
+            ("cname_infra", _detect_cname_infra(ctx, domain)),
+            ("domain_connect", _detect_domain_connect(ctx, domain)),
+            ("subdomain_txt", _detect_subdomain_txt(ctx, domain)),
+            ("caa", _detect_caa(ctx, domain)),
+            ("srv", _detect_srv(ctx, domain)),
+            ("common_subdomains", _detect_common_subdomains(ctx, domain)),
+            ("hosting_a_record", _detect_hosting_from_a_record(ctx, domain)),
+            ("idp_hub", _detect_idp_hub(ctx, domain)),
+            ("exchange_onprem", _detect_exchange_onprem(ctx, domain)),
         ]
         if not skip_ct:
-            detectors.append(_detect_cert_intel(ctx, domain))
+            detectors.append(("cert_intel", _detect_cert_intel(ctx, domain)))
 
         # Isolate each detector so one failure on crafted input degrades
         # gracefully instead of aborting the whole DNS source. A bare
@@ -2346,14 +2348,19 @@ class DNSSource:
         # source). Each detector mutates the shared ctx in place, so a
         # partial contribution from a failing detector still survives.
         # BaseException (cancellation / KeyboardInterrupt) still propagates.
-        async def _isolate(coro: Any) -> None:
-            name = getattr(getattr(coro, "cr_code", None), "co_name", "detector")
+        #
+        # A failed detector is recorded in degraded_sources (surfaced in
+        # JSON / --explain output) and logged at warning level, so a real
+        # regression that breaks a detector for every input is visible
+        # rather than silently dropping that detector's intelligence.
+        async def _isolate(name: str, coro: Any) -> None:
             try:
                 await coro
             except Exception as exc:
-                logger.debug("DNS detector %s failed: %s", name, exc)
+                logger.warning("DNS detector %r failed for %s: %s", name, domain, exc)
+                ctx.degraded_sources.add(f"detector:{name}")
 
-        await asyncio.gather(*(_isolate(d) for d in detectors))
+        await asyncio.gather(*(_isolate(name, coro) for name, coro in detectors))
 
         # Remove the queried domain itself from related_domains
         ctx.related_domains.discard(domain.lower())

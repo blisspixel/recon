@@ -10,6 +10,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
 is the next planned event; see `docs/roadmap.md`.
 
+## [1.9.21] - 2026-05-22
+
+### Security
+
+Round-five audit pass (HTTP response parsing, async / concurrency /
+resource lifecycle, and a correctness bug-hunt + v1.9.20 regression
+re-audit). The async and bug-hunt reviews found no reachable bug, and the
+response-parsing review confirmed every attacker-influenced parser is
+type-guarded, isolated, and body-capped. This release lands the
+observability and defense-in-depth items the pass surfaced; it does not
+fix a new vulnerability.
+
+- **Detector failures are now observable.** The v1.9.20 gather isolation
+  swallowed a failing detector at debug level, so a regression that broke
+  a detector for every input could silently drop its intelligence. Failed
+  detectors are now recorded in `degraded_sources` (surfaced in JSON and
+  `--explain`) and logged at warning level. The detector list also
+  carries stable names rather than relying on coroutine introspection.
+- **Defense-in-depth output hygiene.** The verbose source-detail table
+  now control-strips `region` and `error` (parity with the primary
+  panel); the Autodiscover federated-domain list is control-stripped and
+  count-capped; and the CertSpotter `issuer` name is type-checked before
+  use, matching the `isinstance` discipline the rest of CT ingestion
+  follows.
+
+Rationale and the pass's deferred items (the `_RetryTransport` unused
+base pool, synchronous YAML parse on the loop during `reload_data`, and
+the over-1024-byte batch-line split) are in
+`docs/security-audit-resolutions.md`.
+
+### Tests
+
+- `tests/test_sources/test_dns.py` extends the gather-isolation
+  regression to assert a failed detector surfaces in `degraded_sources`.
+
 ## [1.9.20] - 2026-05-22
 
 ### Security
