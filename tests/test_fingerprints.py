@@ -364,3 +364,26 @@ class TestFingerprintMetadataInJson:
         )
         payload = json.loads(format_tenant_json(info))
         assert payload["fingerprint_metadata"] == {}
+
+
+def test_discovered_cname_targets_classify():
+    """cname_target rules harvested from the corpus discovery loop load with
+    their expected slugs and match a representative CNAME terminal via the
+    same substring rule the surface classifier applies."""
+    from recon_tool.fingerprints import get_cname_target_rules
+
+    by_pattern = {r.pattern: r.slug for r in get_cname_target_rules()}
+    expected = {
+        "hosted-by-discourse.com": "discourse",
+        "substack-custom-domains.com": "substack",
+        "beyondtrustcloud.com": "beyondtrust",
+        "arcticwolf.net": "arctic-wolf",
+        "usgovcloud.microsoft": "microsoft365-gov",
+        "material.security": "material-security",
+    }
+    for pattern, slug in expected.items():
+        assert by_pattern.get(pattern) == slug, f"missing/incorrect cname_target {pattern} -> {slug}"
+
+    rules = get_cname_target_rules()
+    terminal = "community.acme.hosted-by-discourse.com"
+    assert "discourse" in [r.slug for r in rules if r.pattern in terminal]

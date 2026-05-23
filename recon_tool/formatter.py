@@ -625,6 +625,20 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "ns1": "Cloud",
     "stackpath": "Cloud",
     "ultradns": "Cloud",
+    # v1.9.22: slugs for cname_target rules discovered via the corpus
+    # discovery loop. The marketing / generic-SaaS ones (substack, tally,
+    # bynder, ...) roll up to Business Apps via the pass-2 fallback; only
+    # the ones with a specific home are mapped here.
+    "discourse": "Collaboration",
+    "document360": "Collaboration",
+    "statuspal": "Collaboration",
+    "cloudsmith": "Cloud",
+    "beyondtrust": "Identity",
+    "janrain": "Identity",
+    "arctic-wolf": "Security",
+    "rootly": "Security",
+    "material-security": "Email",
+    "microsoft365-gov": "Email",
 }
 
 # Email service-name prefixes that bypass slug lookup. These catch
@@ -873,6 +887,8 @@ _CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         # Developer / prototyping platforms — not production cloud
         "replit",
         "glitch",
+        # Package / artifact registry — distribution, not general cloud
+        "cloudsmith",
         # Specialty CDN / DAM — long-tail not in the rollup
         "cloudinary",
         "azion",

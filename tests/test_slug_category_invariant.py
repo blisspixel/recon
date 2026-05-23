@@ -121,6 +121,18 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "wrike",
         "yandex",
         "zendesk",
+        # v1.9.22: cname_target slugs discovered via the corpus loop that
+        # roll up to Business Apps (marketing / DAM / PR / generic SaaS).
+        "act-on",
+        "brandfolder",
+        "bynder",
+        "cision-mediaroom",
+        "impact",
+        "mynewsdesk",
+        "oktopost",
+        "partnerpage",
+        "substack",
+        "tally",
     }
 )
 
