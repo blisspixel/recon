@@ -10,6 +10,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
 is the next planned event; see `docs/roadmap.md`.
 
+## [1.9.22] - 2026-05-23
+
+### Added
+
+Twenty new `cname_target` fingerprints, harvested from a discovery run
+over the private validation corpus (`recon batch --include-unclassified`)
+and confirmed absent from the catalog before adding:
+
+- Collaboration / docs: Discourse (`hosted-by-discourse.com`),
+  Document360, StatusPal, Tally.
+- Security / identity: BeyondTrust, Arctic Wolf, Rootly, Material
+  Security, Janrain (Akamai Identity Cloud).
+- Marketing / DAM / PR: Substack, Oktopost, Bynder, Brandfolder, Act-On,
+  Cision MediaRoom, Impact.com, PartnerPage, Mynewsdesk.
+- Infrastructure: Cloudsmith.
+- Email: Microsoft 365 US Government cloud (`usgovcloud.microsoft`, GCC
+  High / DoD), a previously-uncovered government-cloud M365 signal.
+
+Each carries a description and reference in the surface.yaml style; slugs
+are mapped in `_CATEGORY_BY_SLUG` (specific categories) or the Business
+Apps fallback. All 233 surface entries pass the fingerprint validator
+(regex safety and specificity) and the metadata-coverage gate.
+
+### Validation
+
+Ran the corpus discovery and Bayesian fusion loop on stratified samples
+(30 modern-stack domains, then 136 across all 34 categories). The
+Bayesian layer held up: 402 of 402 high-confidence posteriors agreed
+with the deterministic pipeline (100%), with zero cross-source conflicts
+across the 136 diverse domains. One item is recorded for the v2.0
+calibration pass: `email_security_modern_provider` never produces a
+non-sparse estimate (it fires high for nearly everyone), so its evidence
+bindings are worth revisiting.
+
 ## [1.9.21] - 2026-05-22
 
 ### Security

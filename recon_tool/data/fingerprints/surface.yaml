@@ -3768,3 +3768,278 @@ fingerprints:
       placement testing. Does not imply Validity Everest is the
       org's primary email vendor.
     reference: https://www.validity.com/everest/
+
+# ---------------------------------------------------------------------------
+# v1.9.22 expansion: cname_target rules harvested from the private validation
+# corpus discovery loop (recon batch --include-unclassified). Each was an
+# unclassified CNAME terminal observed across real domains and confirmed
+# absent from the catalog before adding.
+# ---------------------------------------------------------------------------
+- name: Discourse
+  slug: discourse
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: hosted-by-discourse.com
+    reference: https://meta.discourse.org/t/set-up-a-custom-domain-cname/55020
+    tier: application
+    description: >-
+      Subdomain CNAMEd to a Discourse-hosted community forum
+      (`*.hosted-by-discourse.com`). Indicates the org runs a hosted
+      Discourse community on a branded domain. Hosting-binding signal
+      only; it does not indicate forum activity or member count.
+- name: Substack
+  slug: substack
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: substack-custom-domains.com
+    reference: https://support.substack.com/hc/en-us/articles/360051222571
+    tier: application
+    description: >-
+      Custom domain CNAMEd to a Substack publication
+      (`*.substack-custom-domains.com`). Indicates the org publishes a
+      newsletter on Substack under a branded domain. Does not indicate
+      subscriber count or paid-tier status.
+- name: Document360
+  slug: document360
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: document360.io
+    reference: https://docs.document360.com/docs/custom-domain-mapping
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Document360 knowledge base
+      (`*.document360.io`). Indicates a hosted help/KB portal on a
+      branded domain. Hosting-binding signal only.
+- name: StatusPal
+  slug: statuspal
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: statuspal.io
+    reference: https://docs.statuspal.io/
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a StatusPal hosted status page
+      (`*.statuspal.io`). Indicates the org publishes a service-status
+      page on a branded domain. Does not indicate incident history.
+- name: Cloudsmith
+  slug: cloudsmith
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cloudsmith.io
+    reference: https://help.cloudsmith.io/
+    tier: infrastructure
+    description: >-
+      CNAME into a Cloudsmith hosted package/artifact registry
+      (`*.cloudsmith.io`). Indicates the org distributes software
+      artifacts through Cloudsmith. Infrastructure-binding signal only.
+- name: Tally
+  slug: tally
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cname.tally.so
+    reference: https://tally.so/help/custom-domains
+    tier: application
+    description: >-
+      Custom domain CNAMEd to a Tally form (`cname.tally.so`).
+      Indicates the org hosts forms/surveys on Tally under a branded
+      domain. Hosting-binding signal only.
+- name: Oktopost
+  slug: oktopost
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: okt.to
+    reference: https://help.oktopost.com/
+    tier: application
+    description: >-
+      Branded short-link / social CNAME into Oktopost (`okt.to`), a
+      B2B social-media management platform. Indicates the org runs
+      social campaigns through Oktopost. Marketing-tooling signal only.
+- name: BeyondTrust
+  slug: beyondtrust
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: beyondtrustcloud.com
+    reference: https://www.beyondtrust.com/docs
+    tier: application
+    description: >-
+      Subdomain CNAMEd to a BeyondTrust cloud instance
+      (`*.beyondtrustcloud.com`), a privileged-access / remote-support
+      platform. Indicates the org runs BeyondTrust for PAM or secure
+      remote support. Does not distinguish the specific product.
+- name: Arctic Wolf
+  slug: arctic-wolf
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: arcticwolf.net
+    reference: https://arcticwolf.com/
+    tier: application
+    description: >-
+      Subdomain CNAMEd to Arctic Wolf infrastructure
+      (`*.arcticwolf.net`), a managed detection and response (MDR)
+      provider. Suggests the org uses Arctic Wolf for security
+      operations. Hosting-binding signal only.
+- name: Rootly
+  slug: rootly
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: rootly.com
+    reference: https://docs.rootly.com/
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to Rootly (`*.rootly.com`), an
+      incident-management platform. Indicates the org runs incident
+      response tooling on Rootly. Hosting-binding signal only.
+- name: Material Security
+  slug: material-security
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: material.security
+    reference: https://material.security/
+    tier: application
+    description: >-
+      Subdomain CNAMEd to Material Security (`*.material.security`), an
+      email security and data-governance platform layered over M365 /
+      Google Workspace. Suggests the org runs Material for mailbox
+      protection. Hosting-binding signal only.
+- name: Bynder
+  slug: bynder
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: getbynder.com
+    reference: https://support.bynder.com/
+    tier: application
+    description: >-
+      Custom domain CNAMEd to a Bynder digital-asset-management portal
+      (`*.getbynder.com`). Indicates the org runs a Bynder DAM on a
+      branded domain. Hosting-binding signal only.
+- name: Brandfolder
+  slug: brandfolder
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: mybrandfolder.com
+    reference: https://help.brandfolder.com/
+    tier: application
+    description: >-
+      Custom domain CNAMEd to a Brandfolder digital-asset-management
+      portal (`*.mybrandfolder.com`). Indicates the org runs a
+      Brandfolder DAM on a branded domain. Hosting-binding signal only.
+- name: Act-On
+  slug: act-on
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: actonsoftware.com
+    reference: https://www.act-on.com/
+    tier: application
+    description: >-
+      Tracking / landing-page CNAME into Act-On (`*.actonsoftware.com`),
+      a marketing-automation platform. Indicates the org runs Act-On
+      campaigns. Marketing-tooling signal only.
+- name: Janrain (Akamai Identity Cloud)
+  slug: janrain
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: janrain.ws
+    reference: https://techdocs.akamai.com/identity-cloud/docs
+    tier: application
+    description: >-
+      Login subdomain CNAMEd to Janrain / Akamai Identity Cloud
+      (`*.janrain.ws`), a customer identity and access management
+      (CIAM) platform. Indicates the org runs hosted CIAM. Does not
+      distinguish the specific Akamai product tier.
+- name: Cision MediaRoom
+  slug: cision-mediaroom
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: mediaroom.com
+    reference: https://www.cision.com/
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Cision MediaRoom online newsroom
+      (`*.mediaroom.com`). Indicates the org runs a hosted press /
+      investor-relations newsroom. Hosting-binding signal only.
+- name: Impact.com
+  slug: impact
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: impactradius.com
+    reference: https://impact.com/
+    tier: application
+    description: >-
+      Tracking CNAME into Impact.com (`*.impactradius.com`), a
+      partnership / affiliate-marketing platform. Indicates the org
+      runs partnership programs through Impact. Marketing-tooling
+      signal only.
+- name: PartnerPage
+  slug: partnerpage
+  category: Marketing
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: partnerpage.io
+    reference: https://www.partnerpage.io/
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to PartnerPage (`*.partnerpage.io`), a
+      hosted partner-directory platform. Indicates the org runs a
+      branded partner directory. Hosting-binding signal only.
+- name: Mynewsdesk
+  slug: mynewsdesk
+  category: Marketing
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: mynewsdesk.com
+    reference: https://www.mynewsdesk.com/
+    tier: application
+    description: >-
+      Subdomain CNAMEd to Mynewsdesk (`*.mynewsdesk.com`), a PR /
+      newsroom and press-distribution platform. Indicates the org runs
+      a hosted newsroom. Hosting-binding signal only.
+- name: Microsoft 365 (US Government cloud)
+  slug: microsoft365-gov
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: usgovcloud.microsoft
+    reference: https://learn.microsoft.com/en-us/microsoft-365/enterprise/microsoft-365-u-s-government-gcc-high-endpoints
+    tier: application
+    description: >-
+      Autodiscover / service CNAME terminating in the Microsoft 365 US
+      Government cloud (`*.usgovcloud.microsoft`), i.e. GCC High / DoD
+      rather than the commercial cloud. Indicates a government-cloud
+      M365 tenant. Distinct from the commercial microsoft365 slug.
