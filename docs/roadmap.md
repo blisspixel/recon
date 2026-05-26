@@ -4,14 +4,14 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.22** (fingerprint expansion: 20 new
-cname_target rules harvested from a discovery run over the private
-validation corpus, including Discourse, Substack, BeyondTrust,
-Arctic Wolf, and a Microsoft 365 US Government cloud signal; the
-same run validated the Bayesian fusion layer at 100% calibration
-agreement across 136 diverse domains). Twelfth bridge release after
-v1.9.11. v2.0 remains the mechanical schema-lock-and-tag event.
-Cumulative pre-v2.0 work since v1.9.3:
+Current release: **v1.9.23** (comprehensive corpus-discovery batch:
+a multi-signal mine across TXT verifications, SPF includes, MX
+providers, NS providers, and DMARC `rua=` vendors over the full
+~5000-domain corpus, surfacing every clearly-attributable
+unfingerprinted pattern. 56 TXT + 17 SPF + 9 MX + 8 DMARC-rua + 12 NS
++ 8 cname_target additions; catalog grows 459 -> 572 entries).
+Thirteenth bridge release after v1.9.11. v2.0 remains the mechanical
+schema-lock-and-tag event. Cumulative pre-v2.0 work since v1.9.3:
 
 Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
 detail in `CHANGELOG.md` and the per-release validation memos):
@@ -39,6 +39,7 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.20 | Round-four audit: detector gather exception isolation; starlette PYSEC-2026-161; TXT length cap; quadratic-clustering cap; ReDoS + markdown-escape completion | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 | v1.9.21 | Round-five audit (no new bug found): detector-failure observability via degraded_sources; verbose-table / Autodiscover / CertSpotter output hygiene | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 | v1.9.22 | Fingerprint expansion: 20 new cname_target rules from a corpus discovery run (Discourse, Substack, BeyondTrust, Arctic Wolf, M365 US Gov cloud, ...); Bayesian fusion validated at 100% calibration across 136 diverse domains | `CHANGELOG.md` |
+| v1.9.23 | Comprehensive corpus-discovery batch across TXT / SPF / MX / NS / DMARC-rua signals: 56 TXT verifications + 17 SPF + 9 MX + 8 DMARC-rua + 12 NS + 8 cname_target; catalog grows 459 -> 572 entries | `CHANGELOG.md` |
 
 **Outstanding before v2.0:**
 

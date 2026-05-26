@@ -1,0 +1,421 @@
+# SPF / MX / NS / DMARC-rua fingerprints harvested from the corpus signal
+# mine (recon resolves these per apex). Reuses existing slugs for known
+# vendors; new vendors carry their own slug. Added v1.9.23.
+#
+# Loaded by recon_tool.fingerprints.load_fingerprints.
+
+fingerprints:
+- name: Proofpoint
+  slug: proofpoint
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: pphosted.com
+    description: >-
+      Proofpoint SPF include (`pphosted.com`). Indicates the org authorizes Proofpoint to send email for this domain.
+- name: Pardot Landing Pages
+  slug: pardot
+  category: Marketing
+  confidence: high
+  detections:
+  - type: spf
+    pattern: pardot.com
+    description: >-
+      Pardot Landing Pages SPF include (`pardot.com`). Indicates the org authorizes Pardot Landing Pages to send email for this domain.
+- name: Statuspage (Atlassian)
+  slug: statuspage
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: spf
+    pattern: stspg-customer.com
+    description: >-
+      Statuspage (Atlassian) SPF include (`stspg-customer.com`). Indicates the org authorizes Statuspage (Atlassian) to send email for this domain.
+- name: Mailjet
+  slug: mailjet
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: mailjet.com
+    description: >-
+      Mailjet SPF include (`mailjet.com`). Indicates the org authorizes Mailjet to send email for this domain.
+- name: Salesforce Marketing Cloud
+  slug: salesforce-mc
+  category: Marketing
+  confidence: high
+  detections:
+  - type: spf
+    pattern: exacttarget.com
+    description: >-
+      Salesforce Marketing Cloud SPF include (`exacttarget.com`). Indicates the org authorizes Salesforce Marketing Cloud to send email for this domain.
+- name: Greenhouse
+  slug: greenhouse
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: spf
+    pattern: greenhouse.io
+    description: >-
+      Greenhouse SPF include (`greenhouse.io`). Indicates the org authorizes Greenhouse to send email for this domain.
+- name: Docebo
+  slug: docebo
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: spf
+    pattern: docebosaas.com
+    description: >-
+      Docebo SPF include (`docebosaas.com`). Indicates the org authorizes Docebo to send email for this domain.
+- name: Help Scout
+  slug: helpscout
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: spf
+    pattern: helpscoutemail.com
+    description: >-
+      Help Scout SPF include (`helpscoutemail.com`). Indicates the org authorizes Help Scout to send email for this domain.
+- name: Atlassian (Jira/Confluence)
+  slug: atlassian
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: spf
+    pattern: atlassian.net
+    description: >-
+      Atlassian (Jira/Confluence) SPF include (`atlassian.net`). Indicates the org authorizes Atlassian (Jira/Confluence) to send email for this domain.
+- name: Postmark
+  slug: postmark
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: mtasv.net
+    description: >-
+      Postmark SPF include (`mtasv.net`). Indicates the org authorizes Postmark to send email for this domain.
+- name: SAP SuccessFactors
+  slug: successfactors
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: spf
+    pattern: sapsf.com
+    description: >-
+      SAP SuccessFactors SPF include (`sapsf.com`). Indicates the org authorizes SAP SuccessFactors to send email for this domain.
+- name: Shopify
+  slug: shopify
+  category: Commerce
+  confidence: high
+  detections:
+  - type: spf
+    pattern: shopify.com
+    description: >-
+      Shopify SPF include (`shopify.com`). Indicates the org authorizes Shopify to send email for this domain.
+- name: Exclaimer
+  slug: exclaimer
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: exclaimer.net
+    description: >-
+      Exclaimer SPF include (`exclaimer.net`). Indicates the org authorizes Exclaimer to send email for this domain.
+- name: Exclaimer
+  slug: exclaimer
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: emailsignatures365.com
+    description: >-
+      Exclaimer SPF include (`emailsignatures365.com`). Indicates the org authorizes Exclaimer to send email for this domain.
+- name: Oracle NetSuite
+  slug: netsuite
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: spf
+    pattern: netsuite.com
+    description: >-
+      Oracle NetSuite SPF include (`netsuite.com`). Indicates the org authorizes Oracle NetSuite to send email for this domain.
+- name: MailerLite
+  slug: mailerlite
+  category: Marketing
+  confidence: high
+  detections:
+  - type: spf
+    pattern: mlsend.com
+    description: >-
+      MailerLite SPF include (`mlsend.com`). Indicates the org authorizes MailerLite to send email for this domain.
+- name: Campaign Monitor
+  slug: campaign-monitor
+  category: Marketing
+  confidence: high
+  detections:
+  - type: spf
+    pattern: createsend.com
+    description: >-
+      Campaign Monitor SPF include (`createsend.com`). Indicates the org authorizes Campaign Monitor to send email for this domain.
+- name: Google Workspace
+  slug: google-workspace
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: googlemail.com
+    description: >-
+      Google Workspace mail exchanger (`googlemail.com`). Indicates Google Workspace handles inbound mail for this domain.
+- name: Trend Micro Email Security
+  slug: trendmicro
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: trendmicro.eu
+    description: >-
+      Trend Micro Email Security mail exchanger (`trendmicro.eu`). Indicates Trend Micro Email Security handles inbound mail for this domain.
+- name: Mimecast
+  slug: mimecast
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: mimecast.co.za
+    description: >-
+      Mimecast mail exchanger (`mimecast.co.za`). Indicates Mimecast handles inbound mail for this domain.
+- name: GoDaddy
+  slug: godaddy
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: secureserver.net
+    description: >-
+      GoDaddy mail exchanger (`secureserver.net`). Indicates GoDaddy handles inbound mail for this domain.
+- name: Mailprotector
+  slug: mailprotector
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: mxrecord.io
+    description: >-
+      Mailprotector mail exchanger (`mxrecord.io`). Indicates Mailprotector handles inbound mail for this domain.
+- name: Mailgun
+  slug: mailgun
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: mailgun.org
+    description: >-
+      Mailgun mail exchanger (`mailgun.org`). Indicates Mailgun handles inbound mail for this domain.
+- name: Proofpoint
+  slug: proofpoint
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: ppe-hosted.com
+    description: >-
+      Proofpoint mail exchanger (`ppe-hosted.com`). Indicates Proofpoint handles inbound mail for this domain.
+- name: Microsoft 365 (US Government cloud)
+  slug: microsoft365-gov
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: office365.us
+    description: >-
+      Microsoft 365 (US Government cloud) mail exchanger (`office365.us`). Indicates Microsoft 365 (US Government cloud) handles inbound mail for this domain.
+- name: SecureMX
+  slug: securemx
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: securemx.jp
+    description: >-
+      SecureMX mail exchanger (`securemx.jp`). Indicates SecureMX handles inbound mail for this domain.
+- name: DMARC Analyzer (Mimecast)
+  slug: dmarc-analyzer
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: dmarcanalyzer.com
+    description: >-
+      DMARC Analyzer (Mimecast) DMARC aggregate-report endpoint (`dmarcanalyzer.com`). Indicates the org uses DMARC Analyzer (Mimecast) for DMARC monitoring.
+- name: Postmark
+  slug: postmark
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: postmarkapp.com
+    description: >-
+      Postmark DMARC aggregate-report endpoint (`postmarkapp.com`). Indicates the org uses Postmark for DMARC monitoring.
+- name: MxToolbox DMARC
+  slug: mxtoolbox-dmarc
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: dmarc-report.com
+    description: >-
+      MxToolbox DMARC DMARC aggregate-report endpoint (`dmarc-report.com`). Indicates the org uses MxToolbox DMARC for DMARC monitoring.
+- name: DMARC Digests
+  slug: dmarc-digests
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: dmarcdigests.com
+    description: >-
+      DMARC Digests DMARC aggregate-report endpoint (`dmarcdigests.com`). Indicates the org uses DMARC Digests for DMARC monitoring.
+- name: Validity
+  slug: validity
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: everest.email
+    description: >-
+      Validity DMARC aggregate-report endpoint (`everest.email`). Indicates the org uses Validity for DMARC monitoring.
+- name: Netcraft
+  slug: netcraft
+  category: Security
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: netcraft.com
+    description: >-
+      Netcraft DMARC aggregate-report endpoint (`netcraft.com`). Indicates the org uses Netcraft for DMARC monitoring.
+- name: DMARCLY
+  slug: dmarcly
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: dmarcly.com
+    description: >-
+      DMARCLY DMARC aggregate-report endpoint (`dmarcly.com`). Indicates the org uses DMARCLY for DMARC monitoring.
+- name: Validity
+  slug: validity
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: 250ok.net
+    description: >-
+      Validity DMARC aggregate-report endpoint (`250ok.net`). Indicates the org uses Validity for DMARC monitoring.
+- name: CSC
+  slug: csc
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: cscdns.net
+    description: >-
+      CSC nameserver (`cscdns.net`). Indicates the org runs authoritative DNS on CSC.
+- name: CSC
+  slug: csc
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: cscdns.uk
+    description: >-
+      CSC nameserver (`cscdns.uk`). Indicates the org runs authoritative DNS on CSC.
+- name: DNS Made Easy
+  slug: dnsmadeeasy
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: dnsmadeeasy.com
+    description: >-
+      DNS Made Easy nameserver (`dnsmadeeasy.com`). Indicates the org runs authoritative DNS on DNS Made Easy.
+- name: Foundation DNS
+  slug: foundationdns
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: foundationdns.com
+    description: >-
+      Foundation DNS nameserver (`foundationdns.com`). Indicates the org runs authoritative DNS on Foundation DNS.
+- name: Foundation DNS
+  slug: foundationdns
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: foundationdns.net
+    description: >-
+      Foundation DNS nameserver (`foundationdns.net`). Indicates the org runs authoritative DNS on Foundation DNS.
+- name: Foundation DNS
+  slug: foundationdns
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: foundationdns.org
+    description: >-
+      Foundation DNS nameserver (`foundationdns.org`). Indicates the org runs authoritative DNS on Foundation DNS.
+- name: Network Solutions
+  slug: worldnic
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: worldnic.com
+    description: >-
+      Network Solutions nameserver (`worldnic.com`). Indicates the org runs authoritative DNS on Network Solutions.
+- name: Afternic (parking)
+  slug: afternic
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: afternic.com
+    description: >-
+      Afternic (parking) nameserver (`afternic.com`). Indicates the org runs authoritative DNS on Afternic (parking).
+- name: MarkMonitor
+  slug: markmonitor
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: markmonitor.com
+    description: >-
+      MarkMonitor nameserver (`markmonitor.com`). Indicates the org runs authoritative DNS on MarkMonitor.
+- name: easyDNS
+  slug: easydns2
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: easydns.net
+    description: >-
+      easyDNS nameserver (`easydns.net`). Indicates the org runs authoritative DNS on easyDNS.
+- name: easyDNS
+  slug: easydns2
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: easydns.com
+    description: >-
+      easyDNS nameserver (`easydns.com`). Indicates the org runs authoritative DNS on easyDNS.
+- name: Gandi
+  slug: gandi
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: gandi.net
+    description: >-
+      Gandi nameserver (`gandi.net`). Indicates the org runs authoritative DNS on Gandi.
