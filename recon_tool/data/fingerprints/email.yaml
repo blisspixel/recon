@@ -364,6 +364,20 @@ fingerprints:
       DMARC `rua=` aggregate-report target at EasyDMARC.
       Indicates the domain sends DMARC aggregate reports to
       EasyDMARC for analysis.
+  - type: dmarc_rua
+    pattern: easydmarc.us
+    reference: https://easydmarc.com/
+    description: >-
+      DMARC `rua=` aggregate-report target at EasyDMARC's US
+      reporting endpoint (`*.easydmarc.us`). Same vendor as
+      the .com pattern.
+  - type: dmarc_rua
+    pattern: easydmarc.eu
+    reference: https://easydmarc.com/
+    description: >-
+      DMARC `rua=` aggregate-report target at EasyDMARC's EU
+      reporting endpoint (`*.easydmarc.eu`). Same vendor as
+      the .com pattern.
 - name: Valimail
   slug: valimail
   category: Email & Communication
@@ -384,6 +398,13 @@ fingerprints:
       DMARC `rua=` aggregate-report target at Valimail.
       Indicates the domain sends DMARC aggregate reports to
       Valimail for analysis.
+  - type: dmarc_rua
+    pattern: vali.email
+    reference: https://help.valimail.com/
+    description: >-
+      DMARC `rua=` aggregate-report target at Valimail's
+      shortened reporting domain (`*.vali.email`). Same vendor
+      as the valimail.com pattern.
 - name: Agari (DMARC)
   slug: agari
   category: Email Governance

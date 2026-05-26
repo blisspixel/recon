@@ -3882,6 +3882,14 @@ fingerprints:
       (`*.beyondtrustcloud.com`), a privileged-access / remote-support
       platform. Indicates the org runs BeyondTrust for PAM or secure
       remote support. Does not distinguish the specific product.
+  - type: cname_target
+    pattern: bomgarcloud.com
+    reference: https://www.beyondtrust.com/docs/remote-support/
+    tier: application
+    description: >-
+      Subdomain CNAMEd to BeyondTrust Remote Support on the legacy Bomgar
+      cloud (`*.bomgarcloud.com`). Same vendor as beyondtrustcloud.com;
+      indicates secure remote support. Hosting-binding signal only.
 - name: Arctic Wolf
   slug: arctic-wolf
   category: Security
@@ -3936,6 +3944,14 @@ fingerprints:
       Custom domain CNAMEd to a Bynder digital-asset-management portal
       (`*.getbynder.com`). Indicates the org runs a Bynder DAM on a
       branded domain. Hosting-binding signal only.
+  - type: cname_target
+    pattern: bynder.com
+    reference: https://support.bynder.com/
+    tier: application
+    description: >-
+      Custom domain CNAMEd to a Bynder DAM portal on the primary
+      `bynder.com` domain (alongside the getbynder.com variant). Same
+      vendor; hosting-binding signal only.
 - name: Brandfolder
   slug: brandfolder
   category: Marketing
@@ -4043,3 +4059,112 @@ fingerprints:
       Government cloud (`*.usgovcloud.microsoft`), i.e. GCC High / DoD
       rather than the commercial cloud. Indicates a government-cloud
       M365 tenant. Distinct from the commercial microsoft365 slug.
+
+# ---------------------------------------------------------------------------
+# v1.9.23 expansion: cname_target rules from the 670-domain CNAME discovery
+# run (recon batch --include-unclassified), confirmed absent before adding.
+# ---------------------------------------------------------------------------
+- name: Freshservice
+  slug: freshservice
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: freshservice.com
+    reference: https://support.freshservice.com/
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Freshservice (Freshworks) IT service
+      management portal (`*.freshservice.com`). Indicates the org runs
+      Freshservice ITSM on a branded domain. Hosting-binding signal only.
+- name: Avature
+  slug: avature
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: avature.net
+    reference: https://www.avature.net/
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to Avature (`*.avature.net`), a talent /
+      recruiting CRM platform. Indicates the org runs Avature for hiring or
+      candidate-relationship management. Hosting-binding signal only.
+- name: Help Scout
+  slug: helpscout
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: helpscoutdocs.com
+    reference: https://docs.helpscout.com/
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Help Scout Docs knowledge base
+      (`*.helpscoutdocs.com`). Indicates the org runs a Help Scout hosted
+      help center on a branded domain. Hosting-binding signal only.
+- name: Oracle Service Cloud
+  slug: oracle-service-cloud
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: custhelp.com
+    reference: https://www.oracle.com/cx/service/
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to Oracle Service Cloud / RightNow
+      (`*.custhelp.com`), a customer-service / help-center platform.
+      Indicates the org runs Oracle Service Cloud. Hosting-binding signal only.
+- name: TIBCO Mashery
+  slug: mashery
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: mashery.com
+    reference: https://www.tibco.com/products/api-management
+    tier: application
+    description: >-
+      API endpoint CNAMEd to TIBCO Mashery (`*.mashery.com`), an
+      API-management / gateway platform. Indicates the org fronts APIs
+      through Mashery. Hosting-binding signal only.
+- name: Crownpeak
+  slug: crownpeak
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: crownpeak.net
+    reference: https://www.crownpeak.com/
+    tier: application
+    description: >-
+      Subdomain CNAMEd to Crownpeak (`*.crownpeak.net`), a digital-experience
+      / CMS and consent-management platform. Indicates the org runs Crownpeak.
+      Hosting-binding signal only.
+- name: Infobip
+  slug: infobip
+  category: Email & Communication
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: infobip.com
+    reference: https://www.infobip.com/docs
+    tier: application
+    description: >-
+      Tracking / messaging CNAME into Infobip (`*.infobip.com`), a
+      cloud-communications (CPaaS) provider. Indicates the org sends
+      messaging / email through Infobip. Hosting-binding signal only.
+- name: Ad Legend
+  slug: adlegend
+  category: Marketing
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: adlegend.com
+    reference: https://www.adlegend.com/
+    tier: application
+    description: >-
+      Ad-serving CNAME into Ad Legend (`*.adlegend.com`), a digital
+      advertising / ad-management platform. Indicates the org serves ads
+      through Ad Legend. Marketing-tooling signal only.

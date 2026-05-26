@@ -387,3 +387,23 @@ def test_discovered_cname_targets_classify():
     rules = get_cname_target_rules()
     terminal = "community.acme.hosted-by-discourse.com"
     assert "discourse" in [r.slug for r in rules if r.pattern in terminal]
+
+
+def test_discovered_txt_verifications_classify():
+    """TXT verification fingerprints harvested from the corpus TXT-prefix
+    mine classify their domain-verification tokens (case-insensitive)."""
+    from recon_tool.fingerprints import get_txt_patterns, match_txt
+
+    pats = get_txt_patterns()
+    expected = {
+        "docker-verification=abc123": "docker",
+        "h1-domain-verification=deadbeef": "hackerone",
+        "teamviewer-sso-verification=xyz": "teamviewer",
+        "Foxit-domain-verification=Z9": "foxit",  # mixed case
+        "hibp-verify=tok": "hibp",
+        "calendly-site-verification=ok": "calendly",
+        "lovable_verification=tok": "lovable",
+    }
+    for token, slug in expected.items():
+        m = match_txt(token, pats)
+        assert getattr(m, "slug", None) == slug, f"{token} -> expected {slug}, got {getattr(m, 'slug', None)}"

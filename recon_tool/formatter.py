@@ -639,6 +639,33 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "rootly": "Security",
     "material-security": "Email",
     "microsoft365-gov": "Email",
+    # v1.9.23: slugs for TXT verification fingerprints discovered via the
+    # corpus TXT-prefix mine. The generic / marketing ones roll up to
+    # Business Apps via the fallback; only the ones with a specific home
+    # are mapped here.
+    "hackerone": "Security",
+    "detectify": "Security",
+    "bugcrowd": "Security",
+    "spycloud": "Security",
+    "validity": "Email",
+    "lovable": "AI",
+    "tollbit": "AI",
+    "helpscout": "Collaboration",
+    "censys": "Security",
+    "confluent": "Data & Analytics",
+    "datadome": "Security",
+    "keybase": "Security",
+    "windsurf": "AI",
+    # v1.9.23: NS-provider slugs from the signal mine (DNS / registrar
+    # providers; excluded from the multi-cloud rollup below).
+    "afternic": "Cloud",
+    "csc": "Cloud",
+    "dnsmadeeasy": "Cloud",
+    "easydns2": "Cloud",
+    "foundationdns": "Cloud",
+    "gandi": "Cloud",
+    "markmonitor": "Cloud",
+    "worldnic": "Cloud",
 }
 
 # Email service-name prefixes that bypass slug lookup. These catch
@@ -889,6 +916,16 @@ _CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "glitch",
         # Package / artifact registry — distribution, not general cloud
         "cloudsmith",
+        # v1.9.23: DNS / registrar providers from the NS signal mine — DNS
+        # operators, not multi-cloud hosting vendors for the panel summary.
+        "afternic",
+        "csc",
+        "dnsmadeeasy",
+        "easydns2",
+        "foundationdns",
+        "gandi",
+        "markmonitor",
+        "worldnic",
         # Specialty CDN / DAM — long-tail not in the rollup
         "cloudinary",
         "azion",

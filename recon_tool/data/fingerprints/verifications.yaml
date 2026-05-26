@@ -1,0 +1,694 @@
+# Domain-verification TXT fingerprints harvested from the private validation
+# corpus (TXT-prefix discovery mine over ~5000 apexes). Each prefix is a
+# vendor's domain-verification token, planted when an org binds a domain to a
+# SaaS tenant. Confirmed absent from the catalog before adding (v1.9.23).
+#
+# Loaded by recon_tool.fingerprints.load_fingerprints.
+
+fingerprints:
+- name: Docker
+  slug: docker
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^docker-verification=
+    reference: https://docs.docker.com/security/for-admins/domain-management/
+    description: >-
+      Docker domain-verification TXT (`docker-verification=`). Indicates
+      the domain is bound to a Docker (Docker Hub / Docker Business)
+      organization for SSO and image management. Does not prove active
+      seats; verification ships before users are provisioned.
+- name: HackerOne
+  slug: hackerone
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^h1-domain-verification=
+    reference: https://docs.hackerone.com/
+    description: >-
+      HackerOne domain-verification TXT (`h1-domain-verification=`).
+      Indicates the org runs a HackerOne bug-bounty or vulnerability-
+      disclosure program bound to this domain. Program-binding signal only.
+- name: TeamViewer
+  slug: teamviewer
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^teamviewer-sso-verification=
+    reference: https://www.teamviewer.com/en/global/support/knowledge-base/
+    description: >-
+      TeamViewer SSO domain-verification TXT
+      (`teamviewer-sso-verification=`). Indicates the org has configured
+      TeamViewer single sign-on for this domain. Does not prove active
+      remote-support usage.
+- name: Zapier
+  slug: zapier
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^zapier-domain-verification-challenge=
+    reference: https://help.zapier.com/
+    description: >-
+      Zapier domain-verification TXT
+      (`zapier-domain-verification-challenge=`). Indicates the domain is
+      bound to a Zapier team/company for SSO and provisioning. Does not
+      indicate which integrations are active.
+- name: Palo Alto Networks
+  slug: paloalto
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^paloaltonetworks-site-verification=
+    reference: https://docs.paloaltonetworks.com/
+    description: >-
+      Palo Alto Networks domain-verification TXT
+      (`paloaltonetworks-site-verification=`). Indicates the domain is
+      bound to a Palo Alto Networks cloud tenant (e.g. Prisma / Cortex).
+      Tenant-binding signal only.
+- name: GoTo (LogMeIn)
+  slug: logmein
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^logmein-verification-code=
+    reference: https://support.goto.com/
+    description: >-
+      LogMeIn / GoTo domain-verification TXT (`logmein-verification-code=`).
+      Indicates the domain is bound to a GoTo (LogMeIn) account for
+      remote-access / collaboration products. Account-binding signal only.
+- name: SAP SuccessFactors
+  slug: successfactors
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^successfactors-site-verification=
+    reference: https://www.sap.com/products/hcm.html
+    description: >-
+      SAP SuccessFactors domain-verification TXT
+      (`successfactors-site-verification=`). Indicates the org runs SAP
+      SuccessFactors (cloud HCM) bound to this domain. HR-platform signal only.
+- name: Pexip
+  slug: pexip
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^pexip-ms-tenant-domain-verification=
+    reference: https://docs.pexip.com/
+    description: >-
+      Pexip domain-verification TXT (`pexip-ms-tenant-domain-verification=`),
+      a video-conferencing interoperability platform commonly bound to a
+      Microsoft Teams tenant. Indicates the org runs Pexip for video interop.
+- name: JetBrains
+  slug: jetbrains
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^jetbrains-domain-verification=
+    reference: https://www.jetbrains.com/help/
+    description: >-
+      JetBrains domain-verification TXT (`jetbrains-domain-verification=`).
+      Indicates the domain is bound to a JetBrains organization for license
+      management / SSO. Does not indicate which IDEs are in use.
+- name: Uber for Business
+  slug: uber-business
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^uber-domain-verification=
+    reference: https://www.uber.com/us/en/business/
+    description: >-
+      Uber for Business domain-verification TXT (`uber-domain-verification=`).
+      Indicates the org runs an Uber for Business account bound to this
+      domain. Account-binding signal only.
+- name: Parallels
+  slug: parallels
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^parallels-domain-verification=
+    reference: https://www.parallels.com/
+    description: >-
+      Parallels domain-verification TXT (`parallels-domain-verification=`).
+      Indicates the domain is bound to a Parallels account (remote
+      application / desktop delivery). Account-binding signal only.
+- name: Detectify
+  slug: detectify
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^detectify-verification=
+    reference: https://support.detectify.com/
+    description: >-
+      Detectify domain-verification TXT (`detectify-verification=`), an
+      external attack-surface / web vulnerability scanner. Indicates the
+      org scans this domain with Detectify. Security-tooling signal only.
+- name: Foxit
+  slug: foxit
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^foxit-domain-verification=
+    reference: https://www.foxit.com/
+    description: >-
+      Foxit domain-verification TXT (`foxit-domain-verification=`), a PDF /
+      e-signature platform. Indicates the domain is bound to a Foxit
+      account. Account-binding signal only.
+- name: Bugcrowd
+  slug: bugcrowd
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^bugcrowd-verification=
+    reference: https://docs.bugcrowd.com/
+    description: >-
+      Bugcrowd domain-verification TXT (`bugcrowd-verification=`).
+      Indicates the org runs a Bugcrowd crowdsourced-security program
+      bound to this domain. Program-binding signal only.
+- name: SpyCloud
+  slug: spycloud
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^spycloud-domain-verification=
+    reference: https://spycloud.com/
+    description: >-
+      SpyCloud domain-verification TXT (`spycloud-domain-verification=`), an
+      account-takeover / breach-exposure monitoring platform. Indicates the
+      org monitors this domain with SpyCloud. Security-tooling signal only.
+- name: BrowserStack
+  slug: browserstack
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^browserstack-domain-verification=
+    reference: https://www.browserstack.com/docs
+    description: >-
+      BrowserStack domain-verification TXT
+      (`browserstack-domain-verification=`), a cross-browser testing
+      platform. Indicates the domain is bound to a BrowserStack
+      organization. Account-binding signal only.
+- name: Calendly
+  slug: calendly
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^calendly-site-verification=
+    reference: https://help.calendly.com/
+    description: >-
+      Calendly domain-verification TXT (`calendly-site-verification=`).
+      Indicates the domain is bound to a Calendly organization for managed
+      scheduling / SSO. Account-binding signal only.
+- name: Sitecore
+  slug: sitecore
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^sitecore-domain-verification=
+    reference: https://doc.sitecore.com/
+    description: >-
+      Sitecore domain-verification TXT (`sitecore-domain-verification=`), a
+      digital-experience / CMS platform. Indicates the domain is bound to a
+      Sitecore cloud tenant.
+  - type: cname_target
+    pattern: sitecorecontenthub.cloud
+    tier: application
+    reference: https://doc.sitecore.com/ch/
+    description: >-
+      Subdomain CNAMEd to Sitecore Content Hub
+      (`*.sitecorecontenthub.cloud`), Sitecore's DAM / content-operations
+      cloud. Hosting-binding signal only.
+- name: Bitrise
+  slug: bitrise
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^bitrise-verification=
+    reference: https://devcenter.bitrise.io/
+    description: >-
+      Bitrise domain-verification TXT (`bitrise-verification=`), a mobile
+      CI/CD platform. Indicates the domain is bound to a Bitrise
+      organization. Account-binding signal only.
+- name: HPE GreenLake
+  slug: hpe-greenlake
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^hpe-greenlake-domain-verification=
+    reference: https://www.hpe.com/us/en/greenlake.html
+    description: >-
+      HPE GreenLake domain-verification TXT
+      (`hpe-greenlake-domain-verification=`), HPE's hybrid-cloud / consumption
+      platform. Indicates the domain is bound to an HPE GreenLake tenant.
+- name: MindManager
+  slug: mindmanager
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^mindmanager-verification=
+    reference: https://www.mindmanager.com/
+    description: >-
+      MindManager domain-verification TXT (`mindmanager-verification=`), a
+      mind-mapping / visual-planning tool. Indicates the domain is bound to
+      a MindManager account.
+- name: Bluebeam
+  slug: bluebeam
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^bluebeam-verification=
+    reference: https://www.bluebeam.com/
+    description: >-
+      Bluebeam domain-verification TXT (`bluebeam-verification=`), a
+      construction / PDF-markup collaboration platform. Indicates the domain
+      is bound to a Bluebeam account.
+- name: Validity
+  slug: validity
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^validity-domain-verification=
+    reference: https://www.validity.com/
+    description: >-
+      Validity domain-verification TXT (`validity-domain-verification=`), an
+      email-deliverability / sender-reputation platform (Everest /
+      BriteVerify). Indicates the org runs Validity for email deliverability.
+- name: Reachdesk
+  slug: reachdesk
+  category: Marketing
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^reachdesk-verification=
+    reference: https://www.reachdesk.com/
+    description: >-
+      Reachdesk domain-verification TXT (`reachdesk-verification=`), a
+      corporate-gifting / direct-mail marketing platform. Indicates the
+      domain is bound to a Reachdesk account.
+- name: reMarkable
+  slug: remarkable
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^remarkable-domain-verification=
+    reference: https://remarkable.com/
+    description: >-
+      reMarkable domain-verification TXT (`remarkable-domain-verification=`),
+      the e-paper tablet vendor's business / device-management binding.
+      Account-binding signal only.
+- name: Extensis
+  slug: extensis
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^extensis-domain-verification=
+    reference: https://www.extensis.com/
+    description: >-
+      Extensis domain-verification TXT (`extensis-domain-verification=`), a
+      font / digital-asset management platform. Indicates the domain is
+      bound to an Extensis account.
+- name: Lovable
+  slug: lovable
+  category: AI
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^lovable_verification=
+    reference: https://lovable.dev/
+    description: >-
+      Lovable domain-verification TXT (`lovable_verification=`), an AI
+      app-builder platform. Indicates the domain is bound to a Lovable
+      project. Account-binding signal only.
+- name: LinkedIn
+  slug: linkedin
+  category: Marketing
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^linkedin-site-verification=
+    reference: https://www.linkedin.com/help/linkedin
+    description: >-
+      LinkedIn domain-verification TXT (`linkedin-site-verification=`).
+      Indicates the org has verified this domain against a LinkedIn Page /
+      advertising account. Marketing-presence signal only.
+- name: Pinterest
+  slug: pinterest
+  category: Marketing
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^pinterest-site-verification=
+    reference: https://help.pinterest.com/
+    description: >-
+      Pinterest domain-verification TXT (`pinterest-site-verification=`).
+      Indicates the org claims this domain for a Pinterest business account.
+      Marketing-presence signal only.
+- name: TikTok
+  slug: tiktok
+  category: Marketing
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^tiktok-developers-site-verification=
+    reference: https://developers.tiktok.com/
+    description: >-
+      TikTok domain-verification TXT
+      (`tiktok-developers-site-verification=`). Indicates the org claims this
+      domain for TikTok developer / advertising integrations.
+      Marketing-presence signal only.
+- name: Lucid
+  slug: lucid
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^lucid-verification=
+    reference: https://help.lucid.co/
+    description: >-
+      Lucid (Lucidchart / Lucidspark) domain-verification TXT
+      (`lucid-verification=`). Indicates the domain is bound to a Lucid
+      account for managed diagramming / whiteboarding. Account-binding signal only.
+- name: Have I Been Pwned
+  slug: hibp
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^hibp-verify=
+    reference: https://haveibeenpwned.com/DomainSearch
+    description: >-
+      Have I Been Pwned domain-verification TXT (`hibp-verify=`). Indicates
+      the org monitors this domain for breach exposure via HIBP domain
+      search. Security-tooling signal only.
+- name: Amazon Business
+  slug: amazon-business
+  category: Commerce
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^amazon-business-verification=
+    reference: https://business.amazon.com/
+    description: >-
+      Amazon Business domain-verification TXT
+      (`amazon-business-verification=`). Indicates the org runs an Amazon
+      Business (procurement) account bound to this domain.
+- name: Schneider EcoStruxure
+  slug: ecostruxure
+  category: Infrastructure
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^ecostruxure-it-verification=
+    reference: https://www.se.com/ww/en/work/solutions/system/s1/ecostruxure-it/
+    description: >-
+      Schneider Electric EcoStruxure IT domain-verification TXT
+      (`ecostruxure-it-verification=`), a data-center / DCIM monitoring
+      platform. Indicates the domain is bound to an EcoStruxure IT account.
+- name: TollBit
+  slug: tollbit
+  category: AI
+  confidence: medium
+  detections:
+  - type: txt
+    pattern: ^tollbit-domain-verification=
+    reference: https://tollbit.com/
+    description: >-
+      TollBit domain-verification TXT (`tollbit-domain-verification=`), an
+      AI-content-licensing / bot-monetization platform. Indicates the domain
+      is enrolled with TollBit.
+- name: Statuspage (Atlassian)
+  slug: statuspage
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^status-page-domain-verification=
+    description: >-
+      Statuspage (Atlassian) domain-verification TXT (`status-page-domain-verification=`). Indicates the
+      domain is bound to a Statuspage (Atlassian) account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Mixpanel
+  slug: mixpanel
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^mixpanel-domain-verify=
+    description: >-
+      Mixpanel domain-verification TXT (`mixpanel-domain-verify=`). Indicates the
+      domain is bound to a Mixpanel account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Pendo
+  slug: pendo
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^pendo-domain-verification=
+    description: >-
+      Pendo domain-verification TXT (`pendo-domain-verification=`). Indicates the
+      domain is bound to a Pendo account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Drift Chat
+  slug: drift
+  category: Marketing
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^drift-domain-verification=
+    description: >-
+      Drift Chat domain-verification TXT (`drift-domain-verification=`). Indicates the
+      domain is bound to a Drift Chat account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Shopify
+  slug: shopify
+  category: Commerce
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^shopify-verification-code=
+    description: >-
+      Shopify domain-verification TXT (`shopify-verification-code=`). Indicates the
+      domain is bound to a Shopify account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Monday.com
+  slug: monday
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^monday-com-verification=
+    description: >-
+      Monday.com domain-verification TXT (`monday-com-verification=`). Indicates the
+      domain is bound to a Monday.com account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Zoom
+  slug: zoom
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^zoom-domain-verification=
+    description: >-
+      Zoom domain-verification TXT (`zoom-domain-verification=`). Indicates the
+      domain is bound to a Zoom account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: LaunchDarkly
+  slug: launchdarkly
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^launchdarkly-domain-verification=
+    description: >-
+      LaunchDarkly domain-verification TXT (`launchdarkly-domain-verification=`). Indicates the
+      domain is bound to a LaunchDarkly account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: New Relic
+  slug: newrelic
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^new-relic-domain-verification=
+    description: >-
+      New Relic domain-verification TXT (`new-relic-domain-verification=`). Indicates the
+      domain is bound to a New Relic account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: GitKraken
+  slug: gitkraken
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^gitkraken-domain-verification=
+    description: >-
+      GitKraken domain-verification TXT (`gitkraken-domain-verification=`). Indicates the
+      domain is bound to a GitKraken account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: ConfigCat
+  slug: configcat
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^configcat-domain-verification=
+    description: >-
+      ConfigCat domain-verification TXT (`configcat-domain-verification=`). Indicates the
+      domain is bound to a ConfigCat account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Confluent
+  slug: confluent
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^confluent-verification=
+    description: >-
+      Confluent domain-verification TXT (`confluent-verification=`). Indicates the
+      domain is bound to a Confluent account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Keybase
+  slug: keybase
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^keybase-site-verification=
+    description: >-
+      Keybase domain-verification TXT (`keybase-site-verification=`). Indicates the
+      domain is bound to a Keybase account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: DataDome
+  slug: datadome
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^datadome-domain-verify=
+    description: >-
+      DataDome domain-verification TXT (`datadome-domain-verify=`). Indicates the
+      domain is bound to a DataDome account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Sinch
+  slug: sinch
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^sinch-domain-verification=
+    description: >-
+      Sinch domain-verification TXT (`sinch-domain-verification=`). Indicates the
+      domain is bound to a Sinch account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Site24x7
+  slug: site24x7
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^site24x7-signals-domain-verification=
+    description: >-
+      Site24x7 domain-verification TXT (`site24x7-signals-domain-verification=`). Indicates the
+      domain is bound to a Site24x7 account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Censys
+  slug: censys
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^censys-domain-verification=
+    description: >-
+      Censys domain-verification TXT (`censys-domain-verification=`). Indicates the
+      domain is bound to a Censys account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Appspace
+  slug: appspace
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^appspace-domain-verification=
+    description: >-
+      Appspace domain-verification TXT (`appspace-domain-verification=`). Indicates the
+      domain is bound to a Appspace account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Nitro
+  slug: nitro
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^nitro-verification-code=
+    description: >-
+      Nitro domain-verification TXT (`nitro-verification-code=`). Indicates the
+      domain is bound to a Nitro account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Windsurf (Codeium)
+  slug: windsurf
+  category: AI
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^windsurf-verification=
+    description: >-
+      Windsurf (Codeium) domain-verification TXT (`windsurf-verification=`). Indicates the
+      domain is bound to a Windsurf (Codeium) account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.
+- name: Insomnia (Kong)
+  slug: insomnia
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^insomnia-validation=
+    description: >-
+      Insomnia (Kong) domain-verification TXT (`insomnia-validation=`). Indicates the
+      domain is bound to a Insomnia (Kong) account or tenant for SSO /
+      provisioning. Account-binding signal only; it does not prove
+      active usage.

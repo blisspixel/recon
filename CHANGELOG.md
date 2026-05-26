@@ -10,6 +10,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
 is the next planned event; see `docs/roadmap.md`.
 
+## [1.9.23] - 2026-05-26
+
+### Added
+
+The comprehensive corpus-discovery batch. A multi-signal mine over the
+full ~5000-domain private corpus surfaced unfingerprinted patterns
+across every detection type recon uses, and this release lands all the
+clearly-attributable ones. The catalog grows from 459 to **572 entries**
+(+113), spanning five detection types.
+
+- **56 TXT verification fingerprints** (`verifications.yaml`). The first
+  batch covered hand-curated new vendors (Docker, HackerOne, TeamViewer,
+  Zapier, Palo Alto Networks, GoTo / LogMeIn, SAP SuccessFactors, Pexip,
+  JetBrains, Uber for Business, Parallels, Detectify, Foxit, Bugcrowd,
+  SpyCloud, BrowserStack, Calendly, Sitecore, Bitrise, HPE GreenLake,
+  MindManager, Bluebeam, Validity, Reachdesk, reMarkable, Extensis,
+  Lovable, LinkedIn, Pinterest, TikTok, Lucid, Have I Been Pwned, Amazon
+  Business, Schneider EcoStruxure, TollBit). A second generator pass
+  added Atlassian Statuspage, Mixpanel, Pendo, Shopify, monday.com,
+  Zoom, LaunchDarkly, New Relic, GitKraken, ConfigCat, Confluent,
+  Keybase, DataDome, Sinch, Site24x7, Censys, Appspace, Nitro, Windsurf,
+  Insomnia, Sitecore (TXT + CNAME).
+- **17 SPF include fingerprints** (`discovered-signals.yaml`):
+  Proofpoint, Salesforce Pardot, Atlassian Statuspage, Mailjet,
+  Salesforce Marketing Cloud, Greenhouse, Docebo, Help Scout, Atlassian,
+  Postmark, SAP SuccessFactors, Shopify, Exclaimer (two patterns),
+  Oracle NetSuite, MailerLite, Campaign Monitor.
+- **9 MX provider fingerprints**: Google Workspace (`googlemail.com`),
+  Trend Micro, Mimecast (regional), GoDaddy, Mailprotector, Mailgun,
+  Proofpoint Essentials, Microsoft 365 US Gov, SecureMX.
+- **8 DMARC `rua=` vendor fingerprints**: DMARC Analyzer (Mimecast),
+  Postmark, MxToolbox DMARC, DMARC Digests, Netcraft, DMARCLY, Validity
+  (`everest.email` and `250ok.net`). Plus new `vali.email`,
+  `easydmarc.us`, `easydmarc.eu` patterns added to the existing Valimail
+  and EasyDMARC entries so the SPF-flattener invariant holds.
+- **12 NS provider fingerprints**: CSC (`cscdns.net`, `cscdns.uk`), DNS
+  Made Easy, Foundation DNS (.com / .net / .org), Network Solutions
+  (`worldnic.com`), Afternic, MarkMonitor, easyDNS, Gandi. All added to
+  the cloud-rollup exclusions (DNS providers, not multi-cloud hosting).
+- **8 new `cname_target` rules**: Freshservice, Avature, Help Scout,
+  Oracle Service Cloud, TIBCO Mashery, Crownpeak, Infobip, Ad Legend.
+  Plus the legacy / alternate domains `bomgarcloud.com` (BeyondTrust)
+  and `bynder.com`, added to the slugs introduced in v1.9.22.
+
+All 572 fingerprint entries pass the validator (regex safety and
+specificity) and the metadata-coverage gate; new slugs are mapped in
+`_CATEGORY_BY_SLUG` or the Business Apps fallback; NS-provider slugs
+are added to the cloud-rollup exclusion set so the panel summary stays
+focused on actual hosting clouds.
+
+The discovery loop ran across all the detection types recon uses (TXT,
+SPF, MX, NS, DMARC `rua=`) and applied each type's matcher to confirm
+absence before adding. The long tail (single-domain occurrences and
+ambiguous identities) is left for future batches; this release lands
+every clearly-attributable, multi-domain signal.
+
 ## [1.9.22] - 2026-05-23
 
 ### Added
