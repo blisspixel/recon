@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### v1.9.24 mega-batch (corpus + engine, not yet released)
+No unreleased changes pending.
+
+## [1.9.24] - 2026-05-27
 
 A second full pass over the 5241-domain private corpus, combined with
 engine work surfaced by the QA pass on the resulting catalog. The
@@ -22,7 +24,7 @@ catalog cap added).
 Source: deepmine and unclassified-CNAME-chain mining over the
 2026-05-26 full-corpus run; the per-candidate triage that produced
 this batch is `validation/v1.9.24-candidates-triage.md` (local-only,
-gitignored under `/validation/*`).
+allowlisted into the otherwise-gitignored `/validation/*` tree).
 
 Added (156 new vendor entries):
 
