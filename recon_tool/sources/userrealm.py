@@ -8,7 +8,6 @@ Queries two public Microsoft endpoints (no auth required):
 from __future__ import annotations
 
 import logging
-import xml.etree.ElementTree as ET
 from typing import Any
 from xml.sax.saxutils import escape as xml_escape
 
@@ -65,7 +64,7 @@ def _parse_autodiscover_domains(xml_text: str) -> tuple[list[str], str | None]:
 
     try:
         root = DefusedET.fromstring(xml_text)
-    except ET.ParseError as exc:
+    except DefusedET.ParseError as exc:
         logger.debug("Failed to parse Autodiscover XML: %s", exc)
         return [], None
 

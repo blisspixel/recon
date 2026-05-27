@@ -40,33 +40,123 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.21 | Round-five audit (no new bug found): detector-failure observability via degraded_sources; verbose-table / Autodiscover / CertSpotter output hygiene | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
 | v1.9.22 | Fingerprint expansion: 20 new cname_target rules from a corpus discovery run (Discourse, Substack, BeyondTrust, Arctic Wolf, M365 US Gov cloud, ...); Bayesian fusion validated at 100% calibration across 136 diverse domains | `CHANGELOG.md` |
 | v1.9.23 | Comprehensive corpus-discovery batch across TXT / SPF / MX / NS / DMARC-rua signals: 56 TXT verifications + 17 SPF + 9 MX + 8 DMARC-rua + 12 NS + 8 cname_target; catalog grows 459 -> 572 entries | `CHANGELOG.md` |
+| v1.9.24 | Second corpus pass (lowered thresholds) plus shadow-handling consistency: 156 new fingerprints + 60 EXTEND variants across all six signal types, catalog grows 572 -> 788 entries; engine substring matchers (MX / NS / CAA / dmarc_rua / cname) all sort longest-first and SPF gains `filter_shadowed_matches` so a broader pattern cannot double-count alongside a narrower one; pre-existing cname-regex matcher bug fixed (9 patterns silently never-fired); audit residuals (priors clamp open `(0,1)`, per-file catalog cap); `tests/test_pattern_shadowing.py` adds a CI gate for future shadow / description / EXTEND-duplicate failures | `CHANGELOG.md` |
 
-**Outstanding before v2.0:**
+**Outstanding before v2.0:** *(refined 2026-05-26 after the v1.9.24
+mega-batch; the v1.9.24 entry above absorbed items 1 and the
+fingerprint / engine work that originally would have been split
+across multiple patches.)*
 
-1. Codex security scans (operator-paced, a few days). The
-   May-2026 audit cycle closed in v1.9.4 (CNAME walker A/AAAA
-   leak), v1.9.9 (MCP shadow-load full closure), v1.9.13 (CNAME
-   walker entry-point + redirect_domain filter after a
-   2026-05-17 scanner re-flag pinned to the v1.5.0 introducing
-   commit), and v1.9.14 (revert of the v1.9.13 terminus-only
-   A/AAAA check after a follow-up scanner pass showed it had
-   reopened the v1.9.4 leak on a type-dependent-answer path);
-   `docs/security-audit-resolutions.md` records the closure
-   trail. Any additional scanner pass between v1.9.14 and the
+The work below ships as 1.9.x patches following the no-bundling
+discipline; v2.0 itself stays the mechanical lock event with no
+new work. Recommended sequencing is at the end.
+
+1. **Schema-contract polish.** Three items the pre-lock audit
+   surfaced in `docs/recon-schema.json` and the way real output
+   relates to it:
+
+   - The schema description currently reads "Stable v1.0 contract
+     for `recon <domain> --json` output", but batch NDJSON output
+     (`recon batch ... --ndjson`) also emits records, including
+     input-validation error records of shape `{domain, error}`
+     that do not match the single-domain contract. The schema
+     must explicitly state its scope (single-domain success
+     output) and either (a) document the batch error-record shape
+     separately or (b) emit the full skeleton on input-validation
+     failures.
+   - Fields `domain` and `error` appear in batch error records
+     but are not declared in the schema's `properties`. Either
+     declare them with conditional semantics or document the
+     omission with intent.
+   - Fields `explanation_dag` and `unclassified_cname_chains` are
+     in the schema but conditionally emitted (only with
+     `--explain-dag` / `--include-unclassified`). Document the
+     conditional emission explicitly so consumers do not infer
+     "always present".
+
+   *Acceptance:* a sample batch NDJSON over the private corpus
+   validates against the schema using a single deterministic rule
+   set (success records pass the full shape; error records are
+   handled by an explicit allowance), and a re-read of the schema
+   prose answers "what shape can I expect from each output mode"
+   without ambiguity.
+
+2. **Release-notes draft brought current.** `validation/v2.0-
+   release-notes-draft.md` was staged in v1.9.14 prep and covers
+   v1.9.3 through v1.9.14 only. The releases since (v1.9.15
+   through whatever the last 1.9.x is at lock time) must be added
+   so the eventual v2.0 CHANGELOG entry captures the full pre-2.0
+   work. The post-v1.9.14 work includes audit rounds 1-5 (DNS
+   leak, CT / BIMI ingestion, MCP / CLI / output injection, DoS /
+   resource, detector exception isolation), the cname_target
+   fingerprint expansion (v1.9.22), the broader corpus-
+   discovery batch (v1.9.23, 113 new fingerprints), and the
+   v1.9.24 mega-batch (216 catalog entries plus shadow-handling
+   consistency across substring matchers and the cname-regex
+   matcher fix).
+
+   *Acceptance:* the draft's release table covers every tag from
+   v1.9.3 through the lock-time 1.9.x, each row linked to its
+   shipping patch and validation memo; the security closure table
+   reflects rounds 1-5 in addition to the original 2026-05 cycle.
+
+3. **Validation-summary refresh with the full-corpus baseline.**
+   `validation/v2.0-validation-summary.md` was published in
+   v1.9.14 prep. A full-corpus Bayesian calibration run on
+   2026-05-26 produced the broadest result the project has:
+   13,939 of 13,939 high-confidence posteriors agree with the
+   deterministic pipeline (100%), zero cross-source conflicts
+   across 5,236 successful domains, and all 9 nodes pass the
+   v1.9.5 stability gates with Brier <= 0.05 and ECE <= 0.19.
+   The summary should incorporate this run as the v2.0 lock-time
+   baseline rather than the v1.9.14 snapshot, so the document a
+   v2.0 consumer reads is the freshest evidence the engine
+   improved. A CT-enabled re-run is also wanted before lock so
+   `infrastructure_clusters` and the region / shard kinds of
+   `lexical_observations` are exercised on real input rather than
+   recorded as "no data" (the no-CT run skips the cert layer that
+   feeds both signals).
+
+   *Acceptance:* the summary's trend table extends through the
+   2026-05-26 full-corpus run with CT enabled; per-node stability
+   metrics on the full corpus are tabulated; the historical
+   v1.9.14 baseline remains as the prior reference point.
+
+4. **Codex security scans (operator-paced).** Continuing the
+   trail that closed in v1.9.4 / v1.9.9 / v1.9.13 / v1.9.14 plus
+   rounds 1-5; `docs/security-audit-resolutions.md` records the
+   closure trail. Any additional scanner pass between now and the
    v2.0 tag adds to that trail if it surfaces anything new.
-2. Polish-doc cross-checks against the v2.0 quality bar
-   (`docs/roadmap.md` §"Quality bar for v2.0 itself"): SIEM
-   examples re-parse the locked schema, correlation.md
-   citation reachability, dependency-floor manifesto matches
-   `pyproject.toml`.
-3. Mechanical lock ceremony: bump `docs/recon-schema.json`
-   description from "v1.0 contract" to "v2.0 contract"; move
-   `validation/v2.0-release-notes-draft.md` body into
-   `CHANGELOG.md` under `## [2.0.0] - <date>`; delete the draft
-   file; run `scripts/release.py`. The validation summary
-   (`validation/v2.0-validation-summary.md`) and corpus-run
-   result (`validation/v2.0-corpus-run.md`) shipped in
-   v1.9.14 prep and need no further work at lock time.
+
+5. **Mechanical lock ceremony (v2.0.0 itself).** Once items 1-4
+   are addressed:
+
+   - Bump `docs/recon-schema.json` description from "v1.0
+     contract" to "v2.0 contract"; strip EXPERIMENTAL language
+     from the promoted-field descriptions per the schema-lock
+     disposition table.
+   - Flip `--fusion` to default-on with the clean-panel
+     disclosure rule (see "v2.0 design decision" section below).
+   - Promote `correlation.md` from living draft to polished
+     reference, with the four sections the snapshot requires
+     (defense / correlation mapping, prior-art comparison,
+     dependency-floor manifesto, failure-mode catalog).
+   - Move `validation/v2.0-release-notes-draft.md` body into
+     `CHANGELOG.md` under `## [2.0.0] - <date>`; delete the
+     draft file.
+   - Run `scripts/release.py`.
+
+**Recommended sequencing.** Items 1 through 3 ship as 1.9.x
+patches, one per coherent story:
+
+- **v1.9.25** lands the schema-contract polish (item 1).
+- **v1.9.26** brings the release-notes draft current and
+  refreshes the validation summary (items 2 and 3 are both
+  "v2.0 docs currency" and ship together as one patch).
+- Item 4 runs in parallel on the operator's schedule and folds
+  into the closure trail as it lands.
+- **v2.0.0** is item 5, the mechanical ceremony, after 1-3 are
+  in `main` and any pending scanner pass has settled.
 
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery

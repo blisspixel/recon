@@ -692,3 +692,827 @@ fingerprints:
       domain is bound to a Insomnia (Kong) account or tenant for SSO /
       provisioning. Account-binding signal only; it does not prove
       active usage.
+# v1.9.24 TXT verification additions appended to verifications.yaml.
+# 77 new entries from the 5241-domain corpus deep mine.
+
+- name: Yahoo Small Business
+  slug: yahoo
+  category: Email
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^yahoo-verification-key=
+    description: >-
+      Yahoo Small Business domain-verification TXT
+      (`yahoo-verification-key=`). Indicates the domain is bound to a
+      Yahoo Small Business tenant. Account-binding signal only; it does
+      not prove active mailbox usage.
+- name: HashiCorp Cloud Platform
+  slug: hashicorp-cloud
+  category: Cloud
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^hcp-domain-verification=
+    description: >-
+      HashiCorp Cloud Platform (HCP) domain-verification TXT
+      (`hcp-domain-verification=`). Indicates the domain is bound to an
+      HCP organization for SSO / provisioning. Account-binding signal
+      only.
+- name: Astro
+  slug: astro
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^astro-domain-verification=
+    description: >-
+      Astro domain-verification TXT (`astro-domain-verification=`).
+      Indicates the domain is bound to an Astro account. Account-
+      binding signal only; it does not prove active usage.
+- name: Remote.com
+  slug: remote-com
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^remote-domain-verification=
+    description: >-
+      Remote.com (HR / payroll) domain-verification TXT
+      (`remote-domain-verification=`). Indicates the domain is bound to
+      a Remote.com tenant. Account-binding signal only.
+- name: Parsec
+  slug: parsec
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^parsec-domain-verification=
+    description: >-
+      Parsec (remote desktop) domain-verification TXT
+      (`parsec-domain-verification=`). Indicates the domain is bound to
+      a Parsec team. Account-binding signal only.
+- name: Zywave
+  slug: zywave
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^zywave-domain-verification=
+    description: >-
+      Zywave (insurance tech) domain-verification TXT
+      (`zywave-domain-verification=`). Indicates the domain is bound to
+      a Zywave tenant. Account-binding signal only.
+- name: Infor CloudSuite
+  slug: infor
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^infor-cloudsuite-domain-verification=
+    description: >-
+      Infor CloudSuite domain-verification TXT
+      (`infor-cloudsuite-domain-verification=`). Indicates the domain
+      is bound to an Infor CloudSuite tenant. Tenant-binding signal
+      only.
+- name: Proofpoint Wombat
+  slug: wombat-security
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^wombat-verification=
+    description: >-
+      Proofpoint Wombat security-awareness platform domain-
+      verification TXT (`wombat-verification=`). Indicates the domain
+      is bound to a Wombat / Proofpoint Security Awareness tenant.
+      Account-binding signal only.
+- name: Parkable
+  slug: parkable
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^parkable-domain-verification=
+    description: >-
+      Parkable (workplace parking) domain-verification TXT
+      (`parkable-domain-verification=`). Account-binding signal only.
+- name: BetterComp
+  slug: bettercomp
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^bettercomp-verify=
+    description: >-
+      BetterComp (HR compensation) domain-verification TXT
+      (`bettercomp-verify=`). Account-binding signal only.
+- name: Gradle Enterprise
+  slug: gradle
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^gradle-verification=
+    description: >-
+      Gradle Enterprise (build platform) domain-verification TXT
+      (`gradle-verification=`). Account-binding signal only.
+- name: DeepL
+  slug: deepl
+  category: AI
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^deepl-domain-verification=
+    description: >-
+      DeepL (AI translation) domain-verification TXT
+      (`deepl-domain-verification=`). Indicates the domain is bound to
+      a DeepL Pro / business account. Account-binding signal only.
+- name: Heyhack
+  slug: heyhack
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^heyhack-verification=
+    description: >-
+      Heyhack (automated pentest) domain-verification TXT
+      (`heyhack-verification=`). Indicates the domain is bound to a
+      Heyhack tenant. Account-binding signal only.
+- name: Make.com
+  slug: make-com
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^make-domain-verification=
+    description: >-
+      Make.com (formerly Integromat) domain-verification TXT
+      (`make-domain-verification=`). Account-binding signal only.
+- name: WeWork
+  slug: wework
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^wework-site-verification=
+    description: >-
+      WeWork domain-verification TXT (`wework-site-verification=`).
+      Indicates the domain is bound to a WeWork enterprise account.
+      Account-binding signal only.
+- name: Airalo
+  slug: airalo
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^airalo-domain-verification=
+    description: >-
+      Airalo (eSIM) domain-verification TXT
+      (`airalo-domain-verification=`). Account-binding signal only.
+- name: ProjectDiscovery
+  slug: projectdiscovery
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^projectdiscovery-verification=
+    description: >-
+      ProjectDiscovery (security tooling) domain-verification TXT
+      (`projectdiscovery-verification=`). Indicates the domain is
+      bound to a ProjectDiscovery cloud tenant. Account-binding signal
+      only.
+- name: Dailymotion
+  slug: dailymotion
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^dailymotion-domain-verification=
+    description: >-
+      Dailymotion (video) domain-verification TXT
+      (`dailymotion-domain-verification=`). Account-binding signal
+      only.
+- name: Bill One
+  slug: bill-one
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^bill-one-domain-verification=
+    description: >-
+      Bill One (Japanese billing platform) domain-verification TXT
+      (`bill-one-domain-verification=`). Account-binding signal only.
+- name: Formstack
+  slug: formstack
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^formstack-domain-verification=
+    description: >-
+      Formstack (forms / workflow) domain-verification TXT
+      (`formstack-domain-verification=`). Account-binding signal only.
+- name: AbuseIPDB
+  slug: abuseipdb
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^abuseipdb-verification=
+    description: >-
+      AbuseIPDB domain-verification TXT (`abuseipdb-verification=`).
+      Indicates the domain is bound to an AbuseIPDB account.
+      Account-binding signal only.
+- name: SolarWinds Service Desk
+  slug: solarwinds-service-desk
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^solarwinds-service0desk-verification=
+    description: >-
+      SolarWinds Service Desk (ITSM) domain-verification TXT
+      (`solarwinds-service0desk-verification=`). Account-binding
+      signal only.
+- name: Stytch
+  slug: stytch
+  category: Identity
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^stytch_verification_dns=
+    description: >-
+      Stytch (auth / identity API) domain-verification TXT
+      (`stytch_verification_dns=`). Account-binding signal only.
+- name: HeyGen
+  slug: heygen
+  category: AI
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^heygen-verification=
+    description: >-
+      HeyGen (AI avatar video) domain-verification TXT
+      (`heygen-verification=`). Account-binding signal only.
+- name: SafeBreach
+  slug: safebreach
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^safebreach-domain-verification=
+    description: >-
+      SafeBreach (breach and attack simulation) domain-verification
+      TXT (`safebreach-domain-verification=`). Account-binding signal
+      only.
+- name: Brave
+  slug: brave
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^brave-ledger-verification=
+    description: >-
+      Brave Creator domain-verification TXT
+      (`brave-ledger-verification=`). Indicates the domain is bound to
+      a Brave Creator account. Account-binding signal only.
+- name: ProdPad
+  slug: prodpad
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^prodpad-domain-verification=
+    description: >-
+      ProdPad (product management) domain-verification TXT
+      (`prodpad-domain-verification=`). Account-binding signal only.
+- name: Gather
+  slug: gather
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^gather-domain-verification=
+    description: >-
+      Gather (virtual office) domain-verification TXT
+      (`gather-domain-verification=`). Account-binding signal only.
+- name: Kiro
+  slug: kiro
+  category: AI
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^kiro-site-verification=
+    description: >-
+      Kiro (AWS AI IDE) domain-verification TXT
+      (`kiro-site-verification=`). Account-binding signal only.
+- name: Nearmap
+  slug: nearmap
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^nearmap-domain-verification=
+    description: >-
+      Nearmap (aerial imagery) domain-verification TXT
+      (`nearmap-domain-verification=`). Account-binding signal only.
+- name: Krisp
+  slug: krisp
+  category: AI
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^krisp-domain-verification=
+    description: >-
+      Krisp (AI noise cancellation) domain-verification TXT
+      (`krisp-domain-verification=`). Account-binding signal only.
+- name: ActiveProspect
+  slug: activeprospect
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^activeprospect-domain-verification=
+    description: >-
+      ActiveProspect (lead consent) domain-verification TXT
+      (`activeprospect-domain-verification=`). Account-binding signal
+      only.
+- name: Reftab
+  slug: reftab
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^reftab-domain-verification=
+    description: >-
+      Reftab (asset tracking) domain-verification TXT
+      (`reftab-domain-verification=`). Account-binding signal only.
+- name: Coda
+  slug: coda
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^coda-verification=
+    description: >-
+      Coda (docs / workspace) domain-verification TXT
+      (`coda-verification=`). Account-binding signal only.
+- name: Nulab
+  slug: nulab
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^nulab-verification-code=
+    description: >-
+      Nulab (Backlog / Cacoo / Typetalk) domain-verification TXT
+      (`nulab-verification-code=`). Account-binding signal only.
+- name: Fireflies
+  slug: fireflies
+  category: AI
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^fireflies-verification=
+    description: >-
+      Fireflies.ai (AI meeting notes) domain-verification TXT
+      (`fireflies-verification=`). Account-binding signal only.
+- name: Virtru
+  slug: virtru
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^virtru-site-verify=
+    description: >-
+      Virtru (email / file encryption) domain-verification TXT
+      (`virtru-site-verify=`). Account-binding signal only.
+- name: Botify
+  slug: botify
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^botify-site-verification=
+    description: >-
+      Botify (technical SEO) domain-verification TXT
+      (`botify-site-verification=`). Account-binding signal only.
+- name: Northpass
+  slug: northpass
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^northpass-domain-verification=
+    description: >-
+      Northpass (customer education LMS) domain-verification TXT
+      (`northpass-domain-verification=`). Account-binding signal only.
+- name: WalletConnect
+  slug: walletconnect
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^wallet-connect-dns-verification=
+    description: >-
+      WalletConnect (web3) domain-verification TXT
+      (`wallet-connect-dns-verification=`). Account-binding signal
+      only.
+- name: Barco
+  slug: barco
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^barco-verification=
+    description: >-
+      Barco (visualization / ClickShare) domain-verification TXT
+      (`barco-verification=`). Account-binding signal only.
+- name: Coursera
+  slug: coursera
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^coursera-domain-verification=
+    description: >-
+      Coursera (online learning) domain-verification TXT
+      (`coursera-domain-verification=`). Account-binding signal only.
+- name: Samsung
+  slug: samsung
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^samsung-domain-verification=
+    description: >-
+      Samsung enterprise domain-verification TXT
+      (`samsung-domain-verification=`). Account-binding signal only.
+- name: Favro
+  slug: favro
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^favro-verification=
+    description: >-
+      Favro (planning / PM) domain-verification TXT
+      (`favro-verification=`). Account-binding signal only.
+- name: ContractWorks
+  slug: contractworks
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^contractworksverify=
+    description: >-
+      ContractWorks (contract management, by Onit) domain-verification
+      TXT (`contractworksverify=`). Account-binding signal only.
+- name: IdenTrust
+  slug: identrust
+  category: Identity
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^identrust_validation=
+    description: >-
+      IdenTrust (CA / public-key infrastructure) domain-verification
+      TXT (`identrust_validation=`). Account-binding signal only.
+- name: DoorDash
+  slug: doordash
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^doordash-verification=
+    description: >-
+      DoorDash enterprise domain-verification TXT
+      (`doordash-verification=`). Account-binding signal only.
+- name: Jumio
+  slug: jumio
+  category: Identity
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^jumio-up-idp-domain-verification=
+    description: >-
+      Jumio (identity verification) domain-verification TXT
+      (`jumio-up-idp-domain-verification=`). Account-binding signal
+      only.
+- name: Toast
+  slug: toast
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^toast-domain-verification=
+    description: >-
+      Toast (restaurant POS) domain-verification TXT
+      (`toast-domain-verification=`). Account-binding signal only.
+- name: Feishu (Lark)
+  slug: feishu
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^verification-code-site-app_feishu=
+    description: >-
+      Feishu / Lark (ByteDance productivity suite) domain-verification
+      TXT (`verification-code-site-App_feishu=`). Account-binding
+      signal only.
+- name: Ethiack
+  slug: ethiack
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^ethiack-verification=
+    description: >-
+      Ethiack (pentest-as-a-service) domain-verification TXT
+      (`ethiack-verification=`). Account-binding signal only.
+- name: Happeo
+  slug: happeo
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^happeo-site-verification=
+    description: >-
+      Happeo (Google Workspace intranet) domain-verification TXT
+      (`happeo-site-verification=`). Account-binding signal only.
+- name: Spacelift
+  slug: spacelift
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^spacelift-domain-verification=
+    description: >-
+      Spacelift (infrastructure-as-code platform) domain-verification
+      TXT (`spacelift-domain-verification=`). Account-binding signal
+      only.
+- name: Everlytic
+  slug: everlytic
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^everlytic-site-verification=
+    description: >-
+      Everlytic (email / SMS marketing) domain-verification TXT
+      (`everlytic-site-verification=`). Account-binding signal only.
+- name: SafetyCulture
+  slug: safetyculture
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^safetyculture-domain-verification=
+    description: >-
+      SafetyCulture (iAuditor) domain-verification TXT
+      (`safetyculture-domain-verification=`). Account-binding signal
+      only.
+- name: Microsec
+  slug: microsec
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^microsec-verification=
+    description: >-
+      Microsec (web3 / smart-contract security) domain-verification
+      TXT (`microsec-verification=`). Account-binding signal only.
+- name: D4Sign
+  slug: d4sign
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^d4sign-domain-verification=
+    description: >-
+      D4Sign (Brazilian e-signature) domain-verification TXT
+      (`d4sign-domain-verification=`). Account-binding signal only.
+- name: Razorpay
+  slug: razorpay
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^rzp-site-verification=
+    description: >-
+      Razorpay (Indian payments) domain-verification TXT
+      (`rzp-site-verification=`). Account-binding signal only.
+- name: Specops Software
+  slug: specops
+  category: Identity
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^specops-verification-code=
+    description: >-
+      Specops Software (password / identity management) domain-
+      verification TXT (`specops-verification-code=`). Account-binding
+      signal only.
+- name: Gitpod
+  slug: gitpod
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^gitpod-verification=
+    description: >-
+      Gitpod (cloud development environments) domain-verification TXT
+      (`gitpod-verification=`). Account-binding signal only.
+- name: Securiti
+  slug: securiti
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^securiti-verification-id=
+    description: >-
+      Securiti.ai (data privacy / governance) domain-verification TXT
+      (`securiti-verification-id=`). Account-binding signal only.
+- name: Trustpilot
+  slug: trustpilot
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^trustpilot-one-time-verification-id=
+    description: >-
+      Trustpilot (reviews) domain-verification TXT
+      (`trustpilot-one-time-verification-id=`). Account-binding signal
+      only.
+- name: QQ Mail
+  slug: qqmail
+  category: Email
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^qqmail-site-verification=
+    description: >-
+      Tencent QQ Mail Business domain-verification TXT
+      (`qqmail-site-verification=`). Account-binding signal only.
+- name: NordPass
+  slug: nordpass
+  category: Identity
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^nordpass-domain-verification=
+    description: >-
+      NordPass (password manager) domain-verification TXT
+      (`nordpass-domain-verification=`). Account-binding signal only.
+- name: Gem
+  slug: gem
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^gem-domain-verification=
+    description: >-
+      Gem (recruiting CRM) domain-verification TXT
+      (`gem-domain-verification=`). Account-binding signal only.
+- name: Arcules
+  slug: arcules
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^arcules-domain-verification=
+    description: >-
+      Arcules (video security) domain-verification TXT
+      (`arcules-domain-verification=`). Account-binding signal only.
+- name: Druide
+  slug: druide
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^druide-validation-domaine=
+    description: >-
+      Druide informatique (French language SaaS) domain-verification
+      TXT (`druide-validation-domaine=`). Account-binding signal only.
+- name: eSputnik
+  slug: esputnik
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^esputnik-verification=
+    description: >-
+      eSputnik (CRM / email marketing) domain-verification TXT
+      (`esputnik-verification=`). Account-binding signal only.
+- name: Freepik
+  slug: freepik
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^freepik-domain-verification=
+    description: >-
+      Freepik (creative assets) domain-verification TXT
+      (`freepik-domain-verification=`). Account-binding signal only.
+- name: Lemlist
+  slug: lemlist
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^lemlist-verif=
+    description: >-
+      Lemlist (sales engagement) domain-verification TXT
+      (`lemlist-verif=`). Account-binding signal only.
+- name: Apperio
+  slug: apperio
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^apperio-domain-verification=
+    description: >-
+      Apperio (legal spend management) domain-verification TXT
+      (`apperio-domain-verification=`). Account-binding signal only.
+- name: Read AI
+  slug: read-ai
+  category: AI
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^read-ai-verification=
+    description: >-
+      Read.ai (AI meeting analytics) domain-verification TXT
+      (`read-ai-verification=`). Account-binding signal only.
+- name: MessageBird (Bird)
+  slug: messagebird
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^bird-domain-verification=
+    description: >-
+      MessageBird (now Bird, omnichannel comms) domain-verification
+      TXT (`bird-domain-verification=`). Account-binding signal only.
+- name: Vitally
+  slug: vitally
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^vitally-domain-verification=
+    description: >-
+      Vitally (customer success) domain-verification TXT
+      (`vitally-domain-verification=`). Account-binding signal only.
+- name: Lucidchart
+  slug: lucidchart
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^lucidchart-verification=
+    description: >-
+      Lucidchart (diagramming) domain-verification TXT
+      (`lucidchart-verification=`). Account-binding signal only.
+- name: PandaDoc
+  slug: pandadoc
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^pandadoc-domain-verification=
+    description: >-
+      PandaDoc (document automation) domain-verification TXT
+      (`pandadoc-domain-verification=`). Account-binding signal only.
+- name: InVision
+  slug: invision
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^invisionapp-verification=
+    description: >-
+      InVision (design collaboration) domain-verification TXT
+      (`invisionapp-verification=`). Account-binding signal only.
+- name: Fortinet
+  slug: fortinet
+  category: Security
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^fortinet-fortiphish-site-verification=
+    description: >-
+      Fortinet FortiPhish (phishing simulation) domain-verification
+      TXT (`fortinet-fortiphish-site-verification=`). Account-binding
+      signal only.
+- name: Adobe AEM
+  slug: adobe-aem
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^adobe-aem-verification=
+    description: >-
+      Adobe Experience Manager (AEM) domain-verification TXT
+      (`adobe-aem-verification=`). Account-binding signal only.

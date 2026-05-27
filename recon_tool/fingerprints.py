@@ -58,6 +58,12 @@ __all__ = [
 # Hard cap on pattern length. Not a ReDoS fix by itself — see _validate_regex.
 _MAX_PATTERN_LENGTH = 500
 
+# Generous per-file ceiling on third-party / ~/.recon catalog files. The
+# bundled catalog ships well under this; the cap protects the long-lived
+# MCP server from an oversized user file driving per-lookup matching cost
+# or holding unbounded memory.
+_MAX_CATALOG_ENTRIES_PER_FILE = 2000
+
 _VALID_DETECTION_TYPES = frozenset(
     {"txt", "spf", "mx", "ns", "cname", "cname_target", "subdomain_txt", "caa", "srv", "dmarc_rua"}
 )
@@ -380,6 +386,18 @@ def _load_from_path(path: Path) -> list[Fingerprint]:
 
     if not isinstance(raw, list):
         return []
+
+    # Cap third-party / ~/.recon catalog files at a generous ceiling so an
+    # oversized user file does not inflate per-lookup matching cost or hold
+    # unbounded memory in the long-lived MCP server.
+    if len(raw) > _MAX_CATALOG_ENTRIES_PER_FILE:
+        logger.warning(
+            "fingerprint file %s has %d entries; truncating to %d.",
+            source,
+            len(raw),
+            _MAX_CATALOG_ENTRIES_PER_FILE,
+        )
+        raw = raw[:_MAX_CATALOG_ENTRIES_PER_FILE]
 
     results: list[Fingerprint] = []
     for fp_raw in raw:
@@ -779,3 +797,60 @@ def match_txt(txt_value: str, patterns: tuple[Detection, ...] | list[Detection])
             # Defensive: pattern was validated on load, but guard against edge cases
             continue
     return None
+
+
+def filter_shadowed_matches(
+    matches: list[Detection] | tuple[Detection, ...],
+) -> list[Detection]:
+    """Specificity-suppression for substring matchers that accumulate.
+
+    SPF accumulates matches because multiple distinct vendor includes
+    can legitimately appear on one record (M365 + Salesforce, etc.).
+    The other substring matchers (MX, NS, CAA, dmarc_rua, cname,
+    cname_target) take a different approach , they sort patterns
+    longest-first and ``break`` on the first match, so a narrower
+    pattern always wins. SPF cannot ``break`` without losing the
+    multi-vendor case, so it instead collects every match and asks
+    this function to drop the shadowed ones.
+
+    Two cases the function distinguishes:
+
+    1. Same slug, different patterns: both fire, slug accumulates once
+       in ctx.slugs. No double-count, both kept.
+    2. Different slugs, one pattern is a strict substring of another:
+       the broader slug would fire alongside the narrower one and
+       double-count in ctx.slugs. The broader is dropped.
+
+    Pre-condition: every Detection in *matches* has already been
+    verified to match the same record (its pattern was found via
+    substring containment). The function does not re-match; it only
+    enforces specificity between the matches the caller already
+    collected.
+
+    Returns the matches to keep , those whose pattern is NOT a strict
+    substring of another match's pattern under a different slug.
+    Non-overlapping matches (e.g. spf.protection.outlook.com plus
+    _spf.salesforce.com on the same SPF record) both survive, which is
+    the correct semantics: multiple distinct vendor signals can fire
+    on one record.
+    """
+    if not matches:
+        return list(matches)
+    info = [(m, m.pattern.lower()) for m in matches]
+    keep: list[Detection] = []
+    for m, pl in info:
+        shadowed = False
+        for m2, pl2 in info:
+            if pl == pl2:
+                continue
+            if m2.slug == m.slug:
+                # Same-slug, different patterns , not a shadow.
+                continue
+            if pl in pl2:
+                # m's pattern is a strict substring of m2's; m is
+                # shadowed by m2 (the more specific match).
+                shadowed = True
+                break
+        if not shadowed:
+            keep.append(m)
+    return keep
