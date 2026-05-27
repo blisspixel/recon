@@ -118,7 +118,7 @@ recon contoso.com                              # default panel
 recon contoso.com --explain                    # full reasoning + provenance DAG
 recon contoso.com --full                       # everything (services + domains + posture)
 recon contoso.com --profile fintech            # apply a posture lens
-recon contoso.com --confidence-mode strict     # drop hedging on dense-evidence targets (v0.11)
+recon contoso.com --confidence-mode strict     # drop hedging on dense-evidence targets (current)
 recon contoso.com --json                       # structured JSON for piping
 recon batch domains.txt --json                 # batch (cross-domain token clustering)
 recon batch domains.txt --json --include-ecosystem  # add v1.8 ecosystem hypergraph

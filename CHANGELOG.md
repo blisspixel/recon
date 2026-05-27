@@ -7,8 +7,181 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No unreleased changes pending. v2.0 mechanical lock-and-tag ceremony
-is the next planned event; see `docs/roadmap.md`.
+### v1.9.24 mega-batch (corpus + engine, not yet released)
+
+A second full pass over the 5241-domain private corpus, combined with
+engine work surfaced by the QA pass on the resulting catalog. The
+catalog grows from **572 to 788 entries (+216)** covering 156 new
+vendors and 60 new detection variants for existing vendors. Three
+engine improvements ride along: shadow-handling consistency across
+substring matchers, a pre-existing cname-matcher regex bug fix that
+re-enables 9 silently broken catalog entries, and two audit residuals
+deferred from rounds 4 and 5 (priors clamp tightened, per-file
+catalog cap added).
+
+Source: deepmine and unclassified-CNAME-chain mining over the
+2026-05-26 full-corpus run; the per-candidate triage that produced
+this batch is `validation/v1.9.24-candidates-triage.md` (local-only,
+gitignored under `/validation/*`).
+
+Added (156 new vendor entries):
+
+- **79 TXT verifications** (`verifications.yaml`): Yahoo SMB,
+  HashiCorp Cloud Platform, Astro, Remote.com, Parsec, Zywave, Infor
+  CloudSuite, Proofpoint Wombat, Parkable, BetterComp, Gradle
+  Enterprise, DeepL, Heyhack, Make.com, WeWork, Airalo,
+  ProjectDiscovery, Dailymotion, Bill One, Formstack, AbuseIPDB,
+  SolarWinds Service Desk, Stytch, HeyGen, SafeBreach, Brave, ProdPad,
+  Gather, Kiro, Nearmap, Krisp, ActiveProspect, Reftab, Coda, Nulab,
+  Fireflies, Virtru, Botify, Northpass, WalletConnect, Barco,
+  Coursera, Samsung, Favro, ContractWorks, IdenTrust, DoorDash, Jumio,
+  Toast, Feishu (Lark), Ethiack, Happeo, Spacelift, Everlytic,
+  SafetyCulture, Microsec, D4Sign, Razorpay, Specops, Gitpod,
+  Securiti, Trustpilot, QQ Mail, NordPass, Gem, Arcules, Druide,
+  eSputnik, Freepik, Lemlist, Apperio, Read AI, MessageBird (Bird),
+  Vitally, Lucidchart, PandaDoc, InVision, Fortinet, Adobe AEM.
+- **16 SPF includes** (`discovered-signals.yaml`): Oracle Email
+  Delivery, PowerSPF, Sailthru, Amadeus, Elastic Email, Sage Intacct,
+  Constant Contact, spf-report, Everbridge, Tipalti, MessageProvider,
+  MailChannels, Braintree, Stibee, Ipreo, SMTP.com.
+- **7 MX providers**: Mxrecord, Fastmail (`messagingengine.com`),
+  Hornetsecurity, AppRiver (Zix), TitanHQ, Apple iCloud Mail,
+  Iberlayer Mailguard.
+- **13 DMARC rua aggregators**: Cloudflare Email Analytics, CISA
+  DMARC (`dhs.gov`), Skout (`sdmarc.net`), cp-dmarc, EmailAnalyst,
+  Red Sift, Report URI, DMARC360, MailHardener, DMARC25 (Japan),
+  InboxMonster, DMARCInput, GlockApps.
+- **12 NS providers**: AT&T DNS, DNSimple (multi-TLD), F5 Cloud DNS,
+  NameBright DNS, Etisalat Domains, NetNames, Constellix, Imperva
+  SecureDNS, EasyDNS Backup, Com Laude (multi-TLD), Level3 / Lumen,
+  DNSPod (Tencent).
+- **29 cname_target rules** (`surface.yaml`): Piano (Tinypass),
+  Validity Everest, Edgecast, Adestra MessageFocus, Gorgias, Shopee,
+  Cleverbridge, Blackbaud Convio, Ovative, ThreatMetrix, BigCommerce,
+  Rio SEO, SAP Cloud Kyma, Archbee, Storm Reply, Cloudways,
+  BrightSites, Cirrus Identity, Pressable, Sanity SVD CDN, INAP,
+  BusinessWire, Gannett Digital, Sourcepoint CMP, Dub, Hund, Emarsys,
+  Redocly, Zoomin Software.
+
+Extended (61 new detection variants):
+
+- TXT: Atlassian (sending-domain), Google Workspace (gws-recovery +
+  work-accounts), Smartsheet Gov, Pexip portal, Alibaba Cloud
+  (aliyun), Oracle OCI, Brevo (sendinblue), Cisco Secure Email,
+  Intercom, Heroku, GitHub, Zendesk, Loom (variant), Mailgun
+  (mgverify).
+- SPF: Mimecast (mim.ec), Oracle Cloud, SAP SuccessFactors
+  (.com + sapsf.eu), Emma, Q4 Inc, Oracle Eloqua, Freshservice,
+  Brevo, AutoSPF, Zoho (zoho.com + zcsend.net), Qualtrics, GoDaddy,
+  Microsoft 365 GCC.
+- MX: Google Workspace (smtp.google.com), AWS SES inbound, Microsoft
+  365 (mx.microsoft + msv1.invalid + eo.outlook.com), Trellix Gov,
+  Fortinet FortiMail Cloud, Cisco IronPort, Trend Micro, Alibaba
+  Cloud, ProtonMail, CSC.
+- DMARC rua: Cisco Secure Email, Barracuda, Valimail Gov
+  (`valigov.email` merged into the canonical valimail entry to
+  preserve the SPF-flattener invariant), Brevo, Trend Micro EU,
+  Mailgun, GoDaddy, Alibaba Cloud.
+- NS: Google Workspace (Google Domains handoff), Oracle Cloud,
+  MarkMonitor (.zone), GoDaddy DefensiveDNS.
+- cname_target: Netlify, Microsoft 365 (hybrid outlook.com), Heroku
+  (herokuspace), Alibaba Cloud (alibabadns + alibaba.com), AWS SES
+  (awsapps), Zoho (zohohost), Cloudflare China (pacloudflare),
+  Salesforce Desk, Cvent Lanyon (lwcal), MuleSoft CloudHub,
+  StackPath / MaxCDN (netdna-cdn), Stova / Aventri (etouches), Adobe
+  AEM Cloud (adobecqms).
+
+All new slugs are mapped explicitly in
+`recon_tool.formatter._CATEGORY_BY_SLUG` or added to the
+`EXPECTED_BUSINESS_APPS_FALLBACK` set in
+`tests/test_slug_category_invariant.py`. Cloud-categorized slugs
+either roll up via `_CLOUD_VENDOR_BY_SLUG` or are excluded from the
+multi-cloud rollup via `_CLOUD_VENDOR_ROLLUP_EXCLUSIONS` (DNS
+operators, single-purpose SaaS hosting, specialty CDN). The full
+candidate triage is in `validation/v1.9.24-candidates-triage.md`.
+
+### v1.9.24 shadow-handling consistency
+
+A QA pass on the v1.9.24 catalog found three substring shadows
+introduced by the batch (cisco.com MX, ondemand.com cname_target,
+desk.com cname_target). These are catalog patterns broad enough that
+a more specific pattern under a *different* slug would also fire on
+the same record, double-counting the underlying vendor.
+
+The catalog fixes (cisco.com removed, ondemand.com narrowed to
+k8s-hana.ondemand.com, desk.com narrowed to .desk.com) closed those
+three shadows. The underlying engine inconsistency (substring
+matchers handled shadow suppression differently across signal types)
+was also closed:
+
+- `cname_target` already sorted patterns longest-first in
+  `_classify_chain` and did not propagate the slug into ctx.slugs
+  (lands in `SurfaceAttribution` instead). Already shadow-safe.
+- `mx`, `ns`, `caa`, `dmarc_rua`: now sort patterns longest-first
+  before iterating with `break`-on-first-match, so the most specific
+  pattern always wins (matches cname_target semantics).
+- `spf`: accumulates matches (multiple distinct vendors per record is
+  legitimate, e.g. M365 + Salesforce includes), but a new helper
+  `recon_tool.fingerprints.filter_shadowed_matches` drops broader
+  matches whose pattern is a strict substring of another firing match
+  under a *different* slug. Same-slug substring pairs (e.g.
+  valimail.com + vali.email both under slug=valimail) survive, since
+  the slug accumulates once in ctx.slugs anyway.
+
+`tests/test_pattern_shadowing.py` asserts the catalog has no
+unapproved cross-slug substring shadow at build time, with an
+explicit allow-list for the cname_target shadows the engine
+demonstrably suppresses (aws-region-endpoint vs aws-api-gateway /
+aws-nlb, oracle-cloud vs oracle-fusion). Two adjacent invariants
+ride alongside the same file: every detection must carry a
+description (operator-trace gate) and EXTEND-style YAML entries
+sharing slug + name must not repeat the same `(type, pattern)`. The
+fingerprint-discovery loop and future catalog additions now have a
+CI gate that catches the double-count failure mode before release.
+
+### v1.9.24 cname matcher regex bug fix
+
+The cname loader has always validated `pattern` fields as regex (the
+ReDoS-shape audit runs `re.compile` at load time), but the matcher
+in `_detect_cname_infra` used substring search (`det.pattern in cl`).
+The mismatch silently disabled nine catalog entries whose patterns
+carried real regex syntax (escaped dots, `$` anchors, alternation):
+`langsmith`, `fastly`, `flyio`, `railway`, `splunk`, `cyberark`,
+`beyond-identity`, `workspace-one` (×2). Those entries never fired
+on any apex with the original matcher.
+
+The matcher now uses `re.search(..., re.IGNORECASE)` consistent with
+the loader's validation contract. The 88 plain-string patterns
+behave identically (regex without metacharacters is equivalent to
+substring search), and the 9 regex patterns finally fire on the
+hosts they were written to match.
+
+### v1.9.24 audit residual hardenings (rounds 4 + 5 follow-ups)
+
+Two items deferred during the round-4 and round-5 reviews:
+
+- `recon_tool/bayesian.py` `load_priors_override`: clamp tightened
+  from the inclusive interval `[0, 1]` to the open interval
+  `(0, 1)`. A root prior pinned at `0` or `1` is a degeneracy
+  operators rarely intend (one mis-belief permanently pins the
+  node), matching the documented likelihood `{0, 1}` ban so the
+  degeneracy policy is now uniform across priors and likelihoods.
+  Operators wanting near-certainty can still use a near-bound
+  value like `0.999`.
+- `recon_tool/fingerprints.py` `_load_from_path`: caps each
+  user-supplied catalog file at a generous per-file ceiling
+  (`_MAX_CATALOG_ENTRIES_PER_FILE = 2000`) so an oversized
+  `~/.recon/fingerprints.yaml` cannot inflate per-lookup matching
+  cost or hold unbounded memory in the long-lived MCP server. The
+  bundled catalog ships well under this; the cap is purely a
+  defense for third-party / user-config files.
+
+A small Bandit-skip cleanup rides along: the `B405` skip in
+`pyproject.toml` covered an `xml.etree.ElementTree` import in
+`recon_tool/sources/userrealm.py` that was already replaced with
+`defusedxml.ElementTree` (the `ET.ParseError` reference now uses
+`DefusedET.ParseError`). The stdlib import is removed, and the
+`B405` entry comes out of the skip list with it.
 
 ## [1.9.23] - 2026-05-26
 

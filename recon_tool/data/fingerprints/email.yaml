@@ -405,6 +405,11 @@ fingerprints:
       DMARC `rua=` aggregate-report target at Valimail's
       shortened reporting domain (`*.vali.email`). Same vendor
       as the valimail.com pattern.
+  - type: dmarc_rua
+    pattern: valigov.email
+    description: >-
+      Valimail Gov DMARC rua destination (`valigov.email`).
+      Government tenants. Same vendor as the vali.email pattern.
 - name: Agari (DMARC)
   slug: agari
   category: Email Governance

@@ -410,8 +410,12 @@ def load_priors_override(path: Path | None = None) -> dict[str, float]:
         if not isinstance(v, int | float):
             continue
         fv = float(v)
-        if not 0.0 <= fv <= 1.0:
-            logger.warning("priors override at %s: value for %s outside [0, 1] — ignored", target, k)
+        # Open interval (0, 1) to match the likelihood {0,1} ban: a root prior
+        # pinned at 0 or 1 is a degeneracy operators rarely intend (one
+        # mis-belief permanently pins the node). Operators wanting near-
+        # certainty can use a near-bound value like 0.999.
+        if not 0.0 < fv < 1.0:
+            logger.warning("priors override at %s: value for %s outside (0, 1); ignored", target, k)
             continue
         out[k] = fv
     if out:

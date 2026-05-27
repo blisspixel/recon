@@ -117,15 +117,12 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 # B603 — ``subprocess.run(cmd, check=False)`` — same call site as B404.
 #        No shell, no user-controlled command parts, Path is validated
 #        with ``.exists()`` before invocation.
-# B405 — ``import xml.etree.ElementTree as ET`` in userrealm.py. Only
-#        referenced for the ``ET.ParseError`` exception class; actual
-#        parsing uses ``defusedxml.ElementTree.fromstring`` one line
-#        above the ``except`` clause.
 # B406 — ``from xml.sax.saxutils import escape`` in userrealm.py. Used
 #        for escaping OUTGOING request bodies (we're writing XML, not
-#        parsing untrusted XML).
+#        parsing untrusted XML). (B405 was eliminated in 1.9.24 hygiene pass
+#        by removing the unused stdlib xml.etree import entirely.)
 exclude_dirs = ["tests", ".venv", "dist", "build"]
-skips = ["B311", "B404", "B603", "B405", "B406"]
+skips = ["B311", "B404", "B603", "B406"]
 
 [tool.pyright]
 pythonVersion = "3.10"

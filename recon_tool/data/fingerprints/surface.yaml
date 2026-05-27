@@ -4168,3 +4168,303 @@ fingerprints:
       Ad-serving CNAME into Ad Legend (`*.adlegend.com`), a digital
       advertising / ad-management platform. Indicates the org serves ads
       through Ad Legend. Marketing-tooling signal only.
+# v1.9.24 cname_target additions appended to surface.yaml.
+# 29 new vendor CNAME targets from the corpus chain mine.
+
+- name: Piano (Tinypass)
+  slug: piano
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: tinypass.com
+    description: >-
+      Piano (subscription / paywall) CNAME target (`tinypass.com`).
+      Common on news / media apexes for paywall authentication.
+- name: Validity Everest
+  slug: validity-everest
+  category: Email
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: everestengagement.com
+    description: >-
+      Validity Everest (deliverability engagement tracking) CNAME
+      target (`everestengagement.com`).
+- name: Edgecast
+  slug: edgecast
+  category: Cloud
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: edgecastcdn.net
+    description: >-
+      Edgecast (Verizon Media, now Edgio) CDN CNAME target
+      (`edgecastcdn.net`). Indicates the subdomain is fronted by
+      Edgecast's edge network.
+- name: Adestra
+  slug: adestra
+  category: Email
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: msgfocus.com
+    description: >-
+      Adestra MessageFocus (Upland Software) CNAME target
+      (`msgfocus.com`). Indicates the subdomain is bound to an
+      Adestra tenant for marketing email.
+- name: Gorgias
+  slug: gorgias
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: gorgias.help
+    description: >-
+      Gorgias (helpdesk for e-commerce) CNAME target
+      (`gorgias.help`). Indicates the subdomain hosts a Gorgias
+      helpdesk.
+- name: Shopee
+  slug: shopee
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: shopeemobile.com
+    description: >-
+      Shopee (e-commerce, SEA) CNAME target (`shopeemobile.com`).
+      Indicates the subdomain CNAMEs to Shopee infrastructure.
+- name: Cleverbridge
+  slug: cleverbridge
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cleverbridge.com
+    description: >-
+      Cleverbridge (e-commerce / subscription billing) CNAME target
+      (`cleverbridge.com`). Indicates the subdomain hosts a Cleverbridge
+      checkout or account portal.
+- name: Convio
+  slug: convio
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: convio.net
+    description: >-
+      Blackbaud Convio (nonprofit fundraising) CNAME target
+      (`convio.net`).
+- name: Ovative
+  slug: ovative
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: ovative.com
+    description: >-
+      Ovative Group (marketing analytics) CNAME target
+      (`ovative.com`).
+- name: ThreatMetrix
+  slug: threatmetrix
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: online-metrix.net
+    description: >-
+      ThreatMetrix (LexisNexis fraud detection) CNAME target
+      (`online-metrix.net`). Indicates the subdomain proxies device-
+      fingerprinting traffic.
+- name: BigCommerce
+  slug: bigcommerce
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: mybigcommerce.com
+    description: >-
+      BigCommerce (e-commerce platform) CNAME target
+      (`mybigcommerce.com`). Indicates the subdomain hosts a
+      BigCommerce store.
+- name: Rio SEO
+  slug: rio-seo
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: rioseo.com
+    description: >-
+      Rio SEO (local-search marketing) CNAME target (`rioseo.com`).
+- name: SAP Cloud Kyma
+  slug: sap-cloud-kyma
+  category: Cloud
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: k8s-hana.ondemand.com
+    description: >-
+      SAP Cloud Platform (Kyma / Shoot) CNAME target
+      (`k8s-hana.ondemand.com`). Indicates the subdomain is hosted on
+      SAP's managed Kubernetes offering. Narrowed from `ondemand.com`
+      in v1.9.24 QA to avoid shadowing sap-commerce.
+- name: Archbee
+  slug: archbee
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: archbee.com
+    description: >-
+      Archbee (developer documentation) CNAME target
+      (`archbee.com`). Indicates the subdomain hosts public docs.
+- name: Storm Reply
+  slug: storm-reply
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: stormreply.com
+    description: >-
+      Storm Reply (Reply Group SAP consulting / cloud platform)
+      CNAME target (`stormreply.com`).
+- name: Cloudways
+  slug: cloudways
+  category: Cloud
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cloudwaysapps.com
+    description: >-
+      Cloudways (managed cloud hosting) CNAME target
+      (`cloudwaysapps.com`). SaaS hosting on top of AWS / DigitalOcean /
+      Linode / Vultr.
+- name: BrightSites
+  slug: brightsites
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: mybrightsites.com
+    description: >-
+      BrightSites (B2B e-commerce sites) CNAME target
+      (`mybrightsites.com`).
+- name: Cirrus Identity
+  slug: cirrus-identity
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cirrusidentity.com
+    description: >-
+      Cirrus Identity (higher-education federation bridge) CNAME
+      target (`cirrusidentity.com`). Common on .edu apexes for
+      Shibboleth / Duo / Google bridge.
+- name: Pressable
+  slug: pressable
+  category: Cloud
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: pressdns.com
+    description: >-
+      Pressable (managed WordPress hosting) CNAME target
+      (`pressdns.com`). SaaS hosting for WordPress.
+- name: Sanity SVD CDN
+  slug: sanity-cdn
+  category: Cloud
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: svdcdn.com
+    description: >-
+      Sanity SVD (image / asset CDN) CNAME target (`svdcdn.com`).
+      Sanity's structured-content delivery edge.
+- name: INAP
+  slug: inap
+  category: Cloud
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: internap.com
+    description: >-
+      INAP (Internap, now part of EvocativeIT) bare-metal / colo
+      CNAME target (`internap.com`).
+- name: BusinessWire
+  slug: businesswire
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: businesswire.com
+    description: >-
+      BusinessWire (press release distribution) CNAME target
+      (`businesswire.com`). Common on investor-relations subdomains.
+- name: Gannett Digital
+  slug: gannett
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: gannettdigital.com
+    description: >-
+      Gannett Digital (USA Today Network) CNAME target
+      (`gannettdigital.com`).
+- name: Sourcepoint
+  slug: sourcepoint
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: sp-prod.net
+    description: >-
+      Sourcepoint (consent management platform / CMP) CNAME target
+      (`sp-prod.net`).
+- name: Dub
+  slug: dub
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: dub.co
+    description: >-
+      Dub (link management) CNAME target (`dub.co`). Indicates the
+      subdomain is a Dub-managed shortlink endpoint.
+- name: Hund
+  slug: hund
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: hund.io
+    description: >-
+      Hund (status page platform) CNAME target (`hund.io`).
+- name: Emarsys
+  slug: emarsys
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: emarsys.net
+    description: >-
+      Emarsys (SAP customer engagement) CNAME target
+      (`emarsys.net`).
+- name: Redocly
+  slug: redocly
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: redocly.app
+    description: >-
+      Redocly (OpenAPI / API docs) CNAME target (`redocly.app`).
+- name: Zoomin Software
+  slug: zoomin
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: zoominsoftware.io
+    description: >-
+      Zoomin (technical content / documentation portal) CNAME target
+      (`zoominsoftware.io`).

@@ -419,3 +419,1199 @@ fingerprints:
     pattern: gandi.net
     description: >-
       Gandi nameserver (`gandi.net`). Indicates the org runs authoritative DNS on Gandi.
+# v1.9.24 SPF additions appended to discovered-signals.yaml.
+# 16 new vendors identified at >=3 domains in the corpus SPF mine.
+
+- name: Oracle Email Delivery
+  slug: oracle-email-delivery
+  category: Email
+  confidence: high
+  detections:
+  - type: spf
+    pattern: oracleemaildelivery.com
+    description: >-
+      Oracle Email Delivery SPF include (`oracleemaildelivery.com`).
+      Bulk-mail delivery service hosted on Oracle Cloud. Domains that
+      include this in their SPF use Oracle for outbound transactional
+      or marketing email.
+- name: PowerSPF
+  slug: powerspf
+  category: Email
+  confidence: high
+  detections:
+  - type: spf
+    pattern: powerspf.com
+    description: >-
+      PowerSPF (SPF flattening service) include (`powerspf.com`).
+      A flattener consolidates many third-party SPF includes into a
+      single dynamically-generated record. Indicates the org uses a
+      managed SPF rather than a hand-maintained record.
+- name: Sailthru
+  slug: sailthru
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: spf
+    pattern: sailthru.com
+    description: >-
+      Sailthru (Marigold) SPF include (`sailthru.com`). Sailthru is a
+      CRM / email marketing platform; an SPF include here means the
+      org sends marketing email through Sailthru.
+- name: Amadeus
+  slug: amadeus
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: spf
+    pattern: amadeus.com
+    description: >-
+      Amadeus (travel technology) SPF include (`amadeus.com`). Common
+      on airline, hotel, and travel agency apexes for booking and
+      itinerary email.
+- name: Elastic Email
+  slug: elasticemail
+  category: Email
+  confidence: high
+  detections:
+  - type: spf
+    pattern: elasticemail.com
+    description: >-
+      Elastic Email SPF include (`elasticemail.com`). Bulk transactional
+      and marketing email delivery service.
+- name: Sage Intacct
+  slug: sage-intacct
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: spf
+    pattern: intacct.com
+    description: >-
+      Sage Intacct (cloud accounting) SPF include (`intacct.com`).
+      Email originating from this domain is dispatched by the Intacct
+      tenant on the org's behalf.
+- name: Constant Contact
+  slug: constantcontact
+  category: Email
+  confidence: high
+  detections:
+  - type: spf
+    pattern: constantcontact.com
+    description: >-
+      Constant Contact SPF include (`constantcontact.com`). Email
+      marketing platform; SPF include indicates outbound campaigns are
+      dispatched through Constant Contact.
+- name: spf-report
+  slug: spf-report
+  category: Email
+  confidence: high
+  detections:
+  - type: spf
+    pattern: spf-report.com
+    description: >-
+      spf-report (SPF flattening / reporting service) include
+      (`spf-report.com`). A managed SPF service. Indicates the org
+      relies on a flattener rather than a hand-maintained record.
+- name: Everbridge
+  slug: everbridge
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: spf
+    pattern: everbridge.net
+    description: >-
+      Everbridge (critical-event / mass notification) SPF include
+      (`everbridge.net`). Indicates the org uses Everbridge for
+      emergency or operational notifications.
+- name: Tipalti
+  slug: tipalti
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: spf
+    pattern: tipalti.com
+    description: >-
+      Tipalti (accounts-payable automation) SPF include
+      (`tipalti.com`). Tipalti dispatches supplier and payment-related
+      email on the org's behalf.
+- name: MessageProvider
+  slug: messageprovider
+  category: Email
+  confidence: high
+  detections:
+  - type: spf
+    pattern: messageprovider.com
+    description: >-
+      MessageProvider (transactional email) SPF include
+      (`messageprovider.com`). Indicates outbound email is dispatched
+      through MessageProvider.
+- name: MailChannels
+  slug: mailchannels
+  category: Email
+  confidence: high
+  detections:
+  - type: spf
+    pattern: mailchannels.net
+    description: >-
+      MailChannels SPF include (`mailchannels.net`). Outbound SMTP
+      relay commonly used by hosting providers and white-labelled
+      mail services.
+- name: Braintree
+  slug: braintree
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: spf
+    pattern: braintreegateway.com
+    description: >-
+      Braintree (PayPal payment gateway) SPF include
+      (`braintreegateway.com`). Indicates Braintree dispatches
+      transaction email on the org's behalf.
+- name: Stibee
+  slug: stibee
+  category: Email
+  confidence: high
+  detections:
+  - type: spf
+    pattern: stibee.com
+    description: >-
+      Stibee (Korean email marketing) SPF include (`stibee.com`).
+      Common on Korean-market apexes for newsletter delivery.
+- name: Ipreo
+  slug: ipreo
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: spf
+    pattern: ipreomail.com
+    description: >-
+      Ipreo (IHS Markit investor-relations communications) SPF include
+      (`ipreomail.com`). Common on public-company apexes for IR
+      shareholder email.
+- name: SMTP.com
+  slug: smtp-com
+  category: Email
+  confidence: high
+  detections:
+  - type: spf
+    pattern: smtp.com
+    description: >-
+      SMTP.com (transactional email service) SPF include
+      (`smtp.com`). Indicates outbound mail is dispatched through
+      SMTP.com's infrastructure.
+# v1.9.24 MX additions appended to discovered-signals.yaml.
+# 7 new MX-provider vendors from the corpus mine.
+
+- name: Mxrecord
+  slug: mxrecord
+  category: Email
+  confidence: high
+  detections:
+  - type: mx
+    pattern: mxrecord.mx
+    description: >-
+      Mxrecord email-delivery MX target (`mxrecord.mx`). Indicates the
+      org routes inbound mail through Mxrecord.
+- name: Fastmail
+  slug: fastmail
+  category: Email
+  confidence: high
+  detections:
+  - type: mx
+    pattern: messagingengine.com
+    description: >-
+      Fastmail MX target (`messagingengine.com`). Indicates the org
+      uses Fastmail as its inbound mail provider.
+- name: Hornetsecurity
+  slug: hornetsecurity
+  category: Email
+  confidence: high
+  detections:
+  - type: mx
+    pattern: hornetsecurity.com
+    description: >-
+      Hornetsecurity (email security gateway) MX target
+      (`hornetsecurity.com`). Indicates inbound mail is filtered by
+      Hornetsecurity.
+- name: AppRiver (Zix)
+  slug: appriver
+  category: Email
+  confidence: high
+  detections:
+  - type: mx
+    pattern: arsmtp.com
+    description: >-
+      AppRiver / Zix email-security gateway MX target (`arsmtp.com`).
+      Indicates inbound mail is filtered by AppRiver before delivery.
+- name: TitanHQ
+  slug: titanhq
+  category: Security
+  confidence: high
+  detections:
+  - type: mx
+    pattern: titanhq.com
+    description: >-
+      TitanHQ (SpamTitan email security) MX target (`titanhq.com`).
+      Indicates inbound mail is filtered by SpamTitan.
+- name: Apple iCloud Mail
+  slug: icloud-mail
+  category: Email
+  confidence: high
+  detections:
+  - type: mx
+    pattern: icloud.com
+    description: >-
+      Apple iCloud Mail MX target (`icloud.com`). Indicates the org
+      uses iCloud (or iCloud Custom Email Domain) for inbound mail.
+- name: Iberlayer Mailguard
+  slug: iberlayer
+  category: Email
+  confidence: high
+  detections:
+  - type: mx
+    pattern: iberlayer.com
+    description: >-
+      Iberlayer Mailguard (Spanish email security) MX target
+      (`iberlayer.com`). Common on Iberian-market apexes for inbound
+      mail filtering.
+# v1.9.24 DMARC rua additions appended to discovered-signals.yaml.
+# 13 new DMARC aggregate-report destinations from the corpus mine.
+
+- name: Cloudflare Email Analytics
+  slug: cloudflare-email-analytics
+  category: Email
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: cloudflare.net
+    description: >-
+      Cloudflare Email Routing / DMARC aggregate-report destination
+      (`cloudflare.net`). The org uses Cloudflare's DMARC analytics to
+      collect aggregate reports.
+- name: CISA DMARC
+  slug: cisa-dmarc
+  category: Security
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: dhs.gov
+    description: >-
+      U.S. CISA / DHS DMARC aggregate-report destination (`dhs.gov`).
+      The org has bound its DMARC rua to the federal compliance
+      pipeline (BOD 18-01 or a successor). Common on .gov and
+      contractor apexes.
+- name: Skout (sdmarc)
+  slug: sdmarc
+  category: Email
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: sdmarc.net
+    description: >-
+      Skout / sdmarc DMARC aggregate-report destination
+      (`sdmarc.net`). DMARC-as-a-service vendor; rua there indicates
+      the org outsources DMARC analytics.
+- name: cp-dmarc
+  slug: cp-dmarc
+  category: Email
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: cp-dmarc.com
+    description: >-
+      cp-dmarc (DMARC analytics) aggregate-report destination
+      (`cp-dmarc.com`). Indicates the org pipes rua reports to
+      cp-dmarc.
+- name: EmailAnalyst
+  slug: emailanalyst
+  category: Email
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: emailanalyst.com
+    description: >-
+      EmailAnalyst (DMARC analytics) aggregate-report destination
+      (`emailanalyst.com`).
+- name: Red Sift
+  slug: redsift
+  category: Email
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: redsift.cloud
+    description: >-
+      Red Sift OnDMARC aggregate-report destination
+      (`redsift.cloud`). Red Sift offers managed DMARC monitoring and
+      enforcement.
+- name: Report URI
+  slug: report-uri
+  category: Security
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: report-uri.com
+    description: >-
+      Report URI (security report aggregation) DMARC destination
+      (`report-uri.com`). Report URI also handles CSP, HPKP, and
+      NEL reports.
+- name: DMARC360
+  slug: dmarc360
+  category: Email
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: dmarc360.com
+    description: >-
+      DMARC360 aggregate-report destination (`dmarc360.com`).
+- name: MailHardener
+  slug: mailhardener
+  category: Email
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: mailhardener.com
+    description: >-
+      MailHardener (DMARC / SPF / DKIM monitoring) DMARC aggregate-
+      report destination (`mailhardener.com`).
+- name: DMARC25
+  slug: dmarc25
+  category: Email
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: dmarc25.jp
+    description: >-
+      DMARC25 (Japanese DMARC analytics) aggregate-report destination
+      (`dmarc25.jp`).
+- name: InboxMonster
+  slug: inboxmonster
+  category: Email
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: inboxmonster.com
+    description: >-
+      InboxMonster (deliverability monitoring) DMARC aggregate-report
+      destination (`inboxmonster.com`).
+- name: DMARCInput
+  slug: dmarcinput
+  category: Email
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: dmarcinput.com
+    description: >-
+      DMARCInput (DMARC analytics) aggregate-report destination
+      (`dmarcinput.com`).
+- name: GlockApps
+  slug: glockapps
+  category: Email
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: glockapps.com
+    description: >-
+      GlockApps (deliverability testing) DMARC aggregate-report
+      destination (`glockapps.com`).
+# v1.9.24 NS additions appended to discovered-signals.yaml.
+# 12 new DNS providers (NS) from the corpus mine.
+
+- name: AT&T DNS
+  slug: att-dns
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: att.net
+    description: >-
+      AT&T enterprise DNS NS target (`att.net`). Indicates the org's
+      authoritative DNS is hosted with AT&T (typically AT&T managed
+      hosting customers).
+- name: DNSimple
+  slug: dnsimple
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: dnsimple-edge.org
+    description: >-
+      DNSimple authoritative DNS NS target (`dnsimple-edge.org`).
+      Indicates the org uses DNSimple as its managed DNS provider.
+  - type: ns
+    pattern: dnsimple-edge.net
+    description: >-
+      DNSimple authoritative DNS NS target (`dnsimple-edge.net`).
+  - type: ns
+    pattern: dnsimple-edge.com
+    description: >-
+      DNSimple authoritative DNS NS target (`dnsimple-edge.com`).
+  - type: ns
+    pattern: dnsimple-edge.io
+    description: >-
+      DNSimple authoritative DNS NS target (`dnsimple-edge.io`).
+- name: F5 Cloud DNS
+  slug: f5-clouddns
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: f5clouddns.com
+    description: >-
+      F5 Distributed Cloud DNS NS target (`f5clouddns.com`).
+      Indicates the org uses F5's managed DNS service.
+- name: NameBright DNS
+  slug: namebright
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: namebrightdns.com
+    description: >-
+      NameBright DNS NS target (`namebrightdns.com`). Registrar /
+      managed DNS provider, common on domains registered through
+      NameBright (Turn Commerce).
+- name: Etisalat Domains
+  slug: etisalat-dns
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: etisalatdomains.ae
+    description: >-
+      Etisalat (UAE telco) authoritative DNS NS target
+      (`etisalatdomains.ae`). Common on UAE / Gulf-region apexes.
+- name: NetNames
+  slug: netnames
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: netnames.net
+    description: >-
+      NetNames (CSC Digital Brand Services) NS target
+      (`netnames.net`). Enterprise registrar / DNS for brand
+      protection use cases.
+- name: Constellix
+  slug: constellix
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: constellix.net
+    description: >-
+      Constellix (DNS Made Easy parent, Tiggee) NS target
+      (`constellix.net`).
+  - type: ns
+    pattern: constellix.com
+    description: >-
+      Constellix NS target (`constellix.com`).
+- name: Imperva SecureDNS
+  slug: imperva-securedns
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: impervasecuredns.net
+    description: >-
+      Imperva SecureDNS NS target (`impervasecuredns.net`). Indicates
+      the org uses Imperva's managed DNS as part of its WAF / DDoS
+      protection.
+- name: EasyDNS Backup
+  slug: easydns-org
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: easydns.org
+    description: >-
+      EasyDNS secondary / backup NS target (`easydns.org`). Different
+      authoritative pool from the primary easydns.com / .net surface.
+- name: Com Laude
+  slug: com-laude
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: comlaude-dns.com
+    description: >-
+      Com Laude (enterprise registrar / DNS) NS target
+      (`comlaude-dns.com`).
+  - type: ns
+    pattern: comlaude-dns.net
+    description: >-
+      Com Laude NS target (`comlaude-dns.net`).
+  - type: ns
+    pattern: comlaude-dns.co.uk
+    description: >-
+      Com Laude NS target (`comlaude-dns.co.uk`).
+  - type: ns
+    pattern: comlaude-dns.eu
+    description: >-
+      Com Laude NS target (`comlaude-dns.eu`).
+- name: Level3 DNS
+  slug: level3
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: level3.net
+    description: >-
+      Level3 (Lumen) authoritative DNS NS target (`level3.net`).
+      Common on legacy enterprise apexes still routed through Lumen.
+- name: DNSPod
+  slug: dnspod
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: dnsv5.com
+    description: >-
+      DNSPod (Tencent Cloud) NS target (`dnsv5.com`). Common on
+      Chinese-market apexes.
+# v1.9.24 EXTEND batch appended to discovered-signals.yaml.
+# Each entry shares slug + display name with an existing catalog entry;
+# multiple YAML entries can legitimately share both name and slug
+# (see test_fingerprint_expansion::test_all_fingerprint_slugs_unique).
+
+# ── TXT verification EXTENDs ────────────────────────────────────────
+- name: Atlassian (Jira/Confluence)
+  slug: atlassian
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^atlassian-sending-domain-verification=
+    description: >-
+      Atlassian sending-domain TXT
+      (`atlassian-sending-domain-verification=`). Confirms outbound
+      Atlassian email (Jira / Confluence notifications) from this
+      domain. Account-binding signal only.
+- name: Google Workspace
+  slug: google-workspace
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^google-gws-recovery-domain-verification=
+    description: >-
+      Google Workspace recovery-binding TXT
+      (`google-gws-recovery-domain-verification=`). Used during
+      Workspace account-recovery flow binding. Account-binding signal
+      only.
+  - type: txt
+    pattern: ^work-accounts-domain-verification=
+    description: >-
+      Google work-accounts domain-binding TXT
+      (`work-accounts-domain-verification=`). Account-binding signal
+      only.
+- name: Smartsheet
+  slug: smartsheet
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^smartsheet-gov-site-validation=
+    description: >-
+      Smartsheet Gov tenant verification TXT
+      (`smartsheet-gov-site-validation=`). Indicates the org uses
+      Smartsheet's FedRAMP-certified instance.
+- name: Pexip
+  slug: pexip
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^pexip-portal-domain-verification=
+    description: >-
+      Pexip portal domain-verification TXT
+      (`pexip-portal-domain-verification=`). Indicates the org uses
+      Pexip's customer portal.
+- name: Alibaba Cloud (compute / generic)
+  slug: alibaba-cloud
+  category: Cloud
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^aliyun-site-verification=
+    description: >-
+      Aliyun (Alibaba Cloud) site-verification TXT
+      (`aliyun-site-verification=`). Confirms the org has a domain
+      bound to an Aliyun (China-region) account.
+- name: Oracle Cloud Infrastructure
+  slug: oracle-cloud
+  category: Cloud
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^oci-domain-verification=
+    description: >-
+      Oracle Cloud Infrastructure (OCI) domain-verification TXT
+      (`oci-domain-verification=`). Account-binding signal only.
+- name: Brevo (Sendinblue)
+  slug: brevo
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^sendinblue-site-verification=
+    description: >-
+      Brevo (formerly Sendinblue) site-verification TXT
+      (`sendinblue-site-verification=`). Account-binding signal only.
+- name: Cisco Secure Email
+  slug: cisco-email
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^cisco-site-verification=
+    description: >-
+      Cisco Secure Email domain-verification TXT
+      (`cisco-site-verification=`). Account-binding signal only.
+- name: Intercom
+  slug: intercom
+  category: Sales Intelligence
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^intercom-domain-validation=
+    description: >-
+      Intercom domain-validation TXT (`intercom-domain-validation=`).
+      Account-binding signal only.
+- name: Heroku
+  slug: heroku
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^heroku-domain-verification=
+    description: >-
+      Heroku domain-verification TXT (`heroku-domain-verification=`).
+      Indicates a custom domain bound to a Heroku app or team.
+- name: GitHub
+  slug: github
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^github-verification=
+    description: >-
+      GitHub organization domain-verification TXT
+      (`github-verification=`). Indicates the domain is verified for a
+      GitHub organization.
+- name: Zendesk
+  slug: zendesk
+  category: Support & Helpdesk
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^zendeskverification=
+    description: >-
+      Zendesk domain-verification TXT (`zendeskverification=`).
+      Account-binding signal only.
+- name: Loom
+  slug: loom
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^loom-verification=
+    description: >-
+      Loom domain-verification TXT (`loom-verification=`). Account-
+      binding signal only. (Variant of the `loom-site-verification=`
+      prefix added in v1.9.23.)
+- name: Mailgun
+  slug: mailgun
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: txt
+    pattern: ^mgverify=
+    description: >-
+      Mailgun ownership / sending-domain verification TXT
+      (`mgverify=`). Common on Mailgun-authenticated sending domains.
+
+# ── SPF include EXTENDs ──────────────────────────────────────────────
+- name: Mimecast
+  slug: mimecast
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: mim.ec
+    description: >-
+      Mimecast outbound delivery SPF include (`mim.ec`). Variant of
+      `_netblocks.mimecast.com`; used by tenants with the modern
+      delivery surface.
+- name: Oracle Cloud Infrastructure
+  slug: oracle-cloud
+  category: Cloud
+  confidence: high
+  detections:
+  - type: spf
+    pattern: oraclecloud.com
+    description: >-
+      Oracle Cloud generic SPF include (`oraclecloud.com`). Email
+      sent from OCI services (e.g. APEX, Notifications) authenticates
+      via this include.
+- name: SAP SuccessFactors
+  slug: successfactors
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: spf
+    pattern: successfactors.com
+    description: >-
+      SAP SuccessFactors SPF include (`successfactors.com`). Used by
+      SuccessFactors for HR notification email.
+  - type: spf
+    pattern: sapsf.eu
+    description: >-
+      SAP SuccessFactors EU data-residency SPF include
+      (`sapsf.eu`). EU-region tenants.
+- name: Emma Email Marketing
+  slug: emma
+  category: Sales & Marketing
+  confidence: high
+  detections:
+  - type: spf
+    pattern: e2ma.net
+    description: >-
+      Emma Email Marketing SPF include (`e2ma.net`). Marketing email
+      campaigns dispatched through Emma.
+- name: Q4 Inc. (IR Platform)
+  slug: q4-ir
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: spf
+    pattern: q4press.com
+    description: >-
+      Q4 Inc. press / IR distribution SPF include (`q4press.com`).
+      Common on public-company IR subdomains.
+- name: Eloqua (Oracle)
+  slug: eloqua
+  category: Sales Intelligence
+  confidence: high
+  detections:
+  - type: spf
+    pattern: eloqua.com
+    description: >-
+      Oracle Eloqua marketing-automation SPF include (`eloqua.com`).
+- name: Freshservice
+  slug: freshservice
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: spf
+    pattern: freshservice.com
+    description: >-
+      Freshservice (Freshworks) ITSM SPF include (`freshservice.com`).
+      Outbound ticket notifications.
+- name: Brevo (Sendinblue)
+  slug: brevo
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: sendinblue.com
+    description: >-
+      Brevo (formerly Sendinblue) outbound SPF include
+      (`sendinblue.com`).
+- name: AutoSPF
+  slug: autospf
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: autospf.email
+    description: >-
+      AutoSPF (SPF flattening service) include (`autospf.email`).
+      Indicates the org outsources SPF maintenance to AutoSPF.
+- name: Zoho Mail
+  slug: zoho
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: zoho.com
+    description: >-
+      Zoho generic SPF include (`zoho.com`). Outbound Zoho services
+      (Mail, CRM, Desk).
+  - type: spf
+    pattern: zcsend.net
+    description: >-
+      Zoho Campaigns SPF include (`zcsend.net`). Marketing email
+      dispatched through Zoho Campaigns.
+- name: Qualtrics
+  slug: qualtrics
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: spf
+    pattern: qemailserver.com
+    description: >-
+      Qualtrics outbound email SPF include (`qemailserver.com`).
+      Survey-distribution mail dispatched through Qualtrics.
+- name: GoDaddy
+  slug: godaddy
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: secureserver.net
+    description: >-
+      GoDaddy hosted-email SPF include (`secureserver.net`). Outbound
+      mail dispatched through GoDaddy hosting.
+- name: Microsoft 365
+  slug: microsoft365
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: spf
+    pattern: spf.protection.office365.us
+    description: >-
+      Microsoft 365 GCC / GCC-High SPF include
+      (`spf.protection.office365.us`). U.S. government tenants.
+
+# ── MX EXTENDs ───────────────────────────────────────────────────────
+- name: Google Workspace
+  slug: google-workspace
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: smtp.google.com
+    description: >-
+      Google Workspace MX target (`smtp.google.com`). Variant of the
+      legacy `aspmx.l.google.com` series; used by Workspace tenants
+      with the modernized delivery edge.
+- name: AWS SES
+  slug: aws-ses
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: inbound-smtp
+    description: >-
+      AWS SES inbound MX target (`inbound-smtp.*.amazonaws.com`).
+      Indicates the org receives email through AWS SES inbound.
+- name: Microsoft 365
+  slug: microsoft365
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: mx.microsoft
+    description: >-
+      Microsoft 365 modernized MX target (`*.mx.microsoft`).
+  - type: mx
+    pattern: msv1.invalid
+    description: >-
+      Microsoft 365 null-MX placeholder (`msv1.invalid`). Tenants in
+      mid-migration / disabled inbound state.
+  - type: mx
+    pattern: eo.outlook.com
+    description: >-
+      Microsoft 365 Exchange Online MX edge (`*.eo.outlook.com`).
+- name: Trellix (FireEye)
+  slug: trellix
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: mx
+    pattern: fireeyegov.com
+    description: >-
+      Trellix / FireEye Email Security Gov MX target
+      (`fireeyegov.com`).
+- name: Fortinet
+  slug: fortinet
+  category: Security
+  confidence: high
+  detections:
+  - type: mx
+    pattern: fortimailcloud.com
+    description: >-
+      Fortinet FortiMail Cloud MX target (`fortimailcloud.com`).
+- name: Trend Micro Email Security
+  slug: trendmicro
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: trendmicro.com
+    description: >-
+      Trend Micro Email Security gateway MX target
+      (`trendmicro.com`).
+- name: Alibaba Cloud (compute / generic)
+  slug: alibaba-cloud
+  category: Cloud
+  confidence: high
+  detections:
+  - type: mx
+    pattern: alibaba-inc.com
+    description: >-
+      Alibaba Mail / DingTalk Mail MX target (`alibaba-inc.com`).
+- name: ProtonMail
+  slug: protonmail
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: protonmail.ch
+    description: >-
+      ProtonMail MX target (`protonmail.ch`). Variant of the
+      `mail.protonmail.ch` series.
+- name: CSC
+  slug: csc
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: mx
+    pattern: cscdns.net
+    description: >-
+      CSC Global brand-protection mail relay MX target
+      (`cscdns.net`).
+
+# ── DMARC rua EXTENDs ────────────────────────────────────────────────
+- name: Cisco Secure Email
+  slug: cisco-email
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: dmp.cisco.com
+    description: >-
+      Cisco Secure Email Reporting / DMARC rua destination
+      (`dmp.cisco.com`).
+- name: Barracuda
+  slug: barracuda
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: barracudanetworks.com
+    description: >-
+      Barracuda Email Protection DMARC rua destination
+      (`barracudanetworks.com`).
+- name: Brevo (Sendinblue)
+  slug: brevo
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: dmarc.brevo.com
+    description: >-
+      Brevo DMARC reporting destination (`dmarc.brevo.com`).
+- name: Trend Micro Email Security
+  slug: trendmicro
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: trendmicro.eu
+    description: >-
+      Trend Micro Email Security EU DMARC reporting destination
+      (`trendmicro.eu`).
+- name: Mailgun
+  slug: mailgun
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: mailgun.org
+    description: >-
+      Mailgun DMARC aggregate-report destination (`mailgun.org`).
+- name: GoDaddy
+  slug: godaddy
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: onsecureserver.net
+    description: >-
+      GoDaddy DMARC reporting destination (`onsecureserver.net`).
+- name: Alibaba Cloud (compute / generic)
+  slug: alibaba-cloud
+  category: Cloud
+  confidence: high
+  detections:
+  - type: dmarc_rua
+    pattern: service.alibaba.com
+    description: >-
+      Alibaba Cloud DMARC reporting destination
+      (`service.alibaba.com`).
+
+# ── NS EXTENDs ───────────────────────────────────────────────────────
+- name: Google Workspace
+  slug: google-workspace
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: ns
+    pattern: googledomains.com
+    description: >-
+      Google Domains NS target (`googledomains.com`). Indicates the
+      apex was registered through Google Domains (now operated by
+      Squarespace) and points at Google's authoritative DNS.
+- name: Oracle Cloud Infrastructure
+  slug: oracle-cloud
+  category: Cloud
+  confidence: high
+  detections:
+  - type: ns
+    pattern: oraclecloud.net
+    description: >-
+      Oracle Cloud authoritative DNS NS target (`oraclecloud.net`).
+- name: MarkMonitor
+  slug: markmonitor
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: ns
+    pattern: markmonitor.zone
+    description: >-
+      MarkMonitor authoritative DNS NS target (`markmonitor.zone`).
+      Modern brand-protection DNS edge.
+- name: GoDaddy
+  slug: godaddy
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: ns
+    pattern: gdnsdef.com
+    description: >-
+      GoDaddy DefensiveDNS NS target (`gdnsdef.com`). Premium DDoS-
+      protected DNS.
+
+# ── cname_target EXTENDs ─────────────────────────────────────────────
+- name: Netlify
+  slug: netlify
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: netlify.com
+    description: >-
+      Netlify-hosted custom domain CNAME target (`netlify.com`).
+- name: Microsoft 365
+  slug: microsoft365
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: outlook.com
+    description: >-
+      Microsoft 365 hybrid / federated mail CNAME target
+      (`outlook.com`). Common on autodiscover / pod hostnames.
+- name: Heroku
+  slug: heroku
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: herokuspace.com
+    description: >-
+      Heroku custom-DNS CNAME target (`herokuspace.com`). Customer-
+      configured app hostnames.
+- name: Alibaba Cloud (compute / generic)
+  slug: alibaba-cloud
+  category: Cloud
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: alibabadns.com
+    description: >-
+      Alibaba Cloud authoritative DNS CNAME endpoint
+      (`alibabadns.com`).
+  - type: cname_target
+    pattern: alibaba.com
+    description: >-
+      Alibaba Cloud generic CNAME target (`alibaba.com`).
+- name: AWS SES
+  slug: aws-ses
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: awsapps.com
+    description: >-
+      AWS apps suite (WorkMail / SES web console) CNAME target
+      (`awsapps.com`).
+- name: Zoho Mail
+  slug: zoho
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: zohohost.com
+    description: >-
+      Zoho hosted-app CNAME target (`zohohost.com`).
+- name: Cloudflare
+  slug: cloudflare
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: pacloudflare.com
+    description: >-
+      Cloudflare China partner CNAME target (`pacloudflare.com`).
+      Used by tenants on Cloudflare's China-network partnership.
+- name: Salesforce
+  slug: salesforce
+  category: CRM & Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: .desk.com
+    description: >-
+      Salesforce Desk (legacy support product) CNAME target
+      (`.desk.com`). Leading dot scopes the match so it does not
+      shadow `zendesk.com` / `mynewsdesk.com` via substring matching.
+- name: Certain (Cvent)
+  slug: certain-cvent
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: lwcal.com
+    description: >-
+      Cvent Lanyon / LWCal event microsite CNAME target
+      (`lwcal.com`).
+- name: MuleSoft Anypoint
+  slug: mulesoft
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cloudhub.io
+    description: >-
+      MuleSoft CloudHub iPaaS-hosted endpoint CNAME target
+      (`cloudhub.io`).
+- name: StackPath / MaxCDN
+  slug: stackpath
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: netdna-cdn.com
+    description: >-
+      StackPath / MaxCDN legacy CDN CNAME target (`netdna-cdn.com`).
+- name: Stova (Aventri)
+  slug: stova-aventri
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: etouches.com
+    description: >-
+      Etouches / Stova event-registration CNAME target
+      (`etouches.com`). Legacy Etouches brand, now Stova.
+- name: Adobe Experience Cloud
+  slug: adobe-experience-cloud
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: adobecqms.net
+    description: >-
+      Adobe Experience Manager (AEM) Cloud Service / CQ-managed
+      CNAME target (`adobecqms.net`).

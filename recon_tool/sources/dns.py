@@ -33,6 +33,7 @@ from recon_tool.constants import (
     SVC_SPF_STRICT,
 )
 from recon_tool.fingerprints import (
+    filter_shadowed_matches,
     get_caa_patterns,
     get_cname_patterns,
     get_cname_target_rules,
@@ -403,10 +404,18 @@ async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
             # match on the authoritative portion (e.g. "spf.protection.outlook.com").
             # Unlike TXT patterns (which use regex), SPF patterns are plain
             # substrings because the YAML values are literal domain fragments.
-            for det in spf_patterns:
-                if det.pattern.lower() in txt_lower:
-                    ctx.add(det.name, det.slug)
-                    ctx.record_fp_match(det.slug, "spf", det.pattern)
+            #
+            # Multiple distinct vendors can legitimately fire on one SPF
+            # record (e.g. M365 + Salesforce includes), so we accumulate
+            # rather than break-on-first-match. We then apply
+            # ``filter_shadowed_matches`` so that when a broad pattern
+            # (e.g. ``cisco.com``) and a narrow one
+            # (e.g. ``ess.cisco.com``) both match, only the narrow one's
+            # slug fires , preventing double-counting of the same vendor.
+            spf_matches = [det for det in spf_patterns if det.pattern.lower() in txt_lower]
+            for det in filter_shadowed_matches(spf_matches):
+                ctx.add(det.name, det.slug)
+                ctx.record_fp_match(det.slug, "spf", det.pattern)
             if txt_lower.rstrip().endswith("-all"):
                 ctx.services.add(SVC_SPF_STRICT)
             elif txt_lower.rstrip().endswith("~all"):
@@ -483,11 +492,13 @@ async def _follow_spf_redirect(ctx: _DetectionCtx, spf_text: str, depth: int, ma
             rec_lower = record.strip().lower()
             if not rec_lower.startswith("v=spf1"):
                 continue
-            # Run the same fingerprint pass on the target's SPF
-            for det in patterns:
-                if det.pattern.lower() in rec_lower:
-                    ctx.add(det.name, det.slug)
-                    ctx.record_fp_match(det.slug, "spf", det.pattern)
+            # Run the same fingerprint pass on the target's SPF, with
+            # specificity suppression for shadow patterns (see the
+            # comment in _detect_txt above).
+            spf_matches = [det for det in patterns if det.pattern.lower() in rec_lower]
+            for det in filter_shadowed_matches(spf_matches):
+                ctx.add(det.name, det.slug)
+                ctx.record_fp_match(det.slug, "spf", det.pattern)
             # Propagate the policy qualifier from the redirect
             # target up to the origin - if _spf.mail.umich.edu
             # ends in -all, then umich.edu's SPF effectively ends
@@ -529,12 +540,18 @@ async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
     mx_records = await _safe_resolve(domain, "MX")
     ctx.raw_dns_records.setdefault("MX", []).extend(mx_records)
 
+    # Sort MX patterns longest-first so the most specific pattern wins per
+    # MX record (the loop below stops at the first match). Without this,
+    # a broader pattern listed earlier in the catalog could shadow a
+    # narrower one (e.g. `cisco.com` shadowing `ess.cisco.com`).
+    mx_patterns_sorted = sorted(get_mx_patterns(), key=lambda d: -len(d.pattern))
+
     unmatched_hosts: list[str] = []
     any_matched = False
     for mx in mx_records:
         mx_lower = mx.lower()
         matched = False
-        for det in get_mx_patterns():
+        for det in mx_patterns_sorted:
             if det.pattern in mx_lower:
                 ctx.add(det.name, det.slug, source_type="MX", raw_value=mx)
                 ctx.record_fp_match(det.slug, "mx", det.pattern)
@@ -967,7 +984,10 @@ def _extract_dmarc_rua(ctx: _DetectionCtx, dmarc_record: str) -> None:
     from recon_tool.fingerprints import get_dmarc_rua_patterns
 
     matches = _RUA_MAILTO_RE.findall(dmarc_record)
-    rua_patterns = get_dmarc_rua_patterns()
+    # Sort longest-first so the most specific pattern wins per rua address
+    # (consistent with MX / NS / CAA / cname_target , see
+    # filter_shadowed_matches).
+    rua_patterns = sorted(get_dmarc_rua_patterns(), key=lambda d: -len(d.pattern))
 
     for addr in matches:
         # Extract domain portion from email address
@@ -1069,9 +1089,13 @@ async def _detect_ns(ctx: _DetectionCtx, domain: str) -> None:
     ns_records = await _safe_resolve(domain, "NS")
     ctx.raw_dns_records.setdefault("NS", []).extend(ns_records)
 
+    # Sort longest-first so the most specific pattern wins (consistent with
+    # MX matcher and cname_target classifier , see filter_shadowed_matches).
+    ns_patterns_sorted = sorted(get_ns_patterns(), key=lambda d: -len(d.pattern))
+
     for ns in ns_records:
         ns_lower = ns.lower()
-        for det in get_ns_patterns():
+        for det in ns_patterns_sorted:
             if det.pattern in ns_lower:
                 ctx.add(det.name, det.slug)
                 ctx.record_fp_match(det.slug, "ns", det.pattern)
@@ -1089,14 +1113,36 @@ async def _detect_cname_infra(ctx: _DetectionCtx, domain: str) -> None:
     if all_cnames:
         ctx.raw_dns_records.setdefault("CNAME", []).extend(all_cnames)
 
+    # Sort longest-first so the most specific pattern wins per CNAME
+    # (consistent with MX / NS / CAA / dmarc_rua / cname_target , see
+    # filter_shadowed_matches).
+    #
+    # cname patterns are regex-validated at load time (the loader runs
+    # them through re.compile to catch ReDoS-shaped expressions), and
+    # nine catalog entries today carry real regex syntax (escaped dots,
+    # ``$`` anchors, alternation , see slugs langsmith, fastly, flyio,
+    # railway, splunk, cyberark, beyond-identity, workspace-one). The
+    # original substring matcher (``det.pattern in cl``) silently
+    # never-fired on those nine because no real hostname contains
+    # backslashes or ``$``. Switching to ``re.search`` lights them up
+    # while preserving behavior for the 88 plain-string patterns
+    # (regex without metacharacters is equivalent to substring search,
+    # modulo ``.`` matching any single character, which on hostname
+    # patterns like ``hubspot.net`` is the intended forgiving match).
+    cname_patterns_sorted = sorted(get_cname_patterns(), key=lambda d: -len(d.pattern))
     for cname_list in (www_results, root_results):
         for cname in cname_list:
             cl = cname.lower()
-            for det in get_cname_patterns():
-                if det.pattern in cl:
-                    ctx.add(det.name, det.slug, source_type="CNAME", raw_value=cname)
-                    ctx.record_fp_match(det.slug, "cname", det.pattern)
-                    break
+            for det in cname_patterns_sorted:
+                try:
+                    if re.search(det.pattern, cl, re.IGNORECASE):
+                        ctx.add(det.name, det.slug, source_type="CNAME", raw_value=cname)
+                        ctx.record_fp_match(det.slug, "cname", det.pattern)
+                        break
+                except re.error:
+                    # Defensive: patterns were validated on load, but
+                    # guard against edge cases the loader missed.
+                    continue
 
 
 async def _detect_domain_connect(ctx: _DetectionCtx, domain: str) -> None:
@@ -1294,9 +1340,12 @@ async def _detect_subdomain_txt(ctx: _DetectionCtx, domain: str) -> None:
 
 async def _detect_caa(ctx: _DetectionCtx, domain: str) -> None:
     """Query CAA records to identify certificate authority and PKI strategy."""
+    # Sort longest-first so the most specific pattern wins (consistent
+    # with MX / NS / cname_target , see filter_shadowed_matches).
+    caa_patterns_sorted = sorted(get_caa_patterns(), key=lambda d: -len(d.pattern))
     for caa in await _safe_resolve(domain, "CAA"):
         caa_lower = caa.lower()
-        for det in get_caa_patterns():
+        for det in caa_patterns_sorted:
             if det.pattern in caa_lower:
                 ctx.add(det.name, det.slug)
                 ctx.record_fp_match(det.slug, "caa", det.pattern)
