@@ -1290,10 +1290,31 @@ fingerprints:
   confidence: high
   detections:
   - type: mx
-    pattern: inbound-smtp
+    pattern: inbound-smtp.us-east-1.amazonaws.com
     description: >-
-      AWS SES inbound MX target (`inbound-smtp.*.amazonaws.com`).
-      Indicates the org receives email through AWS SES inbound.
+      AWS SES inbound MX target in `us-east-1`. Specific region
+      hostname; non-us-east-1 tenants are captured by region-
+      specific siblings below.
+  - type: mx
+    pattern: inbound-smtp.us-west-2.amazonaws.com
+    description: >-
+      AWS SES inbound MX target in `us-west-2`.
+  - type: mx
+    pattern: inbound-smtp.eu-west-1.amazonaws.com
+    description: >-
+      AWS SES inbound MX target in `eu-west-1`.
+  - type: mx
+    pattern: inbound-smtp.eu-central-1.amazonaws.com
+    description: >-
+      AWS SES inbound MX target in `eu-central-1`.
+  - type: mx
+    pattern: inbound-smtp.ap-southeast-1.amazonaws.com
+    description: >-
+      AWS SES inbound MX target in `ap-southeast-1`.
+  - type: mx
+    pattern: inbound-smtp.ap-northeast-1.amazonaws.com
+    description: >-
+      AWS SES inbound MX target in `ap-northeast-1`.
 - name: Microsoft 365
   slug: microsoft365
   category: Email & Communication
