@@ -19,6 +19,11 @@ import httpx
 from recon_tool.http import http_client
 from recon_tool.infra_graph import build_infrastructure_clusters
 from recon_tool.models import CertBurst, CertSummary, InfrastructureClusterReport
+from recon_tool.rate_limit import (
+    RateLimited,
+    ct_rate_limiter_certspotter,
+    ct_rate_limiter_crtsh,
+)
 from recon_tool.validator import is_safe_dns_name, strip_control_chars
 
 # CT SAN values are attacker-controlled: anyone can log a certificate for
@@ -168,10 +173,66 @@ HIGH_SIGNAL_PREFIXES = (
     "security",
 )
 
-# Timeout for CT HTTP calls — separate from DNS query timeout
-# because CT services can be slow under load. Kept tight so a slow
-# provider fails fast and the fallback chain proceeds.
+# Timeout for CT HTTP calls. Separate from DNS query timeout because
+# CT services can be slow under load. Kept tight so a slow provider
+# fails fast and the fallback chain proceeds.
 _CT_TIMEOUT = 6.0
+
+
+# v1.9.25: process-wide cap on concurrent CT calls. Both crt.sh and
+# CertSpotter free-tier rate-limit aggressively (CertSpotter ~50
+# req/min per IP), and batch concurrency multiplied unbounded CT
+# pressure. The 5241-domain 2026-05-27 corpus run saw 99.9% of records
+# with crt.sh degraded because four-way batch concurrency burst far
+# past the per-IP budget. Capping CT calls process-wide keeps the
+# enumerator under free-tier limits regardless of how many domains
+# the caller is resolving in parallel.
+#
+# Created lazily on first use because the running asyncio loop must
+# exist at construction time. ``_get_ct_semaphore`` returns a per-
+# loop singleton so tests that create their own loop see a fresh
+# semaphore rather than a stale one bound to the prior loop.
+import asyncio  # noqa: E402  (placed here so the rationale stays adjacent)
+
+_CT_GLOBAL_CONCURRENCY = 2
+_ct_semaphore_by_loop: dict[int, asyncio.Semaphore] = {}
+
+
+def _get_ct_semaphore() -> asyncio.Semaphore:
+    """Return the asyncio semaphore that gates CT provider calls.
+
+    Bound to the running event loop. Tests that swap loops get a
+    fresh semaphore rather than one tied to the previous loop's
+    state.
+    """
+    loop = asyncio.get_running_loop()
+    key = id(loop)
+    sem = _ct_semaphore_by_loop.get(key)
+    if sem is None:
+        sem = asyncio.Semaphore(_CT_GLOBAL_CONCURRENCY)
+        _ct_semaphore_by_loop[key] = sem
+    return sem
+
+
+def _parse_retry_after(resp: httpx.Response) -> float | None:
+    """Parse the ``Retry-After`` header into seconds, or return None.
+
+    RFC 7231 allows either a delta-seconds integer or an HTTP-date;
+    we accept only the numeric form because the HTTP-date branch
+    requires careful clock handling and providers we care about
+    (crt.sh, CertSpotter) emit the numeric form when they emit at all.
+    Negative or unparseable values become None.
+    """
+    raw = resp.headers.get("retry-after")
+    if not raw:
+        return None
+    try:
+        seconds = float(raw.strip())
+    except (TypeError, ValueError):
+        return None
+    if seconds < 0:
+        return None
+    return seconds
 
 
 # ── Protocol ────────────────────────────────────────────────────────────
@@ -483,18 +544,50 @@ class CrtshProvider:
         """Query crt.sh for subdomain discovery and cert metadata.
 
         Raises on any failure so the fallback chain can proceed.
+        Gated by the global CT semaphore so corpus-scale batch
+        concurrency does not blow past per-IP rate limits.
         """
         url = f"https://crt.sh/?q=%.{domain}&output=json"
-        async with http_client(timeout=_CT_TIMEOUT, retry_transient=False) as client:
-            resp = await client.get(url)
+        # Adaptive rate limiter. The limiter handles its own breaker
+        # and AIMD pacing; on success we mark the call as a probe that
+        # passed, on 429 we feed Retry-After back so the limiter slows
+        # down. Local-side RateLimited (breaker open, or wait exceeds
+        # max_wait_s) raises so the orchestrator falls through to
+        # CertSpotter or cache without blocking the run.
+        limiter = ct_rate_limiter_crtsh()
+        try:
+            await limiter.acquire()
+        except RateLimited as exc:
+            msg = f"crt.sh rate-limited locally for {domain}: {exc}"
+            raise httpx.HTTPError(msg) from exc
+        async with _get_ct_semaphore(), http_client(timeout=_CT_TIMEOUT, retry_transient=False) as client:
+            try:
+                resp = await client.get(url)
+            except httpx.HTTPError:
+                limiter.on_other_failure()
+                raise
+            if resp.status_code == 429:
+                # Server-side rate limit. Feed Retry-After (if any) to
+                # the limiter so the next call honors it as a floor.
+                # Brief on-call sleep (bounded) for the worst-offender
+                # case where Retry-After is small enough to ride out.
+                retry_after = _parse_retry_after(resp)
+                limiter.on_rate_limited(retry_after_s=retry_after)
+                if retry_after is not None and retry_after <= 30.0:
+                    await asyncio.sleep(retry_after)
+                msg = f"crt.sh rate-limited (HTTP 429) for {domain}"
+                raise httpx.HTTPStatusError(msg, request=resp.request, response=resp)
             if resp.status_code != 200:
+                limiter.on_other_failure()
                 msg = f"crt.sh returned HTTP {resp.status_code} for {domain}"
                 raise httpx.HTTPStatusError(msg, request=resp.request, response=resp)
             try:
                 data = resp.json()
             except ValueError as exc:
+                limiter.on_other_failure()
                 msg = f"crt.sh returned invalid JSON for {domain}"
                 raise httpx.HTTPError(msg) from exc
+            limiter.on_success()
 
         if not isinstance(data, list):
             return [], None, None
@@ -637,26 +730,57 @@ class CertSpotterProvider:
         all_raw_names: list[str] = []
         all_cert_entries: list[dict[str, str | int | list[str] | None]] = []
         after_cursor: str | None = None
+        # v1.9.25: mark when a 429 truncated this call so the caller
+        # can distinguish rate-limit-driven empty results from genuine
+        # empty-cert-history responses. The caller (dns.py) uses this
+        # signal to mark certspotter as degraded rather than silently
+        # treating it as a soft success.
+        rate_limited = False
 
-        async with http_client(timeout=_CT_TIMEOUT, retry_transient=False) as client:
+        # Adaptive rate limiter + breaker. Free-tier subdomain queries
+        # are 10/day, so the breaker is the real protection: once the
+        # daily quota hits, the provider 429s, the limiter slows down
+        # and eventually trips the breaker for a cooldown. Subsequent
+        # acquires fail fast (RateLimited) and the orchestrator falls
+        # through to cache.
+        limiter = ct_rate_limiter_certspotter()
+        try:
+            await limiter.acquire()
+        except RateLimited as exc:
+            msg = f"CertSpotter rate-limited locally for {domain}: {exc}"
+            raise httpx.HTTPError(msg) from exc
+
+        async with _get_ct_semaphore(), http_client(timeout=_CT_TIMEOUT, retry_transient=False) as client:
             for _ in range(self._MAX_PAGES):
                 resp = await self._fetch_page(client, domain, after_cursor)
                 if resp.status_code == 429:
-                    # Rate-limited — stop and return what we have so far.
-                    # The caller will see partial but usable data, and the
-                    # result is still better than a cascade failure.
+                    # Rate-limited. Feed Retry-After (if any) to the
+                    # adaptive limiter so its next acquire honors the
+                    # server's stated wait. Brief on-call sleep
+                    # (bounded) for the cheap-to-ride-out case. Stop
+                    # paging and return what we have; the caller sees
+                    # partial data when at least one page succeeded.
+                    retry_after = _parse_retry_after(resp)
+                    limiter.on_rate_limited(retry_after_s=retry_after)
+                    if retry_after is not None and retry_after <= 30.0:
+                        await asyncio.sleep(retry_after)
+                    rate_limited = True
                     break
                 if resp.status_code != 200:
                     msg = f"CertSpotter returned HTTP {resp.status_code} for {domain}"
                     raise httpx.HTTPStatusError(msg, request=resp.request, response=resp)
-
                 try:
                     data = resp.json()
                 except ValueError as exc:
+                    limiter.on_other_failure()
                     msg = f"CertSpotter returned invalid JSON for {domain}"
                     raise httpx.HTTPError(msg) from exc
+                # Got a parseable 200; mark the limiter healthy so AIMD
+                # speeds the next call slightly.
+                limiter.on_success()
                 if not isinstance(data, list) or not data:
-                    # Empty page — we've reached the end of the issuance list.
+                    # Empty page. We've reached the end of the issuance
+                    # list (genuine empty success, not rate-limited).
                     break
 
                 # Extract dns_names and cert metadata from each issuance
@@ -685,9 +809,10 @@ class CertSpotterProvider:
                     issuer_name = None
                     if isinstance(issuer, dict):
                         candidate = issuer.get("friendly_name") or issuer.get("name")
-                        # Only accept a string; a non-str (e.g. {"name": 123})
-                        # otherwise breaks the isinstance(str) discipline the
-                        # rest of this ingestion path relies on.
+                        # Only accept a string; a non-str
+                        # (e.g. {"name": 123}) otherwise breaks the
+                        # isinstance(str) discipline the rest of this
+                        # ingestion path relies on.
                         if isinstance(candidate, str):
                             issuer_name = candidate
                     not_before = issuance.get("not_before")
@@ -702,19 +827,28 @@ class CertSpotterProvider:
                         }
                     )
 
-                # If we already have enough unique candidate names to fill
-                # MAX_SUBDOMAINS after filtering, stop early — no point
-                # paying for more pages.
+                # If we already have enough unique candidate names to
+                # fill MAX_SUBDOMAINS after filtering, stop early. No
+                # point paying for more pages.
                 if len(set(all_raw_names)) >= MAX_SUBDOMAINS * 2:
                     break
 
-                # Advance the cursor. If the response didn't include ids
-                # we can't paginate any further.
+                # Advance the cursor. If the response didn't include
+                # ids we can't paginate any further.
                 if last_id is None:
                     break
                 after_cursor = last_id
 
         if not all_raw_names and not all_cert_entries:
+            # v1.9.25: rate-limit-driven empty result raises so the
+            # orchestrator marks the provider as degraded. Without
+            # this, dns.py treats the empty tuple as a soft success
+            # (continue, do not record degradation), and the panel
+            # claims "no certspotter data" rather than "certspotter
+            # was rate-limited."
+            if rate_limited:
+                msg = f"CertSpotter rate-limited (HTTP 429) for {domain}"
+                raise httpx.HTTPError(msg)
             return [], None, None
 
         subdomains = filter_subdomains(all_raw_names, domain)

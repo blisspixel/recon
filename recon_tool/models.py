@@ -498,6 +498,12 @@ class SourceResult:
     # data was used; None when data came from a live provider.
     ct_cache_age_days: int | None = None
 
+    # --- v1.9.25: CT attempt outcome ---
+    # See ``TenantInfo.ct_attempt_outcome`` for the enum semantics. Set
+    # by ``DNSSource`` when CT enumeration is attempted; None on sources
+    # that do not touch CT.
+    ct_attempt_outcome: str | None = None
+
     # --- v0.9.3: OIDC tenant metadata enrichment ---
     # Extracted from the Microsoft OIDC discovery document when present.
     # Distinguish commercial M365, Government Community Cloud / GCC High,
@@ -611,6 +617,30 @@ class TenantInfo:
     # fallback. None when data came from a live provider. Surfaced in the
     # panel as "from local cache, N days old".
     ct_cache_age_days: int | None = None
+
+    # --- v1.9.25: CT attempt outcome ---
+    # Records WHY this lookup did or did not get CT data, independent of
+    # whether cert_summary is populated. Without this field, a record with
+    # cert_summary=None could mean "no certs in CT", "rate-limited", "open
+    # breaker", "cache miss after live failure" -- all indistinguishable
+    # in the JSON. Values:
+    #   cache_hit          -- the cache-first short-circuit served the
+    #                         result, no live provider was called.
+    #   live_success       -- a live provider returned data, which was
+    #                         used and also written to the cache.
+    #   live_rate_limited  -- both live providers raised RateLimited
+    #                         (HTTP 429 or local breaker / max-wait),
+    #                         and no cache fallback was available.
+    #   breaker_open       -- one or both providers had an open circuit
+    #                         breaker before any HTTP call was attempted.
+    #   live_other_failure -- both live providers raised a non-429 error
+    #                         (timeout, 5xx, JSON parse failure) and no
+    #                         cache fallback was available.
+    #   cache_miss         -- both providers returned empty-but-not-error
+    #                         (soft failure) and no cache entry existed.
+    #   skipped            -- the caller explicitly set ``--no-ct`` so no
+    #                         CT enumeration was attempted.
+    ct_attempt_outcome: str | None = None
 
     # --- v1.4: staleness timestamps (ISO-8601 UTC) ---
     # resolved_at is when the live resolution produced this TenantInfo.

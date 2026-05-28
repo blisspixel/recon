@@ -760,6 +760,16 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "hund": "Collaboration",
     "redocly": "Collaboration",
     "zoomin": "Collaboration",
+    # v1.9.25 catalog gap-fill from Phase F corpus output. Slugs with
+    # a non-Business-Apps home.
+    "readthedocs": "Collaboration",
+    "stoplight": "Collaboration",
+    "k15t-scroll-viewport": "Collaboration",
+    "bevylabs": "Collaboration",
+    "aptible": "Cloud",
+    "platform-sh": "Cloud",
+    "whecloud": "Cloud",
+    "inxmail": "Email",
 }
 
 # Email service-name prefixes that bypass slug lookup. These catch
@@ -1084,6 +1094,11 @@ _CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "pressable",
         "sanity-cdn",
         "inap",
+        # v1.9.25: specialty PaaS / regional-CDN slugs from the Phase F
+        # corpus output. Same rationale as the v1.9.24 entries above.
+        "aptible",
+        "platform-sh",
+        "whecloud",
     }
 )
 
@@ -2836,6 +2851,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         "ct_provider_used": info.ct_provider_used,
         "ct_subdomain_count": info.ct_subdomain_count,
         "ct_cache_age_days": info.ct_cache_age_days,
+        "ct_attempt_outcome": info.ct_attempt_outcome,
         "slug_confidences": [[slug, score] for slug, score in info.slug_confidences],
         # v1.9 Bayesian network — populated only when --fusion is on.
         # ``conflict_provenance`` (v1.9.1+) is always present per posterior;

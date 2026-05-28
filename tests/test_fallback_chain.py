@@ -24,6 +24,16 @@ class TestFallbackChain:
     def _enable_crtsh(self):
         """Override conftest auto-mock so we can test the real fallback chain."""
 
+    @pytest.fixture
+    def _bypass_ct_cache_first(self):
+        """v1.9.25 added a cache-first short-circuit to _detect_cert_intel.
+        Tests that exercise the live-provider fallback chain need to
+        force a cache miss so providers actually get called; tests that
+        exercise the cache itself opt out of this fixture."""
+        with patch("recon_tool.ct_cache.ct_cache_get", return_value=None):
+            yield
+
+    @pytest.mark.usefixtures("_bypass_ct_cache_first")
     @pytest.mark.asyncio
     async def test_crtsh_tried_first(self):
         """CrtshProvider should be tried before CertSpotterProvider."""
@@ -58,6 +68,7 @@ class TestFallbackChain:
         assert call_order == ["crt.sh"]
         assert "sub.example.com" in ctx.related_domains
 
+    @pytest.mark.usefixtures("_bypass_ct_cache_first")
     @pytest.mark.asyncio
     async def test_fallback_to_certspotter_on_crtsh_failure(self):
         """When CrtshProvider fails, CertSpotterProvider should be tried."""
@@ -93,6 +104,7 @@ class TestFallbackChain:
         assert "crt.sh" in ctx.degraded_sources
         assert "certspotter" not in ctx.degraded_sources
 
+    @pytest.mark.usefixtures("_bypass_ct_cache_first")
     @pytest.mark.asyncio
     async def test_both_fail_both_in_degraded(self):
         """When both providers fail, both names should be in degraded_sources."""
@@ -123,6 +135,7 @@ class TestFallbackChain:
         assert "certspotter" in ctx.degraded_sources
         assert ctx.cert_summary is None
 
+    @pytest.mark.usefixtures("_bypass_ct_cache_first")
     @pytest.mark.asyncio
     async def test_successful_fallback_uses_certspotter_results(self):
         """When CrtshProvider fails and CertSpotterProvider succeeds,
@@ -162,6 +175,7 @@ class TestFallbackChain:
         assert ctx.cert_summary is mock_summary
         assert "api.example.com" in ctx.related_domains
 
+    @pytest.mark.usefixtures("_bypass_ct_cache_first")
     @pytest.mark.asyncio
     async def test_crtsh_success_sets_cert_summary(self):
         """When CrtshProvider succeeds, its cert_summary should be used."""
@@ -191,15 +205,19 @@ class TestFallbackChain:
 
     @pytest.mark.asyncio
     async def test_empty_providers_falls_through_to_ct_cache(self, tmp_path, monkeypatch):
-        """v1.8.1 regression — empty-but-not-error provider responses must
-        not block the CT cache fallback.
+        """v1.8.1 regression PLUS v1.9.25 cache-first semantics.
 
-        CertSpotter rate-limited responses look like a successful empty
-        result (HTTP 200 with no issuances). Before v1.8.1, the loop in
-        ``_detect_cert_intel`` returned on any successful response, so
-        the CT cache fallback never fired and ``cert_summary`` stayed
-        None even when a populated cache entry existed. The 10-domain
-        validation dive found 7/10 targets in this state.
+        Original v1.8.1 case: CertSpotter rate-limited responses look
+        like a successful empty result (HTTP 200, no issuances). Before
+        v1.8.1 the loop returned on any successful response, so the CT
+        cache fallback never fired.
+
+        v1.9.25 update: the orchestrator now consults the CT cache
+        BEFORE trying live providers. A populated cache entry short-
+        circuits both providers entirely, so the attribution is the
+        cache's own ``provider_used`` (the seeder), not the soft-failure
+        provider name. Providers never run when the cache has a fresh
+        entry; this test asserts that exact behavior.
         """
         # Point the CT cache at a tmp dir and seed it.
         monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
@@ -239,17 +257,17 @@ class TestFallbackChain:
             ctx = _DetectionCtx()
             await _detect_cert_intel(ctx, "example.com")
 
-        # Cache fallback must have populated the result. Round-trip
-        # through the cache JSON serialiser produces an equal-but-
-        # not-identical CertSummary instance.
+        # Cache hit must have populated the result. Round-trip through
+        # the cache JSON serialiser produces an equal-but-not-identical
+        # CertSummary instance.
         assert ctx.cert_summary == cached_summary
         assert "api.example.com" in ctx.related_domains
         assert ctx.ct_subdomain_count == 2
         assert ctx.ct_cache_age_days == 0  # just-cached
-        # Soft-failure attribution: prefer the live provider name we
-        # actually called over the historical cache provider, so the
-        # panel reflects the current live attempt.
-        assert ctx.ct_provider_used == "crt.sh (cached)"
+        # v1.9.25 attribution: the cache short-circuits providers, so
+        # the panel surfaces the seeder (certspotter) rather than a
+        # soft-failure provider that never actually ran.
+        assert ctx.ct_provider_used == "certspotter (cached)"
 
     @pytest.mark.asyncio
     async def test_empty_providers_no_cache_records_soft_attribution(self, tmp_path, monkeypatch):

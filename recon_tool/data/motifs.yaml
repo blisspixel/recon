@@ -307,3 +307,62 @@ motifs:
           - oraclecloud.com
           - oraclecloud.net
           - oraclevcn.com
+
+  # v1.9.25 multi-hop motifs surfaced by the 2026-05-28 corpus mining
+  # (validation/phase-b-motif-mine.md). Each fired on >=3 corpus apexes
+  # and represents a real recurring chain shape that the single-hop
+  # cname_target classifier was not catching.
+  - name: zpa_to_aws
+    display_name: "Zscaler ZPA / Z-edge to AWS origin"
+    description: Zscaler Private Access ZPA edge fronting an AWS origin (CloudFront / ELB). Common for SaaS or enterprise apps tunneled through ZPA.
+    confidence: medium
+    chain:
+      - name: zpa
+        match:
+          - zpa-app.net
+          - zpa.net
+      - name: aws
+        match:
+          - amazonaws.com
+          - cloudfront.net
+          - elb.amazonaws.com
+
+  - name: zpa_gov_chain
+    display_name: "Zscaler ZPA Gov to AWS origin"
+    description: Zscaler ZPA Gov tier fronting an AWS origin. Government / regulated tenants use a separate ZPA Gov tier (zpagov.net) before reaching the AWS origin.
+    confidence: medium
+    chain:
+      - name: zpa
+        match:
+          - zpa-app.net
+      - name: zpa_gov
+        match:
+          - zpagov.net
+      - name: aws
+        match:
+          - amazonaws.com
+          - cloudfront.net
+
+  - name: msecnd_to_zeta
+    display_name: "Legacy Azure CDN to Zeta CDN"
+    description: Legacy Microsoft Edge CDN (msecnd.net) fronting a Zeta Global edge (zetacdn.net). Multi-CDN topology observed on marketing-heavy properties.
+    confidence: medium
+    chain:
+      - name: msecnd
+        match:
+          - msecnd.net
+      - name: zeta
+        match:
+          - zetacdn.net
+
+  - name: episerver_to_optimizely
+    display_name: "Episerver legacy host to Optimizely DXP"
+    description: Legacy Episerver host (episerver.net) fronting the Optimizely DXP edge (optimizely.com). Same vendor across a rebrand boundary.
+    confidence: medium
+    chain:
+      - name: episerver
+        match:
+          - episerver.net
+      - name: optimizely
+        match:
+          - optimizely.com

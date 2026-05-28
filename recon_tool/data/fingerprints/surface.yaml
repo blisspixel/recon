@@ -4468,3 +4468,216 @@ fingerprints:
     description: >-
       Zoomin (technical content / documentation portal) CNAME target
       (`zoominsoftware.io`).
+# v1.9.25 catalog additions — appended to surface.yaml.
+# Sourced from the 2026-05-28 Phase F corpus output. Each entry has
+# >=3 apex hits and a clear vendor attribution.
+
+# ── cname_target EXTENDs for v1.9.24 misses ────────────────────────
+- name: WP Engine
+  slug: wpengine
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: wpengine.com
+    description: >-
+      WP Engine managed-WordPress CNAME target (`wpengine.com`).
+      Catches the customer-facing apex form alongside the existing
+      `wpenginepowered.com` and `wpeproxy.com` patterns.
+- name: Freshdesk
+  slug: freshdesk
+  category: Support & Helpdesk
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: freshdesk.com
+    description: >-
+      Freshdesk helpdesk CNAME target (`freshdesk.com`). Customer
+      help-portal subdomains delegate here.
+- name: Swoogo
+  slug: swoogo
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: swoogo.com
+    description: >-
+      Swoogo event-registration CNAME target (`swoogo.com`).
+      Customer-facing event sites alongside the existing
+      `swoogo.net` infrastructure pattern.
+- name: SAP Customer Data Cloud (Gigya)
+  slug: gigya
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: gigya-api.com
+    description: >-
+      SAP Customer Data Cloud (Gigya) API CNAME target
+      (`gigya-api.com`). Identity-broker subdomains alongside the
+      existing `gigya.com` web-tier pattern.
+- name: Optimizely
+  slug: optimizely
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: optimizely.com
+    description: >-
+      Optimizely (formerly Episerver) experimentation / DXP CNAME
+      target (`optimizely.com`). Distinct from the existing apex-
+      CNAME `cname` rule because chain-hop matching needs a
+      cname_target type to fire.
+- name: Mailjet
+  slug: mailjet
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: mailjet.com
+    description: >-
+      Mailjet email-tracking CNAME target (`mailjet.com`). Customer
+      tracking subdomains alongside the existing SPF detection.
+
+# ── New vendor cname_target rules ──────────────────────────────────
+- name: OpenData Soft
+  slug: opendatasoft
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: opendatasoft.com
+    description: >-
+      Opendatasoft (open-data portal platform) CNAME target
+      (`opendatasoft.com`). Common on government and utility data
+      portals.
+- name: Read the Docs
+  slug: readthedocs
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: readthedocs.io
+    description: >-
+      Read the Docs documentation-hosting CNAME target
+      (`readthedocs.io`).
+- name: Foleon
+  slug: foleon
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: foleon.com
+    description: >-
+      Foleon (interactive content platform) CNAME target
+      (`foleon.com`).
+- name: Stoplight
+  slug: stoplight
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: stoplight.io
+    description: >-
+      Stoplight (API documentation platform) CNAME target
+      (`stoplight.io`).
+- name: Aptible
+  slug: aptible
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: aptible.in
+    description: >-
+      Aptible (PaaS for regulated workloads) CNAME target
+      (`aptible.in`). Common on healthcare and fintech apexes.
+- name: Platform.sh
+  slug: platform-sh
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: platform.sh
+    description: >-
+      Platform.sh PaaS edge CNAME target (`platform.sh`).
+- name: K15t (Scroll Viewport)
+  slug: k15t-scroll-viewport
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: k15t.app
+    description: >-
+      K15t Scroll Viewport (Confluence-published docs / knowledge
+      base) CNAME target (`k15t.app`).
+- name: WHECloud
+  slug: whecloud
+  category: Infrastructure
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: whecloud.com
+    description: >-
+      WHECloud (regional CDN / web acceleration) CNAME target
+      (`whecloud.com`).
+- name: Inxmail
+  slug: inxmail
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: inxmail.com
+    description: >-
+      Inxmail (email marketing platform, European market) CNAME
+      target (`inxmail.com`).
+- name: Bevy
+  slug: bevylabs
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: bevylabs.com
+    description: >-
+      Bevy (community / events platform) CNAME target
+      (`bevylabs.com`).
+- name: Brilliant Made
+  slug: brilliantmade
+  category: Marketing
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: brilliantmade.com
+    description: >-
+      Brilliant Made (custom merchandise / branded apparel) CNAME
+      target (`brilliantmade.com`).
+- name: Music Today
+  slug: musictoday
+  category: Marketing
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: musictoday.com
+    description: >-
+      Music Today (artist e-commerce / fan engagement) CNAME target
+      (`musictoday.com`).
+- name: OpenGov Open Data
+  slug: ogopendata
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: ogopendata.com
+    description: >-
+      OpenGov open-data portal CNAME target (`ogopendata.com`).
+      Government data publishing.
+- name: Cvent (events)
+  slug: cvent
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cvent.com
+    description: >-
+      Cvent event-management CNAME target (`cvent.com`). Customer
+      event-microsite subdomains alongside the existing certain-cvent
+      and stova-aventri slugs that cover Cvent's other product lines.

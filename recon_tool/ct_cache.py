@@ -39,7 +39,13 @@ __all__ = [
 
 logger = logging.getLogger("recon")
 
-CT_CACHE_TTL: int = 604800  # 7 days in seconds
+CT_CACHE_TTL: int = 2592000  # 30 days in seconds.
+# Bumped from 7 days in v1.9.25 alongside the CT pipeline resilience
+# work. Free-tier rate limits (crt.sh 5/min IP, CertSpotter 10/day
+# for subdomain queries) make full-corpus CT enumeration a multi-
+# session operation; a 30-day window keeps prior fetches usable
+# across the build-up runs without forcing re-fetch when nothing
+# meaningful about a domain's cert posture is likely to have changed.
 
 
 @dataclass(frozen=True)

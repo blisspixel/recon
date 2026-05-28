@@ -24,6 +24,7 @@ REQUIRED_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "chain_motifs",
     "cloud_instance",
     "confidence",
+    "ct_attempt_outcome",
     "ct_cache_age_days",
     "ct_provider_used",
     "ct_subdomain_count",

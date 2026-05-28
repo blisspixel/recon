@@ -144,3 +144,26 @@ def _reset_global_console():
     _formatter._console = None
     yield
     _formatter._console = None
+
+
+@pytest.fixture(autouse=True)
+def _isolated_rate_limit_state(tmp_path_factory, monkeypatch):
+    """Reset the adaptive rate limiter between tests.
+
+    The CT providers' rate limiters persist breaker / interval state to
+    ``~/.recon/rate-limit-state`` (v1.9.25). Without isolation, a real
+    Phase F corpus run that tripped a breaker leaves a persisted state
+    file that bleeds into unit tests: subsequent acquire() calls raise
+    RateLimited instead of hitting the mocked HTTP code path. Two
+    things are needed: (1) clear the per-loop singleton table so each
+    test gets fresh limiters, and (2) point RECON_CONFIG_DIR at a tmp
+    dir so any persisted state goes to a throwaway location.
+    """
+    import recon_tool.rate_limit as _rl
+
+    isolated_dir = tmp_path_factory.mktemp("rate_limit_state")
+    monkeypatch.setenv("RECON_CONFIG_DIR", str(isolated_dir))
+    # Forget any limiters cached from a prior test or production run.
+    _rl._limiters_by_loop.clear()
+    yield
+    _rl._limiters_by_loop.clear()

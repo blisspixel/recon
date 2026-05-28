@@ -265,6 +265,14 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "rio-seo",
         "shopee",
         "storm-reply",
+        # v1.9.25 catalog gap-fill from Phase F. Business-Apps fallback
+        # for generic SaaS / commerce / events / data-portal vendors.
+        "opendatasoft",
+        "foleon",
+        "brilliantmade",
+        "musictoday",
+        "ogopendata",
+        "cvent",
     }
 )
 

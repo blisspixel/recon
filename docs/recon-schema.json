@@ -38,6 +38,7 @@
     "ct_provider_used",
     "ct_subdomain_count",
     "ct_cache_age_days",
+    "ct_attempt_outcome",
     "cert_summary",
     "cloud_instance",
     "tenant_region_sub_scope",
@@ -207,6 +208,11 @@
       "description": "Age of the CT cache entry in days when cached data was used. Null when data came from a live provider.",
       "type": ["integer", "null"],
       "minimum": 0
+    },
+    "ct_attempt_outcome": {
+      "description": "v1.9.25: outcome of the CT enumeration attempt. cache_hit when the cache-first short-circuit served the result. live_success when a live provider returned data. live_rate_limited when a provider was rate-limited (HTTP 429 or local breaker / wait-ceiling). breaker_open when a provider's circuit breaker was open before any HTTP call. live_other_failure for non-429 errors (timeout, 5xx, JSON parse). cache_miss when providers returned empty-but-not-error and no cache entry existed. skipped when --no-ct was passed. Null on older records or sources that do not touch CT.",
+      "type": ["string", "null"],
+      "enum": [null, "cache_hit", "live_success", "live_rate_limited", "breaker_open", "live_other_failure", "cache_miss", "skipped"]
     },
     "cert_summary": {
       "description": "Certificate transparency summary. Null when no CT data was obtained.",

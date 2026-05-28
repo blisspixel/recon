@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -48,6 +49,69 @@ def _count_corpus(corpus: Path) -> int:
         1
         for line in corpus.read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.strip().startswith("#")
+    )
+
+
+def _write_ct_budget_summary(results_path: Path, run_dir: Path) -> None:
+    """Emit a ct_budget_summary.json summarising the CT pipeline outcome.
+
+    Two inputs feed the summary:
+      1. Per-domain ``ct_attempt_outcome`` values from the just-completed
+         batch (counts each enum value).
+      2. The persisted adaptive-limiter state under
+         ``~/.recon/rate-limit-state`` (post-run interval, breaker
+         status, success / rate_limit / failure tallies).
+
+    The result is an operator-facing tally that answers "what did the
+    CT pipeline actually do this run?" without needing to scan the
+    NDJSON by hand.
+    """
+    outcome_counts: dict[str, int] = {}
+    total = 0
+    with contextlib.suppress(OSError), results_path.open(encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            total += 1
+            outcome = rec.get("ct_attempt_outcome")
+            if outcome is None:
+                outcome = "not_attempted"
+            outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+
+    # Pick up the persisted rate-limiter snapshots written by the
+    # batch subprocess. The state files live in the operator's recon
+    # config dir; if RECON_CONFIG_DIR is set we read from there.
+    rl_dir_env = os.environ.get("RECON_CONFIG_DIR")
+    rl_root = Path(rl_dir_env) if rl_dir_env else Path.home() / ".recon"
+    rl_dir = rl_root / "rate-limit-state"
+    limiter_snapshots: dict[str, dict[str, Any]] = {}
+    if rl_dir.exists():
+        for state_file in sorted(rl_dir.glob("*.json")):
+            with contextlib.suppress(OSError, ValueError):
+                limiter_snapshots[state_file.stem] = json.loads(state_file.read_text(encoding="utf-8"))
+
+    summary = {
+        "records_total": total,
+        "outcome_counts": outcome_counts,
+        "limiter_snapshots": limiter_snapshots,
+        "written_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+    (run_dir / "ct_budget_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    # Short stdout note so the operator sees the headline.
+    cache_n = outcome_counts.get("cache_hit", 0)
+    live_n = outcome_counts.get("live_success", 0)
+    rl_n = outcome_counts.get("live_rate_limited", 0)
+    br_n = outcome_counts.get("breaker_open", 0)
+    cmiss_n = outcome_counts.get("cache_miss", 0)
+    print(
+        f"  ct_budget_summary: {total} records — "
+        f"cache_hit={cache_n} live_success={live_n} "
+        f"rate_limited={rl_n} breaker_open={br_n} cache_miss={cmiss_n}",
+        flush=True,
     )
 
 
@@ -122,9 +186,65 @@ def main() -> None:
             "if a downstream consumer expects an array."
         ),
     )
+    parser.add_argument(
+        "--ct-retry-from",
+        type=Path,
+        default=None,
+        help=(
+            "Read a prior run's results.ndjson and re-resolve only the "
+            "records where ct_attempt_outcome indicates a degradation "
+            "(live_rate_limited, breaker_open, live_other_failure, "
+            "cache_miss). Multi-session corpus enumeration: chain calls "
+            "across days to build CT coverage without re-fetching "
+            "domains that already succeeded. Implies --ct."
+        ),
+    )
     args = parser.parse_args()
 
     corpus = args.corpus
+    # --ct-retry-from synthesizes a filtered corpus file from the prior
+    # run, listing only the domains whose CT was degraded. It implies
+    # --ct (re-fetching with CT off would defeat the purpose).
+    if args.ct_retry_from is not None:
+        if not args.ct_retry_from.exists():
+            print(f"error: --ct-retry-from path not found: {args.ct_retry_from}", file=sys.stderr)
+            raise SystemExit(2)
+        prior = args.ct_retry_from
+        if prior.is_dir():
+            prior = prior / "results.ndjson"
+        if not prior.exists():
+            print(f"error: results.ndjson not found in {args.ct_retry_from}", file=sys.stderr)
+            raise SystemExit(2)
+        degraded_outcomes = {
+            "live_rate_limited",
+            "breaker_open",
+            "live_other_failure",
+            "cache_miss",
+        }
+        degraded_domains: list[str] = []
+        with prior.open(encoding="utf-8") as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                rec = json.loads(line)
+                outcome = rec.get("ct_attempt_outcome")
+                if outcome in degraded_outcomes:
+                    dom = rec.get("queried_domain")
+                    if dom:
+                        degraded_domains.append(dom)
+        if not degraded_domains:
+            print("--ct-retry-from: no degraded records in prior run; nothing to retry")
+            raise SystemExit(0)
+        synth = args.output_root.parent / f"_ct-retry-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%SZ')}.txt"
+        synth.parent.mkdir(parents=True, exist_ok=True)
+        synth.write_text("\n".join(degraded_domains) + "\n", encoding="utf-8")
+        print(
+            f"--ct-retry-from {args.ct_retry_from}: re-running CT for "
+            f"{len(degraded_domains)} degraded domains via {synth}"
+        )
+        corpus = synth
+        args.ct = True
+
     if not corpus.exists():
         print(f"error: corpus file not found: {corpus}", file=sys.stderr)
         raise SystemExit(2)
@@ -177,6 +297,15 @@ def main() -> None:
     if result.returncode != 0:
         print(f"    FAILED: {result.stderr.strip()}", file=sys.stderr)
         raise SystemExit(2)
+
+    # Step 1.5: write ct_budget_summary.json. Aggregates per-domain
+    # ct_attempt_outcome counts from the just-completed batch and pulls
+    # the persisted limiter state from ~/.recon/rate-limit-state/.
+    # Operator can see at a glance: how many records hit cache, how
+    # many got fresh CT, how many were rate-limited / breaker-blocked,
+    # and what state the limiters wound down in.
+    if args.ct:
+        _write_ct_budget_summary(results_path, run_dir)
 
     # Step 2: gap analysis
     _run_step(

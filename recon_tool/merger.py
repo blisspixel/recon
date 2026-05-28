@@ -855,15 +855,26 @@ def merge_results(
     if cert_summary is not None:
         issuance_velocity = cert_summary.issuance_velocity
 
-    # Propagate CT provider attribution from any source (v0.9.2)
+    # Propagate CT provider attribution from any source (v0.9.2).
+    # v1.9.25 adds ct_attempt_outcome so the JSON record carries WHY
+    # a CT call did or did not produce data, independent of whether
+    # cert_summary is populated.
     ct_provider_used: str | None = None
     ct_subdomain_count: int = 0
     ct_cache_age_days: int | None = None
+    ct_attempt_outcome: str | None = None
     for result in results:
         if result.ct_provider_used:
             ct_provider_used = result.ct_provider_used
             ct_subdomain_count = result.ct_subdomain_count
             ct_cache_age_days = result.ct_cache_age_days
+            break
+    # The outcome can be set even without a provider_used (e.g.
+    # "live_rate_limited" with no successful provider). Take the first
+    # non-None outcome across sources.
+    for result in results:
+        if getattr(result, "ct_attempt_outcome", None):
+            ct_attempt_outcome = result.ct_attempt_outcome
             break
 
     # v0.9.3: propagate OIDC tenant metadata (first non-None wins).
@@ -1062,6 +1073,7 @@ def merge_results(
         ct_provider_used=ct_provider_used,
         ct_subdomain_count=ct_subdomain_count,
         ct_cache_age_days=ct_cache_age_days,
+        ct_attempt_outcome=ct_attempt_outcome,
         cloud_instance=cloud_instance,
         tenant_region_sub_scope=tenant_region_sub_scope,
         msgraph_host=msgraph_host,
