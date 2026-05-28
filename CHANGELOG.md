@@ -9,6 +9,144 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.25] - 2026-05-28
+
+### CT pipeline resilience (Phase A)
+
+The v1.9.24 corpus run was 99.9% degraded on crt.sh because batch
+concurrency burst past per-IP rate limits and CertSpotter's 429-as-
+empty responses silently soft-failed without marking the source
+degraded. This release rebuilds the CT enumeration path so corpus-
+scale runs respect provider rate limits, surface degradation
+honestly, and accrue coverage across multiple sessions via cache
+and persistent limiter state.
+
+`recon_tool/rate_limit.py` (new): `AdaptiveRateLimiter` with AIMD
+pacing (additive decrease on success, multiplicative increase on
+429), per-provider circuit breaker (3 consecutive failures opens
+for a 60s cooldown that doubles each subsequent trip, capped at
+10 minutes), and a bounded `max_wait_s` so saturation falls
+through to cache instead of blocking the run. Honors
+`Retry-After` headers as a hard floor on the next interval.
+Persistent state under `~/.recon/rate-limit-state/`: a fresh
+process inherits "crt.sh tripped 8 minutes ago" so the
+burst-and-learn cycle does not restart every invocation. Stale
+state (>24h) is ignored on load.
+
+`recon_tool/sources/cert_providers.py`: process-wide
+`_CT_GLOBAL_CONCURRENCY = 2` semaphore gates both providers, so
+batch concurrency cannot multiply per-IP pressure. Each provider's
+query is wrapped with `acquire`/`on_success`/`on_rate_limited`/
+`on_other_failure` callbacks so the AIMD math sees every outcome.
+CertSpotter rate-limited-with-zero-pages now raises
+`httpx.HTTPError` rather than returning empty data, so the
+orchestrator marks it degraded.
+
+`recon_tool/sources/dns.py`: `_detect_cert_intel` consults the CT
+cache **first**; a fresh entry short-circuits both live providers.
+`ct_provider_used` carries the seeder's name plus `(cached)`.
+
+`recon_tool/ct_cache.py`: `CT_CACHE_TTL` bumped from 7d to 30d.
+Free-tier rate limits make full-corpus enumeration a multi-session
+operation; 30 days keeps prior fetches usable across the build-up.
+
+Per-record `ct_attempt_outcome` field on `TenantInfo`: `cache_hit`
+/ `live_success` / `live_rate_limited` / `breaker_open` /
+`live_other_failure` / `cache_miss` / `skipped`. Distinguishes "no
+certs in CT" from "rate-limited" from "breaker open" in the JSON
+output. Was previously silent.
+
+`validation/scan.py`: writes `ct_budget_summary.json` at end of
+each `--ct` run with outcome counts and persisted limiter
+snapshots. New `--ct-retry-from <prior-run>` flag reads a prior
+results.ndjson, filters to records with degraded outcomes, and
+re-resolves only those domains. Multi-session corpus enumeration
+becomes a first-class operator workflow.
+
+### Catalog gap-fill from Phase F corpus output
+
+The 2026-05-28 Phase F corpus run surfaced cname_target endpoints
+the v1.9.24 batch had marked EXTEND but where the actual catalog
+patterns differed from the corpus form. Twenty entries close the
+gap:
+
+Six EXTENDs to existing slugs that had close-but-not-matching
+patterns: `wpengine` adds `wpengine.com` (alongside the existing
+`wpenginepowered.com` / `wpeproxy.com`); `freshdesk` adds the
+cname_target form `freshdesk.com` (previously only SPF);
+`swoogo` adds `swoogo.com` (alongside `swoogo.net`); `gigya`
+adds `gigya-api.com` (alongside `gigya.com`); `optimizely`
+adds the cname_target form (the existing `cname` rule fires
+only on apex CNAMEs, not chain hops); `mailjet` adds the
+cname_target form (previously only SPF).
+
+Fourteen new vendors: Opendatasoft, Read the Docs, Foleon,
+Stoplight, Aptible, Platform.sh, K15t Scroll Viewport, WHECloud,
+Inxmail, Bevy, Brilliant Made, Music Today, OpenGov OpenData,
+Cvent (event microsites distinct from the existing
+`certain-cvent` and `stova-aventri` Cvent-family slugs).
+
+Catalog: 788 -> 808 entries, 617 -> 631 unique slugs.
+
+### Chain motif library expansion
+
+Four new multi-hop motifs surfaced by the Phase B mining
+(`validation/phase-b-motif-mine.md`):
+
+- `zpa_to_aws`: Zscaler ZPA edge fronting AWS origin (3 corpus apex).
+- `zpa_gov_chain`: 3-hop ZPA Gov tier to AWS (3 apex).
+- `msecnd_to_zeta`: legacy Azure CDN fronting Zeta Global CDN (3 apex).
+- `episerver_to_optimizely`: legacy Episerver host fronting Optimizely
+  DXP edge across the rebrand boundary (3 apex).
+
+Motif library: 18 -> 22.
+
+### Engine: cname matcher regex bug fix preserved
+
+The v1.9.24 cname-matcher regex fix (substring -> `re.search`)
+remains in place; the 9 previously-dormant catalog patterns
+(langsmith, fastly, flyio, railway, splunk, cyberark,
+beyond-identity, workspace-one) continue to fire. New regression
+tests pin the behavior.
+
+### Testing
+
+- `tests/test_ct_pipeline_resilience.py` (new): 19 tests covering
+  semaphore cap+singleton, 429-raises, partial-page survival,
+  AdaptiveRateLimiter (AIMD math, breaker semantics, success
+  decrease, persistence round-trip + stale-state-ignored +
+  persist=False opt-out), Retry-After parsing, cache-first
+  short-circuit.
+- `tests/test_rate_limit_properties.py` (new): 6 Hypothesis-based
+  property tests verifying interval bounds, breaker-state /
+  failure-count correspondence, success-resets, Retry-After floor,
+  snapshot JSON-serializability, fail-fast on saturation.
+- `tests/test_cname_regex_patterns.py` (new): 14 tests pinning each
+  of the 9 regex-shaped cname patterns to real hostnames they
+  match (anchored to vendor docs).
+- `tests/test_pattern_shadowing.py` (extended): same 7 tests plus
+  the v1.9.25 shadow-safety check confirms the 20 new entries do
+  not introduce cross-slug substring shadows.
+- `tests/test_fallback_chain.py`: 6 pre-existing tests updated for
+  cache-first semantics; one bypass fixture for tests that
+  exercise the live-fallback chain.
+- `tests/conftest.py`: new `_isolated_rate_limit_state` autouse
+  fixture isolates each test from persisted limiter state.
+
+### Known limitations the design now surfaces honestly
+
+Free-tier CT enumeration on a fresh IP cannot complete a
+5000-domain corpus in a single session: CertSpotter's free-tier
+subdomain quota is 10/day, crt.sh's per-IP limit is 5/min and
+tightens further under load. The Phase F corpus run with the new
+pipeline ended with both breakers open, 10,246 local declines
+saved the run from blocking, and 57 records (1.1%) populated
+cert_summary, of which 54 came from cache. This is the published-
+limit reality; the design surfaces it via degraded_sources,
+ct_attempt_outcome, and the ct_budget_summary.json artifact so
+operators can plan multi-session enumeration via the
+`--ct-retry-from` workflow.
+
 ## [1.9.24] - 2026-05-27
 
 A second full pass over the 5241-domain private corpus, combined with

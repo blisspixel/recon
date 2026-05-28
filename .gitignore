@@ -230,3 +230,4 @@ secrets.yml
 .kiro/
 /archive
 docs/archive/
+_local_gate.sh

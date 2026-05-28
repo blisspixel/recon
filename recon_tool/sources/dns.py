@@ -206,6 +206,7 @@ class _DetectionCtx:
         "bimi_identity",
         "cert_summary",
         "chain_motifs",
+        "ct_attempt_outcome",
         "ct_cache_age_days",
         "ct_provider_used",
         "ct_subdomain_count",
@@ -254,6 +255,10 @@ class _DetectionCtx:
         self.ct_subdomain_count: int = 0
         # v0.10: CT cache age in days when cached data used as fallback
         self.ct_cache_age_days: int | None = None
+        # v1.9.25: per-record CT attempt outcome. See ``TenantInfo.ct_attempt_outcome``
+        # for the enum values. None when CT enumeration was not attempted
+        # for this lookup (e.g. ``--no-ct``); set by ``_detect_cert_intel``.
+        self.ct_attempt_outcome: str | None = None
         # v1.5: per-subdomain attributions from CNAME-chain classification.
         # Populated after the main detector gather, since classification
         # depends on related_domains being collected first.
@@ -1412,15 +1417,57 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
     silently null even though a populated cache entry existed. Now
     we record the first such response (so the panel still shows
     "certspotter (0 subdomains)") and continue trying.
+
+    Cache-first lookup (v1.9.25): a fresh CT cache entry short-circuits
+    the live providers entirely. Corpus-scale re-runs that previously
+    re-hit crt.sh / CertSpotter for every domain now serve from the
+    cache for any apex enumerated in the last seven days. The cache
+    TTL is the standard ``CT_CACHE_TTL`` and the cached entry counts
+    as a successful fetch (``ct_provider_used`` is ``"<provider>
+    (cached)"`` so the panel still surfaces which live provider
+    originally populated the entry).
     """
     from recon_tool.ct_cache import ct_cache_get, ct_cache_put
 
+    cached_first = ct_cache_get(domain)
+    if cached_first is not None and cached_first.subdomains:
+        ctx.related_domains.update(cached_first.subdomains)
+        if cached_first.cert_summary is not None:
+            ctx.cert_summary = cached_first.cert_summary
+        ctx.ct_provider_used = f"{cached_first.provider_used} (cached)"
+        ctx.ct_subdomain_count = len(cached_first.subdomains)
+        ctx.ct_cache_age_days = cached_first.age_days
+        ctx.ct_attempt_outcome = "cache_hit"
+        logger.debug(
+            "cert intel cache-first hit for %s: %d subdomains, %d days old",
+            domain,
+            len(cached_first.subdomains),
+            cached_first.age_days,
+        )
+        return
+
     providers: list[CertIntelProvider] = [CrtshProvider(), CertSpotterProvider()]
+    # Track WHY each provider failed (if it did) so the per-record
+    # outcome can distinguish rate-limit, breaker, and other failures.
+    rate_limit_count = 0
+    breaker_open_count = 0
+    other_failure_count = 0
     soft_provider: str | None = None  # First provider to return empty-but-not-error.
     for provider in providers:
         try:
             subdomains, cert_summary, infrastructure_clusters = await provider.query(domain)
         except Exception as exc:
+            # Classify the failure so the per-record outcome can name it.
+            # RateLimited from the adaptive limiter wraps either a local
+            # breaker-open decline or a max-wait-exceeded decline; both
+            # surface as "rate-limited" in the message.
+            err_str = str(exc).lower()
+            if "circuit breaker open" in err_str:
+                breaker_open_count += 1
+            elif "rate-limited" in err_str or "429" in err_str:
+                rate_limit_count += 1
+            else:
+                other_failure_count += 1
             logger.debug("cert intel provider %s failed for %s: %s", provider.name, domain, exc)
             ctx.degraded_sources.add(provider.name)
             continue
@@ -1446,6 +1493,7 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
             ctx.infrastructure_clusters = infrastructure_clusters
         ctx.ct_provider_used = provider.name
         ctx.ct_subdomain_count = len(subdomains)
+        ctx.ct_attempt_outcome = "live_success"
         logger.debug("cert intel from %s for %s: %d subdomains", provider.name, domain, len(subdomains))
         # Cache successful result for future fallback
         ct_cache_put(domain, subdomains, cert_summary, provider.name)
@@ -1464,6 +1512,7 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
         ctx.ct_provider_used = f"{attribution} (cached)"
         ctx.ct_subdomain_count = len(cached.subdomains)
         ctx.ct_cache_age_days = cached.age_days
+        ctx.ct_attempt_outcome = "cache_hit"
         logger.debug(
             "cert intel from CT cache for %s: %d subdomains, %d days old",
             domain,
@@ -1475,6 +1524,20 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
         # empty response - surface that in the panel rather than
         # leaving ct_provider_used unset.
         ctx.ct_provider_used = soft_provider
+        ctx.ct_attempt_outcome = "cache_miss"
+    else:
+        # No success, no soft-failure, no cache. Pick the most precise
+        # outcome from the failure-classification tallies. Ordered so
+        # breaker_open is most-specific (we KNOW the breaker fired),
+        # rate_limited next, and other_failure as the catch-all.
+        if breaker_open_count > 0:
+            ctx.ct_attempt_outcome = "breaker_open"
+        elif rate_limit_count > 0:
+            ctx.ct_attempt_outcome = "live_rate_limited"
+        elif other_failure_count > 0:
+            ctx.ct_attempt_outcome = "live_other_failure"
+        else:
+            ctx.ct_attempt_outcome = "cache_miss"
         ctx.ct_subdomain_count = 0
 
 
@@ -2317,6 +2380,7 @@ class DNSSource:
                 ct_provider_used=ctx.ct_provider_used,
                 ct_subdomain_count=ctx.ct_subdomain_count,
                 ct_cache_age_days=ctx.ct_cache_age_days,
+                ct_attempt_outcome=ctx.ct_attempt_outcome,
                 raw_dns_records=tuple(
                     (rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals
                 ),
@@ -2341,6 +2405,7 @@ class DNSSource:
             ct_provider_used=ctx.ct_provider_used,
             ct_subdomain_count=ctx.ct_subdomain_count,
             ct_cache_age_days=ctx.ct_cache_age_days,
+            ct_attempt_outcome=ctx.ct_attempt_outcome,
             raw_dns_records=tuple((rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals),
             surface_attributions=surface_tuple,
             unclassified_cname_chains=unclassified_tuple,
