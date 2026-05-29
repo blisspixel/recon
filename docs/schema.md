@@ -12,6 +12,56 @@ documented field is present and correctly typed on a fixture TenantInfo.
 
 ---
 
+## Output modes
+
+`recon` emits more than one JSON shape. The top-level object documented
+below is the shape of one mode only: a successful single-domain lookup.
+The table tells you what to expect from each mode so you can pick a parser
+without guessing.
+
+| Invocation | Top-level shape | Per-record shape |
+|---|---|---|
+| `recon <domain> --json` | a single object | the top-level object below (success), or exit code 2/3 with no JSON on validation/no-data failures |
+| `recon batch <file> --json` | a bare JSON array, one element per input domain in file order | each element is either a success object (the top-level object below) or a `BatchErrorRecord` |
+| `recon batch <file> --json --include-ecosystem` | a `BatchResult` wrapper object `{domains, ecosystem_hyperedges}` | `domains` elements are success objects or `BatchErrorRecord`; falls back to the bare array when no domain resolved |
+| `recon batch <file> --ndjson` | one JSON object per line (newline-delimited) | each line is a success object or a `BatchErrorRecord` |
+| `recon delta <domain>` / `recon <domain> --compare <file>` | a single `DeltaReport` object | n/a |
+
+The machine-readable form of each shape lives in
+[`recon-schema.json`](recon-schema.json): the document root is the
+single-domain success object; `$defs/BatchArray`, `$defs/BatchResult`,
+`$defs/BatchNdjsonRecord`, `$defs/BatchErrorRecord`, and `$defs/DeltaReport`
+cover the rest.
+
+### `BatchErrorRecord` (batch / NDJSON only)
+
+When a single domain in a batch run fails (input validation or a lookup
+error), recon emits an error record in place of the success object rather
+than dropping the domain silently:
+
+```json
+{"domain": "not a domain", "error": "invalid domain syntax"}
+```
+
+Exactly two keys, `domain` and `error`, both strings. The shape is disjoint
+from the single-domain success object (which carries dozens of required
+fields), so a consumer can branch on the key set alone. The deterministic
+rule a consumer should apply to any batch / NDJSON record:
+
+- key set is exactly `{domain, error}` -> error record;
+- key set is a superset of the required single-domain fields -> success object;
+- anything else -> malformed, reject.
+
+That rule is implemented for in-process consumers as
+`recon_tool.schema_contract.classify_batch_record`, and exercised against a
+synthetic batch sample in `tests/test_batch_ndjson_schema.py`. A success
+object in batch `--json` may carry the extra batch-only cross-domain fields
+described under [Batch-only cross-domain fields](#batch-only-cross-domain-fields-batch---json);
+those keep it a superset of the required set, so the rule still classifies
+it as a success object.
+
+---
+
 ## Top-level object
 
 Every `--json` invocation returns a single JSON object with the following
@@ -255,7 +305,30 @@ object, keyed by detected slug.
 Surfaced under the top-level `ecosystem_hyperedges` array of the batch
 JSON wrapper when `recon batch --json --include-ecosystem` is run. The
 batch wrapper shape is `{ecosystem_hyperedges: [...], domains: [...]}`
-in that mode; otherwise the batch JSON is just the per-domain array.
+in that mode; otherwise the batch JSON is just the per-domain array. One
+edge case: if `--include-ecosystem` is set but no domain in the batch
+resolved successfully, there is nothing to build a hypergraph from, so
+the output falls back to the bare per-domain array (which then holds only
+`BatchErrorRecord` entries).
+
+### Batch-only cross-domain fields (`batch --json`)
+
+In `recon batch --json` output (the non-streaming path), a per-domain
+success object may carry up to three additional keys that the
+single-domain contract never emits. They are populated only when the
+batch surfaced a relationship between two or more domains, and never
+appear in single-domain `--json` or in `--ndjson` (which streams each
+record before the batch-wide pass can run):
+
+| Field | Type | Emitted when |
+|---|---|---|
+| `shared_verification_tokens` | `list[{token, peer}]` | two or more batch domains shared a TXT verification token |
+| `shared_tenant` | `list[{tenant_id, peers}]` | two or more batch domains shared an M365 `tenant_id` |
+| `shared_display_name` | `list[{display_name, normalized_name, peers}]` | two or more batch domains normalized to the same display name (hedged: customer-supplied brand text, not cryptographic) |
+
+These are additive: they leave the record a superset of the required
+single-domain fields, so the batch-record rule still classifies it as a
+success object.
 
 ### `bimi_identity`
 
@@ -276,7 +349,13 @@ All string fields; all except `organization` nullable. Stability: stable.
 ## Arrays of structured records (verbose modes)
 
 When invoked with `--verbose` / `--full` / `--explain`, additional structured
-arrays appear:
+arrays appear. These fields are conditional: they are absent unless the
+relevant flag is passed, so a consumer should treat their presence as
+optional and never infer "always present". They are intentionally omitted
+from the schema's `required` list for the same reason. The conditional
+fields are `evidence` (`--explain`), `explanation_dag` (`--explain` on the
+`lookup_tenant` MCP tool), and `unclassified_cname_chains`
+(`--include-unclassified`).
 
 ### `evidence` (present with `--explain`)
 

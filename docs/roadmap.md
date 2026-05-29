@@ -4,14 +4,14 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.23** (comprehensive corpus-discovery batch:
-a multi-signal mine across TXT verifications, SPF includes, MX
-providers, NS providers, and DMARC `rua=` vendors over the full
-~5000-domain corpus, surfacing every clearly-attributable
-unfingerprinted pattern. 56 TXT + 17 SPF + 9 MX + 8 DMARC-rua + 12 NS
-+ 8 cname_target additions; catalog grows 459 -> 572 entries).
-Thirteenth bridge release after v1.9.11. v2.0 remains the mechanical
-schema-lock-and-tag event. Cumulative pre-v2.0 work since v1.9.3:
+Current release: **v1.9.26** (schema-contract polish: scopes the JSON
+schema root to single-domain success output, documents the batch /
+NDJSON error-record shape as `$defs/BatchErrorRecord`, corrects the
+`BatchResult` prose to match the emitter, and adds a pure-Python
+`classify_batch_record` rule set. Closes item 1 of the "Outstanding
+before v2.0" list below; no runtime output shape changed). v2.0 remains
+the mechanical schema-lock-and-tag event. Cumulative pre-v2.0 work since
+v1.9.3:
 
 Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
 detail in `CHANGELOG.md` and the per-release validation memos):
@@ -41,6 +41,8 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.22 | Fingerprint expansion: 20 new cname_target rules from a corpus discovery run (Discourse, Substack, BeyondTrust, Arctic Wolf, M365 US Gov cloud, ...); Bayesian fusion validated at 100% calibration across 136 diverse domains | `CHANGELOG.md` |
 | v1.9.23 | Comprehensive corpus-discovery batch across TXT / SPF / MX / NS / DMARC-rua signals: 56 TXT verifications + 17 SPF + 9 MX + 8 DMARC-rua + 12 NS + 8 cname_target; catalog grows 459 -> 572 entries | `CHANGELOG.md` |
 | v1.9.24 | Second corpus pass (lowered thresholds) plus shadow-handling consistency: 156 new fingerprints + 60 EXTEND variants across all six signal types, catalog grows 572 -> 788 entries; engine substring matchers (MX / NS / CAA / dmarc_rua / cname) all sort longest-first and SPF gains `filter_shadowed_matches` so a broader pattern cannot double-count alongside a narrower one; pre-existing cname-regex matcher bug fixed (9 patterns silently never-fired); audit residuals (priors clamp open `(0,1)`, per-file catalog cap); `tests/test_pattern_shadowing.py` adds a CI gate for future shadow / description / EXTEND-duplicate failures | `CHANGELOG.md` |
+| v1.9.25 | CT pipeline resilience (AIMD adaptive rate limiter + per-provider circuit breaker + persistent limiter state + cache-first short-circuit + `ct_attempt_outcome` field + `--ct-retry-from` multi-session workflow); Phase F catalog gap-fill (788 -> 808 entries, 20 cname_target additions); chain motif library 18 -> 22 | `CHANGELOG.md` |
+| v1.9.26 | Schema-contract polish (path-to-v2.0 item 1): JSON schema root scoped to single-domain success output; batch / NDJSON error-record shape declared as `$defs/BatchErrorRecord`; `BatchArray` / `BatchNdjsonRecord` defs added and inaccurate `BatchResult` prose corrected to match the emitter; pure-Python `classify_batch_record` rule set; conditional fields documented. No runtime output shape changed | `CHANGELOG.md`, `validation/v1.9.26-schema-contract.md` |
 
 **Outstanding before v2.0:** *(refined 2026-05-26 after the v1.9.24
 mega-batch; the v1.9.24 entry above absorbed items 1 and the
@@ -51,8 +53,14 @@ The work below ships as 1.9.x patches following the no-bundling
 discipline; v2.0 itself stays the mechanical lock event with no
 new work. Recommended sequencing is at the end.
 
-1. **Schema-contract polish.** Three items the pre-lock audit
-   surfaced in `docs/recon-schema.json` and the way real output
+1. **Schema-contract polish.** *(SHIPPED in v1.9.26. Chose option (a):
+   document the error-record shape and add an explicit pure-Python
+   allowance rather than change runtime output. A fourth gap surfaced
+   while grounding the work and was fixed in the same patch: the
+   `BatchResult` `$def` claimed batch JSON always wraps under `domains`,
+   but the default `recon batch --json` emits a bare array. See
+   `validation/v1.9.26-schema-contract.md`.)* Three items the pre-lock
+   audit surfaced in `docs/recon-schema.json` and the way real output
    relates to it:
 
    - The schema description currently reads "Stable v1.0 contract
@@ -147,12 +155,16 @@ new work. Recommended sequencing is at the end.
    - Run `scripts/release.py`.
 
 **Recommended sequencing.** Items 1 through 3 ship as 1.9.x
-patches, one per coherent story:
+patches, one per coherent story. The actual order diverged from the
+original plan: **v1.9.25** took the operator-paced CT-resilience +
+catalog story (standing work, not a numbered item), so the
+schema-contract polish slid one patch to v1.9.26.
 
-- **v1.9.25** lands the schema-contract polish (item 1).
-- **v1.9.26** brings the release-notes draft current and
-  refreshes the validation summary (items 2 and 3 are both
-  "v2.0 docs currency" and ship together as one patch).
+- ~~**v1.9.25** lands the schema-contract polish (item 1).~~ Shipped
+  instead as **v1.9.26** (v1.9.25 was the CT-pipeline-resilience patch).
+- **v1.9.27** brings the release-notes draft current and refreshes the
+  validation summary (items 2 and 3 are both "v2.0 docs currency" and
+  ship together as one patch).
 - Item 4 runs in parallel on the operator's schedule and folds
   into the closure trail as it lands.
 - **v2.0.0** is item 5, the mechanical ceremony, after 1-3 are
