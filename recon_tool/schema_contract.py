@@ -11,11 +11,17 @@ This module is that mirror. The list is kept in sync with
 ``docs/recon-schema.json#/required`` by ``tests/test_json_schema_file.py``,
 which fails CI on any drift between this tuple and the schema file.
 
-Importing this module has no side effects; it exposes a single sorted
-tuple of strings.
+Importing this module has no side effects; it exposes a sorted tuple of
+the required single-domain fields plus the deterministic batch-record
+classifier the schema contract references.
 """
 
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 REQUIRED_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "auth_type",
@@ -66,3 +72,37 @@ REQUIRED_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "tenant_id",
     "tenant_region_sub_scope",
 )
+
+# Batch and NDJSON runs interleave two record shapes: a single-domain
+# success object (carrying every field in REQUIRED_TOP_LEVEL_FIELDS) and an
+# error record emitted when a domain fails validation or lookup. The error
+# record is exactly these two keys, matching docs/recon-schema.json
+# $defs/BatchErrorRecord. The two shapes are disjoint, so a consumer can
+# classify any batch / NDJSON record by its key set alone.
+BATCH_ERROR_RECORD_KEYS: frozenset[str] = frozenset({"domain", "error"})
+
+
+def classify_batch_record(record: Mapping[str, object]) -> str:
+    """Classify one batch or NDJSON record by the deterministic rule set.
+
+    Returns:
+        ``"error"`` when the record is a BatchErrorRecord (exactly the
+        ``{domain, error}`` keys); ``"success"`` when it carries every
+        field in REQUIRED_TOP_LEVEL_FIELDS (a single-domain success
+        object, possibly with extra batch-only or flag-gated fields);
+        ``"unknown"`` for anything else.
+
+    The classification is unambiguous because the two valid shapes do not
+    overlap: the error record has exactly two keys, the success object
+    requires far more. A success object never matches the error rule, and
+    an error record never matches the success rule. This mirrors the
+    ``oneOf`` branch in docs/recon-schema.json $defs/BatchArray and
+    $defs/BatchNdjsonRecord, so a pure-Python consumer can validate batch
+    output without a JSON Schema library.
+    """
+    keys = set(record.keys())
+    if keys == set(BATCH_ERROR_RECORD_KEYS):
+        return "error"
+    if keys.issuperset(REQUIRED_TOP_LEVEL_FIELDS):
+        return "success"
+    return "unknown"

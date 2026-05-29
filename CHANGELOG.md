@@ -9,6 +9,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.26] - 2026-05-29
+
+### Schema-contract polish (path-to-v2.0 item 1)
+
+Closes item 1 of the "Outstanding before v2.0" list in
+`docs/roadmap.md`. Documentation plus a schema-additive set of `$defs`
+and a small pure-Python rule set. No runtime output shape changed; this
+is a no-behavior-change patch.
+
+The pre-lock schema audit found that `docs/recon-schema.json` described
+only the single-domain `--json` output, while batch and NDJSON runs also
+emit a `{domain, error}` error record (when a domain fails validation or
+lookup) whose shape was declared nowhere. A re-read while grounding the
+work also showed the `BatchResult` `$def` was inaccurate: the default
+`recon batch --json` emits a bare array, not a `{domains: ...}` wrapper.
+Only `--include-ecosystem` wraps, and even that falls back to the bare
+array when no domain resolved.
+
+`docs/recon-schema.json`:
+- Top-level `description` rewritten to scope the root object to
+  single-domain success output and to enumerate the other output modes,
+  each pointing at its `$def`.
+- New `$defs/BatchErrorRecord`: `{domain, error}`, both required,
+  `additionalProperties: false`.
+- New `$defs/BatchArray` (default `batch --json`) and
+  `$defs/BatchNdjsonRecord` (`batch --ndjson`): each element / line is
+  `oneOf {single-domain success object, BatchErrorRecord}`.
+- `$defs/BatchResult` description corrected to the `--include-ecosystem`
+  wrapper shape with the bare-array fallback noted; `domains` items now
+  allow both shapes; `ecosystem_hyperedges` declared required in the
+  wrapper.
+- `evidence`, `explanation_dag`, and `unclassified_cname_chains`
+  descriptions now state their conditional emission plainly so a
+  consumer does not read them as always present.
+- The batch-only cross-domain fields (`shared_verification_tokens`,
+  `shared_tenant`, `shared_display_name`) are declared as optional
+  properties with batch-only descriptions.
+
+`recon_tool/schema_contract.py`:
+- `BATCH_ERROR_RECORD_KEYS` and `classify_batch_record()`: the single
+  deterministic rule set for batch / NDJSON records. Returns `success`
+  (key set is a superset of the required single-domain fields), `error`
+  (key set is exactly `{domain, error}`), or `unknown`. Pure-Python, so
+  consumers validate batch output without a JSON Schema library.
+
+`docs/schema.md`:
+- New "Output modes" section with a per-mode shape table, the
+  `BatchErrorRecord` shape, and the deterministic classification rule.
+- New "Batch-only cross-domain fields" subsection.
+- Verbose-modes section names the conditional fields and why they are
+  absent from `required`.
+
+### Testing
+
+- `tests/test_batch_ndjson_schema.py` (new): validates a synthetic batch
+  NDJSON sample (Microsoft fictional brands) with the rule set, confirms
+  every record classifies as success or error, and checks the schema
+  file's batch `$defs` agree with the classifier.
+- `tests/test_json_schema_file.py` (extended): asserts the four batch
+  `$defs` are present.
+
+Validation: `validation/v1.9.26-schema-contract.md`, including the
+local command to run the rule set over a gitignored private-corpus
+NDJSON run.
+
 ## [1.9.25] - 2026-05-28
 
 ### CT pipeline resilience (Phase A)

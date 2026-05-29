@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/blisspixel/recon/main/docs/recon-schema.json",
   "title": "recon JSON output",
-  "description": "Stable v1.0 contract for `recon <domain> --json` output. Mirrors docs/schema.md; the dataclass in recon_tool.models.TenantInfo and the formatter in recon_tool.formatter.format_tenant_dict are the implementation source of truth. Consumers should ignore unknown properties — additive changes are non-breaking within 1.x. See tests/test_json_schema_contract.py for the executable contract.",
+  "description": "Stable v1.0 contract for the single-domain success output of `recon <domain> --json`. This root object describes exactly one output mode: a successful single-domain lookup. The other output modes have their own shapes, documented in $defs and in docs/schema.md. `recon batch <file> --json` (default) emits a bare array of records, one per input domain (see $defs/BatchArray); each element is either a single-domain success object (this root) or a $defs/BatchErrorRecord. `recon batch <file> --json --include-ecosystem` wraps that array in a $defs/BatchResult object (and falls back to the bare array when no domain resolved). `recon batch <file> --ndjson` emits one $defs/BatchNdjsonRecord per line. `recon delta <domain>` emits a $defs/DeltaReport. The dataclass in recon_tool.models.TenantInfo and the formatter in recon_tool.formatter.format_tenant_dict are the implementation source of truth. Consumers should ignore unknown properties; additive changes are non-breaking within 1.x. A few top-level fields are emitted only in specific modes or behind specific flags and are intentionally absent from `required`; each such property states its condition in its own description. See tests/test_json_schema_contract.py for the executable single-domain contract and tests/test_batch_ndjson_schema.py for the batch-record rule set.",
   "type": "object",
   "required": [
     "tenant_id",
@@ -291,18 +291,55 @@
       "additionalProperties": {"$ref": "#/$defs/FingerprintMetadata"}
     },
     "unclassified_cname_chains": {
-      "description": "OPTIONAL — present only when ``--include-unclassified`` is passed. CNAME chains the surface classifier resolved but couldn't attribute to any cname_target fingerprint. Each entry: {subdomain, chain: [hop1, hop2, terminal]}. Wildcard-DNS echoes are filtered out before this list is populated. Feeds the fingerprint-discovery loop in validation/find_gaps.py and the /recon-fingerprint-triage Claude skill.",
+      "description": "Conditional. Present only when ``--include-unclassified`` is passed, absent otherwise; consumers should not treat it as always present. CNAME chains the surface classifier resolved but could not attribute to any cname_target fingerprint. Each entry: {subdomain, chain: [hop1, hop2, terminal]}. Wildcard-DNS echoes are filtered out before this list is populated. Feeds the fingerprint-discovery loop in validation/find_gaps.py and the /recon-fingerprint-triage Claude skill.",
       "type": "array",
       "items": {"$ref": "#/$defs/UnclassifiedCnameChain"}
     },
     "evidence": {
-      "description": "Present with --explain. Per-detection evidence trace.",
+      "description": "Conditional. Present only with --explain, absent otherwise; consumers should not treat it as always present. Per-detection evidence trace.",
       "type": "array",
       "items": {"$ref": "#/$defs/EvidenceRecord"}
     },
     "explanation_dag": {
-      "description": "Present with --explain on the lookup_tenant MCP tool. Top-level keys: evidence, slugs, rules, signals, insights — each a list of records with id and references.",
+      "description": "Conditional. Present only with --explain on the lookup_tenant MCP tool, absent otherwise; consumers should not treat it as always present. Top-level keys: evidence, slugs, rules, signals, insights, each a list of records with id and references.",
       "type": "object"
+    },
+    "shared_verification_tokens": {
+      "description": "Conditional, batch-only. Present on a per-domain success record in `recon batch --json` output only when two or more domains in the batch shared a TXT verification token. Never emitted in single-domain --json or in --ndjson (which streams before the batch-wide pass runs). Each entry pairs a shared token with the peer domain that also carried it.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["token", "peer"],
+        "properties": {
+          "token": {"type": "string"},
+          "peer": {"type": "string"}
+        }
+      }
+    },
+    "shared_tenant": {
+      "description": "Conditional, batch-only. Present on a per-domain success record in `recon batch --json` output only when two or more domains in the batch shared an M365 tenant_id. Never emitted in single-domain --json or in --ndjson. Each entry carries the shared tenant_id and the peer domains under it.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tenant_id", "peers"],
+        "properties": {
+          "tenant_id": {"type": ["string", "null"]},
+          "peers": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "shared_display_name": {
+      "description": "Conditional, batch-only. Present on a per-domain success record in `recon batch --json` output only when two or more domains in the batch normalized to the same display name. Hedged signal (customer-supplied brand text, not cryptographic). Never emitted in single-domain --json or in --ndjson. Each entry carries the raw display_name, its normalized form, and the peer domains.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["display_name", "normalized_name", "peers"],
+        "properties": {
+          "display_name": {"type": "string"},
+          "normalized_name": {"type": "string"},
+          "peers": {"type": "array", "items": {"type": "string"}}
+        }
+      }
     }
   },
   "$defs": {
@@ -661,19 +698,57 @@
         }
       }
     },
-    "BatchResult": {
-      "description": "Output shape of ``recon batch <file> --json``. Wraps one ``TenantInfo`` per queried domain under ``domains``, with an optional top-level ``ecosystem_hyperedges`` array emitted when ``--include-ecosystem`` is set. Stable v2.0. Per-domain entries follow the top-level ``TenantInfo`` schema in this file.",
+    "BatchErrorRecord": {
+      "description": "Emitted in place of a success object when a single domain in a batch run fails. Appears as an array element in ``recon batch --json`` (BatchArray), as a ``domains`` element in the ``--include-ecosystem`` BatchResult wrapper, and as a line in ``recon batch --ndjson``. A domain yields this shape when it fails input validation (e.g. a malformed apex) or when its lookup raises. Exactly two keys and no overlap with the single-domain success contract (which requires dozens of fields), so a consumer can branch on the key set alone. The deterministic classifier in recon_tool.schema_contract.classify_batch_record encodes that rule.",
       "type": "object",
-      "required": ["domains"],
+      "required": ["domain", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "type": "string",
+          "description": "The raw domain string from the input list, before validation and lowercasing."
+        },
+        "error": {
+          "type": "string",
+          "description": "Human-readable failure reason: the validation message or the lookup error text."
+        }
+      }
+    },
+    "BatchArray": {
+      "description": "Default shape of ``recon batch <file> --json`` (without --include-ecosystem): a bare JSON array, one element per input domain, in input-file order. Each element is either a single-domain success object (the root schema of this file) or a BatchErrorRecord. Success elements may additionally carry the batch-only cross-domain fields (shared_verification_tokens, shared_tenant, shared_display_name) when the batch surfaced a peer relationship. This is also the shape ``--include-ecosystem`` falls back to when no domain in the batch resolved successfully.",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {"$ref": "#"},
+          {"$ref": "#/$defs/BatchErrorRecord"}
+        ]
+      }
+    },
+    "BatchNdjsonRecord": {
+      "description": "One line of ``recon batch <file> --ndjson`` output. Same per-record shape as a BatchArray element: either a single-domain success object (the root schema of this file) or a BatchErrorRecord. NDJSON streams per domain as each completes, so the cross-domain batch enrichment fields (shared_verification_tokens, shared_tenant, shared_display_name) and the --include-ecosystem hyperedge envelope are never present in this mode; both require the full result set before emission.",
+      "oneOf": [
+        {"$ref": "#"},
+        {"$ref": "#/$defs/BatchErrorRecord"}
+      ]
+    },
+    "BatchResult": {
+      "description": "Shape of ``recon batch <file> --json --include-ecosystem`` when at least one domain resolved successfully: a wrapper object carrying the per-domain results under ``domains`` and the cross-domain ``ecosystem_hyperedges`` array as a sibling. Without --include-ecosystem the batch JSON is a bare BatchArray instead, with no wrapper; and an --include-ecosystem run where no domain resolved also falls back to the bare BatchArray. Stable v2.0.",
+      "type": "object",
+      "required": ["domains", "ecosystem_hyperedges"],
       "properties": {
         "domains": {
           "type": "array",
-          "description": "Per-domain ``TenantInfo`` results, one entry per input apex.",
-          "items": {"$ref": "#"}
+          "description": "Per-domain results, one entry per input apex in input-file order. Each entry is either a single-domain success object (the root schema of this file) or a BatchErrorRecord.",
+          "items": {
+            "oneOf": [
+              {"$ref": "#"},
+              {"$ref": "#/$defs/BatchErrorRecord"}
+            ]
+          }
         },
         "ecosystem_hyperedges": {
           "type": "array",
-          "description": "Multi-domain signatures observed across the batch. Present only when ``--include-ecosystem`` is set; absent otherwise. Each entry is one ``EcosystemHyperedge``.",
+          "description": "Multi-domain signatures observed across the batch. Always present in this wrapper (empty array when no rule fired). Each entry is one ``EcosystemHyperedge``.",
           "items": {"$ref": "#/$defs/EcosystemHyperedge"}
         }
       }

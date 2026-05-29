@@ -92,6 +92,19 @@ def test_delta_report_def_present(schema: dict) -> None:
     assert "DeltaReport" in schema.get("$defs", {})
 
 
+def test_batch_mode_defs_present(schema: dict) -> None:
+    """Each batch output mode has a $defs entry (v1.9.26 schema-contract polish).
+
+    The root schema is single-domain success output; batch and NDJSON modes
+    interleave success objects with ``{domain, error}`` records. Those shapes
+    live in dedicated $defs so a consumer can validate every output mode. Full
+    shape assertions live in ``test_batch_ndjson_schema.py``.
+    """
+    defs = schema.get("$defs", {})
+    for name in ("BatchArray", "BatchNdjsonRecord", "BatchResult", "BatchErrorRecord"):
+        assert name in defs, f"missing $defs/{name}"
+
+
 def test_schema_contract_constant_matches_required(schema: dict) -> None:
     """Drift guard for the runtime mirror used by ``recon doctor``.
 
