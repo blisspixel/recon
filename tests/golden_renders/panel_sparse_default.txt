@@ -1,0 +1,15 @@
+Northwind Traders
+northwindtraders.com
+──────────────────────────────────────────────────────────────────────────────
+  Provider     Microsoft 365 (account detected, no MX)
+  Confidence   ●○○ Low (1 sources)
+
+
+Services
+  Email          Microsoft 365
+  AI             Microsoft Copilot (likely)
+
+
+Insights
+  Passive DNS surfaces little for this apex.
+

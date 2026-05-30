@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.38] - 2026-05-30
+
+### Golden-output renderer tests + pre-2.0 hardening roadmap (hardening phase, patch 1)
+
+Opens the pre-2.0 hardening phase. v2.0 is deliberately deferred behind
+making the engine and catalog solid (more validation, more fingerprints,
+the complexity decomposition, robustness work), not behind docs currency.
+
+- `tests/test_golden_renders.py`: golden-output characterization tests
+  that pin the exact rendered output of `render_tenant_panel` (C901 ~96,
+  ~940 lines) and `format_tenant_markdown` (C901 ~25) across dense,
+  sparse, hardened, verbose, and explain cases. The snapshots live under
+  `tests/golden_renders/`; regenerate intentionally with
+  `RECON_REGEN_GOLDEN=1`. These guarantee byte-identical output when those
+  functions are decomposed in the next patches, so the user-facing panel
+  cannot change silently. Every fixture uses Microsoft fictional brands
+  (Contoso, Northwind, Fabrikam); no real company data.
+- `docs/roadmap.md`: a "Pre-2.0 hardening phase" section laying out the
+  four tracks (complexity decomposition, test and validation rigor,
+  catalog growth, robustness and security) and the corpus-driven
+  validation that runs alongside, with v2.0 gated behind the hardening.
+
+No source behavior changed.
+
 ## [1.9.37] - 2026-05-30
 
 ### Enable the C901 complexity gate (engineering elevation, patch 10)
