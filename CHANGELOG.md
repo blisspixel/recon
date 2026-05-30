@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.32] - 2026-05-30
+
+### Build-provenance attestation + hash-pinned audit requirements (engineering elevation, patch 5)
+
+Supply-chain hardening adopted from the 2026-05 standards review. CI and
+release configuration only; no code or runtime behavior changed.
+
+- **Build provenance.** A new `attest` job in `release.yml` signs a
+  GitHub-native SLSA build-provenance attestation
+  (`actions/attest-build-provenance`) for the wheel and sdist, linking
+  them to the workflow run that produced them. Consumers can verify with
+  `gh attestation verify <artifact> --repo blisspixel/recon`. The job is
+  deliberately separate, like `publish-pypi` and `github-release`: it
+  downloads the sealed artifacts and runs no project dependency code, so
+  the `id-token` it is granted cannot be minted by a compromised
+  dependency. This keeps the v1.9.3.3 supply-chain isolation contract
+  intact.
+- **Hash-pinned audit requirements.** The exported runtime requirements
+  the dependency audit reads now carry per-package sha256 hashes (dropped
+  `--no-hashes` from the `uv export` in both `ci.yml` and `release.yml`),
+  so the audited surface is hash-pinned. pip-audit handles hashed
+  requirements (verified locally). The SBOM export is left unhashed since
+  its `--no-deps` CycloneDX generation does not benefit from hashes.
+
+Full SLSA L3, Sigstore in-toto signing, and reproducible-build
+verification stay deferred as disproportionate for a stdio tool at
+current scale; the cheap, GitHub-native provenance step closes most of
+the gap. The actual install path was already hash-verified via `uv.lock`.
+
 ## [1.9.31] - 2026-05-30
 
 ### Design-by-Contract on the inference core (engineering elevation, patch 4)
