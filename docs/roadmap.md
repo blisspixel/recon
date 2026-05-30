@@ -456,12 +456,13 @@ know is missing rather than only what we know is present:
   contracts, then a second pass over the matchers and validators. Updates
   the dependency-floor note above (the floor grows by one deliberate
   pure-Python import).
-- Branch coverage is not enforced and the gate sits at 80% line
-  coverage. Turn on `--cov-branch` in the CI and release test jobs (and
-  the local gate), name `server.py` (around 71% line today) as the
-  explicit under-covered target, and set the gate to a measured value.
-  Branch coverage measured at 83% as of v1.9.28, so the honest gate moves
-  to roughly 82, not the flat 95% the brief asked for.
+- ~~Branch coverage is not enforced and the gate sits at 80% line
+  coverage.~~ **Shipped in v1.9.30** - `--cov-branch` enabled in the CI
+  matrix, the release test job, and the local gate (`scripts/release.py`,
+  `CONTRIBUTING.md`). Branch coverage measured at 82.95%, so the gate
+  moves from 80% line to 82% branch, a stricter metric at a higher number
+  rather than the flat 95% the brief asked for. `server.py` (around 71%
+  line) stays the named under-covered target for follow-up tests.
 - No complexity gate. Decision from the standards review: add ruff `C901`
   at `max-complexity=15` (28 functions exceed it today) plus the `PLR`
   refactor family, and refactor the worst offenders rather than

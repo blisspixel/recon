@@ -468,7 +468,7 @@ salience).
 ## Code changes
 
 - Run `pre-commit run --all-files` or `ruff check recon_tool/` and `pyright recon_tool/` before submitting.
-- Run `pytest tests/` — coverage must stay above 80%.
+- Run `pytest tests/ --cov=recon_tool --cov-branch` — branch coverage must stay above 82%.
 - Integration tests (`pytest -m integration`) require network access and are skipped by default.
 - Keep PRs focused — one concern per PR.
 

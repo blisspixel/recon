@@ -31,8 +31,8 @@ The script enforces the pre-release checklist automatically. It runs:
 5. **CHANGELOG entry check** — requires a `## [X.Y.Z]` section to exist in
    `CHANGELOG.md`. Refuses otherwise.
 6. **Quality gate** — runs `ruff check`, `pyright`, and
-   `pytest --cov-fail-under=80` on the full test suite. Refuses on any
-   failure.
+   `pytest --cov-branch --cov-fail-under=82` on the full test suite.
+   Refuses on any failure.
 7. **Confirmation prompt** — y/N, defaults to N. Abort here and nothing has
    changed.
 8. **Version bump** — updates `pyproject.toml`, `recon_tool/__init__.py`
@@ -57,7 +57,7 @@ quality gate passes before cutting an actual release.
 
 Triggered by any tag matching `v*` pushed to the repo. The workflow:
 
-1. **test** — installs deps, runs `pytest --cov-fail-under=80`, `ruff check`,
+1. **test** — installs deps, runs `pytest --cov-branch --cov-fail-under=82`, `ruff check`,
    exports locked runtime requirements, and audits those with `pip-audit`.
 2. **build** — `uv build` produces the sdist and wheel under `dist/`.
 3. **publish-pypi** — uses `pypa/gh-action-pypi-publish@release/v1` with
