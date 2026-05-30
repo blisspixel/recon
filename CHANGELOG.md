@@ -9,6 +9,96 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.27] - 2026-05-29
+
+### MCP-onboarding UX: client-side config check + troubleshooting docs
+
+Acts on field feedback from a Windows 11 / Claude Code install attempt
+where both server doctors passed but the tools still did not appear. The
+gap was never the server. Nothing told the operator whether the client
+had actually been handed the config, and the docs stopped before the
+most common failure mode.
+
+Added:
+- `recon doctor --client=<name>` reads the config file a client actually
+  loads (claude-code, claude-desktop, cursor, vscode, windsurf, kiro)
+  and reports whether an `mcpServers.recon` stanza is present and
+  well-formed, including a command-sanity check that flags the
+  bare-`recon`-not-on-PATH case. For Claude Code it also checks the
+  project-nested `projects[...].mcpServers.recon` shape that
+  `claude mcp add` writes, and notes that a plugin install keeps its
+  config inside the plugin rather than in `~/.claude.json`. Exits
+  non-zero when no stanza is found so it can gate a setup script. New
+  module `recon_tool/client_doctor.py`: pure-data, no network, reuses
+  the install path resolver and the BOM-tolerant read.
+
+Docs:
+- `docs/mcp.md` gains a third verify-your-setup check for
+  `recon doctor --client`, a "When doctor passes but the tools don't
+  load" section (`/mcp`, the `mcp__recon__*` vs `mcp__claude_ai_*`
+  naming, restart means a full application quit and relaunch), and a
+  note on how approval semantics differ between the `recon mcp install`
+  path (`autoApprove: []`, manual) and the plugin path (auto-approved).
+- `agents/claude-code/README.md` gains a skill-vs-MCP "what each adds"
+  section, the same troubleshooting pointer, the approval-path
+  clarification, and a note that the wrapped `mcpServers` form is the
+  correct plugin `.mcp.json` schema. The skill-vs-MCP framing is written
+  as the accurate split: the one-shot analyses (exposure score,
+  hardening gaps, posteriors) are reachable from the CLI via
+  `--exposure` / `--gaps` / `--fusion`, so a skill can drive them; the
+  MCP server's distinct value is the stateful and iterative workflows.
+- Top-level `README.md` gains a one-line troubleshooting pointer and the
+  same skill-vs-MCP one-liner.
+- `agents/claude-code/skills/recon/SKILL.md` CLI-fallback section gains
+  the `--exposure --json`, `--gaps --json`, `--fusion`, and
+  `--explain-dag` flags, so the skill in CLI mode reaches the exposure
+  score, hardening gaps, and Bayesian posteriors rather than stopping at
+  the lookup, plus an explicit list of what stays MCP-only
+  (`simulate_hardening` loops, the ephemeral-fingerprint reevaluate
+  loop, live two-domain `compare_postures`, `test_hypothesis`).
+
+Not changed:
+- The plugin `.mcp.json` format. A field report suggested the wrapped
+  `mcpServers` form was wrong for the plugin loader; the official Claude
+  Code docs confirm the wrapped form is correct, so the file is left as
+  is and the docs clarify the point instead.
+
+Tests: `tests/test_doctor_client.py` covers stanza-present (top-level
+and project-nested), missing, mcpServers-without-recon, malformed JSON,
+BOM-tolerant read, the bare-`recon`-not-on-PATH warning, the
+python-module command form, populated `autoApprove`, the cursor
+workspace path, and the CLI exit codes.
+
+### Bug-hunt fixes (same patch)
+
+Adversarial review of the new surface turned up three defects, fixed
+here:
+
+- **VS Code config key.** VS Code's `.vscode/mcp.json` maps servers
+  under a top-level `servers` key, not `mcpServers` (per the VS Code MCP
+  configuration reference). `recon mcp install --client=vscode`
+  previously wrote `mcpServers`, which VS Code does not read, so the
+  install silently produced a config that never loaded. A new
+  `servers_key(client)` helper now drives both `plan_install` and
+  `install`: vscode gets `servers`, every other client keeps
+  `mcpServers`. The `agents/vscode/mcp.json` scaffold and the
+  `docs/mcp.md` config-location note are updated to match, and
+  `recon doctor --client=vscode` reads `servers` first (falling back to
+  a legacy `mcpServers` block so an older install is still found, with a
+  note to move it).
+- **Absolute-path command mis-warned.** `recon doctor --client` flagged
+  an absolute `command` path ending in `recon` / `recon.exe` (the common
+  installed form, since `recon mcp install` persists
+  `shutil.which("recon")`) as "unrecognized" when the path did not
+  resolve on the machine running the check, for example a config synced
+  from another machine. The command-sanity check now recognizes the
+  `recon` basename alongside the python / uvx launcher forms.
+- **Duplicate stanza mislabelled.** When recon was registered in more
+  than one of a client's config files (for example both `~/.claude.json`
+  and a project `.mcp.json`), the second file was reported as having no
+  recon entry. It is now labelled as a duplicate the first candidate
+  already covers.
+
 ## [1.9.26] - 2026-05-29
 
 ### Schema-contract polish (path-to-v2.0 item 1)

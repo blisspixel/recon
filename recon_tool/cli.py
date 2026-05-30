@@ -440,12 +440,23 @@ def discover(
 def doctor(
     fix: bool = typer.Option(False, "--fix", help="Scaffold template config files"),
     mcp: bool = typer.Option(False, "--mcp", help="Validate MCP server setup and emit copy-pasteable client config"),
+    client: str | None = typer.Option(
+        None,
+        "--client",
+        help="Check whether a client's MCP config has the recon stanza "
+        "(claude-code, claude-desktop, cursor, vscode, windsurf, kiro). "
+        "Reads the config file the client loads. The config-side complement "
+        "to --mcp, which validates the server itself.",
+    ),
 ) -> None:
     """
     Check connectivity to all data sources.
     """
     if fix:
         _doctor_fix()
+        return
+    if client is not None:
+        _doctor_client(client)
         return
     if mcp:
         _doctor_mcp()
@@ -615,6 +626,56 @@ def _render_mcp_checks(checks: list[tuple[str, bool, str]]) -> None:
         mark = "ok" if ok else "FAIL"
         style = "green" if ok else "red"
         console.print(f"  [{style}]{mark:>4}[/{style}]  {name} — {detail}")
+
+
+def _doctor_client(client: str) -> None:
+    """Read a client's MCP config and report whether recon is registered.
+
+    Complements `--mcp` (which validates the server) by answering the
+    other half of "did the install work": does the client's own config
+    file carry an `mcpServers.recon` stanza the client would load.
+    """
+    from recon_tool.client_doctor import ClientCheck, check_client
+    from recon_tool.mcp_install import SUPPORTED_CLIENTS
+
+    console = get_console()
+    console.print()
+
+    if client not in SUPPORTED_CLIENTS:
+        console.print(
+            f"  [red]unknown client '{escape(client)}'[/red]\n"
+            f"  Supported: {', '.join(SUPPORTED_CLIENTS)}"
+        )
+        raise typer.Exit(EXIT_VALIDATION)
+
+    report = check_client(client)  # pyright: ignore[reportArgumentType]
+    console.print(f"  [bold]MCP client config check — {client}[/bold]")
+    console.print()
+
+    _style = {"ok": "green", "warn": "yellow", "fail": "red", "info": "dim"}
+    _mark = {"ok": "ok", "warn": "warn", "fail": "FAIL", "info": "·"}
+    check: ClientCheck
+    for check in report.checks:
+        style = _style[check.status]
+        mark = _mark[check.status]
+        console.print(f"  [{style}]{mark:>4}[/{style}]  {check.name} — {escape(check.detail)}")
+
+    if report.notes:
+        console.print()
+        for note in report.notes:
+            console.print(f"  [dim]note:[/dim] {escape(note)}")
+
+    console.print()
+    if report.ok:
+        console.print("  [green]recon is registered in this client's config.[/green]")
+        console.print()
+        return
+    console.print(
+        f"  [yellow]recon was not found (or a config file is broken).[/yellow] "
+        f"See the notes above, or run `recon mcp install --client={client}`."
+    )
+    console.print()
+    raise typer.Exit(EXIT_NO_DATA)
 
 
 def _doctor_fix() -> None:

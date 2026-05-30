@@ -12,6 +12,15 @@ agents/claude-code/
 └── README.md                    # this file
 ```
 
+## Skill vs MCP server: what each adds
+
+The two pieces do different jobs, which is worth spelling out if your setup already ships a `/recon` skill and you are wondering what the MCP server buys you:
+
+- **The skill** teaches Claude when to reach for recon and how to read its hedged output. Driving the CLI, it covers the one-shot analyses: the lookup, the exposure score (`recon <domain> --exposure --json`), the hardening gaps (`recon <domain> --gaps --json`), and the Bayesian posteriors (`--fusion`, `--explain-dag`). For most presales and vendor-diligence work, that is the whole job, with zero setup.
+- **The MCP server** adds what a one-shot CLI call does not do well: stateful and iterative agentic workflows. `simulate_hardening` what-if loops where Claude proposes a fix, scores it, and proposes another; the ephemeral-fingerprint loop (`inject_ephemeral_fingerprint` then `reevaluate_domain`) that re-scores without re-resolving DNS; live two-domain `compare_postures`; and `test_hypothesis`. If you have a working skill and the MCP install succeeds but you are not sure what changed, this is the difference.
+
+The earlier framing of "the MCP server adds `assess_exposure` / `find_hardening_gaps` / the posterior tools" was too strong: those one-shot analyses are reachable from the CLI too (`--exposure`, `--gaps`, `--fusion`), so a skill can drive them. The honest distinction is one-shot (either path) versus stateful/iterative (MCP).
+
 ## Install
 
 The plugin wires up Claude Code (skill + MCP launch config). It does **not** install the recon Python package — that step is still the user's responsibility, just like any other MCP server.
@@ -77,7 +86,11 @@ Run a recon lookup on contoso.com and summarize what's observable.
 
 The skill auto-loads when you mention a domain alongside recon-shaped intent. The MCP server starts on demand.
 
+If the tools do not appear after install, the cause is almost always that Claude Code did not re-read the config, not a broken config. Run `recon doctor --client=claude-code` to confirm the stanza is present, run `/mcp` inside Claude Code to see connected servers and any startup error, and if recon is still missing, fully quit and relaunch the app (a new chat in the same process does not re-spawn MCP servers). Local stdio tools appear as `mcp__recon__*`, not `mcp__claude_ai_*`. The full checklist is in [`docs/mcp.md`](../../docs/mcp.md#when-doctor-passes-but-the-tools-dont-load).
+
 ## Choosing the MCP launch command
+
+The shipped file uses the wrapped `{ "mcpServers": { "recon": { ... } } }` form. That is the correct schema for a plugin-bundled `.mcp.json`, the same shape a project-root `.mcp.json` and `~/.claude.json` use ([Claude Code MCP docs](https://code.claude.com/docs/en/mcp)). If you have seen flat, unwrapped entries elsewhere, those are most likely the client's enabled-servers list rather than a plugin config.
 
 The shipped `.mcp.json` uses `command: "recon"`, which works for anyone who pip-installed `recon-tool` globally. If `recon` is not on the launcher's PATH (rare for Claude Code, more common for sandboxed environments), pick one of these alternatives by editing your local copy of `.mcp.json`:
 
@@ -109,6 +122,8 @@ Use the absolute path to your Python or `uvx` binary if neither is on PATH for t
 ## Approval policy
 
 Plugin-bundled MCP servers are auto-approved by Claude Code when the plugin is enabled — there is no `autoApprove` field in the plugin `.mcp.json` schema. recon's MCP tools are read-only by design, but the user can still review or disable individual tool calls through Claude Code's normal MCP approval UI. Users who want stricter manual approval should add recon as a user-level MCP server in their own Claude Code config rather than relying on the plugin form.
+
+Concretely, the two paths default differently. The `recon mcp install --client=claude-code` path seeds `"autoApprove": []` into `~/.claude.json`, so every tool waits for manual approval. The plugin path auto-approves. Installing by both leaves two registrations with different approval semantics, so it is cleaner to pick one path.
 
 ## What this plugin does *not* do
 

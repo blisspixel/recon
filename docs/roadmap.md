@@ -4,12 +4,13 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.26** (schema-contract polish: scopes the JSON
-schema root to single-domain success output, documents the batch /
-NDJSON error-record shape as `$defs/BatchErrorRecord`, corrects the
-`BatchResult` prose to match the emitter, and adds a pure-Python
-`classify_batch_record` rule set. Closes item 1 of the "Outstanding
-before v2.0" list below; no runtime output shape changed). v2.0 remains
+Current release: **v1.9.27** (MCP-onboarding UX: a client-side config
+check, `recon doctor --client=<name>`, that reads the config file a
+client loads and reports whether the `mcpServers.recon` stanza is
+present and well-formed; a troubleshooting section for the case where
+both server doctors pass but the tools still do not load; and a note on
+how approval semantics differ between the `recon mcp install` path and
+the plugin path. Standing work, not a numbered v2.0 item). v2.0 remains
 the mechanical schema-lock-and-tag event. Cumulative pre-v2.0 work since
 v1.9.3:
 
@@ -43,6 +44,7 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.24 | Second corpus pass (lowered thresholds) plus shadow-handling consistency: 156 new fingerprints + 60 EXTEND variants across all six signal types, catalog grows 572 -> 788 entries; engine substring matchers (MX / NS / CAA / dmarc_rua / cname) all sort longest-first and SPF gains `filter_shadowed_matches` so a broader pattern cannot double-count alongside a narrower one; pre-existing cname-regex matcher bug fixed (9 patterns silently never-fired); audit residuals (priors clamp open `(0,1)`, per-file catalog cap); `tests/test_pattern_shadowing.py` adds a CI gate for future shadow / description / EXTEND-duplicate failures | `CHANGELOG.md` |
 | v1.9.25 | CT pipeline resilience (AIMD adaptive rate limiter + per-provider circuit breaker + persistent limiter state + cache-first short-circuit + `ct_attempt_outcome` field + `--ct-retry-from` multi-session workflow); Phase F catalog gap-fill (788 -> 808 entries, 20 cname_target additions); chain motif library 18 -> 22 | `CHANGELOG.md` |
 | v1.9.26 | Schema-contract polish (path-to-v2.0 item 1): JSON schema root scoped to single-domain success output; batch / NDJSON error-record shape declared as `$defs/BatchErrorRecord`; `BatchArray` / `BatchNdjsonRecord` defs added and inaccurate `BatchResult` prose corrected to match the emitter; pure-Python `classify_batch_record` rule set; conditional fields documented. No runtime output shape changed | `CHANGELOG.md`, `validation/v1.9.26-schema-contract.md` |
+| v1.9.27 | MCP-onboarding UX (standing work, not a numbered item): `recon doctor --client=<name>` reads a client's MCP config (all six supported clients) and reports whether the `mcpServers.recon` stanza is present and well-formed, with claude-code-specific handling of the `projects[...]` local-scope shape and a plugin-scope caveat; docs gain a "doctor passes but tools do not load" troubleshooting section (`/mcp`, `mcp__recon__*` naming, full-restart reminder) and a note on how approval semantics differ between the install and plugin paths | `CHANGELOG.md` |
 
 **Outstanding before v2.0:** *(refined 2026-05-26 after the v1.9.24
 mega-batch; the v1.9.24 entry above absorbed items 1 and the
@@ -156,13 +158,18 @@ new work. Recommended sequencing is at the end.
 
 **Recommended sequencing.** Items 1 through 3 ship as 1.9.x
 patches, one per coherent story. The actual order diverged from the
-original plan: **v1.9.25** took the operator-paced CT-resilience +
-catalog story (standing work, not a numbered item), so the
-schema-contract polish slid one patch to v1.9.26.
+original plan twice, both times because standing work claimed the next
+number: **v1.9.25** took the operator-paced CT-resilience + catalog
+story, sliding the schema-contract polish to v1.9.26; then **v1.9.27**
+took the MCP-onboarding story, sliding the docs-currency work to
+v1.9.28.
 
 - ~~**v1.9.25** lands the schema-contract polish (item 1).~~ Shipped
   instead as **v1.9.26** (v1.9.25 was the CT-pipeline-resilience patch).
-- **v1.9.27** brings the release-notes draft current and refreshes the
+- **v1.9.27** lands MCP-onboarding UX: the `recon doctor --client`
+  config-side check plus the troubleshooting and approval-semantics
+  docs. Standing work, not a numbered item.
+- **v1.9.28** brings the release-notes draft current and refreshes the
   validation summary (items 2 and 3 are both "v2.0 docs currency" and
   ship together as one patch).
 - Item 4 runs in parallel on the operator's schedule and folds

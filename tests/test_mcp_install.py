@@ -730,3 +730,42 @@ class TestSupportedClientsConstantStaysCurrent:
             path = resolve_config_path(client, scope)
             assert path is not None
             assert path.name.endswith(".json")
+
+
+class TestVscodeServersKey:
+    """VS Code's .vscode/mcp.json maps servers under a top-level `servers`
+    key, not `mcpServers`. The installer must write that key for vscode
+    and `mcpServers` for every other client."""
+
+    def test_servers_key_helper(self) -> None:
+        from recon_tool.mcp_install import servers_key
+
+        assert servers_key("vscode") == "servers"
+        assert servers_key("claude-code") == "mcpServers"
+        assert servers_key("claude-desktop") == "mcpServers"
+        assert servers_key("cursor") == "mcpServers"
+        assert servers_key("windsurf") == "mcpServers"
+        assert servers_key("kiro") == "mcpServers"
+
+    def test_install_vscode_writes_servers_not_mcpservers(self, tmp_path: Path) -> None:
+        target = tmp_path / "mcp.json"
+        install("vscode", "workspace", config_path_override=target)
+        data = json.loads(target.read_text(encoding="utf-8"))
+        assert "servers" in data
+        assert "mcpServers" not in data
+        assert data["servers"]["recon"]["args"] == ["mcp"]
+
+    def test_install_vscode_merges_into_existing_servers(self, tmp_path: Path) -> None:
+        target = tmp_path / "mcp.json"
+        target.write_text(json.dumps({"servers": {"other": {"command": "x"}}}), encoding="utf-8")
+        install("vscode", "workspace", config_path_override=target)
+        data = json.loads(target.read_text(encoding="utf-8"))
+        assert "other" in data["servers"]
+        assert "recon" in data["servers"]
+
+    def test_install_non_vscode_still_writes_mcpservers(self, tmp_path: Path) -> None:
+        target = tmp_path / "mcp.json"
+        install("cursor", "user", config_path_override=target)
+        data = json.loads(target.read_text(encoding="utf-8"))
+        assert "mcpServers" in data
+        assert "servers" not in data

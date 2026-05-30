@@ -164,7 +164,9 @@ Then ask your AI: *"Run a recon lookup on contoso.com and tell me what's running
 
 See [docs/mcp.md](docs/mcp.md) for the full tool list, advanced agentic workflows, and per-client config locations.
 
-**Claude Code, Kiro, Windsurf, Cursor, VS Code:** per-agent install scaffolds live under [`agents/`](agents/) — one folder per client with its MCP config and guidance template. Claude Code users get a full plugin (MCP + skill in one install) at [`agents/claude-code/`](agents/claude-code/). The portable [`AGENTS.md`](AGENTS.md) at the repo root is auto-detected by Kiro and other agents.md-aware tools.
+Installed but the tools don't appear? Run `recon doctor --client=<name>` to confirm the config carries the recon stanza, then see the [troubleshooting checklist](docs/mcp.md#when-doctor-passes-but-the-tools-dont-load). The usual fix is a full application restart, since a new chat does not re-spawn MCP servers.
+
+**Claude Code, Kiro, Windsurf, Cursor, VS Code:** per-agent install scaffolds live under [`agents/`](agents/) — one folder per client with its MCP config and guidance template. Claude Code users get a full plugin (MCP + skill in one install) at [`agents/claude-code/`](agents/claude-code/). The skill drives the CLI for the one-shot analyses (lookup, `--exposure` score, `--gaps`, `--fusion` posteriors); the MCP server adds the stateful, iterative workflows (what-if hardening loops, ephemeral fingerprints, live two-domain compare). That folder's README has the breakdown. The portable [`AGENTS.md`](AGENTS.md) at the repo root is auto-detected by Kiro and other agents.md-aware tools.
 
 **Quickest install for AI clients with file-write tools.** Paste this prompt to your AI:
 
