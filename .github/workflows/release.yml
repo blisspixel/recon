@@ -60,7 +60,7 @@ jobs:
         run: uv sync --extra dev
 
       - name: Run tests
-        run: uv run pytest tests/ -q --cov=recon_tool --cov-fail-under=80
+        run: uv run pytest tests/ -q --cov=recon_tool --cov-branch --cov-fail-under=82
 
       - name: Lint
         run: uv run ruff check recon_tool/
