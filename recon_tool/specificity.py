@@ -27,6 +27,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+import deal
+
 from recon_tool.fingerprints import _validate_regex  # pyright: ignore[reportPrivateUsage]
 
 __all__ = [
@@ -280,6 +282,13 @@ def synthetic_corpus(detection_type: str) -> list[str]:
     return PATTERN_TYPE_CORPORA.get(detection_type.lower(), _generic_corpus())
 
 
+def _verdict_match_count_valid(verdict: SpecificityVerdict) -> bool:
+    """Contract: the match count cannot exceed the corpus it was counted
+    against, and cannot be negative."""
+    return 0 <= verdict.matches <= verdict.corpus_size
+
+
+@deal.post(_verdict_match_count_valid)  # pyright: ignore[reportUntypedFunctionDecorator]
 def evaluate_pattern(
     pattern: str,
     detection_type: str,

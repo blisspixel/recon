@@ -31,6 +31,8 @@ from recon_tool.bayesian import (
     _interval_is_ordered,
     _marginal_in_unit_range,
 )
+from recon_tool.fingerprints import Detection, _no_shadowed_pairs_survive
+from recon_tool.specificity import SpecificityVerdict, _verdict_match_count_valid
 
 
 class TestValidatorPredicates:
@@ -63,6 +65,41 @@ class TestValidatorPredicates:
         assert not _interval_is_ordered((0.8, 0.2))  # low > high
         assert not _interval_is_ordered((-0.1, 0.5))  # below 0
         assert not _interval_is_ordered((0.5, 1.1))  # above 1
+
+
+class TestMatcherValidators:
+    """The engine-matcher contract predicates (deal second pass)."""
+
+    def _det(self, pattern: str, slug: str) -> Detection:
+        return Detection(pattern=pattern, name=slug, slug=slug, category="email", confidence="high")
+
+    def test_no_shadowed_pairs_survive(self) -> None:
+        # Different slugs where one pattern is a strict substring of the
+        # other is the double-count the filter must remove.
+        bad = [self._det("salesforce.com", "salesforce"), self._det("force.com", "force_com")]
+        assert not _no_shadowed_pairs_survive(bad)
+        # Same slug, different patterns: allowed (slug accumulates once).
+        same_slug = [self._det("a.example", "x"), self._det("a.example.long", "x")]
+        assert _no_shadowed_pairs_survive(same_slug)
+        # Non-overlapping vendor patterns: both survive.
+        distinct = [self._det("outlook.com", "m365"), self._det("salesforce.com", "salesforce")]
+        assert _no_shadowed_pairs_survive(distinct)
+        assert _no_shadowed_pairs_survive([])
+
+    def test_verdict_match_count_valid(self) -> None:
+        assert _verdict_match_count_valid(
+            SpecificityVerdict(pattern="p", detection_type="spf", matches=3, corpus_size=10, threshold_exceeded=False)
+        )
+        assert _verdict_match_count_valid(
+            SpecificityVerdict(pattern="p", detection_type="spf", matches=0, corpus_size=0, threshold_exceeded=False)
+        )
+        # More matches than corpus entries is impossible.
+        assert not _verdict_match_count_valid(
+            SpecificityVerdict(pattern="p", detection_type="spf", matches=11, corpus_size=10, threshold_exceeded=False)
+        )
+        assert not _verdict_match_count_valid(
+            SpecificityVerdict(pattern="p", detection_type="spf", matches=-1, corpus_size=10, threshold_exceeded=False)
+        )
 
 
 class TestContractFires:

@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.35] - 2026-05-30
+
+### Design-by-Contract second pass: engine matchers (engineering elevation, patch 8)
+
+Extends the `deal` contracts from the inference core (v1.9.31) to the
+fingerprint engine. Same wiring: contracts run under test and local dev,
+disabled in production via `deal.disable()` under `-O`.
+
+- `fingerprints.filter_shadowed_matches` gains a `@deal.post` asserting
+  no shadowed pair survives: after filtering there is no pair of kept
+  detections with different slugs where one pattern is a strict substring
+  of the other. That pair is exactly the double-count the filter exists to
+  remove, so its survival is a bug. This is the "no double-count after
+  shadow filtering" invariant made executable.
+- `specificity.evaluate_pattern` gains a `@deal.post` asserting the match
+  count stays within `[0, corpus_size]` (a pattern cannot match more
+  synthetic-corpus entries than exist).
+- `tests/test_contracts.py` adds direct tests for both predicates
+  (shadowed pair rejected, same-slug and non-overlapping kept; match count
+  out of range rejected).
+
+Both predicates are named, typed validators, consistent with the
+inference-core contracts; the two decorator lines carry the same localized
+`# pyright: ignore[reportUntypedFunctionDecorator]`. The roadmap's deal
+item is updated: the second pass is now shipped.
+
+No runtime output shape changed.
+
 ## [1.9.34] - 2026-05-30
 
 ### Convert ConfidenceLevel to StrEnum (engineering elevation, patch 7)

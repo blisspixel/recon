@@ -477,11 +477,13 @@ know is missing rather than only what we know is present:
   evidence factors are strictly positive, encoding the no-degenerate
   invariant; marginals stay in `[0, 1]`; credible intervals are ordered
   within `[0, 1]`). `tests/test_contracts.py` proves the contracts fire
-  on violation and are no-ops under `-O`. *Second pass still open*: extend
-  contracts to the engine matchers (specificity ordering, no double-count
-  after shadow filtering) and the boundary validators. The
-  dependency-floor note above is updated to reflect the deliberate
-  addition.
+  on violation and are no-ops under `-O`. *Second pass shipped in v1.9.35*:
+  contracts on the fingerprint engine, `filter_shadowed_matches` (no
+  shadowed pair survives, the no-double-count invariant) and
+  `evaluate_pattern` (match count stays within `[0, corpus_size]`), with
+  matching predicate tests. Still open as a smaller follow-up: contracts
+  on the boundary validators in `validator.py`. The dependency-floor note
+  above reflects the deliberate addition.
 - ~~Branch coverage is not enforced and the gate sits at 80% line
   coverage.~~ **Shipped in v1.9.30** - `--cov-branch` enabled in the CI
   matrix, the release test job, and the local gate (`scripts/release.py`,
