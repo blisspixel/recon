@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 __all__ = [
@@ -35,17 +35,17 @@ __all__ = [
 ]
 
 
-class ConfidenceLevel(str, Enum):  # noqa: UP042  # see note below
-    """How reliable the resolved TenantInfo is based on source agreement."""
+class ConfidenceLevel(StrEnum):
+    """How reliable the resolved TenantInfo is based on source agreement.
 
-    # UP042 (inherit from enum.StrEnum) is deferred deliberately, not
-    # overlooked. StrEnum changes str()/__format__ semantics, and several
-    # ConfidenceLevel members are interpolated into user-facing output
-    # (TenantInfo.confidence, evidence_confidence, inference_confidence).
-    # The conversion is a genuine improvement on a >=3.12 floor but needs
-    # its own pass that audits every interpolation and pins the rendered
-    # output with a golden test, so it does not ride in the floor-raise
-    # patch. Tracked separately.
+    A ``StrEnum`` (Python 3.11+): members are strings equal to their value,
+    so JSON, dict-key lookups, and comparisons behave as before, and
+    ``str()`` / f-strings render the value (``"high"``) rather than the
+    qualified name. Audited before the v1.9.34 conversion: every render
+    site already used ``.value``, so this changes no user-facing output;
+    the full suite covers the panel, markdown, and JSON renderers.
+    """
+
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
