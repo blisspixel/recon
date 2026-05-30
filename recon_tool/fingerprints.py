@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, NamedTuple
 
+import deal
 import yaml
 
 logger = logging.getLogger("recon")
@@ -799,6 +800,25 @@ def match_txt(txt_value: str, patterns: tuple[Detection, ...] | list[Detection])
     return None
 
 
+def _no_shadowed_pairs_survive(result: list[Detection]) -> bool:
+    """Contract: no kept detection's pattern strictly shadows another's.
+
+    After filtering, there must be no pair of kept detections with
+    different slugs where one pattern is a strict substring of the other.
+    That pair is exactly the double-count the filter exists to remove, so
+    its survival is a bug.
+    """
+    pats = [(d.slug, d.pattern.lower()) for d in result]
+    for slug_a, pa in pats:
+        for slug_b, pb in pats:
+            if pa == pb or slug_a == slug_b:
+                continue
+            if pa in pb:
+                return False
+    return True
+
+
+@deal.post(_no_shadowed_pairs_survive)  # pyright: ignore[reportUntypedFunctionDecorator]
 def filter_shadowed_matches(
     matches: list[Detection] | tuple[Detection, ...],
 ) -> list[Detection]:
