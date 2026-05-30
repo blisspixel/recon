@@ -20,7 +20,7 @@ on:
 #     exists, so a compromised dev dep cannot tamper with release
 #     artifacts from this job.
 #   * ``build`` job is PURE: ``uv build`` runs against the locked
-#     runtime dependency set (no ``--extra dev``); ``dist/`` is
+#     runtime dependency set (``--no-dev``, no dev group); ``dist/`` is
 #     created and immediately uploaded as an artifact. No additional
 #     code executes between build and upload. ``actions/upload-artifact``
 #     seals the bytes into GitHub-managed storage at upload time.
@@ -57,7 +57,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: uv sync
 
       - name: Run tests
         run: uv run pytest tests/ -q --cov=recon_tool --cov-branch --cov-fail-under=82
@@ -98,7 +98,7 @@ jobs:
     # Pure build job. The supply-chain isolation contract requires
     # that NO additional dependency code executes in this workspace
     # between ``uv build`` and ``actions/upload-artifact``. Do not
-    # add ``uv sync --extra dev`` here. Do not run pip-audit, SBOM
+    # add ``uv sync`` here. Do not run pip-audit, SBOM
     # generation, ruff, pyright, pytest, or any other tool that
     # imports project dependencies in this job. Those belong in
     # other jobs that do not touch dist/.
@@ -117,7 +117,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Sync runtime deps (no --extra dev)
+      - name: Sync runtime deps (no dev group)
         # ``uv build`` resolves the build backend (hatchling) from
         # pyproject; this sync ensures we have a clean uv cache state
         # without installing the optional dev set. Dev tooling

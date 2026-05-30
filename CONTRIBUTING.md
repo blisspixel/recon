@@ -60,7 +60,7 @@ This doc answers:
 ```bash
 git clone https://github.com/blisspixel/recon.git
 cd recon
-uv sync --extra dev                    # or: pip install -e ".[dev]"
+uv sync                    # installs the dev group (pip: pip install -e . --group dev, pip 25.1+)
 pre-commit install                     # activate pre-commit hooks
 uv run pytest tests/                   # or: pytest tests/
 ```

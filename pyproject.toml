@@ -1,6 +1,6 @@
 [project]
 name = "recon-tool"
-version = "1.9.35"
+version = "1.9.36"
 description = "Domain intelligence CLI and MCP server — tech stack, email security, and signal intelligence from DNS."
 requires-python = ">=3.12"
 readme = "README.md"
@@ -59,7 +59,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["recon_tool"]
 
-[project.optional-dependencies]
+# PEP 735 dependency group. uv treats `dev` as a default group, so
+# `uv sync` installs it and `uv sync --no-dev` / `uv export --no-dev`
+# exclude it. Unlike the old `[project.optional-dependencies]`, these are
+# not published as an installable extra, so `pip install recon-tool[dev]`
+# no longer pulls the test toolchain (that was never a real use case).
+[dependency-groups]
 dev = [
     "hypothesis>=6.0",
     "pytest>=8.0",

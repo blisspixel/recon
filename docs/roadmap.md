@@ -521,10 +521,15 @@ know is missing rather than only what we know is present:
   so it surfaces a dependency without a `cp314t` wheel without failing CI.
   recon is asyncio-based with no shared mutable thread state, so this is a
   dependency-readiness probe rather than a correctness change.
-- Dev dependencies still live under `[project.optional-dependencies]`.
-  Hygiene: migrate to PEP 735 `[dependency-groups]` plus a `[tool.uv]`
-  block so the dev set is not published as an installable extra. Low
-  risk, current uv idiom.
+- ~~Dev dependencies still live under `[project.optional-dependencies]`.~~
+  **Shipped in v1.9.36** - migrated to a PEP 735 `[dependency-groups].dev`
+  table, so the dev toolchain is no longer published as an installable
+  `recon-tool[dev]` extra. uv treats `dev` as a default group, so
+  `uv sync` installs it and the `--no-dev` build/audit steps still exclude
+  it; the CI / release `uv sync --extra dev` calls became plain
+  `uv sync`. A separate `[tool.uv]` block was not needed (the `dev`
+  default-group behavior is built in). README and CONTRIBUTING note the
+  pip path (`pip install -e . --group dev`, pip 25.1+) for non-uv users.
 - No mutation testing - line coverage measures execution, not test
   quality. Still post-v2.0, but the standards review reaffirmed it as
   the chosen answer to "test quality beyond line coverage." Candidate
