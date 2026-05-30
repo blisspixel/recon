@@ -98,6 +98,14 @@ here:
   and a project `.mcp.json`), the second file was reported as having no
   recon entry. It is now labelled as a duplicate the first candidate
   already covers.
+- **Cross-platform basename of a Windows command path.** The
+  command-sanity check extracted the launcher basename with `Path(...)`,
+  which on POSIX does not treat `\` as a separator, so a config synced
+  from a Windows box (a backslash path like `C:\...\recon.exe`) was
+  mis-warned as unrecognized when the check ran on Linux or macOS. The
+  basename is now taken with `PureWindowsPath`, which accepts both `/`
+  and `\` on any OS. Surfaced by the CI test matrix; the original local
+  gate ran on Windows only and did not exercise the POSIX path.
 
 ## [1.9.26] - 2026-05-29
 

@@ -318,6 +318,50 @@ A few patterns are distinctive enough to call out:
   probabilistic-programming framework. `pip install recon-tool`
   pulls roughly eight runtime packages.
 
+### External standards review (2026-05)
+
+A general-purpose Python-standards brief (uv-first toolchain,
+3.14 baseline, Pydantic/structlog at every boundary, mypy strict,
+95% branch coverage, NASA Power-of-10 control-flow rules, a
+portfolio-wide Copier template) was reviewed against this project.
+Most of it is already in place (uv + lockfile, grouped Dependabot,
+pre-commit with ruff / pyright / actionlint, pyright strict,
+pytest + coverage + Hypothesis, pip-audit in CI and release, SBOM,
+gitleaks, OIDC trusted-publisher). The items worth adopting are
+folded into Known gaps below. The rest were considered and
+declined, recorded here so the reasoning is durable:
+
+- **3.14-only baseline (drop 3.10 to 3.13)** - declined. recon is
+  meant to be consumed by other tools, so a broad support window is
+  part of the product. We keep `requires-python >=3.10` and instead
+  add 3.14 to the test matrix (see Known gaps).
+- **Pydantic at every boundary plus structlog as runtime deps** -
+  declined. This would break the pure-Python dependency-floor
+  invariant above. Pydantic already rides in transitively via `mcp`,
+  so the MCP layer can lean on it without taking a new floor, but the
+  CLI and core keep their hand-rolled boundary validation
+  (`validator.py`, `strict_mode.py`, `schema_contract.py`,
+  `defusedxml`). The hedged, provenance-rich output is recon's
+  observability story; a structured-logging framework is sized for
+  long-running services, not a stdio tool.
+- **mypy strict on top of pyright** - declined as redundant. pyright
+  strict already gates CI. Astral's `ty` may be worth a spike once it
+  reaches 1.0; it is in preview, so not now.
+- **Blanket 95% branch coverage** - declined in favor of a measured
+  raise (see Known gaps); a flat target tends to buy execution, not
+  test quality.
+- **Literal Power-of-10 rules** (two asserts per public function,
+  50-line cap, line-length 100) - adapted rather than adopted. The
+  intent, simple statically-analyzable control flow and bounded
+  resources, is already a project value (resource caps, bounded
+  clustering, rate limits). We encode the measurable part as a ruff
+  complexity cap (see Known gaps) and keep the deliberate 120 line
+  length.
+- **Central Copier template plus reusable workflows across a repo
+  portfolio** - out of scope for this roadmap. recon can serve as a
+  reference for that later, but the multi-repo machinery is not
+  recon's concern.
+
 ### Known gaps
 
 The list of things a security-focused project ideally has but we
@@ -340,18 +384,60 @@ know is missing rather than only what we know is present:
   `tests/test_cache_forward_compat.py` pins the implicit "ignore
   unknown fields, load known fields cleanly" contract that the
   reader has always honoured but never tested.
-- No mutation testing - line coverage measures execution, not
-  test quality. Open; tracked for post-v2.0 if line coverage
-  starts feeling like a false-positive signal.
-- No SLSA provenance or reproducible-build verification.
-  Deferred; valuable but disproportionate for a stdio-only tool
-  at current scale.
+- No `py.typed` marker (PEP 561). Surfaced by the 2026-05 standards
+  review: `pyproject.toml` carries the `Typing :: Typed` classifier
+  and CI runs pyright strict, but `recon_tool/py.typed` does not
+  exist, so a downstream consumer's type checker does not actually
+  pick up recon's inline types. Cheap to fix (the marker file plus a
+  hatch wheel-include line) and a good fit for the "good citizen"
+  posture. Recommended as a pre-v2.0 hygiene patch, since v2.0 is the
+  polished-everywhere release and a Typed classifier with no marker
+  is a polish defect.
+- Python 3.14 not yet in the support matrix. Add 3.14 to the
+  `ci.yml` test matrix and a `Programming Language :: Python :: 3.14`
+  classifier while keeping the `>=3.10` floor, and optionally add a
+  `.python-version` that pins the dev/CI toolchain (not the runtime
+  floor). A small standalone hygiene patch that keeps recon current
+  without dropping any consumer.
+- Branch coverage is not measured and the gate sits at 80% line
+  coverage. Turn on `--cov-branch`, name `server.py` (around 71%
+  line today) as the explicit under-covered target, and raise the
+  gate from 80 toward 85 as real coverage allows. A measured raise,
+  not a flat 95% target.
+- No complexity gate. Add ruff `C901` (mccabe `max-complexity`) plus
+  a small set of `PLR` refactor rules to encode simple,
+  statically-analyzable control flow as a measurable check. This is
+  the part of the Power-of-10 ask that pays off here; the literal
+  rules were declined above.
+- Dev dependencies still live under `[project.optional-dependencies]`.
+  Optional hygiene: migrate to PEP 735 `[dependency-groups]` plus a
+  `[tool.uv]` block so the dev set is not published as an installable
+  extra. Low risk, current uv idiom.
+- No mutation testing - line coverage measures execution, not test
+  quality. Still post-v2.0, but the standards review reaffirmed it as
+  the chosen answer to "test quality beyond line coverage." Candidate
+  scope when it lands: a mutmut or cosmic-ray spike against the
+  Bayesian inference core and the engine matchers, where a surviving
+  mutant is the most diagnostic.
+- No SLSA provenance or reproducible-build verification. Full SLSA
+  plus reproducible builds stays deferred as disproportionate for a
+  stdio-only tool at current scale. Worth a second look, though:
+  GitHub-native build-provenance attestation
+  (`actions/attest-build-provenance`) did not exist when this was
+  first deferred and is now cheap, so a near-term `release.yml`
+  attestation step is being reconsidered separately from the heavier
+  reproducible-build work.
 
-These do not block v1.9.x or v2.0. The four cheap ones
-(SECURITY.md, SBOM, secrets-scanning, forward-compat test) all
-shipped by v1.9.3.1 - the engineering-quality "what's still
-missing" list shrunk meaningfully in one patch. The expensive
-ones (SLSA, reproducible builds, mutation testing) wait.
+These do not block v1.9.x or v2.0, with one nuance: `py.typed` fits
+the v2.0 polish bar and is recommended before the lock. The four
+cheap ones (SECURITY.md, SBOM, secrets-scanning, forward-compat test)
+all shipped by v1.9.3.1 - the engineering-quality "what's still
+missing" list shrunk meaningfully in one patch. The cheap
+citizen-fixes above (`py.typed`, the 3.14 matrix) can ride along as
+small hygiene patches; the deeper ones (branch-coverage raise,
+complexity-gate backfill, mutation testing, provenance attestation)
+run post-v2.0 or in parallel, since v2.0 itself stays the mechanical
+schema-lock event with no new engine work.
 
 ## Success Metrics (Post-1.0)
 
