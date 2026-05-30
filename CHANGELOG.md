@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.29] - 2026-05-30
+
+### Raise the Python floor to 3.12 (engineering elevation, patch 2)
+
+**Breaking for consumers on Python 3.10 or 3.11.** `requires-python` moves
+from `>=3.10` to `>=3.12`. This is a deliberate floor raise adopted from
+the 2026-05 standards review, not an accident: Python 3.10 reaches EOL on
+2026-10-31 and 3.11 on 2027-10, so a 3.12 floor keeps recon on
+upstream-supported runtimes through 2028 and lets the core use post-3.11
+syntax and typing. Anyone still on 3.10 or 3.11 should pin `recon-tool`
+to `<1.9.29` until they upgrade their interpreter.
+
+Changed:
+- `pyproject.toml`: `requires-python = ">=3.12"`; dropped the `3.10` and
+  `3.11` classifiers; `ruff target-version = "py312"`; `pyright
+  pythonVersion = "3.12"`.
+- `.github/workflows/ci.yml`: the test matrix is now 3.12 / 3.13 / 3.14
+  across Ubuntu, Windows, and macOS (the 3.10-specific excludes are gone
+  with the versions they referenced).
+- Added `.python-version` (3.14) so the local and CI dev toolchain is
+  pinned to the static-analysis baseline without affecting the runtime
+  floor.
+- Docs that state the supported range (`README.md`,
+  `docs/release-process.md`, `docs/stability.md`) updated to 3.12 - 3.14.
+
+Modernization unlocked by the higher floor (ruff pyupgrade at `py312`,
+behavior-preserving):
+- `datetime.timezone.utc` to the `datetime.UTC` alias across the
+  codebase and tests.
+- `asyncio.TimeoutError` to the builtin `TimeoutError` (identical since
+  3.11).
+- The three CLI type aliases (`McpCheck`, `DoctorStatus`, `DoctorCheck`)
+  to PEP 695 `type` statements.
+
+Deferred on purpose: converting `ConfidenceLevel` to `enum.StrEnum`
+(ruff UP042) is held back behind a documented `noqa`. StrEnum changes
+`str()` / `__format__` output and several confidence members are
+interpolated into user-facing text, so the conversion needs its own pass
+with a golden-output test rather than riding in the floor raise.
+
+No runtime output shape changed.
+
 ## [1.9.28] - 2026-05-30
 
 ### Packaging and platform currency (engineering elevation, patch 1 of a series)

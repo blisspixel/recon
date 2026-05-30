@@ -35,9 +35,17 @@ __all__ = [
 ]
 
 
-class ConfidenceLevel(str, Enum):
+class ConfidenceLevel(str, Enum):  # noqa: UP042  # see note below
     """How reliable the resolved TenantInfo is based on source agreement."""
 
+    # UP042 (inherit from enum.StrEnum) is deferred deliberately, not
+    # overlooked. StrEnum changes str()/__format__ semantics, and several
+    # ConfidenceLevel members are interpolated into user-facing output
+    # (TenantInfo.confidence, evidence_confidence, inference_confidence).
+    # The conversion is a genuine improvement on a >=3.12 floor but needs
+    # its own pass that audits every interpolation and pins the rendered
+    # output with a golden test, so it does not ride in the floor-raise
+    # patch. Tracked separately.
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"

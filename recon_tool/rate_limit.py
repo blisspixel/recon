@@ -47,7 +47,7 @@ import json
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger("recon")
@@ -186,7 +186,7 @@ class AdaptiveRateLimiter:
             saved_at = datetime.fromisoformat(saved_at_iso.replace("Z", "+00:00"))
         except ValueError:
             return
-        age_s = (datetime.now(timezone.utc) - saved_at).total_seconds()
+        age_s = (datetime.now(UTC) - saved_at).total_seconds()
         if age_s < 0 or age_s > _PERSIST_MAX_AGE_SECONDS:
             return
         # Floats; clamp to documented bounds in case the on-disk file
@@ -233,7 +233,7 @@ class AdaptiveRateLimiter:
         is_open, remaining = self._breaker_state()
         payload = {
             "name": self.name,
-            "saved_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "saved_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "interval_s": round(self._interval_s, 3),
             "current_cooldown_s": round(self._current_cooldown_s, 3),
             "consecutive_failures": self._consecutive_failures,

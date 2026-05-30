@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from typing import Any, Literal, TypeAlias
+from typing import Any, Literal
 
 import click
 import typer
@@ -25,9 +25,9 @@ from rich.markup import escape
 from recon_tool.formatter import get_console
 from recon_tool.validator import strip_control_chars
 
-McpCheck: TypeAlias = tuple[str, bool, str]
-DoctorStatus: TypeAlias = Literal["ok", "warn", "fail"]
-DoctorCheck: TypeAlias = tuple[str, DoctorStatus, str]
+type McpCheck = tuple[str, bool, str]
+type DoctorStatus = Literal["ok", "warn", "fail"]
+type DoctorCheck = tuple[str, DoctorStatus, str]
 
 __all__ = [
     "EXIT_INTERNAL",
@@ -642,10 +642,7 @@ def _doctor_client(client: str) -> None:
     console.print()
 
     if client not in SUPPORTED_CLIENTS:
-        console.print(
-            f"  [red]unknown client '{escape(client)}'[/red]\n"
-            f"  Supported: {', '.join(SUPPORTED_CLIENTS)}"
-        )
+        console.print(f"  [red]unknown client '{escape(client)}'[/red]\n  Supported: {', '.join(SUPPORTED_CLIENTS)}")
         raise typer.Exit(EXIT_VALIDATION)
 
     report = check_client(client)  # pyright: ignore[reportArgumentType]

@@ -71,12 +71,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        exclude:
-          - os: macos-latest
-            python-version: "3.10"
-          - os: windows-latest
-            python-version: "3.10"
+        python-version: ["3.12", "3.13", "3.14"]
+    # `.python-version` pins the local and dev toolchain to 3.14. In CI the
+    # matrix has to win, so force uv to the matrix interpreter; without this
+    # uv reads `.python-version` and runs every matrix job on 3.14, which
+    # would silently defeat the 3.12 / 3.13 coverage.
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
 
     steps:
       - uses: actions/checkout@v6

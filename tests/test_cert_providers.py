@@ -8,7 +8,7 @@ Requirements: 1.1, 1.2, 1.3, 2.1–2.7, 3.1–3.8, 11.5, 11.6
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -268,7 +268,7 @@ class TestFilterSubdomains:
 
 class TestBuildCertSummary:
     def test_basic_construction(self):
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         entries = [
             {
                 "issuer_id": "1",
@@ -292,16 +292,16 @@ class TestBuildCertSummary:
         assert len(cs.top_issuers) <= 3
 
     def test_returns_none_for_empty(self):
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         assert build_cert_summary([], now) is None
 
     def test_returns_none_for_invalid_entries(self):
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         entries = [{"issuer_id": None, "issuer_name": None, "not_before": None, "not_after": None}]
         assert build_cert_summary(entries, now) is None
 
     def test_issuance_velocity_counts_recent(self):
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         entries = [
             {
                 "issuer_id": "1",
@@ -321,7 +321,7 @@ class TestBuildCertSummary:
         assert cs.issuance_velocity == 1
 
     def test_top_issuers_capped_at_3(self):
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         entries = [
             {
                 "issuer_id": str(i),
@@ -337,7 +337,7 @@ class TestBuildCertSummary:
 
     def test_no_dns_names_means_no_clusters_or_bursts(self):
         """Pre-v1.7 entry shape (no dns_names key) must still build cleanly."""
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         entries = [
             {
                 "issuer_id": "1",
@@ -360,7 +360,7 @@ class TestBuildCertSummary:
         run on a 105-domain corpus (0/105 had cert_summary populated
         before the fix).
         """
-        now = datetime(2026, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2026, 6, 1, tzinfo=UTC)
         entries = [
             {
                 "issuer_id": "DigiCert",
@@ -401,7 +401,7 @@ class TestWildcardSiblingClusters:
         }
 
     def test_wildcard_with_concrete_siblings_emits_cluster(self):
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         cs = build_cert_summary(
             [self._entry(["*.example.com", "example.com", "api.example.com"])],
             now,
@@ -410,20 +410,20 @@ class TestWildcardSiblingClusters:
         assert cs.wildcard_sibling_clusters == (("api.example.com", "example.com"),)
 
     def test_no_wildcard_means_no_cluster(self):
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         cs = build_cert_summary([self._entry(["example.com", "api.example.com"])], now)
         assert cs is not None
         assert cs.wildcard_sibling_clusters == ()
 
     def test_only_wildcards_means_no_cluster(self):
         """A cert covering only wildcards has no concrete sibling to harvest."""
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         cs = build_cert_summary([self._entry(["*.example.com", "*.api.example.com"])], now)
         assert cs is not None
         assert cs.wildcard_sibling_clusters == ()
 
     def test_duplicate_clusters_deduped_across_renewals(self):
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         entries = [
             self._entry(["*.example.com", "example.com", "api.example.com"], when="2024-01-01T00:00:00"),
             self._entry(["*.example.com", "example.com", "api.example.com"], when="2024-04-01T00:00:00"),
@@ -433,7 +433,7 @@ class TestWildcardSiblingClusters:
         assert len(cs.wildcard_sibling_clusters) == 1
 
     def test_clusters_capped(self):
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         entries = [
             self._entry(
                 [f"*.zone{i}.example.com", f"node{i}.zone{i}.example.com"],
@@ -462,7 +462,7 @@ class TestDeploymentBursts:
         }
 
     def test_three_co_issued_names_form_burst(self):
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         entries = [
             self._entry("2024-05-01T12:00:00", ["api.example.com"]),
             self._entry("2024-05-01T12:00:30", ["app.example.com"]),
@@ -477,7 +477,7 @@ class TestDeploymentBursts:
 
     def test_two_names_does_not_form_burst(self):
         """Below the min_burst_names threshold."""
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         entries = [
             self._entry("2024-05-01T12:00:00", ["api.example.com"]),
             self._entry("2024-05-01T12:00:30", ["app.example.com"]),
@@ -487,7 +487,7 @@ class TestDeploymentBursts:
         assert cs.deployment_bursts == ()
 
     def test_separate_windows_yield_separate_bursts(self):
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         entries = [
             self._entry("2024-05-01T12:00:00", ["a.example.com"]),
             self._entry("2024-05-01T12:00:10", ["b.example.com"]),
@@ -503,7 +503,7 @@ class TestDeploymentBursts:
 
     def test_wildcards_excluded_from_burst_names(self):
         """Wildcards never count toward burst output (the wildcard fact is its own signal)."""
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         entries = [
             self._entry("2024-05-01T12:00:00", ["*.example.com", "a.example.com"]),
             self._entry("2024-05-01T12:00:10", ["b.example.com"]),
@@ -853,7 +853,7 @@ class TestCertDataSanitization:
         assert result == ["ok.example.com"]
 
     def test_build_cert_summary_strips_issuer_control_chars(self):
-        now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2024, 6, 1, tzinfo=UTC)
         entries: list[dict[str, str | int | list[str] | None]] = [
             {
                 "issuer_id": "1",

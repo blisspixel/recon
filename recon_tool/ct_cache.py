@@ -17,7 +17,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -227,7 +227,7 @@ def _entry_to_dict(
     provider_used: str,
 ) -> dict[str, Any]:
     d: dict[str, Any] = {
-        "cached_at": datetime.now(timezone.utc).isoformat(),
+        "cached_at": datetime.now(UTC).isoformat(),
         "provider_used": provider_used,
         "subdomains": subdomains,
     }

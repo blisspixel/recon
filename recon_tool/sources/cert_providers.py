@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Protocol, runtime_checkable
 
 import httpx
@@ -400,7 +400,7 @@ def _detect_deployment_bursts(
             dt = _parse_iso_datetime(not_before_raw)
         except (ValueError, TypeError):
             continue
-        dt = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+        dt = dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
         names = entry.get("dns_names")
         names_list: list[str] = []
         if isinstance(names, list):
@@ -505,7 +505,7 @@ def build_cert_summary(
     # Make all dates offset-aware for comparison with `now`
     aware_dates = []
     for dt in not_before_dates:
-        aware_dt = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+        aware_dt = dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
         aware_dates.append(aware_dt)
 
     newest_dt = max(aware_dates)
@@ -638,7 +638,7 @@ class CrtshProvider:
 
         subdomains = filter_subdomains(raw_names, domain)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         cert_summary = build_cert_summary(cert_entries, now)
         cluster_report = build_infrastructure_clusters(list(cert_entries)) if cert_entries else None
 
@@ -852,7 +852,7 @@ class CertSpotterProvider:
             return [], None, None
 
         subdomains = filter_subdomains(all_raw_names, domain)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         cert_summary = build_cert_summary(all_cert_entries, now)
         cluster_report = build_infrastructure_clusters(list(all_cert_entries)) if all_cert_entries else None
         return subdomains, cert_summary, cluster_report

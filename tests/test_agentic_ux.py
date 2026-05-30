@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -366,8 +366,8 @@ def test_render_report_contains_required_sections(tmp_path: Path) -> None:
     fake = _FakeProvider()
     records = run.run_matrix(fake, max_tokens=256)
     summary = run.score_records(records)
-    started = datetime(2026, 5, 8, 12, 0, 0, tzinfo=timezone.utc)
-    finished = datetime(2026, 5, 8, 12, 5, 0, tzinfo=timezone.utc)
+    started = datetime(2026, 5, 8, 12, 0, 0, tzinfo=UTC)
+    finished = datetime(2026, 5, 8, 12, 5, 0, tzinfo=UTC)
     body = run.render_report(records, summary, started_at=started, finished_at=finished)
     assert "# Agentic UX Validation — v1.9.2" in body
     assert "## Methodology" in body

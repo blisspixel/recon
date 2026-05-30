@@ -205,7 +205,7 @@ consumer was relying on the default.
 The stable Python surface is the range advertised in `pyproject.toml` and
 tested in CI.
 
-- **Currently tested:** Python 3.10, 3.11, 3.12, and 3.13.
+- **Currently tested:** Python 3.12, 3.13, and 3.14.
 - **Adding a Python version:** update CI, classifiers, and this section in the
   same change.
 - **Dropping a Python version:** treat as a compatibility change, document it

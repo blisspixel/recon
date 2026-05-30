@@ -432,9 +432,7 @@ def plan_install(
     mcp_servers = existing.get(key)
     if mcp_servers is not None and not isinstance(mcp_servers, dict):
         raise InstallError(
-            f"{path} has an `{key}` field that is "
-            f"{type(mcp_servers).__name__}, not an object. Refusing to "
-            f"rewrite."
+            f"{path} has an `{key}` field that is {type(mcp_servers).__name__}, not an object. Refusing to rewrite."
         )
 
     parent_dirs: list[Path] = []

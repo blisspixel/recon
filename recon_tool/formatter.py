@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Iterable
+from datetime import UTC
 from typing import Any
 
 from rich.console import Console
@@ -3250,7 +3251,7 @@ def format_delta_dict(report: DeltaReport) -> dict[str, Any]:
     ``docs/recon-schema.json#/$defs/DeltaReport`` so downstream
     validators do not reject no-change or partial-change reports.
     """
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     def _change_pair(value: tuple[Any, Any] | None) -> dict[str, Any] | None:
         if value is None:
@@ -3259,7 +3260,7 @@ def format_delta_dict(report: DeltaReport) -> dict[str, Any]:
 
     return {
         "domain": report.domain,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "has_changes": report.has_changes,
         "added_services": list(report.added_services),
         "removed_services": list(report.removed_services),
