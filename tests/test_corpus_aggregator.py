@@ -29,6 +29,7 @@ from validation.corpus_aggregator import (
     _multi_cloud_fired,
     _stratum_for_entry,
     aggregate,
+    main,
 )
 
 
@@ -227,3 +228,41 @@ class TestPerStratumAggregation:
         assert per["baseline"]["counted"] == 1
         assert per["gcp"]["counted"] == 2  # both GCP fixtures bucket here, including the brand-style one
         assert per["oracle"]["counted"] == 1
+
+
+class TestCliInputParsing:
+    """`main` reads the results file the scan actually writes.
+
+    `scan.py` defaults to NDJSON output, so the aggregator must parse
+    NDJSON (one record per line), not only a JSON array, and must skip
+    input-validation error records. Regression from the 2026-05 corpus
+    validation, where the aggregator crashed on the default NDJSON output.
+    """
+
+    def test_main_parses_ndjson_and_skips_error_records(self, tmp_path: Path) -> None:
+        records = [
+            _make_dict(tenant_id="contoso", slugs=["m365", "cloudflare-cdn"]),
+            _make_dict(tenant_id="northwind", slugs=["gcp-compute", "fastly-cdn"]),
+            {"domain": "northwindtraders.example", "error": "Invalid domain format: bad"},
+        ]
+        ndjson_path = tmp_path / "results.ndjson"
+        ndjson_path.write_text("\n".join(json.dumps(r) for r in records) + "\n", encoding="utf-8")
+        out_path = tmp_path / "aggregate.json"
+
+        rc = main([str(ndjson_path), "--output", str(out_path)])
+
+        assert rc in (0, None)
+        agg = json.loads(out_path.read_text(encoding="utf-8"))
+        # The error record is skipped; only the two successful records count.
+        assert agg["counted"] == 2
+
+    def test_main_still_parses_json_array(self, tmp_path: Path) -> None:
+        records = [_make_dict(tenant_id="contoso", slugs=["m365"])]
+        json_path = tmp_path / "results.json"
+        json_path.write_text(json.dumps(records), encoding="utf-8")
+        out_path = tmp_path / "aggregate.json"
+
+        main([str(json_path), "--output", str(out_path)])
+
+        agg = json.loads(out_path.read_text(encoding="utf-8"))
+        assert agg["counted"] == 1

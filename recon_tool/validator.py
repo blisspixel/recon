@@ -1,5 +1,6 @@
 """Domain input validation and scheme stripping."""
 
+import contextlib
 import re
 
 __all__ = [
@@ -119,6 +120,19 @@ def validate_domain(raw_input: str) -> str:
     # (example.com) is where TXT verification records and MX records live.
     if domain.startswith("www."):
         domain = domain[4:]
+
+    # Internationalized domain names: convert a raw-Unicode IDN (for
+    # example ``münchen.de``) to its ASCII punycode form
+    # (``xn--mnchen-3ya.de``) before the format check, so an operator can
+    # paste an IDN directly instead of pre-encoding it. Uses the stdlib
+    # IDNA codec, so no new dependency. A string the codec cannot encode
+    # (empty or oversized labels) raises and falls through to the format
+    # check below, which rejects it with the usual clear error. Surfaced by
+    # the 2026-05 corpus validation, where a raw-Unicode IDN apex was the
+    # only rejected domain in a 200-domain run.
+    if not domain.isascii():
+        with contextlib.suppress(UnicodeError, ValueError):
+            domain = domain.encode("idna").decode("ascii")
 
     # Validate format
     if not _DOMAIN_RE.match(domain):

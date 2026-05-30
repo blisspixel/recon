@@ -301,14 +301,26 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, help="Where to write the aggregate JSON; stdout if omitted")
     args = parser.parse_args(argv)
 
-    raw = json.loads(args.results_path.read_text(encoding="utf-8"))
-    if isinstance(raw, dict) and "results" in raw:
-        results = raw["results"]
-    elif isinstance(raw, list):
-        results = raw
+    text = args.results_path.read_text(encoding="utf-8")
+    try:
+        raw = json.loads(text)
+    except json.JSONDecodeError:
+        # NDJSON: one record per line. This is the default `scan.py` /
+        # `recon batch --ndjson` output shape, which a single json.loads
+        # cannot parse. Fall back to line-by-line parsing.
+        results = [json.loads(line) for line in text.splitlines() if line.strip()]
     else:
-        msg = f"unexpected results.json shape: {type(raw)}"
-        raise SystemExit(msg)
+        if isinstance(raw, dict) and "results" in raw:
+            results = raw["results"]
+        elif isinstance(raw, list):
+            results = raw
+        else:
+            msg = f"unexpected results shape: {type(raw)}"
+            raise SystemExit(msg)
+
+    # Skip input-validation error records ({domain, error}); the aggregator
+    # counts panel-surface firings on successful results only.
+    results = [r for r in results if not (isinstance(r, dict) and r.get("error"))]
 
     agg = aggregate(results)
     out_text = json.dumps(agg, indent=2)

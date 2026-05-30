@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.41] - 2026-05-30
+
+### IDN handling + aggregator fix from a $0 corpus validation (hardening phase, patch 4)
+
+A zero-cost (`--no-ct`, passive only) end-to-end run of the engine against
+a random 200-domain subset of the private corpus confirmed the whole
+pipeline works on real input (199/200 processed, exit 0, healthy
+confidence / provider / detection-density distributions; aggregate counts
+only, no apex names committed). It also surfaced two fixable issues that
+unit tests alone would not have:
+
+- **IDN handling (`recon_tool/validator.py`).** `validate_domain` rejected
+  raw-Unicode internationalized domains (an IDN apex was the only failure
+  in the run). It now IDNA-encodes them to punycode
+  (`münchen.de` to `xn--mnchen-3ya.de`) using the stdlib codec before the
+  format check, so an operator can paste an IDN directly. No new
+  dependency; un-encodable labels still fall through to the clear
+  "Invalid domain format" rejection. Tested with the failing case and
+  scheme/www/uppercase variants.
+- **Aggregator NDJSON parsing (`validation/corpus_aggregator.py`).** The
+  aggregator did a single `json.loads`, which fails on the NDJSON that
+  `scan.py` writes by default, so the aggregation step crashed. It now
+  parses NDJSON line-by-line and skips input-validation error records.
+  Covered by a new `TestCliInputParsing`.
+
+The 55 detection gaps the run found feed the catalog-growth track; a
+full-corpus, CT-enabled run remains the v2.0 calibration gate.
+
 ## [1.9.40] - 2026-05-30
 
 ### Decompose tenant_info_from_dict (hardening phase, patch 3)

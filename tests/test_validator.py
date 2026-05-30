@@ -22,6 +22,26 @@ class TestValidateDomain:
     def test_leading_trailing_whitespace_stripped(self):
         assert validate_domain("  contoso.com  ") == "contoso.com"
 
+    # --- Internationalized domain names (IDN) ---
+    # Raw-Unicode IDNs are IDNA-encoded to punycode rather than rejected.
+    # Surfaced by the 2026-05 corpus validation, where an IDN apex was the
+    # only rejected domain in a 200-domain run.
+
+    def test_idn_unicode_converted_to_punycode(self):
+        assert validate_domain("münchen.de") == "xn--mnchen-3ya.de"
+
+    def test_idn_accented_converted(self):
+        assert validate_domain("mehiläinen.com") == "xn--mehilinen-z2a.com"
+
+    def test_punycode_passthrough(self):
+        assert validate_domain("xn--mnchen-3ya.de") == "xn--mnchen-3ya.de"
+
+    def test_idn_with_scheme_and_www_stripped(self):
+        assert validate_domain("https://www.münchen.de") == "xn--mnchen-3ya.de"
+
+    def test_idn_uppercase_normalized(self):
+        assert validate_domain("MÜNCHEN.DE") == "xn--mnchen-3ya.de"
+
     # --- Scheme stripping ---
 
     def test_strip_https(self):
