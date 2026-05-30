@@ -1771,6 +1771,128 @@ def _confidence_is_high(level: ConfidenceLevel) -> bool:
     return level == ConfidenceLevel.HIGH
 
 
+def _render_key_facts(info: TenantInfo) -> Text:  # noqa: C901
+    """Build the key-facts block: Provider, Tenant/Region, Auth, Cloud
+    (sovereignty), Multi-cloud rollup, Confidence.
+
+    Extracted from ``render_tenant_panel`` so the panel orchestrator stays
+    a thin sequence of section calls. Behavior is unchanged; the golden
+    renders in ``tests/test_golden_renders.py`` pin the exact output.
+    """
+    facts = Text()
+
+    def _field(label: str, value: str, value_style: str = "") -> None:
+        """Emit one "  Label    value\\n" row, wrapping the value at
+        the panel width with a continuation indent matching the
+        label column."""
+        indent_width = 2 + _LABEL_WIDTH  # "  " + label column
+        max_width = _PANEL_WIDTH - indent_width
+        lines = _wrap_text(value, max_width)
+        for i, line in enumerate(lines):
+            if i == 0:
+                facts.append("  ")
+                facts.append(label.ljust(_LABEL_WIDTH), style="dim")
+            else:
+                facts.append(" " * indent_width)
+            facts.append(line, style=value_style)
+            facts.append("\n")
+
+    has_mx_records = any(e.source_type == "MX" for e in info.evidence)
+    # v0.10.1: only show secondary providers confirmed via email routing
+    email_confirmed_slugs = frozenset(e.slug for e in info.evidence if e.source_type in ("MX", "DKIM"))
+    provider_line = detect_provider(
+        info.services,
+        info.slugs,
+        primary_email_provider=info.primary_email_provider,
+        email_gateway=info.email_gateway,
+        likely_primary_email_provider=info.likely_primary_email_provider,
+        has_mx_records=has_mx_records,
+        email_confirmed_slugs=email_confirmed_slugs,
+    )
+    _field("Provider", provider_line)
+
+    if info.tenant_id:
+        tenant_line = info.tenant_id
+        if info.region:
+            tenant_line += f" • {info.region}"
+        _field("Tenant", tenant_line)
+    elif info.region:
+        _field("Region", info.region)
+
+    # Auth — combine M365 and GWS auth labels when both are present.
+    # "Managed (Entra ID + Google Workspace)" reads cleaner than
+    # "Managed + Managed (GWS)". GetUserRealm returns
+    # NameSpaceType=Unknown for domains that aren't real M365 tenants;
+    # treat "Unknown" as no auth info at the display layer.
+    effective_auth: str | None = info.auth_type
+    if effective_auth and effective_auth.strip().lower() == "unknown":
+        effective_auth = None
+
+    auth_parts: list[str] = []
+    if effective_auth and info.google_auth_type:
+        if effective_auth == info.google_auth_type:
+            providers: list[str] = []
+            # Only claim "Entra ID" when the microsoft365 slug is actually
+            # detected; a dormant tenant_id from OIDC discovery on a
+            # Google-primary domain otherwise yields a confident-wrong claim.
+            if "microsoft365" in info.slugs:
+                providers.append("Entra ID")
+            else:
+                providers.append("Microsoft")
+            gws = "Google Workspace"
+            if info.google_idp_name:
+                gws += f" via {info.google_idp_name}"
+            providers.append(gws)
+            auth_parts.append(f"{effective_auth} ({' + '.join(providers)})")
+        else:
+            auth_parts.append(effective_auth)
+            gws_label = info.google_auth_type
+            if info.google_idp_name:
+                gws_label += f" via {info.google_idp_name}"
+            auth_parts.append(f"{gws_label} (Google Workspace)")
+    elif effective_auth:
+        auth_parts.append(effective_auth)
+    elif info.google_auth_type:
+        gws_label = info.google_auth_type
+        if info.google_idp_name:
+            gws_label += f" via {info.google_idp_name}"
+        auth_parts.append(f"{gws_label} (Google Workspace)")
+    if auth_parts:
+        _field("Auth", " + ".join(auth_parts))
+
+    # Sovereignty — only when cloud_instance indicates non-commercial
+    if info.cloud_instance and "microsoftonline.com" not in info.cloud_instance.lower():
+        sov_label = info.cloud_instance
+        if info.tenant_region_sub_scope:
+            sov_label += f" ({info.tenant_region_sub_scope})"
+        _field("Cloud", sov_label)
+
+    # Multi-cloud rollup (v1.9.9): a single-line at-a-glance indicator that
+    # the public footprint touches more than one cloud vendor. Slugs from
+    # the apex and from CNAME-chain subdomain attributions both contribute;
+    # `_CLOUD_VENDOR_BY_SLUG` collapses sibling slugs so the count reflects
+    # distinct vendors. Fires only at >= 2 distinct vendors.
+    surface_slug_stream: list[str] = []
+    for sa in info.surface_attributions:
+        if sa.primary_slug:
+            surface_slug_stream.append(sa.primary_slug)
+        if sa.infra_slug:
+            surface_slug_stream.append(sa.infra_slug)
+    vendor_counts = count_cloud_vendors(info.slugs, surface_slug_stream)
+    if len(vendor_counts) >= 2:
+        ranked_vendors = sorted(vendor_counts.items(), key=lambda p: (-p[1], p[0]))
+        vendor_names = [v for v, _ in ranked_vendors]
+        rollup = f"{len(vendor_names)} providers observed ({', '.join(vendor_names)})"
+        _field("Multi-cloud", rollup)
+
+    # Confidence — green only for High, default otherwise.
+    dots = CONFIDENCE_DOTS[info.confidence]
+    conf_value = f"{dots} {info.confidence.value.capitalize()} ({len(info.sources)} sources)"
+    _field("Confidence", conf_value, value_style="green" if _confidence_is_high(info.confidence) else "")
+
+    return facts
+
+
 def render_tenant_panel(  # noqa: C901
     info: TenantInfo,
     show_services: bool = False,
@@ -1835,153 +1957,7 @@ def render_tenant_panel(  # noqa: C901
     blocks.append(rule)
 
     # ── Key facts block ────────────────────────────────────────────
-    facts = Text()
-
-    def _field(label: str, value: str, value_style: str = "") -> None:
-        """Emit one "  Label    value\\n" row, wrapping the value at
-        the panel width with a continuation indent matching the
-        label column. Without the explicit wrap, Rich auto-breaks
-        long values mid-line and the continuation lands at column 0
-        — which is what produced the ugly "Google \\nWorkspace" wrap
-        on long Provider strings before v0.9.3."""
-        indent_width = 2 + _LABEL_WIDTH  # "  " + label column
-        max_width = _PANEL_WIDTH - indent_width
-        lines = _wrap_text(value, max_width)
-        for i, line in enumerate(lines):
-            if i == 0:
-                facts.append("  ")
-                facts.append(label.ljust(_LABEL_WIDTH), style="dim")
-            else:
-                facts.append(" " * indent_width)
-            facts.append(line, style=value_style)
-            facts.append("\n")
-
-    has_mx_records = any(e.source_type == "MX" for e in info.evidence)
-    # v0.10.1: only show secondary providers confirmed via email routing
-    email_confirmed_slugs = frozenset(e.slug for e in info.evidence if e.source_type in ("MX", "DKIM"))
-    provider_line = detect_provider(
-        info.services,
-        info.slugs,
-        primary_email_provider=info.primary_email_provider,
-        email_gateway=info.email_gateway,
-        likely_primary_email_provider=info.likely_primary_email_provider,
-        has_mx_records=has_mx_records,
-        email_confirmed_slugs=email_confirmed_slugs,
-    )
-    _field("Provider", provider_line)
-
-    if info.tenant_id:
-        tenant_line = info.tenant_id
-        if info.region:
-            tenant_line += f" • {info.region}"
-        _field("Tenant", tenant_line)
-    elif info.region:
-        _field("Region", info.region)
-
-    # Auth — combine M365 and GWS auth labels when both are present.
-    # v0.9.3 refinement: when both auth_type and google_auth_type are
-    # the same value (e.g. both "Managed"), collapse to one label with
-    # the providers named in parentheses instead of repeating the word.
-    # "Managed (Entra ID + Google Workspace)" reads cleaner than
-    # "Managed + Managed (GWS)".
-    #
-    # v0.9.3 hardening: GetUserRealm returns NameSpaceType=Unknown for
-    # domains that aren't real M365 tenants. That gets parsed into
-    # auth_type="Unknown" which then leaked as "Unknown + Managed (GWS)"
-    # on Google-only targets. Treat "Unknown" as effectively no auth
-    # info at the display layer so the panel doesn't surface a
-    # meaningless token.
-    effective_auth: str | None = info.auth_type
-    if effective_auth and effective_auth.strip().lower() == "unknown":
-        effective_auth = None
-
-    auth_parts: list[str] = []
-    if effective_auth and info.google_auth_type:
-        if effective_auth == info.google_auth_type:
-            providers: list[str] = []
-            # v0.9.3 hardening: only claim "Entra ID" when the
-            # microsoft365 slug is actually detected. A tenant_id
-            # from OIDC discovery is sometimes set on domains that
-            # registered an Entra ID tenant but don't actively use
-            # M365 as their identity / email provider (seen on a
-            # Google-primary domain with a dormant MS tenant).
-            # Saying "Entra ID" in that case is a confident-wrong
-            # claim. Without the slug, fall back to the neutral
-            # "Microsoft" label.
-            if "microsoft365" in info.slugs:
-                providers.append("Entra ID")
-            else:
-                providers.append("Microsoft")
-            gws = "Google Workspace"
-            if info.google_idp_name:
-                gws += f" via {info.google_idp_name}"
-            providers.append(gws)
-            auth_parts.append(f"{effective_auth} ({' + '.join(providers)})")
-        else:
-            auth_parts.append(effective_auth)
-            gws_label = info.google_auth_type
-            if info.google_idp_name:
-                gws_label += f" via {info.google_idp_name}"
-            # v0.9.3 refinement: spell out "(Google Workspace)" so
-            # the Auth line reads as natural language instead of
-            # terminal shorthand. Previously this branch emitted
-            # "(GWS)" while the same-auth collapsed branch emitted
-            # the full name — inconsistent depending on whether
-            # the two auth types happened to match.
-            auth_parts.append(f"{gws_label} (Google Workspace)")
-    elif effective_auth:
-        auth_parts.append(effective_auth)
-    elif info.google_auth_type:
-        gws_label = info.google_auth_type
-        if info.google_idp_name:
-            gws_label += f" via {info.google_idp_name}"
-        auth_parts.append(f"{gws_label} (Google Workspace)")
-    if auth_parts:
-        _field("Auth", " + ".join(auth_parts))
-
-    # Sovereignty — only when cloud_instance indicates non-commercial
-    if info.cloud_instance and "microsoftonline.com" not in info.cloud_instance.lower():
-        sov_label = info.cloud_instance
-        if info.tenant_region_sub_scope:
-            sov_label += f" ({info.tenant_region_sub_scope})"
-        _field("Cloud", sov_label)
-
-    # Multi-cloud rollup (v1.9.9) — a single-line indicator that the
-    # public footprint touches more than one cloud vendor. The per-slug
-    # Cloud row and per-subdomain Subdomain row already carry the full
-    # distribution; this rollup is the at-a-glance summary so the fact
-    # that a domain spans AWS + Cloudflare + GCP is visible without
-    # reading two later sections. Slugs from the apex (info.slugs) and
-    # from CNAME-chain subdomain attributions both contribute. The
-    # canonicalization map in ``_CLOUD_VENDOR_BY_SLUG`` collapses sibling
-    # slugs (Route 53 + CloudFront → one AWS) so the count reflects
-    # distinct vendors, not slugs. Fires only when ≥ 2 distinct vendors
-    # are observed; a single-cloud target stays unannotated to avoid
-    # adding noise to the panel.
-    surface_slug_stream: list[str] = []
-    for sa in info.surface_attributions:
-        if sa.primary_slug:
-            surface_slug_stream.append(sa.primary_slug)
-        if sa.infra_slug:
-            surface_slug_stream.append(sa.infra_slug)
-    vendor_counts = count_cloud_vendors(info.slugs, surface_slug_stream)
-    if len(vendor_counts) >= 2:
-        # Sort by mention count descending, then alphabetically on ties
-        # for diff-stable output. The mention count itself does not ship
-        # in the label — it's a slug-population artefact, not an
-        # operator-meaningful number. The rollup tells you which vendors
-        # are observed, not which is "biggest".
-        ranked_vendors = sorted(vendor_counts.items(), key=lambda p: (-p[1], p[0]))
-        vendor_names = [v for v, _ in ranked_vendors]
-        rollup = f"{len(vendor_names)} providers observed ({', '.join(vendor_names)})"
-        _field("Multi-cloud", rollup)
-
-    # Confidence — green only for High, default otherwise.
-    dots = CONFIDENCE_DOTS[info.confidence]
-    conf_value = f"{dots} {info.confidence.value.capitalize()} ({len(info.sources)} sources)"
-    _field("Confidence", conf_value, value_style="green" if _confidence_is_high(info.confidence) else "")
-
-    blocks.append(facts)
+    blocks.append(_render_key_facts(info))
 
     # ── Services section ──────────────────────────────────────────
     if info.services:
