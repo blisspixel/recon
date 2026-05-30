@@ -403,6 +403,32 @@ Declined, with the reason:
   reference for that later, but the multi-repo machinery is not recon's
   concern.
 
+### AI-security review (2026-05)
+
+A separate AI-systems security brief (adversarial-ML threat models;
+poisoning / evasion / extraction / inference attacks; differential
+privacy; secure enclaves; model watermarking; confidential computing;
+SecMLOps) was reviewed. Almost all of it is out of scope here for a
+structural reason: recon trains no model and serves no model. The Bayesian
+layer is hand-authored YAML, not learned weights (the no-learned-weights
+invariant); there is no training data, no fine-tuning loop, no inference
+endpoint, and nothing multi-modal. So model poisoning, extraction,
+inversion, membership inference, DP-SGD, enclaves, adversarial training,
+and certified robustness do not apply, since there is no model to poison,
+steal, or invert.
+
+The part that does apply is the agentic surface, and it already has an
+explicit threat model. recon is consumed by AI agents over MCP and is a
+conduit of untrusted external strings (DNS TXT records, CT SAN names, BIMI
+metadata, identity-endpoint responses) into an LLM's context. `SECURITY.md`
+documents the MCP threat model (the agent is assumed adversarial; prompt
+injection, tool poisoning, and parameter tampering are assumed), the
+v1.9.18 to v1.9.21 audit rounds closed the output-injection surface (ANSI
+/ newline / markdown sanitization, SSRF, ReDoS, resource caps), and the
+v1.9.32 build-provenance attestation extends integrity to the bundled
+fingerprint and signal data, which is recon's only "data supply chain".
+The one genuinely new forward item is carried in Known gaps below.
+
 ### Known gaps
 
 The list of things a security-focused project ideally has but we
@@ -472,25 +498,27 @@ know is missing rather than only what we know is present:
   35); decomposing these into named helpers is the highest-value slice.
   Each refactor preserves behavior and is verified against the existing
   suite. Keep the deliberate 120 line length.
-- No deterministic fault-injection / chaos tests at the network
-  boundary. recon already carries retry, an adaptive rate limiter, a
-  per-provider circuit breaker, and `degraded_sources` handling; what is
-  missing is a test layer that *proves* that resilience by injecting
-  timeouts, malformed and truncated payloads, and partial provider
-  failures at the source boundary and asserting the hedged output and
-  exception hygiene hold. Fits recon squarely as a network tool.
-- No Hypothesis *stateful* testing. The `AdaptiveRateLimiter`, the
-  circuit breaker, and the cache are real state machines; a
-  `RuleBasedStateMachine` exercising sequences of acquire / success /
-  rate-limited / cooldown transitions would catch lifecycle bugs the
-  current single-shot property tests cannot. Pairs naturally with the
-  fault-injection layer.
-- Free-threaded 3.14t not exercised. Add the free-threaded build
-  (`3.14t`) to the matrix as a dependency-compatibility probe. recon is
-  asyncio-based with no shared mutable thread state, so the concurrency
-  discipline the brief asks for is largely already met; the value here is
-  catching a dependency that is not yet `cp314t`-ready before a user on
-  free-threaded Python hits it.
+- Deterministic fault-injection / chaos tests at the network boundary.
+  recon already carries retry, an adaptive rate limiter, a per-provider
+  circuit breaker, and `degraded_sources` handling, and the existing
+  resilience suites (`test_ct_pipeline_resilience.py`,
+  `test_properties_resilience.py`, `test_fallback_chain.py`) plus the new
+  stateful machine (v1.9.33) cover much of the failure surface. Open as a
+  deeper follow-up: a dedicated layer injecting malformed and truncated
+  provider payloads at the source boundary and asserting the hedged output
+  and exception hygiene hold.
+- ~~No Hypothesis *stateful* testing.~~ **Shipped in v1.9.33** -
+  `tests/test_rate_limit_stateful.py` drives the `AdaptiveRateLimiter` +
+  circuit breaker with arbitrary outcome sequences (a
+  `RuleBasedStateMachine`) and asserts the interval bounds, a
+  model-tracked consecutive-failure counter, bounded cooldown, and the
+  open-breaker-implies-threshold invariant after every step. The cache
+  state machine is a candidate for the same treatment later.
+- ~~Free-threaded 3.14t not exercised.~~ **Shipped in v1.9.33** - an
+  Ubuntu `3.14t` matrix entry, marked experimental and `continue-on-error`
+  so it surfaces a dependency without a `cp314t` wheel without failing CI.
+  recon is asyncio-based with no shared mutable thread state, so this is a
+  dependency-readiness probe rather than a correctness change.
 - Dev dependencies still live under `[project.optional-dependencies]`.
   Hygiene: migrate to PEP 735 `[dependency-groups]` plus a `[tool.uv]`
   block so the dev set is not published as an installable extra. Low
@@ -511,6 +539,20 @@ know is missing rather than only what we know is present:
   Full SLSA L3 plus Sigstore in-toto signing and reproducible-build
   verification stay deferred as disproportionate for a stdio tool at
   current scale, but the cheap provenance step closes most of the gap.
+- Prompt-injection posture for AI consumers (from the 2026-05 AI-security
+  review). recon hands untrusted external strings (DNS TXT records, CT SAN
+  names, BIMI metadata, identity-endpoint responses) to an LLM over MCP,
+  so an attacker who controls a queried domain's DNS or certificates could
+  try to smuggle instructions through recon's output. The terminal and
+  markdown injection surface is already closed (v1.9.18 to v1.9.21); the
+  open, forward item is an explicit data-not-instructions posture: a
+  light, optional demarcation in MCP tool output (or a documented
+  convention) that marks recon's returned strings as untrusted *observed
+  content*, so a consuming agent treats them as data rather than
+  instructions. Low-cost, defensive, and squarely in recon's lane as a
+  passive tool that feeds AI agents. The model-centric AI-security
+  concerns from the same brief are out of scope (see the AI-security
+  review note above): recon trains and serves no model.
 
 These do not block v1.9.x or v2.0. The four oldest cheap ones
 (SECURITY.md, SBOM, secrets-scanning, forward-compat test) shipped by

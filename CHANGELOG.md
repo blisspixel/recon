@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.33] - 2026-05-30
+
+### Test rigor: stateful rate-limiter machine + free-threaded 3.14t probe (engineering elevation, patch 6)
+
+From the standards review's testing-rigor items. Additive; no source or
+runtime behavior changed.
+
+- **Hypothesis stateful testing.** `tests/test_rate_limit_stateful.py`
+  drives the `AdaptiveRateLimiter` + circuit breaker with arbitrary
+  sequences of success / rate-limited / other-failure outcomes (a
+  `RuleBasedStateMachine`) and asserts invariants after every step: the
+  interval stays within `[min, max]`, the consecutive-failure counter
+  tracks a parallel model exactly and never goes negative, the breaker
+  cooldown stays bounded, and an open breaker implies the failure
+  threshold was crossed. The existing property tests exercise single
+  operations; this reaches the sequence-level bugs they cannot.
+- **Free-threaded 3.14t probe.** `ci.yml` gains an Ubuntu `3.14t`
+  (PEP 703 free-threaded) matrix entry, marked experimental and
+  `continue-on-error`, so it surfaces whether a runtime dependency lacks
+  a cp314t wheel without failing CI. recon is asyncio-based with no shared
+  mutable thread state, so this is a dependency-readiness probe rather
+  than a correctness change.
+
+Deterministic fault injection at the network boundary (timeouts,
+malformed and truncated payloads, partial provider failures) is already
+substantially covered by the existing resilience suites
+(`test_ct_pipeline_resilience.py`, `test_properties_resilience.py`,
+`test_fallback_chain.py`); deeper malformed-payload injection is noted as
+a possible follow-up.
+
 ## [1.9.32] - 2026-05-30
 
 ### Build-provenance attestation + hash-pinned audit requirements (engineering elevation, patch 5)
