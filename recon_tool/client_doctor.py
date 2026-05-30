@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import shutil
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Literal
 
 from recon_tool.mcp_install import Client, Scope, resolve_config_path, servers_key
@@ -174,7 +174,14 @@ def _command_checks(block: dict[str, object]) -> list[ClientCheck]:
         # the python / uvx launcher forms by basename, so a config synced
         # from another machine (where the path does not resolve locally) is
         # not mislabelled "unrecognized".
-        basename = Path(command).name.lower()
+        #
+        # Use PureWindowsPath for the basename: a config synced from a
+        # Windows box carries a backslash path, and bare `Path` on POSIX
+        # does not treat `\` as a separator, so `Path(r"C:\...\recon.exe").name`
+        # returns the whole string and the recon basename is missed.
+        # PureWindowsPath accepts both `/` and `\`, so it extracts the
+        # right basename for either separator style on either OS.
+        basename = PureWindowsPath(command).name.lower()
         known_launcher = basename.startswith(("recon", "python", "uvx", "uv"))
         if Path(command).exists() or known_launcher:
             checks.append(ClientCheck("command", "ok", command))
