@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.34] - 2026-05-30
+
+### Convert ConfidenceLevel to StrEnum (engineering elevation, patch 7)
+
+Completes the modernization deferred in the v1.9.29 floor raise.
+`ConfidenceLevel` now inherits from `enum.StrEnum` (3.11+) instead of
+`(str, Enum)`, which clears the `# noqa: UP042` it was carrying.
+
+This was deferred because StrEnum changes `str()` / `__format__` to render
+the value (`"high"`) rather than the qualified name (`ConfidenceLevel.HIGH`),
+and a wrong move could have changed user-facing output. The audit before
+this change found that every render site already goes through `.value`
+(panel, markdown, JSON, delta, exposure, explanation), and nothing
+interpolates the enum directly, so the conversion changes no output. JSON,
+dict-key lookups, and comparisons are unaffected because StrEnum members
+are still strings equal to their value. The full suite, which covers all
+those renderers, confirms it.
+
+No runtime output shape changed.
+
 ## [1.9.33] - 2026-05-30
 
 ### Test rigor: stateful rate-limiter machine + free-threaded 3.14t probe (engineering elevation, patch 6)
