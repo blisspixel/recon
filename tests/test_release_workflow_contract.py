@@ -217,38 +217,60 @@ class TestSbomJobIsIsolated:
         )
 
 
-class TestPublishJobIsHardened:
-    """The publish-pypi job is the only job with id-token: write.
-    It must not install or execute project dev dependencies, and must
-    not touch dist/ beyond downloading and publishing."""
+# Jobs allowed to hold id-token: write. The rule is not "only
+# publish-pypi" but "only jobs that run NO project dependency code", so a
+# compromised dependency cannot mint a token. publish-pypi downloads the
+# sealed dist and publishes it; attest downloads the sealed dist and signs
+# a provenance attestation. Both are dependency-free, asserted below. Any
+# new entry here must come with the same dependency-free guarantee.
+_OIDC_ALLOWED_JOBS = {"publish-pypi", "attest"}
 
-    def test_publish_pypi_is_only_job_with_id_token_write(self, workflow):
+
+class TestPublishJobIsHardened:
+    """Only dependency-free jobs (publish-pypi, attest) may hold
+    id-token: write. They must not install or execute project
+    dependencies, and must not touch dist/ beyond downloading it."""
+
+    def test_only_dependency_free_jobs_have_id_token_write(self, workflow):
         for name, job in workflow.get("jobs", {}).items():
             perms = job.get("permissions") or {}
             id_token = perms.get("id-token") if isinstance(perms, dict) else None
-            if name == "publish-pypi":
-                assert id_token == _PERM_WRITE, "publish-pypi must have id-token: write for OIDC trusted publishing"
-            else:
-                assert id_token != _PERM_WRITE, (
-                    f"job {name!r} has id-token: write — only publish-pypi may carry this "
-                    "scope. A compromised dep in any other job could otherwise mint a "
-                    "token and publish to PyPI under our trusted-publisher identity."
-                )
+            if name in _OIDC_ALLOWED_JOBS:
+                continue
+            assert id_token != _PERM_WRITE, (
+                f"job {name!r} has id-token: write — only the dependency-free jobs "
+                f"{sorted(_OIDC_ALLOWED_JOBS)} may carry this scope. A compromised dep "
+                "in any other job could otherwise mint a token and publish to PyPI "
+                "under our trusted-publisher identity."
+            )
+        # publish-pypi must always carry it (OIDC trusted publishing).
+        publish_perms = workflow["jobs"]["publish-pypi"].get("permissions") or {}
+        assert publish_perms.get("id-token") == _PERM_WRITE, (
+            "publish-pypi must have id-token: write for OIDC trusted publishing"
+        )
 
-    def test_publish_pypi_does_not_install_dev_deps(self, workflow):
-        publish = workflow["jobs"]["publish-pypi"]
-        for step in _steps(publish):
-            text = _step_text(step)
-            assert "--extra dev" not in text, (
-                f"publish-pypi step {step.get('name')!r} installs dev deps; "
-                "this job runs with id-token: write — keep the surface tiny."
-            )
-            assert "uv sync" not in text, (
-                f"publish-pypi step {step.get('name')!r} runs uv sync; "
-                "this job downloads the sealed dist/ artifact and publishes it. "
-                "Any code execution in this job runs with id-token: write — "
-                "keep the surface tiny."
-            )
+    def test_id_token_jobs_do_not_install_or_run_deps(self, workflow):
+        # Every job that mints an OIDC token must run no project dependency
+        # code, so a compromised dep cannot execute under id-token: write.
+        for name in _OIDC_ALLOWED_JOBS:
+            job = workflow["jobs"].get(name)
+            if job is None:
+                continue
+            for step in _steps(job):
+                text = _step_text(step)
+                assert "--extra dev" not in text, (
+                    f"{name} step {step.get('name')!r} installs dev deps; "
+                    "this job runs with id-token: write — keep the surface tiny."
+                )
+                assert "uv sync" not in text, (
+                    f"{name} step {step.get('name')!r} runs uv sync; "
+                    "this job downloads the sealed dist/ artifact only. Any code "
+                    "execution under id-token: write widens the surface."
+                )
+                assert "uv run" not in text, (
+                    f"{name} step {step.get('name')!r} runs uv run; "
+                    "this job must execute no project code under id-token: write."
+                )
 
 
 class TestGithubReleaseAttachesBothArtifacts:
