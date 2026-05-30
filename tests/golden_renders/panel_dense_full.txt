@@ -1,0 +1,27 @@
+Contoso Ltd
+contoso.com
+──────────────────────────────────────────────────────────────────────────────
+  Provider     Microsoft 365 (primary) via Proofpoint gateway
+  Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
+  Auth         Federated
+  Confidence   ●●● High (3 sources)
+
+
+Services
+  Email          Microsoft 365, Proofpoint, DMARC reject, MTA-STS enforce
+  AI             Microsoft Copilot (likely)
+  Collaboration  Slack
+
+
+Domains (3)
+  contoso.com
+  contoso.onmicrosoft.com
+  contoso.co.uk
+
+
+Related domains
+  api.contoso.com, login.contoso.com
+
+Insights
+  Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)
+

@@ -1,0 +1,13 @@
+Fabrikam, Inc.
+fabrikam.com
+──────────────────────────────────────────────────────────────────────────────
+  Provider     Unknown (no known provider pattern matched)
+  Confidence   ●○○ Low (2 sources)
+
+
+Insights
+  Wildcard-only certificate posture limits passive visibility.
+
+
+Note
+  Some sources unavailable (oidc_discovery).

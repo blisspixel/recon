@@ -47,6 +47,52 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.27 | MCP-onboarding UX (standing work, not a numbered item): `recon doctor --client=<name>` reads a client's MCP config (all six supported clients) and reports whether the `mcpServers.recon` stanza is present and well-formed, with claude-code-specific handling of the `projects[...]` local-scope shape and a plugin-scope caveat; docs gain a "doctor passes but tools do not load" troubleshooting section (`/mcp`, `mcp__recon__*` naming, full-restart reminder) and a note on how approval semantics differ between the install and plugin paths; also folds the 2026-05 external-standards review into the Engineering quality posture section | `CHANGELOG.md` |
 | v1.9.28 | Engineering-elevation series patch 1 (standing work, not a numbered item): `py.typed` marker (PEP 561) verified in the built wheel so downstream type checkers pick up recon's inline types; Python 3.14 added to the CI matrix (Ubuntu / Windows / macOS) and a `3.14` classifier, `>=3.10` floor unchanged. No runtime behavior change | `CHANGELOG.md` |
 
+## Pre-2.0 hardening phase (current)
+
+The engineering-elevation series (v1.9.27 to v1.9.37: py.typed, the 3.12
+floor, branch coverage, `deal` contracts, build provenance, the stateful
+and 3.14t test work, PEP 735, the C901 gate) is shipped. Before the v2.0
+lock, the project is in a deliberate hardening phase: v2.0 is gated behind
+making the engine and catalog demonstrably solid, not behind docs currency
+alone. The scoping confirmed the eventual lock is small (EXPERIMENTAL
+labels are already gone, `correlation.md` is most of the way to the polish
+bar, the v2.0 corpus-run file is populated), so the value now is in depth,
+not ceremony.
+
+Four tracks run as a sequence of focused, CI-green 1.9.x patches:
+
+- **Complexity decomposition.** Decompose the 28 functions carrying
+  `# noqa: C901` (the gate from v1.9.37 already holds new code), removing
+  each marker as its function drops under 15. Golden-output
+  characterization tests for the renderers come first
+  (`tests/test_golden_renders.py`, fictional brands only) so the
+  ~940-line `render_tenant_panel` and the markdown renderer can be split
+  with byte-identical output guaranteed.
+- **Test and validation rigor.** `deal` contracts on the boundary
+  validators (third pass after the inference core and matchers); a
+  Hypothesis stateful machine for the cache lifecycle; deterministic
+  fault-injection at the source boundary (malformed / truncated payloads,
+  timeouts, partial provider failures) asserting hedged output and
+  `degraded_sources` hold; branch coverage driven up toward the
+  `server.py` target.
+- **Catalog growth.** Public vendor-doc-sourced `cname_target`
+  fingerprints via the `CONTRIBUTING.md` methodology, plus corpus-mined
+  candidates from `validation/scan.py` over private-corpus subsets
+  (respecting CT rate limits and the `--ct-retry-from` multi-session
+  workflow). Per-domain output stays gitignored; only aggregate counts
+  reach committed memos, and committed examples use the fictional brands.
+- **Robustness and security.** Adversarial bug-hunt of the ingestion and
+  parse paths (DNS, CT, BIMI VMC, identity endpoints), input edge cases
+  (IDN / punycode, malformed, oversized, truncated), and another
+  security-audit round folded into `docs/security-audit-resolutions.md`.
+
+Corpus-driven validation runs alongside the catalog work: periodic
+calibration on private-corpus subsets (per-node Brier / ECE,
+deterministic-versus-Bayesian agreement, a fingerprint-gap report),
+aggregate-only, to re-validate the engine across the trend. v2.0 is
+revisited only once this hardening has made the engine and catalog
+solid; the items below are the lock ceremony that follows it.
+
 **Outstanding before v2.0:** *(refined 2026-05-26 after the v1.9.24
 mega-batch; the v1.9.24 entry above absorbed items 1 and the
 fingerprint / engine work that originally would have been split
