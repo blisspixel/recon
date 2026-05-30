@@ -324,10 +324,10 @@ A few patterns are distinctive enough to call out:
 - **Pure-Python dependency floor.** No numpy, no scipy, no
   probabilistic-programming framework, no C-extension of our own
   choosing. `pip install recon-tool` pulls roughly eight runtime
-  packages. One deliberate addition is planned: `deal` (pure-Python
-  Design-by-Contract), adopted from the 2026-05 standards review and
-  tracked in Known gaps; it is a no-op in production under `-O`, so it
-  adds an import, not runtime cost. The floor stays a hard constraint
+  packages. One deliberate addition was made in v1.9.31: `deal`
+  (pure-Python Design-by-Contract), adopted from the 2026-05 standards
+  review; it is a no-op in production under `-O`, so it adds an import,
+  not runtime cost. The floor stays a hard constraint
   otherwise: `cryptography` and `pydantic-core` are the only compiled
   pieces in the tree, and both arrive transitively through `mcp` rather
   than by our choice.
@@ -444,18 +444,18 @@ know is missing rather than only what we know is present:
   as its own patch so a consumer reading the changelog sees exactly when
   the floor moved.
 - **Adopt Design-by-Contract via `deal`** (engineering-elevation series).
-  Add `deal` to the runtime dependencies and apply `@deal.pre` /
-  `@deal.post` / `@deal.inv` / `@deal.raises` contracts on the
-  highest-value surfaces first: the Bayesian fusion path (posteriors stay
-  in `(0, 1)`, evidence likelihoods strictly positive, the network stays
-  acyclic) and the engine matchers (specificity ordering, no double-count
-  after shadow filtering). Contracts run under test and local dev and are
-  disabled in production via `-O` (wire `deal.disable()` when not
-  `__debug__`) so there is zero runtime cost for installed users. Likely
-  more than one patch: first the dependency plus the inference-core
-  contracts, then a second pass over the matchers and validators. Updates
-  the dependency-floor note above (the floor grows by one deliberate
-  pure-Python import).
+  *First pass shipped in v1.9.31*: `deal` added as a runtime dependency
+  (disabled in production via `deal.disable()` when not `__debug__`, so
+  zero cost for installed users), with `@deal.post` contracts on the
+  inference math in `bayesian.py` (factor entries are probabilities;
+  evidence factors are strictly positive, encoding the no-degenerate
+  invariant; marginals stay in `[0, 1]`; credible intervals are ordered
+  within `[0, 1]`). `tests/test_contracts.py` proves the contracts fire
+  on violation and are no-ops under `-O`. *Second pass still open*: extend
+  contracts to the engine matchers (specificity ordering, no double-count
+  after shadow filtering) and the boundary validators. The
+  dependency-floor note above is updated to reflect the deliberate
+  addition.
 - ~~Branch coverage is not enforced and the gate sits at 80% line
   coverage.~~ **Shipped in v1.9.30** - `--cov-branch` enabled in the CI
   matrix, the release test job, and the local gate (`scripts/release.py`,

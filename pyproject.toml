@@ -1,6 +1,6 @@
 [project]
 name = "recon-tool"
-version = "1.9.30"
+version = "1.9.31"
 description = "Domain intelligence CLI and MCP server — tech stack, email security, and signal intelligence from DNS."
 requires-python = ">=3.12"
 readme = "README.md"
@@ -30,6 +30,13 @@ dependencies = [
     "defusedxml>=0.7",
     "mcp>=1.0",
     "networkx>=3.0",
+    # Design-by-Contract. Pure-Python, so it does not breach the
+    # no-C-extension floor. Contracts (pre / post / inv) document and
+    # enforce the inference-core invariants under test and local dev, and
+    # are turned into no-ops in production via `deal.disable()` when
+    # `__debug__` is false (see recon_tool/__init__.py), so installed users
+    # pay no runtime cost.
+    "deal>=4.24.0",
     # Security floor on a transitive dependency: mcp pulls in python-multipart,
     # and 0.0.26 has CVE-2026-42561 (fix: 0.0.27). Pinned here so resolvers and
     # `pip-audit` stay green until mcp's own floor catches up.
