@@ -72,12 +72,25 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.12", "3.13", "3.14"]
+        include:
+          # Free-threaded 3.14 (PEP 703), Ubuntu only, as a
+          # dependency-compatibility probe. recon is asyncio-based with no
+          # shared mutable thread state, so the value here is catching a
+          # dependency without a cp314t wheel before a user on
+          # free-threaded Python hits it. Marked experimental so it does
+          # not block CI: a missing cp314t wheel reports, it does not fail.
+          - os: ubuntu-latest
+            python-version: "3.14t"
+            experimental: true
     # `.python-version` pins the local and dev toolchain to 3.14. In CI the
     # matrix has to win, so force uv to the matrix interpreter; without this
     # uv reads `.python-version` and runs every matrix job on 3.14, which
     # would silently defeat the 3.12 / 3.13 coverage.
     env:
       UV_PYTHON: ${{ matrix.python-version }}
+    # Non-blocking only for the experimental free-threaded probe above;
+    # every other matrix job fails CI as normal.
+    continue-on-error: ${{ matrix.experimental || false }}
 
     steps:
       - uses: actions/checkout@v6
