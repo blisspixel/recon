@@ -537,7 +537,7 @@ class CrtshProvider:
     def name(self) -> str:
         return "crt.sh"
 
-    async def query(
+    async def query(  # noqa: C901
         self,
         domain: str,
     ) -> tuple[list[str], CertSummary | None, InfrastructureClusterReport | None]:
@@ -705,7 +705,7 @@ class CertSpotterProvider:
             params["after"] = after_cursor
         return await client.get(self._BASE_URL, params=params)
 
-    async def query(
+    async def query(  # noqa: C901
         self,
         domain: str,
     ) -> tuple[list[str], CertSummary | None, InfrastructureClusterReport | None]:

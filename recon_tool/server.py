@@ -424,7 +424,7 @@ def _resource_profiles() -> str:  # pyright: ignore[reportUnusedFunction]
         openWorldHint=True,
     ),
 )
-async def lookup_tenant(
+async def lookup_tenant(  # noqa: C901
     domain: str,
     format: str = "text",
     explain: bool = False,
@@ -1836,7 +1836,7 @@ async def test_hypothesis(domain: str, hypothesis: str) -> str:
         openWorldHint=True,
     ),
 )
-async def simulate_hardening(domain: str, fixes: list[str]) -> str:
+async def simulate_hardening(domain: str, fixes: list[str]) -> str:  # noqa: C901
     """What-if simulation: re-compute exposure score with hypothetical fixes.
 
     Accepts a list of fix descriptions (e.g., "DMARC reject", "MTA-STS enforce")

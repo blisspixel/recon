@@ -130,7 +130,7 @@ def _parse_metadata_block(name: str, raw_metadata: list[Any]) -> tuple[_Metadata
     return tuple(conditions)
 
 
-def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule | None:
+def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule | None:  # noqa: C901
     """Validate a single posture rule and return a frozen _PostureRule, or None."""
     if not isinstance(rule, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
         logger.warning("Posture rule at index %d is not a dict — skipped", index)

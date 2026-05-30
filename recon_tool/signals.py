@@ -115,7 +115,7 @@ def _parse_metadata_block(name: str, raw_metadata: list[Any]) -> tuple[MetadataC
     return tuple(conditions)
 
 
-def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | None:
+def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | None:  # noqa: C901
     """Validate a single signal definition and return a frozen Signal, or None.
 
     Required: name (str), and at least one of requires.any or metadata.

@@ -458,7 +458,7 @@ def _parse_degraded_sources(data: dict[str, Any]) -> tuple[str, ...]:
     return ()
 
 
-def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
+def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:  # noqa: C901
     """Deserialize a dict back to TenantInfo. Raises ValueError on invalid data.
 
     Handles: string → ConfidenceLevel (fallback MEDIUM), nested dicts → frozen

@@ -1,6 +1,6 @@
 [project]
 name = "recon-tool"
-version = "1.9.36"
+version = "1.9.37"
 description = "Domain intelligence CLI and MCP server — tech stack, email security, and signal intelligence from DNS."
 requires-python = ">=3.12"
 readme = "README.md"
@@ -103,11 +103,20 @@ line-length = 120
 #   PIE     — misc improvements (no-self-assign, unused-star, etc.)
 #   RET     — return-statement cleanup
 #   G       — logging-format sanity
-select = ["E", "F", "W", "I", "UP", "B", "SIM", "S", "PT", "PLW", "RUF", "C4", "PIE", "RET", "G"]
+#   C901    — mccabe cyclomatic complexity cap (max 15, see [tool.ruff.lint.mccabe])
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "S", "PT", "PLW", "RUF", "C4", "PIE", "RET", "G", "C901"]
 # We deliberately use em-dashes (—) and smart quotes in docstrings and
 # user-facing strings; ruff's ambiguous-unicode warnings are noise in
 # our prose-heavy comments.
 ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.mccabe]
+# Cyclomatic-complexity cap. New code must come in under 15. The 28
+# functions over the cap when this gate was first enabled (v1.9.37) carry
+# an explicit `# noqa: C901` and are being decomposed incrementally; each
+# refactor removes its marker. The cap holds the line for new code while
+# that backlog is worked down. See docs/roadmap.md (complexity gate).
+max-complexity = 15
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["E402", "S101"]  # allow assert in tests

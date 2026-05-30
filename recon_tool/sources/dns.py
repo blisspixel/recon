@@ -714,7 +714,7 @@ async def _detect_gws_cnames(ctx: _DetectionCtx, domain: str) -> None:
         ctx.slugs.add("google-workspace-modules")
 
 
-async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
+async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:  # noqa: C901
     """Check DKIM selectors for Exchange Online, Google, and common providers.
 
     Exchange uses selector1/selector2, Google uses 'google', and many ESPs
@@ -835,7 +835,7 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
                 break
 
 
-async def _parse_bimi_vmc(ctx: _DetectionCtx, bimi_txt: str) -> None:
+async def _parse_bimi_vmc(ctx: _DetectionCtx, bimi_txt: str) -> None:  # noqa: C901
     """Fetch VMC PEM from BIMI 'a=' URL and extract corporate identity.
 
     BIMI TXT records may contain an 'a=' tag pointing to a .pem VMC
@@ -1013,7 +1013,7 @@ def _extract_dmarc_rua(ctx: _DetectionCtx, dmarc_record: str) -> None:
                 break  # first match wins per RUA address
 
 
-async def _detect_email_security(ctx: _DetectionCtx, domain: str) -> None:
+async def _detect_email_security(ctx: _DetectionCtx, domain: str) -> None:  # noqa: C901
     """Check DMARC, BIMI, MTA-STS, and TLS-RPT records concurrently."""
     dmarc_task = _safe_resolve(f"_dmarc.{domain}", "TXT")
     bimi_task = _safe_resolve(f"default._bimi.{domain}", "TXT")
@@ -1394,7 +1394,7 @@ async def _detect_srv(ctx: _DetectionCtx, domain: str) -> None:
 # ── Certificate Transparency (fallback chain) ──────────────────────────
 
 
-async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
+async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:  # noqa: C901
     """Try CrtshProvider, fall back to CertSpotterProvider, fall back to CT cache.
 
     On first successful provider, record the provider name and subdomain

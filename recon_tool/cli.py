@@ -1717,7 +1717,7 @@ def signals_search(
 
 
 @signals_app.command("show")
-def signals_show(
+def signals_show(  # noqa: C901
     name: str = typer.Argument(..., help="Signal name (quote if it contains spaces)"),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
 ) -> None:
@@ -1857,7 +1857,7 @@ def delta(
     asyncio.run(_run())
 
 
-async def _doctor() -> None:
+async def _doctor() -> None:  # noqa: C901
     """Run diagnostic checks."""
     import dns.exception
     import dns.resolver
@@ -2145,7 +2145,7 @@ def _build_explanations(
     return explanations
 
 
-async def _lookup(
+async def _lookup(  # noqa: C901
     domain: str,
     json_output: bool,
     markdown: bool,
@@ -2719,7 +2719,7 @@ async def _discover(
         typer.echo(f"wrote {out} ({len(candidates)} candidates)", err=True)
 
 
-async def _batch(
+async def _batch(  # noqa: C901
     file: str,
     json_output: bool,
     markdown: bool,

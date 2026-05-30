@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.37] - 2026-05-30
+
+### Enable the C901 complexity gate (engineering elevation, patch 10)
+
+Turns on ruff's mccabe cyclomatic-complexity cap (`C901`,
+`max-complexity = 15`) so new code must come in under 15. This is the
+foundational step of the complexity work: it holds the line for new code
+immediately, before the existing backlog is decomposed.
+
+- `pyproject.toml`: `C901` added to the ruff `select`, with
+  `[tool.ruff.lint.mccabe] max-complexity = 15` and a comment explaining
+  the grandfathering.
+- The 28 functions over the cap at enable time carry an explicit
+  `# noqa: C901` (added mechanically with `ruff --add-noqa`). They are
+  being decomposed in later batches; each refactor removes its marker,
+  ratcheting the debt down. This is the honest brownfield order: hold the
+  line for new code first, then work the backlog rather than attempt a
+  single large, risky refactor across 14 files.
+- The genuine monsters (`render_tenant_panel` at 96, `_lookup` at 77,
+  `merge_results` at 64, `_batch` at 60) are the highest-value targets;
+  `render_tenant_panel` (~940 lines, the main user-facing panel) needs a
+  golden-output test before it is decomposed. The `PLR` refactor family
+  (~107 hits) is deferred so the gate stays focused on cyclomatic
+  complexity first.
+
+No source behavior changed; the markers are comments.
+
 ## [1.9.36] - 2026-05-30
 
 ### Migrate dev dependencies to PEP 735 dependency-groups (engineering elevation, patch 9)
