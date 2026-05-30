@@ -458,7 +458,181 @@ def _parse_degraded_sources(data: dict[str, Any]) -> tuple[str, ...]:
     return ()
 
 
-def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:  # noqa: C901
+def _cert_summary_from_dict(data: dict[str, Any]) -> CertSummary | None:
+    """Deserialize the ``cert_summary`` sub-dict, restoring the v1.7 cert
+    intelligence (wildcard sibling clusters + deployment bursts). Returns
+    None when the field is absent or not a dict. Extracted from
+    ``tenant_info_from_dict`` to keep that deserializer flat."""
+    cs_data = data.get("cert_summary")
+    if not isinstance(cs_data, dict):
+        return None
+    wcs_raw = cs_data.get("wildcard_sibling_clusters", [])
+    wildcard_sibling_clusters: tuple[tuple[str, ...], ...] = ()
+    if isinstance(wcs_raw, list):
+        wildcard_sibling_clusters = tuple(
+            tuple(str(n) for n in cluster) for cluster in wcs_raw if isinstance(cluster, list)
+        )
+    bursts_raw = cs_data.get("deployment_bursts", [])
+    deployment_bursts: tuple[CertBurst, ...] = ()
+    if isinstance(bursts_raw, list):
+        burst_records: list[CertBurst] = []
+        for entry in bursts_raw:
+            if not isinstance(entry, dict):
+                continue
+            names = entry.get("names", [])
+            if not isinstance(names, list):
+                continue
+            burst_records.append(
+                CertBurst(
+                    window_start=str(entry.get("window_start", "")),
+                    window_end=str(entry.get("window_end", "")),
+                    span_seconds=int(entry.get("span_seconds", 0)),
+                    names=tuple(str(n) for n in names),
+                )
+            )
+        deployment_bursts = tuple(burst_records)
+    return CertSummary(
+        cert_count=int(cs_data.get("cert_count", 0)),
+        issuer_diversity=int(cs_data.get("issuer_diversity", 0)),
+        issuance_velocity=int(cs_data.get("issuance_velocity", 0)),
+        newest_cert_age_days=int(cs_data.get("newest_cert_age_days", 0)),
+        oldest_cert_age_days=int(cs_data.get("oldest_cert_age_days", 0)),
+        top_issuers=tuple(cs_data.get("top_issuers", [])),
+        wildcard_sibling_clusters=wildcard_sibling_clusters,
+        deployment_bursts=deployment_bursts,
+    )
+
+
+def _surface_attributions_from_dict(data: dict[str, Any]) -> tuple[SurfaceAttribution, ...]:
+    """Deserialize the ``surface_attributions`` list. Entries missing a
+    subdomain / primary slug / primary name are skipped."""
+    surface_list = data.get("surface_attributions", [])
+    if not isinstance(surface_list, list):
+        return ()
+    sa_records: list[SurfaceAttribution] = []
+    for item in surface_list:
+        if not isinstance(item, dict):
+            continue
+        subdomain = item.get("subdomain")
+        primary_slug = item.get("primary_slug")
+        primary_name = item.get("primary_name")
+        primary_tier = item.get("primary_tier", "application")
+        if not subdomain or not primary_slug or not primary_name:
+            continue
+        sa_records.append(
+            SurfaceAttribution(
+                subdomain=str(subdomain),
+                primary_slug=str(primary_slug),
+                primary_name=str(primary_name),
+                primary_tier=str(primary_tier),
+                infra_slug=item.get("infra_slug"),
+                infra_name=item.get("infra_name"),
+            )
+        )
+    return tuple(sa_records)
+
+
+def _infrastructure_clusters_from_dict(data: dict[str, Any]) -> InfrastructureClusterReport | None:
+    """Deserialize the ``infrastructure_clusters`` (v1.8) envelope, or None
+    when absent. A missing algorithm maps to ``skipped`` so the contract
+    matches a live run that did not build clusters."""
+    ic_data = data.get("infrastructure_clusters")
+    if not isinstance(ic_data, dict):
+        return None
+    algorithm_raw = ic_data.get("algorithm", "skipped")
+    algorithm = str(algorithm_raw) if algorithm_raw in ("louvain", "connected_components", "skipped") else "skipped"
+    clusters_raw = ic_data.get("clusters")
+    cluster_records: list[InfrastructureCluster] = []
+    if isinstance(clusters_raw, list):
+        for entry in clusters_raw:
+            if not isinstance(entry, dict):
+                continue
+            members_raw = entry.get("members", [])
+            if not isinstance(members_raw, list):
+                continue
+            cluster_records.append(
+                InfrastructureCluster(
+                    cluster_id=int(entry.get("cluster_id", 0)),
+                    members=tuple(str(m) for m in members_raw),
+                    size=int(entry.get("size", len(members_raw))),
+                    shared_cert_count=int(entry.get("shared_cert_count", 0)),
+                    dominant_issuer=entry.get("dominant_issuer"),
+                )
+            )
+    edges_raw = ic_data.get("edges", [])
+    edge_records: list[InfrastructureEdge] = []
+    if isinstance(edges_raw, list):
+        for entry in edges_raw:
+            if not isinstance(entry, dict):
+                continue
+            src = entry.get("source")
+            dst = entry.get("target")
+            if not isinstance(src, str) or not isinstance(dst, str):
+                continue
+            edge_records.append(
+                InfrastructureEdge(
+                    source=src,
+                    target=dst,
+                    shared_cert_count=int(entry.get("shared_cert_count", 1)),
+                )
+            )
+    return InfrastructureClusterReport(
+        clusters=tuple(cluster_records),
+        modularity=float(ic_data.get("modularity", 0.0) or 0.0),
+        algorithm=algorithm,
+        node_count=int(ic_data.get("node_count", 0)),
+        edge_count=int(ic_data.get("edge_count", 0)),
+        edges=tuple(edge_records),
+    )
+
+
+def _unclassified_chains_from_dict(data: dict[str, Any]) -> tuple[UnclassifiedCnameChain, ...]:
+    """Deserialize the ``unclassified_cname_chains`` list."""
+    unclass_list = data.get("unclassified_cname_chains", [])
+    if not isinstance(unclass_list, list):
+        return ()
+    uc_records: list[UnclassifiedCnameChain] = []
+    for item in unclass_list:
+        if not isinstance(item, dict):
+            continue
+        subdomain = item.get("subdomain")
+        chain_raw = item.get("chain", [])
+        if not subdomain or not isinstance(chain_raw, list):
+            continue
+        uc_records.append(
+            UnclassifiedCnameChain(
+                subdomain=str(subdomain),
+                chain=tuple(str(h) for h in chain_raw),
+            )
+        )
+    return tuple(uc_records)
+
+
+def _chain_motifs_from_dict(data: dict[str, Any]) -> tuple[ChainMotifObservation, ...]:
+    """Deserialize the ``chain_motifs`` list (v1.8.1)."""
+    motifs_list = data.get("chain_motifs", [])
+    if not isinstance(motifs_list, list):
+        return ()
+    cm_records: list[ChainMotifObservation] = []
+    for item in motifs_list:
+        if not isinstance(item, dict):
+            continue
+        motif_chain = item.get("chain", [])
+        if not isinstance(motif_chain, list):
+            continue
+        cm_records.append(
+            ChainMotifObservation(
+                motif_name=str(item.get("motif_name", "")),
+                display_name=str(item.get("display_name", "")),
+                confidence=str(item.get("confidence", "medium")),
+                subdomain=str(item.get("subdomain", "")),
+                chain=tuple(str(h) for h in motif_chain),
+            )
+        )
+    return tuple(cm_records)
+
+
+def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
     """Deserialize a dict back to TenantInfo. Raises ValueError on invalid data.
 
     Handles: string → ConfidenceLevel (fallback MEDIUM), nested dicts → frozen
@@ -477,48 +651,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:  # noqa: C901
         raise ValueError(msg)
 
     # CertSummary
-    cert_summary: CertSummary | None = None
-    cs_data = data.get("cert_summary")
-    if isinstance(cs_data, dict):
-        # v1.8.1: restore wildcard_sibling_clusters + deployment_bursts
-        # so cached lookups carry the same v1.7 cert intelligence as
-        # live ones.
-        wcs_raw = cs_data.get("wildcard_sibling_clusters", [])
-        wildcard_sibling_clusters: tuple[tuple[str, ...], ...] = ()
-        if isinstance(wcs_raw, list):
-            wildcard_sibling_clusters = tuple(
-                tuple(str(n) for n in cluster) for cluster in wcs_raw if isinstance(cluster, list)
-            )
-        bursts_raw = cs_data.get("deployment_bursts", [])
-        deployment_bursts: tuple[CertBurst, ...] = ()
-        if isinstance(bursts_raw, list):
-            burst_records: list[CertBurst] = []
-            for entry in bursts_raw:
-                if not isinstance(entry, dict):
-                    continue
-                names = entry.get("names", [])
-                if not isinstance(names, list):
-                    continue
-                burst_records.append(
-                    CertBurst(
-                        window_start=str(entry.get("window_start", "")),
-                        window_end=str(entry.get("window_end", "")),
-                        span_seconds=int(entry.get("span_seconds", 0)),
-                        names=tuple(str(n) for n in names),
-                    )
-                )
-            deployment_bursts = tuple(burst_records)
-
-        cert_summary = CertSummary(
-            cert_count=int(cs_data.get("cert_count", 0)),
-            issuer_diversity=int(cs_data.get("issuer_diversity", 0)),
-            issuance_velocity=int(cs_data.get("issuance_velocity", 0)),
-            newest_cert_age_days=int(cs_data.get("newest_cert_age_days", 0)),
-            oldest_cert_age_days=int(cs_data.get("oldest_cert_age_days", 0)),
-            top_issuers=tuple(cs_data.get("top_issuers", [])),
-            wildcard_sibling_clusters=wildcard_sibling_clusters,
-            deployment_bursts=deployment_bursts,
-        )
+    cert_summary = _cert_summary_from_dict(data)
 
     # BIMIIdentity
     bimi_identity: BIMIIdentity | None = None
@@ -555,125 +688,13 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:  # noqa: C901
     if isinstance(ds_data, dict):
         detection_scores = tuple((str(k), str(v)) for k, v in ds_data.items())
 
-    # SurfaceAttribution list → tuple
-    surface_list = data.get("surface_attributions", [])
-    surface_attributions: tuple[SurfaceAttribution, ...] = ()
-    if isinstance(surface_list, list):
-        sa_records: list[SurfaceAttribution] = []
-        for item in surface_list:
-            if not isinstance(item, dict):
-                continue
-            subdomain = item.get("subdomain")
-            primary_slug = item.get("primary_slug")
-            primary_name = item.get("primary_name")
-            primary_tier = item.get("primary_tier", "application")
-            if not subdomain or not primary_slug or not primary_name:
-                continue
-            sa_records.append(
-                SurfaceAttribution(
-                    subdomain=str(subdomain),
-                    primary_slug=str(primary_slug),
-                    primary_name=str(primary_name),
-                    primary_tier=str(primary_tier),
-                    infra_slug=item.get("infra_slug"),
-                    infra_name=item.get("infra_name"),
-                )
-            )
-        surface_attributions = tuple(sa_records)
-
-    # InfrastructureClusterReport (v1.8). Empty/missing values map to a
-    # ``skipped`` envelope so the contract stays the same as live runs;
-    # legitimate cached envelopes deserialize back into a typed report.
-    infrastructure_clusters: InfrastructureClusterReport | None = None
-    ic_data = data.get("infrastructure_clusters")
-    if isinstance(ic_data, dict):
-        algorithm_raw = ic_data.get("algorithm", "skipped")
-        algorithm = str(algorithm_raw) if algorithm_raw in ("louvain", "connected_components", "skipped") else "skipped"
-        clusters_raw = ic_data.get("clusters")
-        cluster_records: list[InfrastructureCluster] = []
-        if isinstance(clusters_raw, list):
-            for entry in clusters_raw:
-                if not isinstance(entry, dict):
-                    continue
-                members_raw = entry.get("members", [])
-                if not isinstance(members_raw, list):
-                    continue
-                cluster_records.append(
-                    InfrastructureCluster(
-                        cluster_id=int(entry.get("cluster_id", 0)),
-                        members=tuple(str(m) for m in members_raw),
-                        size=int(entry.get("size", len(members_raw))),
-                        shared_cert_count=int(entry.get("shared_cert_count", 0)),
-                        dominant_issuer=entry.get("dominant_issuer"),
-                    )
-                )
-        edges_raw = ic_data.get("edges", [])
-        edge_records: list[InfrastructureEdge] = []
-        if isinstance(edges_raw, list):
-            for entry in edges_raw:
-                if not isinstance(entry, dict):
-                    continue
-                src = entry.get("source")
-                dst = entry.get("target")
-                if not isinstance(src, str) or not isinstance(dst, str):
-                    continue
-                edge_records.append(
-                    InfrastructureEdge(
-                        source=src,
-                        target=dst,
-                        shared_cert_count=int(entry.get("shared_cert_count", 1)),
-                    )
-                )
-        infrastructure_clusters = InfrastructureClusterReport(
-            clusters=tuple(cluster_records),
-            modularity=float(ic_data.get("modularity", 0.0) or 0.0),
-            algorithm=algorithm,
-            node_count=int(ic_data.get("node_count", 0)),
-            edge_count=int(ic_data.get("edge_count", 0)),
-            edges=tuple(edge_records),
-        )
-
-    # UnclassifiedCnameChain list → tuple
-    unclass_list = data.get("unclassified_cname_chains", [])
-    unclassified_cname_chains: tuple[UnclassifiedCnameChain, ...] = ()
-    if isinstance(unclass_list, list):
-        uc_records: list[UnclassifiedCnameChain] = []
-        for item in unclass_list:
-            if not isinstance(item, dict):
-                continue
-            subdomain = item.get("subdomain")
-            chain_raw = item.get("chain", [])
-            if not subdomain or not isinstance(chain_raw, list):
-                continue
-            uc_records.append(
-                UnclassifiedCnameChain(
-                    subdomain=str(subdomain),
-                    chain=tuple(str(h) for h in chain_raw),
-                )
-            )
-        unclassified_cname_chains = tuple(uc_records)
-
-    # ChainMotifObservation list → tuple (v1.8.1).
-    motifs_list = data.get("chain_motifs", [])
-    chain_motifs: tuple[ChainMotifObservation, ...] = ()
-    if isinstance(motifs_list, list):
-        cm_records: list[ChainMotifObservation] = []
-        for item in motifs_list:
-            if not isinstance(item, dict):
-                continue
-            motif_chain = item.get("chain", [])
-            if not isinstance(motif_chain, list):
-                continue
-            cm_records.append(
-                ChainMotifObservation(
-                    motif_name=str(item.get("motif_name", "")),
-                    display_name=str(item.get("display_name", "")),
-                    confidence=str(item.get("confidence", "medium")),
-                    subdomain=str(item.get("subdomain", "")),
-                    chain=tuple(str(h) for h in motif_chain),
-                )
-            )
-        chain_motifs = tuple(cm_records)
+    # SurfaceAttribution / InfrastructureClusterReport / Unclassified
+    # chains / ChainMotif observations — each deserialized by a helper so
+    # this function stays a flat sequence of field reads.
+    surface_attributions = _surface_attributions_from_dict(data)
+    infrastructure_clusters = _infrastructure_clusters_from_dict(data)
+    unclassified_cname_chains = _unclassified_chains_from_dict(data)
+    chain_motifs = _chain_motifs_from_dict(data)
 
     return TenantInfo(
         tenant_id=data.get("tenant_id"),
