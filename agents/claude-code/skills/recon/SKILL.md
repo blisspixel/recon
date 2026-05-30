@@ -151,6 +151,14 @@ CLI fallbacks when the MCP server is not connected:
 - `recon batch <file> --json` — list of domains with cross-domain token clustering.
 - `recon delta <domain>` — diff against the last cached snapshot. Relay verbatim like the default panel.
 
+Most of the analysis the MCP tools expose is reachable from the CLI too. Reach for these rather than stopping at the plain panel when the user wants a score or gaps:
+
+- `recon <domain> --exposure --json` produces the 0-100 exposure assessment. This is the CLI equivalent of the `assess_exposure` tool, and the 0-100 score comes from this flag specifically (the plain panel does not carry it).
+- `recon <domain> --gaps --json` produces the categorized hardening gaps with neutral "Consider" notes. CLI equivalent of `find_hardening_gaps`.
+- `recon <domain> --fusion` adds the Bayesian per-slug posteriors. `recon <domain> --explain-dag --explain-dag-format mermaid` renders the evidence DAG inline in chat. CLI equivalent of `get_posteriors` and `explain_dag`.
+
+What stays MCP-only, because it needs cached session state or an iterative loop: `simulate_hardening` what-if loops, the ephemeral-fingerprint reevaluate loop (`inject_ephemeral_fingerprint` then `reevaluate_domain` without re-resolving), live two-domain `compare_postures`, and `test_hypothesis`. When the MCP server is not connected and the user asks for one of these, say so plainly rather than approximating it.
+
 ## Workflow patterns
 
 Single-domain assessment (the common case):

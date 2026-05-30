@@ -56,6 +56,18 @@ SUPPORTED_CLIENTS: tuple[Client, ...] = (
 )
 
 
+def servers_key(client: Client) -> str:
+    """Top-level config key under which the client maps server names.
+
+    VS Code's ``.vscode/mcp.json`` uses a top-level ``servers`` key (see
+    code.visualstudio.com/docs/copilot/reference/mcp-configuration); a
+    block written under ``mcpServers`` is silently ignored by VS Code.
+    Every other supported client (Claude Desktop / Code, Cursor,
+    Windsurf, Kiro) uses ``mcpServers``.
+    """
+    return "servers" if client == "vscode" else "mcpServers"
+
+
 @dataclass(frozen=True)
 class _ClientSpec:
     """Per-client config-path metadata.
@@ -416,10 +428,11 @@ def plan_install(
     )
     existing = _read_existing(path)
     canonical_block = build_recon_block()
-    mcp_servers = existing.get("mcpServers")
+    key = servers_key(client)
+    mcp_servers = existing.get(key)
     if mcp_servers is not None and not isinstance(mcp_servers, dict):
         raise InstallError(
-            f"{path} has an `mcpServers` field that is "
+            f"{path} has an `{key}` field that is "
             f"{type(mcp_servers).__name__}, not an object. Refusing to "
             f"rewrite."
         )
@@ -472,7 +485,7 @@ def plan_install(
             diffs = sorted(key for key in _CANONICAL_KEYS if existing_recon.get(key) != target_block.get(key))
             diff_blurb = ", ".join(diffs) if diffs else "fields"
             raise InstallError(
-                f"{path} already has an `mcpServers.recon` entry whose "
+                f"{path} already has an `{key}.recon` entry whose "
                 f"{diff_blurb} would change. Pass --force to overwrite "
                 f"those canonical fields (your other fields — env, "
                 f"autoApprove, etc. — are preserved), or edit the file "
@@ -537,14 +550,15 @@ def install(
 
     plan.path.parent.mkdir(parents=True, exist_ok=True)
 
+    key = servers_key(client)
     existing = _read_existing(plan.path)
-    mcp_servers_raw = existing.get("mcpServers")
+    mcp_servers_raw = existing.get(key)
     if isinstance(mcp_servers_raw, dict):
         mcp_servers: dict[str, object] = {str(k): v for k, v in mcp_servers_raw.items()}
     else:
         mcp_servers = {}
     mcp_servers["recon"] = plan.new_block
-    existing["mcpServers"] = mcp_servers
+    existing[key] = mcp_servers
 
     # ensure_ascii=False preserves non-ASCII characters (e.g. accented
     # comments or unicode field values the user may have in their
