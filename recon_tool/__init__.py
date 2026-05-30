@@ -4,7 +4,17 @@ import re
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-_FALLBACK_VERSION = "1.9.30"
+import deal
+
+# Design-by-Contract. Contracts on the inference core (see bayesian.py)
+# run under test and local dev, where __debug__ is true. Under
+# `python -O` (__debug__ is false) we disable them so installed users pay
+# no runtime cost: deal checks the disabled flag at call time, and this
+# runs on package import before any contracted function is called.
+if not __debug__:
+    deal.disable()
+
+_FALLBACK_VERSION = "1.9.31"
 
 
 def _source_tree_version() -> str | None:

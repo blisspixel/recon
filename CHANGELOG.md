@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.31] - 2026-05-30
+
+### Design-by-Contract on the inference core (engineering elevation, patch 4)
+
+Adopts `deal` for Design-by-Contract, first pass: the inference math in
+`recon_tool/bayesian.py`. Contracts make the invariants the code already
+relies on executable, so a violation fails loudly under test instead of
+silently producing a malformed posterior.
+
+- New runtime dependency `deal` (pure-Python, so it does not breach the
+  no-C-extension floor). It is disabled in production via
+  `deal.disable()` when `__debug__` is false (wired in
+  `recon_tool/__init__.py`), so installed users running under `python -O`
+  pay no runtime cost; contracts run under test and local dev.
+- Postconditions on four inference functions, written as named, typed
+  validators (not inline lambdas, so they carry no unknown-type noise and
+  are unit-tested on their own):
+  - `_factor_for_node`: every factor entry is a probability in `[0, 1]`.
+  - `_factor_for_evidence`: a returned evidence factor has only
+    strictly-positive entries. This encodes the no-degenerate-factor
+    invariant (the schema rejects `{0, 1}` likelihoods because a single
+    zero would pin a node's posterior permanently).
+  - `_query_marginal`: each returned marginal probability is in `[0, 1]`.
+  - `_credible_interval`: the interval is ordered and within `[0, 1]`
+    (`0 <= low <= high <= 1`).
+- `tests/test_contracts.py`: proves the validator logic, that a contract
+  actually raises `deal.PostContractError` on a violating result, and
+  (via `python -O` subprocesses) that contracts are no-ops in production
+  and active otherwise. A contract that never fires is no better than a
+  comment; these tests show these fire.
+- `deal`'s decorators are dynamically typed, so the four decorator lines
+  carry a localized `# pyright: ignore[reportUntypedFunctionDecorator]`;
+  the validators themselves are fully typed.
+
+The dependency-floor invariant note in the roadmap is updated: `deal` is
+the one deliberate pure-Python addition, accepted for the verifiability
+gain. A second pass extending contracts to the engine matchers and
+validators is tracked for a follow-up.
+
+No runtime output shape changed.
+
 ## [1.9.30] - 2026-05-30
 
 ### Branch coverage + measured gate raise (engineering elevation, patch 3)

@@ -58,6 +58,7 @@ from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
 
+import deal
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -454,8 +455,45 @@ Assignment = frozenset[tuple[str, str]]
 Factor = dict[Assignment, float]
 
 
+# Design-by-Contract validators for the inference math below. Named and
+# typed (rather than inline lambdas) so they carry no unknown-type noise
+# and can be read and tested on their own. Each encodes an invariant the
+# module already relies on; under `python -O` deal disables them (see
+# recon_tool/__init__.py), so they are a test-time and dev-time guard.
+def _factor_is_probabilities(factor: Factor) -> bool:
+    """Every factor entry is a probability in ``[0, 1]``."""
+    return all(0.0 <= v <= 1.0 for v in factor.values())
+
+
+def _factor_is_strictly_positive(factor: Factor | None) -> bool:
+    """A returned evidence factor has only strictly-positive entries.
+
+    Encodes the no-degenerate-factor invariant: the schema rejects
+    ``{0, 1}`` likelihoods because a single zero would pin a node's
+    posterior permanently.
+    """
+    return factor is None or all(v > 0.0 for v in factor.values())
+
+
+def _marginal_in_unit_range(dist: dict[str, float]) -> bool:
+    """Each marginal probability is in ``[0, 1]``."""
+    return all(0.0 <= v <= 1.0 for v in dist.values())
+
+
+def _interval_is_ordered(interval: tuple[float, float]) -> bool:
+    """Credible interval is ordered and within ``[0, 1]``."""
+    low, high = interval
+    return 0.0 <= low <= high <= 1.0
+
+
+@deal.post(_factor_is_probabilities)  # pyright: ignore[reportUntypedFunctionDecorator]
 def _factor_for_node(node: _Node) -> Factor:
-    """Build the conditional factor :math:`P(\\text{node} \\mid \\text{parents})`."""
+    """Build the conditional factor :math:`P(\\text{node} \\mid \\text{parents})`.
+
+    Contract: every factor entry is a probability in ``[0, 1]``. A value
+    outside that range means a malformed prior or CPT slipped past
+    ``load_network``'s validation.
+    """
     factor: Factor = {}
     if not node.parents:
         prior = node.prior if node.prior is not None else 0.5
@@ -471,8 +509,15 @@ def _factor_for_node(node: _Node) -> Factor:
     return factor
 
 
+@deal.post(_factor_is_strictly_positive)  # pyright: ignore[reportUntypedFunctionDecorator]
 def _factor_for_evidence(node: _Node, fired_evidence: list[_Evidence]) -> Factor | None:
     """Build the observation factor for a node given which of its bindings fired.
+
+    Contract: when a factor is returned, every likelihood entry is
+    strictly positive. This encodes the no-degenerate-factor invariant
+    (the schema rejects ``{0, 1}`` likelihoods): a single zero would pin
+    the node's posterior permanently, so a zero here is a bug, not a
+    valid factor.
 
     Returns None when no evidence fired for this node; the node has no
     observation factor in that case (its prior/CPT factor still
@@ -532,8 +577,13 @@ def _sum_out(factor: Factor, var: str) -> Factor:
     return out
 
 
+@deal.post(_marginal_in_unit_range)  # pyright: ignore[reportUntypedFunctionDecorator]
 def _query_marginal(factors: list[Factor], query: str, all_vars: list[str]) -> dict[str, float]:
-    """Compute :math:`P(\\text{query})` by eliminating every other variable."""
+    """Compute :math:`P(\\text{query})` by eliminating every other variable.
+
+    Contract: each returned marginal probability is in ``[0, 1]`` (the
+    normalization divides each entry by the non-negative total).
+    """
     work = list(factors)
     for v in all_vars:
         if v == query:
@@ -580,6 +630,7 @@ def _evidence_for_domain(
     return fired
 
 
+@deal.post(_interval_is_ordered)  # pyright: ignore[reportUntypedFunctionDecorator]
 def _credible_interval(
     posterior: float,
     n_eff: float,
