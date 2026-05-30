@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.28] - 2026-05-30
+
+### Packaging and platform currency (engineering elevation, patch 1 of a series)
+
+First step of the engineering-elevation work folded into the roadmap's
+Known gaps in v1.9.27. Two good-citizen items, both packaging-facing,
+neither changing runtime behavior:
+
+- **`py.typed` marker (PEP 561).** `pyproject.toml` has carried the
+  `Typing :: Typed` classifier and CI has run pyright strict for a long
+  time, but the package shipped no `py.typed` marker, so a downstream
+  consumer's type checker did not actually pick up recon's inline types.
+  Added `recon_tool/py.typed` (an empty marker, the correct form for a
+  fully-typed package). Verified the marker lands in the built wheel
+  (`recon_tool/py.typed` is present in `recon_tool-<version>-py3-none-any.whl`);
+  hatchling includes it from the package directory with no extra config.
+- **Python 3.14 support.** Added 3.14 to the CI test matrix (Ubuntu,
+  Windows, macOS) and a `Programming Language :: Python :: 3.14`
+  classifier. The `requires-python >=3.10` floor is unchanged: this adds
+  a supported version, it does not drop any. recon imports and its
+  targeted suites pass on CPython 3.14.5 locally (all runtime and dev
+  dependencies resolve on 3.14), and the matrix exercises the full suite
+  there. The 3.14-only baseline from the external standards brief was
+  declined for the reason recorded in the roadmap: a broad support window
+  is part of the product for a tool meant to be consumed by other tools.
+
+No code paths changed. ruff + pyright clean; full suite green on the
+matrix.
+
 ## [1.9.27] - 2026-05-29
 
 ### MCP-onboarding UX: client-side config check + troubleshooting docs
