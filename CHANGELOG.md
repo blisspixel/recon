@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.39] - 2026-05-30
+
+### Decompose render_tenant_panel, part 1: extract the key-facts block (hardening phase, patch 2)
+
+First decomposition of `render_tenant_panel` (C901 ~96, the ~940-line main
+panel). The key-facts block (Provider / Tenant / Region / Auth / Cloud
+sovereignty / Multi-cloud rollup / Confidence, the densest branch cluster)
+is extracted into a `_render_key_facts(info) -> Text` helper. The panel
+shrinks to ~622 lines and the helper is independently readable and tested.
+
+Behavior is unchanged, guaranteed by the golden-output tests from v1.9.38
+(`tests/test_golden_renders.py`): the rendered panel is byte-identical
+across dense / sparse / hardened / verbose / explain cases. `render_tenant_panel`
+keeps its `# noqa: C901` until the remaining sections (services, surface,
+insights, posture, verbose / explain blocks) are extracted in the next
+patches and it drops under the cap; `_render_key_facts` carries its own
+marker for now (the auth label logic is still branchy).
+
+No source behavior changed.
+
 ## [1.9.38] - 2026-05-30
 
 ### Golden-output renderer tests + pre-2.0 hardening roadmap (hardening phase, patch 1)
