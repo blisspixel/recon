@@ -113,7 +113,10 @@ jobs:
         run: uv sync --extra dev
 
       - name: Export runtime requirements
-        run: uv export --frozen --no-dev --no-emit-project --no-hashes --format requirements.txt --output-file .ci-audit-requirements.txt
+        # Hash-pinned (no --no-hashes): per-package sha256 hashes are
+        # included so the audit reads a hash-pinned surface. Kept in
+        # lockstep with release.yml. pip-audit handles hashed requirements.
+        run: uv export --frozen --no-dev --no-emit-project --format requirements.txt --output-file .ci-audit-requirements.txt
 
       - name: Audit dependencies
         # PYSEC-2025-183 (CVE-2025-45768) is ignored deliberately, not

@@ -80,7 +80,10 @@ jobs:
         run: uv run python scripts/check_metadata_coverage.py
 
       - name: Export runtime requirements
-        run: uv export --frozen --no-dev --no-emit-project --no-hashes --format requirements.txt --output-file .ci-audit-requirements.txt
+        # Hash-pinned (no --no-hashes): the exported requirements carry
+        # per-package sha256 hashes, so the audit reads a hash-pinned
+        # surface. pip-audit handles hashed requirements.
+        run: uv export --frozen --no-dev --no-emit-project --format requirements.txt --output-file .ci-audit-requirements.txt
 
       - name: Audit dependencies
         # Mirrors ci.yml. PYSEC-2025-183 (CVE-2025-45768) is a disputed,
@@ -134,6 +137,34 @@ jobs:
         with:
           name: dist
           path: dist/
+
+  attest:
+    # SLSA build-provenance attestation. Kept in its own job, like
+    # publish-pypi and github-release, so the supply-chain isolation
+    # contract holds: this job downloads the sealed artifacts and runs
+    # NO project dependency code, so the id-token it is granted cannot be
+    # minted by a compromised dependency. It signs a provenance
+    # attestation (GitHub-native, OIDC) linking the wheel and sdist to
+    # this workflow run; verify later with `gh attestation verify`. Full
+    # SLSA L3 / Sigstore in-toto signing and reproducible builds stay
+    # deferred (see docs/roadmap.md); this closes most of the gap cheaply.
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/*"
 
   sbom:
     # Separate runner. dist/ does not exist in this workspace. A

@@ -14,7 +14,7 @@ import deal
 if not __debug__:
     deal.disable()
 
-_FALLBACK_VERSION = "1.9.31"
+_FALLBACK_VERSION = "1.9.32"
 
 
 def _source_tree_version() -> str | None:

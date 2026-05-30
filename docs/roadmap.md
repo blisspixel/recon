@@ -502,13 +502,15 @@ know is missing rather than only what we know is present:
   Bayesian inference core and the engine matchers, where a surviving
   mutant is the most diagnostic. Pairs with the `deal` contracts (a
   contract that never fails on a mutant is a contract worth tightening).
-- Build provenance and hash-pinned audit requirements. Adopted from the
-  standards review: add GitHub-native `actions/attest-build-provenance`
-  to `release.yml` for the wheel and sdist, and switch the exported audit
-  requirements to hash-pinned (`--require-hashes`). Full SLSA L3 plus
-  Sigstore in-toto signing and reproducible-build verification stay
-  deferred as disproportionate for a stdio tool at current scale, but the
-  cheap provenance step closes most of the gap.
+- ~~Build provenance and hash-pinned audit requirements.~~ **Shipped in
+  v1.9.32** - a separate `attest` job in `release.yml` signs a
+  GitHub-native `actions/attest-build-provenance` attestation for the
+  wheel and sdist (verify with `gh attestation verify`), kept out of the
+  build job so the supply-chain isolation contract holds; the exported
+  audit requirements in `ci.yml` and `release.yml` are now hash-pinned.
+  Full SLSA L3 plus Sigstore in-toto signing and reproducible-build
+  verification stay deferred as disproportionate for a stdio tool at
+  current scale, but the cheap provenance step closes most of the gap.
 
 These do not block v1.9.x or v2.0. The four oldest cheap ones
 (SECURITY.md, SBOM, secrets-scanning, forward-compat test) shipped by
