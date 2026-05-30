@@ -217,7 +217,7 @@ async def _run_with_timeout() -> DoctorReport:
     try:
         try:
             tool_names, checks = await asyncio.wait_for(_run_handshake(errlog), timeout=_HANDSHAKE_TIMEOUT_S)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return DoctorReport(
                 checks=(
                     DoctorCheck(

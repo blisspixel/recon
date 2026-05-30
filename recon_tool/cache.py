@@ -12,7 +12,7 @@ import json
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -176,7 +176,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
     EvidenceRecord tuple → list of dicts, detection_scores tuple-of-tuples → dict,
     all tuple fields → lists.
     """
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
     d: dict[str, Any] = {
         "_cached_at": now_iso,
         "_cache_version": _CACHE_VERSION,

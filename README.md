@@ -103,7 +103,7 @@ release; the catalog grows from observed gaps, not invented entries.
 
 ## Install
 
-Requires Python 3.10+.
+Requires Python 3.12+.
 
 ```bash
 pip install recon-tool                 # includes MCP server

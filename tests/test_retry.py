@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-
 import httpx
 import pytest
 
@@ -84,7 +82,7 @@ async def test_asyncio_timeout_is_transient() -> None:
         nonlocal call_count
         call_count += 1
         if call_count < 3:
-            raise asyncio.TimeoutError()
+            raise TimeoutError()
         return "ok"
 
     assert await timing_out() == "ok"

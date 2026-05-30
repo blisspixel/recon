@@ -9,7 +9,7 @@ Uses Hypothesis for property-based testing.
 from __future__ import annotations
 
 import string
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from io import StringIO
 
 from hypothesis import HealthCheck, assume, given, settings
@@ -136,7 +136,7 @@ class TestProperty2CertSummaryInvariants:
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_cert_summary_invariants(self, entries):
         """For any non-empty cert entries, CertSummary satisfies all invariants."""
-        now = datetime(2025, 6, 1, tzinfo=timezone.utc)
+        now = datetime(2025, 6, 1, tzinfo=UTC)
         cs = build_cert_summary(entries, now)
 
         # build_cert_summary may return None if all entries are invalid

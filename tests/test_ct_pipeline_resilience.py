@@ -16,6 +16,7 @@ layers blind despite ``--ct`` being passed.
 
 from __future__ import annotations
 
+from datetime import UTC
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -311,12 +312,12 @@ class TestAdaptiveRateLimiterPersistence:
         Inheriting day-old punishment would punish operators returning the
         next morning for yesterday's burst, which is the wrong behavior."""
         import json as _json
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
         state_dir = tmp_path / "rate-limit-state"
         state_dir.mkdir(parents=True, exist_ok=True)
-        old = datetime.now(timezone.utc) - timedelta(hours=48)
+        old = datetime.now(UTC) - timedelta(hours=48)
         (state_dir / "stale.json").write_text(
             _json.dumps(
                 {
@@ -371,7 +372,7 @@ class TestCertIntelCacheFirst:
         hitting either live provider. Corpus re-runs of size 5000+ have
         no business re-hitting crt.sh for apexes that were just fetched.
         """
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from recon_tool.ct_cache import CTCacheEntry
         from recon_tool.models import CertSummary
@@ -391,7 +392,7 @@ class TestCertIntelCacheFirst:
                 deployment_bursts=(),
             ),
             provider_used="crt.sh",
-            cached_at=datetime.now(timezone.utc).isoformat(),
+            cached_at=datetime.now(UTC).isoformat(),
             age_days=2,
         )
 

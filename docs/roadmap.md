@@ -4,15 +4,15 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.27** (MCP-onboarding UX: a client-side config
-check, `recon doctor --client=<name>`, that reads the config file a
-client loads and reports whether the `mcpServers.recon` stanza is
-present and well-formed; a troubleshooting section for the case where
-both server doctors pass but the tools still do not load; and a note on
-how approval semantics differ between the `recon mcp install` path and
-the plugin path. Standing work, not a numbered v2.0 item). v2.0 remains
-the mechanical schema-lock-and-tag event. Cumulative pre-v2.0 work since
-v1.9.3:
+Current release: **v1.9.28** (engineering-elevation series, patch 1:
+`py.typed` marker so downstream type checkers pick up recon's inline
+types, plus Python 3.14 added to the CI matrix and classifiers with the
+`>=3.10` floor unchanged at the time). The series is the adopted slice of
+a 2026-05 external-standards review, documented in the Engineering
+quality posture section below; the next patches raise the floor to 3.12,
+add quality gates (branch coverage plus a complexity refactor), and adopt
+`deal` Design-by-Contract. v2.0 remains the mechanical
+schema-lock-and-tag event. Cumulative pre-v2.0 work since v1.9.3:
 
 Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
 detail in `CHANGELOG.md` and the per-release validation memos):
@@ -44,7 +44,8 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.24 | Second corpus pass (lowered thresholds) plus shadow-handling consistency: 156 new fingerprints + 60 EXTEND variants across all six signal types, catalog grows 572 -> 788 entries; engine substring matchers (MX / NS / CAA / dmarc_rua / cname) all sort longest-first and SPF gains `filter_shadowed_matches` so a broader pattern cannot double-count alongside a narrower one; pre-existing cname-regex matcher bug fixed (9 patterns silently never-fired); audit residuals (priors clamp open `(0,1)`, per-file catalog cap); `tests/test_pattern_shadowing.py` adds a CI gate for future shadow / description / EXTEND-duplicate failures | `CHANGELOG.md` |
 | v1.9.25 | CT pipeline resilience (AIMD adaptive rate limiter + per-provider circuit breaker + persistent limiter state + cache-first short-circuit + `ct_attempt_outcome` field + `--ct-retry-from` multi-session workflow); Phase F catalog gap-fill (788 -> 808 entries, 20 cname_target additions); chain motif library 18 -> 22 | `CHANGELOG.md` |
 | v1.9.26 | Schema-contract polish (path-to-v2.0 item 1): JSON schema root scoped to single-domain success output; batch / NDJSON error-record shape declared as `$defs/BatchErrorRecord`; `BatchArray` / `BatchNdjsonRecord` defs added and inaccurate `BatchResult` prose corrected to match the emitter; pure-Python `classify_batch_record` rule set; conditional fields documented. No runtime output shape changed | `CHANGELOG.md`, `validation/v1.9.26-schema-contract.md` |
-| v1.9.27 | MCP-onboarding UX (standing work, not a numbered item): `recon doctor --client=<name>` reads a client's MCP config (all six supported clients) and reports whether the `mcpServers.recon` stanza is present and well-formed, with claude-code-specific handling of the `projects[...]` local-scope shape and a plugin-scope caveat; docs gain a "doctor passes but tools do not load" troubleshooting section (`/mcp`, `mcp__recon__*` naming, full-restart reminder) and a note on how approval semantics differ between the install and plugin paths | `CHANGELOG.md` |
+| v1.9.27 | MCP-onboarding UX (standing work, not a numbered item): `recon doctor --client=<name>` reads a client's MCP config (all six supported clients) and reports whether the `mcpServers.recon` stanza is present and well-formed, with claude-code-specific handling of the `projects[...]` local-scope shape and a plugin-scope caveat; docs gain a "doctor passes but tools do not load" troubleshooting section (`/mcp`, `mcp__recon__*` naming, full-restart reminder) and a note on how approval semantics differ between the install and plugin paths; also folds the 2026-05 external-standards review into the Engineering quality posture section | `CHANGELOG.md` |
+| v1.9.28 | Engineering-elevation series patch 1 (standing work, not a numbered item): `py.typed` marker (PEP 561) verified in the built wheel so downstream type checkers pick up recon's inline types; Python 3.14 added to the CI matrix (Ubuntu / Windows / macOS) and a `3.14` classifier, `>=3.10` floor unchanged. No runtime behavior change | `CHANGELOG.md` |
 
 **Outstanding before v2.0:** *(refined 2026-05-26 after the v1.9.24
 mega-batch; the v1.9.24 entry above absorbed items 1 and the
@@ -157,25 +158,31 @@ new work. Recommended sequencing is at the end.
    - Run `scripts/release.py`.
 
 **Recommended sequencing.** Items 1 through 3 ship as 1.9.x
-patches, one per coherent story. The actual order diverged from the
-original plan twice, both times because standing work claimed the next
-number: **v1.9.25** took the operator-paced CT-resilience + catalog
-story, sliding the schema-contract polish to v1.9.26; then **v1.9.27**
-took the MCP-onboarding story, sliding the docs-currency work to
-v1.9.28.
+patches, one per coherent story. The actual order kept diverging from the
+original plan because standing work claimed the next number: **v1.9.25**
+took the operator-paced CT-resilience + catalog story, sliding the
+schema-contract polish to v1.9.26; **v1.9.27** took the MCP-onboarding
+story; and the **engineering-elevation series** (the adopted slice of the
+2026-05 standards review, see Engineering quality posture) then claimed
+v1.9.28 onward, sliding the docs-currency work further down the line.
 
 - ~~**v1.9.25** lands the schema-contract polish (item 1).~~ Shipped
   instead as **v1.9.26** (v1.9.25 was the CT-pipeline-resilience patch).
-- **v1.9.27** lands MCP-onboarding UX: the `recon doctor --client`
-  config-side check plus the troubleshooting and approval-semantics
-  docs. Standing work, not a numbered item.
-- **v1.9.28** brings the release-notes draft current and refreshes the
-  validation summary (items 2 and 3 are both "v2.0 docs currency" and
-  ship together as one patch).
+- **v1.9.27** lands MCP-onboarding UX and folds in the standards review.
+  Standing work, not a numbered item.
+- **Engineering-elevation series** (standing work) runs as a sequence of
+  focused patches, each its own story: **v1.9.28** shipped `py.typed` +
+  the 3.14 matrix; the next patches raise the floor to `>=3.12`, add the
+  quality gates (branch coverage + the complexity refactor), adopt `deal`
+  Design-by-Contract, migrate to PEP 735, and add the provenance step.
+  Details and per-item rationale are in the Known gaps list.
+- **v2.0 docs currency** (original items 2 and 3): bring the release-notes
+  draft current and refresh the validation summary. Ships as one patch
+  once the elevation series settles, before the lock.
 - Item 4 runs in parallel on the operator's schedule and folds
   into the closure trail as it lands.
-- **v2.0.0** is item 5, the mechanical ceremony, after 1-3 are
-  in `main` and any pending scanner pass has settled.
+- **v2.0.0** is item 5, the mechanical ceremony, after the docs-currency
+  patch is in `main` and any pending scanner pass has settled.
 
 Current theme: treat correlation as inference
 over a graph of strictly public observables (DNS, CT, identity-discovery
@@ -315,52 +322,86 @@ A few patterns are distinctive enough to call out:
   generates random valid networks and evidence sets to surface
   edge cases unit tests miss.
 - **Pure-Python dependency floor.** No numpy, no scipy, no
-  probabilistic-programming framework. `pip install recon-tool`
-  pulls roughly eight runtime packages.
+  probabilistic-programming framework, no C-extension of our own
+  choosing. `pip install recon-tool` pulls roughly eight runtime
+  packages. One deliberate addition is planned: `deal` (pure-Python
+  Design-by-Contract), adopted from the 2026-05 standards review and
+  tracked in Known gaps; it is a no-op in production under `-O`, so it
+  adds an import, not runtime cost. The floor stays a hard constraint
+  otherwise: `cryptography` and `pydantic-core` are the only compiled
+  pieces in the tree, and both arrive transitively through `mcp` rather
+  than by our choice.
 
 ### External standards review (2026-05)
 
-A general-purpose Python-standards brief (uv-first toolchain,
-3.14 baseline, Pydantic/structlog at every boundary, mypy strict,
-95% branch coverage, NASA Power-of-10 control-flow rules, a
-portfolio-wide Copier template) was reviewed against this project.
-Most of it is already in place (uv + lockfile, grouped Dependabot,
-pre-commit with ruff / pyright / actionlint, pyright strict,
-pytest + coverage + Hypothesis, pip-audit in CI and release, SBOM,
-gitleaks, OIDC trusted-publisher). The items worth adopting are
-folded into Known gaps below. The rest were considered and
-declined, recorded here so the reasoning is durable:
+Two general-purpose Python-standards briefs were reviewed against this
+project (a first pass, then a sharper revision that argued a pure-Python
+-first, formally-contracted, supply-chain-hardened posture). Most of the
+combined ask is already in place (uv + lockfile, grouped Dependabot,
+pre-commit with ruff / pyright / actionlint, pyright strict, pytest +
+coverage + Hypothesis, pip-audit in CI and release, SBOM, gitleaks, OIDC
+trusted-publisher). The items worth adopting are folded into Known gaps
+below. This sub-section records the decisions, both the adoptions that
+reverse an earlier call and the declines, so the reasoning is durable.
 
-- **3.14-only baseline (drop 3.10 to 3.13)** - declined. recon is
-  meant to be consumed by other tools, so a broad support window is
-  part of the product. We keep `requires-python >=3.10` and instead
-  add 3.14 to the test matrix (see Known gaps).
+Adopted from the review:
+
+- **Raise the Python floor to `>=3.12`.** The first brief asked for a
+  3.14-only baseline, which we declined as hostile to downstream
+  consumers. The revision made the better argument: floor at 3.12, dev
+  and static-analysis baseline at 3.14, matrix 3.12 / 3.13 / 3.14. 3.10
+  reaches EOL on 2026-10-31 and 3.11 on 2027-10, so 3.12 buys upstream
+  security coverage through 2028 and lets the core use post-3.11 syntax
+  and typing. This is a deliberate floor raise (it drops 3.10 and 3.11),
+  tracked in Known gaps; v1.9.28 already added 3.14 to the matrix under
+  the old `>=3.10` floor, so the raise removes the two oldest rows rather
+  than adds work.
+- **Design-by-Contract via `deal`.** Pure-Python, so it clears the
+  no-C-extensions bar, and a no-op in production under `-O`. Adopted as a
+  real track on the highest-value surfaces (Bayesian fusion and the
+  engine matchers) where preconditions and postconditions catch errors
+  that types alone do not. This grows the runtime floor by one import, a
+  cost accepted for the verifiability gain. Tracked in Known gaps.
+- **Build-provenance attestation plus hash-pinned audit requirements.**
+  GitHub-native `actions/attest-build-provenance` (cheap, did not exist
+  when SLSA was first deferred) and `--require-hashes` on the exported
+  audit requirements. Full SLSA L3 and Sigstore in-toto signing stay
+  aspirational, not this cycle. Tracked in Known gaps.
+
+Declined, with the reason:
+
 - **Pydantic at every boundary plus structlog as runtime deps** -
-  declined. This would break the pure-Python dependency-floor
-  invariant above. Pydantic already rides in transitively via `mcp`,
-  so the MCP layer can lean on it without taking a new floor, but the
-  CLI and core keep their hand-rolled boundary validation
+  declined. This would break the pure-Python dependency-floor invariant
+  above for little gain. Pydantic already rides in transitively via
+  `mcp`, so the MCP layer can lean on it without taking a new floor, but
+  the CLI and core keep their hand-rolled boundary validation
   (`validator.py`, `strict_mode.py`, `schema_contract.py`,
-  `defusedxml`). The hedged, provenance-rich output is recon's
-  observability story; a structured-logging framework is sized for
-  long-running services, not a stdio tool.
+  `defusedxml`), which already follows "parse, don't validate" via frozen
+  dataclasses. `deal` covers the contract half the brief wanted from
+  Pydantic without the heavier dependency. The hedged, provenance-rich
+  output is recon's observability story; a structured-logging framework
+  is sized for long-running services, not a stdio tool.
 - **mypy strict on top of pyright** - declined as redundant. pyright
   strict already gates CI. Astral's `ty` may be worth a spike once it
   reaches 1.0; it is in preview, so not now.
 - **Blanket 95% branch coverage** - declined in favor of a measured
-  raise (see Known gaps); a flat target tends to buy execution, not
-  test quality.
+  raise (see Known gaps); branch coverage measured at 83% today, so the
+  honest gate sits near there, not at a flat 95% that buys execution
+  rather than test quality.
 - **Literal Power-of-10 rules** (two asserts per public function,
   50-line cap, line-length 100) - adapted rather than adopted. The
   intent, simple statically-analyzable control flow and bounded
   resources, is already a project value (resource caps, bounded
   clustering, rate limits). We encode the measurable part as a ruff
-  complexity cap (see Known gaps) and keep the deliberate 120 line
-  length.
+  complexity cap with a worst-offender refactor (see Known gaps) and keep
+  the deliberate 120 line length.
+- **Trivy and a Dockerfile** - not applicable. recon ships as a stdio
+  CLI and library on PyPI, not a container image, so there is no image to
+  scan. If a container is ever published, Trivy folds in then.
 - **Central Copier template plus reusable workflows across a repo
   portfolio** - out of scope for this roadmap. recon can serve as a
-  reference for that later, but the multi-repo machinery is not
-  recon's concern.
+  reference for that later, but the multi-repo machinery is not recon's
+  concern.
 
 ### Known gaps
 
@@ -384,60 +425,100 @@ know is missing rather than only what we know is present:
   `tests/test_cache_forward_compat.py` pins the implicit "ignore
   unknown fields, load known fields cleanly" contract that the
   reader has always honoured but never tested.
-- No `py.typed` marker (PEP 561). Surfaced by the 2026-05 standards
-  review: `pyproject.toml` carries the `Typing :: Typed` classifier
-  and CI runs pyright strict, but `recon_tool/py.typed` does not
-  exist, so a downstream consumer's type checker does not actually
-  pick up recon's inline types. Cheap to fix (the marker file plus a
-  hatch wheel-include line) and a good fit for the "good citizen"
-  posture. Recommended as a pre-v2.0 hygiene patch, since v2.0 is the
-  polished-everywhere release and a Typed classifier with no marker
-  is a polish defect.
-- Python 3.14 not yet in the support matrix. Add 3.14 to the
-  `ci.yml` test matrix and a `Programming Language :: Python :: 3.14`
-  classifier while keeping the `>=3.10` floor, and optionally add a
-  `.python-version` that pins the dev/CI toolchain (not the runtime
-  floor). A small standalone hygiene patch that keeps recon current
-  without dropping any consumer.
-- Branch coverage is not measured and the gate sits at 80% line
-  coverage. Turn on `--cov-branch`, name `server.py` (around 71%
-  line today) as the explicit under-covered target, and raise the
-  gate from 80 toward 85 as real coverage allows. A measured raise,
-  not a flat 95% target.
-- No complexity gate. Add ruff `C901` (mccabe `max-complexity`) plus
-  a small set of `PLR` refactor rules to encode simple,
-  statically-analyzable control flow as a measurable check. This is
-  the part of the Power-of-10 ask that pays off here; the literal
-  rules were declined above.
+- ~~No `py.typed` marker (PEP 561).~~ **Shipped in v1.9.28** -
+  `recon_tool/py.typed` added and verified present in the built wheel,
+  so a downstream consumer's type checker now picks up recon's inline
+  types. The `Typing :: Typed` classifier is no longer a false promise.
+- ~~Python 3.14 not in the support matrix.~~ **Shipped in v1.9.28** -
+  3.14 added to the `ci.yml` test matrix (Ubuntu, Windows, macOS) and a
+  `Programming Language :: Python :: 3.14` classifier added. recon
+  imports and passes its suites on CPython 3.14.5.
+- **Raise the Python floor to `>=3.12`** (engineering-elevation series).
+  Adopted from the standards review: drop 3.10 and 3.11, set the matrix
+  to 3.12 / 3.13 / 3.14, move `ruff target-version` and `pyright
+  pythonVersion` to 3.12, and pin the dev toolchain via `.python-version`
+  at 3.14. 3.10 reaches EOL on 2026-10-31; the floor raise sheds the
+  soon-unpatched versions and unlocks post-3.11 syntax and typing. This
+  drops two classifiers and is a deliberate breaking change for any
+  consumer still on 3.10 / 3.11, called out in the release notes. Ships
+  as its own patch so a consumer reading the changelog sees exactly when
+  the floor moved.
+- **Adopt Design-by-Contract via `deal`** (engineering-elevation series).
+  Add `deal` to the runtime dependencies and apply `@deal.pre` /
+  `@deal.post` / `@deal.inv` / `@deal.raises` contracts on the
+  highest-value surfaces first: the Bayesian fusion path (posteriors stay
+  in `(0, 1)`, evidence likelihoods strictly positive, the network stays
+  acyclic) and the engine matchers (specificity ordering, no double-count
+  after shadow filtering). Contracts run under test and local dev and are
+  disabled in production via `-O` (wire `deal.disable()` when not
+  `__debug__`) so there is zero runtime cost for installed users. Likely
+  more than one patch: first the dependency plus the inference-core
+  contracts, then a second pass over the matchers and validators. Updates
+  the dependency-floor note above (the floor grows by one deliberate
+  pure-Python import).
+- Branch coverage is not enforced and the gate sits at 80% line
+  coverage. Turn on `--cov-branch` in the CI and release test jobs (and
+  the local gate), name `server.py` (around 71% line today) as the
+  explicit under-covered target, and set the gate to a measured value.
+  Branch coverage measured at 83% as of v1.9.28, so the honest gate moves
+  to roughly 82, not the flat 95% the brief asked for.
+- No complexity gate. Decision from the standards review: add ruff `C901`
+  at `max-complexity=15` (28 functions exceed it today) plus the `PLR`
+  refactor family, and refactor the worst offenders rather than
+  grandfather them. The genuine monsters are concentrated
+  (`render_tenant_panel` at 96, `_lookup` at 77, `merge_results` at 64,
+  `_batch` at 60, `explain_insights` at 40, `tenant_info_from_dict` at
+  35); decomposing these into named helpers is the highest-value slice.
+  Each refactor preserves behavior and is verified against the existing
+  suite. Keep the deliberate 120 line length.
+- No deterministic fault-injection / chaos tests at the network
+  boundary. recon already carries retry, an adaptive rate limiter, a
+  per-provider circuit breaker, and `degraded_sources` handling; what is
+  missing is a test layer that *proves* that resilience by injecting
+  timeouts, malformed and truncated payloads, and partial provider
+  failures at the source boundary and asserting the hedged output and
+  exception hygiene hold. Fits recon squarely as a network tool.
+- No Hypothesis *stateful* testing. The `AdaptiveRateLimiter`, the
+  circuit breaker, and the cache are real state machines; a
+  `RuleBasedStateMachine` exercising sequences of acquire / success /
+  rate-limited / cooldown transitions would catch lifecycle bugs the
+  current single-shot property tests cannot. Pairs naturally with the
+  fault-injection layer.
+- Free-threaded 3.14t not exercised. Add the free-threaded build
+  (`3.14t`) to the matrix as a dependency-compatibility probe. recon is
+  asyncio-based with no shared mutable thread state, so the concurrency
+  discipline the brief asks for is largely already met; the value here is
+  catching a dependency that is not yet `cp314t`-ready before a user on
+  free-threaded Python hits it.
 - Dev dependencies still live under `[project.optional-dependencies]`.
-  Optional hygiene: migrate to PEP 735 `[dependency-groups]` plus a
-  `[tool.uv]` block so the dev set is not published as an installable
-  extra. Low risk, current uv idiom.
+  Hygiene: migrate to PEP 735 `[dependency-groups]` plus a `[tool.uv]`
+  block so the dev set is not published as an installable extra. Low
+  risk, current uv idiom.
 - No mutation testing - line coverage measures execution, not test
   quality. Still post-v2.0, but the standards review reaffirmed it as
   the chosen answer to "test quality beyond line coverage." Candidate
   scope when it lands: a mutmut or cosmic-ray spike against the
   Bayesian inference core and the engine matchers, where a surviving
-  mutant is the most diagnostic.
-- No SLSA provenance or reproducible-build verification. Full SLSA
-  plus reproducible builds stays deferred as disproportionate for a
-  stdio-only tool at current scale. Worth a second look, though:
-  GitHub-native build-provenance attestation
-  (`actions/attest-build-provenance`) did not exist when this was
-  first deferred and is now cheap, so a near-term `release.yml`
-  attestation step is being reconsidered separately from the heavier
-  reproducible-build work.
+  mutant is the most diagnostic. Pairs with the `deal` contracts (a
+  contract that never fails on a mutant is a contract worth tightening).
+- Build provenance and hash-pinned audit requirements. Adopted from the
+  standards review: add GitHub-native `actions/attest-build-provenance`
+  to `release.yml` for the wheel and sdist, and switch the exported audit
+  requirements to hash-pinned (`--require-hashes`). Full SLSA L3 plus
+  Sigstore in-toto signing and reproducible-build verification stay
+  deferred as disproportionate for a stdio tool at current scale, but the
+  cheap provenance step closes most of the gap.
 
-These do not block v1.9.x or v2.0, with one nuance: `py.typed` fits
-the v2.0 polish bar and is recommended before the lock. The four
-cheap ones (SECURITY.md, SBOM, secrets-scanning, forward-compat test)
-all shipped by v1.9.3.1 - the engineering-quality "what's still
-missing" list shrunk meaningfully in one patch. The cheap
-citizen-fixes above (`py.typed`, the 3.14 matrix) can ride along as
-small hygiene patches; the deeper ones (branch-coverage raise,
-complexity-gate backfill, mutation testing, provenance attestation)
-run post-v2.0 or in parallel, since v2.0 itself stays the mechanical
-schema-lock event with no new engine work.
+These do not block v1.9.x or v2.0. The four oldest cheap ones
+(SECURITY.md, SBOM, secrets-scanning, forward-compat test) shipped by
+v1.9.3.1; `py.typed` and the 3.14 matrix shipped in v1.9.28. The
+engineering-elevation series carries the rest as a sequence of focused
+patches: floor raise to 3.12, then quality gates (branch coverage plus
+the complexity refactor), then `deal` contracts, then PEP 735 and the
+provenance step, with the test-rigor layers (fault injection, stateful
+Hypothesis, 3.14t) and mutation testing running alongside or post-v2.0.
+v2.0 itself stays the mechanical schema-lock event with no new engine
+work.
 
 ## Success Metrics (Post-1.0)
 
