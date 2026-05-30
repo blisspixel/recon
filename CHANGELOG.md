@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.40] - 2026-05-30
+
+### Decompose tenant_info_from_dict (hardening phase, patch 3)
+
+Fully decomposes the cache deserializer `tenant_info_from_dict` (C901 35),
+dropping it under the cap so its `# noqa: C901` is removed. The five
+nested-loop block parsers are extracted into named helpers:
+`_cert_summary_from_dict`, `_surface_attributions_from_dict`,
+`_infrastructure_clusters_from_dict`, `_unclassified_chains_from_dict`,
+and `_chain_motifs_from_dict`. The main function is now a flat sequence of
+field reads and helper calls, and each parser is independently readable.
+
+Behavior is unchanged, confirmed by the cache round-trip, forward-compat,
+and cross-version-compatibility suites (131 tests). First grandfathered
+C901 marker removed from the v1.9.37 backlog.
+
+No source behavior changed.
+
 ## [1.9.39] - 2026-05-30
 
 ### Decompose render_tenant_panel, part 1: extract the key-facts block (hardening phase, patch 2)
