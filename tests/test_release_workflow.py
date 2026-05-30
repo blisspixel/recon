@@ -22,12 +22,17 @@ def test_release_workflow_does_not_grant_workflow_level_oidc() -> None:
     assert permissions == {"contents": "read"}
 
 
-def test_release_oidc_is_scoped_to_pypi_publish_job() -> None:
+def test_release_oidc_is_scoped_to_dependency_free_jobs() -> None:
     workflow = _load_release_workflow()
     jobs = workflow["jobs"]
 
     jobs_with_oidc = {name for name, job in jobs.items() if job.get("permissions", {}).get("id-token") == "write"}
-    assert jobs_with_oidc == {"publish-pypi"}
+    # Only jobs that run NO project dependency code may mint an OIDC token:
+    # publish-pypi (downloads the sealed dist and publishes it) and attest
+    # (downloads the sealed dist and signs a provenance attestation). Both
+    # are verified dependency-free in test_release_workflow_contract.py, so
+    # a compromised dependency cannot mint a token in either.
+    assert jobs_with_oidc == {"publish-pypi", "attest"}
     assert jobs["publish-pypi"]["environment"] == "pypi"
 
 
