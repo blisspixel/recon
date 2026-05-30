@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.36] - 2026-05-30
+
+### Migrate dev dependencies to PEP 735 dependency-groups (engineering elevation, patch 9)
+
+Packaging hygiene from the 2026-05 standards review. The dev toolchain
+moves from `[project.optional-dependencies].dev` to a PEP 735
+`[dependency-groups].dev` table, so it is no longer published as an
+installable `recon-tool[dev]` extra (that was never a real use case).
+
+- `pyproject.toml`: `[dependency-groups].dev`. uv treats `dev` as a
+  default group, so `uv sync` installs it and `uv sync --no-dev` /
+  `uv export --no-dev` still exclude it (verified). No `[tool.uv]` block
+  is needed; the default-group behavior is built in.
+- `ci.yml` and `release.yml`: the `uv sync --extra dev` calls became
+  plain `uv sync`; the `--no-dev` build and audit-export steps are
+  unchanged. The supply-chain isolation contract tests still pass (they
+  forbid `--extra dev` in the build and id-token jobs, which now holds
+  everywhere).
+- `README.md`, `CONTRIBUTING.md`: the dev-setup line now shows `uv sync`
+  with the pip equivalent for non-uv users
+  (`pip install -e . --group dev`, pip 25.1+). The old
+  `pip install -e ".[dev]"` no longer applies, since dependency-groups
+  are not pip extras.
+
+No runtime behavior changed; runtime dependencies are untouched.
+
 ## [1.9.35] - 2026-05-30
 
 ### Design-by-Contract second pass: engine matchers (engineering elevation, patch 8)
