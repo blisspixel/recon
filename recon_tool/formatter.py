@@ -1185,7 +1185,7 @@ def _pick_single_primary(joined: str) -> tuple[str, list[str]]:
     return parts[0], parts[1:]
 
 
-def detect_provider(
+def detect_provider(  # noqa: C901
     services: tuple[str, ...] | set[str],
     slugs: tuple[str, ...] | set[str] = (),
     primary_email_provider: str | None = None,
@@ -1473,7 +1473,7 @@ def _categorize_service(service: str, slug: str | None) -> str:
     return "Business Apps"
 
 
-def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:
+def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:  # noqa: C901
     """Group TenantInfo services into display categories.
 
     Two-pass classification:
@@ -1645,7 +1645,7 @@ def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:
     return {c: svcs for c in _SERVICE_CATEGORIES_ORDER if (svcs := by_cat.get(c))}
 
 
-def _compact_email_summary(info: TenantInfo, email_services: list[str]) -> list[str]:
+def _compact_email_summary(info: TenantInfo, email_services: list[str]) -> list[str]:  # noqa: C901
     """Build a short Email row when default deduplication removes everything.
 
     The default panel intentionally avoids a full protocol laundry list, but an
@@ -1771,7 +1771,7 @@ def _confidence_is_high(level: ConfidenceLevel) -> bool:
     return level == ConfidenceLevel.HIGH
 
 
-def render_tenant_panel(
+def render_tenant_panel(  # noqa: C901
     info: TenantInfo,
     show_services: bool = False,
     show_domains: bool = False,
@@ -3062,7 +3062,7 @@ def _markdown_escape(value: str) -> str:
     return value.translate(_MARKDOWN_ESCAPE)
 
 
-def format_tenant_markdown(info: TenantInfo) -> str:
+def format_tenant_markdown(info: TenantInfo) -> str:  # noqa: C901
     """Format TenantInfo as a markdown report."""
     lines: list[str] = []
     lines.append(f"# Tenant Report: {_markdown_escape(info.display_name)}")

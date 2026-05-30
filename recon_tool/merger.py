@@ -652,7 +652,7 @@ def compute_confidence(results: list[SourceResult]) -> tuple[ConfidenceLevel, bo
     return ConfidenceLevel.LOW, False
 
 
-def merge_results(
+def merge_results(  # noqa: C901
     results: list[SourceResult],
     queried_domain: str,
 ) -> TenantInfo:

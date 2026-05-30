@@ -231,7 +231,7 @@ class InferenceResult:
 # ── Loaders ────────────────────────────────────────────────────────────
 
 
-def load_network(path: Path | None = None) -> BayesianNetwork:
+def load_network(path: Path | None = None) -> BayesianNetwork:  # noqa: C901
     """Load and validate the Bayesian network YAML.
 
     Raises ``ValueError`` for malformed schema (unknown parents,

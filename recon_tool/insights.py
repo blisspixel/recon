@@ -221,7 +221,7 @@ def _auth_insights(ctx: InsightContext) -> list[str]:
     return []
 
 
-def _email_security_insights(ctx: InsightContext) -> list[str]:
+def _email_security_insights(ctx: InsightContext) -> list[str]:  # noqa: C901
     has_exchange = bool(ctx.slugs & _EXCHANGE_SLUGS)
     has_google = bool(ctx.slugs & _GOOGLE_SLUGS)
     # v0.9.3 honesty fix: a bare Exchange/Google-Workspace slug can

@@ -85,7 +85,7 @@ class ChainMotifMatch:
     chain: tuple[str, ...]
 
 
-def _validate_motif(raw: Any, source: str) -> ChainMotif | None:
+def _validate_motif(raw: Any, source: str) -> ChainMotif | None:  # noqa: C901
     if not isinstance(raw, dict):
         return None
     name = raw.get("name")

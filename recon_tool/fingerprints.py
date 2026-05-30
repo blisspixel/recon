@@ -214,7 +214,7 @@ def _validate_subdomain_txt_pattern(pattern: str, source: str, name: str) -> boo
     return _validate_regex(regex, f"{source}:{name}")
 
 
-def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None:
+def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None:  # noqa: C901
     """Validate a single fingerprint entry and return a frozen Fingerprint, or None.
 
     Does NOT mutate the input dict. Returns a frozen dataclass.

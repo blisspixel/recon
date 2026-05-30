@@ -110,7 +110,7 @@ def _classify_regression_severity(change: dict[str, Any]) -> str:
     return "low"
 
 
-def _classify_change_type(change: dict[str, Any]) -> str:
+def _classify_change_type(change: dict[str, Any]) -> str:  # noqa: C901
     """Classify whether a domain change is good, bad, mixed, or review-only."""
     positive = 0
     negative = 0
@@ -271,7 +271,7 @@ def compare_batch_results(before_results: list[dict[str, Any]], after_results: l
     }
 
 
-def render_summary_markdown(
+def render_summary_markdown(  # noqa: C901
     label: str,
     summary: dict[str, Any],
     results: list[dict[str, Any]],

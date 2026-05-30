@@ -237,7 +237,7 @@ def explain_signals(
     return records
 
 
-def explain_insights(
+def explain_insights(  # noqa: C901
     insights: list[str],
     slugs: frozenset[str],
     services: frozenset[str],
