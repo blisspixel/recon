@@ -25,7 +25,7 @@ from recon_tool.explanation import (
     explain_signals,
     serialize_explanation,
 )
-from recon_tool.merger import merge_results
+from recon_tool.merger import _PLACEHOLDER_DISPLAY_NAMES, merge_results
 from recon_tool.models import (
     CandidateValue,
     EvidenceRecord,
@@ -58,11 +58,16 @@ def _source(name: str, **kwargs: object) -> SourceResult:
 _slug_alphabet = st.sampled_from("abcdefghijklmnopqrstuvwxyz0123456789")
 _slug_st = st.text(alphabet=_slug_alphabet, min_size=2, max_size=12)
 
+# Exclude the merger's placeholder display names (e.g. "directory", "default
+# directory"): the merge legitimately rejects those and falls through to the
+# domain, so a property test asserting "second source's display_name wins"
+# must not generate a value the merger is designed to discard. Sourced from the
+# merger so the exclusion stays in sync if the placeholder set grows.
 _safe_text_st = st.text(
     alphabet=st.sampled_from("abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_."),
     min_size=1,
     max_size=40,
-).filter(lambda s: s.strip() == s and len(s.strip()) > 0)
+).filter(lambda s: s.strip() == s and len(s.strip()) > 0 and s.strip().lower() not in _PLACEHOLDER_DISPLAY_NAMES)
 
 _source_type_st = st.sampled_from(["TXT", "MX", "CNAME", "NS", "SPF", "CAA", "SRV", "HTTP"])
 
