@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.52] - 2026-06-01
+
+### Finish the formatter C901 sweep
+
+The last two over-cap functions in `formatter.py` are decomposed, so the whole
+file is now under the complexity cap of 15 with no remaining `# noqa: C901`.
+
+- **`recon_tool/formatter.py`.** `_categorize_services` splits into its two
+  classification passes (`_categorize_pass1_slugs`, `_categorize_pass2_names`,
+  sharing `_is_service_artifact`) plus the three post-passes that tidy the
+  result (`_dedup_identity_echoes`, `_consolidate_caa_issuers`,
+  `_infer_bundled_ai`); the function becomes a thin pipeline over `by_cat`.
+  `_compact_email_summary` splits into `_email_summary_providers` and
+  `_email_summary_controls` over a shared `_append_unique` helper.
+
+No runtime behavior change: the categorized Services block and the compact email
+summary are held byte-identical by the panel golden snapshots, the provider-line
+unit tests, and `test_formatter_coverage`.
+
 ## [1.9.51] - 2026-06-01
 
 ### Decompose _render_key_facts under the C901 cap
