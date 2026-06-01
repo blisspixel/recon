@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.54] - 2026-06-01
+
+### Core-module C901 cleanup (posture)
+
+- **`recon_tool/posture.py`.** `_validate_and_build_rule` drops under the
+  complexity cap by extracting `_parse_slug_condition` (the
+  slugs_any / slugs_min / slugs_max sub-parse, with the same defaulting and
+  skip-warnings as before). The function loses its `# noqa: C901` and
+  `posture.py` is now fully under the cap.
+
+No runtime behavior change: posture-rule validation is unchanged, verified by
+`test_posture_validation` and `test_enhanced_yaml`.
+
 ## [1.9.53] - 2026-06-01
 
 ### Begin the core-module C901 cleanup (insights)

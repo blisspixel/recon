@@ -130,7 +130,30 @@ def _parse_metadata_block(name: str, raw_metadata: list[Any]) -> tuple[_Metadata
     return tuple(conditions)
 
 
-def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule | None:  # noqa: C901
+def _parse_slug_condition(condition: dict[str, Any], name: str) -> tuple[tuple[str, ...], int, int | None]:
+    """Parse the slugs_any / slugs_min / slugs_max sub-block of a posture rule
+    condition, with the same defaulting and warnings as the inline version.
+    Returns ``((), 0, None)`` when no slug condition is present.
+    """
+    raw_slugs = condition.get("slugs_any")
+    if not (isinstance(raw_slugs, list) and raw_slugs):
+        return (), 0, None
+    slugs_any = tuple(raw_slugs)
+    slugs_min = condition.get("slugs_min", 1)
+    if not isinstance(slugs_min, int) or slugs_min < 0:
+        logger.warning("Posture rule %r has invalid slugs_min — defaulting to 1", name)
+        slugs_min = 1
+    slugs_max: int | None = None
+    raw_max = condition.get("slugs_max")
+    if raw_max is not None:
+        if isinstance(raw_max, int) and raw_max >= 0:
+            slugs_max = raw_max
+        else:
+            logger.warning("Posture rule %r has invalid slugs_max — ignored", name)
+    return slugs_any, slugs_min, slugs_max
+
+
+def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule | None:
     """Validate a single posture rule and return a frozen _PostureRule, or None."""
     if not isinstance(rule, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
         logger.warning("Posture rule at index %d is not a dict — skipped", index)
@@ -162,22 +185,7 @@ def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule |
         return None
 
     # Parse slug conditions
-    slugs_any: tuple[str, ...] = ()
-    slugs_min = 0
-    slugs_max: int | None = None
-    raw_slugs = condition.get("slugs_any")
-    if isinstance(raw_slugs, list) and raw_slugs:
-        slugs_any = tuple(raw_slugs)
-        slugs_min = condition.get("slugs_min", 1)
-        if not isinstance(slugs_min, int) or slugs_min < 0:
-            logger.warning("Posture rule %r has invalid slugs_min — defaulting to 1", name)
-            slugs_min = 1
-        raw_max = condition.get("slugs_max")
-        if raw_max is not None:
-            if isinstance(raw_max, int) and raw_max >= 0:
-                slugs_max = raw_max
-            else:
-                logger.warning("Posture rule %r has invalid slugs_max — ignored", name)
+    slugs_any, slugs_min, slugs_max = _parse_slug_condition(condition, name)
 
     # Parse metadata conditions
     metadata_conditions: tuple[_MetadataCondition, ...] = ()
