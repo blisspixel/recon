@@ -4,14 +4,16 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.28** (engineering-elevation series, patch 1:
-`py.typed` marker so downstream type checkers pick up recon's inline
-types, plus Python 3.14 added to the CI matrix and classifiers with the
-`>=3.10` floor unchanged at the time). The series is the adopted slice of
-a 2026-05 external-standards review, documented in the Engineering
-quality posture section below; the next patches raise the floor to 3.12,
-add quality gates (branch coverage plus a complexity refactor), and adopt
-`deal` Design-by-Contract. v2.0 remains the mechanical
+Current release: **v1.9.42** (pre-2.0 hardening phase, patch 5: restore
+the bare `recon <domain>` shorthand, which a Typer >=0.25 change that
+vendors its own Click had stopped routing to `lookup` on fresh installs). The
+engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
+`py.typed` marker, the `>=3.12` floor, branch coverage, `deal`
+Design-by-Contract, build-provenance attestation, PEP 735 dependency
+groups, and the C901 complexity gate); the project is now in the pre-2.0
+hardening phase described below (v1.9.38 onward). The series was the
+adopted slice of a 2026-05 external-standards review, documented in the
+Engineering quality posture section below. v2.0 remains the mechanical
 schema-lock-and-tag event. Cumulative pre-v2.0 work since v1.9.3:
 
 Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
@@ -46,6 +48,20 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.26 | Schema-contract polish (path-to-v2.0 item 1): JSON schema root scoped to single-domain success output; batch / NDJSON error-record shape declared as `$defs/BatchErrorRecord`; `BatchArray` / `BatchNdjsonRecord` defs added and inaccurate `BatchResult` prose corrected to match the emitter; pure-Python `classify_batch_record` rule set; conditional fields documented. No runtime output shape changed | `CHANGELOG.md`, `validation/v1.9.26-schema-contract.md` |
 | v1.9.27 | MCP-onboarding UX (standing work, not a numbered item): `recon doctor --client=<name>` reads a client's MCP config (all six supported clients) and reports whether the `mcpServers.recon` stanza is present and well-formed, with claude-code-specific handling of the `projects[...]` local-scope shape and a plugin-scope caveat; docs gain a "doctor passes but tools do not load" troubleshooting section (`/mcp`, `mcp__recon__*` naming, full-restart reminder) and a note on how approval semantics differ between the install and plugin paths; also folds the 2026-05 external-standards review into the Engineering quality posture section | `CHANGELOG.md` |
 | v1.9.28 | Engineering-elevation series patch 1 (standing work, not a numbered item): `py.typed` marker (PEP 561) verified in the built wheel so downstream type checkers pick up recon's inline types; Python 3.14 added to the CI matrix (Ubuntu / Windows / macOS) and a `3.14` classifier, `>=3.10` floor unchanged. No runtime behavior change | `CHANGELOG.md` |
+| v1.9.29 | Engineering-elevation patch 2: Python floor raised to `>=3.12` (drops 3.10 / 3.11), matrix set to 3.12 / 3.13 / 3.14, `ruff` and `pyright` baselines moved to 3.12. Deliberate breaking change for 3.10 / 3.11 consumers | `CHANGELOG.md` |
+| v1.9.30 | Engineering-elevation patch 3: `--cov-branch` enabled in the CI matrix, the release test job, and the local gate; coverage gate moved from 80% line to 82% branch | `CHANGELOG.md` |
+| v1.9.31 | Engineering-elevation patch 4: `deal` Design-by-Contract first pass on the Bayesian inference core (no-op in production under `-O`); `tests/test_contracts.py` proves the contracts fire on violation | `CHANGELOG.md` |
+| v1.9.32 | Engineering-elevation patch 5: build-provenance attestation for the wheel and sdist (`actions/attest-build-provenance`) plus hash-pinned exported audit requirements | `CHANGELOG.md` |
+| v1.9.33 | Engineering-elevation patch 6: stateful Hypothesis machine for the rate limiter / circuit breaker (`test_rate_limit_stateful.py`) plus a free-threaded 3.14t CI probe (experimental, `continue-on-error`) | `CHANGELOG.md` |
+| v1.9.34 | Engineering-elevation patch 7: `ConfidenceLevel` converted to `StrEnum` | `CHANGELOG.md` |
+| v1.9.35 | Engineering-elevation patch 8: `deal` second pass on the engine matchers (`filter_shadowed_matches` no-double-count invariant, `evaluate_pattern` match-count bounds) | `CHANGELOG.md` |
+| v1.9.36 | Engineering-elevation patch 9: dev dependencies migrated to a PEP 735 `[dependency-groups].dev` table (no longer published as a `recon-tool[dev]` extra) | `CHANGELOG.md` |
+| v1.9.37 | Engineering-elevation patch 10: ruff `C901` complexity gate enabled at `max-complexity=15`; the 28 functions over the cap carry `# noqa: C901` and are decomposed incrementally | `CHANGELOG.md` |
+| v1.9.38 | Pre-2.0 hardening patch 1: golden-output renderer characterization tests (`tests/test_golden_renders.py`, fictional brands) plus the pre-2.0 hardening roadmap | `CHANGELOG.md` |
+| v1.9.39 | Pre-2.0 hardening patch 2: `render_tenant_panel` decomposition part 1 (key-facts block extracted to `_render_key_facts`), output held byte-identical by the golden tests | `CHANGELOG.md` |
+| v1.9.40 | Pre-2.0 hardening patch 3: `tenant_info_from_dict` decomposed under the C901 cap via five named block parsers; first grandfathered `# noqa: C901` marker removed | `CHANGELOG.md` |
+| v1.9.41 | Pre-2.0 hardening patch 4: IDN-to-punycode handling in `validate_domain` plus an NDJSON aggregator parsing fix (`validation/corpus_aggregator.py`), both surfaced by a $0 passive corpus run | `CHANGELOG.md` |
+| v1.9.42 | Pre-2.0 hardening patch 5: restore the bare `recon <domain>` shorthand on fresh installs. Typer >=0.25 vendors its own Click, so `_DomainGroup`'s `except click.UsageError` never saw the vendored error; it now routes a dotted, non-flag, non-subcommand first arg to `lookup` before normal resolution instead | `CHANGELOG.md` |
 
 ## Pre-2.0 hardening phase (current)
 

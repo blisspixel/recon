@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.42] - 2026-06-01
+
+### Restore the bare `recon <domain>` shorthand on fresh installs
+
+`recon contoso.com` (the shorthand that routes a domain-like first argument
+to the `lookup` command, without an explicit subcommand) stopped working on
+fresh installs. The cause was a dependency change, not our routing logic:
+Typer >=0.25 vendors its own copy of Click, so the `UsageError` raised during
+command resolution is `typer._click`'s, not the top-level `click`'s. The
+group's `except click.UsageError` catch-and-retry never saw the vendored
+exception, so a bare domain fell through as "No such command".
+
+- **`recon_tool/cli.py`.** `_DomainGroup.resolve_command` now routes a
+  domain-like first argument (contains a dot, is not a known subcommand, does
+  not start with `-`) to `lookup` before normal resolution, rather than
+  catching a resolution error and retrying. The up-front form does not depend
+  on which Click raised the error.
+- **`tests/test_cli.py`.** A `test_bare_domain_routes_to_lookup` regression
+  guard exercises the routing through `CliRunner` so a future Typer or Click
+  change that breaks the shorthand fails CI.
+
 ## [1.9.41] - 2026-05-30
 
 ### IDN handling + aggregator fix from a $0 corpus validation (hardening phase, patch 4)

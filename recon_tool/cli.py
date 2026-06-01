@@ -93,14 +93,19 @@ class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseC
         ctx: click.Context,
         args: list[str],
     ) -> tuple[str | None, click.Command | None, list[str]]:
-        # Try normal subcommand resolution first
-        try:
-            return super().resolve_command(ctx, args)
-        except click.UsageError:
-            # If the first arg looks like a domain, route to lookup
-            if args and "." in args[0] and args[0] not in _SUBCOMMANDS and not args[0].startswith("-"):
-                return super().resolve_command(ctx, ["lookup", *args])
-            raise
+        # Route a domain-like first arg to ``lookup`` *before* normal
+        # resolution, rather than catching a "no such command" error and
+        # retrying. The catch-and-retry form depended on which Click raised
+        # the error: Typer >=0.25 vendors its own Click, so the UsageError is
+        # ``typer._click``'s, not the top-level ``click``'s, and an
+        # ``except click.UsageError`` silently misses it (the regression that
+        # broke ``recon <domain>`` on fresh installs). Rewriting up front has
+        # no such dependency. A domain always contains a dot and no subcommand
+        # does, so a dotted, non-flag arg that is not a known subcommand is a
+        # domain.
+        if args and "." in args[0] and args[0] not in _SUBCOMMANDS and not args[0].startswith("-"):
+            args = ["lookup", *args]
+        return super().resolve_command(ctx, args)
 
 
 app = typer.Typer(
