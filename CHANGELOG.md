@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.48] - 2026-06-01
+
+### Extend the golden net for the markdown renderer
+
+Before decomposing `format_tenant_markdown` (the next C901 target), pin the
+render branches the existing markdown fixtures leave dark.
+
+- **`tests/test_golden_renders.py`.** A `_markdown_rich_info` fixture (Contoso,
+  fictional) carries a Google Workspace service set, GWS auth type / identity
+  provider / active modules / CSE, and a degraded source. The new
+  `markdown_rich` snapshot pins the GWS services split, the GWS details block,
+  and the degraded-sources footer note, none of which the dense or sparse
+  fixtures reach.
+
+No runtime behavior change.
+
 ## [1.9.47] - 2026-06-01
 
 ### render_tenant_panel decomposition part 3 (final): under the C901 cap

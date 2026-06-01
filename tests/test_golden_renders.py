@@ -178,6 +178,51 @@ def _surface_rich_info() -> TenantInfo:
     )
 
 
+def _markdown_rich_info() -> TenantInfo:
+    """A tenant exercising the markdown branches the dense/sparse fixtures leave
+    dark: a Google Workspace services split, the GWS details block (auth type,
+    IdP, active modules, CSE), and the degraded-sources footer note. Contoso,
+    fictional.
+
+    Pins ``format_tenant_markdown`` paths that ``fully_populated_tenant_info``
+    (no GWS service, no degraded sources) does not reach, so that renderer can
+    be decomposed with the same byte-identical guarantee as the panel.
+    """
+    return TenantInfo(
+        tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        display_name="Contoso Ltd",
+        default_domain="contoso.com",
+        queried_domain="contoso.com",
+        confidence=ConfidenceLevel.HIGH,
+        region="NA",
+        sources=("oidc_discovery", "dns_records", "cert_transparency"),
+        services=(
+            "Microsoft 365",
+            "Google Workspace",
+            "Google Workspace: Drive",
+            "Google Workspace: CSE",
+            "Slack",
+        ),
+        slugs=("microsoft365", "google-workspace", "slack"),
+        auth_type="Federated",
+        domain_count=2,
+        tenant_domains=("contoso.com", "contoso.onmicrosoft.com"),
+        related_domains=("api.contoso.com",),
+        insights=("Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)",),
+        degraded_sources=("crt.sh",),
+        google_auth_type="SSO (SAML)",
+        google_idp_name="Okta",
+        cert_summary=CertSummary(
+            cert_count=42,
+            issuer_diversity=3,
+            issuance_velocity=7,
+            newest_cert_age_days=2,
+            oldest_cert_age_days=365,
+            top_issuers=("Let's Encrypt", "DigiCert"),
+        ),
+    )
+
+
 class TestGoldenPanelRenders:
     """render_tenant_panel output is pinned across decomposition."""
 
@@ -225,3 +270,8 @@ class TestGoldenMarkdownRenders:
 
     def test_markdown_sparse(self) -> None:
         _check_golden("markdown_sparse", format_tenant_markdown(_sparse_info()))
+
+    def test_markdown_rich(self) -> None:
+        # Pins the GWS services split, the GWS details block (auth, IdP, active
+        # modules, CSE), and the degraded-sources footer note.
+        _check_golden("markdown_rich", format_tenant_markdown(_markdown_rich_info()))

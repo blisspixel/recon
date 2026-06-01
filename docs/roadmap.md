@@ -4,13 +4,12 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.47** (pre-2.0 hardening phase, patch 10:
-`render_tenant_panel` decomposition part 3, the final one. The remaining
-sections (Services, the passive-DNS ceiling, the related-domain and footprint
-listings, insights, certs, the degraded-sources note, verbose and explain
-detail) move to focused helpers, all under the C901 cap, and the panel drops
-from 59 to under 15 so its grandfathered `# noqa: C901` is removed. Output held
-byte-identical by the golden snapshots throughout). The
+Current release: **v1.9.48** (pre-2.0 hardening phase, patch 11: extend the
+golden-output net for the markdown renderer before decomposing it. A
+`_markdown_rich_info` fixture plus a `markdown_rich` snapshot pin the branches
+the dense/sparse fixtures left dark: the Google Workspace services split, the
+GWS details block (auth, IdP, active modules, CSE), and the degraded-sources
+footer note). The
 engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
 `py.typed` marker, the `>=3.12` floor (relaxed back to `>=3.11` in v1.9.43),
 branch coverage, `deal`
@@ -72,6 +71,7 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.45 | Pre-2.0 hardening patch 8: `render_tenant_panel` decomposition part 2. The ~100-line External surface section moves to `_render_external_surface` with `_surface_partition` / `_append_individual_rows` / `_append_collapsed_rows` sub-helpers, each under the C901 cap; the panel drops from 74 to 59. Output held byte-identical by the v1.9.44 `panel_surface_full` snapshot | `CHANGELOG.md` |
 | v1.9.46 | Pre-2.0 hardening patch 9: fix a flaky merge property test surfaced during the v1.9.47 work. `merge_results` discards placeholder display names ("directory" / "default directory") in favour of better signals; `test_first_none_skipped`'s text strategy could generate one and then assert it survived. The placeholder set moves to module scope in `merger.py` and the test strategy excludes it, so the property holds for every generated input | `CHANGELOG.md` |
 | v1.9.47 | Pre-2.0 hardening patch 10: `render_tenant_panel` decomposition part 3 (final). The remaining sections move to focused helpers (`_render_services` / `_strip_email_noise` / `_append_subdomain_summary`, `_render_passive_dns_ceiling`, the related-domain and footprint renderers, `_render_insights` / `_append_wrapped_lines`, `_render_certs`, `_render_degraded_note` / `_degraded_note_parts`, `_render_verbose_detail`, `_render_explain_conflicts`), all under the C901 cap; the panel drops 59 to under 15 and its `# noqa: C901` is removed. Output held byte-identical by the golden snapshots | `CHANGELOG.md` |
+| v1.9.48 | Pre-2.0 hardening patch 11: extend the golden net for `format_tenant_markdown` before decomposing it. A `_markdown_rich_info` fixture plus a `markdown_rich` snapshot pin the dark branches (GWS services split, GWS details block with auth / IdP / active modules / CSE, degraded-sources footer) | `CHANGELOG.md` |
 
 ## Pre-2.0 hardening phase (current)
 
