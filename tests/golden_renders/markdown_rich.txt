@@ -1,0 +1,57 @@
+# Tenant Report: Contoso Ltd
+
+**Domain:** contoso.com  
+**Tenant ID:** `a1b2c3d4-e5f6-7890-abcd-ef1234567890`  
+**Default Domain:** contoso.com  
+**Region:** NA  
+**Auth Type:** Federated  
+**Confidence:** high (3 sources)  
+**Evidence Confidence:** medium  
+**Inference Confidence:** medium  
+
+## Microsoft 365 Services
+
+- Microsoft 365
+
+## Google Workspace Services
+
+- Google Workspace
+- Google Workspace: Drive
+- Google Workspace: CSE
+
+## Tech Stack
+
+- Slack
+
+## Google Workspace
+
+**Auth Type:** SSO \(SAML\)  
+**Identity Provider:** Okta  
+**Active Modules:** Drive, CSE  
+**CSE:** Google Workspace: CSE  
+
+## Insights
+
+- Email security 4/5 strong \(DMARC reject, DKIM, SPF strict, MTA-STS\)
+
+## Certificate Intelligence
+
+- **Total Certificates:** 42
+- **Issuer Diversity:** 3 distinct issuers
+- **Issuance Velocity:** 7 certs in last 90 days
+- **Newest Cert Age:** 2 days
+- **Oldest Cert Age:** 365 days
+- **Top Issuers:** Let's Encrypt, DigiCert
+
+## Tenant Domains (2)
+
+- contoso.com
+- contoso.onmicrosoft.com
+
+## Related Domains
+
+- api.contoso.com
+
+---
+*Note: Some sources were unavailable (crt.sh) — subdomain discovery may be incomplete.*  
+*Sources: oidc_discovery, dns_records, cert_transparency*
