@@ -3101,8 +3101,8 @@ def _markdown_escape(value: str) -> str:
     return value.translate(_MARKDOWN_ESCAPE)
 
 
-def format_tenant_markdown(info: TenantInfo) -> str:  # noqa: C901
-    """Format TenantInfo as a markdown report."""
+def _md_header(info: TenantInfo) -> list[str]:
+    """Title and key-facts block of the markdown report."""
     lines: list[str] = []
     lines.append(f"# Tenant Report: {_markdown_escape(info.display_name)}")
     lines.append("")
@@ -3120,98 +3120,109 @@ def format_tenant_markdown(info: TenantInfo) -> str:  # noqa: C901
         f"**Inference Confidence:** {info.inference_confidence.value}  "
     )
     lines.append("")
+    return lines
 
-    # Services split — group by provider_group when available
-    if info.services:
-        m365_svcs = [s for s in info.services if _is_m365_service(s)]
-        gws_svcs = [s for s in info.services if _is_gws_service(s)]
-        other_svcs = [s for s in info.services if not _is_m365_service(s) and not _is_gws_service(s)]
 
-        if m365_svcs:
-            lines.append("## Microsoft 365 Services")
+def _md_services_split(info: TenantInfo) -> list[str]:
+    """Services grouped into Microsoft 365 / Google Workspace / Tech Stack."""
+    if not info.services:
+        return []
+    m365_svcs = [s for s in info.services if _is_m365_service(s)]
+    gws_svcs = [s for s in info.services if _is_gws_service(s)]
+    other_svcs = [s for s in info.services if not _is_m365_service(s) and not _is_gws_service(s)]
+    lines: list[str] = []
+    for header, svcs in (
+        ("## Microsoft 365 Services", m365_svcs),
+        ("## Google Workspace Services", gws_svcs),
+        ("## Tech Stack", other_svcs),
+    ):
+        if svcs:
+            lines.append(header)
             lines.append("")
-            for svc in m365_svcs:
+            for svc in svcs:
                 lines.append(f"- {svc}")
             lines.append("")
+    return lines
 
-        if gws_svcs:
-            lines.append("## Google Workspace Services")
-            lines.append("")
-            for svc in gws_svcs:
-                lines.append(f"- {svc}")
-            lines.append("")
 
-        if other_svcs:
-            lines.append("## Tech Stack")
-            lines.append("")
-            for svc in other_svcs:
-                lines.append(f"- {svc}")
-            lines.append("")
-
-    # Google Workspace details section
+def _md_gws_details(info: TenantInfo) -> list[str]:
+    """Google Workspace details: auth type, identity provider, active modules,
+    and client-side encryption."""
     gws_slugs = set(info.slugs)
     has_gws = any(_is_gws_service(s) for s in info.services) or "google-workspace" in gws_slugs
-    if has_gws:
-        lines.append("## Google Workspace")
-        lines.append("")
-        if info.google_auth_type:
-            lines.append(f"**Auth Type:** {_markdown_escape(info.google_auth_type)}  ")
-        if info.google_idp_name:
-            lines.append(f"**Identity Provider:** {_markdown_escape(info.google_idp_name)}  ")
-        # Active modules from GWS CNAME detections
-        gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
-        if gws_modules:
-            lines.append(f"**Active Modules:** {', '.join(gws_modules)}  ")
-        # CSE details
-        cse_svcs = [s for s in info.services if "CSE" in s]
-        if cse_svcs:
-            lines.append(f"**CSE:** {', '.join(cse_svcs)}  ")
-        lines.append("")
+    if not has_gws:
+        return []
+    lines: list[str] = ["## Google Workspace", ""]
+    if info.google_auth_type:
+        lines.append(f"**Auth Type:** {_markdown_escape(info.google_auth_type)}  ")
+    if info.google_idp_name:
+        lines.append(f"**Identity Provider:** {_markdown_escape(info.google_idp_name)}  ")
+    # Active modules from GWS CNAME detections.
+    gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
+    if gws_modules:
+        lines.append(f"**Active Modules:** {', '.join(gws_modules)}  ")
+    cse_svcs = [s for s in info.services if "CSE" in s]
+    if cse_svcs:
+        lines.append(f"**CSE:** {', '.join(cse_svcs)}  ")
+    lines.append("")
+    return lines
 
-    # Insights
-    if info.insights:
-        lines.append("## Insights")
-        lines.append("")
-        for insight in info.insights:
-            # Defense in depth: insight text is built from charset-constrained
-            # labels and closed-vocab provider names today, but escape it so
-            # the markdown report's safety does not depend on every current
-            # and future insight contributor staying within a safe alphabet.
-            lines.append(f"- {_markdown_escape(insight)}")
-        lines.append("")
 
-    # Certificate Intelligence
-    if info.cert_summary is not None:
-        cs = info.cert_summary
-        lines.append("## Certificate Intelligence")
-        lines.append("")
-        lines.append(f"- **Total Certificates:** {cs.cert_count}")
-        lines.append(f"- **Issuer Diversity:** {cs.issuer_diversity} distinct issuers")
-        lines.append(f"- **Issuance Velocity:** {cs.issuance_velocity} certs in last 90 days")
-        lines.append(f"- **Newest Cert Age:** {cs.newest_cert_age_days} days")
-        lines.append(f"- **Oldest Cert Age:** {cs.oldest_cert_age_days} days")
-        if cs.top_issuers:
-            lines.append(f"- **Top Issuers:** {', '.join(_markdown_escape(i) for i in cs.top_issuers)}")
-        lines.append("")
+def _md_insights(info: TenantInfo) -> list[str]:
+    """Insights section. Insight text is markdown-escaped as defense in depth so
+    the report's safety does not depend on every current and future insight
+    staying within a safe alphabet."""
+    if not info.insights:
+        return []
+    lines: list[str] = ["## Insights", ""]
+    for insight in info.insights:
+        lines.append(f"- {_markdown_escape(insight)}")
+    lines.append("")
+    return lines
 
-    # Domains
-    if info.tenant_domains:
-        lines.append(f"## Tenant Domains ({info.domain_count})")
-        lines.append("")
-        for d in info.tenant_domains:
-            lines.append(f"- {d}")
-        lines.append("")
 
-    # Related domains
-    if info.related_domains:
-        lines.append("## Related Domains")
-        lines.append("")
-        for d in info.related_domains:
-            lines.append(f"- {d}")
-        lines.append("")
+def _md_cert_intel(info: TenantInfo) -> list[str]:
+    """Certificate-intelligence section."""
+    if info.cert_summary is None:
+        return []
+    cs = info.cert_summary
+    lines: list[str] = ["## Certificate Intelligence", ""]
+    lines.append(f"- **Total Certificates:** {cs.cert_count}")
+    lines.append(f"- **Issuer Diversity:** {cs.issuer_diversity} distinct issuers")
+    lines.append(f"- **Issuance Velocity:** {cs.issuance_velocity} certs in last 90 days")
+    lines.append(f"- **Newest Cert Age:** {cs.newest_cert_age_days} days")
+    lines.append(f"- **Oldest Cert Age:** {cs.oldest_cert_age_days} days")
+    if cs.top_issuers:
+        lines.append(f"- **Top Issuers:** {', '.join(_markdown_escape(i) for i in cs.top_issuers)}")
+    lines.append("")
+    return lines
 
-    # Footer
-    lines.append("---")
+
+def _md_tenant_domains(info: TenantInfo) -> list[str]:
+    """Tenant-domains section."""
+    if not info.tenant_domains:
+        return []
+    lines: list[str] = [f"## Tenant Domains ({info.domain_count})", ""]
+    for d in info.tenant_domains:
+        lines.append(f"- {d}")
+    lines.append("")
+    return lines
+
+
+def _md_related_domains(info: TenantInfo) -> list[str]:
+    """Related-domains section."""
+    if not info.related_domains:
+        return []
+    lines: list[str] = ["## Related Domains", ""]
+    for d in info.related_domains:
+        lines.append(f"- {d}")
+    lines.append("")
+    return lines
+
+
+def _md_footer(info: TenantInfo) -> list[str]:
+    """Footer: separator, optional degraded-sources note, and the sources line."""
+    lines: list[str] = ["---"]
     if info.degraded_sources:
         sources_list = ", ".join(info.degraded_sources)
         lines.append(
@@ -3219,7 +3230,26 @@ def format_tenant_markdown(info: TenantInfo) -> str:  # noqa: C901
         )
     lines.append(f"*Sources: {', '.join(info.sources)}*")
     lines.append("")
+    return lines
 
+
+def format_tenant_markdown(info: TenantInfo) -> str:
+    """Format TenantInfo as a markdown report.
+
+    A thin orchestrator over the per-section ``_md_*`` builders, each of which
+    returns its lines (or an empty list when the section does not apply).
+    Output held byte-identical by ``tests/test_golden_renders.py``
+    (``markdown_dense`` / ``markdown_sparse`` / ``markdown_rich``).
+    """
+    lines: list[str] = []
+    lines.extend(_md_header(info))
+    lines.extend(_md_services_split(info))
+    lines.extend(_md_gws_details(info))
+    lines.extend(_md_insights(info))
+    lines.extend(_md_cert_intel(info))
+    lines.extend(_md_tenant_domains(info))
+    lines.extend(_md_related_domains(info))
+    lines.extend(_md_footer(info))
     return "\n".join(lines)
 
 

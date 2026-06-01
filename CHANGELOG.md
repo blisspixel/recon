@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.49] - 2026-06-01
+
+### Decompose format_tenant_markdown under the C901 cap
+
+- **`recon_tool/formatter.py`.** The markdown report renderer's eight sections
+  move to focused builders (`_md_header`, `_md_services_split`,
+  `_md_gws_details`, `_md_insights`, `_md_cert_intel`, `_md_tenant_domains`,
+  `_md_related_domains`, `_md_footer`), each returning its list of lines (empty
+  when the section does not apply). `format_tenant_markdown` becomes a thin
+  orchestrator that concatenates them in the original order, drops under the
+  cap of 15, and loses its `# noqa: C901`.
+
+No runtime behavior change: the output is held byte-identical by the
+`markdown_dense`, `markdown_sparse`, and `markdown_rich` golden snapshots.
+
 ## [1.9.48] - 2026-06-01
 
 ### Extend the golden net for the markdown renderer
