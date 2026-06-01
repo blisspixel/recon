@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.51] - 2026-06-01
+
+### Decompose _render_key_facts under the C901 cap
+
+- **`recon_tool/formatter.py`.** The key-facts block builder (Provider, Tenant
+  / Region, Auth, Cloud, Multi-cloud, Confidence) drops under the cap of 15. Its
+  `_field` closure becomes the module-level `_append_field`, and the three
+  branch-heavy lines move to pure builders: `_key_facts_provider_line`,
+  `_key_facts_auth_line` (with a small `_with_idp` helper for the shared
+  "label via IdP" pattern), and `_key_facts_multicloud_line`. `_render_key_facts`
+  is now a flat sequence of field appends and loses its `# noqa: C901`.
+
+No runtime behavior change: output held byte-identical by the panel golden
+snapshots in `tests/test_golden_renders.py`.
+
 ## [1.9.50] - 2026-06-01
 
 ### Decompose detect_provider under the C901 cap
