@@ -71,7 +71,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
         include:
           # Free-threaded 3.14 (PEP 703), Ubuntu only, as a
           # dependency-compatibility probe. recon is asyncio-based with no
@@ -85,7 +85,7 @@ jobs:
     # `.python-version` pins the local and dev toolchain to 3.14. In CI the
     # matrix has to win, so force uv to the matrix interpreter; without this
     # uv reads `.python-version` and runs every matrix job on 3.14, which
-    # would silently defeat the 3.12 / 3.13 coverage.
+    # would silently defeat the 3.11 / 3.12 / 3.13 coverage.
     env:
       UV_PYTHON: ${{ matrix.python-version }}
     # Non-blocking only for the experimental free-threaded probe above;

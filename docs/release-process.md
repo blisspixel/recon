@@ -150,7 +150,7 @@ is enforced.
 The supported range is the set advertised in `pyproject.toml` classifiers and
 tested in CI.
 
-Current tested range: **Python 3.12 through 3.14**.
+Current tested range: **Python 3.11 through 3.14**.
 
 Dropping a Python version is a compatibility change and should be called out in
 `CHANGELOG.md`. A minor release should warn first when practical.
