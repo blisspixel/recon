@@ -4,11 +4,11 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.44** (pre-2.0 hardening phase, patch 7: extend the
-golden-output safety net before more `render_tenant_panel` decomposition. A
-new fixture pins the render branches the prior golden fixture left dark, the
-external-surface attributions and unclassified CNAME chains, so the next
-decomposition steps stay byte-identical on those paths too). The
+Current release: **v1.9.45** (pre-2.0 hardening phase, patch 8:
+`render_tenant_panel` decomposition part 2, the External surface section
+extracted to `_render_external_surface` plus three small sub-helpers, all
+under the C901 cap. Output held byte-identical by the v1.9.44 golden
+snapshots; the panel's own complexity drops 74 to 59). The
 engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
 `py.typed` marker, the `>=3.12` floor (relaxed back to `>=3.11` in v1.9.43),
 branch coverage, `deal`
@@ -67,6 +67,7 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.42 | Pre-2.0 hardening patch 5: restore the bare `recon <domain>` shorthand on fresh installs. Typer >=0.25 vendors its own Click, so `_DomainGroup`'s `except click.UsageError` never saw the vendored error; it now routes a dotted, non-flag, non-subcommand first arg to `lookup` before normal resolution instead | `CHANGELOG.md` |
 | v1.9.43 | Pre-2.0 hardening patch 6: relax the Python floor to `>=3.11` (re-adds the 3.11 classifier and CI matrix row, ruff/pyright baselines back to 3.11). No runtime dependency needs 3.12 and the only 3.12-only syntax was three PEP 695 `type` aliases, now `TypeAlias`. Reverses the v1.9.29 floor raise so 3.11 consumers can install while 3.11 still gets security fixes | `CHANGELOG.md` |
 | v1.9.44 | Pre-2.0 hardening patch 7: extend the golden-output net ahead of more `render_tenant_panel` decomposition. A `_surface_rich_info` fixture plus `panel_surface_default` / `panel_surface_full` snapshots pin the branches the prior fixture left dark: the Services subdomain summary, the Unclassified surface block, and the full-mode External surface section (individual rows, collapsed CDN group, apex stripping, layered labels) | `CHANGELOG.md` |
+| v1.9.45 | Pre-2.0 hardening patch 8: `render_tenant_panel` decomposition part 2. The ~100-line External surface section moves to `_render_external_surface` with `_surface_partition` / `_append_individual_rows` / `_append_collapsed_rows` sub-helpers, each under the C901 cap; the panel drops from 74 to 59. Output held byte-identical by the v1.9.44 `panel_surface_full` snapshot | `CHANGELOG.md` |
 
 ## Pre-2.0 hardening phase (current)
 

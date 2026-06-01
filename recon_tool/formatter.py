@@ -2235,109 +2235,10 @@ def render_tenant_panel(  # noqa: C901
             rel.append(line, style="dim")
         blocks.append(rel)
 
-    # External surface section: per-subdomain attributions from CNAME chains.
-    # Two-column layout (subdomain, primary service name) sorted alphabetically
-    # by subdomain. No arrows or decorative characters — the gutter does the
-    # separating. Default panel hides this; --full / --domains shows it because
-    # only operators investigating the external footprint care about the map.
-    if show_domains and info.surface_attributions:
+    # ── External surface (per-subdomain attributions; --domains / --full) ─
+    surf = _render_external_surface(info, show_domains)
+    if surf is not None:
         _spacer()
-        surf = Text()
-        surf.append(f"External surface ({len(info.surface_attributions)})", style="bold")
-        surf.append("\n")
-
-        # Group attributions by primary service. Services with many
-        # attributions (typically an apex's primary CDN — Fastly fronts 54 of
-        # kayak.com's subdomains, Cloudflare 51 of bamboohr.com's) are
-        # collapsed to a single block to keep the section scannable. Services
-        # with only a handful are shown one-per-line, which preserves the
-        # "what is this URL serving" answer for low-frequency findings.
-        _COLLAPSE_THRESHOLD = 5
-        from collections import defaultdict as _dd
-
-        groups: dict[str, list[Any]] = _dd(list)
-        for sa in info.surface_attributions:
-            groups[sa.primary_name].append(sa)
-
-        individuals: list[Any] = []
-        collapsed: list[tuple[str, list[Any]]] = []
-        for service_name, sas in groups.items():
-            if len(sas) >= _COLLAPSE_THRESHOLD:
-                collapsed.append((service_name, sorted(sas, key=lambda s: s.subdomain)))
-            else:
-                individuals.extend(sas)
-
-        individuals.sort(key=lambda s: s.subdomain)
-        # Largest collapse blocks first — most important to know about.
-        collapsed.sort(key=lambda t: -len(t[1]))
-
-        # Column width derived from longest individual subdomain. Min 24
-        # so short panels don't crowd; max _PANEL_WIDTH - 30 so long ones
-        # don't push the service column off-screen.
-        if individuals:
-            ind_max = max(len(s.subdomain) for s in individuals)
-            col_width = max(24, min(ind_max, _PANEL_WIDTH - 30))
-        else:
-            col_width = 24
-
-        for sa in individuals:
-            sub = sa.subdomain
-            if len(sub) > col_width:
-                sub = sub[: col_width - 2] + ".."
-            # Layered display: when the CNAME chain matched both an
-            # application-tier and an infrastructure-tier service (e.g.,
-            # Auth0 fronted by Cloudflare), list both.
-            services_label = sa.primary_name
-            if sa.infra_name:
-                services_label = f"{sa.primary_name}, {sa.infra_name}"
-            surf.append("  ")
-            surf.append(f"{sub:<{col_width}}", style="dim")
-            surf.append("  ")
-            surf.append(services_label)
-            surf.append("\n")
-
-        # Collapsed groups appear after individual rows. One header line per
-        # service, followed by the wrapped list of subdomains (with apex
-        # stripped to the short label so the wrap fits more per line).
-        if collapsed:
-            if individuals:
-                surf.append("\n")
-            apex = info.queried_domain
-            for service_name, sas in collapsed:
-                surf.append("  ")
-                surf.append(f"{service_name} ({len(sas)})", style="bold")
-                surf.append("\n")
-                short_names: list[str] = []
-                for s in sas:
-                    sub = s.subdomain
-                    # Strip the apex suffix to a bare label (``app`` instead of
-                    # ``app.contoso.com``) so the wrapped line fits more.
-                    if sub.endswith("." + apex):
-                        sub = sub[: -(len(apex) + 1)]
-                    elif sub == apex:
-                        sub = "(apex)"
-                    short_names.append(sub)
-                joined = ", ".join(short_names)
-                for line in _wrap_text(joined, _PANEL_WIDTH - 4):
-                    surf.append("    ")
-                    surf.append(line, style="dim")
-                    surf.append("\n")
-
-        # Discovery-loop hint: when there are unclassified CNAME chains the
-        # surface classifier resolved but couldn't attribute, surface a
-        # one-liner inviting the user into the catalog-growth loop. Default
-        # panel doesn't get this — only --full / --domains, where the user
-        # is already engaged with the surface map.
-        if info.unclassified_cname_chains:
-            n = len(info.unclassified_cname_chains)
-            noun = "subdomain" if n == 1 else "subdomains"
-            surf.append("\n  ")
-            surf.append(
-                f"{n} unclassified {noun} — `recon discover {info.queried_domain}` to surface fingerprint candidates",
-                style="dim italic",
-            )
-            surf.append("\n")
-
         blocks.append(surf)
 
     # ── Insights (curated) ────────────────────────────────────────
@@ -2516,6 +2417,138 @@ def render_tenant_panel(  # noqa: C901
         blocks.append(conf_block)
 
     return Group(*blocks)
+
+
+_SURFACE_COLLAPSE_THRESHOLD = 5
+
+
+def _surface_partition(
+    attributions: tuple[Any, ...],
+) -> tuple[list[Any], list[tuple[str, list[Any]]]]:
+    """Split surface attributions into individually-listed rows and collapsed
+    per-service groups.
+
+    Services with ``>= _SURFACE_COLLAPSE_THRESHOLD`` attributions (typically an
+    apex's primary CDN, e.g. Fastly fronting 54 of a domain's subdomains)
+    collapse to a single group so the section stays scannable; the rest are
+    shown one per line, which preserves the "what is this URL serving" answer
+    for low-frequency findings. Individuals are sorted by subdomain; collapsed
+    groups by descending size (largest first, most important to know about).
+    """
+    from collections import defaultdict as _dd
+
+    groups: dict[str, list[Any]] = _dd(list)
+    for sa in attributions:
+        groups[sa.primary_name].append(sa)
+
+    individuals: list[Any] = []
+    collapsed: list[tuple[str, list[Any]]] = []
+    for service_name, sas in groups.items():
+        if len(sas) >= _SURFACE_COLLAPSE_THRESHOLD:
+            collapsed.append((service_name, sorted(sas, key=lambda s: s.subdomain)))
+        else:
+            individuals.extend(sas)
+
+    individuals.sort(key=lambda s: s.subdomain)
+    collapsed.sort(key=lambda t: -len(t[1]))
+    return individuals, collapsed
+
+
+def _append_individual_rows(surf: Text, individuals: list[Any]) -> None:
+    """Append one row per individually-listed attribution: subdomain (left,
+    truncated to a derived column width) then the service label, with the
+    fronting infrastructure tier appended when the chain matched both an
+    application and an infrastructure service (e.g. Auth0 fronted by Cloudflare).
+    """
+    if not individuals:
+        return
+    # Column width derived from the longest individual subdomain. Min 24 so
+    # short panels don't crowd; max _PANEL_WIDTH - 30 so long ones don't push
+    # the service column off-screen.
+    ind_max = max(len(s.subdomain) for s in individuals)
+    col_width = max(24, min(ind_max, _PANEL_WIDTH - 30))
+    for sa in individuals:
+        sub = sa.subdomain
+        if len(sub) > col_width:
+            sub = sub[: col_width - 2] + ".."
+        services_label = sa.primary_name
+        if sa.infra_name:
+            services_label = f"{sa.primary_name}, {sa.infra_name}"
+        surf.append("  ")
+        surf.append(f"{sub:<{col_width}}", style="dim")
+        surf.append("  ")
+        surf.append(services_label)
+        surf.append("\n")
+
+
+def _append_collapsed_rows(
+    surf: Text, collapsed: list[tuple[str, list[Any]]], had_individuals: bool, apex: str
+) -> None:
+    """Append the collapsed per-service groups after any individual rows: one
+    bold header per service, then the wrapped list of subdomains with the apex
+    suffix stripped to a bare label (``app`` instead of ``app.contoso.com``) so
+    more fit per wrapped line.
+    """
+    if not collapsed:
+        return
+    if had_individuals:
+        surf.append("\n")
+    for service_name, sas in collapsed:
+        surf.append("  ")
+        surf.append(f"{service_name} ({len(sas)})", style="bold")
+        surf.append("\n")
+        short_names: list[str] = []
+        for s in sas:
+            sub = s.subdomain
+            if sub.endswith("." + apex):
+                sub = sub[: -(len(apex) + 1)]
+            elif sub == apex:
+                sub = "(apex)"
+            short_names.append(sub)
+        joined = ", ".join(short_names)
+        for line in _wrap_text(joined, _PANEL_WIDTH - 4):
+            surf.append("    ")
+            surf.append(line, style="dim")
+            surf.append("\n")
+
+
+def _render_external_surface(info: TenantInfo, show_domains: bool) -> Text | None:
+    """Per-subdomain external-surface section (only with --domains / --full).
+
+    Two-column layout (subdomain, primary service name) sorted alphabetically
+    by subdomain. No arrows or decorative characters — the gutter does the
+    separating. Default panel hides this; --full / --domains shows it because
+    only operators investigating the external footprint care about the map.
+
+    Returns ``None`` when the section does not apply. Extracted from
+    ``render_tenant_panel`` (C901 decomposition); output held byte-identical by
+    ``tests/test_golden_renders.py`` (``panel_surface_full``).
+    """
+    if not (show_domains and info.surface_attributions):
+        return None
+    surf = Text()
+    surf.append(f"External surface ({len(info.surface_attributions)})", style="bold")
+    surf.append("\n")
+
+    individuals, collapsed = _surface_partition(info.surface_attributions)
+    _append_individual_rows(surf, individuals)
+    _append_collapsed_rows(surf, collapsed, bool(individuals), info.queried_domain)
+
+    # Discovery-loop hint: when there are unclassified CNAME chains the surface
+    # classifier resolved but couldn't attribute, invite the user into the
+    # catalog-growth loop. Only here (--full / --domains), where the user is
+    # already engaged with the surface map.
+    if info.unclassified_cname_chains:
+        n = len(info.unclassified_cname_chains)
+        noun = "subdomain" if n == 1 else "subdomains"
+        surf.append("\n  ")
+        surf.append(
+            f"{n} unclassified {noun} — `recon discover {info.queried_domain}` to surface fingerprint candidates",
+            style="dim italic",
+        )
+        surf.append("\n")
+
+    return surf
 
 
 def _curate_insights(
