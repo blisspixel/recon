@@ -4,12 +4,13 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.51** (pre-2.0 hardening phase, patch 14: decompose
-`_render_key_facts` under the C901 cap. The `_field` closure becomes the
-module-level `_append_field`, and the provider, auth, and multi-cloud lines
-move to `_key_facts_provider_line` / `_key_facts_auth_line` /
-`_key_facts_multicloud_line` (plus a small `_with_idp` helper); the `# noqa:
-C901` is removed. Output held byte-identical by the panel golden snapshots). The
+Current release: **v1.9.52** (pre-2.0 hardening phase, patch 15: finish the
+formatter C901 sweep. `_categorize_services` splits into the two classification
+passes plus the identity-dedup / CAA-consolidation / bundled-AI post-passes, and
+`_compact_email_summary` into provider and hardening-control builders over a
+shared `_append_unique`. With these, every function in `formatter.py` is under
+the cap and the file carries no `# noqa: C901`. Output held byte-identical by
+the golden snapshots). The
 engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
 `py.typed` marker, the `>=3.12` floor (relaxed back to `>=3.11` in v1.9.43),
 branch coverage, `deal`
@@ -75,6 +76,7 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.49 | Pre-2.0 hardening patch 12: decompose `format_tenant_markdown` under the C901 cap. The eight report sections move to `_md_header` / `_md_services_split` / `_md_gws_details` / `_md_insights` / `_md_cert_intel` / `_md_tenant_domains` / `_md_related_domains` / `_md_footer`, each returning its lines; the function becomes a thin orchestrator and its `# noqa: C901` is removed. Output held byte-identical by the golden snapshots | `CHANGELOG.md` |
 | v1.9.50 | Pre-2.0 hardening patch 13: decompose `detect_provider` (the email-topology-aware provider line) under the C901 cap. The three paths move to `_provider_exchange_onprem`, `_provider_from_topology` (+ `_topology_slug_secondaries`), and `_provider_slug_fallback`; `detect_provider` becomes a thin dispatcher and its `# noqa: C901` is removed. Behavior preserved against the provider-line unit tests and the panel golden snapshots | `CHANGELOG.md` |
 | v1.9.51 | Pre-2.0 hardening patch 14: decompose `_render_key_facts` under the C901 cap. The `_field` closure becomes the module-level `_append_field`; the provider / auth / multi-cloud lines move to `_key_facts_provider_line`, `_key_facts_auth_line`, `_key_facts_multicloud_line` (plus `_with_idp`); the `# noqa: C901` is removed. Output held byte-identical by the panel golden snapshots | `CHANGELOG.md` |
+| v1.9.52 | Pre-2.0 hardening patch 15: finish the formatter C901 sweep. `_categorize_services` splits into `_categorize_pass1_slugs` / `_categorize_pass2_names` plus `_dedup_identity_echoes` / `_consolidate_caa_issuers` / `_infer_bundled_ai` (and `_is_service_artifact`); `_compact_email_summary` into `_email_summary_providers` / `_email_summary_controls` over a shared `_append_unique`. Every function in `formatter.py` is now under the cap with no `# noqa: C901`. Output held byte-identical by the golden snapshots | `CHANGELOG.md` |
 
 ## Pre-2.0 hardening phase (current)
 

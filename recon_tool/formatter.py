@@ -1480,7 +1480,125 @@ def _categorize_service(service: str, slug: str | None) -> str:
     return "Business Apps"
 
 
-def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:  # noqa: C901
+def _is_service_artifact(name: str) -> bool:
+    """Verification tokens and registrar handoffs — filtered from the panel."""
+    return any(name.endswith(suf) for suf in _FILTERED_SERVICE_SUFFIXES) or any(
+        name.startswith(pfx) for pfx in _FILTERED_SERVICE_PREFIXES
+    )
+
+
+def _categorize_pass1_slugs(
+    info: TenantInfo, slug_to_name: dict[str, str], by_cat: dict[str, list[str]]
+) -> tuple[set[str], set[str]]:
+    """Pass 1: slug-authoritative classification.
+
+    Each detected slug with a known category (``_CATEGORY_BY_SLUG``) pulls in
+    its canonical fingerprint display name, or an explicit
+    ``_SLUG_DISPLAY_OVERRIDES`` entry, with the "CAA: " prefix stripped outside
+    Security and a cloud type qualifier ("(DNS)", "(CDN)", ...) added so a slug
+    like Route 53 does not read as a cloud-compute claim. A category missing
+    from ``_SERVICE_CATEGORIES_ORDER`` (future-fingerprint drift) is added to
+    ``by_cat`` defensively so the append never raises. Mutates ``by_cat``;
+    returns the (seen_services, slugs_filed) sets pass 2 needs.
+    """
+    seen_services: set[str] = set()
+    slugs_filed: set[str] = set()
+    for slug in info.slugs:
+        cat = _CATEGORY_BY_SLUG.get(slug)
+        if not cat:
+            continue
+        name = _SLUG_DISPLAY_OVERRIDES.get(slug) or slug_to_name.get(slug, slug)
+        if _is_service_artifact(name):
+            continue
+        if cat != "Security" and name.startswith("CAA: "):
+            name = name[len("CAA: ") :]
+        if cat == "Cloud":
+            qualifier = _CLOUD_SLUG_QUALIFIERS.get(slug)
+            if qualifier:
+                name = f"{name} ({qualifier})"
+        if name in seen_services:
+            continue
+        if cat not in by_cat:
+            by_cat[cat] = []
+        by_cat[cat].append(name)
+        seen_services.add(name)
+        slugs_filed.add(slug)
+    return seen_services, slugs_filed
+
+
+def _categorize_pass2_names(
+    info: TenantInfo,
+    name_to_slug: dict[str, str],
+    by_cat: dict[str, list[str]],
+    seen_services: set[str],
+    slugs_filed: set[str],
+) -> None:
+    """Pass 2: classify service names without a slug match by prefix / name
+    pattern, skipping anything already filed in pass 1 (by name, lowercased
+    prefix, or slug) so a detection is not double-counted under two display
+    names. Mutates ``by_cat`` and the seen sets."""
+    seen_lower_prefixes = {s.lower().split(" (")[0] for s in seen_services}
+    for svc in info.services:
+        if svc in seen_services:
+            continue
+        if _is_service_artifact(svc):
+            continue
+        svc_prefix = svc.lower().split(" (")[0]
+        if svc_prefix in seen_lower_prefixes:
+            continue
+        slug = _slug_for_service(svc, name_to_slug)
+        if slug and slug in slugs_filed:
+            continue
+        cat = _categorize_service(svc, slug)
+        by_cat.setdefault(cat, []).append(svc)
+        seen_services.add(svc)
+        seen_lower_prefixes.add(svc_prefix)
+
+
+def _dedup_identity_echoes(by_cat: dict[str, list[str]]) -> None:
+    """Drop Identity rows that merely echo an Email provider (e.g. "Google
+    Workspace (managed identity)" when the Email row already shows Google
+    Workspace and the Auth line already says "Managed (Google Workspace)").
+    Entries for a distinct identity provider (Okta, Duo, CyberArk, Ping) stay."""
+    email_provider_names = {n for n in by_cat.get("Email", []) if n}
+    filtered_identity: list[str] = []
+    for ident in by_cat.get("Identity", []):
+        ident_core = ident
+        for suffix in (" (managed identity)", " (federated identity)"):
+            if ident.endswith(suffix):
+                ident_core = ident[: -len(suffix)]
+                break
+        if ident_core in email_provider_names:
+            continue
+        filtered_identity.append(ident)
+    by_cat["Identity"] = filtered_identity
+
+
+def _consolidate_caa_issuers(by_cat: dict[str, list[str]]) -> None:
+    """Collapse the per-issuer "CAA: <issuer>" Security entries into one compact
+    "CAA: N issuers restricted" line so CAA records do not overwhelm the row or
+    read as deployed security tools. The full list stays in --full / --json."""
+    security = by_cat.get("Security", [])
+    caa_entries = [s for s in security if s.startswith("CAA:")]
+    if len(caa_entries) >= 1:
+        non_caa = [s for s in security if not s.startswith("CAA:")]
+        count = len(caa_entries)
+        consolidated = f"CAA: {count} issuer{'s' if count != 1 else ''} restricted"
+        by_cat["Security"] = [*non_caa, consolidated]
+
+
+def _infer_bundled_ai(by_cat: dict[str, list[str]], slugs: tuple[str, ...] | set[str]) -> None:
+    """Infer platform-bundled AI tools with no DNS fingerprint (Copilot from
+    M365, Gemini from Google Workspace), hedged with "(likely)" to distinguish
+    them from DNS-confirmed detections."""
+    ai_names = {n.lower() for n in by_cat.get("AI", [])}
+    if "microsoft365" in slugs and "microsoft copilot" not in ai_names:
+        by_cat.setdefault("AI", []).append("Microsoft Copilot (likely)")
+    if "google-workspace" in slugs and "google gemini" not in ai_names:
+        by_cat.setdefault("AI", []).append("Google Gemini (likely)")
+
+
+def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:
     """Group TenantInfo services into display categories.
 
     Two-pass classification:
@@ -1504,155 +1622,75 @@ def _categorize_services(info: TenantInfo) -> dict[str, list[str]]:  # noqa: C90
         slug_to_name = {}
         name_to_slug = {}
 
-    def _is_artifact(name: str) -> bool:
-        """Verification tokens and registrar handoffs — filtered out."""
-        return any(name.endswith(suf) for suf in _FILTERED_SERVICE_SUFFIXES) or any(
-            name.startswith(pfx) for pfx in _FILTERED_SERVICE_PREFIXES
-        )
-
-    # Initialize one bucket per declared category. Unknown categories
-    # produced by ``_CATEGORY_BY_SLUG`` (e.g. when a future fingerprint
-    # introduces a category that ``_SERVICE_CATEGORIES_ORDER`` does
-    # not yet list) are added to ``by_cat`` defensively in pass 1
-    # below. Without that defence, a slug whose category is missing
-    # from the order tuple raises ``KeyError`` at append time and
-    # crashes the panel for any apex that has the slug fire. The
-    # category will not appear in the rendered panel until added to
-    # ``_SERVICE_CATEGORIES_ORDER``, but the renderer will not crash.
+    # One bucket per declared category. Pass 1 adds any category missing from
+    # _SERVICE_CATEGORIES_ORDER defensively so a future-fingerprint drift cannot
+    # crash the panel; such a category just will not render until added here.
     by_cat: dict[str, list[str]] = {c: [] for c in _SERVICE_CATEGORIES_ORDER}
-    seen_services: set[str] = set()
-    slugs_filed: set[str] = set()  # slugs pass 1 has already filed
 
-    # Pass 1: slug-authoritative classification. A detected slug with
-    # a known category pulls in its canonical fingerprint display name.
-    # v0.9.3 refinement: an explicit override in _SLUG_DISPLAY_OVERRIDES
-    # wins over the fingerprint display name — this covers slugs like
-    # "google-managed" that don't have a fingerprint entry. Cloud
-    # services get a type qualifier ("(DNS)", "(CDN)", "(edge)") so
-    # Route 53 doesn't read as a cloud-compute claim.
-    for slug in info.slugs:
-        cat = _CATEGORY_BY_SLUG.get(slug)
-        if not cat:
-            continue
-        name = _SLUG_DISPLAY_OVERRIDES.get(slug) or slug_to_name.get(slug, slug)
-        # Filter verification/registrar artefacts — these aren't
-        # deployed products, they're ownership tokens.
-        if _is_artifact(name):
-            continue
-        # v0.9.3 refinement: strip the "CAA: " prefix when rendering
-        # a CAA-derived fingerprint under a non-Security category.
-        # In Security the CAA consolidation collapses these into a
-        # single "CAA: N issuers restricted" line; in Cloud / Email /
-        # other categories the "CAA: " prefix leaks into the row
-        # ("CAA: AWS Certificate Manager" in the Cloud row reads as
-        # a products-detected claim). The actual detection mechanism
-        # (CAA record → slug) belongs in --explain, not the name.
-        if cat != "Security" and name.startswith("CAA: "):
-            name = name[len("CAA: ") :]
-        if cat == "Cloud":
-            qualifier = _CLOUD_SLUG_QUALIFIERS.get(slug)
-            if qualifier:
-                name = f"{name} ({qualifier})"
-        if name in seen_services:
-            continue
-        # Defensive: if the slug's category is missing from
-        # ``_SERVICE_CATEGORIES_ORDER`` (a future-fingerprint drift),
-        # add the bucket on the fly so the append does not raise.
-        # The category will not appear in the rendered panel order
-        # until added to the tuple; the v1.9.9 catalog-driven
-        # Hypothesis tests pin this invariant.
-        if cat not in by_cat:
-            by_cat[cat] = []
-        by_cat[cat].append(name)
-        seen_services.add(name)
-        slugs_filed.add(slug)
-
-    # Pass 2: service names without a slug match — use prefix / name
-    # classification. Skip services whose slug has already been filed
-    # in pass 1 so we don't double-count the same detection under two
-    # different display names (e.g. "Atlassian" and
-    # "Atlassian (Jira/Confluence)" both mapping to slug "atlassian").
-    # Defensive substring check covers the case where TenantInfo was
-    # hand-built with abbreviated service names that don't round-trip
-    # through name_to_slug.
-    seen_lower_prefixes = {s.lower().split(" (")[0] for s in seen_services}
-    for svc in info.services:
-        if svc in seen_services:
-            continue
-        if _is_artifact(svc):
-            continue
-        svc_prefix = svc.lower().split(" (")[0]
-        if svc_prefix in seen_lower_prefixes:
-            continue
-        slug = _slug_for_service(svc, name_to_slug)
-        if slug and slug in slugs_filed:
-            # Already covered under its canonical display name in pass 1
-            continue
-        cat = _categorize_service(svc, slug)
-        by_cat.setdefault(cat, []).append(svc)
-        seen_services.add(svc)
-        seen_lower_prefixes.add(svc_prefix)
-
-    # v0.9.3 refinement: drop Identity row entries that just echo an
-    # Email provider. On a Google-only domain the Identity row
-    # shows "Google Workspace (managed identity)" alongside the
-    # Email row's "Google Workspace" — same fact in two places. The
-    # Auth line already says "Managed (Google Workspace)", so the
-    # Identity row adds nothing. Keep Identity entries that
-    # represent a DISTINCT identity provider (Okta, Duo, CyberArk,
-    # Ping) — only drop pure echoes of the email-provider family.
-    email_provider_names = {n for n in by_cat.get("Email", []) if n}
-    identity = by_cat.get("Identity", [])
-    filtered_identity: list[str] = []
-    for ident in identity:
-        # Strip the "(managed identity)" / "(federated identity)"
-        # suffix to compare with the email-provider name.
-        ident_core = ident
-        for suffix in (" (managed identity)", " (federated identity)"):
-            if ident.endswith(suffix):
-                ident_core = ident[: -len(suffix)]
-                break
-        # Drop when the core name is already in the Email row
-        if ident_core in email_provider_names:
-            continue
-        filtered_identity.append(ident)
-    by_cat["Identity"] = filtered_identity
-
-    # v0.9.3 refinement: consolidate CAA issuer fingerprints.
-    # Each "CAA: <issuer>" fingerprint fires as its own Security
-    # entry, so a domain with four CAA record issuers ends up showing
-    # "CAA: DigiCert, CAA: Google Trust Services, CAA: Let's Encrypt,
-    # CAA: Sectigo" under Security — which overwhelms the row AND
-    # misrepresents CAA records as deployed security tools. Collapse
-    # them into one compact "CAA: N issuers restricted" entry. The
-    # full issuer list is still available via --full / --verbose and
-    # in the --json output; the default panel just shows the count so
-    # the Security row's visual budget goes to actually-deployed
-    # security tools first.
-    security = by_cat.get("Security", [])
-    caa_entries: list[str] = [s for s in security if s.startswith("CAA:")]
-    if len(caa_entries) >= 1:
-        non_caa = [s for s in security if not s.startswith("CAA:")]
-        count = len(caa_entries)
-        consolidated = f"CAA: {count} issuer{'s' if count != 1 else ''} restricted"
-        by_cat["Security"] = [*non_caa, consolidated]
-
-    # v0.10: infer bundled AI services from platform presence.
-    # Copilot is bundled into M365, Gemini into Google Workspace.
-    # These have no DNS fingerprint — they're invisible to passive
-    # detection. But if the platform is present, the AI tool is
-    # likely available. Hedge with "(likely)" to distinguish from
-    # DNS-confirmed detections like Anthropic.
-    ai_names = {n.lower() for n in by_cat.get("AI", [])}
-    if "microsoft365" in info.slugs and "microsoft copilot" not in ai_names:
-        by_cat.setdefault("AI", []).append("Microsoft Copilot (likely)")
-    if "google-workspace" in info.slugs and "google gemini" not in ai_names:
-        by_cat.setdefault("AI", []).append("Google Gemini (likely)")
+    seen_services, slugs_filed = _categorize_pass1_slugs(info, slug_to_name, by_cat)
+    _categorize_pass2_names(info, name_to_slug, by_cat, seen_services, slugs_filed)
+    _dedup_identity_echoes(by_cat)
+    _consolidate_caa_issuers(by_cat)
+    _infer_bundled_ai(by_cat, info.slugs)
 
     return {c: svcs for c in _SERVICE_CATEGORIES_ORDER if (svcs := by_cat.get(c))}
 
 
-def _compact_email_summary(info: TenantInfo, email_services: list[str]) -> list[str]:  # noqa: C901
+def _append_unique(summary: list[str], value: str | None) -> None:
+    """Append ``value`` to ``summary`` when it is truthy and not already present."""
+    if value and value not in summary:
+        summary.append(value)
+
+
+def _email_summary_providers(info: TenantInfo, service_set: set[str], summary: list[str]) -> None:
+    """Fill ``summary`` with the email provider(s): the strict primary, else the
+    likely primary, else any known provider present in the service set, followed
+    by the gateway."""
+
+    def _add_list(value: str | None) -> None:
+        if not value:
+            return
+        for part in value.split(" + "):
+            _append_unique(summary, part.strip())
+
+    _add_list(info.primary_email_provider)
+    if not summary:
+        _add_list(info.likely_primary_email_provider)
+    if not summary:
+        for provider in ("Microsoft 365", "Google Workspace", "Zoho Mail", "ProtonMail", "AWS SES"):
+            if provider in service_set:
+                _append_unique(summary, provider)
+    _append_unique(summary, info.email_gateway)
+
+
+def _email_summary_controls(
+    info: TenantInfo, service_set: set[str], email_services: list[str], summary: list[str]
+) -> None:
+    """Append the main email hardening controls (DMARC, DKIM, SPF, MTA-STS,
+    BIMI) to ``summary``."""
+    if info.dmarc_policy:
+        _append_unique(summary, f"DMARC {info.dmarc_policy}")
+    elif "DMARC" in service_set:
+        _append_unique(summary, "DMARC")
+
+    if any(s.startswith("DKIM") for s in email_services):
+        _append_unique(summary, "DKIM")
+
+    if any(s.startswith("SPF: strict") for s in email_services):
+        _append_unique(summary, "SPF strict")
+    elif any(s.startswith("SPF: softfail") for s in email_services):
+        _append_unique(summary, "SPF softfail")
+
+    if info.mta_sts_mode and info.mta_sts_mode != "none":
+        _append_unique(summary, f"MTA-STS {info.mta_sts_mode}")
+    elif "MTA-STS" in service_set:
+        _append_unique(summary, "MTA-STS")
+
+    if "BIMI" in service_set:
+        _append_unique(summary, "BIMI")
+
+
+def _compact_email_summary(info: TenantInfo, email_services: list[str]) -> list[str]:
     """Build a short Email row when default deduplication removes everything.
 
     The default panel intentionally avoids a full protocol laundry list, but an
@@ -1662,48 +1700,8 @@ def _compact_email_summary(info: TenantInfo, email_services: list[str]) -> list[
     """
     service_set = set(email_services)
     summary: list[str] = []
-
-    def _add(value: str | None) -> None:
-        if value and value not in summary:
-            summary.append(value)
-
-    def _add_provider_list(value: str | None) -> None:
-        if not value:
-            return
-        for part in value.split(" + "):
-            _add(part.strip())
-
-    _add_provider_list(info.primary_email_provider)
-    if not summary:
-        _add_provider_list(info.likely_primary_email_provider)
-    if not summary:
-        for provider in ("Microsoft 365", "Google Workspace", "Zoho Mail", "ProtonMail", "AWS SES"):
-            if provider in service_set:
-                _add(provider)
-
-    _add(info.email_gateway)
-
-    if info.dmarc_policy:
-        _add(f"DMARC {info.dmarc_policy}")
-    elif "DMARC" in service_set:
-        _add("DMARC")
-
-    if any(s.startswith("DKIM") for s in email_services):
-        _add("DKIM")
-
-    if any(s.startswith("SPF: strict") for s in email_services):
-        _add("SPF strict")
-    elif any(s.startswith("SPF: softfail") for s in email_services):
-        _add("SPF softfail")
-
-    if info.mta_sts_mode and info.mta_sts_mode != "none":
-        _add(f"MTA-STS {info.mta_sts_mode}")
-    elif "MTA-STS" in service_set:
-        _add("MTA-STS")
-
-    if "BIMI" in service_set:
-        _add("BIMI")
-
+    _email_summary_providers(info, service_set, summary)
+    _email_summary_controls(info, service_set, email_services, summary)
     return summary
 
 
