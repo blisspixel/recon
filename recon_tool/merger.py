@@ -652,6 +652,19 @@ def compute_confidence(results: list[SourceResult]) -> tuple[ConfidenceLevel, bo
     return ConfidenceLevel.LOW, False
 
 
+# v0.11: placeholder tenant display names that are meaningless to a user.
+# "Default Directory" is what Microsoft shows when a tenant owner never set a
+# custom name — it's a placeholder, not the organization's name. The merge
+# falls through to better signals (BIMI, domain) when it sees one. Exposed at
+# module level so tests can exclude these from generated display-name inputs.
+_PLACEHOLDER_DISPLAY_NAMES: frozenset[str] = frozenset(
+    {
+        "default directory",
+        "directory",
+    }
+)
+
+
 def merge_results(  # noqa: C901
     results: list[SourceResult],
     queried_domain: str,
@@ -686,17 +699,6 @@ def merge_results(  # noqa: C901
         "dmarc_policy": [],
         "google_auth_type": [],
     }
-
-    # v0.11: placeholder tenant display names that are meaningless to a
-    # user. "Default Directory" is what Microsoft shows when a tenant
-    # owner never set a custom name — it's a placeholder, not the
-    # organization's name. Fall through to better signals (BIMI, domain).
-    _PLACEHOLDER_DISPLAY_NAMES: frozenset[str] = frozenset(
-        {
-            "default directory",
-            "directory",
-        }
-    )
 
     def _is_placeholder(name: str | None) -> bool:
         if not name:

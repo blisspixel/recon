@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.46] - 2026-06-01
+
+### Fix a flaky merge property test
+
+`merge_results` deliberately discards placeholder tenant display names
+("Default Directory" / "Directory", what Microsoft shows when a tenant owner
+never set a custom name) and falls through to better signals. The property
+test `test_first_none_skipped` ("second source's display_name wins when the
+first is None") generated its candidate name with a free text strategy that
+could produce exactly those placeholders, then asserted the placeholder
+survived. It passed almost always and failed only when the strategy happened to
+draw a denylisted value (e.g. `direcTory`).
+
+- **`recon_tool/merger.py`.** The `_PLACEHOLDER_DISPLAY_NAMES` frozenset moves
+  from inside `merge_results` to module scope so it is a single source of truth
+  that tests can import. No behavior change.
+- **`tests/test_explanation_engine.py`.** The shared `_safe_text_st` strategy
+  now excludes those placeholder names, so a "this value wins" property never
+  generates a value the merger is designed to reject.
+
 ## [1.9.45] - 2026-06-01
 
 ### render_tenant_panel decomposition part 2: External surface section
