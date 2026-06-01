@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.43] - 2026-06-01
+
+### Relax the Python floor back to `>=3.11`
+
+v1.9.29 raised the floor to `>=3.12`. Revisiting that decision, the only
+3.12-only code in the tree was three PEP 695 `type` aliases in `cli.py`,
+and no runtime dependency needs 3.12 (networkx sets the practical floor at
+3.11). Since 3.11 still receives security fixes (through ~Oct 2027) and
+recon is meant to be a broadly-consumed building block, supporting 3.11
+costs little and widens reach. This reverses the v1.9.29 raise.
+
+- **`pyproject.toml`.** `requires-python = ">=3.11"`, re-added the 3.11
+  classifier, `ruff target-version = "py311"`, `pyright pythonVersion =
+  "3.11"`.
+- **`recon_tool/cli.py`.** The three `type X = ...` aliases are written as
+  `X: TypeAlias = ...` (the only 3.12-only syntax). No behavior change;
+  `datetime.UTC`, builtin `TimeoutError`, and `enum.StrEnum` are all 3.11.
+- **`.github/workflows/ci.yml`.** 3.11 re-added to the test matrix
+  (`3.11 / 3.12 / 3.13 / 3.14`). Dev toolchain stays pinned at 3.14.
+- **`uv.lock`.** Regenerated for the `>=3.11` floor.
+
+Verified on CPython 3.11.15: import, `recon --help`, and `recon doctor` all
+run; the full suite passes with pyright at `pythonVersion=3.11`.
+
 ## [1.9.42] - 2026-06-01
 
 ### Restore the bare `recon <domain>` shorthand on fresh installs

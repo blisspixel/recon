@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from typing import Any, Literal
+from typing import Any, Literal, TypeAlias
 
 import click
 import typer
@@ -25,9 +25,9 @@ from rich.markup import escape
 from recon_tool.formatter import get_console
 from recon_tool.validator import strip_control_chars
 
-type McpCheck = tuple[str, bool, str]
-type DoctorStatus = Literal["ok", "warn", "fail"]
-type DoctorCheck = tuple[str, DoctorStatus, str]
+McpCheck: TypeAlias = tuple[str, bool, str]
+DoctorStatus: TypeAlias = Literal["ok", "warn", "fail"]
+DoctorCheck: TypeAlias = tuple[str, DoctorStatus, str]
 
 __all__ = [
     "EXIT_INTERNAL",

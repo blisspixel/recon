@@ -1,8 +1,8 @@
 [project]
 name = "recon-tool"
-version = "1.9.42"
+version = "1.9.43"
 description = "Domain intelligence CLI and MCP server — tech stack, email security, and signal intelligence from DNS."
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 readme = "README.md"
 license = "MIT"
 keywords = ["dns", "osint", "recon", "domain-intelligence", "mcp", "security", "saas-fingerprinting"]
@@ -14,6 +14,7 @@ classifiers = [
     "Intended Audience :: System Administrators",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
@@ -84,7 +85,7 @@ markers = [
 addopts = "-m 'not integration'"
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py311"
 line-length = 120
 
 [tool.ruff.lint]
@@ -145,7 +146,7 @@ exclude_dirs = ["tests", ".venv", "dist", "build"]
 skips = ["B311", "B404", "B603", "B406"]
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.11"
 typeCheckingMode = "strict"
 # Resolve imports through the local checkout's editable install in
 # .venv rather than any stale user-site install elsewhere on the
