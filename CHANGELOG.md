@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.47] - 2026-06-01
+
+### render_tenant_panel decomposition part 3 (final): under the C901 cap
+
+Completes the incremental decomposition of `render_tenant_panel`, the main
+user-facing panel, which stood at C901 96 when the gate was enabled in v1.9.37.
+With this patch the function drops under the cap of 15 and its grandfathered
+`# noqa: C901` is removed.
+
+- **`recon_tool/formatter.py`.** The remaining inline sections move to focused
+  helpers, each under the cap: `_render_services` (with `_strip_email_noise`
+  and `_append_subdomain_summary`), `_render_passive_dns_ceiling`,
+  `_render_related_compact`, `_render_unclassified_surface`,
+  `_render_full_tenant_domains`, `_render_full_related`, `_render_insights`
+  (with the shared `_append_wrapped_lines`), `_render_certs`,
+  `_render_degraded_note` (with `_degraded_note_parts`),
+  `_render_verbose_detail`, and `_render_explain_conflicts`. `render_tenant_panel`
+  is now a thin orchestrator that appends whatever each section returns, in the
+  original order.
+
+No runtime behavior change: every panel mode (default, full, verbose, explain,
+sparse, hardened, and the surface-rich fixture) is held byte-identical by the
+golden characterization tests in `tests/test_golden_renders.py`.
+
 ## [1.9.46] - 2026-06-01
 
 ### Fix a flaky merge property test
