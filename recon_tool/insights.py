@@ -221,37 +221,27 @@ def _auth_insights(ctx: InsightContext) -> list[str]:
     return []
 
 
-def _email_security_insights(ctx: InsightContext) -> list[str]:  # noqa: C901
+def _has_scoreable_email(ctx: InsightContext) -> bool:
+    """Whether there is email worth scoring.
+
+    v0.9.3 honesty fix: a bare Exchange / Google-Workspace slug can come from a
+    non-MX source (Google Identity Routing reporting a registered account,
+    Microsoft OIDC reporting a tenant), which does not prove the domain receives
+    email there. On a domain with zero MX records and no DMARC, an "Email
+    security 0/5 weak" score reads as "configured but badly secured" when the
+    truth is "no email configured to score". So a provider slug only counts
+    alongside an MX-backed signal (a strict or inferred primary, a real DMARC
+    record, or a dedicated outbound-email slug).
+    """
     has_exchange = bool(ctx.slugs & _EXCHANGE_SLUGS)
     has_google = bool(ctx.slugs & _GOOGLE_SLUGS)
-    # v0.9.3 honesty fix: a bare Exchange/Google-Workspace slug can
-    # come from a non-MX source (Google Identity Routing endpoint
-    # reporting a registered account, Microsoft OIDC reporting a
-    # tenant). Those don't prove the domain actually RECEIVES email
-    # via that provider. On a domain with zero MX records and no
-    # DMARC, the "Email security 0/5 weak" score reads as "email is
-    # configured but badly secured" when the truth is "there is no
-    # email configured to score."
-    #
-    # The `primary_email_provider` context field is populated only
-    # from MX evidence. When it's None AND the slug was matched via
-    # a non-MX identity source, we can't honestly score email
-    # security — there's no email to score. Require at least one of:
-    #   - primary_email_provider (strict MX-backed primary)
-    #   - likely_primary_email_provider (inferred MX downstream)
-    #   - dmarc_policy (a real DMARC record)
-    #   - a dedicated outbound-email slug (sendgrid, mailgun, etc.)
-    # before scoring.
     has_mx_signal = bool(
         ctx.primary_email_provider
         or ctx.likely_primary_email_provider
         or ctx.dmarc_policy is not None
         or bool(ctx.slugs & _EMAIL_SLUGS)
     )
-    # Email detection: fire the score when we see any email provider, email
-    # gateway, email sending service, or DMARC record. If you have DMARC
-    # configured, you have email worth scoring.
-    has_email = (
+    return (
         (has_exchange and has_mx_signal)
         or (has_google and has_mx_signal)
         or bool(ctx.slugs & _EMAIL_SLUGS)
@@ -259,80 +249,72 @@ def _email_security_insights(ctx: InsightContext) -> list[str]:  # noqa: C901
         or ctx.dmarc_policy is not None  # has DMARC record = has email
     )
 
-    if not has_email:
-        if ctx.dmarc_policy:
-            return [f"DMARC: {ctx.dmarc_policy}"]
-        return []
 
-    insights: list[str] = []
+def _email_score_parts(ctx: InsightContext) -> tuple[list[str], bool, bool]:
+    """The observed email-hardening controls, in score order.
+
+    Gateway-inferred DKIM: large orgs behind a commercial gateway (Proofpoint /
+    Mimecast / IronPort / ...) with an enforcing DMARC policy almost always sign
+    with DKIM via custom selectors we cannot enumerate, so the control is
+    credited with a hedged "(inferred via gateway)" annotation. Returns
+    ``(score_parts, has_dkim, dkim_inferred_via_gateway)`` so the caller can add
+    the right auxiliary notes.
+    """
     has_dkim = SVC_DKIM_EXCHANGE in ctx.services or SVC_DKIM in ctx.services
     has_bimi = SVC_BIMI in ctx.services
     has_mta_sts = SVC_MTA_STS in ctx.services
     has_spf_strict = SVC_SPF_STRICT in ctx.services
-
-    # Gateway-inferred DKIM: Fortune-500-scale orgs with a commercial gateway
-    # (Proofpoint / Mimecast / Cisco IronPort / Barracuda / Trend / Trellix /
-    # Symantec) AND an enforcing DMARC policy almost always DO sign with DKIM
-    # — the gateway handles it automatically using custom selectors we can't
-    # enumerate. Without this inference, the apex score penalized these
-    # orgs for a control they effectively have. The annotation stays hedged
-    # ("via gateway") so the user can see the inference chain.
     dkim_inferred_via_gateway = (
         not has_dkim and ctx.email_gateway is not None and ctx.dmarc_policy in ("quarantine", "reject")
     )
 
-    score = 0
     score_parts: list[str] = []
     if ctx.dmarc_policy in ("reject", "quarantine"):
-        score += 1
         score_parts.append(f"DMARC {ctx.dmarc_policy}")
     if has_dkim:
-        score += 1
         score_parts.append("DKIM")
     elif dkim_inferred_via_gateway:
-        score += 1
         score_parts.append(f"DKIM (inferred via {ctx.email_gateway})")
     if has_spf_strict:
-        score += 1
         score_parts.append("SPF strict")
     if has_mta_sts:
-        score += 1
         score_parts.append("MTA-STS")
     if has_bimi:
-        score += 1
         score_parts.append("BIMI")
+    return score_parts, has_dkim, dkim_inferred_via_gateway
 
-    # When DMARC is in monitoring mode (p=none) or SPF is soft/neutral,
-    # something IS configured — it's just not enforcing. Surface that
-    # explicitly rather than saying "no protections detected" which
-    # misreads monitoring-mode deployment as absence.
-    if not score_parts:
-        observed_non_scoring: list[str] = []
-        if ctx.dmarc_policy == "none":
-            observed_non_scoring.append("DMARC monitoring only")
-        if any(s.startswith("SPF:") for s in ctx.services) and not has_spf_strict:
-            observed_non_scoring.append("SPF soft/neutral")
-        if observed_non_scoring:
-            parts_str = ", ".join(observed_non_scoring) + " — no strict controls"
-        else:
-            parts_str = "no strict controls observed"
-    else:
-        parts_str = ", ".join(score_parts)
 
-    # Panel line: inventory of observed controls, no fraction or grade.
-    # The N/5 form that v1.0.2 introduced was still read as a grade
-    # (3/5 → "mediocre") even without the verdict word. The individual
-    # controls aren't equally weighted either (DMARC reject is load-
-    # bearing, BIMI is decorative), so an equal-count fraction misled.
-    # The machine-readable email_security_score field stays in --json
-    # for consumers that genuinely need to sort/filter batch output —
-    # see `email_security_score` in docs/schema.md.
-    _ = score  # used only to choose between score_parts and fallback branch above
-    insights.append(f"Email security: {parts_str}")
+def _non_scoring_email_summary(ctx: InsightContext) -> str:
+    """Summary line when no strict control scored: name what IS configured
+    (DMARC monitoring, soft/neutral SPF) rather than implying absence, which
+    would misread a monitoring-mode deployment as nothing at all."""
+    observed_non_scoring: list[str] = []
+    if ctx.dmarc_policy == "none":
+        observed_non_scoring.append("DMARC monitoring only")
+    if any(s.startswith("SPF:") for s in ctx.services) and SVC_SPF_STRICT not in ctx.services:
+        observed_non_scoring.append("SPF soft/neutral")
+    if observed_non_scoring:
+        return ", ".join(observed_non_scoring) + " — no strict controls"
+    return "no strict controls observed"
 
-    # Auxiliary notes — score line captures the parts; these name the
-    # consequence. "DMARC monitoring" in the score line is the configured
-    # mode; "not enforced" in the aux line is the user-facing takeaway.
+
+def _email_security_insights(ctx: InsightContext) -> list[str]:
+    if not _has_scoreable_email(ctx):
+        if ctx.dmarc_policy:
+            return [f"DMARC: {ctx.dmarc_policy}"]
+        return []
+
+    score_parts, has_dkim, dkim_inferred_via_gateway = _email_score_parts(ctx)
+    parts_str = ", ".join(score_parts) if score_parts else _non_scoring_email_summary(ctx)
+
+    # Panel line: inventory of observed controls, no fraction or grade. The N/5
+    # form was still read as a grade even without the verdict word, and the
+    # controls are not equally weighted (DMARC reject is load-bearing, BIMI is
+    # decorative). The machine-readable email_security_score field stays in
+    # --json for consumers that need to sort/filter (see docs/schema.md).
+    insights: list[str] = [f"Email security: {parts_str}"]
+
+    # Auxiliary notes name the consequence the score line only implies.
     if ctx.dmarc_policy == "none":
         insights.append("DMARC: none — monitoring mode, not enforced")
     elif ctx.dmarc_policy is None:

@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.53] - 2026-06-01
+
+### Begin the core-module C901 cleanup (insights)
+
+With `formatter.py` fully under the complexity cap, the decomposition moves into
+the core modules.
+
+- **`recon_tool/insights.py`.** `_email_security_insights` splits into
+  `_has_scoreable_email` (the honesty gate that avoids scoring email on a domain
+  with no MX-backed signal), `_email_score_parts` (the observed hardening
+  controls, including gateway-inferred DKIM), and `_non_scoring_email_summary`
+  (the monitoring-mode / soft-SPF fallback line). The function drops under the
+  cap of 15 and loses its `# noqa: C901`. A vestigial `score` counter that was
+  only assigned (`_ = score`) is removed; the branch already keys off
+  `score_parts`.
+
+No runtime behavior change: the email-security insight lines are unchanged,
+verified by `test_insights_unit`, `test_hedging_invariants`, and
+`test_explain_integration`.
+
 ## [1.9.52] - 2026-06-01
 
 ### Finish the formatter C901 sweep
