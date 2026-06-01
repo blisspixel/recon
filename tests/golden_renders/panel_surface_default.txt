@@ -1,0 +1,29 @@
+Contoso Ltd
+contoso.com
+──────────────────────────────────────────────────────────────────────────────
+  Provider     Microsoft 365 (account detected, no MX)
+  Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
+  Auth         Federated
+  Multi-cloud  2 providers observed (Fastly, Cloudflare)
+  Confidence   ●●● High (3 sources)
+
+
+Services
+  Email          Microsoft 365
+  AI             Microsoft Copilot (likely)
+  Collaboration  Slack
+  Subdomain      Fastly (6), Auth0 (2), Zendesk (1)
+
+
+High-signal related domains
+  api.contoso.com, login.contoso.com
+
+Unclassified surface
+  3 CNAME chain termini reached, no fingerprint match. We walked them but cannot name them — open a fingerprint PR or 
+run
+  `recon discover contoso.com` to triage candidates.
+  examples: weird.contoso.com → origin.unknown.net, legacy.contoso.com → old.vendor.net
+
+Insights
+  Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)
+

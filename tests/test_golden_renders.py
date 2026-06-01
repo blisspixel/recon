@@ -24,7 +24,13 @@ from pathlib import Path
 from rich.console import Console
 
 from recon_tool.formatter import format_tenant_markdown, render_tenant_panel
-from recon_tool.models import CertSummary, ConfidenceLevel, TenantInfo
+from recon_tool.models import (
+    CertSummary,
+    ConfidenceLevel,
+    SurfaceAttribution,
+    TenantInfo,
+    UnclassifiedCnameChain,
+)
 
 _GOLDEN_DIR = Path(__file__).parent / "golden_renders"
 _WIDTH = 120
@@ -96,6 +102,82 @@ def _hardened_info() -> TenantInfo:
     )
 
 
+def _surface_rich_info() -> TenantInfo:
+    """A tenant with a populated external surface: CNAME-chain attributions
+    (a collapsed CDN group, layered app+infra rows, a standalone app) plus
+    unclassified chains. Contoso, fictional.
+
+    Pins the render branches the ``fully_populated_tenant_info`` fixture leaves
+    dark: the Services subdomain summary, the Unclassified surface block, and
+    the full-mode External surface section (individual rows, collapsed groups,
+    apex stripping, layered service labels). Without this fixture those blocks
+    have no golden snapshot, so a decomposition could change them unnoticed.
+    """
+    fastly = tuple(
+        SurfaceAttribution(
+            subdomain=f"cdn{i}.contoso.com",
+            primary_slug="fastly",
+            primary_name="Fastly",
+            primary_tier="infrastructure",
+        )
+        for i in range(1, 7)  # 6 >= collapse threshold -> rendered as a group
+    )
+    auth0 = (
+        SurfaceAttribution(
+            subdomain="login.contoso.com",
+            primary_slug="auth0",
+            primary_name="Auth0",
+            primary_tier="application",
+            infra_slug="cloudflare",
+            infra_name="Cloudflare",  # layered: "Auth0, Cloudflare"
+        ),
+        SurfaceAttribution(
+            subdomain="sso.contoso.com",
+            primary_slug="auth0",
+            primary_name="Auth0",
+            primary_tier="application",
+        ),
+    )
+    zendesk = (
+        SurfaceAttribution(
+            subdomain="support.contoso.com",
+            primary_slug="zendesk",
+            primary_name="Zendesk",
+            primary_tier="application",
+        ),
+    )
+    return TenantInfo(
+        tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        display_name="Contoso Ltd",
+        default_domain="contoso.com",
+        queried_domain="contoso.com",
+        confidence=ConfidenceLevel.HIGH,
+        region="NA",
+        sources=("oidc_discovery", "dns_records", "cert_transparency"),
+        services=("Microsoft 365", "Slack"),
+        slugs=("microsoft365", "slack"),
+        auth_type="Federated",
+        domain_count=4,
+        related_domains=("api.contoso.com", "login.contoso.com"),
+        insights=("Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)",),
+        surface_attributions=fastly + auth0 + zendesk,
+        unclassified_cname_chains=(
+            UnclassifiedCnameChain(
+                subdomain="weird.contoso.com",
+                chain=("weird.contoso.com", "edge.example.net", "origin.unknown.net"),
+            ),
+            UnclassifiedCnameChain(
+                subdomain="legacy.contoso.com",
+                chain=("legacy.contoso.com", "old.vendor.net"),
+            ),
+            UnclassifiedCnameChain(
+                subdomain="app.contoso.com",
+                chain=("app.contoso.com",),
+            ),
+        ),
+    )
+
+
 class TestGoldenPanelRenders:
     """render_tenant_panel output is pinned across decomposition."""
 
@@ -119,6 +201,20 @@ class TestGoldenPanelRenders:
 
     def test_panel_hardened_default(self) -> None:
         _check_golden("panel_hardened_default", _render_panel(_hardened_info()))
+
+    def test_panel_surface_default(self) -> None:
+        # Default mode: exercises the Services subdomain summary and the
+        # Unclassified surface block (both keyed on not-show_domains).
+        _check_golden("panel_surface_default", _render_panel(_surface_rich_info()))
+
+    def test_panel_surface_full(self) -> None:
+        # Full mode: exercises the External surface section (individual rows,
+        # collapsed CDN group, apex stripping, layered service labels) and the
+        # unclassified-subdomain discovery hint.
+        _check_golden(
+            "panel_surface_full",
+            _render_panel(_surface_rich_info(), show_services=True, show_domains=True),
+        )
 
 
 class TestGoldenMarkdownRenders:
