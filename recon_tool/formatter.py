@@ -1778,36 +1778,34 @@ def _confidence_is_high(level: ConfidenceLevel) -> bool:
     return level == ConfidenceLevel.HIGH
 
 
-def _render_key_facts(info: TenantInfo) -> Text:  # noqa: C901
-    """Build the key-facts block: Provider, Tenant/Region, Auth, Cloud
-    (sovereignty), Multi-cloud rollup, Confidence.
+def _append_field(facts: Text, label: str, value: str, value_style: str = "") -> None:
+    """Emit one "  Label    value" row into ``facts``, wrapping the value at the
+    panel width with a continuation indent matching the label column."""
+    indent_width = 2 + _LABEL_WIDTH  # "  " + label column
+    max_width = _PANEL_WIDTH - indent_width
+    for i, line in enumerate(_wrap_text(value, max_width)):
+        if i == 0:
+            facts.append("  ")
+            facts.append(label.ljust(_LABEL_WIDTH), style="dim")
+        else:
+            facts.append(" " * indent_width)
+        facts.append(line, style=value_style)
+        facts.append("\n")
 
-    Extracted from ``render_tenant_panel`` so the panel orchestrator stays
-    a thin sequence of section calls. Behavior is unchanged; the golden
-    renders in ``tests/test_golden_renders.py`` pin the exact output.
-    """
-    facts = Text()
 
-    def _field(label: str, value: str, value_style: str = "") -> None:
-        """Emit one "  Label    value\\n" row, wrapping the value at
-        the panel width with a continuation indent matching the
-        label column."""
-        indent_width = 2 + _LABEL_WIDTH  # "  " + label column
-        max_width = _PANEL_WIDTH - indent_width
-        lines = _wrap_text(value, max_width)
-        for i, line in enumerate(lines):
-            if i == 0:
-                facts.append("  ")
-                facts.append(label.ljust(_LABEL_WIDTH), style="dim")
-            else:
-                facts.append(" " * indent_width)
-            facts.append(line, style=value_style)
-            facts.append("\n")
+def _with_idp(base: str, google_idp_name: str | None) -> str:
+    """Append " via <IdP>" to a Google Workspace auth label when an IdP name is
+    known."""
+    return f"{base} via {google_idp_name}" if google_idp_name else base
 
+
+def _key_facts_provider_line(info: TenantInfo) -> str:
+    """The provider line via ``detect_provider``, with the MX/DKIM-derived
+    has-MX and email-confirmed-slug flags (only secondaries confirmed via email
+    routing are shown)."""
     has_mx_records = any(e.source_type == "MX" for e in info.evidence)
-    # v0.10.1: only show secondary providers confirmed via email routing
     email_confirmed_slugs = frozenset(e.slug for e in info.evidence if e.source_type in ("MX", "DKIM"))
-    provider_line = detect_provider(
+    return detect_provider(
         info.services,
         info.slugs,
         primary_email_provider=info.primary_email_provider,
@@ -1816,21 +1814,17 @@ def _render_key_facts(info: TenantInfo) -> Text:  # noqa: C901
         has_mx_records=has_mx_records,
         email_confirmed_slugs=email_confirmed_slugs,
     )
-    _field("Provider", provider_line)
 
-    if info.tenant_id:
-        tenant_line = info.tenant_id
-        if info.region:
-            tenant_line += f" • {info.region}"
-        _field("Tenant", tenant_line)
-    elif info.region:
-        _field("Region", info.region)
 
-    # Auth — combine M365 and GWS auth labels when both are present.
-    # "Managed (Entra ID + Google Workspace)" reads cleaner than
-    # "Managed + Managed (GWS)". GetUserRealm returns
-    # NameSpaceType=Unknown for domains that aren't real M365 tenants;
-    # treat "Unknown" as no auth info at the display layer.
+def _key_facts_auth_line(info: TenantInfo) -> str | None:
+    """Combine the M365 and Google Workspace auth labels into one line.
+
+    "Managed (Entra ID + Google Workspace)" reads cleaner than
+    "Managed + Managed (GWS)" when both providers share an auth type.
+    GetUserRealm returns NameSpaceType=Unknown for domains that are not real
+    M365 tenants, so "Unknown" is treated as no auth info here. Returns ``None``
+    when no usable auth info is present.
+    """
     effective_auth: str | None = info.auth_type
     if effective_auth and effective_auth.strip().lower() == "unknown":
         effective_auth = None
@@ -1838,47 +1832,31 @@ def _render_key_facts(info: TenantInfo) -> Text:  # noqa: C901
     auth_parts: list[str] = []
     if effective_auth and info.google_auth_type:
         if effective_auth == info.google_auth_type:
-            providers: list[str] = []
             # Only claim "Entra ID" when the microsoft365 slug is actually
             # detected; a dormant tenant_id from OIDC discovery on a
             # Google-primary domain otherwise yields a confident-wrong claim.
-            if "microsoft365" in info.slugs:
-                providers.append("Entra ID")
-            else:
-                providers.append("Microsoft")
-            gws = "Google Workspace"
-            if info.google_idp_name:
-                gws += f" via {info.google_idp_name}"
-            providers.append(gws)
+            ms_label = "Entra ID" if "microsoft365" in info.slugs else "Microsoft"
+            providers = [ms_label, _with_idp("Google Workspace", info.google_idp_name)]
             auth_parts.append(f"{effective_auth} ({' + '.join(providers)})")
         else:
             auth_parts.append(effective_auth)
-            gws_label = info.google_auth_type
-            if info.google_idp_name:
-                gws_label += f" via {info.google_idp_name}"
-            auth_parts.append(f"{gws_label} (Google Workspace)")
+            auth_parts.append(f"{_with_idp(info.google_auth_type, info.google_idp_name)} (Google Workspace)")
     elif effective_auth:
         auth_parts.append(effective_auth)
     elif info.google_auth_type:
-        gws_label = info.google_auth_type
-        if info.google_idp_name:
-            gws_label += f" via {info.google_idp_name}"
-        auth_parts.append(f"{gws_label} (Google Workspace)")
-    if auth_parts:
-        _field("Auth", " + ".join(auth_parts))
+        auth_parts.append(f"{_with_idp(info.google_auth_type, info.google_idp_name)} (Google Workspace)")
+    if not auth_parts:
+        return None
+    return " + ".join(auth_parts)
 
-    # Sovereignty — only when cloud_instance indicates non-commercial
-    if info.cloud_instance and "microsoftonline.com" not in info.cloud_instance.lower():
-        sov_label = info.cloud_instance
-        if info.tenant_region_sub_scope:
-            sov_label += f" ({info.tenant_region_sub_scope})"
-        _field("Cloud", sov_label)
 
-    # Multi-cloud rollup (v1.9.9): a single-line at-a-glance indicator that
-    # the public footprint touches more than one cloud vendor. Slugs from
-    # the apex and from CNAME-chain subdomain attributions both contribute;
-    # `_CLOUD_VENDOR_BY_SLUG` collapses sibling slugs so the count reflects
-    # distinct vendors. Fires only at >= 2 distinct vendors.
+def _key_facts_multicloud_line(info: TenantInfo) -> str | None:
+    """At-a-glance multi-cloud indicator (v1.9.9).
+
+    The apex slugs and the CNAME-chain subdomain attributions both contribute;
+    ``count_cloud_vendors`` collapses sibling slugs so the count reflects
+    distinct vendors. Returns ``None`` unless the footprint touches >= 2.
+    """
     surface_slug_stream: list[str] = []
     for sa in info.surface_attributions:
         if sa.primary_slug:
@@ -1886,16 +1864,51 @@ def _render_key_facts(info: TenantInfo) -> Text:  # noqa: C901
         if sa.infra_slug:
             surface_slug_stream.append(sa.infra_slug)
     vendor_counts = count_cloud_vendors(info.slugs, surface_slug_stream)
-    if len(vendor_counts) >= 2:
-        ranked_vendors = sorted(vendor_counts.items(), key=lambda p: (-p[1], p[0]))
-        vendor_names = [v for v, _ in ranked_vendors]
-        rollup = f"{len(vendor_names)} providers observed ({', '.join(vendor_names)})"
-        _field("Multi-cloud", rollup)
+    if len(vendor_counts) < 2:
+        return None
+    ranked_vendors = sorted(vendor_counts.items(), key=lambda p: (-p[1], p[0]))
+    vendor_names = [v for v, _ in ranked_vendors]
+    return f"{len(vendor_names)} providers observed ({', '.join(vendor_names)})"
+
+
+def _render_key_facts(info: TenantInfo) -> Text:
+    """Build the key-facts block: Provider, Tenant/Region, Auth, Cloud
+    (sovereignty), Multi-cloud rollup, Confidence.
+
+    Extracted from ``render_tenant_panel`` so the panel orchestrator stays
+    a thin sequence of section calls. Behavior is unchanged; the golden
+    renders in ``tests/test_golden_renders.py`` pin the exact output.
+    """
+    facts = Text()
+    _append_field(facts, "Provider", _key_facts_provider_line(info))
+
+    if info.tenant_id:
+        tenant_line = info.tenant_id
+        if info.region:
+            tenant_line += f" • {info.region}"
+        _append_field(facts, "Tenant", tenant_line)
+    elif info.region:
+        _append_field(facts, "Region", info.region)
+
+    auth_line = _key_facts_auth_line(info)
+    if auth_line is not None:
+        _append_field(facts, "Auth", auth_line)
+
+    # Sovereignty — only when cloud_instance indicates non-commercial.
+    if info.cloud_instance and "microsoftonline.com" not in info.cloud_instance.lower():
+        sov_label = info.cloud_instance
+        if info.tenant_region_sub_scope:
+            sov_label += f" ({info.tenant_region_sub_scope})"
+        _append_field(facts, "Cloud", sov_label)
+
+    multicloud_line = _key_facts_multicloud_line(info)
+    if multicloud_line is not None:
+        _append_field(facts, "Multi-cloud", multicloud_line)
 
     # Confidence — green only for High, default otherwise.
     dots = CONFIDENCE_DOTS[info.confidence]
     conf_value = f"{dots} {info.confidence.value.capitalize()} ({len(info.sources)} sources)"
-    _field("Confidence", conf_value, value_style="green" if _confidence_is_high(info.confidence) else "")
+    _append_field(facts, "Confidence", conf_value, value_style="green" if _confidence_is_high(info.confidence) else "")
 
     return facts
 
