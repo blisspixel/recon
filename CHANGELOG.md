@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.50] - 2026-06-01
+
+### Decompose detect_provider under the C901 cap
+
+- **`recon_tool/formatter.py`.** `detect_provider` (the email-topology-aware
+  provider line, C901 29) splits into three path helpers: `_provider_exchange_onprem`
+  (Exchange on-prem / hybrid), `_provider_from_topology` (single promoted
+  primary, gateway, and deduped secondaries, with `_topology_slug_secondaries`
+  for the slug-confirmed list), and `_provider_slug_fallback` (the no-topology
+  slug path). `detect_provider` is now a thin dispatcher, drops under the cap of
+  15, and loses its `# noqa: C901`.
+
+No runtime behavior change: the provider line is unchanged, verified against the
+existing provider-line unit tests (`test_backward_compat`, `test_email_topology`,
+`test_formatter_coverage`) and the panel golden snapshots.
+
 ## [1.9.49] - 2026-06-01
 
 ### Decompose format_tenant_markdown under the C901 cap

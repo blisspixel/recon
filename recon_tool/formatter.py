@@ -1185,7 +1185,143 @@ def _pick_single_primary(joined: str) -> tuple[str, list[str]]:
     return parts[0], parts[1:]
 
 
-def detect_provider(  # noqa: C901
+def _provider_exchange_onprem(
+    slug_set_early: set[str], primary_email_provider: str | None, email_gateway: str | None
+) -> str | None:
+    """Exchange on-prem / hybrid provider line.
+
+    Fires when the exchange-onprem slug is present and there is no MX-backed
+    primary provider: a strong signal that email goes to a self-hosted Exchange
+    cluster regardless of dormant Google / M365 account registrations the
+    identity endpoints report. When an M365 tenant also exists the platform is
+    Microsoft 365 (cloud or hybrid) and autodiscover is just an endpoint, so we
+    do not lead with "Exchange Server (on-prem)". Returns ``None`` when this
+    path does not apply.
+    """
+    if not ("exchange-onprem" in slug_set_early and not primary_email_provider):
+        return None
+    if "microsoft365" in slug_set_early:
+        primary_segment = "Microsoft 365"
+        if email_gateway:
+            primary_segment = f"{primary_segment} via {email_gateway} gateway"
+        segments = [primary_segment]
+        if "google-workspace" in slug_set_early:
+            segments.append("Google Workspace (account detected)")
+        return " + ".join(segments)
+    # Genuinely on-prem Exchange — no M365 tenant found.
+    other_accounts: list[str] = []
+    if "google-workspace" in slug_set_early:
+        other_accounts.append("Google Workspace")
+    primary_segment = "Exchange Server (on-prem / hybrid)"
+    if email_gateway:
+        primary_segment = f"{primary_segment} behind {email_gateway} gateway"
+    segments = [primary_segment]
+    for acct in other_accounts:
+        segments.append(f"{acct} (account detected)")
+    return " + ".join(segments)
+
+
+def _topology_slug_secondaries(
+    slug_set: set[str],
+    primary_name: str | None,
+    inferred_secondaries: list[str],
+    email_confirmed_slugs: frozenset[str] | None,
+) -> list[str]:
+    """Slug-based secondary providers (detected via TXT/DKIM) not already in the
+    primary line. Account-only detections (OIDC, TXT tokens) are dropped as
+    Provider-line noise unless confirmed via email routing (MX or DKIM)."""
+    slug_secondaries: list[str] = []
+    for slug, name in (
+        ("microsoft365", "Microsoft 365"),
+        ("google-workspace", "Google Workspace"),
+        ("zoho", "Zoho Mail"),
+        ("protonmail", "ProtonMail"),
+    ):
+        if slug not in slug_set:
+            continue
+        if primary_name and name == primary_name:
+            continue
+        if name in inferred_secondaries:
+            continue
+        if email_confirmed_slugs is not None and slug not in email_confirmed_slugs:
+            continue
+        slug_secondaries.append(name)
+    return slug_secondaries
+
+
+def _provider_from_topology(
+    slugs: tuple[str, ...] | set[str],
+    primary_email_provider: str | None,
+    email_gateway: str | None,
+    likely_primary_email_provider: str | None,
+    email_confirmed_slugs: frozenset[str] | None,
+) -> str:
+    """Provider line from email-topology data: a single promoted primary (see
+    ``_pick_single_primary``), an optional gateway, and deduped secondaries
+    drawn from the inferred list plus email-confirmed slugs."""
+    primary_name: str | None = None
+    primary_label: str = ""
+    inferred_secondaries: list[str] = []
+    if primary_email_provider:
+        primary_name, inferred_secondaries = _pick_single_primary(primary_email_provider)
+        primary_label = "(primary)"
+    elif likely_primary_email_provider:
+        primary_name, inferred_secondaries = _pick_single_primary(likely_primary_email_provider)
+        primary_label = "(likely primary)"
+
+    slug_secondaries = _topology_slug_secondaries(
+        set(slugs), primary_name, inferred_secondaries, email_confirmed_slugs
+    )
+
+    all_secondaries: list[str] = []
+    for n in inferred_secondaries + slug_secondaries:
+        if n not in all_secondaries:
+            all_secondaries.append(n)
+
+    segments: list[str] = []
+    if primary_name:
+        head = f"{primary_name} {primary_label}".strip()
+        if email_gateway:
+            head = f"{head} via {email_gateway} gateway"
+        segments.append(head)
+    elif email_gateway:
+        segments.append(f"{email_gateway} gateway (no inferable downstream)")
+
+    for sec in all_secondaries:
+        segments.append(f"{sec} (secondary)")
+
+    if segments:
+        return " + ".join(segments)
+    return "Unknown (no known provider pattern matched)"
+
+
+def _provider_slug_fallback(slugs: tuple[str, ...] | set[str], has_mx_records: bool) -> str:
+    """Slug-based provider line when no topology data is available.
+
+    Distinguishes "account detected, no MX" (the slug came from a non-MX source
+    on a domain with zero MX records) from "account detected, custom MX" (MX
+    records exist but point to an unrecognized host). Callers that know whether
+    MX records exist pass ``has_mx_records``; the conservative default is True.
+    """
+    slug_set = set(slugs)
+    providers: list[str] = []
+    if "microsoft365" in slug_set:
+        providers.append("Microsoft 365")
+    if "google-workspace" in slug_set:
+        providers.append("Google Workspace")
+    if "zoho" in slug_set:
+        providers.append("Zoho Mail")
+    if "protonmail" in slug_set:
+        providers.append("ProtonMail")
+    if not providers and "aws-ses" in slug_set:
+        providers.append("AWS SES")
+    if providers:
+        qualifier = "account detected, no MX" if not has_mx_records else "account detected, custom MX"
+        return " + ".join(f"{p} ({qualifier})" for p in providers)
+    return "Unknown (no known provider pattern matched)"
+
+
+def detect_provider(
     services: tuple[str, ...] | set[str],
     slugs: tuple[str, ...] | set[str] = (),
     primary_email_provider: str | None = None,
@@ -1216,150 +1352,21 @@ def detect_provider(  # noqa: C901
     Falls back to slug-based detection when topology fields are all
     None (backward compatible).
     """
-    # v0.9.3: Exchange on-prem / hybrid detection is a strong
-    # signal that the domain's email goes to a self-hosted
-    # Exchange cluster, regardless of what the identity-endpoint
-    # sources say about dormant Google / Microsoft 365 accounts.
-    # When the exchange-onprem slug is present AND there's no
-    # MX-backed primary provider, surface "Exchange Server
-    # (on-prem / hybrid)" as the primary and treat any
-    # slug-based M365 / Google signals as secondary account
-    # registrations. This catches cases like vatican.va where
-    # the real answer is "runs Exchange on their own servers"
-    # but the tool was labelling it "Google Workspace".
     slug_set_early = set(slugs)
-    if "exchange-onprem" in slug_set_early and not primary_email_provider:
-        if "microsoft365" in slug_set_early:
-            # Exchange autodiscover + M365 tenant = Microsoft 365 (cloud
-            # or hybrid). M365 is the platform; autodiscover is just an
-            # endpoint. Don't lead with "Exchange Server (on-prem)".
-            primary_segment = "Microsoft 365"
-            if email_gateway:
-                primary_segment = f"{primary_segment} via {email_gateway} gateway"
-            segments = [primary_segment]
-            if "google-workspace" in slug_set_early:
-                segments.append("Google Workspace (account detected)")
-            return " + ".join(segments)
-        # Genuinely on-prem Exchange — no M365 tenant found
-        other_accounts: list[str] = []
-        if "google-workspace" in slug_set_early:
-            other_accounts.append("Google Workspace")
-        primary_segment = "Exchange Server (on-prem / hybrid)"
-        if email_gateway:
-            primary_segment = f"{primary_segment} behind {email_gateway} gateway"
-        segments = [primary_segment]
-        for acct in other_accounts:
-            segments.append(f"{acct} (account detected)")
-        return " + ".join(segments)
+    exchange = _provider_exchange_onprem(slug_set_early, primary_email_provider, email_gateway)
+    if exchange is not None:
+        return exchange
 
-    # If we have topology data, use it
     if primary_email_provider or email_gateway or likely_primary_email_provider:
-        primary_name: str | None = None
-        primary_label: str = ""
-        inferred_secondaries: list[str] = []
+        return _provider_from_topology(
+            slugs,
+            primary_email_provider,
+            email_gateway,
+            likely_primary_email_provider,
+            email_confirmed_slugs,
+        )
 
-        if primary_email_provider:
-            primary_name, inferred_secondaries = _pick_single_primary(primary_email_provider)
-            primary_label = "(primary)"
-        elif likely_primary_email_provider:
-            primary_name, inferred_secondaries = _pick_single_primary(likely_primary_email_provider)
-            primary_label = "(likely primary)"
-
-        # Collect slug-based secondaries — providers detected via TXT
-        # or DKIM but not already in the primary line.
-        slug_set = set(slugs)
-        slug_secondaries: list[str] = []
-        for slug, name in [
-            ("microsoft365", "Microsoft 365"),
-            ("google-workspace", "Google Workspace"),
-            ("zoho", "Zoho Mail"),
-            ("protonmail", "ProtonMail"),
-        ]:
-            if slug in slug_set:
-                if primary_name and name == primary_name:
-                    continue
-                if name in inferred_secondaries:
-                    continue
-                # v0.10.1: only show slug-based secondary if confirmed
-                # via email routing (MX or DKIM). Account-only detections
-                # (OIDC, TXT tokens) are noise in the Provider line.
-                if email_confirmed_slugs is not None and slug not in email_confirmed_slugs:
-                    continue
-                slug_secondaries.append(name)
-
-        # Full secondary list combines the two sources, deduped.
-        all_secondaries: list[str] = []
-        for n in inferred_secondaries + slug_secondaries:
-            if n not in all_secondaries:
-                all_secondaries.append(n)
-
-        segments: list[str] = []
-        if primary_name:
-            head = f"{primary_name} {primary_label}".strip()
-            if email_gateway:
-                head = f"{head} via {email_gateway} gateway"
-            segments.append(head)
-        elif email_gateway:
-            segments.append(f"{email_gateway} gateway (no inferable downstream)")
-
-        for sec in all_secondaries:
-            segments.append(f"{sec} (secondary)")
-
-        if segments:
-            return " + ".join(segments)
-        return "Unknown (no known provider pattern matched)"
-
-    # Fallback: slug-based detection with v0.9.3 honesty constraint.
-    #
-    # This path runs when primary_email_provider, email_gateway,
-    # and likely_primary_email_provider are ALL None — which means
-    # the merge pipeline didn't find an MX record matching a known
-    # provider slug. Two very different situations land here:
-    #
-    #   (a) The domain has NO MX records at all. The provider slug
-    #       was added by a non-MX source (Google Identity Routing
-    #       endpoint, Microsoft OIDC discovery, TXT verification
-    #       tokens). Calling this "(primary)" was the v0.9.2 bug —
-    #       a dormant Google Workspace account registration was
-    #       rendered as "Google Workspace (primary)" on a domain
-    #       with zero MX records. The honest label here is
-    #       "(account detected, no MX)".
-    #
-    #   (b) The domain HAS MX records but they point to a host
-    #       recon doesn't recognize — Apache's own mail servers,
-    #       a custom self-hosted Postfix, a niche provider not in
-    #       the fingerprint set. Calling this "(account detected,
-    #       no MX)" is ALSO a lie — MX records exist, email IS
-    #       being received, the tool just can't name the host.
-    #       The honest label here is "(account detected, custom
-    #       MX)".
-    #
-    # Callers that know whether MX records exist pass
-    # has_mx_records accordingly; the default is True (the
-    # conservative choice — avoids over-promising "no MX" when
-    # we don't know).
-    slug_set = set(slugs)
-    providers = []
-    if "microsoft365" in slug_set:
-        providers.append("Microsoft 365")
-    if "google-workspace" in slug_set:
-        providers.append("Google Workspace")
-    if "zoho" in slug_set:
-        providers.append("Zoho Mail")
-    if "protonmail" in slug_set:
-        providers.append("ProtonMail")
-    if not providers and "aws-ses" in slug_set:
-        providers.append("AWS SES")
-    if providers:
-        qualifier = "account detected, no MX" if not has_mx_records else "account detected, custom MX"
-        return " + ".join(f"{p} ({qualifier})" for p in providers)
-    # C2: when nothing matches any known provider, distinguish "we have no
-    # idea" from "MX observed but custom/self-hosted" when possible. The
-    # caller only has slugs here, so the best we can do is return a hint
-    # that invites the user to run --explain to see what was actually
-    # queried. "Unknown" stays as the word so the existing panel colour
-    # and alignment aren't disturbed.
-    return "Unknown (no known provider pattern matched)"
+    return _provider_slug_fallback(slugs, has_mx_records)
 
 
 def _wrap_service_list(
