@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.44] - 2026-06-01
+
+### Extend the golden-output safety net before more panel decomposition
+
+`render_tenant_panel` is being decomposed incrementally (v1.9.39 onward) under
+the protection of golden characterization tests. The existing
+`fully_populated_tenant_info` fixture left several render branches dark: the
+Services subdomain summary, the Unclassified surface block, and the full-mode
+External surface section. Decomposing those without a snapshot would risk a
+silent output change, so this patch pins them first.
+
+- **`tests/test_golden_renders.py`.** A `_surface_rich_info` fixture (Contoso,
+  fictional) populates `surface_attributions` (a collapsed CDN group, layered
+  application-plus-infrastructure rows, a standalone app) and
+  `unclassified_cname_chains`. Two new snapshots, `panel_surface_default` and
+  `panel_surface_full`, pin the previously-dark branches: the subdomain
+  summary line, the unclassified-termini block, and the External surface
+  rendering (individual rows, collapsed group with apex stripping, layered
+  service labels, discovery hint).
+
+No runtime behavior change. Branch coverage rises as the formatter paths that
+only these branches reach are now exercised.
+
 ## [1.9.43] - 2026-06-01
 
 ### Relax the Python floor back to `>=3.11`

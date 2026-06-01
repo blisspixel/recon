@@ -4,11 +4,11 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.43** (pre-2.0 hardening phase, patch 6: relax the
-Python floor back to `>=3.11`. No runtime dependency needs 3.12 (networkx
-sets the practical floor at 3.11), and the only 3.12-only code was three
-PEP 695 `type` aliases, now written as `TypeAlias`; supporting 3.11 while it
-still gets security fixes fits recon's building-block role). The
+Current release: **v1.9.44** (pre-2.0 hardening phase, patch 7: extend the
+golden-output safety net before more `render_tenant_panel` decomposition. A
+new fixture pins the render branches the prior golden fixture left dark, the
+external-surface attributions and unclassified CNAME chains, so the next
+decomposition steps stay byte-identical on those paths too). The
 engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
 `py.typed` marker, the `>=3.12` floor (relaxed back to `>=3.11` in v1.9.43),
 branch coverage, `deal`
@@ -66,6 +66,7 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.41 | Pre-2.0 hardening patch 4: IDN-to-punycode handling in `validate_domain` plus an NDJSON aggregator parsing fix (`validation/corpus_aggregator.py`), both surfaced by a $0 passive corpus run | `CHANGELOG.md` |
 | v1.9.42 | Pre-2.0 hardening patch 5: restore the bare `recon <domain>` shorthand on fresh installs. Typer >=0.25 vendors its own Click, so `_DomainGroup`'s `except click.UsageError` never saw the vendored error; it now routes a dotted, non-flag, non-subcommand first arg to `lookup` before normal resolution instead | `CHANGELOG.md` |
 | v1.9.43 | Pre-2.0 hardening patch 6: relax the Python floor to `>=3.11` (re-adds the 3.11 classifier and CI matrix row, ruff/pyright baselines back to 3.11). No runtime dependency needs 3.12 and the only 3.12-only syntax was three PEP 695 `type` aliases, now `TypeAlias`. Reverses the v1.9.29 floor raise so 3.11 consumers can install while 3.11 still gets security fixes | `CHANGELOG.md` |
+| v1.9.44 | Pre-2.0 hardening patch 7: extend the golden-output net ahead of more `render_tenant_panel` decomposition. A `_surface_rich_info` fixture plus `panel_surface_default` / `panel_surface_full` snapshots pin the branches the prior fixture left dark: the Services subdomain summary, the Unclassified surface block, and the full-mode External surface section (individual rows, collapsed CDN group, apex stripping, layered labels) | `CHANGELOG.md` |
 
 ## Pre-2.0 hardening phase (current)
 

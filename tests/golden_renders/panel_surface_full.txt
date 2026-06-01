@@ -1,0 +1,33 @@
+Contoso Ltd
+contoso.com
+──────────────────────────────────────────────────────────────────────────────
+  Provider     Microsoft 365 (account detected, no MX)
+  Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
+  Auth         Federated
+  Multi-cloud  2 providers observed (Fastly, Cloudflare)
+  Confidence   ●●● High (3 sources)
+
+
+Services
+  Email          Microsoft 365
+  AI             Microsoft Copilot (likely)
+  Collaboration  Slack
+
+
+Related domains
+  api.contoso.com, login.contoso.com
+
+External surface (9)
+  login.contoso.com         Auth0, Cloudflare
+  sso.contoso.com           Auth0
+  support.contoso.com       Zendesk
+
+  Fastly (6)
+    cdn1, cdn2, cdn3, cdn4, cdn5, cdn6
+
+  3 unclassified subdomains — `recon discover contoso.com` to surface fingerprint candidates
+
+
+Insights
+  Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)
+
