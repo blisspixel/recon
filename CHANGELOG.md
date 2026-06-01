@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.45] - 2026-06-01
+
+### render_tenant_panel decomposition part 2: External surface section
+
+Continues the incremental decomposition of `render_tenant_panel` (the main
+user-facing panel, C901 96 at the v1.9.37 gate-enable point) under golden
+characterization tests.
+
+- **`recon_tool/formatter.py`.** The ~100-line External surface section (the
+  full-mode per-subdomain attribution map) moves out to a new
+  `_render_external_surface` helper, itself split into `_surface_partition`
+  (group attributions into individually-listed rows and collapsed per-service
+  groups), `_append_individual_rows`, and `_append_collapsed_rows`. Each new
+  function is under the C901 cap of 15, so no `# noqa` is added.
+  `render_tenant_panel`'s complexity drops from 74 to 59 (its `# noqa: C901`
+  stays until the remaining sections are extracted).
+
+No runtime behavior change: the output is held byte-identical by the v1.9.44
+`panel_surface_full` golden snapshot.
+
 ## [1.9.44] - 2026-06-01
 
 ### Extend the golden-output safety net before more panel decomposition
