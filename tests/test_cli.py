@@ -65,8 +65,22 @@ class TestHelp:
 
 
 class TestDirectDomainLookup:
-    """recon contoso.com works via sys.argv preprocessing (not testable via CliRunner).
-    These test the lookup subcommand which is equivalent."""
+    """``recon contoso.com`` (no ``lookup`` subcommand) routes to the lookup
+    command via ``_DomainGroup``. This is exercised through CliRunner: the
+    routing runs inside Click's command resolution, which CliRunner drives."""
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_bare_domain_routes_to_lookup(self, mock_resolve) -> None:
+        # Regression guard for the shorthand routing. Typer >=0.25 vendors its
+        # own Click, so the group's domain-to-lookup routing must not depend on
+        # catching the top-level ``click.UsageError`` (it does not see the
+        # vendored one). A bare domain must reach the lookup command, not error
+        # with "No such command".
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        result = runner.invoke(app, ["contoso.com", "--no-cache"])
+        assert result.exit_code == 0, result.output
+        assert "No such command" not in result.output
+        assert "Contoso Ltd" in result.output
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_default(self, mock_resolve) -> None:
