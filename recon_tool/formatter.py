@@ -1893,7 +1893,7 @@ def _render_key_facts(info: TenantInfo) -> Text:  # noqa: C901
     return facts
 
 
-def render_tenant_panel(  # noqa: C901
+def render_tenant_panel(
     info: TenantInfo,
     show_services: bool = False,
     show_domains: bool = False,
@@ -1960,463 +1960,309 @@ def render_tenant_panel(  # noqa: C901
     blocks.append(_render_key_facts(info))
 
     # ── Services section ──────────────────────────────────────────
-    if info.services:
+    svc_block, ceiling_categorized_count = _render_services(info, verbose, show_domains)
+    if svc_block is not None:
         _spacer()
-        svc_block = Text()
-        svc_block.append("Services", style="bold")
-        svc_block.append("\n")
-        categorized = _categorize_services(info)
-        # v0.10: in default mode, strip noise from Email row.
-        # (1) Protocol/config entries (DKIM, DMARC, SPF, etc.) — the
-        #     email security score insight already covers these.
-        # (2) Provider-line services (Exchange, M365, Google Workspace,
-        #     gateway) — already in the header. Repeating them in Email
-        #     is saying the same thing twice.
-        # If this would erase the entire Email row, keep a compact summary
-        # instead so dense email evidence does not render as a sparse panel.
-        # In --full mode, show everything.
-        if not verbose and "Email" in categorized:
-            original_email = list(categorized["Email"])
-            _email_noise = {
-                "DKIM",
-                "DKIM (Exchange Online)",
-                "DMARC",
-                "MTA-STS",
-                "BIMI",
-                "TLS-RPT",
-                "Exchange Autodiscover",
-                "Microsoft 365",
-                "Google Workspace",
-                "Exchange Server (on-prem / hybrid)",
-            }
-            # Also strip the gateway — already in Provider line
-            _gateway_names = {
-                "Proofpoint",
-                "Trend Micro Email Security",
-                "Mimecast",
-                "Barracuda Email Security",
-            }
-            _all_noise = _email_noise | _gateway_names
-            categorized["Email"] = [s for s in categorized["Email"] if s not in _all_noise and not s.startswith("SPF")]
-            if not categorized["Email"]:
-                email_summary = _compact_email_summary(info, original_email)
-                if email_summary:
-                    categorized["Email"] = email_summary
-                else:
-                    del categorized["Email"]
-        max_width = _CATEGORY_WIDTH
-        for cat, svcs in categorized.items():
-            svc_block.append("  ")
-            svc_block.append(cat.ljust(max_width), style="dim")
-            wrapped = _wrap_service_list(
-                svcs,
-                label_width=2 + max_width,
-                panel_width=_PANEL_WIDTH,
-                panel_pad=0,
-            )
-            svc_block.append(wrapped)
-            svc_block.append("\n")
-
-        # Default-mode-only: one extra line summarising services that the
-        # CNAME-chain classifier attributed to subdomains. These are kept
-        # separate from the apex Services categories above because apex
-        # DNS evidence and subdomain CNAME-chain evidence answer different
-        # questions and conflating them double-counts. --full users see
-        # the full per-subdomain table further down the panel, so we
-        # suppress the summary there to avoid redundancy.
-        #
-        # v1.9.3.10: the Subdomain summary now reports counts per provider
-        # (e.g. ``AWS CloudFront (5), Fastly (3), Stripe (12)``) so the
-        # multi-cloud picture is visible by default. The prior version
-        # listed names without counts, which hid the fact that an apex on
-        # one cloud has subdomains across several others. Sorted by count
-        # descending so the dominant providers anchor the line.
-        if info.surface_attributions and not show_domains:
-            # Count per-name occurrences across surface attributions.
-            # v1.9.3.10: deliberately NO apex-evidence filter. The
-            # Subdomain line answers a different question from the Cloud
-            # line above — "how many subdomains are hosted on which
-            # provider" vs "what does the apex resolve to". When apex and
-            # subdomains share a provider (e.g., apex on AWS Route 53,
-            # 15 subdomains on AWS CloudFront), the prior version's
-            # filter hid the subdomain counts because the AWS slug was
-            # apex-evidenced. That collapsed the multi-cloud distribution.
-            # Showing both surfaces with their distinct labels lets
-            # operators see at a glance: where the apex sits AND how the
-            # subdomain footprint is split across providers.
-            name_counts: dict[str, int] = {}
-            for sa in info.surface_attributions:
-                # Only the *primary* attribution is counted per subdomain;
-                # the infra tier (CDN fronting the primary) is the same
-                # subdomain, not an additional one, so counting both
-                # would double-attribute. Surface infra separately only
-                # when there's no primary.
-                name = sa.primary_name
-                if not sa.primary_slug or not name:
-                    name = sa.infra_name
-                    if not sa.infra_slug or not name:
-                        continue
-                name_counts[name] = name_counts.get(name, 0) + 1
-
-            if name_counts:
-                # Sort by count descending, then name ascending for
-                # diff-stable output on ties.
-                ranked = sorted(name_counts.items(), key=lambda p: (-p[1], p[0]))
-                # Render: "Name (N), Name (M), ..." — counts make
-                # multi-cloud distribution visible at a glance.
-                surface_summary = [f"{name} ({count})" for name, count in ranked]
-                budget = _PANEL_WIDTH - (2 + max_width) - 2
-                joined = ", ".join(surface_summary)
-                if len(joined) > budget:
-                    # Pack as many fit, reserving room for "+N more".
-                    kept: list[str] = []
-                    running = 0
-                    for s in surface_summary:
-                        gap = 2 if kept else 0
-                        if running + gap + len(s) > budget - 12:
-                            break
-                        kept.append(s)
-                        running += gap + len(s)
-                    remaining = len(surface_summary) - len(kept)
-                    joined = ", ".join(kept) + f", +{remaining} more" if remaining > 0 else ", ".join(kept)
-                svc_block.append("  ")
-                svc_block.append("Subdomain".ljust(max_width), style="dim")
-                svc_block.append(joined)
-                svc_block.append("\n")
-
         blocks.append(svc_block)
-        ceiling_categorized_count = len(categorized)
-    else:
-        # No services: handled by render_warning. The ceiling check
-        # below short-circuits on ``info.services`` so this default
-        # value is only here to keep ``categorized`` out of the
-        # conditional's scope.
-        ceiling_categorized_count = 0
 
     # ── Passive-DNS ceiling phrasing (v1.9.9) ─────────────────────
-    # When a domain looks like it should be richer than what we
-    # surfaced, add a one-line teaching note about what passive DNS
-    # cannot see. Operators (and AI agents) reading a sparse panel
-    # otherwise risk the "absence of finding = service not present"
-    # misread. The line teaches the architectural limit; it does not
-    # suggest something is wrong with the tool or the target.
-    #
-    # Trigger heuristic — conservative on purpose. Fires only when
-    # all of the following hold:
-    #   - default panel (``--full`` shows the long surface section
-    #     and signals scale on its own; the ceiling line would be
-    #     redundant there).
-    #   - ``info.services`` populated (we did get something back; a
-    #     completely failed run is a different message handled by
-    #     ``render_warning``).
-    #   - ``info.domain_count >= 3`` — the apex has at least three
-    #     tenant domains, suggesting a non-trivial organization. A
-    #     single-domain target genuinely may publish little.
-    #   - fewer than 5 categorized service families AND fewer than 5
-    #     CNAME-chain subdomain attributions. Both halves of the
-    #     check matter: a domain with 4 service categories and 30
-    #     surface attributions is not sparse; one with 4 categories
-    #     and 0 attributions is. Under-firing on a small-but-genuine
-    #     org is preferable to alarming on a richly-attributed one.
+    ceiling = _render_passive_dns_ceiling(info, show_domains, ceiling_categorized_count)
+    if ceiling is not None:
+        _spacer()
+        blocks.append(ceiling)
+
+    # ── Related domains & external-footprint listings ─────────────
+    # Each helper self-gates on default-vs-full mode and returns None when its
+    # section does not apply, so the panel just appends whatever is present in
+    # the original section order.
+    for footprint_section in (
+        _render_related_compact(info, show_domains),
+        _render_unclassified_surface(info, show_domains),
+        _render_full_tenant_domains(info, show_domains),
+        _render_full_related(info, show_domains),
+        _render_external_surface(info, show_domains),
+    ):
+        if footprint_section is not None:
+            _spacer()
+            blocks.append(footprint_section)
+
+    # ── Insights, certs, degraded note, and verbose / explain detail ─
+    # Each helper self-gates and returns None when its section does not apply.
+    for detail_section in (
+        _render_insights(info, verbose, confidence_mode),
+        _render_certs(info, verbose),
+        _render_degraded_note(info),
+        _render_verbose_detail(info, verbose),
+        _render_explain_conflicts(info, explain, verbose),
+    ):
+        if detail_section is not None:
+            _spacer()
+            blocks.append(detail_section)
+
+    return Group(*blocks)
+
+
+def _strip_email_noise(categorized: dict[str, list[str]], info: TenantInfo) -> None:
+    """In default mode, strip from the Email row the protocol/config entries
+    (DKIM/DMARC/SPF/...) the email-security score already covers and the
+    provider/gateway services already shown in the header. If that empties the
+    row, fall back to a compact summary so dense email evidence does not render
+    as a sparse panel. Mutates ``categorized`` in place.
+    """
+    original_email = list(categorized["Email"])
+    _email_noise = {
+        "DKIM",
+        "DKIM (Exchange Online)",
+        "DMARC",
+        "MTA-STS",
+        "BIMI",
+        "TLS-RPT",
+        "Exchange Autodiscover",
+        "Microsoft 365",
+        "Google Workspace",
+        "Exchange Server (on-prem / hybrid)",
+    }
+    # Also strip the gateway — already in the Provider line.
+    _gateway_names = {
+        "Proofpoint",
+        "Trend Micro Email Security",
+        "Mimecast",
+        "Barracuda Email Security",
+    }
+    _all_noise = _email_noise | _gateway_names
+    categorized["Email"] = [s for s in categorized["Email"] if s not in _all_noise and not s.startswith("SPF")]
+    if not categorized["Email"]:
+        email_summary = _compact_email_summary(info, original_email)
+        if email_summary:
+            categorized["Email"] = email_summary
+        else:
+            del categorized["Email"]
+
+
+def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: bool, max_width: int) -> None:
+    """Default-mode-only line summarising the providers the CNAME-chain
+    classifier attributed to subdomains, with per-provider counts so the
+    multi-cloud distribution is visible at a glance (e.g. ``AWS CloudFront (5),
+    Fastly (3)``).
+
+    Kept separate from the apex Services categories because apex DNS evidence
+    and subdomain CNAME-chain evidence answer different questions and conflating
+    them double-counts; --full shows the full per-subdomain table instead, so
+    the summary is suppressed there. Deliberately no apex-evidence filter: the
+    line answers "how many subdomains sit on which provider", distinct from the
+    Cloud line's "what does the apex resolve to". Counts the primary attribution
+    per subdomain (the fronting infra tier is the same subdomain, not an extra),
+    falling back to the infra tier only when there is no primary.
+    """
+    if not (info.surface_attributions and not show_domains):
+        return
+    name_counts: dict[str, int] = {}
+    for sa in info.surface_attributions:
+        name = sa.primary_name
+        if not sa.primary_slug or not name:
+            name = sa.infra_name
+            if not sa.infra_slug or not name:
+                continue
+        name_counts[name] = name_counts.get(name, 0) + 1
+    if not name_counts:
+        return
+    # Sort by count descending, then name ascending for diff-stable ties.
+    ranked = sorted(name_counts.items(), key=lambda p: (-p[1], p[0]))
+    surface_summary = [f"{name} ({count})" for name, count in ranked]
+    budget = _PANEL_WIDTH - (2 + max_width) - 2
+    joined = ", ".join(surface_summary)
+    if len(joined) > budget:
+        # Pack as many as fit, reserving room for "+N more".
+        kept: list[str] = []
+        running = 0
+        for s in surface_summary:
+            gap = 2 if kept else 0
+            if running + gap + len(s) > budget - 12:
+                break
+            kept.append(s)
+            running += gap + len(s)
+        remaining = len(surface_summary) - len(kept)
+        joined = ", ".join(kept) + f", +{remaining} more" if remaining > 0 else ", ".join(kept)
+    svc_block.append("  ")
+    svc_block.append("Subdomain".ljust(max_width), style="dim")
+    svc_block.append(joined)
+    svc_block.append("\n")
+
+
+def _render_services(info: TenantInfo, verbose: bool, show_domains: bool) -> tuple[Text | None, int]:
+    """Render the categorized Services section and return it with the count of
+    service categories (used by the passive-DNS ceiling trigger).
+
+    Returns ``(None, 0)`` when there are no services. Output held byte-identical
+    by ``tests/test_golden_renders.py`` (``panel_dense_default`` /
+    ``panel_surface_default``).
+    """
+    if not info.services:
+        return None, 0
+    svc_block = Text()
+    svc_block.append("Services", style="bold")
+    svc_block.append("\n")
+    categorized = _categorize_services(info)
+    if not verbose and "Email" in categorized:
+        _strip_email_noise(categorized, info)
+    max_width = _CATEGORY_WIDTH
+    for cat, svcs in categorized.items():
+        svc_block.append("  ")
+        svc_block.append(cat.ljust(max_width), style="dim")
+        wrapped = _wrap_service_list(
+            svcs,
+            label_width=2 + max_width,
+            panel_width=_PANEL_WIDTH,
+            panel_pad=0,
+        )
+        svc_block.append(wrapped)
+        svc_block.append("\n")
+    _append_subdomain_summary(svc_block, info, show_domains, max_width)
+    return svc_block, len(categorized)
+
+
+def _render_passive_dns_ceiling(info: TenantInfo, show_domains: bool, categorized_count: int) -> Text | None:
+    """One-line teaching note about what passive DNS cannot see, shown on a
+    default panel that looks sparser than the org probably is.
+
+    Operators (and AI agents) reading a sparse panel otherwise risk the
+    "absence of finding = service not present" misread. The trigger is
+    conservative: default panel only (--full signals scale on its own),
+    services present (a fully-failed run is handled by ``render_warning``),
+    ``domain_count >= 3`` (a non-trivial org), and fewer than five categorized
+    families AND fewer than five subdomain attributions. Both halves of the
+    sparseness check matter: four categories with thirty attributions is not
+    sparse; four with zero is. Returns ``None`` when the trigger does not fire.
+    """
     _SPARSE_CATEGORY_FLOOR = 5
     _SPARSE_SURFACE_FLOOR = 5
     _MIN_DOMAINS_FOR_CEILING = 3
-    if (
+    if not (
         info.services
         and not show_domains
         and info.domain_count >= _MIN_DOMAINS_FOR_CEILING
-        and ceiling_categorized_count < _SPARSE_CATEGORY_FLOOR
+        and categorized_count < _SPARSE_CATEGORY_FLOOR
         and len(info.surface_attributions) < _SPARSE_SURFACE_FLOOR
     ):
-        _spacer()
-        ceiling = Text()
-        ceiling.append("Passive-DNS ceiling", style="bold")
-        ceiling.append("\n  ")
-        ceiling.append(
-            "Passive DNS surfaces what publishes externally. Server-side API consumption, internal workloads, and",
-            style="dim",
-        )
-        ceiling.append("\n  ")
-        ceiling.append(
-            "SaaS without DNS verification do not appear in public DNS records.",
-            style="dim",
-        )
-        blocks.append(ceiling)
+        return None
+    ceiling = Text()
+    ceiling.append("Passive-DNS ceiling", style="bold")
+    ceiling.append("\n  ")
+    ceiling.append(
+        "Passive DNS surfaces what publishes externally. Server-side API consumption, internal workloads, and",
+        style="dim",
+    )
+    ceiling.append("\n  ")
+    ceiling.append(
+        "SaaS without DNS verification do not appear in public DNS records.",
+        style="dim",
+    )
+    return ceiling
 
-    # ── Related domains (compact) ─────────────────────────────────
-    if info.related_domains and not show_domains:
-        picked, total = _pick_high_signal_related(tuple(info.related_domains))
-        if picked:
-            _spacer()
-            rel = Text()
-            rel.append("High-signal related domains", style="bold")
-            rel.append("\n")
-            rel.append("  ")
-            # Render as wrapped comma-list within the panel width
-            joined = ", ".join(picked)
-            max_width = _PANEL_WIDTH - 2
-            for j, line in enumerate(_wrap_text(joined, max_width)):
-                if j > 0:
-                    rel.append("\n  ")
-                rel.append(line, style="dim")
-            if total > len(picked):
-                remaining = total - len(picked)
-                rel.append(
-                    f"\n  ({total} total — {remaining} more, use --full to see all)",
-                    style="dim italic",
-                )
-            blocks.append(rel)
 
-    # ── Unclassified surface (default panel; v1.9.3.10) ───────────
-    # The chain walker reached CNAME termini that the catalog could
-    # not classify. Surface the count + a sample so the operator
-    # knows we walked something interesting but couldn't name it.
-    # The implicit message of the default panel was "they only use
-    # the services we listed" — this corrects it to "they use AT
-    # LEAST the services we listed, plus N unclassified surfaces".
-    # Humility over completeness: hide the gap is the worst-case
-    # failure mode, since absence of evidence reads as evidence of
-    # absence to operators who don't know recon's invariants.
-    if info.unclassified_cname_chains and not show_domains:
-        _spacer()
-        unc = Text()
-        n = len(info.unclassified_cname_chains)
-        noun = "terminus" if n == 1 else "termini"
-        unc.append("Unclassified surface", style="bold")
-        unc.append("\n  ")
-        unc.append(
-            f"{n} CNAME chain {noun} reached, no fingerprint match. ",
-            style="dim",
-        )
-        unc.append(
-            "We walked them but cannot name them — open a fingerprint PR or run\n  ",
-            style="dim",
-        )
-        unc.append(
-            f"`recon discover {info.queried_domain}` to triage candidates.",
+def _render_related_compact(info: TenantInfo, show_domains: bool) -> Text | None:
+    """Compact high-signal related-domains list (default panel only).
+
+    Returns ``None`` unless there are related domains and at least one survives
+    the high-signal filter. Extracted from ``render_tenant_panel``; output held
+    byte-identical by ``tests/test_golden_renders.py`` (``panel_dense_default``).
+    """
+    if not (info.related_domains and not show_domains):
+        return None
+    picked, total = _pick_high_signal_related(tuple(info.related_domains))
+    if not picked:
+        return None
+    rel = Text()
+    rel.append("High-signal related domains", style="bold")
+    rel.append("\n")
+    rel.append("  ")
+    # Render as a wrapped comma-list within the panel width.
+    joined = ", ".join(picked)
+    max_width = _PANEL_WIDTH - 2
+    for j, line in enumerate(_wrap_text(joined, max_width)):
+        if j > 0:
+            rel.append("\n  ")
+        rel.append(line, style="dim")
+    if total > len(picked):
+        remaining = total - len(picked)
+        rel.append(
+            f"\n  ({total} total — {remaining} more, use --full to see all)",
             style="dim italic",
         )
-        # Show up to 2 representative subdomain → terminus pairs so the
-        # operator can sanity-check what's getting missed. More than 2
-        # would crowd the default panel; --full / `recon discover` is
-        # the path to the complete list.
-        examples = list(info.unclassified_cname_chains[:2])
-        if examples:
-            unc.append("\n  ", style="dim")
-            unc.append("examples: ", style="dim")
-            sample_strs: list[str] = []
-            for uc in examples:
-                terminus = uc.chain[-1] if uc.chain else "(no terminus)"
-                sample_strs.append(f"{uc.subdomain} → {terminus}")
-            unc.append(", ".join(sample_strs), style="dim italic")
-        blocks.append(unc)
+    return rel
 
-    # ── Full tenant_domains listing (only with --domains / --full) ─
-    if show_domains and info.tenant_domains:
-        _spacer()
-        dom = Text()
-        dom.append(f"Domains ({info.domain_count})", style="bold")
-        dom.append("\n")
-        for d in info.tenant_domains:
-            dom.append(f"  {d}\n", style="dim")
-        blocks.append(dom)
 
-    # Full related list when --domains / --full
-    if show_domains and info.related_domains:
-        _spacer()
-        rel = Text()
-        rel.append("Related domains", style="bold")
-        rel.append("\n")
-        rel.append("  ")
-        joined = ", ".join(info.related_domains)
-        for j, line in enumerate(_wrap_text(joined, _PANEL_WIDTH - 2)):
-            if j > 0:
-                rel.append("\n  ")
-            rel.append(line, style="dim")
-        blocks.append(rel)
+def _render_unclassified_surface(info: TenantInfo, show_domains: bool) -> Text | None:
+    """Unclassified-CNAME-termini note (default panel only).
 
-    # ── External surface (per-subdomain attributions; --domains / --full) ─
-    surf = _render_external_surface(info, show_domains)
-    if surf is not None:
-        _spacer()
-        blocks.append(surf)
+    The chain walker reached CNAME termini the catalog could not classify.
+    Surfacing the count plus up to two representative subdomain -> terminus
+    examples corrects the default panel's implicit "they only use the services
+    we listed" to "they use AT LEAST those, plus N unclassified surfaces" —
+    humility over completeness, since absence of evidence otherwise reads as
+    evidence of absence. Returns ``None`` when there are no unclassified chains
+    or in --domains / --full mode. Output held byte-identical by
+    ``tests/test_golden_renders.py`` (``panel_surface_default``).
+    """
+    if not (info.unclassified_cname_chains and not show_domains):
+        return None
+    unc = Text()
+    n = len(info.unclassified_cname_chains)
+    noun = "terminus" if n == 1 else "termini"
+    unc.append("Unclassified surface", style="bold")
+    unc.append("\n  ")
+    unc.append(
+        f"{n} CNAME chain {noun} reached, no fingerprint match. ",
+        style="dim",
+    )
+    unc.append(
+        "We walked them but cannot name them — open a fingerprint PR or run\n  ",
+        style="dim",
+    )
+    unc.append(
+        f"`recon discover {info.queried_domain}` to triage candidates.",
+        style="dim italic",
+    )
+    # Up to 2 representative pairs so the operator can sanity-check what's
+    # getting missed; --full / `recon discover` is the path to the full list.
+    examples = list(info.unclassified_cname_chains[:2])
+    if examples:
+        unc.append("\n  ", style="dim")
+        unc.append("examples: ", style="dim")
+        sample_strs: list[str] = []
+        for uc in examples:
+            terminus = uc.chain[-1] if uc.chain else "(no terminus)"
+            sample_strs.append(f"{uc.subdomain} → {terminus}")
+        unc.append(", ".join(sample_strs), style="dim italic")
+    return unc
 
-    # ── Insights (curated) ────────────────────────────────────────
-    if info.insights:
-        curated: list[str] = _curate_insights(info.insights, info.services, info.slugs)
-        # v0.11: strict confidence mode drops hedging qualifiers when the
-        # evidence is dense (High confidence + 3+ sources). Sparse-data
-        # output is never touched — the "never overclaim on thin evidence"
-        # invariant stays load-bearing.
-        from recon_tool.strict_mode import apply_strict_mode, should_apply_strict
 
-        if should_apply_strict(info, confidence_mode):
-            curated = list(apply_strict_mode(tuple(curated)))
-        if curated:
-            _spacer()
-            ins = Text()
-            ins.append("Insights", style="bold")
-            ins.append("\n")
-            max_width = _PANEL_WIDTH - 2
+def _render_full_tenant_domains(info: TenantInfo, show_domains: bool) -> Text | None:
+    """Full tenant-domains listing (--domains / --full only)."""
+    if not (show_domains and info.tenant_domains):
+        return None
+    dom = Text()
+    dom.append(f"Domains ({info.domain_count})", style="bold")
+    dom.append("\n")
+    for d in info.tenant_domains:
+        dom.append(f"  {d}\n", style="dim")
+    return dom
 
-            # Promote the email security score to first position (bold).
-            score_line: str | None = None
-            sparse_insights: list[str] = []
-            other_insights: list[str] = []
-            for c in curated:
-                if c.startswith("Email security ") and score_line is None:
-                    score_line = c
-                elif _is_sparse_insight(c):
-                    sparse_insights.append(c)
-                else:
-                    other_insights.append(c)
 
-            if score_line is not None:
-                for j, line in enumerate(_wrap_text(score_line, max_width)):
-                    ins.append("  " if j == 0 else "\n  ")
-                    ins.append(line, style="bold")
-                ins.append("\n")
-
-            ordered_insights = sparse_insights + other_insights
-
-            # Cap at 5 insights in default mode; --full/--verbose shows all
-            display_insights = ordered_insights
-            overflow_count = 0
-            if not verbose and len(ordered_insights) > 5:
-                display_insights = ordered_insights[:5]
-                overflow_count = len(ordered_insights) - 5
-
-            for insight in display_insights:
-                for j, line in enumerate(_wrap_text(insight, max_width)):
-                    ins.append("  " if j == 0 else "\n  ")
-                    ins.append(line, style="dim")
-                ins.append("\n")
-
-            if overflow_count > 0:
-                ins.append("  ")
-                ins.append(
-                    f"{overflow_count} more — use --full to see all",
-                    style="dim italic",
-                )
-                ins.append("\n")
-
-            blocks.append(ins)
-
-    # ── Certificate summary (only with --verbose or --full) ───────
-    if verbose and info.cert_summary is not None:
-        _spacer()
-        cs = info.cert_summary
-        issuer_list = ", ".join(cs.top_issuers) if cs.top_issuers else "unknown"
-        certs = Text()
-        certs.append("Certs", style="bold")
-        certs.append("\n  ")
-        certs.append(
-            f"{cs.cert_count} total, {cs.issuance_velocity} in last 90d, {cs.issuer_diversity} issuers ({issuer_list})",
-            style="dim",
-        )
-        blocks.append(certs)
-
-    # ── Degraded-sources note (subtle color) ─────────────────────
-    # Two tiers of framing:
-    #
-    # (1) **Info tone** (default, no color) — when only CT sources
-    #     are degraded AND the fallback chain successfully reached
-    #     another provider. The user should see that a fallback
-    #     happened and which provider answered, but it reads as a
-    #     routine event, not a warning. Previously this case was
-    #     painted yellow and framed as "Some sources unavailable",
-    #     which made successful fallback runs look broken.
-    #
-    # (2) **Warning tone** (yellow) — when a non-CT source is
-    #     unavailable OR when every CT provider failed (no
-    #     fallback recovery). This is the case where the user's
-    #     data is actually incomplete.
-    if info.degraded_sources:
-        non_ct_degraded = [s for s in info.degraded_sources if s not in ("crt.sh", "certspotter")]
-        ct_in_degraded = [s for s in info.degraded_sources if s in ("crt.sh", "certspotter")]
-        ct_fallback_succeeded = bool(ct_in_degraded) and info.ct_provider_used is not None
-        ct_fallback_failed = bool(ct_in_degraded) and info.ct_provider_used is None
-        ct_from_cache = info.ct_cache_age_days is not None
-        # v0.9.3 refinement: suppress the "CT fallback: … → … (0
-        # subdomains)" line entirely. When the fallback succeeded
-        # but returned zero subdomains, the outcome is identical
-        # to what the user would see on a clean run of a domain
-        # with no related CT data. Mentioning the fallback on
-        # every such run is noise — it turns crt.sh's current
-        # flakiness into a persistent footer. We only surface
-        # the fallback when it actually changed the answer
-        # (returned at least one subdomain). If the user needs
-        # per-run CT provenance they have --json which always
-        # carries ct_provider_used and ct_subdomain_count.
-        ct_fallback_informative = ct_fallback_succeeded and info.ct_subdomain_count > 0
-
-        is_warning = bool(non_ct_degraded) or ct_fallback_failed
-        label_style = "yellow" if is_warning else "dim"
-        body_style = "yellow" if is_warning else "dim"
-
-        note_parts: list[str] = []
-        if non_ct_degraded:
-            note_parts.append(f"Some sources unavailable ({', '.join(non_ct_degraded)})")
-        if ct_fallback_failed:
-            note_parts.append(f"All CT providers unavailable ({', '.join(ct_in_degraded)})")
-        elif ct_from_cache and ct_fallback_informative:
-            # Cache fallback is worth surfacing — the user is seeing stale data
-            age = info.ct_cache_age_days
-            age_str = "today" if age == 0 else f"{age} day{'s' if age != 1 else ''} old"
-            note_parts.append(f"CT: from local cache, {age_str} ({info.ct_subdomain_count} subdomains)")
-        # Suppress routine CT fallback notes (crt.sh → certspotter) —
-        # infrastructure plumbing that adds noise on nearly every run.
-        # CT provenance is always available in --json output.
-
-        if note_parts:
-            _spacer()
-            note = Text()
-            note.append("Note", style=label_style)
-            note.append("\n  ")
-            note_text = " — ".join(note_parts) + "."
-            for j, line in enumerate(_wrap_text(note_text, _PANEL_WIDTH - 2)):
-                if j > 0:
-                    note.append("\n  ")
-                note.append(line, style=body_style)
-            blocks.append(note)
-
-    # ── Verbose sections: dual confidence + detection scores + chain
-    if verbose:
-        _spacer()
-        v = Text()
-        v.append("Evidence Detail", style="bold")
-        v.append("\n")
-        v.append(
-            f"  Evidence confidence:  {info.evidence_confidence.value.capitalize()}\n",
-            style="dim",
-        )
-        v.append(
-            f"  Inference confidence: {info.inference_confidence.value.capitalize()}\n",
-            style="dim",
-        )
-        if info.detection_scores:
-            v.append("  Detection scores:\n", style="dim")
-            for slug, score in info.detection_scores:
-                v.append(f"    {slug}: {score}\n", style="dim")
-        if info.evidence:
-            v.append("  Evidence chain:\n", style="dim")
-            for ev in info.evidence:
-                v.append(f"    [{ev.source_type}] {ev.rule_name} -> {ev.slug}\n", style="dim")
-        blocks.append(v)
-
-    # ── Explain mode: conflict annotations ────────────────────────
-    if explain and info.merge_conflicts and info.merge_conflicts.has_conflicts:
-        _spacer()
-        conf_block = Text()
-        conf_block.append("Conflicts", style="bold")
-        conf_block.append("\n")
-        for field_name in ("display_name", "auth_type", "region", "tenant_id", "dmarc_policy"):
-            ann = render_conflict_annotation(field_name, info.merge_conflicts, verbose=verbose)
-            if ann:
-                conf_block.append(f"  {field_name}: {ann}\n", style="dim")
-        blocks.append(conf_block)
-
-    return Group(*blocks)
+def _render_full_related(info: TenantInfo, show_domains: bool) -> Text | None:
+    """Full related-domains list (--domains / --full only)."""
+    if not (show_domains and info.related_domains):
+        return None
+    rel = Text()
+    rel.append("Related domains", style="bold")
+    rel.append("\n")
+    rel.append("  ")
+    joined = ", ".join(info.related_domains)
+    for j, line in enumerate(_wrap_text(joined, _PANEL_WIDTH - 2)):
+        if j > 0:
+            rel.append("\n  ")
+        rel.append(line, style="dim")
+    return rel
 
 
 _SURFACE_COLLAPSE_THRESHOLD = 5
@@ -2549,6 +2395,190 @@ def _render_external_surface(info: TenantInfo, show_domains: bool) -> Text | Non
         surf.append("\n")
 
     return surf
+
+
+def _append_wrapped_lines(text: Text, content: str, max_width: int, style: str) -> None:
+    """Append ``content`` wrapped to ``max_width``, each line indented two
+    spaces, with a trailing newline. Shared by the panel's score and insight
+    lines so both wrap identically.
+    """
+    for j, line in enumerate(_wrap_text(content, max_width)):
+        text.append("  " if j == 0 else "\n  ")
+        text.append(line, style=style)
+    text.append("\n")
+
+
+def _render_insights(info: TenantInfo, verbose: bool, confidence_mode: str) -> Text | None:
+    """Curated Insights section: the email-security score is promoted to a bold
+    first line, sparse-context insights are ordered ahead of the rest, and the
+    list is capped at five in default mode (--full / --verbose shows all).
+
+    Strict confidence mode drops hedging qualifiers on dense evidence only; the
+    "never overclaim on thin evidence" invariant keeps sparse output untouched.
+    Returns ``None`` when there is nothing to show. Output held byte-identical
+    by ``tests/test_golden_renders.py`` (``panel_dense_default`` and the strict
+    / sparse variants).
+    """
+    if not info.insights:
+        return None
+    curated: list[str] = _curate_insights(info.insights, info.services, info.slugs)
+    from recon_tool.strict_mode import apply_strict_mode, should_apply_strict
+
+    if should_apply_strict(info, confidence_mode):
+        curated = list(apply_strict_mode(tuple(curated)))
+    if not curated:
+        return None
+    ins = Text()
+    ins.append("Insights", style="bold")
+    ins.append("\n")
+    max_width = _PANEL_WIDTH - 2
+
+    # Promote the email security score to the first (bold) position; order the
+    # remaining insights sparse-context first.
+    score_line: str | None = None
+    sparse_insights: list[str] = []
+    other_insights: list[str] = []
+    for c in curated:
+        if c.startswith("Email security ") and score_line is None:
+            score_line = c
+        elif _is_sparse_insight(c):
+            sparse_insights.append(c)
+        else:
+            other_insights.append(c)
+
+    if score_line is not None:
+        _append_wrapped_lines(ins, score_line, max_width, "bold")
+
+    ordered_insights = sparse_insights + other_insights
+
+    # Cap at 5 in default mode; --full / --verbose shows all.
+    display_insights = ordered_insights
+    overflow_count = 0
+    if not verbose and len(ordered_insights) > 5:
+        display_insights = ordered_insights[:5]
+        overflow_count = len(ordered_insights) - 5
+
+    for insight in display_insights:
+        _append_wrapped_lines(ins, insight, max_width, "dim")
+
+    if overflow_count > 0:
+        ins.append("  ")
+        ins.append(f"{overflow_count} more — use --full to see all", style="dim italic")
+        ins.append("\n")
+
+    return ins
+
+
+def _render_certs(info: TenantInfo, verbose: bool) -> Text | None:
+    """Certificate summary line (--verbose / --full only)."""
+    if not (verbose and info.cert_summary is not None):
+        return None
+    cs = info.cert_summary
+    issuer_list = ", ".join(cs.top_issuers) if cs.top_issuers else "unknown"
+    certs = Text()
+    certs.append("Certs", style="bold")
+    certs.append("\n  ")
+    certs.append(
+        f"{cs.cert_count} total, {cs.issuance_velocity} in last 90d, {cs.issuer_diversity} issuers ({issuer_list})",
+        style="dim",
+    )
+    return certs
+
+
+def _degraded_note_parts(info: TenantInfo) -> tuple[list[str], bool]:
+    """Decide which degraded-source note lines to show and whether the framing
+    is a warning.
+
+    Warning tone (yellow) applies when a non-CT source is unavailable or every
+    CT provider failed. Info tone (dim) covers a routine CT fallback that
+    recovered. Routine crt.sh -> certspotter fallbacks are suppressed as noise
+    (provenance stays in --json); a cache fallback that actually changed the
+    answer (returned at least one subdomain) is surfaced.
+    """
+    non_ct_degraded = [s for s in info.degraded_sources if s not in ("crt.sh", "certspotter")]
+    ct_in_degraded = [s for s in info.degraded_sources if s in ("crt.sh", "certspotter")]
+    ct_fallback_succeeded = bool(ct_in_degraded) and info.ct_provider_used is not None
+    ct_fallback_failed = bool(ct_in_degraded) and info.ct_provider_used is None
+    ct_from_cache = info.ct_cache_age_days is not None
+    ct_fallback_informative = ct_fallback_succeeded and info.ct_subdomain_count > 0
+    is_warning = bool(non_ct_degraded) or ct_fallback_failed
+
+    note_parts: list[str] = []
+    if non_ct_degraded:
+        note_parts.append(f"Some sources unavailable ({', '.join(non_ct_degraded)})")
+    if ct_fallback_failed:
+        note_parts.append(f"All CT providers unavailable ({', '.join(ct_in_degraded)})")
+    elif ct_from_cache and ct_fallback_informative:
+        age = info.ct_cache_age_days
+        age_str = "today" if age == 0 else f"{age} day{'s' if age != 1 else ''} old"
+        note_parts.append(f"CT: from local cache, {age_str} ({info.ct_subdomain_count} subdomains)")
+    return note_parts, is_warning
+
+
+def _render_degraded_note(info: TenantInfo) -> Text | None:
+    """Degraded-sources note. Returns ``None`` when there is nothing worth
+    noting. Output held byte-identical by ``tests/test_golden_renders.py``
+    (``panel_hardened_default`` exercises the warning path).
+    """
+    if not info.degraded_sources:
+        return None
+    note_parts, is_warning = _degraded_note_parts(info)
+    if not note_parts:
+        return None
+    style = "yellow" if is_warning else "dim"
+    note = Text()
+    note.append("Note", style=style)
+    note.append("\n  ")
+    note_text = " — ".join(note_parts) + "."
+    for j, line in enumerate(_wrap_text(note_text, _PANEL_WIDTH - 2)):
+        if j > 0:
+            note.append("\n  ")
+        note.append(line, style=style)
+    return note
+
+
+def _render_verbose_detail(info: TenantInfo, verbose: bool) -> Text | None:
+    """Evidence-detail section (--verbose / --full only): dual confidence,
+    detection scores, and the evidence chain.
+    """
+    if not verbose:
+        return None
+    v = Text()
+    v.append("Evidence Detail", style="bold")
+    v.append("\n")
+    v.append(
+        f"  Evidence confidence:  {info.evidence_confidence.value.capitalize()}\n",
+        style="dim",
+    )
+    v.append(
+        f"  Inference confidence: {info.inference_confidence.value.capitalize()}\n",
+        style="dim",
+    )
+    if info.detection_scores:
+        v.append("  Detection scores:\n", style="dim")
+        for slug, score in info.detection_scores:
+            v.append(f"    {slug}: {score}\n", style="dim")
+    if info.evidence:
+        v.append("  Evidence chain:\n", style="dim")
+        for ev in info.evidence:
+            v.append(f"    [{ev.source_type}] {ev.rule_name} -> {ev.slug}\n", style="dim")
+    return v
+
+
+def _render_explain_conflicts(info: TenantInfo, explain: bool, verbose: bool) -> Text | None:
+    """Conflict annotations (--explain only) for the fields that carry merge
+    conflicts.
+    """
+    if not (explain and info.merge_conflicts and info.merge_conflicts.has_conflicts):
+        return None
+    conf_block = Text()
+    conf_block.append("Conflicts", style="bold")
+    conf_block.append("\n")
+    for field_name in ("display_name", "auth_type", "region", "tenant_id", "dmarc_policy"):
+        ann = render_conflict_annotation(field_name, info.merge_conflicts, verbose=verbose)
+        if ann:
+            conf_block.append(f"  {field_name}: {ann}\n", style="dim")
+    return conf_block
 
 
 def _curate_insights(
