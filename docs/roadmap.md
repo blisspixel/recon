@@ -92,13 +92,17 @@ not ceremony.
 
 Four tracks run as a sequence of focused, CI-green 1.9.x patches:
 
-- **Complexity decomposition.** Decompose the 28 functions carrying
+- **Complexity decomposition.** Decompose the functions carrying
   `# noqa: C901` (the gate from v1.9.37 already holds new code), removing
   each marker as its function drops under 15. Golden-output
-  characterization tests for the renderers come first
-  (`tests/test_golden_renders.py`, fictional brands only) so the
-  ~940-line `render_tenant_panel` and the markdown renderer can be split
-  with byte-identical output guaranteed.
+  characterization tests for the renderers came first
+  (`tests/test_golden_renders.py`, fictional brands only); with that net in
+  place the whole of `formatter.py` is decomposed and carries no marker as of
+  v1.9.52, the ~940-line `render_tenant_panel` and the markdown renderer
+  included, output held byte-identical throughout. The remaining markers are
+  the behaviour-heavy functions (`_lookup`, `merge_results`, `_batch`, and a
+  tail of validators / loaders), which want characterization coverage of their
+  own before they are split.
 - **Test and validation rigor.** `deal` contracts on the boundary
   validators (third pass after the inference core and matchers); a
   Hypothesis stateful machine for the cache lifecycle; deterministic
@@ -249,7 +253,8 @@ v1.9.28 onward, sliding the docs-currency work further down the line.
   Standing work, not a numbered item.
 - **Engineering-elevation series** (standing work) runs as a sequence of
   focused patches, each its own story: **v1.9.28** shipped `py.typed` +
-  the 3.14 matrix; the next patches raise the floor to `>=3.12`, add the
+  the 3.14 matrix; the next patches raise the floor to `>=3.12` (later
+  relaxed back to `>=3.11` in v1.9.43), add the
   quality gates (branch coverage + the complexity refactor), adopt `deal`
   Design-by-Contract, migrate to PEP 735, and add the provenance step.
   Details and per-item rationale are in the Known gaps list.
@@ -324,9 +329,9 @@ Built-in fingerprints live in nine categorized YAML files under
 (per-subdomain CNAME-target classification, added in v1.5), and
 `verticals.yaml`.
 
-**Current totals** *(as of v1.9.3.9)*:
+**Current totals** *(as of v1.9.53)*:
 
-- 414 fingerprint entries; 343 unique slugs.
+- 808 fingerprint entries; 631 unique slugs.
 - All slugs map to a defender-visible category in `formatter.py`.
 - Zero cross-file slug-name collisions (verified by `tests/test_fingerprint_expansion.py`).
 
@@ -432,7 +437,13 @@ Adopted from the review:
   and typing. This is a deliberate floor raise (it drops 3.10 and 3.11),
   tracked in Known gaps; v1.9.28 already added 3.14 to the matrix under
   the old `>=3.10` floor, so the raise removes the two oldest rows rather
-  than adds work.
+  than adds work. *Update: shipped in v1.9.29, then reversed in v1.9.43.
+  On review, no runtime dependency needed 3.12 (networkx set the practical
+  floor at 3.11) and the only 3.12-only code was three PEP 695 `type`
+  aliases, since rewritten as `TypeAlias`; for a building-block library the
+  reach of supporting 3.11 while it still gets security fixes outweighed the
+  cosmetic syntax. The floor is now `>=3.11` with the dev / static-analysis
+  baseline still at 3.14. See the v1.9.43 row.*
 - **Design-by-Contract via `deal`.** Pure-Python, so it clears the
   no-C-extensions bar, and a no-op in production under `-O`. Adopted as a
   real track on the highest-value surfaces (Bayesian fusion and the
@@ -536,16 +547,17 @@ know is missing rather than only what we know is present:
   3.14 added to the `ci.yml` test matrix (Ubuntu, Windows, macOS) and a
   `Programming Language :: Python :: 3.14` classifier added. recon
   imports and passes its suites on CPython 3.14.5.
-- **Raise the Python floor to `>=3.12`** (engineering-elevation series).
-  Adopted from the standards review: drop 3.10 and 3.11, set the matrix
-  to 3.12 / 3.13 / 3.14, move `ruff target-version` and `pyright
-  pythonVersion` to 3.12, and pin the dev toolchain via `.python-version`
-  at 3.14. 3.10 reaches EOL on 2026-10-31; the floor raise sheds the
-  soon-unpatched versions and unlocks post-3.11 syntax and typing. This
-  drops two classifiers and is a deliberate breaking change for any
-  consumer still on 3.10 / 3.11, called out in the release notes. Ships
-  as its own patch so a consumer reading the changelog sees exactly when
-  the floor moved.
+- ~~**Raise the Python floor to `>=3.12`** (engineering-elevation series).~~
+  **Shipped in v1.9.29, then reversed in v1.9.43.** The raise dropped 3.10 and
+  3.11, set the matrix to 3.12 / 3.13 / 3.14, and moved `ruff target-version` /
+  `pyright pythonVersion` to 3.12, with the dev toolchain pinned at 3.14. On
+  later review the 3.11 drop was reverted: no runtime dependency needs 3.12
+  (networkx sets the practical floor at 3.11) and the only 3.12-only code was
+  three PEP 695 `type` aliases (now `TypeAlias`), so for a building-block
+  library the reach of supporting 3.11 while it still gets security fixes won
+  out. The floor is now `>=3.11`; 3.10 stays dropped (EOL 2026-10-31); the dev /
+  static-analysis baseline stays at 3.14. Both moves shipped as their own
+  patches so the changelog shows exactly when the floor moved each way.
 - **Adopt Design-by-Contract via `deal`** (engineering-elevation series).
   *First pass shipped in v1.9.31*: `deal` added as a runtime dependency
   (disabled in production via `deal.disable()` when not `__debug__`, so
@@ -570,15 +582,18 @@ know is missing rather than only what we know is present:
   line) stays the named under-covered target for follow-up tests.
 - Complexity gate enabled, refactoring incremental. **Gate live in
   v1.9.37**: ruff `C901` at `max-complexity=15` is now enforced, so new
-  code must come in under 15. The 28 functions over the cap at enable time
+  code must come in under 15. The functions over the cap at enable time
   carry an explicit `# noqa: C901` and are being decomposed in batches;
   each refactor removes its marker, ratcheting the debt down. This is the
   honest brownfield order: hold the line for new code first, then work the
-  backlog. The genuine monsters are concentrated and are the highest-value
-  targets (`render_tenant_panel` at 96, `_lookup` at 77, `merge_results`
-  at 64, `_batch` at 60, `explain_insights` at 40, `tenant_info_from_dict`
-  at 35); `render_tenant_panel` (~940 lines) needs a golden-output test
-  before it is decomposed, since it renders the main user-facing panel.
+  backlog. Progress: `tenant_info_from_dict` (v1.9.40) and then the entire
+  `formatter.py` (v1.9.45 to v1.9.52, behind the golden-output net) are done,
+  including the worst offender `render_tenant_panel` (96 to under 15); then
+  `insights._email_security_insights` (v1.9.53). The remaining monsters are
+  the behaviour-heavy functions (`_lookup` at 77, `merge_results` at 64,
+  `_batch` at 60, `explain_insights` at 40, plus a tail of validators and
+  loaders); these take characterization coverage of their own before they are
+  split, since they are not pure renderers the golden snapshots can pin.
   Each refactor preserves behavior and is verified against the suite. The
   `PLR` refactor family (too-many-branches / statements / returns / args,
   ~107 hits) is deferred to a later pass so the gate stays focused on
@@ -648,7 +663,8 @@ These do not block v1.9.x or v2.0. The four oldest cheap ones
 (SECURITY.md, SBOM, secrets-scanning, forward-compat test) shipped by
 v1.9.3.1; `py.typed` and the 3.14 matrix shipped in v1.9.28. The
 engineering-elevation series carries the rest as a sequence of focused
-patches: floor raise to 3.12, then quality gates (branch coverage plus
+patches: floor raise to 3.12 (later relaxed to `>=3.11` in v1.9.43), then
+quality gates (branch coverage plus
 the complexity refactor), then `deal` contracts, then PEP 735 and the
 provenance step, with the test-rigor layers (fault injection, stateful
 Hypothesis, 3.14t) and mutation testing running alongside or post-v2.0.
