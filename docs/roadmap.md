@@ -4,11 +4,13 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.49** (pre-2.0 hardening phase, patch 12: decompose
-`format_tenant_markdown` under the C901 cap. The eight report sections move to
-focused `_md_*` builders that each return their lines, leaving the function a
-thin orchestrator; its `# noqa: C901` is removed. Output held byte-identical by
-the v1.9.48 `markdown_rich` snapshot plus the dense and sparse ones). The
+Current release: **v1.9.50** (pre-2.0 hardening phase, patch 13: decompose
+`detect_provider` under the C901 cap. Its three paths (Exchange on-prem,
+email-topology, slug fallback) move to `_provider_exchange_onprem`,
+`_provider_from_topology` with `_topology_slug_secondaries`, and
+`_provider_slug_fallback`, leaving a thin dispatcher; the `# noqa: C901` is
+removed. Behavior preserved against 52 provider-line unit tests plus the panel
+golden snapshots). The
 engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
 `py.typed` marker, the `>=3.12` floor (relaxed back to `>=3.11` in v1.9.43),
 branch coverage, `deal`
@@ -72,6 +74,7 @@ detail in `CHANGELOG.md` and the per-release validation memos):
 | v1.9.47 | Pre-2.0 hardening patch 10: `render_tenant_panel` decomposition part 3 (final). The remaining sections move to focused helpers (`_render_services` / `_strip_email_noise` / `_append_subdomain_summary`, `_render_passive_dns_ceiling`, the related-domain and footprint renderers, `_render_insights` / `_append_wrapped_lines`, `_render_certs`, `_render_degraded_note` / `_degraded_note_parts`, `_render_verbose_detail`, `_render_explain_conflicts`), all under the C901 cap; the panel drops 59 to under 15 and its `# noqa: C901` is removed. Output held byte-identical by the golden snapshots | `CHANGELOG.md` |
 | v1.9.48 | Pre-2.0 hardening patch 11: extend the golden net for `format_tenant_markdown` before decomposing it. A `_markdown_rich_info` fixture plus a `markdown_rich` snapshot pin the dark branches (GWS services split, GWS details block with auth / IdP / active modules / CSE, degraded-sources footer) | `CHANGELOG.md` |
 | v1.9.49 | Pre-2.0 hardening patch 12: decompose `format_tenant_markdown` under the C901 cap. The eight report sections move to `_md_header` / `_md_services_split` / `_md_gws_details` / `_md_insights` / `_md_cert_intel` / `_md_tenant_domains` / `_md_related_domains` / `_md_footer`, each returning its lines; the function becomes a thin orchestrator and its `# noqa: C901` is removed. Output held byte-identical by the golden snapshots | `CHANGELOG.md` |
+| v1.9.50 | Pre-2.0 hardening patch 13: decompose `detect_provider` (the email-topology-aware provider line) under the C901 cap. The three paths move to `_provider_exchange_onprem`, `_provider_from_topology` (+ `_topology_slug_secondaries`), and `_provider_slug_fallback`; `detect_provider` becomes a thin dispatcher and its `# noqa: C901` is removed. Behavior preserved against the provider-line unit tests and the panel golden snapshots | `CHANGELOG.md` |
 
 ## Pre-2.0 hardening phase (current)
 
