@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.65] - 2026-06-01
+
+### Decompose the `validation_runner` C901 pair
+
+Complexity-decomposition track (item A2).
+
+- `_classify_change_type` splits into `_change_score` (the positive / negative
+  signal-weight sum) and `_change_needs_review` (the no-score-but-worth-a-look
+  check); the classifier becomes a thin dispatch over the two.
+- `render_summary_markdown` moves its section bodies to `_md_changed_domain_lines`,
+  `_md_detailed_comparison`, `_md_attention_section`, and
+  `_md_per_domain_snapshot`; the renderer becomes a thin orchestrator.
+- Both functions drop their `# noqa: C901`. `validation_runner.py` now carries
+  no marker; 14 remain across the package.
+
+No behavior change: change classification and the rendered Markdown are
+unchanged, verified by the validation-runner / compare / delta tests.
+
 ## [1.9.64] - 2026-06-01
 
 ### Decompose `load_network` under the C901 cap
