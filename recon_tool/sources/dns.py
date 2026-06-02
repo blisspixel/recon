@@ -714,63 +714,28 @@ async def _detect_gws_cnames(ctx: _DetectionCtx, domain: str) -> None:
         ctx.slugs.add("google-workspace-modules")
 
 
-async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:  # noqa: C901
-    """Check DKIM selectors for Exchange Online, Google, and common providers.
+# Common ESP DKIM selectors beyond Exchange/Google.
+# Each tuple is (selector_prefix, cname_hint, service_name, slug).
+# If the CNAME target contains the hint, we attribute it to that service.
+_ESP_DKIM_SELECTORS: list[tuple[str, str, str, str]] = [
+    ("k1", "domainkey.u", "Mailchimp", "mailchimp"),
+    ("s1", "domainkey.u", "Mailchimp", "mailchimp"),
+    ("em", "sendgrid.net", "SendGrid", "sendgrid"),
+    ("s1", "sendgrid.net", "SendGrid", "sendgrid"),
+    ("default", "mailgun.org", "Mailgun", "mailgun"),
+    ("pm", "dkim.pstmrk.com", "Postmark", "postmark"),
+    ("mxvault", "mimecast", "Mimecast", "mimecast"),
+]
 
-    Exchange uses selector1/selector2, Google uses 'google', and many ESPs
-    use 's1'/'s2', 'k1', 'default', 'dkim', 'mail', or 'em' selectors.
-    We check all common selectors and record which type of DKIM we found.
+# v0.10.1: generic enterprise DKIM selectors - large enterprises use
+# non-standard selector names. These TXT probes confirm DKIM exists even when
+# we can't attribute it to a specific provider.
+_GENERIC_DKIM_SELECTORS: tuple[str, ...] = ("s2", "dkim", "mail", "k2")
 
-    Also extracts the onmicrosoft.com domain from Exchange DKIM CNAMEs -
-    this reveals the tenant's internal domain name.
-    """
-    # Common ESP DKIM selectors beyond Exchange/Google.
-    # Each tuple is (selector_prefix, cname_hint, service_name, slug).
-    # If the CNAME target contains the hint, we attribute it to that service.
-    _ESP_SELECTORS: list[tuple[str, str, str, str]] = [
-        ("k1", "domainkey.u", "Mailchimp", "mailchimp"),
-        ("s1", "domainkey.u", "Mailchimp", "mailchimp"),
-        ("em", "sendgrid.net", "SendGrid", "sendgrid"),
-        ("s1", "sendgrid.net", "SendGrid", "sendgrid"),
-        ("default", "mailgun.org", "Mailgun", "mailgun"),
-        ("pm", "dkim.pstmrk.com", "Postmark", "postmark"),
-        ("mxvault", "mimecast", "Mimecast", "mimecast"),
-    ]
 
-    # Fire Exchange and Google DKIM queries concurrently
-    sel1_task = _safe_resolve(f"selector1._domainkey.{domain}", "CNAME")
-    sel2_task = _safe_resolve(f"selector2._domainkey.{domain}", "CNAME")
-    google_txt_task = _safe_resolve(f"google._domainkey.{domain}", "TXT")
-    google_cname_task = _safe_resolve(f"google._domainkey.{domain}", "CNAME")
-
-    # Also fire ESP selector queries concurrently
-    esp_tasks = [_safe_resolve(f"{sel}._domainkey.{domain}", "CNAME") for sel, _, _, _ in _ESP_SELECTORS]
-
-    # v0.10.1: generic enterprise DKIM selectors - large enterprises use
-    # non-standard selector names. These TXT probes confirm DKIM exists
-    # even when we can't attribute it to a specific provider.
-    _GENERIC_DKIM_SELECTORS: tuple[str, ...] = ("s2", "dkim", "mail", "k2")
-    generic_dkim_tasks = [_safe_resolve(f"{sel}._domainkey.{domain}", "TXT") for sel in _GENERIC_DKIM_SELECTORS]
-
-    all_results = await asyncio.gather(
-        sel1_task,
-        sel2_task,
-        google_txt_task,
-        google_cname_task,
-        *esp_tasks,
-        *generic_dkim_tasks,
-    )
-
-    sel1_results = all_results[0]
-    sel2_results = all_results[1]
-    google_txt_results = all_results[2]
-    google_cname_results = all_results[3]
-    esp_end = 4 + len(_ESP_SELECTORS)
-    esp_results = all_results[4:esp_end]
-    generic_dkim_results = all_results[esp_end:]
-
-    # Exchange DKIM selectors
-    for selector_results in (sel1_results, sel2_results):
+def _apply_exchange_dkim(ctx: _DetectionCtx, selector_groups: tuple[list[str], list[str]]) -> None:
+    """Attribute Exchange Online DKIM and capture the onmicrosoft.com tenant domain."""
+    for selector_results in selector_groups:
         for cname in selector_results:
             cl = cname.lower()
             if "protection.outlook.com" in cl or "onmicrosoft.com" in cl:
@@ -782,101 +747,122 @@ async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:  # noqa: C901
                         ctx.related_domains.add(parts[1])
                 break
 
-    # Google DKIM selector - proves Google handles email signing.
-    # Check TXT first; if no TXT match, fall back to CNAME delegation.
-    # When found, add both generic DKIM and Google Workspace attribution
-    # so the signal fires even when MX points to a gateway (Proofpoint, etc.).
-    # source_type="DKIM" is required for the email topology inference in
-    # merger.py to recognize this as downstream-provider evidence when MX
-    # points to a gateway.
-    google_dkim_found = False
-    for record in google_txt_results:
+
+def _apply_google_dkim(ctx: _DetectionCtx, txt_results: list[str], cname_results: list[str]) -> None:
+    """Attribute Google Workspace DKIM. TXT first, then CNAME delegation.
+
+    source_type="DKIM" is required for the email-topology inference in
+    merger.py to recognise this as downstream-provider evidence when MX
+    points to a gateway (Proofpoint, etc.).
+    """
+    for record in txt_results:
         if "v=dkim1" in record.lower():
             ctx.services.add(SVC_DKIM)
-            ctx.add(
-                "DKIM (Google Workspace)",
-                "google-workspace",
-                source_type="DKIM",
-                raw_value=record,
-            )
-            google_dkim_found = True
-            break
-    if not google_dkim_found:
-        for cname in google_cname_results:
-            if "google.com" in cname.lower():
-                ctx.services.add(SVC_DKIM)
-                ctx.add(
-                    "DKIM (Google Workspace)",
-                    "google-workspace",
-                    source_type="DKIM",
-                    raw_value=cname,
-                )
-                break
+            ctx.add("DKIM (Google Workspace)", "google-workspace", source_type="DKIM", raw_value=record)
+            return
+    for cname in cname_results:
+        if "google.com" in cname.lower():
+            ctx.services.add(SVC_DKIM)
+            ctx.add("DKIM (Google Workspace)", "google-workspace", source_type="DKIM", raw_value=cname)
+            return
 
-    # ESP DKIM selectors - attribute to specific services when CNAME matches
-    for (_, hint, svc_name, slug), cname_results in zip(_ESP_SELECTORS, esp_results, strict=True):
+
+def _apply_esp_dkim(
+    ctx: _DetectionCtx,
+    esp_selectors: list[tuple[str, str, str, str]],
+    esp_results: list[list[str]],
+) -> None:
+    """Attribute ESP DKIM (Mailchimp, SendGrid, ...) when a selector CNAME matches its hint."""
+    for (_, hint, svc_name, slug), cname_results in zip(esp_selectors, esp_results, strict=True):
         for cname in cname_results:
             if hint in cname.lower():
                 ctx.add(svc_name, slug, source_type="DKIM", raw_value=cname)
                 ctx.services.add(SVC_DKIM)
                 break
 
-    # v0.10.1: generic enterprise DKIM - if no provider-specific DKIM was
-    # found above, check generic selectors for inline TXT DKIM keys. This
-    # only confirms DKIM exists (feeds the email security score) without
-    # attributing it to a specific provider.
-    if SVC_DKIM not in ctx.services:
-        for txt_records in generic_dkim_results:
-            for record in txt_records:
-                if "v=dkim1" in record.lower():
-                    ctx.services.add(SVC_DKIM)
-                    break
-            if SVC_DKIM in ctx.services:
-                break
 
+def _apply_generic_dkim(ctx: _DetectionCtx, generic_results: list[list[str]]) -> None:
+    """Confirm DKIM exists via generic selectors when no provider-specific DKIM fired.
 
-async def _parse_bimi_vmc(ctx: _DetectionCtx, bimi_txt: str) -> None:  # noqa: C901
-    """Fetch VMC PEM from BIMI 'a=' URL and extract corporate identity.
-
-    BIMI TXT records may contain an 'a=' tag pointing to a .pem VMC
-    (Verified Mark Certificate). VMCs require strict legal verification,
-    so the Subject fields are high-confidence corporate identity data.
+    Only feeds the email-security score; does not attribute a provider.
     """
+    if SVC_DKIM in ctx.services:
+        return
+    for txt_records in generic_results:
+        for record in txt_records:
+            if "v=dkim1" in record.lower():
+                ctx.services.add(SVC_DKIM)
+                return
 
-    # Extract a= URL from BIMI TXT record
-    a_url: str | None = None
+
+async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
+    """Check DKIM selectors for Exchange Online, Google, and common providers.
+
+    Exchange uses selector1/selector2, Google uses 'google', and many ESPs
+    use 's1'/'s2', 'k1', 'default', 'dkim', 'mail', or 'em' selectors. Fires
+    all the common selector probes concurrently, then applies each provider's
+    attribution. Also extracts the onmicrosoft.com domain from Exchange DKIM
+    CNAMEs, which reveals the tenant's internal domain name.
+    """
+    sel1_task = _safe_resolve(f"selector1._domainkey.{domain}", "CNAME")
+    sel2_task = _safe_resolve(f"selector2._domainkey.{domain}", "CNAME")
+    google_txt_task = _safe_resolve(f"google._domainkey.{domain}", "TXT")
+    google_cname_task = _safe_resolve(f"google._domainkey.{domain}", "CNAME")
+    esp_tasks = [_safe_resolve(f"{sel}._domainkey.{domain}", "CNAME") for sel, _, _, _ in _ESP_DKIM_SELECTORS]
+    generic_dkim_tasks = [_safe_resolve(f"{sel}._domainkey.{domain}", "TXT") for sel in _GENERIC_DKIM_SELECTORS]
+
+    all_results = await asyncio.gather(
+        sel1_task,
+        sel2_task,
+        google_txt_task,
+        google_cname_task,
+        *esp_tasks,
+        *generic_dkim_tasks,
+    )
+
+    esp_end = 4 + len(_ESP_DKIM_SELECTORS)
+    sel1_results, sel2_results, google_txt_results, google_cname_results = all_results[:4]
+    esp_results = all_results[4:esp_end]
+    generic_dkim_results = all_results[esp_end:]
+
+    _apply_exchange_dkim(ctx, (sel1_results, sel2_results))
+    _apply_google_dkim(ctx, google_txt_results, google_cname_results)
+    _apply_esp_dkim(ctx, _ESP_DKIM_SELECTORS, esp_results)
+    _apply_generic_dkim(ctx, generic_dkim_results)
+
+
+def _extract_bimi_vmc_url(bimi_txt: str) -> str | None:
+    """Return the ``a=`` VMC ``.pem`` URL from a BIMI TXT record, or None."""
     for part in bimi_txt.split(";"):
         cleaned = part.strip()
         if cleaned.lower().startswith("a="):
             candidate = cleaned[2:].strip()
             if candidate.lower().endswith(".pem"):
-                a_url = candidate
-                break
+                return candidate
+    return None
 
-    if not a_url:
-        return
 
-    # Security: the a= URL is attacker-controlled (the looked-up domain
-    # owner authors their own BIMI TXT record). Fetching it unvalidated
-    # is an SSRF primitive: the value's host could name any server, an
-    # internal/split-horizon name, or an IP literal. Require https, a
-    # public-DNS host, no embedded credentials, and the default port,
-    # and do not follow redirects (a VMC a= URL is a direct .pem). The
-    # shared client's transport additionally blocks private-IP
-    # destinations. See docs/security-audit-resolutions.md.
+def _bimi_vmc_url_is_safe(a_url: str) -> bool:
+    """SSRF guard for the attacker-authored BIMI ``a=`` URL.
+
+    The looked-up domain owner authors their own BIMI TXT record, so the URL
+    could name any server, an internal/split-horizon name, or an IP literal.
+    Require https, a public-DNS host, no embedded credentials, and the default
+    port. The shared client's transport additionally blocks private-IP
+    destinations. See docs/security-audit-resolutions.md.
+    """
     from urllib.parse import urlparse
 
     try:
         parsed = urlparse(a_url)
         host = (parsed.hostname or "").lower()
-        # ``.port`` raises ValueError on a malformed or out-of-range port
-        # (e.g. ":bad", ":99999"). Read it inside the guard so a crafted
-        # BIMI record is refused cleanly rather than raising out of this
-        # enrichment helper and aborting the whole DNS source.
+        # ``.port`` raises ValueError on a malformed/out-of-range port
+        # (e.g. ":bad", ":99999"); read it inside the guard so a crafted
+        # record is refused cleanly rather than aborting the DNS source.
         port = parsed.port
     except ValueError:
         logger.debug("BIMI VMC a= URL refused (unparseable URL/port): %s", a_url)
-        return
+        return False
     if (
         parsed.scheme != "https"
         or parsed.username
@@ -885,6 +871,59 @@ async def _parse_bimi_vmc(ctx: _DetectionCtx, bimi_txt: str) -> None:  # noqa: C
         or not _is_public_dns_name(host)
     ):
         logger.debug("BIMI VMC a= URL refused (requires https + public host): %s", a_url)
+        return False
+    return True
+
+
+def _parse_vmc_subject(pem_data: str) -> tuple[str | None, str | None, str | None, str | None]:
+    """Extract (organization, country, state, locality) from a VMC PEM.
+
+    Prefers the cryptography library; falls back to a regex over the PEM text
+    when it is unavailable.
+    """
+    org = country = state = locality = None
+    try:
+        from cryptography import x509
+
+        cert_obj = x509.load_pem_x509_certificate(pem_data.encode())
+        for attr in cert_obj.subject:
+            oid_name = attr.oid.dotted_string
+            val = str(attr.value)
+            if oid_name == "2.5.4.10":  # Organization
+                org = val
+            elif oid_name == "2.5.4.6":  # Country
+                country = val
+            elif oid_name == "2.5.4.8":  # State
+                state = val
+            elif oid_name == "2.5.4.7":  # Locality
+                locality = val
+    except ImportError:
+        import re as _re
+
+        for line in pem_data.splitlines():
+            line_stripped = line.strip()
+            if "O=" in line_stripped or "O =" in line_stripped:
+                m = _re.search(r"O\s*=\s*([^,/]+)", line_stripped)
+                if m:
+                    org = m.group(1).strip()
+            if "C=" in line_stripped:
+                m = _re.search(r"C\s*=\s*([^,/]+)", line_stripped)
+                if m:
+                    country = m.group(1).strip()
+    return org, country, state, locality
+
+
+async def _parse_bimi_vmc(ctx: _DetectionCtx, bimi_txt: str) -> None:
+    """Fetch the VMC PEM from a BIMI ``a=`` URL and extract corporate identity.
+
+    BIMI TXT records may carry an ``a=`` tag pointing to a ``.pem`` VMC
+    (Verified Mark Certificate). VMCs require strict legal verification, so the
+    Subject fields are high-confidence corporate identity data. The fetch is
+    SSRF-guarded and the parsed fields are control-stripped before they reach
+    any sink.
+    """
+    a_url = _extract_bimi_vmc_url(bimi_txt)
+    if a_url is None or not _bimi_vmc_url_is_safe(a_url):
         return
 
     try:
@@ -894,67 +933,29 @@ async def _parse_bimi_vmc(ctx: _DetectionCtx, bimi_txt: str) -> None:  # noqa: C
                 return
             pem_data = resp.text
 
-        # Parse X.509 certificate Subject
-        org = country = state = locality = trademark = None
-
-        # Try using the cryptography library if available (more reliable)
-        try:
-            from cryptography import x509
-
-            cert_obj = x509.load_pem_x509_certificate(pem_data.encode())
-            subject = cert_obj.subject
-            for attr in subject:
-                oid_name = attr.oid.dotted_string
-                val = str(attr.value)
-                if oid_name == "2.5.4.10":  # Organization
-                    org = val
-                elif oid_name == "2.5.4.6":  # Country
-                    country = val
-                elif oid_name == "2.5.4.8":  # State
-                    state = val
-                elif oid_name == "2.5.4.7":  # Locality
-                    locality = val
-        except ImportError:
-            # Fallback: regex parse the PEM for common Subject fields
-            import re as _re
-
-            for line in pem_data.splitlines():
-                line_stripped = line.strip()
-                # Look for Subject line in text representation
-                if "O=" in line_stripped or "O =" in line_stripped:
-                    m = _re.search(r"O\s*=\s*([^,/]+)", line_stripped)
-                    if m:
-                        org = m.group(1).strip()
-                if "C=" in line_stripped:
-                    m = _re.search(r"C\s*=\s*([^,/]+)", line_stripped)
-                    if m:
-                        country = m.group(1).strip()
-
-        if org:
-            # The VMC subject fields come from a PEM served at the
-            # attacker-influenced a= URL. Strip control bytes and bound
-            # length before they reach any panel / markdown / MCP sink.
-            org = strip_control_chars(org)
-            country = strip_control_chars(country) if country else None
-            state = strip_control_chars(state) if state else None
-            locality = strip_control_chars(locality) if locality else None
-            ctx.bimi_identity = BIMIIdentity(
-                organization=org,
-                country=country,
-                state=state,
-                locality=locality,
-                trademark=trademark,
+        org, country, state, locality = _parse_vmc_subject(pem_data)
+        if not org:
+            return
+        # The VMC subject fields come from a PEM served at the attacker-
+        # influenced a= URL. Strip control bytes before any panel / markdown /
+        # MCP sink.
+        org = strip_control_chars(org)
+        ctx.bimi_identity = BIMIIdentity(
+            organization=org,
+            country=strip_control_chars(country) if country else None,
+            state=strip_control_chars(state) if state else None,
+            locality=strip_control_chars(locality) if locality else None,
+            trademark=None,
+        )
+        ctx.slugs.add("bimi-vmc")
+        ctx.evidence.append(
+            EvidenceRecord(
+                source_type="HTTP",
+                raw_value=f"VMC Organization={org}",
+                rule_name="BIMI VMC",
+                slug="bimi-vmc",
             )
-            ctx.slugs.add("bimi-vmc")
-            ctx.evidence.append(
-                EvidenceRecord(
-                    source_type="HTTP",
-                    raw_value=f"VMC Organization={org}",
-                    rule_name="BIMI VMC",
-                    slug="bimi-vmc",
-                )
-            )
-
+        )
     except Exception as exc:
         logger.debug("BIMI VMC parsing failed: %s", exc)
 
