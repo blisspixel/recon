@@ -31,7 +31,9 @@ INIT_PY = ROOT / "recon_tool" / "__init__.py"
 CHANGELOG = ROOT / "CHANGELOG.md"
 
 _VERSION_RE = re.compile(r'^version\s*=\s*"([^"]+)"', re.MULTILINE)
-_INIT_VERSION_RE = re.compile(r'__version__\s*=\s*"([^"]+)"')
+# __init__.py computes __version__ at runtime and only the _FALLBACK_VERSION
+# constant is a literal, so the bump target is that constant, not __version__.
+_INIT_VERSION_RE = re.compile(r'_FALLBACK_VERSION\s*=\s*"([^"]+)"')
 _SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$")
 
 
@@ -189,7 +191,7 @@ def _bump_pyproject(new_version: str, dry_run: bool) -> None:
 
 def _bump_init(new_version: str, dry_run: bool) -> None:
     content = INIT_PY.read_text(encoding="utf-8")
-    updated = _INIT_VERSION_RE.sub(f'__version__ = "{new_version}"', content, count=1)
+    updated = _INIT_VERSION_RE.sub(f'_FALLBACK_VERSION = "{new_version}"', content, count=1)
     if dry_run:
         return
     INIT_PY.write_text(updated, encoding="utf-8")
