@@ -41,7 +41,7 @@ no inbound network listeners, no user-code execution.
 - Schemes (`http://`, `https://`, `ftp://`) stripped
 - `www.` prefix stripped
 - Normalized to lowercase
-- Typed `ValueError` on invalid input → CLI exit code 2 (`EXIT_VALIDATION`)
+- Typed `ValueError` on invalid input → CLI exit code 2 (`EXIT_VALIDATION`); see the full [exit-code contract](schema.md#exit-codes)
 
 ### Malicious DNS responses
 

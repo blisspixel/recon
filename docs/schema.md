@@ -62,6 +62,34 @@ it as a success object.
 
 ---
 
+## Exit codes
+
+The CLI returns a small, stable set of process exit codes so a script can
+branch on the outcome without parsing output. They are defined in one place,
+`recon_tool/exit_codes.py`, and shared by the CLI and the MCP server entry
+point.
+
+| Code | Name | Meaning |
+|---|---|---|
+| `0` | success | The command completed and produced its output. |
+| `1` | general error | An unexpected or uncaught failure, plus a few handled fallbacks that are neither a clean validation nor a no-data case (an optional MCP dependency missing, an unexpected MCP server fault). This is also the Python default for an uncaught exception, so it covers paths recon does not explicitly classify. |
+| `2` | validation error | Input recon rejected before doing work: a malformed domain, a missing file, mutually exclusive flags, or a refused unsafe invocation. No JSON is emitted on this path. |
+| `3` | no data | The target resolved but no information was available. No JSON is emitted on this path. |
+| `4` | internal error | A network or pipeline failure recon caught and classified itself, rather than letting it surface as an uncaught `1`. |
+
+Notes for scripters:
+
+- Codes `2`, `3`, and `4` are emitted deliberately by the lookup and delta
+  paths; `1` is the general fallback; `0` is success. `recon delta` and
+  `recon <domain> --compare <file>` follow the same contract.
+- On `2` and `3` the `--json` modes write no JSON to stdout, so a consumer
+  should check the exit code before parsing.
+- `recon fingerprints check` (the bundled fingerprint validator) returns `0`
+  when every entry passes, `1` when any entry fails or a duplicate slug is
+  found, and `2` when the path is missing or holds no YAML.
+
+---
+
 ## Top-level object
 
 Every `--json` invocation returns a single JSON object with the following
@@ -408,8 +436,8 @@ Stability: stable.
 ```
 
 Each `changed_*` field is either `null` (no change) or an object with `from`
-and `to`. Exit codes for `recon delta` match the main CLI (0 success,
-2 validation error, 3 no data).
+and `to`. Exit codes for `recon delta` match the main CLI; see
+[Exit codes](#exit-codes).
 
 ---
 
