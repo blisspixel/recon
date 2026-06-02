@@ -168,7 +168,7 @@ The install command is idempotent and merge-safe — sibling MCP servers, hand-c
 }
 ```
 
-The default install already includes the MCP server. Keep approvals manual until you've decided which tools, if any, you want to trust automatically.
+The default install already includes the MCP server. Keep approvals manual until you've decided which tools, if any, you want to trust automatically. recon's MCP tools are split into read-only and stateful sets (the three ephemeral-fingerprint / reload tools are stateful); see the [autoApprove guidance](docs/mcp.md#read-only-vs-stateful-autoapprove-guidance) for which is which.
 
 Then ask your AI: *"Run a recon lookup on contoso.com and tell me what's running."*
 
