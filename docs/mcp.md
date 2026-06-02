@@ -124,6 +124,31 @@ Domain-analysis tools are cache-first and may resolve the domain when no fresh
 cache entry exists. The server includes a bounded TTL cache (120s) and
 per-domain rate limiting.
 
+### Read-only vs stateful (autoApprove guidance)
+
+Each tool carries a `readOnlyHint` annotation so a consuming agent can reason
+about what is safe to auto-approve. The split is enforced in code and kept in
+sync with this section by `tests/test_mcp_tool_annotations.py`.
+
+**Stateful tools** change the server's in-memory state for the session and are
+the ones to keep manual (or approve only when you understand the effect):
+
+- `inject_ephemeral_fingerprint`: adds a temporary fingerprint to the running
+  session's catalog.
+- `clear_ephemeral_fingerprints`: removes all ephemeral fingerprints from the
+  session.
+- `reload_data`: re-reads the fingerprint, signal, and posture catalogs from
+  disk into the running server.
+
+Every other tool is **read-only** (`readOnlyHint=true`): it does not mutate
+server state. Note that read-only does not mean "no network": the
+domain-analysis tools are cache-first and may make passive outbound DNS / CT /
+identity-endpoint queries when no fresh cache entry exists (the "Network
+calls?" column above says which). Read-only here means recon does not change
+its own state, not that the call is fully offline. An operator comfortable with
+passive outbound queries can auto-approve the read-only set; the safe default
+remains an empty `autoApprove` list until you have decided per tool.
+
 ## Catalog Resources
 
 recon exposes three MCP resources so agents can browse "what can this tool detect?" without spending a tool invocation on introspection:
