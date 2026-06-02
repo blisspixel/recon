@@ -220,18 +220,46 @@ runs in this order, each step one or more 1.9.x patches:
    corpus-mined gap-fill: run `validation/scan.py` over the private corpus,
    `find_gaps` to a report, triage candidates, and merge vetted rules.
    Aggregate counts only reach the repo.
-5. **Bayesian full-corpus calibration (Track C, C3).** Run the calibration over
-   the final catalog: per-node Brier / ECE, deterministic-vs-Bayesian
-   agreement, sparse-case interval coverage, CT-enabled so the cert-fed signals
-   are exercised. Extends the release trend. Aggregate metrics only.
+5. **Bayesian full-corpus calibration (Track C, C3),** with the legitimacy
+   refinements below applied so the numbers are defensible, not just
+   self-consistent. Run over the final catalog: per-node metrics,
+   deterministic-vs-Bayesian *consistency*, interval coverage, sparse-case
+   behavior. Aggregate metrics only.
 6. **Docs currency (pre-lock).** Bring the release-notes draft current (F1),
-   promote `correlation.md` to the polished reference (G3), and refresh the
-   validation-summary with the fresh calibration baseline (F2).
+   promote `correlation.md` to the polished reference (G3, incl. the
+   independence-bias and ground-truth caveats below), and refresh the
+   validation-summary with the fresh baseline (F2).
 
-The corpus runs are network-heavy and respect CT rate limits (the
-`--ct-retry-from` multi-session workflow), so they run in the background while
-the code work proceeds. Only the v2.0 lock ceremony itself (G1 schema lock,
-G2 `--fusion` default-on, G4 changelog-move + tag) stays out of this sequence.
+The corpus runs are network-heavy. The DNS / identity-endpoint pass runs at low
+batch concurrency (a concurrency-16 pass blew the 120s per-domain budget on
+~84% of domains via resolver saturation; concurrency 5 holds the error rate near
+4%). CT is separate and self-throttles to a process-wide cap of 2 with an AIMD
+limiter + circuit breaker, so a CT-enabled pass is small-subset / multi-session
+(`--ct-retry-from`) and reported as partial. The nine Bayesian nodes are fed by
+DNS / identity, not CT, so the no-CT pass calibrates the layer fully; CT only
+feeds the separate `infrastructure_clusters` and cert lexical surfaces. Only the
+v2.0 lock ceremony itself (G1 schema lock, G2 `--fusion` default-on, G4
+changelog-move + tag) stays out of this sequence.
+
+#### Calibration legitimacy refinements (Track C-cal)
+
+A 2026-06 methodology review flagged that the current numbers measure
+*self-consistency*, not calibration against ground truth, and over-claim when
+they call it "calibration." These refinements make the Bayesian-validation
+story defensible. Each is its own small patch; they gate the C3 calibration
+claims and the `correlation.md` polish (G3).
+
+| # | Refinement | Acceptance |
+|---|---|---|
+| CAL1 | Reframe consistency vs calibration | Everywhere (analyzer headers, `correlation.md`, validation memos), the deterministic-vs-Bayesian number is named *consistency / agreement*, not *calibration*, with an explicit note that both layers share the same evidence. Proxy-label Brier / ECE are labeled as proxy-label, not ground-truth. |
+| CAL2 | Uncertainty on every metric | The agreement rate carries a Wilson / Rule-of-Three CI (report the upper bound on disagreement, e.g. ~3/n); Brier / ECE carry bootstrap CIs. No bare "100%". |
+| CAL3 | Empirical interval coverage | The load-bearing claim (80% credible intervals) is tested: empirical coverage of the 80% interval against ground truth is computed and reported. |
+| CAL4 | Ground-truth subset | A hand-labeled set of ~50-100 domains with independently-known answers (verified M365 / GWS tenants, known Okta orgs) lives gitignored; real calibration + CAL3 coverage are computed against it, aggregates only. |
+| CAL5 | Split coverage from calibration | The per-node verdict separates firing count (coverage / power) from Brier / ECE (calibration). `okta_idp` is reported as well-calibrated-but-low-coverage, not a flat "fail"; the `>= 10` firing gate is a coverage note, not a calibration verdict. |
+| CAL6 | Stratified sampling | Calibration draws a random / stratified sample (by cloud vendor / vertical / region, using `by-vertical/` and `by-region/`) and reports per stratum; the full 5,241 run is used so low-coverage nodes (okta_idp) clear the firing gate on volume. |
+| CAL7 | Independence-bias documentation | `correlation.md` documents that correlated DNS bindings (e.g. MX + autodiscover + Exchange-DKIM all implying M365) can be double-counted by the combination rule, narrowing intervals; the layer either down-weights correlated bindings or states the bias as a known limitation. |
+| CAL8 | Sensitivity analysis per release | `threshold_sensitivity.py` runs a +/-20% likelihood perturbation each calibration pass and shows the posteriors / agreement are stable; the result is an aggregate artifact. |
+| CAL9 | Reliability diagrams + proper scoring lead | The validation memo leads with reliability diagrams and the log-score (a proper scoring rule); ECE is demoted to a secondary diagnostic with its binning scheme stated. |
 
 **Track E - CLI and agent quality-of-life.** Complete. The seven items (exit-code
 reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
