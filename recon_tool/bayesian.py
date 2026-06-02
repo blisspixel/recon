@@ -116,6 +116,12 @@ class _Evidence:
     name: str
     likelihood_present: float  # P(observed | node=present)
     likelihood_absent: float  # P(observed | node=absent)
+    # Optional correlation group. Bindings that share a group are treated as
+    # redundant readings of one underlying fact (conditionally dependent given
+    # the node), so a group contributes only its strongest fired binding rather
+    # than the naive independent product. None = independent (legacy behaviour).
+    # See correlation.md §4.8.3 "Conditionally-dependent bindings".
+    group: str | None = None
 
 
 @dataclass(frozen=True)
@@ -310,7 +316,12 @@ def _parse_node_evidence(name: str, evidence_raw: Any) -> tuple[_Evidence, ...]:
         lp, la = float(lik[0]), float(lik[1])
         if not (0.0 < lp < 1.0) or not (0.0 < la < 1.0):
             raise ValueError(f"bayesian_network[{name}/{obs_name}]: likelihoods must be strictly in (0, 1)")
-        evidence.append(_Evidence(kind=kind, name=obs_name, likelihood_present=lp, likelihood_absent=la))
+        raw_group = entry.get("group")
+        if raw_group is not None and not (isinstance(raw_group, str) and raw_group):
+            raise ValueError(f"bayesian_network[{name}/{obs_name}]: 'group' must be a non-empty string")
+        evidence.append(
+            _Evidence(kind=kind, name=obs_name, likelihood_present=lp, likelihood_absent=la, group=raw_group)
+        )
     return tuple(evidence)
 
 
@@ -524,6 +535,37 @@ def _factor_for_node(node: _Node) -> Factor:
     return factor
 
 
+def _binding_llr(ev: _Evidence) -> float:
+    """Natural-log likelihood ratio for one binding. Finite (likelihoods in (0,1))."""
+    return math.log(ev.likelihood_present / ev.likelihood_absent)
+
+
+def _contributing_evidence(fired_evidence: list[_Evidence]) -> list[_Evidence]:
+    """Reduce co-firing correlated bindings to one effective binding per group.
+
+    Bindings that share a non-None ``group`` are redundant readings of one
+    underlying fact (conditionally dependent given the node, e.g. the three
+    M365 indicators), so multiplying their likelihoods over-counts the evidence
+    and produces an over-confident posterior with too tight an interval. We keep
+    only the strongest fired binding in each group (max ``|LLR|``), which under
+    the conservative perfectly-dependent bound contributes
+    :math:`\\lambda_g = \\max_{b \\in g} \\lambda_b` rather than the sum.
+    Ungrouped bindings (``group`` None) each contribute independently, so this is
+    a strict refinement that changes only nodes whose YAML declares groups. See
+    correlation.md §4.8.3.
+    """
+    independent: list[_Evidence] = []
+    strongest: dict[str, _Evidence] = {}
+    for ev in fired_evidence:
+        if ev.group is None:
+            independent.append(ev)
+            continue
+        current = strongest.get(ev.group)
+        if current is None or abs(_binding_llr(ev)) > abs(_binding_llr(current)):
+            strongest[ev.group] = ev
+    return independent + list(strongest.values())
+
+
 @deal.post(_factor_is_strictly_positive)  # pyright: ignore[reportUntypedFunctionDecorator]
 def _factor_for_evidence(node: _Node, fired_evidence: list[_Evidence]) -> Factor | None:
     """Build the observation factor for a node given which of its bindings fired.
@@ -539,20 +581,22 @@ def _factor_for_evidence(node: _Node, fired_evidence: list[_Evidence]) -> Factor
     participates in inference).
 
     The factor is :math:`P(\\text{observation pattern} \\mid \\text{node})`,
-    a function of the node's state. We assume conditional independence
-    of observations given the node, which is the standard naive-Bayes
-    treatment for evidence under a single latent variable.
+    a function of the node's state. Bindings in different correlation groups
+    (and ungrouped bindings) are combined as conditionally independent given
+    the node, the standard naive-Bayes treatment; co-firing bindings within one
+    group are first reduced to their strongest member by
+    :func:`_contributing_evidence`, so redundant readings of one fact are not
+    multiplied as if independent (correlation.md §4.8.3).
     """
     if not fired_evidence:
         return None
-    # Multiplicative likelihoods over fired observations.
+    # Multiplicative likelihoods over the contributing observations (one per
+    # correlation group plus every ungrouped binding).
     like_present = 1.0
     like_absent = 1.0
-    fired_names = {e.name for e in fired_evidence}
-    for ev in node.evidence:
-        if ev.name in fired_names:
-            like_present *= ev.likelihood_present
-            like_absent *= ev.likelihood_absent
+    for ev in _contributing_evidence(fired_evidence):
+        like_present *= ev.likelihood_present
+        like_absent *= ev.likelihood_absent
         # Note: we deliberately do NOT multiply by (1 - likelihood) for
         # un-observed bindings. Passive collection cannot distinguish
         # "this node truly lacks the binding" from "the binding is

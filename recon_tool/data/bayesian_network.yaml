@@ -92,22 +92,34 @@ nodes:
   - name: m365_tenant
     description: "Domain has a Microsoft 365 / Entra tenant."
     prior: 0.30
+    # These three slugs are redundant readings of one fact (the org runs M365):
+    # a domain exposing one usually exposes the others, so they co-fire and are
+    # not conditionally independent. The shared `group` makes them contribute a
+    # single effective likelihood ratio rather than the over-counted product.
+    # See correlation.md §4.8.3.
     evidence:
       - slug: microsoft365
         likelihood: [0.95, 0.03]
+        group: m365_indicators
       - slug: entra-id
         likelihood: [0.88, 0.02]
+        group: m365_indicators
       - slug: exchange-online
         likelihood: [0.85, 0.02]
+        group: m365_indicators
 
   - name: google_workspace_tenant
     description: "Domain has a Google Workspace tenant."
     prior: 0.25
+    # Co-firing readings of one fact (the org runs Google Workspace); grouped
+    # so they are not multiplied as independent confirmations.
     evidence:
       - slug: google-workspace
         likelihood: [0.92, 0.04]
+        group: gws_indicators
       - slug: gmail
         likelihood: [0.85, 0.05]
+        group: gws_indicators
 
   - name: federated_identity
     description: "Domain uses an external IdP for SSO (Okta, Auth0, Ping, etc.)."
