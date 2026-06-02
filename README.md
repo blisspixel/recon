@@ -130,6 +130,15 @@ recon mcp                                      # start MCP server (stdio)
 
 Built-in profiles: `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`. Custom profiles live in `~/.recon/profiles/*.yaml`.
 
+**Shell completion.** recon ships tab-completion for the command tree and flags (via Typer). Install it for your current shell, or print the script to wire it up yourself:
+
+```bash
+recon --install-completion                     # add completion to your shell config
+recon --show-completion                        # print the completion script (bash/zsh/fish/powershell)
+```
+
+After `--install-completion`, start a new shell for it to take effect.
+
 See [docs/README.md](docs/README.md) for the organized documentation index.
 
 ## MCP Server
