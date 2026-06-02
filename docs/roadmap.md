@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.64** (pre-2.0 hardening phase). The next work is the
+Current release: **v1.9.71** (pre-2.0 hardening phase). The next work is the
 execution queue under the pre-2.0 hardening section below; what has already
 shipped is in the CHANGELOG. The
 engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
@@ -206,10 +206,12 @@ runs in this order, each step one or more 1.9.x patches:
    refactored `__init__.py` (only `_FALLBACK_VERSION` is a literal now), and clear
    the two `scripts/` C901s, so the release gate is sound before more patches
    stack.
-1. **Finish complexity decomposition (Track A) to zero markers.** A3 `sources/dns`
-   detectors, then A5 `explain_insights`, A7 `merge_results`, A6 the `cli`
-   behaviour-heavy set, A8 the `server` pair. The behaviour-heavy functions get
-   characterization coverage before they are split.
+1. **Finish complexity decomposition (Track A) to zero markers.** The
+   validator/loader tail, `validation_runner`, `cert_providers`, the
+   `sources/dns` detectors, and `explain_insights` are done (v1.9.61 to
+   v1.9.69); 7 markers remain, all behaviour-heavy: A6 the `cli` set
+   (`signals_show`, `_doctor`, `_lookup`, `_batch`), A7 `merge_results`, and A8
+   the `server` pair. These get characterization coverage before they are split.
 2. **Test and validation rigor (Track B).** `deal` contracts on `validator.py`,
    the cache-lifecycle stateful machine, source-boundary fault injection; server
    branch coverage folds in alongside.
@@ -279,20 +281,17 @@ reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
 data-not-instructions demarcation) shipped in v1.9.55 to v1.9.60; see the
 CHANGELOG for the per-patch detail.
 
-**Track A - Complexity decomposition** (14 `# noqa: C901` markers remain; the
-gate from v1.9.37 already holds new code; the formatter, the posture and
-insights core, and the validator/loader tail are already decomposed, see the
-CHANGELOG). What remains:
+**Track A - Complexity decomposition** (7 `# noqa: C901` markers remain; the
+gate from v1.9.37 already holds new code. The formatter, the posture and
+insights core, the validator/loader tail, the `validation_runner` pair, the
+`sources/dns` detectors, the `cert_providers` queries, and `explain_insights`
+are all decomposed, see the CHANGELOG). What remains, all behaviour-heavy:
 
 | # | Story | Status | Acceptance |
 |---|---|---|---|
-| A2 | `validation_runner` pair | open | `_classify_change_type` and `render_summary_markdown` decomposed under the cap; behavior held by the validation-runner tests. |
-| A3 | `sources/dns` detectors | open | `_detect_dkim`, `_parse_bimi_vmc`, `_detect_email_security`, `_detect_cert_intel` decomposed; behavior held by the DNS-source and ingestion tests. These are ingestion-path functions, so they pair naturally with the Track D adversarial pass. |
-| A4 | `sources/cert_providers` queries | open | The two `query` methods decomposed; behavior held by the CT-pipeline-resilience tests. |
-| A5 | `explanation.explain_insights` | open | Characterization coverage added first (it is behaviour-heavy, not a pure renderer), then decomposed under the cap. |
 | A6 | `cli` behaviour-heavy set | open | `signals_show`, `_doctor`, `_lookup` (77), `_batch` (60) each get characterization coverage, then are decomposed. The two largest functions in the tree; one patch each. |
 | A7 | `merger.merge_results` (64) | open | Characterization coverage added, then decomposed under the cap; the merge property tests stay green. |
-| A8 | `server` tool pair | open | `lookup_tenant` and `simulate_hardening` decomposed; behavior held by the server tests (pairs with E5 / E6 / E7 server-test growth). |
+| A8 | `server` tool pair | open | `lookup_tenant` and `simulate_hardening` decomposed; behavior held by the server tests (pairs with the E5 / E6 / E7 server-test growth). |
 
 **Track B - Test and validation rigor:**
 
@@ -844,15 +843,15 @@ know is missing rather than only what we know is present:
   `formatter.py` (v1.9.45 to v1.9.52, behind the golden-output net) are done,
   including the worst offender `render_tenant_panel` (96 to under 15); then
   `insights._email_security_insights` (v1.9.53), `posture._validate_and_build_rule`
-  (v1.9.54), and the validator/loader tail (`_validate_fingerprint`,
+  (v1.9.54), the validator/loader tail (`_validate_fingerprint`,
   `_validate_motif`, `_validate_and_build_signal`, `load_network`) in v1.9.61 to
-  v1.9.64. 17 markers remain. The remaining monsters are the behaviour-heavy
-  functions (`_lookup` at 77, `merge_results` at 64, `_batch` at 60,
-  `explain_insights` at 40, the `sources/dns` detectors, the `cert_providers`
-  queries, the `validation_runner` pair, the two `cli` doctor / signals-show
-  commands, and the `server` tool pair); these take characterization coverage of
-  their own before they are split, since they are not pure renderers the golden
-  snapshots can pin.
+  v1.9.64, the `validation_runner` pair (v1.9.65), the `cert_providers` queries
+  (v1.9.66), the `sources/dns` detectors (v1.9.67 to v1.9.68), and
+  `explain_insights` (v1.9.69). 7 markers remain. The remaining monsters are the
+  behaviour-heavy functions (`_lookup` at 77, `merge_results` at 64, `_batch` at
+  60, the two `cli` doctor / signals-show commands, and the `server` tool pair);
+  these take characterization coverage of their own before they are split, since
+  they are not pure renderers the golden snapshots can pin.
   Each refactor preserves behavior and is verified against the suite. The
   `PLR` refactor family (too-many-branches / statements / returns / args,
   ~107 hits) is deferred to a later pass so the gate stays focused on
