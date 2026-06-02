@@ -214,7 +214,86 @@ def _validate_subdomain_txt_pattern(pattern: str, source: str, name: str) -> boo
     return _validate_regex(regex, f"{source}:{name}")
 
 
-def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None:  # noqa: C901
+def _parse_detection_weight(raw_weight: Any, name: str, source: str) -> float:
+    """Parse and clamp a detection weight to [0.0, 1.0]; default 1.0."""
+    if raw_weight is None:
+        return 1.0
+    try:
+        weight = float(raw_weight)
+    except (TypeError, ValueError):
+        logger.warning(
+            "Fingerprint %r detection has non-numeric weight %r in %s — defaulting to 1.0",
+            name,
+            raw_weight,
+            source,
+        )
+        return 1.0
+    if weight < 0.0 or weight > 1.0:
+        logger.warning(
+            "Fingerprint %r detection has out-of-range weight %r in %s — defaulting to 1.0",
+            name,
+            raw_weight,
+            source,
+        )
+        return 1.0
+    return weight
+
+
+def _parse_cname_target_tier(det: dict[str, Any], name: str, source: str) -> str:
+    """Return the cname_target tier if valid, else default 'application'."""
+    raw_tier = det.get("tier", "application")
+    if raw_tier in _VALID_CNAME_TARGET_TIERS:
+        return raw_tier
+    logger.warning(
+        "Fingerprint %r cname_target detection has invalid tier %r in %s — defaulting to application",
+        name,
+        raw_tier,
+        source,
+    )
+    return "application"
+
+
+def _parse_detection_rule(det: Any, name: str, source: str) -> DetectionRule | None:
+    """Validate one detection entry and return a DetectionRule, or None to skip."""
+    if not isinstance(det, dict):
+        return None
+    det_type = det.get("type")
+    if det_type not in _VALID_DETECTION_TYPES:
+        logger.warning(
+            "Fingerprint %r has unknown detection type %r in %s — skipped",
+            name,
+            det_type,
+            source,
+        )
+        return None
+    pattern = det.get("pattern", "")
+    if not isinstance(pattern, str):
+        logger.warning(
+            "Fingerprint %r has non-string pattern %r in %s — skipped",
+            name,
+            pattern,
+            source,
+        )
+        return None
+    if det_type == "subdomain_txt":
+        if not _validate_subdomain_txt_pattern(pattern, source, name):
+            return None
+    elif not _validate_regex(pattern, f"{source}:{name}"):
+        return None
+
+    weight = _parse_detection_weight(det.get("weight"), name, source)
+    tier = _parse_cname_target_tier(det, name, source) if det_type == "cname_target" else "application"
+    return DetectionRule(
+        type=det_type,
+        pattern=pattern,
+        description=det.get("description", ""),
+        reference=det.get("reference", ""),
+        weight=weight,
+        tier=tier,
+    )
+
+
+def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None:
     """Validate a single fingerprint entry and return a frozen Fingerprint, or None.
 
     Does NOT mutate the input dict. Returns a frozen dataclass.
@@ -245,78 +324,9 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
 
     valid_detections: list[DetectionRule] = []
     for det in detections_raw:
-        if not isinstance(det, dict):
-            continue
-        det_type = det.get("type")
-        if det_type not in _VALID_DETECTION_TYPES:
-            logger.warning(
-                "Fingerprint %r has unknown detection type %r in %s — skipped",
-                name,
-                det_type,
-                source,
-            )
-            continue
-        pattern = det.get("pattern", "")
-        if not isinstance(pattern, str):
-            logger.warning(
-                "Fingerprint %r has non-string pattern %r in %s — skipped",
-                name,
-                pattern,
-                source,
-            )
-            continue
-        if det_type == "subdomain_txt":
-            if not _validate_subdomain_txt_pattern(pattern, source, name):
-                continue
-        elif not _validate_regex(pattern, f"{source}:{name}"):
-            continue
-        # Parse and validate detection weight
-        weight = 1.0
-        raw_weight = det.get("weight")
-        if raw_weight is not None:
-            try:
-                weight = float(raw_weight)
-            except (TypeError, ValueError):
-                logger.warning(
-                    "Fingerprint %r detection has non-numeric weight %r in %s — defaulting to 1.0",
-                    name,
-                    raw_weight,
-                    source,
-                )
-                weight = 1.0
-            else:
-                if weight < 0.0 or weight > 1.0:
-                    logger.warning(
-                        "Fingerprint %r detection has out-of-range weight %r in %s — defaulting to 1.0",
-                        name,
-                        raw_weight,
-                        source,
-                    )
-                    weight = 1.0
-
-        tier = "application"
-        if det_type == "cname_target":
-            raw_tier = det.get("tier", "application")
-            if raw_tier in _VALID_CNAME_TARGET_TIERS:
-                tier = raw_tier
-            else:
-                logger.warning(
-                    "Fingerprint %r cname_target detection has invalid tier %r in %s — defaulting to application",
-                    name,
-                    raw_tier,
-                    source,
-                )
-
-        valid_detections.append(
-            DetectionRule(
-                type=det_type,
-                pattern=pattern,
-                description=det.get("description", ""),
-                reference=det.get("reference", ""),
-                weight=weight,
-                tier=tier,
-            )
-        )
+        rule = _parse_detection_rule(det, name, source)
+        if rule is not None:
+            valid_detections.append(rule)
 
     if not valid_detections:
         logger.warning("Fingerprint %r has no valid detections in %s — skipped", name, source)
