@@ -267,7 +267,15 @@ def _verdict(rollup: NodeRollup) -> tuple[bool, str, str]:
     else:
         c_status = "fail"
         c_ok = False
-    verdict = "stable" if (b_pass and c_ok) else "not yet"
+    # CAL5: separate coverage from calibration so a node that is well-calibrated
+    # but under-fired (e.g. okta_idp at small n) is not mislabeled a
+    # miscalibration. b_pass is the calibration verdict; c is coverage/power.
+    if not b_pass:
+        verdict = "miscalibrated"
+    elif c_ok:
+        verdict = "stable"
+    else:
+        verdict = "low-coverage"
     return (b_pass, c_status, verdict)
 
 
