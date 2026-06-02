@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.58] - 2026-06-01
+
+### MCP autoApprove guidance (read-only vs stateful)
+
+CLI and agent quality-of-life track, item E5. Every MCP tool already carried a
+`readOnlyHint` annotation, but the docs did not classify the tools, so a
+consuming agent had no documented basis for deciding what is safe to
+auto-approve.
+
+- `docs/mcp.md` gains a "Read-only vs stateful (autoApprove guidance)"
+  subsection naming the three stateful tools
+  (`inject_ephemeral_fingerprint`, `clear_ephemeral_fingerprints`,
+  `reload_data`) and noting that read-only does not mean offline: the
+  cache-first analysis tools may still make passive outbound queries.
+- `tests/test_mcp_tool_annotations.py` keeps the doc in sync with the live
+  annotations: it fails if a new tool is missing from the Available Tools
+  table, or if the documented stateful set drifts from the tools whose
+  `readOnlyHint` is false.
+- The README manual-approval note links to the guidance.
+
+No runtime behavior change.
+
 ## [1.9.57] - 2026-06-01
 
 ### `batch` reads domains from stdin
