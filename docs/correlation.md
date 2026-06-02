@@ -968,6 +968,59 @@ choice is annotated in `recon_tool/bayesian.py` so future
 contributors who reach for symmetric conditioning read the
 rationale first.
 
+##### Conditionally-dependent bindings and the over-counting correction
+
+The likelihood factor $L(O \mid X) = \prod_{b \in O \cap B(X)} \ell_b(X)$
+treats the fired bindings of a node as conditionally independent given $X$.
+In log-odds form each fired binding shifts the posterior log-odds of $X$ by
+its log-likelihood-ratio
+
+$$\lambda_b = \log \frac{\alpha_b}{\beta_b},$$
+
+and the combined shift is the sum $\sum_b \lambda_b$. The sum is the correct
+update when the bindings are conditionally independent given $X$, and it is
+biased toward over-confidence when they are not.
+
+recon's highest-coverage nodes break the independence assumption by
+construction. The `m365_tenant` bindings `microsoft365`, `entra-id`, and
+`exchange-online` are three readings of one underlying fact: a domain that
+exposes one usually exposes the others, so conditional on
+`m365_tenant = present` they are strongly positively correlated rather than
+independent. With $\ell = [0.95, 0.03],\,[0.88, 0.02],\,[0.85, 0.02]$ the
+per-binding log-LRs are $\lambda \approx 3.46,\,3.78,\,3.75$ nats; the
+independent product sums them to $\approx 11.0$ nats, whereas a correct
+treatment of three near-perfectly-dependent readings of one cause contributes
+about the strongest alone, $\approx 3.78$ nats. The excess $\approx 7.2$ nats
+of log-odds is spurious confidence that pushes the posterior to the extreme and
+narrows the 80% credible interval more than three correlated observations
+justify.
+
+This is the mirror image of the asymmetric-likelihood conservatism above. The
+$LR = 1$ absence rule makes the layer deliberately *under*-confident on
+hardened targets that hide indicators; the independent-product assumption makes
+it *over*-confident on richly-instrumented targets that expose several
+correlated indicators. The two biases act on disjoint parts of the input
+distribution, so a validation metric that reports only mean agreement on
+instrumented targets (where the deterministic slug fires regardless) does not
+surface the over-confidence: it appears only in interval width, which the
+agreement metric does not test.
+
+The dependence-aware correction declares correlated bindings as an *evidence
+group* and lets a group contribute a single effective log-LR rather than the
+sum. Treating within-group bindings as perfectly dependent given $X$ (the
+conservative bound) makes a group $g$ contribute
+
+$$\lambda_g = \max_{b \in g} \lambda_b,$$
+
+recovering the "one cause, one observation" semantics, while bindings in
+different groups (genuinely independent signals) still multiply. This is the
+standard remedy for redundant evidence in a naive-Bayes-style combiner:
+correlated tests are not independent confirmations. The grouping is committed
+as data on each node, so the dependence structure stays auditable rather than
+learned. Implemented in `recon_tool/bayesian.py`; ungrouped bindings keep the
+independent-product behaviour, so the correction is a strict refinement on the
+nodes that declare groups.
+
 #### 4.8.4 Credible intervals: calibration over inference
 
 Variable elimination gives us a single posterior $\hat{p} = P(X \mid O)$.
@@ -1486,6 +1539,56 @@ $0.061$, well under threshold, and v1.9.5 classified the node
 follow-up topology fix in v1.9.6 (removal of `dkim_present` as
 a binding, see §4.8.12) that closed the one remaining `not yet`
 disposition from v1.9.5.
+
+##### Why the real-corpus consistency check is near-tautological
+
+The two claims above can be sharpened into a statement worth making explicit,
+because it bounds what the headline real-corpus number can and cannot show.
+Under the virtual-evidence construction (§4.8.1) with the $LR = 1$ absence rule
+(§4.8.3), a node's posterior rises above its prior-and-parent baseline only when
+at least one positive binding fires; an absent binding leaves it at baseline. So
+for a threshold $\tau$ chosen above every prior (the layer uses $0.85$), a high,
+non-sparse posterior implies a fired positive binding:
+
+$$P(X \mid O) \ge \tau \ \text{and not sparse} \;\Longrightarrow\; \exists\, b \in O \cap B(X).$$
+
+A fired binding is, by definition, a deterministic-pipeline detection.
+Therefore the real-corpus consistency check, which asks whether a high posterior
+is backed by a deterministic detection, is satisfied by construction, up to the
+small residual where parent-propagation alone clears $\tau$. The full-corpus
+result (13,307 of 13,307 high-confidence posteriors backed) is consistent with
+this: the agreement is near-tautological, so it validates the inference plumbing
+and the binding wiring, not the numeric CPT and likelihood values. Those values
+move the posterior's magnitude and its interval, not the sign of a fired
+binding. The only experiment that can falsify the values is frequentist interval
+coverage against an independent ground-truth label set, which the passive
+setting does not yet supply. We report the consistency number as a real, if
+weak, regression guard and name its near-tautological character so it is not
+read as calibration.
+
+##### Information recovered: the operational form of the correlation objective
+
+§1 disclaims the "minimise posterior entropy, maximise mutual information"
+language as describing intent rather than an implemented objective. The intent
+is nonetheless measurable. For a node $X$ with prior $\pi$ and posterior
+$P(X \mid O)$ the realised pointwise information gain is the entropy reduction
+
+$$\Delta H(X \mid O) = H(\pi) - H\big(P(X \mid O)\big),\qquad H(p) = -p\log p - (1-p)\log(1-p),$$
+
+whose expectation over the observation distribution is the mutual information
+$I(X; O)$ (Lindley 1956, Bayesian experimental design). Summed over the priored
+nodes and aggregated across the first full-corpus pass, the per-domain entropy
+reduction had median $\approx 0.85$ nats (Q3 $\approx 1.23$, max $\approx 2.5$).
+This turns the aspirational objective into a tracked quantity, computed in
+`recon_tool/bayesian.py` and reported per calibration pass, and is the honest
+operational reading of "correlation as information recovery."
+
+Two caveats keep the metric humble. First, $\Delta H$ measures the information
+the model extracts under its own likelihoods, not ground-truth-validated
+information, so it is a model-internal quantity, not an accuracy claim. Second,
+the over-counting bias of §4.8.3 inflates $\Delta H$ on richly-instrumented
+targets where correlated bindings compound, so the figure should be read
+alongside the evidence-group correction, not before it.
 
 #### 4.8.8 Defensive value
 
