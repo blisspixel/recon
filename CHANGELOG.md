@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.62] - 2026-06-01
+
+### Decompose `_validate_motif` under the C901 cap
+
+Complexity-decomposition track, the validator/loader tail (item A1, patch 2).
+
+- `recon_tool/motifs.py`: the per-marker parsing in `_validate_motif` moves to
+  `_parse_motif_marker` (a None return still rejects the whole motif, since the
+  chain must be fully valid). The marker loop becomes a thin collect and the
+  function drops its `# noqa: C901`.
+
+No behavior change: motif validation is unchanged, verified by `test_motifs`.
+
 ## [1.9.61] - 2026-06-01
 
 ### Decompose `_validate_fingerprint` under the C901 cap

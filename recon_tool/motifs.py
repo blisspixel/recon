@@ -85,7 +85,34 @@ class ChainMotifMatch:
     chain: tuple[str, ...]
 
 
-def _validate_motif(raw: Any, source: str) -> ChainMotif | None:  # noqa: C901
+def _parse_motif_marker(m_raw: Any) -> _MotifMarker | None:
+    """Validate one chain marker and return a _MotifMarker, or None to reject.
+
+    A None return rejects the whole motif (the chain must be fully valid).
+    """
+    if not isinstance(m_raw, dict):
+        return None
+    m_name = m_raw.get("name")
+    m_match = m_raw.get("match")
+    if not isinstance(m_name, str) or not m_name:
+        return None
+    if not isinstance(m_match, list) or not m_match:
+        return None
+    patterns: list[str] = []
+    for p in m_match:
+        if not isinstance(p, str):
+            continue
+        p_clean = p.strip().lower()
+        if p_clean:
+            patterns.append(p_clean)
+        if len(patterns) >= MAX_PATTERNS_PER_MARKER:
+            break
+    if not patterns:
+        return None
+    return _MotifMarker(name=m_name, patterns=tuple(patterns))
+
+
+def _validate_motif(raw: Any, source: str) -> ChainMotif | None:
     if not isinstance(raw, dict):
         return None
     name = raw.get("name")
@@ -115,26 +142,10 @@ def _validate_motif(raw: Any, source: str) -> ChainMotif | None:  # noqa: C901
         return None
     markers: list[_MotifMarker] = []
     for m_raw in chain_raw:
-        if not isinstance(m_raw, dict):
+        marker = _parse_motif_marker(m_raw)
+        if marker is None:
             return None
-        m_name = m_raw.get("name")
-        m_match = m_raw.get("match")
-        if not isinstance(m_name, str) or not m_name:
-            return None
-        if not isinstance(m_match, list) or not m_match:
-            return None
-        patterns: list[str] = []
-        for p in m_match:
-            if not isinstance(p, str):
-                continue
-            p_clean = p.strip().lower()
-            if p_clean:
-                patterns.append(p_clean)
-            if len(patterns) >= MAX_PATTERNS_PER_MARKER:
-                break
-        if not patterns:
-            return None
-        markers.append(_MotifMarker(name=m_name, patterns=tuple(patterns)))
+        markers.append(marker)
     return ChainMotif(
         name=name,
         display_name=display_name,
