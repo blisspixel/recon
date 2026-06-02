@@ -125,23 +125,8 @@ def _emit_file(path: Path, header: str, entries: list[dict[str, Any]]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Split monolithic fingerprints.yaml into per-category files.")
-    parser.add_argument("--input", type=Path, required=True, help="Path to monolithic fingerprints.yaml")
-    parser.add_argument("--output-dir", type=Path, required=True, help="Output directory for per-category files")
-    args = parser.parse_args(argv)
-
-    if not args.input.exists():
-        print(f"error: {args.input} does not exist", file=sys.stderr)
-        return 2
-
-    raw = yaml.safe_load(args.input.read_text(encoding="utf-8"))
-    entries = raw.get("fingerprints", []) if isinstance(raw, dict) else raw
-    if not isinstance(entries, list):
-        print("error: expected a 'fingerprints:' list", file=sys.stderr)
-        return 2
-
-    # Group by slug to merge duplicates.
+def _group_and_merge(entries: list[Any]) -> tuple[list[dict[str, Any]], list[str], int]:
+    """Group entries by slug, merging duplicates. Returns (merged, merge-notes, skipped)."""
     by_slug: OrderedDict[str, list[dict[str, Any]]] = OrderedDict()
     skipped = 0
     for e in entries:
@@ -162,8 +147,13 @@ def main(argv: list[str] | None = None) -> int:
         else:
             merged_entries.append(_merge_entries(group))
             merges.append(f"{slug} ({len(group)} entries merged)")
+    return merged_entries, merges, skipped
 
-    # Bucket into per-category files.
+
+def _bucket_by_category(
+    merged_entries: list[dict[str, Any]],
+) -> tuple[dict[str, list[dict[str, Any]]], list[tuple[str, str]]]:
+    """Bucket merged entries into per-category files. Returns (buckets, unmapped)."""
     buckets: dict[str, list[dict[str, Any]]] = {fname: [] for fname in set(_CATEGORY_TO_FILE.values())}
     unmapped: list[tuple[str, str]] = []
     for fp in merged_entries:
@@ -173,6 +163,27 @@ def main(argv: list[str] | None = None) -> int:
             unmapped.append((str(fp.get("slug", "?")), str(cat)))
             continue
         buckets[target].append(fp)
+    return buckets, unmapped
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Split monolithic fingerprints.yaml into per-category files.")
+    parser.add_argument("--input", type=Path, required=True, help="Path to monolithic fingerprints.yaml")
+    parser.add_argument("--output-dir", type=Path, required=True, help="Output directory for per-category files")
+    args = parser.parse_args(argv)
+
+    if not args.input.exists():
+        print(f"error: {args.input} does not exist", file=sys.stderr)
+        return 2
+
+    raw = yaml.safe_load(args.input.read_text(encoding="utf-8"))
+    entries = raw.get("fingerprints", []) if isinstance(raw, dict) else raw
+    if not isinstance(entries, list):
+        print("error: expected a 'fingerprints:' list", file=sys.stderr)
+        return 2
+
+    merged_entries, merges, skipped = _group_and_merge(entries)
+    buckets, unmapped = _bucket_by_category(merged_entries)
 
     if unmapped:
         print("error: unmapped categories — extend _CATEGORY_TO_FILE:", file=sys.stderr)
