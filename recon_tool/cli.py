@@ -52,8 +52,12 @@ from recon_tool.exit_codes import (  # noqa: E402
 )
 
 # Known subcommands — used by the callback to distinguish domains from commands.
-# UPDATE THIS SET when adding new subcommands.
-_SUBCOMMANDS = frozenset({"doctor", "batch", "lookup", "mcp", "cache", "delta", "fingerprints", "signals"})
+# Must equal the registered command tree; `tests/test_subcommands.py` pins it,
+# so a new command that is not added here fails CI rather than silently
+# mis-routing a dotted first argument.
+_SUBCOMMANDS = frozenset(
+    {"doctor", "batch", "lookup", "mcp", "cache", "delta", "discover", "fingerprints", "signals"}
+)
 
 # Maximum number of domains in a batch file to prevent OOM from huge files.
 _MAX_BATCH_DOMAINS = 10000
