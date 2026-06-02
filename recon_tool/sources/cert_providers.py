@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from collections import Counter
 from datetime import UTC, datetime, timedelta
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 import httpx
 
@@ -527,6 +527,97 @@ def build_cert_summary(
     )
 
 
+# ── CT payload parsers (pure, no I/O) ───────────────────────────────────
+
+
+def _extract_crtsh_entries(
+    data: list[Any],
+) -> tuple[list[str], list[dict[str, str | int | list[str] | None]]]:
+    """Pull bounded raw-name and per-cert lists from a crt.sh JSON payload.
+
+    Pure parsing, no I/O. Caps the entries scanned, the SANs per cert, the
+    cert-summary entries, and the raw-name list so a large or hostile CT
+    history cannot exhaust memory.
+    """
+    raw_names: list[str] = []
+    cert_entries: list[dict[str, str | int | list[str] | None]] = []
+    for entry in data[:_MAX_CRTSH_ENTRIES]:
+        if not isinstance(entry, dict):
+            continue
+
+        name_value = entry.get("name_value", "")
+        cert_sans: list[str] = []
+        if isinstance(name_value, str):
+            for raw_name in name_value.split("\n", _MAX_SANS_PER_CERT):
+                if len(cert_sans) >= _MAX_SANS_PER_CERT:
+                    break
+                n = raw_name.strip()
+                if n and _is_safe_san_name(n):
+                    cert_sans.append(n)
+
+        if len(cert_entries) < _MAX_CRTSH_CERT_SUMMARY_ENTRIES:
+            cert_entries.append(
+                {
+                    "issuer_ca_id": entry.get("issuer_ca_id"),
+                    "issuer_id": entry.get("issuer_ca_id"),
+                    "issuer_name": entry.get("issuer_name"),
+                    "not_before": entry.get("not_before"),
+                    "not_after": entry.get("not_after"),
+                    "dns_names": cert_sans,
+                }
+            )
+
+        if len(raw_names) >= _MAX_CRTSH_RAW_NAMES:
+            continue
+        for n in cert_sans:
+            raw_names.append(n)
+            if len(raw_names) >= _MAX_CRTSH_RAW_NAMES:
+                break
+    return raw_names, cert_entries
+
+
+def _parse_certspotter_issuance(
+    issuance: Any,
+) -> tuple[list[str], dict[str, str | int | list[str] | None] | None, str | None]:
+    """Parse one CertSpotter issuance into (safe SAN names, cert entry, id).
+
+    Pure parsing, no I/O. Returns empty / None on a non-mapping issuance so
+    the caller can skip it.
+    """
+    if not isinstance(issuance, dict):
+        return [], None, None
+
+    issuance_id = issuance.get("id")
+    last_id = str(issuance_id) if isinstance(issuance_id, str | int) else None
+
+    dns_names = issuance.get("dns_names", [])
+    cert_sans: list[str] = []
+    if isinstance(dns_names, list):
+        for name in dns_names:
+            if len(cert_sans) >= _MAX_SANS_PER_CERT:
+                break
+            if isinstance(name, str):
+                stripped = name.strip()
+                if stripped and _is_safe_san_name(stripped):
+                    cert_sans.append(stripped)
+
+    issuer = issuance.get("issuer")
+    issuer_name = None
+    if isinstance(issuer, dict):
+        candidate = issuer.get("friendly_name") or issuer.get("name")
+        if isinstance(candidate, str):
+            issuer_name = candidate
+
+    cert_entry: dict[str, str | int | list[str] | None] = {
+        "issuer_id": issuer_name,
+        "issuer_name": issuer_name,
+        "not_before": issuance.get("not_before"),
+        "not_after": issuance.get("not_after"),
+        "dns_names": cert_sans,
+    }
+    return cert_sans, cert_entry, last_id
+
+
 # ── CrtshProvider ───────────────────────────────────────────────────────
 
 
@@ -537,7 +628,7 @@ class CrtshProvider:
     def name(self) -> str:
         return "crt.sh"
 
-    async def query(  # noqa: C901
+    async def query(
         self,
         domain: str,
     ) -> tuple[list[str], CertSummary | None, InfrastructureClusterReport | None]:
@@ -592,50 +683,10 @@ class CrtshProvider:
         if not isinstance(data, list):
             return [], None, None
 
-        # Extract a bounded candidate set from name_value fields. Do
-        # not build raw/cert lists from the entire crt.sh payload:
-        # large CT histories can contain tens of thousands of names,
-        # and only MAX_SUBDOMAINS are ever returned.
-        raw_names: list[str] = []
-        cert_entries: list[dict[str, str | int | list[str] | None]] = []
-        for entry in data[:_MAX_CRTSH_ENTRIES]:
-            if not isinstance(entry, dict):
-                continue
-
-            # v1.7: parse SANs once so they can both feed the
-            # ``raw_names`` discovery list AND attach to the per-cert
-            # entry for wildcard-sibling and burst analysis. Bounded
-            # by ``_MAX_SANS_PER_CERT`` so a hostile/malformed
-            # ``name_value`` cannot exhaust memory during the split.
-            name_value = entry.get("name_value", "")
-            cert_sans: list[str] = []
-            if isinstance(name_value, str):
-                for raw_name in name_value.split("\n", _MAX_SANS_PER_CERT):
-                    if len(cert_sans) >= _MAX_SANS_PER_CERT:
-                        break
-                    n = raw_name.strip()
-                    if n and _is_safe_san_name(n):
-                        cert_sans.append(n)
-
-            if len(cert_entries) < _MAX_CRTSH_CERT_SUMMARY_ENTRIES:
-                cert_entries.append(
-                    {
-                        "issuer_ca_id": entry.get("issuer_ca_id"),
-                        "issuer_id": entry.get("issuer_ca_id"),
-                        "issuer_name": entry.get("issuer_name"),
-                        "not_before": entry.get("not_before"),
-                        "not_after": entry.get("not_after"),
-                        "dns_names": cert_sans,
-                    }
-                )
-
-            if len(raw_names) >= _MAX_CRTSH_RAW_NAMES:
-                continue
-            for n in cert_sans:
-                raw_names.append(n)
-                if len(raw_names) >= _MAX_CRTSH_RAW_NAMES:
-                    break
-
+        # Parse the (bounded) payload into raw names + per-cert entries. Done
+        # in _extract_crtsh_entries so the query method stays a thin
+        # fetch-then-parse driver.
+        raw_names, cert_entries = _extract_crtsh_entries(data)
         subdomains = filter_subdomains(raw_names, domain)
 
         now = datetime.now(UTC)
@@ -705,7 +756,7 @@ class CertSpotterProvider:
             params["after"] = after_cursor
         return await client.get(self._BASE_URL, params=params)
 
-    async def query(  # noqa: C901
+    async def query(
         self,
         domain: str,
     ) -> tuple[list[str], CertSummary | None, InfrastructureClusterReport | None]:
@@ -783,49 +834,18 @@ class CertSpotterProvider:
                     # list (genuine empty success, not rate-limited).
                     break
 
-                # Extract dns_names and cert metadata from each issuance
+                # Parse each issuance via the shared helper so this method
+                # stays a thin pagination driver. A non-mapping issuance
+                # yields a None entry and is skipped.
                 last_id: str | None = None
                 for issuance in data:
-                    if not isinstance(issuance, dict):
+                    names, cert_entry, issuance_id = _parse_certspotter_issuance(issuance)
+                    if cert_entry is None:
                         continue
-
-                    issuance_id = issuance.get("id")
-                    if isinstance(issuance_id, str | int):
-                        last_id = str(issuance_id)
-
-                    dns_names = issuance.get("dns_names", [])
-                    cert_sans: list[str] = []
-                    if isinstance(dns_names, list):
-                        for name in dns_names:
-                            if len(cert_sans) >= _MAX_SANS_PER_CERT:
-                                break
-                            if isinstance(name, str):
-                                stripped = name.strip()
-                                if stripped and _is_safe_san_name(stripped):
-                                    all_raw_names.append(stripped)
-                                    cert_sans.append(stripped)
-
-                    issuer = issuance.get("issuer")
-                    issuer_name = None
-                    if isinstance(issuer, dict):
-                        candidate = issuer.get("friendly_name") or issuer.get("name")
-                        # Only accept a string; a non-str
-                        # (e.g. {"name": 123}) otherwise breaks the
-                        # isinstance(str) discipline the rest of this
-                        # ingestion path relies on.
-                        if isinstance(candidate, str):
-                            issuer_name = candidate
-                    not_before = issuance.get("not_before")
-                    not_after = issuance.get("not_after")
-                    all_cert_entries.append(
-                        {
-                            "issuer_id": issuer_name,
-                            "issuer_name": issuer_name,
-                            "not_before": not_before,
-                            "not_after": not_after,
-                            "dns_names": cert_sans,
-                        }
-                    )
+                    all_raw_names.extend(names)
+                    all_cert_entries.append(cert_entry)
+                    if issuance_id is not None:
+                        last_id = issuance_id
 
                 # If we already have enough unique candidate names to
                 # fill MAX_SUBDOMAINS after filtering, stop early. No
