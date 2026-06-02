@@ -1,0 +1,757 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/blisspixel/recon/main/docs/recon-schema.json",
+  "title": "recon JSON output",
+  "description": "Stable v1.0 contract for the single-domain success output of `recon <domain> --json`. This root object describes exactly one output mode: a successful single-domain lookup. The other output modes have their own shapes, documented in $defs and in docs/schema.md. `recon batch <file> --json` (default) emits a bare array of records, one per input domain (see $defs/BatchArray); each element is either a single-domain success object (this root) or a $defs/BatchErrorRecord. `recon batch <file> --json --include-ecosystem` wraps that array in a $defs/BatchResult object (and falls back to the bare array when no domain resolved). `recon batch <file> --ndjson` emits one $defs/BatchNdjsonRecord per line. `recon delta <domain>` emits a $defs/DeltaReport. The dataclass in recon_tool.models.TenantInfo and the formatter in recon_tool.formatter.format_tenant_dict are the implementation source of truth. Consumers should ignore unknown properties; additive changes are non-breaking within 1.x. A few top-level fields are emitted only in specific modes or behind specific flags and are intentionally absent from `required`; each such property states its condition in its own description. See tests/test_json_schema_contract.py for the executable single-domain contract and tests/test_batch_ndjson_schema.py for the batch-record rule set.",
+  "type": "object",
+  "required": [
+    "tenant_id",
+    "display_name",
+    "default_domain",
+    "queried_domain",
+    "provider",
+    "confidence",
+    "evidence_confidence",
+    "inference_confidence",
+    "region",
+    "auth_type",
+    "google_auth_type",
+    "google_idp_name",
+    "primary_email_provider",
+    "likely_primary_email_provider",
+    "email_gateway",
+    "sources",
+    "partial",
+    "degraded_sources",
+    "services",
+    "slugs",
+    "detection_scores",
+    "insights",
+    "domain_count",
+    "tenant_domains",
+    "related_domains",
+    "email_security_score",
+    "dmarc_policy",
+    "dmarc_pct",
+    "mta_sts_mode",
+    "site_verification_tokens",
+    "ct_provider_used",
+    "ct_subdomain_count",
+    "ct_cache_age_days",
+    "ct_attempt_outcome",
+    "cert_summary",
+    "cloud_instance",
+    "tenant_region_sub_scope",
+    "msgraph_host",
+    "lexical_observations",
+    "bimi_identity",
+    "slug_confidences",
+    "posterior_observations",
+    "surface_attributions",
+    "evidence_conflicts",
+    "chain_motifs",
+    "infrastructure_clusters",
+    "fingerprint_metadata"
+  ],
+  "properties": {
+    "tenant_id": {
+      "description": "Microsoft 365 tenant UUID. Null for non-M365 domains.",
+      "type": ["string", "null"]
+    },
+    "display_name": {
+      "description": "Organization display name. Falls back to the queried domain when no better signal is available.",
+      "type": "string"
+    },
+    "default_domain": {
+      "description": "Primary domain within the tenant. Falls back to the queried domain when no tenant was detected.",
+      "type": "string"
+    },
+    "queried_domain": {
+      "description": "The domain the user passed (after validation and lowercasing).",
+      "type": "string"
+    },
+    "provider": {
+      "description": "One-line provider summary (e.g. 'Microsoft 365 (primary) via Proofpoint gateway + Google Workspace (secondary)').",
+      "type": "string"
+    },
+    "confidence": {
+      "description": "Overall confidence in the merged result.",
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "evidence_confidence": {
+      "description": "Confidence in detected fingerprint slugs.",
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "inference_confidence": {
+      "description": "Confidence in derived insights.",
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "region": {
+      "description": "Geographic region when detectable via OIDC (e.g. 'NA', 'EU', 'WW').",
+      "type": ["string", "null"]
+    },
+    "auth_type": {
+      "description": "M365 authentication style.",
+      "type": ["string", "null"],
+      "enum": ["Federated", "Managed", null]
+    },
+    "google_auth_type": {
+      "description": "Google Workspace authentication style.",
+      "type": ["string", "null"],
+      "enum": ["Federated", "Managed", null]
+    },
+    "google_idp_name": {
+      "description": "Third-party IdP name for Google Workspace when detectable.",
+      "type": ["string", "null"]
+    },
+    "primary_email_provider": {
+      "description": "MX-confirmed primary email provider.",
+      "type": ["string", "null"]
+    },
+    "likely_primary_email_provider": {
+      "description": "Inferred primary (hedged) when MX is a gateway and DKIM/TXT/OIDC points to a specific downstream.",
+      "type": ["string", "null"]
+    },
+    "email_gateway": {
+      "description": "MX-detected email security gateway (Proofpoint, Mimecast, etc.).",
+      "type": ["string", "null"]
+    },
+    "sources": {
+      "description": "Source names that successfully contributed to the result.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "partial": {
+      "description": "True when any core source is in degraded_sources (CT-only degradation does not flip this flag).",
+      "type": "boolean"
+    },
+    "degraded_sources": {
+      "description": "Source names that failed or were unavailable.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "services": {
+      "description": "Human-readable service names ('Microsoft 365', 'Slack', etc.).",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "slugs": {
+      "description": "Stable fingerprint slugs for programmatic matching.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "detection_scores": {
+      "description": "Per-slug detection score level aggregated from evidence.",
+      "type": "object",
+      "additionalProperties": {"type": "string", "enum": ["low", "medium", "high"]}
+    },
+    "insights": {
+      "description": "Derived intelligence lines. Exact wording may evolve; presence and signal types are stable.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "domain_count": {
+      "description": "Number of domains in the tenant.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "tenant_domains": {
+      "description": "All domains found in the tenant.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "related_domains": {
+      "description": "Domains inferred from CNAME breadcrumbs, CT logs, or autodiscover delegation.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "email_security_score": {
+      "description": "Count of the 5 email controls present: DMARC reject/quarantine, DKIM selectors, SPF strict (-all), MTA-STS, BIMI.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "dmarc_policy": {
+      "description": "DMARC policy when a DMARC record is present.",
+      "type": ["string", "null"],
+      "enum": ["reject", "quarantine", "none", null]
+    },
+    "dmarc_pct": {
+      "description": "DMARC pct= parameter.",
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "mta_sts_mode": {
+      "description": "MTA-STS policy mode.",
+      "type": ["string", "null"],
+      "enum": ["enforce", "testing", "none", null]
+    },
+    "site_verification_tokens": {
+      "description": "TXT tokens observed on the apex (e.g. 'google-site-verification=', 'MS=').",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "ct_provider_used": {
+      "description": "Which CT provider answered, or '(cached)' suffix when data came from the per-domain CT cache.",
+      "type": ["string", "null"]
+    },
+    "ct_subdomain_count": {
+      "description": "Number of subdomains returned after filtering.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "ct_cache_age_days": {
+      "description": "Age of the CT cache entry in days when cached data was used. Null when data came from a live provider.",
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "ct_attempt_outcome": {
+      "description": "v1.9.25: outcome of the CT enumeration attempt. cache_hit when the cache-first short-circuit served the result. live_success when a live provider returned data. live_rate_limited when a provider was rate-limited (HTTP 429 or local breaker / wait-ceiling). breaker_open when a provider's circuit breaker was open before any HTTP call. live_other_failure for non-429 errors (timeout, 5xx, JSON parse). cache_miss when providers returned empty-but-not-error and no cache entry existed. skipped when --no-ct was passed. Null on older records or sources that do not touch CT.",
+      "type": ["string", "null"],
+      "enum": [null, "cache_hit", "live_success", "live_rate_limited", "breaker_open", "live_other_failure", "cache_miss", "skipped"]
+    },
+    "cert_summary": {
+      "description": "Certificate transparency summary. Null when no CT data was obtained.",
+      "oneOf": [
+        {"$ref": "#/$defs/CertSummary"},
+        {"type": "null"}
+      ]
+    },
+    "cloud_instance": {
+      "description": "Microsoft cloud sovereignty from M365 OIDC discovery.",
+      "type": ["string", "null"],
+      "enum": ["microsoftonline.com", "microsoftonline.us", "partner.microsoftonline.cn", null]
+    },
+    "tenant_region_sub_scope": {
+      "description": "Gov-cloud disambiguation from M365 OIDC.",
+      "type": ["string", "null"],
+      "enum": ["GCC", "DOD", "USGov", null]
+    },
+    "msgraph_host": {
+      "description": "Authoritative Microsoft Graph host.",
+      "type": ["string", "null"],
+      "enum": ["graph.microsoft.com", "graph.microsoft.us", null]
+    },
+    "lexical_observations": {
+      "description": "Hedged observations from CT subdomain lexical taxonomy.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "bimi_identity": {
+      "description": "BIMI VMC identity. Null when no BIMI VMC was observed.",
+      "oneOf": [
+        {"$ref": "#/$defs/BIMIIdentity"},
+        {"type": "null"}
+      ]
+    },
+    "slug_confidences": {
+      "description": "Bayesian per-slug posterior means (stable v2.0+). Each entry is a [slug, posterior] pair with posterior in [0, 1]. Populated only when --fusion is passed.",
+      "type": "array",
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "prefixItems": [
+          {"type": "string"},
+          {"type": "number", "minimum": 0, "maximum": 1}
+        ]
+      }
+    },
+    "posterior_observations": {
+      "description": "Marginal posteriors over high-level claims from the Bayesian network at recon_tool/data/bayesian_network.yaml (v1.9; stable v2.0+). Each entry includes the posterior P(node=present | E) and the central 80% credible interval. Populated only when --fusion is passed; empty array otherwise. The Beta layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/PosteriorObservation"}
+    },
+    "surface_attributions": {
+      "description": "Per-subdomain attribution to a SaaS or infrastructure provider, derived from CNAME-chain classification of related_domains. Each entry maps one subdomain to its primary service. Application-tier matches (Auth0, Shopify, Zendesk, ...) take precedence over infrastructure-tier matches (Cloudflare, Fastly, CloudFront, ...) when a chain produces both — the infrastructure layer is recorded in infra_slug / infra_name as supplementary context. Empty array when no related domains classified.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/SurfaceAttribution"}
+    },
+    "evidence_conflicts": {
+      "description": "Top-level array of cross-source disagreements (v1.7+). Each entry names a merged field where 2+ sources provided different non-None values, with every candidate preserved. Empty array when sources agreed. The conflict-aware merger picks a winner using source-confidence ordering; this array surfaces the alternates so consumers can see what was discarded. The legacy `conflicts` dict that --explain emits remains for backwards compatibility.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/EvidenceConflict"}
+    },
+    "chain_motifs": {
+      "description": "CNAME chain motifs (v1.7+). Each entry records an ordered proxy/CDN/origin shape (e.g. Cloudflare → AWS origin, Akamai → Azure origin) that fired on a related subdomain's CNAME chain. Observable structure only — never an ownership claim. Empty array when no motif matched any related subdomain. The motif catalog lives in recon_tool/data/motifs.yaml and can be extended via ~/.recon/motifs.yaml (additive only).",
+      "type": "array",
+      "items": {"$ref": "#/$defs/ChainMotif"}
+    },
+    "infrastructure_clusters": {
+      "description": "Per-domain CT co-occurrence community detection report (v1.8+). Always emitted. ``algorithm`` records which path produced the partition (``louvain`` for small graphs, ``connected_components`` when the graph exceeds the size cap, ``skipped`` when no graph could be built). Modularity is 0.0 in the fallback / skipped paths. Members within each cluster are sorted; clusters are sorted by size descending. Observable structure only — clusters describe co-issuance, not ownership.",
+      "$ref": "#/$defs/InfrastructureClusterReport"
+    },
+    "fingerprint_metadata": {
+      "description": "Per-slug relationship metadata (v1.8+). Object keyed by detected fingerprint slug. Each value is `{product_family, parent_vendor, bimi_org}` — descriptive hints sourced from the fingerprint YAML. Slugs without any populated metadata are omitted entirely. Empty object when no detected slug carries metadata. Drives the v1.8 ecosystem hypergraph; never an ownership assertion.",
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/FingerprintMetadata"}
+    },
+    "unclassified_cname_chains": {
+      "description": "Conditional. Present only when ``--include-unclassified`` is passed, absent otherwise; consumers should not treat it as always present. CNAME chains the surface classifier resolved but could not attribute to any cname_target fingerprint. Each entry: {subdomain, chain: [hop1, hop2, terminal]}. Wildcard-DNS echoes are filtered out before this list is populated. Feeds the fingerprint-discovery loop in validation/find_gaps.py and the /recon-fingerprint-triage Claude skill.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/UnclassifiedCnameChain"}
+    },
+    "evidence": {
+      "description": "Conditional. Present only with --explain, absent otherwise; consumers should not treat it as always present. Per-detection evidence trace.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/EvidenceRecord"}
+    },
+    "explanation_dag": {
+      "description": "Conditional. Present only with --explain on the lookup_tenant MCP tool, absent otherwise; consumers should not treat it as always present. Top-level keys: evidence, slugs, rules, signals, insights, each a list of records with id and references.",
+      "type": "object"
+    },
+    "shared_verification_tokens": {
+      "description": "Conditional, batch-only. Present on a per-domain success record in `recon batch --json` output only when two or more domains in the batch shared a TXT verification token. Never emitted in single-domain --json or in --ndjson (which streams before the batch-wide pass runs). Each entry pairs a shared token with the peer domain that also carried it.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["token", "peer"],
+        "properties": {
+          "token": {"type": "string"},
+          "peer": {"type": "string"}
+        }
+      }
+    },
+    "shared_tenant": {
+      "description": "Conditional, batch-only. Present on a per-domain success record in `recon batch --json` output only when two or more domains in the batch shared an M365 tenant_id. Never emitted in single-domain --json or in --ndjson. Each entry carries the shared tenant_id and the peer domains under it.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tenant_id", "peers"],
+        "properties": {
+          "tenant_id": {"type": ["string", "null"]},
+          "peers": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "shared_display_name": {
+      "description": "Conditional, batch-only. Present on a per-domain success record in `recon batch --json` output only when two or more domains in the batch normalized to the same display name. Hedged signal (customer-supplied brand text, not cryptographic). Never emitted in single-domain --json or in --ndjson. Each entry carries the raw display_name, its normalized form, and the peer domains.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["display_name", "normalized_name", "peers"],
+        "properties": {
+          "display_name": {"type": "string"},
+          "normalized_name": {"type": "string"},
+          "peers": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "CertSummary": {
+      "type": "object",
+      "required": [
+        "cert_count",
+        "issuer_diversity",
+        "issuance_velocity",
+        "newest_cert_age_days",
+        "oldest_cert_age_days",
+        "top_issuers",
+        "wildcard_sibling_clusters",
+        "deployment_bursts"
+      ],
+      "properties": {
+        "cert_count": {"type": "integer", "minimum": 0},
+        "issuer_diversity": {"type": "integer", "minimum": 0},
+        "issuance_velocity": {"type": "integer", "minimum": 0, "description": "Certs issued in last 90 days."},
+        "newest_cert_age_days": {"type": "integer", "minimum": 0},
+        "oldest_cert_age_days": {"type": "integer", "minimum": 0},
+        "top_issuers": {
+          "type": "array",
+          "items": {"type": "string"},
+          "maxItems": 3
+        },
+        "wildcard_sibling_clusters": {
+          "description": "Stable v1.7+. Each entry is the deduplicated, sorted list of non-wildcard SANs from a single cert that also covered ≥1 wildcard SAN. Empty array when CT data showed no wildcard certs or none had concrete siblings to harvest. Bounded — at most 10 clusters, 20 names per cluster.",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "deployment_bursts": {
+          "description": "Stable v1.7+. Cohorts of cert issuances clustered by `not_before` proximity (default 60s window, min 3 distinct non-wildcard SANs). Output is intentionally relative — span_seconds + name list — and never claims ownership. Empty array when no cluster meets the minimum size. Bounded — at most 8 bursts, 25 names per burst.",
+          "type": "array",
+          "items": {"$ref": "#/$defs/CertBurst"}
+        }
+      }
+    },
+    "CertBurst": {
+      "type": "object",
+      "required": ["window_start", "window_end", "span_seconds", "names"],
+      "properties": {
+        "window_start": {"type": "string", "description": "ISO-8601 UTC of earliest not_before in this burst."},
+        "window_end": {"type": "string", "description": "ISO-8601 UTC of latest not_before in this burst."},
+        "span_seconds": {"type": "integer", "minimum": 0, "description": "Window span in seconds."},
+        "names": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Distinct non-wildcard SANs co-issued inside this window, sorted."
+        }
+      }
+    },
+    "BIMIIdentity": {
+      "type": "object",
+      "required": ["organization", "country", "state", "locality", "trademark"],
+      "properties": {
+        "organization": {"type": "string"},
+        "country": {"type": ["string", "null"]},
+        "state": {"type": ["string", "null"]},
+        "locality": {"type": ["string", "null"]},
+        "trademark": {"type": ["string", "null"]}
+      }
+    },
+    "EvidenceRecord": {
+      "type": "object",
+      "required": ["source_type", "raw_value", "rule_name", "slug"],
+      "properties": {
+        "source_type": {
+          "type": "string",
+          "description": "DNS or HTTP source class (TXT, MX, CNAME, NS, SRV, CAA, SPF, HTTP)."
+        },
+        "raw_value": {"type": "string"},
+        "rule_name": {"type": "string"},
+        "slug": {"type": "string"}
+      }
+    },
+    "SurfaceAttribution": {
+      "description": "Maps one subdomain to its primary service from CNAME chain classification. primary_* fields are the application-tier match when present, else the most specific infrastructure-tier match. infra_* fields are populated only when both an application and an infrastructure tier matched — they record the CDN or load balancer fronting the application service.",
+      "type": "object",
+      "required": ["subdomain", "primary_slug", "primary_name", "primary_tier", "infra_slug", "infra_name"],
+      "properties": {
+        "subdomain": {"type": "string"},
+        "primary_slug": {"type": "string"},
+        "primary_name": {"type": "string"},
+        "primary_tier": {"type": "string", "enum": ["application", "infrastructure"]},
+        "infra_slug": {"type": ["string", "null"]},
+        "infra_name": {"type": ["string", "null"]}
+      }
+    },
+    "ChainMotif": {
+      "description": "One CNAME chain motif observed against a related subdomain. ``chain`` is the ordered subset of hops that matched the motif's markers — not the full original chain.",
+      "type": "object",
+      "required": ["motif_name", "display_name", "confidence", "subdomain", "chain"],
+      "properties": {
+        "motif_name": {"type": "string", "description": "Stable identifier from motifs.yaml."},
+        "display_name": {"type": "string", "description": "Human-readable label with → separators."},
+        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+        "subdomain": {"type": "string", "description": "Related subdomain whose chain produced the match."},
+        "chain": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Matched hops in order, one per motif marker."
+        }
+      }
+    },
+    "InfrastructureClusterReport": {
+      "description": "Stable v1.8+. Wraps the cluster list with the algorithm path and the underlying graph metrics so downstream tools can interpret the partition correctly.",
+      "type": "object",
+      "required": ["algorithm", "modularity", "node_count", "edge_count", "clusters"],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": ["louvain", "connected_components", "skipped"],
+          "description": "Path that produced the partition. ``connected_components`` is the deterministic fallback used when the graph exceeds the v1.8 node cap; ``skipped`` means no graph was built (no CT entries, fewer than two nodes, or no edges)."
+        },
+        "modularity": {
+          "type": "number",
+          "description": "Newman-Girvan modularity for the Louvain partition. 0.0 in the fallback / skipped paths."
+        },
+        "node_count": {"type": "integer", "minimum": 0, "description": "Distinct non-wildcard SAN hostnames observed across the cert entries."},
+        "edge_count": {"type": "integer", "minimum": 0, "description": "Edges in the co-occurrence graph (each edge weights co-issuance count)."},
+        "clusters": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/InfrastructureCluster"}
+        }
+      }
+    },
+    "EcosystemHyperedge": {
+      "description": "One observed multi-domain signature in a ``recon batch --json --include-ecosystem`` run (v1.8+). Surfaced as the top-level ``ecosystem_hyperedges`` array of the batch wrapper, where the per-domain entries appear under ``domains``. Not emitted in single-domain ``--json`` output.",
+      "type": "object",
+      "required": ["edge_type", "key", "members"],
+      "properties": {
+        "edge_type": {
+          "type": "string",
+          "enum": ["top_issuer", "bimi_org", "parent_vendor", "shared_slugs"],
+          "description": "Rule that produced the edge: shared CT top issuer, shared BIMI VMC organization, shared fingerprint parent_vendor, or shared fingerprint-slug pair (≥2 overlap)."
+        },
+        "key": {
+          "type": "string",
+          "description": "Value the rule fired on. Issuer name, BIMI org, parent vendor, or — for ``shared_slugs`` — the comma-joined intersection of overlapping slug names."
+        },
+        "members": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 2,
+          "description": "Sorted apex domains that share the signature."
+        }
+      }
+    },
+    "FingerprintMetadata": {
+      "description": "Relationship hints for one fingerprint slug. Stable v1.8+. Each field is optional — at least one will be non-null when this record appears.",
+      "type": "object",
+      "required": ["product_family", "parent_vendor", "bimi_org"],
+      "properties": {
+        "product_family": {"type": ["string", "null"], "description": "Vendor-internal product line (e.g. \"Microsoft 365\", \"Google Workspace\", \"AWS\")."},
+        "parent_vendor": {"type": ["string", "null"], "description": "Corporate parent the product rolls up to (e.g. \"Microsoft\", \"Salesforce\" for Slack)."},
+        "bimi_org": {"type": ["string", "null"], "description": "Exact organization name expected on a BIMI VMC for domains under this product."}
+      }
+    },
+    "InfrastructureCluster": {
+      "description": "One community in the per-domain SAN co-occurrence graph. Stable v1.8+.",
+      "type": "object",
+      "required": ["cluster_id", "size", "members", "shared_cert_count", "dominant_issuer"],
+      "properties": {
+        "cluster_id": {"type": "integer", "minimum": 0, "description": "Stable id within this report (largest cluster is 0)."},
+        "size": {"type": "integer", "minimum": 2},
+        "members": {"type": "array", "items": {"type": "string"}, "description": "SAN hostnames in this cluster, sorted."},
+        "shared_cert_count": {"type": "integer", "minimum": 0, "description": "Number of cert-entry contributions across edges fully inside this cluster (not unique certs)."},
+        "dominant_issuer": {"type": ["string", "null"], "description": "Most common issuer name across contributing certs."}
+      }
+    },
+    "EvidenceConflict": {
+      "description": "A single field where two or more sources provided different non-None values during merge. Stable v1.7+.",
+      "type": "object",
+      "required": ["field", "candidates"],
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Merged field name. One of: display_name, auth_type, region, tenant_id, dmarc_policy, google_auth_type."
+        },
+        "candidates": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["value", "source", "confidence"],
+            "properties": {
+              "value": {"type": "string"},
+              "source": {"type": "string"},
+              "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+            }
+          }
+        }
+      }
+    },
+    "UnclassifiedCnameChain": {
+      "description": "A CNAME chain captured during surface classification that did not match any cname_target fingerprint. Surfaced only with ``--include-unclassified``. ``chain`` is ordered: each hop is a CNAME target, terminal last. Useful for proposing new fingerprints — the terminal hostname is usually a third-party SaaS endpoint we don't yet recognize, an intra-org CDN, or noise.",
+      "type": "object",
+      "required": ["subdomain", "chain"],
+      "properties": {
+        "subdomain": {"type": "string"},
+        "chain": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 1
+        }
+      }
+    },
+    "PosteriorObservation": {
+      "description": "Per-node Bayesian posterior with 80% credible interval (v1.9; stable v2.0+). The interval reflects evidence sparsity and cross-source conflict — wide intervals for hardened-target sparse cases, tight intervals for densely-corroborated cases. ``sparse=true`` flags the passive-observation ceiling. ``conflict_provenance`` (v1.9.1+) carries the source-pair detail behind any n_eff penalty.",
+      "type": "object",
+      "required": [
+        "name",
+        "description",
+        "posterior",
+        "interval_low",
+        "interval_high",
+        "evidence_used",
+        "n_eff",
+        "sparse",
+        "conflict_provenance"
+      ],
+      "properties": {
+        "name": {"type": "string", "description": "Stable node identifier matching bayesian_network.yaml."},
+        "description": {"type": "string", "description": "Plain-English claim the node encodes."},
+        "posterior": {"type": "number", "minimum": 0, "maximum": 1, "description": "P(node=present | observed evidence)."},
+        "interval_low": {"type": "number", "minimum": 0, "maximum": 1, "description": "Lower bound of the 80% credible interval."},
+        "interval_high": {"type": "number", "minimum": 0, "maximum": 1, "description": "Upper bound of the 80% credible interval."},
+        "evidence_used": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Bound observations that fired for this node, formatted as ``slug:<name>`` or ``signal:<name>``."
+        },
+        "n_eff": {"type": "number", "minimum": 0, "description": "Effective sample size used to derive the interval; lower means wider interval."},
+        "sparse": {"type": "boolean", "description": "True when n_eff equals the floor — interval reflects passive-observation ceiling, not strong belief."},
+        "conflict_provenance": {
+          "type": "array",
+          "description": "Cross-source disagreements that contributed to this node's n_eff penalty (v1.9.1+). Empty array when no conflicts dampened the interval. Surfaces the source-pair detail dropped by the legacy count-only path; pairs with the existing top-level ``evidence_conflicts`` array.",
+          "items": {"$ref": "#/$defs/NodeConflict"}
+        }
+      }
+    },
+    "NodeConflict": {
+      "description": "One cross-source disagreement carried through to a NodePosterior (v1.9.1+). ``field`` is the merged TenantInfo field whose sources disagreed; ``sources`` lists the distinct sources that contributed candidate values; ``magnitude`` is the n_eff penalty (in n_eff units) this conflict applied to the node.",
+      "type": "object",
+      "required": ["field", "sources", "magnitude"],
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Merged field name. One of: display_name, auth_type, region, tenant_id, dmarc_policy, google_auth_type."
+        },
+        "sources": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Distinct source identifiers that contributed a candidate value for this field."
+        },
+        "magnitude": {
+          "type": "number",
+          "minimum": 0,
+          "description": "n_eff penalty this single conflict applied. Uniform at v1.9.1; exposed as a number so future per-node relevance weighting is schema-additive."
+        }
+      }
+    },
+    "DeltaReport": {
+      "description": "Output shape of `recon delta <domain>` and `recon <domain> --compare <file>`. Stable.",
+      "type": "object",
+      "required": [
+        "domain",
+        "added_services",
+        "removed_services",
+        "added_slugs",
+        "removed_slugs",
+        "added_signals",
+        "removed_signals",
+        "changed_auth_type",
+        "changed_dmarc_policy",
+        "changed_email_security_score",
+        "changed_confidence",
+        "changed_domain_count"
+      ],
+      "properties": {
+        "domain": {"type": "string"},
+        "added_services": {"type": "array", "items": {"type": "string"}},
+        "removed_services": {"type": "array", "items": {"type": "string"}},
+        "added_slugs": {"type": "array", "items": {"type": "string"}},
+        "removed_slugs": {"type": "array", "items": {"type": "string"}},
+        "added_signals": {"type": "array", "items": {"type": "string"}},
+        "removed_signals": {"type": "array", "items": {"type": "string"}},
+        "changed_auth_type": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["from", "to"],
+              "properties": {
+                "from": {"type": ["string", "null"]},
+                "to": {"type": ["string", "null"]}
+              }
+            }
+          ]
+        },
+        "changed_dmarc_policy": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["from", "to"],
+              "properties": {
+                "from": {"type": ["string", "null"]},
+                "to": {"type": ["string", "null"]}
+              }
+            }
+          ]
+        },
+        "changed_email_security_score": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["from", "to"],
+              "properties": {
+                "from": {"type": ["integer", "null"]},
+                "to": {"type": ["integer", "null"]}
+              }
+            }
+          ]
+        },
+        "changed_confidence": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["from", "to"],
+              "properties": {
+                "from": {"type": "string"},
+                "to": {"type": "string"}
+              }
+            }
+          ]
+        },
+        "changed_domain_count": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["from", "to"],
+              "properties": {
+                "from": {"type": "integer"},
+                "to": {"type": "integer"}
+              }
+            }
+          ]
+        }
+      }
+    },
+    "BatchErrorRecord": {
+      "description": "Emitted in place of a success object when a single domain in a batch run fails. Appears as an array element in ``recon batch --json`` (BatchArray), as a ``domains`` element in the ``--include-ecosystem`` BatchResult wrapper, and as a line in ``recon batch --ndjson``. A domain yields this shape when it fails input validation (e.g. a malformed apex) or when its lookup raises. Exactly two keys and no overlap with the single-domain success contract (which requires dozens of fields), so a consumer can branch on the key set alone. The deterministic classifier in recon_tool.schema_contract.classify_batch_record encodes that rule.",
+      "type": "object",
+      "required": ["domain", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "type": "string",
+          "description": "The raw domain string from the input list, before validation and lowercasing."
+        },
+        "error": {
+          "type": "string",
+          "description": "Human-readable failure reason: the validation message or the lookup error text."
+        }
+      }
+    },
+    "BatchArray": {
+      "description": "Default shape of ``recon batch <file> --json`` (without --include-ecosystem): a bare JSON array, one element per input domain, in input-file order. Each element is either a single-domain success object (the root schema of this file) or a BatchErrorRecord. Success elements may additionally carry the batch-only cross-domain fields (shared_verification_tokens, shared_tenant, shared_display_name) when the batch surfaced a peer relationship. This is also the shape ``--include-ecosystem`` falls back to when no domain in the batch resolved successfully.",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {"$ref": "#"},
+          {"$ref": "#/$defs/BatchErrorRecord"}
+        ]
+      }
+    },
+    "BatchNdjsonRecord": {
+      "description": "One line of ``recon batch <file> --ndjson`` output. Same per-record shape as a BatchArray element: either a single-domain success object (the root schema of this file) or a BatchErrorRecord. NDJSON streams per domain as each completes, so the cross-domain batch enrichment fields (shared_verification_tokens, shared_tenant, shared_display_name) and the --include-ecosystem hyperedge envelope are never present in this mode; both require the full result set before emission.",
+      "oneOf": [
+        {"$ref": "#"},
+        {"$ref": "#/$defs/BatchErrorRecord"}
+      ]
+    },
+    "BatchResult": {
+      "description": "Shape of ``recon batch <file> --json --include-ecosystem`` when at least one domain resolved successfully: a wrapper object carrying the per-domain results under ``domains`` and the cross-domain ``ecosystem_hyperedges`` array as a sibling. Without --include-ecosystem the batch JSON is a bare BatchArray instead, with no wrapper; and an --include-ecosystem run where no domain resolved also falls back to the bare BatchArray. Stable v2.0.",
+      "type": "object",
+      "required": ["domains", "ecosystem_hyperedges"],
+      "properties": {
+        "domains": {
+          "type": "array",
+          "description": "Per-domain results, one entry per input apex in input-file order. Each entry is either a single-domain success object (the root schema of this file) or a BatchErrorRecord.",
+          "items": {
+            "oneOf": [
+              {"$ref": "#"},
+              {"$ref": "#/$defs/BatchErrorRecord"}
+            ]
+          }
+        },
+        "ecosystem_hyperedges": {
+          "type": "array",
+          "description": "Multi-domain signatures observed across the batch. Always present in this wrapper (empty array when no rule fired). Each entry is one ``EcosystemHyperedge``.",
+          "items": {"$ref": "#/$defs/EcosystemHyperedge"}
+        }
+      }
+    }
+  }
+}
