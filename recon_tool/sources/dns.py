@@ -13,7 +13,10 @@ import asyncio
 import logging
 import re
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from recon_tool.ct_cache import CTCacheEntry
 
 import dns.asyncresolver
 import dns.exception
@@ -1014,80 +1017,83 @@ def _extract_dmarc_rua(ctx: _DetectionCtx, dmarc_record: str) -> None:
                 break  # first match wins per RUA address
 
 
-async def _detect_email_security(ctx: _DetectionCtx, domain: str) -> None:  # noqa: C901
-    """Check DMARC, BIMI, MTA-STS, and TLS-RPT records concurrently."""
-    dmarc_task = _safe_resolve(f"_dmarc.{domain}", "TXT")
-    bimi_task = _safe_resolve(f"default._bimi.{domain}", "TXT")
-    mta_sts_task = _safe_resolve(f"_mta-sts.{domain}", "TXT")
-    tls_rpt_task = _safe_resolve(f"_smtp._tls.{domain}", "TXT")
+def _apply_dmarc_pct(ctx: _DetectionCtx, raw_pct: str, domain: str) -> None:
+    """Validate and record a DMARC ``pct=`` value (0-100), warning on bad input."""
+    try:
+        pct_val = int(raw_pct)
+    except ValueError:
+        logger.warning("DMARC pct= value %r is not a valid integer for %s - ignored", raw_pct, domain)
+        return
+    if 0 <= pct_val <= 100:
+        ctx.dmarc_pct = pct_val
+    else:
+        logger.warning("DMARC pct= value %d out of range for %s - ignored", pct_val, domain)
 
-    dmarc_results, bimi_results, mta_sts_results, tls_rpt_results = await asyncio.gather(
-        dmarc_task,
-        bimi_task,
-        mta_sts_task,
-        tls_rpt_task,
-    )
 
+def _apply_dmarc(ctx: _DetectionCtx, dmarc_results: list[str], domain: str) -> None:
+    """Record DMARC presence, policy, pct, and rua mailto fingerprints."""
     for txt in dmarc_results:
-        if txt.lower().startswith("v=dmarc1"):
-            ctx.services.add(SVC_DMARC)
-            for part in txt.split(";"):
-                cleaned = part.strip().lower()
-                if cleaned.startswith("p="):
-                    ctx.dmarc_policy = cleaned[2:].strip()
-                elif cleaned.startswith("pct="):
-                    raw_pct = cleaned[4:].strip()
-                    try:
-                        pct_val = int(raw_pct)
-                        if 0 <= pct_val <= 100:
-                            ctx.dmarc_pct = pct_val
-                        else:
-                            logger.warning(
-                                "DMARC pct= value %d out of range for %s - ignored",
-                                pct_val,
-                                domain,
-                            )
-                    except ValueError:
-                        logger.warning(
-                            "DMARC pct= value %r is not a valid integer for %s - ignored",
-                            raw_pct,
-                            domain,
-                        )
+        if not txt.lower().startswith("v=dmarc1"):
+            continue
+        ctx.services.add(SVC_DMARC)
+        for part in txt.split(";"):
+            cleaned = part.strip().lower()
+            if cleaned.startswith("p="):
+                ctx.dmarc_policy = cleaned[2:].strip()
+            elif cleaned.startswith("pct="):
+                _apply_dmarc_pct(ctx, cleaned[4:].strip(), domain)
+        _extract_dmarc_rua(ctx, txt)
 
-            # Extract rua= mailto domains and match against fingerprints
-            _extract_dmarc_rua(ctx, txt)
 
+async def _apply_bimi(ctx: _DetectionCtx, bimi_results: list[str], domain: str) -> None:
+    """Record BIMI presence and attempt best-effort VMC identity enrichment.
+
+    The VMC enrichment runs over an attacker-authored record, so it must never
+    abort the DNS source: anything it raises is caught and the BIMI detection
+    plus the rest of the DNS intelligence is kept.
+    """
     for txt in bimi_results:
         if "v=bimi1" in txt.lower():
             ctx.services.add(SVC_BIMI)
-            # Attempt VMC corporate identity extraction. This is best-effort
-            # enrichment over an attacker-authored record, so it must never
-            # abort the DNS source: catch anything it raises and keep the
-            # BIMI service detection plus the rest of the DNS intelligence.
             try:
                 await _parse_bimi_vmc(ctx, txt)
             except Exception as exc:
                 logger.debug("BIMI VMC enrichment failed for %s: %s", domain, exc)
 
-    mta_sts_detected = False
-    for txt in mta_sts_results:
-        if "v=stsv1" in txt.lower():
-            ctx.services.add(SVC_MTA_STS)
-            mta_sts_detected = True
 
-    # Fetch MTA-STS policy file if TXT record found
-    if mta_sts_detected:
-        policy_mode = await _fetch_mta_sts_policy(domain)
-        if policy_mode:
-            ctx.mta_sts_mode = policy_mode
-            if policy_mode == "enforce":
-                ctx.slugs.add("mta-sts-enforce")
+async def _apply_mta_sts(ctx: _DetectionCtx, mta_sts_results: list[str], domain: str) -> None:
+    """Record MTA-STS presence and, when the TXT fires, fetch the policy mode."""
+    mta_sts_detected = any("v=stsv1" in txt.lower() for txt in mta_sts_results)
+    if not mta_sts_detected:
+        return
+    ctx.services.add(SVC_MTA_STS)
+    policy_mode = await _fetch_mta_sts_policy(domain)
+    if policy_mode:
+        ctx.mta_sts_mode = policy_mode
+        if policy_mode == "enforce":
+            ctx.slugs.add("mta-sts-enforce")
 
-    # TLS-RPT detection
+
+def _apply_tls_rpt(ctx: _DetectionCtx, tls_rpt_results: list[str]) -> None:
+    """Record TLS-RPT presence."""
     for txt in tls_rpt_results:
         if "v=tlsrptv1" in txt.lower():
             ctx.add("TLS-RPT", "tls-rpt", source_type="TXT", raw_value=txt)
             break
+
+
+async def _detect_email_security(ctx: _DetectionCtx, domain: str) -> None:
+    """Check DMARC, BIMI, MTA-STS, and TLS-RPT records concurrently."""
+    dmarc_results, bimi_results, mta_sts_results, tls_rpt_results = await asyncio.gather(
+        _safe_resolve(f"_dmarc.{domain}", "TXT"),
+        _safe_resolve(f"default._bimi.{domain}", "TXT"),
+        _safe_resolve(f"_mta-sts.{domain}", "TXT"),
+        _safe_resolve(f"_smtp._tls.{domain}", "TXT"),
+    )
+    _apply_dmarc(ctx, dmarc_results, domain)
+    await _apply_bimi(ctx, bimi_results, domain)
+    await _apply_mta_sts(ctx, mta_sts_results, domain)
+    _apply_tls_rpt(ctx, tls_rpt_results)
 
 
 async def _detect_ns(ctx: _DetectionCtx, domain: str) -> None:
@@ -1395,89 +1401,65 @@ async def _detect_srv(ctx: _DetectionCtx, domain: str) -> None:
 # ── Certificate Transparency (fallback chain) ──────────────────────────
 
 
-async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:  # noqa: C901
-    """Try CrtshProvider, fall back to CertSpotterProvider, fall back to CT cache.
+def _apply_cached_cert_intel(ctx: _DetectionCtx, cached: CTCacheEntry, attribution: str) -> None:
+    """Apply a CT cache entry to the context (shared by cache-first and fallback)."""
+    ctx.related_domains.update(cached.subdomains)
+    if cached.cert_summary is not None:
+        ctx.cert_summary = cached.cert_summary
+    ctx.ct_provider_used = attribution
+    ctx.ct_subdomain_count = len(cached.subdomains)
+    ctx.ct_cache_age_days = cached.age_days
+    ctx.ct_attempt_outcome = "cache_hit"
 
-    On first successful provider, record the provider name and subdomain
-    count on the context so the panel can surface which provider actually
-    ran ("crt.sh (142 subdomains)" vs "certspotter (8 subdomains)"). This
-    makes enrichment asymmetry between runs visible instead of silent.
 
-    When all live providers fail, the per-domain CT cache serves as a
-    final fallback - returning the last known subdomain set with an
-    explicit cache age annotation so the panel can show "from local
-    cache, N days old".
+def _classify_ct_failure(exc: Exception) -> str:
+    """Bucket a CT-provider exception as breaker / rate_limit / other.
 
-    Empty-but-not-error responses (v1.8.1): a provider that returns
-    ``([], None, None)`` is treated as a soft failure, not as a
-    successful empty answer. CertSpotter rate-limited responses look
-    like that - HTTP 200 with an empty issuance list - and prior to
-    this they prevented the next provider AND the CT-cache fallback
-    from running. The 10-domain v1.8 validation found 7/10 cases
-    where both providers returned this shape and `cert_summary` was
-    silently null even though a populated cache entry existed. Now
-    we record the first such response (so the panel still shows
-    "certspotter (0 subdomains)") and continue trying.
-
-    Cache-first lookup (v1.9.25): a fresh CT cache entry short-circuits
-    the live providers entirely. Corpus-scale re-runs that previously
-    re-hit crt.sh / CertSpotter for every domain now serve from the
-    cache for any apex enumerated in the last seven days. The cache
-    TTL is the standard ``CT_CACHE_TTL`` and the cached entry counts
-    as a successful fetch (``ct_provider_used`` is ``"<provider>
-    (cached)"`` so the panel still surfaces which live provider
-    originally populated the entry).
+    RateLimited from the adaptive limiter wraps either a local breaker-open
+    decline or a max-wait-exceeded decline; both surface as "rate-limited".
     """
-    from recon_tool.ct_cache import ct_cache_get, ct_cache_put
+    err_str = str(exc).lower()
+    if "circuit breaker open" in err_str:
+        return "breaker"
+    if "rate-limited" in err_str or "429" in err_str:
+        return "rate_limit"
+    return "other"
 
-    cached_first = ct_cache_get(domain)
-    if cached_first is not None and cached_first.subdomains:
-        ctx.related_domains.update(cached_first.subdomains)
-        if cached_first.cert_summary is not None:
-            ctx.cert_summary = cached_first.cert_summary
-        ctx.ct_provider_used = f"{cached_first.provider_used} (cached)"
-        ctx.ct_subdomain_count = len(cached_first.subdomains)
-        ctx.ct_cache_age_days = cached_first.age_days
-        ctx.ct_attempt_outcome = "cache_hit"
-        logger.debug(
-            "cert intel cache-first hit for %s: %d subdomains, %d days old",
-            domain,
-            len(cached_first.subdomains),
-            cached_first.age_days,
-        )
-        return
+
+def _ct_failure_outcome(failures: dict[str, int]) -> str:
+    """Pick the most precise outcome label from the failure tallies."""
+    if failures["breaker"] > 0:
+        return "breaker_open"
+    if failures["rate_limit"] > 0:
+        return "live_rate_limited"
+    if failures["other"] > 0:
+        return "live_other_failure"
+    return "cache_miss"
+
+
+async def _query_cert_providers(ctx: _DetectionCtx, domain: str) -> tuple[bool, str | None, dict[str, int]]:
+    """Try each live CT provider in turn. Apply the first real success to ctx.
+
+    Returns (success, soft_provider, failure-tallies). An empty-but-not-error
+    response (``([], None, None)``, e.g. a CertSpotter rate-limit) is a soft
+    failure: the first such provider name is remembered so the cache fallback
+    can still attribute the panel correctly.
+    """
+    from recon_tool.ct_cache import ct_cache_put
 
     providers: list[CertIntelProvider] = [CrtshProvider(), CertSpotterProvider()]
-    # Track WHY each provider failed (if it did) so the per-record
-    # outcome can distinguish rate-limit, breaker, and other failures.
-    rate_limit_count = 0
-    breaker_open_count = 0
-    other_failure_count = 0
-    soft_provider: str | None = None  # First provider to return empty-but-not-error.
+    failures = {"breaker": 0, "rate_limit": 0, "other": 0}
+    soft_provider: str | None = None
     for provider in providers:
         try:
             subdomains, cert_summary, infrastructure_clusters = await provider.query(domain)
         except Exception as exc:
-            # Classify the failure so the per-record outcome can name it.
-            # RateLimited from the adaptive limiter wraps either a local
-            # breaker-open decline or a max-wait-exceeded decline; both
-            # surface as "rate-limited" in the message.
-            err_str = str(exc).lower()
-            if "circuit breaker open" in err_str:
-                breaker_open_count += 1
-            elif "rate-limited" in err_str or "429" in err_str:
-                rate_limit_count += 1
-            else:
-                other_failure_count += 1
+            failures[_classify_ct_failure(exc)] += 1
             logger.debug("cert intel provider %s failed for %s: %s", provider.name, domain, exc)
             ctx.degraded_sources.add(provider.name)
             continue
 
         if not subdomains and cert_summary is None and infrastructure_clusters is None:
-            # Empty success - treat as a soft failure. Remember the
-            # provider name so the cache-fallback path below can still
-            # surface it in the panel ("certspotter (cached)") instead
-            # of attributing the result to a provider that never tried.
             logger.debug(
                 "cert intel provider %s returned empty for %s - treating as soft failure",
                 provider.name,
@@ -1496,24 +1478,48 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:  # noqa: 
         ctx.ct_subdomain_count = len(subdomains)
         ctx.ct_attempt_outcome = "live_success"
         logger.debug("cert intel from %s for %s: %d subdomains", provider.name, domain, len(subdomains))
-        # Cache successful result for future fallback
         ct_cache_put(domain, subdomains, cert_summary, provider.name)
+        return True, None, failures
+
+    return False, soft_provider, failures
+
+
+async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:
+    """Try CrtshProvider, fall back to CertSpotterProvider, fall back to CT cache.
+
+    On the first successful provider, record the provider name and subdomain
+    count on the context so the panel can surface which provider actually ran
+    ("crt.sh (142 subdomains)" vs "certspotter (8 subdomains)"), making
+    enrichment asymmetry between runs visible instead of silent.
+
+    A fresh CT cache entry short-circuits the live providers entirely
+    (v1.9.25). When all live providers fail (hard error or empty-but-not-error,
+    v1.8.1), the per-domain CT cache is the final fallback, annotated with its
+    age so the panel can show "from local cache, N days old". With no cache and
+    no success, the attempt outcome reflects the most precise failure observed.
+    """
+    from recon_tool.ct_cache import ct_cache_get
+
+    cached_first = ct_cache_get(domain)
+    if cached_first is not None and cached_first.subdomains:
+        _apply_cached_cert_intel(ctx, cached_first, f"{cached_first.provider_used} (cached)")
+        logger.debug(
+            "cert intel cache-first hit for %s: %d subdomains, %d days old",
+            domain,
+            len(cached_first.subdomains),
+            cached_first.age_days,
+        )
         return
 
-    # All live providers failed (hard error or empty) - try per-domain
-    # CT cache as final fallback.
+    success, soft_provider, failures = await _query_cert_providers(ctx, domain)
+    if success:
+        return
+
     cached = ct_cache_get(domain)
     if cached is not None and cached.subdomains:
-        ctx.related_domains.update(cached.subdomains)
-        if cached.cert_summary is not None:
-            ctx.cert_summary = cached.cert_summary
-        # Attribution: if a live provider returned empty (soft failure),
-        # name it explicitly so the panel reflects what actually ran.
-        attribution = soft_provider or cached.provider_used
-        ctx.ct_provider_used = f"{attribution} (cached)"
-        ctx.ct_subdomain_count = len(cached.subdomains)
-        ctx.ct_cache_age_days = cached.age_days
-        ctx.ct_attempt_outcome = "cache_hit"
+        # Attribution: if a live provider returned empty (soft failure), name
+        # it explicitly so the panel reflects what actually ran.
+        _apply_cached_cert_intel(ctx, cached, f"{soft_provider or cached.provider_used} (cached)")
         logger.debug(
             "cert intel from CT cache for %s: %d subdomains, %d days old",
             domain,
@@ -1521,24 +1527,12 @@ async def _detect_cert_intel(ctx: _DetectionCtx, domain: str) -> None:  # noqa: 
             cached.age_days,
         )
     elif soft_provider is not None:
-        # No cache available, but at least one provider returned an
-        # empty response - surface that in the panel rather than
+        # No cache, but a provider returned empty - surface it rather than
         # leaving ct_provider_used unset.
         ctx.ct_provider_used = soft_provider
         ctx.ct_attempt_outcome = "cache_miss"
     else:
-        # No success, no soft-failure, no cache. Pick the most precise
-        # outcome from the failure-classification tallies. Ordered so
-        # breaker_open is most-specific (we KNOW the breaker fired),
-        # rate_limited next, and other_failure as the catch-all.
-        if breaker_open_count > 0:
-            ctx.ct_attempt_outcome = "breaker_open"
-        elif rate_limit_count > 0:
-            ctx.ct_attempt_outcome = "live_rate_limited"
-        elif other_failure_count > 0:
-            ctx.ct_attempt_outcome = "live_other_failure"
-        else:
-            ctx.ct_attempt_outcome = "cache_miss"
+        ctx.ct_attempt_outcome = _ct_failure_outcome(failures)
         ctx.ct_subdomain_count = 0
 
 
