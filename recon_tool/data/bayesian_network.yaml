@@ -230,8 +230,19 @@ nodes:
         likelihood: [0.55, 0.10]
       - signal: mta_sts_enforce
         likelihood: [0.70, 0.05]
+      # v1.9.x: down-weight spf_strict from [0.75, 0.30] (LR 2.5) to [0.70, 0.45]
+      # (LR ~1.6). Conceptual, not corpus-fitted: a strict SPF `-all` is
+      # near-ubiquitous email hygiene that many domains publish without enforcing
+      # a DMARC reject/quarantine policy, so its absence-of-discrimination
+      # (P(spf_strict | enforcing absent)) is much higher than 0.30. The old LR
+      # let spf_strict-plus-one-weak-signal combinations clear the high-posterior
+      # threshold on domains whose true policy is not enforcing; the 2026-06
+      # synthetic calibration showed this node at conditional ECE 0.31 with the
+      # [0.85] reliability bin realizing only 0.166. SPF-strict stays a binding
+      # (it is an auth mechanism, unlike DKIM which was removed in v1.9.6) but a
+      # weak one. See CONTRIBUTING.md "CPT-change discipline".
       - signal: spf_strict
-        likelihood: [0.75, 0.30]
+        likelihood: [0.70, 0.45]
 
   # ── Infrastructure layer ──────────────────────────────────────────
   - name: cdn_fronting

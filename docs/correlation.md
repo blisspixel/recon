@@ -1021,6 +1021,48 @@ learned. Implemented in `recon_tool/bayesian.py`; ungrouped bindings keep the
 independent-product behaviour, so the correction is a strict refinement on the
 nodes that declare groups.
 
+##### Node-dependent missingness: MNAR is not universal
+
+The $LR = 1$ absence rule rests on the MNAR claim that an absent binding may be
+adversarial hiding rather than genuine absence. That claim is **node-dependent**,
+and applying it uniformly miscalibrates the nodes for which it is false. The
+Rubin taxonomy this section already invokes makes the distinction precise:
+
+- **MNAR nodes (asymmetric is correct).** Hideable infrastructure such as
+  `m365_tenant` or `okta_idp`. A hardened operator can strip the public OIDC
+  endpoint or the Okta CNAME, so absence is correlated with the latent state
+  through the hiding choice. $LR = 1$ refuses to read that absence as evidence
+  of absence.
+- **MAR nodes (symmetric is correct).** Public-declaration signals such as the
+  `email_security_policy_enforcing` bindings (DMARC reject / quarantine,
+  MTA-STS enforce, strict SPF). These are published in DNS or they are not, and
+  there is no adversarial incentive to hide a *weaker* policy; absence is
+  genuine. Here the correct update conditions on absence with the complementary
+  likelihood $(1 - \alpha_b)/(1 - \beta_b)$, so a missing strong signal (a
+  missing `dmarc_reject`, $\alpha = 0.92$) is strong evidence against the claim.
+
+The 2026-06 synthetic calibration measured the cost of the uniform assumption:
+`email_security_policy_enforcing` sat at conditional ECE $\approx 0.31$, with the
+$[0.85, 0.90)$ reliability bin realizing an empirical rate of $0.166$. The node
+said "probably enforcing" and was wrong most of the time in that bin, because it
+could not use the absence of the strong DMARC signals as disconfirmation. A
+conceptual down-weight of `spf_strict` (a near-ubiquitous hygiene signal that is
+weak evidence of full enforcement, from $[0.75, 0.30]$ to $[0.70, 0.45]$) reduced
+it to $\approx 0.28$ but did not resolve it, confirming the residual is the
+missingness regime, not one binding.
+
+The principled fix is per-node MAR / symmetric conditioning, flagged on the node
+and consistent with this section's own Rubin framing rather than a departure
+from it. A prototype confirmed the direction (the no-signal baseline for the
+policy node correctly collapses toward $0$). It is held as its own change
+because it ripples into the effective-sample-size and sparse-flag semantics
+(under MAR, absence is evidence, so a no-signal node should not be flagged
+sparse) and into the per-node stability criterion (which must move from "every
+fired binding raises the posterior above the all-absent baseline" to "toggling a
+binding from absent to fired raises the posterior"). Until it ships, the policy
+node's conditional miscalibration is a known, measured limitation, and v2.0
+calibration claims gate on the maximum per-node conditional ECE, not the mean.
+
 #### 4.8.4 Credible intervals: calibration over inference
 
 Variable elimination gives us a single posterior $\hat{p} = P(X \mid O)$.

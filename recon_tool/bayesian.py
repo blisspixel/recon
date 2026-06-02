@@ -587,6 +587,15 @@ def _factor_for_evidence(node: _Node, fired_evidence: list[_Evidence]) -> Factor
     group are first reduced to their strongest member by
     :func:`_contributing_evidence`, so redundant readings of one fact are not
     multiplied as if independent (correlation.md §4.8.3).
+
+    We deliberately do NOT condition on absence: a non-firing binding
+    contributes nothing (LR=1). Passive collection cannot distinguish "this
+    node truly lacks the binding" from "the binding is there but the operator
+    hid it", so conditioning on absence would over-claim absence on hardened
+    targets (correlation.md §4.8.3, the MNAR argument). The node-dependent
+    refinement for public-declaration signals (MAR, where absence is genuine)
+    is tracked as a dedicated change; see correlation.md §4.8.3
+    "Node-dependent missingness" and roadmap CAL14.
     """
     if not fired_evidence:
         return None
@@ -597,12 +606,6 @@ def _factor_for_evidence(node: _Node, fired_evidence: list[_Evidence]) -> Factor
     for ev in _contributing_evidence(fired_evidence):
         like_present *= ev.likelihood_present
         like_absent *= ev.likelihood_absent
-        # Note: we deliberately do NOT multiply by (1 - likelihood) for
-        # un-observed bindings. Passive collection cannot distinguish
-        # "this node truly lacks the binding" from "the binding is
-        # there but DNS doesn't expose it". Conditioning on absence
-        # would produce overconfident posteriors on hardened targets;
-        # see correlation.md §4 for the passive-observation ceiling.
     factor: Factor = {
         frozenset({(node.name, "present")}): like_present,
         frozenset({(node.name, "absent")}): like_absent,
