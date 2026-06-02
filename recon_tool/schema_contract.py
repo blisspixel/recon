@@ -18,10 +18,24 @@ classifier the schema contract references.
 
 from __future__ import annotations
 
+from importlib.resources import files
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+
+def packaged_schema_text() -> str:
+    """Return the bundled recon JSON-output schema as text.
+
+    ``docs/recon-schema.json`` is the source of truth, but the wheel does not
+    ship ``docs/``. A byte-identical copy is bundled at
+    ``recon_tool/data/recon-schema.json`` so the MCP schema-discovery resource
+    can serve the contract without an external fetch. The two are kept in sync
+    by ``tests/test_schema_resource.py``. The schema's own ``description``
+    field states the contract version.
+    """
+    return (files("recon_tool") / "data" / "recon-schema.json").read_text(encoding="utf-8")
 
 REQUIRED_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "auth_type",

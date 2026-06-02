@@ -417,6 +417,24 @@ def _resource_profiles() -> str:  # pyright: ignore[reportUnusedFunction]
     )
 
 
+@mcp.resource(
+    "recon://schema",
+    name="JSON output schema",
+    description=(
+        "The recon JSON-output contract as a JSON Schema, the same document "
+        "published at docs/recon-schema.json. Use it to self-describe the "
+        "shape of `recon <domain> --json` output (and the batch / delta modes "
+        "in its $defs) without an external fetch. The schema's own description "
+        "field states the contract version and the additive-change policy."
+    ),
+    mime_type="application/json",
+)
+def _resource_schema() -> str:  # pyright: ignore[reportUnusedFunction]
+    from recon_tool.schema_contract import packaged_schema_text
+
+    return packaged_schema_text()
+
+
 @mcp.tool(
     annotations=ToolAnnotations(
         readOnlyHint=True,

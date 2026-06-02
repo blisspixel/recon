@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.59] - 2026-06-01
+
+### Schema-discovery MCP resource (`recon://schema`)
+
+CLI and agent quality-of-life track, item E6. An MCP agent could not read the
+JSON-output contract without fetching `docs/recon-schema.json` over the
+network, because the wheel ships only the `recon_tool` package.
+
+- New `recon://schema` read-only MCP resource returns the JSON-output contract
+  as a JSON Schema (the same document as `docs/recon-schema.json`, including
+  the batch and delta shapes in its `$defs`). The contract version is carried
+  in the schema's own `description`.
+- A byte-identical copy of the schema is bundled at
+  `recon_tool/data/recon-schema.json` so the resource serves offline;
+  `recon_tool.schema_contract.packaged_schema_text` loads it.
+  `tests/test_schema_resource.py` guards the copy against drift from the docs
+  source and confirms the resource is registered.
+- `docs/mcp.md` lists the resource (the Catalog Resources count goes from three
+  to four).
+
 ## [1.9.58] - 2026-06-01
 
 ### MCP autoApprove guidance (read-only vs stateful)

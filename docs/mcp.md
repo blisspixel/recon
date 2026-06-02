@@ -151,15 +151,16 @@ remains an empty `autoApprove` list until you have decided per tool.
 
 ## Catalog Resources
 
-recon exposes three MCP resources so agents can browse "what can this tool detect?" without spending a tool invocation on introspection:
+recon exposes four MCP resources so agents can browse "what can this tool detect?" and "what shape is the output?" without spending a tool invocation on introspection:
 
 | URI | Content |
 |---|---|
 | `recon://fingerprints` | Full SaaS fingerprint catalog (slug, name, category, confidence, match_mode, detection_count, ...) |
 | `recon://signals` | Derived intelligence signals with candidate slugs, min_matches, contradicts/requires relationships, and positive-when-absent inversions |
 | `recon://profiles` | Built-in posture profile lenses (category boosts, signal boosts, focus categories) |
+| `recon://schema` | The JSON-output contract as a JSON Schema (the same document as `docs/recon-schema.json`), so an agent can self-describe the shape of `recon <domain> --json` (plus the batch / delta modes in its `$defs`) without an external fetch. The contract version is in the schema's own `description`. |
 
-Each resource returns deterministic JSON sourced from the already-loaded YAML catalogs. No network calls. Changes to custom `~/.recon/fingerprints/` or `~/.recon/signals.yaml` require calling `reload_data` to take effect.
+The catalog resources return deterministic JSON sourced from the already-loaded YAML catalogs; `recon://schema` returns the bundled schema document. No network calls. Changes to custom `~/.recon/fingerprints/` or `~/.recon/signals.yaml` require calling `reload_data` to take effect.
 
 ## Staleness Timestamps
 
