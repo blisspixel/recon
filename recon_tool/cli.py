@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from typing import Any, Literal, TypeAlias
+from typing import Any, Literal, TextIO, TypeAlias
 
 import click
 import typer
@@ -59,8 +59,44 @@ _SUBCOMMANDS = frozenset(
     {"doctor", "batch", "lookup", "mcp", "cache", "delta", "discover", "fingerprints", "signals"}
 )
 
-# Maximum number of domains in a batch file to prevent OOM from huge files.
+# Batch-input safety bounds. Cap the per-line read (so a newline-free
+# multi-GB "line" cannot be buffered whole), the cumulative bytes (so a stream
+# of millions of blank/comment lines, which never increments the domain count,
+# cannot loop unbounded), and the domain count itself (to prevent OOM).
 _MAX_BATCH_DOMAINS = 10000
+_MAX_BATCH_LINE_BYTES = 1024
+_MAX_BATCH_FILE_BYTES = 10 * 1024 * 1024
+
+
+class _BatchInputError(ValueError):
+    """Batch input exceeded a safety bound (size or domain count)."""
+
+
+def _read_batch_domains(stream: TextIO) -> list[str]:
+    """Stream domain lines from a text stream under the batch safety bounds.
+
+    Reads line by line so a huge input is never buffered whole, skips blank
+    and ``#``-comment lines, and raises :class:`_BatchInputError` if the input
+    exceeds the cumulative-size or domain-count cap. Shared by the file path
+    and the stdin path (``recon batch -``).
+    """
+    domains: list[str] = []
+    total_bytes = 0
+    while True:
+        line = stream.readline(_MAX_BATCH_LINE_BYTES)
+        if not line:
+            break
+        total_bytes += len(line)
+        if total_bytes > _MAX_BATCH_FILE_BYTES:
+            msg = f"Batch input exceeds maximum size of {_MAX_BATCH_FILE_BYTES // (1024 * 1024)} MB"
+            raise _BatchInputError(msg)
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            domains.append(stripped)
+            if len(domains) > _MAX_BATCH_DOMAINS:
+                msg = f"Batch input exceeds maximum of {_MAX_BATCH_DOMAINS} domains"
+                raise _BatchInputError(msg)
+    return domains
 
 
 def _fmt_exc(exc: BaseException) -> str:
@@ -331,7 +367,7 @@ def lookup(
 
 @app.command()
 def batch(
-    file: str = typer.Argument(help="File with one domain per line"),
+    file: str = typer.Argument(help="File with one domain per line, or - to read domains from stdin"),
     json_output: bool = typer.Option(False, "--json", help="JSON array output"),
     markdown: bool = typer.Option(False, "--md", help="Markdown report per domain"),
     csv_output: bool = typer.Option(False, "--csv", help="CSV output"),
@@ -2792,43 +2828,30 @@ async def _batch(  # noqa: C901
         render_error("--include-ecosystem requires --json")
         raise typer.Exit(code=EXIT_VALIDATION)
 
-    path = Path(file)
-    if not path.exists():
-        render_error(f"File not found: {file}")
-        raise typer.Exit(code=EXIT_VALIDATION)
-
-    # Stream lines instead of reading entire file to avoid OOM on huge
-    # files. Bound both the per-line read (so a newline-free multi-GB
-    # "line" cannot be buffered whole) and the cumulative bytes (so a file
-    # of millions of blank/comment lines, which never increments the
-    # domain count, cannot loop unbounded). A real domain line is well
-    # under the per-line cap and a real batch file well under the total.
-    _MAX_BATCH_LINE_BYTES = 1024
-    _MAX_BATCH_FILE_BYTES = 10 * 1024 * 1024
-    domain_list: list[str] = []
+    # A literal "-" reads the domain list from stdin (cat domains.txt |
+    # recon batch -); otherwise treat the argument as a file path. Both go
+    # through the same bounded line reader.
+    from_stdin = file == "-"
     try:
-        with path.open(encoding="utf-8") as f:
-            total_bytes = 0
-            while True:
-                line = f.readline(_MAX_BATCH_LINE_BYTES)
-                if not line:
-                    break
-                total_bytes += len(line)
-                if total_bytes > _MAX_BATCH_FILE_BYTES:
-                    render_error(f"Batch file exceeds maximum size of {_MAX_BATCH_FILE_BYTES // (1024 * 1024)} MB")
-                    raise typer.Exit(code=EXIT_VALIDATION)
-                stripped = line.strip()
-                if stripped and not stripped.startswith("#"):
-                    domain_list.append(stripped)
-                    if len(domain_list) > _MAX_BATCH_DOMAINS:
-                        render_error(f"Batch file exceeds maximum of {_MAX_BATCH_DOMAINS} domains")
-                        raise typer.Exit(code=EXIT_VALIDATION)
+        if from_stdin:
+            domain_list = _read_batch_domains(sys_mod.stdin)
+        else:
+            path = Path(file)
+            if not path.exists():
+                render_error(f"File not found: {file}")
+                raise typer.Exit(code=EXIT_VALIDATION)
+            with path.open(encoding="utf-8") as f:
+                domain_list = _read_batch_domains(f)
+    except _BatchInputError as exc:
+        render_error(str(exc))
+        raise typer.Exit(code=EXIT_VALIDATION) from None
     except OSError as exc:
         render_error(f"Cannot read file: {exc}")
         raise typer.Exit(code=EXIT_INTERNAL) from None
 
     if not domain_list:
-        render_error("No domains found in file")
+        source = "stdin" if from_stdin else "file"
+        render_error(f"No domains found in {source}")
         raise typer.Exit(code=EXIT_VALIDATION)
 
     # Deduplicate while preserving input order
