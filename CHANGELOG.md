@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.67] - 2026-06-01
+
+### Decompose the DKIM and BIMI-VMC DNS detectors under the C901 cap
+
+Complexity-decomposition track (item A3, part 1 of the `sources/dns` detectors).
+
+- `_detect_dkim` keeps the concurrent selector probes but moves each provider's
+  attribution to a focused `ctx`-mutating helper: `_apply_exchange_dkim`
+  (Exchange + onmicrosoft.com tenant capture), `_apply_google_dkim` (TXT then
+  CNAME), `_apply_esp_dkim` (Mailchimp / SendGrid / ... by CNAME hint), and
+  `_apply_generic_dkim` (generic-selector confirmation). The ESP and generic
+  selector tables move to module scope.
+- `_parse_bimi_vmc` splits into `_extract_bimi_vmc_url`, `_bimi_vmc_url_is_safe`
+  (the SSRF guard), and `_parse_vmc_subject` (cryptography with a regex
+  fallback); the async function keeps the fetch and the broad parse-failure
+  guard.
+- Both drop their `# noqa: C901`.
+
+No behavior change: DKIM attribution, the SSRF guard, and VMC parsing are
+unchanged, verified by the DNS-source / DKIM / BIMI / email-security tests.
+
 ## [1.9.66] - 2026-06-01
 
 ### Decompose the CT-provider `query` C901 pair
