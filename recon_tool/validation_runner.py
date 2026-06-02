@@ -110,11 +110,10 @@ def _classify_regression_severity(change: dict[str, Any]) -> str:
     return "low"
 
 
-def _classify_change_type(change: dict[str, Any]) -> str:  # noqa: C901
-    """Classify whether a domain change is good, bad, mixed, or review-only."""
+def _change_score(change: dict[str, Any]) -> tuple[int, int]:
+    """Sum the positive and negative signal weights for a domain change."""
     positive = 0
     negative = 0
-    needs_review = False
 
     status = change.get("status_change")
     if isinstance(status, dict):
@@ -142,21 +141,28 @@ def _classify_change_type(change: dict[str, Any]) -> str:  # noqa: C901
 
     negative += len(change.get("degraded_sources_added") or [])
     positive += len(change.get("degraded_sources_removed") or [])
+    return positive, negative
 
+
+def _change_needs_review(change: dict[str, Any]) -> bool:
+    """A change with no clear good/bad score still warrants a human look."""
     if "provider_change" in change or "sparse_diagnosis_change" in change:
-        needs_review = True
+        return True
     if change.get("added_services") or change.get("removed_services"):
-        needs_review = True
-    if change.get("added_slugs") or change.get("removed_slugs"):
-        needs_review = True
+        return True
+    return bool(change.get("added_slugs") or change.get("removed_slugs"))
 
+
+def _classify_change_type(change: dict[str, Any]) -> str:
+    """Classify whether a domain change is good, bad, mixed, or review-only."""
+    positive, negative = _change_score(change)
     if positive and negative:
         return "mixed"
     if negative:
         return "regression"
     if positive:
         return "improvement"
-    if needs_review:
+    if _change_needs_review(change):
         return "review"
     return "neutral"
 
@@ -271,7 +277,126 @@ def compare_batch_results(before_results: list[dict[str, Any]], after_results: l
     }
 
 
-def render_summary_markdown(  # noqa: C901
+def _md_changed_domain_lines(entry: dict[str, Any]) -> list[str]:
+    """Render the detail lines for one changed domain in the regression report."""
+    lines = [f"- `{entry['domain']}` ({entry['severity']}, {entry['change_type']})"]
+    if "status_change" in entry:
+        status = entry["status_change"]
+        lines.append(f"  status: `{status['from']}` -> `{status['to']}`")
+    if "provider_change" in entry:
+        provider = entry["provider_change"]
+        lines.append(f"  provider: `{provider['from']}` -> `{provider['to']}`")
+    if "confidence_change" in entry:
+        confidence = entry["confidence_change"]
+        lines.append(f"  confidence: `{confidence['from']}` -> `{confidence['to']}`")
+    if "partial_change" in entry:
+        partial = entry["partial_change"]
+        lines.append(f"  partial: `{partial['from']}` -> `{partial['to']}`")
+    if entry.get("degraded_sources_added") or entry.get("degraded_sources_removed"):
+        added = ", ".join(entry.get("degraded_sources_added", [])) or "-"
+        removed = ", ".join(entry.get("degraded_sources_removed", [])) or "-"
+        lines.append(f"  degraded sources: +[{added}] -[{removed}]")
+    if entry.get("added_services") or entry.get("removed_services"):
+        added = ", ".join(entry.get("added_services", [])) or "-"
+        removed = ", ".join(entry.get("removed_services", [])) or "-"
+        lines.append(f"  services: +[{added}] -[{removed}]")
+    if entry.get("added_slugs") or entry.get("removed_slugs"):
+        added = ", ".join(entry.get("added_slugs", [])) or "-"
+        removed = ", ".join(entry.get("removed_slugs", [])) or "-"
+        lines.append(f"  slugs: +[{added}] -[{removed}]")
+    if "sparse_diagnosis_change" in entry:
+        sparse = entry["sparse_diagnosis_change"]
+        lines.append(f"  sparse diagnosis: `{sparse['from']}` -> `{sparse['to']}`")
+    return lines
+
+
+def _md_detailed_comparison(detailed_comparison: dict[str, Any]) -> list[str]:
+    """Render the Regression Detail + Changed domains sections."""
+    change_counts = detailed_comparison["change_counts"]
+    severity_counts = detailed_comparison["severity_counts"]
+    change_type_counts = detailed_comparison["change_type_counts"]
+    lines = [
+        "## Regression Detail",
+        "",
+        f"- shared domains: {detailed_comparison['shared_domains']}",
+        f"- added domains: {len(detailed_comparison['added_domains'])}",
+        f"- removed domains: {len(detailed_comparison['removed_domains'])}",
+        f"- changed domains: {detailed_comparison['changed_domain_count']}",
+        f"- provider changes: {change_counts['provider_changes']}",
+        f"- confidence changes: {change_counts['confidence_changes']}",
+        f"- partial changes: {change_counts['partial_changes']}",
+        f"- degraded-source changes: {change_counts['degraded_changes']}",
+        f"- service changes: {change_counts['service_changes']}",
+        f"- slug changes: {change_counts['slug_changes']}",
+        f"- sparse-diagnosis changes: {change_counts['sparse_diagnosis_changes']}",
+        f"- critical regressions: {severity_counts['critical']}",
+        f"- high regressions: {severity_counts['high']}",
+        f"- medium regressions: {severity_counts['medium']}",
+        f"- low regressions: {severity_counts['low']}",
+        f"- regression changes: {change_type_counts['regression']}",
+        f"- improvement changes: {change_type_counts['improvement']}",
+        f"- mixed changes: {change_type_counts['mixed']}",
+        f"- review changes: {change_type_counts['review']}",
+        f"- neutral changes: {change_type_counts['neutral']}",
+        "",
+    ]
+    if detailed_comparison["added_domains"]:
+        added_domains = ", ".join(f"`{domain}`" for domain in detailed_comparison["added_domains"])
+        lines.append(f"Added domains: {added_domains}")
+        lines.append("")
+    if detailed_comparison["removed_domains"]:
+        removed_domains = ", ".join(f"`{domain}`" for domain in detailed_comparison["removed_domains"])
+        lines.append(f"Removed domains: {removed_domains}")
+        lines.append("")
+    lines.extend(["## Changed domains", ""])
+    if not detailed_comparison["changed_domains"]:
+        lines.append("- none")
+        lines.append("")
+    else:
+        for entry in detailed_comparison["changed_domains"]:
+            lines.extend(_md_changed_domain_lines(entry))
+        lines.append("")
+    return lines
+
+
+def _md_attention_section(summary: dict[str, Any]) -> list[str]:
+    """Render the Domains needing attention section."""
+    lines = ["## Domains needing attention", ""]
+    if not summary["error_domains"] and not summary["partial_domains"] and not summary["degraded_domains"]:
+        lines.append("- none")
+    else:
+        for domain in summary["error_domains"]:
+            lines.append(f"- error: `{domain}`")
+        for domain in summary["partial_domains"]:
+            lines.append(f"- partial: `{domain}`")
+        for entry in summary["degraded_domains"]:
+            sources = ", ".join(entry["degraded_sources"])
+            lines.append(f"- degraded: `{entry['domain']}` via {sources}")
+    lines.append("")
+    return lines
+
+
+def _md_per_domain_snapshot(results: list[dict[str, Any]]) -> list[str]:
+    """Render the per-domain snapshot section."""
+    lines = ["## Per-domain snapshot", ""]
+    for entry in results:
+        if "error" in entry:
+            lines.append(f"- `{entry.get('domain', '?')}`: ERROR — {entry['error']}")
+            continue
+        domain = str(entry.get("queried_domain") or "?")
+        provider = str(entry.get("provider") or "-")
+        confidence = str(entry.get("confidence") or "-")
+        partial = bool(entry.get("partial"))
+        degraded_sources = entry.get("degraded_sources") or []
+        degraded_text = ", ".join(str(source) for source in degraded_sources) if degraded_sources else "-"
+        lines.append(
+            f"- `{domain}`: provider=`{provider}` "
+            f"confidence=`{confidence}` partial={partial} degraded=`{degraded_text}`"
+        )
+    return lines
+
+
+def render_summary_markdown(
     label: str,
     summary: dict[str, Any],
     results: list[dict[str, Any]],
@@ -303,79 +428,7 @@ def render_summary_markdown(  # noqa: C901
         )
 
     if detailed_comparison is not None:
-        change_counts = detailed_comparison["change_counts"]
-        severity_counts = detailed_comparison["severity_counts"]
-        change_type_counts = detailed_comparison["change_type_counts"]
-        lines.extend(
-            [
-                "## Regression Detail",
-                "",
-                f"- shared domains: {detailed_comparison['shared_domains']}",
-                f"- added domains: {len(detailed_comparison['added_domains'])}",
-                f"- removed domains: {len(detailed_comparison['removed_domains'])}",
-                f"- changed domains: {detailed_comparison['changed_domain_count']}",
-                f"- provider changes: {change_counts['provider_changes']}",
-                f"- confidence changes: {change_counts['confidence_changes']}",
-                f"- partial changes: {change_counts['partial_changes']}",
-                f"- degraded-source changes: {change_counts['degraded_changes']}",
-                f"- service changes: {change_counts['service_changes']}",
-                f"- slug changes: {change_counts['slug_changes']}",
-                f"- sparse-diagnosis changes: {change_counts['sparse_diagnosis_changes']}",
-                f"- critical regressions: {severity_counts['critical']}",
-                f"- high regressions: {severity_counts['high']}",
-                f"- medium regressions: {severity_counts['medium']}",
-                f"- low regressions: {severity_counts['low']}",
-                f"- regression changes: {change_type_counts['regression']}",
-                f"- improvement changes: {change_type_counts['improvement']}",
-                f"- mixed changes: {change_type_counts['mixed']}",
-                f"- review changes: {change_type_counts['review']}",
-                f"- neutral changes: {change_type_counts['neutral']}",
-                "",
-            ]
-        )
-        if detailed_comparison["added_domains"]:
-            added_domains = ", ".join(f"`{domain}`" for domain in detailed_comparison["added_domains"])
-            lines.append(f"Added domains: {added_domains}")
-            lines.append("")
-        if detailed_comparison["removed_domains"]:
-            removed_domains = ", ".join(f"`{domain}`" for domain in detailed_comparison["removed_domains"])
-            lines.append(f"Removed domains: {removed_domains}")
-            lines.append("")
-        lines.extend(["## Changed domains", ""])
-        if not detailed_comparison["changed_domains"]:
-            lines.append("- none")
-            lines.append("")
-        else:
-            for entry in detailed_comparison["changed_domains"]:
-                lines.append(f"- `{entry['domain']}` ({entry['severity']}, {entry['change_type']})")
-                if "status_change" in entry:
-                    status = entry["status_change"]
-                    lines.append(f"  status: `{status['from']}` -> `{status['to']}`")
-                if "provider_change" in entry:
-                    provider = entry["provider_change"]
-                    lines.append(f"  provider: `{provider['from']}` -> `{provider['to']}`")
-                if "confidence_change" in entry:
-                    confidence = entry["confidence_change"]
-                    lines.append(f"  confidence: `{confidence['from']}` -> `{confidence['to']}`")
-                if "partial_change" in entry:
-                    partial = entry["partial_change"]
-                    lines.append(f"  partial: `{partial['from']}` -> `{partial['to']}`")
-                if entry.get("degraded_sources_added") or entry.get("degraded_sources_removed"):
-                    added = ", ".join(entry.get("degraded_sources_added", [])) or "-"
-                    removed = ", ".join(entry.get("degraded_sources_removed", [])) or "-"
-                    lines.append(f"  degraded sources: +[{added}] -[{removed}]")
-                if entry.get("added_services") or entry.get("removed_services"):
-                    added = ", ".join(entry.get("added_services", [])) or "-"
-                    removed = ", ".join(entry.get("removed_services", [])) or "-"
-                    lines.append(f"  services: +[{added}] -[{removed}]")
-                if entry.get("added_slugs") or entry.get("removed_slugs"):
-                    added = ", ".join(entry.get("added_slugs", [])) or "-"
-                    removed = ", ".join(entry.get("removed_slugs", [])) or "-"
-                    lines.append(f"  slugs: +[{added}] -[{removed}]")
-                if "sparse_diagnosis_change" in entry:
-                    sparse = entry["sparse_diagnosis_change"]
-                    lines.append(f"  sparse diagnosis: `{sparse['from']}` -> `{sparse['to']}`")
-            lines.append("")
+        lines.extend(_md_detailed_comparison(detailed_comparison))
 
     def _append_counter_section(title: str, items: list[list[Any]] | list[tuple[Any, Any]]) -> None:
         lines.extend([f"## {title}", ""])
@@ -393,34 +446,8 @@ def render_summary_markdown(  # noqa: C901
     _append_counter_section("Top sparse diagnoses", summary["top_sparse_diagnoses"])
     _append_counter_section("Top insights", summary["top_insights"])
 
-    lines.extend(["## Domains needing attention", ""])
-    if not summary["error_domains"] and not summary["partial_domains"] and not summary["degraded_domains"]:
-        lines.append("- none")
-    else:
-        for domain in summary["error_domains"]:
-            lines.append(f"- error: `{domain}`")
-        for domain in summary["partial_domains"]:
-            lines.append(f"- partial: `{domain}`")
-        for entry in summary["degraded_domains"]:
-            sources = ", ".join(entry["degraded_sources"])
-            lines.append(f"- degraded: `{entry['domain']}` via {sources}")
-    lines.append("")
-
-    lines.extend(["## Per-domain snapshot", ""])
-    for entry in results:
-        if "error" in entry:
-            lines.append(f"- `{entry.get('domain', '?')}`: ERROR — {entry['error']}")
-            continue
-        domain = str(entry.get("queried_domain") or "?")
-        provider = str(entry.get("provider") or "-")
-        confidence = str(entry.get("confidence") or "-")
-        partial = bool(entry.get("partial"))
-        degraded_sources = entry.get("degraded_sources") or []
-        degraded_text = ", ".join(str(source) for source in degraded_sources) if degraded_sources else "-"
-        lines.append(
-            f"- `{domain}`: provider=`{provider}` "
-            f"confidence=`{confidence}` partial={partial} degraded=`{degraded_text}`"
-        )
+    lines.extend(_md_attention_section(summary))
+    lines.extend(_md_per_domain_snapshot(results))
 
     return "\n".join(lines) + "\n"
 

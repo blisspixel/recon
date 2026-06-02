@@ -205,7 +205,7 @@ reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
 data-not-instructions demarcation) shipped in v1.9.55 to v1.9.60; see the
 CHANGELOG for the per-patch detail.
 
-**Track A - Complexity decomposition** (17 `# noqa: C901` markers remain; the
+**Track A - Complexity decomposition** (14 `# noqa: C901` markers remain; the
 gate from v1.9.37 already holds new code; the formatter, the posture and
 insights core, and the validator/loader tail are already decomposed, see the
 CHANGELOG). What remains:
