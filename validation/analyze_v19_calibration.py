@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import statistics
 import sys
 from collections import Counter, defaultdict
@@ -65,7 +66,7 @@ def _quartiles(values: list[float]) -> tuple[float, float, float]:
     )
 
 
-def main() -> int:
+def main() -> int:  # noqa: C901  # report-assembly script; sectioned by comment banners
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--input",
@@ -153,9 +154,11 @@ def main() -> int:
 
     # ── 2. Calibration spot-check ─────────────────────────────────────
 
-    print(f"=== Calibration spot-check (posterior >= {args.threshold}, non-sparse) ===")
-    print("For each high-confidence posterior, does the deterministic")
-    print("pipeline back it up? Agreements / disagreements per node.")
+    print(f"=== Consistency check: deterministic vs Bayesian (posterior >= {args.threshold}, non-sparse) ===")
+    print("NOTE: this is a CONSISTENCY check, not ground-truth calibration. Both")
+    print("layers consume the same observed evidence, so agreement shows the two")
+    print("layers do not contradict each other, not that either is correct. Real")
+    print("calibration needs an independent ground-truth label set (roadmap CAL3/CAL4).")
     print()
     spot_results: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     spot_disagreements: dict[str, list[str]] = defaultdict(list)
@@ -229,6 +232,18 @@ def main() -> int:
     overall = total_agree + total_disagree
     overall_rate = total_agree / overall if overall else 0.0
     print(f"{'OVERALL':<28} {total_agree:>7} {total_disagree:>10} {overall_rate:>7.1%}")
+    # CAL2: attach uncertainty rather than reporting a bare rate. With zero
+    # disagreements the Rule of Three gives a 95% upper bound on the true
+    # disagreement rate of ~3/n; with disagreements present, report a normal-
+    # approximation 95% upper bound on the disagreement rate.
+    if overall:
+        if total_disagree == 0:
+            bound = 3.0 / overall
+            print(f"  95% upper bound on disagreement (Rule of Three): ~{bound:.2%} (0/{overall})")
+        else:
+            p = total_disagree / overall
+            half = 1.96 * math.sqrt(p * (1 - p) / overall)
+            print(f"  disagreement {p:.2%}, 95% upper bound ~{min(1.0, p + half):.2%} ({total_disagree}/{overall})")
     print()
 
     if any(spot_disagreements.values()):
