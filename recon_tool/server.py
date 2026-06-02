@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
+from recon_tool.exit_codes import EXIT_ERROR, EXIT_VALIDATION
 from recon_tool.formatter import detect_provider, format_tenant_json, format_tenant_markdown
 from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
 from recon_tool.resolver import resolve_tenant
@@ -2692,7 +2693,7 @@ def main() -> None:
     if shadow_error is not None:
         sys.stderr.write(shadow_error)
         sys.stderr.flush()
-        sys.exit(2)
+        sys.exit(EXIT_VALIDATION)
 
     force_stdio_raw = os.environ.get("RECON_MCP_FORCE_STDIO", "").strip().lower()
     if _stdin_is_tty() and force_stdio_raw not in {"1", "true", "yes", "on"}:
@@ -2716,7 +2717,7 @@ def main() -> None:
         # a traceback. Users see a calm error, not a Python scream.
         sys.stderr.write(f"\nMCP server exited unexpectedly: {exc}\n")
         sys.stderr.flush()
-        raise SystemExit(1) from exc
+        raise SystemExit(EXIT_ERROR) from exc
 
 
 # ── Bayesian fusion MCP tools (v1.9, stable v2.0+) ─────────────────────

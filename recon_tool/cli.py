@@ -30,22 +30,26 @@ DoctorStatus: TypeAlias = Literal["ok", "warn", "fail"]
 DoctorCheck: TypeAlias = tuple[str, DoctorStatus, str]
 
 __all__ = [
+    "EXIT_ERROR",
     "EXIT_INTERNAL",
     "EXIT_NO_DATA",
+    "EXIT_SUCCESS",
     "EXIT_VALIDATION",
     "app",
     "run",
 ]
 
-# Structured exit codes for scripting:
-#   0 = success
-#   1 = general error (fallback)
-#   2 = input validation error (bad domain format, missing file)
-#   3 = no data found (domain resolved but no information available)
-#   4 = internal/network error
-EXIT_VALIDATION = 2
-EXIT_NO_DATA = 3
-EXIT_INTERNAL = 4
+# Structured exit codes for scripting live in one module so the CLI and the
+# MCP server entry point share a single contract. Documented for consumers in
+# docs/schema.md ("Exit codes"). Re-exported here for back-compat with callers
+# that import them from recon_tool.cli.
+from recon_tool.exit_codes import (  # noqa: E402
+    EXIT_ERROR,
+    EXIT_INTERNAL,
+    EXIT_NO_DATA,
+    EXIT_SUCCESS,
+    EXIT_VALIDATION,
+)
 
 # Known subcommands — used by the callback to distinguish domains from commands.
 # UPDATE THIS SET when adding new subcommands.
@@ -736,7 +740,7 @@ def mcp_callback(ctx: typer.Context) -> None:
             "[red]MCP dependency unavailable in this environment.[/red]\n"
             "  Reinstall with: [bold]pip install -U recon-tool[/bold]"
         )
-        raise SystemExit(1) from exc
+        raise SystemExit(EXIT_ERROR) from exc
 
     server_main()
 
@@ -887,7 +891,7 @@ def mcp_doctor_command() -> None:
             "[red]MCP dependency unavailable in this environment.[/red]\n"
             "  Reinstall with: [bold]pip install -U recon-tool[/bold]"
         )
-        raise SystemExit(1) from exc
+        raise SystemExit(EXIT_ERROR) from exc
 
     console = get_console()
     console.print()
@@ -1021,7 +1025,7 @@ def cache_clear(
             console.print(f"  No cache entry for [bold]{validated}[/bold].")
     else:
         console.print("  Specify a domain or use --all.")
-        raise typer.Exit(code=2)
+        raise typer.Exit(code=EXIT_VALIDATION)
 
 
 # ── Fingerprints CLI ──────────────────────────────────────────────────

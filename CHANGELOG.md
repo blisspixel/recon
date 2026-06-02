@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.55] - 2026-06-01
+
+### Exit-code reference and named constants
+
+CLI and agent quality-of-life track, item E1. The exit-code contract existed
+but was scattered and partly unnamed.
+
+- **One reference block.** `docs/schema.md` gains an "Exit codes" section
+  documenting the full `0` / `1` / `2` / `3` / `4` contract for scripters
+  (success, general error, validation, no data, internal), including that no
+  JSON is emitted on the `2` and `3` paths and how `recon fingerprints check`
+  maps its own codes. `docs/security.md`, the README, and the `recon delta`
+  note cross-link to it instead of restating partial lists.
+- **Single source of truth.** A new `recon_tool/exit_codes.py` holds the five
+  constants. `cli.py` imports and re-exports them (back-compat for callers
+  that import `EXIT_*` from `recon_tool.cli`), and `server.py` and
+  `fingerprint_validator.py` now share them too.
+- **No more bare literals.** The remaining raw exit integers are named:
+  `cli.py`'s `cache clear` validation exit and the two MCP-dependency-missing
+  fallbacks, `server.py`'s cwd-shadow refusal (`2`) and unexpected-fault
+  fallback (`1`), and `fingerprint_validator.py`'s `0` / `1` / `2` returns.
+
+No behavior change: every exit code is the same integer as before, now named.
+Covered by `tests/test_exit_codes.py`.
+
 ## [1.9.54] - 2026-06-01
 
 ### Core-module C901 cleanup (posture)
