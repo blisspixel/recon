@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.57] - 2026-06-01
+
+### `batch` reads domains from stdin
+
+CLI and agent quality-of-life track, item E3. `recon batch -` now reads the
+domain list from stdin, the natural piping ergonomic
+(`cat domains.txt | recon batch - --json`).
+
+- A literal `-` for the file argument routes to stdin; any other value is
+  still treated as a file path.
+- The bounded line reader is extracted into `_read_batch_domains`, shared by
+  the file and stdin paths, so both honor the same per-line, cumulative-size,
+  and domain-count caps. Over-bound input raises a typed `_BatchInputError`
+  that maps to the validation exit code.
+- Help text and the README usage block document the stdin form. Covered by
+  `tests/test_batch_stdin.py` (the reader's caps directly, plus the
+  end-to-end stdin path).
+
 ## [1.9.56] - 2026-06-01
 
 ### `_SUBCOMMANDS` matches the registered command tree
