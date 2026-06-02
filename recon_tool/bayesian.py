@@ -57,6 +57,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
+from typing import Any
 
 import deal
 import yaml
@@ -231,7 +232,7 @@ class InferenceResult:
 # ── Loaders ────────────────────────────────────────────────────────────
 
 
-def load_network(path: Path | None = None) -> BayesianNetwork:  # noqa: C901
+def load_network(path: Path | None = None) -> BayesianNetwork:
     """Load and validate the Bayesian network YAML.
 
     Raises ``ValueError`` for malformed schema (unknown parents,
@@ -253,86 +254,100 @@ def load_network(path: Path | None = None) -> BayesianNetwork:  # noqa: C901
     nodes: list[_Node] = []
     seen_names: set[str] = set()
     for raw_node in raw_nodes:
-        if not isinstance(raw_node, dict):
-            raise ValueError("bayesian_network: each node must be a mapping")
-        name = raw_node.get("name")
-        if not isinstance(name, str) or not name:
-            raise ValueError("bayesian_network: node missing required 'name'")
-        if name in seen_names:
-            raise ValueError(f"bayesian_network: duplicate node name {name!r}")
-        seen_names.add(name)
-
-        description = raw_node.get("description") or ""
-        if not isinstance(description, str):
-            raise ValueError(f"bayesian_network[{name}]: 'description' must be a string")
-
-        parents_raw = raw_node.get("parents") or []
-        if not isinstance(parents_raw, list) or not all(isinstance(p, str) for p in parents_raw):
-            raise ValueError(f"bayesian_network[{name}]: 'parents' must be a list of strings")
-        parents: tuple[str, ...] = tuple(parents_raw)
-
-        prior_raw = raw_node.get("prior")
-        cpt_raw = raw_node.get("cpt") or {}
-
-        prior: float | None = None
-        cpt: dict[str, float] = {}
-
-        if not parents:
-            if not isinstance(prior_raw, int | float):
-                raise ValueError(f"bayesian_network[{name}]: root node requires numeric 'prior'")
-            prior = float(prior_raw)
-            if not 0.0 <= prior <= 1.0:
-                raise ValueError(f"bayesian_network[{name}]: prior {prior} outside [0, 1]")
-        else:
-            if not isinstance(cpt_raw, dict) or not cpt_raw:
-                raise ValueError(f"bayesian_network[{name}]: node with parents requires 'cpt'")
-            for k, v in cpt_raw.items():
-                if not isinstance(k, str) or not isinstance(v, int | float):
-                    raise ValueError(f"bayesian_network[{name}]: cpt entries must be str→float")
-                if not 0.0 <= float(v) <= 1.0:
-                    raise ValueError(f"bayesian_network[{name}]: cpt value {v} outside [0, 1]")
-                cpt[k] = float(v)
-
-        evidence_raw = raw_node.get("evidence") or []
-        if not isinstance(evidence_raw, list):
-            raise ValueError(f"bayesian_network[{name}]: 'evidence' must be a list")
-        evidence: list[_Evidence] = []
-        for entry in evidence_raw:
-            if not isinstance(entry, dict):
-                raise ValueError(f"bayesian_network[{name}]: evidence entries must be mappings")
-            slug = entry.get("slug")
-            signal = entry.get("signal")
-            if (slug is None) == (signal is None):
-                raise ValueError(
-                    f"bayesian_network[{name}]: evidence entry must specify exactly one of 'slug' / 'signal'"
-                )
-            kind = "slug" if slug else "signal"
-            obs_name = slug if slug else signal
-            if not isinstance(obs_name, str) or not obs_name:
-                raise ValueError(f"bayesian_network[{name}]: evidence kind={kind} missing name")
-            lik = entry.get("likelihood")
-            if not isinstance(lik, list) or len(lik) != 2 or not all(isinstance(x, int | float) for x in lik):
-                raise ValueError(f"bayesian_network[{name}/{obs_name}]: 'likelihood' must be [float, float]")
-            lp, la = float(lik[0]), float(lik[1])
-            if not (0.0 < lp < 1.0) or not (0.0 < la < 1.0):
-                raise ValueError(f"bayesian_network[{name}/{obs_name}]: likelihoods must be strictly in (0, 1)")
-            evidence.append(_Evidence(kind=kind, name=obs_name, likelihood_present=lp, likelihood_absent=la))
-
-        nodes.append(
-            _Node(
-                name=name,
-                description=description,
-                parents=parents,
-                prior=prior,
-                cpt=cpt,
-                evidence=tuple(evidence),
-            )
-        )
+        nodes.append(_parse_network_node(raw_node, seen_names))
 
     # Validate: parents reference known nodes, DAG, CPT covers all parent assignments.
     _validate_topology(nodes)
 
     return BayesianNetwork(version=version, nodes=tuple(nodes))
+
+
+def _parse_node_prior_cpt(
+    name: str, parents: tuple[str, ...], prior_raw: Any, cpt_raw: Any
+) -> tuple[float | None, dict[str, float]]:
+    """Validate a node's prior (root) or CPT (non-root). Raises ValueError."""
+    if not parents:
+        if not isinstance(prior_raw, int | float):
+            raise ValueError(f"bayesian_network[{name}]: root node requires numeric 'prior'")
+        prior = float(prior_raw)
+        if not 0.0 <= prior <= 1.0:
+            raise ValueError(f"bayesian_network[{name}]: prior {prior} outside [0, 1]")
+        return prior, {}
+
+    if not isinstance(cpt_raw, dict) or not cpt_raw:
+        raise ValueError(f"bayesian_network[{name}]: node with parents requires 'cpt'")
+    cpt: dict[str, float] = {}
+    for k, v in cpt_raw.items():
+        if not isinstance(k, str) or not isinstance(v, int | float):
+            raise ValueError(f"bayesian_network[{name}]: cpt entries must be str→float")
+        if not 0.0 <= float(v) <= 1.0:
+            raise ValueError(f"bayesian_network[{name}]: cpt value {v} outside [0, 1]")
+        cpt[k] = float(v)
+    return None, cpt
+
+
+def _parse_node_evidence(name: str, evidence_raw: Any) -> tuple[_Evidence, ...]:
+    """Validate a node's evidence bindings. Raises ValueError on a bad entry."""
+    if not isinstance(evidence_raw, list):
+        raise ValueError(f"bayesian_network[{name}]: 'evidence' must be a list")
+    evidence: list[_Evidence] = []
+    for entry in evidence_raw:
+        if not isinstance(entry, dict):
+            raise ValueError(f"bayesian_network[{name}]: evidence entries must be mappings")
+        slug = entry.get("slug")
+        signal = entry.get("signal")
+        if (slug is None) == (signal is None):
+            raise ValueError(
+                f"bayesian_network[{name}]: evidence entry must specify exactly one of 'slug' / 'signal'"
+            )
+        kind = "slug" if slug else "signal"
+        obs_name = slug if slug else signal
+        if not isinstance(obs_name, str) or not obs_name:
+            raise ValueError(f"bayesian_network[{name}]: evidence kind={kind} missing name")
+        lik = entry.get("likelihood")
+        if not isinstance(lik, list) or len(lik) != 2 or not all(isinstance(x, int | float) for x in lik):
+            raise ValueError(f"bayesian_network[{name}/{obs_name}]: 'likelihood' must be [float, float]")
+        lp, la = float(lik[0]), float(lik[1])
+        if not (0.0 < lp < 1.0) or not (0.0 < la < 1.0):
+            raise ValueError(f"bayesian_network[{name}/{obs_name}]: likelihoods must be strictly in (0, 1)")
+        evidence.append(_Evidence(kind=kind, name=obs_name, likelihood_present=lp, likelihood_absent=la))
+    return tuple(evidence)
+
+
+def _parse_network_node(raw_node: Any, seen_names: set[str]) -> _Node:
+    """Validate one node mapping and return a frozen _Node. Raises ValueError.
+
+    Mutates ``seen_names`` to enforce unique node names across the network.
+    """
+    if not isinstance(raw_node, dict):
+        raise ValueError("bayesian_network: each node must be a mapping")
+    name = raw_node.get("name")
+    if not isinstance(name, str) or not name:
+        raise ValueError("bayesian_network: node missing required 'name'")
+    if name in seen_names:
+        raise ValueError(f"bayesian_network: duplicate node name {name!r}")
+    seen_names.add(name)
+
+    description = raw_node.get("description") or ""
+    if not isinstance(description, str):
+        raise ValueError(f"bayesian_network[{name}]: 'description' must be a string")
+
+    parents_raw = raw_node.get("parents") or []
+    if not isinstance(parents_raw, list) or not all(isinstance(p, str) for p in parents_raw):
+        raise ValueError(f"bayesian_network[{name}]: 'parents' must be a list of strings")
+    parents: tuple[str, ...] = tuple(parents_raw)
+
+    prior, cpt = _parse_node_prior_cpt(name, parents, raw_node.get("prior"), raw_node.get("cpt") or {})
+    evidence = _parse_node_evidence(name, raw_node.get("evidence") or [])
+
+    return _Node(
+        name=name,
+        description=description,
+        parents=parents,
+        prior=prior,
+        cpt=cpt,
+        evidence=evidence,
+    )
 
 
 def _validate_topology(nodes: list[_Node]) -> None:

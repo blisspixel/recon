@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.64] - 2026-06-01
+
+### Decompose `load_network` under the C901 cap
+
+Complexity-decomposition track, the validator/loader tail (item A1, patch 4,
+the last of the tail). Every grandfathered `# noqa: C901` validator/loader is
+now decomposed.
+
+- `recon_tool/bayesian.py`: the per-node parsing in `load_network` moves to
+  `_parse_network_node`, with `_parse_node_prior_cpt` (root prior vs non-root
+  CPT validation) and `_parse_node_evidence` (the evidence-binding loop with
+  the strictly-in-`(0, 1)` likelihood check) as focused helpers. `load_network`
+  becomes the top-level schema check plus a thin node loop, and drops its
+  `# noqa: C901`.
+
+No behavior change: every ValueError message and validation rule is preserved,
+verified by the bayesian suite and `test_contracts` (255 tests).
+
 ## [1.9.63] - 2026-06-01
 
 ### Decompose `_validate_and_build_signal` under the C901 cap
