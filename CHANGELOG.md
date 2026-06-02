@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.63] - 2026-06-01
+
+### Decompose `_validate_and_build_signal` under the C901 cap
+
+Complexity-decomposition track, the validator/loader tail (item A1, patch 3).
+
+- `recon_tool/signals.py`: the long chain of optional-field parsing in
+  `_validate_and_build_signal` moves to three focused helpers:
+  `_parse_strict_str_list` (a malformed value rejects the signal, used for
+  `contradicts` / `requires_signals`), `_parse_lenient_str_list` (defaults to
+  empty on error, used for `expected_counterparts` / `positive_when_absent`),
+  and `_parse_requires_block` (the `requires.any` / `min_matches` / metadata
+  fallback logic). The function becomes a thin orchestrator and drops its
+  `# noqa: C901`.
+
+No behavior change: signal validation, warning messages, and reject-vs-default
+semantics are unchanged, verified by the signal suite (255 tests).
+
 ## [1.9.62] - 2026-06-01
 
 ### Decompose `_validate_motif` under the C901 cap
