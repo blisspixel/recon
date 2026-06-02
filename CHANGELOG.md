@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.56] - 2026-06-01
+
+### `_SUBCOMMANDS` matches the registered command tree
+
+CLI and agent quality-of-life track, item E2. The root callback uses
+`_SUBCOMMANDS` to tell a bare domain argument apart from a subcommand, but the
+set omitted the real `discover` command. It was harmless today (the set only
+gates a dotted, non-flag first argument, and `discover` is rarely passed a
+domain-like first token), but it was a latent mis-routing risk and an
+inconsistency.
+
+- `discover` added to `_SUBCOMMANDS`, so the set now equals the registered
+  command tree (`lookup`, `batch`, `discover`, `doctor`, `delta`, `mcp`,
+  `cache`, `fingerprints`, `signals`).
+- `tests/test_subcommands.py` pins the set against the Typer app's registered
+  commands and groups, so a future command that is not added here fails CI
+  rather than silently mis-routing.
+
 ## [1.9.55] - 2026-06-01
 
 ### Exit-code reference and named constants
