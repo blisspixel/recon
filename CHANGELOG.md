@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.69] - 2026-06-01
+
+### Decompose `explain_insights` under the C901 cap
+
+Complexity-decomposition track (item A5).
+
+- `recon_tool/explanation.py`: the 16-branch insight-to-generator dispatch in
+  `explain_insights` moves to `_classify_insight`. The two special cases (the
+  signal-name `": "` parse and the email-security all-slug scan) are handled
+  explicitly; the remaining keyword branches become an ordered
+  `_INSIGHT_RULES` table of (predicate, generator label, candidate slugs,
+  note), preserving the original first-match order. `explain_insights` becomes
+  a thin loop that classifies, appends detection scores, and builds the
+  record. The function drops its `# noqa: C901`.
+
+No behavior change: the insight-to-generator mapping, attributed slugs, fired
+rules, and confidence derivations are unchanged, verified by the explanation
+suite (174 tests).
+
 ## [1.9.68] - 2026-06-01
 
 ### Decompose the email-security and cert-intel DNS detectors

@@ -22,6 +22,8 @@ from recon_tool.models import (
 from recon_tool.signals import Signal, SignalMatch
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from recon_tool.posture import _PostureRule  # pyright: ignore[reportPrivateUsage]
 
 __all__ = [
@@ -237,7 +239,174 @@ def explain_signals(
     return records
 
 
-def explain_insights(  # noqa: C901
+# Keyword-driven insight classification. Each rule is
+# (predicate over the lowercased insight, generator label, candidate slugs to
+# attribute when present, confidence note). Order matters: the first matching
+# rule wins, mirroring the original elif chain. The two special cases
+# (signal-name parsing and the email-security all-slug scan) are handled before
+# this table in _classify_insight.
+_INSIGHT_RULES: list[tuple[Callable[[str], bool], str, tuple[str, ...], str]] = [
+    (
+        lambda low: "federated" in low or "cloud-managed" in low or "entra id" in low,
+        "_auth_insights",
+        ("okta", "duo", "cisco-identity", "microsoft365"),
+        "Authentication type derived from identity provider detection",
+    ),
+    (
+        lambda low: "email gateway" in low,
+        "_gateway_insights",
+        ("proofpoint", "mimecast", "barracuda", "cisco-ironport", "cisco-email", "trendmicro", "symantec", "trellix"),
+        "Email gateway detected via DNS fingerprinting",
+    ),
+    (
+        lambda low: "security stack" in low,
+        "_security_stack_insights",
+        (
+            "knowbe4",
+            "crowdstrike",
+            "sentinelone",
+            "sophos",
+            "duo",
+            "okta",
+            "1password",
+            "paloalto",
+            "zscaler",
+            "netskope",
+            "wiz",
+            "imperva",
+        ),
+        "Security tools detected via DNS fingerprinting",
+    ),
+    (
+        lambda low: "sase" in low or "ztna" in low,
+        "_sase_insights",
+        ("zscaler", "netskope", "paloalto"),
+        "SASE/ZTNA provider detected via DNS fingerprinting",
+    ),
+    (
+        lambda low: "dual provider" in low or "coexistence" in low,
+        "_migration_insights",
+        ("google-workspace", "microsoft365"),
+        "Dual provider detected from simultaneous Google and Microsoft fingerprints",
+    ),
+    (
+        lambda low: "domains" in low and ("enterprise" in low or "mid-size" in low or "in tenant" in low),
+        "_org_size_insights",
+        (),
+        "Organization size estimated from domain count and SPF complexity",
+    ),
+    (
+        lambda low: "m365" in low and ("e3" in low or "e5" in low or "proplus" in low or "apps for" in low),
+        "_license_insights",
+        (),
+        "License tier inferred from Intune enrollment and auth type",
+    ),
+    (
+        lambda low: "dual mdm" in low or "mac management" in low,
+        "_mdm_insights",
+        ("jamf", "kandji"),
+        "MDM detection from DNS fingerprinting",
+    ),
+    (
+        lambda low: low.startswith("pki:"),
+        "_pki_insights",
+        ("letsencrypt", "digicert", "sectigo", "aws-acm", "google-trust", "globalsign"),
+        "Certificate authority detected from CAA records",
+    ),
+    (
+        lambda low: low.startswith("infrastructure:"),
+        "_infrastructure_insights",
+        (),
+        "Infrastructure providers detected from DNS records",
+    ),
+    (
+        lambda low: "google workspace" in low and ("federated" in low or "managed" in low),
+        "_google_auth_insights",
+        ("google-federated", "google-managed"),
+        "Google Workspace identity type detected",
+    ),
+    (
+        lambda low: "google workspace modules" in low,
+        "_google_modules_insights",
+        (),
+        "Google Workspace modules detected from DNS records",
+    ),
+    (
+        lambda low: "dmarc" in low or "dkim" in low,
+        "_email_security_insights",
+        (),
+        "Email security observation from DNS records",
+    ),
+    (
+        lambda low: "conflicting tenant" in low,
+        "merge_results (conflict detection)",
+        (),
+        "Multiple distinct tenant IDs found across sources",
+    ),
+    (
+        lambda low: "large org signal" in low,
+        "_org_size_insights",
+        (),
+        "Organization size estimated from SPF include count",
+    ),
+]
+
+
+def _classify_insight(
+    insight: str,
+    slugs: frozenset[str],
+    evidence: tuple[EvidenceRecord, ...],
+) -> tuple[list[str], list[EvidenceRecord], list[str], list[str]]:
+    """Map one insight string to (relevant slugs, evidence, fired rules, notes).
+
+    Best-effort keyword matching back to the generator that likely produced the
+    insight. The signal-name case and the email-security all-slug scan are
+    handled explicitly; everything else is the ordered ``_INSIGHT_RULES`` table.
+    """
+    lower = insight.lower()
+    relevant_slugs: list[str] = []
+    relevant_evidence: list[EvidenceRecord] = []
+    fired_rules: list[str] = []
+    confidence_parts: list[str] = []
+
+    # Signal-generated insights have the pattern "SignalName: matched1, matched2".
+    if ": " in insight and not lower.startswith(("email security", "dmarc", "no dmarc", "no dkim")):
+        parts = insight.split(": ", 1)
+        matched_str = parts[1] if len(parts) > 1 else ""
+        for slug in (s.strip() for s in matched_str.split(",") if s.strip()):
+            if slug in slugs:
+                relevant_slugs.append(slug)
+                relevant_evidence.extend(_evidence_for_slug(slug, evidence))
+        fired_rules.append(f"Signal: {parts[0]}")
+        confidence_parts.append(f"Signal-generated insight referencing {len(relevant_slugs)} slug(s)")
+        return relevant_slugs, relevant_evidence, fired_rules, confidence_parts
+
+    # Email security score insight scans all slugs for parenthetical references.
+    if lower.startswith("email security"):
+        fired_rules.append("_email_security_insights")
+        for slug in slugs:
+            if slug in lower:
+                relevant_slugs.append(slug)
+                relevant_evidence.extend(_evidence_for_slug(slug, evidence))
+        confidence_parts.append("Email security score derived from DMARC, DKIM, SPF, MTA-STS, BIMI presence")
+        return relevant_slugs, relevant_evidence, fired_rules, confidence_parts
+
+    for predicate, rule, candidate_slugs, note in _INSIGHT_RULES:
+        if predicate(lower):
+            fired_rules.append(rule)
+            for slug in candidate_slugs:
+                if slug in slugs:
+                    relevant_slugs.append(slug)
+                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
+            confidence_parts.append(note)
+            return relevant_slugs, relevant_evidence, fired_rules, confidence_parts
+
+    fired_rules.append("unknown generator")
+    confidence_parts.append("Unmapped insight — generator could not be determined")
+    return relevant_slugs, relevant_evidence, fired_rules, confidence_parts
+
+
+def explain_insights(
     insights: list[str],
     slugs: frozenset[str],
     services: frozenset[str],
@@ -246,185 +415,14 @@ def explain_insights(  # noqa: C901
 ) -> list[ExplanationRecord]:
     """Generate ExplanationRecords for all generated insights.
 
-    Maps each insight string back to the generator that likely produced it
-    using keyword matching against known insight patterns. This is
-    approximate — insights are free-form strings, so the mapping is
-    best-effort.
+    Maps each insight string back to the generator that likely produced it via
+    keyword matching (see ``_classify_insight``). Approximate by design, since
+    insights are free-form strings.
     """
     records: list[ExplanationRecord] = []
-
     for insight in insights:
-        lower = insight.lower()
+        relevant_slugs, relevant_evidence, fired_rules, confidence_parts = _classify_insight(insight, slugs, evidence)
 
-        # Determine which slugs/services are relevant to this insight
-        relevant_slugs: list[str] = []
-        relevant_evidence: list[EvidenceRecord] = []
-        fired_rules: list[str] = []
-        confidence_parts: list[str] = []
-
-        # Signal-generated insights have the pattern "SignalName: matched1, matched2"
-        if ": " in insight and not lower.startswith(("email security", "dmarc", "no dmarc", "no dkim")):
-            # Likely a signal insight — handled by explain_signals, but we
-            # still produce a lightweight record for completeness.
-            parts = insight.split(": ", 1)
-            signal_name = parts[0]
-            matched_str = parts[1] if len(parts) > 1 else ""
-            matched_items = [s.strip() for s in matched_str.split(",") if s.strip()]
-            for slug in matched_items:
-                if slug in slugs:
-                    relevant_slugs.append(slug)
-                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
-            fired_rules.append(f"Signal: {signal_name}")
-            confidence_parts.append(f"Signal-generated insight referencing {len(relevant_slugs)} slug(s)")
-
-        # Email security score insight
-        elif lower.startswith("email security"):
-            fired_rules.append("_email_security_insights")
-            # Extract referenced components from the parenthetical
-            for slug in slugs:
-                if slug in lower:
-                    relevant_slugs.append(slug)
-                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
-            confidence_parts.append("Email security score derived from DMARC, DKIM, SPF, MTA-STS, BIMI presence")
-
-        # Auth insights
-        elif "federated" in lower or "cloud-managed" in lower or "entra id" in lower:
-            fired_rules.append("_auth_insights")
-            for slug in ("okta", "duo", "cisco-identity", "microsoft365"):
-                if slug in slugs:
-                    relevant_slugs.append(slug)
-                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
-            confidence_parts.append("Authentication type derived from identity provider detection")
-
-        # Gateway insights
-        elif "email gateway" in lower:
-            fired_rules.append("_gateway_insights")
-            _gw_slugs = (
-                "proofpoint",
-                "mimecast",
-                "barracuda",
-                "cisco-ironport",
-                "cisco-email",
-                "trendmicro",
-                "symantec",
-                "trellix",
-            )
-            for slug in _gw_slugs:
-                if slug in slugs:
-                    relevant_slugs.append(slug)
-                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
-            confidence_parts.append("Email gateway detected via DNS fingerprinting")
-
-        # Security stack insights
-        elif "security stack" in lower:
-            fired_rules.append("_security_stack_insights")
-            _sec_slugs = (
-                "knowbe4",
-                "crowdstrike",
-                "sentinelone",
-                "sophos",
-                "duo",
-                "okta",
-                "1password",
-                "paloalto",
-                "zscaler",
-                "netskope",
-                "wiz",
-                "imperva",
-            )
-            for slug in _sec_slugs:
-                if slug in slugs:
-                    relevant_slugs.append(slug)
-                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
-            confidence_parts.append("Security tools detected via DNS fingerprinting")
-
-        # SASE insights
-        elif "sase" in lower or "ztna" in lower:
-            fired_rules.append("_sase_insights")
-            for slug in ("zscaler", "netskope", "paloalto"):
-                if slug in slugs:
-                    relevant_slugs.append(slug)
-                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
-            confidence_parts.append("SASE/ZTNA provider detected via DNS fingerprinting")
-
-        # Migration insights
-        elif "dual provider" in lower or "coexistence" in lower:
-            fired_rules.append("_migration_insights")
-            for slug in ("google-workspace", "microsoft365"):
-                if slug in slugs:
-                    relevant_slugs.append(slug)
-                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
-            confidence_parts.append("Dual provider detected from simultaneous Google and Microsoft fingerprints")
-
-        # Org size insights
-        elif "domains" in lower and ("enterprise" in lower or "mid-size" in lower or "in tenant" in lower):
-            fired_rules.append("_org_size_insights")
-            confidence_parts.append("Organization size estimated from domain count and SPF complexity")
-
-        # License insights
-        elif "m365" in lower and ("e3" in lower or "e5" in lower or "proplus" in lower or "apps for" in lower):
-            fired_rules.append("_license_insights")
-            confidence_parts.append("License tier inferred from Intune enrollment and auth type")
-
-        # MDM insights
-        elif "dual mdm" in lower or "mac management" in lower:
-            fired_rules.append("_mdm_insights")
-            for slug in ("jamf", "kandji"):
-                if slug in slugs:
-                    relevant_slugs.append(slug)
-                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
-            confidence_parts.append("MDM detection from DNS fingerprinting")
-
-        # PKI insights
-        elif lower.startswith("pki:"):
-            fired_rules.append("_pki_insights")
-            _pki_slugs = ("letsencrypt", "digicert", "sectigo", "aws-acm", "google-trust", "globalsign")
-            for slug in _pki_slugs:
-                if slug in slugs:
-                    relevant_slugs.append(slug)
-                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
-            confidence_parts.append("Certificate authority detected from CAA records")
-
-        # Infrastructure insights
-        elif lower.startswith("infrastructure:"):
-            fired_rules.append("_infrastructure_insights")
-            confidence_parts.append("Infrastructure providers detected from DNS records")
-
-        # Google auth insights
-        elif "google workspace" in lower and ("federated" in lower or "managed" in lower):
-            fired_rules.append("_google_auth_insights")
-            for slug in ("google-federated", "google-managed"):
-                if slug in slugs:
-                    relevant_slugs.append(slug)
-                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
-            confidence_parts.append("Google Workspace identity type detected")
-
-        # Google modules insights
-        elif "google workspace modules" in lower:
-            fired_rules.append("_google_modules_insights")
-            confidence_parts.append("Google Workspace modules detected from DNS records")
-
-        # DMARC / DKIM standalone insights
-        elif "dmarc" in lower or "dkim" in lower:
-            fired_rules.append("_email_security_insights")
-            confidence_parts.append("Email security observation from DNS records")
-
-        # Conflicting tenant IDs
-        elif "conflicting tenant" in lower:
-            fired_rules.append("merge_results (conflict detection)")
-            confidence_parts.append("Multiple distinct tenant IDs found across sources")
-
-        # SPF complexity
-        elif "large org signal" in lower:
-            fired_rules.append("_org_size_insights")
-            confidence_parts.append("Organization size estimated from SPF include count")
-
-        else:
-            # Unmapped insight — produce minimal record
-            fired_rules.append("unknown generator")
-            confidence_parts.append("Unmapped insight — generator could not be determined")
-
-        # Add detection scores for relevant slugs
         for slug in relevant_slugs:
             score = _score_for_slug(slug, detection_scores)
             confidence_parts.append(f"Slug '{slug}' detection score: '{score}'")
