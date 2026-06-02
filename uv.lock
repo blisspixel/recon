@@ -1186,7 +1186,7 @@ wheels = [
 
 [[package]]
 name = "recon-tool"
-version = "1.9.60"
+version = "1.9.61"
 source = { editable = "." }
 dependencies = [
     { name = "deal" },

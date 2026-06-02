@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.61] - 2026-06-01
+
+### Decompose `_validate_fingerprint` under the C901 cap
+
+Complexity-decomposition track, the validator/loader tail (item A1, patch 1 of
+the tail).
+
+- `recon_tool/fingerprints.py`: the per-detection parsing in
+  `_validate_fingerprint` moves to `_parse_detection_rule`, with
+  `_parse_detection_weight` (clamp to `[0, 1]`, default 1.0) and
+  `_parse_cname_target_tier` as focused helpers. The validator's detection
+  loop becomes a thin collect, and the function drops its `# noqa: C901`.
+
+No behavior change: fingerprint validation is unchanged, verified by
+`test_fingerprint_expansion`, `test_validate_fingerprint_script`, and
+`test_pattern_shadowing`.
+
 ## [1.9.60] - 2026-06-01
 
 ### Data-not-instructions demarcation for MCP consumers
