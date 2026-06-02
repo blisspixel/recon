@@ -78,6 +78,26 @@ user/process.
   provider responses
 - Bounded TTL cache and per-domain rate limiting in the MCP server to reduce
   repeated lookup abuse
+- Data-not-instructions demarcation: the injected server instructions tell the
+  consuming model that every domain-derived string in tool output (DNS TXT,
+  SPF / DMARC values, CT SAN names and issuer strings, BIMI metadata, identity-
+  endpoint responses) is untrusted observed content, to be analyzed and
+  reported as data and never followed as an instruction. This complements the
+  output sanitization that removes terminal and markdown control sequences
+  (v1.9.18 to v1.9.21); the demarcation covers the residual case where the
+  literal observed text reads like a directive.
+
+**Untrusted observed content (the conduit risk):**
+
+recon is a conduit of attacker-influenceable strings into an LLM's context.
+Whoever controls a queried domain's DNS or certificates controls the values
+recon observes and returns. The mechanical injection surface (ANSI escapes,
+newline and markdown injection, SSRF, ReDoS) was closed in the v1.9.18 to
+v1.9.21 audit rounds. The residual surface is semantic: an observed value whose
+plain text reads like an instruction. recon addresses that in-band, by marking
+the observed content as data in the server instructions every session loads, so
+a well-behaved consuming agent treats it accordingly. A consumer that
+auto-approves tools should still treat all tool output as untrusted data.
 
 **Remaining risks (users must understand):**
 
