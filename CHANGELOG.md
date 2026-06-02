@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.68] - 2026-06-01
+
+### Decompose the email-security and cert-intel DNS detectors
+
+Complexity-decomposition track (item A3, part 2; `sources/dns.py` now carries
+no `# noqa: C901`).
+
+- `_detect_email_security` keeps the concurrent record probes and dispatches to
+  per-record appliers: `_apply_dmarc` (with `_apply_dmarc_pct` for the bounded
+  `pct=` parse), `_apply_bimi` (presence + best-effort VMC enrichment),
+  `_apply_mta_sts` (presence + policy-mode fetch), and `_apply_tls_rpt`.
+- `_detect_cert_intel` splits into `_query_cert_providers` (the crt.sh ->
+  CertSpotter loop with soft-failure handling), `_classify_ct_failure`,
+  `_ct_failure_outcome`, and `_apply_cached_cert_intel` (shared by the
+  cache-first and cache-fallback paths). The orchestrator keeps the
+  cache-first / live / cache-fallback ordering.
+- Both drop their `# noqa: C901`. 8 markers remain across the package, all on
+  the `cli` / `explanation` / `merger` / `server` behaviour-heavy functions.
+
+No behavior change: email-security detection, the soft-failure / cache-fallback
+semantics, and the per-record outcome labels are unchanged, verified by the
+DNS-source / CT / email-security / fallback tests (325 passed).
+
 ## [1.9.67] - 2026-06-01
 
 ### Decompose the DKIM and BIMI-VMC DNS detectors under the C901 cap
