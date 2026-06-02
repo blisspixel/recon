@@ -38,7 +38,7 @@ recon --version
 
 If the command is not found:
 
-> "`recon-tool` is not installed. It's a Python CLI from github.com/blisspixel/recon that reads public DNS, identity endpoints, and certificate transparency — no credentials needed. Install with `pip install recon-tool`? (Python 3.10+ required.)"
+> "`recon-tool` is not installed. It's a Python CLI from github.com/blisspixel/recon that reads public DNS, identity endpoints, and certificate transparency — no credentials needed. Install with `pip install recon-tool`? (Python 3.11+ required.)"
 
 Wait for explicit approval, then `pip install recon-tool` followed by `recon doctor` to verify connectivity. If `recon --version` succeeds, continue immediately — do not re-prompt on subsequent calls in the same session.
 

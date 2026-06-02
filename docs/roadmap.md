@@ -17,7 +17,13 @@ groups, and the C901 complexity gate); the project is now in the pre-2.0
 hardening phase described below (v1.9.38 onward). The series was the
 adopted slice of a 2026-05 external-standards review, documented in the
 Engineering quality posture section below. v2.0 remains the mechanical
-schema-lock-and-tag event. Cumulative pre-v2.0 work since v1.9.3:
+schema-lock-and-tag event that caps, rather than adds to, the accumulated
+1.9.x work; what 2.0 actually delivers and why it is meant to be excellent
+everywhere is set out under the pre-2.0 hardening phase below ("What 2.0
+delivers, and why the small ceremony is the point"). For the ordered,
+checkable list of everything left before the lock, see "Remaining work to v2.0
+(the execution queue)" under that section. Cumulative pre-v2.0
+work since v1.9.3:
 
 Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
 detail in `CHANGELOG.md` and the per-release validation memos):
@@ -90,7 +96,32 @@ labels are already gone, `correlation.md` is most of the way to the polish
 bar, the v2.0 corpus-run file is populated), so the value now is in depth,
 not ceremony.
 
-Four tracks run as a sequence of focused, CI-green 1.9.x patches:
+**What 2.0 delivers, and why the small ceremony is the point.** The 2.0
+*event* is mechanical by design: a schema lock, a doc snapshot, the `--fusion`
+default flip, and a tag, with no new feature work invented at the lock moment.
+That is deliberate, not modest. Every capability ships and is validated in a
+1.9.x patch first, so the lock is small precisely because the substance is
+already done and proven. What 2.0 *delivers* is the capstone where that
+accumulated excellence becomes a stable contract:
+
+- a fingerprint catalog that is comprehensive and high-precision across the
+  5,000+ company corpus, with the gap report driven to a low residual, not just
+  the top-tier-vendor spot checks that cleared early;
+- a Bayesian layer whose every node is calibrated and stable across the full
+  corpus, the credible intervals behaving as designed on sparse and hardened
+  targets, validated by complete (CT-enabled) calibration runs rather than
+  snapshots;
+- a JSON / MCP schema locked as a real v2.0 contract, with the promoted fields
+  documented as stable;
+- reference docs (notably `correlation.md`) at the polish bar;
+- and zero EXPERIMENTAL labels anywhere.
+
+So the "mechanical lock event" language elsewhere in this file describes the
+*ceremony*, not the *ambition*. By the time it fires, recon is meant to be
+excellent everywhere because the corpus-driven depth above made it so, and the
+small tag step is the proof that nothing was rushed to get there.
+
+Five tracks run as a sequence of focused, CI-green 1.9.x patches:
 
 - **Complexity decomposition.** Decompose the functions carrying
   `# noqa: C901` (the gate from v1.9.37 already holds new code), removing
@@ -120,13 +151,169 @@ Four tracks run as a sequence of focused, CI-green 1.9.x patches:
   parse paths (DNS, CT, BIMI VMC, identity endpoints), input edge cases
   (IDN / punycode, malformed, oversized, truncated), and another
   security-audit round folded into `docs/security-audit-resolutions.md`.
+- **CLI and agent quality-of-life.** Polish the consumer surface, separate
+  from the internal complexity work. The capability is already broad (the
+  `lookup` / `batch` / `delta` / `discover` / `doctor` / `cache` /
+  `fingerprints` / `signals` / `mcp` command tree, `--explain` / `--full` /
+  `--json` / `--exposure` / `--gaps` / `--profile` / `--chain`, an exit-code
+  contract, and roughly two dozen MCP tools), so the gap is discoverability and
+  small ergonomics rather than missing features. Concrete items, each its own
+  small patch:
+    - *Exit-code reference.* The contract exists (`0` success, `2` validation,
+      `3` no-data, `4` internal) but is documented only in scattered spots
+      (`schema.md`, `security.md`); pull it into one reference block for
+      scripters, and name every literal as a constant in `cli.py`.
+    - *Shell completion currency.* Typer ships `--install-completion` /
+      `--show-completion` automatically; decide deliberately whether to
+      document it or disable it, rather than leave it present but invisible.
+    - *`batch` stdin.* Support `cat domains.txt | recon batch -` if not
+      already present, the natural piping ergonomic for batch input.
+    - *`autoApprove` guidance.* Document which MCP tools are read-only versus
+      stateful so a consuming agent (and the README's manual-approval advice)
+      can reason about what is safe to auto-approve.
+    - *Schema-discovery surface.* An MCP tool or `recon://` read-only resource
+      that returns the JSON schema and its version, so an agent can
+      self-describe without an external fetch.
+    - *Data-not-instructions demarcation.* Already tracked in Known gaps: mark
+      recon's returned DNS / CT / BIMI strings as untrusted observed content so
+      a consuming agent treats them as data, not instructions. It belongs to
+      this track as the highest-value agent-facing item.
+    - *Small consistency items.* `_SUBCOMMANDS` omits the real `discover`
+      command (harmless today, since the set only gates dotted first args, but
+      worth aligning). None of these add engine surface; they make what already
+      ships easier to consume, which is squarely the "exceptionally well before
+      2.0" goal a consumer actually notices.
 
-Corpus-driven validation runs alongside the catalog work: periodic
-calibration on private-corpus subsets (per-node Brier / ECE,
-deterministic-versus-Bayesian agreement, a fingerprint-gap report),
-aggregate-only, to re-validate the engine across the trend. v2.0 is
-revisited only once this hardening has made the engine and catalog
-solid; the items below are the lock ceremony that follows it.
+### Remaining work to v2.0 (the execution queue)
+
+This subsection is the single source of truth for what is left before the v2.0
+lock. The five tracks above describe the shape of the work; the queue below
+turns it into an ordered, checkable list so "what ships next" is never
+ambiguous. Each row is one coherent 1.9.x patch under the no-bundling
+discipline (one story per patch, version bump last, local gate matched to CI).
+Rows marked *operator-paced* need the gitignored 5,000+ company corpus or a
+maintainer-run scan and cannot be completed from the public tree alone; every
+other row is code or docs work that ships on its own.
+
+The order is the recommended sequencing: cheapest-and-clearest first
+(consumer-facing polish and pure decomposition), then the rigor and
+robustness layers, then the corpus-driven depth, and finally the mechanical
+lock. Numbers are queue positions, not version numbers; each row claims the
+next free `v1.9.x` when it ships.
+
+**Track E - CLI and agent quality-of-life** (each its own small patch):
+
+| # | Story | Status | Acceptance |
+|---|---|---|---|
+| E1 | Exit-code reference | open | One reference block (in `docs/schema.md`, cross-linked from `security.md` and the README) documents the `0` / `2` / `3` / `4` contract; every exit literal in `cli.py` names an `EXIT_*` constant (no bare `code=2`); a test asserts each command's exit code. |
+| E2 | `_SUBCOMMANDS` consistency | open | `discover` added to the `_SUBCOMMANDS` frozenset so the dotted-first-arg guard matches the real command tree; a test pins the set against the registered Typer commands. |
+| E3 | `batch` stdin | open | `recon batch -` reads domains from stdin with the same per-line and total-size bounds as the file path; documented in usage; covered by a test. |
+| E4 | Shell-completion currency | open | A deliberate decision recorded: either document `--install-completion` / `--show-completion` in the README and `docs`, or disable them. No invisible-but-present surface. |
+| E5 | `autoApprove` guidance | open | `docs/mcp.md` (and the README manual-approval note) classify every MCP tool as read-only or stateful so a consumer can reason about safe auto-approval; a test keeps the table in sync with the registered tools. |
+| E6 | Schema-discovery surface | open | An MCP tool or `recon://` read-only resource returns the JSON schema and its version so an agent can self-describe without an external fetch; covered by a server test. |
+| E7 | Data-not-instructions demarcation | open | The highest-value agent-facing item (also the one open AI-security forward item in Known gaps). MCP tool output marks recon's returned DNS / CT / BIMI strings as untrusted observed content (a light, optional demarcation or a documented convention) so a consuming agent treats them as data, not instructions. Covered by a server test and documented in `SECURITY.md`. |
+
+**Track A - Complexity decomposition** (21 `# noqa: C901` markers remain as of
+v1.9.54; the gate from v1.9.37 already holds new code):
+
+| # | Story | Status | Acceptance |
+|---|---|---|---|
+| A1 | Validator / loader tail | open | The pure-ish validators and loaders drop under the cap by extracting named sub-parsers, markers removed: `fingerprints._validate_fingerprint`, `motifs._validate_motif`, `signals._validate_and_build_signal`, `bayesian.load_network`. Behavior held by the existing validation suites. One patch per function. |
+| A2 | `validation_runner` pair | open | `_classify_change_type` and `render_summary_markdown` decomposed under the cap; behavior held by the validation-runner tests. |
+| A3 | `sources/dns` detectors | open | `_detect_dkim`, `_parse_bimi_vmc`, `_detect_email_security`, `_detect_cert_intel` decomposed; behavior held by the DNS-source and ingestion tests. These are ingestion-path functions, so they pair naturally with the Track D adversarial pass. |
+| A4 | `sources/cert_providers` queries | open | The two `query` methods decomposed; behavior held by the CT-pipeline-resilience tests. |
+| A5 | `explanation.explain_insights` | open | Characterization coverage added first (it is behaviour-heavy, not a pure renderer), then decomposed under the cap. |
+| A6 | `cli` behaviour-heavy set | open | `signals_show`, `_doctor`, `_lookup` (77), `_batch` (60) each get characterization coverage, then are decomposed. The two largest functions in the tree; one patch each. |
+| A7 | `merger.merge_results` (64) | open | Characterization coverage added, then decomposed under the cap; the merge property tests stay green. |
+| A8 | `server` tool pair | open | `lookup_tenant` and `simulate_hardening` decomposed; behavior held by the server tests (pairs with E5 / E6 / E7 server-test growth). |
+
+**Track B - Test and validation rigor:**
+
+| # | Story | Status | Acceptance |
+|---|---|---|---|
+| B1 | `deal` contracts on boundary validators | open | Third `deal` pass (after the inference core in v1.9.31 and the matchers in v1.9.35): pre/post-conditions on `validator.py`, with predicate tests that prove they fire on violation and are no-ops under `-O`. |
+| B2 | Cache-lifecycle stateful machine | open | A Hypothesis `RuleBasedStateMachine` drives the cache read / write / evict / forward-compat path with arbitrary operation sequences and asserts the load-known / ignore-unknown and skip-malformed invariants after every step. |
+| B3 | Source-boundary fault injection | open | A deterministic layer injects malformed / truncated / timed-out / partial-failure provider payloads at the source boundary and asserts the hedged output, `degraded_sources`, and exception hygiene hold. |
+| B4 | Branch coverage toward `server.py` | open | New server tests (growing alongside E5 / E6 / E7 and A8) move `server.py` branch coverage up from its ~71% line baseline; the gate ratchets if the number clears a new floor. |
+
+**Track D - Robustness and security:**
+
+| # | Story | Status | Acceptance |
+|---|---|---|---|
+| D1 | Ingestion adversarial bug-hunt | open | A fresh adversarial pass over the DNS / CT / BIMI VMC / identity-endpoint parse paths plus input edge cases (IDN / punycode, malformed, oversized, truncated); any finding fixed and folded into `docs/security-audit-resolutions.md` as a new round. |
+| D2 | Operator-paced scanner pass | operator-paced | Any Codex / external scanner pass between now and the tag adds to the closure trail if it surfaces anything new. |
+
+**Track C - Catalog growth** (the corpus-driven depth that is the real v2.0
+gate; see "The pre-2.0 build plan" below for the empirical bar):
+
+| # | Story | Status | Acceptance |
+|---|---|---|---|
+| C1 | Vendor-doc-sourced `cname_target` additions | open | New high-precision `cname_target` rules sourced from public vendor docs via the `CONTRIBUTING.md` methodology (advances reference coverage on every rule); residual regional-cloud / SaaS-app / SSE-SASE gaps named in the Library Assessment narrowed. Committed examples use the fictional brands. |
+| C2 | Full-corpus fingerprint mining | operator-paced | `validation/scan.py` over private-corpus subsets plus `/recon-fingerprint-triage`, merging vetted rules so the gap report reaches a low residual. Aggregate counts only reach the repo. |
+| C3 | CT-enabled full-corpus calibration | operator-paced | A complete (CT-enabled) full-corpus Bayesian calibration run so `infrastructure_clusters` and the region / shard `lexical_observations` are exercised on real input; per-node Brier / ECE, deterministic-vs-Bayesian agreement, and sparse-case interval coverage tabulated, extending the release trend. |
+
+**v2.0 docs currency** (ships as one or two patches once the tracks above
+settle, before the lock):
+
+| # | Story | Status | Acceptance |
+|---|---|---|---|
+| F1 | Release-notes draft brought current | open | `validation/v2.0-release-notes-draft.md` (covers v1.9.3 to v1.9.14 today) extended through the lock-time 1.9.x: every tag row linked to its patch and validation memo; the security-closure table reflects rounds 1-5 plus the original 2026-05 cycle. (Outstanding item 2.) |
+| F2 | Validation-summary refresh | partly operator-paced | `validation/v2.0-validation-summary.md` incorporates the latest full-corpus run (the C3 CT-enabled re-run) as the lock-time baseline; per-node stability on the full corpus tabulated; the v1.9.14 snapshot kept as the prior reference point. (Outstanding item 3.) |
+
+**v2.0 lock ceremony** (operator-paced; mechanical, runs only after every row
+above is green; Outstanding item 5):
+
+| # | Story | Status | Acceptance |
+|---|---|---|---|
+| G1 | Schema lock | operator-paced | Apply the disposition table; bump `docs/recon-schema.json` from "v1.0 contract" to "v2.0 contract"; strip EXPERIMENTAL language from the promoted-field descriptions. |
+| G2 | `--fusion` default-on | operator-paced | Flip `--fusion` to default-on with the clean-panel disclosure rule (see the v2.0 design-decision section). |
+| G3 | `correlation.md` promotion | open | Promote from living draft to polished reference with the four required sections (defense / correlation mapping, prior-art comparison, dependency-floor manifesto, failure-mode catalog). Doc work, can land before the tag. |
+| G4 | Changelog move + tag | operator-paced | Move the release-notes draft body into `CHANGELOG.md` under `## [2.0.0] - <date>`, delete the draft, run `scripts/release.py`. |
+
+Schema-contract polish (the original Outstanding item 1) shipped in v1.9.26 and
+is not in the queue. The original v1.9.4 to v1.9.11 numbered sequence further
+down this file is historical: every one of those versions shipped (the project
+is at v1.9.54), and the current framing is these five tracks plus the lock
+ceremony, not that sequence.
+
+### The pre-2.0 build plan: corpus-driven validation depth
+
+2.0 is the "polished and excellent everywhere" release, so before the schema
+locks the engine and catalog have to be demonstrably excellent rather than
+merely present, and that bar is set empirically against the private corpus of
+5,000+ companies, not asserted. The rest of the 1.9.x build series is, at its
+core, about exhausting what that corpus can teach before the lock. Two threads
+run in parallel, each as its own focused 1.9.x patches:
+
+- **Fingerprint and pattern excellence.** Keep mining the full corpus with
+  `validation/scan.py` (the 4-5k+ domain library) and the
+  `/recon-fingerprint-triage` flow, merging vetted `cname_target` and other
+  rules so the catalog (808 entries / 631 unique slugs today) closes its
+  residual coverage gaps and every high-value detection is precision-checked
+  against real observations. The goal at lock time is a catalog that is
+  comprehensive and high-precision across the whole corpus, with the
+  fingerprint-gap report driven to a low residual, rather than resting on the
+  top-tier-vendor spot checks that cleared early. This is the "Catalog growth"
+  track above, run to completion rather than opportunistically.
+- **Thorough Bayesian-layer validation.** Run complete full-corpus calibration
+  passes, not spot checks: per-node Brier / ECE, deterministic-versus-Bayesian
+  agreement, and credible-interval coverage on sparse-evidence cases, repeated
+  across the release trend so the calibration claims stay falsifiable over time
+  rather than at one moment. The broadest run so far (2026-05-26) had 13,939 of
+  13,939 high-confidence posteriors agree with the deterministic pipeline, zero
+  cross-source conflicts across 5,236 successful domains, and all 9 nodes inside
+  the v1.9.5 stability gates (Brier <= 0.05, ECE <= 0.19). Before lock we want a
+  CT-enabled full-corpus re-run so the cert-fed signals
+  (`infrastructure_clusters`, the region / shard `lexical_observations`) are
+  exercised on real input too, plus confirmation that the trend holds across the
+  rest of the hardening series, not just at one snapshot.
+
+All of this stays aggregate-only: no apex names or per-domain output is
+committed (the corpus lives in gitignored paths), so what reaches the repo is
+counts and calibration metrics, not the underlying data. This corpus-driven
+depth is what "demonstrably solid" means above, and it, not docs currency or
+ceremony, is the real gate. 2.0 is revisited only once it holds; the items
+below are the mechanical lock ceremony that follows it.
 
 **Outstanding before v2.0:** *(refined 2026-05-26 after the v1.9.24
 mega-batch; the v1.9.24 entry above absorbed items 1 and the
@@ -765,7 +952,14 @@ across releases; high-posterior calibration; interval coverage on
 sparse-evidence cases) cleared on the v1.9.0 corpus run; per-node
 calibration findings drove the v1.9.3 surgery.
 
-### The path to v2.0 - a numbered sequence
+### The path to v2.0 - a numbered sequence (historical)
+
+> This numbered sequence (v1.9.4 to v1.9.11) is kept for the record. Every
+> version in it shipped; the project is now at v1.9.54. The current remaining
+> work is the execution queue under "Remaining work to v2.0" near the top of
+> this file, organized by the five hardening tracks plus the lock ceremony, not
+> by this sequence.
+
 
 v2.0 is the "polished and excellent everywhere" release: schema
 lock + doc snapshot + zero EXPERIMENTAL labels anywhere. It is not
@@ -1481,7 +1675,7 @@ per stratum because synthetic fixtures are sparse-by-design). The
 gitignored-private-corpus run will produce the truth-of-record
 numbers.
 
-#### v1.9.11 - Documentation polish dry-run (next)
+#### v1.9.11 - Documentation polish dry-run (shipped)
 
 **What ships.** Every doc reviewed against the v2.0 quality bar
 before v2.0 actually tags. correlation.md polished to the v2.0
