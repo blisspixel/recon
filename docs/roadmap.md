@@ -199,6 +199,34 @@ robustness layers, then the corpus-driven depth, and finally the mechanical
 lock. Numbers are queue positions, not version numbers; each row claims the
 next free `v1.9.x` when it ships.
 
+**Order of operations to the lock.** Track E is done. The remaining doable work
+runs in this order, each step one or more 1.9.x patches:
+
+0. **Tooling foundation.** Fix `release.py` so its `_INIT_VERSION_RE` matches the
+   refactored `__init__.py` (only `_FALLBACK_VERSION` is a literal now), and clear
+   the two `scripts/` C901s, so the release gate is sound before more patches
+   stack.
+1. **Finish complexity decomposition (Track A) to zero markers.** A3 `sources/dns`
+   detectors, then A5 `explain_insights`, A7 `merge_results`, A6 the `cli`
+   behaviour-heavy set, A8 the `server` pair. The behaviour-heavy functions get
+   characterization coverage before they are split.
+2. **Test and validation rigor (Track B).** `deal` contracts on `validator.py`,
+   the cache-lifecycle stateful machine, source-boundary fault injection; server
+   branch coverage folds in alongside.
+3. **Robustness and security (Track D).** A fresh adversarial ingestion audit,
+   findings folded into `docs/security-audit-resolutions.md`.
+4. **Catalog growth, doable slice (Track C, C1).** Vendor-doc-sourced
+   `cname_target` fingerprints via the `CONTRIBUTING.md` methodology,
+   specificity-gated, fictional-brand examples only.
+5. **Docs currency (pre-lock).** Bring the release-notes draft current (F1),
+   promote `correlation.md` to the polished reference (G3), and refresh the
+   validation-summary structure (F2).
+
+Operator-paced and therefore not in this agent-run sequence: the full-corpus
+fingerprint mining and CT-enabled calibration (C2 / C3, which need the private
+corpus), the corpus numbers in the F2 validation summary, and the v2.0 lock
+ceremony itself (G1 / G2 / G4).
+
 **Track E - CLI and agent quality-of-life.** Complete. The seven items (exit-code
 reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
 `autoApprove` guidance, the `recon://schema` discovery resource, and the
