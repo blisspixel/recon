@@ -245,21 +245,32 @@ changelog-move + tag) stays out of this sequence.
 
 A 2026-06 methodology review flagged that the current numbers measure
 *self-consistency*, not calibration against ground truth, and over-claim when
-they call it "calibration." These refinements make the Bayesian-validation
-story defensible. Each is its own small patch; they gate the C3 calibration
-claims and the `correlation.md` polish (G3).
+they call it "calibration." A second review of the theory (`correlation.md`)
+against the first full-corpus pass added CAL10 to CAL13 and sharpened CAL1 /
+CAL7 / CAL9: the consistency number is near-tautological under the
+virtual-evidence construction (so it cannot falsify the CPT values), the
+correlated-binding multiplication makes the layer over-confident on
+richly-instrumented targets even as the absence rule keeps it conservative on
+hidden ones, and the information-recovery north-star is now measurable
+(entropy reduction). These refinements make the Bayesian-validation story
+defensible without overstating it. Each is its own small patch; they gate the
+C3 calibration claims and the `correlation.md` polish (G3).
 
 | # | Refinement | Acceptance |
 |---|---|---|
-| CAL1 | Reframe consistency vs calibration | Everywhere (analyzer headers, `correlation.md`, validation memos), the deterministic-vs-Bayesian number is named *consistency / agreement*, not *calibration*, with an explicit note that both layers share the same evidence. Proxy-label Brier / ECE are labeled as proxy-label, not ground-truth. |
+| CAL1 | Reframe consistency vs calibration (and show why) | Everywhere (analyzer headers, `correlation.md`, validation memos), the deterministic-vs-Bayesian number is named *consistency / agreement*, not *calibration*, with an explicit note that both layers share the same evidence. State the mechanism: under the virtual-evidence construction a high non-sparse posterior requires a fired positive binding, which is itself a deterministic detection, so the consistency number tests the inference plumbing, not the CPT / likelihood values. Only CAL3 interval coverage can falsify the values. Proxy-label Brier / ECE are labeled as proxy-label, not ground-truth. |
 | CAL2 | Uncertainty on every metric | The agreement rate carries a Wilson / Rule-of-Three CI (report the upper bound on disagreement, e.g. ~3/n); Brier / ECE carry bootstrap CIs. No bare "100%". |
 | CAL3 | Empirical interval coverage | The load-bearing claim (80% credible intervals) is tested: empirical coverage of the 80% interval against ground truth is computed and reported. |
 | CAL4 | Ground-truth subset | A hand-labeled set of ~50-100 domains with independently-known answers (verified M365 / GWS tenants, known Okta orgs) lives gitignored; real calibration + CAL3 coverage are computed against it, aggregates only. |
 | CAL5 | Split coverage from calibration | The per-node verdict separates firing count (coverage / power) from Brier / ECE (calibration). `okta_idp` is reported as well-calibrated-but-low-coverage, not a flat "fail"; the `>= 10` firing gate is a coverage note, not a calibration verdict. |
 | CAL6 | Stratified sampling | Calibration draws a random / stratified sample (by cloud vendor / vertical / region, using `by-vertical/` and `by-region/`) and reports per stratum; the full 5,241 run is used so low-coverage nodes (okta_idp) clear the firing gate on volume. |
-| CAL7 | Independence-bias documentation | `correlation.md` documents that correlated DNS bindings (e.g. MX + autodiscover + Exchange-DKIM all implying M365) can be double-counted by the combination rule, narrowing intervals; the layer either down-weights correlated bindings or states the bias as a known limitation. |
+| CAL7 | Correlated-binding overconfidence | `correlation.md` documents that co-firing bindings (e.g. `microsoft365` + `entra-id` + `exchange-online`, three views of one fact) are multiplied as if conditionally independent, which compounds the likelihood ratio and narrows the interval more than the evidence warrants. Combined with the `LR=1` absence rule this gives an asymmetric failure: conservative on hidden targets, over-confident on richly-instrumented ones. Mitigation: a noisy-OR / single evidence-cluster factor over co-firing slugs or an explicit down-weight, plus an interval-width-vs-evidence-count diagnostic that surfaces the over-confidence (which the mean-agreement metric cannot see). |
 | CAL8 | Sensitivity analysis per release | `threshold_sensitivity.py` runs a +/-20% likelihood perturbation each calibration pass and shows the posteriors / agreement are stable; the result is an aggregate artifact. |
-| CAL9 | Reliability diagrams + proper scoring lead | The validation memo leads with reliability diagrams and the log-score (a proper scoring rule); ECE is demoted to a secondary diagnostic with its binning scheme stated. |
+| CAL9 | Reliability diagrams + proper scoring lead; do not drop the hard cases | The validation memo leads with reliability diagrams, the posterior histogram, and the log-score (a proper scoring rule); ECE is demoted to a secondary diagnostic with its binning scheme stated, and the memo notes that ECE looks low partly because the posterior distribution is bimodal (few mid-range points). The headline consistency number excludes sparse observations today; report the sparse cohort separately rather than silently dropping the cases where the model's real uncertainty lives. |
+| CAL10 | Entropy-reduction (information-recovery) metric | Operationalize the mutual-information north-star that `correlation.md` currently disclaims as intent: report the per-domain posterior entropy reduction (H(prior) - H(posterior), in nats) distribution each calibration pass. A first full-corpus pass measured median ~0.85 nats (Q3 ~1.23). This is the concrete "information recovered" number the framing wants. |
+| CAL11 | Graph partition stability, not a lone modularity score | The graph layer (Louvain / CPM) reports a partition stability / consensus measure across seeds and resolution, not a single modularity Q; `correlation.md` cites the resolution-limit (Fortunato-Barthelemy 2007) and degeneracy (Good et al. 2010) literature where CPM is introduced, since CT co-occurrence graphs are typically small and sparse. |
+| CAL12 | Ground priors in observed base rates | Node priors are documented against observed corpus base rates and the elicitation is written down. The first full-corpus pass showed mismatches (e.g. `m365_tenant` prior 0.30 vs high-confidence in ~60% of domains, `aws_hosting` 0.40 vs ~28%). Strong likelihoods wash this out for the point estimate, but the prior is load-bearing for the sparse-case posterior and the interval, which is the field we say matters most. |
+| CAL13 | "Evidence-responsive" not "calibrated" | Until CAL3 frequentist coverage exists, the 80% credible intervals are described as *evidence-responsive* (they widen on sparse evidence, a monotonicity property), not *calibrated* (a coverage statement in the Dawid sense). The word "calibrated" is reserved for what CAL3 demonstrates. |
 
 **Track E - CLI and agent quality-of-life.** Complete. The seven items (exit-code
 reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
