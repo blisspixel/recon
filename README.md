@@ -121,6 +121,7 @@ recon contoso.com --profile fintech            # apply a posture lens
 recon contoso.com --confidence-mode strict     # drop hedging on dense-evidence targets (current)
 recon contoso.com --json                       # structured JSON for piping
 recon batch domains.txt --json                 # batch (cross-domain token clustering)
+cat domains.txt | recon batch - --json         # batch reading domains from stdin
 recon batch domains.txt --json --include-ecosystem  # add v1.8 ecosystem hypergraph
 recon contoso.com --chain --depth 2            # follow related-domain breadcrumbs
 recon delta contoso.com                        # diff against last cached snapshot
