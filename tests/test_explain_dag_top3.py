@@ -211,11 +211,16 @@ class TestRenderDagDotTop3:
 # ── Snapshot ────────────────────────────────────────────────────────
 
 
+# microsoft365 and entra-id share the m365_indicators correlation group, so
+# they contribute one effective likelihood ratio (the stronger, entra-id) rather
+# than the over-counted independent product. The posterior is 0.950 with a wider
+# interval, not the pre-grouping 0.998 / [0.977, 1.000]. See correlation.md
+# §4.8.3.
 _SNAPSHOT_FRAGMENT = (
     "## m365_tenant\n"
     "_Domain has a Microsoft 365 / Entra tenant._\n"
     "\n"
-    "- **Posterior:** 0.998 _(80% credible interval: [0.977, 1.000], n_eff=6.00)_\n"
+    "- **Posterior:** 0.950 _(80% credible interval: [0.835, 1.000], n_eff=6.00)_\n"
     "- **Confidence label:** high-confidence\n"
     "- **Evidence:** slug `microsoft365`, slug `entra-id`\n"
     "- **Top influences (ranked, 2 fired):**\n"

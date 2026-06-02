@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.70] - 2026-06-02
+
+### Evidence-group correction for conditionally-dependent bindings
+
+Bayesian-core math (roadmap CAL7; `docs/correlation.md` §4.8.3). The likelihood
+product `L(O | X) = prod ell_b` treated a node's fired bindings as conditionally
+independent given the node. For co-firing correlated readings of one fact
+(`microsoft365` + `entra-id` + `exchange-online` for `m365_tenant`, or the two
+Google Workspace slugs) that over-counts the evidence: it compounds the
+log-likelihood-ratio and produces an over-confident posterior with too narrow an
+interval. This is the mirror of the asymmetric-likelihood conservatism on
+hardened targets (the layer was conservative on hidden targets and
+over-confident on richly-instrumented ones).
+
+- `_Evidence` gains an optional `group`. Bindings sharing a group are reduced to
+  their strongest fired member (max `|LLR|`) before the product, so a group
+  contributes one effective likelihood ratio rather than the sum
+  (`lambda_g = max_b lambda_b`, the conservative perfectly-dependent bound).
+  Ungrouped bindings are unchanged, so this is a strict refinement that affects
+  only nodes whose YAML declares a group.
+- `bayesian_network.yaml` groups the three M365 slugs (`m365_indicators`) and
+  the two GWS slugs (`gws_indicators`). On a domain exposing two M365 slugs the
+  `m365_tenant` posterior moves from 0.998 to 0.950 and the 80% interval widens
+  from [0.977, 1.000] to [0.835, 1.000].
+- Covered by `tests/test_bayesian_evidence_groups.py`; the `--explain-dag`
+  snapshot is updated to the corrected values.
+
+Deterministic-vs-Bayesian consistency is preserved: lowering a correctly-
+detected node's posterior cannot create a disagreement. A post-grouping
+full-corpus calibration refresh (the interval-width effect) is a follow-up.
+
 ## [1.9.69] - 2026-06-01
 
 ### Decompose `explain_insights` under the C901 cap
