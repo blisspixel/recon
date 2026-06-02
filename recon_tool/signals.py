@@ -115,7 +115,75 @@ def _parse_metadata_block(name: str, raw_metadata: list[Any]) -> tuple[MetadataC
     return tuple(conditions)
 
 
-def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | None:  # noqa: C901
+def _parse_strict_str_list(name: str, field: str, raw: Any) -> tuple[str, ...] | None:
+    """Parse a list-of-non-empty-strings field. None input is absent (empty).
+
+    Returns the tuple on success (possibly empty), or None to reject the whole
+    signal when the value is present but malformed.
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        logger.warning("Signal %r has invalid %r (not a list) — skipped", name, field)
+        return None
+    for entry in raw:
+        if not isinstance(entry, str) or not entry:
+            logger.warning("Signal %r has invalid entry in %r — skipped", name, field)
+            return None
+    return tuple(raw)
+
+
+def _parse_lenient_str_list(name: str, field: str, raw: Any) -> tuple[str, ...]:
+    """Parse a list-of-non-empty-strings field, defaulting to empty on any error.
+
+    Unlike :func:`_parse_strict_str_list`, a malformed value never rejects the
+    signal; it falls back to an empty tuple with a warning.
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        logger.warning("Signal %r has invalid %r (not a list) — defaulting to empty", name, field)
+        return ()
+    for entry in raw:
+        if not isinstance(entry, str) or not entry.strip():
+            logger.warning("Signal %r has invalid entry in %r — defaulting to empty tuple", name, field)
+            return ()
+    return tuple(raw)
+
+
+def _parse_requires_block(name: str, signal: dict[str, Any], has_metadata: bool) -> tuple[tuple[str, ...], int] | None:
+    """Parse the optional ``requires`` block into (candidates, min_matches).
+
+    Returns None to reject the signal when neither a valid ``requires.any``,
+    metadata, nor ``requires_signals`` is present.
+    """
+    requires = signal.get("requires")
+    if requires is not None:
+        if not isinstance(requires, dict):
+            logger.warning("Signal %r has invalid 'requires' — skipped", name)
+            return None
+        any_list = requires.get("any")
+        if isinstance(any_list, list) and any_list:
+            min_matches = signal.get("min_matches", 1)
+            if not isinstance(min_matches, int) or min_matches < 1:
+                logger.warning("Signal %r has invalid min_matches %r — defaulting to 1", name, min_matches)
+                min_matches = 1
+            return tuple(any_list), min_matches
+        if has_metadata:
+            # requires block present but no valid any list — OK if metadata present
+            return (), 0
+        logger.warning("Signal %r has empty or missing 'requires.any' and no metadata — skipped", name)
+        return None
+    if not has_metadata:
+        # No requires and no metadata — OK only if requires_signals is present
+        raw_requires_signals_check = signal.get("requires_signals")
+        if not (isinstance(raw_requires_signals_check, list) and raw_requires_signals_check):
+            logger.warning("Signal %r has neither 'requires' nor 'metadata' nor 'requires_signals' — skipped", name)
+            return None
+    return (), 0
+
+
+def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | None:
     """Validate a single signal definition and return a frozen Signal, or None.
 
     Required: name (str), and at least one of requires.any or metadata.
@@ -144,59 +212,19 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
         metadata_conditions = parsed
 
     # Parse optional requires block
-    requires = signal.get("requires")
-    candidates: tuple[str, ...] = ()
-    min_matches = 0
+    parsed_requires = _parse_requires_block(name, signal, bool(metadata_conditions))
+    if parsed_requires is None:
+        return None
+    candidates, min_matches = parsed_requires
 
-    if requires is not None:
-        if not isinstance(requires, dict):
-            logger.warning("Signal %r has invalid 'requires' — skipped", name)
-            return None
-        any_list = requires.get("any")
-        if isinstance(any_list, list) and any_list:
-            candidates = tuple(any_list)
-            min_matches = signal.get("min_matches", 1)
-            if not isinstance(min_matches, int) or min_matches < 1:
-                logger.warning("Signal %r has invalid min_matches %r — defaulting to 1", name, min_matches)
-                min_matches = 1
-        elif metadata_conditions:
-            # requires block present but no valid any list — OK if metadata present
-            pass
-        else:
-            logger.warning("Signal %r has empty or missing 'requires.any' and no metadata — skipped", name)
-            return None
-    elif not metadata_conditions:
-        # No requires and no metadata — check if requires_signals is present
-        raw_requires_signals_check = signal.get("requires_signals")
-        if not (isinstance(raw_requires_signals_check, list) and raw_requires_signals_check):
-            logger.warning("Signal %r has neither 'requires' nor 'metadata' nor 'requires_signals' — skipped", name)
-            return None
-
-    # Parse optional contradicts field
-    contradicts: tuple[str, ...] = ()
-    raw_contradicts = signal.get("contradicts")
-    if raw_contradicts is not None:
-        if not isinstance(raw_contradicts, list):
-            logger.warning("Signal %r has invalid 'contradicts' (not a list) — skipped", name)
-            return None
-        for entry in raw_contradicts:
-            if not isinstance(entry, str) or not entry:
-                logger.warning("Signal %r has invalid entry in 'contradicts' — skipped", name)
-                return None
-        contradicts = tuple(raw_contradicts)
-
-    # Parse optional requires_signals field
-    requires_signals: tuple[str, ...] = ()
-    raw_requires_signals = signal.get("requires_signals")
-    if raw_requires_signals is not None:
-        if not isinstance(raw_requires_signals, list):
-            logger.warning("Signal %r has invalid 'requires_signals' (not a list) — skipped", name)
-            return None
-        for entry in raw_requires_signals:
-            if not isinstance(entry, str) or not entry:
-                logger.warning("Signal %r has invalid entry in 'requires_signals' — skipped", name)
-                return None
-        requires_signals = tuple(raw_requires_signals)
+    # Parse optional contradicts / requires_signals fields (strict: a malformed
+    # value rejects the whole signal).
+    contradicts = _parse_strict_str_list(name, "contradicts", signal.get("contradicts"))
+    if contradicts is None:
+        return None
+    requires_signals = _parse_strict_str_list(name, "requires_signals", signal.get("requires_signals"))
+    if requires_signals is None:
+        return None
 
     # Parse optional explain field
     raw_explain = signal.get("explain")
@@ -205,27 +233,9 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
         raw_explain = ""
     explain: str = raw_explain if isinstance(raw_explain, str) else ""
 
-    # Parse optional expected_counterparts field
-    expected_counterparts: tuple[str, ...] = ()
-    raw_counterparts = signal.get("expected_counterparts")
-    if raw_counterparts is not None:
-        if not isinstance(raw_counterparts, list):
-            logger.warning(
-                "Signal %r has invalid 'expected_counterparts' (not a list) — defaulting to empty",
-                name,
-            )
-        else:
-            valid_counterparts: list[str] = []
-            for entry in raw_counterparts:
-                if not isinstance(entry, str) or not entry.strip():
-                    logger.warning(
-                        "Signal %r has invalid entry in 'expected_counterparts' — defaulting to empty tuple",
-                        name,
-                    )
-                    valid_counterparts = []
-                    break
-                valid_counterparts.append(entry)
-            expected_counterparts = tuple(valid_counterparts)
+    # Parse optional expected_counterparts field (lenient: a malformed value
+    # falls back to an empty tuple rather than rejecting the signal).
+    expected_counterparts = _parse_lenient_str_list(name, "expected_counterparts", signal.get("expected_counterparts"))
 
     # Parse optional exclude_matches_in_primary field
     raw_exclude_primary = signal.get("exclude_matches_in_primary", False)
@@ -237,28 +247,8 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
         raw_exclude_primary = False
 
     # Parse optional positive_when_absent field (v0.9.3). Same shape as
-    # expected_counterparts: a list of slug strings. An empty or invalid
-    # list falls back to an empty tuple.
-    positive_when_absent: tuple[str, ...] = ()
-    raw_positive_absent = signal.get("positive_when_absent")
-    if raw_positive_absent is not None:
-        if not isinstance(raw_positive_absent, list):
-            logger.warning(
-                "Signal %r has invalid 'positive_when_absent' (not a list) — defaulting to empty",
-                name,
-            )
-        else:
-            valid_absent: list[str] = []
-            for entry in raw_positive_absent:
-                if not isinstance(entry, str) or not entry.strip():
-                    logger.warning(
-                        "Signal %r has invalid entry in 'positive_when_absent' — defaulting to empty tuple",
-                        name,
-                    )
-                    valid_absent = []
-                    break
-                valid_absent.append(entry)
-            positive_when_absent = tuple(valid_absent)
+    # expected_counterparts: a list of slug strings, lenient on error.
+    positive_when_absent = _parse_lenient_str_list(name, "positive_when_absent", signal.get("positive_when_absent"))
 
     return Signal(
         name=name,
