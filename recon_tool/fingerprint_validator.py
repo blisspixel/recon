@@ -10,6 +10,7 @@ from typing import Any
 
 import yaml
 
+from recon_tool.exit_codes import EXIT_ERROR, EXIT_SUCCESS, EXIT_VALIDATION
 from recon_tool.fingerprints import _validate_fingerprint  # pyright: ignore[reportPrivateUsage]
 from recon_tool.specificity import evaluate_pattern
 
@@ -109,7 +110,7 @@ def validate_path(path: Path, *, quiet: bool = False, skip_specificity: bool = F
     """Validate a fingerprint YAML file or directory and return a process exit code."""
     if not path.exists():
         print(f"error: {path} does not exist", file=sys.stderr)
-        return 2
+        return EXIT_VALIDATION
 
     captured: list[logging.LogRecord] = []
 
@@ -154,7 +155,7 @@ def _validate_path_with_capture(
         files = sorted(path.glob("*.yaml"))
         if not files:
             print(f"error: no *.yaml files found in {path}", file=sys.stderr)
-            return 2
+            return EXIT_VALIDATION
         for file_path in files:
             file_total, file_passed, file_failures = _validate_file(
                 file_path,
@@ -204,8 +205,8 @@ def _validate_path_with_capture(
             print(f"  - {warning}")
 
     if failed_names or duplicates:
-        return 1
-    return 0
+        return EXIT_ERROR
+    return EXIT_SUCCESS
 
 
 def main(argv: list[str] | None = None) -> int:
