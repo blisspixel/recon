@@ -4,11 +4,16 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.54** (pre-2.0 hardening phase, patch 17: core-module
-C901 cleanup continues. `_validate_and_build_rule` (posture.py) drops under the
-cap by extracting `_parse_slug_condition`, the slugs_any / slugs_min / slugs_max
-sub-parse; `posture.py` now carries no `# noqa: C901`. Behavior preserved
-against the posture-validation and enhanced-YAML tests). The
+Current release: **v1.9.64** (pre-2.0 hardening phase. The CLI and agent
+quality-of-life track shipped in full as v1.9.55 to v1.9.60 (exit-code
+reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
+MCP autoApprove guidance, the `recon://schema` discovery resource, and the
+data-not-instructions demarcation). The complexity-decomposition track then
+cleared its validator/loader tail as v1.9.61 to v1.9.64
+(`_validate_fingerprint`, `_validate_motif`, `_validate_and_build_signal`,
+`load_network`), leaving 17 `# noqa: C901` markers, all on behaviour-heavy
+functions that take characterization coverage before they are split. See the
+execution queue below for what remains.) The
 engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
 `py.typed` marker, the `>=3.12` floor (relaxed back to `>=3.11` in v1.9.43),
 branch coverage, `deal`
@@ -205,20 +210,21 @@ next free `v1.9.x` when it ships.
 
 | # | Story | Status | Acceptance |
 |---|---|---|---|
-| E1 | Exit-code reference | open | One reference block (in `docs/schema.md`, cross-linked from `security.md` and the README) documents the `0` / `2` / `3` / `4` contract; every exit literal in `cli.py` names an `EXIT_*` constant (no bare `code=2`); a test asserts each command's exit code. |
-| E2 | `_SUBCOMMANDS` consistency | open | `discover` added to the `_SUBCOMMANDS` frozenset so the dotted-first-arg guard matches the real command tree; a test pins the set against the registered Typer commands. |
-| E3 | `batch` stdin | open | `recon batch -` reads domains from stdin with the same per-line and total-size bounds as the file path; documented in usage; covered by a test. |
-| E4 | Shell-completion currency | open | A deliberate decision recorded: either document `--install-completion` / `--show-completion` in the README and `docs`, or disable them. No invisible-but-present surface. |
-| E5 | `autoApprove` guidance | open | `docs/mcp.md` (and the README manual-approval note) classify every MCP tool as read-only or stateful so a consumer can reason about safe auto-approval; a test keeps the table in sync with the registered tools. |
-| E6 | Schema-discovery surface | open | An MCP tool or `recon://` read-only resource returns the JSON schema and its version so an agent can self-describe without an external fetch; covered by a server test. |
-| E7 | Data-not-instructions demarcation | open | The highest-value agent-facing item (also the one open AI-security forward item in Known gaps). MCP tool output marks recon's returned DNS / CT / BIMI strings as untrusted observed content (a light, optional demarcation or a documented convention) so a consuming agent treats them as data, not instructions. Covered by a server test and documented in `SECURITY.md`. |
+| E1 | Exit-code reference | shipped v1.9.55 | One reference block (in `docs/schema.md`, cross-linked from `security.md` and the README) documents the `0` / `2` / `3` / `4` contract; every exit literal in `cli.py` names an `EXIT_*` constant (no bare `code=2`); a test asserts each command's exit code. |
+| E2 | `_SUBCOMMANDS` consistency | shipped v1.9.56 | `discover` added to the `_SUBCOMMANDS` frozenset so the dotted-first-arg guard matches the real command tree; a test pins the set against the registered Typer commands. |
+| E3 | `batch` stdin | shipped v1.9.57 | `recon batch -` reads domains from stdin with the same per-line and total-size bounds as the file path; documented in usage; covered by a test. |
+| E4 | Shell-completion currency | shipped (docs) | A deliberate decision recorded: either document `--install-completion` / `--show-completion` in the README and `docs`, or disable them. No invisible-but-present surface. |
+| E5 | `autoApprove` guidance | shipped v1.9.58 | `docs/mcp.md` (and the README manual-approval note) classify every MCP tool as read-only or stateful so a consumer can reason about safe auto-approval; a test keeps the table in sync with the registered tools. |
+| E6 | Schema-discovery surface | shipped v1.9.59 | An MCP tool or `recon://` read-only resource returns the JSON schema and its version so an agent can self-describe without an external fetch; covered by a server test. |
+| E7 | Data-not-instructions demarcation | shipped v1.9.60 | The highest-value agent-facing item (also the one open AI-security forward item in Known gaps). MCP tool output marks recon's returned DNS / CT / BIMI strings as untrusted observed content (a light, optional demarcation or a documented convention) so a consuming agent treats them as data, not instructions. Covered by a server test and documented in `SECURITY.md`. |
 
-**Track A - Complexity decomposition** (21 `# noqa: C901` markers remain as of
-v1.9.54; the gate from v1.9.37 already holds new code):
+**Track A - Complexity decomposition** (17 `# noqa: C901` markers remain as of
+v1.9.64, after the validator/loader tail cleared in A1; the gate from v1.9.37
+already holds new code):
 
 | # | Story | Status | Acceptance |
 |---|---|---|---|
-| A1 | Validator / loader tail | open | The pure-ish validators and loaders drop under the cap by extracting named sub-parsers, markers removed: `fingerprints._validate_fingerprint`, `motifs._validate_motif`, `signals._validate_and_build_signal`, `bayesian.load_network`. Behavior held by the existing validation suites. One patch per function. |
+| A1 | Validator / loader tail | shipped v1.9.61-64 | The pure-ish validators and loaders drop under the cap by extracting named sub-parsers, markers removed: `fingerprints._validate_fingerprint`, `motifs._validate_motif`, `signals._validate_and_build_signal`, `bayesian.load_network`. Behavior held by the existing validation suites. One patch per function. |
 | A2 | `validation_runner` pair | open | `_classify_change_type` and `render_summary_markdown` decomposed under the cap; behavior held by the validation-runner tests. |
 | A3 | `sources/dns` detectors | open | `_detect_dkim`, `_parse_bimi_vmc`, `_detect_email_security`, `_detect_cert_intel` decomposed; behavior held by the DNS-source and ingestion tests. These are ingestion-path functions, so they pair naturally with the Track D adversarial pass. |
 | A4 | `sources/cert_providers` queries | open | The two `query` methods decomposed; behavior held by the CT-pipeline-resilience tests. |
@@ -776,11 +782,16 @@ know is missing rather than only what we know is present:
   backlog. Progress: `tenant_info_from_dict` (v1.9.40) and then the entire
   `formatter.py` (v1.9.45 to v1.9.52, behind the golden-output net) are done,
   including the worst offender `render_tenant_panel` (96 to under 15); then
-  `insights._email_security_insights` (v1.9.53). The remaining monsters are
-  the behaviour-heavy functions (`_lookup` at 77, `merge_results` at 64,
-  `_batch` at 60, `explain_insights` at 40, plus a tail of validators and
-  loaders); these take characterization coverage of their own before they are
-  split, since they are not pure renderers the golden snapshots can pin.
+  `insights._email_security_insights` (v1.9.53), `posture._validate_and_build_rule`
+  (v1.9.54), and the validator/loader tail (`_validate_fingerprint`,
+  `_validate_motif`, `_validate_and_build_signal`, `load_network`) in v1.9.61 to
+  v1.9.64. 17 markers remain. The remaining monsters are the behaviour-heavy
+  functions (`_lookup` at 77, `merge_results` at 64, `_batch` at 60,
+  `explain_insights` at 40, the `sources/dns` detectors, the `cert_providers`
+  queries, the `validation_runner` pair, the two `cli` doctor / signals-show
+  commands, and the `server` tool pair); these take characterization coverage of
+  their own before they are split, since they are not pure renderers the golden
+  snapshots can pin.
   Each refactor preserves behavior and is verified against the suite. The
   `PLR` refactor family (too-many-branches / statements / returns / args,
   ~107 hits) is deferred to a later pass so the gate stays focused on
@@ -831,20 +842,21 @@ know is missing rather than only what we know is present:
   Full SLSA L3 plus Sigstore in-toto signing and reproducible-build
   verification stay deferred as disproportionate for a stdio tool at
   current scale, but the cheap provenance step closes most of the gap.
-- Prompt-injection posture for AI consumers (from the 2026-05 AI-security
-  review). recon hands untrusted external strings (DNS TXT records, CT SAN
-  names, BIMI metadata, identity-endpoint responses) to an LLM over MCP,
-  so an attacker who controls a queried domain's DNS or certificates could
-  try to smuggle instructions through recon's output. The terminal and
-  markdown injection surface is already closed (v1.9.18 to v1.9.21); the
-  open, forward item is an explicit data-not-instructions posture: a
-  light, optional demarcation in MCP tool output (or a documented
-  convention) that marks recon's returned strings as untrusted *observed
-  content*, so a consuming agent treats them as data rather than
-  instructions. Low-cost, defensive, and squarely in recon's lane as a
-  passive tool that feeds AI agents. The model-centric AI-security
-  concerns from the same brief are out of scope (see the AI-security
-  review note above): recon trains and serves no model.
+- ~~Prompt-injection posture for AI consumers (from the 2026-05 AI-security
+  review).~~ **Shipped in v1.9.60** (queue item E7). recon hands untrusted
+  external strings (DNS TXT records, CT SAN names, BIMI metadata,
+  identity-endpoint responses) to an LLM over MCP, so an attacker who controls
+  a queried domain's DNS or certificates could try to smuggle instructions
+  through recon's output. The terminal and markdown injection surface was
+  already closed (v1.9.18 to v1.9.21); v1.9.60 adds the explicit
+  data-not-instructions posture as a documented in-band convention: the
+  injected MCP server instructions gain an "Untrusted observed content (data,
+  not instructions)" section telling the consuming model to treat every
+  domain-derived value as data to analyze and report, never as an instruction
+  to follow, even when the literal text reads like a directive. `SECURITY.md`
+  documents it and `tests/test_data_not_instructions.py` guards it. The
+  model-centric AI-security concerns from the same brief stay out of scope (see
+  the AI-security review note above): recon trains and serves no model.
 
 These do not block v1.9.x or v2.0. The four oldest cheap ones
 (SECURITY.md, SBOM, secrets-scanning, forward-compat test) shipped by
