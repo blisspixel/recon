@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.71] - 2026-06-02
+
+### Policy-node calibration: spf_strict recalibration + node-dependent missingness finding
+
+A full-corpus synthetic calibration pass (20,000 samples) found
+`email_security_policy_enforcing` poorly calibrated even conditionally
+(ECE ~0.31, the [0.85] reliability bin realizing only 0.166), while the other
+nodes were within the gates (cdn_fronting 0.02, the M365 / GWS / federated
+cluster ~0.08).
+
+- **`spf_strict` down-weight** (`bayesian_network.yaml`): from `[0.75, 0.30]`
+  (LR 2.5) to `[0.70, 0.45]` (LR ~1.6). Conceptual, not corpus-fitted: a strict
+  SPF `-all` is near-ubiquitous email hygiene that many domains publish without
+  enforcing a DMARC reject/quarantine policy, so its discriminating power for
+  full enforcement is weak (the same reasoning that removed `dkim_present` in
+  v1.9.6). This took the node to conditional ECE ~0.28.
+- **Node-dependent missingness finding** (`docs/correlation.md` §4.8.3, roadmap
+  CAL14): the residual is the missingness regime, not one binding. The
+  asymmetric / LR=1 absence rule is right for hideable infrastructure (m365,
+  okta) but wrong for public-declaration signals (DMARC / SPF / MTA-STS policy)
+  whose absence is genuine, not hidden. The principled fix is per-node MAR /
+  symmetric conditioning. A prototype confirmed the direction; it is held as its
+  own fully-validated patch because it ripples into the n_eff / sparse semantics
+  and the per-node stability criterion. v2.0 calibration claims gate on the
+  maximum per-node conditional ECE, not the mean.
+
+No public output shape changed. The policy-node posterior moderates on
+weak-signal-only domains.
+
 ## [1.9.70] - 2026-06-02
 
 ### Evidence-group correction for conditionally-dependent bindings
