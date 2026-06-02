@@ -43,6 +43,7 @@ import argparse
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -207,6 +208,47 @@ def _category_for_file(path: Path) -> str:
     return _FILENAME_TO_CATEGORY.get(path.name, path.stem)
 
 
+def _tally_detection(det: dict[str, Any], slug: str, cat_stats: CategoryStats) -> None:
+    """Fold one detection's metadata-coverage signals into the category stats."""
+    cat_stats.detection_total += 1
+    desc = det.get("description")
+    desc_text = desc.strip() if isinstance(desc, str) else ""
+    det_type = str(det.get("type") or "<no-type>")
+    det_pattern = str(det.get("pattern") or "<no-pattern>")
+    if desc_text:
+        cat_stats.detection_with_description += 1
+    else:
+        cat_stats.description_gaps.append((slug, det_type, det_pattern))
+    ref = det.get("reference")
+    has_ref = isinstance(ref, str) and bool(ref.strip())
+    if has_ref:
+        cat_stats.detection_with_reference += 1
+    weight = det.get("weight")
+    if isinstance(weight, int | float) and float(weight) != 1.0:
+        cat_stats.detection_with_weight += 1
+
+    if not desc_text:
+        return
+    # Richness heuristics (advisory). Flag a richness gap when a described
+    # detection fails 2 or more of {long enough, scope-narrowing, has reference}.
+    desc_lower = desc_text.lower()
+    long_enough = len(desc_text) >= _RICHNESS_LENGTH_FLOOR
+    scope_narrowed = any(tok in desc_lower for tok in _SCOPE_NARROWING_TOKENS)
+    if long_enough:
+        cat_stats.detection_with_long_desc += 1
+    if scope_narrowed:
+        cat_stats.detection_with_scope_narrowing += 1
+    missing: list[str] = []
+    if not long_enough:
+        missing.append("short")
+    if not scope_narrowed:
+        missing.append("no-scope-narrowing")
+    if not has_ref:
+        missing.append("no-reference")
+    if len(missing) >= 2:
+        cat_stats.richness_gaps.append((slug, det_type, det_pattern, ",".join(missing)))
+
+
 def _walk_fingerprints(root: Path) -> dict[str, CategoryStats]:
     stats: dict[str, CategoryStats] = {}
     for yaml_path in sorted(root.glob("*.yaml")):
@@ -221,54 +263,13 @@ def _walk_fingerprints(root: Path) -> dict[str, CategoryStats]:
         for fp in fingerprints:
             if not isinstance(fp, dict):
                 continue
-            slug = fp.get("slug") or fp.get("name") or "<unknown>"
+            slug = str(fp.get("slug") or fp.get("name") or "<unknown>")
             detections = fp.get("detections") or []
             if not isinstance(detections, list):
                 continue
             for det in detections:
-                if not isinstance(det, dict):
-                    continue
-                cat_stats.detection_total += 1
-                desc = det.get("description")
-                desc_text = desc.strip() if isinstance(desc, str) else ""
-                if desc_text:
-                    cat_stats.detection_with_description += 1
-                else:
-                    det_type = str(det.get("type") or "<no-type>")
-                    det_pattern = str(det.get("pattern") or "<no-pattern>")
-                    cat_stats.description_gaps.append((str(slug), det_type, det_pattern))
-                ref = det.get("reference")
-                has_ref = isinstance(ref, str) and bool(ref.strip())
-                if has_ref:
-                    cat_stats.detection_with_reference += 1
-                weight = det.get("weight")
-                if isinstance(weight, int | float) and float(weight) != 1.0:
-                    cat_stats.detection_with_weight += 1
-
-                # Richness heuristics (advisory).
-                if desc_text:
-                    desc_lower = desc_text.lower()
-                    long_enough = len(desc_text) >= _RICHNESS_LENGTH_FLOOR
-                    scope_narrowed = any(tok in desc_lower for tok in _SCOPE_NARROWING_TOKENS)
-                    if long_enough:
-                        cat_stats.detection_with_long_desc += 1
-                    if scope_narrowed:
-                        cat_stats.detection_with_scope_narrowing += 1
-                    # Flag a richness gap if it fails 2 or more of the
-                    # three signals. Single-miss is acceptable; the
-                    # short-and-no-narrowing-and-no-reference combo is
-                    # the audit's worklist.
-                    missing: list[str] = []
-                    if not long_enough:
-                        missing.append("short")
-                    if not scope_narrowed:
-                        missing.append("no-scope-narrowing")
-                    if not has_ref:
-                        missing.append("no-reference")
-                    if len(missing) >= 2:
-                        det_type = str(det.get("type") or "<no-type>")
-                        det_pattern = str(det.get("pattern") or "<no-pattern>")
-                        cat_stats.richness_gaps.append((str(slug), det_type, det_pattern, ",".join(missing)))
+                if isinstance(det, dict):
+                    _tally_detection(det, slug, cat_stats)
     return stats
 
 
