@@ -215,17 +215,23 @@ runs in this order, each step one or more 1.9.x patches:
    branch coverage folds in alongside.
 3. **Robustness and security (Track D).** A fresh adversarial ingestion audit,
    findings folded into `docs/security-audit-resolutions.md`.
-4. **Catalog growth, doable slice (Track C, C1).** Vendor-doc-sourced
-   `cname_target` fingerprints via the `CONTRIBUTING.md` methodology,
-   specificity-gated, fictional-brand examples only.
-5. **Docs currency (pre-lock).** Bring the release-notes draft current (F1),
+4. **Catalog growth (Track C).** C1 vendor-doc-sourced `cname_target`
+   fingerprints (specificity-gated, fictional-brand examples only), then C2
+   corpus-mined gap-fill: run `validation/scan.py` over the private corpus,
+   `find_gaps` to a report, triage candidates, and merge vetted rules.
+   Aggregate counts only reach the repo.
+5. **Bayesian full-corpus calibration (Track C, C3).** Run the calibration over
+   the final catalog: per-node Brier / ECE, deterministic-vs-Bayesian
+   agreement, sparse-case interval coverage, CT-enabled so the cert-fed signals
+   are exercised. Extends the release trend. Aggregate metrics only.
+6. **Docs currency (pre-lock).** Bring the release-notes draft current (F1),
    promote `correlation.md` to the polished reference (G3), and refresh the
-   validation-summary structure (F2).
+   validation-summary with the fresh calibration baseline (F2).
 
-Operator-paced and therefore not in this agent-run sequence: the full-corpus
-fingerprint mining and CT-enabled calibration (C2 / C3, which need the private
-corpus), the corpus numbers in the F2 validation summary, and the v2.0 lock
-ceremony itself (G1 / G2 / G4).
+The corpus runs are network-heavy and respect CT rate limits (the
+`--ct-retry-from` multi-session workflow), so they run in the background while
+the code work proceeds. Only the v2.0 lock ceremony itself (G1 schema lock,
+G2 `--fusion` default-on, G4 changelog-move + tag) stays out of this sequence.
 
 **Track E - CLI and agent quality-of-life.** Complete. The seven items (exit-code
 reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
