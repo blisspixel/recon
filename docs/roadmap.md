@@ -4,16 +4,9 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.64** (pre-2.0 hardening phase. The CLI and agent
-quality-of-life track shipped in full as v1.9.55 to v1.9.60 (exit-code
-reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
-MCP autoApprove guidance, the `recon://schema` discovery resource, and the
-data-not-instructions demarcation). The complexity-decomposition track then
-cleared its validator/loader tail as v1.9.61 to v1.9.64
-(`_validate_fingerprint`, `_validate_motif`, `_validate_and_build_signal`,
-`load_network`), leaving 17 `# noqa: C901` markers, all on behaviour-heavy
-functions that take characterization coverage before they are split. See the
-execution queue below for what remains.) The
+Current release: **v1.9.64** (pre-2.0 hardening phase). The next work is the
+execution queue under the pre-2.0 hardening section below; what has already
+shipped is in the CHANGELOG. The
 engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
 `py.typed` marker, the `>=3.12` floor (relaxed back to `>=3.11` in v1.9.43),
 branch coverage, `deal`
@@ -206,25 +199,19 @@ robustness layers, then the corpus-driven depth, and finally the mechanical
 lock. Numbers are queue positions, not version numbers; each row claims the
 next free `v1.9.x` when it ships.
 
-**Track E - CLI and agent quality-of-life** (each its own small patch):
+**Track E - CLI and agent quality-of-life.** Complete. The seven items (exit-code
+reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
+`autoApprove` guidance, the `recon://schema` discovery resource, and the
+data-not-instructions demarcation) shipped in v1.9.55 to v1.9.60; see the
+CHANGELOG for the per-patch detail.
+
+**Track A - Complexity decomposition** (17 `# noqa: C901` markers remain; the
+gate from v1.9.37 already holds new code; the formatter, the posture and
+insights core, and the validator/loader tail are already decomposed, see the
+CHANGELOG). What remains:
 
 | # | Story | Status | Acceptance |
 |---|---|---|---|
-| E1 | Exit-code reference | shipped v1.9.55 | One reference block (in `docs/schema.md`, cross-linked from `security.md` and the README) documents the `0` / `2` / `3` / `4` contract; every exit literal in `cli.py` names an `EXIT_*` constant (no bare `code=2`); a test asserts each command's exit code. |
-| E2 | `_SUBCOMMANDS` consistency | shipped v1.9.56 | `discover` added to the `_SUBCOMMANDS` frozenset so the dotted-first-arg guard matches the real command tree; a test pins the set against the registered Typer commands. |
-| E3 | `batch` stdin | shipped v1.9.57 | `recon batch -` reads domains from stdin with the same per-line and total-size bounds as the file path; documented in usage; covered by a test. |
-| E4 | Shell-completion currency | shipped (docs) | A deliberate decision recorded: either document `--install-completion` / `--show-completion` in the README and `docs`, or disable them. No invisible-but-present surface. |
-| E5 | `autoApprove` guidance | shipped v1.9.58 | `docs/mcp.md` (and the README manual-approval note) classify every MCP tool as read-only or stateful so a consumer can reason about safe auto-approval; a test keeps the table in sync with the registered tools. |
-| E6 | Schema-discovery surface | shipped v1.9.59 | An MCP tool or `recon://` read-only resource returns the JSON schema and its version so an agent can self-describe without an external fetch; covered by a server test. |
-| E7 | Data-not-instructions demarcation | shipped v1.9.60 | The highest-value agent-facing item (also the one open AI-security forward item in Known gaps). MCP tool output marks recon's returned DNS / CT / BIMI strings as untrusted observed content (a light, optional demarcation or a documented convention) so a consuming agent treats them as data, not instructions. Covered by a server test and documented in `SECURITY.md`. |
-
-**Track A - Complexity decomposition** (17 `# noqa: C901` markers remain as of
-v1.9.64, after the validator/loader tail cleared in A1; the gate from v1.9.37
-already holds new code):
-
-| # | Story | Status | Acceptance |
-|---|---|---|---|
-| A1 | Validator / loader tail | shipped v1.9.61-64 | The pure-ish validators and loaders drop under the cap by extracting named sub-parsers, markers removed: `fingerprints._validate_fingerprint`, `motifs._validate_motif`, `signals._validate_and_build_signal`, `bayesian.load_network`. Behavior held by the existing validation suites. One patch per function. |
 | A2 | `validation_runner` pair | open | `_classify_change_type` and `render_summary_markdown` decomposed under the cap; behavior held by the validation-runner tests. |
 | A3 | `sources/dns` detectors | open | `_detect_dkim`, `_parse_bimi_vmc`, `_detect_email_security`, `_detect_cert_intel` decomposed; behavior held by the DNS-source and ingestion tests. These are ingestion-path functions, so they pair naturally with the Track D adversarial pass. |
 | A4 | `sources/cert_providers` queries | open | The two `query` methods decomposed; behavior held by the CT-pipeline-resilience tests. |
