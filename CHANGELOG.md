@@ -40,6 +40,14 @@ Deterministic-vs-Bayesian consistency is preserved: lowering a correctly-
 detected node's posterior cannot create a disagreement. A post-grouping
 full-corpus calibration refresh (the interval-width effect) is a follow-up.
 
+### Dependency hygiene: pyjwt 2.13.0
+
+Bump the transitively-pulled `pyjwt` (via `mcp[crypto]`) from 2.12.1 to 2.13.0,
+which fixes PYSEC-2026-175, PYSEC-2026-177, PYSEC-2026-178, and PYSEC-2026-179.
+These advisories published after the green CI run and the fixed version is
+available, so the lockfile is upgraded rather than the advisory ignored. The
+disputed no-fix PYSEC-2025-183 remains on the documented ignore list.
+
 ## [1.9.69] - 2026-06-01
 
 ### Decompose `explain_insights` under the C901 cap
