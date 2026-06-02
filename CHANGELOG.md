@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.66] - 2026-06-01
+
+### Decompose the CT-provider `query` C901 pair
+
+Complexity-decomposition track (item A4).
+
+- `recon_tool/sources/cert_providers.py`: the pure-parse cores of the two CT
+  provider `query` methods move to module-level helpers,
+  `_extract_crtsh_entries` (the bounded crt.sh name / cert-entry extraction)
+  and `_parse_certspotter_issuance` (one CertSpotter issuance to safe SAN
+  names, a cert entry, and the pagination cursor). Each `query` becomes a thin
+  fetch / paginate driver around its parser, and both drop their
+  `# noqa: C901`.
+
+No behavior change: the CT fetch, rate-limit handling, pagination, and the
+extracted parsing are unchanged (the caps, the safe-SAN filter, and the
+429 / degraded-source signals all hold), verified by the CT-pipeline-resilience
+and fallback-chain tests.
+
 ## [1.9.65] - 2026-06-01
 
 ### Decompose the `validation_runner` C901 pair
