@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.77] - 2026-06-03
+
+### deal contracts on the boundary validators (Track B, item B1)
+
+The third `deal` Design-by-Contract pass, after the inference core (v1.9.31) and
+the engine matchers (v1.9.35). `validator.py` gains postconditions on its two
+boundary functions:
+
+- `strip_control_chars` carries `@deal.post(_has_no_control_chars)`, asserting no
+  C0 (0x00-0x1F), DEL (0x7F), or C1 (0x80-0x9F) control character survives in its
+  output. This is the load-bearing security invariant: the result is rendered to
+  terminals and into JSON / markdown / MCP output, where a surviving ESC or
+  newline would be an injection vector.
+- `validate_domain` carries `@deal.post(_is_normalized_domain)`, asserting every
+  successful return is lowercase and matches the domain grammar (the
+  ValueError-raising paths are unconstrained).
+
+Both predicates are named and unit-tested in `tests/test_contracts.py`
+(`TestBoundaryValidators`: accept valid shapes, reject control bytes and
+unnormalized domains), with fire-on-violation tests proving the postconditions
+raise `deal.PostContractError` when a decorated function returns a violating
+value. Contracts remain no-ops under `python -O` (proven by the existing
+`TestContractsDisabledUnderO`), so installed users pay no runtime cost.
+
 ## [1.9.76] - 2026-06-03
 
 ### Complexity decomposition: the server tool pair (Track A, item A8) - Track A complete

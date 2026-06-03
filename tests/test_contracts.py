@@ -33,6 +33,7 @@ from recon_tool.bayesian import (
 )
 from recon_tool.fingerprints import Detection, _no_shadowed_pairs_survive
 from recon_tool.specificity import SpecificityVerdict, _verdict_match_count_valid
+from recon_tool.validator import _has_no_control_chars, _is_normalized_domain
 
 
 class TestValidatorPredicates:
@@ -102,8 +103,52 @@ class TestMatcherValidators:
         )
 
 
+class TestBoundaryValidators:
+    """The `validator.py` contract predicates (deal third pass)."""
+
+    def test_has_no_control_chars(self) -> None:
+        assert _has_no_control_chars("DigiCert Inc")
+        assert _has_no_control_chars("Contoso, Ltd.")
+        assert _has_no_control_chars("")  # vacuously true
+        # Café — non-control Unicode is preserved, so the predicate accepts it.
+        assert _has_no_control_chars("Café")
+        # C0 ESC, NUL, newline, DEL, and a C1 control are each rejected.
+        assert not _has_no_control_chars("evil\x1b[31m")
+        assert not _has_no_control_chars("a\x00b")
+        assert not _has_no_control_chars("line1\nline2")
+        assert not _has_no_control_chars("x\x7f")
+        assert not _has_no_control_chars("x\x85")  # C1 NEL
+
+    def test_is_normalized_domain(self) -> None:
+        assert _is_normalized_domain("contoso.com")
+        assert _is_normalized_domain("sub.northwindtraders.co.uk")
+        assert _is_normalized_domain("xn--mnchen-3ya.de")  # punycode IDN
+        # Uppercase is not normalized (validate_domain lowercases before return).
+        assert not _is_normalized_domain("Contoso.com")
+        # Not a domain grammar at all.
+        assert not _is_normalized_domain("not a domain")
+        assert not _is_normalized_domain("")
+        assert not _is_normalized_domain("https://contoso.com")  # scheme not stripped
+
+
 class TestContractFires:
     """deal raises when a decorated function returns a violating value."""
+
+    def test_validator_post_raises_on_unnormalized_domain(self) -> None:
+        @deal.post(_is_normalized_domain)
+        def _bad() -> str:
+            return "NotLowercased.COM"  # violates the normalized-domain postcondition
+
+        with pytest.raises(deal.PostContractError):
+            _bad()
+
+    def test_validator_post_raises_on_control_chars(self) -> None:
+        @deal.post(_has_no_control_chars)
+        def _leaky() -> str:
+            return "issuer\x1b[2J"  # an ESC survived, violates the postcondition
+
+        with pytest.raises(deal.PostContractError):
+            _leaky()
 
     def test_post_contract_raises_on_violation(self) -> None:
         @deal.post(_interval_is_ordered)
