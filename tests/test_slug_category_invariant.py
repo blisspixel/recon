@@ -277,6 +277,16 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         # course platform; same conservative Business-Apps bucket as its peers
         # coursera and northpass).
         "thinkific",
+        # v1.9.83: cname_target slugs from a live-analysis discovery batch.
+        # Generic B2B SaaS (localization, encryption-relay, LMS, PSA/onboarding,
+        # community, PRM) with no specific panel-category home; conservative
+        # Business-Apps bucket.
+        "crowdin",
+        "evervault",
+        "intellum",
+        "rocketlane",
+        "bettermode",
+        "impartner",
     }
 )
 

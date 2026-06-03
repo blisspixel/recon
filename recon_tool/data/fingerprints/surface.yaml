@@ -87,6 +87,96 @@ fingerprints:
       domain. Hosting-binding signal only, not a course-catalog or
       enrollment-volume signal.
 
+- name: Crowdin
+  slug: crowdin
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: crowdin.com
+    reference: https://support.crowdin.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Crowdin localization project.
+      Suggests the org uses Crowdin for software / content
+      translation management on a branded domain. Hosting-binding
+      signal only, not a translation-volume or plan-tier signal.
+
+- name: Evervault
+  slug: evervault
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: evervault.app
+    reference: https://docs.evervault.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to an Evervault Relay endpoint.
+      Suggests the org routes traffic through Evervault for
+      field-level encryption / tokenization. Hosting-binding
+      signal only, not a data-volume signal.
+
+- name: Intellum
+  slug: intellum
+  category: Education
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: intellum.com
+    reference: https://www.intellum.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to an Intellum-hosted learning
+      platform. Suggests the org runs an Intellum LMS /
+      customer-education site on a branded domain. Hosting-binding
+      signal only, not an enrollment-volume signal.
+
+- name: Rocketlane
+  slug: rocketlane
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: rocketlane.com
+    reference: https://www.rocketlane.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Rocketlane customer-onboarding
+      / professional-services-automation portal. Suggests the org
+      runs Rocketlane for client onboarding and delivery on a
+      branded domain. Hosting-binding signal only.
+
+- name: Bettermode
+  slug: bettermode
+  category: Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: bettermode.io
+    reference: https://www.bettermode.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Bettermode (formerly Tribe)
+      community site. Suggests the org runs a Bettermode
+      customer-community / forum on a branded domain.
+      Hosting-binding signal only, not a membership-volume signal.
+
+- name: Impartner
+  slug: impartner
+  category: CRM & Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: impartner.io
+    reference: https://www.impartner.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to an Impartner partner-relationship-
+      management (PRM) portal. Suggests the org runs an Impartner
+      partner / channel portal on a branded domain. Hosting-binding
+      signal only.
+
 - name: Auth0 (Okta)
   slug: auth0
   category: Identity
