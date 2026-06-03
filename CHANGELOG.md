@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.84] - 2026-06-03
+
+### Catalog: seven more cname_target fingerprints from a live-analysis batch (Track C, C1)
+
+A third live-analysis gap-fill batch over a fresh spread of example domains. Seven
+SaaS vendors with distinctive custom-domain CNAMEs that the catalog did not cover,
+each added as a high-precision `cname_target` rule in `surface.yaml`
+(`tier: application`). The catalog grows from 815 to 822 entries.
+
+- `lumapps` (`lumapps.com`) - employee-experience / intranet
+- `vgs` (`verygoodproxy.com`) - Very Good Security tokenization / data-redaction proxy
+- `securitypal` (`securitypal.com`) - security-questionnaire / compliance automation
+- `greatquestion` (`greatquestion.co`) - user-research / customer-interview platform
+- `heymarvin` (`heymarvin.com`) - Marvin qualitative-research repository
+- `airmason` (`airmason.com`) - digital employee-handbook platform
+- `nudata` (`nudatasecurity.com`) - NuData (Mastercard) behavioral-biometrics / fraud
+
+As with the prior batches, every pattern is distinctive enough that the substring
+matcher will not false-positive; intra-org infrastructure, already-covered vendors
+(Marketo), and ambiguous targets from the same run were dropped. Only the vendor
+patterns and neutral descriptions are committed; no observed apex reaches the repo.
+The seven slugs join `EXPECTED_BUSINESS_APPS_FALLBACK`. Validated against
+`validate_fingerprint.py`, the metadata-coverage gate, and the shadowing /
+specificity / expansion tests.
+
 ## [1.9.83] - 2026-06-03
 
 ### Catalog: six cname_target fingerprints from a live-analysis batch (Track C, C1)

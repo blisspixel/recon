@@ -177,6 +177,107 @@ fingerprints:
       partner / channel portal on a branded domain. Hosting-binding
       signal only.
 
+- name: LumApps
+  slug: lumapps
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: lumapps.com
+    reference: https://www.lumapps.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a LumApps employee-experience site.
+      Suggests the org runs LumApps as a digital workplace / intranet
+      on a branded domain. Hosting-binding signal only.
+
+- name: Very Good Security (VGS)
+  slug: vgs
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: verygoodproxy.com
+    reference: https://www.verygoodsecurity.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Very Good Security (VGS) proxy
+      route. Suggests the org routes traffic through VGS for
+      tokenization / data redaction (PCI / PII). Hosting-binding
+      signal only, not a data-volume signal.
+
+- name: SecurityPal
+  slug: securitypal
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: securitypal.com
+    reference: https://securitypal.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a SecurityPal portal. Suggests the
+      org uses SecurityPal for security-questionnaire / compliance
+      automation on a branded domain. Hosting-binding signal only.
+
+- name: Great Question
+  slug: greatquestion
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: greatquestion.co
+    reference: https://greatquestion.co
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Great Question research site.
+      Suggests the org runs Great Question for user-research /
+      customer-interview programs on a branded domain. Hosting-binding
+      signal only.
+
+- name: Marvin
+  slug: heymarvin
+  category: Business Apps
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: heymarvin.com
+    reference: https://heymarvin.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Marvin (Hey Marvin) research
+      repository. Suggests the org uses Marvin for qualitative
+      user-research analysis on a branded domain. Hosting-binding
+      signal only.
+
+- name: AirMason
+  slug: airmason
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: airmason.com
+    reference: https://www.airmason.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to an AirMason digital-handbook site.
+      Suggests the org runs AirMason for employee handbooks / policy
+      documents on a branded domain. Hosting-binding signal only.
+
+- name: NuData Security
+  slug: nudata
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: nudatasecurity.com
+    reference: https://nudatasecurity.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a NuData Security (Mastercard)
+      endpoint. Suggests the org integrates NuData behavioral-
+      biometrics / fraud-prevention. Hosting-binding signal only.
+
 - name: Auth0 (Okta)
   slug: auth0
   category: Identity

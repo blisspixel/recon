@@ -287,6 +287,16 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "rocketlane",
         "bettermode",
         "impartner",
+        # v1.9.84: second cname_target discovery batch (intranet, data-
+        # tokenization proxy, compliance automation, user-research, employee
+        # handbook, fraud biometrics). Conservative Business-Apps panel bucket.
+        "lumapps",
+        "vgs",
+        "securitypal",
+        "greatquestion",
+        "heymarvin",
+        "airmason",
+        "nudata",
     }
 )
 
