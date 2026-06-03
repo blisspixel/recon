@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.78] - 2026-06-03
+
+### Cache-lifecycle stateful machine (Track B, item B2)
+
+A new `tests/test_cache_stateful.py` adds a Hypothesis `RuleBasedStateMachine`
+that drives arbitrary sequences of cache operations (write, write-with-unknown-
+future-fields, corrupt, stale, clear, clear-all) over a small pool of valid and
+invalid domain keys, and reconciles the on-disk state against a model after
+every step. Test-only change; no production code touched.
+
+The `@invariant` asserts, after each operation, that:
+
+- a domain written with a good payload reads back equal (load-known);
+- a payload carrying extra future fields still reads back equal (ignore-unknown
+  / forward-compat);
+- a corrupt payload reads back as None and never raises (skip-malformed);
+- a TTL-stale entry reads back as None (lazy eviction);
+- invalid / traversal keys never store and always read None (the
+  `_safe_cache_path` containment guard).
+
+This complements the single-operation cache tests (`test_cache_roundtrip`,
+`test_cache_forward_compat`, `test_cache_cli`) by reaching the sequence-level
+interleavings (corrupt-then-rewrite, clear the wrong key, stale after a
+particular order) a single-shot test cannot. The machine isolates each example
+in a temporary `RECON_CONFIG_DIR` and restores the environment on teardown.
+
 ## [1.9.77] - 2026-06-03
 
 ### deal contracts on the boundary validators (Track B, item B1)
