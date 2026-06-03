@@ -2239,7 +2239,647 @@ def _build_explanations(
     return explanations
 
 
-async def _lookup(  # noqa: C901
+def _lookup_validate(
+    domain: str,
+    *,
+    json_output: bool,
+    markdown: bool,
+    chain_mode: bool,
+    compare_file: str | None,
+    show_exposure: bool,
+    show_gaps: bool,
+    chain_depth: int,
+) -> str:
+    """Check the mutually-exclusive flag combinations and validate the domain.
+
+    Returns the validated domain or raises ``typer.Exit`` with EXIT_VALIDATION.
+    """
+    from recon_tool.formatter import render_error
+    from recon_tool.validator import validate_domain
+
+    if chain_mode and compare_file:
+        render_error("--chain and --compare are mutually exclusive")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+    if show_exposure and (chain_mode or compare_file):
+        render_error("--exposure and --chain/--compare are mutually exclusive")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+    if show_gaps and (chain_mode or compare_file):
+        render_error("--gaps and --chain/--compare are mutually exclusive")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+    if sum([json_output, markdown]) > 1:
+        render_error("--json and --md are mutually exclusive")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+    if chain_depth > 1 and not chain_mode:
+        render_error("--depth requires --chain")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    try:
+        return validate_domain(domain)
+    except ValueError as exc:
+        render_error(_fmt_exc(exc))
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+
+async def _resolve_with_spinner(
+    console: Any, validated: str, *, timeout: float, skip_ct: bool, quiet: bool
+) -> tuple[Any, list[Any]]:
+    """Resolve a tenant, showing a status spinner unless output is machine-readable."""
+    from recon_tool.resolver import resolve_tenant
+
+    if quiet:
+        return await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
+    import random
+
+    msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
+    with console.status(msg):
+        return await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
+
+
+async def _resolve_cached(
+    console: Any,
+    validated: str,
+    *,
+    no_cache: bool,
+    cache_ttl: int,
+    timeout: float,
+    skip_ct: bool,
+    quiet: bool,
+) -> Any:
+    """Return a cached TenantInfo if present, else resolve fresh and cache it."""
+    info: Any = None
+    if not no_cache:
+        from recon_tool.cache import cache_get
+
+        cached = cache_get(validated, ttl=cache_ttl)
+        if cached is not None:
+            info = cached
+    if info is None:
+        info, _results = await _resolve_with_spinner(
+            console, validated, timeout=timeout, skip_ct=skip_ct, quiet=quiet
+        )
+        if not no_cache:
+            from recon_tool.cache import cache_put
+
+            cache_put(validated, info)
+    return info
+
+
+async def _lookup_compare(
+    console: Any,
+    validated: str,
+    domain: str,
+    compare_file: str,
+    *,
+    json_output: bool,
+    markdown: bool,
+    timeout: float,
+    skip_ct: bool,
+) -> None:
+    """Resolve and diff against a saved snapshot (`--compare`)."""
+    from pathlib import Path as _Path
+
+    from recon_tool.delta import compute_delta, load_previous
+    from recon_tool.formatter import format_delta_json, render_delta_panel, render_error, render_warning
+    from recon_tool.models import ReconLookupError
+
+    try:
+        previous = load_previous(_Path(compare_file))
+    except (FileNotFoundError, ValueError) as exc:
+        render_error(_fmt_exc(exc))
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    try:
+        info, _results = await _resolve_with_spinner(
+            console, validated, timeout=timeout, skip_ct=skip_ct, quiet=json_output or markdown
+        )
+    except ReconLookupError as exc:
+        render_warning(domain, exc)
+        raise typer.Exit(code=EXIT_NO_DATA) from None
+    except Exception as exc:
+        render_error(_fmt_exc(exc))
+        raise typer.Exit(code=EXIT_INTERNAL) from None
+
+    delta = compute_delta(previous, info)
+    if json_output:
+        typer.echo(format_delta_json(delta))
+    else:
+        console.print(render_delta_panel(delta))
+
+
+async def _lookup_chain(
+    console: Any,
+    validated: str,
+    *,
+    chain_depth: int,
+    skip_ct: bool,
+    json_output: bool,
+    markdown: bool,
+    show_explain: bool,
+) -> None:
+    """Follow related-domain breadcrumbs (`--chain`)."""
+    from recon_tool.chain import chain_resolve
+    from recon_tool.formatter import format_chain_json, render_chain_panel, render_error
+
+    try:
+        if not json_output and not markdown:
+            import random
+
+            msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
+            with console.status(msg):
+                report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct)
+        else:
+            report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct)
+    except Exception as exc:
+        render_error(_fmt_exc(exc))
+        raise typer.Exit(code=EXIT_INTERNAL) from None
+
+    if json_output:
+        chain_dict = json.loads(format_chain_json(report))
+        if show_explain:
+            from recon_tool.formatter import format_explanations_list
+
+            for i, domain_entry in enumerate(chain_dict.get("domains", [])):
+                if i < len(report.results):
+                    chain_info = report.results[i].info
+                    explanations = _build_explanations(chain_info, [])
+                    domain_entry["explanations"] = format_explanations_list(explanations)
+                    if chain_info.merge_conflicts and chain_info.merge_conflicts.has_conflicts:
+                        from recon_tool.models import serialize_conflicts
+
+                        domain_entry["conflicts"] = serialize_conflicts(chain_info.merge_conflicts)
+        typer.echo(json.dumps(chain_dict, indent=2))
+    else:
+        console.print(render_chain_panel(report))
+        if show_explain:
+            from recon_tool.formatter import render_explanations_panel
+
+            for r in report.results:
+                explanations = _build_explanations(r.info, [])
+                if explanations:
+                    console.print(render_explanations_panel(explanations))
+
+
+async def _lookup_exposure(
+    console: Any,
+    validated: str,
+    domain: str,
+    *,
+    no_cache: bool,
+    cache_ttl: int,
+    json_output: bool,
+    markdown: bool,
+    timeout: float,
+    skip_ct: bool,
+) -> None:
+    """Resolve (cache-aware) and render the exposure score (`--exposure`)."""
+    from recon_tool.exposure import assess_exposure_from_info
+    from recon_tool.formatter import format_exposure_json, render_error, render_exposure_panel, render_warning
+    from recon_tool.models import ReconLookupError
+
+    try:
+        info_exp = await _resolve_cached(
+            console,
+            validated,
+            no_cache=no_cache,
+            cache_ttl=cache_ttl,
+            timeout=timeout,
+            skip_ct=skip_ct,
+            quiet=json_output or markdown,
+        )
+        assessment = assess_exposure_from_info(info_exp)
+        if json_output:
+            typer.echo(format_exposure_json(assessment))
+        else:
+            console.print(render_exposure_panel(assessment))
+    except ReconLookupError as exc:
+        render_warning(domain, exc)
+        raise typer.Exit(code=EXIT_NO_DATA) from None
+    except Exception as exc:
+        render_error(_fmt_exc(exc))
+        raise typer.Exit(code=EXIT_INTERNAL) from None
+
+
+async def _lookup_gaps(
+    console: Any,
+    validated: str,
+    domain: str,
+    *,
+    no_cache: bool,
+    cache_ttl: int,
+    json_output: bool,
+    markdown: bool,
+    timeout: float,
+    skip_ct: bool,
+) -> None:
+    """Resolve (cache-aware) and render the detection-gap report (`--gaps`)."""
+    from recon_tool.exposure import find_gaps_from_info
+    from recon_tool.formatter import format_gaps_json, render_error, render_gaps_panel, render_warning
+    from recon_tool.models import ReconLookupError
+
+    try:
+        info_gaps = await _resolve_cached(
+            console,
+            validated,
+            no_cache=no_cache,
+            cache_ttl=cache_ttl,
+            timeout=timeout,
+            skip_ct=skip_ct,
+            quiet=json_output or markdown,
+        )
+        report = find_gaps_from_info(info_gaps)
+        if json_output:
+            typer.echo(format_gaps_json(report))
+        else:
+            console.print(render_gaps_panel(report))
+    except ReconLookupError as exc:
+        render_warning(domain, exc)
+        raise typer.Exit(code=EXIT_NO_DATA) from None
+    except Exception as exc:
+        render_error(_fmt_exc(exc))
+        raise typer.Exit(code=EXIT_INTERNAL) from None
+
+
+def _lookup_apply_fusion(info: Any) -> Any:
+    """Recompute slug posteriors and the Bayesian network marginals onto ``info``.
+
+    Purely deterministic over the existing ``TenantInfo`` (no network calls), so
+    it runs on both cache hits and misses when ``--fusion`` / ``--explain-dag``
+    is set. ``--explain-dag`` implies ``--fusion`` because the DAG renderer needs
+    the posteriors present.
+    """
+    from dataclasses import replace
+
+    from recon_tool.bayesian import infer_from_tenant_info
+    from recon_tool.fusion import compute_slug_posteriors
+    from recon_tool.models import NodeConflict, NodeEvidence, PosteriorObservation
+
+    bayesian_result = infer_from_tenant_info(info)
+    bayesian_observations = tuple(
+        PosteriorObservation(
+            name=p.name,
+            description=p.description,
+            posterior=p.posterior,
+            interval_low=p.interval_low,
+            interval_high=p.interval_high,
+            evidence_used=p.evidence_used,
+            n_eff=p.n_eff,
+            sparse=p.sparse,
+            conflict_provenance=tuple(
+                NodeConflict(field=c.field, sources=c.sources, magnitude=c.magnitude)
+                for c in p.conflict_provenance
+            ),
+            evidence_ranked=tuple(
+                NodeEvidence(
+                    kind=e.kind,
+                    name=e.name,
+                    llr=e.llr,
+                    influence_pct=e.influence_pct,
+                )
+                for e in p.evidence_ranked
+            ),
+        )
+        for p in bayesian_result.posteriors
+    )
+    return replace(
+        info,
+        slug_confidences=compute_slug_posteriors(info.evidence),
+        posterior_observations=bayesian_observations,
+    )
+
+
+async def _lookup_resolve_standard(
+    console: Any,
+    validated: str,
+    *,
+    json_output: bool,
+    markdown: bool,
+    fusion: bool,
+    explain_dag: bool,
+    no_cache: bool,
+    cache_ttl: int,
+    timeout: float,
+    skip_ct: bool,
+) -> tuple[Any, list[Any]]:
+    """Cache read, resolve on miss, apply fusion, write back. Returns (info, results)."""
+    info: Any = None
+    results: list[Any] = []
+    if not no_cache:
+        from recon_tool.cache import cache_get
+
+        cached = cache_get(validated, ttl=cache_ttl)
+        if cached is not None:
+            info = cached
+
+    cache_miss = info is None
+    if cache_miss:
+        info, results = await _resolve_with_spinner(
+            console, validated, timeout=timeout, skip_ct=skip_ct, quiet=json_output or markdown
+        )
+
+    if fusion or explain_dag:
+        info = _lookup_apply_fusion(info)
+
+    # Cache hits don't write back: the entry hasn't changed except for fusion
+    # output, which is recomputed on read anyway.
+    if cache_miss and not no_cache:
+        from recon_tool.cache import cache_put
+
+        cache_put(validated, info)
+    return info, results
+
+
+def _lookup_compute_observations(info: Any, profile_name: str | None, show_posture: bool) -> tuple[Any, ...]:
+    """Resolve the requested posture profile and compute posture observations."""
+    from recon_tool.formatter import render_error
+
+    profile = None
+    if profile_name:
+        from recon_tool.profiles import load_profile
+
+        profile = load_profile(profile_name)
+        if profile is None:
+            from recon_tool.profiles import list_profiles
+
+            names = ", ".join(p.name for p in list_profiles())
+            render_error(f"Unknown profile {profile_name!r}. Available profiles: {names or '(none)'}")
+            raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    observations: tuple[Any, ...] = ()
+    if show_posture:
+        from recon_tool.posture import analyze_posture
+        from recon_tool.profiles import apply_profile, compute_baseline_anomalies
+
+        raw_observations = analyze_posture(info)
+        # v1.8: append vertical-baseline anomalies before profile reweighting so
+        # profile boosts apply uniformly. Empty tuple when no profile or when the
+        # profile has no expectations.
+        anomalies = compute_baseline_anomalies(
+            profile,
+            info.slugs,
+            tuple(cm.motif_name for cm in info.chain_motifs),
+        )
+        combined_obs = tuple(raw_observations) + anomalies
+        observations = apply_profile(combined_obs, profile)
+    return observations
+
+
+def _lookup_emit_explain_dag(validated: str, info: Any, explain_dag_format: str) -> None:
+    """Render the Bayesian evidence DAG in the requested format (`--explain-dag`)."""
+    from recon_tool.bayesian import infer_from_tenant_info, load_network
+    from recon_tool.bayesian_dag import render_dag_dot, render_dag_mermaid, render_dag_text
+    from recon_tool.formatter import render_error
+
+    network = load_network()
+    inference = infer_from_tenant_info(info, network=network)
+    fmt = (explain_dag_format or "text").lower()
+    if fmt == "dot":
+        typer.echo(render_dag_dot(network, inference, domain=validated))
+    elif fmt == "mermaid":
+        typer.echo(render_dag_mermaid(network, inference, domain=validated))
+    elif fmt == "text":
+        typer.echo(render_dag_text(network, inference, domain=validated))
+    else:
+        render_error(f"--explain-dag-format must be 'text', 'dot', or 'mermaid', got {explain_dag_format!r}")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+
+def _lookup_emit_json(
+    info: Any,
+    results: list[Any],
+    observations: tuple[Any, ...],
+    *,
+    show_posture: bool,
+    show_explain: bool,
+    include_unclassified: bool,
+) -> None:
+    """Emit the tenant dict as JSON, with optional posture and explanation blocks."""
+    from recon_tool.formatter import format_posture_observations, format_tenant_dict
+
+    tenant_dict = format_tenant_dict(info, include_unclassified=include_unclassified)
+    if show_posture:
+        tenant_dict["posture"] = format_posture_observations(observations)
+    if show_explain:
+        from recon_tool.explanation import build_explanation_dag
+        from recon_tool.formatter import format_explanations_list
+        from recon_tool.models import serialize_conflicts
+
+        explanations = _build_explanations(info, results)
+        tenant_dict["explanations"] = format_explanations_list(explanations)
+        # v0.9.3: structured provenance DAG for programmatic consumers. Lives
+        # alongside the flat list; both are emitted so existing tooling doesn't
+        # break.
+        tenant_dict["explanation_dag"] = build_explanation_dag(explanations, info.evidence)
+        if info.merge_conflicts and info.merge_conflicts.has_conflicts:
+            tenant_dict["conflicts"] = serialize_conflicts(info.merge_conflicts)
+    typer.echo(json.dumps(tenant_dict, indent=2))
+
+
+def _lookup_emit_markdown(
+    info: Any,
+    results: list[Any],
+    observations: tuple[Any, ...],
+    *,
+    show_posture: bool,
+    show_explain: bool,
+) -> None:
+    """Emit the tenant report as Markdown, with optional posture and explanations."""
+    from recon_tool.formatter import format_tenant_markdown
+
+    md = format_tenant_markdown(info)
+    if show_posture and observations:
+        md += "\n## Posture Analysis\n\n"
+        for obs in observations:
+            indicator = {"high": "●", "medium": "◐", "low": "○"}.get(obs.salience, "○")
+            md += f"- {indicator} **[{obs.category}]** {obs.statement}\n"
+        md += "\n"
+    if show_explain:
+        from recon_tool.formatter import format_explanations_markdown
+
+        explanations = _build_explanations(info, results)
+        md += "\n" + format_explanations_markdown(explanations)
+    typer.echo(md)
+
+
+def _synthetic_source_results(info: Any) -> list[Any]:
+    """Reconstruct minimal SourceResults from a cached TenantInfo.
+
+    On a cache hit the raw SourceResult list isn't available (the cache stores
+    TenantInfo, not source results), so the `--explain` status panel rebuilds
+    what it can from ``info.sources`` (successes) and ``info.degraded_sources``
+    (failures).
+    """
+    from recon_tool.models import SourceResult
+
+    _m365_sources = {"oidc_discovery", "user_realm", "dns_records"}
+    synthetic: list[SourceResult] = []
+    for src_name in info.sources:
+        synthetic.append(
+            SourceResult(
+                source_name=src_name,
+                tenant_id=info.tenant_id if src_name == "oidc_discovery" else None,
+                display_name=info.display_name if src_name == "user_realm" else None,
+                auth_type=info.auth_type if src_name == "user_realm" else None,
+                m365_detected=bool(info.tenant_id) and src_name in _m365_sources,
+                dmarc_policy=info.dmarc_policy if src_name == "dns_records" else None,
+            )
+        )
+    for deg in info.degraded_sources:
+        synthetic.append(
+            SourceResult(
+                source_name=deg,
+                error="unavailable during original lookup",
+            )
+        )
+    return synthetic
+
+
+def _lookup_emit_panel(
+    console: Any,
+    info: Any,
+    results: list[Any],
+    observations: tuple[Any, ...],
+    *,
+    show_services: bool,
+    show_domains: bool,
+    verbose: bool,
+    show_explain: bool,
+    show_sources: bool,
+    show_posture: bool,
+    confidence_mode: str,
+) -> None:
+    """Render the default human-readable panel, plus optional sources/posture/explain."""
+    from recon_tool.formatter import render_sources_detail, render_tenant_panel
+
+    console.print(
+        render_tenant_panel(
+            info,
+            show_services=show_services,
+            show_domains=show_domains,
+            verbose=verbose,
+            explain=show_explain,
+            confidence_mode=confidence_mode,
+        )
+    )
+
+    if show_sources:
+        console.print(render_sources_detail(results))
+
+    # Posture panel after main output
+    if show_posture and observations:
+        from recon_tool.formatter import render_posture_panel
+
+        posture_panel = render_posture_panel(observations)
+        if posture_panel:
+            console.print(posture_panel)
+
+    # Explanations panel after posture
+    if show_explain:
+        from recon_tool.formatter import render_explanations_panel, render_source_status_panel
+
+        # U1 (v0.9.2): always render per-source status under --explain so users
+        # can see which sources succeeded, which failed, and why. Previously this
+        # was only available via --verbose.
+        status_results: list[Any] = results
+        if not status_results and info is not None:
+            status_results = _synthetic_source_results(info)
+
+        status_panel = render_source_status_panel(status_results)
+        if status_panel:
+            console.print(status_panel)
+
+        explanations = _build_explanations(info, results)
+        if explanations:
+            console.print(render_explanations_panel(explanations))
+
+
+async def _lookup_standard(
+    console: Any,
+    validated: str,
+    domain: str,
+    *,
+    json_output: bool,
+    markdown: bool,
+    verbose: bool,
+    show_services: bool,
+    show_domains: bool,
+    show_sources: bool,
+    show_posture: bool,
+    profile_name: str | None,
+    confidence_mode: str,
+    fusion: bool,
+    explain_dag: bool,
+    explain_dag_format: str,
+    include_unclassified: bool,
+    show_explain: bool,
+    no_cache: bool,
+    cache_ttl: int,
+    timeout: float,
+    skip_ct: bool,
+) -> None:
+    """The default lookup path: resolve, fuse, then emit DAG / JSON / Markdown / panel."""
+    from recon_tool.formatter import render_error, render_verbose_sources, render_warning
+    from recon_tool.models import ReconLookupError
+
+    try:
+        info, results = await _lookup_resolve_standard(
+            console,
+            validated,
+            json_output=json_output,
+            markdown=markdown,
+            fusion=fusion,
+            explain_dag=explain_dag,
+            no_cache=no_cache,
+            cache_ttl=cache_ttl,
+            timeout=timeout,
+            skip_ct=skip_ct,
+        )
+
+        if verbose:
+            render_verbose_sources(results)
+
+        observations = _lookup_compute_observations(info, profile_name, show_posture)
+
+        if explain_dag:
+            _lookup_emit_explain_dag(validated, info, explain_dag_format)
+            return
+        if json_output:
+            _lookup_emit_json(
+                info,
+                results,
+                observations,
+                show_posture=show_posture,
+                show_explain=show_explain,
+                include_unclassified=include_unclassified,
+            )
+            return
+        if markdown:
+            _lookup_emit_markdown(
+                info, results, observations, show_posture=show_posture, show_explain=show_explain
+            )
+            return
+
+        _lookup_emit_panel(
+            console,
+            info,
+            results,
+            observations,
+            show_services=show_services,
+            show_domains=show_domains,
+            verbose=verbose,
+            show_explain=show_explain,
+            show_sources=show_sources,
+            show_posture=show_posture,
+            confidence_mode=confidence_mode,
+        )
+    except ReconLookupError as exc:
+        render_warning(domain, exc)
+        raise typer.Exit(code=EXIT_NO_DATA) from None
+    except Exception as exc:
+        render_error(_fmt_exc(exc))
+        raise typer.Exit(code=EXIT_INTERNAL) from None
+
+
+async def _lookup(
     domain: str,
     json_output: bool,
     markdown: bool,
@@ -2266,24 +2906,12 @@ async def _lookup(  # noqa: C901
     include_unclassified: bool = False,
     skip_ct: bool = False,
 ) -> None:
-    """Async lookup implementation."""
-    # Lazy imports: formatter, resolver, validator are imported here (not at module
-    # level) to keep CLI startup fast. Typer parses args before any command runs,
-    # so top-level imports of heavy modules (httpx, dns, yaml) would slow down
-    # even `recon --help`. The doctor and batch functions do the same.
-    from recon_tool.formatter import (
-        format_tenant_dict,
-        format_tenant_markdown,
-        render_error,
-        render_sources_detail,
-        render_tenant_panel,
-        render_verbose_sources,
-        render_warning,
-    )
-    from recon_tool.models import ReconLookupError
-    from recon_tool.resolver import resolve_tenant
-    from recon_tool.validator import validate_domain
+    """Async lookup implementation.
 
+    A thin dispatcher: normalize the output flags, validate the domain and the
+    mutually-exclusive flag combinations, then hand off to the mode helper for
+    compare / chain / exposure / gaps, or to the standard panel path.
+    """
     console = get_console()
 
     if full:
@@ -2293,460 +2921,98 @@ async def _lookup(  # noqa: C901
         show_posture = True
 
     # ``--profile`` is a no-op unless posture output is shown. If the user
-    # specified a profile, they want to see the profile-filtered posture
-    # observations — turn on posture automatically rather than silently
-    # dropping the flag.
+    # specified a profile, they want the profile-filtered posture observations,
+    # so turn on posture automatically rather than silently dropping the flag.
     if profile_name and not show_posture:
         show_posture = True
 
-    # Mutual exclusion: --chain and --compare cannot be used together
-    if chain_mode and compare_file:
-        render_error("--chain and --compare are mutually exclusive")
-        raise typer.Exit(code=EXIT_VALIDATION) from None
+    validated = _lookup_validate(
+        domain,
+        json_output=json_output,
+        markdown=markdown,
+        chain_mode=chain_mode,
+        compare_file=compare_file,
+        show_exposure=show_exposure,
+        show_gaps=show_gaps,
+        chain_depth=chain_depth,
+    )
 
-    # Mutual exclusion: --exposure and --gaps are mutually exclusive with --chain and --compare
-    if show_exposure and (chain_mode or compare_file):
-        render_error("--exposure and --chain/--compare are mutually exclusive")
-        raise typer.Exit(code=EXIT_VALIDATION) from None
-
-    if show_gaps and (chain_mode or compare_file):
-        render_error("--gaps and --chain/--compare are mutually exclusive")
-        raise typer.Exit(code=EXIT_VALIDATION) from None
-
-    # Mutual exclusion: only one output format allowed
-    if sum([json_output, markdown]) > 1:
-        render_error("--json and --md are mutually exclusive")
-        raise typer.Exit(code=EXIT_VALIDATION) from None
-
-    # --depth > 1 requires --chain
-    if chain_depth > 1 and not chain_mode:
-        render_error("--depth requires --chain")
-        raise typer.Exit(code=EXIT_VALIDATION) from None
-
-    try:
-        validated = validate_domain(domain)
-    except ValueError as exc:
-        render_error(_fmt_exc(exc))
-        raise typer.Exit(code=EXIT_VALIDATION) from None
-
-    # ── Compare mode ─────────────────────────────────────────────────
     if compare_file:
-        from pathlib import Path
-
-        from recon_tool.delta import compute_delta, load_previous
-        from recon_tool.formatter import format_delta_json, render_delta_panel
-
-        try:
-            previous = load_previous(Path(compare_file))
-        except (FileNotFoundError, ValueError) as exc:
-            render_error(_fmt_exc(exc))
-            raise typer.Exit(code=EXIT_VALIDATION) from None
-
-        try:
-            if not json_output and not markdown:
-                import random
-
-                msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
-                with console.status(msg):
-                    info, results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
-            else:
-                info, results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
-        except ReconLookupError as exc:
-            render_warning(domain, exc)
-            raise typer.Exit(code=EXIT_NO_DATA) from None
-        except Exception as exc:
-            render_error(_fmt_exc(exc))
-            raise typer.Exit(code=EXIT_INTERNAL) from None
-
-        delta = compute_delta(previous, info)
-
-        if json_output:
-            typer.echo(format_delta_json(delta))
-        else:
-            console.print(render_delta_panel(delta))
-        return
-
-    # ── Chain mode ───────────────────────────────────────────────────
-    if chain_mode:
-        from recon_tool.chain import chain_resolve
-        from recon_tool.formatter import format_chain_json, render_chain_panel
-
-        try:
-            if not json_output and not markdown:
-                import random
-
-                msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
-                with console.status(msg):
-                    report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct)
-            else:
-                report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct)
-        except Exception as exc:
-            render_error(_fmt_exc(exc))
-            raise typer.Exit(code=EXIT_INTERNAL) from None
-
-        if json_output:
-            chain_dict = json.loads(format_chain_json(report))
-            if show_explain:
-                from recon_tool.formatter import format_explanations_list
-
-                for i, domain_entry in enumerate(chain_dict.get("domains", [])):
-                    if i < len(report.results):
-                        chain_info = report.results[i].info
-                        explanations = _build_explanations(chain_info, [])
-                        domain_entry["explanations"] = format_explanations_list(explanations)
-                        if chain_info.merge_conflicts and chain_info.merge_conflicts.has_conflicts:
-                            from recon_tool.models import serialize_conflicts
-
-                            domain_entry["conflicts"] = serialize_conflicts(chain_info.merge_conflicts)
-            typer.echo(json.dumps(chain_dict, indent=2))
-        else:
-            console.print(render_chain_panel(report))
-            if show_explain:
-                from recon_tool.formatter import render_explanations_panel
-
-                for r in report.results:
-                    explanations = _build_explanations(r.info, [])
-                    if explanations:
-                        console.print(render_explanations_panel(explanations))
-        return
-
-    # ── Exposure mode ────────────────────────────────────────────────
-    if show_exposure:
-        from recon_tool.exposure import assess_exposure_from_info
-        from recon_tool.formatter import format_exposure_json, render_exposure_panel
-
-        try:
-            info_exp: Any = None
-            if not no_cache:
-                from recon_tool.cache import cache_get
-
-                cached = cache_get(validated, ttl=cache_ttl)
-                if cached is not None:
-                    info_exp = cached
-
-            if info_exp is None:
-                if not json_output and not markdown:
-                    import random
-
-                    msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
-                    with console.status(msg):
-                        info_exp, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
-                else:
-                    info_exp, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
-
-                if not no_cache:
-                    from recon_tool.cache import cache_put
-
-                    cache_put(validated, info_exp)
-
-            assessment = assess_exposure_from_info(info_exp)
-
-            if json_output:
-                typer.echo(format_exposure_json(assessment))
-            else:
-                console.print(render_exposure_panel(assessment))
-        except ReconLookupError as exc:
-            render_warning(domain, exc)
-            raise typer.Exit(code=EXIT_NO_DATA) from None
-        except Exception as exc:
-            render_error(_fmt_exc(exc))
-            raise typer.Exit(code=EXIT_INTERNAL) from None
-        return
-
-    # ── Gaps mode ────────────────────────────────────────────────────
-    if show_gaps:
-        from recon_tool.exposure import find_gaps_from_info
-        from recon_tool.formatter import format_gaps_json, render_gaps_panel
-
-        try:
-            info_gaps: Any = None
-            if not no_cache:
-                from recon_tool.cache import cache_get
-
-                cached = cache_get(validated, ttl=cache_ttl)
-                if cached is not None:
-                    info_gaps = cached
-
-            if info_gaps is None:
-                if not json_output and not markdown:
-                    import random
-
-                    msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
-                    with console.status(msg):
-                        info_gaps, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
-                else:
-                    info_gaps, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
-
-                if not no_cache:
-                    from recon_tool.cache import cache_put
-
-                    cache_put(validated, info_gaps)
-
-            report = find_gaps_from_info(info_gaps)
-
-            if json_output:
-                typer.echo(format_gaps_json(report))
-            else:
-                console.print(render_gaps_panel(report))
-        except ReconLookupError as exc:
-            render_warning(domain, exc)
-            raise typer.Exit(code=EXIT_NO_DATA) from None
-        except Exception as exc:
-            render_error(_fmt_exc(exc))
-            raise typer.Exit(code=EXIT_INTERNAL) from None
-        return
-
-    # ── Standard lookup ──────────────────────────────────────────────
-    try:
-        # Check cache before hitting upstream
-        info: Any = None
-        results: list[Any] = []
-        if not no_cache:
-            from recon_tool.cache import cache_get
-
-            cached = cache_get(validated, ttl=cache_ttl)
-            if cached is not None:
-                info = cached
-
-        if info is None:
-            if not json_output and not markdown:
-                import random
-
-                msg = random.choice(_STATUS_MESSAGES)  # noqa: S311 — not security-sensitive
-                with console.status(msg):
-                    info, results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
-            else:
-                info, results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
-            cache_miss = True
-        else:
-            cache_miss = False
-
-        # v0.11 + v1.9: apply Bayesian fusion when opted in. Runs on
-        # both cache hits and cache misses because fusion is purely
-        # deterministic over the existing ``TenantInfo`` and we want
-        # ``--fusion`` / ``--explain-dag`` to produce posteriors
-        # whether or not we just paid for a fresh resolve. Costs nothing
-        # — no network calls — so the recompute is cheap.
-        #   * v0.11 ``slug_confidences``: per-slug Beta posteriors
-        #     from raw evidence weights.
-        #   * v1.9 ``posterior_observations``: marginal posteriors
-        #     over the high-level claims in
-        #     ``recon_tool/data/bayesian_network.yaml``.
-        # ``--explain-dag`` implies ``--fusion``: rendering the DAG
-        # requires posteriors to be present.
-        if fusion or explain_dag:
-            from dataclasses import replace
-
-            from recon_tool.bayesian import infer_from_tenant_info
-            from recon_tool.fusion import compute_slug_posteriors
-            from recon_tool.models import NodeConflict, NodeEvidence, PosteriorObservation
-
-            bayesian_result = infer_from_tenant_info(info)
-            bayesian_observations = tuple(
-                PosteriorObservation(
-                    name=p.name,
-                    description=p.description,
-                    posterior=p.posterior,
-                    interval_low=p.interval_low,
-                    interval_high=p.interval_high,
-                    evidence_used=p.evidence_used,
-                    n_eff=p.n_eff,
-                    sparse=p.sparse,
-                    conflict_provenance=tuple(
-                        NodeConflict(field=c.field, sources=c.sources, magnitude=c.magnitude)
-                        for c in p.conflict_provenance
-                    ),
-                    evidence_ranked=tuple(
-                        NodeEvidence(
-                            kind=e.kind,
-                            name=e.name,
-                            llr=e.llr,
-                            influence_pct=e.influence_pct,
-                        )
-                        for e in p.evidence_ranked
-                    ),
-                )
-                for p in bayesian_result.posteriors
-            )
-            info = replace(
-                info,
-                slug_confidences=compute_slug_posteriors(info.evidence),
-                posterior_observations=bayesian_observations,
-            )
-
-        # Write to cache after fresh lookup. (Cache hits don't write
-        # back — the cache entry hasn't changed except for fusion
-        # output, which we recompute on read anyway.)
-        if cache_miss and not no_cache:
-            from recon_tool.cache import cache_put
-
-            cache_put(validated, info)
-
-        if verbose:
-            render_verbose_sources(results)
-
-        # Compute posture observations if requested
-        observations: tuple[Any, ...] = ()
-        profile = None
-        if profile_name:
-            from recon_tool.profiles import load_profile
-
-            profile = load_profile(profile_name)
-            if profile is None:
-                from recon_tool.profiles import list_profiles
-
-                names = ", ".join(p.name for p in list_profiles())
-                render_error(f"Unknown profile {profile_name!r}. Available profiles: {names or '(none)'}")
-                raise typer.Exit(code=EXIT_VALIDATION) from None
-        if show_posture:
-            from recon_tool.posture import analyze_posture
-            from recon_tool.profiles import apply_profile, compute_baseline_anomalies
-
-            raw_observations = analyze_posture(info)
-            # v1.8: append vertical-baseline anomalies before profile
-            # reweighting so profile boosts apply uniformly. Empty tuple
-            # when no profile or when the profile has no expectations.
-            anomalies = compute_baseline_anomalies(
-                profile,
-                info.slugs,
-                tuple(cm.motif_name for cm in info.chain_motifs),
-            )
-            combined_obs = tuple(raw_observations) + anomalies
-            observations = apply_profile(combined_obs, profile)
-
-        if explain_dag:
-            from recon_tool.bayesian import infer_from_tenant_info, load_network
-            from recon_tool.bayesian_dag import render_dag_dot, render_dag_mermaid, render_dag_text
-
-            network = load_network()
-            inference = infer_from_tenant_info(info, network=network)
-            fmt = (explain_dag_format or "text").lower()
-            if fmt == "dot":
-                typer.echo(render_dag_dot(network, inference, domain=validated))
-            elif fmt == "mermaid":
-                typer.echo(render_dag_mermaid(network, inference, domain=validated))
-            elif fmt == "text":
-                typer.echo(render_dag_text(network, inference, domain=validated))
-            else:
-                render_error(f"--explain-dag-format must be 'text', 'dot', or 'mermaid', got {explain_dag_format!r}")
-                raise typer.Exit(code=EXIT_VALIDATION) from None
-            return
-
-        if json_output:
-            from recon_tool.formatter import format_posture_observations
-
-            tenant_dict = format_tenant_dict(info, include_unclassified=include_unclassified)
-            if show_posture:
-                tenant_dict["posture"] = format_posture_observations(observations)
-            if show_explain:
-                from recon_tool.explanation import build_explanation_dag
-                from recon_tool.formatter import format_explanations_list
-                from recon_tool.models import serialize_conflicts
-
-                explanations = _build_explanations(info, results)
-                tenant_dict["explanations"] = format_explanations_list(explanations)
-                # v0.9.3: structured provenance DAG for programmatic
-                # consumers. Lives alongside the flat list — both are
-                # emitted so existing tooling doesn't break.
-                tenant_dict["explanation_dag"] = build_explanation_dag(explanations, info.evidence)
-                if info.merge_conflicts and info.merge_conflicts.has_conflicts:
-                    tenant_dict["conflicts"] = serialize_conflicts(info.merge_conflicts)
-            typer.echo(json.dumps(tenant_dict, indent=2))
-            return
-
-        if markdown:
-            md = format_tenant_markdown(info)
-            if show_posture and observations:
-                md += "\n## Posture Analysis\n\n"
-                for obs in observations:
-                    indicator = {"high": "●", "medium": "◐", "low": "○"}.get(obs.salience, "○")
-                    md += f"- {indicator} **[{obs.category}]** {obs.statement}\n"
-                md += "\n"
-            if show_explain:
-                from recon_tool.formatter import format_explanations_markdown
-
-                explanations = _build_explanations(info, results)
-                md += "\n" + format_explanations_markdown(explanations)
-            typer.echo(md)
-            return
-
-        console.print(
-            render_tenant_panel(
-                info,
-                show_services=show_services,
-                show_domains=show_domains,
-                verbose=verbose,
-                explain=show_explain,
-                confidence_mode=confidence_mode,
-            )
+        await _lookup_compare(
+            console,
+            validated,
+            domain,
+            compare_file,
+            json_output=json_output,
+            markdown=markdown,
+            timeout=timeout,
+            skip_ct=skip_ct,
         )
+        return
 
-        if show_sources:
-            console.print(render_sources_detail(results))
+    if chain_mode:
+        await _lookup_chain(
+            console,
+            validated,
+            chain_depth=chain_depth,
+            skip_ct=skip_ct,
+            json_output=json_output,
+            markdown=markdown,
+            show_explain=show_explain,
+        )
+        return
 
-        # Posture panel after main output
-        if show_posture and observations:
-            from recon_tool.formatter import render_posture_panel
+    if show_exposure:
+        await _lookup_exposure(
+            console,
+            validated,
+            domain,
+            no_cache=no_cache,
+            cache_ttl=cache_ttl,
+            json_output=json_output,
+            markdown=markdown,
+            timeout=timeout,
+            skip_ct=skip_ct,
+        )
+        return
 
-            posture_panel = render_posture_panel(observations)
-            if posture_panel:
-                console.print(posture_panel)
+    if show_gaps:
+        await _lookup_gaps(
+            console,
+            validated,
+            domain,
+            no_cache=no_cache,
+            cache_ttl=cache_ttl,
+            json_output=json_output,
+            markdown=markdown,
+            timeout=timeout,
+            skip_ct=skip_ct,
+        )
+        return
 
-        # Explanations panel after posture
-        if show_explain:
-            from recon_tool.formatter import (
-                render_explanations_panel,
-                render_source_status_panel,
-            )
-            from recon_tool.models import SourceResult
-
-            # U1 (v0.9.2): always render per-source status under --explain
-            # so users can see which sources succeeded, which failed, and
-            # why. Previously this was only available via --verbose.
-            #
-            # On cache hit, the original SourceResult list isn't available
-            # (cache stores TenantInfo, not raw source results). Reconstruct
-            # minimal SourceResults from info.sources (successes) and
-            # info.degraded_sources (failures) so the panel still renders
-            # something useful for cached lookups.
-            status_results: list[SourceResult] = results
-            if not status_results and info is not None:
-                _m365_sources = {"oidc_discovery", "user_realm", "dns_records"}
-                synthetic: list[SourceResult] = []
-                for src_name in info.sources:
-                    synthetic.append(
-                        SourceResult(
-                            source_name=src_name,
-                            tenant_id=info.tenant_id if src_name == "oidc_discovery" else None,
-                            display_name=info.display_name if src_name == "user_realm" else None,
-                            auth_type=info.auth_type if src_name == "user_realm" else None,
-                            m365_detected=bool(info.tenant_id) and src_name in _m365_sources,
-                            dmarc_policy=info.dmarc_policy if src_name == "dns_records" else None,
-                        )
-                    )
-                for deg in info.degraded_sources:
-                    synthetic.append(
-                        SourceResult(
-                            source_name=deg,
-                            error="unavailable during original lookup",
-                        )
-                    )
-                status_results = synthetic
-
-            status_panel = render_source_status_panel(status_results)
-            if status_panel:
-                console.print(status_panel)
-
-            explanations = _build_explanations(info, results)
-            if explanations:
-                console.print(render_explanations_panel(explanations))
-
-    except ReconLookupError as exc:
-        render_warning(domain, exc)
-        raise typer.Exit(code=EXIT_NO_DATA) from None
-    except Exception as exc:
-        render_error(_fmt_exc(exc))
-        raise typer.Exit(code=EXIT_INTERNAL) from None
+    await _lookup_standard(
+        console,
+        validated,
+        domain,
+        json_output=json_output,
+        markdown=markdown,
+        verbose=verbose,
+        show_services=show_services,
+        show_domains=show_domains,
+        show_sources=show_sources,
+        show_posture=show_posture,
+        profile_name=profile_name,
+        confidence_mode=confidence_mode,
+        fusion=fusion,
+        explain_dag=explain_dag,
+        explain_dag_format=explain_dag_format,
+        include_unclassified=include_unclassified,
+        show_explain=show_explain,
+        no_cache=no_cache,
+        cache_ttl=cache_ttl,
+        timeout=timeout,
+        skip_ct=skip_ct,
+    )
 
 
 async def _discover(

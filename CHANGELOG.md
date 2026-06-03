@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.73] - 2026-06-03
+
+### Complexity decomposition: _lookup (Track A, item A6)
+
+The `_lookup` orchestrator (the largest function in the tree, complexity ~77)
+drops under the C901 cap and loses its `# noqa: C901`. It is now a thin
+dispatcher: normalize the output flags, validate the domain and the
+mutually-exclusive flag combinations via `_lookup_validate`, then hand off to a
+mode helper. Output is held unchanged; the 155 cli-focused tests
+(`test_cli`, `test_cli_coverage`, `test_cli_coverage_extra`, `test_cli_explain`,
+`test_exposure_cli`, `test_chain`, `test_delta_cli`, `test_profiles`,
+`test_strict_mode`, `test_explanation_dag`, `test_fusion_integration`) stay
+green.
+
+- Each mode moves to its own helper: `_lookup_compare`, `_lookup_chain`,
+  `_lookup_exposure`, `_lookup_gaps`, and `_lookup_standard`.
+- The repeated spinner/resolve pattern collapses into `_resolve_with_spinner`
+  (status spinner unless output is machine-readable) and `_resolve_cached`
+  (cache read, resolve on miss, write back), shared by the exposure/gaps paths.
+- The standard path's heavy sub-blocks split out too: `_lookup_resolve_standard`
+  (cache + resolve + fusion + write-back), `_lookup_apply_fusion` (the Bayesian
+  posterior recompute), `_lookup_compute_observations` (posture + profile),
+  `_lookup_emit_explain_dag` / `_lookup_emit_json` / `_lookup_emit_markdown` /
+  `_lookup_emit_panel`, and `_synthetic_source_results` (the cache-hit
+  SourceResult reconstruction for the `--explain` status panel).
+- The lazy-import discipline is preserved: each helper imports its heavy
+  dependencies at call time, and the resolver is still imported from
+  `recon_tool.resolver` so the existing test mocks keep working.
+
+Four `# noqa: C901` markers remain: `_batch`, `merge_results`, and the two
+`server` tools (`lookup_tenant`, `simulate_hardening`).
+
 ## [1.9.72] - 2026-06-03
 
 ### Complexity decomposition: signals_show and _doctor (Track A, the cli leaves)
