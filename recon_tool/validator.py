@@ -3,6 +3,8 @@
 import contextlib
 import re
 
+import deal
+
 __all__ = [
     "UUID_RE",
     "is_safe_dns_name",
@@ -30,6 +32,17 @@ def is_safe_dns_name(name: str) -> bool:
 _MAX_DISPLAY_LEN = 200
 
 
+def _has_no_control_chars(value: str) -> bool:
+    """No C0 (0x00-0x1F), DEL (0x7F), or C1 (0x80-0x9F) control character survives.
+
+    This is the load-bearing security postcondition for ``strip_control_chars``:
+    its output is rendered to terminals and into JSON / markdown / MCP output, so
+    a surviving ESC or newline would be an injection vector.
+    """
+    return all(not (ord(c) < 0x20 or ord(c) == 0x7F or 0x80 <= ord(c) <= 0x9F) for c in value)
+
+
+@deal.post(_has_no_control_chars)  # pyright: ignore[reportUntypedFunctionDecorator]
 def strip_control_chars(value: str, max_len: int = _MAX_DISPLAY_LEN) -> str:
     """Remove control characters from an attacker-derived display string and
     bound its length.
@@ -79,6 +92,17 @@ _SCHEME_RE = re.compile(r"^https?://", re.IGNORECASE)
 _MAX_INPUT_LENGTH = 500
 
 
+def _is_normalized_domain(domain: str) -> bool:
+    """A returned domain is lowercase and matches the domain grammar.
+
+    ``validate_domain`` only returns after ``_DOMAIN_RE`` matches the lowercased,
+    scheme-stripped, punycode-encoded value, so this postcondition holds on every
+    successful return (it does not constrain the ValueError-raising paths).
+    """
+    return domain == domain.lower() and bool(_DOMAIN_RE.match(domain))
+
+
+@deal.post(_is_normalized_domain)  # pyright: ignore[reportUntypedFunctionDecorator]
 def validate_domain(raw_input: str) -> str:
     """Validate and normalize a domain string.
 
