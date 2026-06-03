@@ -15,8 +15,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
-from typing import Any, Literal, TextIO, TypeAlias
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any, Literal, NoReturn, TextIO, TypeAlias
 
 import click
 import typer
@@ -1765,8 +1768,84 @@ def signals_search(
     console.print()
 
 
+def _signal_show_payload(match: Any) -> dict[str, Any]:
+    """Build the JSON payload for `signals show --json`."""
+    return {
+        "name": match.name,
+        "category": match.category,
+        "confidence": match.confidence,
+        "description": match.description,
+        "candidates": list(match.candidates),
+        "min_matches": match.min_matches,
+        "metadata_conditions": [
+            {"field": m.field, "operator": m.operator, "value": m.value} for m in match.metadata
+        ],
+        "contradicts": list(match.contradicts),
+        "requires_signals": list(match.requires_signals),
+        "expected_counterparts": list(match.expected_counterparts),
+        "positive_when_absent": list(match.positive_when_absent),
+        "explain": match.explain,
+    }
+
+
+def _render_signal_not_found(name: str, sigs: Sequence[Any]) -> NoReturn:
+    """Render a not-found error with near-miss suggestions, then exit."""
+    from recon_tool.formatter import render_error
+
+    needle = name.lower()
+    candidates = [s.name for s in sigs if needle in s.name.lower()][:5]
+    render_error(f"No signal named {name!r}.")
+    if candidates:
+        get_console().print(f"  Did you mean: {', '.join(repr(c) for c in candidates)}?")
+    raise typer.Exit(code=EXIT_VALIDATION) from None
+
+
+def _render_signal_section(console: Any, header: str, items: Sequence[str]) -> None:
+    """Print a blank line, a bold header, and one ``- item`` per entry.
+
+    A no-op when ``items`` is empty, so callers stay branch-free.
+    """
+    if not items:
+        return
+    console.print()
+    console.print(f"  [bold]{header}[/bold]")
+    for item in items:
+        console.print(f"    - {item}")
+
+
+def _render_signal_detail(match: Any) -> None:
+    """Print the full human-readable definition of a single signal."""
+    console = get_console()
+    console.print()
+    console.print(f"  [bold]{match.name}[/bold]")
+    console.print(f"    Category:    {match.category}")
+    console.print(f"    Confidence:  {match.confidence}")
+    if match.description:
+        console.print(f"    Description: {match.description}")
+    _render_signal_section(
+        console,
+        f"Candidate slugs ({len(match.candidates)}, min_matches={match.min_matches})",
+        list(match.candidates),
+    )
+    if match.metadata:
+        console.print()
+        console.print("  [bold]Metadata conditions[/bold]")
+        for m in match.metadata:
+            console.print(f"    - {m.field} {m.operator} {m.value!r}")
+    _render_signal_section(console, "Contradicts", list(match.contradicts))
+    _render_signal_section(console, "Requires other signals", list(match.requires_signals))
+    _render_signal_section(console, "Expected counterparts (absence engine)", list(match.expected_counterparts))
+    _render_signal_section(
+        console, "Positive-when-absent (hedged hardening observation)", list(match.positive_when_absent)
+    )
+    if match.explain:
+        console.print()
+        console.print(f"  [bold]Explain[/bold] {match.explain}")
+    console.print()
+
+
 @signals_app.command("show")
-def signals_show(  # noqa: C901
+def signals_show(
     name: str = typer.Argument(..., help="Signal name (quote if it contains spaces)"),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
 ) -> None:
@@ -1776,76 +1855,13 @@ def signals_show(  # noqa: C901
     sigs = load_signals()
     match = next((s for s in sigs if s.name == name), None)
     if match is None:
-        from recon_tool.formatter import render_error
-
-        needle = name.lower()
-        candidates = [s.name for s in sigs if needle in s.name.lower()][:5]
-        render_error(f"No signal named {name!r}.")
-        if candidates:
-            get_console().print(f"  Did you mean: {', '.join(repr(c) for c in candidates)}?")
-        raise typer.Exit(code=EXIT_VALIDATION) from None
+        _render_signal_not_found(name, sigs)
 
     if json_output:
-        payload = {
-            "name": match.name,
-            "category": match.category,
-            "confidence": match.confidence,
-            "description": match.description,
-            "candidates": list(match.candidates),
-            "min_matches": match.min_matches,
-            "metadata_conditions": [
-                {"field": m.field, "operator": m.operator, "value": m.value} for m in match.metadata
-            ],
-            "contradicts": list(match.contradicts),
-            "requires_signals": list(match.requires_signals),
-            "expected_counterparts": list(match.expected_counterparts),
-            "positive_when_absent": list(match.positive_when_absent),
-            "explain": match.explain,
-        }
-        typer.echo(json.dumps(payload, indent=2))
+        typer.echo(json.dumps(_signal_show_payload(match), indent=2))
         return
 
-    console = get_console()
-    console.print()
-    console.print(f"  [bold]{match.name}[/bold]")
-    console.print(f"    Category:    {match.category}")
-    console.print(f"    Confidence:  {match.confidence}")
-    if match.description:
-        console.print(f"    Description: {match.description}")
-    if match.candidates:
-        console.print()
-        console.print(f"  [bold]Candidate slugs ({len(match.candidates)}, min_matches={match.min_matches})[/bold]")
-        for c in match.candidates:
-            console.print(f"    - {c}")
-    if match.metadata:
-        console.print()
-        console.print("  [bold]Metadata conditions[/bold]")
-        for m in match.metadata:
-            console.print(f"    - {m.field} {m.operator} {m.value!r}")
-    if match.contradicts:
-        console.print()
-        console.print("  [bold]Contradicts[/bold]")
-        for c in match.contradicts:
-            console.print(f"    - {c}")
-    if match.requires_signals:
-        console.print()
-        console.print("  [bold]Requires other signals[/bold]")
-        for r in match.requires_signals:
-            console.print(f"    - {r}")
-    if match.expected_counterparts:
-        console.print()
-        console.print("  [bold]Expected counterparts (absence engine)[/bold]")
-        for c in match.expected_counterparts:
-            console.print(f"    - {c}")
-    if match.positive_when_absent:
-        console.print()
-        console.print("  [bold]Positive-when-absent (hedged hardening observation)[/bold]")
-        for c in match.positive_when_absent:
-            console.print(f"    - {c}")
-    if match.explain:
-        console.print()
-        console.print(f"  [bold]Explain[/bold] {match.explain}")
-    console.print()
+    _render_signal_detail(match)
 
 
 # ── Delta CLI ─────────────────────────────────────────────────────────
@@ -1906,30 +1922,28 @@ def delta(
     asyncio.run(_run())
 
 
-async def _doctor() -> None:  # noqa: C901
-    """Run diagnostic checks."""
-    import dns.exception
-    import dns.resolver
-    import httpx
+def _doctor_print_header(console: Any) -> None:
+    """Print the version line with the schema-stability indicator, plus Python.
 
+    v1.9.11+: the substring "v2.0 stable schema" (vs "pre-v2.0 schema") lets an
+    operator see at a glance whether Bayesian fusion is opt-in (pre-v2.0) or
+    stable per the schema-lock disposition table; the v2.0 quality bar requires
+    that text.
+    """
     from recon_tool import __version__
 
-    console = get_console()
     console.print()
-    # v1.9.11+: print the schema-stability indicator alongside the
-    # version so operators see at a glance whether they are running a
-    # pre-v2.0 build (Bayesian fusion was opt-in/experimental) or the
-    # v2.0+ build (Bayesian fusion is stable per the schema-lock
-    # disposition table). The substring "v2.0 stable schema" is the
-    # text v2.0's quality bar requires; v1.9.x builds print
-    # "pre-v2.0 schema" so the difference is visible.
     schema_label = "v2.0 stable schema" if __version__.startswith("2.") else "pre-v2.0 schema"
     console.print(f"  recon [bold]v{__version__}[/bold] [dim]({schema_label})[/dim]")
     console.print(f"  Python [bold]{sys.version.split()[0]}[/bold]")
     console.print()
 
-    checks: list[DoctorCheck] = []
 
+async def _doctor_identity_checks() -> list[DoctorCheck]:
+    """Probe the Microsoft identity-discovery endpoints (OIDC, GetUserRealm, Autodiscover)."""
+    import httpx
+
+    checks: list[DoctorCheck] = []
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             resp = await client.get("https://login.microsoftonline.com/common/.well-known/openid-configuration")
@@ -1956,10 +1970,17 @@ async def _doctor() -> None:  # noqa: C901
             checks.append(("Autodiscover", "ok", f"HTTP {resp.status_code} (reachable)"))
         except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
             checks.append(("Autodiscover", "fail", _fmt_exc(exc)))
+    return checks
+
+
+def _doctor_dns_check() -> DoctorCheck:
+    """Resolve a known-good TXT record to confirm DNS works."""
+    import dns.exception
+    import dns.resolver
 
     try:
         answers = dns.resolver.resolve("example.com", "TXT")
-        checks.append(("DNS resolution", "ok", f"{len(list(answers))} TXT records"))  # pyright: ignore[reportArgumentType]
+        return ("DNS resolution", "ok", f"{len(list(answers))} TXT records")  # pyright: ignore[reportArgumentType]
     except (
         dns.resolver.NXDOMAIN,
         dns.resolver.NoAnswer,
@@ -1967,88 +1988,97 @@ async def _doctor() -> None:  # noqa: C901
         dns.exception.Timeout,
         OSError,
     ) as exc:
-        checks.append(("DNS resolution", "fail", _fmt_exc(exc)))
+        return ("DNS resolution", "fail", _fmt_exc(exc))
 
-    # Check crt.sh connectivity (certificate transparency)
+
+async def _doctor_ct_check() -> DoctorCheck:
+    """Check crt.sh connectivity (certificate transparency, optional enrichment)."""
+    import httpx
+
     async with httpx.AsyncClient(timeout=8.0) as client:
         try:
             resp = await client.get("https://crt.sh/?q=%.example.com&output=json")
             if resp.status_code == 200:
-                checks.append(("crt.sh (cert transparency)", "ok", "HTTP 200"))
-            else:
-                checks.append(
-                    (
-                        "crt.sh (cert transparency)",
-                        "warn",
-                        f"HTTP {resp.status_code} (optional enrichment degraded)",
-                    )
-                )
+                return ("crt.sh (cert transparency)", "ok", "HTTP 200")
+            return (
+                "crt.sh (cert transparency)",
+                "warn",
+                f"HTTP {resp.status_code} (optional enrichment degraded)",
+            )
         except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
-            checks.append(("crt.sh (cert transparency)", "warn", f"{_fmt_exc(exc)} (optional enrichment degraded)"))
+            return ("crt.sh (cert transparency)", "warn", f"{_fmt_exc(exc)} (optional enrichment degraded)")
 
+
+def _doctor_mcp_check() -> DoctorCheck:
+    """Confirm the MCP server module imports cleanly."""
     try:
         from recon_tool.server import mcp  # noqa: F401  # pyright: ignore[reportUnusedImport]
 
-        checks.append(("MCP server module", "ok", "loaded"))
+        return ("MCP server module", "ok", "loaded")
     except Exception as exc:
-        checks.append(("MCP server module", "fail", _fmt_exc(exc)))
+        return ("MCP server module", "fail", _fmt_exc(exc))
 
-    # Check fingerprint database loading
+
+def _doctor_fingerprint_db_check() -> DoctorCheck:
+    """Confirm the built-in fingerprint database loads."""
     try:
         from recon_tool.fingerprints import load_fingerprints
 
         fps = load_fingerprints()
         if fps:
-            checks.append(("Fingerprint database", "ok", f"{len(fps)} fingerprints loaded"))
-        else:
-            checks.append(("Fingerprint database", "fail", "no fingerprints loaded — detection will not work"))
+            return ("Fingerprint database", "ok", f"{len(fps)} fingerprints loaded")
+        return ("Fingerprint database", "fail", "no fingerprints loaded — detection will not work")
     except Exception as exc:
-        checks.append(("Fingerprint database", "fail", _fmt_exc(exc)))
+        return ("Fingerprint database", "fail", _fmt_exc(exc))
 
-    # Check custom fingerprint path
-    import os
-    from pathlib import Path
 
+def _doctor_custom_path(filename: str) -> Path:
+    """Resolve a custom config file path under RECON_CONFIG_DIR or ~/.recon."""
     custom_dir = os.environ.get("RECON_CONFIG_DIR")
-    custom_path = Path(custom_dir) / "fingerprints.yaml" if custom_dir else Path.home() / ".recon" / "fingerprints.yaml"
-    if custom_path.exists():
-        try:
-            import yaml
+    return Path(custom_dir) / filename if custom_dir else Path.home() / ".recon" / filename
 
-            data = yaml.safe_load(custom_path.read_text(encoding="utf-8"))
-            count = 0
-            if isinstance(data, dict) and "fingerprints" in data:
-                count = len(data["fingerprints"])
-            elif isinstance(data, list):
-                count = len(data)
-            checks.append(("Custom fingerprints", "ok", f"{count} entries in {custom_path}"))
-        except Exception as exc:
-            checks.append(("Custom fingerprints", "fail", _fmt_exc(exc)))
-    else:
-        checks.append(("Custom fingerprints", "ok", f"none ({custom_path} not found)"))
 
-    # Check signal database loading
+def _doctor_custom_fingerprints_check() -> DoctorCheck:
+    """Report on the optional user fingerprints.yaml overlay."""
+    custom_path = _doctor_custom_path("fingerprints.yaml")
+    if not custom_path.exists():
+        return ("Custom fingerprints", "ok", f"none ({custom_path} not found)")
+    try:
+        import yaml
+
+        data = yaml.safe_load(custom_path.read_text(encoding="utf-8"))
+        count = 0
+        if isinstance(data, dict) and "fingerprints" in data:
+            count = len(data["fingerprints"])
+        elif isinstance(data, list):
+            count = len(data)
+        return ("Custom fingerprints", "ok", f"{count} entries in {custom_path}")
+    except Exception as exc:
+        return ("Custom fingerprints", "fail", _fmt_exc(exc))
+
+
+def _doctor_signal_db_check() -> DoctorCheck:
+    """Confirm the built-in signal database loads."""
     try:
         from recon_tool.signals import load_signals
 
         sigs = load_signals()
         if sigs:
-            checks.append(("Signal database", "ok", f"{len(sigs)} signals loaded"))
-        else:
-            checks.append(("Signal database", "fail", "no signals loaded — signal intelligence will not work"))
+            return ("Signal database", "ok", f"{len(sigs)} signals loaded")
+        return ("Signal database", "fail", "no signals loaded — signal intelligence will not work")
     except Exception as exc:
-        checks.append(("Signal database", "fail", _fmt_exc(exc)))
+        return ("Signal database", "fail", _fmt_exc(exc))
 
-    # v1.9.11+: verify the locked-schema top-level fields are still
-    # emitted by ``format_tenant_json``. This is the v2.0 quality bar
-    # asking for the operator to see, at doctor time, that the build's
-    # emitter matches the locked contract. We synthesise a minimal
-    # TenantInfo with the dataclass defaults, render it through the
-    # JSON formatter, and confirm every required top-level field
-    # from ``recon_tool.schema_contract.REQUIRED_TOP_LEVEL_FIELDS``
-    # appears in the output. Drift between this tuple and
-    # ``docs/recon-schema.json#/required`` is caught at PR time by
-    # ``tests/test_json_schema_file.py``.
+
+def _doctor_schema_fields_check() -> DoctorCheck:
+    """Verify the locked-schema top-level fields are still emitted by ``format_tenant_json``.
+
+    v1.9.11+ / v2.0 quality bar: synthesise a minimal TenantInfo, render it
+    through the JSON formatter, and confirm every required top-level field from
+    ``recon_tool.schema_contract.REQUIRED_TOP_LEVEL_FIELDS`` appears. Drift
+    between that tuple and ``docs/recon-schema.json#/required`` is caught at PR
+    time by ``tests/test_json_schema_file.py``.
+    """
     try:
         import json as _json
 
@@ -2066,40 +2096,31 @@ async def _doctor() -> None:  # noqa: C901
         payload = _json.loads(format_tenant_json(sample))
         missing = sorted(set(REQUIRED_TOP_LEVEL_FIELDS) - set(payload.keys()))
         if missing:
-            checks.append(
-                (
-                    "Schema fields",
-                    "fail",
-                    f"{len(missing)} locked field(s) missing from emitter output: {missing}",
-                )
-            )
-        else:
-            checks.append(
-                (
-                    "Schema fields",
-                    "ok",
-                    f"{len(REQUIRED_TOP_LEVEL_FIELDS)} locked top-level fields present",
-                )
-            )
+            return ("Schema fields", "fail", f"{len(missing)} locked field(s) missing from emitter output: {missing}")
+        return ("Schema fields", "ok", f"{len(REQUIRED_TOP_LEVEL_FIELDS)} locked top-level fields present")
     except Exception as exc:
-        checks.append(("Schema fields", "fail", _fmt_exc(exc)))
+        return ("Schema fields", "fail", _fmt_exc(exc))
 
-    # Check custom signals path
-    custom_signals_path = Path(custom_dir) / "signals.yaml" if custom_dir else Path.home() / ".recon" / "signals.yaml"
-    if custom_signals_path.exists():
-        try:
-            import yaml as _yaml
 
-            data = _yaml.safe_load(custom_signals_path.read_text(encoding="utf-8"))
-            count = 0
-            if isinstance(data, dict) and "signals" in data:
-                count = len(data["signals"])
-            checks.append(("Custom signals", "ok", f"{count} entries in {custom_signals_path}"))
-        except Exception as exc:
-            checks.append(("Custom signals", "fail", _fmt_exc(exc)))
-    else:
-        checks.append(("Custom signals", "ok", f"none ({custom_signals_path} not found)"))
+def _doctor_custom_signals_check() -> DoctorCheck:
+    """Report on the optional user signals.yaml overlay."""
+    custom_signals_path = _doctor_custom_path("signals.yaml")
+    if not custom_signals_path.exists():
+        return ("Custom signals", "ok", f"none ({custom_signals_path} not found)")
+    try:
+        import yaml as _yaml
 
+        data = _yaml.safe_load(custom_signals_path.read_text(encoding="utf-8"))
+        count = 0
+        if isinstance(data, dict) and "signals" in data:
+            count = len(data["signals"])
+        return ("Custom signals", "ok", f"{count} entries in {custom_signals_path}")
+    except Exception as exc:
+        return ("Custom signals", "fail", _fmt_exc(exc))
+
+
+def _doctor_render(console: Any, checks: list[DoctorCheck]) -> None:
+    """Print each check row and the closing summary line."""
     has_failures = False
     has_warnings = False
     for name, status, detail in checks:
@@ -2119,6 +2140,30 @@ async def _doctor() -> None:  # noqa: C901
     else:
         console.print("  [green]All checks passed.[/green]")
     console.print()
+
+
+async def _doctor() -> None:
+    """Run diagnostic checks.
+
+    The check order is load-bearing: ``tests/test_doctor.py`` drives the
+    httpx mock with a positional side-effect list, so identity probes must
+    run before the crt.sh probe.
+    """
+    console = get_console()
+    _doctor_print_header(console)
+
+    checks: list[DoctorCheck] = []
+    checks.extend(await _doctor_identity_checks())
+    checks.append(_doctor_dns_check())
+    checks.append(await _doctor_ct_check())
+    checks.append(_doctor_mcp_check())
+    checks.append(_doctor_fingerprint_db_check())
+    checks.append(_doctor_custom_fingerprints_check())
+    checks.append(_doctor_signal_db_check())
+    checks.append(_doctor_schema_fields_check())
+    checks.append(_doctor_custom_signals_check())
+
+    _doctor_render(console, checks)
 
 
 def _build_explanations(
