@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.86] - 2026-06-03
+
+### Catalog: four more cname_target fingerprints from a live-analysis batch (Track C, C1)
+
+A fifth live-analysis gap-fill batch. Four distinctive vendors with custom-domain
+CNAMEs the catalog did not cover, added as high-precision `cname_target` rules in
+`surface.yaml`. The catalog grows from 825 to 829 entries.
+
+- `extole` (`extole.com`) - referral / customer-advocacy marketing
+- `staffbase` (`staffbase.com`) - employee-communications / intranet
+- `superfiliate` (`superfiliate.com`) - creator / affiliate commerce
+- `transcend` (`transcend-cdn.com`) - data-privacy / consent management (GDPR / CCPA)
+
+Same discipline: intra-org and unattributable targets dropped, only vendor
+patterns and neutral descriptions committed, no observed apex in the repo. The
+four slugs join `EXPECTED_BUSINESS_APPS_FALLBACK`. Validated against
+`validate_fingerprint.py`, the metadata-coverage gate, and the shadowing /
+specificity / expansion tests.
+
+This is the fifth catalog batch of the session; the live-analysis loop has added
+21 vetted `cname_target` rules (808 to 829) across `surface.yaml` while keeping
+every committed example free of real-company data.
+
 ## [1.9.85] - 2026-06-03
 
 ### Catalog: three more cname_target fingerprints from a live-analysis batch (Track C, C1)

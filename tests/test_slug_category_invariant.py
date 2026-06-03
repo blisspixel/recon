@@ -302,6 +302,12 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "manageengine",
         "northflank",
         "urlgenius",
+        # v1.9.86: fourth cname_target discovery batch (referral marketing,
+        # employee comms, affiliate commerce, data-privacy/consent).
+        "extole",
+        "staffbase",
+        "superfiliate",
+        "transcend",
     }
 )
 

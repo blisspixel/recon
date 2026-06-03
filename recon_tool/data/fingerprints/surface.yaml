@@ -322,6 +322,65 @@ fingerprints:
       Suggests the org uses URLgenius for mobile deep linking / app
       attribution on a branded domain. Hosting-binding signal only.
 
+- name: Extole
+  slug: extole
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: extole.com
+    reference: https://www.extole.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to an Extole referral / advocacy
+      program. Suggests the org runs Extole for refer-a-friend /
+      customer-advocacy marketing on a branded domain. Hosting-binding
+      signal only.
+
+- name: Staffbase
+  slug: staffbase
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: staffbase.com
+    reference: https://staffbase.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Staffbase employee-communications
+      site. Suggests the org runs Staffbase as an internal-comms /
+      intranet platform on a branded domain. Hosting-binding signal
+      only.
+
+- name: Superfiliate
+  slug: superfiliate
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: superfiliate.com
+    reference: https://www.superfiliate.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Superfiliate microsite. Suggests
+      the org runs Superfiliate for creator / affiliate-commerce
+      programs on a branded domain. Hosting-binding signal only.
+
+- name: Transcend
+  slug: transcend
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: transcend-cdn.com
+    reference: https://transcend.io
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Transcend asset / consent endpoint.
+      Suggests the org uses Transcend for data-privacy / consent
+      management (GDPR / CCPA) on a branded domain. Hosting-binding
+      signal only.
+
 - name: Auth0 (Okta)
   slug: auth0
   category: Identity
