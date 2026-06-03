@@ -3079,69 +3079,42 @@ async def _discover(
         typer.echo(f"wrote {out} ({len(candidates)} candidates)", err=True)
 
 
-async def _batch(  # noqa: C901
-    file: str,
+def _batch_validate_flags(
+    *,
     json_output: bool,
     markdown: bool,
-    concurrency: int,
-    csv_output: bool = False,
-    *,
-    include_unclassified: bool = False,
-    skip_ct: bool = False,
-    ndjson: bool = False,
-    include_ecosystem: bool = False,
-    fusion: bool = False,
+    csv_output: bool,
+    ndjson: bool,
+    include_ecosystem: bool,
 ) -> None:
-    """Process multiple domains from a file with controlled concurrency.
+    """Reject mutually-exclusive output flags and the --include-ecosystem constraint."""
+    from recon_tool.formatter import render_error
 
-    Rate limiting: Each domain hits 3+ external endpoints concurrently.
-    The semaphore caps domain-level concurrency, and the HTTP transport
-    retries on 429/503 with exponential backoff. For large batch files,
-    an inter-domain delay prevents burst-flooding upstream endpoints.
-
-    Output modes:
-      * default — rendered tenant panel per domain
-      * ``json_output`` — single JSON array at the end (back-compat shape)
-      * ``markdown`` — rendered markdown per domain
-      * ``csv_output`` — flat CSV of headline fields
-      * ``ndjson`` — one JSON object per line, flushed as each domain
-        completes. Recommended for large corpora where ``json_output`` would
-        buffer the entire result set in memory.
-    """
-    import json as json_mod
-    import sys as sys_mod
-    from pathlib import Path
-
-    from recon_tool.formatter import (
-        format_tenant_dict,
-        format_tenant_markdown,
-        render_error,
-        render_tenant_panel,
-    )
-    from recon_tool.models import ReconLookupError
-    from recon_tool.models import TenantInfo as _TenantInfo
-    from recon_tool.resolver import resolve_tenant
-    from recon_tool.validator import validate_domain
-
-    console = get_console()
-
-    # Mutual exclusion: only one output format allowed
     if sum([json_output, markdown, csv_output, ndjson]) > 1:
         render_error("--json, --md, --csv, and --ndjson are mutually exclusive")
         raise typer.Exit(code=EXIT_VALIDATION)
-
-    # v1.8: --include-ecosystem requires --json. Hypergraph is a batch-
-    # scope envelope sibling to the per-domain entries; it has no
-    # natural place in the panel, markdown, CSV, or NDJSON outputs
-    # (NDJSON streams per-domain and the hypergraph needs the full
-    # set).
+    # v1.8: --include-ecosystem requires --json. The hypergraph is a batch-scope
+    # envelope sibling to the per-domain entries with no natural place in the
+    # panel, markdown, CSV, or NDJSON outputs (NDJSON streams per-domain and the
+    # hypergraph needs the full set).
     if include_ecosystem and not json_output:
         render_error("--include-ecosystem requires --json")
         raise typer.Exit(code=EXIT_VALIDATION)
 
-    # A literal "-" reads the domain list from stdin (cat domains.txt |
-    # recon batch -); otherwise treat the argument as a file path. Both go
-    # through the same bounded line reader.
+
+def _batch_load_domains(file: str, console: Any, *, announce_dupes: bool) -> list[str]:
+    """Read the domain list (file path or "-" for stdin), dedupe in input order.
+
+    Raises ``typer.Exit`` on a missing/unreadable/malformed file or an empty list.
+    """
+    import sys as sys_mod
+    from pathlib import Path
+
+    from recon_tool.formatter import render_error
+
+    # A literal "-" reads the domain list from stdin (cat domains.txt | recon
+    # batch -); otherwise treat the argument as a file path. Both go through the
+    # same bounded line reader.
     from_stdin = file == "-"
     try:
         if from_stdin:
@@ -3173,10 +3146,383 @@ async def _batch(  # noqa: C901
         if d_lower not in seen:
             seen.add(d_lower)
             unique_domains.append(d)
-    if len(unique_domains) < len(domain_list) and not json_output and not markdown and not csv_output:
+    if len(unique_domains) < len(domain_list) and announce_dupes:
         skipped = len(domain_list) - len(unique_domains)
         console.print(f"  [dim]{skipped} duplicate(s) removed[/dim]")
-    domain_list = unique_domains
+    return unique_domains
+
+
+def _batch_apply_fusion(info: Any) -> Any:
+    """Bayesian fusion for batch results: ``posterior_observations`` + ``slug_confidences``.
+
+    Pure post-processing over the already-resolved TenantInfo, no extra network
+    calls. Unlike ``_lookup_apply_fusion`` this omits ``evidence_ranked`` on each
+    posterior, preserving the batch JSON shape that shipped before this refactor.
+    """
+    from dataclasses import replace
+
+    from recon_tool.bayesian import infer_from_tenant_info
+    from recon_tool.fusion import compute_slug_posteriors
+    from recon_tool.models import NodeConflict, PosteriorObservation
+
+    result = infer_from_tenant_info(info)
+    return replace(
+        info,
+        slug_confidences=compute_slug_posteriors(info.evidence),
+        posterior_observations=tuple(
+            PosteriorObservation(
+                name=p.name,
+                description=p.description,
+                posterior=p.posterior,
+                interval_low=p.interval_low,
+                interval_high=p.interval_high,
+                evidence_used=p.evidence_used,
+                n_eff=p.n_eff,
+                sparse=p.sparse,
+                conflict_provenance=tuple(
+                    NodeConflict(field=c.field, sources=c.sources, magnitude=c.magnitude)
+                    for c in p.conflict_provenance
+                ),
+            )
+            for p in result.posteriors
+        ),
+    )
+
+
+def _batch_attach_shared_tokens(json_results: list[dict[str, Any]], batch_infos: dict[str, Any]) -> None:
+    """Attach ``shared_verification_tokens`` peer lists in place (v0.9.3).
+
+    Keyed by ``queried_domain`` (the canonical normalized form) when at least two
+    domains in the batch publish the same site-verification token.
+    """
+    from recon_tool.clustering import compute_shared_tokens
+
+    domain_tokens = {d: info.site_verification_tokens for d, info in batch_infos.items()}
+    clusters = compute_shared_tokens(domain_tokens)
+    if not clusters:
+        return
+    for entry in json_results:
+        key = entry.get("queried_domain")
+        if not isinstance(key, str):
+            continue
+        peers = clusters.get(key)
+        if peers:
+            entry["shared_verification_tokens"] = [{"token": e.token, "peer": e.peer} for e in peers]
+
+
+def _batch_attach_peers(json_results: list[dict[str, Any]], batch_infos: dict[str, Any]) -> None:
+    """Attach ``shared_tenant`` and ``shared_display_name`` peer lists in place (v1.3).
+
+    Tenant-ID sharing is cryptographically strong (same M365 customer account);
+    display-name overlap is hedged (same brand / likely related, but
+    customer-supplied so not cryptographic). Both surface as a per-domain peer
+    list so batch consumers can pull related apexes without re-resolving them.
+    """
+    from recon_tool.clustering import compute_display_name_clusters, compute_tenant_clusters
+
+    domain_tenants = {d: info.tenant_id for d, info in batch_infos.items()}
+    domain_names = {d: info.display_name for d, info in batch_infos.items()}
+    tenant_clusters = compute_tenant_clusters(domain_tenants)
+    display_clusters = compute_display_name_clusters(domain_names)
+
+    # Build per-domain peer indexes for quick lookup.
+    tenant_peers: dict[str, list[dict[str, object]]] = {}
+    for tc in tenant_clusters:
+        for d in tc.domains:
+            tenant_peers.setdefault(d, []).append(
+                {
+                    "tenant_id": tc.tenant_id,
+                    "peers": [p for p in tc.domains if p != d],
+                }
+            )
+    display_peers: dict[str, list[dict[str, object]]] = {}
+    for dc in display_clusters:
+        for d, raw in zip(dc.domains, dc.raw_names, strict=True):
+            display_peers.setdefault(d, []).append(
+                {
+                    "display_name": raw,
+                    "normalized_name": dc.normalized_name,
+                    "peers": [p for p in dc.domains if p != d],
+                }
+            )
+
+    if not (tenant_peers or display_peers):
+        return
+    for entry in json_results:
+        key = entry.get("queried_domain")
+        if not isinstance(key, str):
+            continue
+        if key in tenant_peers:
+            entry["shared_tenant"] = tenant_peers[key]
+        if key in display_peers:
+            entry["shared_display_name"] = display_peers[key]
+
+
+def _batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, include_ecosystem: bool) -> None:
+    """Assemble the batch JSON array (with cross-domain enrichment) and emit it."""
+    import json as json_mod
+
+    json_results: list[dict[str, Any]] = [r for r in results if r is not None]  # type: ignore[misc]
+
+    if batch_infos:
+        _batch_attach_shared_tokens(json_results, batch_infos)
+        _batch_attach_peers(json_results, batch_infos)
+
+    # v1.8: ecosystem hypergraph. Off by default. When opted in via
+    # --include-ecosystem, emit hyperedges over the batch's TenantInfo set as a
+    # top-level envelope sibling to the per-domain entries.
+    if include_ecosystem and batch_infos:
+        from recon_tool.ecosystem import build_ecosystem_hyperedges
+
+        hyperedges = build_ecosystem_hyperedges(batch_infos)
+        ecosystem_payload = {
+            "ecosystem_hyperedges": [
+                {
+                    "edge_type": e.edge_type,
+                    "key": e.key,
+                    "members": list(e.members),
+                }
+                for e in hyperedges
+            ],
+            "domains": json_results,
+        }
+        typer.echo(json_mod.dumps(ecosystem_payload, indent=2))
+        return
+
+    typer.echo(json_mod.dumps(json_results, indent=2))
+
+
+async def _batch_emit_ndjson(domain_list: list[str], process_one: Any, error_prefix: str) -> None:
+    """Stream one JSON object per line, flushed as each domain completes.
+
+    Skips the post-batch enrichment (shared tokens, tenant peers, display-name
+    clusters) because those need every result before any can be emitted. Trades
+    batch-wide enrichment for constant memory and visible progress on large
+    corpora.
+    """
+    import json as json_mod
+    import sys as sys_mod
+
+    tasks = [asyncio.create_task(process_one(d)) for d in domain_list]
+    for fut in asyncio.as_completed(tasks):
+        result = await fut
+        if isinstance(result, dict):
+            typer.echo(json_mod.dumps(result))
+            # Flush stdout so downstream pipelines see each line as it lands.
+            sys_mod.stdout.flush()
+        elif isinstance(result, str) and result.startswith(error_prefix):
+            typer.echo(result.removeprefix(error_prefix), err=True)
+
+
+def _batch_render_results(
+    results: list[object],
+    batch_infos: dict[str, Any],
+    console: Any,
+    *,
+    json_output: bool,
+    csv_output: bool,
+    markdown: bool,
+    include_ecosystem: bool,
+    error_prefix: str,
+) -> None:
+    """Render gathered batch results in input order for the chosen output mode."""
+    from recon_tool.formatter import render_error
+
+    if json_output:
+        _batch_emit_json(results, batch_infos, include_ecosystem=include_ecosystem)
+    elif csv_output:
+        from recon_tool.formatter import format_batch_csv
+
+        csv_rows: list[Any] = [r for r in results if isinstance(r, tuple) and len(r) == 3]
+        typer.echo(format_batch_csv(csv_rows), nl=False)
+    elif markdown:
+        for r in results:
+            if r is not None:
+                typer.echo(r)
+                typer.echo("---\n")
+    else:
+        for r in results:
+            if r is None:
+                continue
+            if isinstance(r, str) and r.startswith(error_prefix):
+                render_error(r[len(error_prefix) :])
+            else:
+                console.print(r)
+                console.print()
+
+
+def _batch_error_result(
+    domain: str,
+    message: str,
+    *,
+    json_output: bool,
+    ndjson: bool,
+    csv_output: bool,
+    markdown: bool,
+    markdown_skips: bool,
+    error_prefix: str,
+) -> object:
+    """Shape a per-domain error for the active output mode.
+
+    ``markdown_skips`` distinguishes the validate-error path (markdown yields
+    nothing) from the resolve-error path (markdown falls through to the display
+    sentinel), preserving the pre-refactor behaviour exactly.
+    """
+    if json_output or ndjson:
+        return {"domain": domain, "error": message}
+    if csv_output:
+        return (domain, None, message)
+    if markdown and markdown_skips:
+        return None
+    return f"{error_prefix}{domain}: {message}"
+
+
+def _batch_success_result(
+    info: Any,
+    domain: str,
+    *,
+    json_output: bool,
+    ndjson: bool,
+    csv_output: bool,
+    markdown: bool,
+    include_unclassified: bool,
+) -> object:
+    """Shape a successful per-domain result for the active output mode."""
+    from recon_tool.formatter import format_tenant_dict, format_tenant_markdown, render_tenant_panel
+
+    if json_output or ndjson:
+        return format_tenant_dict(info, include_unclassified=include_unclassified)
+    if csv_output:
+        return (domain, info, None)
+    if markdown:
+        return format_tenant_markdown(info)
+    return render_tenant_panel(info)
+
+
+async def _batch_process_one(
+    domain: str,
+    *,
+    semaphore: asyncio.Semaphore,
+    batch_infos: dict[str, Any],
+    skip_ct: bool,
+    fusion: bool,
+    json_output: bool,
+    ndjson: bool,
+    csv_output: bool,
+    markdown: bool,
+    include_unclassified: bool,
+    error_prefix: str,
+) -> object:
+    """Resolve a single domain under the semaphore and shape its result.
+
+    Stashes the TenantInfo in ``batch_infos`` (keyed by queried_domain) so the
+    post-batch token / tenant / display-name clustering can run.
+    """
+    from recon_tool.models import ReconLookupError
+    from recon_tool.resolver import resolve_tenant
+    from recon_tool.validator import validate_domain
+
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        return _batch_error_result(
+            domain,
+            str(exc),
+            json_output=json_output,
+            ndjson=ndjson,
+            csv_output=csv_output,
+            markdown=markdown,
+            markdown_skips=True,
+            error_prefix=error_prefix,
+        )
+
+    async with semaphore:
+        try:
+            # Small delay between domains to avoid burst-flooding upstream
+            # endpoints (Microsoft, DNS). The semaphore caps concurrency, but
+            # without a delay all N domains fire at once.
+            await asyncio.sleep(0.1)
+            info, _results = await resolve_tenant(validated, skip_ct=skip_ct)
+            if fusion:
+                info = _batch_apply_fusion(info)
+            batch_infos[info.queried_domain] = info
+            return _batch_success_result(
+                info,
+                domain,
+                json_output=json_output,
+                ndjson=ndjson,
+                csv_output=csv_output,
+                markdown=markdown,
+                include_unclassified=include_unclassified,
+            )
+        except ReconLookupError as exc:
+            return _batch_error_result(
+                domain,
+                str(exc),
+                json_output=json_output,
+                ndjson=ndjson,
+                csv_output=csv_output,
+                markdown=markdown,
+                markdown_skips=False,
+                error_prefix=error_prefix,
+            )
+        except Exception as exc:
+            return _batch_error_result(
+                domain,
+                str(exc),
+                json_output=json_output,
+                ndjson=ndjson,
+                csv_output=csv_output,
+                markdown=markdown,
+                markdown_skips=False,
+                error_prefix=error_prefix,
+            )
+
+
+async def _batch(
+    file: str,
+    json_output: bool,
+    markdown: bool,
+    concurrency: int,
+    csv_output: bool = False,
+    *,
+    include_unclassified: bool = False,
+    skip_ct: bool = False,
+    ndjson: bool = False,
+    include_ecosystem: bool = False,
+    fusion: bool = False,
+) -> None:
+    """Process multiple domains from a file with controlled concurrency.
+
+    Rate limiting: Each domain hits 3+ external endpoints concurrently.
+    The semaphore caps domain-level concurrency, and the HTTP transport
+    retries on 429/503 with exponential backoff. For large batch files,
+    an inter-domain delay prevents burst-flooding upstream endpoints.
+
+    Output modes:
+      * default — rendered tenant panel per domain
+      * ``json_output`` — single JSON array at the end (back-compat shape)
+      * ``markdown`` — rendered markdown per domain
+      * ``csv_output`` — flat CSV of headline fields
+      * ``ndjson`` — one JSON object per line, flushed as each domain
+        completes. Recommended for large corpora where ``json_output`` would
+        buffer the entire result set in memory.
+    """
+    from recon_tool.models import TenantInfo as _TenantInfo
+
+    console = get_console()
+
+    _batch_validate_flags(
+        json_output=json_output,
+        markdown=markdown,
+        csv_output=csv_output,
+        ndjson=ndjson,
+        include_ecosystem=include_ecosystem,
+    )
+
+    domain_list = _batch_load_domains(
+        file, console, announce_dupes=not json_output and not markdown and not csv_output
+    )
 
     semaphore = asyncio.Semaphore(concurrency)
 
@@ -3192,97 +3538,21 @@ async def _batch(  # noqa: C901
     # preventing interleaved output from concurrent coroutines.
     _ERROR_PREFIX = "\x00ERR:"
 
-    async def _process_one(domain: str) -> object:
-        """Process a single domain with semaphore-controlled concurrency.
-
-        Returns:
-            - dict for JSON mode (success or error)
-            - str for markdown mode (rendered markdown)
-            - tuple (domain, TenantInfo, None) or (domain, None, error) for CSV mode
-            - Panel for display mode
-            - Error sentinel string for display-mode errors
-            - None when nothing to show
-        """
-        try:
-            validated = validate_domain(domain)
-        except ValueError as exc:
-            if json_output or ndjson:
-                return {"domain": domain, "error": str(exc)}
-            if csv_output:
-                return (domain, None, str(exc))
-            if markdown:
-                return None
-            return f"{_ERROR_PREFIX}{domain}: {exc}"
-
-        async with semaphore:
-            try:
-                # Small delay between domains to avoid burst-flooding
-                # upstream endpoints (Microsoft, DNS). The semaphore limits
-                # concurrency, but without a delay all N domains fire at once.
-                await asyncio.sleep(0.1)
-                info, _results = await resolve_tenant(validated, skip_ct=skip_ct)
-
-                # v1.9: optional Bayesian fusion. Pure post-processing
-                # over the already-collected TenantInfo, no extra
-                # network calls. Populates ``posterior_observations``
-                # and ``slug_confidences`` on the per-domain result.
-                if fusion:
-                    from dataclasses import replace as _replace
-
-                    from recon_tool.bayesian import infer_from_tenant_info as _infer
-                    from recon_tool.fusion import compute_slug_posteriors as _slug_post
-                    from recon_tool.models import NodeConflict as _NC
-                    from recon_tool.models import PosteriorObservation as _PO
-
-                    _br = _infer(info)
-                    info = _replace(
-                        info,
-                        slug_confidences=_slug_post(info.evidence),
-                        posterior_observations=tuple(
-                            _PO(
-                                name=p.name,
-                                description=p.description,
-                                posterior=p.posterior,
-                                interval_low=p.interval_low,
-                                interval_high=p.interval_high,
-                                evidence_used=p.evidence_used,
-                                n_eff=p.n_eff,
-                                sparse=p.sparse,
-                                conflict_provenance=tuple(
-                                    _NC(field=c.field, sources=c.sources, magnitude=c.magnitude)
-                                    for c in p.conflict_provenance
-                                ),
-                            )
-                            for p in _br.posteriors
-                        ),
-                    )
-
-                # v0.9.3: capture TenantInfo for post-batch token clustering.
-                # Keyed by queried_domain so the post-processing pass can
-                # correlate back to tenant dict entries using the same key
-                # that format_tenant_dict emits.
-                batch_infos[info.queried_domain] = info
-
-                if json_output or ndjson:
-                    return format_tenant_dict(info, include_unclassified=include_unclassified)
-                if csv_output:
-                    return (domain, info, None)
-                if markdown:
-                    return format_tenant_markdown(info)
-                return render_tenant_panel(info)
-
-            except ReconLookupError as exc:
-                if json_output or ndjson:
-                    return {"domain": domain, "error": str(exc)}
-                if csv_output:
-                    return (domain, None, str(exc))
-                return f"{_ERROR_PREFIX}{domain}: {exc}"
-            except Exception as exc:
-                if json_output or ndjson:
-                    return {"domain": domain, "error": str(exc)}
-                if csv_output:
-                    return (domain, None, str(exc))
-                return f"{_ERROR_PREFIX}{domain}: {exc}"
+    async def _run_one(domain: str) -> object:
+        """Bind the batch-scoped state and delegate to ``_batch_process_one``."""
+        return await _batch_process_one(
+            domain,
+            semaphore=semaphore,
+            batch_infos=batch_infos,
+            skip_ct=skip_ct,
+            fusion=fusion,
+            json_output=json_output,
+            ndjson=ndjson,
+            csv_output=csv_output,
+            markdown=markdown,
+            include_unclassified=include_unclassified,
+            error_prefix=_ERROR_PREFIX,
+        )
 
     # Gather all results concurrently, then output in input-file order.
     # This prevents interleaved output from concurrent coroutines.
@@ -3291,146 +3561,30 @@ async def _batch(  # noqa: C901
 
     async def _tracked(domain: str) -> object:
         nonlocal completed
-        result = await _process_one(domain)
+        result = await _run_one(domain)
         completed += 1
         if not json_output and not markdown and not csv_output:
             console.print(f"  [{completed}/{total}] {domain}", style="dim", highlight=False)
         return result
 
-    # NDJSON streaming path. Emits one JSON object per line, flushed as each
-    # domain completes. Skips post-batch enrichment (shared_verification_tokens,
-    # tenant peers, display-name clusters) because those require knowing all
-    # results before any can be emitted. Trade off batch-wide enrichment for
-    # constant memory and visible progress on large corpora.
+    # NDJSON streaming path, flushed per-domain (see helper for the trade-off).
     if ndjson:
-        tasks = [asyncio.create_task(_process_one(d)) for d in domain_list]
-        for fut in asyncio.as_completed(tasks):
-            result = await fut
-            if isinstance(result, dict):
-                line = json_mod.dumps(result)
-                typer.echo(line)
-                # Flush stdout so downstream pipelines see each line as it lands.
-                sys_mod.stdout.flush()
-            elif isinstance(result, str) and result.startswith(_ERROR_PREFIX):
-                typer.echo(result.removeprefix(_ERROR_PREFIX), err=True)
+        await _batch_emit_ndjson(domain_list, _run_one, _ERROR_PREFIX)
         return
 
     tasks = [_tracked(d) for d in domain_list]
     results = await asyncio.gather(*tasks)
 
-    if json_output:
-        json_results: list[dict[str, Any]] = [r for r in results if r is not None]  # type: ignore[misc]
-
-        # v0.9.3: attach shared_verification_tokens to each entry when
-        # at least two domains in the batch share the same token. Keyed
-        # by queried_domain which is the canonical normalized form.
-        if batch_infos:
-            from recon_tool.clustering import (
-                compute_display_name_clusters,
-                compute_shared_tokens,
-                compute_tenant_clusters,
-            )
-
-            domain_tokens = {d: info.site_verification_tokens for d, info in batch_infos.items()}
-            clusters = compute_shared_tokens(domain_tokens)
-            if clusters:
-                for entry in json_results:
-                    key = entry.get("queried_domain")
-                    if not isinstance(key, str):
-                        continue
-                    peers = clusters.get(key)
-                    if peers:
-                        entry["shared_verification_tokens"] = [{"token": e.token, "peer": e.peer} for e in peers]
-
-            # v1.3: tenant-ID + display-name clustering across the batch.
-            # Tenant-ID sharing is cryptographically strong (same M365
-            # customer account); display-name overlap is hedged (same
-            # brand / likely related, but customer-supplied so not
-            # cryptographic). Both surface the same way — as a peer
-            # list keyed to each domain — so batch consumers can pull
-            # related apexes without re-resolving them.
-            domain_tenants = {d: info.tenant_id for d, info in batch_infos.items()}
-            domain_names = {d: info.display_name for d, info in batch_infos.items()}
-            tenant_clusters = compute_tenant_clusters(domain_tenants)
-            display_clusters = compute_display_name_clusters(domain_names)
-
-            # Build per-domain peer indexes for quick lookup.
-            tenant_peers: dict[str, list[dict[str, object]]] = {}
-            for tc in tenant_clusters:
-                for d in tc.domains:
-                    tenant_peers.setdefault(d, []).append(
-                        {
-                            "tenant_id": tc.tenant_id,
-                            "peers": [p for p in tc.domains if p != d],
-                        }
-                    )
-            display_peers: dict[str, list[dict[str, object]]] = {}
-            for dc in display_clusters:
-                for d, raw in zip(dc.domains, dc.raw_names, strict=True):
-                    display_peers.setdefault(d, []).append(
-                        {
-                            "display_name": raw,
-                            "normalized_name": dc.normalized_name,
-                            "peers": [p for p in dc.domains if p != d],
-                        }
-                    )
-
-            if tenant_peers or display_peers:
-                for entry in json_results:
-                    key = entry.get("queried_domain")
-                    if not isinstance(key, str):
-                        continue
-                    if key in tenant_peers:
-                        entry["shared_tenant"] = tenant_peers[key]
-                    if key in display_peers:
-                        entry["shared_display_name"] = display_peers[key]
-
-        # v1.8: ecosystem hypergraph. Off by default. When the operator
-        # opts in via ``--include-ecosystem``, compute hyperedges over
-        # the batch's TenantInfo set and emit them as a top-level
-        # ``ecosystem_hyperedges`` envelope (a sibling to the per-domain
-        # entries). Empty when no rule fires.
-        if include_ecosystem and batch_infos:
-            from recon_tool.ecosystem import build_ecosystem_hyperedges
-
-            hyperedges = build_ecosystem_hyperedges(batch_infos)
-            ecosystem_payload = {
-                "ecosystem_hyperedges": [
-                    {
-                        "edge_type": e.edge_type,
-                        "key": e.key,
-                        "members": list(e.members),
-                    }
-                    for e in hyperedges
-                ],
-                "domains": json_results,
-            }
-            typer.echo(json_mod.dumps(ecosystem_payload, indent=2))
-            return
-
-        typer.echo(json_mod.dumps(json_results, indent=2))
-    elif csv_output:
-        from recon_tool.formatter import format_batch_csv
-
-        csv_rows: list[tuple[str, _TenantInfo | None, str | None]] = []
-        for r in results:
-            if isinstance(r, tuple) and len(r) == 3:
-                csv_rows.append(r)  # type: ignore[arg-type]
-        typer.echo(format_batch_csv(csv_rows), nl=False)
-    elif markdown:
-        for r in results:
-            if r is not None:
-                typer.echo(r)
-                typer.echo("---\n")
-    else:
-        for r in results:
-            if r is None:
-                continue
-            if isinstance(r, str) and r.startswith(_ERROR_PREFIX):
-                render_error(r[len(_ERROR_PREFIX) :])
-            else:
-                console.print(r)
-                console.print()
+    _batch_render_results(
+        results,
+        batch_infos,
+        console,
+        json_output=json_output,
+        csv_output=csv_output,
+        markdown=markdown,
+        include_ecosystem=include_ecosystem,
+        error_prefix=_ERROR_PREFIX,
+    )
 
 
 def run() -> None:

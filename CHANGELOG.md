@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.74] - 2026-06-03
+
+### Complexity decomposition: _batch (Track A, item A6)
+
+`_batch` (complexity ~19 once its marker was removed; the mccabe count folds in
+its nested coroutines) drops under the C901 cap and loses its `# noqa: C901`.
+The outer body becomes a thin pipeline and the per-domain coroutine moves to a
+module-level helper so it is measured on its own. Output is held unchanged
+across all five modes (panel, JSON, markdown, CSV, NDJSON); `test_batch`,
+`test_ecosystem`, the cli coverage suites, and `test_siem_examples` stay green.
+
+- Flag validation and domain loading (the stdin / file read plus order-preserving
+  dedupe) move to `_batch_validate_flags` and `_batch_load_domains`.
+- The per-domain work moves to module-level `_batch_process_one`, with
+  `_batch_error_result` / `_batch_success_result` shaping the result for the
+  active output mode. `_batch` keeps a small `_run_one` closure that binds the
+  batch-scoped state (semaphore, `batch_infos`, flags) and delegates to it.
+- The cross-domain enrichment splits into `_batch_attach_shared_tokens` (v0.9.3
+  shared verification tokens) and `_batch_attach_peers` (v1.3 tenant-ID and
+  display-name peers); `_batch_emit_json`, `_batch_emit_ndjson`, and
+  `_batch_render_results` own the output paths.
+- `_batch_apply_fusion` holds the batch Bayesian recompute. It deliberately
+  preserves the shipped batch shape, which omits `evidence_ranked` on each
+  posterior (the single-domain `_lookup_apply_fusion` includes it). That
+  difference is pre-existing and is left intact here; reconciling the two is a
+  separate question, not part of this behaviour-preserving decomposition.
+
+Three `# noqa: C901` markers remain: `merge_results` and the two `server` tools
+(`lookup_tenant`, `simulate_hardening`).
+
 ## [1.9.73] - 2026-06-03
 
 ### Complexity decomposition: _lookup (Track A, item A6)
