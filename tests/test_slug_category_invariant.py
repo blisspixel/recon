@@ -297,6 +297,11 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "heymarvin",
         "airmason",
         "nudata",
+        # v1.9.85: third cname_target discovery batch (ITSM, developer PaaS,
+        # mobile deep-linking). Conservative Business-Apps panel bucket.
+        "manageengine",
+        "northflank",
+        "urlgenius",
     }
 )
 
