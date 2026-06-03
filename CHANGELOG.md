@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.82] - 2026-06-03
+
+### Catalog: Thinkific cname_target fingerprint (Track C, item C1)
+
+A live-analysis gap-fill: a passive lookup surfaced an unclassified
+`learn.`-style subdomain CNAMEd to a `*.thinkific.com` target (Thinkific, the
+online-course / LMS storefront platform), which the catalog did not cover. Added
+a high-precision `cname_target` rule (`surface.yaml`, `tier: application`,
+slug `thinkific`). The catalog grows from 808 to 809 entries.
+
+Per the catalog discipline, only the vendor pattern and a neutral description are
+committed: no observed apex or per-domain finding reaches the repo. `thinkific`
+joins `EXPECTED_BUSINESS_APPS_FALLBACK` in `tests/test_slug_category_invariant.py`,
+the same conservative panel bucket as its LMS peers `coursera` and `northpass`.
+Validated against `validate_fingerprint.py`, the metadata-coverage gate, and the
+shadowing / specificity / expansion tests.
+
 ## [1.9.81] - 2026-06-03
 
 ### Round-six ingestion audit: output-sink control stripping (Track D, item D1)
