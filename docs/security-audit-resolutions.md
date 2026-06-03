@@ -995,6 +995,51 @@ loads are ever moved to `asyncio.to_thread`.
 
 ---
 
+## Closed: round-six audit (output-sink control stripping - v1.9.81)
+
+A sixth pass re-traced every attacker-controlled parse boundary to its
+output sink. The round-three fix control-strips `display_name` /
+`auth_type` / `region` at the merger before they reach `TenantInfo`, and
+round five confirmed the CSE / MTA-STS / VMC / CT parsers are
+`isinstance`-guarded at parse time. But two source-derived strings reach
+the live terminal panel (rendered via rich `Text.append`, which does not
+strip ESC) without passing through that merger scrub. Both are new: not
+previously listed, and not covered by the round-three field set.
+
+### Service strings carrying control bytes (MED) - closed
+
+`GoogleSource` builds a service entry `f"CSE Key Manager: {host}"` where
+`host` is the `urlparse(...).hostname` of the `cse.<domain>` config's
+`discovery_uri` (`sources/google.py`). `urlparse` preserves control bytes
+in the host, and the `services` set was never control-stripped, so a
+domain owner who controls `cse.<domain>` could land an ANSI/newline
+payload on the operator's terminal (and in the un-escaped markdown service
+list). Closed by scrubbing the whole `services` set through
+`strip_control_chars` at the merger finalization boundary
+(`merger.py`), so the score / insight logic and every renderer see clean
+values regardless of which source produced the string.
+
+### DMARC `p=` value carrying control bytes (MED) - closed
+
+`_apply_dmarc` (`sources/dns.py`) stored the `p=` token as
+`cleaned[2:].strip()` after a `.lower()`, which does not remove control
+bytes; unlike `mta_sts_mode` (allowlist-validated) and `dmarc_pct`
+(range-checked), the policy value was unvalidated. A record
+`v=DMARC1; p=none<ESC>[31m...` reached the panel's email-summary line
+verbatim. Closed by control-stripping `dmarc_policy` at the same merger
+boundary. `google_idp_name` (derived from a redirect host; httpx already
+rejects control bytes in redirect hosts, so this is defense in depth) is
+folded into the same scrub.
+
+The fix is one consistent place: `merge_results` now scrubs `services`,
+`dmarc_policy`, and `google_idp_name` alongside the round-three fields, so
+any future source that emits a control-bearing service string or policy is
+covered without a per-source change. Pinned by
+`tests/test_ingestion_sanitization.py` (control bytes stripped; clean
+values unchanged).
+
+---
+
 ## Process notes
 
 * **Closure precedence.** If a scanner flags a finding listed here

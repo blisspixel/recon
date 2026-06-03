@@ -808,6 +808,11 @@ def _resolve_display_name(display_name: str | None, bimi_identity: BIMIIdentity 
     return queried_domain
 
 
+def _scrub_optional(value: str | None) -> str | None:
+    """Strip control chars from an optional source-derived string; None passes through."""
+    return strip_control_chars(value) if value else value
+
+
 def _scrub_free_text(
     display_name: str, auth_type: str | None, region: str | None
 ) -> tuple[str, str | None, str | None]:
@@ -999,11 +1004,22 @@ def merge_results(
     display_name = _resolve_display_name(scalars.display_name, scalars.bimi_identity, queried_domain)
     default_domain = scalars.default_domain if scalars.default_domain is not None else queried_domain
     display_name, auth_type, region = _scrub_free_text(display_name, scalars.auth_type, scalars.region)
+    # Round 6 (Track D): dmarc_policy is source-derived free text (the DMARC
+    # ``p=`` value) that reaches the terminal panel via rich Text.append, which
+    # does not strip ESC, so scrub it alongside the other free-text fields.
+    # google_idp_name is folded in as defense in depth.
+    dmarc_policy = _scrub_optional(scalars.dmarc_policy)
+    google_idp_name = _scrub_optional(scalars.google_idp_name)
 
     base_confidence, has_id_conflict = compute_confidence(results)
     sources = tuple(r.source_name for r in results if r.is_success)
 
     all_services, all_slugs, all_related = _aggregate_detections(results)
+    # Round 6 (Track D): a service string can carry attacker-controlled bytes
+    # (e.g. a Google CSE discovery_uri host parsed in sources/google.py), so
+    # strip control characters before the set reaches the email-security score,
+    # the insight logic, and the terminal panel.
+    all_services = {strip_control_chars(s) for s in all_services}
     # Remove domains we already know about from related_domains
     all_related -= all_domains
     all_related.discard(queried_domain.lower())
@@ -1032,13 +1048,13 @@ def merge_results(
         all_services,
         all_slugs,
         auth_type,
-        scalars.dmarc_policy,
+        dmarc_policy,
         domain_count,
         email_security_score=email_security_score,
         spf_include_count=spf_include_count,
         issuance_velocity=issuance_velocity,
         google_auth_type=scalars.google_auth_type,
-        google_idp_name=scalars.google_idp_name,
+        google_idp_name=google_idp_name,
         dmarc_pct=dmarc_pct,
         primary_email_provider=primary_email_provider,
         likely_primary_email_provider=likely_primary_email_provider,
@@ -1079,7 +1095,7 @@ def merge_results(
         services=tuple(sorted(all_services)),
         slugs=tuple(sorted(all_slugs)),
         auth_type=auth_type,
-        dmarc_policy=scalars.dmarc_policy,
+        dmarc_policy=dmarc_policy,
         domain_count=domain_count,
         tenant_domains=tenant_domains,
         related_domains=tuple(sorted(all_related)),
@@ -1094,7 +1110,7 @@ def merge_results(
         site_verification_tokens=tuple(sorted(scalars.site_verification_tokens)),
         mta_sts_mode=scalars.mta_sts_mode,
         google_auth_type=scalars.google_auth_type,
-        google_idp_name=scalars.google_idp_name,
+        google_idp_name=google_idp_name,
         merge_conflicts=merge_conflicts,
         primary_email_provider=primary_email_provider,
         email_gateway=email_gateway,

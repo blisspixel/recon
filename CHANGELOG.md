@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.81] - 2026-06-03
+
+### Round-six ingestion audit: output-sink control stripping (Track D, item D1)
+
+A fresh adversarial pass over the ingestion / parse paths re-traced every
+attacker-controlled string to its output sink and closed two new MED findings
+(folded into `docs/security-audit-resolutions.md` as round six). Both are
+source-derived strings that reached the live terminal panel via rich
+`Text.append` (which does not strip ESC) without passing through the round-three
+merger scrub:
+
+- **Service strings.** `GoogleSource` builds `f"CSE Key Manager: {host}"` from
+  the `urlparse(...).hostname` of a `cse.<domain>` config's `discovery_uri`, and
+  `urlparse` preserves control bytes in the host. A domain owner controlling
+  `cse.<domain>` could land an ANSI / newline payload on the operator's terminal.
+- **DMARC `p=` value.** `_apply_dmarc` stored the policy token unvalidated
+  (only `.lower()`, which keeps control bytes), unlike the allowlist-validated
+  `mta_sts_mode` and range-checked `dmarc_pct`.
+
+Fixed in one consistent place: `merge_results` now control-strips the whole
+`services` set, `dmarc_policy`, and `google_idp_name` (the last as defense in
+depth) at the finalization boundary, alongside the existing
+`display_name` / `auth_type` / `region` scrub. Any future source that emits a
+control-bearing service string or policy is covered without a per-source change.
+Legitimate values are unchanged. Pinned by `tests/test_ingestion_sanitization.py`.
+
 ## [1.9.80] - 2026-06-03
 
 ### Server-tool coverage: the Bayesian + clustering MCP tools (Track B, item B4)
