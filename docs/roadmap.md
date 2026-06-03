@@ -4,9 +4,11 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.71** (pre-2.0 hardening phase). The next work is the
-execution queue under the pre-2.0 hardening section below; what has already
-shipped is in the CHANGELOG. The
+Current release: **v1.9.76** (pre-2.0 hardening phase). Track A (complexity
+decomposition) is complete as of v1.9.76: zero `# noqa: C901` markers remain and
+the mccabe cap of 15 now holds the whole tree. The next work is Track B (test
+and validation rigor) in the execution queue under the pre-2.0 hardening section
+below; what has already shipped is in the CHANGELOG. The
 engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
 `py.typed` marker, the `>=3.12` floor (relaxed back to `>=3.11` in v1.9.43),
 branch coverage, `deal`
@@ -202,17 +204,16 @@ next free `v1.9.x` when it ships.
 **Order of operations to the lock.** Track E is done. The remaining doable work
 runs in this order, each step one or more 1.9.x patches:
 
-0. **Tooling foundation.** Fix `release.py` so its `_INIT_VERSION_RE` matches the
-   refactored `__init__.py` (only `_FALLBACK_VERSION` is a literal now), and clear
-   the two `scripts/` C901s, so the release gate is sound before more patches
-   stack.
-1. **Finish complexity decomposition (Track A) to zero markers.** The
-   validator/loader tail, `validation_runner`, `cert_providers`, the
-   `sources/dns` detectors, and `explain_insights` are done (v1.9.61 to
-   v1.9.69); 7 markers remain, all behaviour-heavy: A6 the `cli` set
-   (`signals_show`, `_doctor`, `_lookup`, `_batch`), A7 `merge_results`, and A8
-   the `server` pair. These get characterization coverage before they are split.
-2. **Test and validation rigor (Track B).** `deal` contracts on `validator.py`,
+0. **Tooling foundation.** Done: `release.py`'s `_INIT_VERSION_RE` matches the
+   refactored `__init__.py` (only `_FALLBACK_VERSION` is a literal now) and the
+   `scripts/` C901s are cleared, so the release gate is sound.
+1. **Finish complexity decomposition (Track A) to zero markers.** Done in
+   v1.9.72 to v1.9.76. The behaviour-heavy tail was the last of it: A6 the `cli`
+   set (`signals_show` + `_doctor` in v1.9.72, `_lookup` in v1.9.73, `_batch` in
+   v1.9.74), A7 `merge_results` (v1.9.75), and A8 the `server` pair (v1.9.76),
+   each with characterization coverage added first. Zero `# noqa: C901` markers
+   remain and the cap holds the whole tree.
+2. **Test and validation rigor (Track B).** Next up. `deal` contracts on `validator.py`,
    the cache-lifecycle stateful machine, source-boundary fault injection; server
    branch coverage folds in alongside.
 3. **Robustness and security (Track D).** A fresh adversarial ingestion audit,
@@ -275,23 +276,51 @@ C3 calibration claims and the `correlation.md` polish (G3).
 | CAL13 | "Evidence-responsive" not "calibrated" | Until CAL3 frequentist coverage exists, the 80% credible intervals are described as *evidence-responsive* (they widen on sparse evidence, a monotonicity property), not *calibrated* (a coverage statement in the Dawid sense). The word "calibrated" is reserved for what CAL3 demonstrates. |
 | CAL14 | Node-dependent missingness (MAR vs MNAR) | The blanket asymmetric / LR=1 absence rule is right for hideable infrastructure (m365, okta), but wrong for public-declaration signals whose absence is genuine, not adversarially hidden (DMARC / SPF / MTA-STS policy). The 2026-06 synthetic calibration showed `email_security_policy_enforcing` at conditional ECE ~0.31 (the [0.85] reliability bin realizing 0.166) precisely because the model could not use the absence of the strong DMARC signals as disconfirmation. A `spf_strict` down-weight (v1.9.71, conceptual) took it to ~0.28; the real fix is per-node MAR / symmetric conditioning for public-declaration nodes. A prototype confirmed the direction (the no-signal baseline correctly drops toward 0). It is a core-invariant change that ripples into n_eff / sparse (absence is evidence, so a no-signal MAR node should not be flagged sparse) and the criterion-(a) stability test (reframe from "every binding raises the posterior above the all-absent baseline" to "toggling a binding raises the posterior"), so it ships as its own fully-validated patch, not bundled. v2.0 should gate on the *max* per-node conditional ECE, not the mean. |
 
+#### External-review candidate items (2026-06)
+
+A 2026-06 external review of the correlation engine surfaced four additive items
+worth scheduling. The rest of that review either restated already-shipped work
+(the evidence-group correction in v1.9.70, the CAL1 to CAL14 calibration track)
+or conflicted with the zero-dependency / passive-only invariants and is not
+adopted. None of the four are scheduled yet; each would be its own future patch.
+
+| # | Item | Track | Notes |
+|---|---|---|---|
+| EXT1 | CT-edge temporal decay | C (graph) | Down-weight CT-derived edges by certificate age (`w = e^(-lambda * delta_t)`) before community detection, so legacy-infrastructure edges do not bridge distinct infrastructure epochs. Additive, no new dependency. |
+| EXT2 | SAN-count edge weighting | C (graph) | Penalise edges from large shared-CDN certificates (`|SAN| > tau`): a 2-SAN cert is a strong ownership link, a 150-SAN edge cert is noise. Pairs with EXT1 and the CAL11 partition-stability work. |
+| EXT3 | Counterfactual explanations | B / explainability | "If DMARC reject were absent, the policy posterior would drop from X to Y." Cheap given the exact-inference engine (re-run with one binding flipped); extends `--explain-dag`. The per-node LLR attribution it also asks for already exists (`NodeEvidence.llr` / `influence_pct`). |
+| EXT4 | PROV-O / JSON-LD provenance export | E / agent QoL | A `--prov` flag emitting the evidence DAG as W3C PROV-O rather than the bespoke `explanation_dag` JSON. Optional polish, not a v2.0 gate. |
+
+Explicitly *not* adopted from that review, with reasons: HPD-from-PMF (the claim
+nodes are binary, so each posterior is a single probability, not a multi-state
+mass function to take an HPD over); a scipy / numpy tensor inference backend
+(breaches the no-numpy invariant, and the nine-node network is deliberately
+small); an external empirical-Bayes prior source such as Censys / Rapid7 Sonar
+(breaches zero-paid-API / no-bundled-DB; the own-corpus version is CAL12); a
+historical-DNS `StateTransition` signal (recon has no historical-DNS source
+under its invariants, only live resolution plus `delta` and cross-source
+conflict provenance); matplotlib calibration SVGs (heavy dependency; the
+calibration artifacts live as `validation/` memos); and a code-plugin node
+system (data-only YAML overlays only, per the no-user-code invariant).
+
 **Track E - CLI and agent quality-of-life.** Complete. The seven items (exit-code
 reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
 `autoApprove` guidance, the `recon://schema` discovery resource, and the
 data-not-instructions demarcation) shipped in v1.9.55 to v1.9.60; see the
 CHANGELOG for the per-patch detail.
 
-**Track A - Complexity decomposition** (7 `# noqa: C901` markers remain; the
-gate from v1.9.37 already holds new code. The formatter, the posture and
-insights core, the validator/loader tail, the `validation_runner` pair, the
-`sources/dns` detectors, the `cert_providers` queries, and `explain_insights`
-are all decomposed, see the CHANGELOG). What remains, all behaviour-heavy:
+**Track A - Complexity decomposition.** Complete as of v1.9.76. Zero
+`# noqa: C901` markers remain in `recon_tool/`, so the mccabe cap of 15 from
+v1.9.37 now holds the whole tree, not just new code. The full sweep (formatter,
+posture / insights core, the validator/loader tail, `validation_runner`,
+`sources/dns`, `cert_providers`, `explain_insights`, and the behaviour-heavy
+tail below) is in the CHANGELOG.
 
 | # | Story | Status | Acceptance |
 |---|---|---|---|
-| A6 | `cli` behaviour-heavy set | open | `signals_show`, `_doctor`, `_lookup` (77), `_batch` (60) each get characterization coverage, then are decomposed. The two largest functions in the tree; one patch each. |
-| A7 | `merger.merge_results` (64) | open | Characterization coverage added, then decomposed under the cap; the merge property tests stay green. |
-| A8 | `server` tool pair | open | `lookup_tenant` and `simulate_hardening` decomposed; behavior held by the server tests (pairs with the E5 / E6 / E7 server-test growth). |
+| A6 | `cli` behaviour-heavy set | done (v1.9.72-v1.9.74) | `signals_show` + `_doctor` (v1.9.72), `_lookup` (v1.9.73), `_batch` (v1.9.74), each characterized then decomposed under the cap. A new `tests/test_signals_show_cli.py` covers the previously-untested `signals show`. |
+| A7 | `merger.merge_results` (64) | done (v1.9.75) | Decomposed under the cap via single-purpose helpers; the merge property tests stayed green. |
+| A8 | `server` tool pair | done (v1.9.76) | `lookup_tenant` (text rendering to `_lookup_tenant_text`) and `simulate_hardening` (fix-parsing to `_simulate_fixes`) decomposed; server / exposure / GWS tests green. |
 
 **Track B - Test and validation rigor:**
 
