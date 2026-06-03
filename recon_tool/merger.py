@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from typing import Any, NamedTuple
 
 from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
 from recon_tool.constants import (
@@ -665,50 +666,56 @@ _PLACEHOLDER_DISPLAY_NAMES: frozenset[str] = frozenset(
 )
 
 
-def merge_results(  # noqa: C901
-    results: list[SourceResult],
-    queried_domain: str,
-) -> TenantInfo:
-    """Merge multiple SourceResults into a single TenantInfo with insights."""
-    tenant_id: str | None = None
-    display_name: str | None = None
-    default_domain: str | None = None
-    region: str | None = None
-    auth_type: str | None = None
-    dmarc_policy: str | None = None
-    all_domains: set[str] = set()
-    google_auth_type: str | None = None
-    google_idp_name: str | None = None
+class _ScalarFields(NamedTuple):
+    """First-wins scalar identity fields plus the accumulated domain/token sets."""
+
+    tenant_id: str | None
+    display_name: str | None
+    default_domain: str | None
+    region: str | None
+    auth_type: str | None
+    dmarc_policy: str | None
+    google_auth_type: str | None
+    google_idp_name: str | None
+    bimi_identity: BIMIIdentity | None
+    mta_sts_mode: str | None
+    all_domains: set[str]
+    site_verification_tokens: set[str]
+
+
+def _is_placeholder_name(name: str | None) -> bool:
+    """True for an empty name or a generic placeholder ("directory")."""
+    if not name:
+        return True
+    return name.strip().lower() in _PLACEHOLDER_DISPLAY_NAMES
+
+
+def _first_non_none(results: list[SourceResult], attr: str) -> Any:
+    """Return the first non-None ``result.<attr>`` across sources, else None."""
+    for result in results:
+        value = getattr(result, attr, None)
+        if value is not None:
+            return value
+    return None
+
+
+def _merge_scalar_fields(results: list[SourceResult]) -> _ScalarFields:
+    """First-wins merge of the scalar identity fields.
+
+    Sources are ordered by reliability (OIDC > UserRealm > DNS), so the first
+    non-None value for each field is the most trustworthy; a most-complete-wins
+    strategy would need per-result scoring for little benefit. ``display_name``
+    additionally skips placeholder values.
+    """
+    tenant_id = display_name = default_domain = region = auth_type = dmarc_policy = None
+    google_auth_type = google_idp_name = mta_sts_mode = None
     bimi_identity: BIMIIdentity | None = None
-    mta_sts_mode: str | None = None
-    all_site_verification_tokens: set[str] = set()
-
-    # First-wins merge: for each field, the first source (in priority order)
-    # that provides a non-None value wins. This is intentional — sources are
-    # ordered by reliability (OIDC > UserRealm > DNS), so the first non-None
-    # value is the most trustworthy. A "most-complete-wins" strategy would
-    # require scoring each result, adding complexity for little benefit.
-    #
-    # Conflict tracking: collect all non-None candidate values per tracked field
-    # so we can surface disagreements when 2+ sources provide different values.
-    _tracked_candidates: dict[str, list[CandidateValue]] = {
-        "display_name": [],
-        "auth_type": [],
-        "region": [],
-        "tenant_id": [],
-        "dmarc_policy": [],
-        "google_auth_type": [],
-    }
-
-    def _is_placeholder(name: str | None) -> bool:
-        if not name:
-            return True
-        return name.strip().lower() in _PLACEHOLDER_DISPLAY_NAMES
-
+    all_domains: set[str] = set()
+    tokens: set[str] = set()
     for result in results:
         if tenant_id is None and result.tenant_id is not None:
             tenant_id = result.tenant_id
-        if _is_placeholder(display_name) and not _is_placeholder(result.display_name):
+        if _is_placeholder_name(display_name) and not _is_placeholder_name(result.display_name):
             display_name = result.display_name
         if default_domain is None and result.default_domain is not None:
             default_domain = result.default_domain
@@ -727,142 +734,135 @@ def merge_results(  # noqa: C901
         if mta_sts_mode is None and result.mta_sts_mode is not None:
             mta_sts_mode = result.mta_sts_mode
         all_domains.update(result.tenant_domains)
-        all_site_verification_tokens.update(result.site_verification_tokens)
+        tokens.update(result.site_verification_tokens)
+    return _ScalarFields(
+        tenant_id=tenant_id,
+        display_name=display_name,
+        default_domain=default_domain,
+        region=region,
+        auth_type=auth_type,
+        dmarc_policy=dmarc_policy,
+        google_auth_type=google_auth_type,
+        google_idp_name=google_idp_name,
+        bimi_identity=bimi_identity,
+        mta_sts_mode=mta_sts_mode,
+        all_domains=all_domains,
+        site_verification_tokens=tokens,
+    )
 
-        # Collect candidates for conflict tracking
-        _src_confidence = "high" if result.is_complete else ("medium" if result.is_success else "low")
-        if result.display_name is not None:
-            _tracked_candidates["display_name"].append(
-                CandidateValue(value=result.display_name, source=result.source_name, confidence=_src_confidence)
-            )
-        if result.auth_type is not None:
-            _tracked_candidates["auth_type"].append(
-                CandidateValue(value=result.auth_type, source=result.source_name, confidence=_src_confidence)
-            )
-        if result.region is not None:
-            _tracked_candidates["region"].append(
-                CandidateValue(value=result.region, source=result.source_name, confidence=_src_confidence)
-            )
-        if result.tenant_id is not None:
-            _tracked_candidates["tenant_id"].append(
-                CandidateValue(value=result.tenant_id, source=result.source_name, confidence=_src_confidence)
-            )
-        if result.dmarc_policy is not None:
-            _tracked_candidates["dmarc_policy"].append(
-                CandidateValue(value=result.dmarc_policy, source=result.source_name, confidence=_src_confidence)
-            )
-        if result.google_auth_type is not None:
-            _tracked_candidates["google_auth_type"].append(
-                CandidateValue(value=result.google_auth_type, source=result.source_name, confidence=_src_confidence)
-            )
 
-    # Build MergeConflicts: only populate fields where 2+ sources disagree
-    _conflict_fields: dict[str, tuple[CandidateValue, ...]] = {}
-    for field_name, candidates in _tracked_candidates.items():
-        if len(candidates) >= 2:
-            unique_values = {c.value for c in candidates}
-            if len(unique_values) >= 2:
-                _conflict_fields[field_name] = tuple(candidates)
-    merge_conflicts: MergeConflicts | None = None
-    if _conflict_fields:
-        merge_conflicts = MergeConflicts(**_conflict_fields)
+def _compute_merge_conflicts(results: list[SourceResult]) -> MergeConflicts | None:
+    """Collect per-field candidate values; surface only fields where 2+ sources disagree."""
+    tracked: dict[str, list[CandidateValue]] = {
+        "display_name": [],
+        "auth_type": [],
+        "region": [],
+        "tenant_id": [],
+        "dmarc_policy": [],
+        "google_auth_type": [],
+    }
+    for result in results:
+        confidence = "high" if result.is_complete else ("medium" if result.is_success else "low")
+        for field_name in tracked:
+            value = getattr(result, field_name)
+            if value is not None:
+                tracked[field_name].append(
+                    CandidateValue(value=value, source=result.source_name, confidence=confidence)
+                )
+    conflict_fields: dict[str, tuple[CandidateValue, ...]] = {}
+    for field_name, candidates in tracked.items():
+        if len(candidates) >= 2 and len({c.value for c in candidates}) >= 2:
+            conflict_fields[field_name] = tuple(candidates)
+    return MergeConflicts(**conflict_fields) if conflict_fields else None
 
-    # Only raise `all_sources_failed` when EVERY source returned an error.
-    # If any source produced a clean result (even with empty services/slugs),
-    # we honor the successful lookup by emitting a sparse TenantInfo with
-    # `provider = "Unknown (no known provider pattern matched)"` downstream.
-    # This keeps batch runs uniform (sparse domains don't mix errors with
-    # successes) and matches the hedged-observation invariant: "we looked
-    # and found nothing" is a valid, honest answer — not an error.
-    if tenant_id is None and all(r.error is not None for r in results):
-        source_errors: tuple[tuple[str, str], ...] = tuple(
-            (r.source_name, r.error) for r in results if r.error is not None
-        )
-        reasons = "; ".join(f"{n}: {e}" for n, e in source_errors)
-        raise ReconLookupError(
-            domain=queried_domain,
-            message=(f"No information could be resolved for {queried_domain}. All sources returned errors: {reasons}"),
-            error_type="all_sources_failed",
-            source_errors=source_errors,
-        )
 
-    if display_name is None or _is_placeholder(display_name):
-        # BIMI VMC organization name as fallback — always preferred if present
-        if bimi_identity is not None and bimi_identity.organization:
-            display_name = bimi_identity.organization
-        else:
-            # Prefer the queried domain over the tenant_id UUID for display.
-            # A raw UUID reads as debugging output; the domain reads as
-            # the company identifier.
-            display_name = queried_domain
-    if default_domain is None:
-        default_domain = queried_domain
+def _raise_if_all_sources_failed(results: list[SourceResult], queried_domain: str, tenant_id: str | None) -> None:
+    """Raise ``all_sources_failed`` only when EVERY source returned an error.
 
-    # Security: scrub free-text fields that originate from sources recon
-    # does not control before they enter TenantInfo and reach the panel /
-    # JSON / MCP output. display_name (GetUserRealm FederationBrandName),
-    # auth_type (NameSpaceType), and region are influenced by the looked-up
-    # domain's federation configuration; rich's Text.append does not strip
-    # ESC, so an unscrubbed value here is an ANSI-injection vector on a
-    # normal lookup. queried_domain and the already-stripped BIMI VMC org
-    # are idempotent under this.
-    if display_name:
-        display_name = strip_control_chars(display_name)
+    If any source produced a clean result (even with empty services/slugs), the
+    successful lookup is honored downstream as a sparse TenantInfo: "we looked
+    and found nothing" is a valid, hedged answer, not an error.
+    """
+    if tenant_id is not None or not all(r.error is not None for r in results):
+        return
+    source_errors: tuple[tuple[str, str], ...] = tuple(
+        (r.source_name, r.error) for r in results if r.error is not None
+    )
+    reasons = "; ".join(f"{n}: {e}" for n, e in source_errors)
+    raise ReconLookupError(
+        domain=queried_domain,
+        message=(f"No information could be resolved for {queried_domain}. All sources returned errors: {reasons}"),
+        error_type="all_sources_failed",
+        source_errors=source_errors,
+    )
+
+
+def _resolve_display_name(display_name: str | None, bimi_identity: BIMIIdentity | None, queried_domain: str) -> str:
+    """Pick the best display name, preferring a real name, then BIMI VMC org, then the domain."""
+    if display_name is not None and not _is_placeholder_name(display_name):
+        return display_name
+    # BIMI VMC organization name as fallback. Otherwise prefer the queried domain
+    # over a raw tenant_id UUID, which reads as debugging output.
+    if bimi_identity is not None and bimi_identity.organization:
+        return bimi_identity.organization
+    return queried_domain
+
+
+def _scrub_free_text(
+    display_name: str, auth_type: str | None, region: str | None
+) -> tuple[str, str | None, str | None]:
+    """Strip control chars from source-influenced free text before it reaches output.
+
+    display_name (GetUserRealm FederationBrandName), auth_type (NameSpaceType),
+    and region are influenced by the looked-up domain's federation config; rich's
+    Text.append does not strip ESC, so an unscrubbed value is an ANSI-injection
+    vector on a normal lookup. display_name is always a non-empty string from
+    ``_resolve_display_name``, so it is scrubbed unconditionally.
+    """
+    display_name = strip_control_chars(display_name)
     if auth_type:
         auth_type = strip_control_chars(auth_type)
     if region:
         region = strip_control_chars(region)
+    return display_name, auth_type, region
 
-    confidence, has_id_conflict = compute_confidence(results)
-    sources = tuple(r.source_name for r in results if r.is_success)
 
-    all_services: set[str] = set()
-    all_slugs: set[str] = set()
-    all_related: set[str] = set()
+def _aggregate_detections(results: list[SourceResult]) -> tuple[set[str], set[str], set[str]]:
+    """Union of detected services, slugs, and related domains across sources."""
+    services: set[str] = set()
+    slugs: set[str] = set()
+    related: set[str] = set()
     for result in results:
-        all_services.update(result.detected_services)
-        all_slugs.update(result.detected_slugs)
-        all_related.update(result.related_domains)
+        services.update(result.detected_services)
+        slugs.update(result.detected_slugs)
+        related.update(result.related_domains)
+    return services, slugs, related
 
-    # Remove domains we already know about from related_domains
-    all_related -= all_domains
-    all_related.discard(queried_domain.lower())
 
-    domain_count = len(all_domains)
-    tenant_domains = tuple(sorted(all_domains))
+def _email_security_score(services: set[str]) -> int:
+    """Count presence of DMARC, any DKIM, SPF strict, MTA-STS, BIMI (0-5)."""
+    score_services = {SVC_DMARC, SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI}
+    return min(sum(1 for svc in services if svc in score_services), 5)
 
-    # Compute email_security_score: count presence of DMARC, any DKIM, SPF strict, MTA-STS, BIMI (0-5)
-    _score_services = {SVC_DMARC, SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI}
-    email_security_score = min(sum(1 for svc in all_services if svc in _score_services), 5)
 
-    # Extract spf_include_count from services like "SPF complexity: N includes"
-    spf_include_count: int | None = None
-
-    for svc in all_services:
+def _extract_spf_include_count(services: set[str]) -> int | None:
+    """Parse the include count out of an "SPF complexity: N includes" service string."""
+    for svc in services:
         if svc.startswith("SPF complexity:"):
             with contextlib.suppress(ValueError, IndexError):
-                spf_include_count = int(svc.split(":")[1].strip().split()[0])
-            break
+                return int(svc.split(":")[1].strip().split()[0])
+            return None
+    return None
 
-    # Extract issuance_velocity from cert_summary if available
-    issuance_velocity: int | None = None
 
-    # Propagate first non-None cert_summary from any source
-    cert_summary: CertSummary | None = None
-    for result in results:
-        if result.cert_summary is not None:
-            cert_summary = result.cert_summary
-            break
+def _merge_ct_metadata(results: list[SourceResult]) -> tuple[str | None, int, int | None, str | None]:
+    """Propagate CT provider attribution (first wins) and the first CT attempt outcome.
 
-    if cert_summary is not None:
-        issuance_velocity = cert_summary.issuance_velocity
-
-    # Propagate CT provider attribution from any source (v0.9.2).
-    # v1.9.25 adds ct_attempt_outcome so the JSON record carries WHY
-    # a CT call did or did not produce data, independent of whether
-    # cert_summary is populated.
+    v0.9.2 / v1.9.25: ``ct_attempt_outcome`` can be set without a provider (e.g.
+    "live_rate_limited"), so it is taken independently of ``ct_provider_used``.
+    """
     ct_provider_used: str | None = None
-    ct_subdomain_count: int = 0
+    ct_subdomain_count = 0
     ct_cache_age_days: int | None = None
     ct_attempt_outcome: str | None = None
     for result in results:
@@ -871,16 +871,15 @@ def merge_results(  # noqa: C901
             ct_subdomain_count = result.ct_subdomain_count
             ct_cache_age_days = result.ct_cache_age_days
             break
-    # The outcome can be set even without a provider_used (e.g.
-    # "live_rate_limited" with no successful provider). Take the first
-    # non-None outcome across sources.
     for result in results:
         if getattr(result, "ct_attempt_outcome", None):
             ct_attempt_outcome = result.ct_attempt_outcome
             break
+    return ct_provider_used, ct_subdomain_count, ct_cache_age_days, ct_attempt_outcome
 
-    # v0.9.3: propagate OIDC tenant metadata (first non-None wins).
-    # These fields only populate on OIDCSource results.
+
+def _merge_oidc_metadata(results: list[SourceResult]) -> tuple[str | None, str | None, str | None]:
+    """First-wins propagation of OIDC tenant metadata (only OIDCSource sets these)."""
     cloud_instance: str | None = None
     tenant_region_sub_scope: str | None = None
     msgraph_host: str | None = None
@@ -893,29 +892,139 @@ def merge_results(  # noqa: C901
             msgraph_host = result.msgraph_host
         if cloud_instance and tenant_region_sub_scope and msgraph_host:
             break
+    return cloud_instance, tenant_region_sub_scope, msgraph_host
 
-    # Propagate evidence from all sources (needed before insights for topology)
+
+def _collect_evidence(results: list[SourceResult]) -> tuple[EvidenceRecord, ...]:
+    """Flatten evidence records from every source."""
     all_evidence: list[EvidenceRecord] = []
     for result in results:
         all_evidence.extend(result.evidence)
-    evidence_tuple = tuple(all_evidence)
+    return tuple(all_evidence)
 
-    # Compute email topology from evidence
-    primary_email_provider, email_gateway, likely_primary_email_provider = _compute_email_topology(evidence_tuple)
 
-    # Extract dmarc_pct from source results (first non-None wins)
-    dmarc_pct: int | None = None
+def _collect_degraded(results: list[SourceResult]) -> set[str]:
+    """Deduplicated union of degraded source names across results."""
+    degraded: set[str] = set()
     for result in results:
-        if result.dmarc_pct is not None:
-            dmarc_pct = result.dmarc_pct
-            break
+        degraded.update(result.degraded_sources)
+    return degraded
 
-    # v0.9.3: has_mx_records is True if ANY MX evidence record
-    # exists, regardless of whether the host matched a known
-    # provider slug. Used by downstream insight generators to
-    # distinguish "no email at all" from "custom / self-hosted
-    # email" — both cases have primary_email_provider None but
-    # very different user-facing meanings.
+
+def _finalize_confidence(
+    base_confidence: ConfidenceLevel,
+    results: list[SourceResult],
+    all_degraded: set[str],
+    ct_provider_used: str | None,
+) -> tuple[ConfidenceLevel, ConfidenceLevel, ConfidenceLevel]:
+    """Combine the base, evidence, and inference confidences and apply the degraded downgrade.
+
+    v0.9.3: skip the downgrade when the only degraded sources are CT providers
+    and a CT fallback recovered the data (``ct_provider_used`` is set); penalising
+    a successful recovery would undersell the result.
+    """
+    evidence_confidence = compute_evidence_confidence(results)
+    inference_confidence = compute_inference_confidence(results)
+    confidence = _min_confidence(base_confidence, _min_confidence(evidence_confidence, inference_confidence))
+
+    ct_only_degradation = bool(all_degraded) and all(s in ("crt.sh", "certspotter") for s in all_degraded)
+    ct_fallback_recovered = ct_only_degradation and ct_provider_used is not None
+    if all_degraded and not ct_fallback_recovered:
+        confidence = _downgrade_confidence(confidence)
+        evidence_confidence = _downgrade_confidence(evidence_confidence)
+    return confidence, evidence_confidence, inference_confidence
+
+
+def _append_lexical_observations(insights: list[str], related: set[str], queried_domain: str) -> tuple[str, ...]:
+    """Append lexical-taxonomy observations to insights and return their statements.
+
+    v0.9.3: pure re-projection of related_domains through a rule-based parser; no
+    new network calls, no generated candidates.
+    """
+    lex_obs = lexical_observations([d for d in related if "*" not in d], base_domain=queried_domain)
+    for obs in lex_obs:
+        insights.append(f"{obs.category}: {obs.statement}")
+    return tuple(o.statement for o in lex_obs)
+
+
+def _dedupe_surface(results: list[SourceResult]) -> tuple[SurfaceAttribution, ...]:
+    """First-wins, subdomain-keyed dedupe of surface attributions, sorted by subdomain."""
+    seen: set[str] = set()
+    merged: list[SurfaceAttribution] = []
+    for result in results:
+        for sa in result.surface_attributions:
+            if sa.subdomain not in seen:
+                seen.add(sa.subdomain)
+                merged.append(sa)
+    return tuple(sorted(merged, key=lambda s: s.subdomain))
+
+
+def _dedupe_unclassified(results: list[SourceResult]) -> tuple[UnclassifiedCnameChain, ...]:
+    """First-wins, subdomain-keyed dedupe of unclassified CNAME chains, sorted by subdomain."""
+    seen: set[str] = set()
+    merged: list[UnclassifiedCnameChain] = []
+    for result in results:
+        for uc in result.unclassified_cname_chains:
+            if uc.subdomain not in seen:
+                seen.add(uc.subdomain)
+                merged.append(uc)
+    return tuple(sorted(merged, key=lambda u: u.subdomain))
+
+
+def _dedupe_motifs(results: list[SourceResult]) -> tuple[ChainMotifObservation, ...]:
+    """First-wins dedupe of chain-motif observations keyed by (subdomain, motif_name)."""
+    seen: set[tuple[str, str]] = set()
+    merged: list[ChainMotifObservation] = []
+    for result in results:
+        for cm in result.chain_motifs:
+            key = (cm.subdomain, cm.motif_name)
+            if key not in seen:
+                seen.add(key)
+                merged.append(cm)
+    return tuple(sorted(merged, key=lambda m: (m.subdomain, m.motif_name)))
+
+
+def merge_results(
+    results: list[SourceResult],
+    queried_domain: str,
+) -> TenantInfo:
+    """Merge multiple SourceResults into a single TenantInfo with insights."""
+    scalars = _merge_scalar_fields(results)
+    tenant_id = scalars.tenant_id
+    all_domains = scalars.all_domains
+    merge_conflicts = _compute_merge_conflicts(results)
+
+    _raise_if_all_sources_failed(results, queried_domain, tenant_id)
+
+    display_name = _resolve_display_name(scalars.display_name, scalars.bimi_identity, queried_domain)
+    default_domain = scalars.default_domain if scalars.default_domain is not None else queried_domain
+    display_name, auth_type, region = _scrub_free_text(display_name, scalars.auth_type, scalars.region)
+
+    base_confidence, has_id_conflict = compute_confidence(results)
+    sources = tuple(r.source_name for r in results if r.is_success)
+
+    all_services, all_slugs, all_related = _aggregate_detections(results)
+    # Remove domains we already know about from related_domains
+    all_related -= all_domains
+    all_related.discard(queried_domain.lower())
+
+    domain_count = len(all_domains)
+    tenant_domains = tuple(sorted(all_domains))
+
+    email_security_score = _email_security_score(all_services)
+    spf_include_count = _extract_spf_include_count(all_services)
+
+    cert_summary: CertSummary | None = _first_non_none(results, "cert_summary")
+    issuance_velocity = cert_summary.issuance_velocity if cert_summary is not None else None
+
+    ct_provider_used, ct_subdomain_count, ct_cache_age_days, ct_attempt_outcome = _merge_ct_metadata(results)
+    cloud_instance, tenant_region_sub_scope, msgraph_host = _merge_oidc_metadata(results)
+
+    evidence_tuple = _collect_evidence(results)
+    primary_email_provider, email_gateway, likely_primary_email_provider = _compute_email_topology(evidence_tuple)
+    dmarc_pct: int | None = _first_non_none(results, "dmarc_pct")
+    # v0.9.3: True if ANY MX evidence exists, regardless of slug match — lets
+    # downstream insights distinguish "no email" from "custom / self-hosted".
     has_mx_records = any(e.source_type == "MX" for e in evidence_tuple)
 
     # Build insights list, then append signal intelligence.
@@ -923,13 +1032,13 @@ def merge_results(  # noqa: C901
         all_services,
         all_slugs,
         auth_type,
-        dmarc_policy,
+        scalars.dmarc_policy,
         domain_count,
         email_security_score=email_security_score,
         spf_include_count=spf_include_count,
         issuance_velocity=issuance_velocity,
-        google_auth_type=google_auth_type,
-        google_idp_name=google_idp_name,
+        google_auth_type=scalars.google_auth_type,
+        google_idp_name=scalars.google_idp_name,
         dmarc_pct=dmarc_pct,
         primary_email_provider=primary_email_provider,
         likely_primary_email_provider=likely_primary_email_provider,
@@ -940,105 +1049,24 @@ def merge_results(  # noqa: C901
         has_mx_records=has_mx_records,
     )
 
-    # Surface conflicting tenant IDs — this is high-value intel that explains
-    # why confidence is LOW and may indicate a misconfigured or transitioning tenant.
+    # Surface conflicting tenant IDs — high-value intel that explains why
+    # confidence is LOW and may indicate a misconfigured or transitioning tenant.
     if has_id_conflict:
         conflicting = sorted({r.tenant_id for r in results if r.tenant_id is not None})
         insights.insert(0, f"Conflicting tenant IDs detected: {', '.join(conflicting)}")
 
-    # Collect degraded_sources from all results, deduplicate
-    all_degraded: set[str] = set()
-    for result in results:
-        all_degraded.update(result.degraded_sources)
+    all_degraded = _collect_degraded(results)
+    confidence, evidence_confidence, inference_confidence = _finalize_confidence(
+        base_confidence, results, all_degraded, ct_provider_used
+    )
 
-    # Compute dual confidence
-    evidence_confidence = compute_evidence_confidence(results)
-    inference_confidence = compute_inference_confidence(results)
-    # Backward-compatible confidence: min of the two dimensions
-    confidence = _min_confidence(confidence, _min_confidence(evidence_confidence, inference_confidence))
-
-    # A7: downgrade confidence when a degraded source genuinely
-    # impairs the picture.
-    #
-    # v0.9.3 refinement: skip the downgrade when the ONLY degraded
-    # sources are CT providers AND a CT fallback successfully
-    # returned data. In that case the fallback recovered the
-    # information; penalising confidence for a successful recovery
-    # undersells the actual quality of the result. The fallback
-    # chain only recovers if at least one CT provider answered
-    # (ct_provider_used is set).
-    ct_only_degradation = bool(all_degraded) and all(s in ("crt.sh", "certspotter") for s in all_degraded)
-    ct_fallback_recovered = ct_only_degradation and ct_provider_used is not None
-    if all_degraded and not ct_fallback_recovered:
-        confidence = _downgrade_confidence(confidence)
-        evidence_confidence = _downgrade_confidence(evidence_confidence)
-
-    # Compute per-detection corroboration scores
     detection_scores = compute_detection_scores(evidence_tuple)
+    lexical_observation_statements = _append_lexical_observations(insights, all_related, queried_domain)
 
-    # v0.9.3: lexical taxonomy observations from CT-discovered subdomains.
-    # Pure re-projection of related_domains through a rule-based parser —
-    # no new network calls, no generated candidates. Observations are
-    # exposed on TenantInfo.lexical_observations AND appended to insights
-    # for the default panel display.
-    lex_obs = lexical_observations(
-        [d for d in all_related if "*" not in d],
-        base_domain=queried_domain,
-    )
-    lexical_observation_statements: tuple[str, ...] = tuple(o.statement for o in lex_obs)
-    for obs in lex_obs:
-        insights.append(f"{obs.category}: {obs.statement}")
-
-    # Collect surface_attributions across sources. dns_records is currently
-    # the only source that emits these, but propagating through the merger
-    # keeps the shape future-proof if another source ever produces them.
-    seen_subdomains: set[str] = set()
-    merged_surface: list[SurfaceAttribution] = []
-    for result in results:
-        for sa in result.surface_attributions:
-            if sa.subdomain in seen_subdomains:
-                continue
-            seen_subdomains.add(sa.subdomain)
-            merged_surface.append(sa)
-    surface_tuple: tuple[SurfaceAttribution, ...] = tuple(sorted(merged_surface, key=lambda s: s.subdomain))
-
-    seen_unclassified: set[str] = set()
-    merged_unclassified: list[UnclassifiedCnameChain] = []
-    for result in results:
-        for uc in result.unclassified_cname_chains:
-            if uc.subdomain in seen_unclassified:
-                continue
-            seen_unclassified.add(uc.subdomain)
-            merged_unclassified.append(uc)
-    unclassified_tuple: tuple[UnclassifiedCnameChain, ...] = tuple(
-        sorted(merged_unclassified, key=lambda u: u.subdomain)
-    )
-
-    # v1.7: chain motif observations. dns_records currently is the only
-    # source emitting them; propagate through the merger so future sources
-    # can contribute without engine changes.
-    seen_motif_keys: set[tuple[str, str]] = set()
-    merged_motifs: list[ChainMotifObservation] = []
-    for result in results:
-        for cm in result.chain_motifs:
-            key = (cm.subdomain, cm.motif_name)
-            if key in seen_motif_keys:
-                continue
-            seen_motif_keys.add(key)
-            merged_motifs.append(cm)
-    chain_motifs_tuple: tuple[ChainMotifObservation, ...] = tuple(
-        sorted(merged_motifs, key=lambda m: (m.subdomain, m.motif_name))
-    )
-
-    # v1.8: infrastructure clusters. First non-None wins — currently only
-    # dns_records emits a report (built from CT cert entries) so there is
-    # nothing to merge across sources, but the propagation pattern matches
-    # the rest of cert-derived intelligence.
-    infrastructure_clusters: InfrastructureClusterReport | None = None
-    for result in results:
-        if result.infrastructure_clusters is not None:
-            infrastructure_clusters = result.infrastructure_clusters
-            break
+    surface_tuple = _dedupe_surface(results)
+    unclassified_tuple = _dedupe_unclassified(results)
+    chain_motifs_tuple = _dedupe_motifs(results)
+    infrastructure_clusters: InfrastructureClusterReport | None = _first_non_none(results, "infrastructure_clusters")
 
     return TenantInfo(
         tenant_id=tenant_id,
@@ -1051,7 +1079,7 @@ def merge_results(  # noqa: C901
         services=tuple(sorted(all_services)),
         slugs=tuple(sorted(all_slugs)),
         auth_type=auth_type,
-        dmarc_policy=dmarc_policy,
+        dmarc_policy=scalars.dmarc_policy,
         domain_count=domain_count,
         tenant_domains=tenant_domains,
         related_domains=tuple(sorted(all_related)),
@@ -1062,11 +1090,11 @@ def merge_results(  # noqa: C901
         evidence_confidence=evidence_confidence,
         inference_confidence=inference_confidence,
         detection_scores=detection_scores,
-        bimi_identity=bimi_identity,
-        site_verification_tokens=tuple(sorted(all_site_verification_tokens)),
-        mta_sts_mode=mta_sts_mode,
-        google_auth_type=google_auth_type,
-        google_idp_name=google_idp_name,
+        bimi_identity=scalars.bimi_identity,
+        site_verification_tokens=tuple(sorted(scalars.site_verification_tokens)),
+        mta_sts_mode=scalars.mta_sts_mode,
+        google_auth_type=scalars.google_auth_type,
+        google_idp_name=scalars.google_idp_name,
         merge_conflicts=merge_conflicts,
         primary_email_provider=primary_email_provider,
         email_gateway=email_gateway,
