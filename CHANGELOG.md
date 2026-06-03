@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.79] - 2026-06-03
+
+### Source-boundary fault injection (Track B, item B3)
+
+A new `tests/test_source_fault_injection.py` asserts the resolver's aggregate
+behaviour when sources fault. The per-source tests already prove each source
+turns a malformed / truncated / timed-out / non-object provider payload into a
+clean `SourceResult` with an error; this covers what happens when those faults
+combine across the pool. Test-only change; no production code touched.
+
+A `_FaultySource` injects each fault mode (raise, hang, upstream error, degraded,
+good) deterministically with no network, driving:
+
+- exception hygiene: a raising source is converted by `_safe_lookup` into an
+  error `SourceResult` and never propagates;
+- partial failure: a good source still produces its tenant alongside crashing
+  and erroring siblings, which surface as error results;
+- degraded surfacing + hedging: a degraded source appears in the merged
+  `TenantInfo.degraded_sources` and the result is never HIGH confidence;
+- all-fail: when no source yields a tenant, `resolve_tenant` raises
+  `ReconLookupError(all_sources_failed)`;
+- timeout: a hanging source trips the aggregate timeout as
+  `ReconLookupError(timeout)`.
+
+One test pairs a real `OIDCSource` (fed a truncated body via
+`httpx.MockTransport`) with a good faulty source, showing a malformed provider
+payload is isolated end to end through `resolve_tenant` while the good source's
+tenant still wins.
+
 ## [1.9.78] - 2026-06-03
 
 ### Cache-lifecycle stateful machine (Track B, item B2)
