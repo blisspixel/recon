@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.76] - 2026-06-03
+
+### Complexity decomposition: the server tool pair (Track A, item A8) - Track A complete
+
+The two remaining `# noqa: C901` markers, both in `server.py`, are removed.
+With this patch **zero `# noqa: C901` markers remain in `recon_tool/`**, so
+Track A (complexity decomposition) of the pre-2.0 hardening phase is complete:
+every function in the package is under the mccabe cap of 15, and the gate from
+v1.9.37 now holds the whole tree, not just new code. Behaviour is preserved,
+held by the server, exposure, and GWS suites (`test_server`, `test_server_cache`,
+`test_exposure_server`, `test_gws_features`, `test_mcp_introspection`).
+
+- `lookup_tenant`: the text-format rendering moves to `_lookup_tenant_text`, with
+  the Google Workspace lines in `_lookup_tenant_gws_lines`. The cache /
+  rate-limit / resolve block with its structured logging is left inline (it is
+  not shared with `_resolve_or_cache`, which does not log), so observability is
+  unchanged.
+- `simulate_hardening`: the fix-parsing if/elif chain moves to `_simulate_fixes`
+  over a small `_SimState`, dispatched through `_apply_one_fix` with
+  `_apply_dmarc_fix` and `_apply_mta_sts_fix` for the two stateful controls.
+  Keyword precedence (first match wins) and the recognised-no-op cases (a
+  quarantine request when the policy is already reject; a bare mta-sts when a
+  mode is already set) are preserved exactly, including that they append no
+  message rather than "Unrecognized".
+
+The mccabe gate comment in `pyproject.toml` is updated to reflect that the
+grandfathered backlog is now cleared.
+
 ## [1.9.75] - 2026-06-03
 
 ### Complexity decomposition: merge_results (Track A, item A7)
