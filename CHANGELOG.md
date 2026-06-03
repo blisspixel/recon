@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.75] - 2026-06-03
+
+### Complexity decomposition: merge_results (Track A, item A7)
+
+`merge_results` (complexity ~64) drops under the C901 cap and loses its
+`# noqa: C901`. It is now an orchestrator that calls focused, single-purpose
+helpers; the output TenantInfo is identical, held by the merger property tests
+(`test_merger`, `test_merger_error_surfacing`, `test_conflict_provenance`) plus
+`test_email_topology`, `test_degraded_sources`, and the insights suites.
+
+- First-wins scalar merge moves to `_merge_scalar_fields` (returning a
+  `_ScalarFields` NamedTuple); conflict tracking to `_compute_merge_conflicts`;
+  the all-sources-failed guard to `_raise_if_all_sources_failed`.
+- Display-name resolution, free-text scrubbing, detection aggregation, the
+  email-security score, and the SPF include-count parse move to
+  `_resolve_display_name`, `_scrub_free_text`, `_aggregate_detections`,
+  `_email_security_score`, and `_extract_spf_include_count`.
+- The metadata propagations move to `_merge_ct_metadata`, `_merge_oidc_metadata`,
+  `_collect_evidence`, `_collect_degraded`, and a generic `_first_non_none`
+  (cert_summary, dmarc_pct, infrastructure_clusters).
+- Confidence finalization moves to `_finalize_confidence` (the dual-confidence
+  min plus the degraded-source downgrade with the CT-recovery exception);
+  lexical observations to `_append_lexical_observations`; and the three
+  subdomain-keyed dedupes to `_dedupe_surface` / `_dedupe_unclassified` /
+  `_dedupe_motifs`.
+
+Behaviour is preserved exactly, including the placeholder display-name skip and
+the first-source-wins ordering. Two `# noqa: C901` markers remain, both in
+`server.py` (`lookup_tenant`, `simulate_hardening`).
+
 ## [1.9.74] - 2026-06-03
 
 ### Complexity decomposition: _batch (Track A, item A6)
