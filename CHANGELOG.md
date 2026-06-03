@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.85] - 2026-06-03
+
+### Catalog: three more cname_target fingerprints from a live-analysis batch (Track C, C1)
+
+A fourth live-analysis gap-fill batch. Three distinctive, well-known vendors with
+custom-domain CNAMEs the catalog did not cover, added as high-precision
+`cname_target` rules in `surface.yaml`. The catalog grows from 822 to 825 entries.
+
+- `manageengine` (`manageengine.com`) - ManageEngine (Zoho) IT service / asset management
+- `northflank` (`northflank.com`) - Northflank developer platform (PaaS)
+- `urlgenius` (`urlgeni.us`) - URLgenius mobile deep linking / app attribution
+
+Conservative curation continued: from this batch's candidates, intra-org
+infrastructure and two substring-risky patterns were deliberately dropped
+(`files.com` would match `profiles.com`; `classy.org` would match
+`classy.organic.com`, and "classy" is not a distinctive label). Only the vendor
+patterns and neutral descriptions are committed. The three slugs join
+`EXPECTED_BUSINESS_APPS_FALLBACK`. Validated against `validate_fingerprint.py`,
+the metadata-coverage gate, and the shadowing / specificity / expansion tests.
+
 ## [1.9.84] - 2026-06-03
 
 ### Catalog: seven more cname_target fingerprints from a live-analysis batch (Track C, C1)

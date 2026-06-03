@@ -278,6 +278,50 @@ fingerprints:
       endpoint. Suggests the org integrates NuData behavioral-
       biometrics / fraud-prevention. Hosting-binding signal only.
 
+- name: ManageEngine
+  slug: manageengine
+  category: Support & Helpdesk
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: manageengine.com
+    reference: https://www.manageengine.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a ManageEngine (Zoho) IT-management
+      product such as ServiceDesk Plus. Suggests the org runs
+      ManageEngine for IT service / asset management on a branded
+      domain. Hosting-binding signal only.
+
+- name: Northflank
+  slug: northflank
+  category: DevTools & Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: northflank.com
+    reference: https://northflank.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Northflank-hosted application.
+      Suggests the org deploys services on Northflank's developer
+      platform (PaaS) on a branded domain. Hosting-binding signal
+      only.
+
+- name: URLgenius
+  slug: urlgenius
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: urlgeni.us
+    reference: https://www.urlgenius.com
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a URLgenius deep-link domain.
+      Suggests the org uses URLgenius for mobile deep linking / app
+      attribution on a branded domain. Hosting-binding signal only.
+
 - name: Auth0 (Okta)
   slug: auth0
   category: Identity
