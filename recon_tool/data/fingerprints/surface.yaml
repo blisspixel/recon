@@ -71,6 +71,22 @@ fingerprints:
       chain. Hosting-binding signal only, not a ticket-volume
       signal.
 
+- name: Thinkific
+  slug: thinkific
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: thinkific.com
+    reference: https://support.thinkific.com/hc/en-us
+    tier: application
+    description: >-
+      Custom subdomain CNAMEd to a Thinkific-hosted course site
+      (commonly a learn. or academy. subdomain). Indicates the org
+      runs a Thinkific online-course / LMS storefront on a branded
+      domain. Hosting-binding signal only, not a course-catalog or
+      enrollment-volume signal.
+
 - name: Auth0 (Okta)
   slug: auth0
   category: Identity

@@ -273,6 +273,10 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "musictoday",
         "ogopendata",
         "cvent",
+        # v1.9.82: cname_target slug from a live-analysis gap (LMS / online-
+        # course platform; same conservative Business-Apps bucket as its peers
+        # coursera and northpass).
+        "thinkific",
     }
 )
 
