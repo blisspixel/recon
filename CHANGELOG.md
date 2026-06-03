@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.80] - 2026-06-03
+
+### Server-tool coverage: the Bayesian + clustering MCP tools (Track B, item B4)
+
+A new `tests/test_server_bayesian_tools.py` covers `get_posteriors`,
+`explain_dag`, and `cluster_verification_tokens`, the three largest untested
+blocks in `server.py`. Test-only change; no production code touched.
+
+Following the established server-tool test pattern (patch `resolve_tenant` so the
+cache-miss path runs without network), the tests exercise:
+
+- `get_posteriors`: the posterior block shape (entropy reduction, evidence count,
+  per-node posterior / interval / n_eff / sparse), the cache-hit short-circuit,
+  and the validation / lookup-error / unexpected-error branches.
+- `explain_dag`: the text and DOT renderers (asserting they differ), the
+  invalid-format rejection, and the validation-error branch.
+- `cluster_verification_tokens`: a shared-token cluster across two domains, the
+  empty-input and too-many-domains guards, and the JSON envelope shape.
+
+This lifts `server.py` branch coverage, completing the testable items of Track B
+(B1 to B4). The global coverage gate stays at 82% branch; it is deliberately not
+ratcheted here, to avoid flaky failures on unrelated future changes that dip
+slightly.
+
 ## [1.9.79] - 2026-06-03
 
 ### Source-boundary fault injection (Track B, item B3)
