@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.83] - 2026-06-03
+
+### Catalog: six cname_target fingerprints from a live-analysis batch (Track C, C1)
+
+A second live-analysis gap-fill batch. Passive lookups across a spread of example
+domains surfaced unclassified custom-domain CNAMEs to six SaaS vendors the catalog
+did not cover; each was added as a high-precision `cname_target` rule in
+`surface.yaml` (`tier: application`). The catalog grows from 809 to 815 entries.
+
+- `crowdin` (`crowdin.com`) - localization / translation management
+- `evervault` (`evervault.app`) - developer field-level encryption / Relay
+- `intellum` (`intellum.com`) - corporate learning / LMS
+- `rocketlane` (`rocketlane.com`) - customer onboarding / PSA
+- `bettermode` (`bettermode.io`) - community platform (formerly Tribe)
+- `impartner` (`impartner.io`) - partner-relationship management (PRM)
+
+Each pattern is distinctive enough that the substring matcher (the cname_target
+classifier matches `pattern in hop`) will not false-positive on unrelated hosts;
+short/ambiguous candidates from the same batch were deliberately dropped. Per the
+catalog discipline, only the vendor patterns and neutral descriptions are
+committed: no observed apex or per-domain finding reaches the repo. The six slugs
+join `EXPECTED_BUSINESS_APPS_FALLBACK` (conservative panel bucket). Validated
+against `validate_fingerprint.py`, the metadata-coverage gate, and the shadowing
+/ specificity / expansion tests.
+
 ## [1.9.82] - 2026-06-03
 
 ### Catalog: Thinkific cname_target fingerprint (Track C, item C1)
