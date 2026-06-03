@@ -6,8 +6,11 @@ This file is forward-looking. Shipped work belongs in
 
 Current release: **v1.9.76** (pre-2.0 hardening phase). Track A (complexity
 decomposition) is complete as of v1.9.76: zero `# noqa: C901` markers remain and
-the mccabe cap of 15 now holds the whole tree. The next work is Track B (test
-and validation rigor) in the execution queue under the pre-2.0 hardening section
+the mccabe cap of 15 now holds the whole tree. Track B (test and validation
+rigor) is also complete as of v1.9.80 (B1 to B4: deal contracts on the boundary
+validators, the cache-lifecycle stateful machine, source-boundary fault
+injection, and the server-tool coverage lift). The next work is Track D (a fresh
+adversarial ingestion audit) in the execution queue under the pre-2.0 hardening section
 below; what has already shipped is in the CHANGELOG. The
 engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
 `py.typed` marker, the `>=3.12` floor (relaxed back to `>=3.11` in v1.9.43),
@@ -213,11 +216,12 @@ runs in this order, each step one or more 1.9.x patches:
    v1.9.74), A7 `merge_results` (v1.9.75), and A8 the `server` pair (v1.9.76),
    each with characterization coverage added first. Zero `# noqa: C901` markers
    remain and the cap holds the whole tree.
-2. **Test and validation rigor (Track B).** Next up. `deal` contracts on `validator.py`,
-   the cache-lifecycle stateful machine, source-boundary fault injection; server
-   branch coverage folds in alongside.
-3. **Robustness and security (Track D).** A fresh adversarial ingestion audit,
-   findings folded into `docs/security-audit-resolutions.md`.
+2. **Test and validation rigor (Track B).** Done in v1.9.77 to v1.9.80: `deal`
+   contracts on `validator.py` (B1), the cache-lifecycle stateful machine (B2),
+   source-boundary fault injection (B3), and the server-tool coverage lift that
+   took `server.py` to ~75% (B4).
+3. **Robustness and security (Track D).** Next up. A fresh adversarial ingestion
+   audit, findings folded into `docs/security-audit-resolutions.md`.
 4. **Catalog growth (Track C).** C1 vendor-doc-sourced `cname_target`
    fingerprints (specificity-gated, fictional-brand examples only), then C2
    corpus-mined gap-fill: run `validation/scan.py` over the private corpus,
@@ -326,10 +330,10 @@ tail below) is in the CHANGELOG.
 
 | # | Story | Status | Acceptance |
 |---|---|---|---|
-| B1 | `deal` contracts on boundary validators | open | Third `deal` pass (after the inference core in v1.9.31 and the matchers in v1.9.35): pre/post-conditions on `validator.py`, with predicate tests that prove they fire on violation and are no-ops under `-O`. |
-| B2 | Cache-lifecycle stateful machine | open | A Hypothesis `RuleBasedStateMachine` drives the cache read / write / evict / forward-compat path with arbitrary operation sequences and asserts the load-known / ignore-unknown and skip-malformed invariants after every step. |
-| B3 | Source-boundary fault injection | open | A deterministic layer injects malformed / truncated / timed-out / partial-failure provider payloads at the source boundary and asserts the hedged output, `degraded_sources`, and exception hygiene hold. |
-| B4 | Branch coverage toward `server.py` | open | New server tests (growing alongside E5 / E6 / E7 and A8) move `server.py` branch coverage up from its ~71% line baseline; the gate ratchets if the number clears a new floor. |
+| B1 | `deal` contracts on boundary validators | done (v1.9.77) | Third `deal` pass: `@deal.post` on `strip_control_chars` (no-control-chars) and `validate_domain` (normalized-domain), named predicates with fire-on-violation tests in `test_contracts.py`; no-ops under `-O`. |
+| B2 | Cache-lifecycle stateful machine | done (v1.9.78) | `tests/test_cache_stateful.py`: a Hypothesis `RuleBasedStateMachine` drives write / unknown-fields / corrupt / stale / clear / clear-all over a valid+invalid domain pool and reconciles disk against a model each step (load-known / ignore-unknown / skip-malformed / TTL-evict / traversal-safe). |
+| B3 | Source-boundary fault injection | done (v1.9.79) | `tests/test_source_fault_injection.py`: a `_FaultySource` drives raise / hang / error / degraded / good modes through `_safe_lookup` and `resolve_tenant`, asserting exception hygiene, degraded surfacing, hedged output, all-fail, and timeout; one case isolates a malformed OIDC payload end to end. |
+| B4 | Branch coverage toward `server.py` | done (v1.9.80) | `tests/test_server_bayesian_tools.py` covers `get_posteriors`, `explain_dag`, and `cluster_verification_tokens`, lifting `server.py` to ~75%. The global 82% branch gate is left unratcheted to avoid flaky failures on unrelated dips. |
 
 **Track D - Robustness and security:**
 
