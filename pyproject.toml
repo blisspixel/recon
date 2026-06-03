@@ -1,6 +1,6 @@
 [project]
 name = "recon-tool"
-version = "1.9.75"
+version = "1.9.76"
 description = "Domain intelligence CLI and MCP server — tech stack, email security, and signal intelligence from DNS."
 requires-python = ">=3.11"
 readme = "README.md"
@@ -112,11 +112,12 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM", "S", "PT", "PLW", "RUF", "C4", "
 ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.mccabe]
-# Cyclomatic-complexity cap. New code must come in under 15. The 28
-# functions over the cap when this gate was first enabled (v1.9.37) carry
-# an explicit `# noqa: C901` and are being decomposed incrementally; each
-# refactor removes its marker. The cap holds the line for new code while
-# that backlog is worked down. See docs/roadmap.md (complexity gate).
+# Cyclomatic-complexity cap. Every function must come in under 15. The 28
+# functions over the cap when this gate was first enabled (v1.9.37) carried an
+# explicit `# noqa: C901` and were decomposed incrementally; that backlog was
+# fully cleared in v1.9.76 (Track A), so no `# noqa: C901` markers remain and
+# the cap now holds the whole tree, not just new code. See docs/roadmap.md
+# (complexity gate).
 max-complexity = 15
 
 [tool.ruff.lint.per-file-ignores]

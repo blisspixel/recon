@@ -452,6 +452,53 @@ def _resource_schema() -> str:  # pyright: ignore[reportUnusedFunction]
     return packaged_schema_text()
 
 
+def _lookup_tenant_gws_lines(info: TenantInfo) -> list[str]:
+    """Google Workspace auth + module lines for the text format; empty when not GWS."""
+    gws_slugs = set(info.slugs)
+    is_gws = any(s.lower().startswith("google workspace") for s in info.services) or "google-workspace" in gws_slugs
+    if not is_gws:
+        return []
+    lines: list[str] = []
+    if info.google_auth_type:
+        auth_label = info.google_auth_type
+        if info.google_idp_name:
+            auth_label += f" ({info.google_idp_name})"
+        lines.append(f"GWS Auth: {auth_label}")
+    gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
+    if gws_modules:
+        lines.append(f"GWS Modules: {', '.join(gws_modules)}")
+    return lines
+
+
+def _lookup_tenant_text(info: TenantInfo) -> str:
+    """Render the default human-readable text format for ``lookup_tenant``."""
+    provider = detect_provider(info.services, info.slugs)
+    lines = [
+        f"Company: {info.display_name}",
+        f"Domain: {info.default_domain}",
+        f"Provider: {provider}",
+    ]
+    if info.tenant_id:
+        lines.append(f"Tenant ID: {info.tenant_id}")
+    if info.region:
+        lines.append(f"Region: {info.region}")
+    if info.auth_type:
+        lines.append(f"Auth: {info.auth_type}")
+    lines.append(f"Confidence: {info.confidence.value} ({len(info.sources)} sources)")
+    if info.services:
+        lines.append(f"Services: {', '.join(info.services)}")
+    if info.insights:
+        lines.append(f"Insights: {' | '.join(info.insights)}")
+    if info.domain_count > 0:
+        lines.append(f"Domains in tenant: {info.domain_count}")
+    if info.related_domains:
+        lines.append(f"Related domains: {', '.join(info.related_domains)}")
+    lines.extend(_lookup_tenant_gws_lines(info))
+    if info.degraded_sources:
+        lines.append(f"Degraded sources: {', '.join(info.degraded_sources)}")
+    return "\n".join(lines)
+
+
 @mcp.tool(
     annotations=ToolAnnotations(
         readOnlyHint=True,
@@ -460,7 +507,7 @@ def _resource_schema() -> str:  # pyright: ignore[reportUnusedFunction]
         openWorldHint=True,
     ),
 )
-async def lookup_tenant(  # noqa: C901
+async def lookup_tenant(
     domain: str,
     format: str = "text",
     explain: bool = False,
@@ -569,45 +616,7 @@ async def lookup_tenant(  # noqa: C901
         return format_tenant_markdown(info)
 
     # Default text format
-    provider = detect_provider(info.services, info.slugs)
-    lines = [
-        f"Company: {info.display_name}",
-        f"Domain: {info.default_domain}",
-        f"Provider: {provider}",
-    ]
-    if info.tenant_id:
-        lines.append(f"Tenant ID: {info.tenant_id}")
-    if info.region:
-        lines.append(f"Region: {info.region}")
-    if info.auth_type:
-        lines.append(f"Auth: {info.auth_type}")
-    lines.append(f"Confidence: {info.confidence.value} ({len(info.sources)} sources)")
-    if info.services:
-        lines.append(f"Services: {', '.join(info.services)}")
-    if info.insights:
-        lines.append(f"Insights: {' | '.join(info.insights)}")
-    if info.domain_count > 0:
-        lines.append(f"Domains in tenant: {info.domain_count}")
-    if info.related_domains:
-        lines.append(f"Related domains: {', '.join(info.related_domains)}")
-
-    # Google Workspace details
-    gws_slugs = set(info.slugs)
-    is_gws = any(s.lower().startswith("google workspace") for s in info.services) or "google-workspace" in gws_slugs
-    if is_gws:
-        if info.google_auth_type:
-            auth_label = info.google_auth_type
-            if info.google_idp_name:
-                auth_label += f" ({info.google_idp_name})"
-            lines.append(f"GWS Auth: {auth_label}")
-        gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
-        if gws_modules:
-            lines.append(f"GWS Modules: {', '.join(gws_modules)}")
-
-    if info.degraded_sources:
-        lines.append(f"Degraded sources: {', '.join(info.degraded_sources)}")
-
-    return "\n".join(lines)
+    return _lookup_tenant_text(info)
 
 
 @mcp.tool(
@@ -1864,6 +1873,92 @@ async def test_hypothesis(domain: str, hypothesis: str) -> str:
     return json_mod.dumps(result, indent=2)
 
 
+@dataclass
+class _SimState:
+    """Mutable simulation state for ``simulate_hardening`` fix application."""
+
+    services: set[str]
+    slugs: set[str]
+    dmarc: str | None
+    mta_sts: str | None
+
+
+def _apply_dmarc_fix(fix: str, state: _SimState) -> str | None:
+    """Apply a DMARC fix; return the applied message, or None when it is a no-op."""
+    if "reject" in fix:
+        state.dmarc = "reject"
+        return "DMARC policy set to reject"
+    if "quarantine" in fix:
+        if state.dmarc != "reject":
+            state.dmarc = "quarantine"
+            return "DMARC policy set to quarantine"
+        return None
+    if state.dmarc is None or state.dmarc == "none":
+        state.dmarc = "reject"
+        return "DMARC policy set to reject"
+    return None
+
+
+def _apply_mta_sts_fix(fix: str, state: _SimState) -> str | None:
+    """Apply an MTA-STS fix; return the applied message, or None when already set.
+
+    Mirrors the original: an explicit "enforce" always applies, while a bare
+    "mta-sts" applies only when no mode is currently set.
+    """
+    if "enforce" in fix or state.mta_sts is None:
+        state.mta_sts = "enforce"
+        state.services.add("MTA-STS")
+        state.slugs.add("mta-sts-enforce")
+        return "MTA-STS set to enforce"
+    return None
+
+
+def _apply_one_fix(fix: str, state: _SimState) -> str | None:
+    """Apply a single lowercased fix to the simulation state.
+
+    Returns the applied message, or None when the fix is a recognised no-op.
+    Keyword precedence mirrors the original elif chain: the first match wins.
+    """
+    if "dmarc" in fix:
+        return _apply_dmarc_fix(fix, state)
+    if "dkim" in fix:
+        state.services.add("DKIM")
+        state.slugs.add("dkim")
+        return "DKIM configured"
+    if "mta-sts" in fix:
+        return _apply_mta_sts_fix(fix, state)
+    if "bimi" in fix:
+        state.services.add("BIMI")
+        state.slugs.add("bimi")
+        return "BIMI configured"
+    if "spf" in fix and ("strict" in fix or "hardfail" in fix or "-all" in fix):
+        state.services.add("SPF: strict (-all)")
+        return "SPF set to strict (-all)"
+    if "tls-rpt" in fix or "tlsrpt" in fix:
+        state.slugs.add("tls-rpt")
+        return "TLS-RPT configured"
+    if "caa" in fix:
+        state.slugs.add("letsencrypt")
+        return "CAA records configured"
+    return f"Unrecognized fix: {fix}"
+
+
+def _simulate_fixes(fixes_lower: list[str], info: TenantInfo) -> tuple[list[str], _SimState]:
+    """Apply each fix to a fresh simulation state seeded from ``info``."""
+    state = _SimState(
+        services=set(info.services),
+        slugs=set(info.slugs),
+        dmarc=info.dmarc_policy,
+        mta_sts=info.mta_sts_mode,
+    )
+    applied: list[str] = []
+    for fix in fixes_lower:
+        message = _apply_one_fix(fix, state)
+        if message is not None:
+            applied.append(message)
+    return applied, state
+
+
 @mcp.tool(
     annotations=ToolAnnotations(
         readOnlyHint=True,
@@ -1872,7 +1967,7 @@ async def test_hypothesis(domain: str, hypothesis: str) -> str:
         openWorldHint=True,
     ),
 )
-async def simulate_hardening(domain: str, fixes: list[str]) -> str:  # noqa: C901
+async def simulate_hardening(domain: str, fixes: list[str]) -> str:
     """What-if simulation: re-compute exposure score with hypothetical fixes.
 
     Accepts a list of fix descriptions (e.g., "DMARC reject", "MTA-STS enforce")
@@ -1904,56 +1999,7 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> str:  # noqa: C90
     current_score = current_assessment.posture_score
 
     # Parse fixes and simulate by mutating a copy of TenantInfo fields
-    applied: list[str] = []
-    sim_services = set(info.services)
-    sim_slugs = set(info.slugs)
-    sim_dmarc = info.dmarc_policy
-    sim_mta_sts = info.mta_sts_mode
-
-    fixes_lower = [f.lower() for f in fixes]
-
-    for fix in fixes_lower:
-        if "dmarc" in fix and "reject" in fix:
-            sim_dmarc = "reject"
-            applied.append("DMARC policy set to reject")
-        elif "dmarc" in fix and "quarantine" in fix:
-            if sim_dmarc != "reject":
-                sim_dmarc = "quarantine"
-                applied.append("DMARC policy set to quarantine")
-        elif "dmarc" in fix:
-            if sim_dmarc is None or sim_dmarc == "none":
-                sim_dmarc = "reject"
-                applied.append("DMARC policy set to reject")
-        elif "dkim" in fix:
-            sim_services.add("DKIM")
-            sim_slugs.add("dkim")
-            applied.append("DKIM configured")
-        elif "mta-sts" in fix and "enforce" in fix:
-            sim_mta_sts = "enforce"
-            sim_services.add("MTA-STS")
-            sim_slugs.add("mta-sts-enforce")
-            applied.append("MTA-STS set to enforce")
-        elif "mta-sts" in fix:
-            if sim_mta_sts is None:
-                sim_mta_sts = "enforce"
-                sim_services.add("MTA-STS")
-                sim_slugs.add("mta-sts-enforce")
-                applied.append("MTA-STS set to enforce")
-        elif "bimi" in fix:
-            sim_services.add("BIMI")
-            sim_slugs.add("bimi")
-            applied.append("BIMI configured")
-        elif "spf" in fix and ("strict" in fix or "hardfail" in fix or "-all" in fix):
-            sim_services.add("SPF: strict (-all)")
-            applied.append("SPF set to strict (-all)")
-        elif "tls-rpt" in fix or "tlsrpt" in fix:
-            sim_slugs.add("tls-rpt")
-            applied.append("TLS-RPT configured")
-        elif "caa" in fix:
-            sim_slugs.add("letsencrypt")
-            applied.append("CAA records configured")
-        else:
-            applied.append(f"Unrecognized fix: {fix}")
+    applied, state = _simulate_fixes([f.lower() for f in fixes], info)
 
     # Build simulated TenantInfo
     sim_info = TenantInfo(
@@ -1964,10 +2010,10 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> str:  # noqa: C90
         confidence=info.confidence,
         region=info.region,
         sources=info.sources,
-        services=tuple(sorted(sim_services)),
-        slugs=tuple(sorted(sim_slugs)),
+        services=tuple(sorted(state.services)),
+        slugs=tuple(sorted(state.slugs)),
         auth_type=info.auth_type,
-        dmarc_policy=sim_dmarc,
+        dmarc_policy=state.dmarc,
         domain_count=info.domain_count,
         tenant_domains=info.tenant_domains,
         related_domains=info.related_domains,
@@ -1980,7 +2026,7 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> str:  # noqa: C90
         detection_scores=info.detection_scores,
         bimi_identity=info.bimi_identity,
         site_verification_tokens=info.site_verification_tokens,
-        mta_sts_mode=sim_mta_sts,
+        mta_sts_mode=state.mta_sts,
         google_auth_type=info.google_auth_type,
         google_idp_name=info.google_idp_name,
         merge_conflicts=info.merge_conflicts,
