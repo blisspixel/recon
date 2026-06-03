@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.72] - 2026-06-03
+
+### Complexity decomposition: signals_show and _doctor (Track A, the cli leaves)
+
+Two more `# noqa: C901` markers removed (roadmap Track A, the cli set, item
+A6). Both are leaf functions, so the decomposition is low-risk and the output
+is held unchanged.
+
+- `signals_show` (`cli.py`) splits into `_signal_show_payload` (the `--json`
+  dict), `_render_signal_not_found` (the not-found error plus near-miss
+  suggestions), `_render_signal_section` (a shared blank-line / bold-header /
+  bulleted-list helper that no-ops on an empty list so callers stay
+  branch-free), and `_render_signal_detail` (the human-readable view); the
+  command body becomes a thin dispatcher. A new `tests/test_signals_show_cli.py`
+  pins the JSON payload, each text-mode section, and the not-found exit code,
+  since the command had no direct coverage before.
+- `_doctor` (`cli.py`) splits into one helper per check group
+  (`_doctor_identity_checks`, `_doctor_dns_check`, `_doctor_ct_check`,
+  `_doctor_mcp_check`, `_doctor_fingerprint_db_check`,
+  `_doctor_custom_fingerprints_check`, `_doctor_signal_db_check`,
+  `_doctor_schema_fields_check`, `_doctor_custom_signals_check`) plus
+  `_doctor_print_header` and `_doctor_render`; the orchestrator appends the
+  checks in the same order. That order is load-bearing for the httpx mock in
+  `tests/test_doctor.py` (a positional side-effect list), so it is preserved
+  exactly.
+
+Five `# noqa: C901` markers remain (`_lookup`, `_batch`, `merge_results`, and
+the two `server` tools); the cap from v1.9.37 still holds new code.
+
 ## [1.9.71] - 2026-06-02
 
 ### Policy-node calibration: spf_strict recalibration + node-dependent missingness finding
