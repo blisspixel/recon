@@ -4,14 +4,19 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.76** (pre-2.0 hardening phase). Track A (complexity
+Current release: **v1.9.86** (pre-2.0 hardening phase). Track A (complexity
 decomposition) is complete as of v1.9.76: zero `# noqa: C901` markers remain and
 the mccabe cap of 15 now holds the whole tree. Track B (test and validation
-rigor) is also complete as of v1.9.80 (B1 to B4: deal contracts on the boundary
+rigor) is complete as of v1.9.80 (B1 to B4: deal contracts on the boundary
 validators, the cache-lifecycle stateful machine, source-boundary fault
-injection, and the server-tool coverage lift). The next work is Track D (a fresh
-adversarial ingestion audit) in the execution queue under the pre-2.0 hardening section
-below; what has already shipped is in the CHANGELOG. The
+injection, and the server-tool coverage lift). Track D D1 (a fresh adversarial
+ingestion audit) shipped in v1.9.81, closing round six (output-sink control
+stripping). Track C C1 catalog growth is underway: v1.9.82 to v1.9.86 added 21
+vetted `cname_target` rules from local live-analysis batches (808 to 829
+entries). The remaining gate work is the corpus-driven depth (C2 full-corpus gap
+mining, C3 calibration, F2) run locally against the gitignored corpus, plus the
+mechanical lock; see the execution queue under the pre-2.0 hardening section
+below. What has already shipped is in the CHANGELOG. The
 engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
 `py.typed` marker, the `>=3.12` floor (relaxed back to `>=3.11` in v1.9.43),
 branch coverage, `deal`
@@ -194,8 +199,19 @@ lock. The five tracks above describe the shape of the work; the queue below
 turns it into an ordered, checkable list so "what ships next" is never
 ambiguous. Each row is one coherent 1.9.x patch under the no-bundling
 discipline (one story per patch, version bump last, local gate matched to CI).
-Rows marked *operator-paced* need the gitignored 5,000+ company corpus or a
-maintainer-run scan and cannot be completed from the public tree alone; every
+Rows marked *corpus-driven* run against the gitignored ~5,200-domain validation
+corpus (`validation/corpus-private/`) and the network, rather than from the public
+tree alone. That corpus is intentionally kept out of git for cleanliness, respect
+for the organizations in it, and security / legal hygiene, **not** because the
+work is secret or done elsewhere. The scans run locally with the tooling already
+in the repo (`validation/scan.py` to resolve, `validation/find_gaps.py` to rank
+unclassified termini, the calibration / stability harness for the Bayesian
+layer), and rigorous validation against that base is a core part of the pre-2.0
+"exceptionally well done" bar. The only constraint is a commit filter: aggregate
+counts, vetted patterns, fictional-brand examples, and calibration metrics are
+committed; real apexes and per-domain findings stay in the gitignored paths.
+Small ad-hoc random lists are fine for quick iteration on a specific change; the
+full corpus is what gives the broad coverage and calibration confidence. Every
 other row is code or docs work that ships on its own.
 
 The order is the recommended sequencing: cheapest-and-clearest first
@@ -220,13 +236,17 @@ runs in this order, each step one or more 1.9.x patches:
    contracts on `validator.py` (B1), the cache-lifecycle stateful machine (B2),
    source-boundary fault injection (B3), and the server-tool coverage lift that
    took `server.py` to ~75% (B4).
-3. **Robustness and security (Track D).** Next up. A fresh adversarial ingestion
-   audit, findings folded into `docs/security-audit-resolutions.md`.
-4. **Catalog growth (Track C).** C1 vendor-doc-sourced `cname_target`
-   fingerprints (specificity-gated, fictional-brand examples only), then C2
-   corpus-mined gap-fill: run `validation/scan.py` over the private corpus,
-   `find_gaps` to a report, triage candidates, and merge vetted rules.
-   Aggregate counts only reach the repo.
+3. **Robustness and security (Track D).** D1 done in v1.9.81: a fresh adversarial
+   ingestion audit closed round six (output-sink control stripping for
+   source-derived service strings and the DMARC `p=` value), folded into
+   `docs/security-audit-resolutions.md`.
+4. **Catalog growth (Track C).** C1 underway: vendor-sourced `cname_target`
+   fingerprints from local live-analysis batches (v1.9.82 to v1.9.86, 808 to 829
+   entries, fictional-brand examples only). Next is C2 corpus-mined gap-fill: run
+   `validation/scan.py` over the gitignored corpus, `validation/find_gaps.py` to a
+   ranked report, triage candidates, and merge vetted rules until the gap report
+   reaches a low residual. Aggregate counts and vetted patterns reach the repo;
+   real apexes do not.
 5. **Bayesian full-corpus calibration (Track C, C3),** with the legitimacy
    refinements below applied so the numbers are defensible, not just
    self-consistent. Run over the final catalog: per-node metrics,
@@ -348,8 +368,8 @@ gate; see "The pre-2.0 build plan" below for the empirical bar):
 | # | Story | Status | Acceptance |
 |---|---|---|---|
 | C1 | Vendor-doc-sourced `cname_target` additions | open | New high-precision `cname_target` rules sourced from public vendor docs via the `CONTRIBUTING.md` methodology (advances reference coverage on every rule); residual regional-cloud / SaaS-app / SSE-SASE gaps named in the Library Assessment narrowed. Committed examples use the fictional brands. |
-| C2 | Full-corpus fingerprint mining | operator-paced | `validation/scan.py` over private-corpus subsets plus `/recon-fingerprint-triage`, merging vetted rules so the gap report reaches a low residual. Aggregate counts only reach the repo. |
-| C3 | CT-enabled full-corpus calibration | operator-paced | A complete (CT-enabled) full-corpus Bayesian calibration run so `infrastructure_clusters` and the region / shard `lexical_observations` are exercised on real input; per-node Brier / ECE, deterministic-vs-Bayesian agreement, and sparse-case interval coverage tabulated, extending the release trend. |
+| C2 | Full-corpus fingerprint mining | corpus-driven (local) | `validation/scan.py` over the gitignored corpus plus `validation/find_gaps.py` and `/recon-fingerprint-triage`, merging vetted rules so the gap report reaches a low residual. Run locally; aggregate counts and vetted patterns reach the repo, real apexes do not. |
+| C3 | CT-enabled full-corpus calibration | corpus-driven (local) | A complete (CT-enabled) full-corpus Bayesian calibration run so `infrastructure_clusters` and the region / shard `lexical_observations` are exercised on real input; per-node Brier / ECE, deterministic-vs-Bayesian agreement, sparse-case interval coverage, and the CAL10 entropy-reduction numbers tabulated, extending the release trend. Run locally; only aggregate metrics reach the repo. |
 
 **v2.0 docs currency** (ships as one or two patches once the tracks above
 settle, before the lock):
@@ -357,7 +377,7 @@ settle, before the lock):
 | # | Story | Status | Acceptance |
 |---|---|---|---|
 | F1 | Release-notes draft brought current | open | `validation/v2.0-release-notes-draft.md` (covers v1.9.3 to v1.9.14 today) extended through the lock-time 1.9.x: every tag row linked to its patch and validation memo; the security-closure table reflects rounds 1-5 plus the original 2026-05 cycle. (Outstanding item 2.) |
-| F2 | Validation-summary refresh | partly operator-paced | `validation/v2.0-validation-summary.md` incorporates the latest full-corpus run (the C3 CT-enabled re-run) as the lock-time baseline; per-node stability on the full corpus tabulated; the v1.9.14 snapshot kept as the prior reference point. (Outstanding item 3.) |
+| F2 | Validation-summary refresh | corpus-driven (local) | `validation/v2.0-validation-summary.md` incorporates the latest full-corpus run (the C3 CT-enabled re-run) as the lock-time baseline; per-node stability on the full corpus tabulated; the v1.9.14 snapshot kept as the prior reference point. (Outstanding item 3.) |
 
 **v2.0 lock ceremony** (operator-paced; mechanical, runs only after every row
 above is green; Outstanding item 5):
@@ -387,7 +407,8 @@ run in parallel, each as its own focused 1.9.x patches:
 - **Fingerprint and pattern excellence.** Keep mining the full corpus with
   `validation/scan.py` (the 4-5k+ domain library) and the
   `/recon-fingerprint-triage` flow, merging vetted `cname_target` and other
-  rules so the catalog (808 entries / 631 unique slugs today) closes its
+  rules so the catalog (829 entries today, up from 808 via the v1.9.82 to v1.9.86
+  live-analysis batches) closes its
   residual coverage gaps and every high-value detection is precision-checked
   against real observations. The goal at lock time is a catalog that is
   comprehensive and high-precision across the whole corpus, with the
@@ -615,9 +636,10 @@ Built-in fingerprints live in nine categorized YAML files under
 (per-subdomain CNAME-target classification, added in v1.5), and
 `verticals.yaml`.
 
-**Current totals** *(as of v1.9.53)*:
+**Current totals** *(as of v1.9.86)*:
 
-- 808 fingerprint entries; 631 unique slugs.
+- 829 fingerprint entries (808 at v1.9.53, plus 21 cname_target rules from the
+  v1.9.82 to v1.9.86 live-analysis batches).
 - All slugs map to a defender-visible category in `formatter.py`.
 - Zero cross-file slug-name collisions (verified by `tests/test_fingerprint_expansion.py`).
 
