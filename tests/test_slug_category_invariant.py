@@ -308,6 +308,12 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "staffbase",
         "superfiliate",
         "transcend",
+        # 2026-06 C2 corpus run: a marketing-automation host and a domain-
+        # parking host, neither with a specific panel-category home. The two
+        # WAAP fronts from the same batch (reblaze, indusface) are mapped to
+        # Cloud in _CATEGORY_BY_SLUG instead, alongside imperva / cloudflare.
+        "sharpspring",
+        "hugedomains",
     }
 )
 

@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.87] - 2026-06-04
+
+### Catalog: first full-corpus gap-mining batch (Track C, C2)
+
+The first catalog-growth batch sourced from a full-corpus gap-mining run rather
+than vendor-doc reading (C1). A deterministic-pipeline scan over the 5,241-domain
+gitignored corpus (concurrency 5, CT off, 0.1% error) surfaced 1,335 unclassified
+CNAME-terminus buckets; triage at min-count 3 reduced that to 30 candidates, of
+which 5 vendors merged as high-precision `cname_target` rules. The catalog grows
+from 829 to 833 entries.
+
+- `reblaze` (`reblaze.com`) - Reblaze WAAP front, part of Link11
+- `indusface` (`indusguard.com`, `induscdn.com`) - Indusface AppTrana managed WAAP
+- `sharpspring` (`marketingautomation.services`) - SharpSpring marketing automation
+- `hugedomains` (`hugedomains.com`) - HugeDomains parking / for-sale host
+- `aws-nlb` extended with the two AWS GovCloud ELB regions
+  (`elb.us-gov-east-1.amazonaws.com`, `elb.us-gov-west-1.amazonaws.com`), closing
+  the GovCloud gap in the existing commercial-region set
+
+The two WAAP fronts join the Cloud panel category and the multi-cloud rollup
+alongside `imperva`; `sharpspring` and `hugedomains` join
+`EXPECTED_BUSINESS_APPS_FALLBACK`. About half the candidates were org-internal
+GSLB / load-balancer hostnames or first-party hyperscaler properties and were
+correctly excluded (a `cname_target` rule marks a third-party service distinct
+orgs point at, not one org's own internal plumbing); a handful of real vendors
+(Claranet, Gamania, BAMKO, SiteDetour, Turbify, ejoco, and the observed-but-
+defunct Edgio) are deferred to a later batch pending pattern verification. The
+aggregate triage trail is in `validation/v1.9.87-c2-corpus-batch.md`; the corpus
+and per-domain results stay gitignored, no real-company data committed.
+
+Validated against `validate_fingerprint.py` (833 entries), the metadata-coverage
+gate, ruff, pyright (0 errors), and the full test suite (2754 passed), plus the
+slug-category and cloud-vendor-coverage invariants.
+
 ## [1.9.86] - 2026-06-03
 
 ### Catalog: four more cname_target fingerprints from a live-analysis batch (Track C, C1)
