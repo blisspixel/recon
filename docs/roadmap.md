@@ -4,7 +4,7 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.88** (pre-2.0 hardening phase). Track A (complexity
+Current release: **v1.9.89** (pre-2.0 hardening phase). Track A (complexity
 decomposition) is complete as of v1.9.76: zero `# noqa: C901` markers remain and
 the mccabe cap of 15 now holds the whole tree. Track B (test and validation
 rigor) is complete as of v1.9.80 (B1 to B4: deal contracts on the boundary
@@ -13,10 +13,12 @@ injection, and the server-tool coverage lift). Track D D1 (a fresh adversarial
 ingestion audit) shipped in v1.9.81, closing round six (output-sink control
 stripping). Track C C1 catalog growth shipped in v1.9.82 to v1.9.86 (21 vetted
 `cname_target` rules from local live-analysis batches, 808 to 829 entries). Track
-C C2 (full-corpus gap mining) is now underway: a full 5,241-domain scan drove two
-verified batches in v1.9.87 to v1.9.88 (10 vendors, 829 to 838 entries), with the
-aggregate triage trail in `validation/v1.9.87-c2-corpus-batch.md`. The remaining
-gate work is the rest of C2, C3 calibration, and F2, run locally against the
+C C2 (full-corpus gap mining) drove three verified batches from a single full
+5,241-domain scan (v1.9.87 to v1.9.89, 13 vendors, 829 to 841 entries), closing
+the named third-party residual; the trail is in
+`validation/v1.9.87-c2-corpus-batch.md`. The remaining high-count termini are
+org-internal GSLB / load-balancers that by design are not catalogued, so the
+remaining gate work is C3 calibration and F2, run locally against the
 gitignored corpus, plus the mechanical lock; see the execution queue under the
 pre-2.0 hardening section below. What has already shipped is in the CHANGELOG. The
 engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
@@ -246,13 +248,12 @@ runs in this order, each step one or more 1.9.x patches:
    `cname_target` fingerprints from local live-analysis batches, 808 to 829
    entries, fictional-brand examples only). C2 corpus-mined gap-fill is underway:
    a full 5,241-domain `validation/scan.py` run plus `validation/find_gaps.py` and
-   `triage_candidates` drove two verified batches (v1.9.87 to v1.9.88, 10 vendors,
-   829 to 838 entries; trail in `validation/v1.9.87-c2-corpus-batch.md`). The
-   triage confirmed most high-count residual termini are org-internal GSLB /
-   load-balancers that by design never become fingerprints; remaining work is a
-   handful of deferred vendors plus the lower-frequency tail, merged until the
-   third-party gap residual is low. Aggregate counts and vetted patterns reach the
-   repo; real apexes do not.
+   `triage_candidates` drove three verified batches (v1.9.87 to v1.9.89, 13
+   vendors, 829 to 841 entries; trail in `validation/v1.9.87-c2-corpus-batch.md`).
+   The triage confirmed most high-count residual termini are org-internal GSLB /
+   load-balancers that by design never become fingerprints; the named third-party
+   residual is now closed, leaving only the low-frequency long tail. Aggregate
+   counts and vetted patterns reach the repo; real apexes do not.
 5. **Bayesian full-corpus calibration (Track C, C3),** with the legitimacy
    refinements below applied so the numbers are defensible, not just
    self-consistent. Run over the final catalog: per-node metrics,
@@ -384,7 +385,7 @@ gate; see "The pre-2.0 build plan" below for the empirical bar):
 | # | Story | Status | Acceptance |
 |---|---|---|---|
 | C1 | Vendor-doc-sourced `cname_target` additions | done (v1.9.82-v1.9.86) | High-precision `cname_target` rules sourced from public vendor docs via the `CONTRIBUTING.md` methodology (21 rules, 808 to 829 entries). Committed examples use the fictional brands. |
-| C2 | Full-corpus fingerprint mining | underway (v1.9.87+) | `validation/scan.py` over the gitignored corpus plus `validation/find_gaps.py` and `/recon-fingerprint-triage`, merging vetted rules so the gap report reaches a low residual. Two verified batches shipped (v1.9.87 to v1.9.88, 10 vendors, 829 to 838 entries; trail in `validation/v1.9.87-c2-corpus-batch.md`); a handful of deferred vendors and the lower-frequency tail remain. Run locally; aggregate counts and vetted patterns reach the repo, real apexes do not. |
+| C2 | Full-corpus fingerprint mining | third-party residual closed (v1.9.87-v1.9.89) | `validation/scan.py` over the gitignored corpus plus `validation/find_gaps.py` and `/recon-fingerprint-triage`, merging vetted rules so the gap report reaches a low residual. Three verified batches shipped (v1.9.87 to v1.9.89, 13 vendors, 829 to 841 entries; trail in `validation/v1.9.87-c2-corpus-batch.md`). The named third-party residual is closed; the remaining high-count termini are org-internal GSLB / load-balancers that are not catalogued by design. Run locally; aggregate counts and vetted patterns reach the repo, real apexes do not. |
 | C3 | CT-enabled full-corpus calibration | corpus-driven (local) | A complete (CT-enabled) full-corpus Bayesian calibration run so `infrastructure_clusters` and the region / shard `lexical_observations` are exercised on real input; per-node Brier / ECE, deterministic-vs-Bayesian agreement, sparse-case interval coverage, and the CAL10 entropy-reduction numbers tabulated, extending the release trend. Run locally; only aggregate metrics reach the repo. |
 
 **v2.0 docs currency** (ships as one or two patches once the tracks above
@@ -423,8 +424,8 @@ run in parallel, each as its own focused 1.9.x patches:
 - **Fingerprint and pattern excellence.** Keep mining the full corpus with
   `validation/scan.py` (the 4-5k+ domain library) and the
   `/recon-fingerprint-triage` flow, merging vetted `cname_target` and other
-  rules so the catalog (838 entries today, up from 808 via the v1.9.82 to v1.9.86
-  live-analysis batches and the v1.9.87 to v1.9.88 corpus-mining batches) closes its
+  rules so the catalog (841 entries today, up from 808 via the v1.9.82 to v1.9.86
+  live-analysis batches and the v1.9.87 to v1.9.89 corpus-mining batches) closes its
   residual coverage gaps and every high-value detection is precision-checked
   against real observations. The goal at lock time is a catalog that is
   comprehensive and high-precision across the whole corpus, with the
@@ -652,11 +653,11 @@ Built-in fingerprints live in nine categorized YAML files under
 (per-subdomain CNAME-target classification, added in v1.5), and
 `verticals.yaml`.
 
-**Current totals** *(as of v1.9.88)*:
+**Current totals** *(as of v1.9.89)*:
 
-- 838 fingerprint entries (808 at v1.9.53, plus 21 cname_target rules from the
-  v1.9.82 to v1.9.86 live-analysis batches and 10 vendors from the v1.9.87 to
-  v1.9.88 C2 corpus-mining batches).
+- 841 fingerprint entries (808 at v1.9.53, plus 21 cname_target rules from the
+  v1.9.82 to v1.9.86 live-analysis batches and 13 vendors from the v1.9.87 to
+  v1.9.89 C2 corpus-mining batches).
 - All slugs map to a defender-visible category in `formatter.py`.
 - Zero cross-file slug-name collisions (verified by `tests/test_fingerprint_expansion.py`).
 
