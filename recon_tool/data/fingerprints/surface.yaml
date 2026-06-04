@@ -1582,6 +1582,52 @@ fingerprints:
       subdomain. Does not distinguish managed hosting from the other
       services Claranet runs on the same domain.
 
+- name: BAMKO
+  slug: bamko
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: bamkounified.com
+    reference: https://bamko.net/company-stores
+    tier: application
+    description: >-
+      Subdomain CNAMEs into BAMKO (bamkounified.com), a branded-
+      merchandise vendor that hosts per-customer company stores.
+      Suggests the org runs a BAMKO-hosted swag or company store on a
+      branded domain. Hosting-binding signal only.
+
+- name: Gamania CloudForce
+  slug: gamania-cloudforce
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cloudforce.gamania.com
+    reference: https://www.cloudforce.gamania.com/en/cdn
+    tier: infrastructure
+    description: >-
+      Subdomain CNAMEs into Gamania CloudForce (cloudforce.gamania.com),
+      a Taiwan-based CDN, DNS, and anti-DDoS provider. Indicates content
+      for the subdomain is delivered or fronted through Gamania
+      CloudForce. Hosting-binding signal only, common on Taiwan-region
+      properties.
+
+- name: Turbify
+  slug: turbify
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: turbify.biz
+    reference: https://www.turbify.com/hosting
+    tier: infrastructure
+    description: >-
+      Subdomain CNAMEs into Turbify (turbify.biz, formerly Yahoo Small
+      Business), a small-business shared web-hosting provider. Indicates
+      the subdomain is hosted on Turbify cPanel hosting. Common on
+      small-business and long-tail sites.
+
 # ── New candidates from the v1.6.1 expanded-corpus run ───────────────────
 
 - name: Paradox Olivia
