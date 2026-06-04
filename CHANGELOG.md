@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.88] - 2026-06-04
+
+### Catalog: second full-corpus gap-mining batch (Track C, C2)
+
+Batch 2 from the same 5,241-domain run as v1.9.87, re-triaged at min-count 2 to
+reach the lower-frequency tier, plus verification of vendors deferred from batch
+1. Five vendors merged as high-precision `cname_target` rules; the catalog grows
+from 833 to 838 entries.
+
+- `entra-app-proxy` (`msappproxy.net`) - Microsoft Entra Application Proxy, the
+  on-premises-app publishing CNAME target (vendor-doc-sourced from Microsoft
+  Learn)
+- `workato` (`apim.workato.com`, `apim-custom.workato.com`) - Workato API
+  platform (iPaaS)
+- `byteark` (`byteark.com`) - ByteArk CDN and video streaming
+- `sitedetour` (`sitedetour.com`) - SiteDetour URL-redirect / dynamic-QR platform
+- `claranet` (`.clara.net`) - Claranet managed-services and hosting
+
+`entra-app-proxy` maps to the Identity panel category; `byteark` and `claranet`
+join the Cloud category and the multi-cloud rollup; `workato` and `sitedetour`
+join the business-apps fallback. Each was verified against public vendor
+documentation before merge; the Entra App Proxy rule uses the documented
+`msappproxy.net` target rather than the `msidentity.com` intermediate observed in
+the corpus. Vendors still deferred (Gamania, BAMKO, Turbify, ejoco, Marketo
+landing pages) await a corpus-observed customer instance or pattern confirmation;
+the defunct Edgio CDN is dropped. Corpus and per-domain results stay gitignored,
+no real-company data committed.
+
+Gate: validate_fingerprint (838), metadata coverage, ruff, pyright (0 errors),
+full pytest (2754 passed), slug-category and cloud-vendor-coverage invariants.
+
 ## [1.9.87] - 2026-06-04
 
 ### Catalog: first full-corpus gap-mining batch (Track C, C2)
