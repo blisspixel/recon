@@ -327,6 +327,16 @@ conflict provenance); matplotlib calibration SVGs (heavy dependency; the
 calibration artifacts live as `validation/` memos); and a code-plugin node
 system (data-only YAML overlays only, per the no-user-code invariant).
 
+#### Post-2.0 feature candidates (maintainer)
+
+Ideas that fit the passive-primitive brand but are deliberately held until after
+the v2.0 schema lock, since the lock adds no new surface by design. Each would be
+its own post-2.0 patch.
+
+| # | Item | Track | Notes |
+|---|---|---|---|
+| PV1 | Cohort-aggregate summary over a batch | E / agent QoL | A stateless `recon batch --summary` (and a JSON equivalent) that returns the aggregate distribution over a caller-supplied domain set: provider mix, top slugs, email-posture spread, multi-cloud share. The caller (an analyst or an agent) owns the list; recon ships no curated lists and stores nothing. Mostly a thin, hedged surface over computation that already exists (`compute_shared_tokens` and the ecosystem hypergraph in `batch`, plus `validation/corpus_aggregator.py`, which already emits aggregate-only counts, never per-domain names). Guardrails that keep it on-brand: no persistent aggregated store (the SQLite / DuckDB hard-no holds; compute-and-forget only); denominator honesty (report the unknown / sparse share next to every percentage so an aggregate does not read as a census); sample-size and passive-DNS-ceiling disclosure, the same hedging the single-domain panel uses; and humble naming (a "cohort aggregate" or "batch summary", not "industry insights", which would imply authoritative sector data the sample does not support). v2.1 candidate, kept off the v2.0 schema so the lock stays clean. |
+
 **Track E - CLI and agent quality-of-life.** Complete. The seven items (exit-code
 reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
 `autoApprove` guidance, the `recon://schema` discovery resource, and the
