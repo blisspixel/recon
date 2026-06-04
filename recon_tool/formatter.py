@@ -304,6 +304,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "mimecast-dmarc-analyzer": "Email",
     # Identity
     "okta": "Identity",
+    "entra-app-proxy": "Identity",
     "auth0": "Identity",
     "onelogin": "Identity",
     # v1.9.3.9: additional identity providers
@@ -352,6 +353,8 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "imperva": "Cloud",
     "reblaze": "Cloud",
     "indusface": "Cloud",
+    "byteark": "Cloud",
+    "claranet": "Cloud",
     "vercel": "Cloud",
     "netlify": "Cloud",
     "flyio": "Cloud",
@@ -960,6 +963,8 @@ _CLOUD_VENDOR_BY_SLUG: dict[str, str] = {
     "imperva": "Imperva",
     "reblaze": "Reblaze",
     "indusface": "Indusface",
+    "byteark": "ByteArk",
+    "claranet": "Claranet",
     "cdn77": "CDN77",
     "bunnycdn": "BunnyCDN",
     "vercel": "Vercel",

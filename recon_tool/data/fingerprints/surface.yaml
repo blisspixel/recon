@@ -1497,6 +1497,91 @@ fingerprints:
       sale rather than serving an active application. A hygiene
       signal that the label resolves but is not in productive use.
 
+- name: Microsoft Entra Application Proxy
+  slug: entra-app-proxy
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: msappproxy.net
+    reference: https://learn.microsoft.com/en-us/entra/identity/app-proxy/how-to-configure-custom-domain
+    tier: application
+    description: >-
+      Subdomain CNAMEs into Microsoft Entra Application Proxy
+      (msappproxy.net), which publishes an on-premises web app for
+      remote access through Entra ID. Indicates the org exposes an
+      internal application via Entra, not that the app itself runs in
+      Azure. Does not name the specific on-premises application.
+
+- name: Workato
+  slug: workato
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: apim.workato.com
+    reference: https://docs.workato.com/api-mgmt/custom-domain.html
+    tier: application
+    description: >-
+      Subdomain CNAMEs into the Workato API platform
+      (apim.workato.com), the default host for Workato-managed API
+      endpoints. Suggests the org runs Workato for integration and
+      automation (iPaaS) and fronts its APIs on a branded domain.
+  - type: cname_target
+    pattern: apim-custom.workato.com
+    reference: https://docs.workato.com/api-mgmt/custom-domain.html
+    tier: application
+    description: >-
+      Subdomain CNAMEs into Workato API-platform custom-domain
+      hosting (apim-custom.workato.com). Same iPaaS attribution as
+      apim.workato.com, on a customer custom domain. Hosting-binding
+      signal only.
+
+- name: ByteArk
+  slug: byteark
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: byteark.com
+    reference: https://docs.byteark.com/en/stream/
+    tier: infrastructure
+    description: >-
+      Subdomain CNAMEs into ByteArk, a Thailand-based CDN and video-
+      streaming provider. Indicates content for the subdomain is
+      delivered through ByteArk's CDN. Hosting-binding signal only,
+      not a traffic-volume signal.
+
+- name: SiteDetour
+  slug: sitedetour
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: sitedetour.com
+    reference: https://www.sitedetour.com/
+    tier: application
+    description: >-
+      Subdomain CNAMEs into SiteDetour, a hosted URL-redirect and
+      dynamic-QR platform. Indicates the subdomain serves redirects
+      rather than an origin application. A hosting-binding signal for
+      the redirect tier, not the destination it points at.
+
+- name: Claranet
+  slug: claranet
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: .clara.net
+    reference: https://www.claranet.com/
+    tier: infrastructure
+    description: >-
+      Subdomain CNAMEs into Claranet (clara.net), a managed-services
+      and hosting provider. Indicates Claranet hosts or fronts the
+      subdomain. Does not distinguish managed hosting from the other
+      services Claranet runs on the same domain.
+
 # ── New candidates from the v1.6.1 expanded-corpus run ───────────────────
 
 - name: Paradox Olivia

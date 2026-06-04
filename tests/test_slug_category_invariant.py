@@ -314,6 +314,12 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         # Cloud in _CATEGORY_BY_SLUG instead, alongside imperva / cloudflare.
         "sharpspring",
         "hugedomains",
+        # 2026-06 C2 corpus run, batch 2: an iPaaS API host and a URL-redirect
+        # platform with no specific panel-category home. The same batch maps
+        # entra-app-proxy to Identity and byteark / claranet to Cloud in
+        # _CATEGORY_BY_SLUG instead.
+        "workato",
+        "sitedetour",
     }
 )
 
