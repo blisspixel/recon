@@ -355,6 +355,8 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "indusface": "Cloud",
     "byteark": "Cloud",
     "claranet": "Cloud",
+    "gamania-cloudforce": "Cloud",
+    "turbify": "Cloud",
     "vercel": "Cloud",
     "netlify": "Cloud",
     "flyio": "Cloud",
@@ -963,7 +965,6 @@ _CLOUD_VENDOR_BY_SLUG: dict[str, str] = {
     "imperva": "Imperva",
     "reblaze": "Reblaze",
     "indusface": "Indusface",
-    "byteark": "ByteArk",
     "claranet": "Claranet",
     "cdn77": "CDN77",
     "bunnycdn": "BunnyCDN",
@@ -1046,6 +1047,14 @@ _CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "section-io",
         "ioriver",
         "medianova-cdn",
+        # 2026-06 C2 corpus run: regional / specialty CDN and SMB shared
+        # hosting. Same reasoning as azion / cloudinary (regional CDN) and
+        # wpengine / kinsta (single-stack hosting): real vendors, but not
+        # general multi-cloud footprint for the at-a-glance rollup. byteark
+        # is aligned here from v1.9.88 for consistency with the convention.
+        "byteark",
+        "gamania-cloudforce",
+        "turbify",
         "merlincdn",
         "edgetcdn-bitban",
         # Specialty hosting / DNS providers

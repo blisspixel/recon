@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.89] - 2026-06-04
+
+### Catalog: third full-corpus gap-mining batch, C2 deferred set cleared (Track C, C2)
+
+Batch 3 closes the C2 deferred vendor set from the v1.9.87 to v1.9.88 run. Three
+vendors verified against public docs and merged as `cname_target` rules; the
+catalog grows from 838 to 841 entries.
+
+- `bamko` (`bamkounified.com`) - BAMKO branded-merchandise company stores
+- `gamania-cloudforce` (`cloudforce.gamania.com`) - Gamania CloudForce, a Taiwan
+  CDN / DNS / anti-DDoS provider
+- `turbify` (`turbify.biz`) - Turbify (formerly Yahoo Small Business) SMB hosting
+
+Two deferred candidates were resolved without a new rule: Marketo landing pages
+(`mktoweb.com`) are already covered, and the `mktoapps.com` terminus seen in the
+corpus is Marketo's own first-party host, not a customer target; `ejoco` is
+dropped (no public vendor identity, and every in-corpus sample is one parent
+media group, so it fails the general-purpose bar). `bamko` joins the business-
+apps fallback; `gamania-cloudforce` and `turbify` map to the Cloud panel category
+and the multi-cloud rollup-exclusion set, the same convention regional CDNs
+(azion, cloudinary) and SMB hosting (wpengine, kinsta) already follow. For
+consistency, `byteark` (v1.9.88) is aligned into that exclusion set as well, so a
+regional CDN no longer inflates the at-a-glance multi-cloud count.
+
+This closes Track C C2's named third-party residual; the remaining unclassified
+termini are org-internal GSLB / load-balancers that by design are not catalogued.
+Corpus and per-domain results stay gitignored, no real-company data committed.
+
+Gate: validate_fingerprint (841), metadata coverage, ruff, pyright (0 errors),
+full pytest (2754 passed), slug-category and cloud-vendor-coverage invariants.
+
 ## [1.9.88] - 2026-06-04
 
 ### Catalog: second full-corpus gap-mining batch (Track C, C2)

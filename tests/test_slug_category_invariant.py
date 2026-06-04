@@ -320,6 +320,11 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         # _CATEGORY_BY_SLUG instead.
         "workato",
         "sitedetour",
+        # 2026-06 C2 corpus run, batch 3: branded-merchandise company-store
+        # platform with no specific panel-category home. The same batch maps
+        # gamania-cloudforce and turbify to Cloud (then the rollup-exclusion
+        # set) in formatter.py.
+        "bamko",
     }
 )
 
