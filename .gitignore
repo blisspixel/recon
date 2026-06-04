@@ -90,6 +90,7 @@ docs/accuracy.md
 !/validation/v1.9.24-candidates-triage.md
 !/validation/v1.9.26-schema-contract.md
 !/validation/2026-06-02-calibration.md
+!/validation/v1.9.87-c2-corpus-batch.md
 !/validation/corpus_aggregator.py
 !/validation/synthetic_corpus/
 !/validation/synthetic_corpus/**

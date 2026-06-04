@@ -1406,6 +1406,96 @@ fingerprints:
     description: >-
       Subdomain CNAMEs into a regional AWS ALB or NLB
       endpoint in ap-southeast-1 (Singapore).
+  - type: cname_target
+    pattern: elb.us-gov-east-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/govcloud-us/latest/UserGuide/whatis.html
+    tier: infrastructure
+    description: >-
+      Subdomain CNAMEs into a regional AWS ALB or NLB endpoint in
+      the us-gov-east-1 AWS GovCloud (US-East) region. Suggests the
+      org runs workloads in AWS GovCloud, the partition for US
+      government and regulated workloads. Does not distinguish ALB
+      from NLB, and does not by itself confirm a compliance boundary.
+  - type: cname_target
+    pattern: elb.us-gov-west-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/govcloud-us/latest/UserGuide/whatis.html
+    tier: infrastructure
+    description: >-
+      Subdomain CNAMEs into a regional AWS ALB or NLB endpoint in
+      the us-gov-west-1 AWS GovCloud (US-West) region. Same GovCloud
+      partition as us-gov-east-1. Does not distinguish ALB from NLB.
+
+# ── New cname_target rules from the 2026-06 C2 corpus run ─────────────────
+
+- name: Reblaze (Link11)
+  slug: reblaze
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: reblaze.com
+    reference: https://www.reblaze.com/
+    tier: infrastructure
+    description: >-
+      Subdomain CNAMEs into Reblaze (part of Link11), a cloud WAAP
+      that fronts the origin with WAF, DDoS, and bot mitigation.
+      Indicates traffic to the subdomain is proxied through Reblaze.
+      Marks the protective front, not the origin stack behind it.
+
+- name: Indusface AppTrana
+  slug: indusface
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: indusguard.com
+    reference: https://www.indusface.com/products/apptrana-waap-platform/
+    tier: infrastructure
+    description: >-
+      Subdomain CNAMEs into Indusface AppTrana (indusguard.com), a
+      managed WAAP that proxies the site for WAF, DDoS, and bot
+      protection. Indicates traffic is routed through AppTrana.
+      Marks the protective front, not the origin behind it.
+  - type: cname_target
+    pattern: induscdn.com
+    reference: https://www.indusface.com/products/apptrana-waap-platform/
+    tier: infrastructure
+    description: >-
+      Subdomain CNAMEs into the Indusface AppTrana CDN layer
+      (induscdn.com), the content-delivery tier paired with the
+      AppTrana WAAP. Indicates AppTrana fronts the subdomain.
+      Hosting-binding signal only.
+
+- name: SharpSpring
+  slug: sharpspring
+  category: Marketing
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: marketingautomation.services
+    reference: https://sharpspring.com/
+    tier: application
+    description: >-
+      Subdomain CNAMEs into SharpSpring (now Constant Contact Lead
+      Gen and CRM) on marketingautomation.services, used for hosted
+      landing pages and tracked email links. Suggests the org runs
+      SharpSpring for marketing automation on a branded domain.
+      Hosting-binding signal only.
+
+- name: HugeDomains (parked)
+  slug: hugedomains
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: hugedomains.com
+    reference: https://www.hugedomains.com/
+    tier: infrastructure
+    description: >-
+      Subdomain CNAMEs into HugeDomains, a domain reseller and
+      parking host. Indicates the subdomain is parked or listed for
+      sale rather than serving an active application. A hygiene
+      signal that the label resolves but is not in productive use.
 
 # ── New candidates from the v1.6.1 expanded-corpus run ───────────────────
 
