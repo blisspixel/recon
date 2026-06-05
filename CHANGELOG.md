@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.91] - 2026-06-05
+
+### Schema hardening 1/4: descriptions and contract loosening (SH1, SH3, SH4)
+
+First of the pre-2.0 schema-hardening patches. A four-lens pre-lock review of
+`docs/recon-schema.json` found a finite set of field shapes cheaper to fix now
+than after the lock (the SH1-SH9 track in `docs/roadmap.md`). This patch carries
+the changes that do not alter the emitted output shape:
+
+- **SH1**: reconcile the contradictory `partial` description (the JSON's "core
+  sources only, CT-only degradation does not flip it" definition is canonical;
+  `schema.md` now matches). Rewrite the `PosteriorObservation` / `sparse` /
+  interval-bound descriptions so they survive CAL14 (a declarative node can be
+  confidently-absent: low posterior, narrow interval, `sparse=false`) and carry
+  the CAL13 "evidence-responsive, not frequentist coverage" framing.
+- **SH3**: remove the three CT-pipeline telemetry fields (`ct_provider_used`,
+  `ct_cache_age_days`, `ct_attempt_outcome`) from the required set so the CT
+  pipeline can evolve later without a major bump; they are still emitted
+  best-effort. `REQUIRED_TOP_LEVEL_FIELDS` updates in lockstep. `ct_subdomain_count`
+  (a result, not pipeline-internal) stays required.
+- **SH4**: drop the closed host enum on `cloud_instance` (Microsoft controls
+  those values and adds sovereign clouds); the type stays `string|null` with the
+  known values documented.
+
+No emitted field changed shape. Both schema copies (`docs/` and
+`recon_tool/data/`) stay byte-identical.
+
+Gate: full pytest (2755 passed), the schema tests (34), ruff, pyright (0 errors),
+validate_fingerprint (841).
+
 ## [1.9.90] - 2026-06-05
 
 ### Bayesian: node-dependent missingness for the email-policy node (Track C-cal, CAL14)

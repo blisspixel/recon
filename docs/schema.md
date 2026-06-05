@@ -125,7 +125,7 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
 | `sources` | `list[string]` | no | subset of source names | stable | Source names that successfully contributed to the result. |
-| `partial` | bool | no | — | stable | `true` when any `degraded_sources` is non-empty. |
+| `partial` | bool | no | — | stable | `true` when a **core** source (DNS / identity / CT-as-core) is in `degraded_sources`. CT-only degradation does not flip this flag, matching `docs/recon-schema.json`. |
 | `degraded_sources` | `list[string]` | no | — | stable | Source names that failed or were unavailable. |
 
 ### Services & detection
