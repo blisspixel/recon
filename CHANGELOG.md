@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.95] - 2026-06-05
+
+### Schema hardening 5/5: include-ecosystem always emits the wrapper (SH9)
+
+Last of the pre-2.0 schema-hardening patches. When --include-ecosystem is set,
+`recon batch --json` now always emits the BatchResult wrapper object, even when
+no domain in the batch resolved. Previously it fell back to a bare array on an
+all-failed batch, flipping the top-level type from object to array exactly when
+a consumer's error path is already stressed (a consumer doing `result["domains"]`
+would raise). The wrapper now always carries the error records under `domains`
+with an empty `ecosystem_hyperedges`. The BatchResult and BatchArray schema
+descriptions drop the removed fallback, and a regression test covers the
+all-failed case.
+
+This completes the SH1 to SH9 schema-hardening track from the four-lens pre-lock
+review (the SH track in `docs/roadmap.md`); the v2.0 schema lock (G1) now applies
+to a surface with no known regret.
+
+Gate: full pytest (2755 passed), the schema / batch tests, ruff, pyright (0
+errors), validate_fingerprint (841).
+
 ## [1.9.94] - 2026-06-05
 
 ### Schema hardening 4/5: record discriminator and machine-readable error_kind (SH7, SH8)
