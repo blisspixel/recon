@@ -51,6 +51,21 @@ class TestReDoSPrevention:
         assert _validate_regex("(a+){20}", "test") is False
         assert _validate_regex("([a-z]+){15}", "test") is False
 
+    def test_overlapping_alternation_rejected(self):
+        # (a|aa)+ backtracks catastrophically because one branch is a prefix of
+        # another, making a partial match ambiguous. The earlier heuristic
+        # missed this (no nested quantifier); the prefix-overlap check catches it.
+        assert _validate_regex("(a|aa)+c", "test") is False
+        assert _validate_regex("(a|ab)+", "test") is False
+        assert _validate_regex("(foo|foobar)+", "test") is False
+        assert _validate_regex("(x|xy){5,}", "test") is False
+
+    def test_disjoint_alternation_accepted(self):
+        # Quantified alternation with disjoint branches is linear, not ReDoS,
+        # so it stays allowed (catalog cname patterns rely on this).
+        assert _validate_regex("(foo|bar)+", "test") is True
+        assert _validate_regex("(eu|us)[.]example[.]com", "test") is True
+
     def test_excessively_long_pattern_rejected(self):
         assert _validate_regex("a" * 501, "test") is False
 

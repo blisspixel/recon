@@ -80,6 +80,11 @@ DNS_QUERY_TIMEOUT = 5.0
 # bounds backtracking amplification from a crafted multi-KB TXT record.
 _MAX_SUBDOMAIN_TXT_MATCH_LEN = 4096
 
+# A DNS name is at most 253 characters; a longer CNAME value is malformed.
+# Bounds backtracking amplification when a custom / injected cname pattern is
+# matched against an attacker-controlled CNAME target. 255 leaves a small margin.
+_MAX_CNAME_MATCH_LEN = 255
+
 
 def _get_resolver() -> dns.asyncresolver.Resolver:
     """Return the async resolver instance. Overridable for testing."""
@@ -1144,7 +1149,13 @@ async def _detect_cname_infra(ctx: _DetectionCtx, domain: str) -> None:
     cname_patterns_sorted = sorted(get_cname_patterns(), key=lambda d: -len(d.pattern))
     for cname_list in (www_results, root_results):
         for cname in cname_list:
-            cl = cname.lower()
+            # Bound adversarial input before the regex match. A DNS name is at
+            # most 253 characters, so anything longer is malformed and only
+            # amplifies backtracking work for a pathological custom / injected
+            # pattern. The validator (fingerprints._validate_regex) rejects the
+            # known ReDoS shapes; this length cap is the second layer. The full
+            # cname is still used as raw_value below, only the match is bounded.
+            cl = cname.lower()[:_MAX_CNAME_MATCH_LEN]
             for det in cname_patterns_sorted:
                 try:
                     if re.search(det.pattern, cl, re.IGNORECASE):

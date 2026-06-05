@@ -90,12 +90,37 @@ _VALID_MATCH_MODES = frozenset({"any", "all"})
 # (google-re2) would remove the heuristic but crosses the pure-Python
 # dependency floor.
 _REDOS_RE = re.compile(
-    r"\([^)]*[+*][^)]*\)[+*{]"  # (group-with-quantifier) then + * or {n}
+    r"\([^)]*[+*][^)]*\)[+*{]"  # (group-with-quantifier) then + * or {n}, e.g. (a+)+
     r"|"
     r"(?:[+*]\??\.\*[+*])"  # quantifier + .* + quantifier
     r"|"
     r"(?:\.[+*]\??\.[+*]\??\.[+*])"  # three adjacent .X quantifiers (polynomial)
 )
+
+# Quantified alternation group, e.g. (a|aa)+ or (a|ab)*. Only the prefix-
+# overlapping case backtracks catastrophically (one branch is a prefix of
+# another, so a match can be partitioned ambiguously); disjoint alternation
+# such as (foo|bar)+ is linear and stays allowed. See _alternation_redos.
+_ALT_GROUP_QUANT_RE = re.compile(r"\(([^()]*\|[^()]*)\)[+*{]")
+
+
+def _alternation_redos(pattern: str) -> bool:
+    """Flag quantified alternation groups whose branches prefix-overlap.
+
+    ``(a|aa)+`` and ``(a|ab)+`` cause exponential backtracking because one
+    branch is a prefix of another, making a partial match ambiguous. Disjoint
+    branches such as ``(foo|bar)+`` do not, so we flag only the prefix-overlap
+    case. This is a heuristic over simple (non-nested) groups, not a proof; the
+    docstring on _validate_regex notes the linear-time-engine swap for full
+    safety.
+    """
+    for match in _ALT_GROUP_QUANT_RE.finditer(pattern):
+        branches = [b.strip() for b in match.group(1).split("|")]
+        for i, first in enumerate(branches):
+            for second in branches[i + 1 :]:
+                if first and second and (first.startswith(second) or second.startswith(first)):
+                    return True
+    return False
 
 
 class Detection(NamedTuple):
@@ -176,10 +201,11 @@ def _validate_regex(pattern: str, source: str) -> bool:
             source,
         )
         return False
-    # Heuristic ReDoS check: reject nested quantifiers
-    if _REDOS_RE.search(pattern):
+    # Heuristic ReDoS check: reject nested quantifiers and prefix-overlapping
+    # quantified alternation (e.g. (a|aa)+), both catastrophic-backtracking shapes.
+    if _REDOS_RE.search(pattern) or _alternation_redos(pattern):
         logger.warning(
-            "Potentially unsafe regex (nested quantifiers) %r in %s — skipped",
+            "Potentially unsafe regex (catastrophic backtracking) %r in %s — skipped",
             pattern,
             source,
         )

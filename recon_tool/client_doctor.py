@@ -28,6 +28,7 @@ from pathlib import Path, PureWindowsPath
 from typing import Literal
 
 from recon_tool.mcp_install import Client, Scope, resolve_config_path, servers_key
+from recon_tool.validator import strip_control_chars
 
 CheckStatus = Literal["ok", "warn", "fail", "info"]
 
@@ -183,11 +184,18 @@ def _command_checks(block: dict[str, object]) -> list[ClientCheck]:
         # right basename for either separator style on either OS.
         basename = PureWindowsPath(command).name.lower()
         known_launcher = basename.startswith(("recon", "python", "uvx", "uv"))
+        # The command comes from a client config file that an untrusted workspace
+        # can supply (.vscode/mcp.json, .cursor/mcp.json, etc.). rich.markup.escape
+        # neutralizes Rich markup but not terminal control bytes, so strip ANSI /
+        # OSC sequences before this string reaches the operator's terminal. args
+        # and autoApprove are rendered via json.dumps, which already escapes
+        # control bytes, so only the bare command needs this.
+        safe_command = strip_control_chars(command)
         if Path(command).exists() or known_launcher:
-            checks.append(ClientCheck("command", "ok", command))
+            checks.append(ClientCheck("command", "ok", safe_command))
         else:
             checks.append(
-                ClientCheck("command", "warn", f"unrecognized command '{command}'; verify it launches recon mcp")
+                ClientCheck("command", "warn", f"unrecognized command '{safe_command}'; verify it launches recon mcp")
             )
 
     args = block.get("args")

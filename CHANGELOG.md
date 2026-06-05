@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.97] - 2026-06-05
+
+### Security hardening: terminal-escape sanitization and CNAME ReDoS
+
+Two Medium-severity hardening fixes from the external review.
+
+- Terminal-escape injection in the client doctor. `recon doctor --client=<name>`
+  reads workspace-scoped MCP config files (`.vscode/mcp.json`, `.cursor/mcp.json`,
+  and similar) that an untrusted repository can supply. The config `command`
+  value was copied into the report and rendered with Rich markup escaping only,
+  which does not remove terminal control bytes, so a crafted command could emit
+  ANSI / OSC sequences (screen control, clipboard writes) to the operator's
+  terminal. The command is now passed through `strip_control_chars` before
+  display; `args` and `autoApprove` already went through `json.dumps`, which
+  escapes control bytes.
+- CNAME-matcher ReDoS. The CNAME infrastructure detector runs catalog and
+  custom / MCP-injected regex patterns against attacker-controlled CNAME
+  targets. The regex validator caught nested quantifiers like `(a+)+` but not
+  prefix-overlapping quantified alternation like `(a|aa)+`. `_validate_regex`
+  now rejects the prefix-overlap shape, and the matcher bounds the CNAME input
+  to 255 chars (the DNS name limit) before matching, capping backtracking
+  amplification. Disjoint alternation like `(foo|bar)+` stays allowed, and no
+  catalog pattern is affected.
+
+Gate: full pytest, ruff, pyright (0 errors), new ReDoS and sanitization tests.
+
 ## [1.9.96] - 2026-06-05
 
 ### Batch-record validation hardening and introspection fixes
