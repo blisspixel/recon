@@ -35,10 +35,7 @@
     "dmarc_pct",
     "mta_sts_mode",
     "site_verification_tokens",
-    "ct_provider_used",
     "ct_subdomain_count",
-    "ct_cache_age_days",
-    "ct_attempt_outcome",
     "cert_summary",
     "cloud_instance",
     "tenant_region_sub_scope",
@@ -196,7 +193,7 @@
       "items": {"type": "string"}
     },
     "ct_provider_used": {
-      "description": "Which CT provider answered, or '(cached)' suffix when data came from the per-domain CT cache.",
+      "description": "Best-effort CT-pipeline telemetry, not part of the guaranteed contract (removed from the required set in the v2.0 schema-hardening pass so the CT pipeline can evolve). Which CT provider answered, or '(cached)' suffix when data came from the per-domain CT cache.",
       "type": ["string", "null"]
     },
     "ct_subdomain_count": {
@@ -205,12 +202,12 @@
       "minimum": 0
     },
     "ct_cache_age_days": {
-      "description": "Age of the CT cache entry in days when cached data was used. Null when data came from a live provider.",
+      "description": "Best-effort CT-pipeline telemetry, not part of the guaranteed contract (optional since the v2.0 schema-hardening pass). Age of the CT cache entry in days when cached data was used. Null when data came from a live provider.",
       "type": ["integer", "null"],
       "minimum": 0
     },
     "ct_attempt_outcome": {
-      "description": "v1.9.25: outcome of the CT enumeration attempt. cache_hit when the cache-first short-circuit served the result. live_success when a live provider returned data. live_rate_limited when a provider was rate-limited (HTTP 429 or local breaker / wait-ceiling). breaker_open when a provider's circuit breaker was open before any HTTP call. live_other_failure for non-429 errors (timeout, 5xx, JSON parse). cache_miss when providers returned empty-but-not-error and no cache entry existed. skipped when --no-ct was passed. Null on older records or sources that do not touch CT.",
+      "description": "Best-effort CT-pipeline telemetry, not part of the guaranteed contract (optional since the v2.0 schema-hardening pass; the enum may gain values as the pipeline evolves). v1.9.25: outcome of the CT enumeration attempt. cache_hit when the cache-first short-circuit served the result. live_success when a live provider returned data. live_rate_limited when a provider was rate-limited (HTTP 429 or local breaker / wait-ceiling). breaker_open when a provider's circuit breaker was open before any HTTP call. live_other_failure for non-429 errors (timeout, 5xx, JSON parse). cache_miss when providers returned empty-but-not-error and no cache entry existed. skipped when --no-ct was passed. Null on older records or sources that do not touch CT.",
       "type": ["string", "null"],
       "enum": [null, "cache_hit", "live_success", "live_rate_limited", "breaker_open", "live_other_failure", "cache_miss", "skipped"]
     },
@@ -222,9 +219,8 @@
       ]
     },
     "cloud_instance": {
-      "description": "Microsoft cloud sovereignty from M365 OIDC discovery.",
-      "type": ["string", "null"],
-      "enum": ["microsoftonline.com", "microsoftonline.us", "partner.microsoftonline.cn", null]
+      "description": "Microsoft cloud-sovereignty host from M365 OIDC discovery. Microsoft controls this value and may add sovereign clouds, so it is an open string rather than a closed enum; known values include microsoftonline.com (commercial), microsoftonline.us (US Gov), and partner.microsoftonline.cn (China).",
+      "type": ["string", "null"]
     },
     "tenant_region_sub_scope": {
       "description": "Gov-cloud disambiguation from M365 OIDC.",
@@ -552,7 +548,7 @@
       }
     },
     "PosteriorObservation": {
-      "description": "Per-node Bayesian posterior with 80% credible interval (v1.9; stable v2.0+). The interval reflects evidence sparsity and cross-source conflict — wide intervals for hardened-target sparse cases, tight intervals for densely-corroborated cases. ``sparse=true`` flags the passive-observation ceiling. ``conflict_provenance`` (v1.9.1+) carries the source-pair detail behind any n_eff penalty.",
+      "description": "Per-node Bayesian posterior with an 80% credible interval (v1.9; stable v2.0+). The interval is evidence-responsive: it widens monotonically as evidence thins and narrows as it accumulates (a construction property; it is not a frequentist coverage interval, see correlation.md section 4.8.4). ``sparse=true`` flags the passive-observation ceiling for a node whose absence carries no disconfirming weight; a declarative node (one whose absent public-declaration signals are themselves evidence, CAL14) can be confidently-absent, with a low posterior, a narrow interval, and ``sparse=false``. ``conflict_provenance`` (v1.9.1+) carries the source-pair detail behind any n_eff penalty.",
       "type": "object",
       "required": [
         "name",
@@ -569,15 +565,15 @@
         "name": {"type": "string", "description": "Stable node identifier matching bayesian_network.yaml."},
         "description": {"type": "string", "description": "Plain-English claim the node encodes."},
         "posterior": {"type": "number", "minimum": 0, "maximum": 1, "description": "P(node=present | observed evidence)."},
-        "interval_low": {"type": "number", "minimum": 0, "maximum": 1, "description": "Lower bound of the 80% credible interval."},
-        "interval_high": {"type": "number", "minimum": 0, "maximum": 1, "description": "Upper bound of the 80% credible interval."},
+        "interval_low": {"type": "number", "minimum": 0, "maximum": 1, "description": "Lower bound of the 80% credible interval (evidence-responsive, not frequentist coverage)."},
+        "interval_high": {"type": "number", "minimum": 0, "maximum": 1, "description": "Upper bound of the 80% credible interval (evidence-responsive, not frequentist coverage)."},
         "evidence_used": {
           "type": "array",
           "items": {"type": "string"},
           "description": "Bound observations that fired for this node, formatted as ``slug:<name>`` or ``signal:<name>``."
         },
         "n_eff": {"type": "number", "minimum": 0, "description": "Effective sample size used to derive the interval; lower means wider interval."},
-        "sparse": {"type": "boolean", "description": "True when n_eff equals the floor — interval reflects passive-observation ceiling, not strong belief."},
+        "sparse": {"type": "boolean", "description": "True when n_eff is at the floor and absence carried no disconfirming weight for this node; the interval reflects the passive-observation ceiling, not strong belief. For a declarative node (CAL14) absence is evidence, so a confidently-absent declarative node has n_eff above the floor and ``sparse=false`` despite a low posterior."},
         "conflict_provenance": {
           "type": "array",
           "description": "Cross-source disagreements that contributed to this node's n_eff penalty (v1.9.1+). Empty array when no conflicts dampened the interval. Surfaces the source-pair detail dropped by the legacy count-only path; pairs with the existing top-level ``evidence_conflicts`` array.",
