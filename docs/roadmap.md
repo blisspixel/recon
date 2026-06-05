@@ -416,18 +416,24 @@ settle, before the lock):
 | F1 | Release-notes draft brought current | open | `validation/v2.0-release-notes-draft.md` (covers v1.9.3 to v1.9.14 today) extended through the lock-time 1.9.x: every tag row linked to its patch and validation memo; the security-closure table reflects rounds 1-5 plus the original 2026-05 cycle. (Outstanding item 2.) |
 | F2 | Validation-summary refresh | corpus-driven (local) | `validation/v2.0-validation-summary.md` incorporates the latest full-corpus run (the C3 CT-enabled re-run) as the lock-time baseline; per-node stability on the full corpus tabulated; the v1.9.14 snapshot kept as the prior reference point. (Outstanding item 3.) |
 
-**Pre-2.0 schema hardening (gates G1).** A four-lens pre-lock review of
-`docs/recon-schema.json` (API-design, Bayesian, downstream-consumer, and
-long-term-maintainer perspectives, 2026-06-05) found a finite set of field
-shapes that are cheap to fix now but would need a major (3.0) bump with a
-deprecation window to fix after the lock. They ship as small `1.9.x` patches
-before G1; the experimental and v2.0-new fields can still change, which is the
-point of doing it now. The bulk of the schema reviewed clean (the named-object
-`$defs`, `posterior_observations`, `DeltaReport`, the nullable cert / BIMI
-objects, `NodeConflict.magnitude`) and is not touched. Ordering is
-risk-ascending. Each is one coherent patch under the no-bundling discipline; the
-schema-vs-emitter drift test (`tests/test_json_schema_file.py`) and the
-batch-record contract test gate every one.
+**Pre-2.0 schema hardening (gates G1). SHIPPED v1.9.91 to v1.9.95.** A four-lens
+pre-lock review of `docs/recon-schema.json` (API-design, Bayesian,
+downstream-consumer, and long-term-maintainer perspectives, 2026-06-05) found a
+finite set of field shapes that were cheap to fix before the lock but would have
+needed a major (3.0) bump with a deprecation window to fix after. All nine items
+shipped in five risk-ascending patches: v1.9.91 (SH1 descriptions, SH3 CT
+loosening, SH4 cloud_instance enum drop), v1.9.92 (SH2 slug_confidences object
+map, SH5 wildcard_sibling_clusters objects), v1.9.93 (SH6 fusion_enabled flag),
+v1.9.94 (SH7 record_type / schema_version discriminator, SH8 error_kind), and
+v1.9.95 (SH9 the include-ecosystem always-wrapper behavior fix). The two CS-panel
+decisions resolved to the object map (SH2) and yes to the discriminator (SH7).
+The bulk of the schema reviewed clean (the named-object `$defs`,
+`posterior_observations`, `DeltaReport`, the nullable cert / BIMI objects,
+`NodeConflict.magnitude`) and was left untouched. With the track done, G1 now
+applies the lock to a surface with no known regret. The rows below are the
+original plan, kept for the per-item detail; the schema-vs-emitter drift test
+(`tests/test_json_schema_file.py`) and the batch-record contract test gate the
+locked surface.
 
 | # | Story | Decision | Acceptance |
 |---|---|---|---|
