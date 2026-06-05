@@ -290,6 +290,25 @@ hidden ones, and the information-recovery north-star is now measurable
 defensible without overstating it. Each is its own small patch; they gate the
 C3 calibration claims and the `correlation.md` polish (G3).
 
+**Shipped so far (2026-06):** CAL1, CAL2, CAL5, CAL7, CAL10 landed in the
+v1.9.61 to v1.9.71 calibration work. CAL13 (evidence-responsive framing in
+`correlation.md` section 4.8.4) and CAL8 shipped 2026-06-04; CAL8 is a new
+`validation/likelihood_sensitivity.py` harness (cleaner than overloading
+`threshold_sensitivity.py`, which sweeps trigger thresholds) with worst-case
+dECE <= 0.032 and decision flips <= 1.3% under a +/-20% perturbation, artifact
+in `validation/cal8-likelihood-sensitivity.md`. CAL3 / CAL4 are reframed around
+authoritative public oracles (DMARC / SPF / MTA-STS records as their own truth;
+M365 / GWS tenancy via the providers' own endpoints) plus an optional, external,
+anonymized case-study sanity check (`validation/2026-06-04-case-study-spot-check.md`,
+first sample: 7 of 7 positive detections corroborated, 0 false positives), rather
+than a fabricated hand-labeled corpus. **CAL14 design note:** the email-policy
+node's `dmarc_reject` and `dmarc_quarantine` bindings are mutually exclusive, so a
+correct absence-conditioning rule must operate per evidence-group with new
+absence-likelihood parameters (each a claim under the CPT-change discipline), not
+per independent non-fired binding; it is the heaviest remaining change and ships
+with the maintainer in the loop on those modeling choices. Remaining open: the
+CAL3 / CAL4 oracle calibration run, CAL6, CAL9, CAL11, CAL12, and CAL14.
+
 | # | Refinement | Acceptance |
 |---|---|---|
 | CAL1 | Reframe consistency vs calibration (and show why) | Everywhere (analyzer headers, `correlation.md`, validation memos), the deterministic-vs-Bayesian number is named *consistency / agreement*, not *calibration*, with an explicit note that both layers share the same evidence. State the mechanism: under the virtual-evidence construction a high non-sparse posterior requires a fired positive binding, which is itself a deterministic detection, so the consistency number tests the inference plumbing, not the CPT / likelihood values. Only CAL3 interval coverage can falsify the values. Proxy-label Brier / ECE are labeled as proxy-label, not ground-truth. |
