@@ -44,6 +44,7 @@
     "bimi_identity",
     "slug_confidences",
     "posterior_observations",
+    "fusion_enabled",
     "surface_attributions",
     "evidence_conflicts",
     "chain_motifs",
@@ -244,13 +245,17 @@
         {"type": "null"}
       ]
     },
+    "fusion_enabled": {
+      "description": "True when the Bayesian fusion layer ran for this lookup (under --fusion, or default-on from v2.0). Disambiguates the fusion arrays: when false, slug_confidences and posterior_observations are empty because fusion was not computed; when true, an empty array means fusion ran and found nothing.",
+      "type": "boolean"
+    },
     "slug_confidences": {
-      "description": "Bayesian per-slug posterior means (stable v2.0+). An object mapping each detected slug to its posterior mean in [0, 1], parallel to detection_scores. Populated only when --fusion is passed; empty object otherwise. The Beta layer operates on raw evidence; the network layer (posterior_observations) propagates through chained claims.",
+      "description": "Bayesian per-slug posterior means (stable v2.0+). An object mapping each detected slug to its posterior mean in [0, 1], parallel to detection_scores. Populated only when fusion runs (see fusion_enabled); empty object otherwise. The Beta layer operates on raw evidence; the network layer (posterior_observations) propagates through chained claims.",
       "type": "object",
       "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
     },
     "posterior_observations": {
-      "description": "Marginal posteriors over high-level claims from the Bayesian network at recon_tool/data/bayesian_network.yaml (v1.9; stable v2.0+). Each entry includes the posterior P(node=present | E) and the central 80% credible interval. Populated only when --fusion is passed; empty array otherwise. The Beta layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
+      "description": "Marginal posteriors over high-level claims from the Bayesian network at recon_tool/data/bayesian_network.yaml (v1.9; stable v2.0+). Each entry includes the posterior P(node=present | E) and the central 80% credible interval. Populated only when fusion runs (see fusion_enabled); empty array otherwise. The Beta layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
       "type": "array",
       "items": {"$ref": "#/$defs/PosteriorObservation"}
     },
