@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.99] - 2026-06-05
+
+### Schema description fix (SH9 follow-up) and the v2.0 lock-ceremony recipe
+
+- The root schema description still said `--include-ecosystem` "falls back to the
+  bare array when no domain resolved," which SH9 (v1.9.95) removed. It now states
+  the wrapper is always emitted, with error records under `domains` and an empty
+  `ecosystem_hyperedges` on an all-failed batch. Both schema copies stay
+  byte-identical; a readiness audit found this was the only stale reference left.
+- Adds `validation/v2.0-lock-ceremony.md`, the exact mechanical steps to cut
+  2.0.0 (G1 schema description bump, G2 fusion default-on with its test-update
+  discipline, G4 changelog move and tag), so the lock is a well-understood pass
+  rather than improvised at tag time.
+
+Gate: full pytest, the schema tests.
+
 ## [1.9.98] - 2026-06-05
 
 ### Bayesian explanation consistency (CAL7, CAL14)
