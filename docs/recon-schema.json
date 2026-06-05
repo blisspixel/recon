@@ -45,6 +45,8 @@
     "slug_confidences",
     "posterior_observations",
     "fusion_enabled",
+    "schema_version",
+    "record_type",
     "surface_attributions",
     "evidence_conflicts",
     "chain_motifs",
@@ -248,6 +250,15 @@
     "fusion_enabled": {
       "description": "True when the Bayesian fusion layer ran for this lookup (under --fusion, or default-on from v2.0). Disambiguates the fusion arrays: when false, slug_confidences and posterior_observations are empty because fusion was not computed; when true, an empty array means fusion ran and found nothing.",
       "type": "boolean"
+    },
+    "schema_version": {
+      "description": "The recon-schema contract version this record conforms to (SH7, v2.0+). Lets a detached payload (in a log, queue, or tool result, separated from this schema's $id) be routed across a future 2.x to 3.0 boundary.",
+      "type": "string"
+    },
+    "record_type": {
+      "description": "Self-describing discriminator for the output mode (SH7, v2.0+). 'lookup' on a single-domain success object; the other object-shaped modes carry 'batch_result' (the --include-ecosystem wrapper), 'delta' (a delta report), or 'error' (a batch error record). A consumer can branch on this one field instead of inferring the shape from which keys are present.",
+      "type": "string",
+      "const": "lookup"
     },
     "slug_confidences": {
       "description": "Bayesian per-slug posterior means (stable v2.0+). An object mapping each detected slug to its posterior mean in [0, 1], parallel to detection_scores. Populated only when fusion runs (see fusion_enabled); empty object otherwise. The Beta layer operates on raw evidence; the network layer (posterior_observations) propagates through chained claims.",
@@ -606,6 +617,7 @@
       "description": "Output shape of `recon delta <domain>` and `recon <domain> --compare <file>`. Stable.",
       "type": "object",
       "required": [
+        "record_type",
         "domain",
         "added_services",
         "removed_services",
@@ -620,6 +632,11 @@
         "changed_domain_count"
       ],
       "properties": {
+        "record_type": {
+          "type": "string",
+          "const": "delta",
+          "description": "Record discriminator (SH7, v2.0+); always 'delta' on this shape."
+        },
         "domain": {"type": "string"},
         "added_services": {"type": "array", "items": {"type": "string"}},
         "removed_services": {"type": "array", "items": {"type": "string"}},
@@ -697,7 +714,7 @@
     "BatchErrorRecord": {
       "description": "Emitted in place of a success object when a single domain in a batch run fails. Appears as an array element in ``recon batch --json`` (BatchArray), as a ``domains`` element in the ``--include-ecosystem`` BatchResult wrapper, and as a line in ``recon batch --ndjson``. A domain yields this shape when it fails input validation (e.g. a malformed apex) or when its lookup raises. Exactly two keys and no overlap with the single-domain success contract (which requires dozens of fields), so a consumer can branch on the key set alone. The deterministic classifier in recon_tool.schema_contract.classify_batch_record encodes that rule.",
       "type": "object",
-      "required": ["domain", "error"],
+      "required": ["domain", "error", "error_kind", "record_type"],
       "additionalProperties": false,
       "properties": {
         "domain": {
@@ -707,6 +724,16 @@
         "error": {
           "type": "string",
           "description": "Human-readable failure reason: the validation message or the lookup error text."
+        },
+        "error_kind": {
+          "type": "string",
+          "enum": ["validation", "lookup", "timeout"],
+          "description": "Machine-readable error category (SH8, v2.0+) so a consumer can route or alert on a code rather than the free-text message. validation = the domain failed input validation; timeout = the lookup timed out; lookup = any other lookup failure. The enum may gain values."
+        },
+        "record_type": {
+          "type": "string",
+          "const": "error",
+          "description": "Record discriminator (SH7, v2.0+); always 'error' on this shape."
         }
       }
     },
@@ -730,8 +757,13 @@
     "BatchResult": {
       "description": "Shape of ``recon batch <file> --json --include-ecosystem`` when at least one domain resolved successfully: a wrapper object carrying the per-domain results under ``domains`` and the cross-domain ``ecosystem_hyperedges`` array as a sibling. Without --include-ecosystem the batch JSON is a bare BatchArray instead, with no wrapper; and an --include-ecosystem run where no domain resolved also falls back to the bare BatchArray. Stable v2.0.",
       "type": "object",
-      "required": ["domains", "ecosystem_hyperedges"],
+      "required": ["record_type", "domains", "ecosystem_hyperedges"],
       "properties": {
+        "record_type": {
+          "type": "string",
+          "const": "batch_result",
+          "description": "Record discriminator (SH7, v2.0+); always 'batch_result' on this wrapper."
+        },
         "domains": {
           "type": "array",
           "description": "Per-domain results, one entry per input apex in input-file order. Each entry is either a single-domain success object (the root schema of this file) or a BatchErrorRecord.",

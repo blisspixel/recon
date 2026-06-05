@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.94] - 2026-06-05
+
+### Schema hardening 4/5: record discriminator and machine-readable error_kind (SH7, SH8)
+
+Adds self-describing record fields so a consumer (especially an agent handed a
+detached payload without invocation context) can identify and version a record
+without inferring the output mode from which keys are present. SH7 and SH8 ship
+together because both touch the batch error record and the record classifier.
+
+- SH7: every object-shaped output mode gains a required `record_type`
+  discriminator (`lookup` on a single-domain success object, `batch_result` on
+  the --include-ecosystem wrapper, `delta` on a delta report, `error` on a batch
+  error record), and the single-domain root gains a required `schema_version`
+  ("2.0") so a payload separated from the schema's $id can be routed across a
+  future 2.x to 3.0 boundary. `classify_batch_record` is rewritten to branch on
+  `record_type` first, with the prior key-set rules kept as a pre-v2.0 fallback
+  (the v2.0-added required fields are excluded from that fallback so old records
+  still classify).
+- SH8: the batch error record gains a machine-readable `error_kind` enum
+  (`validation` / `lookup` / `timeout`) so a consumer can route or alert on a
+  code rather than the free-text `error` message. The error record stays
+  `additionalProperties: false`, now with the four keys domain, error,
+  error_kind, record_type.
+
+The schema $defs (root, BatchErrorRecord, BatchResult, DeltaReport) and schema.md
+update in lockstep; both schema copies stay byte-identical.
+
+Gate: full pytest (2754 passed), the schema / batch / delta / contract tests,
+ruff, pyright (0 errors), validate_fingerprint (841).
+
 ## [1.9.93] - 2026-06-05
 
 ### Schema hardening 3/5: fusion_enabled flag (SH6)

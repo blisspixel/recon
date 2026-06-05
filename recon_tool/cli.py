@@ -3276,6 +3276,7 @@ def _batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, incl
 
         hyperedges = build_ecosystem_hyperedges(batch_infos)
         ecosystem_payload = {
+            "record_type": "batch_result",  # SH7 discriminator
             "ecosystem_hyperedges": [
                 {
                     "edge_type": e.edge_type,
@@ -3369,7 +3370,17 @@ def _batch_error_result(
     sentinel), preserving the pre-refactor behaviour exactly.
     """
     if json_output or ndjson:
-        return {"domain": domain, "error": message}
+        # SH8: machine-readable error_kind so a consumer can route on a code
+        # rather than the free-text message. markdown_skips marks the
+        # validate-error path; otherwise it is a lookup error (timeout split out).
+        if markdown_skips:
+            error_kind = "validation"
+        elif "timeout" in message.lower() or "timed out" in message.lower():
+            error_kind = "timeout"
+        else:
+            error_kind = "lookup"
+        # SH7: record_type discriminator (this is the error shape).
+        return {"domain": domain, "error": message, "error_kind": error_kind, "record_type": "error"}
     if csv_output:
         return (domain, None, message)
     if markdown and markdown_skips:
