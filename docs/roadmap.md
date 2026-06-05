@@ -413,8 +413,8 @@ settle, before the lock):
 
 | # | Story | Status | Acceptance |
 |---|---|---|---|
-| F1 | Release-notes draft brought current | open | `validation/v2.0-release-notes-draft.md` (covers v1.9.3 to v1.9.14 today) extended through the lock-time 1.9.x: every tag row linked to its patch and validation memo; the security-closure table reflects rounds 1-5 plus the original 2026-05 cycle. (Outstanding item 2.) |
-| F2 | Validation-summary refresh | corpus-driven (local) | `validation/v2.0-validation-summary.md` incorporates the latest full-corpus run (the C3 CT-enabled re-run) as the lock-time baseline; per-node stability on the full corpus tabulated; the v1.9.14 snapshot kept as the prior reference point. (Outstanding item 3.) |
+| F1 | Release-notes draft brought current | done | `validation/v2.0-release-notes-draft.md` extended through v1.9.95: the release-range table now covers the C2 corpus mining (v1.9.87-v1.9.89), CAL14 (v1.9.90), and the schema hardening (v1.9.91-v1.9.95); the schema-lock section describes the SH reshapes and the experimental-to-stable promotion note is corrected for the slug_confidences reshape. |
+| F2 | Validation-summary refresh | docs done; C3 re-run remaining | `validation/v2.0-validation-summary.md` refreshed through v1.9.95: a post-v1.9.14 section covers the CAL track, CAL14 (synthetic conditional ECE about 0.31 to about 0.03), catalog C1/C2, the spot-check, and SH1-SH9; the stale corpus-gate and disposition-carried-unchanged claims are corrected. The CT-enabled full-corpus re-run (C3) that exercises the cert surfaces and reflects CAL14 on real input is the remaining corpus-driven step; the nine DNS/identity-fed nodes are already calibrated by the existing passes. |
 
 **Pre-2.0 schema hardening (gates G1). SHIPPED v1.9.91 to v1.9.95.** A four-lens
 pre-lock review of `docs/recon-schema.json` (API-design, Bayesian,
@@ -460,7 +460,7 @@ above is green; Outstanding item 5):
 |---|---|---|---|
 | G1 | Schema lock | operator-paced | Apply the disposition table; bump `docs/recon-schema.json` from "v1.0 contract" to "v2.0 contract"; strip EXPERIMENTAL language from the promoted-field descriptions. |
 | G2 | `--fusion` default-on | operator-paced | Flip `--fusion` to default-on with the clean-panel disclosure rule (see the v2.0 design-decision section). |
-| G3 | `correlation.md` promotion | open | Promote from living draft to polished reference with the four required sections (defense / correlation mapping, prior-art comparison, dependency-floor manifesto, failure-mode catalog). Doc work, can land before the tag. |
+| G3 | `correlation.md` promotion | done | Promoted from living draft to the polished reference: the header framing updated, the node-dependent-missingness section (4.8.3) rewritten to the shipped CAL14 reality (declarative email-policy node, the n_eff / stability ripples handled, corpus-grounded numbers, ECE about 0.31 to about 0.03). The four required sections are present (defense-correlation mapping 4a, prior-art 4b, dependency-floor manifesto 4c, failure-mode catalog 4.8.10); the CAL13 evidence-responsive framing and the ground-truth / independence-bias caveats are in place. No math removed. |
 | G4 | Changelog move + tag | operator-paced | Move the release-notes draft body into `CHANGELOG.md` under `## [2.0.0] - <date>`, delete the draft, run `scripts/release.py`. |
 
 Schema-contract polish (the original Outstanding item 1) shipped in v1.9.26 and
