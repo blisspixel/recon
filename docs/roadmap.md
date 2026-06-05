@@ -416,6 +416,37 @@ settle, before the lock):
 | F1 | Release-notes draft brought current | open | `validation/v2.0-release-notes-draft.md` (covers v1.9.3 to v1.9.14 today) extended through the lock-time 1.9.x: every tag row linked to its patch and validation memo; the security-closure table reflects rounds 1-5 plus the original 2026-05 cycle. (Outstanding item 2.) |
 | F2 | Validation-summary refresh | corpus-driven (local) | `validation/v2.0-validation-summary.md` incorporates the latest full-corpus run (the C3 CT-enabled re-run) as the lock-time baseline; per-node stability on the full corpus tabulated; the v1.9.14 snapshot kept as the prior reference point. (Outstanding item 3.) |
 
+**Pre-2.0 schema hardening (gates G1).** A four-lens pre-lock review of
+`docs/recon-schema.json` (API-design, Bayesian, downstream-consumer, and
+long-term-maintainer perspectives, 2026-06-05) found a finite set of field
+shapes that are cheap to fix now but would need a major (3.0) bump with a
+deprecation window to fix after the lock. They ship as small `1.9.x` patches
+before G1; the experimental and v2.0-new fields can still change, which is the
+point of doing it now. The bulk of the schema reviewed clean (the named-object
+`$defs`, `posterior_observations`, `DeltaReport`, the nullable cert / BIMI
+objects, `NodeConflict.magnitude`) and is not touched. Ordering is
+risk-ascending. Each is one coherent patch under the no-bundling discipline; the
+schema-vs-emitter drift test (`tests/test_json_schema_file.py`) and the
+batch-record contract test gate every one.
+
+| # | Story | Decision | Acceptance |
+|---|---|---|---|
+| SH1 | Schema-description reconciliations | resolved | Reconcile the contradictory `partial` description (the JSON's "core sources only, not CT-only degradation" definition wins; fix `schema.md`); update the `sparse` / `n_eff` descriptions so they survive CAL14 (a declarative node can be confidently-absent: low posterior, narrow interval, `sparse=false`); tighten the credible-interval description to the CAL13 "evidence-responsive, not frequentist coverage" framing. Verify the maintainer-flagged `detection_scores` schema-vs-model shape (map vs pairs) and fix if drifted. Descriptions only, no field-shape change. |
+| SH2 | `slug_confidences` to array of objects | resolved: array of `{slug, posterior}` | Reshape the v2.0-new `slug_confidences` from a positional `[slug, posterior]` tuple to an array of `{slug, posterior}` objects, matching `posterior_observations` so a per-slug interval / n_eff can be added additively later. The tuple cannot grow in place. Highest-consensus fix. Update the emitter, the cache round-trip, the schema, the tests. |
+| SH3 | CT telemetry out of `required` | resolved | Remove `ct_provider_used`, `ct_cache_age_days`, `ct_attempt_outcome` from the root `required` list (keep emitting them as optional properties) so the CT pipeline can be restructured later without a 3.0. Pure loosening; the schema-contract required set updates. |
+| SH4 | `cloud_instance` enum drop | resolved: drop enum, keep name | Drop the closed host enum on `cloud_instance` (Microsoft controls those values and adds sovereign clouds); keep type `string\|null` and document the known values. Keep the field name (a rename would break v1.x consumers for a cosmetic gain; not worth it). Same treatment for `tenant_region_sub_scope` only if a value gap appears. |
+| SH5 | `wildcard_sibling_clusters` to objects | resolved | Reshape from a bare `list[list[string]]` to an array of `{names: [...]}` objects (room for the generating wildcard SAN / issuer later), matching the adjacent `CertBurst`. Experimental v1.7+ field; changes before the lock. |
+| SH6 | `fusion_enabled` flag | resolved: add the flag | Add a required top-level `fusion_enabled: bool` so a consumer can tell `slug_confidences: []` / `posterior_observations: []` meaning "fusion off" from "fusion ran, found none". Keep both arrays `required` (2.0 flips `--fusion` default-on, so they are normally populated; the flag only disambiguates `--no-fusion`). `surface_attributions` is not fusion-gated and needs no change. |
+| SH7 | Record discriminator | needs sign-off | Add a required `schema_version` ("2.0") to the single-domain root and a `record_type` discriminator (`lookup` / `batch_result` / `delta` / `error`) to each object-shaped mode, so consumers (especially an agent handed a bare payload) do not discriminate by accidental key-disjointness. A required discriminator cannot be added cleanly after the lock. The most additive of the changes; recommended, the one most worth an explicit decision. |
+| SH8 | `BatchErrorRecord` machine-readable kind | resolved | Add an `error_kind` enum (`validation` / `lookup` / `timeout`, extensible) to `BatchErrorRecord` and bless the "a success record never carries a top-level `error` key" guarantee in the contract, so a SIEM routes on a code not free-text and the cheap discriminator is stable. The error record is `additionalProperties: false`, so the slot must exist before the lock. |
+| SH9 | `--include-ecosystem` always-wrapper | resolved | When `--include-ecosystem` is set, always emit the `BatchResult` wrapper (errors under `domains`, `ecosystem_hyperedges: []`) instead of falling back to a bare array when no domain resolved, so the top-level type does not flip on an all-failed batch. The one behavior change; gated by the batch-output tests. |
+
+Two decisions want explicit sign-off before they ship: the `slug_confidences`
+object form (SH2: array-of-objects recommended, vs an object-map) and whether to
+add the `record_type` / `schema_version` discriminator (SH7). The rest are
+clear-cut. Once SH1 to SH9 are green, G1 applies the lock to a surface with no
+known regret.
+
 **v2.0 lock ceremony** (operator-paced; mechanical, runs only after every row
 above is green; Outstanding item 5):
 
