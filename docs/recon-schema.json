@@ -245,17 +245,9 @@
       ]
     },
     "slug_confidences": {
-      "description": "Bayesian per-slug posterior means (stable v2.0+). Each entry is a [slug, posterior] pair with posterior in [0, 1]. Populated only when --fusion is passed.",
-      "type": "array",
-      "items": {
-        "type": "array",
-        "minItems": 2,
-        "maxItems": 2,
-        "prefixItems": [
-          {"type": "string"},
-          {"type": "number", "minimum": 0, "maximum": 1}
-        ]
-      }
+      "description": "Bayesian per-slug posterior means (stable v2.0+). An object mapping each detected slug to its posterior mean in [0, 1], parallel to detection_scores. Populated only when --fusion is passed; empty object otherwise. The Beta layer operates on raw evidence; the network layer (posterior_observations) propagates through chained claims.",
+      "type": "object",
+      "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
     },
     "posterior_observations": {
       "description": "Marginal posteriors over high-level claims from the Bayesian network at recon_tool/data/bayesian_network.yaml (v1.9; stable v2.0+). Each entry includes the posterior P(node=present | E) and the central 80% credible interval. Populated only when --fusion is passed; empty array otherwise. The Beta layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
@@ -363,11 +355,14 @@
           "maxItems": 3
         },
         "wildcard_sibling_clusters": {
-          "description": "Stable v1.7+. Each entry is the deduplicated, sorted list of non-wildcard SANs from a single cert that also covered ≥1 wildcard SAN. Empty array when CT data showed no wildcard certs or none had concrete siblings to harvest. Bounded — at most 10 clusters, 20 names per cluster.",
+          "description": "Stable v1.7+ (reshaped to objects in v2.0). Each entry is an object {names: [...]} whose `names` is the deduplicated, sorted list of non-wildcard SANs from a single cert that also covered at least one wildcard SAN. The object envelope leaves room for a future per-cluster attribute (the generating wildcard SAN or issuer). Empty array when CT data showed no wildcard certs or none had concrete siblings to harvest. Bounded: at most 10 clusters, 20 names per cluster.",
           "type": "array",
           "items": {
-            "type": "array",
-            "items": {"type": "string"}
+            "type": "object",
+            "required": ["names"],
+            "properties": {
+              "names": {"type": "array", "items": {"type": "string"}}
+            }
           }
         },
         "deployment_bursts": {
