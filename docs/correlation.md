@@ -1068,8 +1068,11 @@ calibration claims gate on the maximum per-node conditional ECE, not the mean.
 Variable elimination gives us a single posterior $\hat{p} = P(X \mid O)$.
 But a point estimate is not enough: a posterior of $0.85$ derived
 from one weak observation should not be reported the same way as a
-posterior of $0.85$ derived from five corroborating ones. We need a
-calibrated interval that reflects evidence sparsity.
+posterior of $0.85$ derived from five corroborating ones. We need an
+*evidence-responsive* interval: one whose width reflects how much
+evidence the posterior rests on. We say *evidence-responsive* rather
+than *calibrated* deliberately; the distinction is made precise under
+"What the 80% interval is, and what it is not" below.
 
 The standard approach in conjugate Bayesian analysis is to maintain
 $\mathrm{Beta}(\alpha, \beta)$ posteriors over the parameter
@@ -1115,20 +1118,33 @@ $\pm 0.02$ of the exact Beta quantile across the $n_{\mathrm{eff}}$
 range we operate in, verified by
 `tests/test_bayesian_inference.py::test_credible_interval_matches_beta_quantile`.
 
-**What the 80% interval is, and what it is not.** It is a
-calibrated quantile of the moment-matching $\mathrm{Beta}$
+**What the 80% interval is, and what it is not.** It is the
+central-80% quantile of the moment-matching $\mathrm{Beta}$
 $(\alpha_{\mathrm{eff}}, \beta_{\mathrm{eff}})$ that we
 constructed on top of the exact posterior. It is *not* a
 frequentist coverage interval against the underlying generative
 process, because there is no underlying generative process we have
 access to (the latent claim is unobserved by design and there is
 no ground-truth oracle in the passive setting). The coverage
-guarantee that does hold is *conditional* on the calibration
-model: if the moment-matching family is well-specified for the
+guarantee that does hold is *conditional* on the construction:
+if the moment-matching family is well-specified for the
 domain population, the interval covers the true latent
-probability at 80% on average. The validation strategy (§4.8.7)
-reports calibration error against this conditional claim, not
-against ground truth.
+probability at 80% on average.
+
+Until that conditional coverage is checked empirically against a
+ground-truth subset (the frequentist-coverage test on the
+validation roadmap), we describe the interval as
+**evidence-responsive**, not **calibrated**. The two words name
+different claims. *Evidence-responsive* is the property that the
+interval widens monotonically as evidence thins and narrows as it
+accumulates; we prove this by construction below (the Fellaji
+data-related principle). *Calibrated* in the Dawid sense is the
+stronger claim that an 80% interval contains the truth 80% of the
+time in repeated use; that is a coverage statement, and we reserve
+the word for what an empirical coverage test demonstrates. The
+validation strategy (§4.8.7) reports agreement and proxy-label
+calibration error against the conditional claim, labeled as such,
+not coverage against ground truth.
 
 ##### Calibration principles the interval satisfies
 
@@ -1169,11 +1185,14 @@ $\hat{p}$ and $n_{\mathrm{eff}}$, and both are deterministic
 functions of the observed evidence and the committed YAML
 network.
 
-This is the formal statement of "the layer is calibrated in the
-sense that the principles a calibration measure should satisfy
-are satisfied by construction, not by training." It does not
-say the interval is *tight*; it says the interval is
-*principled*.
+This is the formal statement of "the layer is
+*evidence-responsive* in the sense that the principles an
+epistemic-uncertainty measure should satisfy are met by
+construction, not by training." It is distinct from frequentist
+calibration: it does not say the interval is *tight*, nor that it
+attains 80% coverage in repeated use; it says the interval is
+*principled* and *evidence-responsive*. Frequentist coverage is
+the separate empirical claim, reserved for the coverage test.
 
 ##### Relationship to Subjective Logic and the Imprecise Dirichlet Model
 
