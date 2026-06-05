@@ -68,19 +68,32 @@ def _write_ct_budget_summary(results_path: Path, run_dir: Path) -> None:
     """
     outcome_counts: dict[str, int] = {}
     total = 0
-    with contextlib.suppress(OSError), results_path.open(encoding="utf-8") as fh:
-        for line in fh:
+    text = ""
+    with contextlib.suppress(OSError):
+        text = results_path.read_text(encoding="utf-8")
+    # The batch writes NDJSON (one object per line) or, under --json-array, a
+    # single pretty-printed JSON array. Detect the array form so the per-line
+    # parser does not silently count zero (or crash on a list element).
+    records: list[dict[str, object]] = []
+    if text.lstrip().startswith("["):
+        with contextlib.suppress(ValueError):
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                records = [rec for rec in parsed if isinstance(rec, dict)]
+    else:
+        for line in text.splitlines():
             if not line.strip():
                 continue
             try:
                 rec = json.loads(line)
             except ValueError:
                 continue
-            total += 1
-            outcome = rec.get("ct_attempt_outcome")
-            if outcome is None:
-                outcome = "not_attempted"
-            outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+            if isinstance(rec, dict):
+                records.append(rec)
+    for rec in records:
+        total += 1
+        outcome = rec.get("ct_attempt_outcome") or "not_attempted"
+        outcome_counts[str(outcome)] = outcome_counts.get(str(outcome), 0) + 1
 
     # Pick up the persisted rate-limiter snapshots written by the
     # batch subprocess. The state files live in the operator's recon

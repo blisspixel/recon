@@ -40,6 +40,13 @@ on:
 permissions:
   contents: read
 
+# `.python-version` pins the local / dev toolchain to 3.14, and uv reads it
+# unless UV_PYTHON is set. Every job here installs Python 3.12 via setup-python,
+# so pin uv to the same interpreter workflow-wide; otherwise uv sync / export /
+# pip-audit would resolve and audit against 3.14, not the released runtime floor.
+env:
+  UV_PYTHON: "3.12"
+
 jobs:
   test:
     runs-on: ubuntu-latest
