@@ -41,11 +41,12 @@ permissions:
   contents: read
 
 # `.python-version` pins the local / dev toolchain to 3.14, and uv reads it
-# unless UV_PYTHON is set. Every job here installs Python 3.12 via setup-python,
-# so pin uv to the same interpreter workflow-wide; otherwise uv sync / export /
-# pip-audit would resolve and audit against 3.14, not the released runtime floor.
+# unless UV_PYTHON is set. Every job here installs Python 3.11 (the supported
+# floor) via setup-python, so pin uv to the same interpreter workflow-wide;
+# otherwise uv sync / export / pip-audit would resolve and audit against 3.14,
+# not the released runtime floor.
 env:
-  UV_PYTHON: "3.12"
+  UV_PYTHON: "3.11"
 
 jobs:
   test:
@@ -61,7 +62,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Install dependencies
         run: uv sync
@@ -122,7 +123,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Sync runtime deps (no dev group)
         # ``uv build`` resolves the build backend (hatchling) from
@@ -191,7 +192,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Export runtime requirements
         # Re-export so the SBOM job is self-contained — it does not

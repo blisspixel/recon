@@ -33,7 +33,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Install dependencies
         run: uv sync
@@ -57,7 +57,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Install dependencies
         run: uv sync
@@ -117,7 +117,7 @@ jobs:
       # pip-audit would run on 3.14 instead of the interpreter setup-python
       # installs below, auditing the wrong environment. Mirror the test matrix,
       # which sets UV_PYTHON for the same reason.
-      UV_PYTHON: "3.12"
+      UV_PYTHON: "3.11"
     steps:
       - uses: actions/checkout@v6
 
@@ -127,7 +127,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Install dependencies
         run: uv sync
@@ -165,7 +165,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Install dependencies
         run: uv sync
