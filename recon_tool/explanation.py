@@ -10,6 +10,7 @@ All generated text uses defensive, hedged language.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from recon_tool.models import (
@@ -22,8 +23,6 @@ from recon_tool.models import (
 from recon_tool.signals import Signal, SignalMatch
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from recon_tool.posture import _PostureRule  # pyright: ignore[reportPrivateUsage]
 
 __all__ = [

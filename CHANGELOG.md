@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.96] - 2026-06-05
+
+### Batch-record validation hardening and introspection fixes
+
+Three correctness fixes from an external review pass, all in code shipped earlier
+this session.
+
+- `classify_batch_record` no longer trusts `record_type` alone. The SH7
+  discriminator selects which shape to validate, but the full shape is still
+  enforced: a `record_type="lookup"` record must carry every required success
+  field, and a `record_type="error"` record must be exactly the closed four-key
+  error shape `{domain, error, error_kind, record_type}`. A malformed mapping
+  that only sets `record_type` now classifies as `unknown` instead of being
+  accepted as a valid record. The docstring is corrected to match.
+- `schema_contract.py` (`Mapping`) and `explanation.py` (`Callable`) imported
+  these only under `TYPE_CHECKING` while referencing them in runtime
+  annotations, so `typing.get_type_hints()` raised `NameError`, breaking doc
+  generators and introspection tooling. Both are now runtime imports.
+
+Gate: full pytest, ruff, pyright (0 errors), new bypass and introspection tests.
+
 ## [1.9.95] - 2026-06-05
 
 ### Schema hardening 5/5: include-ecosystem always emits the wrapper (SH9)

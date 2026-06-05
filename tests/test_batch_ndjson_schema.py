@@ -126,6 +126,32 @@ def test_classifier_rejects_malformed_records() -> None:
     assert classify_batch_record({}) == "unknown"
 
 
+def test_record_type_does_not_bypass_shape_validation() -> None:
+    """record_type selects the shape to validate, it does not skip validation.
+
+    A malformed payload that only sets record_type must not be accepted: the
+    full required-field set (success) and the closed four-key set (error) are
+    still enforced.
+    """
+    # record_type=lookup but missing every required success field.
+    assert classify_batch_record({"record_type": "lookup"}) == "unknown"
+    # record_type=lookup with only a couple of fields present.
+    assert classify_batch_record({"record_type": "lookup", "queried_domain": "x"}) == "unknown"
+    # record_type=error with arbitrary extra field (schema is closed).
+    assert classify_batch_record({"record_type": "error", "evil": True}) == "unknown"
+    # record_type=error missing error_kind/domain.
+    assert classify_batch_record({"record_type": "error", "error": "boom"}) == "unknown"
+    # A well-formed v2.0 error record still classifies as error.
+    good_error = {"domain": "bad", "error": "invalid", "error_kind": "validation", "record_type": "error"}
+    assert classify_batch_record(good_error) == "error"
+    # A well-formed v2.0 error record with one extra key is rejected (closed shape).
+    assert classify_batch_record({**good_error, "extra": 1}) == "unknown"
+    # A full success record with record_type=lookup classifies as success.
+    full_success = dict.fromkeys(REQUIRED_TOP_LEVEL_FIELDS, "x")
+    full_success["record_type"] = "lookup"
+    assert classify_batch_record(full_success) == "success"
+
+
 def test_include_ecosystem_always_emits_wrapper_on_all_failed_batch(capsys) -> None:
     """SH9: --include-ecosystem emits the BatchResult wrapper even when no domain
     resolved, so the top-level type does not flip to a bare array."""
