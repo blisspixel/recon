@@ -40,15 +40,16 @@ error), recon emits an error record in place of the success object rather
 than dropping the domain silently:
 
 ```json
-{"domain": "not a domain", "error": "invalid domain syntax"}
+{"domain": "not a domain", "error": "invalid domain syntax", "error_kind": "validation", "record_type": "error"}
 ```
 
-Exactly two keys, `domain` and `error`, both strings. The shape is disjoint
-from the single-domain success object (which carries dozens of required
-fields), so a consumer can branch on the key set alone. The deterministic
-rule a consumer should apply to any batch / NDJSON record:
+Four keys: `domain` and `error` (both strings), `error_kind` (enum:
+`validation`, `lookup`, `timeout`), and `record_type` (const `"error"`).
+The shape is disjoint from the single-domain success object (which carries
+dozens of required fields), so a consumer can branch on the key set alone.
+The deterministic rule a consumer should apply to any batch / NDJSON record:
 
-- key set is exactly `{domain, error}` -> error record;
+- `record_type` is `"error"` (or the key set is `{domain, error, error_kind, record_type}`) -> error record;
 - key set is a superset of the required single-domain fields -> success object;
 - anything else -> malformed, reject.
 
@@ -100,15 +101,15 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
 | `tenant_id` | string | yes | UUID | stable | Microsoft 365 tenant UUID. `null` for non-M365 domains. |
-| `display_name` | string | no | — | stable | Organization display name. Falls back to the queried domain when no better signal is available. |
-| `default_domain` | string | no | — | stable | Primary domain within the tenant. Falls back to the queried domain when no tenant was detected. |
-| `queried_domain` | string | no | — | stable | The domain the user passed (after validation + lowercasing). |
+| `display_name` | string | no | n/a | stable | Organization display name. Falls back to the queried domain when no better signal is available. |
+| `default_domain` | string | no | n/a | stable | Primary domain within the tenant. Falls back to the queried domain when no tenant was detected. |
+| `queried_domain` | string | no | n/a | stable | The domain the user passed (after validation + lowercasing). |
 
 ### Provider & confidence
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `provider` | string | no | — | stable | One-line provider summary (e.g. `"Microsoft 365 (primary) via Proofpoint gateway + Google Workspace (secondary)"`). |
+| `provider` | string | no | n/a | stable | One-line provider summary (e.g. `"Microsoft 365 (primary) via Proofpoint gateway + Google Workspace (secondary)"`). |
 | `confidence` | string | no | `high \| medium \| low` | stable | Overall confidence in the merged result. |
 | `evidence_confidence` | string | no | `high \| medium \| low` | stable | Confidence in detected fingerprint slugs. |
 | `inference_confidence` | string | no | `high \| medium \| low` | stable | Confidence in derived insights. |
@@ -116,34 +117,34 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | `auth_type` | string | yes | `Federated \| Managed` | stable | M365 authentication style. |
 | `google_auth_type` | string | yes | `Federated \| Managed` | stable | Google Workspace authentication style. |
 | `google_idp_name` | string | yes | e.g. `Okta`, `Ping Identity` | stable | Third-party IdP name for GWS when detectable. |
-| `primary_email_provider` | string | yes | — | stable | MX-confirmed primary email provider. |
-| `likely_primary_email_provider` | string | yes | — | stable | Inferred primary (hedged) when MX is a gateway and DKIM/TXT/OIDC points to a specific downstream. |
-| `email_gateway` | string | yes | — | stable | MX-detected email security gateway (Proofpoint, Mimecast, etc.). |
+| `primary_email_provider` | string | yes | n/a | stable | MX-confirmed primary email provider. |
+| `likely_primary_email_provider` | string | yes | n/a | stable | Inferred primary (hedged) when MX is a gateway and DKIM/TXT/OIDC points to a specific downstream. |
+| `email_gateway` | string | yes | n/a | stable | MX-detected email security gateway (Proofpoint, Mimecast, etc.). |
 
 ### Sources & degradation
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
 | `sources` | `list[string]` | no | subset of source names | stable | Source names that successfully contributed to the result. |
-| `partial` | bool | no | — | stable | `true` when a **core** source (DNS / identity / CT-as-core) is in `degraded_sources`. CT-only degradation does not flip this flag, matching `docs/recon-schema.json`. |
-| `degraded_sources` | `list[string]` | no | — | stable | Source names that failed or were unavailable. |
+| `partial` | bool | no | n/a | stable | `true` when a **core** source (DNS / identity / CT-as-core) is in `degraded_sources`. CT-only degradation does not flip this flag, matching `docs/recon-schema.json`. |
+| `degraded_sources` | `list[string]` | no | n/a | stable | Source names that failed or were unavailable. |
 
 ### Services & detection
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `services` | `list[string]` | no | — | stable | Human-readable service names (`"Microsoft 365"`, `"Slack"`, …). |
-| `slugs` | `list[string]` | no | — | stable | Stable fingerprint slugs for programmatic matching. |
+| `services` | `list[string]` | no | n/a | stable | Human-readable service names (`"Microsoft 365"`, `"Slack"`, …). |
+| `slugs` | `list[string]` | no | n/a | stable | Stable fingerprint slugs for programmatic matching. |
 | `detection_scores` | object | no | `{slug: score_level}` | stable | Per-slug detection score: `"low" \| "medium" \| "high"` aggregated from evidence. |
-| `insights` | `list[string]` | no | — | stable | Derived intelligence lines. Exact wording may evolve; presence and signal types are stable. |
+| `insights` | `list[string]` | no | n/a | stable | Derived intelligence lines. Exact wording may evolve; presence and signal types are stable. |
 
 ### Domains
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
 | `domain_count` | int | no | `0+` | stable | Number of domains in the tenant. |
-| `tenant_domains` | `list[string]` | no | — | stable | All domains found in the tenant (M365 `tenant_domains` or equivalent). |
-| `related_domains` | `list[string]` | no | — | stable | Domains inferred from CNAME breadcrumbs, CT logs, or autodiscover delegation. |
+| `tenant_domains` | `list[string]` | no | n/a | stable | All domains found in the tenant (M365 `tenant_domains` or equivalent). |
+| `related_domains` | `list[string]` | no | n/a | stable | Domains inferred from CNAME breadcrumbs, CT logs, or autodiscover delegation. |
 
 ### Email security
 
@@ -153,7 +154,7 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | `dmarc_policy` | string | yes | `reject \| quarantine \| none` | stable | DMARC policy when a DMARC record is present. |
 | `dmarc_pct` | int | yes | `0–100` | stable | DMARC `pct=` parameter. |
 | `mta_sts_mode` | string | yes | `enforce \| testing \| none` | stable | MTA-STS policy mode. |
-| `site_verification_tokens` | `list[string]` | no | — | stable | TXT tokens observed on the apex (`google-site-verification=`, `MS=`, etc.). |
+| `site_verification_tokens` | `list[string]` | no | n/a | stable | TXT tokens observed on the apex (`google-site-verification=`, `MS=`, etc.). |
 
 ### CT / certificate intelligence
 
@@ -162,7 +163,7 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | `ct_provider_used` | string | yes | `crt.sh \| certspotter \| crt.sh (cached) \| certspotter (cached)` | stable | Which CT provider answered, or `(cached)` suffix when data came from the per-domain CT cache. |
 | `ct_subdomain_count` | int | no | `0+` | stable | Number of subdomains returned after filtering. |
 | `ct_cache_age_days` | int | yes | `0+` | stable | Age of the CT cache entry in days when cached data was used. `null` when data came from a live provider. |
-| `cert_summary` | object | yes | — | stable | Nested object: `{cert_count, issuer_diversity, issuance_velocity, newest_cert_age_days, oldest_cert_age_days, top_issuers}`. `null` when no CT data was obtained. |
+| `cert_summary` | object | yes | n/a | stable | Nested object: `{cert_count, issuer_diversity, issuance_velocity, newest_cert_age_days, oldest_cert_age_days, top_issuers}`. `null` when no CT data was obtained. |
 
 ### Sovereignty & Microsoft tenant metadata
 
@@ -176,10 +177,10 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `lexical_observations` | `list[string]` | no | — | stable | Hedged observations from CT subdomain lexical taxonomy. |
-| `bimi_identity` | object | yes | — | stable | BIMI VMC identity: `{organization, country, state, locality, trademark}`. |
-| `evidence_conflicts` | `list[EvidenceConflict]` | no | — | stable (v1.7+) | Cross-source disagreements: each entry names a merged field where 2+ sources gave different values, with all candidates preserved. Empty array when sources agreed. |
-| `chain_motifs` | `list[ChainMotif]` | no | — | stable (v1.7+) | CNAME chain motifs that fired on related subdomains — e.g. Cloudflare → AWS origin, Akamai → Azure origin. Observable proxy/origin shape only; never an ownership claim. Catalog at `recon_tool/data/motifs.yaml`. |
+| `lexical_observations` | `list[string]` | no | n/a | stable | Hedged observations from CT subdomain lexical taxonomy. |
+| `bimi_identity` | object | yes | n/a | stable | BIMI VMC identity: `{organization, country, state, locality, trademark}`. |
+| `evidence_conflicts` | `list[EvidenceConflict]` | no | n/a | stable (v1.7+) | Cross-source disagreements: each entry names a merged field where 2+ sources gave different values, with all candidates preserved. Empty array when sources agreed. |
+| `chain_motifs` | `list[ChainMotif]` | no | n/a | stable (v1.7+) | CNAME chain motifs that fired on related subdomains, e.g. Cloudflare → AWS origin, Akamai → Azure origin. Observable proxy/origin shape only; never an ownership claim. Catalog at `recon_tool/data/motifs.yaml`. |
 | `infrastructure_clusters` | `InfrastructureClusterReport` | no | always | stable (v1.8+) | CT co-occurrence community detection report. `algorithm` ∈ {`louvain`, `connected_components`, `skipped`}; `modularity` is 0.0 in fallback / skipped paths. Members sorted; clusters sorted by size desc. |
 | `fingerprint_metadata` | `dict[string, FingerprintMetadata]` | no | always | stable (v1.8+) | Per-slug `{product_family, parent_vendor, bimi_org}` for detected slugs that carry relationship hints in their fingerprint YAML. Slugs without metadata are omitted. Empty object when nothing applies. Drives the v1.8 ecosystem hypergraph; never an ownership assertion. |
 
@@ -188,7 +189,7 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
 | `slug_confidences` | `object` | no | map `{slug: posterior}`, `posterior` in `[0, 1]` | stable (v2.0+) | Bayesian per-slug posterior means, parallel to `detection_scores`. Populated only when fusion runs (see `fusion_enabled`). Reshaped from a positional pair array to an object map in v2.0 (SH2). See [`fusion.py`](../recon_tool/fusion.py). |
-| `fusion_enabled` | bool | no | — | stable (v2.0+) | True when the Bayesian fusion layer ran (SH6). Disambiguates an empty `slug_confidences` / `posterior_observations` (fusion off) from "fusion ran, found none". |
+| `fusion_enabled` | bool | no | n/a | stable (v2.0+) | True when the Bayesian fusion layer ran (SH6). Disambiguates an empty `slug_confidences` / `posterior_observations` (fusion off) from "fusion ran, found none". |
 | `schema_version` | string | no | `"2.0"` | stable (v2.0+) | Contract version of this record (SH7), so a detached payload can be routed across a future 2.x to 3.0 boundary. |
 | `record_type` | string | no | `lookup` | stable (v2.0+) | Output-mode discriminator (SH7); `lookup` on a single-domain success object. Batch wrappers, deltas, and error records carry `batch_result` / `delta` / `error`. |
 
@@ -207,7 +208,7 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
   "oldest_cert_age_days": 730,
   "top_issuers": ["Let's Encrypt", "DigiCert", "Sectigo"],
   "wildcard_sibling_clusters": [
-    ["api.example.com", "example.com", "www.example.com"]
+    {"names": ["api.example.com", "example.com", "www.example.com"]}
   ],
   "deployment_bursts": [
     {
@@ -228,8 +229,8 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | `newest_cert_age_days` | int | stable |
 | `oldest_cert_age_days` | int | stable |
 | `top_issuers` | `list[string]` (up to 3) | stable |
-| `wildcard_sibling_clusters` | `list[list[string]]` | stable (v1.7+) — each inner list is the deduplicated, sorted concrete-name SANs from a single cert that also covered ≥1 wildcard SAN. Empty when no wildcard cert produced concrete siblings. Bounded (≤10 clusters, ≤20 names per cluster). |
-| `deployment_bursts` | `list[CertBurst]` | stable (v1.7+) — co-issuance cohorts within a 60s window with ≥3 distinct non-wildcard SANs. Output is relative (span_seconds + names) and never claims ownership. Bounded (≤8 bursts, ≤25 names per burst). |
+| `wildcard_sibling_clusters` | `list[{names: [...]}]` | stable (v1.7+): each entry's `names` is the deduplicated, sorted concrete-name SANs from a single cert that also covered ≥1 wildcard SAN. Empty when no wildcard cert produced concrete siblings. Bounded (≤10 clusters, ≤20 names per cluster). |
+| `deployment_bursts` | `list[CertBurst]` | stable (v1.7+): co-issuance cohorts within a 60s window with ≥3 distinct non-wildcard SANs. Output is relative (span_seconds + names) and never claims ownership. Bounded (≤8 bursts, ≤25 names per burst). |
 
 `CertBurst`:
 
@@ -268,7 +269,7 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 }
 ```
 
-`chain` is the matched subsequence of hops, not the full original CNAME chain. Each motif fires on observable structure only — never an ownership claim. The motif catalog is shipped in `recon_tool/data/motifs.yaml` and can be extended via `~/.recon/motifs.yaml` (additive only).
+`chain` is the matched subsequence of hops, not the full original CNAME chain. Each motif fires on observable structure only, never an ownership claim. The motif catalog is shipped in `recon_tool/data/motifs.yaml` and can be extended via `~/.recon/motifs.yaml` (additive only).
 
 ### `InfrastructureClusterReport` (v1.8+)
 
@@ -293,12 +294,12 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 
 `algorithm` is the detection path that produced the partition:
 
-- `louvain` — graph fits inside the 500-node cap; partition is meaningful.
-- `connected_components` — graph above cap; deterministic fallback. `modularity` is 0.0.
-- `skipped` — empty graph or no edges. `clusters` is empty.
+- `louvain`: graph fits inside the 500-node cap; partition is meaningful.
+- `connected_components`: graph above cap; deterministic fallback. `modularity` is 0.0.
+- `skipped`: empty graph or no edges. `clusters` is empty.
 
 Each cluster member is a SAN hostname. Clusters describe **observed
-co-issuance** — names that show up on the same certificates — never
+co-issuance** (names that show up on the same certificates), never
 ownership. Raw edge data is not emitted in the default `--json`
 envelope; use the `export_graph` MCP tool when you need it.
 
@@ -328,10 +329,10 @@ object, keyed by detected slug.
 
 `edge_type` is one of:
 
-- `top_issuer` — domains share their CT top-issuer name.
-- `bimi_org` — domains share an exact BIMI VMC organization (light-normalised).
-- `parent_vendor` — domains have ≥1 detected slug carrying the same `parent_vendor` metadata.
-- `shared_slugs` — pairwise overlap of ≥2 detected slugs. `key` is the comma-joined intersection.
+- `top_issuer`: domains share their CT top-issuer name.
+- `bimi_org`: domains share a BIMI VMC organization (light-normalised).
+- `parent_vendor`: domains have ≥1 detected slug carrying the same `parent_vendor` metadata.
+- `shared_slugs`: pairwise overlap of ≥2 detected slugs. `key` is the comma-joined intersection.
 
 Surfaced under the top-level `ecosystem_hyperedges` array of the batch
 JSON wrapper when `recon batch --json --include-ecosystem` is run. The
@@ -409,7 +410,7 @@ is also passed; the fields inside each record (`source_type`, `raw_value`,
 ### `explanation_dag` (present with `--explain` on `lookup_tenant` MCP tool)
 
 Stability: **stable**. Top-level keys: `evidence`, `slugs`, `rules`,
-`signals`, `insights` — each a list of records with `id` and references.
+`signals`, `insights`, each a list of records with `id` and references.
 
 ---
 
@@ -447,11 +448,11 @@ and `to`. Exit codes for `recon delta` match the main CLI; see
 ## What is NOT in this contract
 
 - Rich panel formatting (whitespace, colors, row ordering within
-  categories) — covered by `stability.md` "What's not in the stability
+  categories); covered by `stability.md` "What's not in the stability
   contract".
-- Insight text wording — the insight types and trigger conditions are
-  stable; exact phrasing may be refined.
-- Which specific fingerprints fire for a given domain — the `slugs` field
+- Insight text wording; the insight types and trigger conditions are
+  stable, though exact phrasing may be refined.
+- Which specific fingerprints fire for a given domain. The `slugs` field
   is stable as a mechanism; the contents depend on the fingerprint database
   version and may change as new fingerprints are added or refined.
 - `cache_age_in_hours`, `cache_hit`, and other internal performance metrics

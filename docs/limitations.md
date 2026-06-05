@@ -1,7 +1,7 @@
 # Known Limitations
 
 recon is passive, zero-credential, and DNS/identity-endpoint-only. That gives
-it stealth, speed, and legal clarity — but it also means there are whole
+it stealth, speed, and legal clarity, but it also means there are whole
 classes of information the tool cannot see. This doc is the honest inventory.
 
 If any of these matter for your use case, either pipe recon's output into a
@@ -19,28 +19,28 @@ gap as a known unknown.
 
 ### Bundled platform services with no DNS footprint
 
-- **Microsoft Copilot, Microsoft Teams Phone, Microsoft Purview** — included in
+- **Microsoft Copilot, Microsoft Teams Phone, Microsoft Purview**: included in
   M365 licenses with no public DNS verification token. recon infers Copilot
   as `(likely)` from M365 tenant presence (see Services > AI).
-- **Google Gemini, Google Vault, Context-Aware Access** — same pattern;
+- **Google Gemini, Google Vault, Context-Aware Access**: same pattern,
   inferred from Google Workspace presence.
-- **Most GitHub features** — private repos, actions, code scanning have no
+- **Most GitHub features**: private repos, actions, code scanning have no
   public DNS footprint even when the org is detectable elsewhere.
 
 ### Heavily proxied or zero-DNS domains
 
-- **Cloudflare Email Routing** — MX points to Cloudflare, the backend mailbox
+- **Cloudflare Email Routing**: MX points to Cloudflare, the backend mailbox
   provider is invisible.
-- **Email security gateways** — when MX is Proofpoint / Mimecast / Trend
+- **Email security gateways**: when MX is Proofpoint / Mimecast / Trend
   Micro / Symantec, the actual email platform behind the gateway is only
   visible when DKIM or other public records leak it.
-- **Cloud-hosted landing pages** — when the entire domain is one A record
+- **Cloud-hosted landing pages**: when the entire domain is one A record
   pointing to a shared CDN and no SaaS verification tokens are published,
   there is nothing to detect.
 
 See [correlation.md](correlation.md) for how the planned graph, temporal,
 and Bayesian layers (v1.7–v1.9) squeeze more usable defensive intelligence
-from these minimal footprints — wildcard SAN siblings, CT issuance bursts,
+from these minimal footprints: wildcard SAN siblings, CT issuance bursts,
 and chain motifs all recover signal that single-record fingerprinting
 cannot.
 
@@ -50,15 +50,15 @@ cannot.
   self-hosted Authelia / Keycloak not exposed via public DNS)
 - **Internal SaaS** (company-internal Jira / Confluence behind VPN with no
   public CNAME)
-- **Corporate file shares, intranet portals, internal ticketing** — all
+- **Corporate file shares, intranet portals, internal ticketing**: all
   zero public DNS footprint by design.
 
 ### Regional and domestic SaaS ecosystems
 
-- **Domestic provider stacks** — some APAC and China-focused organizations use
+- **Domestic provider stacks**: some APAC and China-focused organizations use
   domestic mail, collaboration, cloud, and identity providers whose public DNS
   patterns are not as well represented in the built-in catalog.
-- **Localized verification schemes** — regional SaaS products may publish TXT
+- **Localized verification schemes**: regional SaaS products may publish TXT
   or CNAME proofs that are stable but not yet fingerprinted.
 
 When this happens, recon may correctly show a self-hosted or low-signal result
@@ -67,14 +67,14 @@ as coverage gaps unless the DNS evidence directly supports a stronger claim.
 
 ### Network-level and host-level facts
 
-- **Open ports, running services, OS versions** — these are active-scanning
+- **Open ports, running services, OS versions**: these are active-scanning
   outputs. recon does not port-scan.
-- **Web server software versions** — these come from HTTP responses, not
+- **Web server software versions**: these come from HTTP responses, not
   DNS, and recon makes no HTTP requests to the target's own infrastructure.
-- **TLS certificate chain details beyond CT metadata** — recon sees what CT
+- **TLS certificate chain details beyond CT metadata**: recon sees what CT
   logs contain (issuer, not_before/not_after, subject). For live certificate
   detail, use `openssl s_client` or an active TLS scanner.
-- **IP-level infrastructure, ASN, BGP paths** — recon has no ASN / GeoIP /
+- **IP-level infrastructure, ASN, BGP paths**: recon has no ASN / GeoIP /
   BGP datasets (see roadmap invariants).
 
 ---
@@ -90,8 +90,8 @@ reality, because the evidence density doesn't justify a stronger claim.
 the organization has a fully provisioned Copilot deployment.
 
 **Why hedged:** DNS has nothing to say about license SKU. We know the platform
-exists; we infer the bundled AI is available. The `(likely)` qualifier is
-load-bearing honesty, not cowardice.
+exists and infer the bundled AI is available. The `(likely)` qualifier is
+load-bearing honesty.
 
 ### Dual-provider organizations
 
@@ -118,7 +118,7 @@ active probing, which is out of scope.
 
 ### Federated IdP vendor identification
 
-**Current:** `Federated identity indicators (likely ADFS/Okta/Ping —
+**Current:** `Federated identity indicators (likely ADFS/Okta/Ping,
 enterprise SSO)` when MX / UserRealm say federated but no IdP-specific slug
 (okta / ping / onelogin / auth0) fires.
 
@@ -169,7 +169,7 @@ Times recon has been wrong in empirically verified ways:
 | Historical DNS | SecurityTrails, PassiveTotal, DomainTools (requires API keys) |
 
 recon is deliberately a narrow tool. If you are doing any of the above, use
-the right tool for the job — or pipe recon's `--json` output into it as a
+the right tool for the job, or pipe recon's `--json` output into it as a
 starting point.
 
 ---
@@ -189,7 +189,7 @@ Best practices:
 - `--confidence-mode strict` only drops hedging when ≥3 sources corroborate
   AND confidence is High. Sparse-data output stays hedged by design.
 - If you spot a false positive, open an issue with the domain and the
-  incorrect detection. Fingerprint PRs are welcome — see
+  incorrect detection. Fingerprint PRs are welcome, see
   [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ---

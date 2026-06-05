@@ -14,7 +14,7 @@ runs are what you'll see the first time you sweep a new corpus.
 
 | Corpus | Wall clock | Memory peak | Notes |
 |--------|-----------|-------------|-------|
-| 50 domains | ~90s | ~180 MB | CT-cache cold — first run hits crt.sh for every domain |
+| 50 domains | ~90s | ~180 MB | CT-cache cold: first run hits crt.sh for every domain |
 | 100 domains | ~180s | ~240 MB | Sustained ~0.55 domains/sec; CT-cache starts helping on sibling domains |
 | 500 domains | ~16 min | ~420 MB | CT provider rotation + rate-limit backoff dominates past ~300 domains |
 
@@ -25,7 +25,7 @@ faster because CT lookups short-circuit.
 
 Reproduce with any newline-delimited list of real apex domains saved
 locally (one per line). The project ships only a fictional example
-corpus, so you supply your own list — the shape of the corpus matters
+corpus, so you supply your own list. The shape of the corpus matters
 far more than the specific names. A representative 40-domain list
 covers big-tech, major SaaS, retail, automotive, finance, media,
 pharma, and a few international apexes so the built-in fingerprint
@@ -76,7 +76,7 @@ past ~20 queries/minute.
 
 ## If recon is slow for you
 
-1. Run `recon doctor` — the most common cause is a CT provider that's
+1. Run `recon doctor`. The most common cause is a CT provider that's
    unreachable from your network.
 2. Check `~/.recon/ct-cache/` exists and is writable.
 3. Drop `--timeout` to 60 if you'd rather fail fast on slow domains.

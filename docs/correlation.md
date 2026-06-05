@@ -3,13 +3,14 @@
 **Audience.** Security architects, researchers, and contributors who
 want to understand *why* and *how* recon extracts structural signal from
 strictly public observables. Casual users should rely on the
-[README](../README.md) and `--explain` output. This is the polished
-technical reference for the correlation engine, current as of the v2.0
-schema lock; it is maintained alongside the code rather than frozen.
+[README](../README.md) and `--explain` output. This is the
+technical reference for the correlation engine, current as of v1.9.95
+and tracking the upcoming v2.0 schema lock; it is maintained
+alongside the code rather than frozen.
 
-**TL;DR.** recon ingests three classes of public observables — DNS,
+**TL;DR.** recon ingests three classes of public observables (DNS,
 certificate transparency, and unauthenticated identity-discovery
-endpoints — and runs three layered correlation engines on top of them:
+endpoints) and runs three layered correlation engines on top of them:
 deterministic rule-based fusion, deterministic graph correlation
 (Louvain communities, chain motifs, hypergraph ecosystem view), and a
 small probabilistic Bayesian network (v1.9, stable v2.0+). The
@@ -25,38 +26,38 @@ recon is an **external attack-surface management (EASM) instrument**
 for defenders. The premise: the defender has already applied legal
 and technical obscurity to their own public footprint. The question
 recon answers is *how much of that footprint is still observable to
-anyone with public DNS and certificate-transparency access* — i.e.,
+anyone with public DNS and certificate-transparency access*, that is,
 how effective the obscurity is in practice.
 
 The observables we work from are deliberately narrow:
 
-  - $O_{\mathrm{DNS}}$ — DNS RRsets (A, CNAME, MX, NS, TXT, SPF, DMARC,
+  - $O_{\mathrm{DNS}}$: DNS RRsets (A, CNAME, MX, NS, TXT, SPF, DMARC,
     DKIM, BIMI).
-  - $O_{\mathrm{CT}}$ — CT log entries (issuer, SAN sets,
+  - $O_{\mathrm{CT}}$: CT log entries (issuer, SAN sets,
     `not_before` timestamps).
-  - $O_{\mathrm{ID}}$ — unauthenticated identity-discovery endpoints
+  - $O_{\mathrm{ID}}$: unauthenticated identity-discovery endpoints
     (Microsoft 365 OIDC + GetUserRealm, Google Workspace).
 
 The full observation tuple is $O = (O_{\mathrm{DNS}}, O_{\mathrm{CT}},
-O_{\mathrm{ID}})$. Strictly passive: no probes beyond standard public-
-DNS resolution, no credentials, no learned ML weights, no imported
+O_{\mathrm{ID}})$. Strictly passive: no probes beyond standard
+public-DNS resolution, no credentials, no learned ML weights, no imported
 intelligence databases. (See [roadmap.md § Invariants](roadmap.md#invariants).)
 
 ### Vocabulary
 
 Two terms appear throughout and have specific meanings:
 
-  - **Slug** — a stable identifier emitted by the deterministic
+  - **Slug**: a stable identifier emitted by the deterministic
     fingerprint catalog (e.g. `microsoft365`, `okta`, `cloudflare`).
     Each slug is anchored in one or more YAML rules under
     `recon_tool/data/fingerprints/` that match against $O$.
-  - **Signal** — a higher-order rule defined in
+  - **Signal**: a higher-order rule defined in
     `recon_tool/data/signals/` that fires conditional on slug sets,
     record patterns, or `requires`/`min_matches` predicates. Signals
     are observations *about* the slug evidence (e.g. `dmarc_reject`,
     `federated_sso_hub`).
 
-A *node* in the v1.9 Bayesian network is yet another level up — a
+A *node* in the v1.9 Bayesian network is yet another level up: a
 high-level structural claim ("the tenant is M365-federated") whose
 evidence bindings reference slugs and signals. The three abstractions
 are intentionally layered, not merged; §4.8 develops the network
@@ -77,22 +78,22 @@ the reason is structural rather than aesthetic:
     is "every conclusion is reachable through the evidence DAG."
   - **The Bayesian network is the inference layer.** Nodes here are
     *latent* claims about the organization ("M365-federated tenant")
-    that no single observable settles. They are exactly the place
+    that no single observable settles. They are the place
     where probabilistic reasoning belongs, and the v1.9 layer is
     confined to this scope on purpose.
   - **Signals are the presentation layer.** They are operator-facing
     rollups that compose slug evidence into named ideas the operator
     already has a mental model for ("DMARC reject," "federated SSO
-    hub"). They are not inference primitives — they are *views over*
+    hub"). They are not inference primitives; they are *views over*
     the evidence layer. Their value is that a security architect can
     cite `dmarc_reject` in a ticket without forcing every reader to
     re-derive it from RRsets.
 
 Collapsing these three into one model is technically possible but
 would erase the audit surface. An auditor who can only read posterior
-probabilities — without being able to point at the slug that fired,
+probabilities, without being able to point at the slug that fired,
 the network node it bound to, or the named signal a colleague is
-referring to — cannot reconstruct the argument. That is the failure
+referring to, cannot reconstruct the argument. That is the failure
 mode the layering exists to prevent. Sections 4.1–4.7 stay
 deterministic for the same reason: a deterministic conclusion is
 auditable in a way a black-box posterior is not, even when the
@@ -115,7 +116,7 @@ mutual information" describes the *intent* of the correlation work,
 not an explicit objective being optimized over the tool's parameters.
 Where we use the language of latent variables, posteriors, and
 credible intervals (§4.8), it applies *only* to the discrete Bayesian
-network defined in `bayesian_network.yaml` — not to the whole
+network defined in `bayesian_network.yaml`, not to the whole
 pipeline. Sections 4.1–4.7 are deterministic; their outputs do not
 carry posterior semantics.
 
@@ -142,9 +143,9 @@ Two hard constraints govern every extractor:
      output. Confident-looking output on sparse evidence is a
      calibration failure, not a feature.
 
-These are the load-bearing commitments. Everything else — the lack
+These are the load-bearing commitments. Everything else (the lack
 of telemetry, the data-file-only schema for fingerprints/CPTs, the
-opt-in (`--fusion`-gated) Bayesian layer — falls out of them.
+opt-in `--fusion`-gated Bayesian layer) falls out of them.
 
 ## 3. Current implementation
 
@@ -162,8 +163,8 @@ machinery:
    plus chain-motif matching plus the batch-scope hypergraph view.
    Deterministic given a fixed Louvain seed; runs alongside the
    rule-based fusion without changing it.
-3. **Probabilistic Bayesian-network fusion** (v1.9.0, `--fusion`-
-   gated, stable v2.0+). Variable-elimination inference
+3. **Probabilistic Bayesian-network fusion** (v1.9.0, `--fusion`-gated,
+   stable v2.0+). Variable-elimination inference
    over a small discrete DAG whose CPTs ship as a YAML data file.
    Surfaces marginal posteriors with 80% credible intervals over
    high-level claims (M365 tenant, federated identity,
@@ -175,9 +176,9 @@ machinery:
 
 The three layers are deliberately complementary. Rule-based fusion is
 the audit-friendly authority for "did we observe X?". The graph layer
-is the structural lens — modularity, community boundaries, motif
-hits — none of which a single-cert view recovers. The Bayesian layer
-is the calibrated-uncertainty lens — when the public channel is thin,
+is the structural lens (modularity, community boundaries, motif
+hits), none of which a single-cert view recovers. The Bayesian layer
+is the calibrated-uncertainty lens: when the public channel is thin,
 it is the layer that refuses to overclaim. Sections 4.5 and 4.8 below
 develop the graph and Bayesian layers in detail.
 
@@ -199,48 +200,48 @@ flowchart LR
 Layer 1 is the authority for "did we observe X?" and feeds the
 default panel. Layer 2 is always emitted into a top-level
 infrastructure_clusters envelope, never gated. Layer 3 reads the
-already-collected evidence chain — no new network calls — and
+already-collected evidence chain (no new network calls) and
 contributes posteriors only when `--fusion` is set.
 
 Architecture:
 
-  - `recon_tool/sources/dns.py` — collects DNS observables and the
+  - `recon_tool/sources/dns.py`: collects DNS observables and the
     CNAME chains used by the surface-attribution pipeline.
-  - `recon_tool/sources/cert_providers.py` — pulls CT entries from
+  - `recon_tool/sources/cert_providers.py`: pulls CT entries from
     crt.sh and CertSpotter; surfaces SAN sets and basic cert summary
     statistics.
-  - `recon_tool/fusion.py` — multi-source evidence merge into per-slug
+  - `recon_tool/fusion.py`: multi-source evidence merge into per-slug
     detections.
-  - `recon_tool/merger.py` — deduplicates SourceResults into a single
+  - `recon_tool/merger.py`: deduplicates SourceResults into a single
     TenantInfo with full provenance and a `MergeConflicts` record when
     sources disagree.
-  - `recon_tool/signals.py` — applies YAML rules (`requires`,
+  - `recon_tool/signals.py`: applies YAML rules (`requires`,
     `min_matches`, `expected_counterparts`) to produce signal-layer
     observations on top of fingerprint slugs.
-  - `recon_tool/absence.py` — negative-space rules: when *expected*
+  - `recon_tool/absence.py`: negative-space rules. When *expected*
     evidence is absent, surface the absence as an observation.
-  - `recon_tool/posture.py` — neutral aggregation into the posture
+  - `recon_tool/posture.py`: neutral aggregation into the posture
     panel (Email / Identity / Infrastructure / SaaS / Consistency).
-  - `recon_tool/clustering.py` — simple related-domain grouping for
+  - `recon_tool/clustering.py`: simple related-domain grouping for
     batch mode and chain expansion.
-  - `recon_tool/discovery.py` — surface-attribution and gap-mining
+  - `recon_tool/discovery.py`: surface-attribution and gap-mining
     layer added in v1.5; the building block the discovery loop
     (`recon discover`, `validation/scan.py`) sits on top of.
-  - `recon_tool/explanation.py` — provenance DAG serialization for
+  - `recon_tool/explanation.py`: provenance DAG serialization for
     `--explain` and the MCP `explanation_dag` field.
-  - `recon_tool/motifs.py` (v1.7+) — CNAME chain motif catalog and
+  - `recon_tool/motifs.py` (v1.7+): CNAME chain motif catalog and
     matcher; surfaced as the top-level `chain_motifs` array.
-  - `recon_tool/infra_graph.py` (v1.8+) — CT co-occurrence graph
+  - `recon_tool/infra_graph.py` (v1.8+): CT co-occurrence graph
     builder + Louvain community detection (via pure-Python `networkx`).
     Surfaced as the top-level `infrastructure_clusters` envelope.
-  - `recon_tool/ecosystem.py` (v1.8+) — batch-scope hypergraph builder
+  - `recon_tool/ecosystem.py` (v1.8+): batch-scope hypergraph builder
     over per-domain results. Behind `recon batch --json --include-ecosystem`.
 
 For most domains, deterministic fusion is the right tool. It is
 fast, explainable, auditable, and catches the high-confidence cases
 without probabilistic machinery. The cases it misses are the
-hardened ones — minimal DNS, randomized CNAMEs, short-lived certs,
-wildcard SAN policies — and that is where the graph and Bayesian
+hardened ones (minimal DNS, randomized CNAMEs, short-lived certs,
+wildcard SAN policies), and that is where the graph and Bayesian
 layers do their work.
 
 ### 3.1 What each layer can and cannot resolve
@@ -248,7 +249,7 @@ layers do their work.
 | Layer | Resolves well | Limits |
 |---|---|---|
 | **Rule-based fusion** (default, deterministic) | Direct slug attribution from authoritative observables (OIDC tenant, DKIM signing, MX provider, vendor-specific TXT). High-precision when the channel publishes anything. | Misses hardened targets that publish nothing. No notion of "claim X is uncertain"; output buckets are `low/medium/high`. |
-| **Graph correlation** (v1.8, deterministic, always emitted) | Structural signal across multiple domains: SAN co-occurrence communities, chain motif matches, ecosystem-level co-membership across a batch. Recovers vendor-order pattern when individual labels are randomized. | Operates on the *observed* graph — gives no ownership claim, only co-membership / co-issuance / co-motif. Modularity score is the calibrated handle on partition quality; low score is reported, not hidden. |
+| **Graph correlation** (v1.8, deterministic, always emitted) | Structural signal across multiple domains: SAN co-occurrence communities, chain motif matches, ecosystem-level co-membership across a batch. Recovers vendor-order pattern when individual labels are randomized. | Operates on the *observed* graph: gives no ownership claim, only co-membership / co-issuance / co-motif. Modularity score is the calibrated handle on partition quality; low score is reported, not hidden. |
 | **Bayesian network** (v1.9, `--fusion`, stable v2.0+) | Calibrated posterior + 80% credible interval over a small set of high-level claims (M365 tenant, federated identity, modern email security, etc.) with cross-source-conflict dampening. Sparse-evidence cases produce wide intervals rather than confident-looking point estimates. | Posterior quality is bounded by CPT specification: a wrong CPT produces a tight interval around the wrong mean. Network is small (9 nodes at v1.9.3+; 20-node design budget) and intentionally so. Held opt-in through v1.9.x; v1.9.4 hardened-adversarial calibration, v1.9.5 per-node stability dispositions, and the v1.9.10 stratified-corpus revalidation cleared the path to v2.0. See `validation/v1.9.4-calibration.md`, `validation/v1.9.5-stability.md`, `validation/v1.9.10-pre-lock.md`. |
 
 The three layers do not replace each other. The default panel is
@@ -278,7 +279,7 @@ collapse SAN inventory; the surrounding SAN entries in the same
 issuance are still public. Each sibling lands as `related_domains`
 evidence with type `ct_san_sibling` and the source cert's
 `not_before`. Hedged: "issued together; common ownership not
-implied" — same-cert SAN sets are sometimes shared across tenants of
+implied", since same-cert SAN sets are sometimes shared across tenants of
 the same hosting provider.
 
 *Defender use:* quantify how much subdomain inventory remains
@@ -293,7 +294,7 @@ $\Delta t < \tau$ (DBSCAN-style; $\tau$ on the order of minutes for
 typical deployment cadence). Co-issued subdomains within a burst
 become directed edges in the evidence DAG, weighted by
 $w_{ij} \propto 1/\Delta t_{ij}$. Output language is neutral:
-"co-issued within $\tau$ seconds" — never "same owner".
+"co-issued within $\tau$ seconds", never "same owner".
 
 *Defender use:* detect deployment cadence even when individual
 hostnames are randomized or short-lived.
@@ -319,7 +320,7 @@ type). v1.7.0 promotes them to a top-level `evidence_conflicts` array
 in `--json` and a section in `--explain`. v1.9 feeds the conflict
 count into the Bayesian dampener (§4.8.4).
 
-*Defender use:* surface drift between hardening signals — minimal DNS
+*Defender use:* surface drift between hardening signals: minimal DNS
 that disagrees with public CT, MX that contradicts SPF, OIDC display
 name that disagrees with BIMI VMC.
 
@@ -339,7 +340,7 @@ Louvain over Leiden because Leiden's well-connectedness guarantees
 off on dense million-node graphs; our cluster passes cap at ~500
 nodes where the partition-quality difference is negligible, and
 `leidenalg` would pull in C extensions we don't need. Output is a
-partition $\{C_1, \dots, C_k\}$ and the modularity score $Q$ — high
+partition $\{C_1, \dots, C_k\}$ and the modularity score $Q$: high
 $Q$ means a meaningful boundary, low $Q$ means a coin flip; both
 report honestly.
 
@@ -533,7 +534,7 @@ infrastructure. We make no claim that the network is the right
 abstraction; we claim only that *given* the abstraction, the
 inference is exact and the calibration is honest.
 
-**Validation history.** The layer reached v2.0 stable through six
+**Validation history.** The layer approached the v2.0 lock through six
 named validation steps documented per release: the v1.9.4
 hardened-adversarial corpus (50 domains across five hardening
 postures; `validation/v1.9.4-calibration.md`), the v1.9.5 per-node
@@ -661,10 +662,10 @@ nodes:
 Read top-down: a tenant is M365 with prior probability 0.30; given
 the modern-mail-provider state, federation is present with
 probability 0.45 when only M365 is observed (and 0.35 when only GWS
-is observed — federation is less common on GWS-native deployments
+is observed, since federation is less common on GWS-native deployments
 because GWS-native auth is often used directly); given federation,
 Okta is the IdP with conditional probability 0.30. The numbers are
-tunable and explicitly committed as data — never learned, never
+tunable and explicitly committed as data: never learned, never
 hidden behind a binary blob.
 
 ##### Network topology (v1.9.3)
@@ -696,8 +697,8 @@ Nine nodes total. Five roots (priors only); four children (CPTs).
 `email_security_modern_provider` has three parents because the path
 through M365, GWS, and email-gateway each contribute differently to
 the *provider-presence* claim. `email_security_policy_enforcing` is
-a separate root because policy enforcement is provider-independent
-— a Zoho or Fastmail tenant with a strict DMARC reject policy fires
+a separate root because policy enforcement is provider-independent:
+a Zoho or Fastmail tenant with a strict DMARC reject policy fires
 that node identically to an M365 one. See §4.8.x for the v1.9.3
 split rationale.
 
@@ -1088,7 +1089,7 @@ than *calibrated* deliberately; the distinction is made precise under
 The standard approach in conjugate Bayesian analysis is to maintain
 $\mathrm{Beta}(\alpha, \beta)$ posteriors over the parameter
 directly. Variable elimination with discrete CPTs does not give us
-$(\alpha, \beta)$ — it gives us a point posterior. We recover an
+$(\alpha, \beta)$; it gives us a point posterior. We recover an
 interval by treating $\hat{p}$ as the mean of an effective
 $\mathrm{Beta}(\alpha_{\mathrm{eff}}, \beta_{\mathrm{eff}})$ with
 total mass $n_{\mathrm{eff}}$:
@@ -1099,7 +1100,7 @@ $$\alpha_{\mathrm{eff}} = \hat{p} \cdot n_{\mathrm{eff}}, \qquad
 This is the *moment-matching* construction
 ([Minka 2001](https://tminka.github.io/papers/ep/minka-thesis.pdf) §3
 gives the technique in a different context). It is not derived from
-the network — it is a calibration *on top of* exact inference, and we
+the network; it is a calibration *on top of* exact inference, and we
 say so explicitly. The point of the construction is to give us a
 two-parameter family with the right mean, whose interval shape
 depends only on $n_{\mathrm{eff}}$.
@@ -1321,13 +1322,13 @@ We acknowledge two open issues in this construction:
 1. **The interval is honest about sparsity, not about model
    misspecification.** A wrong CPT produces a tight interval around
    the wrong mean. We have no defense against that other than
-   keeping the CPTs human-readable and committing them as data —
+   keeping the CPTs human-readable and committing them as data,
    plus the quantitative sensitivity analysis below, which bounds
    how much a single CPT error can move any posterior.
 2. **The conflict penalty is global, not per-binding.** A conflict
    anywhere in the merged TenantInfo widens every node's interval,
    not just those whose bindings overlap the conflict. This is
-   conservative — it never under-reports uncertainty — but it is
+   conservative (it never under-reports uncertainty) but it is
    coarser than ideal. A future iteration could thread per-node
    conflict overlap; we did not do so in v1.9 because the global
    penalty already produces the qualitative behavior the operator
@@ -1357,8 +1358,8 @@ the median impact under $0.02$. This is the quantified version of
 "the model is robust to small CPT errors": a thirteen-CPT-entry
 network plus six priors gives the operator a 19-knob model where
 no single knob has unbounded leverage. We do not claim the bound
-is tight in all regimes — adversarial perturbation patterns or
-joint shifts could push higher — but it is a meaningful regression
+is tight in all regimes (adversarial perturbation patterns or
+joint shifts could push higher), but it is a meaningful regression
 guard, and the test fails if the engine ever becomes more
 amplifying.
 
@@ -1384,7 +1385,7 @@ graph TB
 
 Same point posterior, three reports. With $n_{\mathrm{eff}} = 4$
 (passive-observation floor), the operator reads "we cannot tell
-whether this claim holds — the public channel does not constrain
+whether this claim holds; the public channel does not constrain
 it." With $n_{\mathrm{eff}} = 14$, the operator reads "we have a
 calibrated 50-50 reading and the channel does constrain it." This
 is the calibration discipline the layer enforces in numbers, not in
@@ -1406,7 +1407,7 @@ posterior collapses to the network's prior:
 $$P(X \mid O) = P(X) \quad \text{whenever } B(X) \cap O = \emptyset.$$
 
 This is mathematically identical to the deterministic engine
-returning the prior on a hardened target — but the Bayesian layer
+returning the prior on a hardened target, but the Bayesian layer
 makes the non-identifiability *visible* via the credible interval.
 A wide interval at $\hat{p} = 0.30$ is the layer saying "we have not
 moved off the prior; do not over-interpret the point estimate."
@@ -1434,7 +1435,7 @@ operate at different levels of abstraction:
   - **Bayesian-network layer** ($\hat{p}_X$ over each network node
     $X$). Multi-node graphical-model update over a YAML-defined DAG.
     Models the question: *given everything observed, how confident
-    are we that the high-level claim $X$ holds — accounting for
+    are we that the high-level claim $X$ holds, accounting for
     parent dependencies and cross-source conflicts?*
 
 They coexist on `--fusion`. Neither replaces the other: the Beta
@@ -1668,10 +1669,10 @@ A defender who has hardened their public footprint wants to know: if
 an attacker ran recon against them, what could the attacker actually
 infer? The Bayesian layer answers that question with a credible
 interval rather than a verdict. On a hardened target, the layer
-prints "tentative low (interval [0.00, 0.45])" — telling the defender
+prints "tentative low (interval [0.00, 0.45])", telling the defender
 their hardening is working, and quantifying how much residual signal
-remains. On an under-hardened target, the layer prints "high-
-confidence (interval [0.92, 1.00])" — telling the defender exactly
+remains. On an under-hardened target, the layer prints "high-confidence
+(interval [0.92, 1.00])", telling the defender
 what is leaking, and via which observable.
 
 Either way, the operator gets a calibrated posterior with full
@@ -1685,16 +1686,16 @@ The v1.9.0 corpus calibration revealed exactly one weak spot:
 `email_security_strong` agreed with the deterministic pipeline
 on only 52.6% of high-confidence posteriors, while every other node
 sat at 100%. The temptation is to read that as a calibration
-problem — wrong CPT numbers, fix the numbers. The v1.9.3 surgery is
+problem (wrong CPT numbers, fix the numbers). The v1.9.3 surgery is
 the result of taking the alternative hypothesis seriously: the
 disagreement is *definitional*, not numerical, and no parameter
 tuning makes the two definitions agree.
 
 **The diagnosis.** The v1.9.0 node's CPT was parameterized on
-`{m365_tenant, google_workspace_tenant, email_gateway_present}` —
+`{m365_tenant, google_workspace_tenant, email_gateway_present}`,
 modern-mail-provider presence. Its evidence bindings were
 `dmarc_reject`, `dmarc_quarantine`, `mta_sts_enforce`,
-`dkim_present`, `spf_strict` — policy enforcement signals. The
+`dkim_present`, `spf_strict`, the policy enforcement signals. The
 deterministic spot-check tested DMARC reject + DKIM + strict SPF
 + MTA-STS (≥ 2 of 4). These are *different claims*: an M365 tenant
 with `dmarc=none` is a modern provider with weak policy; a
@@ -1708,8 +1709,8 @@ evidence, conflating the two. No CPT entry can repair that.
 - `email_security_modern_provider` keeps the provider-presence
   parents (`m365_tenant`, `google_workspace_tenant`,
   `email_gateway_present`) and drops the evidence bindings. Its
-  posterior is pure CPT propagation from the parents — provider
-  presence is fully observable through the parent slugs.
+  posterior is pure CPT propagation from the parents: provider
+  presence is observable through the parent slugs.
 - `email_security_policy_enforcing` is a root node (no parents)
   with a base-rate prior of 0.25 and the policy-signal evidence
   bindings carried over from v1.9.0. Policy enforcement is
@@ -1755,7 +1756,7 @@ sparse-rate fingerprint at the Bayesian layer.
 This subsection documents those fingerprints so a defender can
 read across from **the hardening posture they have or want** to
 **what recon's panel will and will not infer**. The mapping is
-descriptive — recon's claims about a domain reflect what its
+descriptive: recon's claims about a domain reflect what its
 public DNS surface reveals, not a maturity verdict.
 
 The "Survival vs soft corpus" column is the high-confidence
@@ -1764,61 +1765,61 @@ on the v1.9.4 sample. Values below 1.0 mean the layer correctly
 backs off on that node when the public channel narrows; values
 near 1.0 mean the signal stays visible regardless of hardening.
 
-##### Pattern A — Heavy edge-proxied apexes
+##### Pattern A: Heavy edge-proxied apexes
 
 | Node | Sparse rate | Survival vs soft corpus | What the panel reports |
 |---|---|---|---|
 | `cdn_fronting` | 50% | n/a (category-level) | High-confidence fire on the CDN that *is* the front; the layer correctly names the surface visible to passive DNS. |
-| `m365_tenant` | 60% | — | Moderate hedging; partial visibility through MX / SPF / verification TXT records that bypass the edge. |
-| `email_security_policy_enforcing` | 0% | — | DMARC policy is a public TXT record; the edge doesn't hide it. Fires routinely. |
-| `email_gateway_present` | 90% | — | Gateways rarely route through CF/Akamai/Fastly at MX-resolve time; nearly always sparse. |
-| `okta_idp` | 90% | — | Hub probes blocked or hidden behind the edge; nearly always sparse. |
+| `m365_tenant` | 60% | n/a | Moderate hedging; partial visibility through MX / SPF / verification TXT records that bypass the edge. |
+| `email_security_policy_enforcing` | 0% | n/a | DMARC policy is a public TXT record; the edge doesn't hide it. Fires routinely. |
+| `email_gateway_present` | 90% | n/a | Gateways rarely route through CF/Akamai/Fastly at MX-resolve time; nearly always sparse. |
+| `okta_idp` | 90% | n/a | Hub probes blocked or hidden behind the edge; nearly always sparse. |
 
 **Defensive read for the edge-proxied operator:** the CDN front is
 inferable from passive DNS (your CNAME chain terminates there); the
 identity / cloud stack behind it stays hidden when subdomains also
 front through the same CDN. The hardening is doing what it should.
 
-##### Pattern B — Privacy-focused organizations
+##### Pattern B: Privacy-focused organizations
 
 | Node | Sparse rate | Survival vs soft corpus | What the panel reports |
 |---|---|---|---|
-| `email_gateway_present` | 100% | — | Privacy orgs minimize SaaS verification surface; gateway visibility consistently absent. |
-| `aws_hosting` | 60% | — | Moderate sparsity; some privacy orgs run public-facing AWS Cloudfront. |
-| `federated_identity` | 80% | — | Federation indicators (OIDC discovery, etc.) intentionally minimized. |
-| `google_workspace_tenant` | 40% | — | GWS verification TXT sometimes published (mail signing); often sparse. |
-| `email_security_policy_enforcing` | 20% | — | Privacy orgs almost always publish enforcing DMARC. Fires routinely. |
+| `email_gateway_present` | 100% | n/a | Privacy orgs minimize SaaS verification surface; gateway visibility consistently absent. |
+| `aws_hosting` | 60% | n/a | Moderate sparsity; some privacy orgs run public-facing AWS Cloudfront. |
+| `federated_identity` | 80% | n/a | Federation indicators (OIDC discovery, etc.) intentionally minimized. |
+| `google_workspace_tenant` | 40% | n/a | GWS verification TXT sometimes published (mail signing); often sparse. |
+| `email_security_policy_enforcing` | 20% | n/a | Privacy orgs almost always publish enforcing DMARC. Fires routinely. |
 
 **Defensive read for the privacy-focused operator:** strict DMARC
 policy is still publicly inferable (and is the right defensive
 posture); identity / cloud signals are absent or sparse as
 intended.
 
-##### Pattern C — Major financial institutions
+##### Pattern C: Major financial institutions
 
 | Node | Sparse rate | Survival vs soft corpus | What the panel reports |
 |---|---|---|---|
-| `aws_hosting` | 100% | — | Financial institutions on this sample do not surface AWS-specific apex evidence. |
-| `m365_tenant` | 20% | — | Heavy M365 use; verification + MX evidence consistently present. |
-| `cdn_fronting` | 10% | — | CDN-fronted public sites are the norm; the layer fires high-confidence. |
-| `google_workspace_tenant` | 100% | — | Financial orgs in this sample are M365-only; GWS uniformly sparse. |
-| `email_security_policy_enforcing` | 0% | — | Enforcing DMARC universal in this sample. |
+| `aws_hosting` | 100% | n/a | Financial institutions on this sample do not surface AWS-specific apex evidence. |
+| `m365_tenant` | 20% | n/a | Heavy M365 use; verification + MX evidence consistently present. |
+| `cdn_fronting` | 10% | n/a | CDN-fronted public sites are the norm; the layer fires high-confidence. |
+| `google_workspace_tenant` | 100% | n/a | Financial orgs in this sample are M365-only; GWS uniformly sparse. |
+| `email_security_policy_enforcing` | 0% | n/a | Enforcing DMARC universal in this sample. |
 
 **Defensive read for the financial-services operator:** the public
 fingerprint is "M365 + CDN-fronted + strong DMARC" with everything
-else sparse. This is the strongest available posture for
-fingerprint disclosure while running an enterprise M365 stack;
-recon reports exactly that.
+else sparse. This is a low-disclosure posture for
+fingerprinting while running an enterprise M365 stack;
+recon reports that.
 
-##### Pattern D — Defense / national-security adjacent
+##### Pattern D: Defense / national-security adjacent
 
 | Node | Sparse rate | Survival vs soft corpus | What the panel reports |
 |---|---|---|---|
-| `google_workspace_tenant` | 80% | — | Defense orgs in this sample are AWS / M365 / on-prem; minimal GWS, with two chains the v1.9.4 suffix-only CNAME walker traverses past split-horizon hops. |
-| `aws_hosting` | 80% | — | Some defense-cloud presence on AWS gov regions surfaces. |
-| `federated_identity` | 80% | — | Most identity surface intentionally suppressed publicly; one additional defense chain surfaces a federated-identity binding under the v1.9.4 suffix-only walker. |
-| `okta_idp` | 100% | — | No Okta-specific evidence in this sample's defense subset. |
-| `email_security_policy_enforcing` | 20% | — | Enforcing DMARC mostly published. |
+| `google_workspace_tenant` | 80% | n/a | Defense orgs in this sample are AWS / M365 / on-prem; minimal GWS, with two chains the v1.9.4 suffix-only CNAME walker traverses past split-horizon hops. |
+| `aws_hosting` | 80% | n/a | Some defense-cloud presence on AWS gov regions surfaces. |
+| `federated_identity` | 80% | n/a | Most identity surface intentionally suppressed publicly; one additional defense chain surfaces a federated-identity binding under the v1.9.4 suffix-only walker. |
+| `okta_idp` | 100% | n/a | No Okta-specific evidence in this sample's defense subset. |
+| `email_security_policy_enforcing` | 20% | n/a | Enforcing DMARC mostly published. |
 
 **Defensive read for the defense-contractor operator:** the public
 fingerprint is "AWS / M365 footprint visible at the apex level;
@@ -1826,16 +1827,16 @@ identity stack hidden". The layer correctly reports the limit; an
 attacker scanning passively gets the surface, not the stack
 behind it.
 
-##### Pattern E — Major government agencies
+##### Pattern E: Major government agencies
 
 | Node | Sparse rate | Survival vs soft corpus | What the panel reports |
 |---|---|---|---|
-| `m365_tenant` | 20% | — | Federal agencies heavily M365 (and `.gov` policy reinforces). |
-| `google_workspace_tenant` | 100% | — | GWS uniformly absent in this sample. |
-| `cdn_fronting` | 10% | — | CDN-fronted public sites the norm; layer fires high-confidence. |
-| `aws_hosting` | 90% | — | Some agency cloud presence on AWS GovCloud surfaces. |
-| `federated_identity` | 90% | — | Identity stack intentionally hidden. |
-| `okta_idp` | 100% | — | No Okta surfacing in this sample's gov subset. |
+| `m365_tenant` | 20% | n/a | Federal agencies heavily M365 (and `.gov` policy reinforces). |
+| `google_workspace_tenant` | 100% | n/a | GWS uniformly absent in this sample. |
+| `cdn_fronting` | 10% | n/a | CDN-fronted public sites the norm; layer fires high-confidence. |
+| `aws_hosting` | 90% | n/a | Some agency cloud presence on AWS GovCloud surfaces. |
+| `federated_identity` | 90% | n/a | Identity stack intentionally hidden. |
+| `okta_idp` | 100% | n/a | No Okta surfacing in this sample's gov subset. |
 
 **Defensive read for the federal operator:** identical signature
 to the financial-institution category from the layer's perspective
@@ -1846,7 +1847,7 @@ though their internal stacks differ.
 ##### Cross-cutting findings
 
 - **`email_security_modern_provider` is 100% sparse on every
-  hardened category.** By design — the node has no evidence
+  hardened category.** By design: the node has no evidence
   bindings (v1.9.3 split); it's purely structural CPT propagation.
   This is the calibrated honesty response, not a defect.
 - **`email_security_policy_enforcing` survives soft → hardened at
@@ -1856,7 +1857,7 @@ though their internal stacks differ.
 - **`cdn_fronting` survives at 0.84** with 60% high-confidence on
   the hardened corpus. The CDN front is part of the hardening
   posture, not hidden by it; the layer correctly surfaces it.
-- **`email_gateway_present` survives at 0.57** — the cleanest
+- **`email_gateway_present` survives at 0.57**, a clear
   demonstration of the asymmetric-likelihood design. Gateways
   rarely route through CDN edges at MX-resolve time; the layer
   correctly retreats when public DNS doesn't carry the evidence.
@@ -1941,7 +1942,7 @@ Predicted Bayesian behaviour:
   conflict-dampened `n_eff` prevents the posterior interval from
   collapsing on a confident point estimate.
 
-The conflict provenance surface is exactly the right primitive
+The conflict provenance surface is the relevant primitive
 for this pattern. The operator sees a `posterior_observations`
 entry with `sparse=true`, `conflict_provenance=[...]` populated,
 and the panel's "(N cross-source conflicts dampened)" framing
@@ -2145,7 +2146,7 @@ for the inputs the calibration rests on.
 v1.9.9 is renderer-side: no engine code, no schema, no calibration
 claim. One connection to the inference layer worth recording: the
 panel's "Passive-DNS ceiling" footer is the operator-facing
-counterpart to the layer's `sparse=true` flag (§4.8.4) — a
+counterpart to the layer's `sparse=true` flag (§4.8.4): a
 structural statement that some classes of evidence are unreachable
 through public DNS, paired with the statistical interval the layer
 already emits. The Multi-cloud rollup and wordlist-breadth
@@ -2165,7 +2166,7 @@ domains used are the Microsoft fictional set; the technical
 observations are illustrative of how the layer responds to those
 shapes of evidence.
 
-#### Example 1 — dense M365-federated stack
+#### Example 1: dense M365-federated stack
 
 Input: `recon contoso.com --explain-dag`. The deterministic pipeline
 fires `microsoft365`, `entra-id`, `okta`, `federated_sso_hub`,
@@ -2179,8 +2180,8 @@ Domain has a Microsoft 365 / Entra tenant.
 - Confidence label: high-confidence
 - Evidence: slug `microsoft365`, slug `entra-id`
 - Top influences (ranked, 2 fired):
-    1. slug `entra-id` — LLR +3.78 (52.3% of evidence influence)
-    2. slug `microsoft365` — LLR +3.46 (47.7% of evidence influence)
+    1. slug `entra-id`: LLR +3.78 (52.3% of evidence influence)
+    2. slug `microsoft365`: LLR +3.46 (47.7% of evidence influence)
 
 ## federated_identity
 Domain uses an external IdP for SSO (Okta, Auth0, Ping, etc.).
@@ -2189,8 +2190,8 @@ Domain uses an external IdP for SSO (Okta, Auth0, Ping, etc.).
 - Confidence label: high-confidence
 - Evidence: signal `federated_sso_hub`
 - Top influence:
-    1. signal `federated_sso_hub` — LLR +2.89 (100.0% of evidence influence)
-- Depends on: `m365_tenant` (posterior 1.000) — see CPT in
+    1. signal `federated_sso_hub`: LLR +2.89 (100.0% of evidence influence)
+- Depends on: `m365_tenant` (posterior 1.000); see CPT in
   bayesian_network.yaml for the conditional table.
 
 ## okta_idp
@@ -2200,7 +2201,7 @@ Identity provider is Okta.
 - Confidence label: high-confidence
 - Evidence: slug `okta`
 - Top influence:
-    1. slug `okta` — LLR +3.83 (100.0% of evidence influence)
+    1. slug `okta`: LLR +3.83 (100.0% of evidence influence)
 
 ## email_security_policy_enforcing
 Observable email-authentication policy is enforcing (DMARC reject/quarantine
@@ -2210,28 +2211,28 @@ Observable email-authentication policy is enforcing (DMARC reject/quarantine
 - Confidence label: high-confidence
 - Evidence: signal `dmarc_reject`, signal `dkim_present`, signal `spf_strict`
 - Top influences (ranked, 3 fired):
-    1. signal `dmarc_reject` — LLR +3.14 (61.6% of evidence influence)
-    2. signal `dkim_present`  — LLR +1.04 (20.4% of evidence influence)
-    3. signal `spf_strict`    — LLR +0.92 (18.0% of evidence influence)
+    1. signal `dmarc_reject`: LLR +3.14 (61.6% of evidence influence)
+    2. signal `dkim_present`:  LLR +1.04 (20.4% of evidence influence)
+    3. signal `spf_strict`:    LLR +0.92 (18.0% of evidence influence)
 ```
 
 Reading: the chain reasoning is explicit. M365 is supported by two
 direct slugs and the ranked top-influences list quantifies *which*
-slug drove the posterior — `entra-id` carries 52% of the evidence
+slug drove the posterior: `entra-id` carries 52% of the evidence
 influence because its likelihood ratio (0.88 / 0.02 ≈ 44) is slightly
 larger than `microsoft365`'s (0.95 / 0.03 ≈ 32). Federated identity
 is supported by a signal AND propagates from the M365 parent (the
 CPT line `m365_tenant=present`,`google_workspace_tenant=absent` puts
 $P(\text{federated}|\text{M365}) = 0.45$); Okta then propagates from
 `federated_identity`. The policy-enforcing email node sits on three
-fired signals — DMARC reject is the load-bearing one (61% of influence,
+fired signals: DMARC reject is the load-bearing one (61% of influence,
 LLR +3.14), DKIM and SPF strict are confirmatory. Every claim in the
 chain is hedged with a credible interval, an n_eff, and a top-3 LLR
 ranking so a downstream reader can audit *which* facts drove the
-posterior — the question a defending operator asks when disputing a
+posterior, the question a defending operator asks when disputing a
 verdict.
 
-#### Example 2 — sparse hardened target
+#### Example 2: sparse hardened target
 
 Input: a target with wildcard certs everywhere, minimal published
 DNS, hardened IdP metadata. The pipeline fires only `cloudflare`
@@ -2258,9 +2259,9 @@ Reading: every node except `cdn_fronting` is `sparse`. The intervals
 are wide. The narrative refuses to claim anything we did not
 actually observe. This is the passive-observation ceiling enforced
 in language: a hardened target produces a hedged, low-confidence
-report — exactly what the v1.7-v1.9 thesis predicts.
+report, what the v1.7-v1.9 thesis predicts.
 
-#### Example 3 — cross-source conflict
+#### Example 3: cross-source conflict
 
 Input: two sources disagree on `auth_type` (one says Federated, one
 says Managed). The deterministic merger picks a winner and surfaces
@@ -2279,11 +2280,11 @@ intervals.
 ```
 
 Reading: the point estimate is moderate (0.61) but the interval is
-huge — `[0.02, 1.00]`. The conflict subtracted from `n_eff`,
+wide: `[0.02, 1.00]`. The conflict subtracted from `n_eff`,
 widening the interval. Operators see the disagreement reflected in
 the report instead of getting a single number that hides it.
 
-#### Example 4 — DOT export
+#### Example 4: DOT export
 
 Input: `recon contoso.com --explain-dag --explain-dag-format dot`.
 
@@ -2305,7 +2306,7 @@ Pipe through `dot -Tpng > dag.png` for an image, or paste into
 any Graphviz online viewer. Sparse nodes get dashed borders;
 dense, high-posterior nodes get a navyblue solid border. The
 palette is intentionally hedged: no green for "good", no red for
-"bad" — recon renders structural confidence, not safety judgment.
+"bad". recon renders structural confidence, not safety judgment.
 
 ### 4.9 Feedback-driven priors (v1.9.0, local only)
 
@@ -2314,12 +2315,12 @@ A corpus run can update a local prior file at
 Three guardrails:
 
   1. The priors file lives only on the operator's machine.
-  2. The package never ships learned weights — only the corpus
+  2. The package never ships learned weights, only the corpus
      metadata that produced them, and only as documentation.
   3. There is no remote service. There is no telemetry. There is
      no shared reputation database.
 
-This is "tune your local priors against your own corpus" —
+This is "tune your local priors against your own corpus",
 specifically not "build a community-wide trust model". The
 distinction is invariant.
 
@@ -2423,7 +2424,7 @@ shipped to runtime environments.
 | `scikit-learn` | Discriminative ML; not what recon does. Would add a maintenance surface that suggests recon learns from data. recon does not. |
 | `redis`, `sqlite` (server), `celery`, `FastAPI` | recon is a stdio MCP tool plus a local CLI. No server, no queue, no shared cache. |
 | Shodan / Censys / SecurityTrails APIs | Paid intelligence services. The "zero credentials, zero API keys" invariant rules them out. |
-| GeoIP / ASN databases (MaxMind, Team Cymru, etc.) | Local intelligence-database imports. recon's invariants exclude bundled intelligence — every conclusion must trace to a public observable, not to a maintained mapping table. |
+| GeoIP / ASN databases (MaxMind, Team Cymru, etc.) | Local intelligence-database imports. recon's invariants exclude bundled intelligence: every conclusion must trace to a public observable, not to a maintained mapping table. |
 
 The exclusion list is the practical statement of the
 "data-file-only schema, no learned weights" invariant. A
@@ -2457,33 +2458,33 @@ the project ships under:
   3. **Provenance is non-optional.** Every conclusion is reachable
      through the evidence DAG. The `--explain` output and the
      `explanation_dag` JSON field exist so a security architect
-     can reconstruct exactly which observable produced which
-     observation. A black-box posterior — even a numerically
-     correct one — is unacceptable, because the defender cannot
+     can reconstruct which observable produced which
+     observation. A black-box posterior, even a numerically
+     correct one, is unacceptable, because the defender cannot
      audit it. This rules out ML embeddings, learned weights, and
      any "trust the score" pattern.
 
 These principles are why the invariants are what they are. They are
-not arbitrary engineering taste — they are direct consequences of
+not arbitrary engineering taste; they are direct consequences of
 treating recon as defensive epistemic infrastructure rather than as
 a recon (offensive) tool.
 
 ## 6. How to read recon output through this lens
 
-  - **Default panel** — the posterior mode + maximum-confidence
+  - **Default panel**: the posterior mode + maximum-confidence
     slugs the deterministic engine extracted. Suitable for everyday
     review.
-  - **`--full`** — the broader observation set, including
+  - **`--full`**: the broader observation set, including
     surface-attribution map and the External surface section that
     walks each related subdomain's CNAME chain.
-  - **`--explain`** — the evidence DAG. This is the authoritative
+  - **`--explain`**: the evidence DAG. This is the authoritative
     answer to "why did recon say this?". Every conclusion is
     traceable to its observables.
-  - **`--json` with `--include-unclassified`** — the discovery
+  - **`--json` with `--include-unclassified`**: the discovery
     surface. Unclassified CNAME chains are observables we found but
     cannot yet attribute; they feed the validation loop and the
     `/recon-fingerprint-triage` skill.
-  - **`--fusion`** *(v1.9.0+, stable v2.0+)* — Bayesian posteriors
+  - **`--fusion`** *(v1.9.0+, stable v2.0+)*: Bayesian posteriors
     with credible intervals. Read intervals, not just means.
 
 ## 7. Alignment with invariants
@@ -2510,15 +2511,15 @@ behavior.
 
 ## Relationship to other documents
 
-- [README.md](../README.md) — user-facing introduction and practical
+- [README.md](../README.md): user-facing introduction and practical
   usage. Casual readers start there.
-- [roadmap.md](roadmap.md) — forward-looking build plan, success
+- [roadmap.md](roadmap.md): forward-looking build plan, success
   metrics, validation discipline.
-- [schema.md](schema.md) — JSON output contract. Cited from this
+- [schema.md](schema.md): JSON output contract. Cited from this
   document whenever a new field is mentioned.
-- [limitations.md](limitations.md) — known passive-collection
+- [limitations.md](limitations.md): known passive-collection
   ceilings. Pairs with §1–§2 above for cases where the channel
   genuinely cannot resolve uncertainty further.
-- This document — formal model, mathematical rationale, per-feature
+- This document: formal model, mathematical rationale, per-feature
   defensive-value statements, and the epistemology that ties them
   together.

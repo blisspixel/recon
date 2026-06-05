@@ -2099,8 +2099,8 @@ out.
 
 - **Compute always.** Bayesian inference runs on every lookup.
   Cost is zero network calls (the comment at `cli.py:2365`
-  already documents this: "Costs nothing — no network calls —
-  so the recompute is cheap").
+  already documents this: "Costs nothing, no network calls, so
+  the recompute is cheap").
 - **`--json` always emits** `posterior_observations` and
   `slug_confidences`. Schema-additive per the v2.0 contract; no
   consumer that ignores unknown fields breaks.

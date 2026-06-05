@@ -1,7 +1,7 @@
 # Contributing
 
 Thanks for your interest in contributing to recon. Read the section below
-before anything else: it is the project's single non-negotiable rule.
+first: it is the project's single non-negotiable rule.
 
 ## No real company data, ever
 
@@ -34,10 +34,10 @@ outputs are not. Aggregate counts produced by the corpus aggregator
 may be committed; per-domain results never.
 
 If you're writing a bug report that needs a real domain to reproduce,
-file it privately or describe the behaviour in terms of the fictional
-examples whenever the real name isn't load-bearing. The rationale is
-simple: no upside, accumulating reputational and legal downside over
-the lifetime of the repository.
+file it privately or describe the behaviour using the fictional
+examples whenever the real name isn't load-bearing. The rationale: no
+upside, and accumulating reputational and legal downside over the
+lifetime of the repository.
 
 Reviewers actively check incoming PRs for real-apex strings before
 merge. A PR found to contain real-company data will be rejected and
@@ -69,9 +69,9 @@ uv run pytest tests/                   # or: pytest tests/
 
 ## What we're looking for
 
-recon is a **narrow tool** that does one thing well: passive, zero-creds
+recon is a **narrow tool** focused on one thing: passive, zero-creds
 domain intelligence. Contributions that tighten what the tool already does
-are always welcome:
+are welcome:
 
 | Contribution type | Bar | Examples |
 |---|---|---|
@@ -86,7 +86,7 @@ are always welcome:
 | **Test additions** | Sparse-data fixtures, adversarial inputs, corner cases. | Domain with zero MX + no tenant, IDN / punycode, wildcard DNS |
 
 The **engine stays lean; the data grows**. Most contributions should be
-YAML additions or refinements — that's the healthy scaling path for the
+YAML additions or refinements; that is the intended scaling path for the
 tool. Code changes earn their place against the post-1.0 ethos: correctness,
 reliability, explainability, composability, then new features, in that
 order.
@@ -133,10 +133,10 @@ and ask before writing code.
 recon supports both.
 
 **Local customization** (for your own use, never pushed):
-- `~/.recon/fingerprints.yaml` — custom fingerprints (additive only; cannot override built-ins)
-- `~/.recon/signals.yaml` — custom signal rules
-- `~/.recon/profiles/*.yaml` — custom posture profiles
-- `RECON_CONFIG_DIR` — override the default `~/.recon` location
+- `~/.recon/fingerprints.yaml`: custom fingerprints (additive only; cannot override built-ins)
+- `~/.recon/signals.yaml`: custom signal rules
+- `~/.recon/profiles/*.yaml`: custom posture profiles
+- `RECON_CONFIG_DIR`: override the default `~/.recon` location
 
 Anything that's specific to your organization, your vendors, or your
 internal naming should stay local.
@@ -144,7 +144,7 @@ internal naming should stay local.
 **Upstream contribution** (shared with everyone via a PR):
 - Detections that apply to at least one publicly-known service
 - At least one real customer domain you can point to as evidence
-  (kept locally and described in the PR body — not committed)
+  (kept locally and described in the PR body, not committed)
 - General-purpose (not a specific org's internal pattern)
 
 ---
@@ -174,7 +174,7 @@ the per-domain corpus stays local.
 ## Adding fingerprints
 
 The most common contribution. From v1.1 onward, fingerprints live under
-`recon_tool/data/fingerprints/` — one YAML file per category.
+`recon_tool/data/fingerprints/`, one YAML file per category.
 
 ### 1. Find the right file
 
@@ -198,7 +198,7 @@ recon_tool/data/fingerprints/
 ```
 
 Pick the file that matches your service's primary category. If nothing
-fits, open an issue before adding a new category file — the split is
+fits, open an issue before adding a new category file; the split is
 intentionally coarse.
 
 ### 2. Add your entry
@@ -235,9 +235,9 @@ recon fingerprints check                    # validates the built-in catalog
 recon fingerprints check path/to/custom.yaml  # validate a candidate file
 ```
 
-The `check` command runs the same validation recon uses at runtime —
-regex safety (ReDoS heuristic), required fields, known detection types,
-weight range (0.0–1.0), `match_mode` value — **plus** a cross-file
+The `check` command runs the same validation recon uses at runtime
+(regex safety via a ReDoS heuristic, required fields, known detection
+types, weight range 0.0 to 1.0, `match_mode` value), **plus** a cross-file
 duplicate-slug check. Exits 0 on success, 1 on failure with per-entry
 error messages.
 
@@ -249,7 +249,7 @@ Contributors who prefer invoking the wrapper script directly can still run
 ### Chained patterns (`match_mode: all`)
 
 For high-confidence attribution where a single record could be a false
-positive, use `match_mode: all` — the fingerprint only fires when every
+positive, use `match_mode: all`: the fingerprint only fires when every
 listed detection matches. See [docs/fingerprints.md](docs/fingerprints.md#chained-patterns-match_mode-all) for details.
 
 For multi-detection changes, run:
@@ -272,7 +272,7 @@ The audit is advisory. Use it to document whether the entry should remain
 - [ ] The service's DNS footprint is documented or publicly-observable (not leaked from a customer engagement)
 - [ ] Multi-detection entries include a `match_mode` rationale from the audit output or PR notes
 - [ ] Common legitimate false-negative cases are captured in the PR body, or in `docs/weak-areas.md` when broadly useful
-- [ ] `pytest tests/` passes — property tests must still hold on the sparse-data corpus
+- [ ] `pytest tests/` passes; property tests must still hold on the sparse-data corpus
 - [ ] If the service could trip false positives on domains that merely *visited* the vendor's marketing site, used `match_mode: all`
 
 ### Detection description rubric (v1.9.7+)
@@ -373,7 +373,7 @@ can be added two ways:
    etc.) documents customer-facing custom-domain CNAME targets in
    their own product docs. Reading those docs and seeding fingerprints
    from them closes coverage blindspots BEFORE a customer of that
-   vendor lands in our private corpus — corpus-observed alone has a
+   vendor lands in our private corpus. Corpus-observed alone has a
    built-in bias toward the segments our corpus already represents.
 
 Both paths are encouraged. The **`reference`** field on each
@@ -395,15 +395,15 @@ the pattern. A rule shipped without a `reference` is allowed but
 will be flagged by the advisory metadata-richness audit
 (`scripts/check_metadata_coverage.py --report-richness`, v1.9.8+).
 
-Use the fingerprint PR template — GitHub surfaces it automatically.
+Use the fingerprint PR template; GitHub surfaces it automatically.
 
 ---
 
 ## Adding signals and profiles
 
-> **Heads up — engine changes go through a design doc.** Fingerprints
+> **Heads up: engine changes go through a design doc.** Fingerprints
 > are data; contributors can iterate on them freely. The signal,
-> fusion, and absence engines are inference code — bad changes there
+> fusion, and absence engines are inference code; bad changes there
 > affect every domain recon analyses, not just the one you tested.
 > Before PRing a change to `recon_tool/signals.py`, `merger.py`,
 > `absence.py`, `fusion.py`, or the two-pass evaluator, please open
@@ -414,7 +414,7 @@ Use the fingerprint PR template — GitHub surfaces it automatically.
 > 3. How you'd guard against false positives on sparse-signal domains.
 >
 > Data-only contributions (new signals in `signals.yaml` that reuse
-> the existing engine) don't need this — they follow the fingerprint
+> the existing engine) don't need this; they follow the fingerprint
 > PR workflow.
 
 ### Signals
@@ -459,18 +459,18 @@ signal_boost:
 focus_categories: [email, identity, consistency]
 ```
 
-Profiles are **additive only** — cannot introduce new observations, only
-reweight existing ones, and cannot create false confidence (caps at "high"
-salience).
+Profiles are **additive only**: they cannot introduce new observations,
+only reweight existing ones, and they cannot create false confidence (caps
+at "high" salience).
 
 ---
 
 ## Code changes
 
 - Run `pre-commit run --all-files` or `ruff check recon_tool/` and `pyright recon_tool/` before submitting.
-- Run `pytest tests/ --cov=recon_tool --cov-branch` — branch coverage must stay above 82%.
+- Run `pytest tests/ --cov=recon_tool --cov-branch`; branch coverage must stay above 82%.
 - Integration tests (`pytest -m integration`) require network access and are skipped by default.
-- Keep PRs focused — one concern per PR.
+- Keep PRs focused: one concern per PR.
 
 ### Post-1.0 bar for code changes
 
@@ -479,11 +479,11 @@ Any change that touches a stable surface needs:
 
 - A clear reason the change can't be done as data-only (YAML).
 - An explanation of backward compatibility (or a deprecation plan if the
-  change is breaking — which requires a major version bump).
+  change is breaking, which requires a major version bump).
 - Tests covering both existing consumers and the new behavior.
 
 The bar is deliberately high. Most "I want recon to do X" ideas can be
-solved with a new fingerprint, signal, or profile — not new code.
+solved with a new fingerprint, signal, or profile rather than new code.
 
 ---
 
@@ -515,11 +515,11 @@ Read it before changing any CPT entry.
 
 Three issue templates:
 
-- **Fingerprint request** — you want recon to detect a service it
+- **Fingerprint request**: you want recon to detect a service it
   currently misses.
-- **Bug report** — recon got something wrong, crashed, or behaved
+- **Bug report**: recon got something wrong, crashed, or behaved
   unexpectedly.
-- **Idea** — you want to propose something larger (new flag, new MCP
+- **Idea**: you want to propose something larger (new flag, new MCP
   tool, new CLI command, etc.).
 
 For ideas, the template asks you to confirm the proposal fits the
@@ -531,8 +531,8 @@ to `--json` + pipe to the right tool.
 
 ## Pull request etiquette
 
-- Keep PRs focused — one feature or fix per PR.
+- Keep PRs focused: one feature or fix per PR.
 - Fingerprint-only PRs are welcome and easy to review.
 - Include a brief description of what you changed and why.
 - Reference the issue number if there is one.
-- Be patient — this is a small project with a single maintainer.
+- Be patient: this is a small project with a single maintainer.

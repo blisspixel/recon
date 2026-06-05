@@ -1,7 +1,7 @@
 # Stability Policy
 
 As of v1.0, recon commits to the public surfaces listed below. **Stable**
-surfaces will not break between patch or minor releases — breaking them
+surfaces will not break between patch or minor releases; breaking them
 requires a major version bump and a deprecation window. v2.0 promotes
 the Bayesian fusion surfaces (`--fusion`, `--explain-dag`,
 `posterior_observations`, `slug_confidences`, MCP `get_posteriors` and
@@ -32,7 +32,7 @@ For the JSON output contract in full field-by-field detail, see
 | `recon fingerprints search <query>` | Stable | v1.1+. Search slug / name / category / detection pattern. |
 | `recon fingerprints show <slug>` | Stable | v1.1+. Full entry definition, including synthetic-slug provenance. |
 | `recon fingerprints check [path]` | Stable | v1.1+. Runtime schema, duplicate-slug, and specificity (v1.2+) checks. |
-| `recon fingerprints new <slug>` | Stable | v1.2+. Scaffolding wizard — slug / schema / specificity gates then emits YAML. |
+| `recon fingerprints new <slug>` | Stable | v1.2+. Scaffolding wizard: slug / schema / specificity gates then emits YAML. |
 | `recon fingerprints test <slug>` | Stable | v1.2+. Runs one fingerprint against the bundled public corpus. |
 | `recon signals list` / `search` / `show` | Stable | v1.1+. Same shape as the fingerprints inspect commands. |
 
@@ -54,7 +54,7 @@ For the JSON output contract in full field-by-field detail, see
 | `--chain`, `--depth <1-3>` | Stable | Recursive related-domain resolution. |
 | `--no-cache`, `--cache-ttl <sec>` | Stable | Cache control. |
 | `--timeout <sec>` / `-t` | Stable | Pipeline timeout (default 120s). |
-| `--fusion` | Stable (v2.0+) | v0.11. Opt-in Bayesian fusion. |
+| `--fusion` | Stable (v2.0+) | v0.11. Opt-in Bayesian fusion (still opt-in pre-lock). |
 | `--explain-dag` | Stable (v2.0+) | v1.9.0. Render Bayesian evidence DAG. |
 
 ### CLI exit codes
@@ -69,7 +69,7 @@ For the JSON output contract in full field-by-field detail, see
 
 ### MCP tools
 
-All 22 MCP tools are **stable** — names, parameter names, parameter types,
+All 22 MCP tools are **stable**: names, parameter names, parameter types,
 and return-payload shapes will not change between patch or minor releases.
 New optional parameters may be added. The Bayesian-fusion tools
 (`get_posteriors`, `explain_dag`) ship pre-v2.0 under experimental
@@ -116,9 +116,20 @@ of stability tags:
   domains, email security, CT metadata, sovereignty, and nested
   `cert_summary` / `bimi_identity` objects.
 - **Bayesian fusion fields** (`slug_confidences`,
-  `posterior_observations`) — pre-v2.0 experimental, stable v2.0+ per
+  `posterior_observations`): pre-v2.0 experimental, stable v2.0+ per
   the schema-lock disposition table in
   [`roadmap.md`](roadmap.md#v200--maturity).
+- **Schema-hardening fields**, all stable (v2.0+):
+  - `fusion_enabled` (bool): true when the Bayesian fusion layer ran.
+  - `record_type` (output-mode discriminator): `"lookup"` on a
+    single-domain success object.
+  - `schema_version` (string): `"2.0"`.
+  - `error_kind` (enum: `validation`, `lookup`, `timeout`): on the batch
+    error record.
+
+The v2.0 schema-hardening pass also reshaped two surfaces before the lock:
+`slug_confidences` is now an object map, and `wildcard_sibling_clusters`
+entries are now `{names: [...]}` objects.
 
 Any `--json` consumer that reads only stable fields will work across
 patch and minor releases without modification.
@@ -127,13 +138,13 @@ patch and minor releases without modification.
 
 | Surface | Stable guarantee |
 |---|---|
-| `data/fingerprints/*.yaml` schema | Stable — fields: name, slug, category, confidence, detections, match_mode, weight, m365, provider_group, display_group. v1.1 split the monolith into per-category files; file boundaries are a repo-organization detail, not part of the schema contract. |
-| `~/.recon/fingerprints.yaml` schema | Same. Custom entries are **additive only** — cannot override built-ins. A `~/.recon/fingerprints/` directory is also accepted (v1.1+). |
-| `data/signals.yaml` schema | Stable — fields: name, category, confidence, description, requires, metadata, contradicts, requires_signals, expected_counterparts, positive_when_absent. |
+| `data/fingerprints/*.yaml` schema | Stable. Fields: name, slug, category, confidence, detections, match_mode, weight, m365, provider_group, display_group. v1.1 split the monolith into per-category files; file boundaries are a repo-organization detail, not part of the schema contract. |
+| `~/.recon/fingerprints.yaml` schema | Same. Custom entries are **additive only**; they cannot override built-ins. A `~/.recon/fingerprints/` directory is also accepted (v1.1+). |
+| `data/signals.yaml` schema | Stable. Fields: name, category, confidence, description, requires, metadata, contradicts, requires_signals, expected_counterparts, positive_when_absent. |
 | `~/.recon/signals.yaml` schema | Same. Additive only. |
-| `data/profiles/*.yaml` schema | Stable — fields: name, description, category_boost, signal_boost, focus_categories, exclude_signals, prepend_note. |
+| `data/profiles/*.yaml` schema | Stable. Fields: name, description, category_boost, signal_boost, focus_categories, exclude_signals, prepend_note. |
 | `~/.recon/profiles/*.yaml` schema | Same. Additive only. |
-| `~/.recon/cache/*.json` (TenantInfo cache) | Stable — backward-compatible reads, forward-compatible writes. |
+| `~/.recon/cache/*.json` (TenantInfo cache) | Stable. Backward-compatible reads, forward-compatible writes. |
 | `~/.recon/ct-cache/*.json` (per-domain CT cache) | Stable. |
 | `RECON_CONFIG_DIR` environment variable | Stable. |
 
@@ -172,8 +183,8 @@ surfaces require a major version bump (`x.y` → `(x+1).0`) and a minimum
 one-release deprecation window with a warning emitted before removal.
 
 **Additions are not breaking changes.** New optional CLI flags, new
-optional JSON fields, new MCP tools, new fingerprints or signals — all of
-these can land in minor releases without breaking existing consumers.
+optional JSON fields, new MCP tools, new fingerprints or signals can all
+land in minor releases without breaking existing consumers.
 
 **Default value changes to existing fields** ARE breaking changes if a
 consumer was relying on the default.
@@ -182,20 +193,20 @@ consumer was relying on the default.
 
 ## What is NOT in the stability contract
 
-- **Rich panel visual formatting** — colors, whitespace, row ordering
+- **Rich panel visual formatting**: colors, whitespace, row ordering
   within Services categories, box-drawing details. The section structure
   is stable; pixel-level rendering is not.
-- **Insight wording** — individual insight text may be refined. The
+- **Insight wording**: individual insight text may be refined. The
   insight *types* and their *trigger conditions* are stable (see
   `signals.yaml`); the exact phrasing is not.
-- **Which specific fingerprints fire for a given domain** — the `slugs`
+- **Which specific fingerprints fire for a given domain**: the `slugs`
   field is stable as a mechanism; its contents depend on the fingerprint
   database version and may change as new fingerprints are added or
   existing ones are refined.
-- **Debug / verbose internals** — `--explain` output is stable at the
+- **Debug / verbose internals**: `--explain` output is stable at the
   section level; per-line detail may evolve.
 - **Cache file internal layouts beyond the documented TenantInfo/CT
-  shapes** — future fields may be added; consumers should ignore unknown
+  shapes**: future fields may be added; consumers should ignore unknown
   fields (forward-compatible reads).
 
 ---
@@ -225,5 +236,5 @@ strictly:
   schema changes.
 
 Pre-1.0 releases (0.9.x through 0.11.x) did not honor this contract
-strictly — some minor releases included breaking changes within a minor.
+strictly; some minor releases included breaking changes within a minor.
 From 1.0 onward the contract is enforced.

@@ -1,9 +1,9 @@
-# Weak areas — where recon looks thin, and why
+# Weak areas: where recon looks thin, and why
 
 recon is a passive, zero-credential tool. Its coverage ceiling is set by
 what organizations publish in DNS and in unauthenticated identity /
 certificate-transparency endpoints. Several common deployment shapes
-publish very little of that — which means recon's output on those
+publish very little of that, which means recon's output on those
 domains will look sparse, and you should read it accordingly.
 
 This page names the patterns and explains what to do instead of
@@ -57,7 +57,7 @@ services) that don't publish verifiable public DNS tokens the same
 way Western SaaS does.
 
 What to do: take the `Self-hosted mail` + MX records as a signal
-ceiling — these orgs are observably running their own stack, and the
+ceiling. These orgs are observably running their own stack, and the
 absence of Western-SaaS fingerprints is an accurate reading, not a
 gap in recon's coverage.
 
@@ -71,7 +71,7 @@ traffic at a proxy layer and keep application infrastructure behind
 it. Email is often routed through a gateway (Proofpoint, Mimecast,
 Cisco IronPort), and the gateway's MX is the only mail-layer signal.
 
-What to do: the gateway *is* the signal — recon's gateway inference
+What to do: the gateway *is* the signal. recon's gateway inference
 path (`likely primary provider via <Gateway>`) is doing the right
 work. Don't read "few services" as "unsophisticated stack"; this
 shape is common for enterprises that care about governance.
@@ -84,7 +84,7 @@ pattern matched)` on the provider line.
 
 Why: orgs running their own mail servers and minimal cloud SaaS
 deliberately leave a small passive footprint. recon is seeing the
-ground truth — the footprint is thin because the infrastructure is
+ground truth: the footprint is thin because the infrastructure is
 on-prem.
 
 What to do: nothing. A sparse result on a genuinely self-hosted
@@ -97,7 +97,7 @@ Symptoms: no MX, no identity endpoints resolve, no tenant ID, no
 SaaS services detected. Provider is `Unknown`.
 
 Why: some apexes exist purely as a redirect or for legal / branding
-reasons. There's no organization running against them — the domain
+reasons. There's no organization running against them; the domain
 is parked.
 
 What to do: check `related_domains` in the `--json` output; the
@@ -109,7 +109,7 @@ shared verification tokens (see `clustering.py`).
 
 - Not "recon is broken."
 - Not "the org has an immature stack."
-- Not "you should try harder / more aggressive scanning" —
+- Not "you should try harder / more aggressive scanning";
   *aggressive scanning* is explicitly not this tool's job.
 
 recon is bounded by what's passively observable in public DNS.
