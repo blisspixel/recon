@@ -119,9 +119,11 @@ class TestDotRenderer:
 
     def test_sparse_nodes_are_dashed(self, network, sparse_inference):
         out = render_dag_dot(network, sparse_inference, domain="x")
-        # All sparse → most node lines should have dashed style
+        # Dashed style marks sparse nodes. Declarative nodes (CAL14) condition on
+        # absence so they are not sparse even under no evidence; count the
+        # actually-sparse posteriors rather than assuming every node is.
         dashed_count = out.count("rounded,dashed")
-        assert dashed_count == len(network.nodes)
+        assert dashed_count == sum(1 for p in sparse_inference.posteriors if p.sparse)
 
     def test_dense_nodes_are_solid(self, network, dense_inference):
         out = render_dag_dot(network, dense_inference, domain="x")
@@ -234,8 +236,10 @@ class TestMermaidRenderer:
     def test_sparse_nodes_get_dashed_style(self, network, sparse_inference):
         out = render_dag_mermaid(network, sparse_inference, domain="x")
         # Sparse → dashed border via Mermaid `style ... stroke-dasharray`.
+        # Declarative nodes (CAL14) are not sparse even under no evidence; count
+        # the actually-sparse posteriors.
         dashed_count = out.count("stroke-dasharray:5 5")
-        assert dashed_count == len(network.nodes)
+        assert dashed_count == sum(1 for p in sparse_inference.posteriors if p.sparse)
 
     def test_dense_nodes_have_no_dash(self, network, dense_inference):
         out = render_dag_mermaid(network, dense_inference, domain="x")

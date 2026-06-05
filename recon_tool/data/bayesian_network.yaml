@@ -200,8 +200,11 @@ nodes:
     # / GWS tenants ship with weak policy (p=none); some self-hosted /
     # gateway-fronted setups enforce strictly. The two claims should
     # not be entangled in the topology.
-    # Prior 0.25 reflects published base rates of fully-enforcing DMARC
-    # deployment on enterprise apex domains (not corpus-fitted).
+    # Prior grounded on the 2026-06 corpus: 61.7% of 5,238 domains publish an
+    # enforcing DMARC policy (p=reject/quarantine), so the prior moves from a
+    # hand-set 0.25 to 0.62 (CAL12). A directionally-accurate estimate the
+    # maintainer-validation loop re-checks each release (roadmap PV2), not a
+    # frozen value.
     #
     # v1.9.6: removed `dkim_present` from the evidence list (it was
     # `[0.85, 0.30]`, LR ≈ 2.83). Concept: DKIM publication is a
@@ -222,27 +225,44 @@ nodes:
     # `dmarc_quarantine`, `mta_sts_enforce`, `spf_strict`) all
     # speak directly to it. See CONTRIBUTING.md "CPT-change
     # discipline" → "Worked example 2" for the worked rejection.
-    prior: 0.25
+    prior: 0.62
+    # CAL14: this node is *declarative*. DMARC / SPF / MTA-STS are public
+    # declarations whose absence cannot be hidden from passive DNS, so a signal
+    # that could fire but did not is genuine disconfirming evidence (unlike
+    # hideable infrastructure, which keeps the LR=1 absence rule). Semantic
+    # ruling (definition A): "enforcing" means an observable DMARC
+    # reject/quarantine policy; strict SPF alone is hygiene, not enforcement
+    # (RFC 7489 makes DMARC the policy/alignment layer over SPF/DKIM). The DMARC
+    # policy level is mutually exclusive (reject XOR quarantine XOR none), so the
+    # two DMARC bindings share a `dmarc_policy` group whose whole-absence
+    # likelihood is given explicitly rather than as a complement-product.
+    missingness: declarative
+    group_absence:
+      # P(no DMARC policy | enforcing) is low (an enforcing org publishes one);
+      # P(no DMARC policy | not enforcing) is high. Construct-noise values, not
+      # corpus-fitted; the absence of the DMARC group is the main disconfirmer.
+      dmarc_policy: [0.05, 0.85]
     evidence:
       - signal: dmarc_reject
         likelihood: [0.92, 0.04]
+        group: dmarc_policy
       - signal: dmarc_quarantine
         likelihood: [0.55, 0.10]
+        group: dmarc_policy
+      # mta_sts regrounded on the 2026-06 corpus: only ~6% of enforcing domains
+      # publish MTA-STS (the old [0.70, 0.05] claimed 70%, an order of magnitude
+      # off; CAL12 base-rate correction, re-checked by PV2). The low present-
+      # likelihood also makes its absence near-neutral (complement [0.94, 0.99],
+      # LR ~1), which is correct: MTA-STS non-adoption is the norm even among
+      # enforcers, so it must not disconfirm.
       - signal: mta_sts_enforce
-        likelihood: [0.70, 0.05]
-      # v1.9.x: down-weight spf_strict from [0.75, 0.30] (LR 2.5) to [0.70, 0.45]
-      # (LR ~1.6). Conceptual, not corpus-fitted: a strict SPF `-all` is
-      # near-ubiquitous email hygiene that many domains publish without enforcing
-      # a DMARC reject/quarantine policy, so its absence-of-discrimination
-      # (P(spf_strict | enforcing absent)) is much higher than 0.30. The old LR
-      # let spf_strict-plus-one-weak-signal combinations clear the high-posterior
-      # threshold on domains whose true policy is not enforcing; the 2026-06
-      # synthetic calibration showed this node at conditional ECE 0.31 with the
-      # [0.85] reliability bin realizing only 0.166. SPF-strict stays a binding
-      # (it is an auth mechanism, unlike DKIM which was removed in v1.9.6) but a
-      # weak one. See CONTRIBUTING.md "CPT-change discipline".
+        likelihood: [0.06, 0.01]
+      # spf_strict regrounded on the 2026-06 corpus: P(strict SPF | enforcing)
+      # ~0.53, P(strict SPF | not enforcing) ~0.27 (LR ~2.0), close to the prior
+      # hand-set value. Under definition A strict SPF is supporting, not
+      # sufficient: its absence mildly disconfirms (complement [0.47, 0.73]).
       - signal: spf_strict
-        likelihood: [0.70, 0.45]
+        likelihood: [0.53, 0.27]
 
   # ── Infrastructure layer ──────────────────────────────────────────
   - name: cdn_fronting

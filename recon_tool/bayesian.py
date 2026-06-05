@@ -54,7 +54,7 @@ from __future__ import annotations
 import logging
 import math
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from itertools import product
 from pathlib import Path
 from typing import Any
@@ -137,6 +137,19 @@ class _Node:
     # mapping to P(this_node=present | parents=that assignment).
     cpt: dict[str, float]
     evidence: tuple[_Evidence, ...]
+    # Missingness model for non-firing bindings (roadmap CAL14).
+    #   "hideable" (default): a non-firing binding contributes nothing
+    #     (LR=1). Correct for infrastructure an operator can hide.
+    #   "declarative": a binding that could fire but did not is genuine
+    #     disconfirming evidence (public declarations like DMARC/SPF whose
+    #     absence cannot be hidden from passive DNS).
+    missingness: str = "hideable"
+    # For declarative nodes only: the absence likelihood of a mutually-
+    # exclusive evidence group, as (group_name, P(no member | present),
+    # P(no member | absent)). Independent declarative bindings use the
+    # complement of their own likelihood; a group needs an explicit pair
+    # because its members are alternatives, not independent features.
+    group_absence: tuple[tuple[str, float, float], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -350,6 +363,8 @@ def _parse_network_node(raw_node: Any, seen_names: set[str]) -> _Node:
 
     prior, cpt = _parse_node_prior_cpt(name, parents, raw_node.get("prior"), raw_node.get("cpt") or {})
     evidence = _parse_node_evidence(name, raw_node.get("evidence") or [])
+    missingness = _parse_missingness(name, raw_node.get("missingness"))
+    group_absence = _parse_group_absence(name, raw_node.get("group_absence"), evidence, missingness)
 
     return _Node(
         name=name,
@@ -358,7 +373,46 @@ def _parse_network_node(raw_node: Any, seen_names: set[str]) -> _Node:
         prior=prior,
         cpt=cpt,
         evidence=evidence,
+        missingness=missingness,
+        group_absence=group_absence,
     )
+
+
+def _parse_missingness(name: str, raw: Any) -> str:
+    """Validate the optional node ``missingness`` field (default hideable)."""
+    if raw is None:
+        return "hideable"
+    if raw not in ("hideable", "declarative"):
+        raise ValueError(f"bayesian_network[{name}]: 'missingness' must be 'hideable' or 'declarative'")
+    return raw
+
+
+def _parse_group_absence(
+    name: str, raw: Any, evidence: tuple[_Evidence, ...], missingness: str
+) -> tuple[tuple[str, float, float], ...]:
+    """Validate ``group_absence``: per-group [P(no member|present), P(no member|absent)].
+
+    Only meaningful for declarative nodes; each referenced group must exist
+    among the node's bindings, and each likelihood must be strictly in (0, 1).
+    """
+    if raw is None:
+        return ()
+    if missingness != "declarative":
+        raise ValueError(f"bayesian_network[{name}]: 'group_absence' is only valid on declarative nodes")
+    if not isinstance(raw, dict):
+        raise ValueError(f"bayesian_network[{name}]: 'group_absence' must be a mapping")
+    known_groups = {ev.group for ev in evidence if ev.group}
+    out: list[tuple[str, float, float]] = []
+    for group, pair in raw.items():
+        if group not in known_groups:
+            raise ValueError(f"bayesian_network[{name}]: group_absence group {group!r} has no bindings")
+        if not isinstance(pair, list) or len(pair) != 2 or not all(isinstance(x, int | float) for x in pair):
+            raise ValueError(f"bayesian_network[{name}/{group}]: group_absence must be [float, float]")
+        lp, la = float(pair[0]), float(pair[1])
+        if not (0.0 < lp < 1.0) or not (0.0 < la < 1.0):
+            raise ValueError(f"bayesian_network[{name}/{group}]: group_absence likelihoods must be in (0, 1)")
+        out.append((group, lp, la))
+    return tuple(out)
 
 
 def _validate_topology(nodes: list[_Node]) -> None:
@@ -456,16 +510,7 @@ def _apply_priors_override(network: BayesianNetwork, override: dict[str, float])
     new_nodes: list[_Node] = []
     for n in network.nodes:
         if n.name in override and not n.parents:
-            new_nodes.append(
-                _Node(
-                    name=n.name,
-                    description=n.description,
-                    parents=n.parents,
-                    prior=override[n.name],
-                    cpt=n.cpt,
-                    evidence=n.evidence,
-                )
-            )
+            new_nodes.append(replace(n, prior=override[n.name]))
         else:
             new_nodes.append(n)
     return BayesianNetwork(version=network.version, nodes=tuple(new_nodes))
@@ -588,29 +633,97 @@ def _factor_for_evidence(node: _Node, fired_evidence: list[_Evidence]) -> Factor
     :func:`_contributing_evidence`, so redundant readings of one fact are not
     multiplied as if independent (correlation.md §4.8.3).
 
-    We deliberately do NOT condition on absence: a non-firing binding
-    contributes nothing (LR=1). Passive collection cannot distinguish "this
-    node truly lacks the binding" from "the binding is there but the operator
-    hid it", so conditioning on absence would over-claim absence on hardened
-    targets (correlation.md §4.8.3, the MNAR argument). The node-dependent
-    refinement for public-declaration signals (MAR, where absence is genuine)
-    is tracked as a dedicated change; see correlation.md §4.8.3
-    "Node-dependent missingness" and roadmap CAL14.
+    Missingness (roadmap CAL14):
+
+    - **Hideable nodes** (default) do NOT condition on absence: a non-firing
+      binding contributes nothing (LR=1). Passive collection cannot distinguish
+      "this node truly lacks the binding" from "the binding is there but the
+      operator hid it", so conditioning on absence would over-claim absence on
+      hardened targets (correlation.md §4.8.3, the MNAR argument).
+    - **Declarative nodes** DO condition on absence: a binding that could fire
+      but did not is genuine disconfirming evidence, because the signal is a
+      public declaration whose absence cannot be hidden from passive DNS
+      (DMARC / SPF / MTA-STS policy). A non-firing independent binding
+      contributes the complement of its likelihood; an entirely non-firing
+      mutually-exclusive group (e.g. the DMARC policy level) contributes its
+      explicit ``group_absence`` pair, because its members are alternatives,
+      not independent features, so the complement-product would double-count.
     """
-    if not fired_evidence:
-        return None
-    # Multiplicative likelihoods over the contributing observations (one per
-    # correlation group plus every ungrouped binding).
+    if node.missingness != "declarative":
+        # Hideable (MNAR): only fired bindings contribute.
+        if not fired_evidence:
+            return None
+        like_present = 1.0
+        like_absent = 1.0
+        for ev in _contributing_evidence(fired_evidence):
+            like_present *= ev.likelihood_present
+            like_absent *= ev.likelihood_absent
+        return {
+            frozenset({(node.name, "present")}): like_present,
+            frozenset({(node.name, "absent")}): like_absent,
+        }
+    # Declarative (MAR): fired bindings contribute their likelihood; non-firing
+    # units contribute their absence likelihood. A factor is always returned
+    # (all-absent is itself informative).
     like_present = 1.0
     like_absent = 1.0
     for ev in _contributing_evidence(fired_evidence):
         like_present *= ev.likelihood_present
         like_absent *= ev.likelihood_absent
-    factor: Factor = {
+    fired_groups = {ev.group for ev in fired_evidence if ev.group}
+    fired_names = {ev.name for ev in fired_evidence}
+    grp_absence = {g: (lp, la) for g, lp, la in node.group_absence}
+    seen_groups: set[str] = set()
+    for ev in node.evidence:
+        if ev.name in fired_names:
+            continue
+        if ev.group:
+            if ev.group in fired_groups or ev.group in seen_groups:
+                continue
+            seen_groups.add(ev.group)
+            pair = grp_absence.get(ev.group)
+            if pair is not None:
+                like_present *= pair[0]
+                like_absent *= pair[1]
+        else:
+            like_present *= 1.0 - ev.likelihood_present
+            like_absent *= 1.0 - ev.likelihood_absent
+    return {
         frozenset({(node.name, "present")}): like_present,
         frozenset({(node.name, "absent")}): like_absent,
     }
-    return factor
+
+
+def _declarative_evidence_count(node: _Node, fired_evidence: list[_Evidence]) -> int:
+    """Effective evidence-unit count for a declarative node's ``n_eff``.
+
+    Counts each evidence unit (a correlation group, or an independent binding)
+    that is informative: fired, or absent with a non-trivial absence
+    likelihood ratio. A confidently-disconfirmed declarative node (its strong
+    signals genuinely absent) therefore earns evidence toward ``n_eff`` and is
+    not flagged sparse, symmetric with a confidently-confirmed one. Weak
+    absences (LR ~1, e.g. a rarely-published signal that is simply missing) do
+    not count, so they neither tighten nor widen the interval.
+    """
+    eps = 0.2  # |LLR| below which an absence is treated as uninformative
+    count = len(_contributing_evidence(fired_evidence))
+    fired_groups = {ev.group for ev in fired_evidence if ev.group}
+    fired_names = {ev.name for ev in fired_evidence}
+    grp_absence = {g: (lp, la) for g, lp, la in node.group_absence}
+    seen_groups: set[str] = set()
+    for ev in node.evidence:
+        if ev.name in fired_names:
+            continue
+        if ev.group:
+            if ev.group in fired_groups or ev.group in seen_groups:
+                continue
+            seen_groups.add(ev.group)
+            pair = grp_absence.get(ev.group)
+            if pair is not None and abs(math.log(pair[0] / pair[1])) > eps:
+                count += 1
+        elif abs(math.log((1.0 - ev.likelihood_present) / (1.0 - ev.likelihood_absent))) > eps:
+            count += 1
+    return count
 
 
 def _multiply(a: Factor, b: Factor) -> Factor:
@@ -806,11 +919,15 @@ def infer(
         # Posterior should be a real probability in [0, 1].
         post = max(0.0, min(1.0, post))
         fired = fired_per_node[node.name]
-        ev_count = len(fired)
-        total_evidence += ev_count
+        total_evidence += len(fired)
+        # Hideable nodes count only fired bindings; declarative nodes also
+        # count informative absences (CAL14), so a confidently-absent policy
+        # node gets a narrow interval around a low posterior rather than a
+        # wide "sparse" one.
+        n_eff_count = _declarative_evidence_count(node, fired) if node.missingness == "declarative" else len(fired)
         n_eff = max(
             _MIN_N_EFF,
-            _MIN_N_EFF + ev_count * _EVIDENCE_N_EFF_CONTRIB - conflict_field_count * _CONFLICT_N_EFF_PENALTY,
+            _MIN_N_EFF + n_eff_count * _EVIDENCE_N_EFF_CONTRIB - conflict_field_count * _CONFLICT_N_EFF_PENALTY,
         )
         low, high = _credible_interval(post, n_eff)
 

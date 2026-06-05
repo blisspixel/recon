@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.90] - 2026-06-05
+
+### Bayesian: node-dependent missingness for the email-policy node (Track C-cal, CAL14)
+
+The Bayesian layer now supports per-node missingness. Hideable nodes keep the
+asymmetric LR=1 absence rule (a non-firing binding contributes nothing, correct
+for infrastructure an operator can hide). Declarative nodes treat the absence of
+a public-declaration signal as genuine disconfirming evidence, because DMARC /
+SPF / MTA-STS policy cannot be hidden from passive DNS.
+
+`email_security_policy_enforcing` is the first (and currently only) declarative
+node. The changes are corpus-grounded on a 2026-06 5,238-domain run and
+documented in the YAML:
+
+- prior 0.25 -> 0.62 (61.7% of the corpus publishes an enforcing DMARC policy; a
+  CAL12 base-rate correction)
+- `mta_sts_enforce` likelihood [0.70, 0.05] -> [0.06, 0.01] (only ~6% of
+  enforcing domains publish MTA-STS; the old value was an order of magnitude off,
+  and its low present-likelihood correctly makes its absence near-neutral)
+- `spf_strict` likelihood [0.70, 0.45] -> [0.53, 0.27] (LR ~2.0, regrounded)
+- the two DMARC bindings join a `dmarc_policy` correlation group with an explicit
+  whole-group absence likelihood [0.05, 0.85], because reject and quarantine are
+  mutually exclusive and a per-binding complement-product would double-count
+
+Semantic ruling (definition A, RFC 7489): "enforcing" means an observable DMARC
+reject/quarantine policy; strict SPF alone is hygiene, not enforcement. The new
+YAML fields are `missingness: declarative` and `group_absence`, both validated in
+the loader. A declarative node's `n_eff` counts informative absences, so a
+confidently-non-enforcing domain gets a narrow interval around a low posterior
+rather than a wide "sparse" one (the criterion-(a) baseline tests are reframed to
+exempt declarative nodes).
+
+Result: the synthetic-calibration conditional ECE for this node drops from ~0.31
+to ~0.03. The numbers are directionally-accurate corpus-grounded estimates that
+the maintainer-validation loop (roadmap PV2) re-checks each release, not frozen
+values; the credible interval carries the residual uncertainty. Hideable-node
+behavior is unchanged.
+
+Gate: full pytest (2754 passed), pyright (0 errors), ruff, validate_fingerprint
+(841).
+
 ## [1.9.89] - 2026-06-04
 
 ### Catalog: third full-corpus gap-mining batch, C2 deferred set cleared (Track C, C2)

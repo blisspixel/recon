@@ -232,6 +232,11 @@ def test_baseline_root_posteriors_equal_priors() -> None:
     for node in _network.nodes:
         if node.parents:
             continue  # descendants have CPT-propagated marginals, not prior
+        if node.missingness == "declarative":
+            # CAL14: a declarative node conditions on the absence of its
+            # public-declaration signals, so the all-absent baseline sits below
+            # the prior (disconfirmed) by design, not at it.
+            continue
         baseline = _posterior_for(node.name, _BASELINE)
         assert node.prior is not None, f"{node.name} is rootless but no prior"
         assert abs(baseline - node.prior) < 1e-9, f"{node.name}: baseline {baseline:.6f} != prior {node.prior:.6f}"
