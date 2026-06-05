@@ -3271,10 +3271,17 @@ def _batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, incl
     # v1.8: ecosystem hypergraph. Off by default. When opted in via
     # --include-ecosystem, emit hyperedges over the batch's TenantInfo set as a
     # top-level envelope sibling to the per-domain entries.
-    if include_ecosystem and batch_infos:
-        from recon_tool.ecosystem import build_ecosystem_hyperedges
+    if include_ecosystem:
+        # SH9: when --include-ecosystem is set, always emit the BatchResult
+        # wrapper, even when no domain resolved. Previously this fell back to a
+        # bare array on an all-failed batch, flipping the top-level type exactly
+        # when a consumer's error path is already stressed. Errors ride under
+        # domains; hyperedges are empty when there were no resolved infos.
+        hyperedges: list[Any] = []
+        if batch_infos:
+            from recon_tool.ecosystem import build_ecosystem_hyperedges
 
-        hyperedges = build_ecosystem_hyperedges(batch_infos)
+            hyperedges = list(build_ecosystem_hyperedges(batch_infos))
         ecosystem_payload = {
             "record_type": "batch_result",  # SH7 discriminator
             "ecosystem_hyperedges": [

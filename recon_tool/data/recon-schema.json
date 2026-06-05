@@ -738,7 +738,7 @@
       }
     },
     "BatchArray": {
-      "description": "Default shape of ``recon batch <file> --json`` (without --include-ecosystem): a bare JSON array, one element per input domain, in input-file order. Each element is either a single-domain success object (the root schema of this file) or a BatchErrorRecord. Success elements may additionally carry the batch-only cross-domain fields (shared_verification_tokens, shared_tenant, shared_display_name) when the batch surfaced a peer relationship. This is also the shape ``--include-ecosystem`` falls back to when no domain in the batch resolved successfully.",
+      "description": "Default shape of ``recon batch <file> --json`` (without --include-ecosystem): a bare JSON array, one element per input domain, in input-file order. Each element is either a single-domain success object (the root schema of this file) or a BatchErrorRecord. Success elements may additionally carry the batch-only cross-domain fields (shared_verification_tokens, shared_tenant, shared_display_name) when the batch surfaced a peer relationship.",
       "type": "array",
       "items": {
         "oneOf": [
@@ -755,7 +755,7 @@
       ]
     },
     "BatchResult": {
-      "description": "Shape of ``recon batch <file> --json --include-ecosystem`` when at least one domain resolved successfully: a wrapper object carrying the per-domain results under ``domains`` and the cross-domain ``ecosystem_hyperedges`` array as a sibling. Without --include-ecosystem the batch JSON is a bare BatchArray instead, with no wrapper; and an --include-ecosystem run where no domain resolved also falls back to the bare BatchArray. Stable v2.0.",
+      "description": "Shape of ``recon batch <file> --json --include-ecosystem``: a wrapper object carrying the per-domain results under ``domains`` and the cross-domain ``ecosystem_hyperedges`` array as a sibling. Without --include-ecosystem the batch JSON is a bare BatchArray instead, with no wrapper. From v2.0 (SH9) the wrapper is always emitted when --include-ecosystem is set, including on an all-failed batch (domains carries the error records, ecosystem_hyperedges is empty), so the top-level type does not flip to a bare array. Stable v2.0.",
       "type": "object",
       "required": ["record_type", "domains", "ecosystem_hyperedges"],
       "properties": {

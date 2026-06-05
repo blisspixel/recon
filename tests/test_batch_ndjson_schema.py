@@ -126,6 +126,25 @@ def test_classifier_rejects_malformed_records() -> None:
     assert classify_batch_record({}) == "unknown"
 
 
+def test_include_ecosystem_always_emits_wrapper_on_all_failed_batch(capsys) -> None:
+    """SH9: --include-ecosystem emits the BatchResult wrapper even when no domain
+    resolved, so the top-level type does not flip to a bare array."""
+    from recon_tool.cli import _batch_emit_json
+
+    error_record = {
+        "domain": "bad",
+        "error": "invalid domain syntax",
+        "error_kind": "validation",
+        "record_type": "error",
+    }
+    _batch_emit_json([error_record], {}, include_ecosystem=True)
+    out = json.loads(capsys.readouterr().out)
+    assert isinstance(out, dict), "all-failed --include-ecosystem must stay a wrapper, not a bare array"
+    assert out["record_type"] == "batch_result"
+    assert out["ecosystem_hyperedges"] == []
+    assert out["domains"] == [error_record]
+
+
 def test_batch_only_fields_keep_a_record_classified_as_success(
     fully_populated_tenant_info: TenantInfo,
 ) -> None:
