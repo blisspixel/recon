@@ -214,7 +214,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "ct_provider_used": info.ct_provider_used,
         "ct_subdomain_count": info.ct_subdomain_count,
         "ct_cache_age_days": info.ct_cache_age_days,
-        "slug_confidences": [[slug, score] for slug, score in info.slug_confidences],
+        "slug_confidences": dict(info.slug_confidences),
         "posterior_observations": [
             {
                 "name": p.name,
@@ -267,7 +267,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
             "newest_cert_age_days": cs.newest_cert_age_days,
             "oldest_cert_age_days": cs.oldest_cert_age_days,
             "top_issuers": list(cs.top_issuers),
-            "wildcard_sibling_clusters": [list(cluster) for cluster in cs.wildcard_sibling_clusters],
+            "wildcard_sibling_clusters": [{"names": list(cluster)} for cluster in cs.wildcard_sibling_clusters],
             "deployment_bursts": [
                 {
                     "window_start": b.window_start,
@@ -469,9 +469,15 @@ def _cert_summary_from_dict(data: dict[str, Any]) -> CertSummary | None:
     wcs_raw = cs_data.get("wildcard_sibling_clusters", [])
     wildcard_sibling_clusters: tuple[tuple[str, ...], ...] = ()
     if isinstance(wcs_raw, list):
-        wildcard_sibling_clusters = tuple(
-            tuple(str(n) for n in cluster) for cluster in wcs_raw if isinstance(cluster, list)
-        )
+        clusters: list[tuple[str, ...]] = []
+        for cluster in wcs_raw:
+            if isinstance(cluster, dict):  # v2.0 {names: [...]}
+                names = cluster.get("names", [])
+                if isinstance(names, list):
+                    clusters.append(tuple(str(n) for n in names))
+            elif isinstance(cluster, list):  # legacy [name, ...]
+                clusters.append(tuple(str(n) for n in cluster))
+        wildcard_sibling_clusters = tuple(clusters)
     bursts_raw = cs_data.get("deployment_bursts", [])
     deployment_bursts: tuple[CertBurst, ...] = ()
     if isinstance(bursts_raw, list):
@@ -632,6 +638,21 @@ def _chain_motifs_from_dict(data: dict[str, Any]) -> tuple[ChainMotifObservation
     return tuple(cm_records)
 
 
+def _read_slug_confidences(raw: object) -> tuple[tuple[str, float], ...]:
+    """Read ``slug_confidences`` from a cache record.
+
+    Accepts the v2.0 object-map form ``{slug: posterior}`` and the legacy
+    ``[[slug, posterior], ...]`` list form, so pre-v2.0 cache entries still load.
+    """
+    if isinstance(raw, dict):
+        return tuple((str(k), float(v)) for k, v in raw.items())
+    if isinstance(raw, list | tuple):
+        return tuple(
+            (str(e[0]), float(e[1])) for e in raw if isinstance(e, list | tuple) and len(e) == 2
+        )
+    return ()
+
+
 def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
     """Deserialize a dict back to TenantInfo. Raises ValueError on invalid data.
 
@@ -730,11 +751,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         ct_provider_used=data.get("ct_provider_used"),
         ct_subdomain_count=int(data.get("ct_subdomain_count", 0) or 0),
         ct_cache_age_days=data.get("ct_cache_age_days"),
-        slug_confidences=tuple(
-            (str(entry[0]), float(entry[1]))
-            for entry in data.get("slug_confidences", [])
-            if isinstance(entry, list | tuple) and len(entry) == 2
-        ),
+        slug_confidences=_read_slug_confidences(data.get("slug_confidences")),
         posterior_observations=_parse_posterior_observations(data),
         cloud_instance=data.get("cloud_instance"),
         tenant_region_sub_scope=data.get("tenant_region_sub_scope"),

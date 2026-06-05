@@ -2928,7 +2928,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         "ct_subdomain_count": info.ct_subdomain_count,
         "ct_cache_age_days": info.ct_cache_age_days,
         "ct_attempt_outcome": info.ct_attempt_outcome,
-        "slug_confidences": [[slug, score] for slug, score in info.slug_confidences],
+        "slug_confidences": dict(info.slug_confidences),
         # v1.9 Bayesian network — populated only when --fusion is on.
         # ``conflict_provenance`` (v1.9.1+) is always present per posterior;
         # empty list when no cross-source conflicts dampened the interval.
@@ -2985,7 +2985,9 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
             "top_issuers": list(info.cert_summary.top_issuers),
             # v1.7 — wildcard SAN sibling clusters; empty list when no
             # wildcard cert produced siblings.
-            "wildcard_sibling_clusters": [list(cluster) for cluster in info.cert_summary.wildcard_sibling_clusters],
+            "wildcard_sibling_clusters": [
+                {"names": list(cluster)} for cluster in info.cert_summary.wildcard_sibling_clusters
+            ],
             # v1.7 — temporal CT issuance bursts; relative window deltas only.
             "deployment_bursts": [
                 {

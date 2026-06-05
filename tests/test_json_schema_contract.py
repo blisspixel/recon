@@ -145,7 +145,7 @@ _STABLE_FIELDS: dict[str, type | tuple[type, ...]] = {
 
 # Experimental fields — documented but can evolve in minor releases.
 _EXPERIMENTAL_FIELDS: dict[str, type] = {
-    "slug_confidences": list,
+    "slug_confidences": dict,
 }
 
 
@@ -216,17 +216,17 @@ class TestJSONSchemaContract:
             # nullable string fields
             assert bi[field] is None or isinstance(bi[field], str)
 
-    def test_slug_confidences_pair_shape(self) -> None:
+    def test_slug_confidences_map_shape(self) -> None:
+        # SH2 (v2.0): slug_confidences is an object map {slug: posterior},
+        # parallel to detection_scores, not a positional [slug, posterior] array.
         info = _build_fixture()
         payload = json.loads(format_tenant_json(info))
         sc = payload["slug_confidences"]
-        assert isinstance(sc, list)
-        for entry in sc:
-            assert isinstance(entry, list)
-            assert len(entry) == 2
-            assert isinstance(entry[0], str)
-            assert isinstance(entry[1], int | float)
-            assert 0.0 <= entry[1] <= 1.0
+        assert isinstance(sc, dict)
+        for slug, posterior in sc.items():
+            assert isinstance(slug, str)
+            assert isinstance(posterior, int | float)
+            assert 0.0 <= posterior <= 1.0
 
     def test_evidence_conflicts_empty_when_no_conflicts(self) -> None:
         """No merge_conflicts on TenantInfo → empty array (always present)."""

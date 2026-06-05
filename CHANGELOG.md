@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.92] - 2026-06-05
+
+### Schema hardening 2/4: per-field reshapes (SH2, SH5)
+
+Second pre-2.0 schema-hardening patch. Reshapes two experimental or v2.0-new
+fields from positional or bare-list forms into self-describing shapes that can
+grow additively, so a future per-entry attribute does not force a major bump.
+
+- SH2: `slug_confidences` changes from a positional `[slug, posterior]` tuple
+  array to an object map `{slug: posterior}`, parallel to its structural twin
+  `detection_scores` (the other slug-keyed scalar map). Both serialization sites
+  (`cache.py`, `formatter.py`) now emit `dict(info.slug_confidences)`, mirroring
+  the existing `detection_scores` pattern; the cache reader accepts both the new
+  map and the legacy list so pre-v2.0 cache entries still load.
+- SH5: `wildcard_sibling_clusters` (inside `cert_summary`) changes from a bare
+  list of string lists to a list of `{names: [...]}` objects, matching the
+  adjacent `deployment_bursts` / `CertBurst` shape and leaving room for a future
+  per-cluster attribute. The cache reader accepts both forms.
+
+The internal `TenantInfo` representations are unchanged (still tuples); only the
+serialized output shape changes. Both schema copies stay byte-identical.
+
+Gate: full pytest (2754 passed), the schema / cache / contract tests, ruff,
+pyright (0 errors), validate_fingerprint (841).
+
 ## [1.9.91] - 2026-06-05
 
 ### Schema hardening 1/4: descriptions and contract loosening (SH1, SH3, SH4)
