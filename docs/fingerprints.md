@@ -4,7 +4,7 @@ Fingerprints are DNS pattern rules in `recon_tool/data/fingerprints/`,
 one YAML file per category (`ai.yaml`, `email.yaml`, `security.yaml`,
 `infrastructure.yaml`, `productivity.yaml`, `crm-marketing.yaml`,
 `data-analytics.yaml`, `verticals.yaml`). Add new services by editing
-the matching category file — no code changes needed. Use
+the matching category file; no code changes needed. Use
 `recon fingerprints list` / `search` / `show` to inspect the current
 catalog without opening YAML.
 
@@ -12,7 +12,7 @@ catalog without opening YAML.
 
 Drop `~/.recon/fingerprints.yaml`. Custom entries are validated on
 startup; invalid regex or missing fields are skipped with a warning.
-Custom fingerprints are **additive only** — you cannot override built-in
+Custom fingerprints are **additive only:** you cannot override built-in
 slugs from the custom file. Set `RECON_CONFIG_DIR` to override the
 search directory.
 
@@ -66,7 +66,7 @@ safe way to increase explainability without changing detection behavior.
 ## Chained patterns (`match_mode: all`)
 
 By default a fingerprint fires when *any* detection matches. Use
-`match_mode: all` to require *every* detection — useful when a single
+`match_mode: all` to require *every* detection, useful when a single
 TXT or CNAME alone is ambiguous but the combination is diagnostic.
 
 ```yaml
@@ -101,9 +101,9 @@ Before committing a new fingerprint to the built-in set:
 
 1. Validate: `python scripts/validate_fingerprint.py ~/.recon/fingerprints.yaml`
 2. Dry-run against a real domain that should match:
-   `recon <domain> --explain --no-cache` — verify the slug fires and
+   `recon <domain> --explain --no-cache`. Verify the slug fires and
    the evidence is what you expected.
-3. Dry-run against 10-15 domains that should *not* match — especially
+3. Dry-run against 10-15 domains that should *not* match, especially
    parked / dormant / proxy-fronted domains. If your fingerprint fires
    on any of them, tighten the pattern or switch to `match_mode: all`.
 4. Keep regexes anchored (`^`, `$`) where possible. Unanchored substring
@@ -132,7 +132,7 @@ Patterns that have caused bad detections and should not be repeated:
   running behind it.
 - **Patterns that would collapse sparse evidence into confident-looking
   claims.** See the hardened-target signal recovery section in
-  [correlation.md](correlation.md) for the full reasoning — when a target
+  [correlation.md](correlation.md) for the full reasoning: when a target
   publishes very little, the right answer is wider hedges, not a tighter
   pattern that pretends to know more.
 
@@ -148,7 +148,7 @@ The score counts five apex-observable controls (1 point each):
 | 1 | MTA-STS record present |
 | 1 | BIMI record present |
 
-Score is an observation, not a verdict — we see apex DNS, not the full
+Score is an observation, not a verdict: we see apex DNS, not the full
 posture. A domain with custom DKIM selectors we can't enumerate will
 read low here even if DKIM is actually deployed; the gateway-inferred
 DKIM path mitigates this for commercial-gateway deployments.
@@ -161,6 +161,6 @@ matched services fold back into the primary result. Prioritisation:
 high-signal prefixes (`auth`, `login`, `sso`, `api`, `shop`) first,
 capped at 15 enrichments per lookup to bound DNS fan-out.
 
-CT providers (crt.sh, CertSpotter) fail open — if both are unreachable,
+CT providers (crt.sh, CertSpotter) fail open: if both are unreachable,
 the per-domain CT cache serves as a fallback. See `docs/limitations.md`
 for what CT degradation means for accuracy.

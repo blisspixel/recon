@@ -23,23 +23,31 @@ below.
 ## Field promotions
 
 The following EXPERIMENTAL fields are promoted to stable in v2.0.
-The shape of each field is preserved; only the EXPERIMENTAL
-qualifier in the schema description is removed.
+Most keep their shape; the two exceptions, noted below, were
+reshaped during the pre-lock schema-hardening pass (SH2, SH5) so
+they would not need a breaking change after the freeze.
 
 | Field | First shipped | v2.0 status |
 |---|---|---|
 | `posterior_observations` | v1.9.0 | Stable. Shape pinned: `name`, `description`, `posterior`, `interval_low`, `interval_high`, `evidence_used`, `n_eff`, `sparse`. |
-| `slug_confidences` | v1.9.0 | Stable. Existing `[slug, posterior]` shape. |
+| `slug_confidences` | v1.9.0 | Stable. Reshaped in v2.0 (SH2) from a `[slug, posterior]` pair array to an object map `{slug: posterior}`, parallel to `detection_scores`. |
 | `chain_motifs` | v1.7.0 | Stable. |
-| `wildcard_sibling_clusters` | v1.7.0 | Stable. |
+| `wildcard_sibling_clusters` | v1.7.0 | Stable. Reshaped in v2.0 (SH5) from a list of string lists to a list of `{names: [...]}` objects. |
 | `deployment_bursts` | v1.7.0 | Stable. |
 | `infrastructure_clusters` | v1.8.0 | Stable. |
-| `ecosystem_hyperedges` | v1.8.0 | Stable. Batch-only contract — only present when `--include-ecosystem` is set on `recon batch`. |
+| `ecosystem_hyperedges` | v1.8.0 | Stable. Batch-only contract, present only when `--include-ecosystem` is set on `recon batch`. |
 | `evidence_conflicts` | v1.7.0 | Stable. |
 | `--fusion` CLI flag | v1.9.0 | EXPERIMENTAL label dropped. |
 | `--explain-dag` CLI flag | v1.9.0 | EXPERIMENTAL label dropped. |
 | MCP `get_posteriors` tool | v1.9.0 | EXPERIMENTAL label dropped. |
 | MCP `explain_dag` tool | v1.9.0 | EXPERIMENTAL label dropped. |
+
+New top-level fields added by the schema-hardening pass, stable from
+v2.0: `fusion_enabled` (bool, whether the Bayesian layer ran),
+`record_type` (output-mode discriminator), `schema_version`, and on
+the batch error record `error_kind` (enum: validation, lookup,
+timeout). These are additive, so a v1.9.x consumer that ignores
+unknown fields is unaffected.
 
 ## Bayesian-network node disposition
 
@@ -48,10 +56,11 @@ in `bayesian_network.yaml` as `stable` or `not yet`. v2.0 ships
 only the nodes that cleared all three criteria
 (evidence-response, calibration, independent-firing count).
 
-> **Pending decision** — the disposition for `okta_idp` (the one
-> `not yet` node remaining after v1.9.6) is documented in
-> `validation/v2.0-prep-baseline.md` §3. Once decided, this
-> section lists the final node set v2.0 ships with.
+The one `not yet` node after v1.9.6, `okta_idp`, ships in v2.0 with a
+keep-with-caveat disposition: it cleared the evidence-response and
+calibration criteria, and its independent-firing count is recorded in
+the YAML as a corpus-exposure caveat rather than a blocker. All nine
+nodes ship.
 
 ## Schema version bump
 
