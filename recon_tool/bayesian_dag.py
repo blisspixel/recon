@@ -57,6 +57,12 @@ def _confidence_label(posterior: float, sparse: bool) -> str:
 def _node_evidence_phrase(posterior: NodePosterior) -> str:
     """Format the bound-evidence list as a readable phrase."""
     if not posterior.evidence_used:
+        if posterior.absence_informative:
+            return (
+                "no positive signal; for this node the absence of an expected public "
+                "declaration is itself evidence, so the posterior reflects that absence, "
+                "not the prior"
+            )
         return "no direct evidence (posterior follows network priors and parent claims)"
     parts: list[str] = []
     for binding in posterior.evidence_used:
