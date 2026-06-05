@@ -261,3 +261,21 @@ class TestRegressionFixes:
         assert report.ok
         config_lines = [c for c in report.checks if c.name == "config file"]
         assert any("also has recon" in c.detail and "first wins" in c.detail for c in config_lines)
+
+
+def test_command_check_strips_terminal_control_bytes() -> None:
+    """A workspace config command with ANSI/OSC bytes is sanitized before display.
+
+    rich.markup.escape does not remove terminal control bytes, so an untrusted
+    workspace MCP config could otherwise inject ANSI / OSC sequences into the
+    operator's terminal through `recon doctor --client=<name>`. The command value
+    is stripped of control characters before it becomes a ClientCheck detail.
+    """
+    malicious = "\x1b[31mEVIL\x1b]52;c;cGF3bnVk\x07tail"
+    checks = client_doctor._command_checks({"command": malicious})  # pyright: ignore[reportPrivateUsage]
+    command_checks = [c for c in checks if c.name == "command"]
+    assert command_checks, "expected a command check"
+    for check in command_checks:
+        assert "\x1b" not in check.detail
+        assert "\x07" not in check.detail
+        assert "EVIL" in check.detail  # printable content preserved
