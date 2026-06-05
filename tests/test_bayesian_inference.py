@@ -394,8 +394,12 @@ class TestInferenceCorrectness:
 class TestCredibleIntervals:
     def test_sparse_when_no_evidence(self, shipped_network: BayesianNetwork) -> None:
         result = infer(shipped_network, [], [], priors_override={})
-        # Every node sparse at floor n_eff
-        assert all(p.sparse for p in result.posteriors)
+        # Hideable nodes are sparse at floor n_eff under no evidence. Declarative
+        # nodes (CAL14) condition on the absence of their public-declaration
+        # signals, so no evidence is itself informative and they are not sparse.
+        declarative = {n.name for n in shipped_network.nodes if n.missingness == "declarative"}
+        assert all(p.sparse for p in result.posteriors if p.name not in declarative)
+        assert all(not p.sparse for p in result.posteriors if p.name in declarative)
 
     def test_intervals_widen_under_conflict(self, shipped_network: BayesianNetwork) -> None:
         no_conflict = infer(

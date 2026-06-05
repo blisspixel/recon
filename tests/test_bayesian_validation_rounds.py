@@ -61,8 +61,11 @@ def test_empty_evidence_recovers_marginal_priors(network):
     result = infer(network, [], [], priors_override={})
     for p in result.posteriors:
         node = network.get(p.name)
-        if node.prior is not None:
+        if node.prior is not None and node.missingness != "declarative":
             # Root node — posterior must equal prior to within rounding.
+            # Declarative nodes (CAL14) condition on the absence of their
+            # public-declaration signals, so empty evidence disconfirms rather
+            # than recovering the prior; they are exempt.
             assert abs(p.posterior - node.prior) < 1e-3, (
                 f"{p.name}: posterior {p.posterior} != prior {node.prior} on empty evidence"
             )
@@ -129,7 +132,10 @@ def test_conflicts_widen_intervals(network):
 
 def test_sparse_flag_set_under_no_evidence(network):
     result = infer(network, [], [], priors_override={})
-    assert all(p.sparse for p in result.posteriors)
+    # Declarative nodes (CAL14) treat absence as evidence, so they are not
+    # sparse under no evidence; every hideable node still is.
+    declarative = {n.name for n in network.nodes if n.missingness == "declarative"}
+    assert all(p.sparse for p in result.posteriors if p.name not in declarative)
 
 
 def test_sparse_flag_clears_with_sufficient_evidence(network):

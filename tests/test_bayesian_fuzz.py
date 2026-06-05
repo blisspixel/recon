@@ -313,10 +313,13 @@ class TestAdversarialInference:
             observed_signals=["fake-signal"],
             priors_override={},
         )
-        # Posteriors should equal priors (no evidence applied).
+        # Posteriors should equal priors (no real evidence applied). Declarative
+        # nodes (CAL14) condition on the absence of their public-declaration
+        # signals, so unknown slugs leave them at their all-absent posterior, not
+        # the prior; they are exempt from the equals-prior check.
         for p in result.posteriors:
             node = shipped_net.get(p.name)
-            if node.prior is not None:
+            if node.prior is not None and node.missingness != "declarative":
                 assert abs(p.posterior - node.prior) < 1e-3
 
     def test_observed_iterables_can_be_generators(self, shipped_net: BayesianNetwork) -> None:
