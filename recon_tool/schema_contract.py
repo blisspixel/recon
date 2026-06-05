@@ -18,11 +18,8 @@ classifier the schema contract references.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from importlib.resources import files
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
 
 
 def packaged_schema_text() -> str:
@@ -87,51 +84,53 @@ REQUIRED_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "tenant_region_sub_scope",
 )
 
-# Batch and NDJSON runs interleave two record shapes: a single-domain
-# success object (carrying every field in REQUIRED_TOP_LEVEL_FIELDS) and an
-# error record emitted when a domain fails validation or lookup. The error
-# record is exactly these two keys, matching docs/recon-schema.json
-# $defs/BatchErrorRecord. The two shapes are disjoint, so a consumer can
-# classify any batch / NDJSON record by its key set alone.
+# Batch and NDJSON runs interleave two record shapes: a single-domain success
+# object (carrying every field in REQUIRED_TOP_LEVEL_FIELDS) and an error
+# record emitted when a domain fails validation or lookup.
+#
+# BATCH_ERROR_RECORD_KEYS is the pre-v2.0 two-key error shape, kept as the
+# legacy classifier fallback. _V2_ERROR_RECORD_KEYS is the closed v2.0 shape
+# (docs/recon-schema.json $defs/BatchErrorRecord, additionalProperties:false).
 BATCH_ERROR_RECORD_KEYS: frozenset[str] = frozenset({"domain", "error"})
+_V2_ERROR_RECORD_KEYS: frozenset[str] = frozenset({"domain", "error", "error_kind", "record_type"})
+
+# Fields added to the required set in the v2.0 schema-hardening pass; excluded
+# from the legacy key-set classifier so pre-v2.0 records still classify.
+_V2_ADDED_REQUIRED_FIELDS: frozenset[str] = frozenset({"record_type", "schema_version", "fusion_enabled"})
 
 
 def classify_batch_record(record: Mapping[str, object]) -> str:
     """Classify one batch or NDJSON record by the deterministic rule set.
 
     Returns:
-        ``"error"`` when the record is a BatchErrorRecord (exactly the
-        ``{domain, error}`` keys); ``"success"`` when it carries every
-        field in REQUIRED_TOP_LEVEL_FIELDS (a single-domain success
-        object, possibly with extra batch-only or flag-gated fields);
-        ``"unknown"`` for anything else.
+        ``"error"`` for a BatchErrorRecord, ``"success"`` for a single-domain
+        success object, ``"unknown"`` for anything else.
 
-    The classification is unambiguous because the two valid shapes do not
-    overlap: the error record has exactly two keys, the success object
-    requires far more. A success object never matches the error rule, and
-    an error record never matches the success rule. This mirrors the
-    ``oneOf`` branch in docs/recon-schema.json $defs/BatchArray and
-    $defs/BatchNdjsonRecord, so a pure-Python consumer can validate batch
+    ``record_type`` (v2.0, SH7) selects which shape to check, but it is
+    necessary, not sufficient: the full shape is still validated. A
+    ``record_type == "lookup"`` record must carry every field in
+    REQUIRED_TOP_LEVEL_FIELDS (batch-only extras are allowed); a
+    ``record_type == "error"`` record must be exactly the closed four-key shape
+    ``{domain, error, error_kind, record_type}``. A malformed mapping that only
+    sets ``record_type`` therefore classifies as ``"unknown"``, not accepted.
+    Records without ``record_type`` fall back to the pre-v2.0 key-set rules.
+    This mirrors the ``oneOf`` branch in docs/recon-schema.json $defs/BatchArray
+    and $defs/BatchNdjsonRecord, so a pure-Python consumer can validate batch
     output without a JSON Schema library.
     """
-    # SH7: a v2.0 record self-identifies via record_type. This is the primary,
-    # unambiguous path; the key-set rules below are a legacy fallback for
-    # pre-v2.0 records that predate the discriminator.
+    keys = set(record.keys())
     rt = record.get("record_type")
     if rt == "error":
-        return "error"
+        # Closed shape; additionalProperties:false in the schema, so any extra
+        # or missing key makes it not a valid error record.
+        return "error" if keys == set(_V2_ERROR_RECORD_KEYS) else "unknown"
     if rt == "lookup":
-        return "success"
-    keys = set(record.keys())
+        # Must carry every required success field; batch-only extras allowed.
+        return "success" if keys.issuperset(REQUIRED_TOP_LEVEL_FIELDS) else "unknown"
+    # Pre-v2.0 records predate the discriminator: classify by key set, using the
+    # required set without the v2.0-added fields so old success records match.
     if keys == set(BATCH_ERROR_RECORD_KEYS):
         return "error"
-    # Pre-v2.0 success records lack the v2.0-added required fields, so the
-    # fallback checks the required set without them.
     if keys.issuperset(set(REQUIRED_TOP_LEVEL_FIELDS) - _V2_ADDED_REQUIRED_FIELDS):
         return "success"
     return "unknown"
-
-
-# Fields added to the required set in the v2.0 schema-hardening pass; excluded
-# from the legacy key-set classifier so pre-v2.0 records still classify.
-_V2_ADDED_REQUIRED_FIELDS: frozenset[str] = frozenset({"record_type", "schema_version", "fusion_enabled"})
