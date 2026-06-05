@@ -166,8 +166,12 @@ def main() -> int:
     parser.add_argument("--samples", type=int, default=4000, help="Synthetic domains in the fixed dataset.")
     parser.add_argument("--trials", type=int, default=10, help="Random jitter trials (plus 2 systematic corners).")
     parser.add_argument("--seed", type=int, default=1729, help="RNG seed for reproducibility.")
-    parser.add_argument("--bins", type=int, default=10, help="Reliability bins.")
+    parser.add_argument("--bins", type=int, default=10, help="Reliability bins (positive integer).")
     args = parser.parse_args()
+    if args.bins < 1:
+        parser.error("--bins must be a positive integer")  # _ece divides by bins
+    if args.samples < 1:
+        parser.error("--samples must be a positive integer")
 
     net = load_network()
     rng = random.Random(args.seed)  # noqa: S311 - reproducible synthetic experiment.

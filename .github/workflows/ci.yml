@@ -111,6 +111,13 @@ jobs:
 
   audit:
     runs-on: ubuntu-latest
+    env:
+      # `.python-version` pins the local / dev toolchain to 3.14, and uv reads
+      # it unless UV_PYTHON is set. Without this the audit's uv sync / export /
+      # pip-audit would run on 3.14 instead of the interpreter setup-python
+      # installs below, auditing the wrong environment. Mirror the test matrix,
+      # which sets UV_PYTHON for the same reason.
+      UV_PYTHON: "3.12"
     steps:
       - uses: actions/checkout@v6
 

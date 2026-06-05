@@ -238,7 +238,9 @@ def main() -> int:  # noqa: C901  # report-assembly script; sectioned by comment
     # approximation 95% upper bound on the disagreement rate.
     if overall:
         if total_disagree == 0:
-            bound = 3.0 / overall
+            # Clamp to 1.0: 3/n exceeds 100% for n < 3, which is not a valid
+            # probability bound. The nonzero branch already clamps with min(1.0, ...).
+            bound = min(1.0, 3.0 / overall)
             print(f"  95% upper bound on disagreement (Rule of Three): ~{bound:.2%} (0/{overall})")
         else:
             p = total_disagree / overall
