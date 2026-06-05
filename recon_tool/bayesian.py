@@ -231,11 +231,20 @@ class NodePosterior:
     surfaces the same provenance on every node (penalty is global);
     schema is stable for future per-node relevance refinement."""
     evidence_ranked: tuple[EvidenceContribution, ...] = ()
-    """Fired bindings ranked by absolute LLR contribution (descending),
-    ties broken by binding name for diff-stability. Same set as
-    ``evidence_used`` but with quantified influence. Empty tuple when
-    no bindings fired. Added v1.9.3.2 for top-3 influential-edge
-    rendering in ``--explain-dag``; schema-additive."""
+    """Bindings ranked by absolute LLR contribution (descending), ties
+    broken by binding name for diff-stability. The contributing set (one
+    per correlation group, CAL7), not every fired binding, so the influence
+    shares reflect what actually moved the posterior. Empty tuple when no
+    bindings fired. Added v1.9.3.2 for top-3 influential-edge rendering in
+    ``--explain-dag``; schema-additive."""
+
+    absence_informative: bool = False
+    """True for a declarative node (CAL14), where the absence of an expected
+    public declaration (DMARC / SPF / MTA-STS) is itself evidence that moves
+    the posterior. Lets the explanation renderer avoid the "no evidence,
+    follows priors" phrasing when an empty ``evidence_used`` reflects
+    informative absence rather than missing data. Default False keeps
+    hideable nodes unchanged."""
 
 
 @dataclass(frozen=True)
@@ -919,12 +928,21 @@ def infer(
         # Posterior should be a real probability in [0, 1].
         post = max(0.0, min(1.0, post))
         fired = fired_per_node[node.name]
-        total_evidence += len(fired)
-        # Hideable nodes count only fired bindings; declarative nodes also
+        # CAL7: correlated co-firing bindings that share a group are redundant
+        # readings of one underlying fact, so the posterior uses one effective
+        # binding per group (_contributing_evidence). Reporting, n_eff, and
+        # influence ranking use that same contributing set, not the raw fired
+        # list, otherwise they over-count grouped evidence and report it as
+        # separate influence with too tight an interval. See correlation.md 4.8.3.
+        contributing = _contributing_evidence(fired)
+        total_evidence += len(contributing)
+        # Hideable nodes count contributing bindings; declarative nodes also
         # count informative absences (CAL14), so a confidently-absent policy
         # node gets a narrow interval around a low posterior rather than a
         # wide "sparse" one.
-        n_eff_count = _declarative_evidence_count(node, fired) if node.missingness == "declarative" else len(fired)
+        n_eff_count = (
+            _declarative_evidence_count(node, fired) if node.missingness == "declarative" else len(contributing)
+        )
         n_eff = max(
             _MIN_N_EFF,
             _MIN_N_EFF + n_eff_count * _EVIDENCE_N_EFF_CONTRIB - conflict_field_count * _CONFLICT_N_EFF_PENALTY,
@@ -939,7 +957,7 @@ def infer(
         entropy_reduction = _binary_entropy(prior_p) - _binary_entropy(post)
         total_entropy_reduction += entropy_reduction
 
-        evidence_ranked = _rank_evidence(fired)
+        evidence_ranked = _rank_evidence(contributing)
 
         posteriors.append(
             NodePosterior(
@@ -948,11 +966,14 @@ def infer(
                 posterior=round(post, 4),
                 interval_low=round(low, 4),
                 interval_high=round(high, 4),
+                # evidence_used lists every fired binding (what was observed);
+                # the influence ranking above reflects the contributing set.
                 evidence_used=tuple(f"{ev.kind}:{ev.name}" for ev in fired),
                 n_eff=round(n_eff, 2),
                 sparse=n_eff <= _MIN_N_EFF,
                 conflict_provenance=conflicts,
                 evidence_ranked=evidence_ranked,
+                absence_informative=node.missingness == "declarative",
             )
         )
 

@@ -231,9 +231,9 @@ def test_evidence_count_in_inference_result(network):
         ["dmarc_reject"],
         priors_override={},
     )
-    # 2 slugs + 1 signal = 3 fired bindings; but only those that bind
-    # to a node count. microsoft365 and entra-id both bind to
-    # m365_tenant; dmarc_reject binds to email_security_policy_enforcing
-    # (post-v1.9.3 split).
-    assert result.evidence_count == 3
+    # CAL7: evidence_count is the contributing (group-reduced) count, not the
+    # raw fired count. microsoft365 and entra-id share the m365_indicators group,
+    # so they collapse to one effective binding on m365_tenant; dmarc_reject is
+    # one on email_security_policy_enforcing. 1 + 1 = 2.
+    assert result.evidence_count == 2
     assert result.conflict_count == 0

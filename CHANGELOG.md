@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.98] - 2026-06-05
+
+### Bayesian explanation consistency (CAL7, CAL14)
+
+Two explainability fixes so the reported evidence matches what actually drove the
+posterior.
+
+- CAL7: grouped evidence was reported as independent. Correlated co-firing
+  bindings that share a group (the M365 / GWS indicators, the DMARC policy pair)
+  are redundant readings of one fact, so the posterior already reduces them to
+  one effective binding. The influence ranking (`evidence_ranked`), effective
+  sample size (`n_eff`), and `evidence_count` now use that same contributing set
+  instead of the raw fired list. Previously `--explain-dag` showed each grouped
+  binding as a separate influence with its own percentage, and `n_eff`
+  over-counted them, giving too tight an interval. The Evidence line still lists
+  every observed binding; only the influence and interval math use the
+  contributing set.
+- CAL14: declarative absence was hidden from explanations. For a declarative
+  node (`email_security_policy_enforcing`), the absence of an expected public
+  declaration moves the posterior, but the DAG renderer printed "no direct
+  evidence (posterior follows network priors)" when no binding fired, which is
+  false. `NodePosterior` now carries an `absence_informative` flag, and the
+  renderer explains the posterior as driven by informative absence for those
+  nodes.
+
+Gate: full pytest, ruff, pyright (0 errors). The `--explain-dag` snapshot and
+the multi-influence tests were updated to the corrected (group-reduced) output;
+multi-influence ranking is now exercised with ungrouped evidence and the top-3
+truncation with a direct renderer test.
+
 ## [1.9.97] - 2026-06-05
 
 ### Security hardening: terminal-escape sanitization and CNAME ReDoS
