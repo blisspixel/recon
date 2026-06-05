@@ -57,6 +57,7 @@ REQUIRED_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "evidence_confidence",
     "evidence_conflicts",
     "fingerprint_metadata",
+    "fusion_enabled",
     "google_auth_type",
     "google_idp_name",
     "inference_confidence",

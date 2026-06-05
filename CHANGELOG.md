@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [1.9.93] - 2026-06-05
+
+### Schema hardening 3/5: fusion_enabled flag (SH6)
+
+Adds a required top-level `fusion_enabled` boolean so a consumer can tell the
+two fusion arrays (`slug_confidences`, `posterior_observations`) being empty
+because fusion was not computed apart from them being empty because fusion ran
+and found nothing. Derived at output time from whether the Bayesian layer
+produced its node posteriors, so it adds no new stored state. The fusion-field
+descriptions now point at `fusion_enabled` for the disambiguation;
+`REQUIRED_TOP_LEVEL_FIELDS` updates in lockstep. Both schema copies stay
+byte-identical.
+
+(The SH7 record discriminator and SH8 error_kind ship together in the next
+patch, since both touch the batch error record and the record classifier.)
+
+Gate: full pytest (2754 passed), the schema tests (34), ruff, pyright (0 errors),
+validate_fingerprint (841).
+
 ## [1.9.92] - 2026-06-05
 
 ### Schema hardening 2/4: per-field reshapes (SH2, SH5)

@@ -3116,6 +3116,11 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         d["unclassified_cname_chains"] = [
             {"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains
         ]
+    # SH6: disambiguate "fusion off" from "fusion ran, found none". The Bayesian
+    # layer always emits its nine node posteriors when it runs, so a non-empty
+    # posterior_observations means fusion was computed (slug_confidences /
+    # posterior_observations being empty then means "off", not "no signal").
+    d["fusion_enabled"] = bool(info.posterior_observations)
     return d
 
 
