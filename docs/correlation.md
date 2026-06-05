@@ -3,8 +3,9 @@
 **Audience.** Security architects, researchers, and contributors who
 want to understand *why* and *how* recon extracts structural signal from
 strictly public observables. Casual users should rely on the
-[README](../README.md) and `--explain` output. This is a living
-technical reference; the v2.0 polish is a roadmap deliverable.
+[README](../README.md) and `--explain` output. This is the polished
+technical reference for the correlation engine, current as of the v2.0
+schema lock; it is maintained alongside the code rather than frozen.
 
 **TL;DR.** recon ingests three classes of public observables — DNS,
 certificate transparency, and unauthenticated identity-discovery
@@ -1051,17 +1052,27 @@ weak evidence of full enforcement, from $[0.75, 0.30]$ to $[0.70, 0.45]$) reduce
 it to $\approx 0.28$ but did not resolve it, confirming the residual is the
 missingness regime, not one binding.
 
-The principled fix is per-node MAR / symmetric conditioning, flagged on the node
-and consistent with this section's own Rubin framing rather than a departure
-from it. A prototype confirmed the direction (the no-signal baseline for the
-policy node correctly collapses toward $0$). It is held as its own change
-because it ripples into the effective-sample-size and sparse-flag semantics
-(under MAR, absence is evidence, so a no-signal node should not be flagged
-sparse) and into the per-node stability criterion (which must move from "every
-fired binding raises the posterior above the all-absent baseline" to "toggling a
-binding from absent to fired raises the posterior"). Until it ships, the policy
-node's conditional miscalibration is a known, measured limitation, and v2.0
-calibration claims gate on the maximum per-node conditional ECE, not the mean.
+This per-node MAR / symmetric conditioning shipped in v1.9.90 (CAL14). The
+`email_security_policy_enforcing` node carries `missingness: declarative` in
+`bayesian_network.yaml`, and its observation factor conditions on the absence of
+each non-firing declarative unit. The two mutually-exclusive DMARC bindings share
+a `dmarc_policy` group with an explicit whole-group absence likelihood, so the
+group's absence (a `p=none` or missing policy) is the disconfirmer rather than a
+per-binding complement product that would double-count the alternatives; the
+independent `mta_sts_enforce` and `spf_strict` use their own complements. The
+ripples were handled as this section anticipated: a declarative node's effective
+sample size counts informative absences (so a confidently non-enforcing domain
+gets a narrow interval around a low posterior, not a wide sparse one), and the
+per-node stability criterion moved from "every fired binding raises the posterior
+above the all-absent baseline" to "toggling a binding from absent to fired raises
+the posterior". The prior and the supporting-signal likelihoods were grounded on
+a 2026-06 corpus (enforcing base rate about $0.62$, MTA-STS publication about
+$0.06$ rather than the hand-set $0.70$). The synthetic conditional ECE for the
+node fell from $\approx 0.31$ to $\approx 0.03$. These are directionally-accurate
+corpus-grounded estimates that a periodic maintainer-validation loop re-checks
+each release (roadmap PV2), not frozen constants; v2.0 calibration claims gate on
+the maximum per-node conditional ECE, not the mean. The design note is in
+`validation/cal14-missingness-design.md`.
 
 #### 4.8.4 Credible intervals: calibration over inference
 
