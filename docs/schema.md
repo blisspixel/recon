@@ -168,7 +168,7 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `cloud_instance` | string | yes | `microsoftonline.com \| microsoftonline.us \| partner.microsoftonline.cn` | stable | Cloud sovereignty from M365 OIDC discovery. |
+| `cloud_instance` | string | yes | open string; known: `microsoftonline.com`, `microsoftonline.us`, `partner.microsoftonline.cn` | stable | Microsoft cloud-sovereignty host from M365 OIDC discovery. Open string (not a closed enum) since v2.0 (SH4); Microsoft controls the value. |
 | `tenant_region_sub_scope` | string | yes | `GCC \| DOD \| USGov` | stable | Gov-cloud disambiguation from M365 OIDC. |
 | `msgraph_host` | string | yes | `graph.microsoft.com \| graph.microsoft.us` | stable | Authoritative Microsoft Graph host. |
 
@@ -187,7 +187,10 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `slug_confidences` | `list[[string, float]]` | no | pairs of `(slug, posterior)` with `posterior` in `[0, 1]` | stable (v2.0+) | Bayesian per-slug posterior means. Populated only when `--fusion` is passed. See [`fusion.py`](../recon_tool/fusion.py). |
+| `slug_confidences` | `object` | no | map `{slug: posterior}`, `posterior` in `[0, 1]` | stable (v2.0+) | Bayesian per-slug posterior means, parallel to `detection_scores`. Populated only when fusion runs (see `fusion_enabled`). Reshaped from a positional pair array to an object map in v2.0 (SH2). See [`fusion.py`](../recon_tool/fusion.py). |
+| `fusion_enabled` | bool | no | — | stable (v2.0+) | True when the Bayesian fusion layer ran (SH6). Disambiguates an empty `slug_confidences` / `posterior_observations` (fusion off) from "fusion ran, found none". |
+| `schema_version` | string | no | `"2.0"` | stable (v2.0+) | Contract version of this record (SH7), so a detached payload can be routed across a future 2.x to 3.0 boundary. |
+| `record_type` | string | no | `lookup` | stable (v2.0+) | Output-mode discriminator (SH7); `lookup` on a single-domain success object. Batch wrappers, deltas, and error records carry `batch_result` / `delta` / `error`. |
 
 ---
 

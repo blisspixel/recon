@@ -72,8 +72,10 @@ REQUIRED_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "primary_email_provider",
     "provider",
     "queried_domain",
+    "record_type",
     "region",
     "related_domains",
+    "schema_version",
     "services",
     "site_verification_tokens",
     "slug_confidences",
@@ -112,9 +114,24 @@ def classify_batch_record(record: Mapping[str, object]) -> str:
     $defs/BatchNdjsonRecord, so a pure-Python consumer can validate batch
     output without a JSON Schema library.
     """
+    # SH7: a v2.0 record self-identifies via record_type. This is the primary,
+    # unambiguous path; the key-set rules below are a legacy fallback for
+    # pre-v2.0 records that predate the discriminator.
+    rt = record.get("record_type")
+    if rt == "error":
+        return "error"
+    if rt == "lookup":
+        return "success"
     keys = set(record.keys())
     if keys == set(BATCH_ERROR_RECORD_KEYS):
         return "error"
-    if keys.issuperset(REQUIRED_TOP_LEVEL_FIELDS):
+    # Pre-v2.0 success records lack the v2.0-added required fields, so the
+    # fallback checks the required set without them.
+    if keys.issuperset(set(REQUIRED_TOP_LEVEL_FIELDS) - _V2_ADDED_REQUIRED_FIELDS):
         return "success"
     return "unknown"
+
+
+# Fields added to the required set in the v2.0 schema-hardening pass; excluded
+# from the legacy key-set classifier so pre-v2.0 records still classify.
+_V2_ADDED_REQUIRED_FIELDS: frozenset[str] = frozenset({"record_type", "schema_version", "fusion_enabled"})

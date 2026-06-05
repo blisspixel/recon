@@ -3121,6 +3121,12 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
     # posterior_observations means fusion was computed (slug_confidences /
     # posterior_observations being empty then means "off", not "no signal").
     d["fusion_enabled"] = bool(info.posterior_observations)
+    # SH7: self-describing payload. record_type discriminates the four object
+    # output modes for a consumer (such as an agent) handed a bare payload
+    # without the invocation context; schema_version lets a detached payload be
+    # routed across a future 2.x to 3.0 boundary.
+    d["schema_version"] = "2.0"
+    d["record_type"] = "lookup"
     return d
 
 
@@ -3371,6 +3377,7 @@ def format_delta_dict(report: DeltaReport) -> dict[str, Any]:
         return {"from": value[0], "to": value[1]}
 
     return {
+        "record_type": "delta",  # SH7 discriminator
         "domain": report.domain,
         "timestamp": datetime.now(UTC).isoformat(),
         "has_changes": report.has_changes,

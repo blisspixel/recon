@@ -60,10 +60,16 @@ def synthetic_ndjson(fully_populated_tenant_info: TenantInfo) -> str:
     lines = [
         json.dumps(format_tenant_dict(contoso)),
         json.dumps(format_tenant_dict(northwind)),
-        # The exact shape cli.py emits on a validation failure: see the
-        # ``return {"domain": domain, "error": str(exc)}`` branches in the
-        # batch ``_process_one`` coroutine.
-        json.dumps({"domain": "not a valid domain", "error": "invalid domain syntax"}),
+        # The exact shape cli.py emits on a validation failure (SH7/SH8 v2.0:
+        # adds error_kind and the record_type discriminator).
+        json.dumps(
+            {
+                "domain": "not a valid domain",
+                "error": "invalid domain syntax",
+                "error_kind": "validation",
+                "record_type": "error",
+            }
+        ),
     ]
     return "\n".join(lines) + "\n"
 
@@ -92,7 +98,8 @@ def test_success_records_carry_the_full_single_domain_shape(synthetic_ndjson: st
 
 
 def test_error_records_match_the_explicit_allowance(synthetic_ndjson: str) -> None:
-    """Error records are exactly ``{domain, error}``, both strings."""
+    """v2.0 error records are exactly {domain, error, error_kind, record_type}."""
+    v2_error_keys = {"domain", "error", "error_kind", "record_type"}
     error_records = [
         json.loads(line)
         for line in synthetic_ndjson.splitlines()
@@ -100,9 +107,11 @@ def test_error_records_match_the_explicit_allowance(synthetic_ndjson: str) -> No
     ]
     assert error_records, "sample should contain at least one error record"
     for record in error_records:
-        assert set(record.keys()) == set(BATCH_ERROR_RECORD_KEYS)
+        assert set(record.keys()) == v2_error_keys
         assert isinstance(record["domain"], str)
         assert isinstance(record["error"], str)
+        assert record["error_kind"] in ("validation", "lookup", "timeout")
+        assert record["record_type"] == "error"
 
 
 def test_classifier_rejects_malformed_records() -> None:
@@ -134,13 +143,16 @@ def test_batch_only_fields_keep_a_record_classified_as_success(
 
 
 def test_schema_declares_batch_error_record(schema: dict) -> None:
-    """``BatchErrorRecord`` is declared and matches the classifier's key set."""
+    """``BatchErrorRecord`` is the closed v2.0 four-key shape."""
+    v2_error_keys = {"domain", "error", "error_kind", "record_type"}
     defs = schema.get("$defs", {})
     assert "BatchErrorRecord" in defs
     ber = defs["BatchErrorRecord"]
-    assert set(ber["required"]) == set(BATCH_ERROR_RECORD_KEYS)
+    assert set(ber["required"]) == v2_error_keys
     assert ber.get("additionalProperties") is False
-    assert set(ber["properties"].keys()) == set(BATCH_ERROR_RECORD_KEYS)
+    assert set(ber["properties"].keys()) == v2_error_keys
+    # The legacy two-key set stays the pre-v2.0 fallback in the classifier.
+    assert set(BATCH_ERROR_RECORD_KEYS) == {"domain", "error"}
 
 
 def test_schema_declares_batch_array_and_ndjson_defs(schema: dict) -> None:
@@ -159,8 +171,9 @@ def test_schema_declares_batch_array_and_ndjson_defs(schema: dict) -> None:
     ndjson_refs = _oneof_refs(defs["BatchNdjsonRecord"])
     assert ndjson_refs == {"#", "#/$defs/BatchErrorRecord"}
 
-    # BatchResult wraps domains (same oneOf) and a required ecosystem_hyperedges.
-    assert set(defs["BatchResult"]["required"]) == {"domains", "ecosystem_hyperedges"}
+    # BatchResult wraps domains (same oneOf) and a required ecosystem_hyperedges,
+    # and carries the SH7 record_type discriminator.
+    assert set(defs["BatchResult"]["required"]) == {"record_type", "domains", "ecosystem_hyperedges"}
     domain_item_refs = _oneof_refs(defs["BatchResult"]["properties"]["domains"]["items"])
     assert domain_item_refs == {"#", "#/$defs/BatchErrorRecord"}
 
