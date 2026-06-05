@@ -94,6 +94,7 @@ docs/accuracy.md
 !/validation/v1.9.87-c2-corpus-batch.md
 !/validation/2026-06-04-case-study-spot-check.md
 !/validation/cal8-likelihood-sensitivity.md
+!/validation/cal14-missingness-design.md
 !/validation/corpus_aggregator.py
 !/validation/synthetic_corpus/
 !/validation/synthetic_corpus/**
