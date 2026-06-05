@@ -51,6 +51,7 @@ docs/accuracy.md
 # against either the synthetic-network distribution or a user-supplied
 # corpus; neither contains target data.
 !/validation/synthetic_calibration.py
+!/validation/likelihood_sensitivity.py
 !/validation/analyze_v19_calibration.py
 # v1.9.2.2: LLM-assisted triage runner for fingerprint candidates.
 # Reads private candidates.json (gitignored) and emits generic
@@ -92,6 +93,7 @@ docs/accuracy.md
 !/validation/2026-06-02-calibration.md
 !/validation/v1.9.87-c2-corpus-batch.md
 !/validation/2026-06-04-case-study-spot-check.md
+!/validation/cal8-likelihood-sensitivity.md
 !/validation/corpus_aggregator.py
 !/validation/synthetic_corpus/
 !/validation/synthetic_corpus/**
