@@ -2973,10 +2973,12 @@ def render_warning(domain: str, error: ReconLookupError | None = None) -> None:
     populated), the original one-liner is used.
     """
     console = get_console()
-    console.print(f"[yellow]No information found for {domain}[/yellow]")
+    safe_domain = escape(strip_control_chars(domain))
+    console.print(f"[yellow]No information found for {safe_domain}[/yellow]")
     if error is not None and getattr(error, "source_errors", ()):
         for name, reason in error.source_errors:
-            console.print(f"  [dim]{name}: {reason}[/dim]")
+            line = escape(strip_control_chars(f"{name}: {reason}"))
+            console.print(f"  [dim]{line}[/dim]")
 
 
 def render_error(message: str) -> None:
@@ -3279,7 +3281,7 @@ def _md_header(info: TenantInfo) -> list[str]:
     lines.append(f"**Domain:** {info.queried_domain}  ")
     if info.tenant_id:
         lines.append(f"**Tenant ID:** `{info.tenant_id}`  ")
-    lines.append(f"**Default Domain:** {info.default_domain}  ")
+    lines.append(f"**Default Domain:** {_markdown_escape(info.default_domain)}  ")
     if info.region:
         lines.append(f"**Region:** {_markdown_escape(info.region)}  ")
     if info.auth_type:
@@ -3374,7 +3376,7 @@ def _md_tenant_domains(info: TenantInfo) -> list[str]:
         return []
     lines: list[str] = [f"## Tenant Domains ({info.domain_count})", ""]
     for d in info.tenant_domains:
-        lines.append(f"- {d}")
+        lines.append(f"- {_markdown_escape(d)}")
     lines.append("")
     return lines
 
@@ -4253,7 +4255,7 @@ def render_conflict_annotation(
     if verbose:
         parts: list[str] = []
         for c in candidates:
-            parts.append(f"{c.value} ({c.source})")
+            parts.append(f"{strip_control_chars(str(c.value))} ({c.source})")
         annotation += f"  ({', '.join(parts)})"
 
     return annotation

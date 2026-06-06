@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.2] - 2026-06-06
+
+### Security: output-injection sweep
+
+A dedicated sweep of every render path for the class the 2.1.1 `render_error` fix
+revealed: attacker-influenceable strings (CT issuer/subject, federation brand
+name, autodiscover domains, per-source error text) reaching the terminal or
+markdown without escaping or control-stripping. Most paths were already safe (the
+merger scrubs the primary fields and the panel renders via markup-safe
+`Text.append`); four siblings were fixed, each with a regression test:
+
+- `render_warning` now escapes and control-strips the domain and the per-source
+  error reasons (a `console.print` markup sink carrying server-influenced text).
+- `render_conflict_annotation` (verbose) control-strips the raw candidate values
+  it renders, for example a tenant-controlled federation brand name, under
+  `--explain --verbose`.
+- The `delta` command's two error sinks now use the sanitized `render_error` path
+  like every other lookup error.
+- The markdown report escapes `default_domain` and `tenant_domains` (autodiscover
+  values that are control-stripped but not charset-restricted upstream).
+
+The SSRF/network, ReDoS, resource/path/deserialization, and MCP reviews from 2.1.1
+stand; no new high or medium issues outside this class.
+
+Gate: full pytest, ruff, pyright (0 errors), validate_fingerprint (841).
+
 ## [2.1.1] - 2026-06-06
 
 ### Hardening and security
