@@ -2175,6 +2175,45 @@ lock. Tests already exercise both code paths (the `--fusion`
 code path runs in the test suite); the change is moving the
 default and adding the inverse flag, not adding new logic.
 
+**v2.0.1 panel-disclosure design (the disagreement rendering).**
+
+v2.0 ships the default panel unchanged and the math in `--json` and
+`--explain-dag`; the panel "speak up" rendering is deferred to v2.0.1 so the
+lock stays low-risk. The agreed shape:
+
+- **The confidence dots map to a single defined quantity.** The three dots
+  render the share of the node's 80% credible interval that lies on the
+  decision-threshold side of the claim, binned to thirds: an interval entirely
+  above the threshold is three solid dots; an interval whose mass mostly sits
+  below the threshold demotes toward hollow. This keeps the dots one honest
+  reading (posterior support for the claim) rather than conflating the
+  deterministic source count with the credible-interval width. The deterministic
+  corroboration stays in the existing `(N sources)` text, so the two quantities
+  occupy two channels rather than one overloaded glyph.
+- **Two-predicate disagreement trigger.** The panel annotates a node only when
+  (a) the node is sparse, or (b) the posterior mode falls on the opposite side
+  of the decision threshold from the deterministic call. Otherwise the panel is
+  unchanged from today.
+- **One plain-language clause, dimmed.** Sparse-but-agreed reads "thin on the
+  <claim> call"; posterior-leans-against reads "the evidence does not back the
+  <claim> call". The claim is named in human terms, not by node id, and the
+  clause rides on the confidence line using the existing `•` separator.
+- **Localized dimming.** When a specific claim is disputed, only that span of the
+  value dims; everything the two layers agree on stays at full brightness.
+- **Accessibility.** Solid versus hollow carries the whole signal with no color;
+  a green-to-amber hue is the second channel, never the only one. Glyphs are
+  limited to `●` and `○` for terminal-font safety, no half-fill or meter glyphs.
+- **`--verbose`.** Renders one dimmed sub-line with `posterior [low, high]` per
+  node (comma range), labeled once in the help as the 80% credible interval so
+  it is not read as a frequentist confidence interval.
+- **Determinism.** The dot fill is a pure function of the posterior, the
+  interval, and the threshold; pin it with a property test in the spirit of the
+  `--explain-dag` snapshot so the renderer cannot drift or recalibrate through
+  the UI.
+
+Out of v2.0.1 scope: density glyphs, sparklines, and any rendering richer than
+the above. The panel earns a word only when the evidence does.
+
 ---
 
 That is v2.0. Everything else - feature additions, MCP tools,
