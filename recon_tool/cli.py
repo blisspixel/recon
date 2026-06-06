@@ -291,9 +291,12 @@ def lookup(
         help=("Language style: 'hedged' (default) or 'strict' (drops hedging qualifiers on dense-evidence targets)"),
     ),
     fusion: bool = typer.Option(
-        False,
-        "--fusion",
-        help="Compute Bayesian per-slug posteriors from evidence",
+        True,
+        "--fusion/--no-fusion",
+        help=(
+            "Compute Bayesian per-slug posteriors and credible intervals from "
+            "evidence (on by default from v2.0; --no-fusion to skip)"
+        ),
     ),
     explain_dag: bool = typer.Option(
         False,
@@ -414,13 +417,13 @@ def batch(
         ),
     ),
     fusion: bool = typer.Option(
-        False,
-        "--fusion",
+        True,
+        "--fusion/--no-fusion",
         help=(
             "Compute Bayesian-network posteriors and credible intervals "
-            "over high-level claims for every domain. Adds the "
-            "``posterior_observations`` field to each domain's JSON. "
-            "Pure post-processing — no extra network calls."
+            "over high-level claims for every domain. On by default from v2.0; "
+            "--no-fusion skips it. Adds the ``posterior_observations`` field to "
+            "each domain's JSON. Pure post-processing, no extra network calls."
         ),
     ),
 ) -> None:

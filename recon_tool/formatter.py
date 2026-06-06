@@ -2872,7 +2872,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
     When ``include_unclassified`` is True, the resulting dict adds an
     ``unclassified_cname_chains`` array of ``{subdomain, chain}`` records
     for CNAME chains the surface classifier resolved but couldn't attribute.
-    Off by default to keep the v1.0 schema contract narrow; opt-in for the
+    Off by default to keep the v2.0 schema contract narrow; opt-in for the
     fingerprint-discovery loop.
     """
     has_mx_records = any(e.source_type == "MX" for e in info.evidence)
@@ -2974,7 +2974,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         "msgraph_host": info.msgraph_host,
         "lexical_observations": list(info.lexical_observations),
     }
-    # v1.0 schema contract: always present (null when unavailable).
+    # v2.0 schema contract: always present (null when unavailable).
     if info.cert_summary is not None:
         d["cert_summary"] = {
             "cert_count": info.cert_summary.cert_count,
@@ -3021,7 +3021,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
             }
             for ev in info.evidence
         ]
-    # v1.0 schema contract: always present (empty dict when no detections).
+    # v2.0 schema contract: always present (empty dict when no detections).
     d["detection_scores"] = dict(info.detection_scores)
     # v1.7: Cross-source evidence conflicts — top-level array. Always
     # emitted (empty list when none). Each entry is

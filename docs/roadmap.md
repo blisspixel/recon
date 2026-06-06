@@ -458,10 +458,10 @@ above is green; Outstanding item 5):
 
 | # | Story | Status | Acceptance |
 |---|---|---|---|
-| G1 | Schema lock | operator-paced | Apply the disposition table; bump `docs/recon-schema.json` from "v1.0 contract" to "v2.0 contract"; strip EXPERIMENTAL language from the promoted-field descriptions. |
-| G2 | `--fusion` default-on | operator-paced | Flip `--fusion` to default-on with the clean-panel disclosure rule (see the v2.0 design-decision section). |
+| G1 | Schema lock | done (2.0.0) | `docs/recon-schema.json` (both copies) bumped from "Stable v1.0 contract" to "Stable v2.0 contract", additive-within-2.x; README, the formatter comments, and the contract-test docstring updated; `recon doctor` first line reads "v2.0 stable schema" (version-driven). EXPERIMENTAL labels were already zero in user-facing surfaces (stripped in v1.9.11). |
+| G2 | `--fusion` default-on | done (2.0.0), speak-up deferred to 2.0.1 | Fusion runs on every lookup; `--json` always emits the posteriors; `fusion_enabled` disambiguates; `--no-fusion` (new) opts out; `--fusion` is a now-default no-op. The default panel stays clean. The "speak up when the layers disagree" panel refinement (surface the interval, demote the confidence dot on sparse / disagreement cases, plus `--verbose` always-on) is a 2.0.1 fast-follow, scoped clean to keep the lock low-risk. |
 | G3 | `correlation.md` promotion | done | Promoted from living draft to the polished reference: the header framing updated, the node-dependent-missingness section (4.8.3) rewritten to the shipped CAL14 reality (declarative email-policy node, the n_eff / stability ripples handled, corpus-grounded numbers, ECE about 0.31 to about 0.03). The four required sections are present (defense-correlation mapping 4a, prior-art 4b, dependency-floor manifesto 4c, failure-mode catalog 4.8.10); the CAL13 evidence-responsive framing and the ground-truth / independence-bias caveats are in place. No math removed. |
-| G4 | Changelog move + tag | operator-paced | Move the release-notes draft body into `CHANGELOG.md` under `## [2.0.0] - <date>`, delete the draft, run `scripts/release.py`. |
+| G4 | Changelog move + tag | done (2.0.0 commit); tag pending operator | `CHANGELOG.md` carries the `## [2.0.0]` entry summarizing the lock; `docs/migration-v2.md` finalized (draft banner removed); version bumped to 2.0.0. The `v2.0.0` tag is the one remaining operator action (it publishes to PyPI), held for explicit go. |
 
 Schema-contract polish (the original Outstanding item 1) shipped in v1.9.26 and
 is not in the queue. The original v1.9.4 to v1.9.11 numbered sequence further

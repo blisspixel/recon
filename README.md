@@ -184,7 +184,7 @@ Installed but the tools don't appear? Run `recon doctor --client=<name>` to conf
 
 The SKILL.md follows the open [agentskills.io](https://agentskills.io) standard, so the same file works in Claude Code and Kiro.
 
-**Stable JSON schema.** Downstream consumers can validate `recon <domain> --json` output against [`docs/recon-schema.json`](docs/recon-schema.json) ([raw URL](https://raw.githubusercontent.com/blisspixel/recon/main/docs/recon-schema.json)). The schema is the v1.0 stability contract documented in [`docs/schema.md`](docs/schema.md); drift between schema and emitter is caught by `tests/test_json_schema_file.py`.
+**Stable JSON schema.** Downstream consumers can validate `recon <domain> --json` output against [`docs/recon-schema.json`](docs/recon-schema.json) ([raw URL](https://raw.githubusercontent.com/blisspixel/recon/main/docs/recon-schema.json)). The schema is the v2.0 stability contract documented in [`docs/schema.md`](docs/schema.md); drift between schema and emitter is caught by `tests/test_json_schema_file.py`.
 
 **Exit codes for scripting.** The CLI returns a stable set of exit codes (`0` success, `1` general error, `2` validation, `3` no data, `4` internal) so a script can branch on the outcome without parsing output. The full contract is documented in [`docs/schema.md`](docs/schema.md#exit-codes).
 
