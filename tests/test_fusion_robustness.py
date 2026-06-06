@@ -231,6 +231,22 @@ class TestCLIFlagCombinations:
             assert isinstance(d["posterior_observations"], list)
 
     def test_fusion_off_emits_empty_posteriors(self) -> None:
+        # v2.0: fusion is on by default, so --no-fusion is the way to opt out.
+        app, runner = self._imports()
+        from tests.test_cli import RESOLVE_PATH, SAMPLE_INFO, SAMPLE_RESULTS
+
+        with patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve:
+            mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+            result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--no-cache", "--no-fusion"])
+            assert result.exit_code == 0
+            d = json.loads(result.output)
+            assert d.get("posterior_observations", []) == []
+            assert d.get("slug_confidences", {}) == {}
+            # SH6: the flag disambiguates "fusion off" from "ran, found none".
+            assert d.get("fusion_enabled") is False
+
+    def test_fusion_on_by_default_emits_posteriors(self) -> None:
+        # v2.0 (G2): fusion runs by default, no --fusion needed.
         app, runner = self._imports()
         from tests.test_cli import RESOLVE_PATH, SAMPLE_INFO, SAMPLE_RESULTS
 
@@ -239,7 +255,8 @@ class TestCLIFlagCombinations:
             result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--no-cache"])
             assert result.exit_code == 0
             d = json.loads(result.output)
-            assert d.get("posterior_observations", []) == []
+            assert isinstance(d.get("posterior_observations"), list)
+            assert d.get("fusion_enabled") is True
 
 
 # ── Determinism + concurrency ─────────────────────────────────────────

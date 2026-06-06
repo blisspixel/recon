@@ -2,7 +2,7 @@
 
 Asserts that the JSON output shape matches docs/schema.md. Changes to the
 set of top-level keys or their types must update docs/schema.md AND these
-tests in the same PR. This is the 1.0 stability contract.
+tests in the same PR. This is the 2.0 stability contract.
 """
 
 from __future__ import annotations

@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.0.0] - 2026-06-05
+
+The v2.0 stability lock. No new capability ships in 2.0 itself; everything new
+since v1.9.0 shipped and was validated across the v1.9.x bridge. 2.0 locks the
+JSON schema as the v2.0 contract, turns the Bayesian fusion layer on by default,
+and ratifies the accumulated work.
+
+### Schema lock (G1)
+
+- `docs/recon-schema.json` is bumped from "Stable v1.0 contract" to "Stable v2.0
+  contract"; additive changes stay non-breaking within 2.x. The locked surface
+  is the post-schema-hardening shape (SH1 to SH9): the `slug_confidences` object
+  map, named `wildcard_sibling_clusters` objects, the `fusion_enabled` /
+  `record_type` / `schema_version` discriminators, machine-readable `error_kind`,
+  and the `--include-ecosystem` always-wrapper. Both schema copies stay
+  byte-identical.
+- `recon doctor`'s first line now reads "v2.0 stable schema".
+
+### Fusion on by default (G2)
+
+- The Bayesian inference layer runs on every lookup; it was opt-in behind
+  `--fusion` through v1.9.x. `--json` always emits `posterior_observations` and
+  `slug_confidences`, and `fusion_enabled` disambiguates the opt-out case. The
+  computation costs no extra network calls.
+- `--no-fusion` (new) opts out, reverting to the rule-based shape (empty fusion
+  arrays, `fusion_enabled: false`). `--fusion` is kept as a now-default no-op for
+  compatibility.
+- The default panel stays clean: it renders the deterministic verdict as before
+  and does not dump the credible interval. The panel "speak up when the layers
+  disagree" refinement (surface the interval inline and demote the confidence dot
+  on sparse or disagreement cases) lands as a 2.0.1 fast-follow.
+
+### Validation baseline
+
+- Locked against a full-corpus fusion re-run (5238 successful domains, post-CAL14
+  build): 100% deterministic-vs-Bayesian consistency (13560 of 13560
+  high-confidence firings, zero disagreements), the CAL14 declarative
+  email-policy behavior confirmed on real input, and zero cross-source conflicts.
+  See `validation/v2.0-corpus-run.md`.
+
+The migration guide is `docs/migration-v2.md`; the full validation trail and the
+lock-ceremony record are under `validation/`.
+
 ## [1.9.99] - 2026-06-05
 
 ### Schema description fix (SH9 follow-up) and the v2.0 lock-ceremony recipe

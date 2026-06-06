@@ -1,10 +1,7 @@
 # Migrating to recon v2.0
 
-> **Status: draft.** This file is the v1.9.11 deliverable. Each
-> section's content is filled in as the v1.9.x → v2.0 transition
-> work completes. v2.0 ships with every section populated. Until
-> then, this file documents the shape of the migration so
-> consumers can plan against it.
+> **Status: final for v2.0.** Every section is populated; this is the
+> migration guide that ships with the 2.0 release.
 
 ## What v2.0 means for you
 
