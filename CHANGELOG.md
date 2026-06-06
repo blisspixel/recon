@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.0] - 2026-06-06
+
+### Aggregate state: stateless cohort summary
+
+`recon batch --summary` emits one aggregate-only cohort summary over a batch:
+observability-adjusted prevalence (observed rate, conservative lower bound, and
+observability fraction, so missing-not-at-random absence is encoded honestly),
+aggregated posterior mass with a separate high-confidence share, and provider and
+cloud concentration (entropy and HHI). Add `--json` for machine output; the
+default renders a compact panel. Stateless and compute-and-forget: it ships no
+baselines, stores nothing, makes no baseline-relative anomaly score, infers no
+unobserved services, and names no domain in its output.
+
+- The summary carries its own record type (`cohort_summary`, `schema_version`
+  2.1); the locked v2.0 per-domain schema is unchanged.
+- Caller-grouped analysis (grouping, distinctive-slug ranking, partial pooling)
+  stays in a downstream reducer under `validation/aggregate/`, which shares the
+  per-cohort math with core so the two never drift. See `docs/aggregate-state.md`
+  for the methodology and a fully synthetic worked example.
+- `--summary` pairs with `--json` or stands alone; it does not combine with
+  `--md`, `--csv`, or `--ndjson`.
+
+Gate: full pytest, ruff, pyright (0 errors), validate_fingerprint.
+
 ## [2.0.1] - 2026-06-05
 
 ### Panel disclosure: posterior-backed confidence dots

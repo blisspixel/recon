@@ -53,6 +53,12 @@ docs/accuracy.md
 !/validation/synthetic_calibration.py
 !/validation/likelihood_sensitivity.py
 !/validation/analyze_v19_calibration.py
+# v2.1a: aggregate-state methodology example. Fully synthetic (fictional
+# brands, fabricated numbers); the reference reducer, generator, and synthetic
+# cohort are public. Real cohorts stay local. The reducer run-output is a
+# regenerable artifact (the doc shows how), so it stays out of the repo.
+!/validation/aggregate/
+/validation/aggregate/example_output.json
 # v1.9.2.2: LLM-assisted triage runner for fingerprint candidates.
 # Reads private candidates.json (gitignored) and emits generic
 # YAML stanzas that are safe to commit. The runner itself is

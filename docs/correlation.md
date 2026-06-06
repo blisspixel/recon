@@ -1522,10 +1522,12 @@ publicly reproducible:
 A reviewer with both §4.8.4 (Generalized Bayesian Inference
 framing for the conflict penalty) and §4.8.7 (ECE and Brier scores
 as validation diagnostics) in mind will notice a friction. Proper
-scoring rules like Brier and ECE assume the posterior is trying to
-estimate the true data-generating distribution as closely as
-possible: a calibrated forecaster minimises the scoring rule by
-matching empirical frequencies.
+scoring rules ([Gneiting and Raftery
+2007](https://doi.org/10.1198/016214506000001437)) like the Brier
+score, and the related calibration metric ECE, assume the posterior is
+trying to estimate the true data-generating distribution as closely as
+possible: a calibrated forecaster minimises the score by matching
+empirical frequencies.
 
 Recon's posterior is not optimising that objective. The conflict-
 penalty term in $n_{\mathrm{eff}}$ deliberately widens the
