@@ -98,7 +98,11 @@ def cache_put(domain: str, info: TenantInfo) -> None:
             logger.debug("Cache write rejected invalid domain: %r", domain)
             return
         data = tenant_info_to_dict(info)
-        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        # Atomic write: a crash or a concurrent reader mid-write must not leave a
+        # truncated JSON file. Write a temp sibling, then atomically replace.
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        tmp.replace(path)
     except (OSError, TypeError, ValueError, json.JSONDecodeError):
         logger.debug("Cache write failed for %s", domain, exc_info=True)
 
@@ -214,6 +218,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "ct_provider_used": info.ct_provider_used,
         "ct_subdomain_count": info.ct_subdomain_count,
         "ct_cache_age_days": info.ct_cache_age_days,
+        "ct_attempt_outcome": info.ct_attempt_outcome,
         "slug_confidences": dict(info.slug_confidences),
         "posterior_observations": [
             {
@@ -503,7 +508,7 @@ def _cert_summary_from_dict(data: dict[str, Any]) -> CertSummary | None:
         issuance_velocity=int(cs_data.get("issuance_velocity", 0)),
         newest_cert_age_days=int(cs_data.get("newest_cert_age_days", 0)),
         oldest_cert_age_days=int(cs_data.get("oldest_cert_age_days", 0)),
-        top_issuers=tuple(cs_data.get("top_issuers", [])),
+        top_issuers=tuple(str(x) for x in cs_data.get("top_issuers", [])),
         wildcard_sibling_clusters=wildcard_sibling_clusters,
         deployment_bursts=deployment_bursts,
     )
@@ -751,6 +756,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         ct_provider_used=data.get("ct_provider_used"),
         ct_subdomain_count=int(data.get("ct_subdomain_count", 0) or 0),
         ct_cache_age_days=data.get("ct_cache_age_days"),
+        ct_attempt_outcome=data.get("ct_attempt_outcome"),
         slug_confidences=_read_slug_confidences(data.get("slug_confidences")),
         posterior_observations=_parse_posterior_observations(data),
         cloud_instance=data.get("cloud_instance"),

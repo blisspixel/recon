@@ -495,8 +495,12 @@ fixes were a ReDoS-guard bypass (nested quantified groups such as `((a+))+`) and
 output sanitization (`render_error` and the batch progress line), each with a
 regression test. v2.1.2 added a full output-injection sweep across the render
 paths and closed four more sanitization gaps (`render_warning`, verbose conflict
-annotations, the `delta` error sinks, and markdown autodiscover domains). The
-differential verification of the inference core, the fault-injection matrix, and
+annotations, the `delta` error sinks, and markdown autodiscover domains). v2.1.3
+took a deeper pass over the engine internals (Bayesian inference, merge / resolve
+/ cache, graph / CT), fixing a Louvain determinism bug, a related-domain
+enrichment correctness bug, and several cache and validation robustness gaps; the
+inference math and the schema contract were re-confirmed clean. The differential
+verification of the inference core, the fault-injection matrix, and
 signed/reproducible builds remain ahead.
 
 #### Post-2.0 feature candidates (maintainer)

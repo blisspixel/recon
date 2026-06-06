@@ -197,6 +197,19 @@ class TestDeterminism:
         assert first.modularity == second.modularity
         assert first.edges == second.edges
 
+    def test_partition_invariant_to_entry_order(self):
+        # Reordering the same certs must not change the partition: node insertion
+        # order (and thus Louvain seeding/shuffling) was previously cert-entry
+        # arrival order, which is not stable across CT responses.
+        e1 = _entry(["a.example.com", "b.example.com"])
+        e2 = _entry(["b.example.com", "c.example.com"])
+        e3 = _entry(["c.example.com", "a.example.com"])
+        e4 = _entry(["d.example.com", "e.example.com", "f.example.com"])
+        forward = build_infrastructure_clusters([e1, e2, e3, e4])
+        reordered = build_infrastructure_clusters([e4, e3, e2, e1])
+        assert forward.clusters == reordered.clusters
+        assert forward.modularity == reordered.modularity
+
 
 class TestReportShape:
     def test_returns_report_dataclass(self):

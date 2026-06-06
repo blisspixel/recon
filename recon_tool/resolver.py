@@ -270,7 +270,12 @@ async def _enrich_from_related(
         return info, all_results
 
     # Re-run insight generation with the enriched data to get updated signals
-    from recon_tool.merger import build_insights_with_signals, compute_detection_scores
+    from recon_tool.merger import (
+        build_insights_with_signals,
+        compute_detection_scores,
+        compute_email_security_score,
+        extract_spf_include_count,
+    )
 
     enriched_insights = build_insights_with_signals(
         extra_services,
@@ -278,6 +283,15 @@ async def _enrich_from_related(
         info.auth_type,
         info.dmarc_policy,
         info.domain_count,
+        # Re-pass the metadata the main path supplies; omitting these defaulted
+        # has_mx_records to False (spurious "no email infrastructure") and
+        # silenced the score / SPF / issuance signals on enriched-then-cached
+        # results.
+        email_security_score=compute_email_security_score(extra_services),
+        spf_include_count=extract_spf_include_count(extra_services),
+        issuance_velocity=(info.cert_summary.issuance_velocity if info.cert_summary else None),
+        dmarc_pct=info.dmarc_pct,
+        has_mx_records=any(e.source_type == "MX" for e in info.evidence),
         google_auth_type=info.google_auth_type,
         google_idp_name=info.google_idp_name,
         primary_email_provider=info.primary_email_provider,

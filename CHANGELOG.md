@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.3] - 2026-06-06
+
+### Hardening: engine internals
+
+A deeper bug-hunt over the internals the 2.1.1/2.1.2 reviews did not cover
+(Bayesian inference, the merge/resolve/cache layers, graph/CT parsing), via three
+independent adversarial subagent passes. The inference math, the
+SSRF/resource/path/deserialization surface, and the schema contract were
+re-confirmed clean; the fixes:
+
+- Determinism: the infrastructure-cluster (Louvain) partition was sensitive to
+  cert-entry arrival order (not stable across CT responses), so the same domain
+  could yield different clusters across runs. Nodes are now inserted in a
+  content-determined (sorted) order before partitioning.
+- Correctness: related-domain enrichment re-ran insight generation with a
+  truncated parameter set, defaulting `has_mx_records` to False (a spurious "no
+  email infrastructure" insight) and silencing the score / SPF / issuance signals
+  on enriched-then-cached results. The metadata is now re-passed.
+- Cache: `ct_attempt_outcome` now round-trips (it was silently dropped, so cached
+  `--json` reported it as null); cache writes are atomic (temp-then-replace, so a
+  crash or concurrent read cannot see a truncated file); cert `top_issuers`
+  deserialization coerces elements like its siblings.
+- Bayesian: `load_network` now rejects boundary priors / CPT values `{0, 1}` (the
+  open interval the rest of the module already requires; a degenerate 0/1 pins a
+  posterior), and a degenerate all-zero query factor falls back to the uniform
+  prior rather than a non-normalized result. The bundled model is unaffected.
+- Lexical: the environment-token boundary check now considers every occurrence in
+  a label, not just the first.
+
+Deferred (tracked): the cache round-trip of `merge_conflicts` (needs a
+deserializer; cached `evidence_conflicts` is currently empty), and a few
+low/latent items (enrichment slot fairness, conflict-candidate pre-scrub for the
+JSON path, a cache-version check).
+
+Gate: full pytest, ruff, pyright (0 errors), validate_fingerprint (841).
+
 ## [2.1.2] - 2026-06-06
 
 ### Security: output-injection sweep
