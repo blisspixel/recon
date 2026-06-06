@@ -32,6 +32,7 @@ from recon_tool.models import (
     ExplanationRecord,
     MergeConflicts,
     Observation,
+    PosteriorObservation,
     ReconLookupError,
     SourceResult,
     TenantInfo,
@@ -132,6 +133,77 @@ CONFIDENCE_DOTS: dict[ConfidenceLevel, str] = {
     ConfidenceLevel.MEDIUM: "●●○",
     ConfidenceLevel.LOW: "●○○",
 }
+
+# Posterior-backed confidence (v2.0.1). When fusion has run, the panel's
+# confidence dots reflect where a claim's 80% credible interval sits relative
+# to the present/absent decision threshold, rather than the deterministic tier
+# alone. The dots become one defined quantity (posterior support for the claim);
+# the deterministic corroboration stays in the "(N sources)" text. Glyphs and
+# colors reuse the existing tier vocabulary so the panel reads native, and stay
+# limited to filled / hollow dots for terminal-font safety.
+_POSTERIOR_DECISION_THRESHOLD = 0.5
+
+_DOT_FILL_GLYPH: dict[int, str] = {3: "●●●", 2: "●●○", 1: "●○○"}
+
+_DOT_FILL_COLOR: dict[int, str] = {
+    3: CONFIDENCE_COLORS[ConfidenceLevel.HIGH],
+    2: CONFIDENCE_COLORS[ConfidenceLevel.MEDIUM],
+    1: CONFIDENCE_COLORS[ConfidenceLevel.LOW],
+}
+
+
+def _posterior_dot_fill(obs: PosteriorObservation, threshold: float = _POSTERIOR_DECISION_THRESHOLD) -> int:
+    """Solid-dot count (1 to 3) for a positive claim backed by ``obs``.
+
+    A single, defined quantity: where the node's 80% credible interval sits
+    relative to the present/absent decision threshold.
+
+    - 3: the whole interval is on the yes-side (``interval_low >= threshold``).
+      The evidence is confident.
+    - 2: the point estimate is on the yes-side but the interval dips below the
+      threshold (thin or sparse evidence; the believable range still touches
+      "no").
+    - 1: the point estimate is on the no-side (the evidence leans against the
+      deterministic claim).
+
+    Pure and monotone in ``interval_low`` then ``posterior``; pinned by a
+    property test so the renderer cannot drift or recalibrate through the UI.
+    """
+    if obs.interval_low >= threshold:
+        return 3
+    if obs.posterior >= threshold:
+        return 2
+    return 1
+
+
+# Human-readable name for each node's claim, for the disagreement clause. Kept
+# short so the dimmed line stays on one row in the panel.
+_NODE_CLAIM_NAMES: dict[str, str] = {
+    "m365_tenant": "the M365 tenant",
+    "google_workspace_tenant": "the Workspace tenant",
+    "federated_identity": "federated identity",
+    "okta_idp": "the Okta IdP",
+    "email_gateway_present": "the email gateway",
+    "email_security_modern_provider": "modern email security",
+    "email_security_policy_enforcing": "the email policy",
+    "cdn_fronting": "the CDN",
+    "aws_hosting": "AWS hosting",
+}
+
+
+def _posterior_clause(obs: PosteriorObservation, fill: int) -> str:
+    """The dimmed disagreement clause for a claimed node, or "" when confident.
+
+    fill 2 (the interval dips below the threshold): the evidence is thin.
+    fill 1 (the point estimate is below the threshold): the evidence does not
+    back the deterministic call.
+    """
+    if fill >= 3:
+        return ""
+    claim = _NODE_CLAIM_NAMES.get(obs.name, f"the {obs.name} call")
+    if fill == 2:
+        return f"thin on {claim}"
+    return f"the evidence does not back {claim}"
 
 # M365-specific service keywords for display categorization (--services, markdown).
 # COUPLING WARNING: If you add a new M365 service to fingerprints.yaml, you may
@@ -1809,6 +1881,40 @@ def _append_field(facts: Text, label: str, value: str, value_style: str = "") ->
         facts.append("\n")
 
 
+def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
+    """Render the Confidence row.
+
+    Deterministic fallback (no fusion / --no-fusion): dots from the deterministic
+    tier, green on High, no clause; identical to v1.x. v2.0.1 with fusion: the
+    dots reflect the weakest claimed node's posterior support (the panel is as
+    confident as its shakiest asserted claim), colored by fill, and a dimmed line
+    speaks up when that node is thin or the evidence leans against it. The
+    deterministic corroboration stays in the source count.
+    """
+    facts.append("  ")
+    facts.append("Confidence".ljust(_LABEL_WIDTH), style="dim")
+    tail = f" {info.confidence.value.capitalize()} ({len(info.sources)} sources)"
+
+    claimed = [o for o in info.posterior_observations if o.evidence_used]
+    if not claimed:
+        dots = CONFIDENCE_DOTS[info.confidence]
+        style = "green" if _confidence_is_high(info.confidence) else ""
+        facts.append(dots + tail, style=style)
+        facts.append("\n")
+        return
+
+    weakest = min(claimed, key=lambda o: (_posterior_dot_fill(o), o.posterior))
+    fill = _posterior_dot_fill(weakest)
+    facts.append(_DOT_FILL_GLYPH[fill], style=_DOT_FILL_COLOR[fill])
+    facts.append(tail)
+    facts.append("\n")
+    clause = _posterior_clause(weakest, fill)
+    if clause:
+        facts.append(" " * (2 + _LABEL_WIDTH))
+        facts.append(clause, style="dim")
+        facts.append("\n")
+
+
 def _with_idp(base: str, google_idp_name: str | None) -> str:
     """Append " via <IdP>" to a Google Workspace auth label when an IdP name is
     known."""
@@ -1921,10 +2027,9 @@ def _render_key_facts(info: TenantInfo) -> Text:
     if multicloud_line is not None:
         _append_field(facts, "Multi-cloud", multicloud_line)
 
-    # Confidence — green only for High, default otherwise.
-    dots = CONFIDENCE_DOTS[info.confidence]
-    conf_value = f"{dots} {info.confidence.value.capitalize()} ({len(info.sources)} sources)"
-    _append_field(facts, "Confidence", conf_value, value_style="green" if _confidence_is_high(info.confidence) else "")
+    # Confidence — deterministic dots without fusion; posterior-backed dots plus
+    # a disagreement clause when fusion has run (v2.0.1).
+    _append_confidence_field(facts, info)
 
     return facts
 
@@ -2590,6 +2695,18 @@ def _render_verbose_detail(info: TenantInfo, verbose: bool) -> Text | None:
         f"  Inference confidence: {info.inference_confidence.value.capitalize()}\n",
         style="dim",
     )
+    # v2.0.1: the Bayesian posteriors with their 80% credible intervals, for
+    # operators who want the math visible by default. The label names the
+    # interval so the comma range is not read as a frequentist confidence
+    # interval. Claimed nodes only (the verdict's nodes), strongest first.
+    claimed_posteriors = [o for o in info.posterior_observations if o.evidence_used]
+    if claimed_posteriors:
+        v.append("  Posteriors (80% credible interval):\n", style="dim")
+        for o in sorted(claimed_posteriors, key=lambda x: -x.posterior):
+            v.append(
+                f"    {o.name}: {o.posterior:.2f} [{o.interval_low:.2f}, {o.interval_high:.2f}]\n",
+                style="dim",
+            )
     if info.detection_scores:
         v.append("  Detection scores:\n", style="dim")
         for slug, score in info.detection_scores:
