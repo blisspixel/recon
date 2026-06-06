@@ -29,6 +29,8 @@ from typing import Any
 from rich.panel import Panel
 from rich.text import Text
 
+from recon_tool.validator import strip_control_chars
+
 # 0.9 quantile of the standard normal, for an 80% two-sided interval, matching
 # recon's 80% credible-interval house style. The summary reports an 80% Wilson
 # score interval (closed form); a Jeffreys Beta interval is the Bayesian sibling.
@@ -60,9 +62,11 @@ _PREVALENCE_SIGNALS = (
 
 def wilson_interval(positives: int, n: int, z: float = _Z80) -> tuple[float, float]:
     """80% Wilson score interval for a binomial proportion. Returns (0.0, 1.0)
-    for an empty denominator (no information)."""
+    for an empty denominator (no information). ``positives`` is clamped to
+    ``[0, n]`` so a caller cannot trigger a math-domain error."""
     if n <= 0:
         return (0.0, 1.0)
+    positives = max(0, min(positives, n))
     p = positives / n
     z2 = z * z
     denom = 1.0 + z2 / n
@@ -99,14 +103,22 @@ def hhi(counts: Iterable[float]) -> float:
     return sum((c / total) ** 2 for c in vals)
 
 
+def _as_list(value: Any) -> list[Any]:
+    """Coerce an external value to a list; non-list/tuple input (from arbitrary
+    JSON the downstream reducer ingests) becomes empty so iteration and
+    membership checks never raise on a malformed record."""
+    return list(value) if isinstance(value, (list, tuple)) else []
+
+
 def _dns_resolved(record: Mapping[str, Any]) -> bool:
-    degraded = record.get("degraded_sources") or []
-    return "dns" not in degraded
+    return "dns" not in _as_list(record.get("degraded_sources"))
 
 
 def _posterior_map(record: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
-    obs = record.get("posterior_observations") or []
-    return {o["name"]: o for o in obs if isinstance(o, Mapping) and "name" in o}
+    obs = _as_list(record.get("posterior_observations"))
+    # The name becomes a dict key, so require a string (hashable); a malformed
+    # record with a list/dict name must be skipped, not raise TypeError.
+    return {o["name"]: o for o in obs if isinstance(o, Mapping) and isinstance(o.get("name"), str)}
 
 
 def extract_signals(record: Mapping[str, Any]) -> dict[str, bool | None]:
@@ -131,7 +143,7 @@ def extract_signals(record: Mapping[str, Any]) -> dict[str, bool | None]:
         if o is None or o.get("sparse") or not o.get("evidence_used"):
             out[signal] = None
         else:
-            out[signal] = float(o.get("posterior", 0.0)) > 0.5
+            out[signal] = _safe_float(o.get("posterior")) > 0.5
     return out
 
 
@@ -140,11 +152,23 @@ def _suppressed(count: int) -> int | str:
     return "<=10 (suppressed)" if 1 <= count <= _SUPPRESS_MAX else count
 
 
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    """Coerce an external value to a finite float, defaulting on None, non-numeric,
+    or non-finite (NaN / inf) input. The downstream reducer ingests arbitrary JSON,
+    so a malformed posterior must not crash the run or poison the aggregate math."""
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return default
+    return f if math.isfinite(f) else default
+
+
 def _prevalence_block(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     n = len(records)
+    signal_maps = [extract_signals(r) for r in records]
     block: dict[str, Any] = {}
     for sig in _PREVALENCE_SIGNALS:
-        vals = [extract_signals(r)[sig] for r in records]
+        vals = [sm[sig] for sm in signal_maps]
         observable = [v for v in vals if v is not None]
         positives = sum(1 for v in observable if v)
         obs_n = len(observable)
@@ -168,15 +192,16 @@ def _posterior_claims_block(records: Sequence[Mapping[str, Any]]) -> dict[str, A
             by_node.setdefault(name, []).append(o)
     block: dict[str, Any] = {}
     for node, obs in sorted(by_node.items()):
-        posteriors = [float(o.get("posterior", 0.0)) for o in obs]
-        widths = [float(o.get("interval_high", 0.0)) - float(o.get("interval_low", 0.0)) for o in obs]
-        high_conf = sum(1 for o in obs if float(o.get("posterior", 0.0)) > 0.8 and not o.get("sparse"))
+        posteriors = [min(1.0, max(0.0, _safe_float(o.get("posterior")))) for o in obs]
+        widths = [max(0.0, _safe_float(o.get("interval_high")) - _safe_float(o.get("interval_low"))) for o in obs]
+        high_conf = sum(1 for o, p in zip(obs, posteriors, strict=True) if p > 0.8 and not o.get("sparse"))
         sparse = sum(1 for o in obs if o.get("sparse"))
         block[node] = {
             "expected_prevalence": round(sum(posteriors) / len(posteriors), 4),
             "high_confidence_share": round(high_conf / n, 4) if n else None,
             "mean_interval_width": round(sum(widths) / len(widths), 4),
             "sparse_share": round(sparse / len(obs), 4),
+            "observed_n": len(obs),
         }
     return block
 
@@ -186,7 +211,11 @@ def _mix_block(records: Sequence[Mapping[str, Any]], field: str) -> dict[str, An
         str(r.get(field)) for r in records if r.get(field) not in (None, "", "unknown")
     )
     total = sum(counts.values())
-    shares = {k: round(v / total, 4) for k, v in counts.most_common()} if total else {}
+    # Deterministic order: count descending, then key ascending. Counter's
+    # most_common breaks ties by insertion order, which for a batch is the
+    # non-deterministic resolution-completion order.
+    ordered = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    shares = {k: round(v / total, 4) for k, v in ordered} if total else {}
     return {
         "shares": shares,
         "normalized_entropy": round(normalized_entropy(list(counts.values())), 4),
@@ -223,9 +252,13 @@ def summarize_cohort(
 
     ``attempted`` is the number of domains the batch tried, so the observability
     block can report the resolution rate; it defaults to the number of records.
+    Near-duplicate inputs that normalize to the same domain (for example a www
+    host and its apex) count once among the resolved records, so resolution_rate
+    is conservative rather than inflated.
     """
     n = len(records)
-    attempted = n if attempted is None else attempted
+    # Resolved can never exceed attempted; guard so resolution_rate stays <= 1.
+    attempted = n if attempted is None else max(attempted, n)
     return {
         "label": label,
         "n": n,
@@ -275,7 +308,9 @@ def _fmt_mix(mix: Mapping[str, Any]) -> str:
     shares = mix.get("shares") or {}
     if not shares:
         return "not observable"
-    top = ", ".join(f"{k} {_fmt_pct(v)}" for k, v in list(shares.items())[:3])
+    # Sanitize record-derived keys (e.g. cloud_instance from OIDC discovery)
+    # before they reach the terminal, matching the single-domain panel.
+    top = ", ".join(f"{strip_control_chars(str(k))} {_fmt_pct(v)}" for k, v in list(shares.items())[:3])
     return f"{top}  (HHI {mix.get('hhi')})"
 
 

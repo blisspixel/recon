@@ -9,13 +9,17 @@ edge cases that must not crash (empty cohort, no fusion, single domain).
 
 from __future__ import annotations
 
+import io
 from typing import Any
+
+from rich.console import Console
 
 from recon_tool.cohort_summary import (
     build_summary_document,
     extract_signals,
     hhi,
     normalized_entropy,
+    render_cohort_summary,
     summarize_cohort,
     wilson_interval,
 )
@@ -160,8 +164,94 @@ def test_document_contract() -> None:
             "lower_bound_over_cohort", "observability_fraction",
         }
     assert set(doc["posterior_claims"]["m365_tenant"]) == {
-        "expected_prevalence", "high_confidence_share", "mean_interval_width", "sparse_share",
+        "expected_prevalence", "high_confidence_share", "mean_interval_width", "sparse_share", "observed_n",
     }
     assert set(doc["mix"]) == {"provider", "cloud"}
     for dim in ("provider", "cloud"):
         assert set(doc["mix"][dim]) == {"shares", "normalized_entropy", "hhi", "categorized_n"}
+
+
+# --- 2.1.1 hardening regressions ---
+
+
+def test_mix_order_deterministic_under_ties() -> None:
+    # Tied counts must order identically regardless of input order (count desc,
+    # then key ascending), not by non-deterministic insertion order.
+    a = [_rec(provider="Microsoft 365"), _rec(provider="Google Workspace")] * 3
+    b = [_rec(provider="Google Workspace"), _rec(provider="Microsoft 365")] * 3
+    sa = list(build_summary_document(a)["mix"]["provider"]["shares"])
+    sb = list(build_summary_document(b)["mix"]["provider"]["shares"])
+    assert sa == sb == ["Google Workspace", "Microsoft 365"]
+
+
+def test_wilson_clamps_positives_over_n() -> None:
+    low, high = wilson_interval(15, 10)  # positives > n must not raise
+    assert 0.0 <= low <= high <= 1.0
+
+
+def test_resolution_rate_never_exceeds_one() -> None:
+    recs = [_rec(provider="Microsoft 365") for _ in range(5)]
+    doc = build_summary_document(recs, attempted=2)  # attempted < resolved (bad input)
+    assert doc["observability"]["resolution_rate"] == 1.0
+    assert doc["observability"]["attempted"] == 5
+
+
+def test_malformed_posteriors_do_not_crash_or_poison_json() -> None:
+    import json
+    import math as _m
+
+    # None, non-numeric, NaN/inf, and an inverted interval must coerce safely.
+    recs = [
+        _rec(posterior_observations=[{
+            "name": "m365_tenant", "posterior": None, "interval_low": 0.5, "interval_high": 0.2,
+            "evidence_used": ["slug:x"], "sparse": False,
+        }]),
+        _rec(posterior_observations=[{
+            "name": "m365_tenant", "posterior": "high", "interval_low": float("nan"),
+            "interval_high": float("inf"), "evidence_used": ["slug:x"], "sparse": False,
+        }]),
+    ]
+    doc = build_summary_document(recs)
+    claim = doc["posterior_claims"]["m365_tenant"]
+    assert 0.0 <= claim["expected_prevalence"] <= 1.0
+    assert claim["mean_interval_width"] >= 0.0  # inverted interval never goes negative
+    assert _m.isfinite(claim["expected_prevalence"])
+    assert _m.isfinite(claim["mean_interval_width"])
+    assert "NaN" not in json.dumps(doc)  # no bare NaN tokens in the JSON
+
+
+def test_malformed_record_fields_do_not_crash() -> None:
+    # Non-list posterior_observations / degraded_sources / slugs from arbitrary
+    # JSON must coerce to empty rather than raise.
+    recs = [{
+        "provider": "Microsoft 365", "dmarc_policy": "reject", "cloud_instance": None,
+        "mta_sts_mode": None, "email_gateway": None,
+        "posterior_observations": 5, "degraded_sources": "dns", "slugs": "x",
+    }]
+    doc = build_summary_document(recs)  # must not raise
+    assert doc["n"] == 1
+    assert doc["posterior_claims"] == {}
+
+
+def test_unhashable_posterior_name_is_skipped() -> None:
+    # A malformed record with a list/dict name must be skipped, not raise
+    # TypeError when used as a dict key.
+    recs = [_rec(posterior_observations=[
+        {"name": ["m365_tenant"], "posterior": 0.9, "interval_low": 0.8, "interval_high": 0.95,
+         "evidence_used": ["x"], "sparse": False},
+        {"name": "m365_tenant", "posterior": 0.92, "interval_low": 0.85, "interval_high": 0.97,
+         "evidence_used": ["x"], "sparse": False},
+    ])]
+    doc = build_summary_document(recs)  # must not raise
+    assert "m365_tenant" in doc["posterior_claims"]  # the valid string-named entry counts
+
+
+def test_panel_strips_control_chars_from_record_strings() -> None:
+    # A hostile cloud_instance (influenceable via OIDC discovery) must not inject
+    # terminal escapes into the operator's panel.
+    recs = [_rec(provider="Microsoft 365", cloud_instance="evil\x1b[31mred\x07") for _ in range(3)]
+    console = Console(file=io.StringIO(), width=82, force_terminal=False)
+    console.print(render_cohort_summary(build_summary_document(recs)))
+    out = console.file.getvalue()
+    assert "\x1b" not in out
+    assert "\x07" not in out

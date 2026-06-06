@@ -166,9 +166,14 @@ numbers; pooling is a documented option for callers who want it.
   group relationship does not transport to any individual member.
 - **Absence is ambiguous.** The observability fraction rides next to every
   prevalence number, because absence on a hideable signal can mean hiding.
-- **Small-cell suppression.** Raw counts in $[1, 10]$ are withheld; a cohort
-  below 30 carries a small-n warning. This prevents back-solving a small group
-  and stops a tiny cohort reading as authoritative.
+- **Small-cell suppression and the small-n warning.** Raw counts in $[1, 10]$ are
+  withheld as a friction, and a cohort below 30 carries a small-n warning. The
+  honest limit: a published rate over a known denominator can still imply a small
+  count (observed rate times observable count recovers it), so suppression is not
+  a re-identification guarantee. The small-n warning is the real disclosure
+  signal: do not publish a summary of a cohort below the threshold if its
+  composition is sensitive. The aggregate output never contains a domain name
+  regardless.
 - **Multiplicity.** When comparing many groups across many metrics, control the
   false-discovery rate (Benjamini-Hochberg) rather than reading every gap as
   real.

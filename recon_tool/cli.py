@@ -3114,6 +3114,12 @@ def _batch_validate_flags(
     if summary and (markdown or csv_output or ndjson):
         render_error("--summary cannot combine with --md, --csv, or --ndjson")
         raise typer.Exit(code=EXIT_VALIDATION)
+    # --summary and --include-ecosystem are different batch-scope aggregates; the
+    # summary path returns before the ecosystem envelope is emitted, so combining
+    # them would silently drop the hypergraph. Reject rather than mislead.
+    if summary and include_ecosystem:
+        render_error("--summary cannot combine with --include-ecosystem")
+        raise typer.Exit(code=EXIT_VALIDATION)
     # v1.8: --include-ecosystem requires --json. The hypergraph is a batch-scope
     # envelope sibling to the per-domain entries with no natural place in the
     # panel, markdown, CSV, or NDJSON outputs (NDJSON streams per-domain and the
@@ -3627,7 +3633,8 @@ async def _batch(
         result = await _run_one(domain)
         completed += 1
         if not json_output and not markdown and not csv_output:
-            console.print(f"  [{completed}/{total}] {domain}", style="dim", highlight=False)
+            safe = escape(strip_control_chars(domain))
+            console.print(f"  [{completed}/{total}] {safe}", style="dim", highlight=False)
         return result
 
     # NDJSON streaming path, flushed per-domain (see helper for the trade-off).

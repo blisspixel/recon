@@ -87,6 +87,19 @@ def test_summary_panel_renders() -> None:
     assert "DMARC enforcing" in out
 
 
+def test_summary_rejects_include_ecosystem() -> None:
+    import pytest
+    import typer
+
+    from recon_tool.cli import _batch_validate_flags
+
+    with pytest.raises(typer.Exit):
+        _batch_validate_flags(
+            json_output=True, markdown=False, csv_output=False,
+            ndjson=False, include_ecosystem=True, summary=True,
+        )
+
+
 def test_summary_empty_batch_no_crash() -> None:
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):

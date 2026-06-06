@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.1] - 2026-06-06
+
+### Hardening and security
+
+A focused hardening pass over the v2.1 cohort-summary surface (four review rounds,
+two of them independent adversarial passes) plus a security review of recon's core
+attack surface. Every finding is fixed with a regression test.
+
+Security:
+- ReDoS guard: the catastrophic-backtracking heuristic missed a quantified group
+  wrapped in an extra paren (for example `((a+))+`), which the input-length caps
+  cannot contain. Added a balanced-paren scan that catches nested quantified
+  groups. The shipped catalog is unaffected (841 still validate). Reachable via
+  the MCP ephemeral-fingerprint tool and custom `~/.recon/fingerprints.yaml`.
+- `render_error` now escapes rich markup and strips control characters from its
+  message, so an untrusted batch-file domain echoed in an error cannot inject
+  terminal escapes or markup; the batch per-domain progress line is sanitized the
+  same way.
+- The SSRF / network and resource / path / deserialization reviews found no high
+  or medium issues; the existing guards (private-IP blocklist, bounded redirects,
+  body cap, capped expansions, `validate_domain` plus path containment,
+  `safe_load`, `defusedxml`) hold.
+
+Cohort-summary (`recon batch --summary`) robustness:
+- Deterministic mix ordering and distinctiveness ranking; `_safe_float` coercion
+  and record/field-type guards so malformed or NaN/inf posteriors, non-dict
+  records, and non-list fields from untrusted reducer input cannot crash the run
+  or emit invalid JSON; an unhashable posterior `name` is skipped.
+- `wilson_interval` clamps `positives`; `resolution_rate` is guarded; the
+  small-cell suppression doc is honest (a rate over a known denominator can imply
+  the count, so the small-n warning is the disclosure signal); `--summary`
+  rejects `--include-ecosystem`; a malformed NDJSON line is skipped.
+
+Gate: full pytest, ruff, pyright (0 errors), validate_fingerprint (841).
+
 ## [2.1.0] - 2026-06-06
 
 ### Aggregate state: stateless cohort summary
