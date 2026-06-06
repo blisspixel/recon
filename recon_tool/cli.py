@@ -1896,7 +1896,7 @@ def delta(
     """
     from recon_tool.cache import cache_get, cache_put, tenant_info_to_dict
     from recon_tool.delta import compute_delta
-    from recon_tool.formatter import format_delta_json, render_delta_panel
+    from recon_tool.formatter import format_delta_json, render_delta_panel, render_error
     from recon_tool.resolver import resolve_tenant
     from recon_tool.validator import validate_domain
 
@@ -1904,7 +1904,7 @@ def delta(
     try:
         validated = validate_domain(domain)
     except ValueError as exc:
-        console.print(f"[red]{exc}[/red]")
+        render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_VALIDATION) from exc
 
     cached = cache_get(validated, ttl=30 * 86400)
@@ -1922,7 +1922,7 @@ def delta(
         try:
             info, _results = await resolve_tenant(validated, timeout=timeout)
         except Exception as exc:
-            console.print(f"[red]{exc}[/red]")
+            render_error(_fmt_exc(exc))
             raise typer.Exit(code=EXIT_INTERNAL) from exc
 
         diff = compute_delta(previous_dict, info)

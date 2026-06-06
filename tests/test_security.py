@@ -172,3 +172,55 @@ class TestRenderErrorSanitization:
         assert "\x1b" not in out  # terminal escape stripped
         assert "\x07" not in out  # bell stripped
         assert "bad-domain" in out  # legitimate text preserved
+
+
+class TestOutputInjectionSweep:
+    """Record-derived strings reaching the terminal or markdown must be
+    sanitized: the siblings of the render_error bug, swept in 2.1.2."""
+
+    def test_render_warning_sanitizes_domain_and_reason(self):
+        import contextlib
+        import io
+
+        from recon_tool.formatter import render_warning
+        from recon_tool.models import ReconLookupError
+
+        err = ReconLookupError(domain="x", message="no data", error_type="not_found")
+        err.source_errors = (("dns", "fail \x1b[2J [bold]evil[/bold]"),)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            render_warning("contoso.com\x1b[2J\x07", err)
+        out = buf.getvalue()
+        assert "\x1b" not in out
+        assert "\x07" not in out
+        assert "[bold]" in out  # markup neutralized (rendered literally, not interpreted)
+
+    def test_markdown_escapes_autodiscover_domains(self):
+        from recon_tool.formatter import format_tenant_markdown
+        from recon_tool.models import ConfidenceLevel, TenantInfo
+
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Contoso",
+            default_domain="evil[x](http://h)",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.HIGH,
+            tenant_domains=("a[b](c).com",),
+            domain_count=1,
+        )
+        md = format_tenant_markdown(info)
+        assert "](http://h)" not in md  # default_domain link breakout escaped
+        assert "a[b](c)" not in md  # tenant-domain link breakout escaped
+
+    def test_conflict_annotation_verbose_strips_control_chars(self):
+        from recon_tool.formatter import render_conflict_annotation
+        from recon_tool.models import CandidateValue, MergeConflicts
+
+        conflicts = MergeConflicts(
+            display_name=(
+                CandidateValue(value="Contoso\x1b[2J", source="oidc", confidence="high"),
+                CandidateValue(value="Other", source="userrealm", confidence="medium"),
+            )
+        )
+        ann = render_conflict_annotation("display_name", conflicts, verbose=True)
+        assert "\x1b" not in ann
