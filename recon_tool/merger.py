@@ -844,13 +844,13 @@ def _aggregate_detections(results: list[SourceResult]) -> tuple[set[str], set[st
     return services, slugs, related
 
 
-def _email_security_score(services: set[str]) -> int:
+def compute_email_security_score(services: set[str]) -> int:
     """Count presence of DMARC, any DKIM, SPF strict, MTA-STS, BIMI (0-5)."""
     score_services = {SVC_DMARC, SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI}
     return min(sum(1 for svc in services if svc in score_services), 5)
 
 
-def _extract_spf_include_count(services: set[str]) -> int | None:
+def extract_spf_include_count(services: set[str]) -> int | None:
     """Parse the include count out of an "SPF complexity: N includes" service string."""
     for svc in services:
         if svc.startswith("SPF complexity:"):
@@ -1027,8 +1027,8 @@ def merge_results(
     domain_count = len(all_domains)
     tenant_domains = tuple(sorted(all_domains))
 
-    email_security_score = _email_security_score(all_services)
-    spf_include_count = _extract_spf_include_count(all_services)
+    email_security_score = compute_email_security_score(all_services)
+    spf_include_count = extract_spf_include_count(all_services)
 
     cert_summary: CertSummary | None = _first_non_none(results, "cert_summary")
     issuance_velocity = cert_summary.issuance_velocity if cert_summary is not None else None

@@ -167,12 +167,16 @@ def _label_matches_env(label: str) -> str | None:
         if lower.startswith(env) and len(lower) > len(env) and lower[len(env)] in _SEPARATORS:
             return env
         # Prefix after a separator (e.g. "api-dev", "app-staging")
-        idx = lower.find(f"-{env}")
-        if idx >= 0 and (idx + 1 + len(env) == len(lower) or lower[idx + 1 + len(env)] in _SEPARATORS):
-            return env
-        idx = lower.find(f"_{env}")
-        if idx >= 0 and (idx + 1 + len(env) == len(lower) or lower[idx + 1 + len(env)] in _SEPARATORS):
-            return env
+        # Check every occurrence, not just the first: a label like "x-devx-dev"
+        # has a non-matching first "-dev" and a valid trailing one.
+        for sep in ("-", "_"):
+            token = f"{sep}{env}"
+            start = lower.find(token)
+            while start >= 0:
+                end = start + len(token)
+                if end == len(lower) or lower[end] in _SEPARATORS:
+                    return env
+                start = lower.find(token, start + 1)
     return None
 
 

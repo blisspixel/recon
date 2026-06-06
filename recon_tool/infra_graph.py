@@ -177,6 +177,17 @@ def _build_graph(
 
 def _louvain_partition(g: nx.Graph[str]) -> tuple[list[set[str]], float, str]:
     """Run Louvain. Returns (communities, modularity, algorithm-name)."""
+    # Re-insert nodes in a content-determined (sorted) order before running
+    # Louvain. networkx seeds its initial communities and its internal shuffle
+    # from node insertion order, which here follows cert-entry arrival order
+    # (the crt.sh response / CertSpotter pagination, which is not stable across
+    # requests); without this, two runs of the same domain could produce
+    # different clusters on tied moves. Edge data is preserved; only iteration
+    # order is normalized.
+    ordered: nx.Graph[str] = nx.Graph()
+    ordered.add_nodes_from(sorted(g.nodes()))
+    ordered.add_edges_from(g.edges(data=True))
+    g = ordered
     # networkx returns a list of sets — one per community.
     communities = nx.community.louvain_communities(  # type: ignore[attr-defined]
         g,

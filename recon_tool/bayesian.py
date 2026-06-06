@@ -298,8 +298,8 @@ def _parse_node_prior_cpt(
         if not isinstance(prior_raw, int | float):
             raise ValueError(f"bayesian_network[{name}]: root node requires numeric 'prior'")
         prior = float(prior_raw)
-        if not 0.0 <= prior <= 1.0:
-            raise ValueError(f"bayesian_network[{name}]: prior {prior} outside [0, 1]")
+        if not 0.0 < prior < 1.0:
+            raise ValueError(f"bayesian_network[{name}]: prior {prior} outside (0, 1)")
         return prior, {}
 
     if not isinstance(cpt_raw, dict) or not cpt_raw:
@@ -308,8 +308,8 @@ def _parse_node_prior_cpt(
     for k, v in cpt_raw.items():
         if not isinstance(k, str) or not isinstance(v, int | float):
             raise ValueError(f"bayesian_network[{name}]: cpt entries must be str→float")
-        if not 0.0 <= float(v) <= 1.0:
-            raise ValueError(f"bayesian_network[{name}]: cpt value {v} outside [0, 1]")
+        if not 0.0 < float(v) < 1.0:
+            raise ValueError(f"bayesian_network[{name}]: cpt value {v} outside (0, 1)")
         cpt[k] = float(v)
     return None, cpt
 
@@ -792,12 +792,16 @@ def _query_marginal(factors: list[Factor], query: str, all_vars: list[str]) -> d
         final = _multiply(final, f)
     # Normalize.
     total = sum(final.values())
+    if total <= 0:
+        # Degenerate all-zero factor (only reachable with a pinned 0/1 in a
+        # custom model, which load_network now rejects). Fall back to the
+        # uniform prior rather than return a non-normalized {0, 0}.
+        return {"present": 0.5, "absent": 0.5}
     out: dict[str, float] = {"present": 0.0, "absent": 0.0}
-    if total > 0:
-        for assign, val in final.items():
-            for var, state in assign:
-                if var == query:
-                    out[state] = val / total
+    for assign, val in final.items():
+        for var, state in assign:
+            if var == query:
+                out[state] = val / total
     return out
 
 

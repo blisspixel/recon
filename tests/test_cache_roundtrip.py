@@ -152,6 +152,13 @@ class TestRoundTripAllFields:
         assert restored.cert_summary.issuance_velocity == 5
         assert restored.cert_summary.top_issuers == ("DigiCert", "Let's Encrypt", "Sectigo")
 
+    def test_ct_attempt_outcome_roundtrips(self) -> None:
+        from dataclasses import replace
+
+        info = replace(_complete_info(), ct_attempt_outcome="live_success")
+        restored = tenant_info_from_dict(tenant_info_to_dict(info))
+        assert restored.ct_attempt_outcome == "live_success"
+
     def test_bimi_identity_roundtrip(self) -> None:
         info = _complete_info()
         restored = tenant_info_from_dict(tenant_info_to_dict(info))
