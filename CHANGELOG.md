@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.0.1] - 2026-06-05
+
+### Panel disclosure: posterior-backed confidence dots
+
+The default panel now reflects the Bayesian layer that v2.0 turned on, while
+staying quiet on the easy cases.
+
+- The Confidence dots are posterior-backed when fusion has run: they show a
+  claimed node's posterior support relative to the present/absent decision
+  threshold, in three levels (`●●●` the whole 80% credible interval above the
+  threshold; `●●○` the point estimate above but the interval dipping below, thin;
+  `●○○` the point estimate below the threshold, the evidence leans against the
+  call). The dots are one defined quantity (posterior support); the deterministic
+  corroboration stays in the `(N sources)` text.
+- The panel is as confident as its weakest claimed node (a node with fired
+  evidence). A declarative node correctly reporting absence does not demote a
+  strong verdict.
+- When the weakest claimed node is below full confidence, a dimmed line under the
+  Confidence row names the claim in plain English: "thin on <claim>" or "the
+  evidence does not back <claim>".
+- `--verbose` lists each claimed node's posterior and 80% credible interval under
+  a labeled heading so the range is not read as a frequentist confidence interval.
+- Accessibility: solid versus hollow carries the signal with no color; the hue is
+  a second channel; glyphs are limited to `●` and `○` for terminal-font safety.
+- Without posteriors (`--no-fusion`) the panel is byte-identical to v1.x, and the
+  dot fill is a pure, property-tested function so it cannot drift through the UI.
+
+Deferred past this release: localized dimming of a disputed claim's span in the
+Provider line.
+
+Gate: full pytest, ruff, pyright (0 errors), new dot-fill property test and panel
+disclosure tests.
+
 ## [2.0.0] - 2026-06-05
 
 The v2.0 stability lock. No new capability ships in 2.0 itself; everything new
