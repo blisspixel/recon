@@ -68,3 +68,40 @@ def test_fixture_small_cell_suppression() -> None:
 def test_distinctiveness_needs_two_groups() -> None:
     one = {"only": [{"slugs": ["a", "b"]}]}
     assert "note" in agg.distinctiveness(one)
+
+
+def test_reducer_tolerates_malformed_records(tmp_path: Any) -> None:
+    import json as _json
+
+    bad = [
+        42, "contoso.com", None,  # non-dict records, must be filtered
+        {"queried_domain": "a.com", "provider": "Microsoft 365", "slugs": "proofpoint",
+         "posterior_observations": 5, "degraded_sources": "dns"},  # non-list fields
+    ]
+    p = tmp_path / "bad.json"
+    p.write_text(_json.dumps(bad), encoding="utf-8")
+    recs = agg.load_records(str(p))
+    assert all(isinstance(r, dict) for r in recs)  # non-dicts dropped
+    summary = agg.reduce_records(recs)  # must not raise
+    assert summary["global"]["n"] == 1
+
+
+def test_reducer_skips_malformed_ndjson_line(tmp_path: Any) -> None:
+    p = tmp_path / "bad.ndjson"
+    p.write_text(
+        '{"queried_domain":"a.com","provider":"Microsoft 365"}\n'
+        "not valid json\n"
+        '{"queried_domain":"b.com","provider":"Google Workspace"}\n',
+        encoding="utf-8",
+    )
+    recs = agg.load_records(str(p))
+    assert len(recs) == 2  # the malformed middle line is skipped, valid lines kept
+
+
+def test_distinctiveness_total_order() -> None:
+    # Each group's ranking must be in a total deterministic order (z desc, then
+    # log-odds desc, then slug asc), not hash-seed-dependent set order.
+    summary = _load_fixture()
+    for rows in summary["distinctiveness"].values():
+        keys = [(-r["z"], -r["log_odds"], r["slug"]) for r in rows]
+        assert keys == sorted(keys)

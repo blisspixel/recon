@@ -487,6 +487,15 @@ sum-product or arithmetic circuits (exact variable elimination is already
 instant, and the differential cross-check depends on the small joint), a credal
 or imprecise-Dirichlet inference mode, and any baseline-relative anomaly scoring.
 
+First pass landed in v2.1.1: a four-round adversarial bug-hunt of the
+cohort-summary surface (two rounds were independent subagent passes) plus a
+security review of the network, ReDoS, and resource/path/deserialization surfaces.
+The SSRF/network and resource/path/deserialization reviews came back clean; the
+fixes were a ReDoS-guard bypass (nested quantified groups such as `((a+))+`) and
+output sanitization (`render_error` and the batch progress line), each with a
+regression test. The differential verification of the inference core, the
+fault-injection matrix, and signed/reproducible builds remain ahead.
+
 #### Post-2.0 feature candidates (maintainer)
 
 Ideas that fit the passive-primitive brand but are deliberately held until after

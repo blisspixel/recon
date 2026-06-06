@@ -123,6 +123,52 @@ def _alternation_redos(pattern: str) -> bool:
     return False
 
 
+def _strip_escapes_and_classes(pattern: str) -> str:
+    """Remove escaped characters and character-class contents so a structural
+    metacharacter scan does not trip on literals like ``\\+`` or ``[+*]``."""
+    out: list[str] = []
+    i, n = 0, len(pattern)
+    while i < n:
+        c = pattern[i]
+        if c == "\\":
+            i += 2  # drop the escape and its target
+            continue
+        if c == "[":
+            i += 1
+            if i < n and pattern[i] == "^":
+                i += 1
+            if i < n and pattern[i] == "]":
+                i += 1  # a literal ] as the first class member
+            while i < n and pattern[i] != "]":
+                i += 2 if pattern[i] == "\\" else 1
+            i += 1  # skip the closing ]
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def _has_nested_quantifier(pattern: str) -> bool:
+    """Flag a quantified group whose body itself contains a quantifier, e.g.
+    ``(a+)+``, ``((a+))+``, ``(a+b+)+``, ``(a{2,4})+``. This is the
+    catastrophic-backtracking shape that the flat ``_REDOS_RE`` misses once a
+    paren is nested (its ``[^)]*`` limbs cannot span an inner group). A regex
+    cannot match balanced parentheses, so this uses a paren-matching scan over
+    the pattern with escapes and character classes removed first.
+    """
+    cleaned = _strip_escapes_and_classes(pattern)
+    stack: list[int] = []
+    for i, ch in enumerate(cleaned):
+        if ch == "(":
+            stack.append(i)
+        elif ch == ")" and stack:
+            open_i = stack.pop()
+            nxt = cleaned[i + 1] if i + 1 < len(cleaned) else ""
+            if nxt in "+*{" and any(q in cleaned[open_i + 1 : i] for q in "+*{"):
+                return True
+    return False
+
+
 class Detection(NamedTuple):
     """A single fingerprint detection rule — replaces anonymous tuples."""
 
@@ -203,7 +249,7 @@ def _validate_regex(pattern: str, source: str) -> bool:
         return False
     # Heuristic ReDoS check: reject nested quantifiers and prefix-overlapping
     # quantified alternation (e.g. (a|aa)+), both catastrophic-backtracking shapes.
-    if _REDOS_RE.search(pattern) or _alternation_redos(pattern):
+    if _REDOS_RE.search(pattern) or _alternation_redos(pattern) or _has_nested_quantifier(pattern):
         logger.warning(
             "Potentially unsafe regex (catastrophic backtracking) %r in %s — skipped",
             pattern,

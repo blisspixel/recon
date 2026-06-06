@@ -91,7 +91,8 @@ def distinctiveness(groups: Mapping[str, Sequence[Mapping[str, Any]]], top_k: in
     for label, recs in groups.items():
         c: Counter[str] = Counter()
         for r in recs:
-            for slug in r.get("slugs") or []:
+            slugs = r.get("slugs")
+            for slug in (slugs if isinstance(slugs, (list, tuple)) else []):
                 c[str(slug)] += 1
         slug_counts[label] = c
     out: dict[str, Any] = {}
@@ -107,8 +108,11 @@ def distinctiveness(groups: Mapping[str, Sequence[Mapping[str, Any]]], top_k: in
                 for s, (d, z) in scored.items()
                 if group_c[s] >= _MIN_DISTINCTIVE_SUPPORT
             ),
-            key=lambda row: row["z"],
-            reverse=True,
+            # Total, deterministic order: z descending, then log-odds, then slug.
+            # weighted_log_odds iterates a set, so sorting on z alone left tied
+            # z-scores in hash-seed-dependent order (and top_k could then drop
+            # different slugs across runs).
+            key=lambda row: (-float(row["z"]), -float(row["log_odds"]), str(row["slug"])),
         )
         out[label] = ranked[:top_k]
     return out
@@ -150,12 +154,24 @@ def load_records(source: str) -> list[dict[str, Any]]:
     try:
         parsed = json.loads(text)
         if isinstance(parsed, list):
-            return parsed
-        if isinstance(parsed, dict) and isinstance(parsed.get("results"), list):
-            return parsed["results"]
-        return [parsed]
+            records = parsed
+        elif isinstance(parsed, dict) and isinstance(parsed.get("results"), list):
+            records = parsed["results"]
+        else:
+            records = [parsed]
     except json.JSONDecodeError:
-        return [json.loads(line) for line in text.splitlines() if line.strip()]
+        records = []
+        for raw in text.splitlines():
+            row = raw.strip()
+            if not row:
+                continue
+            try:
+                records.append(json.loads(row))
+            except json.JSONDecodeError:
+                continue  # skip a malformed NDJSON line rather than abort the run
+    # Keep only object records; a non-dict element (scalar, list, null) from a
+    # hand-edited or third-party file must not crash the reducer.
+    return [r for r in records if isinstance(r, dict)]
 
 
 def load_grouping(path: str) -> dict[str, str]:

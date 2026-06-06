@@ -14,6 +14,7 @@ from datetime import UTC
 from typing import Any
 
 from rich.console import Console
+from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -2979,8 +2980,11 @@ def render_warning(domain: str, error: ReconLookupError | None = None) -> None:
 
 
 def render_error(message: str) -> None:
-    """Print a red error message."""
-    get_console().print(f"[red]{message}[/red]")
+    """Print a red error message. The message is escaped and control-stripped so
+    untrusted content (for example a batch-file domain echoed back in the error)
+    cannot inject rich markup or terminal escapes into the console."""
+    safe = escape(strip_control_chars(message))
+    get_console().print(f"[red]{safe}[/red]")
 
 
 def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) -> dict[str, Any]:

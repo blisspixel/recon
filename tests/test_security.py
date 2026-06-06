@@ -51,6 +51,21 @@ class TestReDoSPrevention:
         assert _validate_regex("(a+){20}", "test") is False
         assert _validate_regex("([a-z]+){15}", "test") is False
 
+    def test_redundantly_nested_quantifier_group_rejected(self):
+        # A quantified group wrapped in an extra paren bypassed the flat
+        # heuristic (its [^)]* limbs cannot span the inner group); the
+        # balanced-paren scan catches it. These are genuinely exponential, so
+        # the input-length caps cannot contain them.
+        assert _validate_regex("((a+))+", "test") is False
+        assert _validate_regex("((\\d+))+", "test") is False
+        assert _validate_regex("((a+)b)+", "test") is False
+        assert _validate_regex("(a+b+)+", "test") is False
+
+    def test_nested_group_without_inner_quantifier_accepted(self):
+        # An inner group with no quantifier inside the outer-quantified group is
+        # linear and stays allowed (no false positive from the scan).
+        assert _validate_regex("(a(bc)d)+", "test") is True
+
     def test_overlapping_alternation_rejected(self):
         # (a|aa)+ backtracks catastrophically because one branch is a prefix of
         # another, making a partial match ambiguous. The earlier heuristic
@@ -138,3 +153,22 @@ class TestErrorSanitization:
         r = repr(err)
         assert "test.com" in r
         assert "No data found" in r
+
+
+class TestRenderErrorSanitization:
+    """render_error must neutralize untrusted content (e.g. a batch-file domain
+    echoed back in an error) so it cannot inject terminal escapes or rich markup."""
+
+    def test_strips_control_bytes_and_neutralizes_markup(self):
+        import contextlib
+        import io
+
+        from recon_tool.formatter import render_error
+
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            render_error("bad-domain\x1b[2J\x07 [blink]evil[/blink]")
+        out = buf.getvalue()
+        assert "\x1b" not in out  # terminal escape stripped
+        assert "\x07" not in out  # bell stripped
+        assert "bad-domain" in out  # legitimate text preserved
