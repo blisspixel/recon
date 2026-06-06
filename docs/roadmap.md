@@ -353,15 +353,153 @@ conflict provenance); matplotlib calibration SVGs (heavy dependency; the
 calibration artifacts live as `validation/` memos); and a code-plugin node
 system (data-only YAML overlays only, per the no-user-code invariant).
 
+#### The concept that orders this plan
+
+recon does one thing: report what the public channel can defensibly reveal about
+a domain, with provenance and honest uncertainty. The invariants follow from that
+single idea rather than from a feature list. No credentials and no active
+scanning, because private and active observation are out of scope. No committed
+company data, because examples teach the method, not targets. No shipped baselines
+and no persistent aggregate store, because recon is a reducer over what it
+observes, not an intelligence database. A small, inspectable Bayesian layer,
+because the uncertainty exists to discipline claims, not to decorate them.
+
+So the post-2.0 work is ordered concept-first: make what exists more trustworthy
+before adding anything, and let any new candidate earn its place by passing back
+through the concept. The cohort work is the clearest case: it is the same
+uncertainty discipline applied across a caller-owned set, "across this
+caller-supplied cohort, what did the public channel reveal, how observable was it,
+and how uncertain are we", never "what does this industry use". Hold the concept
+and the build order below stays simple.
+
+#### Post-2.0 release sequence
+
+The shape of the post-2.0 line, in order:
+
+- **2.0.x: trust hardening.** The assurance work below, differential verification
+  of the inference core first. This is the priority; the product is trust, not
+  surface area.
+- **2.1: aggregate state, thin and doc-first, in two stages (shipped).** 2.1a
+  shipped the methodology doc (`docs/aggregate-state.md`), a synthetic fixture,
+  and a local reducer script, with no change to core. 2.1b shipped the thinnest
+  core surface: `recon batch --summary` (add `--json`), one cohort at a time,
+  carrying its own `cohort_summary` record type and `schema_version` 2.1. It met
+  the acceptance bar: no persistent store, no industry taxonomy or baselines in
+  core, no multi-cohort ranking in core, no real apexes in committed examples, and
+  the output carries the observability denominators and the sparse share. See PV1.
+- **2.2 or later: maintainer validation loop formalized.** PV2 promoted from the
+  by-hand re-grounding already done to a gated routine with drift detection.
+
+Everything past the lock is additive and off the v2.0 schema; the lock stays
+clean. The assurance items are not on the critical path of the feature
+candidates; they come first.
+
+#### Assurance and trust hardening (the post-2.0 north star)
+
+The product is trust, not surface area. The priority after the v2.0 lock is to
+make what exists more resilient and verifiable, not to make recon bigger. These are
+quality tracks: none adds a user-facing feature, none touches the locked schema,
+each is a small gated patch in the 2.0.x / 2.x line, and each deepens something
+recon already leans on. They sit above the feature candidates on purpose.
+
+Resilient (survives any input or failure):
+- A complete fault-injection matrix across every external boundary (DNS, CT, the
+  identity-discovery endpoints, certificate parsing): every failure mode
+  (timeout, malformed, oversized, flood, redirect loop, partial read) degrades to
+  "we cannot tell" with no crash, no hang, no leak. Builds on the existing
+  source-boundary fault injection and the cache-lifecycle stateful machine.
+- Proven resource bounds on every parser, extending the CNAME and TXT length
+  caps to all inputs, with hostile-input fuzzing promoted from a sweep to a CI
+  gate.
+
+Defensive (cannot be exploited or fooled):
+- A written threat model with a traceability matrix (every threat to its
+  mitigation to the test that proves it), on top of the six security-audit rounds.
+- A second static-analysis lane in CI (taint analysis on the input-to-output
+  paths) alongside the existing ruff-S and bandit.
+- An adversarial-robustness corpus: can a domain owner manipulate public
+  observables to make recon confidently wrong? The MNAR hardening is the start;
+  this makes the predicted sparse and widened-interval behavior a standing
+  asserted suite, not just a catalogued failure mode.
+
+Adaptive (stays correct as the world drifts):
+- PV2 (the agentic maintainer-validation loop, below) promoted to a real release
+  routine, with drift detection that flags when catalog firing rates or
+  CPT-implied distributions move beyond a band between releases.
+- A coverage check on the credible intervals, even a proxy-label or case-study
+  version, framed exactly as honestly as CAL1 requires (consistency and
+  evidence-responsiveness, never claimed ground-truth calibration).
+
+Trusted (the artifact and the answer are both verifiable):
+- Differential verification of the inference core: brute-force enumeration over
+  the full joint (nine binary nodes, 512 states) cross-checked against variable
+  elimination for every evidence configuration (3^9, about 19.7k, all
+  enumerable), with an independent reference implementation so it verifies the
+  factor construction (declarative conditioning, grouped evidence, virtual
+  evidence), not just the elimination step. Turns "tested" into "exhaustively
+  verified for this network."
+- Reproducible builds bit-for-bit, signed releases (sigstore), SLSA provenance,
+  on top of the existing build attestation and SBOM.
+- A cross-platform and cross-Python determinism gate so the same input yields
+  byte-identical output on every matrix cell.
+- Mutation testing promoted to a gate with a score floor, and a
+  requirements-and-invariants traceability matrix so every promise maps to the
+  test that keeps it.
+
+Priority order, highest trust-per-effort first: differential verification of the
+inference core; the fault-injection matrix plus the hostile-input fuzz gate;
+signed and reproducible builds with SLSA; PV2 as a routine plus drift detection;
+the interval coverage check; then mutation-as-a-gate and the traceability matrix.
+None of these is on the critical path of the feature candidates below; they are
+the work that matters most.
+
+Each item ships with acceptance criteria, checkable gates rather than "improved
+tests," and where it produces a durable artifact it ships a doc so the trust is
+inspectable rather than asserted: a threat model (`docs/threat-model.md`), an
+assurance case mapping each promise to its mechanism, its test, and its residual
+risk (`docs/assurance-case.md`), an operational contract (timeouts, caps, exit
+codes, cache and partial-result semantics, determinism), a data-handling policy
+(what may and may not enter the public repo, down to comments and fixtures), and a
+statistical-assurance dossier that separates what is observed, what is
+consistency, what is evidence-responsive, and what has empirical coverage. This is
+a standing track across the 2.x line, not a single release, and it adds no
+discovery surface.
+
+Kept proportionate to what recon is. The exhaustive differential cross-check, over
+a few thousand enumerable states, is the right level of formal verification here;
+full TLA+ or Lean machine proofs, recurring paid third-party reviews, and
+long-term-support branches are recorded as aspirational, not committed, because
+for a passive tool they cost more than they return. The principle holds inside
+this track too: deepen what exists rather than keep adding.
+
+Evidence-semantics diagnostics (candidates, not features). Several reviews
+converged on enriching the evidence model rather than enlarging it: per-node
+entropy reduction (how much the channel narrowed the prior), exact
+leave-one-evidence-group-out counterfactual influence, framed as evidence
+counterfactuals over the model and never causal claims about the world (the
+nine-node joint makes it cheap), the evidence-group capping already tracked as CAL7, and graph
+partition stability across seeds. These are additive `--explain` and JSON
+diagnostics that leave the default panel unchanged and feed the
+statistical-assurance dossier, and the monotonicity and missingness behaviors
+become property tests in the differential-verification harness. Deferred as
+disproportionate for a nine-node passive model: compiling the network to
+sum-product or arithmetic circuits (exact variable elimination is already
+instant, and the differential cross-check depends on the small joint), a credal
+or imprecise-Dirichlet inference mode, and any baseline-relative anomaly scoring.
+
 #### Post-2.0 feature candidates (maintainer)
 
 Ideas that fit the passive-primitive brand but are deliberately held until after
 the v2.0 schema lock, since the lock adds no new surface by design. Each would be
-its own post-2.0 patch.
+its own post-2.0 patch, and each sits below the assurance work above in priority.
+Every candidate earns its place against a trust budget: does it keep collection
+passive-only, keep provenance intact, avoid any persistent cross-domain state, and
+improve reliability or operator clarity, and what failure mode does it add? A
+candidate that does not improve trust or clarity waits.
 
 | # | Item | Track | Notes |
 |---|---|---|---|
-| PV1 | Cohort-aggregate summary over a batch | E / agent QoL | A stateless `recon batch --summary` (and a JSON equivalent) that returns the aggregate distribution over a caller-supplied domain set: provider mix, top slugs, email-posture spread, multi-cloud share. The caller (an analyst or an agent) owns the list; recon ships no curated lists and stores nothing. Mostly a thin, hedged surface over computation that already exists (`compute_shared_tokens` and the ecosystem hypergraph in `batch`, plus `validation/corpus_aggregator.py`, which already emits aggregate-only counts, never per-domain names). Guardrails that keep it on-brand: no persistent aggregated store (the SQLite / DuckDB hard-no holds; compute-and-forget only); denominator honesty (report the unknown / sparse share next to every percentage so an aggregate does not read as a census); sample-size and passive-DNS-ceiling disclosure, the same hedging the single-domain panel uses; and humble naming (a "cohort aggregate" or "batch summary", not "industry insights", which would imply authoritative sector data the sample does not support). v2.1 candidate, kept off the v2.0 schema so the lock stays clean. |
+| PV1 | Local cohort summary over recon output | E / agent QoL | Local, caller-owned statistical analysis over a batch, built as a reducer that consumes recon's `--json` / `--ndjson` rather than as core logic, so core recon stays frozen and stateless. The caller owns the domain set and any grouping (by industry, portfolio, vendor set, location, or arbitrary type); those grouping files stay local and gitignored, never committed. The reducer emits aggregate-only views: provider / cloud / CDN / email-posture mix, concentration (entropy or HHI), and the Bayesian-claim prevalences. The honest-statistics discipline (refined from a 2026-06 review): observability-adjusted prevalence reported as three numbers (observed rate on the observable denominator, conservative lower bound over the whole cohort, observability fraction) so MNAR absence is encoded correctly; aggregate posterior mass plus a separate high-confidence (non-sparse, posterior > 0.8) share; hierarchical partial pooling of group rates only when the caller's batch has multiple strata, pooling toward the caller's own global across those strata and never a shipped baseline (a single cohort uses a Wilson interval, since there is nothing to pool toward); compositional treatment of mixes (entropy / divergence / log-ratios, not independent percent columns); weighted log-odds with a Dirichlet prior (the Fightin' Words method) for distinctive-slug ranking that shrinks unstable rare counts; Benjamini-Hochberg FDR control and paired permutation tests for any multi-cohort comparison; small-cell suppression (suppress counts of 1 to 10, caution below about 30); and ecological-fallacy discipline in the wording ("within this cohort tagged X, among observable signals, we saw Y", never "industry X does Y"). Guardrails: no persistent aggregated store (compute-and-forget; the SQLite / DuckDB hard-no holds, and with nothing persisted no differential privacy is needed); recon ships no curated lists and no industry baselines; humble naming ("cohort summary", not authoritative "industry insights"). The committed artifact is a methodology doc (`docs/aggregate-state.md`) with the metric definitions, the honesty rules, and a fully synthetic (Contoso-style) worked example with fabricated numbers; the real grouped numbers stay in gitignored local runs. Build and validate locally heading toward 2.1; if it proves out, the only thing upstreamed into core is the thinnest `recon batch --summary`, one cohort at a time, no grouping logic. v2.1 candidate, off the v2.0 schema. (Explicitly rejected, including ideas that keep resurfacing under "keep recon recon" cover: a persistent local learning store; accumulated or shipped industry baselines (including per-industry centroids in `verticals.yaml`, which is a fingerprint catalog, not a baseline store); Mahalanobis or Z-score anomaly scoring against shipped baselines; putting aggregate state into core (a top-level schema field, a core MCP tool, or a core `--aggregate` flag) instead of a downstream reducer; "industry benchmarking" or "industry intelligence" framing; inferring hidden or unobserved services from industry priors, which overclaims past the passive channel; and K-means / Markov / clustering / differential privacy over stored scans. The dependency floor holds: no pandas, numpy, scipy, matplotlib, or persistent store in core; a local sidecar may use heavier tools. All of these break the compute-and-forget, no-baseline, passive-only, defensive-only invariants.) |
 | PV2 | Agentic maintainer-validation loop | maintainer ops | A periodic, maintainer-side validation loop, run by an agent rather than by hand, that keeps the Bayesian CPT numbers and the catalog honest as the world drifts. Premise: the priors and likelihoods are directionally-accurate, corpus-grounded estimates, not values precise to many decimals, and they are not meant to be; the credible interval already carries the residual uncertainty, so the right discipline is "grounded this release, re-checked next," not false precision. The loop: (1) a fresh corpus scan (`scan.py`), (2) re-ground the base rates from it, (3) the synthetic calibration and likelihood-sensitivity (CAL8) harnesses, (4) the external case-study spot-check, (5) a drift comparison against the previous release that an agent reads and, if a number moved materially, opens an issue or proposes a CPT-update PR with the reasoning (under the CPT-change discipline, with the maintainer approving any semantic change). Tiered by data sensitivity: the synthetic harnesses run anywhere with no data, the spot-check needs only public web plus recon, and the corpus re-grounding stays local on the maintainer's machine because the corpus is gitignored, aggregate-only output. Maintainer-facing, never something an end-user runs, and a natural fit for the existing agent surface (the MCP server, `agents/` scaffolding, and a `/schedule`-style routine). Not a v2.0 gate. |
 
 **Track E - CLI and agent quality-of-life.** Complete. The seven items (exit-code

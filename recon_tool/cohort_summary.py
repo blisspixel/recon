@@ -1,0 +1,313 @@
+"""Stateless cohort summary over a batch of recon records (v2.1).
+
+This is the thin, in-core surface for `recon batch --summary`: one cohort in, one
+aggregate-only summary out. It computes live from the per-domain records the batch
+already produces and stores nothing. It ships no baselines, makes no
+baseline-relative anomaly score, infers no unobserved services, and never names a
+domain in its output.
+
+The richer downstream analysis (caller-supplied grouping, distinctive-slug
+ranking, partial pooling) lives in the separate reducer under
+``validation/aggregate/``, which imports the math and the per-cohort summary from
+this module so the two never drift.
+
+What it reports, and why each is the honest choice, is documented in
+``docs/aggregate-state.md``. In brief: observability-adjusted prevalence as three
+numbers (missing-not-at-random for hideable infrastructure), aggregated posterior
+mass kept separate from the declarative signals, compositional concentration for
+the provider and cloud mixes, and small-cell suppression so a tiny cohort does not
+read as a census.
+"""
+
+from __future__ import annotations
+
+import math
+from collections import Counter
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any
+
+from rich.panel import Panel
+from rich.text import Text
+
+# 0.9 quantile of the standard normal, for an 80% two-sided interval, matching
+# recon's 80% credible-interval house style. The summary reports an 80% Wilson
+# score interval (closed form); a Jeffreys Beta interval is the Bayesian sibling.
+_Z80 = 1.2815515594457
+
+# Small-cell suppression: raw counts in [1, _SUPPRESS_MAX] are withheld from
+# output; a cohort below _SMALL_N carries a warning.
+_SUPPRESS_MAX = 10
+_SMALL_N = 30
+
+COHORT_DISCLAIMER = (
+    "Within this caller-supplied cohort, among externally observable signals. "
+    "Not a sample of any industry and not a census; absence can mean hiding, not "
+    "absence; small cohorts carry wide intervals."
+)
+
+# The deterministic / declarative signals reported with three-number prevalence.
+# Declarative signals (absence is public evidence) are observable whenever DNS
+# resolved; hideable claims are observable only where their node fired non-sparse.
+_PREVALENCE_SIGNALS = (
+    "dmarc_reject",
+    "dmarc_enforcing",
+    "mta_sts_enforce",
+    "email_gateway_present",
+    "m365_tenant",
+    "google_workspace",
+)
+
+
+def wilson_interval(positives: int, n: int, z: float = _Z80) -> tuple[float, float]:
+    """80% Wilson score interval for a binomial proportion. Returns (0.0, 1.0)
+    for an empty denominator (no information)."""
+    if n <= 0:
+        return (0.0, 1.0)
+    p = positives / n
+    z2 = z * z
+    denom = 1.0 + z2 / n
+    center = (p + z2 / (2.0 * n)) / denom
+    half = (z * math.sqrt(p * (1.0 - p) / n + z2 / (4.0 * n * n))) / denom
+    return (max(0.0, center - half), min(1.0, center + half))
+
+
+def shannon_entropy(counts: Iterable[float]) -> float:
+    """Shannon entropy in bits of a count distribution."""
+    vals = [c for c in counts if c > 0]
+    total = sum(vals)
+    if total <= 0:
+        return 0.0
+    return -sum((c / total) * math.log2(c / total) for c in vals)
+
+
+def normalized_entropy(counts: Sequence[float]) -> float:
+    """Entropy normalized to [0, 1] by the number of non-empty categories. 0 is a
+    single-vendor monoculture; 1 is an even spread."""
+    nonzero = [c for c in counts if c > 0]
+    if len(nonzero) <= 1:
+        return 0.0
+    return shannon_entropy(nonzero) / math.log2(len(nonzero))
+
+
+def hhi(counts: Iterable[float]) -> float:
+    """Herfindahl-Hirschman index of concentration in [0, 1]. 1 is a monoculture;
+    near 0 is fragmented."""
+    vals = [c for c in counts if c > 0]
+    total = sum(vals)
+    if total <= 0:
+        return 0.0
+    return sum((c / total) ** 2 for c in vals)
+
+
+def _dns_resolved(record: Mapping[str, Any]) -> bool:
+    degraded = record.get("degraded_sources") or []
+    return "dns" not in degraded
+
+
+def _posterior_map(record: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    obs = record.get("posterior_observations") or []
+    return {o["name"]: o for o in obs if isinstance(o, Mapping) and "name" in o}
+
+
+def extract_signals(record: Mapping[str, Any]) -> dict[str, bool | None]:
+    """Binary signals with explicit observability. None means not observable.
+
+    Declarative signals are observable when DNS resolved; hideable Bayesian claims
+    are observable only when their node fired with enough evidence to be
+    non-sparse, which is exactly where the observability fraction earns its keep.
+    """
+    dns = _dns_resolved(record)
+    posteriors = _posterior_map(record)
+    out: dict[str, bool | None] = {}
+
+    dmarc = record.get("dmarc_policy")
+    out["dmarc_reject"] = (dmarc == "reject") if dns else None
+    out["dmarc_enforcing"] = (dmarc in ("reject", "quarantine")) if dns else None
+    out["mta_sts_enforce"] = (record.get("mta_sts_mode") == "enforce") if dns else None
+    out["email_gateway_present"] = (record.get("email_gateway") is not None) if dns else None
+
+    for signal, node in (("m365_tenant", "m365_tenant"), ("google_workspace", "google_workspace_tenant")):
+        o = posteriors.get(node)
+        if o is None or o.get("sparse") or not o.get("evidence_used"):
+            out[signal] = None
+        else:
+            out[signal] = float(o.get("posterior", 0.0)) > 0.5
+    return out
+
+
+def _suppressed(count: int) -> int | str:
+    """Apply small-cell suppression to a raw count."""
+    return "<=10 (suppressed)" if 1 <= count <= _SUPPRESS_MAX else count
+
+
+def _prevalence_block(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    n = len(records)
+    block: dict[str, Any] = {}
+    for sig in _PREVALENCE_SIGNALS:
+        vals = [extract_signals(r)[sig] for r in records]
+        observable = [v for v in vals if v is not None]
+        positives = sum(1 for v in observable if v)
+        obs_n = len(observable)
+        low, high = wilson_interval(positives, obs_n)
+        block[sig] = {
+            "positives": _suppressed(positives),
+            "observable_n": obs_n,
+            "observed_rate": round(positives / obs_n, 4) if obs_n else None,
+            "observed_rate_interval_80": [round(low, 4), round(high, 4)] if obs_n else None,
+            "lower_bound_over_cohort": round(positives / n, 4) if n else None,
+            "observability_fraction": round(obs_n / n, 4) if n else None,
+        }
+    return block
+
+
+def _posterior_claims_block(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    n = len(records)
+    by_node: dict[str, list[Mapping[str, Any]]] = {}
+    for r in records:
+        for name, o in _posterior_map(r).items():
+            by_node.setdefault(name, []).append(o)
+    block: dict[str, Any] = {}
+    for node, obs in sorted(by_node.items()):
+        posteriors = [float(o.get("posterior", 0.0)) for o in obs]
+        widths = [float(o.get("interval_high", 0.0)) - float(o.get("interval_low", 0.0)) for o in obs]
+        high_conf = sum(1 for o in obs if float(o.get("posterior", 0.0)) > 0.8 and not o.get("sparse"))
+        sparse = sum(1 for o in obs if o.get("sparse"))
+        block[node] = {
+            "expected_prevalence": round(sum(posteriors) / len(posteriors), 4),
+            "high_confidence_share": round(high_conf / n, 4) if n else None,
+            "mean_interval_width": round(sum(widths) / len(widths), 4),
+            "sparse_share": round(sparse / len(obs), 4),
+        }
+    return block
+
+
+def _mix_block(records: Sequence[Mapping[str, Any]], field: str) -> dict[str, Any]:
+    counts = Counter(
+        str(r.get(field)) for r in records if r.get(field) not in (None, "", "unknown")
+    )
+    total = sum(counts.values())
+    shares = {k: round(v / total, 4) for k, v in counts.most_common()} if total else {}
+    return {
+        "shares": shares,
+        "normalized_entropy": round(normalized_entropy(list(counts.values())), 4),
+        "hhi": round(hhi(counts.values()), 4),
+        "categorized_n": total,
+    }
+
+
+def _observability_block(records: Sequence[Mapping[str, Any]], attempted: int) -> dict[str, Any]:
+    n = len(records)
+    resolved_dns = sum(1 for r in records if _dns_resolved(r))
+    degraded = sum(1 for r in records if r.get("degraded_sources"))
+    sparse_shares = []
+    for r in records:
+        obs = list(_posterior_map(r).values())
+        if obs:
+            sparse_shares.append(sum(1 for o in obs if o.get("sparse")) / len(obs))
+    return {
+        "attempted": attempted,
+        "resolved": n,
+        "resolution_rate": round(n / attempted, 4) if attempted else None,
+        "dns_resolved": resolved_dns,
+        "degraded_source_rate": round(degraded / n, 4) if n else None,
+        "mean_sparse_share": round(sum(sparse_shares) / len(sparse_shares), 4) if sparse_shares else None,
+    }
+
+
+def summarize_cohort(
+    records: Sequence[Mapping[str, Any]],
+    label: str = "cohort",
+    attempted: int | None = None,
+) -> dict[str, Any]:
+    """The aggregate object for one cohort. Aggregate-only, no domain names.
+
+    ``attempted`` is the number of domains the batch tried, so the observability
+    block can report the resolution rate; it defaults to the number of records.
+    """
+    n = len(records)
+    attempted = n if attempted is None else attempted
+    return {
+        "label": label,
+        "n": n,
+        "small_n_warning": n < _SMALL_N,
+        "observability": _observability_block(records, attempted),
+        "prevalence": _prevalence_block(records),
+        "posterior_claims": _posterior_claims_block(records),
+        "mix": {
+            "provider": _mix_block(records, "provider"),
+            "cloud": _mix_block(records, "cloud_instance"),
+        },
+    }
+
+
+def build_summary_document(
+    records: Sequence[Mapping[str, Any]],
+    label: str = "cohort",
+    attempted: int | None = None,
+) -> dict[str, Any]:
+    """The full single-cohort ``--summary`` document: the envelope (record type,
+    schema version, disclaimer, suppression policy) plus the cohort's blocks."""
+    return {
+        "record_type": "cohort_summary",
+        "schema_version": "2.1",
+        "disclaimer": COHORT_DISCLAIMER,
+        "suppression_policy": f"counts 1..{_SUPPRESS_MAX} withheld; small-n warning below {_SMALL_N}",
+        **summarize_cohort(records, label, attempted),
+    }
+
+
+def _fmt_pct(value: float | None) -> str:
+    return "n/a" if value is None else f"{round(value * 100)}%"
+
+
+def _fmt_rate(stat: Mapping[str, Any]) -> str:
+    """Compact observed-rate with interval and observability for the panel."""
+    rate = stat.get("observed_rate")
+    if rate is None:
+        return "not observable"
+    interval = stat.get("observed_rate_interval_80") or [0.0, 0.0]
+    obs_frac = stat.get("observability_fraction")
+    tail = "" if obs_frac in (None, 1.0) else f", seen for {_fmt_pct(obs_frac)}"
+    return f"{_fmt_pct(rate)} [{_fmt_pct(interval[0])}-{_fmt_pct(interval[1])}]{tail}"
+
+
+def _fmt_mix(mix: Mapping[str, Any]) -> str:
+    shares = mix.get("shares") or {}
+    if not shares:
+        return "not observable"
+    top = ", ".join(f"{k} {_fmt_pct(v)}" for k, v in list(shares.items())[:3])
+    return f"{top}  (HHI {mix.get('hhi')})"
+
+
+def render_cohort_summary(summary: Mapping[str, Any]) -> Panel:
+    """Render the cohort summary as a compact, hedged panel."""
+    obs = summary.get("observability") or {}
+    prev = summary.get("prevalence") or {}
+    mix = summary.get("mix") or {}
+    body = Text()
+
+    resolved = obs.get("resolved", summary.get("n", 0))
+    attempted = obs.get("attempted", resolved)
+    body.append("Cohort       ", style="dim")
+    warn = "  (small cohort, wide intervals)" if summary.get("small_n_warning") else ""
+    body.append(f"{resolved} resolved of {attempted}{warn}\n")
+    body.append("Observable   ", style="dim")
+    body.append(f"DNS up {obs.get('dns_resolved', 0)}, mean sparse share {obs.get('mean_sparse_share')}\n")
+
+    body.append("Email        ", style="dim")
+    body.append(
+        f"DMARC enforcing {_fmt_rate(prev.get('dmarc_enforcing', {}))}; "
+        f"MTA-STS {_fmt_rate(prev.get('mta_sts_enforce', {}))}\n"
+    )
+    body.append("Identity     ", style="dim")
+    body.append(
+        f"M365 {_fmt_rate(prev.get('m365_tenant', {}))}; "
+        f"Workspace {_fmt_rate(prev.get('google_workspace', {}))}\n"
+    )
+    body.append("Providers    ", style="dim")
+    body.append(f"{_fmt_mix(mix.get('provider', {}))}\n")
+    body.append("Cloud        ", style="dim")
+    body.append(f"{_fmt_mix(mix.get('cloud', {}))}\n")
+    body.append(COHORT_DISCLAIMER, style="dim")
+
+    return Panel(body, title="Cohort summary", title_align="left", border_style="dim")

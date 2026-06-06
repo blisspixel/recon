@@ -426,6 +426,17 @@ def batch(
             "each domain's JSON. Pure post-processing, no extra network calls."
         ),
     ),
+    summary: bool = typer.Option(
+        False,
+        "--summary",
+        help=(
+            "Emit one aggregate-only cohort summary over the whole batch instead "
+            "of per-domain records: observability-adjusted prevalence, posterior "
+            "mass, and provider / cloud concentration. Stateless, ships no "
+            "baselines, names no domain. Add --json for machine output. For "
+            "caller-grouped analysis, see docs/aggregate-state.md."
+        ),
+    ),
 ) -> None:
     """
     Look up multiple domains from a file.
@@ -445,6 +456,7 @@ def batch(
             ndjson=ndjson,
             include_ecosystem=include_ecosystem,
             fusion=fusion,
+            summary=summary,
         )
     )
 
@@ -3089,12 +3101,18 @@ def _batch_validate_flags(
     csv_output: bool,
     ndjson: bool,
     include_ecosystem: bool,
+    summary: bool = False,
 ) -> None:
     """Reject mutually-exclusive output flags and the --include-ecosystem constraint."""
     from recon_tool.formatter import render_error
 
     if sum([json_output, markdown, csv_output, ndjson]) > 1:
         render_error("--json, --md, --csv, and --ndjson are mutually exclusive")
+        raise typer.Exit(code=EXIT_VALIDATION)
+    # v2.1: --summary is a batch-scope aggregate. It pairs with --json (machine
+    # output) or stands alone (panel); the per-domain formats have no cohort view.
+    if summary and (markdown or csv_output or ndjson):
+        render_error("--summary cannot combine with --md, --csv, or --ndjson")
         raise typer.Exit(code=EXIT_VALIDATION)
     # v1.8: --include-ecosystem requires --json. The hypergraph is a batch-scope
     # envelope sibling to the per-domain entries with no natural place in the
@@ -3301,6 +3319,28 @@ def _batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, incl
         return
 
     typer.echo(json_mod.dumps(json_results, indent=2))
+
+
+def _batch_emit_summary(
+    batch_infos: dict[str, Any], attempted: int, console: Any, *, as_json: bool
+) -> None:
+    """Emit one aggregate-only cohort summary over the resolved batch (v2.1).
+
+    Stateless: computed live from the resolved records, stores nothing, ships no
+    baselines, names no domain. The richer caller-grouped analysis lives in the
+    downstream reducer under ``validation/aggregate/``.
+    """
+    import json as json_mod
+
+    from recon_tool.cohort_summary import build_summary_document, render_cohort_summary
+    from recon_tool.formatter import format_tenant_dict
+
+    records = [format_tenant_dict(info) for info in batch_infos.values()]
+    document = build_summary_document(records, attempted=attempted)
+    if as_json:
+        typer.echo(json_mod.dumps(document, indent=2))
+    else:
+        console.print(render_cohort_summary(document))
 
 
 async def _batch_emit_ndjson(domain_list: list[str], process_one: Any, error_prefix: str) -> None:
@@ -3512,6 +3552,7 @@ async def _batch(
     ndjson: bool = False,
     include_ecosystem: bool = False,
     fusion: bool = False,
+    summary: bool = False,
 ) -> None:
     """Process multiple domains from a file with controlled concurrency.
 
@@ -3539,6 +3580,7 @@ async def _batch(
         csv_output=csv_output,
         ndjson=ndjson,
         include_ecosystem=include_ecosystem,
+        summary=summary,
     )
 
     domain_list = _batch_load_domains(
@@ -3595,6 +3637,11 @@ async def _batch(
 
     tasks = [_tracked(d) for d in domain_list]
     results = await asyncio.gather(*tasks)
+
+    # v2.1: --summary collapses the batch into one aggregate-only cohort summary.
+    if summary:
+        _batch_emit_summary(batch_infos, len(domain_list), console, as_json=json_output)
+        return
 
     _batch_render_results(
         results,

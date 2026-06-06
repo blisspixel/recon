@@ -7,7 +7,7 @@
 
 Passive domain intelligence from public sources. Queries DNS records, Microsoft/Google identity endpoints, and certificate transparency logs to build a picture of an organization's technology stack: no credentials, no API keys, no active scanning.
 
-Drop in a domain, get a calibrated read on its identity stack, email posture, and cloud footprint in seconds.
+Drop in a domain, get an evidence-backed read on its identity stack, email posture, and cloud footprint in seconds, with the uncertainty widened when the public channel is sparse.
 
 > **Defensive use only.** recon is designed for legitimate security posture assessment, IT architecture review, vendor due diligence, and defensive hardening. It performs zero active scanning and zero credentialed access. See [docs/legal.md](docs/legal.md) for the full intended-use policy.
 
@@ -62,6 +62,8 @@ recon is a zero-credential first pass for external technology-stack and posture 
 
 recon does not replace commercial EASM platforms, active scanners, or continuous monitoring. It is the upstream signal that feeds those tools, with full provenance so you can verify any conclusion before you act on it.
 
+recon also does not score or rank organizations, enrich domains with firmographics, or maintain an industry intelligence database. It reports what the public channel reveals, with provenance, and leaves business interpretation to the operator.
+
 ## How recon Works
 
 recon starts as a **passive DNS and certificate-transparency
@@ -71,7 +73,7 @@ unauthenticated identity-discovery endpoints Microsoft and Google
 publish for tenant resolution.
 
 Those observables feed into a small Bayesian network, where
-inference produces 80% credible intervals over high-level claims
+inference produces evidence-responsive 80% credible intervals over high-level claims
 (M365 tenant, federated identity, email-policy enforcement, CDN
 fronting, AWS hosting, and so on). The output is an interval, not a
 binary verdict, and the structural motifs the network surfaces (a CDN
@@ -123,6 +125,8 @@ recon contoso.com --json                       # structured JSON for piping
 recon batch domains.txt --json                 # batch (cross-domain token clustering)
 cat domains.txt | recon batch - --json         # batch reading domains from stdin
 recon batch domains.txt --json --include-ecosystem  # add v1.8 ecosystem hypergraph
+recon batch domains.txt --summary              # one aggregate-only cohort summary (panel)
+recon batch domains.txt --summary --json       # the same, as JSON for downstream tooling
 recon contoso.com --chain --depth 2            # follow related-domain breadcrumbs
 recon delta contoso.com                        # diff against last cached snapshot
 recon mcp                                      # start MCP server (stdio)
