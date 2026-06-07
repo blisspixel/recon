@@ -712,7 +712,7 @@
       }
     },
     "BatchErrorRecord": {
-      "description": "Emitted in place of a success object when a single domain in a batch run fails. Appears as an array element in ``recon batch --json`` (BatchArray), as a ``domains`` element in the ``--include-ecosystem`` BatchResult wrapper, and as a line in ``recon batch --ndjson``. A domain yields this shape when it fails input validation (e.g. a malformed apex) or when its lookup raises. Exactly two keys and no overlap with the single-domain success contract (which requires dozens of fields), so a consumer can branch on the key set alone. The deterministic classifier in recon_tool.schema_contract.classify_batch_record encodes that rule.",
+      "description": "Emitted in place of a success object when a single domain in a batch run fails. Appears as an array element in ``recon batch --json`` (BatchArray), as a ``domains`` element in the ``--include-ecosystem`` BatchResult wrapper, and as a line in ``recon batch --ndjson``. A domain yields this shape when it fails input validation (e.g. a malformed apex) or when its lookup raises. Exactly four keys (domain, error, error_kind, record_type) and no overlap with the single-domain success contract (which requires dozens of fields), so a consumer can branch on the key set alone. The deterministic classifier in recon_tool.schema_contract.classify_batch_record encodes that rule.",
       "type": "object",
       "required": ["domain", "error", "error_kind", "record_type"],
       "additionalProperties": false,

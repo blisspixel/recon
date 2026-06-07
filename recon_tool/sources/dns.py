@@ -2166,7 +2166,15 @@ def _classify_chain(
     infrastructure: Any | None = None
     for hop in chain:
         for rule in rules:
-            if rule.pattern in hop:
+            # Label-aware match for domain patterns: the hop must equal the vendor
+            # domain or be a proper subdomain, so an attacker-controlled target like
+            # ``manageengine.com.attacker.tld`` no longer matches ``manageengine.com``.
+            # A leading-dot pattern (``.desk.com``) is the same suffix idiom; a
+            # dot-less fragment (``s3-website``) is a mid-hostname infra marker and
+            # keeps substring semantics.
+            pat = rule.pattern.lstrip(".")
+            matched = (hop == pat or hop.endswith("." + pat)) if "." in pat else (pat in hop)
+            if matched:
                 if rule.tier == "application" and application is None:
                     application = rule
                 elif rule.tier == "infrastructure" and infrastructure is None:

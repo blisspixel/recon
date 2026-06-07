@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.4] - 2026-06-07
+
+### Security and correctness (external review batch)
+
+An external agentic security review of the recent commits surfaced eight
+findings; every real one is fixed with a regression test, two were already
+closed by earlier hardening.
+
+Security:
+- Cache atomic-write symlink vector (Medium): the v2.1.3 atomic write used a
+  predictable `<domain>.json.tmp` that was not validated, so a pre-created temp
+  symlink in a shared or world-writable cache directory could be followed and
+  overwrite a victim-writable file. It now uses `mkstemp` (random name,
+  O_CREAT|O_EXCL, mode 0600, never follows a symlink) inside the validated cache
+  directory, then `os.replace`.
+- cname_target substring overmatch (Medium): the surface-attribution classifier
+  matched the vendor pattern as a bare substring, so an attacker-controlled CNAME
+  target like `manageengine.com.attacker.tld` matched the `manageengine.com`
+  rule. Matching is now DNS-label-aware (exact or proper subdomain).
+- IDNA2003 wrong-domain mapping (Medium): the stdlib idna codec is lossy
+  (`faß.de` maps to `fass.de`, a different registrable domain). A round-trip
+  check now rejects lossy compatibility mappings rather than querying the wrong
+  domain; non-lossy IDNs (`münchen.de` to `xn--mnchen-3ya.de`) still convert. No
+  new dependency.
+- Terminal-escape injection in client-doctor output (Medium): `recon doctor
+  --client` printed config-derived strings (a workspace MCP `command`) through
+  rich markup escaping only; it now control-strips them, the sibling of the
+  v2.1.2 output-injection sweep.
+- CNAME custom-regex ReDoS (Medium): already closed by the v2.1.1 ReDoS-guard
+  hardening (the alternation-overlap and balanced-paren checks reject the
+  reported `(a|aa)+c`); a regression test pins it.
+
+Correctness and privacy:
+- `recon batch --summary` leaked input domain names through the per-domain
+  progress line in default-panel mode, against the aggregate-only contract; the
+  progress print is now suppressed under `--summary`.
+- `--no-fusion` could be bypassed by cached fusion fields; a no-fusion cache hit
+  now clears `slug_confidences` and `posterior_observations` so the opt-out is
+  honored.
+- The declarative-absence DAG explanation already branches on
+  `absence_informative` (the CAL14 work), so a posterior moved by informative
+  absence no longer reads as "follows priors."
+- validation/scan.py streams the NDJSON CT-budget summary line-by-line again (the
+  prior version buffered the whole results file).
+
+Gate: full pytest, ruff, pyright (0 errors), validate_fingerprint (841).
+
 ## [2.1.3] - 2026-06-06
 
 ### Hardening: engine internals

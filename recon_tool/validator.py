@@ -156,7 +156,15 @@ def validate_domain(raw_input: str) -> str:
     # only rejected domain in a 200-domain run.
     if not domain.isascii():
         with contextlib.suppress(UnicodeError, ValueError):
-            domain = domain.encode("idna").decode("ascii")
+            encoded = domain.encode("idna").decode("ascii")
+            # The stdlib idna codec is IDNA2003/nameprep, which is lossy: it maps
+            # faß.de to fass.de, straße.de to strasse.de, and folds fullwidth /
+            # zero-width characters away, silently changing the registrable domain.
+            # Only accept the conversion when it round-trips, so a lossy mapping to
+            # a different domain is rejected (it falls through to the format check
+            # below) rather than queried as the wrong domain.
+            if encoded.encode("ascii").decode("idna") == domain.lower():
+                domain = encoded
 
     # Validate format
     if not _DOMAIN_RE.match(domain):

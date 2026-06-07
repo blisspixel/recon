@@ -418,7 +418,10 @@ annotations, the `delta` error sinks, and markdown autodiscover domains). v2.1.3
 took a deeper pass over the engine internals (Bayesian inference, merge / resolve
 / cache, graph / CT), fixing a Louvain determinism bug, a related-domain
 enrichment correctness bug, and several cache and validation robustness gaps; the
-inference math and the schema contract were re-confirmed clean. The differential
+inference math and the schema contract were re-confirmed clean. v2.1.4 closed an
+external agentic-review batch: a cache symlink vector introduced by the v2.1.3
+atomic write, cname_target substring overmatch, an IDNA2003 lossy mapping, and a
+client-doctor terminal-escape sink, each with a regression test. The differential
 verification of the inference core, the fault-injection matrix, and
 signed/reproducible builds remain ahead.
 
