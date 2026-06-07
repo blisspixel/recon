@@ -252,7 +252,7 @@ class InferenceResult:
     """Full inference output for a domain."""
 
     posteriors: tuple[NodePosterior, ...]
-    entropy_reduction: float  # nats — sum across nodes of H(prior) - H(posterior)
+    entropy_reduction: float  # nats, signed: sum of H(prior) - H(posterior); negative when evidence widens a node
     evidence_count: int  # total observed bindings across all nodes
     conflict_count: int  # cross-source conflicts that dampened intervals
 
@@ -404,13 +404,24 @@ def _parse_group_absence(
     Only meaningful for declarative nodes; each referenced group must exist
     among the node's bindings, and each likelihood must be strictly in (0, 1).
     """
+    grouped = {ev.group for ev in evidence if ev.group}
     if raw is None:
+        # A declarative node with grouped bindings but no group_absence treats each
+        # group's absence as uninformative (LR=1), quietly weakening the
+        # "absence is evidence" contract. Surface it so it stays a deliberate choice.
+        if missingness == "declarative" and grouped:
+            logger.warning(
+                "bayesian_network[%s]: declarative node has grouped bindings %s but no "
+                "group_absence; their absence is treated as uninformative (LR=1)",
+                name,
+                ", ".join(sorted(grouped)),
+            )
         return ()
     if missingness != "declarative":
         raise ValueError(f"bayesian_network[{name}]: 'group_absence' is only valid on declarative nodes")
     if not isinstance(raw, dict):
         raise ValueError(f"bayesian_network[{name}]: 'group_absence' must be a mapping")
-    known_groups = {ev.group for ev in evidence if ev.group}
+    known_groups = grouped
     out: list[tuple[str, float, float]] = []
     for group, pair in raw.items():
         if group not in known_groups:
@@ -421,6 +432,14 @@ def _parse_group_absence(
         if not (0.0 < lp < 1.0) or not (0.0 < la < 1.0):
             raise ValueError(f"bayesian_network[{name}/{group}]: group_absence likelihoods must be in (0, 1)")
         out.append((group, lp, la))
+    uncovered = sorted(known_groups - {g for g, _, _ in out})
+    if uncovered:
+        logger.warning(
+            "bayesian_network[%s]: declarative node groups %s have no group_absence entry; "
+            "their absence is treated as uninformative (LR=1)",
+            name,
+            ", ".join(uncovered),
+        )
     return tuple(out)
 
 
@@ -958,6 +977,8 @@ def infer(
         # evidence-free factor set.
         prior_marginal = _prior_marginal(network, node.name)
         prior_p = prior_marginal.get("present", 0.5)
+        # Signed: negative when evidence widens this node (rare). Kept as a net
+        # information-gain quantity, not clamped, so the total stays honest.
         entropy_reduction = _binary_entropy(prior_p) - _binary_entropy(post)
         total_entropy_reduction += entropy_reduction
 
@@ -1091,7 +1112,9 @@ def signals_from_tenant_info(info: object) -> set[str]:
         raw_value = str(getattr(ev, "raw_value", "") or "").lower()
         if source_type == "DKIM":
             out.add("dkim_present")
-        if source_type == "SPF" and "-all" in raw_value:
+        # Match -all only as a standalone SPF mechanism token, not as a substring
+        # (the substring form fired on records like "include:foo-all.com ~all").
+        if source_type == "SPF" and "-all" in raw_value.split():
             out.add("spf_strict")
 
     return out

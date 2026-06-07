@@ -425,11 +425,15 @@ client-doctor terminal-escape sink, each with a regression test. v2.1.5 added a
 self-driven five-area bug-hunt (fifteen fixes: markup injection on `--verbose`,
 several control-character scrub gaps that bypassed the central merger scrub, a
 non-capturing-group ReDoS gap, a CT-scan resource bound, and `merge_conflicts`
-lost on the cache round-trip), with four inference-layer items held for
-calibration review (a possible `compute_slug_posteriors` alpha double-count, the
-`spf_strict` `-all` substring match, declarative group-absence LR=1, and signed
-entropy-reduction). The differential verification of the inference core, the
-fault-injection matrix, and signed/reproducible builds remain ahead.
+lost on the cache round-trip). v2.1.6 resolved the four held inference-layer
+items: the `spf_strict` `-all` substring match is fixed to a token match (the one
+behavior change); the `compute_slug_posteriors` "alpha double-count" was a
+misleading comment, not a defect (the code matches the documented
+`alpha_prior + weight` model, so posteriors are unchanged); a load-time warning
+now flags declarative nodes whose grouped bindings lack a `group_absence` entry;
+and the signed `entropy_reduction` is documented rather than clamped. The
+differential verification of the inference core, the fault-injection matrix, and
+signed/reproducible builds remain ahead.
 
 #### Post-2.0 feature candidates (maintainer)
 

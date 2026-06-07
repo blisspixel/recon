@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.6] - 2026-06-07
+
+### Inference layer (bug-hunt follow-up, maintainer-reviewed)
+
+The four inference-layer items held back from 2.1.5, resolved after review.
+
+- `spf_strict` now requires `-all` as a standalone SPF mechanism token rather
+  than a substring; a record like `include:foo-all.com ~all` (soft-fail) no
+  longer sets the strict-SPF signal. This is the one behavior change (it sharpens
+  the email-security signal); the other three are non-behavioral.
+- `compute_slug_posteriors`: the "alpha double-count" concern was a misleading
+  inline comment, not a code defect. The code matches the module-docstring model
+  (`alpha_new = alpha_prior + weight` per record; the prior is the outset trust
+  level, not an encoded first observation). The comment is corrected and the
+  always-true `slug_primed` dead code removed; posteriors are unchanged.
+- A declarative Bayesian node whose grouped bindings lack a `group_absence`
+  entry now logs a load-time warning (its absence was silently treated as
+  uninformative, LR=1). The shipped network is already fully covered, so this is
+  a guard for future edits.
+- `InferenceResult.entropy_reduction` is documented as a signed quantity (it can
+  be negative when evidence widens a node); it is reported, not clamped, so the
+  net information-gain total stays honest.
+
+Gate: full pytest, ruff, pyright (0 errors), validate_fingerprint (841).
+
 ## [2.1.5] - 2026-06-07
 
 ### Security and correctness (self-driven bug-hunt)
