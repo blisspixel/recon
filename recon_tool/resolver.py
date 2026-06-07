@@ -269,6 +269,15 @@ async def _enrich_from_related(
     if not found_new:
         return info, all_results
 
+    # Scrub control characters from related-domain service strings before they
+    # reach insight generation and the enriched TenantInfo. The main merge path
+    # scrubs all_services the same way (merger Round 6 / Track D); the enrichment
+    # path must not bypass it, or an attacker-controlled related subdomain's DNS
+    # data could inject ANSI/OSC sequences into services, insights, and output.
+    from recon_tool.validator import strip_control_chars
+
+    extra_services = {strip_control_chars(s) for s in extra_services}
+
     # Re-run insight generation with the enriched data to get updated signals
     from recon_tool.merger import (
         build_insights_with_signals,

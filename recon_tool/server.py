@@ -717,6 +717,7 @@ async def analyze_posture(
     # v0.9.3: apply profile lens if requested
     profile_note: str | None = None
     if profile:
+        profile = profile[:100]
         prof = load_profile(profile)
         if prof is None:
             available = ", ".join(p.name for p in list_profiles()) or "(none)"
@@ -1940,7 +1941,9 @@ def _apply_one_fix(fix: str, state: _SimState) -> str | None:
     if "caa" in fix:
         state.slugs.add("letsencrypt")
         return "CAA records configured"
-    return f"Unrecognized fix: {fix}"
+    # Note the unrecognized fix, but sanitize and bound the caller-supplied
+    # string so it cannot inject control sequences into the response.
+    return f"Unrecognized fix: {strip_control_chars(fix)[:80]}"
 
 
 def _simulate_fixes(fixes_lower: list[str], info: TenantInfo) -> tuple[list[str], _SimState]:
@@ -2115,6 +2118,10 @@ async def inject_ephemeral_fingerprint(
         )
     except EphemeralCapacityError as exc:
         return json_mod.dumps({"error": str(exc)})
+
+    # detections is typed list[dict] but arrives over MCP unenforced; guard at runtime.
+    if not all(isinstance(d, dict) for d in detections):  # pyright: ignore[reportUnnecessaryIsInstance]
+        return json_mod.dumps({"error": "Each detection must be a dict with 'type' and 'pattern' keys."})
 
     fp_dict: dict[str, object] = {
         "name": name,

@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.5] - 2026-06-07
+
+### Security and correctness (self-driven bug-hunt)
+
+A five-area parallel bug-hunt (inference, ingestion, merge/cache, CLI/formatter,
+fingerprints/server). Fifteen findings fixed; four inference-layer items are held
+for maintainer review because they would shift calibrated posteriors.
+
+Security:
+- Rich markup injection in `recon <domain> --verbose`: the per-source line
+  printed attacker-controlled `auth_type` / `dmarc_policy` / `error` through
+  `console.print` without escaping; both are now escaped and control-stripped.
+- Control-character and markup scrub gaps closed on attacker-controlled paths
+  that bypassed the central merger scrub: the OIDC discovery fields
+  (`cloud_instance`, `tenant_region_sub_scope`, `msgraph_host`), the resolver's
+  related-domain enrichment services, the unclassified-CNAME and surface panels,
+  the conflicting-tenant-ID insight, and the `--md` related-domains list.
+- crt.sh `name_value` is length-capped before the per-character SAN scan, so a
+  single newline-free field cannot turn the whole response body into a scan.
+- Non-capturing-group ReDoS: `(?:a|aa)+c` slipped past the alternation-overlap
+  guard because `(?:` corrupted the first branch; the guard now normalizes
+  non-capturing and inline-flag groups before splitting branches.
+- `inject_ephemeral_fingerprint` returns a clean error instead of crashing when
+  a detection element is not a dict; `simulate_hardening` no longer echoes the
+  raw caller-supplied fix string; `analyze_posture` caps the profile name.
+- The v2.1.4 cache `mkstemp` now uses the resolved cache dir, so a symlinked
+  `RECON_CONFIG_DIR` cannot move the temp off-volume and make `os.replace`
+  non-atomic.
+
+Correctness:
+- `merge_conflicts` now survives the cache round-trip; it was serialized but
+  never read back, so a cached result lost its conflict data and the Bayesian
+  n_eff conflict penalty.
+- The CT semaphore and rate-limiter maps key on the loop object through a weak
+  map instead of `id(loop)`, which could be reused after GC and return stale
+  state.
+- The `cname_target` specificity corpus is now the CNAME corpus rather than the
+  mismatched generic one, so the ephemeral-injection gate is meaningful for the
+  most common detection type.
+
+Held for maintainer review (each would shift calibrated posteriors): a possible
+alpha double-count in `compute_slug_posteriors`, the `spf_strict` `-all`
+substring match, declarative group-absence LR=1, and the signed
+entropy-reduction total.
+
+Gate: full pytest, ruff, pyright (0 errors), validate_fingerprint (841).
+
 ## [2.1.4] - 2026-06-07
 
 ### Security and correctness (external review batch)

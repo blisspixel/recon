@@ -265,6 +265,7 @@ PATTERN_TYPE_CORPORA: dict[str, list[str]] = {
     "spf": _spf_corpus(),
     "mx": _mx_corpus(),
     "cname": _cname_corpus(),
+    "cname_target": _cname_corpus(),
     "ns": _ns_corpus(),
     "caa": _generic_corpus(),
     "srv": _generic_corpus(),

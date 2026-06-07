@@ -421,9 +421,15 @@ enrichment correctness bug, and several cache and validation robustness gaps; th
 inference math and the schema contract were re-confirmed clean. v2.1.4 closed an
 external agentic-review batch: a cache symlink vector introduced by the v2.1.3
 atomic write, cname_target substring overmatch, an IDNA2003 lossy mapping, and a
-client-doctor terminal-escape sink, each with a regression test. The differential
-verification of the inference core, the fault-injection matrix, and
-signed/reproducible builds remain ahead.
+client-doctor terminal-escape sink, each with a regression test. v2.1.5 added a
+self-driven five-area bug-hunt (fifteen fixes: markup injection on `--verbose`,
+several control-character scrub gaps that bypassed the central merger scrub, a
+non-capturing-group ReDoS gap, a CT-scan resource bound, and `merge_conflicts`
+lost on the cache round-trip), with four inference-layer items held for
+calibration review (a possible `compute_slug_posteriors` alpha double-count, the
+`spf_strict` `-all` substring match, declarative group-absence LR=1, and signed
+entropy-reduction). The differential verification of the inference core, the
+fault-injection matrix, and signed/reproducible builds remain ahead.
 
 #### Post-2.0 feature candidates (maintainer)
 

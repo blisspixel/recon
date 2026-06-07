@@ -114,6 +114,10 @@ def _alternation_redos(pattern: str) -> bool:
     docstring on _validate_regex notes the linear-time-engine swap for full
     safety.
     """
+    # Treat non-capturing and inline-flag groups ((?:...), (?i:...)) as plain
+    # groups so the branch split sees the real alternatives; otherwise the first
+    # branch parses as "?:a" and prefix-overlap detection misses (?:a|aa)+.
+    pattern = re.sub(r"\(\?[aimsxLu]*:", "(", pattern)
     for match in _ALT_GROUP_QUANT_RE.finditer(pattern):
         branches = [b.strip() for b in match.group(1).split("|")]
         for i, first in enumerate(branches):
