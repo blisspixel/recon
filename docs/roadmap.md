@@ -4,99 +4,18 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-Current release: **v1.9.89** (pre-2.0 hardening phase). Track A (complexity
-decomposition) is complete as of v1.9.76: zero `# noqa: C901` markers remain and
-the mccabe cap of 15 now holds the whole tree. Track B (test and validation
-rigor) is complete as of v1.9.80 (B1 to B4: deal contracts on the boundary
-validators, the cache-lifecycle stateful machine, source-boundary fault
-injection, and the server-tool coverage lift). Track D D1 (a fresh adversarial
-ingestion audit) shipped in v1.9.81, closing round six (output-sink control
-stripping). Track C C1 catalog growth shipped in v1.9.82 to v1.9.86 (21 vetted
-`cname_target` rules from local live-analysis batches, 808 to 829 entries). Track
-C C2 (full-corpus gap mining) drove three verified batches from a single full
-5,241-domain scan (v1.9.87 to v1.9.89, 13 vendors, 829 to 841 entries), closing
-the named third-party residual; the trail is in
-`validation/v1.9.87-c2-corpus-batch.md`. The remaining high-count termini are
-org-internal GSLB / load-balancers that by design are not catalogued, so the
-remaining gate work is C3 calibration and F2, run locally against the
-gitignored corpus, plus the mechanical lock; see the execution queue under the
-pre-2.0 hardening section below. What has already shipped is in the CHANGELOG. The
-engineering-elevation series shipped first (v1.9.28 to v1.9.37: the
-`py.typed` marker, the `>=3.12` floor (relaxed back to `>=3.11` in v1.9.43),
-branch coverage, `deal`
-Design-by-Contract, build-provenance attestation, PEP 735 dependency
-groups, and the C901 complexity gate); the project is now in the pre-2.0
-hardening phase described below (v1.9.38 onward). The series was the
-adopted slice of a 2026-05 external-standards review, documented in the
-Engineering quality posture section below. v2.0 remains the mechanical
-schema-lock-and-tag event that caps, rather than adds to, the accumulated
-1.9.x work; what 2.0 actually delivers and why it is meant to be excellent
-everywhere is set out under the pre-2.0 hardening phase below ("What 2.0
-delivers, and why the small ceremony is the point"). For the ordered,
-checkable list of everything left before the lock, see "Remaining work to v2.0
-(the execution queue)" under that section. Cumulative pre-v2.0
-work since v1.9.3:
+> **Status (2026-06):** v2.1.3 is the current release. The v2.0 schema lock, the
+> v2.1 cohort summary (`recon batch --summary`), and the v2.1.1-v2.1.3 hardening
+> and security patches have all shipped; per-release detail is in
+> [CHANGELOG.md](../CHANGELOG.md) and upgrade notes in
+> [migration-v2.md](migration-v2.md). This file is the plan from here.
 
-Pre-conditions cleared on the v1.9.4 → v2.0 sequence (full
-detail in `CHANGELOG.md` and the per-release validation memos):
+## Pre-2.0 hardening (shipped) and the road past v2.0
 
-| Release | Theme | Reference |
-|---|---|---|
-| v1.9.3 | Bayesian-network topology surgery | `validation/v1.9.3-calibration.md` |
-| v1.9.4 | Hardened-adversarial validation | `validation/v1.9.4-calibration.md` |
-| v1.9.5 | Per-node stability dispositions (8 of 9 stable; `okta_idp` `not yet`) | `validation/v1.9.5-stability.md` |
-| v1.9.6 | CPT-change discipline + audit-finding closures | `validation/v1.9.6-stability-update.md` |
-| v1.9.7 | Metadata-coverage gate flip + 298-detection backfill | `CHANGELOG.md` |
-| v1.9.8 | Catalog metadata richness (100% on three signals) | `validation/v1.9.8-metadata-audit.md` |
-| v1.9.9 | Detection-gap UX surfaces; MCP shadow-load Python 3.10 close-out | `validation/v1.9.9-detection-gap-ux.md` |
-| v1.9.10 | Stratified-corpus pre-lock validation; Bayesian re-validation | `validation/v1.9.10-pre-lock.md` |
-| v1.9.10.1 | Docs render fixes (Mermaid + MathJax in correlation.md) | `CHANGELOG.md` |
-| v1.9.11 | Documentation polish dry-run; v2.0 prep worklist cleared | `CHANGELOG.md`, `validation/v1.9.11-trend-table.md` |
-| v1.9.12 | Panel-display polish + doctor schema-fields verification + Mermaid evidence-DAG output | `CHANGELOG.md` |
-| v1.9.13 | CNAME chain walker hardening (entry-point + terminus-only A/AAAA + redirect_domain filter) | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
-| v1.9.14 | Revert the v1.9.13 terminus-only A/AAAA check (type-dependent-answer path re-opened the v1.9.4 leak); entry-point + redirect_domain filter preserved | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
-| v1.9.15 | SPF `redirect=` chaser suffix-denylist guard (second instance of the internal-DNS-leak finding); dormant A/AAAA helper removed | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
-| v1.9.16 | Dependency-advisory hygiene: idna 3.11 to 3.15 (CVE-2026-45409); documented ignore for disputed no-fix pyjwt PYSEC-2025-183 | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
-| v1.9.17 | Generalized internal-DNS-leak guard: `_safe_resolve` canonical-name discard on non-CNAME/non-PTR chases; CNAME-first A-presence probes | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
-| v1.9.18 | Round-two ingestion audit: BIMI VMC fetch SSRF closed; CT SAN / issuer ANSI-escape and newline injection blocked at ingestion | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
-| v1.9.19 | Round-three audit: HTTP body-size cap; free-text sanitization completed (display_name / dominant_issuer); markdown escaping; MCP / resource bounds (chain_lookup rate-limit, cluster cap) | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
-| v1.9.20 | Round-four audit: detector gather exception isolation; starlette PYSEC-2026-161; TXT length cap; quadratic-clustering cap; ReDoS + markdown-escape completion | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
-| v1.9.21 | Round-five audit (no new bug found): detector-failure observability via degraded_sources; verbose-table / Autodiscover / CertSpotter output hygiene | `CHANGELOG.md`, `docs/security-audit-resolutions.md` |
-| v1.9.22 | Fingerprint expansion: 20 new cname_target rules from a corpus discovery run (Discourse, Substack, BeyondTrust, Arctic Wolf, M365 US Gov cloud, ...); Bayesian fusion validated at 100% calibration across 136 diverse domains | `CHANGELOG.md` |
-| v1.9.23 | Comprehensive corpus-discovery batch across TXT / SPF / MX / NS / DMARC-rua signals: 56 TXT verifications + 17 SPF + 9 MX + 8 DMARC-rua + 12 NS + 8 cname_target; catalog grows 459 -> 572 entries | `CHANGELOG.md` |
-| v1.9.24 | Second corpus pass (lowered thresholds) plus shadow-handling consistency: 156 new fingerprints + 60 EXTEND variants across all six signal types, catalog grows 572 -> 788 entries; engine substring matchers (MX / NS / CAA / dmarc_rua / cname) all sort longest-first and SPF gains `filter_shadowed_matches` so a broader pattern cannot double-count alongside a narrower one; pre-existing cname-regex matcher bug fixed (9 patterns silently never-fired); audit residuals (priors clamp open `(0,1)`, per-file catalog cap); `tests/test_pattern_shadowing.py` adds a CI gate for future shadow / description / EXTEND-duplicate failures | `CHANGELOG.md` |
-| v1.9.25 | CT pipeline resilience (AIMD adaptive rate limiter + per-provider circuit breaker + persistent limiter state + cache-first short-circuit + `ct_attempt_outcome` field + `--ct-retry-from` multi-session workflow); Phase F catalog gap-fill (788 -> 808 entries, 20 cname_target additions); chain motif library 18 -> 22 | `CHANGELOG.md` |
-| v1.9.26 | Schema-contract polish (path-to-v2.0 item 1): JSON schema root scoped to single-domain success output; batch / NDJSON error-record shape declared as `$defs/BatchErrorRecord`; `BatchArray` / `BatchNdjsonRecord` defs added and inaccurate `BatchResult` prose corrected to match the emitter; pure-Python `classify_batch_record` rule set; conditional fields documented. No runtime output shape changed | `CHANGELOG.md`, `validation/v1.9.26-schema-contract.md` |
-| v1.9.27 | MCP-onboarding UX (standing work, not a numbered item): `recon doctor --client=<name>` reads a client's MCP config (all six supported clients) and reports whether the `mcpServers.recon` stanza is present and well-formed, with claude-code-specific handling of the `projects[...]` local-scope shape and a plugin-scope caveat; docs gain a "doctor passes but tools do not load" troubleshooting section (`/mcp`, `mcp__recon__*` naming, full-restart reminder) and a note on how approval semantics differ between the install and plugin paths; also folds the 2026-05 external-standards review into the Engineering quality posture section | `CHANGELOG.md` |
-| v1.9.28 | Engineering-elevation series patch 1 (standing work, not a numbered item): `py.typed` marker (PEP 561) verified in the built wheel so downstream type checkers pick up recon's inline types; Python 3.14 added to the CI matrix (Ubuntu / Windows / macOS) and a `3.14` classifier, `>=3.10` floor unchanged. No runtime behavior change | `CHANGELOG.md` |
-| v1.9.29 | Engineering-elevation patch 2: Python floor raised to `>=3.12` (drops 3.10 / 3.11), matrix set to 3.12 / 3.13 / 3.14, `ruff` and `pyright` baselines moved to 3.12. Deliberate breaking change for 3.10 / 3.11 consumers | `CHANGELOG.md` |
-| v1.9.30 | Engineering-elevation patch 3: `--cov-branch` enabled in the CI matrix, the release test job, and the local gate; coverage gate moved from 80% line to 82% branch | `CHANGELOG.md` |
-| v1.9.31 | Engineering-elevation patch 4: `deal` Design-by-Contract first pass on the Bayesian inference core (no-op in production under `-O`); `tests/test_contracts.py` proves the contracts fire on violation | `CHANGELOG.md` |
-| v1.9.32 | Engineering-elevation patch 5: build-provenance attestation for the wheel and sdist (`actions/attest-build-provenance`) plus hash-pinned exported audit requirements | `CHANGELOG.md` |
-| v1.9.33 | Engineering-elevation patch 6: stateful Hypothesis machine for the rate limiter / circuit breaker (`test_rate_limit_stateful.py`) plus a free-threaded 3.14t CI probe (experimental, `continue-on-error`) | `CHANGELOG.md` |
-| v1.9.34 | Engineering-elevation patch 7: `ConfidenceLevel` converted to `StrEnum` | `CHANGELOG.md` |
-| v1.9.35 | Engineering-elevation patch 8: `deal` second pass on the engine matchers (`filter_shadowed_matches` no-double-count invariant, `evaluate_pattern` match-count bounds) | `CHANGELOG.md` |
-| v1.9.36 | Engineering-elevation patch 9: dev dependencies migrated to a PEP 735 `[dependency-groups].dev` table (no longer published as a `recon-tool[dev]` extra) | `CHANGELOG.md` |
-| v1.9.37 | Engineering-elevation patch 10: ruff `C901` complexity gate enabled at `max-complexity=15`; the 28 functions over the cap carry `# noqa: C901` and are decomposed incrementally | `CHANGELOG.md` |
-| v1.9.38 | Pre-2.0 hardening patch 1: golden-output renderer characterization tests (`tests/test_golden_renders.py`, fictional brands) plus the pre-2.0 hardening roadmap | `CHANGELOG.md` |
-| v1.9.39 | Pre-2.0 hardening patch 2: `render_tenant_panel` decomposition part 1 (key-facts block extracted to `_render_key_facts`), output held byte-identical by the golden tests | `CHANGELOG.md` |
-| v1.9.40 | Pre-2.0 hardening patch 3: `tenant_info_from_dict` decomposed under the C901 cap via five named block parsers; first grandfathered `# noqa: C901` marker removed | `CHANGELOG.md` |
-| v1.9.41 | Pre-2.0 hardening patch 4: IDN-to-punycode handling in `validate_domain` plus an NDJSON aggregator parsing fix (`validation/corpus_aggregator.py`), both surfaced by a $0 passive corpus run | `CHANGELOG.md` |
-| v1.9.42 | Pre-2.0 hardening patch 5: restore the bare `recon <domain>` shorthand on fresh installs. Typer >=0.25 vendors its own Click, so `_DomainGroup`'s `except click.UsageError` never saw the vendored error; it now routes a dotted, non-flag, non-subcommand first arg to `lookup` before normal resolution instead | `CHANGELOG.md` |
-| v1.9.43 | Pre-2.0 hardening patch 6: relax the Python floor to `>=3.11` (re-adds the 3.11 classifier and CI matrix row, ruff/pyright baselines back to 3.11). No runtime dependency needs 3.12 and the only 3.12-only syntax was three PEP 695 `type` aliases, now `TypeAlias`. Reverses the v1.9.29 floor raise so 3.11 consumers can install while 3.11 still gets security fixes | `CHANGELOG.md` |
-| v1.9.44 | Pre-2.0 hardening patch 7: extend the golden-output net ahead of more `render_tenant_panel` decomposition. A `_surface_rich_info` fixture plus `panel_surface_default` / `panel_surface_full` snapshots pin the branches the prior fixture left dark: the Services subdomain summary, the Unclassified surface block, and the full-mode External surface section (individual rows, collapsed CDN group, apex stripping, layered labels) | `CHANGELOG.md` |
-| v1.9.45 | Pre-2.0 hardening patch 8: `render_tenant_panel` decomposition part 2. The ~100-line External surface section moves to `_render_external_surface` with `_surface_partition` / `_append_individual_rows` / `_append_collapsed_rows` sub-helpers, each under the C901 cap; the panel drops from 74 to 59. Output held byte-identical by the v1.9.44 `panel_surface_full` snapshot | `CHANGELOG.md` |
-| v1.9.46 | Pre-2.0 hardening patch 9: fix a flaky merge property test surfaced during the v1.9.47 work. `merge_results` discards placeholder display names ("directory" / "default directory") in favour of better signals; `test_first_none_skipped`'s text strategy could generate one and then assert it survived. The placeholder set moves to module scope in `merger.py` and the test strategy excludes it, so the property holds for every generated input | `CHANGELOG.md` |
-| v1.9.47 | Pre-2.0 hardening patch 10: `render_tenant_panel` decomposition part 3 (final). The remaining sections move to focused helpers (`_render_services` / `_strip_email_noise` / `_append_subdomain_summary`, `_render_passive_dns_ceiling`, the related-domain and footprint renderers, `_render_insights` / `_append_wrapped_lines`, `_render_certs`, `_render_degraded_note` / `_degraded_note_parts`, `_render_verbose_detail`, `_render_explain_conflicts`), all under the C901 cap; the panel drops 59 to under 15 and its `# noqa: C901` is removed. Output held byte-identical by the golden snapshots | `CHANGELOG.md` |
-| v1.9.48 | Pre-2.0 hardening patch 11: extend the golden net for `format_tenant_markdown` before decomposing it. A `_markdown_rich_info` fixture plus a `markdown_rich` snapshot pin the dark branches (GWS services split, GWS details block with auth / IdP / active modules / CSE, degraded-sources footer) | `CHANGELOG.md` |
-| v1.9.49 | Pre-2.0 hardening patch 12: decompose `format_tenant_markdown` under the C901 cap. The eight report sections move to `_md_header` / `_md_services_split` / `_md_gws_details` / `_md_insights` / `_md_cert_intel` / `_md_tenant_domains` / `_md_related_domains` / `_md_footer`, each returning its lines; the function becomes a thin orchestrator and its `# noqa: C901` is removed. Output held byte-identical by the golden snapshots | `CHANGELOG.md` |
-| v1.9.50 | Pre-2.0 hardening patch 13: decompose `detect_provider` (the email-topology-aware provider line) under the C901 cap. The three paths move to `_provider_exchange_onprem`, `_provider_from_topology` (+ `_topology_slug_secondaries`), and `_provider_slug_fallback`; `detect_provider` becomes a thin dispatcher and its `# noqa: C901` is removed. Behavior preserved against the provider-line unit tests and the panel golden snapshots | `CHANGELOG.md` |
-| v1.9.51 | Pre-2.0 hardening patch 14: decompose `_render_key_facts` under the C901 cap. The `_field` closure becomes the module-level `_append_field`; the provider / auth / multi-cloud lines move to `_key_facts_provider_line`, `_key_facts_auth_line`, `_key_facts_multicloud_line` (plus `_with_idp`); the `# noqa: C901` is removed. Output held byte-identical by the panel golden snapshots | `CHANGELOG.md` |
-| v1.9.52 | Pre-2.0 hardening patch 15: finish the formatter C901 sweep. `_categorize_services` splits into `_categorize_pass1_slugs` / `_categorize_pass2_names` plus `_dedup_identity_echoes` / `_consolidate_caa_issuers` / `_infer_bundled_ai` (and `_is_service_artifact`); `_compact_email_summary` into `_email_summary_providers` / `_email_summary_controls` over a shared `_append_unique`. Every function in `formatter.py` is now under the cap with no `# noqa: C901`. Output held byte-identical by the golden snapshots | `CHANGELOG.md` |
-| v1.9.53 | Pre-2.0 hardening patch 16: begin the core-module C901 cleanup beyond the formatter. `_email_security_insights` (insights.py) splits into `_has_scoreable_email`, `_email_score_parts`, and `_non_scoring_email_summary`; a vestigial `score` counter is dropped. Behavior preserved against `test_insights_unit` / `test_hedging_invariants` / `test_explain_integration` | `CHANGELOG.md` |
-| v1.9.54 | Pre-2.0 hardening patch 17: `_validate_and_build_rule` (posture.py) drops under the C901 cap by extracting `_parse_slug_condition` (the slugs_any / slugs_min / slugs_max sub-parse with its defaulting and warnings); `posture.py` now carries no `# noqa: C901`. Behavior preserved against `test_posture_validation` / `test_enhanced_yaml` | `CHANGELOG.md` |
-
-## Pre-2.0 hardening phase (current)
+The pre-2.0 hardening below shipped with the v2.0 lock; the v1.9.x track detail
+is in [CHANGELOG.md](../CHANGELOG.md), kept here only for the rationale. The
+forward plan, the post-2.0 assurance north star, the backlog, and the invariants
+follow it.
 
 The engineering-elevation series (v1.9.27 to v1.9.37: py.typed, the 3.12
 floor, branch coverage, `deal` contracts, build provenance, the stateful
@@ -3200,7 +3119,7 @@ proposal:
   views over slug evidence). Each abstraction is intentionally addressable
   on its own - collapsing them into one model would lose the audit surface
   the project's defensive posture depends on. See
-  [correlation.md § Vocabulary](correlation.md#vocabulary).
+  [correlation.md § Vocabulary](correlation.md#12-vocabulary).
 - *LLM-driven coherence-graph construction in the inference path*
   ([Huntsman 2025](https://arxiv.org/abs/2509.18520)). Uses
   large language models to build weighted coherence graphs from
@@ -3232,7 +3151,7 @@ proposal:
   produces maliciousness *verdicts* recon explicitly does not
   produce (no shared reputation database, no external label
   feed, no operator-judgment claim). See
-  [correlation.md §4.5](correlation.md#45-ct-co-occurrence-graph--louvain-community-detection-v180)
+  [correlation.md §3.5](correlation.md#35-ct-co-occurrence-graph--louvain-community-detection)
   for the explicit scope boundary.
 - *Workload-aware materialization of junction trees*
   ([Kanagal and Deshpande 2010 / 2110.03475](https://arxiv.org/abs/2110.03475)).

@@ -8,6 +8,8 @@ technical reference for the correlation engine, current as of v1.9.95
 and tracking the upcoming v2.0 schema lock; it is maintained
 alongside the code rather than frozen.
 
+## 1. Overview
+
 **TL;DR.** recon ingests three classes of public observables (DNS,
 certificate transparency, and unauthenticated identity-discovery
 endpoints) and runs three layered correlation engines on top of them:
@@ -20,7 +22,28 @@ and "we cannot tell from this channel" is a valid result. We do not
 claim to recover an underlying ground-truth tech stack; we report how
 much the public channel constrains the residual uncertainty about it.
 
-## 1. What recon is doing, and what it is not
+The [README](../README.md) is the accessible introduction for casual
+users; [roadmap.md § Invariants](roadmap.md#invariants) is the
+authoritative invariant list. This section states the recurring
+epistemic commitments once: every conclusion is reachable through the
+evidence DAG (provenance); sparse evidence produces wider hedges and,
+where applicable, wider credible intervals (calibration honesty);
+"we cannot tell from this channel" is a valid output; and nothing is
+learned at runtime, the fingerprints and CPTs ship as data files with
+no learned weights (see §6). Later sections cite back here rather than
+restating these.
+
+**Who this is for, and where else to look.** This is the technical
+reference for architects, researchers, and contributors who want the
+model and its rationale. For other needs: operators reading a result
+should use [README.md](../README.md) plus §5.2, the worked
+`--explain-dag` output in §4.15, and the concern-to-field lookup in
+§6.1; integrators building on the JSON or MCP surface want
+[schema.md](schema.md) and [mcp.md](mcp.md) for exact field contracts;
+readers weighing assurance and limits want [limitations.md](limitations.md)
+with §4.7 (validation) and §4.5 (the passive-observation ceiling).
+
+### 1.1 What recon is doing, and what it is not
 
 recon is an **external attack-surface management (EASM) instrument**
 for defenders. The premise: the defender has already applied legal
@@ -40,10 +63,11 @@ The observables we work from are deliberately narrow:
 
 The full observation tuple is $O = (O_{\mathrm{DNS}}, O_{\mathrm{CT}},
 O_{\mathrm{ID}})$. Strictly passive: no probes beyond standard
-public-DNS resolution, no credentials, no learned ML weights, no imported
-intelligence databases. (See [roadmap.md § Invariants](roadmap.md#invariants).)
+public-DNS resolution and no credentials (the full invariant set,
+including the no-learned-weights and no-imported-intelligence
+commitments, is in §6 and [roadmap.md § Invariants](roadmap.md#invariants)).
 
-### Vocabulary
+### 1.2 Vocabulary
 
 Two terms appear throughout and have specific meanings:
 
@@ -60,10 +84,10 @@ Two terms appear throughout and have specific meanings:
 A *node* in the v1.9 Bayesian network is yet another level up: a
 high-level structural claim ("the tenant is M365-federated") whose
 evidence bindings reference slugs and signals. The three abstractions
-are intentionally layered, not merged; §4.8 develops the network
+are intentionally layered, not merged; §4 develops the network
 formally.
 
-### Why these layers are separate (and stay separate)
+### 1.3 Why these layers are separate (and stay separate)
 
 A reasonable external critique reads the architecture as
 "fingerprints → signals → optional Bayesian overlay" and proposes
@@ -94,19 +118,16 @@ would erase the audit surface. An auditor who can only read posterior
 probabilities, without being able to point at the slug that fired,
 the network node it bound to, or the named signal a colleague is
 referring to, cannot reconstruct the argument. That is the failure
-mode the layering exists to prevent. Sections 4.1–4.7 stay
-deterministic for the same reason: a deterministic conclusion is
-auditable in a way a black-box posterior is not, even when the
-posterior is numerically more honest.
+mode the layering exists to prevent, and it is why the project does
+not adopt unified-PGM proposals that ask signals to "disappear or
+become queries over the posterior": the presentation layer exists
+for humans, and removing it would tax every operator who uses the
+tool to write a finding. Sections 3.1-3.7 stay deterministic for the
+same reason: a deterministic conclusion is auditable in a way a
+black-box posterior is not, even when the posterior is numerically
+more honest.
 
-This is also why the project does not adopt unified-PGM proposals
-that ask signals to "disappear or become queries over the
-posterior." The presentation layer exists for humans, not for the
-inference engine. Removing it to satisfy a model-purity argument
-would impose a tax on every operator who uses the tool to write a
-finding.
-
-### What this document does *not* claim
+### 1.4 What this document does *not* claim
 
 To preempt a reasonable critique: we do not claim recon optimizes any
 information-theoretic objective end-to-end. The pipeline is
@@ -115,12 +136,12 @@ trained system that maximizes anything. The phrase "extracts residual
 mutual information" describes the *intent* of the correlation work,
 not an explicit objective being optimized over the tool's parameters.
 Where we use the language of latent variables, posteriors, and
-credible intervals (§4.8), it applies *only* to the discrete Bayesian
+credible intervals (§4), it applies *only* to the discrete Bayesian
 network defined in `bayesian_network.yaml`, not to the whole
-pipeline. Sections 4.1–4.7 are deterministic; their outputs do not
+pipeline. Sections 3.1-3.7 are deterministic; their outputs do not
 carry posterior semantics.
 
-## 2. Why the design choices are what they are
+### 1.5 Why the design choices are what they are
 
 A defender's hardening strategy reduces how much structural
 information the public channel reveals. recon's correlation work is
@@ -131,23 +152,13 @@ specific structural signals that single-source detection misses on
 hardened targets (wildcard SAN siblings, temporal CT bursts, chain
 motifs, SAN co-occurrence communities, network-propagated claims).
 
-Two hard constraints govern every extractor:
+The two hard constraints that govern every extractor are the
+provenance and calibration-honesty commitments stated in the §1
+intro above. Everything else (the lack of telemetry, the
+data-file-only schema for fingerprints/CPTs, the opt-in
+`--fusion`-gated Bayesian layer) falls out of them.
 
-  1. **Provenance.** Every conclusion is reachable through the
-     evidence DAG (`--explain` and the `explanation_dag` field). A
-     conclusion the operator cannot trace to specific observables is
-     a conclusion they cannot audit.
-  2. **Calibration honesty.** Sparse evidence produces wider hedges
-     in language and (where applicable) wider credible intervals in
-     numbers. "We cannot tell from this channel" is a valid
-     output. Confident-looking output on sparse evidence is a
-     calibration failure, not a feature.
-
-These are the load-bearing commitments. Everything else (the lack
-of telemetry, the data-file-only schema for fingerprints/CPTs, the
-opt-in `--fusion`-gated Bayesian layer) falls out of them.
-
-## 3. Current implementation
+## 2. The three correlation layers
 
 Three layers ship side-by-side, in increasing order of statistical
 machinery:
@@ -169,18 +180,18 @@ machinery:
    Surfaces marginal posteriors with 80% credible intervals over
    high-level claims (M365 tenant, federated identity,
    email-security provider presence, email-security policy
-   enforcement, CDN fronting, and so on; see §4.8 for the full
+   enforcement, CDN fronting, and so on; see §4 for the full
    nine-node topology). The deterministic layer 1 still runs
    first; the Bayesian layer adds calibrated uncertainty without
    replacing the default output shape.
 
-The three layers are deliberately complementary. Rule-based fusion is
-the audit-friendly authority for "did we observe X?". The graph layer
-is the structural lens (modularity, community boundaries, motif
-hits), none of which a single-cert view recovers. The Bayesian layer
-is the calibrated-uncertainty lens: when the public channel is thin,
-it is the layer that refuses to overclaim. Sections 4.5 and 4.8 below
-develop the graph and Bayesian layers in detail.
+The three layers are complementary, not replacements for one another:
+rule-based fusion is the audit-friendly authority for "did we observe
+X?"; the graph layer is the structural lens (modularity, community
+boundaries, motif hits) that a single-cert view does not recover; the
+Bayesian layer is the calibrated-uncertainty lens that refuses to
+overclaim when the public channel is thin. Sections 2.5 and 4 develop
+the graph and Bayesian layers in detail.
 
 ```mermaid
 flowchart LR
@@ -237,14 +248,14 @@ Architecture:
   - `recon_tool/ecosystem.py` (v1.8+): batch-scope hypergraph builder
     over per-domain results. Behind `recon batch --json --include-ecosystem`.
 
-For most domains, deterministic fusion is the right tool. It is
-fast, explainable, auditable, and catches the high-confidence cases
-without probabilistic machinery. The cases it misses are the
-hardened ones (minimal DNS, randomized CNAMEs, short-lived certs,
-wildcard SAN policies), and that is where the graph and Bayesian
-layers do their work.
+For most domains, deterministic fusion is the right tool: fast,
+explainable, auditable, and sufficient for the high-confidence cases.
+The cases it misses are the hardened ones (minimal DNS, randomized
+CNAMEs, short-lived certs, wildcard SAN policies), which is where the
+graph and Bayesian layers do their work. The table in §2.5 states
+each layer's reach and limits in one place.
 
-### 3.1 What each layer can and cannot resolve
+### 2.5 What each layer can and cannot resolve
 
 | Layer | Resolves well | Limits |
 |---|---|---|
@@ -252,26 +263,23 @@ layers do their work.
 | **Graph correlation** (v1.8, deterministic, always emitted) | Structural signal across multiple domains: SAN co-occurrence communities, chain motif matches, ecosystem-level co-membership across a batch. Recovers vendor-order pattern when individual labels are randomized. | Operates on the *observed* graph: gives no ownership claim, only co-membership / co-issuance / co-motif. Modularity score is the calibrated handle on partition quality; low score is reported, not hidden. |
 | **Bayesian network** (v1.9, `--fusion`, stable v2.0+) | Calibrated posterior + 80% credible interval over a small set of high-level claims (M365 tenant, federated identity, modern email security, etc.) with cross-source-conflict dampening. Sparse-evidence cases produce wide intervals rather than confident-looking point estimates. | Posterior quality is bounded by CPT specification: a wrong CPT produces a tight interval around the wrong mean. Network is small (9 nodes at v1.9.3+; 20-node design budget) and intentionally so. Held opt-in through v1.9.x; v1.9.4 hardened-adversarial calibration, v1.9.5 per-node stability dispositions, and the v1.9.10 stratified-corpus revalidation cleared the path to v2.0. See `validation/v1.9.4-calibration.md`, `validation/v1.9.5-stability.md`, `validation/v1.9.10-pre-lock.md`. |
 
-The three layers do not replace each other. The default panel is
-the rule-based fusion. The graph layer is *always* emitted and
-sits in a top-level `infrastructure_clusters` envelope. The
-Bayesian layer is opt-in; when on, both `slug_confidences` (from
-the older Beta layer) and `posterior_observations` (the v1.9
-network layer) populate.
+When `--fusion` is set, both `slug_confidences` (from the older Beta
+layer) and `posterior_observations` (the v1.9 network layer)
+populate; the graph layer's `infrastructure_clusters` envelope is
+emitted regardless of flags.
 
-## 4. Extensions in the build plan
+## 3. Deterministic correlation
 
-Every extension below is a feature extractor over $O$ that recovers
-information the current deterministic engine misses on hardened
-targets. Each lands as a YAML schema extension plus minimal engine
-code, ships gated behind an explicit flag, and stays inside the
-invariants ([roadmap.md § Invariants](roadmap.md#invariants)).
+Each engine below is a feature extractor over $O$ that recovers
+information single-source detection misses on hardened targets. Each
+lands as a YAML schema extension plus minimal engine code, stays
+inside the invariants ([roadmap.md § Invariants](roadmap.md#invariants)),
+and the graph engines (§§ 3.5-3.7) ship gated as noted. §§ 3.1-3.4
+shipped in v1.7.0 (hardened-target signal recovery); §§ 3.5-3.7
+shipped in v1.8.0 (graph correlation). The Bayesian layer (§4) is
+separate.
 
-§§ 4.1-4.4 shipped in **v1.7.0** (hardened-target signal recovery).
-§§ 4.5-4.7 shipped in **v1.8.0** (graph correlation). §§ 4.8-4.9
-cover the v1.9 Bayesian layer (stable v2.0+).
-
-### 4.1 Wildcard SAN sibling expansion (v1.7.0)
+### 3.1 Wildcard SAN sibling expansion
 
 When a CT entry contains `*.example.com`, the rest of the SAN list in
 that same certificate is a candidate sibling set. Wildcards exist to
@@ -285,7 +293,7 @@ the same hosting provider.
 *Defender use:* quantify how much subdomain inventory remains
 observable through CT despite a wildcard policy.
 
-### 4.2 Temporal CT issuance bursts (v1.7.0)
+### 3.2 Temporal CT issuance bursts
 
 Treat issuance as a point process. For a given apex or issuer, the
 timestamps $\{t_1, \dots, t_n\}$ are observable. A *burst* is a
@@ -299,11 +307,11 @@ $w_{ij} \propto 1/\Delta t_{ij}$. Output language is neutral:
 *Defender use:* detect deployment cadence even when individual
 hostnames are randomized or short-lived.
 
-### 4.3 CNAME / NS chain motifs (v1.7.0)
+### 3.3 CNAME / NS chain motifs
 
 Each resolution path is a directed string $\pi(d) = h_1 \to h_2 \to
-\dots \to h_k$. v1.7.0 adds a motif library at
-`recon_tool/data/motifs.yaml` describing recurring vendor-order
+\dots \to h_k$. A motif library (added in v1.7.0) at
+`recon_tool/data/motifs.yaml` describes recurring vendor-order
 patterns: `cloudflare → akamai → custom-origin`,
 `fastly → azure-fd`, intra-vendor `tm → azurefd → msedge`, etc.
 Pattern matching is regex over the chain string with chain length
@@ -312,24 +320,24 @@ capped at 4. Vertical absence rules can also fire on motifs.
 *Defender use:* observe that randomized intermediate labels do not
 hide a recurring vendor ordering.
 
-### 4.4 Cross-source evidence conflict surfacing (v1.7.0)
+### 3.4 Cross-source evidence conflict surfacing
 
 `MergeConflicts` records when two sources disagree on a merged field
 (display name, auth type, region, tenant ID, DMARC policy, Google auth
 type). v1.7.0 promotes them to a top-level `evidence_conflicts` array
 in `--json` and a section in `--explain`. v1.9 feeds the conflict
-count into the Bayesian dampener (§4.8.4).
+count into the Bayesian dampener (§4.4).
 
 *Defender use:* surface drift between hardening signals: minimal DNS
 that disagrees with public CT, MX that contradicts SPF, OIDC display
 name that disagrees with BIMI VMC.
 
-### 4.5 CT co-occurrence graph + Louvain community detection (v1.8.0)
+### 3.5 CT co-occurrence graph + Louvain community detection
 
 Build an undirected multi-graph $G_{\mathrm{CT}} = (V_{\mathrm{CT}}, E_{\mathrm{CT}})$:
 $V_{\mathrm{CT}}$ are domains observed in CT SAN sets, $E_{\mathrm{CT}}$
 are weighted by shared cert ID, shared issuer, and temporal
-proximity (the burst rule from §4.2). Run Louvain community
+proximity (the burst rule from §3.2). Run Louvain community
 detection ([Blondel et al. 2008](https://doi.org/10.1088/1742-5468/2008/10/P10008))
 via pure-Python `networkx`, maximizing modularity:
 
@@ -375,7 +383,7 @@ Two design choices mitigate this in recon:
    so the threshold below which communities disappear is
    correspondingly smaller. Resolution limit still applies; it
    just bites at a much smaller community size.
-2. **Temporal-proximity weighting (from §4.2).** Edges weighted
+2. **Temporal-proximity weighting (from §3.2).** Edges weighted
    by burst-rule co-issuance reinforce tight short-time-window
    clusters relative to ambient co-occurrence. This shifts the
    effective resolution downward for enterprise PKI deployed in
@@ -448,7 +456,7 @@ trade-off is that `graph-tool` is a C++ extension, which crosses
 the pure-Python dependency floor. A pure-Python implementation of
 SBM-MDL is a post-v2.0 candidate, listed in the roadmap.
 
-The honest current-state framing for an operator: the §4.5
+The honest current-state framing for an operator: the §3.5
 partition is sound when modularity $Q$ is high *and* no hub
 dominates the subgraph; when either condition fails, the
 community boundary should be treated as a starting point for
@@ -495,7 +503,7 @@ expect recon to flag malicious infrastructure; that task lives
 in dedicated threat-intelligence platforms with explicit label
 feeds.
 
-### 4.6 Hypergraph ecosystem view (v1.8.0, batch-only)
+### 3.6 Hypergraph ecosystem view (batch-only)
 
 For corpus runs, treat the batch as a hypergraph $\mathcal{H} = (V, \mathcal{E})$:
 hyperedges $e \in \mathcal{E}$ connect domains sharing an issuer, a
@@ -508,7 +516,7 @@ ownership.
 *Defender use:* multi-brand orgs see ecosystem-level coupling
 invisible from any single domain's view.
 
-### 4.7 Vertical-baseline anomaly rules (v1.8.0)
+### 3.7 Vertical-baseline anomaly rules
 
 `verticals.yaml` defines an expected fingerprint distribution per
 profile (fintech, healthcare, etc.). At runtime we compare the
@@ -522,9 +530,9 @@ observations, not verdicts.
 *Defender use:* sanity-check posture against industry norms encoded
 as data, without recon ever asserting "you should do X".
 
-### 4.8 Bayesian network fusion layer (v1.9; stable v2.0+)
+## 4. The Bayesian fusion network
 
-The Bayesian layer is a small discrete graphical model
+The Bayesian layer (v1.9; stable v2.0+) is a small discrete graphical model
 $\mathcal{B} = (V_\mathcal{B}, E_\mathcal{B}, \Phi)$ committed as a
 YAML data file at `recon_tool/data/bayesian_network.yaml`. The model
 is intentionally minimal (fewer than twenty nodes for the seed
@@ -553,14 +561,14 @@ stratified-corpus pre-lock validation across six cloud strata
 (`validation/v1.9.10-pre-lock.md`,
 `validation/v1.9.10-bayesian-revalidation.md`). The
 catalog-metadata pass is upstream of the inference layer (it
-governs what the slug observations $O$ in §4.5 represent) but
+governs what the slug observations $O$ in §3.5 represent) but
 load-bearing for the layer's auditability: every fingerprint match
 that flows into the network has a vendor-doc citation, so a
 defender re-reading the inference output can re-verify the
-underlying detection without grepping the source. See §4.8.12 for
+underlying detection without grepping the source. See §4.12 for
 the per-release calibration narrative.
 
-#### 4.8.1 Generative model
+### 4.1 Generative model
 
 Each node $X \in V_\mathcal{B}$ is a binary latent variable with state
 space $\{\text{present},\ \text{absent}\}$ representing a structural
@@ -591,7 +599,7 @@ degenerate factors that under-estimate uncertainty (a single
 mis-fingerprint would pin a node permanently). The schema enforces
 this at load time.
 
-##### Virtual evidence vs. observed-variable conditioning
+#### Virtual evidence vs. observed-variable conditioning
 
 Worth naming the construction explicitly: each $\ell_b$ is a
 **virtual-evidence** factor in the sense of
@@ -611,7 +619,7 @@ pipeline auditable on its own terms (a binding fires or does not,
 based on a falsifiable pattern in $O$) and confines the
 probabilistic content to the inference layer.
 
-This framing also makes §4.8.3's asymmetric likelihood a forced
+This framing also makes §4.3's asymmetric likelihood a forced
 choice rather than an aesthetic one. Virtual-evidence factors are
 multiplicative; un-fired bindings simply do not enter $\Phi_{\text{ev}}$
 in the first place. The question "what likelihood does a
@@ -619,7 +627,7 @@ non-fired binding contribute?" is a category error under
 virtual-evidence semantics, because there is no observable
 variable whose negative state is being conditioned on.
 
-##### Concrete excerpt
+#### Concrete excerpt
 
 This is the actual YAML the inference engine loads:
 
@@ -665,10 +673,9 @@ probability 0.45 when only M365 is observed (and 0.35 when only GWS
 is observed, since federation is less common on GWS-native deployments
 because GWS-native auth is often used directly); given federation,
 Okta is the IdP with conditional probability 0.30. The numbers are
-tunable and explicitly committed as data: never learned, never
-hidden behind a binary blob.
+tunable and committed as data (see §6).
 
-##### Network topology (v1.9.3)
+#### Network topology (v1.9.3)
 
 ```mermaid
 graph LR
@@ -697,14 +704,12 @@ Nine nodes total. Five roots (priors only); four children (CPTs).
 `email_security_modern_provider` has three parents because the path
 through M365, GWS, and email-gateway each contribute differently to
 the *provider-presence* claim. `email_security_policy_enforcing` is
-a separate root because policy enforcement is provider-independent:
-a Zoho or Fastmail tenant with a strict DMARC reject policy fires
-that node identically to an M365 one. See §4.8.x for the v1.9.3
-split rationale.
+a separate root because policy enforcement is provider-independent
+(see §4.9 for the v1.9.3 split rationale).
 
-#### 4.8.2 Inference: variable elimination
+### 4.2 Inference: variable elimination
 
-##### Factor-graph view
+#### Factor-graph view
 
 The model has a clean factor-graph reading. Define the factor set
 $\Phi = \Phi_{\text{CPT}} \cup \Phi_{\text{ev}}$ as the disjoint
@@ -717,7 +722,7 @@ union of two factor families:
   (the prior).
 - $\Phi_{\text{ev}} = \{\psi_b : b \in O\}$, one factor per fired
   evidence binding, scoped over the bound node $\mathrm{node}(b)$,
-  with $\psi_b(X) = \ell_b(X)$ from §4.8.1.
+  with $\psi_b(X) = \ell_b(X)$ from §4.1.
 
 Given an observed-evidence set $O = \{b : b \text{ fired for the queried domain}\}$,
 the joint over the latent claims factorises as
@@ -737,13 +742,12 @@ P(V_\mathcal{B}) \cdot \prod_{b \in O} \ell_b(\mathrm{node}(b))$$
 where $Z = \sum_{V_\mathcal{B}} P(V_\mathcal{B}) \cdot \prod_{b \in O} \ell_b$
 is the normalising constant for the evidence-conditioned model.
 
-The implementation maintains exactly this representation:
+The implementation maintains this representation:
 `recon_tool/bayesian.py` constructs one factor per CPT row and one
 per fired binding via `_factor_for_node` and `_factor_for_evidence`,
 then sums out non-query variables one at a time in `_query_marginal`.
-The factor-graph view and the code agree term-for-term.
 
-##### Algorithm and complexity
+#### Algorithm and complexity
 
 We compute the marginal exactly by variable elimination
 ([Zhang & Poole 1994](https://www.aaai.org/Library/AAAI/1994/aaai94-203.php),
@@ -773,16 +777,14 @@ treewidth competitions) but our deterministic-lexicographic
 ordering is tractable at this scale and gives bit-identical
 outputs run-to-run.
 
-##### What "current scale" really means: treewidth, not node count
+#### What "current scale" really means: treewidth, not node count
 
 The operative scaling parameter for variable elimination is
 **treewidth**, not node count. Treewidth is highly sensitive to
 edge density: a small number of nodes with dense multi-parent
 CPTs can produce a much higher $w$ than a larger number of nodes
-with sparse parent sets. The current network has $n = 9$ and
-$w = 3$ (bounded by the maximum co-parent count, three for
-`email_security_modern_provider`), giving the $9 \cdot 2^4 = 144$
-operations per query observed above.
+with sparse parent sets. The current $n = 9$, $w = 3$, 144-op
+figure is derived above.
 
 If a future schema change adds dense evidence bindings, for
 instance a node with five or more parents whose CPT does not
@@ -793,22 +795,12 @@ under a millisecond on modern hardware but starts compressing
 margins. The 20-node figure is a heuristic stand-in; the real
 threshold is "treewidth past 5 with non-trivial $n$."
 
-The architectural pivot for high-treewidth networks is
-**Knowledge Compilation**: compile the Bayesian network into a
-tractable probabilistic circuit (Sentential Decision Diagram,
-Sum-Product Network, or arithmetic circuit) at build time, and
-run inference over the circuit at query time. Once compiled,
-exact marginal inference runs in $O(|C|)$ where $|C|$ is the
-circuit's edge count, **independent of treewidth**. See
-[Darwiche 2011, "SDD: A New Canonical Representation of
-Propositional Knowledge Bases"](https://www.ijcai.org/Proceedings/11/Papers/143.pdf)
-for SDDs and [Choi, Vergari, and Van den Broeck 2020,
-"Probabilistic Circuits: A Unifying Framework for Tractable
-Probabilistic Models"](http://starai.cs.ucla.edu/papers/ProbCirc20.pdf)
-for the unified modern treatment. The roadmap backlog item
-"Scaling exact inference past treewidth handling" tracks this
-path; the trigger is "adding a node whose CPT shape pushes
-treewidth past 5", not "adding a 20th node."
+For high-treewidth networks the architectural pivot is knowledge
+compilation: compile the network to a tractable circuit at build
+time, making query-time exact marginal inference treewidth-independent.
+The roadmap backlog item "Scaling exact inference past treewidth
+handling" tracks this path; the trigger is a CPT shape that pushes
+treewidth past 5, not a 20th node.
 
 The implementation is pure Python, no numpy, no probabilistic
 programming framework. We chose the small footprint deliberately:
@@ -818,7 +810,7 @@ For larger networks the code generalizes; we will reach for
 `pgmpy` or similar only when the current implementation no longer
 fits in a single readable module.
 
-#### 4.8.3 The asymmetric likelihood: why we never condition on absence
+### 4.3 The asymmetric likelihood: why we never condition on absence
 
 The asymmetric likelihood is forced by a **missing-data assumption**,
 not chosen for engineering convenience. In the classical Rubin (1976)
@@ -858,7 +850,7 @@ $$L(O \mid X) = \prod_{b \in O \cap B(X)} \ell_b(X),$$
 
 with the un-fired bindings contributing nothing.
 
-##### The $LR = 1$ equivalence
+#### The $LR = 1$ equivalence
 
 A reviewer reading the model in symmetric-Bayesian terms will ask
 what likelihood ratio (LR) recon is implicitly assigning to the
@@ -894,7 +886,7 @@ the bias-conservatism axis for the threat model. The $LR = 1$
 equivalence is the precise mathematical content of "we do not
 condition on absence" and the implication the layer commits to.
 
-##### Adversarial-missingness derivation via m-graphs
+#### Adversarial-missingness derivation via m-graphs
 
 The cleanest formal derivation for $LR = 1$ in recon's setting
 comes from the **missingness-graph (m-graph)** framework of
@@ -911,54 +903,23 @@ from the observed data.
 For recon's setting the $R_E$ variable is *under adversarial
 control*. The hardened operator chooses what to publish and what
 to hide; their hiding choice is a function of $X$ (they hide
-$E$ specifically because $X$ is present). The recent ML treatment
-of this regime is [Halder Lina and Silva 2024, "Fair Graph
-Machine Learning under Adversarial Missingness Processes"
-(ICLR)](https://arxiv.org/abs/2311.01591), which formalises the
-case where an adversary optimises $R_E$ to decouple the observed
-$E^{\ast}$ from the true latent $X$.
+$E$ specifically because $X$ is present), so the masking mechanism
+decouples the observed $E^{\ast}$ from the true latent $X$.
 
-Under that adversarial optimisation, the robust-observer choice is
-to treat the missingness mechanism as perfectly uninformative.
-Formally,
+When the masking mechanism is adversarial and unknown, the latent
+state is only *partially identified*: the observed data is consistent
+with a range of posteriors, not a point ([Manski 2003, *Partial
+Identification of Probability Distributions*](https://doi.org/10.1007/978-0-387-21789-9)).
+The robust-observer choice is to report the prior, treating the
+missingness as perfectly uninformative,
 
 $$P(X \mid E^{\ast} = \text{missing}) = P(X),$$
 
-which is exactly the $LR = 1$ claim above.
-
-##### Formal derivation via Distributionally Robust Optimization
-
-The m-graph framing motivates the robust-observer move but does not
-*automatically* yield $P(X \mid E^{\ast} = \text{missing}) = P(X)$.
-M-graphs only model the dependency of $R_E$ on $X$; the LR = 1
-conclusion requires a further step. The cleanest formalisation
-is **Distributionally Robust Optimization** (DRO; [Duchi and
-Namkoong 2021, "Learning Models with Uniform Performance via
-Distributionally Robust Optimization"](https://arxiv.org/abs/1810.08750)).
-
-Let $\mathcal{P}$ denote an uncertainty set of adversarial masking
-policies: each $P \in \mathcal{P}$ specifies a different
-conditional $P(R_E \mid X)$, and therefore a different posterior
-$P(X \mid E^{\ast} = \text{missing})$. Under DRO, the observer commits
-to the worst-case posterior over the set,
-
-$$P^{\ast}(X \mid E^{\ast} = \text{missing}) \;=\; \inf_{P \in \mathcal{P}} P(X \mid E^{\ast} = \text{missing}).$$
-
-For the unconstrained adversarial set, where the operator can
-decouple $E^{\ast}$ from $X$ to arbitrary degree, the worst-case
-posterior collapses to the prior $P(X)$. This is exactly the
-$LR = 1$ claim, derived rather than asserted. The asymmetric
-likelihood is the minimax-robust update against an unconstrained
-adversarial masking mechanism.
-
-Manski's partial identification reaches the same answer through a
-different route: when the missingness mechanism is unknown, point
-probabilities become bounds (intervals), and recon's
+which is exactly the $LR = 1$ claim above; recon's
 $n_{\mathrm{eff}}$ interval-widening under sparse evidence is the
-marginal-level realisation of those bounds ([Manski 2003, *Partial
-Identification of Probability Distributions*](https://doi.org/10.1007/978-0-387-21789-9)).
-The construction is also consistent with Jeffrey-style updating
-on one-sided evidence ([Jeffrey 1965](https://www.cambridge.org/core/books/logic-of-decision/B6AC0F4DDDF6E2BCB8985CB7CB7E1B59)),
+marginal-level realisation of those Manski bounds. The construction
+is also consistent with Jeffrey-style updating on one-sided evidence
+([Jeffrey 1965](https://www.cambridge.org/core/books/logic-of-decision/B6AC0F4DDDF6E2BCB8985CB7CB7E1B59)),
 the cautious-updating treatments in imprecise-probability theory
 ([Walley 1991](https://www.crcpress.com/Statistical-Reasoning-with-Imprecise-Probabilities/Walley/p/book/9780412286604);
 [Augustin et al. 2014](https://onlinelibrary.wiley.com/doi/book/10.1002/9781118763117)),
@@ -970,7 +931,7 @@ choice is annotated in `recon_tool/bayesian.py` so future
 contributors who reach for symmetric conditioning read the
 rationale first.
 
-##### Conditionally-dependent bindings and the over-counting correction
+#### Conditionally-dependent bindings and the over-counting correction
 
 The likelihood factor $L(O \mid X) = \prod_{b \in O \cap B(X)} \ell_b(X)$
 treats the fired bindings of a node as conditionally independent given $X$.
@@ -1023,7 +984,7 @@ learned. Implemented in `recon_tool/bayesian.py`; ungrouped bindings keep the
 independent-product behaviour, so the correction is a strict refinement on the
 nodes that declare groups.
 
-##### Node-dependent missingness: MNAR is not universal
+#### Node-dependent missingness: MNAR is not universal
 
 The $LR = 1$ absence rule rests on the MNAR claim that an absent binding may be
 adversarial hiding rather than genuine absence. That claim is **node-dependent**,
@@ -1075,7 +1036,7 @@ each release (roadmap PV2), not frozen constants; v2.0 calibration claims gate o
 the maximum per-node conditional ECE, not the mean. The design note is in
 `validation/cal14-missingness-design.md`.
 
-#### 4.8.4 Credible intervals: calibration over inference
+### 4.4 Credible intervals: calibration over inference
 
 Variable elimination gives us a single posterior $\hat{p} = P(X \mid O)$.
 But a point estimate is not enough: a posterior of $0.85$ derived
@@ -1100,10 +1061,11 @@ $$\alpha_{\mathrm{eff}} = \hat{p} \cdot n_{\mathrm{eff}}, \qquad
 This is the *moment-matching* construction
 ([Minka 2001](https://tminka.github.io/papers/ep/minka-thesis.pdf) §3
 gives the technique in a different context). It is not derived from
-the network; it is a calibration *on top of* exact inference, and we
-say so explicitly. The point of the construction is to give us a
-two-parameter family with the right mean, whose interval shape
-depends only on $n_{\mathrm{eff}}$.
+the network; it is a calibration *on top of* exact inference (the
+heuristic-but-principled status is summed up under the Generalized
+Bayesian Inference subsection below). The point of the construction
+is to give a two-parameter family with the right mean, whose
+interval shape depends only on $n_{\mathrm{eff}}$.
 
 The effective sample size is a deliberately conservative function of
 the evidence count and the cross-source conflict count:
@@ -1116,14 +1078,14 @@ better than $\mathrm{Beta}(\cdot, \cdot)$ with mass 4, because we
 know we are inferring from a public broadcast channel rather than
 authoritative inventory), $n_{\mathrm{ev}}$ is the count of bindings
 that fired for this node, $n_{\mathrm{conf}}$ is the cross-source
-conflict count from §4.4, and $(c_{\mathrm{ev}}, c_{\mathrm{conf}}) =
+conflict count from §3.4, and $(c_{\mathrm{ev}}, c_{\mathrm{conf}}) =
 (1.0, 1.5)$ are the per-record contribution and per-conflict penalty.
 
 The 80% credible interval is then the central 80% quantile of
 $\mathrm{Beta}(\alpha_{\mathrm{eff}}, \beta_{\mathrm{eff}})$. We
-approximate with a Wilson-style normal interval
+approximate with a normal-approximation (Wald) interval
 
-$$\hat{p} \pm z_{0.80} \cdot \sqrt{\frac{\hat{p}(1-\hat{p})}{n_{\mathrm{eff}}}}, \qquad z_{0.80} \approx 1.282,$$
+$$\hat{p} \pm z_{0.90} \cdot \sqrt{\frac{\hat{p}(1-\hat{p})}{n_{\mathrm{eff}}}}, \qquad z_{0.90} \approx 1.282,$$
 
 clipped to $[0, 1]$. The approximation is accurate to within
 $\pm 0.02$ of the exact Beta quantile across the $n_{\mathrm{eff}}$
@@ -1154,11 +1116,11 @@ data-related principle). *Calibrated* in the Dawid sense is the
 stronger claim that an 80% interval contains the truth 80% of the
 time in repeated use; that is a coverage statement, and we reserve
 the word for what an empirical coverage test demonstrates. The
-validation strategy (§4.8.7) reports agreement and proxy-label
+validation strategy (§4.7) reports agreement and proxy-label
 calibration error against the conditional claim, labeled as such,
 not coverage against ground truth.
 
-##### Calibration principles the interval satisfies
+#### Calibration principles the interval satisfies
 
 [Fellaji, Pennerath, Conan-Guez, and Couceiro
 (2024)](https://arxiv.org/abs/2407.12211) define two formal
@@ -1169,7 +1131,7 @@ can verify by construction that recon's interval meets both:
 1. **Data-related principle: uncertainty is non-increasing as
    evidence grows.** With more bindings firing for a node,
    $n_{\mathrm{ev}}$ increases, $n_{\mathrm{eff}}$ increases, and
-   the Wilson approximation $\hat{p} \pm z_{0.80}
+   the normal approximation $\hat{p} \pm z_{0.90}
    \sqrt{\hat{p}(1 - \hat{p}) / n_{\mathrm{eff}}}$ produces a
    strictly narrower interval. The conflict-penalty term
    $n_{\mathrm{conf}} \cdot c_{\mathrm{conf}}$ is the only
@@ -1190,132 +1152,76 @@ Fellaji et al. demonstrate that deep ensembles, MC-Dropout, and
 Evidential Deep Learning routinely *violate* both principles
 because stochastic gradient descent produces poor posterior
 approximations. recon's construction is immune to that failure
-mode by design: there is no SGD anywhere in the inference path,
-no learned weights, no neural-network-style posterior
-approximation. The interval is a deterministic function of
-$\hat{p}$ and $n_{\mathrm{eff}}$, and both are deterministic
-functions of the observed evidence and the committed YAML
-network.
+mode by design: there is no SGD anywhere in the inference path
+(committed as data; see §6). The interval is a deterministic
+function of $\hat{p}$ and $n_{\mathrm{eff}}$, and both are
+deterministic functions of the observed evidence and the committed
+YAML network.
 
-This is the formal statement of "the layer is
-*evidence-responsive* in the sense that the principles an
-epistemic-uncertainty measure should satisfy are met by
-construction, not by training." It is distinct from frequentist
-calibration: it does not say the interval is *tight*, nor that it
-attains 80% coverage in repeated use; it says the interval is
-*principled* and *evidence-responsive*. Frequentist coverage is
-the separate empirical claim, reserved for the coverage test.
+This is the by-construction (not by-training) form of the
+evidence-responsive property defined above; it does not promise
+the interval is tight or attains 80% coverage in repeated use,
+which remains the separate empirical claim reserved for the
+coverage test.
 
-##### Relationship to Subjective Logic and the Imprecise Dirichlet Model
+#### Relationship to Subjective Logic and the Imprecise Dirichlet Model
 
-The mathematically coherent treatment of second-order uncertainty
-over the CPT parameters is the **Imprecise Dirichlet Model**
+The moment-matching Beta with $n_{\mathrm{eff}}$ widening
+instantiates the epistemic uncertainty that the **Imprecise
+Dirichlet Model**
 ([Walley 1991](https://www.crcpress.com/Statistical-Reasoning-with-Imprecise-Probabilities/Walley/p/book/9780412286604);
-[Augustin et al. 2014](https://onlinelibrary.wiley.com/doi/book/10.1002/9781118763117)),
-which maintains a bounded interval $\left[\frac{n_k}{N + s}, \frac{n_k + s}{N + s}\right]$
-on every multinomial parameter, with $s$ controlling the
-prior-ignorance strength. The contemporary machine-learning
-treatment is **Subjective Logic**
-([Jøsang 2016](https://link.springer.com/book/10.1007/978-3-319-42337-1)),
-which casts a Dirichlet posterior over a $K$-state outcome with
-parameters $\alpha_k = e_k + W \pi_k$ (evidence count plus prior
-weight times prior probability) and decomposes the total mass
-$S = \sum_k \alpha_k$ into:
-
-- **Belief** (aleatoric, evidence-driven): $b_k = e_k / S$.
-- **Ignorance** (epistemic, prior-driven): $u = W / S$.
-- The identity $\sum_k b_k + u = 1$ holds by construction.
-
-As evidence drops toward zero, $u \to 1$: the formalism produces
-maximal ignorance mass exactly in the sparse-data regime where
-recon needs it. The most cited modern application is
-[Sensoy, Kaplan, and Kandemir 2018, "Evidential Deep Learning to
-Quantify Classification Uncertainty" (NeurIPS)](https://papers.nips.cc/paper/2018/hash/a981f2b708044d6fb4a71a1463242520-Abstract.html),
-which places a Dirichlet over neural-network class probabilities
-to recover the same belief / ignorance decomposition.
-
-Recon's $n_{\mathrm{eff}}$ construction is a **deliberate
-computational approximation** of this formal framework. Rather
-than maintaining interval-valued CPTs (IDM) or a Dirichlet over
-each CPT row (Subjective Logic) and propagating the
-second-order uncertainty through credal-network inference, we
-compute the exact point posterior in $O(n \cdot d^{w+1})$ time
-and then widen the resulting marginal interval at the node level
-based on the evidence and conflict counts. The trade-off is
-explicit:
+[Augustin et al. 2014](https://onlinelibrary.wiley.com/doi/book/10.1002/9781118763117))
+and **Subjective Logic**
+([Jøsang 2016](https://link.springer.com/book/10.1007/978-3-319-42337-1);
+the deep-learning application is
+[Sensoy, Kaplan, and Kandemir 2018](https://papers.nips.cc/paper/2018/hash/a981f2b708044d6fb4a71a1463242520-Abstract.html))
+formalise as an ignorance mass $u$ that tends to 1 as evidence
+drops toward zero. Rather than maintain interval-valued CPTs or a
+Dirichlet per CPT row and propagate through credal-network
+inference, recon computes the exact point posterior and widens the
+marginal interval at the node level from the evidence and conflict
+counts. The trade-off is explicit:
 
 | Treatment | Where uncertainty lives | Inference cost |
 |---|---|---|
 | Full IDM / Subjective Logic | On every CPT entry as bounded intervals or Dirichlet parameters | Credal-network inference (NP-hard in general; benchmark suite [CREPO, Antonucci et al. 2021](https://arxiv.org/abs/2105.04158) caps at ~10 nodes for exact results) |
 | recon's $n_{\mathrm{eff}}$ heuristic | At the marginal posterior level via post-hoc Beta widening | $O(n \cdot d^{w+1})$ exact VE plus $O(n)$ interval construction |
 
-The full IDM / Subjective Logic treatment is mathematically the
-right answer for second-order uncertainty over CPT parameters;
-the heuristic is the one that lets the layer ship in pure Python
-at the current scale. We accept the trade-off and flag the upgrade
-path in the post-v2.0 backlog (roadmap.md "Imprecise Dirichlet
-Model for CPT entries" and "Explicit ignorance mass (epistemic vs
-aleatoric)"): the IDM treatment becomes worth the cost the first
-time corpus runs show the marginal-only widening is the bottleneck
-on calibration quality, not when an external reviewer prefers it on
-aesthetic grounds.
+The upgrade path is in the post-v2.0 backlog
+(roadmap.md "Imprecise Dirichlet Model for CPT entries" and
+"Explicit ignorance mass (epistemic vs aleatoric)").
 
-##### Formal foundation for the conflict-penalty term: Generalized Bayesian Inference
+#### Formal foundation for the conflict-penalty term: Generalized Bayesian Inference
 
-A reviewer reading the $n_{\mathrm{eff}}$ formula will notice that
-the conflict-penalty term $n_{\mathrm{conf}} \cdot c_{\mathrm{conf}}$
-*widens* the interval as conflict count rises. Under strict
-Bayesian updating, evidence (even conflicting evidence) should
-narrow the posterior: conflicts should shift the mean, not widen
-the interval. Recon's construction violates this, deliberately.
-
-The formal home for this kind of update is **Generalized Bayesian
-Inference** (also called Loss-Calibrated Bayes;
-[Bissiri, Holmes, and Walker 2016, "A General Framework for
-Updating Belief Distributions" (JRSS B)](https://doi.org/10.1111/rssb.12158)).
-In this framework, the posterior is not derived from Bayes' rule
-applied to a strict likelihood. It is the solution to an
-optimisation problem:
+The conflict-penalty term $n_{\mathrm{conf}} \cdot c_{\mathrm{conf}}$
+*widens* the interval as conflict count rises, where strict
+Bayesian updating would have conflicting evidence shift the mean
+rather than widen. The formal home for this is a loss-calibrated
+**Generalized Bayesian Inference** update
+([Bissiri, Holmes, and Walker 2016, "A General Framework for
+Updating Belief Distributions" (JRSS B)](https://doi.org/10.1111/rssb.12158)),
+in which the posterior solves
 
 $$P(X \mid O) \;\propto\; \exp\bigl( -\,\mathcal{L}(X, O) \bigr) \cdot P(X),$$
 
-where $\mathcal{L}(X, O)$ is an engineered loss function chosen to
-reflect the inference goal. The exponentiated negative loss
-replaces the standard likelihood; the prior anchors the update.
-Bissiri et al. prove that this construction is coherent (it
-satisfies a list of axioms a "well-behaved" belief update should
-satisfy) for any bounded loss function, even when no generative
-model corresponds to that loss.
+with an engineered bounded loss $\mathcal{L}(X, O)$ replacing the
+strict likelihood; Bissiri et al. prove the construction is
+coherent for any bounded loss, even when no generative model
+corresponds to it. The conflict-penalty term is the loss that
+spreads mass back toward the prior when sources disagree, which is
+what the $n_{\mathrm{eff}}$ widening does at the interval level. The
+two formalisms are complementary: IDM / Subjective Logic justifies
+the moment-matching Beta itself, and Generalized Bayesian Inference
+justifies the conflict-penalty form. The $n_{\mathrm{eff}}$
+construction is heuristic in implementation but principled in form;
+the IDM treatment becomes worth its cost the first time corpus runs
+show the marginal-only widening is the bottleneck on calibration
+quality, not when a reviewer prefers it on aesthetic grounds.
 
-Recon's $n_{\mathrm{eff}}$ construction is a tractable
-approximation of this framework at the marginal level. The
-conflict-penalty term corresponds to a loss function that
-penalises posterior concentrations agreeing with no source when
-sources disagree: a Generalized Bayesian posterior with that
-loss spreads probability mass back toward the prior in the
-presence of conflict, which is what the $n_{\mathrm{eff}}$ widening
-does at the interval level.
-
-The two formalisms in this subsection are complementary, not
-alternatives:
-
-- **IDM / Subjective Logic** justifies the moment-matching Beta
-  construction itself (epistemic uncertainty over parameters,
-  with $u \to 1$ as evidence drops).
-- **Generalized Bayesian Inference** justifies the specific
-  conflict-penalty form (loss-calibrated update incorporating
-  evidence-quality signals like cross-source disagreement).
-
-Adopting both citations is more honest than apologising for the
-$n_{\mathrm{eff}}$ being a heuristic. It is a heuristic in
-implementation but principled in form: each ingredient maps to a
-named formal framework with published axiomatic foundations.
-
-We chose 80% over the more common 95% deliberately: the
-calibration here is heuristic on top of exact inference, and a
-tighter band would over-promise coverage we cannot verify against
-ground truth. The choice is documented as a fixed module-level
-constant so downstream consumers can rely on it.
+We chose 80% over the more common 95% deliberately: a tighter band
+would over-promise coverage we cannot verify against ground truth.
+The choice is documented as a fixed module-level constant so
+downstream consumers can rely on it.
 
 We acknowledge two open issues in this construction:
 
@@ -1337,7 +1243,7 @@ We acknowledge two open issues in this construction:
 Both limitations are documented in `recon_tool/bayesian.py` so a
 future contributor sees them next to the code.
 
-##### Quantitative sensitivity to CPT misspecification
+#### Quantitative sensitivity to CPT misspecification
 
 To bound the first limitation, we ran a $\pm 0.10$ perturbation
 analysis: for every CPT entry and every root prior, perturb by
@@ -1363,7 +1269,7 @@ joint shifts could push higher), but it is a meaningful regression
 guard, and the test fails if the engine ever becomes more
 amplifying.
 
-##### Sparse vs dense, illustrated
+#### Sparse vs dense, illustrated
 
 Holding the point posterior at $\hat{p} = 0.5$ and varying $n_{\mathrm{eff}}$
 gives the operator-facing story for why interval width is the
@@ -1373,7 +1279,7 @@ load-bearing field, not the mean:
 %%{init: {'theme':'base'}}%%
 graph TB
   subgraph sparse["n_eff = 4 (sparse, hardened target)"]
-    sl["0.21"] --- sm["0.5"] --- sh["0.79"]
+    sl["0.18"] --- sm["0.5"] --- sh["0.82"]
   end
   subgraph mid["n_eff = 8"]
     ml["0.27"] --- mm["0.5"] --- mh["0.73"]
@@ -1383,15 +1289,12 @@ graph TB
   end
 ```
 
-Same point posterior, three reports. With $n_{\mathrm{eff}} = 4$
-(passive-observation floor), the operator reads "we cannot tell
-whether this claim holds; the public channel does not constrain
-it." With $n_{\mathrm{eff}} = 14$, the operator reads "we have a
-calibrated 50-50 reading and the channel does constrain it." This
-is the calibration discipline the layer enforces in numbers, not in
-prose.
+Same point posterior, three reports: at $n_{\mathrm{eff}} = 4$
+(passive-observation floor) the operator reads "the public channel
+does not constrain this claim," and at $n_{\mathrm{eff}} = 14$ a
+calibrated 50-50 reading that the channel does constrain.
 
-#### 4.8.5 Identifiability and the passive-observation ceiling
+### 4.5 Identifiability and the passive-observation ceiling
 
 A recurring question from formal-methods readers: is the model
 identifiable? The answer is "no, deliberately, and we report the
@@ -1420,7 +1323,7 @@ that an operator can ask "*why* does this posterior look like this?"
 and get an answer in the same JSON object. There is no separate
 calibration report; the calibration travels with the posterior.
 
-#### 4.8.6 Relationship to the per-slug Beta layer (`fusion.py`)
+### 4.6 Relationship to the per-slug Beta layer (`fusion.py`)
 
 A natural question: how does this layer relate to the existing
 per-slug Beta posteriors in `recon_tool/fusion.py`? The two layers
@@ -1446,7 +1349,7 @@ on the question. The schema fields `slug_confidences` and
 `posterior_observations` are independent and both stable as of
 v2.0 per the schema-lock disposition table.
 
-#### 4.8.7 Validation strategy
+### 4.7 Validation strategy
 
 The layer is validated against four properties, three of them
 publicly reproducible:
@@ -1481,7 +1384,7 @@ publicly reproducible:
 
    The conditional / marginal gap is the asymmetric-likelihood
    design choice measured quantitatively. Under MNAR
-   (§4.8.3), the model deliberately produces prior-aligned
+   (§4.3), the model deliberately produces prior-aligned
    posteriors when no binding fires, which is by construction
    miscalibrated against the unconditional empirical base rate.
    The marginal ECE quantifies that gap but does not measure a
@@ -1490,19 +1393,16 @@ publicly reproducible:
    is reported so an external reviewer who looks at only one
    number does not conclude the wrong thing.
 4. **Real-corpus calibration (private corpora, anonymized
-   aggregates published).** Three per-release calibration reports
-   accumulate corpus evidence across the v1.9.x sequence:
-   `validation/v1.9-validation-summary.md` (v1.9.0 baseline,
-   91-domain soft corpus); `validation/v1.9.4-calibration.md`
-   (50-domain hardened-adversarial corpus stratified across five
-   hardening postures, plus a soft-corpus regression check);
-   `validation/v1.9.5-stability.md` (per-node behavioural-criteria
-   verdicts on the combined 141-domain corpus). The contract is
-   that posteriors above $0.85$ should correspond to deterministic-
-   pipeline classifications in the high-confidence bucket and that
-   intervals on hardened-target subsets should remain wide
-   (`sparse=true`). All three reports confirm the contract. The
-   corpora stay private; only anonymized aggregates ship.
+   aggregates published).** The contract is that posteriors above
+   $0.85$ should correspond to deterministic-pipeline
+   classifications in the high-confidence bucket and that intervals
+   on hardened-target subsets should remain wide (`sparse=true`).
+   The per-release corpus reports are indexed in the §4 Validation
+   history paragraph and narrated in §4.12
+   (`validation/v1.9-validation-summary.md`,
+   `validation/v1.9.4-calibration.md`,
+   `validation/v1.9.5-stability.md`); all confirm the contract.
+   The corpora stay private; only anonymized aggregates ship.
 5. **Determinism (publicly reproducible).** Repeated inferences
    over identical inputs produce float-bit-identical posteriors
    and intervals. Verified across 100 sequential runs and 50
@@ -1517,52 +1417,23 @@ publicly reproducible:
    any topology change that breaks propagation can reach a
    release tag.
 
-##### A theoretical caveat on ECE under Generalized Bayes
+#### A theoretical caveat on ECE under Generalized Bayes
 
-A reviewer with both §4.8.4 (Generalized Bayesian Inference
-framing for the conflict penalty) and §4.8.7 (ECE and Brier scores
-as validation diagnostics) in mind will notice a friction. Proper
-scoring rules ([Gneiting and Raftery
+Proper scoring rules ([Gneiting and Raftery
 2007](https://doi.org/10.1198/016214506000001437)) like the Brier
-score, and the related calibration metric ECE, assume the posterior is
-trying to estimate the true data-generating distribution as closely as
-possible: a calibrated forecaster minimises the score by matching
-empirical frequencies.
+score, and the related metric ECE, reward a posterior that matches
+empirical frequencies. The Generalized-Bayes conflict penalty
+(§4.4; Bissiri, Holmes, and Walker 2016) optimises an engineered
+loss instead, so ECE and Brier appear slightly worse on recon's
+posterior than on a conflict-penalty-free baseline, and the
+strictly correct metric is loss-conditional risk under that same
+loss. We therefore read ECE and Brier as diagnostics, not targets:
+the conditional ECE figure ($\approx 0.16$ in §4.7 item 3) is
+within the acceptable-but-not-ideal band a Generalized-Bayes
+posterior produces, and pushing it lower would mean dropping the
+conflict penalty.
 
-Recon's posterior is not optimising that objective. The conflict-
-penalty term in $n_{\mathrm{eff}}$ deliberately widens the
-interval when sources disagree, which under Generalized Bayesian
-Inference (Bissiri, Holmes, and Walker 2016) is a loss-calibrated
-update that minimises an engineered loss including a
-conflict-penalty term, not a proper-scoring-rule loss. The two
-objectives are not aligned: minimising the engineered loss
-produces cautious hedging under conflict; minimising Brier
-produces aggressive point-estimation.
-
-The consequence: on a Generalized Bayesian posterior, ECE and
-Brier will appear slightly *worse* than they would on an otherwise
-identical posterior without the conflict penalty. The
-miscalibration is not a defect; it is the expected mathematical
-cost of choosing the engineered loss function over the strict
-likelihood. The strictly correct evaluation metric for a
-Generalized Bayesian posterior is **loss-conditional risk** under
-the same engineered loss, not Brier or ECE.
-
-We continue to report ECE and Brier in the validation strategy
-because they are useful proxies for the operator and because they
-let an external reviewer compare recon's calibration against
-familiar baselines. But the strictly correct framing is that the
-reported ECE figure is a *diagnostic*, not a *target*: a small
-ECE gap between recon and a hypothetical conflict-penalty-free
-baseline reflects the deliberate Generalized Bayes design choice,
-not a fixable calibration error. The conditional ECE figure
-($\approx 0.16$ in §4.8.7 item 3) is well within the
-acceptable-but-not-ideal band a Generalized Bayesian posterior
-should produce; pushing it lower would require dropping the
-conflict penalty, which would re-open the strict-Bayesian
-coherence issue §4.8.4 already addresses.
-
-##### Two distinct validation claims
+#### Two distinct validation claims
 
 The validation strategy above makes two epistemologically separate
 claims that must not be conflated:
@@ -1595,32 +1466,29 @@ real-corpus calibration on lucky inputs and fail synthetic ECE on
 the joint. Both validation classes are required; they answer
 different questions and must be reported separately.
 
-The decision to surface marginal vs conditional ECE separately is
-deliberate. A reviewer who looks only at marginal calibration will
-conclude the layer is poorly calibrated. They are correct: it is, in
-the no-evidence regime, by design. The conditional figure is the one
-the layer claims, and it is in the "acceptable but not ideal" band
-($0.16$ on the v1.9.0 synthetic test). The v1.9.0 conditional-ECE
-weak spots were `email_security_strong` and `aws_hosting`; both
-have since been addressed. The `email_security_strong` weak spot
+The conditional figure (the one the layer claims; see item 3 for the
+marginal-vs-conditional split) is in the "acceptable but not ideal"
+band, $0.16$ on the v1.9.0 synthetic test. The v1.9.0
+conditional-ECE weak spots were `email_security_strong` and
+`aws_hosting`; both have since been addressed. The `email_security_strong` weak spot
 was diagnosed as a definitional gap (not a calibration error) and
 resolved in v1.9.3 by splitting the node into
 `email_security_modern_provider` and
-`email_security_policy_enforcing` (§4.8.9). The `aws_hosting`
+`email_security_policy_enforcing` (§4.9). The `aws_hosting`
 weak spot was resolved by the v1.9.4 hardened-adversarial
 calibration: the per-corpus measured Brier was $0.0046$ and ECE
 $0.061$, well under threshold, and v1.9.5 classified the node
 `stable`. The `email_security_policy_enforcing` node took a
 follow-up topology fix in v1.9.6 (removal of `dkim_present` as
-a binding, see §4.8.12) that closed the one remaining `not yet`
+a binding, see §4.12) that closed the one remaining `not yet`
 disposition from v1.9.5.
 
-##### Why the real-corpus consistency check is near-tautological
+#### Why the real-corpus consistency check is near-tautological
 
 The two claims above can be sharpened into a statement worth making explicit,
 because it bounds what the headline real-corpus number can and cannot show.
-Under the virtual-evidence construction (§4.8.1) with the $LR = 1$ absence rule
-(§4.8.3), a node's posterior rises above its prior-and-parent baseline only when
+Under the virtual-evidence construction (§4.1) with the $LR = 1$ absence rule
+(§4.3), a node's posterior rises above its prior-and-parent baseline only when
 at least one positive binding fires; an absent binding leaves it at baseline. So
 for a threshold $\tau$ chosen above every prior (the layer uses $0.85$), a high,
 non-sparse posterior implies a fired positive binding:
@@ -1641,7 +1509,7 @@ setting does not yet supply. We report the consistency number as a real, if
 weak, regression guard and name its near-tautological character so it is not
 read as calibration.
 
-##### Information recovered: the operational form of the correlation objective
+#### Information recovered: the operational form of the correlation objective
 
 §1 disclaims the "minimise posterior entropy, maximise mutual information"
 language as describing intent rather than an implemented objective. The intent
@@ -1661,11 +1529,11 @@ operational reading of "correlation as information recovery."
 Two caveats keep the metric humble. First, $\Delta H$ measures the information
 the model extracts under its own likelihoods, not ground-truth-validated
 information, so it is a model-internal quantity, not an accuracy claim. Second,
-the over-counting bias of §4.8.3 inflates $\Delta H$ on richly-instrumented
+the over-counting bias of §4.3 inflates $\Delta H$ on richly-instrumented
 targets where correlated bindings compound, so the figure should be read
 alongside the evidence-group correction, not before it.
 
-#### 4.8.8 Defensive value
+### 4.8 Defensive value
 
 A defender who has hardened their public footprint wants to know: if
 an attacker ran recon against them, what could the attacker actually
@@ -1678,11 +1546,9 @@ remains. On an under-hardened target, the layer prints "high-confidence
 what is leaking, and via which observable.
 
 Either way, the operator gets a calibrated posterior with full
-provenance, not a black-box score they have to trust. That, more
-than any specific feature, is what justifies the cost of shipping
-the layer.
+provenance, not a black-box score they have to trust.
 
-#### 4.8.9 Definitional discipline: the v1.9.3 split
+### 4.9 Definitional discipline: the v1.9.3 split
 
 The v1.9.0 corpus calibration revealed exactly one weak spot:
 `email_security_strong` agreed with the deterministic pipeline
@@ -1735,7 +1601,7 @@ federation when the path didn't go through M365. v1.9.3 expands the
 parents to `[m365_tenant, google_workspace_tenant]` and re-derives
 the CPT. The v1.9.4 hardened-adversarial corpus run will tighten
 the GWS-path values; the v1.9.3 numbers are seeded from defensible
-priors, not corpus-fitted, per the no-learned-weights invariant.
+priors, not corpus-fitted (committed as data; see §6).
 
 **The principle.** Corpus runs are mirrors that question the
 *topology*, not fitters that minimize the disagreement number.
@@ -1746,7 +1612,7 @@ re-examined. v1.9.3 makes that principle concrete on the one node
 v1.9.0 surfaced as broken; v1.9.6 codifies it as standing
 discipline for future CPT changes.
 
-#### 4.8.10 Failure-mode catalog: hardening pattern fingerprints
+### 4.10 Failure-mode catalog: hardening pattern fingerprints
 
 The v1.9.4 milestone validated the asymmetric-likelihood design
 property end-to-end against a 50-domain hardened-adversarial
@@ -1761,51 +1627,52 @@ read across from **the hardening posture they have or want** to
 descriptive: recon's claims about a domain reflect what its
 public DNS surface reveals, not a maturity verdict.
 
-The "Survival vs soft corpus" column is the high-confidence
-survival ratio (hardened high-conf% / soft high-conf%) per node
-on the v1.9.4 sample. Values below 1.0 mean the layer correctly
-backs off on that node when the public channel narrows; values
-near 1.0 mean the signal stays visible regardless of hardening.
+The per-pattern tables below report the per-node sparse rate on
+the v1.9.4 sample. The high-confidence survival ratios
+(hardened high-conf% / soft high-conf%, where below 1.0 means the
+layer backs off as the channel narrows and near 1.0 means the
+signal stays visible regardless of hardening) are category-level
+and collected in "Cross-cutting findings" below.
 
-##### Pattern A: Heavy edge-proxied apexes
+#### Pattern A: Heavy edge-proxied apexes
 
-| Node | Sparse rate | Survival vs soft corpus | What the panel reports |
-|---|---|---|---|
-| `cdn_fronting` | 50% | n/a (category-level) | High-confidence fire on the CDN that *is* the front; the layer correctly names the surface visible to passive DNS. |
-| `m365_tenant` | 60% | n/a | Moderate hedging; partial visibility through MX / SPF / verification TXT records that bypass the edge. |
-| `email_security_policy_enforcing` | 0% | n/a | DMARC policy is a public TXT record; the edge doesn't hide it. Fires routinely. |
-| `email_gateway_present` | 90% | n/a | Gateways rarely route through CF/Akamai/Fastly at MX-resolve time; nearly always sparse. |
-| `okta_idp` | 90% | n/a | Hub probes blocked or hidden behind the edge; nearly always sparse. |
+| Node | Sparse rate | What the panel reports |
+|---|---|---|
+| `cdn_fronting` | 50% | High-confidence fire on the CDN that *is* the front; the layer correctly names the surface visible to passive DNS. |
+| `m365_tenant` | 60% | Moderate hedging; partial visibility through MX / SPF / verification TXT records that bypass the edge. |
+| `email_security_policy_enforcing` | 0% | DMARC policy is a public TXT record; the edge doesn't hide it. Fires routinely. |
+| `email_gateway_present` | 90% | Gateways rarely route through CF/Akamai/Fastly at MX-resolve time; nearly always sparse. |
+| `okta_idp` | 90% | Hub probes blocked or hidden behind the edge; nearly always sparse. |
 
 **Defensive read for the edge-proxied operator:** the CDN front is
 inferable from passive DNS (your CNAME chain terminates there); the
 identity / cloud stack behind it stays hidden when subdomains also
 front through the same CDN. The hardening is doing what it should.
 
-##### Pattern B: Privacy-focused organizations
+#### Pattern B: Privacy-focused organizations
 
-| Node | Sparse rate | Survival vs soft corpus | What the panel reports |
-|---|---|---|---|
-| `email_gateway_present` | 100% | n/a | Privacy orgs minimize SaaS verification surface; gateway visibility consistently absent. |
-| `aws_hosting` | 60% | n/a | Moderate sparsity; some privacy orgs run public-facing AWS Cloudfront. |
-| `federated_identity` | 80% | n/a | Federation indicators (OIDC discovery, etc.) intentionally minimized. |
-| `google_workspace_tenant` | 40% | n/a | GWS verification TXT sometimes published (mail signing); often sparse. |
-| `email_security_policy_enforcing` | 20% | n/a | Privacy orgs almost always publish enforcing DMARC. Fires routinely. |
+| Node | Sparse rate | What the panel reports |
+|---|---|---|
+| `email_gateway_present` | 100% | Privacy orgs minimize SaaS verification surface; gateway visibility consistently absent. |
+| `aws_hosting` | 60% | Moderate sparsity; some privacy orgs run public-facing AWS Cloudfront. |
+| `federated_identity` | 80% | Federation indicators (OIDC discovery, etc.) intentionally minimized. |
+| `google_workspace_tenant` | 40% | GWS verification TXT sometimes published (mail signing); often sparse. |
+| `email_security_policy_enforcing` | 20% | Privacy orgs almost always publish enforcing DMARC. Fires routinely. |
 
 **Defensive read for the privacy-focused operator:** strict DMARC
 policy is still publicly inferable (and is the right defensive
 posture); identity / cloud signals are absent or sparse as
 intended.
 
-##### Pattern C: Major financial institutions
+#### Pattern C: Major financial institutions
 
-| Node | Sparse rate | Survival vs soft corpus | What the panel reports |
-|---|---|---|---|
-| `aws_hosting` | 100% | n/a | Financial institutions on this sample do not surface AWS-specific apex evidence. |
-| `m365_tenant` | 20% | n/a | Heavy M365 use; verification + MX evidence consistently present. |
-| `cdn_fronting` | 10% | n/a | CDN-fronted public sites are the norm; the layer fires high-confidence. |
-| `google_workspace_tenant` | 100% | n/a | Financial orgs in this sample are M365-only; GWS uniformly sparse. |
-| `email_security_policy_enforcing` | 0% | n/a | Enforcing DMARC universal in this sample. |
+| Node | Sparse rate | What the panel reports |
+|---|---|---|
+| `aws_hosting` | 100% | Financial institutions on this sample do not surface AWS-specific apex evidence. |
+| `m365_tenant` | 20% | Heavy M365 use; verification + MX evidence consistently present. |
+| `cdn_fronting` | 10% | CDN-fronted public sites are the norm; the layer fires high-confidence. |
+| `google_workspace_tenant` | 100% | Financial orgs in this sample are M365-only; GWS uniformly sparse. |
+| `email_security_policy_enforcing` | 0% | Enforcing DMARC universal in this sample. |
 
 **Defensive read for the financial-services operator:** the public
 fingerprint is "M365 + CDN-fronted + strong DMARC" with everything
@@ -1813,15 +1680,15 @@ else sparse. This is a low-disclosure posture for
 fingerprinting while running an enterprise M365 stack;
 recon reports that.
 
-##### Pattern D: Defense / national-security adjacent
+#### Pattern D: Defense / national-security adjacent
 
-| Node | Sparse rate | Survival vs soft corpus | What the panel reports |
-|---|---|---|---|
-| `google_workspace_tenant` | 80% | n/a | Defense orgs in this sample are AWS / M365 / on-prem; minimal GWS, with two chains the v1.9.4 suffix-only CNAME walker traverses past split-horizon hops. |
-| `aws_hosting` | 80% | n/a | Some defense-cloud presence on AWS gov regions surfaces. |
-| `federated_identity` | 80% | n/a | Most identity surface intentionally suppressed publicly; one additional defense chain surfaces a federated-identity binding under the v1.9.4 suffix-only walker. |
-| `okta_idp` | 100% | n/a | No Okta-specific evidence in this sample's defense subset. |
-| `email_security_policy_enforcing` | 20% | n/a | Enforcing DMARC mostly published. |
+| Node | Sparse rate | What the panel reports |
+|---|---|---|
+| `google_workspace_tenant` | 80% | Defense orgs in this sample are AWS / M365 / on-prem; minimal GWS, with two chains the v1.9.4 suffix-only CNAME walker traverses past split-horizon hops. |
+| `aws_hosting` | 80% | Some defense-cloud presence on AWS gov regions surfaces. |
+| `federated_identity` | 80% | Most identity surface intentionally suppressed publicly; one additional defense chain surfaces a federated-identity binding under the v1.9.4 suffix-only walker. |
+| `okta_idp` | 100% | No Okta-specific evidence in this sample's defense subset. |
+| `email_security_policy_enforcing` | 20% | Enforcing DMARC mostly published. |
 
 **Defensive read for the defense-contractor operator:** the public
 fingerprint is "AWS / M365 footprint visible at the apex level;
@@ -1829,24 +1696,23 @@ identity stack hidden". The layer correctly reports the limit; an
 attacker scanning passively gets the surface, not the stack
 behind it.
 
-##### Pattern E: Major government agencies
+#### Pattern E: Major government agencies
 
-| Node | Sparse rate | Survival vs soft corpus | What the panel reports |
-|---|---|---|---|
-| `m365_tenant` | 20% | n/a | Federal agencies heavily M365 (and `.gov` policy reinforces). |
-| `google_workspace_tenant` | 100% | n/a | GWS uniformly absent in this sample. |
-| `cdn_fronting` | 10% | n/a | CDN-fronted public sites the norm; layer fires high-confidence. |
-| `aws_hosting` | 90% | n/a | Some agency cloud presence on AWS GovCloud surfaces. |
-| `federated_identity` | 90% | n/a | Identity stack intentionally hidden. |
-| `okta_idp` | 100% | n/a | No Okta surfacing in this sample's gov subset. |
+| Node | Sparse rate | What the panel reports |
+|---|---|---|
+| `m365_tenant` | 20% | Federal agencies heavily M365 (and `.gov` policy reinforces). |
+| `google_workspace_tenant` | 100% | GWS uniformly absent in this sample. |
+| `cdn_fronting` | 10% | CDN-fronted public sites the norm; layer fires high-confidence. |
+| `aws_hosting` | 90% | Some agency cloud presence on AWS GovCloud surfaces. |
+| `federated_identity` | 90% | Identity stack intentionally hidden. |
+| `okta_idp` | 100% | No Okta surfacing in this sample's gov subset. |
 
-**Defensive read for the federal operator:** identical signature
-to the financial-institution category from the layer's perspective
-("M365 + CDN-fronted + strong DMARC, everything else sparse").
-The two categories share defensive posture in public DNS even
-though their internal stacks differ.
+**Defensive read for the federal operator:** the same layer-side
+signature as Pattern C ("M365 + CDN-fronted + strong DMARC,
+everything else sparse"). The two categories share defensive
+posture in public DNS even though their internal stacks differ.
 
-##### Cross-cutting findings
+#### Cross-cutting findings
 
 - **`email_security_modern_provider` is 100% sparse on every
   hardened category.** By design: the node has no evidence
@@ -1864,7 +1730,7 @@ though their internal stacks differ.
   rarely route through CDN edges at MX-resolve time; the layer
   correctly retreats when public DNS doesn't carry the evidence.
 
-##### What this catalog does not cover
+#### What this catalog does not cover
 
 - **Actively-deceptive DNS posture.** The corpus represents
   *defensively-hardened* organizations, not orgs that craft
@@ -1882,9 +1748,9 @@ though their internal stacks differ.
   Category-1 limit (see backlog item "Passive-DNS ceiling
   phrasing" in roadmap.md).
 
-#### 4.8.11 Adversarial threat model: deception postures
+### 4.11 Adversarial threat model: deception postures
 
-§4.8.10 catalogues *defensive* hardening: orgs that minimise public
+§4.10 catalogues *defensive* hardening: orgs that minimise public
 exposure but do not actively craft misleading DNS. This subsection
 moves one threat-model step further and asks how the Bayesian layer
 behaves under postures that *intend* to mislead a passive observer.
@@ -1896,11 +1762,11 @@ refute it.
 Three deception postures are worth distinguishing because they
 exercise different parts of the inference pipeline.
 
-##### Pattern F: wildcard-cert rotation
+#### Pattern F: wildcard-cert rotation
 
 Pattern: the apex publishes only short-lived wildcard certificates
 (`*.example.com` with validity ≤ 30 days), so CT enumeration returns
-a single SAN per cert and the wildcard probe (§4.8.10 prerequisite)
+a single SAN per cert and the wildcard probe (§4.10 prerequisite)
 matches every random subdomain.
 
 Predicted Bayesian behaviour:
@@ -1920,7 +1786,7 @@ The layer's response is *sparse where it should be sparse*. The
 wildcard rotation does not produce false confidence on hidden
 nodes; it produces a correctly-narrow report on visible nodes.
 
-##### Pattern G: short-TTL decoy CNAME chains
+#### Pattern G: short-TTL decoy CNAME chains
 
 Pattern: the apex publishes CNAMEs with TTLs in the single-digit
 seconds and rotates targets between observation windows
@@ -1934,11 +1800,11 @@ Predicted Bayesian behaviour:
   the TTL/target inconsistency as a `merge_conflicts` field on
   the `TenantInfo`; the Bayesian layer reads `merge_conflicts`
   count via `_conflict_provenance` and dampens `n_eff` globally
-  by `_CONFLICT_N_EFF_PENALTY` per conflict (§4.8.1, asymmetric
+  by `_CONFLICT_N_EFF_PENALTY` per conflict (§4.1, asymmetric
   likelihood discussion).
 - **Credible intervals widen automatically.** With `n_eff` dampened,
   $1/\sqrt{n_{\text{eff}}}$ grows; the 80% credible interval in
-  `_credible_interval` widens as designed (§4.8.4).
+  `_credible_interval` widens as designed (§4.4).
 - **No node fires high-confidence.** Even if a specific evidence
   binding nominally matches one of the rotating CNAME targets, the
   conflict-dampened `n_eff` prevents the posterior interval from
@@ -1950,7 +1816,7 @@ entry with `sparse=true`, `conflict_provenance=[...]` populated,
 and the panel's "(N cross-source conflicts dampened)" framing
 explicit.
 
-##### Pattern H: SAN-stuffing decoys
+#### Pattern H: SAN-stuffing decoys
 
 Pattern: the apex publishes certificates whose SAN list contains
 unrelated public services it does not actually run
@@ -1967,7 +1833,7 @@ Predicted Bayesian behaviour:
   on cert SAN alone. It requires either a CNAME-target match, a
   TXT verification token, or an MX/SPF/NS pattern. A SAN claim
   without corroborating DNS is filtered upstream of the layer.
-- **CT co-occurrence weight is bounded.** §4.5 uses Louvain
+- **CT co-occurrence weight is bounded.** §3.5 uses Louvain
   modularity scores on CT cluster edges; a deliberately-stuffed
   SAN list contributes to the edge weight but a single
   outlier-weighted edge does not flip community assignment under
@@ -1982,7 +1848,7 @@ pipeline's "slug requires corroboration, not just a cert claim"
 discipline is what makes this pattern fail. The Bayesian layer
 inherits the protection and surfaces it in the explanation.
 
-##### What the catalog explicitly does NOT validate
+#### What the catalog explicitly does NOT validate
 
 These patterns are predictions, not measurements. They describe
 how the existing engine *should* behave under each adversarial
@@ -2000,15 +1866,13 @@ and conflict-provenance fields populated on every Pattern G
 domain. The roadmap's "Backlog (after v2.0) → Sensitivity-
 analysis tooling" item is the natural place that work lives.
 
-#### 4.8.12 Stability dispositions and CPT-change discipline (v1.9.5–v1.9.6)
+### 4.12 Stability dispositions and CPT-change discipline (v1.9.5-v1.9.6)
 
-The v1.9.4 hardened-adversarial milestone validated the layer's
-*design property* (asymmetric likelihood, sparse-flag behaviour,
-interval widening on hardened targets). v1.9.5 and v1.9.6 are the
-two follow-up milestones that consume those validation outputs and
-act on them.
+The v1.9.4 milestone validated the layer's design property
+(§4.10). v1.9.5 and v1.9.6 are the two follow-up milestones that
+consume those validation outputs and act on them.
 
-##### v1.9.5: per-node stability criteria
+#### v1.9.5: per-node stability criteria
 
 The v1.9.4 conclusion treated the `--fusion` layer as a single
 unit: validated in aggregate. That framing is over-broad.
@@ -2054,7 +1918,7 @@ Both `not yet` dispositions carried explicit follow-ups documented
 in `validation/v1.9.5-stability.md`. Neither was `Split` or
 `Remove`; both nodes stay in the network.
 
-##### v1.9.6: the CPT-change discipline, applied
+#### v1.9.6: the CPT-change discipline, applied
 
 The v1.9.5 `email_security_policy_enforcing` failure had a single
 specific cause. All ten of the b1 failures were the same evidence
@@ -2093,70 +1957,43 @@ alternative (lower the likelihood) next to the chosen fix
 `evidence_used = ()`, correctly flag `sparse=true`, and join the
 `b2`-eligible det-silent set. Verdict moves `not yet → stable`.
 
-The lesson generalises beyond this one binding. Tuning a
-likelihood to lift a posterior over a threshold is fitting the
-criterion, not improving the model. Removing a binding that
-does not speak to the node's claim improves both criterion
-numbers and the layer's truthfulness. `CONTRIBUTING.md`
-"CPT-change discipline (v1.9.6+)" codifies the pattern as
-standing practice for future CPT changes: question topology,
-not parameters.
+This is the §4.9 "mirrors, not fitters" principle applied to a
+specific binding: removing a binding that does not speak to the
+node's claim improves both the criterion numbers and the layer's
+truthfulness, where tuning a likelihood to clear a threshold would
+only fit the criterion. `CONTRIBUTING.md` "CPT-change discipline
+(v1.9.6+)" codifies it as standing practice for future CPT changes.
 
-##### Net effect on the network at v1.9.9
+#### Net effect
 
-Eight nodes cleared all three criteria at v1.9.5. The ninth,
-`okta_idp`, cleared criteria (a) and (b) but had only 7 firings on
-the v1.9.0 corpus, below the N≥10 threshold for criterion (c).
-v1.9.10's stratified synthetic corpus brought the synthetic
-firing count above 10 (8 fixtures across the GCP / Azure / Oracle
-/ SSE strata fire the node); the real-corpus run gated by v2.0
-records the authoritative number. v2.0 ships with the full nine-
-node network, the disposition table baked into the committed
-configuration, and the `okta_idp` corpus-exposure caveat noted in
-the YAML inline comment for the node.
+Eight nodes cleared all three criteria; `okta_idp` cleared (a) and
+(b) but was corpus-limited on (c) (firing count below the N>=10
+floor), a caveat carried in its YAML inline comment. v2.0 ships the
+full nine-node network with the disposition table baked into the
+committed configuration; the per-release firing counts live in the
+`validation/` reports cited above.
 
-#### 4.8.13 Catalog metadata as upstream calibration (v1.9.7–v1.9.8)
+### 4.13 Catalog metadata as upstream calibration
 
-The Bayesian layer's calibration story (§4.8.4, §4.8.12) treats
-the slug observations $O$ in §4.5 as primitives: each fingerprint
-match is an event the layer conditions on. v1.9.7 and v1.9.8 are
-not network changes; they are upstream-of-the-network changes that
-make those primitives auditable.
+This is not a network change but an upstream-of-the-network one:
+the slug observations $O$ the layer conditions on (§4.1) now each
+carry a non-empty `description`, scope-narrowing language, and a
+canonical vendor `reference` URL, so a defender can re-verify the
+detection behind any posterior. The calibration story (§4.12) is
+unchanged; only the audit trail for its inputs improved. Full
+details in `validation/v1.9.8-metadata-audit.md`.
 
-**v1.9.7 + v1.9.8.** v1.9.7 flipped the metadata-coverage gate
-from a percentage threshold to a presence check; the 298-detection
-backfill brought every detection in
-`recon_tool/data/fingerprints/` to a non-empty `description`
-field. v1.9.8 lifted that floor to a richness floor: every
-detection passes the three-signal audit (length ≥ 80 chars,
-scope-narrowing language, canonical vendor `reference` URL).
-Inline weight rationale on every non-default detection weight.
-Full details in `validation/v1.9.8-metadata-audit.md`.
+### 4.14 Detection-gap UX surfaces
 
-**Why this is a calibration concern.** The Bayesian layer's
-likelihoods are functions of the slug matches that fire (§4.8.1).
-A detection without externally-verifiable provenance leaves the
-posterior harder to defend against an adversarial operator who
-challenges the inference. After v1.9.7+v1.9.8, every slug that
-contributes evidence is paired with a description and a vendor
-doc URL the defender can re-verify against. The calibration story
-itself (§4.8.12) is unchanged; what changed is the audit trail
-for the inputs the calibration rests on.
+This is renderer-side, with no engine, schema, or calibration
+change: the panel's "Passive-DNS ceiling" footer is the
+operator-facing counterpart to the layer's `sparse=true` flag
+(§4.4), and the Multi-cloud rollup and wordlist-breadth additions
+widen slug collection at the surface-attribution layer without
+touching the network's bindings. See
+`validation/v1.9.9-detection-gap-ux.md` for the full story.
 
-#### 4.8.14 Detection-gap UX surfaces (v1.9.9)
-
-v1.9.9 is renderer-side: no engine code, no schema, no calibration
-claim. One connection to the inference layer worth recording: the
-panel's "Passive-DNS ceiling" footer is the operator-facing
-counterpart to the layer's `sparse=true` flag (§4.8.4): a
-structural statement that some classes of evidence are unreachable
-through public DNS, paired with the statistical interval the layer
-already emits. The Multi-cloud rollup and wordlist-breadth
-additions widen slug collection at the surface-attribution layer
-without changing the network's bindings. See
-`validation/v1.9.9-detection-gap-ux.md` for the full v1.9.9 story.
-
-### 4.8a Worked `--explain-dag` examples (v1.9.0)
+### 4.15 Worked `--explain-dag` examples (v1.9.0)
 
 The Bayesian layer ships a renderer (`recon_tool/bayesian_dag.py`)
 that walks the inference output as a plain-English narrative or as
@@ -2207,15 +2044,14 @@ Identity provider is Okta.
 
 ## email_security_policy_enforcing
 Observable email-authentication policy is enforcing (DMARC reject/quarantine
-+ DKIM + strict SPF + optional MTA-STS enforce).
++ strict SPF + optional MTA-STS enforce).
 
-- Posterior: 0.982  (80% credible interval: [0.917, 1.000], n_eff=7.00)
+- Posterior: 0.982  (80% credible interval: [0.912, 1.000], n_eff=6.00)
 - Confidence label: high-confidence
-- Evidence: signal `dmarc_reject`, signal `dkim_present`, signal `spf_strict`
-- Top influences (ranked, 3 fired):
-    1. signal `dmarc_reject`: LLR +3.14 (61.6% of evidence influence)
-    2. signal `dkim_present`:  LLR +1.04 (20.4% of evidence influence)
-    3. signal `spf_strict`:    LLR +0.92 (18.0% of evidence influence)
+- Evidence: signal `dmarc_reject`, signal `spf_strict`
+- Top influences (ranked, 2 fired):
+    1. signal `dmarc_reject`: LLR +3.14 (77.3% of evidence influence)
+    2. signal `spf_strict`:   LLR +0.92 (22.7% of evidence influence)
 ```
 
 Reading: the chain reasoning is explicit. M365 is supported by two
@@ -2226,9 +2062,9 @@ larger than `microsoft365`'s (0.95 / 0.03 ≈ 32). Federated identity
 is supported by a signal AND propagates from the M365 parent (the
 CPT line `m365_tenant=present`,`google_workspace_tenant=absent` puts
 $P(\text{federated}|\text{M365}) = 0.45$); Okta then propagates from
-`federated_identity`. The policy-enforcing email node sits on three
-fired signals: DMARC reject is the load-bearing one (61% of influence,
-LLR +3.14), DKIM and SPF strict are confirmatory. Every claim in the
+`federated_identity`. The policy-enforcing email node sits on two
+fired signals: DMARC reject is the load-bearing one (77% of influence,
+LLR +3.14), strict SPF is confirmatory. Every claim in the
 chain is hedged with a credible interval, an n_eff, and a top-3 LLR
 ranking so a downstream reader can audit *which* facts drove the
 posterior, the question a defending operator asks when disputing a
@@ -2310,7 +2146,7 @@ dense, high-posterior nodes get a navyblue solid border. The
 palette is intentionally hedged: no green for "good", no red for
 "bad". recon renders structural confidence, not safety judgment.
 
-### 4.9 Feedback-driven priors (v1.9.0, local only)
+### 4.16 Feedback-driven priors (v1.9.0, local only)
 
 A corpus run can update a local prior file at
 `~/.recon/priors.yaml` based on the validation run's findings.
@@ -2323,15 +2159,69 @@ Three guardrails:
      no shared reputation database.
 
 This is "tune your local priors against your own corpus",
-specifically not "build a community-wide trust model". The
-distinction is invariant.
+specifically not "build a community-wide trust model"; the
+distinction is invariant. It lets operators tune the Bayesian
+layer to their own environment, with the corpus and priors staying
+on their machine (see §6).
 
-**Defensive value.** Helps operators tune the Bayesian layer to
-their own environment without ever ceding control of the prior to
-a remote service or a shared model. The corpus stays private; the
-priors stay local; the discipline stays the same.
+## 5. Epistemology and reading the output
 
-## 4a. Defense ↔ correlation mapping
+### 5.1 Bayesian epistemic humility in practice
+
+Three principles connect the math above to the design constraints
+the project ships under:
+
+  1. **The public channel is adversarial by design.** A hardened
+     defender minimizes $I(\Theta; O)$ as a deliberate strategy.
+     recon's correlation work is the principled counter-strategy:
+     extract the structural information that no public broadcast
+     can avoid leaking (CT logs are append-only and globally
+     visible; DNS delegation is hierarchical; issuance timing is
+     governed by operational physics). It is not "clever hacks"
+     against defenders; it is the defender themselves running
+     their own counter-analysis.
+  2. **Hedging is a calibration choice, not politeness.** Confident-
+     looking output on sparse evidence is a calibration failure.
+     The Bayesian layer enforces this in numbers (wider intervals
+     under sparse evidence); the deterministic layer enforces it in
+     language (`--confidence-mode strict` only fires when evidence
+     is dense; sparse output stays qualified). Both are the same
+     idea expressed in two registers.
+  3. **Provenance is non-optional.** Every conclusion is reachable
+     through the evidence DAG. The `--explain` output and the
+     `explanation_dag` JSON field exist so a security architect
+     can reconstruct which observable produced which
+     observation. A black-box posterior, even a numerically
+     correct one, is unacceptable, because the defender cannot
+     audit it. This rules out ML embeddings, learned weights, and
+     any "trust the score" pattern.
+
+These principles are why the invariants are what they are. They are
+not arbitrary engineering taste; they are direct consequences of
+treating recon as defensive epistemic infrastructure rather than as
+a recon (offensive) tool.
+
+### 5.2 How to read recon output through this lens
+
+  - **Default panel**: the posterior mode + maximum-confidence
+    slugs the deterministic engine extracted. Suitable for everyday
+    review.
+  - **`--full`**: the broader observation set, including
+    surface-attribution map and the External surface section that
+    walks each related subdomain's CNAME chain.
+  - **`--explain`**: the evidence DAG. This is the authoritative
+    answer to "why did recon say this?". Every conclusion is
+    traceable to its observables.
+  - **`--json` with `--include-unclassified`**: the discovery
+    surface. Unclassified CNAME chains are observables we found but
+    cannot yet attribute; they feed the validation loop and the
+    `/recon-fingerprint-triage` skill.
+  - **`--fusion`** *(v1.9.0+, stable v2.0+)*: Bayesian posteriors
+    with credible intervals. Read intervals, not just means.
+
+## 6. Context
+
+### 6.1 Defense ↔ correlation mapping
 
 A defender reading this document for the practical question "which
 correlation layer surfaces the thing I am worried about?" can use
@@ -2354,13 +2244,13 @@ of every fingerprint is what the catalog (`recon_tool/data/fingerprints/`)
 exists for. Each row in this table is a defender-level concern,
 not a vendor-product concern.
 
-## 4b. Prior-art comparison
+### 6.2 Prior-art comparison
 
 The Bayesian layer's design choices are derived from published
 work rather than invented. This section lists the libraries and
 papers we considered, what they offer, and why each was either
 adopted (cited inline elsewhere in this document) or deliberately
-not depended on (cf. §4c).
+not depended on (cf. §6.3).
 
 **Probabilistic-programming libraries considered and not used.**
 
@@ -2372,18 +2262,18 @@ not depended on (cf. §4c).
 | scikit-learn | Bayesian classifiers, calibration utilities. | Discriminative-model toolkit; would require restating the network as a feature pipeline. Pulls numpy/scipy. |
 
 **Methodological work cited inline.** The asymmetric likelihood
-construction (§4.8.3), the m-graph framing of adversarial
+construction (§4.3), the m-graph framing of adversarial
 missingness, the DRO worst-case derivation, the Manski bounds
 framing, Jeffrey-style updating, and the cautious-updating
 literature in imprecise probability are all cited at point-of-use
-in §4.8.3. The forensic-Bayesian-network analogue (Taroni et al.
+in §4.3. The forensic-Bayesian-network analogue (Taroni et al.
 2014) is cited there too. The Louvain modularity / CPM split is
-cited at §4.5. The Generalized Bayesian Inference / conflict-
-penalty literature is cited at §4.8.4. We claim no novelty;
+cited at §3.5. The Generalized Bayesian Inference / conflict-
+penalty literature is cited at §4.4. We claim no novelty;
 every formal choice has a published source whose framing matches
 recon's adversarial-public-channel setting.
 
-## 4c. Dependency-floor manifesto
+### 6.3 Dependency-floor manifesto
 
 recon ships with eight runtime imports plus one transitive-
 dependency security pin. Each is named below with the role it
@@ -2429,69 +2319,17 @@ shipped to runtime environments.
 | GeoIP / ASN databases (MaxMind, Team Cymru, etc.) | Local intelligence-database imports. recon's invariants exclude bundled intelligence: every conclusion must trace to a public observable, not to a maintained mapping table. |
 
 The exclusion list is the practical statement of the
-"data-file-only schema, no learned weights" invariant. A
+"data-file-only schema, no learned weights" invariant
+([roadmap.md § Invariants](roadmap.md#invariants)). A
 contributor proposing a new dependency must justify why their
 addition belongs alongside the eight above and not on the
 exclusion list.
 
-## 5. Epistemology and the design choices that follow
+### 6.4 Alignment with invariants
 
-### Bayesian epistemic humility in practice
-
-Three principles connect the math above to the design constraints
-the project ships under:
-
-  1. **The public channel is adversarial by design.** A hardened
-     defender minimizes $I(\Theta; O)$ as a deliberate strategy.
-     recon's correlation work is the principled counter-strategy:
-     extract the structural information that no public broadcast
-     can avoid leaking (CT logs are append-only and globally
-     visible; DNS delegation is hierarchical; issuance timing is
-     governed by operational physics). It is not "clever hacks"
-     against defenders; it is the defender themselves running
-     their own counter-analysis.
-  2. **Hedging is a calibration choice, not politeness.** Confident-
-     looking output on sparse evidence is a calibration failure.
-     The Bayesian layer enforces this in numbers (wider intervals
-     under sparse evidence); the deterministic layer enforces it in
-     language (`--confidence-mode strict` only fires when evidence
-     is dense; sparse output stays qualified). Both are the same
-     idea expressed in two registers.
-  3. **Provenance is non-optional.** Every conclusion is reachable
-     through the evidence DAG. The `--explain` output and the
-     `explanation_dag` JSON field exist so a security architect
-     can reconstruct which observable produced which
-     observation. A black-box posterior, even a numerically
-     correct one, is unacceptable, because the defender cannot
-     audit it. This rules out ML embeddings, learned weights, and
-     any "trust the score" pattern.
-
-These principles are why the invariants are what they are. They are
-not arbitrary engineering taste; they are direct consequences of
-treating recon as defensive epistemic infrastructure rather than as
-a recon (offensive) tool.
-
-## 6. How to read recon output through this lens
-
-  - **Default panel**: the posterior mode + maximum-confidence
-    slugs the deterministic engine extracted. Suitable for everyday
-    review.
-  - **`--full`**: the broader observation set, including
-    surface-attribution map and the External surface section that
-    walks each related subdomain's CNAME chain.
-  - **`--explain`**: the evidence DAG. This is the authoritative
-    answer to "why did recon say this?". Every conclusion is
-    traceable to its observables.
-  - **`--json` with `--include-unclassified`**: the discovery
-    surface. Unclassified CNAME chains are observables we found but
-    cannot yet attribute; they feed the validation loop and the
-    `/recon-fingerprint-triage` skill.
-  - **`--fusion`** *(v1.9.0+, stable v2.0+)*: Bayesian posteriors
-    with credible intervals. Read intervals, not just means.
-
-## 7. Alignment with invariants
-
-Every extension above is gated by:
+Every engine above is gated by the project invariants, stated
+authoritatively in [roadmap.md § Invariants](roadmap.md#invariants)
+and summarised here:
 
   - **Passive only.** No new probes beyond standard public-DNS
     resolution.
@@ -2511,16 +2349,20 @@ See [roadmap.md § Implementation discipline](roadmap.md#implementation-discipli
 for the per-PR checklist that turns these invariants into shippable
 behavior.
 
-## Relationship to other documents
+### 6.5 Relationship to other documents
 
 - [README.md](../README.md): user-facing introduction and practical
   usage. Casual readers start there.
 - [roadmap.md](roadmap.md): forward-looking build plan, success
   metrics, validation discipline.
-- [schema.md](schema.md): JSON output contract. Cited from this
-  document whenever a new field is mentioned.
+- [schema.md](schema.md): the JSON output contract and the
+  authoritative definitions for every field this document names
+  (`posterior_observations`, `infrastructure_clusters`, `chain_motifs`,
+  and the rest). Consult it for the exact shape of any field.
+- [mcp.md](mcp.md): the MCP server surface, including the
+  `explanation_dag` field referenced above.
 - [limitations.md](limitations.md): known passive-collection
-  ceilings. Pairs with §1–§2 above for cases where the channel
+  ceilings. Pairs with §1.1 above for cases where the channel
   genuinely cannot resolve uncertainty further.
 - This document: formal model, mathematical rationale, per-feature
   defensive-value statements, and the epistemology that ties them

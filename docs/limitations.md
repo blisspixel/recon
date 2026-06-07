@@ -38,10 +38,10 @@ gap as a known unknown.
   pointing to a shared CDN and no SaaS verification tokens are published,
   there is nothing to detect.
 
-See [correlation.md](correlation.md) for how the planned graph, temporal,
-and Bayesian layers (v1.7–v1.9) squeeze more usable defensive intelligence
-from these minimal footprints: wildcard SAN siblings, CT issuance bursts,
-and chain motifs all recover signal that single-record fingerprinting
+See [correlation.md](correlation.md) for how the graph, temporal, and Bayesian
+layers (shipped v1.7-v1.9, stable v2.0+) squeeze more usable defensive
+intelligence from these minimal footprints: wildcard SAN siblings, CT issuance
+bursts, and chain motifs all recover signal that single-record fingerprinting
 cannot.
 
 ### Internal-only services
@@ -124,6 +124,27 @@ enterprise SSO)` when MX / UserRealm say federated but no IdP-specific slug
 
 **Why hedged:** The federation protocol is observable; the vendor is not
 reliably extractable from DNS alone.
+
+---
+
+## Calibration and the validation ceiling
+
+The `--fusion` posteriors and their 80% credible intervals are
+**evidence-responsive**, not **calibrated** in the frequentist sense. The
+interval widens as the public channel thins and narrows as evidence
+accumulates (a construction property), but recon has not demonstrated that an
+80% interval contains the truth 80% of the time, because the passive setting
+has no ground-truth oracle to measure coverage against. Read the interval as
+"how much the public channel constrains this claim," not as a validated
+probability.
+
+What is validated (numerical correctness, synthetic calibration, determinism,
+sensitivity bounds) and the one experiment that would close the gap
+(frequentist coverage against an independent label set) are in
+[correlation.md](correlation.md) under Validation strategy. One honesty note
+worth repeating from there: the headline real-corpus consistency number is
+near-tautological by construction; it validates the inference plumbing, not the
+CPT values.
 
 ---
 

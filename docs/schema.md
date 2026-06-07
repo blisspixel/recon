@@ -1,9 +1,10 @@
 # JSON Output Schema
 
-This document is the stable contract for `recon <domain> --json` output as
-of v1.0. Any field marked **stable** will not change shape or type between
-patch or minor releases; removing or renaming one requires a major version
-bump and a deprecation window.
+This document is the stable contract for `recon <domain> --json` output,
+current as of v2.0. Any field marked **stable** will not change shape or type
+between patch or minor releases; removing or renaming one requires a major
+version bump and a deprecation window. Consumers should ignore unknown fields:
+additive changes (new fields) are non-breaking within the 2.x line.
 
 For the broader stability policy, see [`stability.md`](stability.md).
 
@@ -26,12 +27,20 @@ without guessing.
 | `recon batch <file> --json --include-ecosystem` | a `BatchResult` wrapper object `{domains, ecosystem_hyperedges}` | `domains` elements are success objects or `BatchErrorRecord`; falls back to the bare array when no domain resolved |
 | `recon batch <file> --ndjson` | one JSON object per line (newline-delimited) | each line is a success object or a `BatchErrorRecord` |
 | `recon delta <domain>` / `recon <domain> --compare <file>` | a single `DeltaReport` object | n/a |
+| `recon batch <file> --summary [--json]` | a single `cohort_summary` object (`record_type: "cohort_summary"`, `schema_version: "2.1"`) | n/a (aggregate-only; no per-domain records) |
 
 The machine-readable form of each shape lives in
 [`recon-schema.json`](recon-schema.json): the document root is the
 single-domain success object; `$defs/BatchArray`, `$defs/BatchResult`,
 `$defs/BatchNdjsonRecord`, `$defs/BatchErrorRecord`, and `$defs/DeltaReport`
 cover the rest.
+
+The `cohort_summary` mode (`recon batch --summary`) is a v2.1 aggregate-only
+document with its own `schema_version` (`"2.1"`, distinct from the `"2.0"` of the
+single-domain record). It reports cohort statistics with no per-domain records;
+its shape and the small-cell suppression policy are documented in
+[`aggregate-state.md`](aggregate-state.md). It is not part of the v2.0
+single-domain contract and is not yet mirrored in `recon-schema.json`.
 
 ### `BatchErrorRecord` (batch / NDJSON only)
 
@@ -145,14 +154,15 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | `domain_count` | int | no | `0+` | stable | Number of domains in the tenant. |
 | `tenant_domains` | `list[string]` | no | n/a | stable | All domains found in the tenant (M365 `tenant_domains` or equivalent). |
 | `related_domains` | `list[string]` | no | n/a | stable | Domains inferred from CNAME breadcrumbs, CT logs, or autodiscover delegation. |
+| `surface_attributions` | `list[SurfaceAttribution]` | no | n/a | stable | Per-subdomain attribution of each related domain to a SaaS or infrastructure provider, from CNAME-chain classification. Empty when nothing classified. See the [`SurfaceAttribution`](#surfaceattribution) nested object. |
 
 ### Email security
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `email_security_score` | int | no | `0–5` | stable | Count of the 5 email controls present: DMARC `reject`/`quarantine`, DKIM selectors, SPF strict (`-all`), MTA-STS, BIMI. |
+| `email_security_score` | int | no | `0-5` | stable | Count of the 5 email controls present: DMARC `reject`/`quarantine`, DKIM selectors, SPF strict (`-all`), MTA-STS, BIMI. |
 | `dmarc_policy` | string | yes | `reject \| quarantine \| none` | stable | DMARC policy when a DMARC record is present. |
-| `dmarc_pct` | int | yes | `0–100` | stable | DMARC `pct=` parameter. |
+| `dmarc_pct` | int | yes | `0-100` | stable | DMARC `pct=` parameter. |
 | `mta_sts_mode` | string | yes | `enforce \| testing \| none` | stable | MTA-STS policy mode. |
 | `site_verification_tokens` | `list[string]` | no | n/a | stable | TXT tokens observed on the apex (`google-site-verification=`, `MS=`, etc.). |
 
@@ -160,9 +170,10 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `ct_provider_used` | string | yes | `crt.sh \| certspotter \| crt.sh (cached) \| certspotter (cached)` | stable | Which CT provider answered, or `(cached)` suffix when data came from the per-domain CT cache. |
+| `ct_provider_used` | string | yes | `crt.sh \| certspotter \| crt.sh (cached) \| certspotter (cached)` | best-effort | Which CT provider answered, or `(cached)` suffix when data came from the per-domain CT cache. CT best-effort: not in the required set, may be absent. |
 | `ct_subdomain_count` | int | no | `0+` | stable | Number of subdomains returned after filtering. |
-| `ct_cache_age_days` | int | yes | `0+` | stable | Age of the CT cache entry in days when cached data was used. `null` when data came from a live provider. |
+| `ct_cache_age_days` | int | yes | `0+` | best-effort | Age of the CT cache entry in days when cached data was used. `null` when from a live provider. CT best-effort: not in the required set, may be absent. |
+| `ct_attempt_outcome` | string | yes | open string | best-effort | CT-pipeline telemetry (which provider path was tried, or why CT was skipped). Best-effort and **not** part of the guaranteed stable contract; the value set may grow. |
 | `cert_summary` | object | yes | n/a | stable | Nested object: `{cert_count, issuer_diversity, issuance_velocity, newest_cert_age_days, oldest_cert_age_days, top_issuers}`. `null` when no CT data was obtained. |
 
 ### Sovereignty & Microsoft tenant metadata
@@ -189,9 +200,10 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
 | `slug_confidences` | `object` | no | map `{slug: posterior}`, `posterior` in `[0, 1]` | stable (v2.0+) | Bayesian per-slug posterior means, parallel to `detection_scores`. Populated only when fusion runs (see `fusion_enabled`). Reshaped from a positional pair array to an object map in v2.0 (SH2). See [`fusion.py`](../recon_tool/fusion.py). |
-| `fusion_enabled` | bool | no | n/a | stable (v2.0+) | True when the Bayesian fusion layer ran (SH6). Disambiguates an empty `slug_confidences` / `posterior_observations` (fusion off) from "fusion ran, found none". |
+| `posterior_observations` | `list[PosteriorObservation]` | no | always present (empty when fusion off) | stable (v2.0+) | Marginal posteriors over the Bayesian network's high-level claims (M365 tenant, federated identity, email-policy enforcement, CDN fronting, and so on), each with an 80% credible interval. Populated only when fusion runs (see `fusion_enabled`); empty array otherwise. See the [`PosteriorObservation`](#posteriorobservation-v20) nested object. |
+| `fusion_enabled` | bool | no | n/a | stable (v2.0+) | True when the Bayesian fusion layer ran (SH6). Distinguishes an empty `slug_confidences` with fusion off from fusion having run and found no per-slug posteriors. `posterior_observations` always carries the network's fixed nodes when fusion runs, so it is non-empty whenever `fusion_enabled` is true. |
 | `schema_version` | string | no | `"2.0"` | stable (v2.0+) | Contract version of this record (SH7), so a detached payload can be routed across a future 2.x to 3.0 boundary. |
-| `record_type` | string | no | `lookup` | stable (v2.0+) | Output-mode discriminator (SH7); `lookup` on a single-domain success object. Batch wrappers, deltas, and error records carry `batch_result` / `delta` / `error`. |
+| `record_type` | string | no | `lookup` | stable (v2.0+) | Output-mode discriminator (SH7); `lookup` on a single-domain success object. Batch wrappers, deltas, error records, and cohort summaries carry `batch_result` / `delta` / `error` / `cohort_summary`. |
 
 ---
 
@@ -375,6 +387,68 @@ success object.
 ```
 
 All string fields; all except `organization` nullable. Stability: stable.
+
+### `SurfaceAttribution`
+
+One entry per classified related subdomain, in the top-level
+`surface_attributions` array.
+
+```json
+{
+  "subdomain": "api.example.com",
+  "primary_slug": "cloudflare",
+  "primary_name": "Cloudflare",
+  "primary_tier": "application",
+  "infra_slug": "amazonaws",
+  "infra_name": "AWS"
+}
+```
+
+| Field | Type | Nullable | Stability | Description |
+|---|---|---|---|---|
+| `subdomain` | string | no | stable | The related subdomain attributed. |
+| `primary_slug` | string | no | stable | Slug of the primary provider the CNAME chain resolves to. |
+| `primary_name` | string | no | stable | Human-readable primary provider name. |
+| `primary_tier` | string | no | stable | Provider tier: `application` or `infrastructure`. |
+| `infra_slug` | string | yes | stable | Underlying infrastructure slug when the primary fronts another provider; `null` when none. |
+| `infra_name` | string | yes | stable | Human-readable infrastructure name; `null` when none. |
+
+Derived from CNAME-chain classification of `related_domains`; observable
+proxy/origin shape only, never an ownership claim.
+
+### `PosteriorObservation` (v2.0+)
+
+One entry per Bayesian-network node, present in the `posterior_observations`
+array when fusion runs (empty array otherwise).
+
+```json
+{
+  "name": "m365_tenant",
+  "description": "Domain has a Microsoft 365 / Entra tenant.",
+  "posterior": 0.97,
+  "interval_low": 0.91,
+  "interval_high": 1.0,
+  "evidence_used": ["slug:microsoft365", "slug:entra-id"],
+  "n_eff": 6.0,
+  "sparse": false,
+  "conflict_provenance": []
+}
+```
+
+| Field | Type | Stability | Description |
+|---|---|---|---|
+| `name` | string | stable (v2.0+) | Stable node identifier matching `bayesian_network.yaml`. |
+| `description` | string | stable (v2.0+) | Plain-English claim the node encodes. |
+| `posterior` | number | stable (v2.0+) | P(node=present \| observed evidence), in `[0, 1]`. |
+| `interval_low` | number | stable (v2.0+) | Lower bound of the 80% credible interval (evidence-responsive, not frequentist coverage; see `correlation.md`). |
+| `interval_high` | number | stable (v2.0+) | Upper bound of the 80% credible interval. |
+| `n_eff` | number | stable (v2.0+) | Effective sample size behind the interval; lower means wider. Floors at 4. |
+| `sparse` | bool | stable (v2.0+) | `true` when `n_eff` is at the floor and absence carried no disconfirming weight, the passive-observation ceiling for this node. |
+| `evidence_used` | `list[string]` | stable (v2.0+) | Bound observations that fired, formatted `slug:<name>` or `signal:<name>`. |
+| `conflict_provenance` | `list[string]` | stable (v2.0+) | Cross-source disagreements that contributed to this node's `n_eff` penalty (v1.9.1+). Empty when none. |
+
+The model, the asymmetric (MNAR) likelihood, and what the 80% interval does and
+does not claim live in [`correlation.md`](correlation.md).
 
 ---
 

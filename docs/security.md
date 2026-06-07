@@ -35,8 +35,8 @@ no inbound network listeners, no user-code execution.
 
 **Surface:** A user (or an agent) passes an arbitrary string to `recon <domain>` or a MCP tool.
 
-**Mitigation:** [`recon_tool/validator.py`](../recon_tool/validator.py) line 18–85:
-- Domain regex: labels must be 1–63 chars, alphanumeric + hyphens, TLD ≥ 2 alpha chars
+**Mitigation:** [`recon_tool/validator.py`](../recon_tool/validator.py) line 18-85:
+- Domain regex: labels must be 1-63 chars, alphanumeric + hyphens, TLD ≥ 2 alpha chars
 - Max input length: 500 chars
 - Schemes (`http://`, `https://`, `ftp://`) stripped
 - `www.` prefix stripped
@@ -53,6 +53,7 @@ no inbound network listeners, no user-code execution.
   A-record IPs; private, loopback, link-local, reserved, multicast,
   unspecified, and other non-global addresses are skipped before PTR lookup.
 - Rich-text rendering uses `Text.append(value, style=...)` which escapes Rich markup in the user-controlled portion
+- Error, warning, and batch-progress sinks that print untrusted strings (a bad domain echoed back, a per-source error reason) escape Rich markup and strip control bytes (`render_error`, `render_warning`; output-injection sweep, v2.1.2), so a crafted domain or DNS value cannot inject terminal escapes or markup
 - JSON output uses `json.dumps` (escapes)
 - No DNS value is interpolated into shell, SQL, or exec contexts anywhere in the codebase
 
@@ -87,11 +88,14 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 
 **Mitigation:** [`recon_tool/fingerprints.py`](../recon_tool/fingerprints.py):
 - `yaml.safe_load` (not `yaml.load`) - no arbitrary constructor execution
-- Pattern length capped at 500 chars (line 56)
-- ReDoS heuristic (`_REDOS_RE` line 68–74) rejects nested quantifiers like
-  `(a+)+`, `(a*)+`, and `(\w+)+`, plus polynomial-backtracking shapes such as
-  repeated wildcard groups. This is a heuristic guardrail, not a formal regex
-  verifier.
+- Pattern length capped at 500 chars
+- ReDoS heuristic (`_validate_regex` in `fingerprints.py`) rejects nested
+  quantifiers like `(a+)+`, `(a*)+`, and `(\w+)+`; a balanced-paren scan
+  (`_has_nested_quantifier`, v2.1.1) also catches the redundantly-nested
+  `((a+))+` that a flat pattern misses; and an alternation-overlap check
+  (`_alternation_redos`) catches prefix-overlapping branches like `(a|aa)+`.
+  This is a heuristic guardrail, not a formal regex verifier; the input-length
+  caps bound what it does not catch.
 - All patterns compile-validated via `re.compile` before use
 - Same checks run on `~/.recon/signals.yaml` via `_validate_signal` in `signals.py`
 - Custom entries are **additive only** - cannot override built-ins (design invariant)
@@ -107,7 +111,7 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 - Asynchronous DNS resolution check (IP from resolver vs allowlist)
 - Used by default in all outbound HTTP (OIDC discovery, UserRealm, cert providers, Google identity)
 
-**Known limitation:** DNS rebinding with sub-second TTLs is not fully defeated (`http.py:9–16`). The check happens before the request, and `httpx` resolves the hostname again for the actual connection. For typical attacker TTLs (minutes) this is safe; for millisecond-TTL rebinding it is not. An attacker who controls both a public hostname and can flip its DNS within the connection window could bypass the check. This is documented in-code as a known tradeoff.
+**Known limitation:** DNS rebinding with sub-second TTLs is not fully defeated (`http.py:9-16`). The check happens before the request, and `httpx` resolves the hostname again for the actual connection. For typical attacker TTLs (minutes) this is safe; for millisecond-TTL rebinding it is not. An attacker who controls both a public hostname and can flip its DNS within the connection window could bypass the check. This is documented in-code as a known tradeoff.
 
 ### Path traversal in local caches
 

@@ -21,6 +21,8 @@ tooling expects them there: `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
 |---|---|
 | MCP server setup and tool list | [mcp.md](mcp.md) |
 | JSON output contract | [schema.md](schema.md) |
+| Cohort summaries across many domains | [aggregate-state.md](aggregate-state.md) |
+| Upgrading from v1.x to v2.0 | [migration-v2.md](migration-v2.md) |
 | Performance expectations | [performance.md](performance.md) |
 | Intended-use and query exposure | [legal.md](legal.md) |
 | Engineering threat model | [security.md](security.md) |

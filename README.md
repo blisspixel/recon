@@ -48,6 +48,8 @@ Insights
 
 Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP server](docs/mcp.md) for AI agents; the default `pip install recon-tool` includes MCP support.
 
+**Jump to:** [Install](#install) · [Usage](#usage) · [How it works](#how-recon-works) · [AI agents and MCP](#mcp-server) · [Automation and JSON](#automation-and-json) · [Limitations](#limitations) · [Docs index](docs/README.md)
+
 ## Why recon?
 
 | If you need... | Use recon for... | Reach for something heavier when... |
@@ -64,35 +66,33 @@ recon does not replace commercial EASM platforms, active scanners, or continuous
 
 recon also does not score or rank organizations, enrich domains with firmographics, or maintain an industry intelligence database. It reports what the public channel reveals, with provenance, and leaves business interpretation to the operator.
 
-## How recon Works
+## How recon works
 
-recon starts as a **passive DNS and certificate-transparency
-reader**. It gathers the public-channel observables: MX records, CNAME
-chains, SPF and DMARC TXT records, CT log SAN sets, and the
-unauthenticated identity-discovery endpoints Microsoft and Google
-publish for tenant resolution.
+recon reads the public channel: DNS records (MX, CNAME, SPF, DMARC,
+TXT), certificate-transparency SAN sets, and the unauthenticated
+identity-discovery endpoints Microsoft and Google publish for tenant
+resolution. No credentials, no scanning, nothing the target can see
+beyond a single MTA-STS policy fetch.
 
-Those observables feed into a small Bayesian network, where
-inference produces evidence-responsive 80% credible intervals over high-level claims
-(M365 tenant, federated identity, email-policy enforcement, CDN
-fronting, AWS hosting, and so on). The output is an interval, not a
-binary verdict, and the structural motifs the network surfaces (a CDN
-in front of an identity provider, an email gateway in front of M365, a
-secondary GWS deployment alongside primary M365) are the ones
-single-source detection often misses.
+It then runs those observables through a small Bayesian network and
+reports each high-level claim (M365 tenant, federated identity,
+email-policy enforcement, CDN fronting, and so on) as an 80% confidence
+interval, not a yes/no verdict. The interval is the load-bearing field:
+on hardened or heavily-proxied targets it **widens** rather than
+collapsing on a fake-confident point estimate, because absent evidence
+is treated as no evidence, not as evidence of absence. The intervals
+are evidence-responsive (they track how much the public channel
+constrains each claim); they are not yet empirically calibrated against
+ground truth, which no passive tool can observe. The structural motifs
+recon surfaces (a CDN in front of an identity provider, an email
+gateway in front of M365, a secondary Google Workspace alongside
+primary M365) are the ones single-source detection often misses.
 
-On hardened or heavily-proxied targets, the credible interval widens
-rather than collapsing on a confident point estimate. This is a
-construction property of the inference layer: by design, absent
-evidence is treated as no evidence rather than as evidence of absence.
-The tool reports what the public channel reveals and is explicit about
-what it does not.
-
-> **For the formal model:** the missing-data treatment under adversarial
-> assumptions (MNAR via Distributionally Robust Optimization), the
-> calibration principles the credible interval satisfies, and the
-> failure-mode catalog across five hardening postures live in
-> [docs/correlation.md](docs/correlation.md).
+> **For the formal model:** the adversarial missing-data treatment
+> (MNAR, with the absent-evidence rule grounded in m-graphs and Manski
+> partial identification), the calibration principles the credible
+> interval satisfies, and the failure-mode catalog across five hardening
+> postures live in [docs/correlation.md](docs/correlation.md).
 
 The fingerprint catalog is shaped by passive-DNS observation of real
 corpora. The built-in catalog ships with the package; operators can
@@ -145,7 +145,7 @@ After `--install-completion`, start a new shell for it to take effect.
 
 See [docs/README.md](docs/README.md) for the organized documentation index.
 
-## MCP Server
+## MCP server
 
 recon runs as an MCP server for Claude, Cursor, VS Code, ChatGPT, or any MCP client. The Model Context Protocol lets AI agents call tools like recon directly from your chat.
 
@@ -188,15 +188,32 @@ Installed but the tools don't appear? Run `recon doctor --client=<name>` to conf
 
 The SKILL.md follows the open [agentskills.io](https://agentskills.io) standard, so the same file works in Claude Code and Kiro.
 
-**Stable JSON schema.** Downstream consumers can validate `recon <domain> --json` output against [`docs/recon-schema.json`](docs/recon-schema.json) ([raw URL](https://raw.githubusercontent.com/blisspixel/recon/main/docs/recon-schema.json)). The schema is the v2.0 stability contract documented in [`docs/schema.md`](docs/schema.md); drift between schema and emitter is caught by `tests/test_json_schema_file.py`.
+## Automation and JSON
 
-**Exit codes for scripting.** The CLI returns a stable set of exit codes (`0` success, `1` general error, `2` validation, `3` no data, `4` internal) so a script can branch on the outcome without parsing output. The full contract is documented in [`docs/schema.md`](docs/schema.md#exit-codes).
+recon is built for piping, and the output shape depends on the command:
+`recon <domain> --json` emits a single result object; `recon batch ... --json`
+emits a wrapped array (`--ndjson` gives one object per line); `recon delta`
+emits a DeltaReport. Validate any shape against
+[`docs/recon-schema.json`](docs/recon-schema.json)
+([raw URL](https://raw.githubusercontent.com/blisspixel/recon/main/docs/recon-schema.json));
+the v2.0 stability contract and every field live in
+[`docs/schema.md`](docs/schema.md), and drift between schema and emitter is
+caught by `tests/test_json_schema_file.py`.
+
+The CLI also returns stable exit codes (`0` success, `1` general error,
+`2` validation, `3` no data, `4` internal) so a script can branch on the
+outcome without parsing output. Full contract:
+[`docs/schema.md`](docs/schema.md#exit-codes).
 
 ## Limitations
 
+The short version is below; [docs/limitations.md](docs/limitations.md) has the
+full inventory, including known noise patterns and a guide to when to reach for
+a different tool.
+
 - **Coverage depends on public DNS.** Organizations behind heavy proxies, with minimal DNS records, or that don't publish SaaS verification tokens will return sparse results. This is fundamental to passive-only collection. When sources transiently fail, the CLI tells you which one and why so you can retry or accept the partial answer.
-- **Internal workloads are structurally invisible.** Server-side API consumption (an org running internal Google Cloud ML, internal AWS data pipelines, internal Snowflake warehouses without public verification tokens, and so on) leaves no trace in public DNS, CT logs, or unauthenticated identity-discovery endpoints. recon cannot tell you what runs internally; it can only tell you what the org publishes externally. The CLI panel calls this out explicitly: the "Cloud" line surfaces what is observable, and on sparse-but-multi-domain apexes a one-line "Passive-DNS ceiling" footer notes that internal workloads and SaaS without DNS verification do not appear in public DNS records (v1.9.9+). A "Multi-cloud" indicator (v1.9.9+) collapses sibling slugs (Route 53 + CloudFront = one AWS) when the public footprint touches more than one cloud vendor.
-- **Heuristic, not ground truth.** The fingerprint database and signal rules are rule-based and solo-maintained. Confident-looking output can still be wrong. The credible interval is the load-bearing field, not the point estimate: by construction, sparse evidence on hardened targets produces a wide interval rather than a confident-looking point estimate, and the `sparse=true` flag in the JSON output is the operator-facing signal that the layer has hit the passive-observation ceiling. Every detection in the catalog carries a description and a vendor doc URL (v1.9.8+), so a finding can be re-verified against the vendor's own documentation before action. Treat results as indicators for investigation, not as definitive assessments. Don't make business decisions based solely on this output. See [docs/correlation.md](docs/correlation.md) for the calibration principles the interval satisfies and the failure-mode catalog across hardening postures.
+- **Internal workloads are structurally invisible.** Server-side API consumption (an org running internal Google Cloud ML, internal AWS data pipelines, internal Snowflake warehouses without public verification tokens, and so on) leaves no trace in public DNS, CT logs, or unauthenticated identity-discovery endpoints. recon cannot tell you what runs internally; it can only tell you what the org publishes externally. The CLI panel calls this out explicitly: the "Cloud" line surfaces what is observable, and on sparse-but-multi-domain apexes a one-line "Passive-DNS ceiling" footer notes that internal workloads and SaaS without DNS verification do not appear in public DNS records. A "Multi-cloud" indicator collapses sibling slugs (Route 53 + CloudFront = one AWS) when the public footprint touches more than one cloud vendor.
+- **Heuristic, not ground truth.** The fingerprint database and signal rules are rule-based and solo-maintained. Confident-looking output can still be wrong. The credible interval is the load-bearing field, not the point estimate: by construction, sparse evidence on hardened targets produces a wide interval rather than a confident-looking point estimate, and the `sparse=true` flag in the JSON output is the operator-facing signal that the layer has hit the passive-observation ceiling. Every detection in the catalog carries a description and a vendor doc URL, so a finding can be re-verified against the vendor's own documentation before action. Treat results as indicators for investigation, not as definitive assessments. Don't make business decisions based solely on this output. See [docs/correlation.md](docs/correlation.md) for the calibration principles the interval satisfies and the failure-mode catalog across hardening postures.
 
 ## Development
 

@@ -26,7 +26,7 @@ they would not need a breaking change after the freeze.
 
 | Field | First shipped | v2.0 status |
 |---|---|---|
-| `posterior_observations` | v1.9.0 | Stable. Shape pinned: `name`, `description`, `posterior`, `interval_low`, `interval_high`, `evidence_used`, `n_eff`, `sparse`. |
+| `posterior_observations` | v1.9.0 | Stable. Shape pinned: `name`, `description`, `posterior`, `interval_low`, `interval_high`, `evidence_used`, `n_eff`, `sparse`, `conflict_provenance`. |
 | `slug_confidences` | v1.9.0 | Stable. Reshaped in v2.0 (SH2) from a `[slug, posterior]` pair array to an object map `{slug: posterior}`, parallel to `detection_scores`. |
 | `chain_motifs` | v1.7.0 | Stable. |
 | `wildcard_sibling_clusters` | v1.7.0 | Stable. Reshaped in v2.0 (SH5) from a list of string lists to a list of `{names: [...]}` objects. |
