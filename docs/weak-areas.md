@@ -9,9 +9,9 @@ domains will look sparse, and you should read it accordingly.
 This page names the patterns and explains what to do instead of
 over-interpreting the result.
 
-See [correlation.md](correlation.md) and the v1.7–v1.9 build plan in
-[roadmap.md](roadmap.md#build-plan) for the exact correlation extensions
-that recover usable signal even on these weak-area shapes.
+See [correlation.md](correlation.md) for the correlation extensions
+(shipped v1.7-v1.9) that recover usable signal even on these weak-area
+shapes.
 
 ## Heavy CDN / edge-proxied domains
 

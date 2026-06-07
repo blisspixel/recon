@@ -37,9 +37,11 @@ fingerprints:
 | `mx` | MX hostnames | Substring | Email providers and gateways |
 | `ns` | NS hostnames | Substring | DNS hosting |
 | `cname` | CNAME targets | Regex | CDN / WAF / SaaS infrastructure |
+| `cname_target` | CNAME chain target | Regex (+ `tier`) | SaaS / infrastructure attribution via CNAME chains; carries a `tier` (`application` or `infrastructure`) that surface attribution uses to rank a chain. The most common detection type in the catalog. |
 | `subdomain_txt` | TXT at a specific subdomain | `subdomain:regex` | Challenge records (`_vendor-challenge:.+`) |
 | `caa` | CAA values | Substring | CA restrictions |
 | `srv` | SRV targets | Substring | Service discovery (Teams, XMPP) |
+| `dmarc_rua` | DMARC `rua=` report URI | Substring | DMARC aggregate-report processor / vendor (the report mailbox host) |
 
 ## Metadata fields
 
@@ -94,8 +96,8 @@ detections on domains with partial evidence.
 
 Testing new fingerprints is part of the broader correlation engine work
 described in [correlation.md](correlation.md). Every new detection rule is
-evaluated for how much additional mutual information it extracts on
-hardened targets without violating hedging or provenance invariants.
+judged by how much additional signal it recovers on hardened targets without
+violating the hedging or provenance invariants.
 
 Before committing a new fingerprint to the built-in set:
 
@@ -131,7 +133,7 @@ Patterns that have caused bad detections and should not be repeated:
 - **Shared CDN hostnames.** A CDN edge proves the edge provider, not the app
   running behind it.
 - **Patterns that would collapse sparse evidence into confident-looking
-  claims.** See the hardened-target signal recovery section in
+  claims.** See the deterministic-correlation section of
   [correlation.md](correlation.md) for the full reasoning: when a target
   publishes very little, the right answer is wider hedges, not a tighter
   pattern that pretends to know more.

@@ -51,9 +51,9 @@ transmitted anywhere recon does not already query.
   default. On a sweep of sibling domains (portfolio discovery),
   the first domain warms the cache and subsequent domains reuse it.
 - **Batch concurrency.** `recon batch` resolves domains sequentially
-  by default; a fast-follow candidate is `--concurrency N` but
-  raising concurrency also raises the per-provider rate-limit
-  pressure on crt.sh / CertSpotter. Keep it conservative.
+  by default; `--concurrency N` runs several at once, but raising it
+  also raises the per-provider rate-limit pressure on crt.sh /
+  CertSpotter. Keep it conservative.
 
 ## Where the time goes
 
@@ -61,12 +61,12 @@ On a single domain with a warm cache:
 
 | Step | Typical |
 |------|---------|
-| DNS resolution (MX, TXT, CNAME, etc.) | 50–300 ms |
-| OIDC discovery | 100–400 ms |
-| GetUserRealm | 100–400 ms |
-| Google Identity endpoint | 200–800 ms |
-| CT provider query (warm) | 10–50 ms |
-| CT provider query (cold) | 1–15 s |
+| DNS resolution (MX, TXT, CNAME, etc.) | 50-300 ms |
+| OIDC discovery | 100-400 ms |
+| GetUserRealm | 100-400 ms |
+| Google Identity endpoint | 200-800 ms |
+| CT provider query (warm) | 10-50 ms |
+| CT provider query (cold) | 1-15 s |
 | Synthesis / formatting | <50 ms |
 
 The CT provider step is the swing variable. Cold runs against a
