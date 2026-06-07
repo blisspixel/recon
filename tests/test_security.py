@@ -308,3 +308,52 @@ class TestSecurityReviewFixes:
         assert summary["outcome_counts"]["cache_hit"] == 1
         assert summary["outcome_counts"]["live_success"] == 1
         assert summary["outcome_counts"]["not_attempted"] == 1
+
+
+class TestBugHuntRound2:
+    """Regression tests for the self-driven bug-hunt batch (2.1.5)."""
+
+    def test_specificity_cname_target_uses_cname_corpus(self):
+        # cname_target had no corpus entry and fell through to the mismatched
+        # generic corpus, making the ephemeral-injection specificity gate
+        # ineffective for the most common detection type.
+        from recon_tool.specificity import PATTERN_TYPE_CORPORA, _cname_corpus, synthetic_corpus
+
+        assert "cname_target" in PATTERN_TYPE_CORPORA
+        assert synthetic_corpus("cname_target") == _cname_corpus()
+
+    def test_validate_regex_rejects_noncapturing_alternation_redos(self):
+        # (?:a|aa)+c (non-capturing overlapping alternation) slipped past the
+        # alternation-overlap check because the "?:" corrupted the first branch.
+        from recon_tool.fingerprints import _validate_regex
+
+        assert _validate_regex("(?:a|aa)+c", "test") is False
+        assert _validate_regex("(?:a|ab)+", "test") is False
+        assert _validate_regex("(?:foo|bar)+", "test") is True  # disjoint branches stay allowed
+
+    def test_merge_conflicts_survive_cache_round_trip(self):
+        # merge_conflicts were serialized but never read back, so a cached result
+        # silently lost all conflict data (and the Bayesian n_eff penalty).
+        from recon_tool.cache import tenant_info_from_dict, tenant_info_to_dict
+        from recon_tool.models import CandidateValue, ConfidenceLevel, MergeConflicts, TenantInfo
+
+        mc = MergeConflicts(
+            tenant_id=(
+                CandidateValue(value="aaaaaaaa-aaaa", source="oidc", confidence="high"),
+                CandidateValue(value="bbbbbbbb-bbbb", source="userrealm", confidence="high"),
+            )
+        )
+        info = TenantInfo(
+            tenant_id="aaaaaaaa-aaaa",
+            display_name="X",
+            default_domain="ex.com",
+            queried_domain="ex.com",
+            confidence=ConfidenceLevel.LOW,
+            domain_count=0,
+            merge_conflicts=mc,
+        )
+        restored = tenant_info_from_dict(tenant_info_to_dict(info))
+        assert restored.merge_conflicts is not None
+        assert restored.merge_conflicts.has_conflicts
+        assert len(restored.merge_conflicts.tenant_id) == 2
+        assert restored.merge_conflicts.tenant_id[0].value == "aaaaaaaa-aaaa"

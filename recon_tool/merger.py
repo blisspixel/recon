@@ -1068,7 +1068,7 @@ def merge_results(
     # Surface conflicting tenant IDs — high-value intel that explains why
     # confidence is LOW and may indicate a misconfigured or transitioning tenant.
     if has_id_conflict:
-        conflicting = sorted({r.tenant_id for r in results if r.tenant_id is not None})
+        conflicting = sorted({strip_control_chars(r.tenant_id) for r in results if r.tenant_id is not None})
         insights.insert(0, f"Conflicting tenant IDs detected: {', '.join(conflicting)}")
 
     all_degraded = _collect_degraded(results)

@@ -2374,7 +2374,7 @@ def _render_unclassified_surface(info: TenantInfo, show_domains: bool) -> Text |
         sample_strs: list[str] = []
         for uc in examples:
             terminus = uc.chain[-1] if uc.chain else "(no terminus)"
-            sample_strs.append(f"{uc.subdomain} → {terminus}")
+            sample_strs.append(f"{strip_control_chars(uc.subdomain)} → {strip_control_chars(terminus)}")
         unc.append(", ".join(sample_strs), style="dim italic")
     return unc
 
@@ -2456,12 +2456,12 @@ def _append_individual_rows(surf: Text, individuals: list[Any]) -> None:
     ind_max = max(len(s.subdomain) for s in individuals)
     col_width = max(24, min(ind_max, _PANEL_WIDTH - 30))
     for sa in individuals:
-        sub = sa.subdomain
+        sub = strip_control_chars(sa.subdomain)
         if len(sub) > col_width:
             sub = sub[: col_width - 2] + ".."
-        services_label = sa.primary_name
+        services_label = strip_control_chars(sa.primary_name)
         if sa.infra_name:
-            services_label = f"{sa.primary_name}, {sa.infra_name}"
+            services_label = f"{strip_control_chars(sa.primary_name)}, {strip_control_chars(sa.infra_name)}"
         surf.append("  ")
         surf.append(f"{sub:<{col_width}}", style="dim")
         surf.append("  ")
@@ -2912,10 +2912,10 @@ def render_verbose_sources(results: list[SourceResult]) -> None:
     c = get_console()
     for result in results:
         if result.is_success:
-            description = _source_success_description(result)
+            description = escape(strip_control_chars(_source_success_description(result)))
             c.print(f"  [green]✓[/green] {result.source_name} — {description}")
         else:
-            error_msg = result.error or "no data returned"
+            error_msg = escape(strip_control_chars(result.error or "no data returned"))
             c.print(f"  [red]✗[/red] {result.source_name} — {error_msg}")
 
 
@@ -3387,7 +3387,7 @@ def _md_related_domains(info: TenantInfo) -> list[str]:
         return []
     lines: list[str] = ["## Related Domains", ""]
     for d in info.related_domains:
-        lines.append(f"- {d}")
+        lines.append(f"- {_markdown_escape(d)}")
     lines.append("")
     return lines
 

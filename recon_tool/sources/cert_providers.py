@@ -193,9 +193,15 @@ _CT_TIMEOUT = 6.0
 # loop singleton so tests that create their own loop see a fresh
 # semaphore rather than a stale one bound to the prior loop.
 import asyncio  # noqa: E402  (placed here so the rationale stays adjacent)
+import weakref  # noqa: E402
 
 _CT_GLOBAL_CONCURRENCY = 2
-_ct_semaphore_by_loop: dict[int, asyncio.Semaphore] = {}
+# Keyed by the loop object through a weak map so a closed loop's entry drops on
+# GC. A plain id(loop) key could be reused by a freshly-created loop and hand
+# back a stale semaphore (permits already consumed by the dead loop).
+_ct_semaphore_by_loop: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore] = (
+    weakref.WeakKeyDictionary()
+)
 
 
 def _get_ct_semaphore() -> asyncio.Semaphore:
@@ -206,11 +212,10 @@ def _get_ct_semaphore() -> asyncio.Semaphore:
     state.
     """
     loop = asyncio.get_running_loop()
-    key = id(loop)
-    sem = _ct_semaphore_by_loop.get(key)
+    sem = _ct_semaphore_by_loop.get(loop)
     if sem is None:
         sem = asyncio.Semaphore(_CT_GLOBAL_CONCURRENCY)
-        _ct_semaphore_by_loop[key] = sem
+        _ct_semaphore_by_loop[loop] = sem
     return sem
 
 
@@ -548,6 +553,10 @@ def _extract_crtsh_entries(
         name_value = entry.get("name_value", "")
         cert_sans: list[str] = []
         if isinstance(name_value, str):
+            # Bound the field before splitting: a single newline-free SAN line could
+            # otherwise be the entire (body-capped) response, and _is_safe_san_name
+            # scans every character. 256 chars per SAN slot is generous.
+            name_value = name_value[: _MAX_SANS_PER_CERT * 256]
             for raw_name in name_value.split("\n", _MAX_SANS_PER_CERT):
                 if len(cert_sans) >= _MAX_SANS_PER_CERT:
                     break

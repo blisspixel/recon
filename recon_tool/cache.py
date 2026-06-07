@@ -20,6 +20,7 @@ from typing import Any
 
 from recon_tool.models import (
     BIMIIdentity,
+    CandidateValue,
     CertBurst,
     CertSummary,
     ChainMotifObservation,
@@ -28,9 +29,11 @@ from recon_tool.models import (
     InfrastructureCluster,
     InfrastructureClusterReport,
     InfrastructureEdge,
+    MergeConflicts,
     SurfaceAttribution,
     TenantInfo,
     UnclassifiedCnameChain,
+    serialize_conflicts,
 )
 from recon_tool.validator import validate_domain
 
@@ -95,6 +98,11 @@ def cache_put(domain: str, info: TenantInfo) -> None:
     try:
         d = cache_dir()
         d.mkdir(parents=True, exist_ok=True)
+        # Resolve after mkdir so the temp dir matches the resolved path that
+        # _safe_cache_path validates against; otherwise a symlinked
+        # RECON_CONFIG_DIR could leave the temp off-volume and make os.replace
+        # non-atomic.
+        d = d.resolve()
         path = _safe_cache_path(domain)
         if path is None:
             logger.debug("Cache write rejected invalid domain: %r", domain)
@@ -230,6 +238,11 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "ct_subdomain_count": info.ct_subdomain_count,
         "ct_cache_age_days": info.ct_cache_age_days,
         "ct_attempt_outcome": info.ct_attempt_outcome,
+        "merge_conflicts": (
+            serialize_conflicts(info.merge_conflicts)
+            if info.merge_conflicts and info.merge_conflicts.has_conflicts
+            else None
+        ),
         "slug_confidences": dict(info.slug_confidences),
         "posterior_observations": [
             {
@@ -669,6 +682,38 @@ def _read_slug_confidences(raw: object) -> tuple[tuple[str, float], ...]:
     return ()
 
 
+_MERGE_CONFLICT_FIELDS = frozenset(
+    {"display_name", "auth_type", "region", "tenant_id", "dmarc_policy", "google_auth_type"}
+)
+
+
+def _parse_merge_conflicts(raw: object) -> MergeConflicts | None:
+    """Rebuild MergeConflicts from a cached dict; None on absence or corruption.
+
+    The to_dict path serializes conflicts via serialize_conflicts; without this
+    inverse a cached result silently lost all conflict data (and the Bayesian
+    n_eff conflict penalty) on read.
+    """
+    if not isinstance(raw, dict):
+        return None
+    kwargs: dict[str, tuple[CandidateValue, ...]] = {}
+    for fname, cands in raw.items():
+        if fname not in _MERGE_CONFLICT_FIELDS or not isinstance(cands, list):
+            continue
+        parsed = tuple(
+            CandidateValue(
+                value=str(c["value"]),
+                source=str(c.get("source", "")),
+                confidence=str(c.get("confidence", "")),
+            )
+            for c in cands
+            if isinstance(c, dict) and isinstance(c.get("value"), str)
+        )
+        if parsed:
+            kwargs[fname] = parsed
+    return MergeConflicts(**kwargs) if kwargs else None
+
+
 def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
     """Deserialize a dict back to TenantInfo. Raises ValueError on invalid data.
 
@@ -750,6 +795,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         related_domains=tuple(data.get("related_domains", [])),
         insights=tuple(data.get("insights", [])),
         degraded_sources=_parse_degraded_sources(data),
+        merge_conflicts=_parse_merge_conflicts(data.get("merge_conflicts")),
         cert_summary=cert_summary,
         evidence=evidence,
         evidence_confidence=_parse_confidence(data.get("evidence_confidence")),
