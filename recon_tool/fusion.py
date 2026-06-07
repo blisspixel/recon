@@ -126,13 +126,14 @@ def compute_slug_posteriors(
     This operates purely on already-collected evidence — no network calls, no
     additional lookups. Safe to call from cached pipeline data.
     """
-    # For each slug: start from the prior matching its strongest evidence
-    # source. For every additional evidence record on the same slug, add that
-    # source's success weight to α. β is fixed at the prior (no negative
+    # For each slug: start from the prior for its strongest evidence source (the
+    # outset trust level), then add that source's success weight for each observed
+    # record, per the module-docstring model alpha_new = alpha_prior + weight. The
+    # prior is the starting belief, not an encoded first observation, so the first
+    # record adds weight like any other. beta is fixed at the prior (no negative
     # evidence in the current model).
     slug_alphas: dict[str, float] = defaultdict(float)
     slug_betas: dict[str, float] = defaultdict(float)
-    slug_primed: set[str] = set()
 
     # Group by slug for deterministic iteration
     by_slug: dict[str, list[EvidenceRecord]] = defaultdict(list)
@@ -142,20 +143,17 @@ def compute_slug_posteriors(
         by_slug[ev.slug].append(ev)
 
     for slug, records in by_slug.items():
-        # Pick the prior from the highest-α source type seen for this slug
+        # Pick the prior from the highest-alpha source type seen for this slug
         best_prior: tuple[float, float] = _DEFAULT_PRIOR
         for ev in records:
             prior = SOURCE_PRIORS.get(ev.source_type, _DEFAULT_PRIOR)
             if prior[0] > best_prior[0]:
                 best_prior = prior
-        if slug not in slug_primed:
-            slug_alphas[slug] = best_prior[0]
-            slug_betas[slug] = best_prior[1]
-            slug_primed.add(slug)
+        slug_alphas[slug] = best_prior[0]
+        slug_betas[slug] = best_prior[1]
 
         for ev in records:
-            weight = SOURCE_WEIGHTS.get(ev.source_type, _DEFAULT_WEIGHT)
-            slug_alphas[slug] += weight
+            slug_alphas[slug] += SOURCE_WEIGHTS.get(ev.source_type, _DEFAULT_WEIGHT)
 
     posteriors: list[tuple[str, float]] = []
     for slug in slug_alphas:

@@ -357,3 +357,18 @@ class TestBugHuntRound2:
         assert restored.merge_conflicts.has_conflicts
         assert len(restored.merge_conflicts.tenant_id) == 2
         assert restored.merge_conflicts.tenant_id[0].value == "aaaaaaaa-aaaa"
+
+    def test_spf_strict_requires_all_as_token(self):
+        # "-all" must be a standalone SPF mechanism, not a substring: a record
+        # like "include:foo-all.com ~all" is soft-fail and must NOT set spf_strict.
+        from types import SimpleNamespace
+
+        from recon_tool.bayesian import signals_from_tenant_info
+
+        def sigs(spf: str) -> set[str]:
+            info = SimpleNamespace(evidence=(SimpleNamespace(source_type="SPF", raw_value=spf),))
+            return signals_from_tenant_info(info)
+
+        assert "spf_strict" not in sigs("v=spf1 include:foo-all.com ~all")
+        assert "spf_strict" in sigs("v=spf1 -all")
+        assert "spf_strict" in sigs("v=spf1 include:_spf.example.com -all")
