@@ -722,12 +722,12 @@ def _doctor_client(client: str) -> None:
     for check in report.checks:
         style = _style[check.status]
         mark = _mark[check.status]
-        console.print(f"  [{style}]{mark:>4}[/{style}]  {check.name} — {escape(check.detail)}")
+        console.print(f"  [{style}]{mark:>4}[/{style}]  {check.name} — {escape(strip_control_chars(check.detail))}")
 
     if report.notes:
         console.print()
         for note in report.notes:
-            console.print(f"  [dim]note:[/dim] {escape(note)}")
+            console.print(f"  [dim]note:[/dim] {escape(strip_control_chars(note))}")
 
     console.print()
     if report.ok:
@@ -2593,6 +2593,13 @@ async def _lookup_resolve_standard(
 
     if fusion or explain_dag:
         info = _lookup_apply_fusion(info)
+    else:
+        # --no-fusion: a cache hit may carry fusion fields written by an earlier
+        # default-on run. Clear them so the opt-out is honored (fusion_enabled is
+        # derived from posterior_observations downstream).
+        from dataclasses import replace as _replace
+
+        info = _replace(info, slug_confidences={}, posterior_observations=())
 
     # Cache hits don't write back: the entry hasn't changed except for fusion
     # output, which is recomputed on read anyway.
@@ -3632,7 +3639,7 @@ async def _batch(
         nonlocal completed
         result = await _run_one(domain)
         completed += 1
-        if not json_output and not markdown and not csv_output:
+        if not summary and not json_output and not markdown and not csv_output:
             safe = escape(strip_control_chars(domain))
             console.print(f"  [{completed}/{total}] {safe}", style="dim", highlight=False)
         return result

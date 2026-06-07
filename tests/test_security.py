@@ -224,3 +224,87 @@ class TestOutputInjectionSweep:
         )
         ann = render_conflict_annotation("display_name", conflicts, verbose=True)
         assert "\x1b" not in ann
+
+
+class TestSecurityReviewFixes:
+    """Regression tests for the 2026-06 external security-review batch."""
+
+    def test_idna_lossy_mapping_rejected(self):
+        # The stdlib idna codec is IDNA2003/nameprep: faß.de maps to fass.de, a
+        # different registrable domain. The round-trip check must reject the lossy
+        # mapping rather than silently query the wrong domain; non-lossy IDNs still
+        # convert.
+        from recon_tool.validator import validate_domain
+
+        assert validate_domain("münchen.de") == "xn--mnchen-3ya.de"
+        for lossy in ("faß.de", "straße.de"):
+            with pytest.raises(ValueError, match="Invalid domain"):
+                validate_domain(lossy)
+
+    def test_cname_target_match_is_label_aware(self):
+        # A bare-substring match let an attacker-controlled CNAME target like
+        # manageengine.com.attacker.tld match the manageengine.com rule. Matching
+        # must be DNS-label-aware (exact or proper subdomain).
+        from types import SimpleNamespace
+
+        from recon_tool.sources.dns import _classify_chain
+
+        rule = SimpleNamespace(
+            pattern="manageengine.com", tier="application", name="ManageEngine", slug="manageengine"
+        )
+        assert _classify_chain(["manageengine.com.attacker.tld"], [rule])[0] is None
+        assert _classify_chain(["foo.manageengine.com"], [rule])[0] is rule
+        assert _classify_chain(["manageengine.com"], [rule])[0] is rule
+
+    def test_cache_write_uses_no_predictable_temp(self, tmp_path, monkeypatch):
+        # The atomic write must not use a predictable <domain>.json.tmp (a
+        # symlink-overwrite vector); mkstemp uses a random O_EXCL name, so a
+        # pre-existing predictable temp is never followed or overwritten.
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
+        from recon_tool.cache import cache_dir, cache_get, cache_put
+        from recon_tool.models import ConfidenceLevel, TenantInfo
+
+        d = cache_dir()
+        d.mkdir(parents=True, exist_ok=True)
+        sentinel = d / "ex.com.json.tmp"
+        sentinel.write_text("SENTINEL", encoding="utf-8")
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="X",
+            default_domain="ex.com",
+            queried_domain="ex.com",
+            confidence=ConfidenceLevel.LOW,
+            domain_count=0,
+        )
+        cache_put("ex.com", info)
+        assert cache_get("ex.com") is not None
+        assert sentinel.read_text(encoding="utf-8") == "SENTINEL"
+
+    def test_ct_budget_summary_streams_ndjson(self, tmp_path):
+        # validation/scan.py must stream the NDJSON results line-by-line (memory
+        # bounded) and count ct_attempt_outcome correctly.
+        import importlib.util
+        import json as _json
+        from pathlib import Path
+
+        repo = Path(__file__).resolve().parent.parent
+        spec = importlib.util.spec_from_file_location("scan_ref", repo / "validation" / "scan.py")
+        assert spec is not None
+        assert spec.loader is not None
+        scan = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(scan)
+
+        results = tmp_path / "results.ndjson"
+        results.write_text(
+            '{"queried_domain":"a.com","ct_attempt_outcome":"cache_hit"}\n'
+            "\n"
+            '{"queried_domain":"b.com","ct_attempt_outcome":"live_success"}\n'
+            '{"queried_domain":"c.com"}\n',
+            encoding="utf-8",
+        )
+        scan._write_ct_budget_summary(results, tmp_path)
+        summary = _json.loads((tmp_path / "ct_budget_summary.json").read_text(encoding="utf-8"))
+        assert summary["records_total"] == 3
+        assert summary["outcome_counts"]["cache_hit"] == 1
+        assert summary["outcome_counts"]["live_success"] == 1
+        assert summary["outcome_counts"]["not_attempted"] == 1

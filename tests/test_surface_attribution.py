@@ -73,8 +73,11 @@ def test_classify_chain_picks_application_over_infrastructure() -> None:
         _make_rule("auth0.com", "auth0", "application"),
         _make_rule("cloudflare.net", "cloudflare", "infrastructure"),
     )
-    # Sorted longest-first by the caller; both same length so order stable.
-    application, infrastructure = _classify_chain(["auth0-ingress.us.auth0.com.cdn.cloudflare.net"], rules)
+    # A real chain is a list of hops: the Auth0 subdomain then the Cloudflare
+    # edge it fronts through. Label-aware matching attributes each correctly.
+    application, infrastructure = _classify_chain(
+        ["auth0-ingress.us.auth0.com", "edge.cdn.cloudflare.net"], rules
+    )
     assert application is not None
     assert application.slug == "auth0"
     assert infrastructure is not None
@@ -110,7 +113,7 @@ def test_classify_chain_walks_multiple_hops() -> None:
     chain = [
         "sso.example.com",  # not matched
         "auth0-ingress.us.auth0.com",  # application match
-        "cloudflare.net.edge",  # infrastructure match
+        "edge.cdn.cloudflare.net",  # infrastructure match
     ]
     application, infrastructure = _classify_chain(chain, rules)
     assert application is not None

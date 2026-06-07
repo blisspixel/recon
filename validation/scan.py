@@ -68,32 +68,31 @@ def _write_ct_budget_summary(results_path: Path, run_dir: Path) -> None:
     """
     outcome_counts: dict[str, int] = {}
     total = 0
-    text = ""
-    with contextlib.suppress(OSError):
-        text = results_path.read_text(encoding="utf-8")
-    # The batch writes NDJSON (one object per line) or, under --json-array, a
-    # single pretty-printed JSON array. Detect the array form so the per-line
-    # parser does not silently count zero (or crash on a list element).
-    records: list[dict[str, object]] = []
-    if text.lstrip().startswith("["):
-        with contextlib.suppress(ValueError):
-            parsed = json.loads(text)
-            if isinstance(parsed, list):
-                records = [rec for rec in parsed if isinstance(rec, dict)]
+
+    def _tally(rec: object) -> None:
+        nonlocal total
+        if isinstance(rec, dict):
+            total += 1
+            outcome = rec.get("ct_attempt_outcome") or "not_attempted"
+            outcome_counts[str(outcome)] = outcome_counts.get(str(outcome), 0) + 1
+
+    # NDJSON (the default, used for large corpora) is streamed line-by-line so a
+    # huge results file stays memory-bounded; the opt-in --json-array form is a
+    # single document (results.json) and is parsed whole.
+    if results_path.suffix == ".ndjson":
+        with contextlib.suppress(OSError), results_path.open(encoding="utf-8") as fh:
+            for raw in fh:
+                line = raw.strip()
+                if not line:
+                    continue
+                with contextlib.suppress(ValueError):
+                    _tally(json.loads(line))
     else:
-        for line in text.splitlines():
-            if not line.strip():
-                continue
-            try:
-                rec = json.loads(line)
-            except ValueError:
-                continue
-            if isinstance(rec, dict):
-                records.append(rec)
-    for rec in records:
-        total += 1
-        outcome = rec.get("ct_attempt_outcome") or "not_attempted"
-        outcome_counts[str(outcome)] = outcome_counts.get(str(outcome), 0) + 1
+        with contextlib.suppress(OSError, ValueError):
+            parsed = json.loads(results_path.read_text(encoding="utf-8"))
+            if isinstance(parsed, list):
+                for rec in parsed:
+                    _tally(rec)
 
     # Pick up the persisted rate-limiter snapshots written by the
     # batch subprocess. The state files live in the operator's recon

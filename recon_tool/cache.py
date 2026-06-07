@@ -7,10 +7,12 @@ All I/O wrapped in try/except with debug logging, never raises to caller.
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import json
 import logging
 import os
+import tempfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -99,10 +101,19 @@ def cache_put(domain: str, info: TenantInfo) -> None:
             return
         data = tenant_info_to_dict(info)
         # Atomic write: a crash or a concurrent reader mid-write must not leave a
-        # truncated JSON file. Write a temp sibling, then atomically replace.
-        tmp = path.with_suffix(path.suffix + ".tmp")
-        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        tmp.replace(path)
+        # truncated JSON file. mkstemp creates the temp inside the validated cache
+        # dir with O_CREAT|O_EXCL and mode 0600 (a random name that never follows a
+        # pre-existing symlink), then os.replace swaps it in atomically. A
+        # predictable "<domain>.json.tmp" name was a symlink-overwrite vector.
+        fd, tmp_name = tempfile.mkstemp(dir=str(d), prefix=f"{path.stem}.", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(json.dumps(data, indent=2))
+            os.replace(tmp_name, path)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                os.unlink(tmp_name)
+            raise
     except (OSError, TypeError, ValueError, json.JSONDecodeError):
         logger.debug("Cache write failed for %s", domain, exc_info=True)
 
