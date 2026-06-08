@@ -66,6 +66,8 @@ recon does not replace commercial EASM platforms, active scanners, or continuous
 
 recon also does not score or rank organizations, enrich domains with firmographics, or maintain an industry intelligence database. It reports what the public channel reveals, with provenance, and leaves business interpretation to the operator.
 
+recon ships as a Python wheel on PyPI and runs locally: a CLI, an importable library, and a stdio MCP server. It is not a hosted service. There is no remote MCP transport, container image, daemon, or scheduled-monitoring mode, and adding one is out of scope by design (see the [roadmap](docs/roadmap.md#intentionally-out-of-scope)). If you need scheduling or shared access, that belongs to whatever runs recon, not to recon itself.
+
 ## How recon works
 
 recon reads the public channel: DNS records (MX, CNAME, SPF, DMARC,
