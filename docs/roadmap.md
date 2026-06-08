@@ -356,7 +356,13 @@ Trusted (the artifact and the answer are both verifiable):
   enumerable), with an independent reference implementation so it verifies the
   factor construction (declarative conditioning, grouped evidence, virtual
   evidence), not just the elimination step. Turns "tested" into "exhaustively
-  verified for this network."
+  verified for this network." Shipped: `validation/differential_verification.py`
+  carries the independent full-joint reference and sweeps the enumerable
+  none/one/all cross product (~2.9k configs) plus an exhaustive per-node subset
+  sweep over the grouped and declarative nodes; variable elimination matched
+  naive enumeration on every node of every configuration (worst gap ~5e-5, the
+  engine's 4-decimal posterior rounding). `tests/test_bayesian_differential.py`
+  anchors the reference to hand-computed marginals and runs a fast subset in CI.
 - Reproducible builds bit-for-bit, signed releases (sigstore), SLSA provenance,
   on top of the existing build attestation and SBOM.
 - A cross-platform and cross-Python determinism gate so the same input yields
@@ -432,8 +438,10 @@ misleading comment, not a defect (the code matches the documented
 `alpha_prior + weight` model, so posteriors are unchanged); a load-time warning
 now flags declarative nodes whose grouped bindings lack a `group_absence` entry;
 and the signed `entropy_reduction` is documented rather than clamped. The
-differential verification of the inference core, the fault-injection matrix, and
-signed/reproducible builds remain ahead.
+differential verification of the inference core has since landed (the independent
+full-joint reference in `validation/differential_verification.py` cross-checking
+variable elimination across the enumerable evidence sweep); the fault-injection
+matrix and signed/reproducible builds remain ahead.
 
 #### Post-2.0 feature candidates (maintainer)
 

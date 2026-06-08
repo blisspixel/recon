@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.7] - 2026-06-08
+
+### Assurance: differential verification of the inference core
+
+The first of the post-2.0 trust-hardening items (roadmap "Trusted" track). An
+independent reference cross-checks the Bayesian engine; no engine or output
+change, verification only.
+
+- `validation/differential_verification.py` carries a second inference
+  implementation that enumerates the full 512-state joint directly and reads
+  each marginal off the normalized sum, with no factor algebra. It re-derives
+  the factor construction (correlation-group reduction, declarative absence
+  conditioning, soft evidence) from the documented spec, independently of the
+  variable-elimination path it checks.
+- It sweeps the enumerable evidence space (every node at none/one/all of its
+  bindings, ~2.9k configs) plus an exhaustive per-node subset sweep over the
+  grouped and declarative nodes. Variable elimination matched naive enumeration
+  on every node of every configuration (worst gap 4.95e-05, the engine's
+  4-decimal posterior rounding).
+- `tests/test_bayesian_differential.py` anchors the reference to hand-computed
+  no-evidence marginals (so the oracle is known-correct, not merely consistent
+  with the engine), then holds variable elimination to it on the prior, the
+  exhaustive tricky-node sweep, and a strided sample of the full sweep.
+
+Gate: full pytest (2832 passed), ruff, pyright (0 errors), validate_fingerprint (841).
+
 ## [2.1.6] - 2026-06-07
 
 ### Inference layer (bug-hunt follow-up, maintainer-reviewed)
