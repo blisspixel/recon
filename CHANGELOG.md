@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.12] - 2026-06-10
+
+### Assurance: reproducible builds + sigstore-signed PyPI attestations
+
+The "Trusted" assurance-track item: make a published release verifiable back to
+its source. Builds were already attested (GitHub-native build provenance) with a
+CycloneDX SBOM and OIDC trusted publishing; this adds the two missing pieces.
+
+- **Reproducible builds.** The release build pins `SOURCE_DATE_EPOCH` to the
+  tagged commit's timestamp, so the wheel and sdist are byte-identical to a
+  rebuild from the same source. A new `reproducible-build` CI job gates the
+  property on every change (it builds twice and compares the artifact hashes).
+- **Sigstore-signed PyPI attestations (PEP 740).** The publish step now emits
+  signed digital attestations to PyPI, so installers and auditors can verify an
+  artifact's provenance directly from the index, alongside the existing
+  `gh attestation verify` path.
+- **`docs/supply-chain.md`** documents the full posture (trusted publishing,
+  both attestation roots, the SBOM, a reproducible-build verification recipe,
+  and the supply-chain isolation contract), and records the full SLSA L3
+  generator workflow as deferred by proportionality.
+
+Release-pipeline and docs only; no package code changed.
+
 ## [2.1.11] - 2026-06-09
 
 ### Assurance: complete the Resilient-track residuals

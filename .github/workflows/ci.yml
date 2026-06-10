@@ -226,3 +226,47 @@ jobs:
 
       - name: Run hostile-input fuzz gate
         run: uv run pytest tests/ -m "hostile_input and not integration"
+
+  reproducible-build:
+    # Bit-for-bit reproducible builds. With a fixed SOURCE_DATE_EPOCH, the same
+    # source must produce byte-identical wheel and sdist, so a consumer can
+    # rebuild the release and verify the published artifacts. release.yml pins
+    # SOURCE_DATE_EPOCH to the tagged commit timestamp at build time; this gate
+    # proves the property holds on every change. Builds go to RUNNER_TEMP
+    # (outside the checkout) so the build output never lands in the packaged
+    # source tree and falsely breaks the comparison.
+    runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.11"
+      # A fixed epoch so the two builds below share pinned file mtimes; the
+      # value is arbitrary (this gate tests determinism, not the release stamp).
+      SOURCE_DATE_EPOCH: "1700000000"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Build twice and compare artifact hashes
+        run: |
+          set -euo pipefail
+          uv build --out-dir "$RUNNER_TEMP/r1"
+          uv build --out-dir "$RUNNER_TEMP/r2"
+          fail=0
+          for f in "$RUNNER_TEMP/r1"/*.whl "$RUNNER_TEMP/r1"/*.tar.gz; do
+            name="$(basename "$f")"
+            h1="$(sha256sum "$RUNNER_TEMP/r1/$name" | cut -d' ' -f1)"
+            h2="$(sha256sum "$RUNNER_TEMP/r2/$name" | cut -d' ' -f1)"
+            if [ "$h1" = "$h2" ]; then
+              echo "reproducible: $name ($h1)"
+            else
+              echo "NOT REPRODUCIBLE: $name ($h1 != $h2)" >&2
+              fail=1
+            fi
+          done
+          exit "$fail"
