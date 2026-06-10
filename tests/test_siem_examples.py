@@ -1,12 +1,12 @@
-"""v1.9.3.8 — SIEM consumption-example regression tests.
+"""SIEM consumption-example regression tests.
 
 Pins the `examples/siem/` worked examples against schema drift. The
 v2.0 schema lock turns recon's `--json` shape into a public contract;
 the SIEM examples are the load-bearing demonstrations that the
 contract is actually consumable. Without these tests, a future schema
 rename could pass the existing schema-drift gate but silently break
-the SIEM mappings — exactly the scenario the v1.9.x quality bar said
-the CI gate must catch.
+the SIEM mappings, the scenario the quality bar said the CI gate must
+catch.
 
 What we verify:
 
@@ -117,12 +117,12 @@ _SPLUNK_DIR = _SIEM_DIR / "splunk"
 
 
 class TestSplunkSearchSafety:
-    """v1.9.4: the published Splunk saved-search examples must use
-    literal set-membership (in() inside mvfilter()) — not regex
-    alternation — when comparing slugs against a baseline. A previous
-    version used ``match(current_slugs, mvjoin(baseline_slugs, "|"))``
-    which interprets slug values as a regex alternation; a slug
-    containing ``.*`` would silently suppress the shadow-IT alert.
+    """The published Splunk saved-search examples must use literal
+    set-membership (in() inside mvfilter()), not regex alternation,
+    when comparing slugs against a baseline. A previous version used
+    ``match(current_slugs, mvjoin(baseline_slugs, "|"))`` which
+    interprets slug values as a regex alternation; a slug containing
+    ``.*`` would silently suppress the shadow-IT alert.
 
     Pinned here so a future edit to the SPL can't regress."""
 

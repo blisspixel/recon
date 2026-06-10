@@ -645,7 +645,7 @@ async def analyze_posture(
         profile: Optional profile name (e.g. "fintech", "healthcare",
             "saas-b2b", "high-value-target", "public-sector"). Reweights
             and filters observations to the profile's lens without
-            adding new intelligence. Added in v0.9.3.
+            adding new intelligence.
 
     Returns:
         JSON array of observations, each with category, salience, statement,
@@ -714,7 +714,7 @@ async def analyze_posture(
 
     observations = _analyze_posture(info)
 
-    # v0.9.3: apply profile lens if requested. ``profile`` is typed
+    # Apply profile lens if requested. ``profile`` is typed
     # ``str | None``, but MCP arguments arrive unenforced at runtime (the same
     # caveat the detection-list guard below notes), so a truthy non-string would
     # raise ``TypeError`` on the ``profile[:100]`` slice. Guard the type and
@@ -1370,7 +1370,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
     signal_matches = evaluate_signals(context)
     signals = load_signals()
 
-    # Third pass: absence signals + positive hardening observations (v0.9.3)
+    # Third pass: absence signals + positive hardening observations
     absence_matches = evaluate_absence_signals(signal_matches, signals, context.detected_slugs)
     positive_matches = evaluate_positive_absence(signal_matches, signals, context.detected_slugs)
     all_signal_matches = signal_matches + absence_matches + positive_matches
@@ -1401,7 +1401,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
 
     base["explanations"] = all_explanations
 
-    # v0.9.3: structured provenance DAG in parallel with the flat list.
+    # Structured provenance DAG in parallel with the flat list.
     # Both views are emitted so existing tooling keeps working.
     from recon_tool.explanation import build_explanation_dag
 
@@ -2143,7 +2143,7 @@ async def inject_ephemeral_fingerprint(
             }
         )
 
-    # v1.2+: ephemeral injection goes through the same specificity gate
+    # Ephemeral injection goes through the same specificity gate
     # as ``recon fingerprints check``. Schema-valid but over-broad
     # patterns (``cname:\.com$``) would false-positive on every
     # subsequent lookup in the session. Blast radius is small
@@ -2378,7 +2378,7 @@ async def cluster_verification_tokens(domains: list[str]) -> str:
     ),
 )
 async def get_infrastructure_clusters(domain: str) -> str:
-    """Return the v1.8 CT co-occurrence community-detection report for a domain.
+    """Return the CT co-occurrence community-detection report for a domain.
 
     Surfaces the same ``infrastructure_clusters`` envelope that ships in
     the default ``--json`` output: cluster membership, modularity score,
@@ -2762,7 +2762,7 @@ def _detect_cwd_shadow_install() -> str | None:
 def main() -> None:
     """Run the MCP server with stdio transport.
 
-    v0.9.3: prints a professional startup banner to stderr before
+    Prints a professional startup banner to stderr before
     handing control to the FastMCP loop, and handles Ctrl+C /
     CancelledError / BrokenPipe cleanly so the user sees
     ``"MCP server stopped"`` instead of a raw traceback. The stdio
@@ -2777,7 +2777,7 @@ def main() -> None:
     import os
     import sys
 
-    # v1.9.3.4: runtime guard against cwd-shadow installs. Runs BEFORE
+    # Runtime guard against cwd-shadow installs. Runs BEFORE
     # the TTY check so an attacker cannot rely on stdin being non-TTY
     # to bypass the guard. Defense-in-depth on top of the
     # PYTHONSAFEPATH=1 and safe-cwd protections in mcp_doctor/install.

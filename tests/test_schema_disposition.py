@@ -1,13 +1,13 @@
-"""v2.0-prep — schema disposition table is enforced by a test.
+"""Schema disposition table is enforced by a test.
 
 The roadmap's v2.0 schema-lock disposition table is policy. This
 test makes the policy mechanically checkable: every field the
 disposition table promotes to stable must be present in
 `docs/recon-schema.json` with the documented shape.
 
-The test exists before v2.0 tag so the v1.9.11 doc-polish pass
-can verify schema coverage as it strips EXPERIMENTAL labels. A
-failure here means either:
+The test exists before v2.0 tag so the doc-polish pass can verify
+schema coverage as it strips EXPERIMENTAL labels. A failure here
+means either:
 
 - The schema is missing a field the disposition table promoted
   (the schema author forgot to add it).

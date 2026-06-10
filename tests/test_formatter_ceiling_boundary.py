@@ -1,4 +1,4 @@
-"""v1.9.9 — boundary tests on the passive-DNS ceiling trigger.
+"""Boundary tests on the passive-DNS ceiling trigger.
 
 The ceiling footer fires only when all of:
     info.services and not show_domains

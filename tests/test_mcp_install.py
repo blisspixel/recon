@@ -129,7 +129,7 @@ class TestBuildReconBlock:
         assert block["autoApprove"] == []
 
     def test_falls_back_to_python_safe_launcher(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """v1.9.9: the fallback uses ``python -c "<sys.path-stripping launcher>"``
+        """The fallback uses ``python -c "<sys.path-stripping launcher>"``
         instead of ``python -m recon_tool.server``. The ``-m`` form
         was vulnerable on Python 3.10 (where ``PYTHONSAFEPATH`` is a
         no-op) because Python adds cwd to sys.path before importing

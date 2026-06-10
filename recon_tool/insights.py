@@ -35,11 +35,11 @@ class InsightContext:
     domain_count: int
     google_auth_type: str | None = None
     google_idp_name: str | None = None
-    # v0.9.3: OIDC tenant metadata enrichment
+    # OIDC tenant metadata enrichment
     cloud_instance: str | None = None
     tenant_region_sub_scope: str | None = None
     msgraph_host: str | None = None
-    # v0.9.3: MX-backed email topology. These are populated only
+    # MX-backed email topology. These are populated only
     # from actual MX evidence, so "primary_email_provider is not
     # None" is the honest test for "does this domain receive
     # email via the named provider". Used by _email_security_insights
@@ -49,7 +49,7 @@ class InsightContext:
     primary_email_provider: str | None = None
     likely_primary_email_provider: str | None = None
     email_gateway: str | None = None
-    # v0.9.3: True when ANY MX records exist, even if they point
+    # True when ANY MX records exist, even if they point
     # to a host recon doesn't recognize (Apache's own mail servers,
     # custom Postfix, etc.). Distinguishes "no email at all" from
     # "custom email we can't name." Used by
@@ -208,7 +208,7 @@ def _auth_insights(ctx: InsightContext) -> list[str]:
         has_m365 = bool(ctx.slugs & _EXCHANGE_SLUGS)
         if not has_m365:
             return []
-        # v0.9.3 refinement: on dual-provider targets (M365 + Google
+        # Refinement: on dual-provider targets (M365 + Google
         # Workspace both present), the Auth line compound format
         # already reads "Managed (Entra ID + Google Workspace)" so
         # this insight would be pure restatement. Drop it then. On
@@ -224,7 +224,7 @@ def _auth_insights(ctx: InsightContext) -> list[str]:
 def _has_scoreable_email(ctx: InsightContext) -> bool:
     """Whether there is email worth scoring.
 
-    v0.9.3 honesty fix: a bare Exchange / Google-Workspace slug can come from a
+    Honesty fix: a bare Exchange / Google-Workspace slug can come from a
     non-MX source (Google Identity Routing reporting a registered account,
     Microsoft OIDC reporting a tenant), which does not prove the domain receives
     email there. On a domain with zero MX records and no DMARC, an "Email
@@ -474,7 +474,7 @@ def _google_modules_insights(ctx: InsightContext) -> list[str]:
 
 
 def _no_email_infrastructure_insights(ctx: InsightContext) -> list[str]:
-    """v0.9.3: emit an explicit hedged observation when a domain has
+    """Emit an explicit hedged observation when a domain has
     no observable email infrastructure at all.
 
     The decisive signal is ``has_mx_records``: when True, the domain
@@ -519,7 +519,7 @@ def _no_email_infrastructure_insights(ctx: InsightContext) -> list[str]:
 
 
 def _sparse_signal_insights(ctx: InsightContext) -> list[str]:
-    """v0.9.3: emit a hedged multi-sided observation when a domain's
+    """Emit a hedged multi-sided observation when a domain's
     public signal is thin.
 
     On a legitimate small-business domain, a parked / dormant
@@ -609,7 +609,7 @@ def _sparse_signal_insights(ctx: InsightContext) -> list[str]:
 
 
 def _sovereignty_insights(ctx: InsightContext) -> list[str]:
-    """v0.9.3: surface Microsoft tenant sovereignty / cloud-instance info.
+    """Surface Microsoft tenant sovereignty / cloud-instance info.
 
     Distinguishes commercial M365, US Government Community Cloud (GCC),
     GCC High / DoD, and Azure China 21Vianet tenants based on the

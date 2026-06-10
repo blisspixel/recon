@@ -246,7 +246,7 @@ def build_recon_block() -> dict[str, object]:
     are blocked on every supported Python version, including Python
     3.10 where ``PYTHONSAFEPATH`` is a no-op.
 
-    Supply-chain hardening (v1.9.9): the launcher code runs
+    Supply-chain hardening: the launcher code runs
     ``del sys.path[0]`` before importing ``recon_tool``, removing the
     cwd-equivalent entry Python adds to ``sys.path``. This is the
     cross-version protection the previous ``-m`` + ``PYTHONSAFEPATH=1``
@@ -268,7 +268,7 @@ def build_recon_block() -> dict[str, object]:
         }
     return {
         "command": sys.executable,
-        # v1.9.9: ``-c`` with explicit sys.path[0] removal closes the
+        # ``-c`` with explicit sys.path[0] removal closes the
         # cwd-shadow attack on every supported Python. The previous
         # ``-m`` form left Python 3.10 reliant on the runtime guard,
         # which fires AFTER Python imports the (potentially malicious)
@@ -286,9 +286,9 @@ def warn_if_fallback() -> str | None:
     """Return a stderr-formatted warning when the fallback launch form
     would be persisted, or ``None`` when ``recon`` is on PATH.
 
-    The warning is informational. v1.9.9 changed the persisted
-    fallback to use ``python -c "<sys.path-stripping launcher>"``
-    instead of ``python -m recon_tool.server``, so the cwd-shadow
+    The warning is informational. The persisted fallback uses
+    ``python -c "<sys.path-stripping launcher>"`` instead of
+    ``python -m recon_tool.server``, so the cwd-shadow
     attack is blocked on every supported Python version (including
     Python 3.10 where ``PYTHONSAFEPATH`` is a no-op). Installing
     ``recon`` to PATH still produces a shorter and arguably

@@ -216,7 +216,7 @@ class Fingerprint:
     provider_group: str | None = None  # e.g., "microsoft365", "google-workspace"
     display_group: str | None = None  # e.g., "Email & Communication", "Security"
     match_mode: str = "any"  # "any" (OR) or "all" (AND)
-    # v1.8 relationship metadata — purely descriptive hints used by the
+    # Relationship metadata — purely descriptive hints used by the
     # ecosystem hypergraph and downstream display logic. NEVER an
     # ownership assertion. Each field is optional and free-form.
     #   product_family — vendor-internal product line (e.g. "Microsoft 365",
@@ -225,7 +225,7 @@ class Fingerprint:
     #                    "Microsoft", "Salesforce" for Slack, "Google").
     #   bimi_org       — exact organization name expected on a BIMI VMC for
     #                    domains under this product. Used for cross-domain
-    #                    BIMI clustering in the v1.8 hypergraph.
+    #                    BIMI clustering in the ecosystem hypergraph.
     product_family: str | None = None
     parent_vendor: str | None = None
     bimi_org: str | None = None
@@ -650,7 +650,7 @@ def load_fingerprints() -> tuple[Fingerprint, ...]:
     (short-lived process). In the MCP server (long-lived), call
     reload_fingerprints() to pick up changes to custom fingerprints.
 
-    Built-in catalog layout (v1.1+): ``data/fingerprints/<category>.yaml``.
+    Built-in catalog layout: ``data/fingerprints/<category>.yaml``.
     The pre-split monolith at ``data/fingerprints.yaml`` is still accepted
     as a fallback so a bisect against an old tree doesn't break. Custom
     fingerprints (``~/.recon/fingerprints.yaml``) are still a single file

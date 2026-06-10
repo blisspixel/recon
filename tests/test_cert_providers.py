@@ -385,7 +385,7 @@ class TestBuildCertSummary:
         assert "Let's Encrypt" in cs.top_issuers
 
 
-# ── Wildcard SAN sibling clusters (v1.7) ─────────────────────────────────
+# ── Wildcard SAN sibling clusters ────────────────────────────────────────
 
 
 class TestWildcardSiblingClusters:
@@ -446,7 +446,7 @@ class TestWildcardSiblingClusters:
         assert len(cs.wildcard_sibling_clusters) <= 10
 
 
-# ── Temporal CT issuance bursts (v1.7) ───────────────────────────────────
+# ── Temporal CT issuance bursts ──────────────────────────────────────────
 
 
 class TestDeploymentBursts:
@@ -568,7 +568,7 @@ class TestCertSpotterRequestShape:
         assert "authorization" not in headers
 
 
-# ── R4 (v0.9.2): Pagination + rate-limit handling ───────────────────────
+# ── R4: Pagination + rate-limit handling ────────────────────────────────
 
 
 def _issuance(idx: int, dns_name: str) -> dict:
@@ -583,7 +583,7 @@ def _issuance(idx: int, dns_name: str) -> dict:
 
 
 class TestCertSpotterPagination:
-    """v0.9.2 R4: CertSpotter pagination follows the after= cursor."""
+    """R4: CertSpotter pagination follows the after= cursor."""
 
     @pytest.mark.asyncio
     async def test_single_page_no_pagination_when_empty_next_page(self):
@@ -813,7 +813,7 @@ class TestCertSpotterPagination:
             await provider.query("example.com")
 
 
-# ── v1.9.18: attacker-controlled CT data sanitization ───────────────────
+# ── Attacker-controlled CT data sanitization ────────────────────────────
 
 
 class TestCertDataSanitization:

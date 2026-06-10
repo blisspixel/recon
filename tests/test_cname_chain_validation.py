@@ -86,7 +86,7 @@ class TestPublicDnsNameSuffix:
             "fe80::1",  # IPv6 literal
             "hostname",  # single-label
             "",
-            # v1.9.13: character-class restrictions - adversarial DNS
+            # Character-class restrictions - adversarial DNS
             # responses or lax resolvers could otherwise smuggle these
             # to evidence output.
             "evil<script>.com",
@@ -112,10 +112,10 @@ class TestPublicDnsNameSuffix:
             "tenant.azurewebsites.net",
             "dx-12345.cloudfront.net",
             "deep.subdomain.contoso.com",
-            # v1.9.13: legitimate DKIM / SRV selectors use underscore.
+            # Legitimate DKIM / SRV selectors use underscore.
             "selector1._domainkey.contoso.com",
             "_sipfederationtls._tcp.contoso.com",
-            # v1.9.13: Punycode IDN names use ASCII LDH only.
+            # Punycode IDN names use ASCII LDH only.
             "xn--p1ai.example.com",
         ],
     )
@@ -290,11 +290,11 @@ class TestSpfRedirectBlocksPrivateTargets:
         )
 
 
-# ── v1.9.13: entry-point validation ────────────────────────────────
+# ── Entry-point validation ─────────────────────────────────────────
 
 
 class TestEntryPointValidation:
-    """v1.9.13: the walker validates the entry-point name before
+    """The walker validates the entry-point name before
     issuing any DNS query. Catches private-suffix entries that some
     related_domains populators might leak in.
     """
@@ -342,7 +342,7 @@ class TestEntryPointValidation:
 
     @pytest.mark.asyncio
     async def test_mixed_case_entry_point_normalized_for_self_loop_detection(self, monkeypatch):
-        # v1.9.13: host is lowercased at entry so a self-loop is
+        # Host is lowercased at entry so a self-loop is
         # detected on the first iteration regardless of input case.
         # Without normalization, "Attacker.example.com" CNAME ->
         # "attacker.example.com" would NOT match the
@@ -358,11 +358,11 @@ class TestEntryPointValidation:
         assert chain == [], f"case-mismatched self-loop should be detected without recording a hop; got chain={chain!r}"
 
 
-# ── v1.9.14: CNAME-only walk invariant (no A/AAAA from the walker) ─
+# ── CNAME-only walk invariant (no A/AAAA from the walker) ──────────
 
 
 class TestNoAAAAQueriesFromWalker:
-    """v1.9.14: the walker issues only CNAME queries. The v1.9.13
+    """The walker issues only CNAME queries. The v1.9.13
     terminus-only A/AAAA check was reverted after a 2026-05-17
     scanner pass showed authoritative DNS can return type-dependent
     answers, so a prior CNAME NoAnswer does not prove a subsequent
@@ -440,11 +440,11 @@ class TestNoAAAAQueriesFromWalker:
         assert a_aaaa == [], f"got: {a_aaaa!r}"
 
 
-# ── v1.9.13: _detect_m365_cnames redirect_domain filter ────────────
+# ── _detect_m365_cnames redirect_domain filter ─────────────────────
 
 
 class TestM365RedirectDomainFilter:
-    """v1.9.13: _detect_m365_cnames suffix-validates the
+    """_detect_m365_cnames suffix-validates the
     redirect_domain extracted from a non-Microsoft autodiscover
     CNAME before adding it to related_domains. Defense-in-depth
     against an attacker-controlled autodiscover response that would
@@ -489,7 +489,7 @@ class TestM365RedirectDomainFilter:
         assert "partner.com" in ctx.related_domains
 
 
-# ── v1.9.17: _safe_resolve canonical-name guard + safe endpoint probe ──
+# ── _safe_resolve canonical-name guard + safe endpoint probe ───────────
 #
 # The chain-walker tests above mock _safe_resolve. The guard tests below
 # mock the resolver itself, because the canonical-name decision lives
@@ -531,7 +531,7 @@ def _fake_resolver(answer: _FakeAnswer) -> Any:
 
 
 class TestSafeResolveCanonicalGuard:
-    """v1.9.17: ``_safe_resolve`` discards a non-CNAME/non-PTR answer
+    """``_safe_resolve`` discards a non-CNAME/non-PTR answer
     whose recursive-resolver canonical name chased to a non-public
     suffix, so an internal name never reaches output and a private-chased
     query is indistinguishable from a name that does not resolve."""
@@ -584,7 +584,7 @@ class TestSafeResolveCanonicalGuard:
 
 
 class TestResolvesToPublicEndpoint:
-    """v1.9.17: ``_resolves_to_public_endpoint`` gives the A-presence
+    """``_resolves_to_public_endpoint`` gives the A-presence
     probes a yes/no resolve signal without leaking. CNAME-first, a
     private CNAME target is rejected before any A/AAAA query fires, and
     the boolean answer never carries the resolved name or address."""

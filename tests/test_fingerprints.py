@@ -229,18 +229,18 @@ class TestMatchTxt:
         assert "Microsoft" in result.name
 
 
-# ── v1.8 relationship metadata ──────────────────────────────────────────
+# ── Relationship metadata ──────────────────────────────────────────────
 
 
 class TestRelationshipMetadata:
-    """v1.8: optional product_family / parent_vendor / bimi_org fields."""
+    """Optional product_family / parent_vendor / bimi_org fields."""
 
     def test_default_metadata_is_none(self, tmp_path):
         """Fingerprints without the relationship-metadata fields populated
         in YAML must produce ``None`` on the loaded dataclass.
 
         Uses a synthetic YAML — the built-in catalogs are partially
-        seeded as of v1.8.1 and growing, so they cannot be relied on
+        seeded and growing, so they cannot be relied on
         as a "no metadata" baseline.
         """
         from recon_tool.fingerprints import _load_from_path
@@ -323,7 +323,7 @@ fingerprints:
 
 
 class TestFingerprintMetadataInJson:
-    """v1.8: fingerprint_metadata JSON envelope."""
+    """fingerprint_metadata JSON envelope."""
 
     def test_only_detected_slugs_appear(self):
         """Only slugs present in info.slugs surface in fingerprint_metadata."""

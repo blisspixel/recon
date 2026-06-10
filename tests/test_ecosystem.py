@@ -1,4 +1,4 @@
-"""Unit tests for the v1.8 batch-scope ecosystem hypergraph.
+"""Unit tests for the batch-scope ecosystem hypergraph.
 
 Covers each hyperedge type:
 - top_issuer: domains sharing CT top-issuer
@@ -137,7 +137,7 @@ class TestParentVendor:
 
 class TestSharedSlugs:
     def test_three_overlapping_slugs_fire(self):
-        """v1.8: MIN_SLUG_OVERLAP raised to 3 to suppress trivial pairs."""
+        """MIN_SLUG_OVERLAP raised to 3 to suppress trivial pairs."""
         infos = {
             "a.com": _info("a.com", slugs=("slug1", "slug2", "slug3", "slug4")),
             "b.com": _info("b.com", slugs=("slug1", "slug2", "slug3", "slug5")),
@@ -148,7 +148,7 @@ class TestSharedSlugs:
         assert edges[0].key == "slug1,slug2,slug3"
 
     def test_two_overlap_no_longer_fires(self):
-        """v1.8: 2-slug overlap is below MIN_SLUG_OVERLAP and stays silent."""
+        """2-slug overlap is below MIN_SLUG_OVERLAP and stays silent."""
         infos = {
             "a.com": _info("a.com", slugs=("slug1", "slug2", "extra-a")),
             "b.com": _info("b.com", slugs=("slug1", "slug2", "extra-b")),
@@ -165,7 +165,7 @@ class TestSharedSlugs:
         assert edges == []
 
     def test_baseline_slug_filter_strips_ubiquitous_overlap(self):
-        """v1.8: slugs present on >50 % of the batch are baseline noise.
+        """Slugs present on >50 % of the batch are baseline noise.
 
         Microsoft365 + Google-Site appear on every domain in this
         synthetic batch (frequency = 1.0) — pairs whose only overlap

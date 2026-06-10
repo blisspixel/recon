@@ -1,4 +1,4 @@
-"""v1.9.9 — adversarial-input rendering tests.
+"""Adversarial-input rendering tests.
 
 The Hypothesis fuzz in ``test_render_fuzz.py`` generates random-but-
 structurally-valid TenantInfo from a clean strategy. These tests

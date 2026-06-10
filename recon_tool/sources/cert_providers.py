@@ -40,7 +40,7 @@ from recon_tool.validator import is_safe_dns_name, strip_control_chars
 _is_safe_san_name = is_safe_dns_name
 
 
-# ── v1.7 caps for derived cert intelligence ──────────────────────────────
+# ── Caps for derived cert intelligence ───────────────────────────────────
 # Wildcard SAN sibling clusters: each cert that contains ≥1 wildcard SAN
 # can produce one cluster of its non-wildcard SANs. We bound both how
 # many clusters surface and how big each cluster can be — a single cert
@@ -159,7 +159,7 @@ HIGH_SIGNAL_PREFIXES = (
     "sandbox",
     "preview",
     "uat",
-    # v1.9.9: keep prioritization in parity with the dns.py probe
+    # Keep prioritization in parity with the dns.py probe
     # wordlist. CT SAN sets that include these prefixes should sort to
     # the top of the returned subdomain list so the operator sees the
     # data, AI, ops, and security tiers when CT happens to surface them.
@@ -179,7 +179,7 @@ HIGH_SIGNAL_PREFIXES = (
 _CT_TIMEOUT = 6.0
 
 
-# v1.9.25: process-wide cap on concurrent CT calls. Both crt.sh and
+# Process-wide cap on concurrent CT calls. Both crt.sh and
 # CertSpotter free-tier rate-limit aggressively (CertSpotter ~50
 # req/min per IP), and batch concurrency multiplied unbounded CT
 # pressure. The 5241-domain 2026-05-27 corpus run saw 99.9% of records
@@ -462,7 +462,7 @@ def build_cert_summary(
     Each entry should have keys: issuer_id (or issuer_ca_id), issuer_name,
     not_before, not_after. Entries missing required fields are skipped.
     When an entry also carries a ``dns_names`` list (CertSpotter, or
-    crt.sh after the v1.7 SAN-attached payload change), wildcard sibling
+    crt.sh after the SAN-attached payload change), wildcard sibling
     clustering and temporal burst detection both run.
 
     Args:
@@ -716,7 +716,7 @@ class CertSpotterProvider:
 
     Zero API keys, zero credentials. Uses the public unauthenticated endpoint.
 
-    Pagination (v0.9.2): CertSpotter returns issuances in pages. Without
+    Pagination: CertSpotter returns issuances in pages. Without
     pagination a single request returns ~100 entries for small domains but
     silently truncates on large targets — producing the enrichment
     asymmetry observed on bank-scale domains (one run returned 5 related
@@ -820,7 +820,7 @@ class CertSpotterProvider:
         all_raw_names: list[str] = []
         all_cert_entries: list[dict[str, str | int | list[str] | None]] = []
         after_cursor: str | None = None
-        # v1.9.25: mark when a 429 truncated this call so the caller
+        # Mark when a 429 truncated this call so the caller
         # can distinguish rate-limit-driven empty results from genuine
         # empty-cert-history responses. The caller (dns.py) uses this
         # signal to mark certspotter as degraded rather than silently
@@ -895,7 +895,7 @@ class CertSpotterProvider:
                 after_cursor = last_id
 
         if not all_raw_names and not all_cert_entries:
-            # v1.9.25: rate-limit-driven empty result raises so the
+            # Rate-limit-driven empty result raises so the
             # orchestrator marks the provider as degraded. Without
             # this, dns.py treats the empty tuple as a soft success
             # (continue, do not record degradation), and the panel

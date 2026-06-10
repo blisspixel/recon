@@ -51,7 +51,7 @@ class TestInsightGeneration:
         assert any("not enforced" in i for i in insights)
 
     def test_no_dmarc_with_exchange(self):
-        """v0.9.3: a domain with MX-backed M365 (primary_email_provider
+        """A domain with MX-backed M365 (primary_email_provider
         set from MX evidence) but no DMARC record should emit the
         "No DMARC" gap insight. Passing primary_email_provider here
         represents "MX actually points to Microsoft 365" — without

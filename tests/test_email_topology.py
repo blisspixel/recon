@@ -156,7 +156,7 @@ class TestDetectProviderFormatting:
     """Verify detect_provider() topology-aware formatting for all 5 cases."""
 
     def test_primary_plus_gateway(self) -> None:
-        """v0.9.3 format: '{primary} (primary) via {gateway} gateway'."""
+        """Format: '{primary} (primary) via {gateway} gateway'."""
         result = detect_provider(
             services=(),
             slugs=("microsoft365",),
@@ -166,7 +166,7 @@ class TestDetectProviderFormatting:
         assert result == "Microsoft 365 (primary) via Proofpoint gateway"
 
     def test_gateway_only(self) -> None:
-        """v0.9.3 format: '{gateway} gateway (no inferable downstream)' when
+        """Format: '{gateway} gateway (no inferable downstream)' when
         no primary can be inferred."""
         result = detect_provider(
             services=(),
@@ -202,7 +202,7 @@ class TestDetectProviderFormatting:
         assert "Microsoft 365" in result
 
     def test_secondary_only_with_gateway(self) -> None:
-        """v0.9.3 format: gateway shown as 'gateway (no inferable downstream)'
+        """Format: gateway shown as 'gateway (no inferable downstream)'
         and a slug-detected provider becomes '(secondary)'."""
         result = detect_provider(
             services=(),
@@ -215,7 +215,7 @@ class TestDetectProviderFormatting:
         assert "(secondary)" in result
 
     def test_backward_compat_no_topology_fields(self) -> None:
-        """v0.9.3 (second revision): slug-only fallback uses
+        """Slug-only fallback uses
         "(account detected, custom MX)" by default — assuming MX
         records exist but point to an unrecognized host. This is
         the common real-world case (Apache / Debian / Python all
@@ -228,7 +228,7 @@ class TestDetectProviderFormatting:
         assert result == "Microsoft 365 (account detected, custom MX)"
 
     def test_backward_compat_google_workspace(self) -> None:
-        """v0.9.3 (second revision): same rationale as above."""
+        """Same rationale as above."""
         result = detect_provider(
             services=(),
             slugs=("google-workspace",),
@@ -246,16 +246,16 @@ class TestDetectProviderFormatting:
 
     def test_no_slugs_returns_explicit_unknown(self) -> None:
         """With no slugs and no topology data, return an explicit "unknown"
-        message that tells the user nothing matched. v0.9.2 extended the
-        bare "Unknown" fallback to explain WHY — so users know the tool
-        looked and came up empty, rather than silently rendering a generic
-        label that could be confused with "not queried"."""
+        message that tells the user nothing matched. The bare "Unknown"
+        fallback explains WHY, so users know the tool looked and came up
+        empty, rather than silently rendering a generic label that could
+        be confused with "not queried"."""
         result = detect_provider(services=(), slugs=())
         assert result.startswith("Unknown")
         assert "no known provider pattern matched" in result
 
     def test_primary_only_no_gateway_no_secondary(self) -> None:
-        """v0.9.3 format: '{primary} (primary)' — the ``(primary)``
+        """Format: '{primary} (primary)' — the ``(primary)``
         label is always present when topology fields were supplied,
         so users can tell whether the label is strict or inferred."""
         result = detect_provider(
@@ -276,10 +276,10 @@ class TestDetectProviderFormatting:
         )
         assert "(secondary)" not in result
 
-    # v0.9.3: multi-likely primary disambiguation ──────────────────────
+    # Multi-likely primary disambiguation ──────────────────────────────
 
     def test_multi_likely_promoted_to_single_primary(self) -> None:
-        """v0.9.3: when likely_primary_email_provider lists multiple
+        """When likely_primary_email_provider lists multiple
         providers, one is promoted to '(likely primary)' and the rest
         become '(secondary)' — never '(dual)'."""
         result = detect_provider(
@@ -311,7 +311,7 @@ class TestDetectProviderFormatting:
         assert "ProtonMail (secondary)" in result
 
     def test_strict_primary_plus_gateway_plus_slug_secondary(self) -> None:
-        """The target format from the v0.9.3 UX feedback:
+        """The target format from the UX feedback:
         'Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)'."""
         result = detect_provider(
             services=(),

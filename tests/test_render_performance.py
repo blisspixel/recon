@@ -1,4 +1,4 @@
-"""v1.9.9 — render-time performance bounds.
+"""Render-time performance bounds.
 
 The renderer must complete in bounded time even on pathological
 inputs. A regression that introduced quadratic behaviour in slug

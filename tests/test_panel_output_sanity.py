@@ -1,4 +1,4 @@
-"""v1.9.9 — rendered-output sanity for the new panel surfaces.
+"""Rendered-output sanity for the new panel surfaces.
 
 The fixture and snapshot tests verify that the new surfaces render at
 all. The sanity tests here verify the rendered output is well-formed:

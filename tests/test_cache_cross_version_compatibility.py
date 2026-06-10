@@ -1,4 +1,4 @@
-"""v1.9.9 — cache compatibility with pre-v1.9.9 serialized data.
+"""Cache compatibility with pre-v1.9.9 serialized data.
 
 The v1.9.9 release adds two renderer-side panel surfaces (Multi-cloud
 rollup, Passive-DNS ceiling) but **introduces no new fields** in the

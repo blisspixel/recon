@@ -1,4 +1,4 @@
-"""v1.9.3.6 — validation harness path-containment regression tests.
+"""Validation harness path-containment regression tests.
 
 Pins the input-validation hardening in
 ``validation.agentic_ux.run._load_persona`` /

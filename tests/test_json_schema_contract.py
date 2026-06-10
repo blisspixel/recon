@@ -1,4 +1,4 @@
-"""JSON schema conformance tests (v1.0).
+"""JSON schema conformance tests.
 
 Asserts that the JSON output shape matches docs/schema.md. Changes to the
 set of top-level keys or their types must update docs/schema.md AND these
@@ -133,13 +133,13 @@ _STABLE_FIELDS: dict[str, type | tuple[type, ...]] = {
     # Additional metadata
     "lexical_observations": list,
     "bimi_identity": (dict, type(None)),
-    # v1.7 — cross-source evidence conflict surfacing
+    # Cross-source evidence conflict surfacing
     "evidence_conflicts": list,
-    # v1.7 — chain motif observations
+    # Chain motif observations
     "chain_motifs": list,
-    # v1.8 — CT co-occurrence community report (always emitted)
+    # CT co-occurrence community report (always emitted)
     "infrastructure_clusters": dict,
-    # v1.8 — per-slug relationship metadata (always emitted, may be empty)
+    # Per-slug relationship metadata (always emitted, may be empty)
     "fingerprint_metadata": dict,
 }
 

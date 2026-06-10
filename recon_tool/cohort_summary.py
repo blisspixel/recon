@@ -1,4 +1,4 @@
-"""Stateless cohort summary over a batch of recon records (v2.1).
+"""Stateless cohort summary over a batch of recon records.
 
 This is the thin, in-core surface for `recon batch --summary`: one cohort in, one
 aggregate-only summary out. It computes live from the per-domain records the batch

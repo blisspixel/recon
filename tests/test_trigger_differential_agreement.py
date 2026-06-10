@@ -1,4 +1,4 @@
-"""v1.9.9 — differential agreement: three independent trigger
+"""Differential agreement: three independent trigger
 implementations.
 
 The corpus aggregator and the renderer are both authored by the same
@@ -49,9 +49,9 @@ from validation.corpus_aggregator import (
 
 # ── Implementation 3: regex parser ─────────────────────────────────────
 # These regexes are deliberately narrow on purpose. They match the
-# specific panel shape v1.9.9 produces; a future renderer change that
-# reshapes the line would surface as a regex miss, and the differential
-# test would flag the disagreement at PR time.
+# specific panel shape the renderer produces; a future renderer change
+# that reshapes the line would surface as a regex miss, and the
+# differential test would flag the disagreement at PR time.
 
 _MULTI_CLOUD_LINE = re.compile(r"Multi-cloud\s+\d+ providers observed \([^)]+\)")
 _CEILING_HEADER = re.compile(r"Passive-DNS ceiling\b")

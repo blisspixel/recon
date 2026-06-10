@@ -1,4 +1,4 @@
-"""v1.9.9 — cloud-vendor canonicalization coverage gap test.
+"""Cloud-vendor canonicalization coverage gap test.
 
 The multi-cloud rollup relies on ``_CLOUD_VENDOR_BY_SLUG`` to collapse
 sibling slugs to a single vendor identity. When the catalog grows a new
@@ -90,16 +90,16 @@ class TestCategoryOrderCoversAllUsedCategories:
     """A category that appears in ``_CATEGORY_BY_SLUG`` but not in
     ``_SERVICE_CATEGORIES_ORDER`` would crash the panel renderer at
     ``by_cat[cat].append(...)``. The renderer has a defensive guard
-    (added v1.9.9) that adds the bucket on the fly so the panel does
+    that adds the bucket on the fly so the panel does
     not crash, but the category will not appear in the rendered panel
     in its expected position until added to the order tuple.
 
     This test exists to catch the drift at PR time so a contributor
     adding a new category-valued slug remembers to extend the order
-    tuple. The bug it catches: ``looker-studio`` shipped in v1.9.3.9
+    tuple. The bug it catches: ``looker-studio`` shipped
     with category ``"Data & Analytics"`` but the category was never
     added to the order tuple, leaving any apex with the slug to crash
-    the renderer. v1.9.9 added the missing entry and this test pins
+    the renderer. The missing entry was added and this test pins
     the invariant going forward."""
 
     def test_every_used_category_is_in_the_order_tuple(self):

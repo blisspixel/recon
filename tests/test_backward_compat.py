@@ -53,7 +53,7 @@ def _make_tenant_info(**overrides: object) -> TenantInfo:
 
 
 class TestBackwardCompatFingerprints:
-    """Verify all existing fingerprints load without warnings after v0.9.0 changes."""
+    """Verify all existing fingerprints load without warnings."""
 
     def setup_method(self) -> None:
         reload_fingerprints()
@@ -228,7 +228,7 @@ class TestBackwardCompatDefaults:
         assert result.raw_dns_records == ()
 
     def test_all_defaults_preserve_existing_behavior(self) -> None:
-        """Creating objects without new fields should behave identically to pre-v0.9.0."""
+        """Creating objects without new fields should behave identically to the prior behavior."""
         # TenantInfo without new fields
         info = TenantInfo(
             tenant_id="test-id",
@@ -250,8 +250,8 @@ class TestBackwardCompatDefaults:
 class TestBackwardCompatDetectProvider:
     """Verify detect_provider() slug-only fallback output.
 
-    v0.9.3 (second refinement): the fallback path now distinguishes
-    two distinct scenarios when primary_email_provider is None:
+    The fallback path distinguishes two distinct scenarios when
+    primary_email_provider is None:
 
     (a) ``has_mx_records=False`` — the domain has literally no MX
         records. The provider slug came from a non-MX identity
@@ -307,7 +307,7 @@ class TestBackwardCompatDetectProvider:
         assert result == "AWS SES (account detected, no MX)"
 
     def test_no_slugs_returns_unknown(self) -> None:
-        """v0.9.2 extended the bare "Unknown" fallback to include a short
+        """Extends the bare "Unknown" fallback to include a short
         explanation of why nothing matched. Still starts with "Unknown" so
         existing string-contains checks keep working."""
         result = detect_provider(services=(), slugs=())
@@ -457,7 +457,7 @@ class TestProperty6BackwardCompatibility:
     @given(data=st.data())
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_new_dataclass_fields_have_safe_defaults(self, data: st.DataObject) -> None:
-        """All new v0.9.0 fields default to None or empty tuple.
+        """All new fields default to None or empty tuple.
 
         **Validates: Requirements 19.5**
         """

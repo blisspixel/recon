@@ -1,4 +1,4 @@
-"""v1.9.9 — wordlist sanity invariants.
+"""Wordlist sanity invariants.
 
 The active-DNS probe wordlist (``_COMMON_SUBDOMAIN_PREFIXES`` in
 ``recon_tool/sources/dns.py``) and the CT prioritization wordlist
@@ -13,7 +13,7 @@ catch:
     for it; conversely, the probe shouldn't waste a network call on
     a prefix CT-prioritize ignores.
 
-The parity matters because v1.9.9 added the same eight prefixes to
+The parity matters because the same eight prefixes were added to
 both lists; a future PR that adds a prefix to only one would silently
 break the breadth-coverage contract. The tests below pin both
 invariants so the parity stays load-bearing rather than coincidental.
@@ -42,7 +42,7 @@ class TestDeduplication:
 
 
 class TestV199AdditionsAppearInBothLists:
-    """The v1.9.9 wordlist extension added the same eight prefixes to
+    """The wordlist extension added the same eight prefixes to
     both lists. A future patch that drops one from either side breaks
     the breadth-coverage parity; this test catches the regression."""
 
@@ -97,7 +97,7 @@ class TestParity:
     def test_v199_additions_appear_in_both_lists_with_same_values(self):
         active_set = set(_COMMON_SUBDOMAIN_PREFIXES)
         ct_set = set(HIGH_SIGNAL_PREFIXES)
-        # Specifically the v1.9.9 additions appear in both
+        # Specifically these additions appear in both
         v199 = {"data", "analytics", "ai", "ml", "internal", "ops", "tools", "security"}
         assert v199.issubset(active_set), f"v1.9.9 prefixes missing from active probe: {v199 - active_set}"
         assert v199.issubset(ct_set), f"v1.9.9 prefixes missing from CT priority: {v199 - ct_set}"

@@ -57,7 +57,7 @@ class Signal:
     explain: str = ""
     expected_counterparts: tuple[str, ...] = ()  # slugs expected to co-occur
     exclude_matches_in_primary: bool = False  # filter matches already in primary_email_provider
-    # v0.9.3: hedged positive observations when an adversary-friendly slug set
+    # Hedged positive observations when an adversary-friendly slug set
     # is absent. The absence engine reads this and emits a two-sided positive
     # observation when this signal fires AND none of these slugs are detected.
     # Example: "Edge Layering" fires, consumer SaaS slugs are absent → emit
@@ -246,7 +246,7 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
         )
         raw_exclude_primary = False
 
-    # Parse optional positive_when_absent field (v0.9.3). Same shape as
+    # Parse optional positive_when_absent field. Same shape as
     # expected_counterparts: a list of slug strings, lenient on error.
     positive_when_absent = _parse_lenient_str_list(name, "positive_when_absent", signal.get("positive_when_absent"))
 

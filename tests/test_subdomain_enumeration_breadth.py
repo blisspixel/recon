@@ -1,4 +1,4 @@
-"""v1.9.9 — subdomain enumeration breadth.
+"""Subdomain enumeration breadth.
 
 The common-prefix wordlist used by the active DNS probe and the
 prioritization wordlist used by the CT subdomain sort grew to cover

@@ -1,7 +1,7 @@
-"""Tests for --confidence-mode strict (v0.11).
+"""Tests for --confidence-mode strict.
 
 Strict mode drops hedging qualifiers on dense-evidence targets. Sparse-data
-output is never touched — the invariant "never overclaim when evidence is
+output is never touched; the invariant "never overclaim when evidence is
 thin" stays load-bearing.
 """
 

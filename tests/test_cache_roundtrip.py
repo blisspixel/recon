@@ -1,8 +1,8 @@
 """Round-trip tests for the disk cache's TenantInfo serialization.
 
-Covers every field that lives on TenantInfo as of v0.9.2 — including the
-v0.9.1 topology fields (primary_email_provider, email_gateway, dmarc_pct,
-likely_primary_email_provider) and the v0.9.2 CT provider attribution
+Covers every field that lives on TenantInfo, including the
+topology fields (primary_email_provider, email_gateway, dmarc_pct,
+likely_primary_email_provider) and the CT provider attribution
 fields (ct_provider_used, ct_subdomain_count). Raises coverage on
 cache.py from 60% toward 90%.
 
@@ -185,7 +185,7 @@ class TestRoundTripAllFields:
         assert set(restored.detection_scores) == set(info.detection_scores)
 
     def test_v091_topology_fields_roundtrip(self) -> None:
-        """v0.9.1 topology fields must persist through the cache."""
+        """Topology fields must persist through the cache."""
         info = _complete_info()
         restored = tenant_info_from_dict(tenant_info_to_dict(info))
         assert restored.primary_email_provider == "Microsoft 365"
@@ -194,7 +194,7 @@ class TestRoundTripAllFields:
         assert restored.likely_primary_email_provider is None
 
     def test_v092_ct_provenance_roundtrip(self) -> None:
-        """v0.9.2 CT provider attribution must persist through the cache."""
+        """CT provider attribution must persist through the cache."""
         info = _complete_info()
         restored = tenant_info_from_dict(tenant_info_to_dict(info))
         assert restored.ct_provider_used == "certspotter"
@@ -378,11 +378,11 @@ class TestDictShape:
 # Needed for os.utime in test_get_stale_returns_none
 import time
 
-# ── v1.8.1: chain_motifs + v1.7 cert_summary fields round-trip ────────
+# ── chain_motifs + v1.7 cert_summary fields round-trip ────────
 
 
 class TestChainMotifsRoundTrip:
-    """v1.8.1 regression — pre-fix the cache silently dropped
+    """Regression test: pre-fix, the cache silently dropped
     ``chain_motifs`` and the v1.7 ``cert_summary`` extensions
     (``wildcard_sibling_clusters``, ``deployment_bursts``). A cached
     lookup served zero motifs even when the original resolve produced

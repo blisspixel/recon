@@ -1,4 +1,4 @@
-"""Batch-scope hypergraph ecosystem view (v1.8+).
+"""Batch-scope hypergraph ecosystem view.
 
 Builds hyperedges over the domains in a single ``recon batch`` run when
 two or more domains share an observable signature. Each hyperedge is
@@ -12,8 +12,7 @@ Hyperedge types
 * ``bimi_org``       — domains whose BIMI VMC organization name is
                        identical (after light normalisation).
 * ``parent_vendor``  — domains that detected at least one fingerprint
-                       sharing a v1.8 ``parent_vendor`` metadata
-                       value.
+                       sharing a ``parent_vendor`` metadata value.
 * ``shared_slugs``   — pairs of domains sharing two or more
                        fingerprint slugs (Jaccard-style overlap, no
                        transitive grouping).
@@ -47,9 +46,9 @@ MAX_HYPEREDGES = 200
 MAX_MEMBERS_PER_HYPEREDGE = 100
 
 # Minimum overlap to fire a ``shared_slugs`` hyperedge between a pair
-# of domains. Bumped from 2 → 3 in v1.8 after the validation corpus
-# showed pair-of-2 overlap firing on trivial coincidences (every
-# enterprise has Microsoft365 + DocuSign + Adobe).
+# of domains. Bumped from 2 → 3 after the validation corpus showed
+# pair-of-2 overlap firing on trivial coincidences (every enterprise
+# has Microsoft365 + DocuSign + Adobe).
 _MIN_SLUG_OVERLAP = 3
 
 # Slugs that appear on more than this fraction of the batch are
@@ -193,7 +192,7 @@ def _shared_slugs_hyperedges(
 
     Ubiquitous slugs (above ``_BASELINE_FREQ_THRESHOLD`` corpus-wide
     prevalence) are stripped from the intersection before the
-    threshold check — this is the v1.8 fix for the noise floor that
+    threshold check — this is the fix for the noise floor that
     let "everyone has Microsoft365 + DocuSign + Adobe" fire as a
     pair on every domain combination.
     """

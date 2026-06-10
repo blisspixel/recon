@@ -1,4 +1,4 @@
-"""Tests for v1.9.25 CT pipeline resilience changes.
+"""Tests for the CT pipeline resilience changes.
 
 Covers:
   - Global CT-call semaphore caps process-wide concurrency.
@@ -411,7 +411,7 @@ class TestCertIntelCacheFirst:
         assert ctx.ct_provider_used == "crt.sh (cached)"
         assert ctx.ct_subdomain_count == 2
         assert "api.example.com" in ctx.related_domains
-        # v1.9.25: ct_attempt_outcome must reflect the cache hit so the
+        # ct_attempt_outcome must reflect the cache hit so the
         # operator can tell this record was served from cache and the
         # absence of live CT data was intentional, not a degradation.
         assert ctx.ct_attempt_outcome == "cache_hit"

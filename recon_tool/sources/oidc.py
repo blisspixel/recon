@@ -25,12 +25,12 @@ def parse_tenant_info_from_oidc(response_json: dict[str, Any]) -> SourceResult:
     - cloud_instance from cloud_instance_name (Microsoft extension) —
       distinguishes commercial (microsoftonline.com), US Government
       (microsoftonline.us), and China 21Vianet
-      (partner.microsoftonline.cn) tenants. Added in v0.9.3.
+      (partner.microsoftonline.cn) tenants.
     - tenant_region_sub_scope from the same-named Microsoft extension
-      (GCC, DOD, USGov, etc.) when present. Added in v0.9.3.
+      (GCC, DOD, USGov, etc.) when present.
     - msgraph_host from msgraph_host (Microsoft extension) — the
       authoritative Graph API host for the tenant, which sometimes
-      reveals a sovereign cloud. Added in v0.9.3.
+      reveals a sovereign cloud.
 
     Args:
         response_json: Parsed JSON dict from the discovery endpoint.
@@ -67,7 +67,7 @@ def parse_tenant_info_from_oidc(response_json: dict[str, Any]) -> SourceResult:
     region_raw = response_json.get("tenant_region_scope")
     region: str | None = strip_control_chars(str(region_raw)).strip() or None if region_raw is not None else None
 
-    # v0.9.3: tenant metadata enrichment — parse the Microsoft-specific
+    # Tenant metadata enrichment — parse the Microsoft-specific
     # OIDC extensions that disambiguate sovereign clouds. All three are
     # optional in the response; None when the discovery doc doesn't
     # carry them.

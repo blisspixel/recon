@@ -135,7 +135,7 @@ CONFIDENCE_DOTS: dict[ConfidenceLevel, str] = {
     ConfidenceLevel.LOW: "●○○",
 }
 
-# Posterior-backed confidence (v2.0.1). When fusion has run, the panel's
+# Posterior-backed confidence. When fusion has run, the panel's
 # confidence dots reflect where a claim's 80% credible interval sits relative
 # to the present/absent decision threshold, rather than the deterministic tier
 # alone. The dots become one defined quantity (posterior support for the claim);
@@ -233,7 +233,7 @@ def _slug_to_relationship_metadata() -> dict[str, dict[str, str | None]]:
     """Return ``{slug: {product_family, parent_vendor, bimi_org}}`` for every
     fingerprint with at least one populated relationship-metadata field.
 
-    Pure data lookup — drives the v1.8 ``fingerprint_metadata`` block in
+    Pure data lookup — drives the ``fingerprint_metadata`` block in
     ``format_tenant_dict``. Slugs without any populated field are
     omitted; callers do not need to filter again.
     """
@@ -318,11 +318,11 @@ def _is_sparse_insight(line: str) -> bool:
     return line.startswith(_SPARSE_INSIGHT_PREFIXES)
 
 
-# ── v0.9.3 panel constants ─────────────────────────────────────────────
+# ── Panel constants ─────────────────────────────────────────────
 
 _PANEL_WIDTH = 78  # One char narrower than an 80-col terminal to avoid
 # wrap-to-next-line artefacts when the last cell is
-# filled. The v0.9.3 layout has no border, so the
+# filled. The layout has no border, so the
 # effective content width equals the panel width.
 _LABEL_WIDTH = 13  # columns for Provider/Tenant/Auth/Confidence labels
 _CATEGORY_WIDTH = 15  # columns for Services sub-category labels
@@ -380,7 +380,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "entra-app-proxy": "Identity",
     "auth0": "Identity",
     "onelogin": "Identity",
-    # v1.9.3.9: additional identity providers
+    # Additional identity providers
     "jumpcloud": "Identity",
     "aws-cognito": "Identity",
     "duo": "Identity",
@@ -391,13 +391,13 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "google-federated": "Identity",
     "google-managed": "Identity",
     "cisco-identity": "Identity",
-    # v0.9.3: identity-hub slugs emitted by _detect_idp_hub when
+    # Identity-hub slugs emitted by _detect_idp_hub when
     # shibboleth.example.edu / weblogin.example.edu / idp.example.edu
-    # resolve. Strong signal that the org runs federated SSO.
+    # resolve. Signal that the org runs federated SSO.
     "federated-sso-hub": "Identity",
     "okta-sso-hub": "Identity",
     "adfs-sso-hub": "Identity",
-    # v0.9.3: Exchange on-prem / hybrid slug emitted by
+    # Exchange on-prem / hybrid slug emitted by
     # _detect_exchange_onprem when owa./outlook./exchange.
     # subdomains resolve. Indicates self-hosted or hybrid
     # Exchange deployment rather than Exchange Online.
@@ -435,7 +435,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "flyio": "Cloud",
     "railway": "Cloud",
     "render": "Cloud",
-    # v0.9.3: hosting-provider detection from A → PTR
+    # Hosting-provider detection from A → PTR
     "aws-ec2": "Cloud",
     "aws-compute": "Cloud",
     "azure-vm": "Cloud",
@@ -447,7 +447,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "vultr": "Cloud",
     "cdn77": "Cloud",
     "bunnycdn": "Cloud",
-    # v1.9.3.9: cloud-vendor coverage additions (Cloud)
+    # Cloud-vendor coverage additions (Cloud)
     "firebase-hosting": "Cloud",
     "gcp-cloud-functions": "Cloud",
     "firebase-realtime": "Cloud",
@@ -479,7 +479,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "sonatype": "Security",
     "cosign-attestation": "Security",
     "lakera": "Security",
-    # v1.9.3.9: cloud-vendor coverage additions (Security)
+    # Cloud-vendor coverage additions (Security)
     "aws-waf": "Security",
     "cato-networks": "Security",
     "prisma-access": "Security",
@@ -519,33 +519,33 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "gitlab": "Collaboration",
     "linear": "Collaboration",
     "disciple-media": "Collaboration",
-    # v0.9.3: higher-ed LMS / SIS / student-facing platforms
+    # Higher-ed LMS / SIS / student-facing platforms
     "canvas-lms": "Collaboration",
     "blackboard": "Collaboration",
     "moodle": "Collaboration",
-    # v1.9.3.9: cloud-vendor coverage additions (Business Apps / Data)
+    # Cloud-vendor coverage additions (Business Apps / Data)
     "oracle-fusion": "Business Apps",
     "looker-studio": "Data & Analytics",
     "ellucian-banner": "Business Apps",
     "handshake": "Business Apps",
     "tophat": "Collaboration",
-    # v0.9.3: sales & marketing platforms missed in earlier passes
+    # Sales & marketing platforms missed in earlier passes
     "d365-marketing": "Business Apps",
     "sfmc": "Business Apps",
     "kartra": "Business Apps",
     "emma": "Email",
     "icontact": "Email",
     "mailerlite": "Email",
-    # v0.9.3: infrastructure verification tokens (netlify already
+    # Infrastructure verification tokens (netlify already
     # mapped in Cloud above via the main fingerprint block; wpengine
     # is new; vmware-cloud is new)
     "wpengine": "Cloud",
     "vmware-cloud": "Cloud",
-    # v0.9.3: nonprofit platforms
+    # Nonprofit platforms
     "salesforce-npsp": "Business Apps",
     "blackbaud": "Business Apps",
     "classy": "Business Apps",
-    # v1.5: surface-attribution slugs that should bucket as Cloud rather
+    # Surface-attribution slugs that should bucket as Cloud rather
     # than landing in the Business Apps fallback. AWS App Runner and
     # MuleSoft Anypoint are PaaS / iPaaS infrastructure; Cloudinary is a
     # media CDN; Apigee is an API gateway; AWS Global Accelerator is an
@@ -592,7 +592,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "rainfocus": "Business Apps",
     "aws-api-gateway": "Cloud",
     "aws-nlb": "Cloud",
-    # v1.6.1 corpus run
+    # Corpus run additions
     "paradox-ai": "Collaboration",
     "jibe": "Business Apps",
     "career-page": "Business Apps",
@@ -610,7 +610,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "zuddl": "Business Apps",
     "postman-hosted": "Collaboration",
     "site24x7": "Collaboration",
-    # v1.9.2.1 catalog growth from corpus-private/consolidated.txt scan.
+    # Catalog growth from corpus-private/consolidated.txt scan.
     "akamai-eaa": "Security",
     "amplience": "Business Apps",
     "bigmarker": "Collaboration",
@@ -647,7 +647,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "uberflip": "Business Apps",
     "weglot": "Collaboration",
     "wordpress-com": "Business Apps",
-    # v2.0-prep catalog growth from the 4270-apex real-corpus scan.
+    # Catalog growth from the 4270-apex real-corpus scan.
     # Without these mappings, panel display falls through to the
     # "Business Apps" default, which miscategorizes CDNs, analytics,
     # and security tooling.
@@ -675,7 +675,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "tencent-wechat": "Collaboration",
     "vanta": "Security",
     "yahoo-japan-cdn": "Cloud",
-    # v2.0-prep: legacy slugs that the v1.9.x pipeline mis-bucketed
+    # Legacy slugs that the v1.9.x pipeline mis-bucketed
     # under "Business Apps" because they were never explicitly mapped.
     # Each one is unambiguous in the operator's mental model:
     # observability / data warehouses / product analytics belong in
@@ -706,7 +706,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "ns1": "Cloud",
     "stackpath": "Cloud",
     "ultradns": "Cloud",
-    # v1.9.22: slugs for cname_target rules discovered via the corpus
+    # Slugs for cname_target rules discovered via the corpus
     # discovery loop. The marketing / generic-SaaS ones (substack, tally,
     # bynder, ...) roll up to Business Apps via the pass-2 fallback; only
     # the ones with a specific home are mapped here.
@@ -720,7 +720,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "rootly": "Security",
     "material-security": "Email",
     "microsoft365-gov": "Email",
-    # v1.9.23: slugs for TXT verification fingerprints discovered via the
+    # Slugs for TXT verification fingerprints discovered via the
     # corpus TXT-prefix mine. The generic / marketing ones roll up to
     # Business Apps via the fallback; only the ones with a specific home
     # are mapped here.
@@ -737,7 +737,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "datadome": "Security",
     "keybase": "Security",
     "windsurf": "AI",
-    # v1.9.23: NS-provider slugs from the signal mine (DNS / registrar
+    # NS-provider slugs from the signal mine (DNS / registrar
     # providers; excluded from the multi-cloud rollup below).
     "afternic": "Cloud",
     "csc": "Cloud",
@@ -747,7 +747,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "gandi": "Cloud",
     "markmonitor": "Cloud",
     "worldnic": "Cloud",
-    # v1.9.24 TXT batch: explicit categories for non-Business-Apps slugs.
+    # TXT batch: explicit categories for non-Business-Apps slugs.
     "yahoo": "Email",
     "qqmail": "Email",
     "hashicorp-cloud": "Cloud",
@@ -777,7 +777,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "happeo": "Collaboration",
     "lucidchart": "Collaboration",
     "invision": "Collaboration",
-    # v1.9.24 SPF batch: email-vendor slugs.
+    # SPF batch: email-vendor slugs.
     "oracle-email-delivery": "Email",
     "powerspf": "Email",
     "elasticemail": "Email",
@@ -787,7 +787,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "mailchannels": "Email",
     "stibee": "Email",
     "smtp-com": "Email",
-    # v1.9.24 MX batch: new MX-provider slugs.
+    # MX batch: new MX-provider slugs.
     "mxrecord": "Email",
     "fastmail": "Email",
     "hornetsecurity": "Email",
@@ -795,7 +795,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "titanhq": "Security",
     "icloud-mail": "Email",
     "iberlayer": "Email",
-    # v1.9.24 DMARC rua batch: DMARC aggregate-report aggregators.
+    # DMARC rua batch: DMARC aggregate-report aggregators.
     "cloudflare-email-analytics": "Email",
     "cisa-dmarc": "Security",
     "sdmarc": "Email",
@@ -809,7 +809,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "inboxmonster": "Email",
     "dmarcinput": "Email",
     "glockapps": "Email",
-    # v1.9.24 NS batch: new DNS-provider slugs (categorized Cloud,
+    # NS batch: new DNS-provider slugs (categorized Cloud,
     # added to the rollup exclusions below since they are DNS operators,
     # not multi-cloud hosting vendors).
     "att-dns": "Cloud",
@@ -824,7 +824,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "com-laude": "Cloud",
     "level3": "Cloud",
     "dnspod": "Cloud",
-    # v1.9.24 cname_target batch: vendor-specific terminal endpoints from
+    # cname_target batch: vendor-specific terminal endpoints from
     # the corpus chain mine. Slugs with a non-Business-Apps home.
     "validity-everest": "Email",
     "adestra": "Email",
@@ -841,7 +841,7 @@ _CATEGORY_BY_SLUG: dict[str, str] = {
     "hund": "Collaboration",
     "redocly": "Collaboration",
     "zoomin": "Collaboration",
-    # v1.9.25 catalog gap-fill from Phase F corpus output. Slugs with
+    # Catalog gap-fill from Phase F corpus output. Slugs with
     # a non-Business-Apps home.
     "readthedocs": "Collaboration",
     "stoplight": "Collaboration",
@@ -863,11 +863,11 @@ _EMAIL_SERVICE_PREFIXES: tuple[str, ...] = (
     "MTA-STS",
     "BIMI",
     "TLS-RPT",
-    "Exchange Autodiscover",  # v0.9.3: M365 autodiscover infrastructure
+    "Exchange Autodiscover",  # M365 autodiscover infrastructure
     "Autodiscover",
 )
 
-# v0.9.3 refinement: service entries that are verification receipts,
+# Service entries that are verification receipts,
 # domain-ownership tokens, or registrar artefacts rather than deployed
 # products. These get filtered out of the categorized Services block
 # because showing "Google (site verified)" alongside "Google Workspace"
@@ -882,7 +882,7 @@ _FILTERED_SERVICE_PREFIXES: tuple[str, ...] = (
     "Domain Connect",  # registrar handoff metadata, not a deployed product
 )
 
-# v0.9.3 refinement: qualifier map for Cloud-category services. Without
+# Qualifier map for Cloud-category services. Without
 # this, "AWS Route 53" under "Cloud" reads as "primary cloud = AWS",
 # which is almost always wrong — Route 53 is authoritative DNS, not
 # compute. The qualifier makes the service type explicit so a CISO
@@ -915,7 +915,7 @@ _CLOUD_SLUG_QUALIFIERS: dict[str, str] = {
     "flyio": "edge",
     "railway": "edge",
     "render": "edge",
-    # v0.9.3: hosting provider detected via A → PTR reverse DNS.
+    # Hosting provider detected via A → PTR reverse DNS.
     # The "(hosting)" qualifier disambiguates from CDN / DNS
     # entries so a CISO reading the Cloud row can tell at a glance
     # which services are delivering compute vs which are just
@@ -933,14 +933,14 @@ _CLOUD_SLUG_QUALIFIERS: dict[str, str] = {
     # (the raw name is enough — "AWS S3", "Azure App Service", …).
 }
 
-# v0.9.3 refinement: explicit display names for slugs whose
+# Explicit display names for slugs whose
 # corresponding fingerprint name is different, OR whose slug has no
 # fingerprint entry at all. Without this, slugs like "google-managed"
 # render as raw strings in the categorized services block.
 _SLUG_DISPLAY_OVERRIDES: dict[str, str] = {
     "google-managed": "Google Workspace (managed identity)",
     "google-federated": "Google Workspace (federated identity)",
-    # v0.9.3: hosting-provider slugs emitted by dns._detect_hosting_from_a_record.
+    # Hosting-provider slugs emitted by dns._detect_hosting_from_a_record.
     # These come from A → PTR reverse-DNS matching, not from the
     # regular fingerprints.yaml pipeline, so there's no fingerprint
     # name to fall back to. Give them explicit user-facing names
@@ -958,21 +958,21 @@ _SLUG_DISPLAY_OVERRIDES: dict[str, str] = {
     "hetzner": "Hetzner",
     "ovh": "OVH",
     "vultr": "Vultr",
-    # v0.9.3: identity-hub slugs emitted by
+    # Identity-hub slugs emitted by
     # dns._detect_idp_hub. These don't have fingerprint entries
     # so the raw slug would leak into the Identity row without
     # an explicit override.
     "federated-sso-hub": "SSO hub",
     "okta-sso-hub": "Okta SSO hub",
     "adfs-sso-hub": "ADFS SSO hub",
-    # v0.9.3: Exchange on-prem / hybrid slug emitted by
-    # dns._detect_exchange_onprem. No fingerprint backs it —
+    # Exchange on-prem / hybrid slug emitted by
+    # dns._detect_exchange_onprem. No fingerprint backs it,
     # the display override is how the Email-row entry gets a
     # human-readable name.
     "exchange-onprem": "Exchange Server (on-prem / hybrid)",
 }
 
-# v1.9.9: canonicalization from per-slug cloud entries to a single
+# Canonicalization from per-slug cloud entries to a single
 # cloud-vendor identity. Used by the apex-level multi-cloud rollup
 # indicator so that, for example, "AWS CloudFront" and "AWS Route 53"
 # collapse to one AWS vote rather than counting as two distinct
@@ -1059,7 +1059,7 @@ _CLOUD_VENDOR_BY_SLUG: dict[str, str] = {
     "edgio-cdn": "Edgio",
     "lumen-cdn": "Lumen",
     "f5-xc": "F5 Distributed Cloud",
-    # v2.0-prep additions from the 4270-apex real-corpus scan. Each
+    # Additions from the 4270-apex real-corpus scan. Each
     # represents a cloud-vendor binding the operator would expect to
     # count in a multi-cloud summary.
     "aws-region-endpoint": "AWS",
@@ -1068,7 +1068,7 @@ _CLOUD_VENDOR_BY_SLUG: dict[str, str] = {
     "tencent-edgeone": "Tencent Cloud",
 }
 
-# v1.9.9: cloud-categorized slugs that are intentionally NOT counted
+# Cloud-categorized slugs that are intentionally NOT counted
 # as cloud vendors in the rollup. Two reasons a slug ends up here:
 #
 # (a) The product is SaaS hosting rather than cloud infrastructure
@@ -1104,7 +1104,7 @@ _CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "glitch",
         # Package / artifact registry — distribution, not general cloud
         "cloudsmith",
-        # v1.9.23: DNS / registrar providers from the NS signal mine — DNS
+        # DNS / registrar providers from the NS signal mine. DNS
         # operators, not multi-cloud hosting vendors for the panel summary.
         "afternic",
         "csc",
@@ -1124,7 +1124,7 @@ _CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         # hosting. Same reasoning as azion / cloudinary (regional CDN) and
         # wpengine / kinsta (single-stack hosting): real vendors, but not
         # general multi-cloud footprint for the at-a-glance rollup. byteark
-        # is aligned here from v1.9.88 for consistency with the convention.
+        # is aligned here for consistency with the convention.
         "byteark",
         "gamania-cloudforce",
         "turbify",
@@ -1137,7 +1137,7 @@ _CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         # API management not tied to a major cloud at the rollup level
         "apigee",
         "mulesoft",
-        # v2.0-prep additions: specialty / regional CDNs and partner-
+        # Additions: specialty / regional CDNs and partner-
         # integration markers where the chain does not by itself
         # establish a direct customer relationship with the vendor.
         "azion-cdn",
@@ -1158,13 +1158,13 @@ _CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "ns1",
         "stackpath",
         "ultradns",
-        # v1.9.24: HashiCorp Cloud Platform is the SaaS-hosted control
+        # HashiCorp Cloud Platform is the SaaS-hosted control
         # plane for Terraform / Vault / Consul / Boundary , single-vendor
         # PaaS, not a general multi-cloud vendor for the panel rollup.
         "hashicorp-cloud",
-        # v1.9.24 NS batch: DNS-provider slugs from the NS signal mine.
+        # NS batch: DNS-provider slugs from the NS signal mine.
         # DNS operators, not multi-cloud hosting vendors , same rationale
-        # as the v1.9.23 DNS/registrar block above.
+        # as the DNS/registrar block above.
         "att-dns",
         "dnsimple",
         "f5-clouddns",
@@ -1177,7 +1177,7 @@ _CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "com-laude",
         "level3",
         "dnspod",
-        # v1.9.24 cname_target batch: Cloud-categorized slugs that are
+        # cname_target batch: Cloud-categorized slugs that are
         # specialty SaaS-hosting / CDN / colo, not general multi-cloud
         # vendors. Same shape as wpengine / kinsta / pagely above.
         "edgecast",
@@ -1186,8 +1186,8 @@ _CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "pressable",
         "sanity-cdn",
         "inap",
-        # v1.9.25: specialty PaaS / regional-CDN slugs from the Phase F
-        # corpus output. Same rationale as the v1.9.24 entries above.
+        # Specialty PaaS / regional-CDN slugs from the Phase F
+        # corpus output. Same rationale as the entries above.
         "aptible",
         "platform-sh",
         "whecloud",
@@ -1198,7 +1198,7 @@ _CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
 def category_for_slug(slug: str) -> str | None:
     """Return the panel category for a fingerprint slug, or ``None``.
 
-    Public accessor over the ``_CATEGORY_BY_SLUG`` lookup. v1.9.9
+    Public accessor over the ``_CATEGORY_BY_SLUG`` lookup. The
     corpus-aggregation tooling uses this to estimate the panel's
     categorized-service count from a serialized TenantInfo without
     re-running the full ``_categorize_services`` pipeline. Returning
@@ -1213,7 +1213,7 @@ def canonical_cloud_vendor(slug: str) -> str | None:
     Returns the vendor label (``"AWS"``, ``"Azure"``, ``"Cloudflare"``,
     ...) for slugs that map to a recognised cloud vendor, or ``None``
     for slugs that are not cloud-categorized. The mapping is the
-    single source of truth used by the v1.9.9 multi-cloud rollup; do
+    single source of truth used by the multi-cloud rollup; do
     not duplicate it inline at call sites.
     """
     return _CLOUD_VENDOR_BY_SLUG.get(slug)
@@ -1423,7 +1423,7 @@ def detect_provider(
 ) -> str:
     """Detect and format the provider line with email topology awareness.
 
-    Target format (v0.9.3 rewrite):
+    Target format:
       - ``Microsoft 365 (primary) via Proofpoint gateway`` — strict primary + gateway
       - ``Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)``
         — primary + gateway + a separately detected secondary
@@ -1432,7 +1432,7 @@ def detect_provider(
       - ``Proofpoint gateway (no inferable downstream)`` — gateway only, unknown downstream
       - ``Microsoft 365; Google Workspace`` — slug-only fallback
 
-    The critical change from pre-v0.9.3: when
+    The critical change from the old format: when
     ``likely_primary_email_provider`` lists multiple providers (e.g.
     ``"Google Workspace + Microsoft 365"``), one is promoted to the
     single primary and the rest become ``"(secondary)"`` — never
@@ -1797,7 +1797,7 @@ def _compact_email_summary(info: TenantInfo, email_services: list[str]) -> list[
 
 
 # High-signal subdomain prefixes for compact related-domain display.
-# Tuned to match the v0.9.3 UI goal: the related line should fit in 1-2
+# Tuned to match the UI goal: the related line should fit in 1-2
 # lines and show the names a security analyst cares about first.
 _HIGH_SIGNAL_RELATED_PREFIXES: tuple[str, ...] = (
     "login.",
@@ -1826,7 +1826,7 @@ def _pick_high_signal_related(
     few high-signal names are present. Returns a tuple of
     ``(picked, total_count)`` so callers can emit the "N total" footer.
 
-    v0.9.3 refinement: ``*.onmicrosoft.com`` entries are filtered out.
+    ``*.onmicrosoft.com`` entries are filtered out.
     These are Microsoft 365 tenant artefacts — they appear in the
     related list because the user realm / autodiscover path surfaces
     them, but they carry no "related brand" signal. A CISO reading
@@ -1886,7 +1886,7 @@ def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
     """Render the Confidence row.
 
     Deterministic fallback (no fusion / --no-fusion): dots from the deterministic
-    tier, green on High, no clause; identical to v1.x. v2.0.1 with fusion: the
+    tier, green on High, no clause. With fusion: the
     dots reflect the weakest claimed node's posterior support (the panel is as
     confident as its shakiest asserted claim), colored by fill, and a dimmed line
     speaks up when that node is thin or the evidence leans against it. The
@@ -1974,7 +1974,7 @@ def _key_facts_auth_line(info: TenantInfo) -> str | None:
 
 
 def _key_facts_multicloud_line(info: TenantInfo) -> str | None:
-    """At-a-glance multi-cloud indicator (v1.9.9).
+    """At-a-glance multi-cloud indicator.
 
     The apex slugs and the CNAME-chain subdomain attributions both contribute;
     ``count_cloud_vendors`` collapses sibling slugs so the count reflects
@@ -2029,7 +2029,7 @@ def _render_key_facts(info: TenantInfo) -> Text:
         _append_field(facts, "Multi-cloud", multicloud_line)
 
     # Confidence — deterministic dots without fusion; posterior-backed dots plus
-    # a disagreement clause when fusion has run (v2.0.1).
+    # a disagreement clause when fusion has run.
     _append_confidence_field(facts, info)
 
     return facts
@@ -2043,7 +2043,7 @@ def render_tenant_panel(
     explain: bool = False,
     confidence_mode: str = "hedged",
 ):  # -> rich renderable
-    """Render TenantInfo as a plain-text hero layout (v0.9.3 redesign).
+    """Render TenantInfo as a plain-text hero layout.
 
     Replaces the old bordered Panel with a flat, professional layout
     that foregrounds Services, keeps Related domains compact, and
@@ -2086,7 +2086,7 @@ def render_tenant_panel(
         blocks.append(Text(""))
 
     # ── Hero header ────────────────────────────────────────────────
-    # v0.9.3 refinement: when display_name falls back to the raw
+    # When display_name falls back to the raw
     # domain (no company name extractable), render it once as bold
     # instead of showing the same string twice.
     header = Text()
@@ -2107,7 +2107,7 @@ def render_tenant_panel(
         _spacer()
         blocks.append(svc_block)
 
-    # ── Passive-DNS ceiling phrasing (v1.9.9) ─────────────────────
+    # ── Passive-DNS ceiling phrasing ─────────────────────
     ceiling = _render_passive_dns_ceiling(info, show_domains, ceiling_categorized_count)
     if ceiling is not None:
         _spacer()
@@ -2696,7 +2696,7 @@ def _render_verbose_detail(info: TenantInfo, verbose: bool) -> Text | None:
         f"  Inference confidence: {info.inference_confidence.value.capitalize()}\n",
         style="dim",
     )
-    # v2.0.1: the Bayesian posteriors with their 80% credible intervals, for
+    # The Bayesian posteriors with their 80% credible intervals, for
     # operators who want the math visible by default. The label names the
     # interval so the comma range is not read as a frequentist confidence
     # interval. Claimed nodes only (the verdict's nodes), strongest first.
@@ -2740,7 +2740,7 @@ def _curate_insights(
     services: tuple[str, ...],
     slugs: tuple[str, ...],
 ) -> list[str]:
-    """Filter and deduplicate insights for the v0.9.3 default panel.
+    """Filter and deduplicate insights for the default panel.
 
     Two kinds of cleanup:
 
@@ -2763,8 +2763,8 @@ def _curate_insights(
            Dual Email Delivery Path: microsoft365, google-workspace
            Secondary Email Provider Observed: google-workspace
 
-       Four different wordings of the same fact. v0.9.3 collapses
-       these into a single canonical line — keeping the highest-
+       Four different wordings of the same fact. The curator collapses
+       these into a single canonical line, keeping the highest-
        signal wording and dropping the rest.
 
     The collapse rules are intentionally narrow: only overlapping
@@ -2779,7 +2779,7 @@ def _curate_insights(
         "PKI:",
         "Google Workspace modules:",  # module list also belongs in Services
     )
-    # v0.10: aggressively drop insights that restate what the Services
+    # Drop insights that restate what the Services
     # block or header already shows. These follow a "Label: slug1, slug2"
     # pattern where the slugs are visible in the categorized Services
     # section. They add zero interpretation — just a differently-worded
@@ -2865,7 +2865,7 @@ def _curate_insights(
     # just documents the precedence for future maintainers.
 
     # ── Email security aux-note dedup ──────────────────────────────
-    # The score line (v1.0.2+: "Email security: <inventory>") already
+    # The score line ("Email security: <inventory>") already
     # names what's present/absent. The auxiliary "DMARC: none", "No
     # DMARC record at apex", "No DKIM at common selectors" insights
     # restate the same observation in prose. Keep the score line on
@@ -3022,7 +3022,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         "domain_count": info.domain_count,
         "sources": list(info.sources),
         "services": list(info.services),
-        # v0.9.3: emit slugs explicitly. TenantInfo.slugs is the
+        # Emit slugs explicitly. TenantInfo.slugs is the
         # canonical detected-fact identifier set — downstream
         # tooling matching on specific slugs had to read them out
         # of `detection_scores` before, which was awkward.
@@ -3053,9 +3053,9 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         "ct_attempt_outcome": info.ct_attempt_outcome,
         "slug_confidences": dict(info.slug_confidences),
         # v1.9 Bayesian network — populated only when --fusion is on.
-        # ``conflict_provenance`` (v1.9.1+) is always present per posterior;
+        # ``conflict_provenance`` is always present per posterior;
         # empty list when no cross-source conflicts dampened the interval.
-        # ``evidence_ranked`` (v1.9.3.2+) ranks fired bindings by absolute
+        # ``evidence_ranked`` ranks fired bindings by absolute
         # LLR contribution so consumers can surface the highest-leverage
         # evidence per node. Empty list when no bindings fired.
         "posterior_observations": [
@@ -3088,10 +3088,10 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
             }
             for p in info.posterior_observations
         ],
-        # v0.11: surface email_security_score at the top level of --json
+        # Surface email_security_score at the top level of --json
         # (previously only available inside the insights string).
         "email_security_score": _compute_email_security_score(info),
-        # v0.9.3: sovereignty + lexical fields
+        # Sovereignty + lexical fields
         "cloud_instance": info.cloud_instance,
         "tenant_region_sub_scope": info.tenant_region_sub_scope,
         "msgraph_host": info.msgraph_host,
@@ -3106,12 +3106,12 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
             "newest_cert_age_days": info.cert_summary.newest_cert_age_days,
             "oldest_cert_age_days": info.cert_summary.oldest_cert_age_days,
             "top_issuers": list(info.cert_summary.top_issuers),
-            # v1.7 — wildcard SAN sibling clusters; empty list when no
+            # Wildcard SAN sibling clusters; empty list when no
             # wildcard cert produced siblings.
             "wildcard_sibling_clusters": [
                 {"names": list(cluster)} for cluster in info.cert_summary.wildcard_sibling_clusters
             ],
-            # v1.7 — temporal CT issuance bursts; relative window deltas only.
+            # Temporal CT issuance bursts; relative window deltas only.
             "deployment_bursts": [
                 {
                     "window_start": burst.window_start,
@@ -3146,13 +3146,13 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         ]
     # v2.0 schema contract: always present (empty dict when no detections).
     d["detection_scores"] = dict(info.detection_scores)
-    # v1.7: Cross-source evidence conflicts — top-level array. Always
+    # Cross-source evidence conflicts — top-level array. Always
     # emitted (empty list when none). Each entry is
     # {field, candidates: [{value, source, confidence}, ...]}. The
     # legacy `conflicts` dict under --explain is unchanged for
     # backwards compatibility.
     d["evidence_conflicts"] = serialize_conflicts_array(info.merge_conflicts)
-    # v1.7: chain motifs — observed CDN/edge → origin shapes from CNAME
+    # Chain motifs — observed CDN/edge → origin shapes from CNAME
     # chain analysis. Always emitted (empty list when none). Each entry
     # is one motif firing on one related subdomain.
     d["chain_motifs"] = [
@@ -3165,7 +3165,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         }
         for cm in info.chain_motifs
     ]
-    # v1.8: infrastructure clusters — community detection over the CT
+    # Infrastructure clusters — community detection over the CT
     # SAN co-occurrence graph. Always emitted as a stable envelope; the
     # ``algorithm`` field reflects which path produced the partition
     # ("louvain" | "connected_components" | "skipped"). Empty
@@ -3202,10 +3202,10 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
     # They surface only via the MCP ``export_graph`` tool, which is the
     # explicit consumer path for graph-rendering pipelines.
 
-    # v1.8: per-slug relationship metadata. Always emitted; entries
+    # Per-slug relationship metadata. Always emitted; entries
     # appear only for slugs that fired AND have at least one populated
     # field. Empty object when no detected slug carries metadata. Drives
-    # the v1.8 ecosystem hypergraph and downstream display logic — never
+    # the ecosystem hypergraph and downstream display logic — never
     # an ownership claim, just descriptive hints from the fingerprint
     # YAML.
     metadata_lookup = _slug_to_relationship_metadata()
@@ -3220,7 +3220,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
             continue
         fingerprint_metadata[slug] = meta
     d["fingerprint_metadata"] = fingerprint_metadata
-    # v1.5: External surface attributions — per-subdomain SaaS attribution
+    # External surface attributions — per-subdomain SaaS attribution
     # from CNAME chain classification. Always emitted (empty list when none).
     d["surface_attributions"] = [
         {
@@ -3233,7 +3233,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         }
         for sa in info.surface_attributions
     ]
-    # v1.5: opt-in unclassified-chain emission. Off by default keeps the v1.0
+    # Opt-in unclassified-chain emission. Off by default keeps the
     # schema narrow; on for the fingerprint-discovery loop.
     if include_unclassified:
         d["unclassified_cname_chains"] = [

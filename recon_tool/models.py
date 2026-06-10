@@ -89,7 +89,7 @@ class CertBurst:
     span in seconds, count of names, name list) rather than absolute
     timestamps — recon does not claim "same owner", only "co-issued".
 
-    Surfaced under ``cert_summary.deployment_bursts`` in --json (v1.7+).
+    Surfaced under ``cert_summary.deployment_bursts`` in --json.
     """
 
     window_start: str  # ISO-8601 UTC of earliest not_before in this burst
@@ -108,12 +108,12 @@ class CertSummary:
     newest_cert_age_days: int
     oldest_cert_age_days: int
     top_issuers: tuple[str, ...]  # up to 3 most frequent issuer_name values
-    # v1.7: Wildcard SAN sibling clusters. Each inner tuple is the sorted
+    # Wildcard SAN sibling clusters. Each inner tuple is the sorted
     # set of non-wildcard SANs from a single cert that also covered a
     # wildcard. Empty when no wildcard cert produced siblings, or when
     # CT data was unavailable. Bounded.
     wildcard_sibling_clusters: tuple[tuple[str, ...], ...] = ()
-    # v1.7: Deployment bursts — cohorts of cert issuances clustered by
+    # Deployment bursts — cohorts of cert issuances clustered by
     # not_before within a short window. Empty when no burst meets the
     # minimum cohort size.
     deployment_bursts: tuple[CertBurst, ...] = ()
@@ -161,7 +161,7 @@ class NodeConflict:
     and cache round-trips. ``field`` is the merged ``TenantInfo`` field
     whose sources disagreed; ``sources`` lists the distinct sources that
     contributed candidate values; ``magnitude`` is the n_eff penalty
-    this conflict applied (uniform at v1.9.1, exposed as a number so
+    this conflict applied (uniform for now, exposed as a number so
     future per-node relevance weighting is schema-additive).
     """
 
@@ -184,7 +184,7 @@ class NodeEvidence:
     when it favours ``absent``. ``influence_pct`` normalizes ``|llr|``
     to a percentage across all fired bindings for the same node.
 
-    Added v1.9.3.2 for top-3 influential-edge rendering. Schema-additive:
+    Supports top-3 influential-edge rendering. Schema-additive:
     the default empty tuple on ``PosteriorObservation.evidence_ranked``
     preserves the v1.9.0 JSON shape for consumers that don't read this
     field.
@@ -214,7 +214,7 @@ class PosteriorObservation:
     sparsity. See ``docs/correlation.md §5`` for the full derivation
     and the passive-observation ceiling that floors the interval width.
 
-    ``conflict_provenance`` (v1.9.1+) lists the cross-source
+    ``conflict_provenance`` lists the cross-source
     disagreements that contributed to this node's n_eff penalty,
     alongside the existing top-level ``evidence_conflicts`` array.
     Empty tuple when no conflicts dampened the interval.
@@ -232,7 +232,7 @@ class PosteriorObservation:
     evidence_ranked: tuple[NodeEvidence, ...] = ()
     """Fired bindings ranked by absolute LLR contribution (descending).
 
-    Added v1.9.3.2. Same shape/order as the engine's
+    Same shape/order as the engine's
     ``EvidenceContribution`` tuple; default empty tuple preserves
     backward-compatibility with v1.9.0 / v1.9.3 JSON consumers."""
 
@@ -291,7 +291,7 @@ def serialize_conflicts_array(conflicts: MergeConflicts | None) -> list[dict[str
 
     Always returns a list. Empty list when ``conflicts`` is None or no
     field has 2+ disagreeing candidates. Used by the top-level
-    ``evidence_conflicts`` array in --json output (v1.7.0+).
+    ``evidence_conflicts`` array in --json output.
     """
     if conflicts is None:
         return []
@@ -335,7 +335,7 @@ class ChainMotifObservation:
     ownership claim. See ``recon_tool/motifs.py`` for the matcher and
     ``recon_tool/data/motifs.yaml`` for the catalog.
 
-    Surfaced under top-level ``chain_motifs`` in --json (v1.7+).
+    Surfaced under top-level ``chain_motifs`` in --json.
     """
 
     motif_name: str
@@ -356,7 +356,7 @@ class InfrastructureCluster:
     ownership.
 
     Surfaced under top-level ``infrastructure_clusters.clusters`` in
-    --json (v1.8+).
+    --json.
     """
 
     cluster_id: int
@@ -368,7 +368,7 @@ class InfrastructureCluster:
 
 @dataclass(frozen=True)
 class InfrastructureEdge:
-    """One edge in the per-domain CT co-occurrence graph (v1.8+).
+    """One edge in the per-domain CT co-occurrence graph.
 
     ``source`` and ``target`` are SAN hostnames (sorted alphabetically
     so the edge is canonical). ``shared_cert_count`` is the number of
@@ -395,8 +395,8 @@ class InfrastructureClusterReport:
     ``modularity`` is 0.0 in the fallback / skipped paths since modularity
     only applies to a Louvain partition.
 
-    Surfaced under top-level ``infrastructure_clusters`` in --json
-    (v1.8+). Always present in the JSON envelope (with empty
+    Surfaced under top-level ``infrastructure_clusters`` in --json.
+    Always present in the JSON envelope (with empty
     ``clusters`` when nothing fired) so the field is part of the stable
     contract.
     """
@@ -481,7 +481,7 @@ class SourceResult:
 
     cert_summary: CertSummary | None = None
 
-    # --- Google Workspace & evidence fields (v0.3.0) ---
+    # --- Google Workspace & evidence fields ---
     evidence: tuple[EvidenceRecord, ...] = ()
     bimi_identity: BIMIIdentity | None = None
     site_verification_tokens: tuple[str, ...] = ()
@@ -489,30 +489,30 @@ class SourceResult:
     google_auth_type: str | None = None  # "Federated", "Managed"
     google_idp_name: str | None = None  # "Okta", "Ping Identity", etc.
 
-    # --- v0.9.0: Intelligence Amplification ---
+    # --- Intelligence Amplification ---
     dmarc_pct: int | None = None  # DMARC pct= value (0-100)
     raw_dns_records: tuple[tuple[str, str], ...] = ()  # (record_type, value) pairs for reevaluation cache
 
-    # --- v0.9.2: CT provider attribution ---
+    # --- CT provider attribution ---
     # Name of the CT provider ("crt.sh" or "certspotter") that actually
     # returned results for this lookup, and how many subdomains came back
     # after filtering. None when no CT provider was queried or all failed.
     ct_provider_used: str | None = None
     ct_subdomain_count: int = 0
 
-    # --- v0.10: CT cache fallback ---
+    # --- CT cache fallback ---
     # When all live CT providers fail, the per-domain CT cache serves as
     # a fallback. ct_cache_age_days is set to the cache age when cached
     # data was used; None when data came from a live provider.
     ct_cache_age_days: int | None = None
 
-    # --- v1.9.25: CT attempt outcome ---
+    # --- CT attempt outcome ---
     # See ``TenantInfo.ct_attempt_outcome`` for the enum semantics. Set
     # by ``DNSSource`` when CT enumeration is attempted; None on sources
     # that do not touch CT.
     ct_attempt_outcome: str | None = None
 
-    # --- v0.9.3: OIDC tenant metadata enrichment ---
+    # --- OIDC tenant metadata enrichment ---
     # Extracted from the Microsoft OIDC discovery document when present.
     # Distinguish commercial M365, Government Community Cloud / GCC High,
     # Azure China 21Vianet, Azure B2C, and Azure External ID tenancies.
@@ -521,7 +521,7 @@ class SourceResult:
     tenant_region_sub_scope: str | None = None  # e.g. "GCC", "DOD", "USGov"
     msgraph_host: str | None = None  # e.g. "graph.microsoft.com", "graph.microsoft.us"
 
-    # --- v1.5: External surface attribution ---
+    # --- External surface attribution ---
     # Per-subdomain attribution from CNAME-chain classification of related
     # domains. Populated by the DNS source after CT and common-subdomain
     # discovery. Drives both the default-panel slug union and the --full
@@ -533,13 +533,13 @@ class SourceResult:
     # loop (validation/find_gaps.py and the triage skill).
     unclassified_cname_chains: tuple[UnclassifiedCnameChain, ...] = ()
 
-    # --- v1.7: CNAME chain motif observations ---
+    # --- CNAME chain motif observations ---
     # Each entry records a motif from data/motifs.yaml that fired on the
     # CNAME chain of a related subdomain — e.g. Cloudflare → AWS origin,
     # Akamai → Azure origin. Always populated; never claims ownership.
     chain_motifs: tuple[ChainMotifObservation, ...] = ()
 
-    # --- v1.8: CT co-occurrence clusters ---
+    # --- CT co-occurrence clusters ---
     # Communities detected in the per-domain SAN co-occurrence graph.
     # Always populated when CT entries were available (may have an
     # empty ``clusters`` tuple when the graph was too small or trivial).
@@ -591,7 +591,7 @@ class TenantInfo:
     degraded_sources: tuple[str, ...] = ()  # Names of unavailable data sources
     cert_summary: CertSummary | None = None
 
-    # --- Google Workspace, evidence & confidence fields (v0.3.0) ---
+    # --- Google Workspace, evidence & confidence fields ---
     evidence: tuple[EvidenceRecord, ...] = ()
     evidence_confidence: ConfidenceLevel = ConfidenceLevel.MEDIUM
     inference_confidence: ConfidenceLevel = ConfidenceLevel.MEDIUM
@@ -602,7 +602,7 @@ class TenantInfo:
     google_auth_type: str | None = None  # "Federated", "Managed"
     google_idp_name: str | None = None  # "Okta", "Ping Identity", etc.
 
-    # --- v0.9.0: Intelligence Amplification ---
+    # --- Intelligence Amplification ---
     primary_email_provider: str | None = None  # MX-detected provider name(s)
     email_gateway: str | None = None  # MX-detected gateway name
     dmarc_pct: int | None = None  # DMARC pct= value (0-100)
@@ -612,7 +612,7 @@ class TenantInfo:
     # load-bearing. Never set when primary_email_provider is also set.
     likely_primary_email_provider: str | None = None
 
-    # --- v0.9.2: CT provider attribution ---
+    # --- CT provider attribution ---
     # Which CT provider actually contributed subdomain data for this
     # lookup ("crt.sh" or "certspotter") and how many came back. Surfaced
     # in the panel bottom Note so enrichment asymmetry between runs is
@@ -620,13 +620,13 @@ class TenantInfo:
     ct_provider_used: str | None = None
     ct_subdomain_count: int = 0
 
-    # --- v0.10: CT cache fallback ---
+    # --- CT cache fallback ---
     # Age of the CT cache entry in days when cached data was used as a
     # fallback. None when data came from a live provider. Surfaced in the
     # panel as "from local cache, N days old".
     ct_cache_age_days: int | None = None
 
-    # --- v1.9.25: CT attempt outcome ---
+    # --- CT attempt outcome ---
     # Records WHY this lookup did or did not get CT data, independent of
     # whether cert_summary is populated. Without this field, a record with
     # cert_summary=None could mean "no certs in CT", "rate-limited", "open
@@ -650,7 +650,7 @@ class TenantInfo:
     #                         CT enumeration was attempted.
     ct_attempt_outcome: str | None = None
 
-    # --- v1.4: staleness timestamps (ISO-8601 UTC) ---
+    # --- Staleness timestamps (ISO-8601 UTC) ---
     # resolved_at is when the live resolution produced this TenantInfo.
     # cached_at is when the on-disk cache entry was written; it is None
     # on a fresh resolve and set only when the result was served from
@@ -659,13 +659,13 @@ class TenantInfo:
     resolved_at: str | None = None
     cached_at: str | None = None
 
-    # --- v0.11: Bayesian fusion (stable v2.0+) ---
+    # --- Bayesian fusion (stable v2.0+) ---
     # Per-slug posterior mean in [0, 1] from the Bayesian fusion layer.
     # Populated only when `--fusion` is passed. Empty otherwise.
     # Shape: ``[(slug, posterior_mean), ...]``. Stable v2.0.
     slug_confidences: tuple[tuple[str, float], ...] = ()
 
-    # --- v1.9: Bayesian-network posteriors (stable v2.0+) ---
+    # --- Bayesian-network posteriors (stable v2.0+) ---
     # Posterior P(node=present | E) and 80% credible interval for each
     # node in the v1.9 Bayesian network. Populated only when
     # ``--fusion`` is passed. Empty otherwise. The Beta layer
@@ -675,7 +675,7 @@ class TenantInfo:
     # Stable v2.0; shape pinned by ``PosteriorObservation``.
     posterior_observations: tuple[PosteriorObservation, ...] = ()
 
-    # --- v0.9.3: OIDC tenant metadata enrichment ---
+    # --- OIDC tenant metadata enrichment ---
     # Sovereignty / cloud instance information extracted from the
     # Microsoft OIDC discovery document. None for non-Microsoft tenants.
     # cloud_instance distinguishes commercial (microsoftonline.com) from
@@ -688,23 +688,23 @@ class TenantInfo:
     tenant_region_sub_scope: str | None = None
     msgraph_host: str | None = None
 
-    # --- v0.9.3: Shared verification token clustering (batch scope) ---
+    # --- Shared verification token clustering (batch scope) ---
     # Populated only when a batch run observes the same site-verification
     # token on multiple domains. Each entry is a (token, peer_domain)
     # pair — one entry per peer that shares this token. Empty on single
     # lookups. Never persisted to disk cache (batch scope only).
     shared_verification_tokens: tuple[tuple[str, str], ...] = ()
 
-    # --- v0.9.3: CT lexical taxonomy (pure rule-based) ---
+    # --- CT lexical taxonomy (pure rule-based) ---
     # Hedged observations derived from recognised environment / region /
     # tenancy-shard prefixes on CT-discovered subdomains. Empty when
     # fewer than the minimum number of matching subdomains are observed.
     lexical_observations: tuple[str, ...] = ()
 
-    # --- Conflict-aware merge (v0.7.0) ---
+    # --- Conflict-aware merge ---
     merge_conflicts: MergeConflicts | None = None
 
-    # --- v1.5: External surface attribution ---
+    # --- External surface attribution ---
     # Per-subdomain attribution to SaaS or infrastructure providers, derived
     # from CNAME chains of related_domains. Populated alongside related_domains
     # but addresses a different question: not "what subdomains exist?" but
@@ -718,13 +718,13 @@ class TenantInfo:
     # loop (validation/find_gaps.py and the triage skill).
     unclassified_cname_chains: tuple[UnclassifiedCnameChain, ...] = ()
 
-    # --- v1.7: CNAME chain motif observations ---
+    # --- CNAME chain motif observations ---
     # Each entry records a motif from data/motifs.yaml that fired on the
     # CNAME chain of a related subdomain — e.g. Cloudflare → AWS origin,
     # Akamai → Azure origin. Always populated; never claims ownership.
     chain_motifs: tuple[ChainMotifObservation, ...] = ()
 
-    # --- v1.8: CT co-occurrence clusters ---
+    # --- CT co-occurrence clusters ---
     # Communities detected over the per-domain certificate SAN co-occurrence
     # graph. The report carries the cluster list, the modularity score, and
     # the algorithm path that produced it ("louvain" | "connected_components"

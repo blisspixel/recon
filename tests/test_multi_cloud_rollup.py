@@ -1,4 +1,4 @@
-"""v1.9.9 — apex-level multi-cloud rollup indicator.
+"""Apex-level multi-cloud rollup indicator.
 
 The default panel grew a one-line ``Multi-cloud`` indicator that fires
 when the apex's public footprint touches more than one canonical cloud

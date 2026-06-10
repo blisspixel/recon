@@ -45,7 +45,7 @@ class TestAuthInsights:
 
 class TestEmailSecurityInsights:
     def test_full_inventory(self):
-        # v1.0.2: score line is inventory, not fraction. All five controls
+        # Score line is inventory, not fraction. All five controls
         # should appear in a single "Email security: ..." line when present.
         ctx = _ctx(
             services={"DKIM (Exchange Online)", "SPF: strict (-all)", "MTA-STS", "BIMI"},

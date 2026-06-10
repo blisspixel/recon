@@ -83,7 +83,7 @@ class TestDoctorCommandHappyPath:
         )
 
     def test_doctor_reports_schema_fields_check(self, patched_doctor_environment) -> None:
-        """v1.9.11+: doctor verifies the locked top-level fields are
+        """Doctor verifies the locked top-level fields are
         all emitted by ``format_tenant_json``. The "Schema fields" row
         must appear in the doctor output and report the count."""
         from recon_tool.schema_contract import REQUIRED_TOP_LEVEL_FIELDS

@@ -1,9 +1,9 @@
-"""v1.9.9 — end-to-end render snapshots for the new panel surfaces.
+"""End-to-end render snapshots for the new panel surfaces.
 
 These tests render specific TenantInfo fixtures through
 ``render_tenant_panel`` and assert structural invariants on the output.
 They are stricter than the per-surface tests because they exercise the
-full panel rendering pipeline and check that the new v1.9.9 surfaces
+full panel rendering pipeline and check that the newer surfaces
 (Multi-cloud row, Passive-DNS ceiling block) coexist correctly with
 the existing key-facts block, Services block, and trailing sections.
 

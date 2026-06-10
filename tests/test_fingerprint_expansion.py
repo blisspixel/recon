@@ -154,7 +154,7 @@ class TestEnrichedFingerprints:
         assert len(fp.detections) == 2
 
     def test_ping_identity_has_three_detections(self) -> None:
-        # v1.5.2: surface.yaml extended ping-identity with a cname_target
+        # surface.yaml extended ping-identity with a cname_target
         # rule, so the merged catalog has 4 detections. The test now asserts
         # the floor (>=3) and confirms the original three are still there.
         fp = self.fps["ping-identity"]
@@ -230,7 +230,7 @@ class TestNewSignals:
         names = _signal_names(_ctx({"crewai-aid"}))
         assert "Agentic AI Infrastructure" not in names
 
-    # AI Adoption Without Governance was removed in v1.0.2. Same class as
+    # AI Adoption Without Governance was removed. Same class as
     # Shadow IT Risk / Complex Migration Window — narrative-judgment
     # synthesis inferring "shadow AI deployment" from absence of specific
     # identity providers. Speculative, not observational.
@@ -256,7 +256,7 @@ class TestNewSignals:
         names = _signal_names(_ctx({"snyk"}))
         assert "Software Supply Chain Maturity" not in names
 
-    # DevSecOps Investment Without Email Governance was removed in v1.0.2.
+    # DevSecOps Investment Without Email Governance was removed.
     # Pure narrative synthesis — inferring that engineering security
     # investment doesn't extend to email-layer controls is opinion, not
     # observation. Both underlying facts are already visible in the

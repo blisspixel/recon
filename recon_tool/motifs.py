@@ -1,4 +1,4 @@
-"""CNAME chain motif library (v1.7+).
+"""CNAME chain motif library.
 
 A motif is an ordered sequence of markers expected to appear in a CNAME
 chain. Each marker matches when ANY of its substrings appears in a
@@ -75,7 +75,7 @@ class ChainMotifMatch:
 
     ``chain`` is the ordered subset of hops that matched the motif's
     markers — not the full original chain. Surfaced under
-    ``chain_motifs`` in --json (v1.7+).
+    ``chain_motifs`` in --json.
     """
 
     motif_name: str
