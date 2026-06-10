@@ -4,11 +4,22 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-> **Status (2026-06):** v2.1.3 is the current release. The v2.0 schema lock, the
-> v2.1 cohort summary (`recon batch --summary`), and the v2.1.1-v2.1.3 hardening
-> and security patches have all shipped; per-release detail is in
+> **Status (2026-06):** v2.1.10 is the current release. The v2.0 schema lock, the
+> v2.1 cohort summary (`recon batch --summary`), and the v2.1.1-v2.1.10 hardening,
+> security, and assurance patches have all shipped; per-release detail is in
 > [CHANGELOG.md](../CHANGELOG.md) and upgrade notes in
-> [migration-v2.md](migration-v2.md). This file is the plan from here.
+> [migration-v2.md](migration-v2.md).
+>
+> **Post-2.0 assurance track, in priority order:** the first three are done.
+> Differential verification of the inference core shipped in v2.1.7; the 2026-06
+> fault-injection sweep closed four confirmed ingestion-boundary gaps (v2.1.8 made
+> the CSE/BIMI direct probes opt-in so the default is passive; v2.1.9 added a gzip
+> decompression-bomb guard, deeply-nested-JSON handling in the cache and CT
+> providers, and a CT-graph entry-count bound); and the hostile-input fuzz CI gate
+> plus per-parser resource-bound tests shipped in v2.1.10. **Next:** signed and
+> reproducible builds with SLSA, then PV2 (the maintainer-validation loop) with
+> drift detection, the credible-interval coverage check, and the mutation gate
+> plus traceability matrix. This file is the plan from here.
 
 ## Pre-2.0 hardening (shipped) and the road past v2.0
 
@@ -116,6 +127,13 @@ Five tracks run as a sequence of focused, CI-green 1.9.x patches:
       2.0" goal a consumer actually notices.
 
 ### Remaining work to v2.0 (the execution queue)
+
+> **All shipped (historical).** Everything in this subsection and the v2.0 lock
+> ceremony below was completed; v2.0.0 and the v2.1.x line have all shipped (the
+> current release is v2.1.10). The detail is kept for the rationale and the
+> per-item disposition; the forward plan is the post-2.0 assurance track above
+> and the feature candidates below. Per-release detail lives in
+> [CHANGELOG.md](../CHANGELOG.md).
 
 This subsection is the single source of truth for what is left before the v2.0
 lock. The five tracks above describe the shape of the work; the queue below
@@ -322,14 +340,21 @@ each is a small gated patch in the 2.0.x / 2.x line, and each deepens something
 recon already leans on. They sit above the feature candidates on purpose.
 
 Resilient (survives any input or failure):
-- A complete fault-injection matrix across every external boundary (DNS, CT, the
-  identity-discovery endpoints, certificate parsing): every failure mode
-  (timeout, malformed, oversized, flood, redirect loop, partial read) degrades to
-  "we cannot tell" with no crash, no hang, no leak. Builds on the existing
-  source-boundary fault injection and the cache-lifecycle stateful machine.
-- Proven resource bounds on every parser, extending the CNAME and TXT length
-  caps to all inputs, with hostile-input fuzzing promoted from a sweep to a CI
-  gate.
+- A fault-injection sweep across every external boundary (DNS, CT, the
+  identity-discovery endpoints, certificate parsing) ran in 2026-06 and was
+  adversarially verified: the four confirmed gaps shipped in v2.1.9 and the seven
+  it rejected as already-guarded are recorded in
+  `docs/security-audit-resolutions.md`. Builds on the existing source-boundary
+  fault injection and the cache-lifecycle stateful machine. *Residual:* organize
+  the per-boundary coverage as one explicit parametrized (boundary x failure-mode)
+  matrix rather than topic-by-topic test files.
+- Proven resource bounds on every parser: hostile-input fuzzing is promoted from
+  a sweep to a dedicated CI gate (the `hostile_input` marker and the
+  `hostile-input-fuzz` job, v2.1.10), with per-parser oversized-input bound
+  assertions. *Residual:* the `_MAX_SUBDOMAIN_TXT_MATCH_LEN` and
+  `_MAX_CNAME_MATCH_LEN` caps still want their own bound-assertion tests, and the
+  OIDC / Azure `region` field wants a source-level length cap (today only the
+  merger scrubs it).
 
 Defensive (cannot be exploited or fooled):
 - A written threat model with a traceability matrix (every threat to its
@@ -371,12 +396,16 @@ Trusted (the artifact and the answer are both verifiable):
   requirements-and-invariants traceability matrix so every promise maps to the
   test that keeps it.
 
-Priority order, highest trust-per-effort first: differential verification of the
-inference core; the fault-injection matrix plus the hostile-input fuzz gate;
-signed and reproducible builds with SLSA; PV2 as a routine plus drift detection;
-the interval coverage check; then mutation-as-a-gate and the traceability matrix.
-None of these is on the critical path of the feature candidates below; they are
-the work that matters most.
+Priority order, highest trust-per-effort first. **Done:** differential
+verification of the inference core (v2.1.7); the fault-injection sweep and its
+four fixes (v2.1.9) plus the hostile-input fuzz gate (v2.1.10). **Remaining, in
+order:** the small "Resilient" residuals above (the two remaining per-parser
+bound tests, the source-level `region` cap, and the explicit boundary-by-mode
+matrix) as cheap completion of the just-shipped item; then signed and
+reproducible builds with SLSA; then PV2 as a routine plus drift detection; then
+the credible-interval coverage check; then mutation-as-a-gate and the
+traceability matrix. None of these is on the critical path of the feature
+candidates below; they are the work that matters most.
 
 Each item ships with acceptance criteria, checkable gates rather than "improved
 tests," and where it produces a durable artifact it ships a doc so the trust is
@@ -438,10 +467,17 @@ misleading comment, not a defect (the code matches the documented
 `alpha_prior + weight` model, so posteriors are unchanged); a load-time warning
 now flags declarative nodes whose grouped bindings lack a `group_absence` entry;
 and the signed `entropy_reduction` is documented rather than clamped. The
-differential verification of the inference core has since landed (the independent
+differential verification of the inference core landed in v2.1.7 (the independent
 full-joint reference in `validation/differential_verification.py` cross-checking
-variable elimination across the enumerable evidence sweep); the fault-injection
-matrix and signed/reproducible builds remain ahead.
+variable elimination across the enumerable evidence sweep). v2.1.8 then made the
+Google CSE and BIMI VMC direct probes opt-in (`--direct-probes`) so a default
+lookup stays passive, and added an `analyze_posture` profile guard. The 2026-06
+fault-injection sweep closed four confirmed ingestion-boundary gaps in v2.1.9 (a
+gzip decompression-bomb guard via identity-encoding plus a compressed-response
+refusal, deeply-nested-JSON `RecursionError` handling in the cache and CT
+providers, and a CT-graph entry-count bound), and the hostile-input fuzz CI gate
+plus per-parser bound assertions shipped in v2.1.10. Signed and reproducible
+builds with SLSA remain ahead.
 
 #### Post-2.0 feature candidates (maintainer)
 

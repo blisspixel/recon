@@ -678,7 +678,7 @@ tunable and committed as data (see §6).
 #### Network topology (v1.9.3)
 
 ```mermaid
-graph LR
+flowchart LR
   m365["m365_tenant<br/>prior 0.30"] --> fed["federated_identity"]
   gws["google_workspace_tenant<br/>prior 0.25"] --> fed
   fed --> okta["okta_idp"]
@@ -1276,8 +1276,7 @@ gives the operator-facing story for why interval width is the
 load-bearing field, not the mean:
 
 ```mermaid
-%%{init: {'theme':'base'}}%%
-graph TB
+flowchart TB
   subgraph sparse["n_eff = 4 (sparse, hardened target)"]
     sl["0.18"] --- sm["0.5"] --- sh["0.82"]
   end
