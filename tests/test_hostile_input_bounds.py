@@ -16,14 +16,19 @@ SPF redirect depth bound; and the DMARC rua extraction under a mailto flood.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import patch
 
+import httpx
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from recon_tool.models import SourceResult
 from recon_tool.sources import dns as dns_mod
+from recon_tool.sources.azure_metadata import AzureMetadataSource
 from recon_tool.sources.cert_providers import (
     _MAX_BURSTS,
     _MAX_CRTSH_CERT_SUMMARY_ENTRIES,
@@ -35,9 +40,18 @@ from recon_tool.sources.cert_providers import (
     _extract_crtsh_entries,
     _extract_wildcard_sibling_clusters,
 )
-from recon_tool.sources.userrealm import _MAX_AUTODISCOVER_DOMAINS, _parse_autodiscover_domains
+from recon_tool.sources.google import GoogleSource
+from recon_tool.sources.oidc import OIDCSource, parse_tenant_info_from_oidc
+from recon_tool.sources.userrealm import (
+    _MAX_AUTODISCOVER_DOMAINS,
+    UserRealmSource,
+    _parse_autodiscover_domains,
+)
+from recon_tool.validator import _MAX_DISPLAY_LEN
 
 pytestmark = pytest.mark.hostile_input
+
+_TENANT_UUID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 
 
 # ── userrealm Autodiscover XML ────────────────────────────────────────────
@@ -209,3 +223,191 @@ class TestDnsParserBounds:
         ctx = dns_mod._DetectionCtx()
         # Must complete and not raise; the rua matcher is linear in the record.
         dns_mod._extract_dmarc_rua(ctx, record)
+
+    @pytest.mark.asyncio
+    async def test_subdomain_txt_oversized_is_skipped(self) -> None:
+        """A TXT value over _MAX_SUBDOMAIN_TXT_MATCH_LEN is skipped before the
+        user-supplied regex runs, so it cannot match (or amplify backtracking)."""
+        rule = SimpleNamespace(pattern="_probe:secret-token", name="FakeVendor", slug="fakevendor")
+
+        async def _resolve(_name: str, _rdtype: str, timeout: float = 5.0) -> list[str]:
+            return ["secret-token" + "x" * 5000]  # matches the regex, but oversized
+
+        ctx = dns_mod._DetectionCtx()
+        with (
+            patch.object(dns_mod, "get_subdomain_txt_patterns", return_value=[rule]),
+            patch.object(dns_mod, "_safe_resolve", _resolve),
+        ):
+            await dns_mod._detect_subdomain_txt(ctx, "contoso.com")
+        assert "fakevendor" not in ctx.slugs
+
+    @pytest.mark.asyncio
+    async def test_subdomain_txt_within_cap_matches(self) -> None:
+        """Control: the same rule matches a within-cap TXT, so the skip above is
+        the length cap, not a broken fixture."""
+        rule = SimpleNamespace(pattern="_probe:secret-token", name="FakeVendor", slug="fakevendor")
+
+        async def _resolve(_name: str, _rdtype: str, timeout: float = 5.0) -> list[str]:
+            return ["secret-token"]
+
+        ctx = dns_mod._DetectionCtx()
+        with (
+            patch.object(dns_mod, "get_subdomain_txt_patterns", return_value=[rule]),
+            patch.object(dns_mod, "_safe_resolve", _resolve),
+        ):
+            await dns_mod._detect_subdomain_txt(ctx, "contoso.com")
+        assert "fakevendor" in ctx.slugs
+
+    @pytest.mark.asyncio
+    async def test_cname_match_is_length_bounded(self) -> None:
+        """A CNAME match token beyond _MAX_CNAME_MATCH_LEN (255) is truncated away
+        before the regex runs, so it does not match."""
+        rule = SimpleNamespace(pattern="match-me", name="FakeCDN", slug="fakecdn")
+
+        async def _resolve(_name: str, rdtype: str, timeout: float = 5.0) -> list[str]:
+            if rdtype == "CNAME":
+                return ["a" * 300 + "match-me.example.com"]  # token at offset 300
+            return []
+
+        ctx = dns_mod._DetectionCtx()
+        with (
+            patch.object(dns_mod, "get_cname_patterns", return_value=[rule]),
+            patch.object(dns_mod, "_safe_resolve", _resolve),
+        ):
+            await dns_mod._detect_cname_infra(ctx, "contoso.com")
+        assert "fakecdn" not in ctx.slugs
+
+    @pytest.mark.asyncio
+    async def test_cname_match_within_cap(self) -> None:
+        """Control: the same token at the start of the CNAME matches."""
+        rule = SimpleNamespace(pattern="match-me", name="FakeCDN", slug="fakecdn")
+
+        async def _resolve(_name: str, rdtype: str, timeout: float = 5.0) -> list[str]:
+            if rdtype == "CNAME":
+                return ["match-me.example.com"]
+            return []
+
+        ctx = dns_mod._DetectionCtx()
+        with (
+            patch.object(dns_mod, "get_cname_patterns", return_value=[rule]),
+            patch.object(dns_mod, "_safe_resolve", _resolve),
+        ):
+            await dns_mod._detect_cname_infra(ctx, "contoso.com")
+        assert "fakecdn" in ctx.slugs
+
+
+# ── Source-level free-text field cap ──────────────────────────────────────
+
+
+class TestRegionFieldCap:
+    """The OIDC ``tenant_region_scope`` is tenant-influenced free text. It is now
+    scrubbed and length-bounded at the source like its siblings, so a direct
+    library caller that bypasses the merger scrub still gets a safe value."""
+
+    _ENDPOINT = f"https://login.microsoftonline.com/{_TENANT_UUID}/oauth2/v2.0/authorize"
+
+    def test_region_control_bytes_stripped_and_bounded(self) -> None:
+        payload = {
+            "authorization_endpoint": self._ENDPOINT,
+            "tenant_region_scope": "eu\x1b[31m\x00" + "x" * 500,
+        }
+        result = parse_tenant_info_from_oidc(payload)
+        assert result.region is not None
+        assert "\x1b" not in result.region
+        assert "\x00" not in result.region
+        assert len(result.region) <= _MAX_DISPLAY_LEN
+
+    def test_region_clean_value_preserved(self) -> None:
+        payload = {"authorization_endpoint": self._ENDPOINT, "tenant_region_scope": "NA"}
+        assert parse_tenant_info_from_oidc(payload).region == "NA"
+
+
+# ── Boundary x failure-mode matrix (HTTP identity sources) ────────────────
+
+
+class _ModeClient:
+    """An httpx-client stand-in that injects one failure mode on every get/post."""
+
+    def __init__(self, mode: str) -> None:
+        self.mode = mode
+
+    async def get(self, *args: Any, **kwargs: Any) -> httpx.Response:
+        return self._respond("GET")
+
+    async def post(self, *args: Any, **kwargs: Any) -> httpx.Response:
+        return self._respond("POST")
+
+    def _respond(self, method: str) -> httpx.Response:
+        req = httpx.Request(method, "https://login.microsoftonline.com/probe")
+        if self.mode == "timeout":
+            raise httpx.ReadTimeout("synthetic timeout", request=req)
+        if self.mode == "network_error":
+            raise httpx.ConnectError("synthetic connect error")
+        if self.mode == "http_500":
+            return httpx.Response(500, request=req)
+        if self.mode == "http_404":
+            return httpx.Response(404, request=req)
+        if self.mode == "malformed_json":
+            return httpx.Response(200, content=b"not json{", request=req)
+        if self.mode == "wrong_shape":
+            return httpx.Response(200, json=[1, 2, 3], request=req)
+        if self.mode == "empty_body":
+            return httpx.Response(200, content=b"", request=req)
+        raise AssertionError(f"unknown mode: {self.mode}")
+
+
+_FAILURE_MODES = [
+    "malformed_json",
+    "wrong_shape",
+    "http_404",
+    "http_500",
+    "timeout",
+    "network_error",
+    "empty_body",
+]
+
+
+async def _invoke_oidc(client: Any) -> SourceResult:
+    return await OIDCSource().lookup("contoso.com", client=client)
+
+
+async def _invoke_userrealm(client: Any) -> SourceResult:
+    return await UserRealmSource().lookup("contoso.com", client=client)
+
+
+async def _invoke_google(client: Any) -> SourceResult:
+    return await GoogleSource().lookup("contoso.com", client=client, active_probes=True)
+
+
+async def _invoke_azure(client: Any) -> SourceResult:
+    return await AzureMetadataSource().lookup("contoso.com", client=client, tenant_id=_TENANT_UUID)
+
+
+_HTTP_SOURCES: dict[str, Callable[[Any], Awaitable[SourceResult]]] = {
+    "oidc": _invoke_oidc,
+    "userrealm": _invoke_userrealm,
+    "google": _invoke_google,
+    "azure_metadata": _invoke_azure,
+}
+
+
+class TestSourceFaultMatrix:
+    """Explicit (HTTP identity source x failure-mode) matrix: every cell must
+    degrade to a clean SourceResult with no raise. The per-source tests cover
+    these individually; this enforces the whole grid so a source that stops
+    degrading under one mode is caught."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("source_key", list(_HTTP_SOURCES))
+    @pytest.mark.parametrize("mode", _FAILURE_MODES)
+    async def test_degrades_cleanly(self, source_key: str, mode: str, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Neutralize the source-level retry backoff so the transient modes do not
+        # add real wall-clock sleep to the matrix.
+        async def _instant(_seconds: float) -> None:
+            return None
+
+        monkeypatch.setattr("recon_tool.retry.asyncio.sleep", _instant)
+
+        result = await _HTTP_SOURCES[source_key](_ModeClient(mode))
+        assert isinstance(result, SourceResult)
+        assert result.source_name
