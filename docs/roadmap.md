@@ -19,10 +19,12 @@ This file is forward-looking. Shipped work belongs in
 > plus per-parser resource-bound tests shipped in v2.1.10, with the residual
 > per-parser bounds and the OIDC/Azure region cap in v2.1.11. Reproducible builds
 > (SOURCE_DATE_EPOCH, CI-gated) and sigstore-signed PyPI attestations shipped in
-> v2.1.12 (see [supply-chain.md](supply-chain.md)). **Next:** PV2 (the
-> maintainer-validation loop) with drift detection, then the credible-interval
-> coverage check, then the mutation gate plus traceability matrix. This file is
-> the plan from here.
+> v2.1.12 (see [supply-chain.md](supply-chain.md)), the auditable assurance case
+> and operational contract in v2.1.13, and the PV2 maintainer-validation loop with
+> a committed, CI-gated inference drift gate in v2.1.14 (see
+> [maintainer-validation.md](maintainer-validation.md)). **Next:** the
+> credible-interval coverage check, then the mutation gate plus traceability
+> matrix. This file is the plan from here.
 
 ## Pre-2.0 hardening (shipped) and the road past v2.0
 
@@ -370,9 +372,14 @@ Defensive (cannot be exploited or fooled):
   asserted suite, not just a catalogued failure mode.
 
 Adaptive (stays correct as the world drifts):
-- PV2 (the agentic maintainer-validation loop, below) promoted to a real release
-  routine, with drift detection that flags when catalog firing rates or
-  CPT-implied distributions move beyond a band between releases.
+- PV2 (the maintainer-validation loop) shipped its committable core in v2.1.14: a
+  deterministic inference drift gate (`validation/drift_check.py` +
+  `inference_baseline.json`, CI-gated by `tests/test_drift_check.py`) that fails
+  when the network's CPT-implied marginals move beyond a band without an
+  acknowledged baseline update, plus the documented tiered loop
+  (`docs/maintainer-validation.md`). The corpus firing-rate re-grounding tier
+  stays maintainer-local against the gitignored corpus; wiring the agent to run
+  the loop on a `/schedule` routine is the remaining operator step.
 - A coverage check on the credible intervals, even a proxy-label or case-study
   version, framed exactly as honestly as CAL1 requires (consistency and
   evidence-responsiveness, never claimed ground-truth calibration).
@@ -407,8 +414,9 @@ verification of the inference core (v2.1.7); the fault-injection sweep and its
 four fixes (v2.1.9) plus the hostile-input fuzz gate (v2.1.10); the "Resilient"
 residuals, the source-level `region` cap, and the boundary-by-mode matrix
 (v2.1.11); and reproducible builds plus sigstore-signed PyPI attestations
-(v2.1.12). **Remaining, in order:** PV2 as a routine plus drift detection; then
-the credible-interval coverage check; then mutation-as-a-gate and the
+(v2.1.12); the auditable assurance case + operational contract (v2.1.13); and the
+PV2 inference drift gate + maintainer-validation loop (v2.1.14). **Remaining, in
+order:** the credible-interval coverage check; then mutation-as-a-gate and the
 traceability matrix. None of these is on the critical path of the feature
 candidates below; they are the work that matters most.
 

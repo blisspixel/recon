@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.14] - 2026-06-10
+
+### Assurance: PV2 maintainer-validation loop + inference drift gate
+
+The "Adaptive" assurance-track item: keep the Bayesian CPT numbers honest as the
+world drifts. The committable, CI-gated core ships now; the corpus-dependent tier
+stays maintainer-local.
+
+- **Inference drift gate.** `validation/drift_check.py` fingerprints the Bayesian
+  network's CPT-implied marginals (each node's no-evidence prior, all-bindings-
+  present posterior, and interval width) deterministically from the network YAML,
+  with no corpus. `validation/inference_baseline.json` is the committed baseline
+  (node names and numbers only, no company data), and `tests/test_drift_check.py`
+  gates it: an edit that shifts an implied distribution beyond 0.01 fails until
+  the baseline is regenerated with `python -m validation.drift_check --update` and
+  committed, so the shift is reviewed in the same diff. This mechanically enforces
+  the CPT-change discipline.
+- **`docs/maintainer-validation.md`** documents the full tiered loop: the
+  committed drift gate (tier 0), the no-data synthetic harnesses (tier 1), the
+  public case-study spot-check (tier 2), and the maintainer-local corpus
+  re-grounding + firing-rate drift (tier 3), plus how an agent runs it on a
+  `/schedule` routine. Only deterministic / aggregate output is committed; the
+  corpus stays gitignored.
+- pyright `extraPaths` now resolves repo-root packages so the gate test can import
+  `validation.drift_check`.
+
+Gate: full pytest (2910 passed), ruff, pyright (0 errors), validate_fingerprint (841), branch coverage 85%.
+
 ## [2.1.13] - 2026-06-10
 
 ### Assurance: auditable trust docs + closed proving-test gaps

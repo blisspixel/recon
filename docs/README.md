@@ -36,6 +36,7 @@ For anyone evaluating recon as a primitive to build on.
 | Auditable claim → mechanism → test → residual | [assurance-case.md](assurance-case.md) |
 | Runtime contract (timeouts, caps, exit codes, determinism) | [operational-contract.md](operational-contract.md) |
 | Release integrity (reproducible, signed, attested builds) | [supply-chain.md](supply-chain.md) |
+| Keeping the model honest over time (maintainer loop + drift gate) | [maintainer-validation.md](maintainer-validation.md) |
 
 ## Extending recon
 
