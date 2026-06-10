@@ -14,7 +14,7 @@ import httpx
 
 from recon_tool.http import http_client
 from recon_tool.models import SourceResult
-from recon_tool.validator import UUID_RE
+from recon_tool.validator import UUID_RE, strip_control_chars
 
 METADATA_URL_TEMPLATE = "https://login.microsoftonline.com/{tenant_id}/v2.0/.well-known/openid-configuration"
 
@@ -78,7 +78,12 @@ class AzureMetadataSource:
                     source_name="azure_ad_metadata",
                     error="Invalid JSON response shape from Azure AD metadata endpoint",
                 )
-            region = data.get("tenant_region_scope") or None
+            # Scrub control bytes and bound the tenant-influenced region at the
+            # source. This source runs outside the default pool (direct/sequential
+            # invocation), so the merger's free-text scrub may not apply; match
+            # the OIDC source's treatment of the same field.
+            region_raw = data.get("tenant_region_scope")
+            region = strip_control_chars(str(region_raw)).strip() or None if region_raw is not None else None
 
             return SourceResult(
                 source_name="azure_ad_metadata",

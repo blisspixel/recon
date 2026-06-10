@@ -60,7 +60,12 @@ def parse_tenant_info_from_oidc(response_json: dict[str, Any]) -> SourceResult:
             error_type="parse_error",
         )
 
-    region = response_json.get("tenant_region_scope") or None
+    # tenant_region_scope is tenant-influenced free text. Scrub control bytes and
+    # bound its length at the source, like its cloud_instance / sub_scope /
+    # msgraph_host siblings below, so a direct or library caller that does not go
+    # through the merger's free-text scrub still gets a safe, bounded value.
+    region_raw = response_json.get("tenant_region_scope")
+    region: str | None = strip_control_chars(str(region_raw)).strip() or None if region_raw is not None else None
 
     # v0.9.3: tenant metadata enrichment — parse the Microsoft-specific
     # OIDC extensions that disambiguate sovereign clouds. All three are

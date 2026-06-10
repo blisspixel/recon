@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.11] - 2026-06-09
+
+### Assurance: complete the Resilient-track residuals
+
+Closes the small residuals left after the v2.1.10 fuzz gate (roadmap "Resilient"
+track).
+
+- The OIDC and Azure metadata sources now scrub control bytes and bound the
+  length of the tenant-influenced `tenant_region_scope` field at the source,
+  matching its `cloud_instance` / `tenant_region_sub_scope` / `msgraph_host`
+  siblings. A direct or library caller that bypasses the merger's free-text
+  scrub now gets a safe, bounded `region` too.
+- New bound assertions for the two remaining parser caps that lacked them
+  (`_MAX_SUBDOMAIN_TXT_MATCH_LEN` and `_MAX_CNAME_MATCH_LEN`): an oversized TXT
+  value or a CNAME match token beyond the cap is skipped before the regex runs.
+- An explicit `(HTTP identity source x failure-mode)` matrix asserts that OIDC,
+  userrealm, Google, and Azure metadata each degrade to a clean SourceResult
+  under malformed / wrong-shape / 404 / 500 / timeout / network-error / empty
+  responses, so a source that stops degrading under one mode is caught.
+
+Gate: full pytest (2902 passed), ruff, pyright (0 errors), validate_fingerprint (841), branch coverage 85%.
+
 ## [2.1.10] - 2026-06-09
 
 ### Assurance: hostile-input fuzz CI gate + per-parser resource-bound tests
