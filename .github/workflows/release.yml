@@ -133,6 +133,17 @@ jobs:
         # from this workspace.
         run: uv sync --no-dev
 
+      - name: Pin reproducible build timestamp
+        # Reproducible builds: pin file mtimes in the wheel/sdist to the tagged
+        # commit's committer timestamp so the same source yields byte-identical
+        # artifacts a consumer can rebuild and verify (the property is gated on
+        # every change by ci.yml's reproducible-build job). hatchling and uv
+        # build honor SOURCE_DATE_EPOCH. checkout is shallow, but the tagged
+        # commit is present, so ``git log -1`` reads its timestamp. This is a git
+        # read, not project dependency code, so the supply-chain isolation
+        # contract (no dependency code between build and seal) is unaffected.
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+
       - name: Build package
         run: uv build
 
@@ -153,9 +164,11 @@ jobs:
     # NO project dependency code, so the id-token it is granted cannot be
     # minted by a compromised dependency. It signs a provenance
     # attestation (GitHub-native, OIDC) linking the wheel and sdist to
-    # this workflow run; verify later with `gh attestation verify`. Full
-    # SLSA L3 / Sigstore in-toto signing and reproducible builds stay
-    # deferred (see docs/roadmap.md); this closes most of the gap cheaply.
+    # this workflow run; verify later with `gh attestation verify`.
+    # Reproducible builds (SOURCE_DATE_EPOCH, gated in ci.yml) and
+    # sigstore-signed PyPI attestations (PEP 740, in the publish-pypi job)
+    # now ship alongside this; only the full SLSA L3 generator workflow
+    # stays deferred as disproportionate (see docs/supply-chain.md).
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -247,6 +260,12 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           skip-existing: true
+          # PEP 740: generate sigstore-signed digital attestations for the wheel
+          # and sdist and upload them to PyPI, so installers and auditors can
+          # verify the artifacts' provenance directly from the index. Uses the
+          # OIDC id-token granted to this job; complements the GitHub-native
+          # build-provenance attestation produced by the ``attest`` job.
+          attestations: true
 
   github-release:
     needs: [build, sbom]

@@ -16,10 +16,13 @@ This file is forward-looking. Shipped work belongs in
 > the CSE/BIMI direct probes opt-in so the default is passive; v2.1.9 added a gzip
 > decompression-bomb guard, deeply-nested-JSON handling in the cache and CT
 > providers, and a CT-graph entry-count bound); and the hostile-input fuzz CI gate
-> plus per-parser resource-bound tests shipped in v2.1.10. **Next:** signed and
-> reproducible builds with SLSA, then PV2 (the maintainer-validation loop) with
-> drift detection, the credible-interval coverage check, and the mutation gate
-> plus traceability matrix. This file is the plan from here.
+> plus per-parser resource-bound tests shipped in v2.1.10, with the residual
+> per-parser bounds and the OIDC/Azure region cap in v2.1.11. Reproducible builds
+> (SOURCE_DATE_EPOCH, CI-gated) and sigstore-signed PyPI attestations shipped in
+> v2.1.12 (see [supply-chain.md](supply-chain.md)). **Next:** PV2 (the
+> maintainer-validation loop) with drift detection, then the credible-interval
+> coverage check, then the mutation gate plus traceability matrix. This file is
+> the plan from here.
 
 ## Pre-2.0 hardening (shipped) and the road past v2.0
 
@@ -388,8 +391,11 @@ Trusted (the artifact and the answer are both verifiable):
   naive enumeration on every node of every configuration (worst gap ~5e-5, the
   engine's 4-decimal posterior rounding). `tests/test_bayesian_differential.py`
   anchors the reference to hand-computed marginals and runs a fast subset in CI.
-- Reproducible builds bit-for-bit, signed releases (sigstore), SLSA provenance,
-  on top of the existing build attestation and SBOM.
+- Reproducible builds bit-for-bit and sigstore-signed releases shipped in v2.1.12
+  (SOURCE_DATE_EPOCH pinned at release time and gated in ci.yml; PEP 740 PyPI
+  attestations on top of the existing GitHub build-provenance attestation and
+  CycloneDX SBOM; see docs/supply-chain.md). The full SLSA L3 generator workflow
+  stays deferred as disproportionate for a passive single-maintainer tool.
 - A cross-platform and cross-Python determinism gate so the same input yields
   byte-identical output on every matrix cell.
 - Mutation testing promoted to a gate with a score floor, and a
@@ -398,11 +404,10 @@ Trusted (the artifact and the answer are both verifiable):
 
 Priority order, highest trust-per-effort first. **Done:** differential
 verification of the inference core (v2.1.7); the fault-injection sweep and its
-four fixes (v2.1.9) plus the hostile-input fuzz gate (v2.1.10). **Remaining, in
-order:** the small "Resilient" residuals above (the two remaining per-parser
-bound tests, the source-level `region` cap, and the explicit boundary-by-mode
-matrix) as cheap completion of the just-shipped item; then signed and
-reproducible builds with SLSA; then PV2 as a routine plus drift detection; then
+four fixes (v2.1.9) plus the hostile-input fuzz gate (v2.1.10); the "Resilient"
+residuals, the source-level `region` cap, and the boundary-by-mode matrix
+(v2.1.11); and reproducible builds plus sigstore-signed PyPI attestations
+(v2.1.12). **Remaining, in order:** PV2 as a routine plus drift detection; then
 the credible-interval coverage check; then mutation-as-a-gate and the
 traceability matrix. None of these is on the critical path of the feature
 candidates below; they are the work that matters most.
