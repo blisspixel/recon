@@ -58,9 +58,7 @@ from recon_tool.exit_codes import (  # noqa: E402
 # Must equal the registered command tree; `tests/test_subcommands.py` pins it,
 # so a new command that is not added here fails CI rather than silently
 # mis-routing a dotted first argument.
-_SUBCOMMANDS = frozenset(
-    {"doctor", "batch", "lookup", "mcp", "cache", "delta", "discover", "fingerprints", "signals"}
-)
+_SUBCOMMANDS = frozenset({"doctor", "batch", "lookup", "mcp", "cache", "delta", "discover", "fingerprints", "signals"})
 
 # Batch-input safety bounds. Cap the per-line read (so a newline-free
 # multi-GB "line" cannot be buffered whole), the cumulative bytes (so a stream
@@ -334,6 +332,17 @@ def lookup(
             "zero load on public CT services."
         ),
     ),
+    direct_probes: bool = typer.Option(
+        False,
+        "--direct-probes",
+        help=(
+            "Opt in to direct HTTPS probes of target-controlled endpoints "
+            "(the Google CSE discovery probe at cse.<domain>, and the BIMI VMC "
+            "certificate fetch). Off by default: recon stays passive and the only "
+            "request the queried domain's own servers see is the standard MTA-STS "
+            "policy fetch. BIMI presence is detected from DNS either way."
+        ),
+    ),
 ) -> None:
     """
     Look up a domain. This is the default command.
@@ -367,6 +376,7 @@ def lookup(
             explain_dag_format=explain_dag_format,
             include_unclassified=include_unclassified,
             skip_ct=no_ct,
+            active_probes=direct_probes,
         )
     )
 
@@ -1792,9 +1802,7 @@ def _signal_show_payload(match: Any) -> dict[str, Any]:
         "description": match.description,
         "candidates": list(match.candidates),
         "min_matches": match.min_matches,
-        "metadata_conditions": [
-            {"field": m.field, "operator": m.operator, "value": m.value} for m in match.metadata
-        ],
+        "metadata_conditions": [{"field": m.field, "operator": m.operator, "value": m.value} for m in match.metadata],
         "contradicts": list(match.contradicts),
         "requires_signals": list(match.requires_signals),
         "expected_counterparts": list(match.expected_counterparts),
@@ -2296,18 +2304,18 @@ def _lookup_validate(
 
 
 async def _resolve_with_spinner(
-    console: Any, validated: str, *, timeout: float, skip_ct: bool, quiet: bool
+    console: Any, validated: str, *, timeout: float, skip_ct: bool, quiet: bool, active_probes: bool = False
 ) -> tuple[Any, list[Any]]:
     """Resolve a tenant, showing a status spinner unless output is machine-readable."""
     from recon_tool.resolver import resolve_tenant
 
     if quiet:
-        return await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
+        return await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct, active_probes=active_probes)
     import random
 
     msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
     with console.status(msg):
-        return await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
+        return await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct, active_probes=active_probes)
 
 
 async def _resolve_cached(
@@ -2319,6 +2327,7 @@ async def _resolve_cached(
     timeout: float,
     skip_ct: bool,
     quiet: bool,
+    active_probes: bool = False,
 ) -> Any:
     """Return a cached TenantInfo if present, else resolve fresh and cache it."""
     info: Any = None
@@ -2330,7 +2339,7 @@ async def _resolve_cached(
             info = cached
     if info is None:
         info, _results = await _resolve_with_spinner(
-            console, validated, timeout=timeout, skip_ct=skip_ct, quiet=quiet
+            console, validated, timeout=timeout, skip_ct=skip_ct, quiet=quiet, active_probes=active_probes
         )
         if not no_cache:
             from recon_tool.cache import cache_put
@@ -2349,6 +2358,7 @@ async def _lookup_compare(
     markdown: bool,
     timeout: float,
     skip_ct: bool,
+    active_probes: bool = False,
 ) -> None:
     """Resolve and diff against a saved snapshot (`--compare`)."""
     from pathlib import Path as _Path
@@ -2365,7 +2375,12 @@ async def _lookup_compare(
 
     try:
         info, _results = await _resolve_with_spinner(
-            console, validated, timeout=timeout, skip_ct=skip_ct, quiet=json_output or markdown
+            console,
+            validated,
+            timeout=timeout,
+            skip_ct=skip_ct,
+            quiet=json_output or markdown,
+            active_probes=active_probes,
         )
     except ReconLookupError as exc:
         render_warning(domain, exc)
@@ -2387,6 +2402,7 @@ async def _lookup_chain(
     *,
     chain_depth: int,
     skip_ct: bool,
+    active_probes: bool = False,
     json_output: bool,
     markdown: bool,
     show_explain: bool,
@@ -2401,9 +2417,9 @@ async def _lookup_chain(
 
             msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
             with console.status(msg):
-                report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct)
+                report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct, active_probes=active_probes)
         else:
-            report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct)
+            report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct, active_probes=active_probes)
     except Exception as exc:
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_INTERNAL) from None
@@ -2445,6 +2461,7 @@ async def _lookup_exposure(
     markdown: bool,
     timeout: float,
     skip_ct: bool,
+    active_probes: bool = False,
 ) -> None:
     """Resolve (cache-aware) and render the exposure score (`--exposure`)."""
     from recon_tool.exposure import assess_exposure_from_info
@@ -2460,6 +2477,7 @@ async def _lookup_exposure(
             timeout=timeout,
             skip_ct=skip_ct,
             quiet=json_output or markdown,
+            active_probes=active_probes,
         )
         assessment = assess_exposure_from_info(info_exp)
         if json_output:
@@ -2485,6 +2503,7 @@ async def _lookup_gaps(
     markdown: bool,
     timeout: float,
     skip_ct: bool,
+    active_probes: bool = False,
 ) -> None:
     """Resolve (cache-aware) and render the detection-gap report (`--gaps`)."""
     from recon_tool.exposure import find_gaps_from_info
@@ -2500,6 +2519,7 @@ async def _lookup_gaps(
             timeout=timeout,
             skip_ct=skip_ct,
             quiet=json_output or markdown,
+            active_probes=active_probes,
         )
         report = find_gaps_from_info(info_gaps)
         if json_output:
@@ -2540,8 +2560,7 @@ def _lookup_apply_fusion(info: Any) -> Any:
             n_eff=p.n_eff,
             sparse=p.sparse,
             conflict_provenance=tuple(
-                NodeConflict(field=c.field, sources=c.sources, magnitude=c.magnitude)
-                for c in p.conflict_provenance
+                NodeConflict(field=c.field, sources=c.sources, magnitude=c.magnitude) for c in p.conflict_provenance
             ),
             evidence_ranked=tuple(
                 NodeEvidence(
@@ -2574,6 +2593,7 @@ async def _lookup_resolve_standard(
     cache_ttl: int,
     timeout: float,
     skip_ct: bool,
+    active_probes: bool = False,
 ) -> tuple[Any, list[Any]]:
     """Cache read, resolve on miss, apply fusion, write back. Returns (info, results)."""
     info: Any = None
@@ -2588,7 +2608,12 @@ async def _lookup_resolve_standard(
     cache_miss = info is None
     if cache_miss:
         info, results = await _resolve_with_spinner(
-            console, validated, timeout=timeout, skip_ct=skip_ct, quiet=json_output or markdown
+            console,
+            validated,
+            timeout=timeout,
+            skip_ct=skip_ct,
+            quiet=json_output or markdown,
+            active_probes=active_probes,
         )
 
     if fusion or explain_dag:
@@ -2837,6 +2862,7 @@ async def _lookup_standard(
     cache_ttl: int,
     timeout: float,
     skip_ct: bool,
+    active_probes: bool = False,
 ) -> None:
     """The default lookup path: resolve, fuse, then emit DAG / JSON / Markdown / panel."""
     from recon_tool.formatter import render_error, render_verbose_sources, render_warning
@@ -2854,6 +2880,7 @@ async def _lookup_standard(
             cache_ttl=cache_ttl,
             timeout=timeout,
             skip_ct=skip_ct,
+            active_probes=active_probes,
         )
 
         if verbose:
@@ -2875,9 +2902,7 @@ async def _lookup_standard(
             )
             return
         if markdown:
-            _lookup_emit_markdown(
-                info, results, observations, show_posture=show_posture, show_explain=show_explain
-            )
+            _lookup_emit_markdown(info, results, observations, show_posture=show_posture, show_explain=show_explain)
             return
 
         _lookup_emit_panel(
@@ -2927,6 +2952,7 @@ async def _lookup(
     explain_dag_format: str = "text",
     include_unclassified: bool = False,
     skip_ct: bool = False,
+    active_probes: bool = False,
 ) -> None:
     """Async lookup implementation.
 
@@ -2969,6 +2995,7 @@ async def _lookup(
             markdown=markdown,
             timeout=timeout,
             skip_ct=skip_ct,
+            active_probes=active_probes,
         )
         return
 
@@ -2978,6 +3005,7 @@ async def _lookup(
             validated,
             chain_depth=chain_depth,
             skip_ct=skip_ct,
+            active_probes=active_probes,
             json_output=json_output,
             markdown=markdown,
             show_explain=show_explain,
@@ -2995,6 +3023,7 @@ async def _lookup(
             markdown=markdown,
             timeout=timeout,
             skip_ct=skip_ct,
+            active_probes=active_probes,
         )
         return
 
@@ -3009,6 +3038,7 @@ async def _lookup(
             markdown=markdown,
             timeout=timeout,
             skip_ct=skip_ct,
+            active_probes=active_probes,
         )
         return
 
@@ -3034,6 +3064,7 @@ async def _lookup(
         cache_ttl=cache_ttl,
         timeout=timeout,
         skip_ct=skip_ct,
+        active_probes=active_probes,
     )
 
 
@@ -3214,8 +3245,7 @@ def _batch_apply_fusion(info: Any) -> Any:
                 n_eff=p.n_eff,
                 sparse=p.sparse,
                 conflict_provenance=tuple(
-                    NodeConflict(field=c.field, sources=c.sources, magnitude=c.magnitude)
-                    for c in p.conflict_provenance
+                    NodeConflict(field=c.field, sources=c.sources, magnitude=c.magnitude) for c in p.conflict_provenance
                 ),
             )
             for p in result.posteriors
@@ -3334,9 +3364,7 @@ def _batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, incl
     typer.echo(json_mod.dumps(json_results, indent=2))
 
 
-def _batch_emit_summary(
-    batch_infos: dict[str, Any], attempted: int, console: Any, *, as_json: bool
-) -> None:
+def _batch_emit_summary(batch_infos: dict[str, Any], attempted: int, console: Any, *, as_json: bool) -> None:
     """Emit one aggregate-only cohort summary over the resolved batch (v2.1).
 
     Stateless: computed live from the resolved records, stores nothing, ships no
@@ -3596,9 +3624,7 @@ async def _batch(
         summary=summary,
     )
 
-    domain_list = _batch_load_domains(
-        file, console, announce_dupes=not json_output and not markdown and not csv_output
-    )
+    domain_list = _batch_load_domains(file, console, announce_dupes=not json_output and not markdown and not csv_output)
 
     semaphore = asyncio.Semaphore(concurrency)
 

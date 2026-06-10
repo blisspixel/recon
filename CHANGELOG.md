@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.8] - 2026-06-09
+
+### Passive by default: direct probes to target-controlled hosts are opt-in
+
+Closes the residual items from an external review batch. The review noted that
+the README's "nothing the target can see beyond a single MTA-STS policy fetch"
+understated recon's contact with the queried domain's own servers: the Google
+CSE discovery probe (`cse.<domain>`) ran on every lookup, and the BIMI VMC
+certificate fetch ran whenever a domain published one.
+
+- Both direct probes are now off by default and gated behind a new
+  `--direct-probes` opt-in (the `active_probes` argument on `resolve_tenant`).
+  A default lookup makes no direct HTTP request to a target-controlled host
+  beyond the standard MTA-STS policy fetch, so the documented passive posture
+  holds by construction rather than by caveat. BIMI presence is still read from
+  the DNS TXT record either way; only the VMC enrichment is gated.
+- README and `docs/legal.md` are updated to describe the passive default and
+  the opt-in. `docs/legal.md`'s query table no longer contradicts its own prose
+  (it listed `cse.<domain>` while the text claimed MTA-STS was the only direct
+  contact), and the BIMI VMC fetch is listed there too.
+- `analyze_posture` (MCP) now guards its `profile` argument with an `isinstance`
+  check before the length slice. MCP arguments arrive unenforced at runtime, so
+  a truthy non-string profile would have raised `TypeError`; it is now treated
+  as no lens, matching the `None` case.
+
+The rest of that review batch was already resolved in v2.1.4 to v2.1.6 (cache
+temp-file symlink, cname_target substring overmatch, IDNA2003 lossy mapping,
+client-doctor terminal-escape, overlapping-alternation ReDoS, the
+`batch --summary` domain leak, the `--no-fusion` cache round-trip, the scan.py
+buffering regression, and the declarative-absence explanation phrasing); each
+was re-confirmed against current code before this patch.
+
+Gate: full pytest (2839 passed), ruff, pyright (0 errors), validate_fingerprint (841), branch coverage 85%.
+
 ## [2.1.7] - 2026-06-08
 
 ### Assurance: differential verification of the inference core

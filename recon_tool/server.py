@@ -714,9 +714,13 @@ async def analyze_posture(
 
     observations = _analyze_posture(info)
 
-    # v0.9.3: apply profile lens if requested
+    # v0.9.3: apply profile lens if requested. ``profile`` is typed
+    # ``str | None``, but MCP arguments arrive unenforced at runtime (the same
+    # caveat the detection-list guard below notes), so a truthy non-string would
+    # raise ``TypeError`` on the ``profile[:100]`` slice. Guard the type and
+    # treat a non-string as no lens, matching the ``None`` case.
     profile_note: str | None = None
-    if profile:
+    if isinstance(profile, str) and profile:  # pyright: ignore[reportUnnecessaryIsInstance]
         profile = profile[:100]
         prof = load_profile(profile)
         if prof is None:

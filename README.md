@@ -73,8 +73,12 @@ recon ships as a Python wheel on PyPI and runs locally: a CLI, an importable lib
 recon reads the public channel: DNS records (MX, CNAME, SPF, DMARC,
 TXT), certificate-transparency SAN sets, and the unauthenticated
 identity-discovery endpoints Microsoft and Google publish for tenant
-resolution. No credentials, no scanning, nothing the target can see
-beyond a single MTA-STS policy fetch.
+resolution. No credentials, no port scanning, no login attempts. By
+default the only request the queried domain's own servers see is the
+standard MTA-STS policy fetch; two direct-probe enrichments (the Google
+CSE discovery endpoint at `cse.<domain>` and the BIMI VMC certificate
+fetch) are opt-in behind `--direct-probes` and stay off unless you ask
+for them. BIMI presence is still read from DNS either way.
 
 It then runs those observables through a small Bayesian network and
 reports each high-level claim (M365 tenant, federated identity,
@@ -123,6 +127,7 @@ recon contoso.com --explain                    # full reasoning + provenance DAG
 recon contoso.com --full                       # everything (services + domains + posture)
 recon contoso.com --profile fintech            # apply a posture lens
 recon contoso.com --confidence-mode strict     # drop hedging on dense-evidence targets (current)
+recon contoso.com --direct-probes              # opt in to direct CSE / BIMI-VMC probes (off by default)
 recon contoso.com --json                       # structured JSON for piping
 recon batch domains.txt --json                 # batch (cross-domain token clustering)
 cat domains.txt | recon batch - --json         # batch reading domains from stdin
