@@ -22,12 +22,16 @@ quickest way to catch a NoneType or KeyError lurking in either.
 
 from __future__ import annotations
 
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 from rich.console import Console
 
 from recon_tool.formatter import _CLOUD_VENDOR_BY_SLUG, render_tenant_panel
 from recon_tool.models import ConfidenceLevel, SurfaceAttribution, TenantInfo
+
+# Part of the dedicated hostile-input fuzz gate (run with `-m hostile_input`).
+pytestmark = pytest.mark.hostile_input
 
 _known_cloud_slugs = sorted(_CLOUD_VENDOR_BY_SLUG.keys())
 _known_saas_slugs = ["slack", "okta", "auth0", "atlassian", "wiz", "salesforce", "hubspot"]

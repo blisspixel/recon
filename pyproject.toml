@@ -1,6 +1,6 @@
 [project]
 name = "recon-tool"
-version = "2.1.9"
+version = "2.1.10"
 description = "Domain intelligence CLI and MCP server — tech stack, email security, and signal intelligence from DNS."
 requires-python = ">=3.11"
 readme = "README.md"
@@ -81,6 +81,7 @@ dev = [
 asyncio_mode = "strict"
 markers = [
     "integration: tests that hit real network endpoints (deselect with '-m not integration')",
+    "hostile_input: adversarial / oversized / malformed parser inputs and fuzz suites; run as a dedicated CI gate with '-m hostile_input'",
 ]
 addopts = "-m 'not integration'"
 

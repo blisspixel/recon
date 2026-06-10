@@ -38,6 +38,9 @@ from recon_tool.http import (
 from recon_tool.infra_graph import _MAX_EDGE_ISSUER_SAMPLES, _build_graph, build_infrastructure_clusters
 from recon_tool.sources.cert_providers import CertSpotterProvider, CrtshProvider
 
+# Part of the dedicated hostile-input fuzz gate (run with `-m hostile_input`).
+pytestmark = pytest.mark.hostile_input
+
 # A JSON document nested far past the interpreter recursion limit. json.loads
 # raises RecursionError (a RuntimeError, not a ValueError) on it.
 _DEEPLY_NESTED_JSON = "[" * 100_000 + "]" * 100_000

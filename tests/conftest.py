@@ -8,6 +8,7 @@ inheriting a stale one from earlier tests that called set_console().
 
 from __future__ import annotations
 
+import os
 from unittest.mock import patch
 
 import pytest
@@ -34,7 +35,16 @@ settings.register_profile(
     deadline=None,
     suppress_health_check=[HealthCheck.too_slow],
 )
-settings.load_profile("recon")
+# Higher-budget profile for the dedicated hostile-input fuzz CI gate. The
+# `hostile-input-fuzz` job sets RECON_FUZZ, so fuzz tests that do not hard-code
+# max_examples draw more examples there; the normal suite stays fast on "recon".
+settings.register_profile(
+    "ci-fuzz",
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
+    max_examples=500,
+)
+settings.load_profile("ci-fuzz" if os.environ.get("RECON_FUZZ") else "recon")
 
 
 @pytest.fixture

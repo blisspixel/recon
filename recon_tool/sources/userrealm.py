@@ -13,6 +13,7 @@ from xml.sax.saxutils import escape as xml_escape
 
 import defusedxml.ElementTree as DefusedET
 import httpx
+from defusedxml.common import DefusedXmlException
 
 from recon_tool.http import http_client
 from recon_tool.models import EvidenceRecord, SourceResult
@@ -64,7 +65,11 @@ def _parse_autodiscover_domains(xml_text: str) -> tuple[list[str], str | None]:
 
     try:
         root = DefusedET.fromstring(xml_text)
-    except DefusedET.ParseError as exc:
+    except (DefusedET.ParseError, DefusedXmlException) as exc:
+        # ParseError is malformed XML; DefusedXmlException is defusedxml
+        # blocking an entity-expansion (billion-laughs) or external-entity
+        # (XXE) payload. Either way degrade to an empty result rather than let
+        # the security exception propagate out of this parser.
         logger.debug("Failed to parse Autodiscover XML: %s", exc)
         return [], None
 

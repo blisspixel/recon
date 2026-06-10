@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.10] - 2026-06-09
+
+### Assurance: hostile-input fuzz CI gate + per-parser resource-bound tests
+
+Promotes the hostile-input fuzz suites from incidental coverage under the
+generic test job to a dedicated, separately-visible CI gate, and locks the named
+resource caps at every parser boundary with oversized-input assertions (the
+roadmap "Resilient" track: proven resource bounds, fuzz promoted to a gate).
+
+- New `hostile_input` pytest marker and a dedicated `hostile-input-fuzz` CI job
+  that runs the marked tests at a higher Hypothesis example budget (a `ci-fuzz`
+  profile, loaded when `RECON_FUZZ` is set). The render and Bayesian fuzz suites
+  and the resilience-hardening tests carry the marker; they still run inside the
+  normal test job where they count toward coverage, so a parser-bound regression
+  is now its own red check.
+- `tests/test_hostile_input_bounds.py` drives crafted oversized / flooded /
+  malformed input straight at each parser and asserts the cap holds: userrealm
+  `_MAX_AUTODISCOVER_DOMAINS`; crt.sh `_MAX_SANS_PER_CERT` and
+  `_MAX_CRTSH_CERT_SUMMARY_ENTRIES`; the CT burst and wildcard-cluster caps; the
+  SPF redirect depth bound; and the DMARC rua extraction under a mailto flood.
+- The Autodiscover XML parser now degrades cleanly on a defusedxml
+  entity-expansion (billion-laughs) or external-entity (XXE) payload: those
+  raise `EntitiesForbidden` / `ExternalReferenceForbidden` (not `ParseError`),
+  which previously propagated out of the parser; the guard now catches the
+  defusedxml base exception and returns an empty result, asserted by the gate.
+
+Gate: full pytest (2867 passed), ruff, pyright (0 errors), validate_fingerprint (841), branch coverage 85%.
+
 ## [2.1.9] - 2026-06-09
 
 ### Resilience: close confirmed ingestion-boundary fault-injection gaps
