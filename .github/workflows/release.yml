@@ -296,15 +296,24 @@ jobs:
           path: sbom/
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          name: "v${{ steps.changelog.outputs.version }}"
-          body_path: release_notes.md
-          draft: false
-          prerelease: false
-          # Attach wheels, sdist, and the CycloneDX SBOM. Consumers
-          # pull the SBOM by stable name (recon-tool-<version>.cdx.json)
-          # for downstream supply-chain audits.
-          files: |
-            dist/*
-            sbom/*
+        # Native gh CLI rather than a third-party action: it authenticates
+        # through the job's GITHUB_TOKEN with no moving major-version tag to
+        # regress (a softprops/action-gh-release@v3 token-handling regression
+        # 401'd the v2.1.14 release after v2.1.13 succeeded on the same step).
+        # Idempotent so a re-run re-uploads instead of failing on an existing
+        # release. Attaches wheels, sdist, and the CycloneDX SBOM, which
+        # consumers pull by stable name (recon-tool-<version>.cdx.json) for
+        # downstream supply-chain audits.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* sbom/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "v${version}" \
+              --notes-file release_notes.md \
+              dist/* sbom/*
+          fi
