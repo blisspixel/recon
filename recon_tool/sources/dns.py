@@ -211,6 +211,7 @@ class _DetectionCtx:
     __slots__ = (
         "_m365_slugs",
         "_matched_fp_detections",
+        "active_probes",
         "bimi_identity",
         "cert_summary",
         "chain_motifs",
@@ -239,6 +240,10 @@ class _DetectionCtx:
         self.services: set[str] = set()
         self.slugs: set[str] = set()
         self.m365: bool = False
+        # Opt-in direct probes to target-controlled hosts (here: the BIMI VMC
+        # fetch). False keeps the DNS source passive; set by DNSSource.lookup
+        # from the active_probes kwarg.
+        self.active_probes: bool = False
         self.dmarc_policy: str | None = None
         self.spf_include_count: int = 0
         self._m365_slugs: frozenset[str] = _get_m365_slugs()
@@ -1053,13 +1058,18 @@ def _apply_dmarc(ctx: _DetectionCtx, dmarc_results: list[str], domain: str) -> N
 async def _apply_bimi(ctx: _DetectionCtx, bimi_results: list[str], domain: str) -> None:
     """Record BIMI presence and attempt best-effort VMC identity enrichment.
 
-    The VMC enrichment runs over an attacker-authored record, so it must never
-    abort the DNS source: anything it raises is caught and the BIMI detection
-    plus the rest of the DNS intelligence is kept.
+    BIMI presence is read from the DNS TXT record (passive). The VMC enrichment
+    fetches the ``a=`` certificate URL, a direct request to a host the looked-up
+    party influences, so it is gated behind ``ctx.active_probes`` (--direct-probes)
+    and skipped by default. When it does run it must never abort the DNS source:
+    anything it raises is caught and the BIMI detection plus the rest of the DNS
+    intelligence is kept.
     """
     for txt in bimi_results:
         if "v=bimi1" in txt.lower():
             ctx.services.add(SVC_BIMI)
+            if not ctx.active_probes:
+                continue
             try:
                 await _parse_bimi_vmc(ctx, txt)
             except Exception as exc:
@@ -2362,10 +2372,15 @@ class DNSSource:
             (crt.sh, CertSpotter). Discovery still runs the common-subdomain
             probe and apex CNAME walks. Useful for high-volume validation
             runs where users want zero CT load.
+          * ``active_probes`` - when True, opt in to the BIMI VMC certificate
+            fetch (a direct request to a target-influenced host). Off by
+            default keeps the DNS source passive; BIMI presence is still
+            detected from the TXT record either way.
         """
         skip_ct = bool(kwargs.get("skip_ct", False))
+        active_probes = bool(kwargs.get("active_probes", False))
         try:
-            ctx = await self._detect_services(domain, skip_ct=skip_ct)
+            ctx = await self._detect_services(domain, skip_ct=skip_ct, active_probes=active_probes)
         except Exception as exc:
             return SourceResult(
                 source_name="dns_records",
@@ -2428,7 +2443,7 @@ class DNSSource:
         )
 
     @staticmethod
-    async def _detect_services(domain: str, skip_ct: bool = False) -> _DetectionCtx:
+    async def _detect_services(domain: str, skip_ct: bool = False, active_probes: bool = False) -> _DetectionCtx:
         """Async service detection - runs all sub-detectors concurrently.
 
         Each sub-detector handles one DNS record type and writes results
@@ -2439,8 +2454,13 @@ class DNSSource:
         Surface attribution still runs against the common-subdomain probe
         and any other CNAME-discovered hosts; only the CT-fed contributions
         are absent from related_domains.
+
+        ``active_probes`` is recorded on the context so the BIMI VMC fetch
+        (the one direct-to-target HTTP call in this source) runs only when the
+        operator opted in; the default stays passive.
         """
         ctx = _DetectionCtx()
+        ctx.active_probes = active_probes
 
         # Build the detector list as (name, coroutine) pairs. The name is a
         # stable label used for logging and degraded-source reporting (it

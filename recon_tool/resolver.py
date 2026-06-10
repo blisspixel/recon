@@ -107,6 +107,7 @@ async def _enrich_from_related(
     info: TenantInfo,
     all_results: list[SourceResult],
     skip_ct: bool = False,
+    active_probes: bool = False,
 ) -> tuple[TenantInfo, list[SourceResult]]:
     """If related domains were found, run lookups on them and merge.
 
@@ -237,7 +238,13 @@ async def _enrich_from_related(
 
     # Run all tiers concurrently
     dns_source = DNSSource()
-    separate_kwargs: dict[str, Any] = {"skip_ct": True} if skip_ct else {}
+    separate_kwargs: dict[str, Any] = {}
+    if skip_ct:
+        separate_kwargs["skip_ct"] = True
+    if active_probes:
+        # Carry the opt-in direct-probe choice to separate-domain DNS lookups so a
+        # related apex's BIMI VMC is fetched only when the operator opted in.
+        separate_kwargs["active_probes"] = True
     all_tasks = [
         *(medium_subdomain_lookup(d) for d in medium_subs),
         *(lightweight_subdomain_lookup(d) for d in lightweight_subs),
@@ -329,6 +336,7 @@ async def _resolve_tenant_inner(
     pool: SourcePool,
     client: httpx.AsyncClient | None = None,
     skip_ct: bool = False,
+    active_probes: bool = False,
 ) -> tuple[TenantInfo, list[SourceResult]]:
     """Inner resolution logic — no timeout wrapper."""
     sources = list(pool)
@@ -346,6 +354,11 @@ async def _resolve_tenant_inner(
     if skip_ct:
         # Threaded through to DNSSource.lookup; other sources ignore the kwarg.
         kwargs["skip_ct"] = True
+    if active_probes:
+        # Opt-in direct probes to target-controlled hosts (Google CSE at
+        # cse.<domain>, the BIMI VMC fetch). Off by default keeps collection
+        # passive; threaded to GoogleSource and DNSSource, other sources ignore it.
+        kwargs["active_probes"] = True
 
     # Run all sources concurrently
     results = await asyncio.gather(*(_safe_lookup(source, domain, **kwargs) for source in sources))
@@ -354,7 +367,7 @@ async def _resolve_tenant_inner(
 
     # Auto-enrich from related domains (e.g. northwind-internal.com discovered via
     # autodiscover CNAME when looking up northwindtraders.com)
-    info, all_results = await _enrich_from_related(info, list(results), skip_ct=skip_ct)
+    info, all_results = await _enrich_from_related(info, list(results), skip_ct=skip_ct, active_probes=active_probes)
 
     return info, all_results
 
@@ -365,6 +378,7 @@ async def resolve_tenant(
     client: httpx.AsyncClient | None = None,
     timeout: float = RESOLVE_TIMEOUT,
     skip_ct: bool = False,
+    active_probes: bool = False,
 ) -> tuple[TenantInfo, list[SourceResult]]:
     """Orchestrates tenant lookup across the SourcePool.
 
@@ -384,6 +398,12 @@ async def resolve_tenant(
         pool: Optional SourcePool (defaults to standard pool with all sources).
         client: Optional httpx client (for testing/injection).
         timeout: Max wall-clock seconds for the entire resolution pipeline.
+        skip_ct: When True, skip the cert-transparency providers.
+        active_probes: When True, opt in to direct HTTPS probes of
+            target-controlled hosts (the Google CSE discovery probe at
+            cse.<domain> and the BIMI VMC certificate fetch). Off by default so
+            collection stays passive: the only request the queried domain's own
+            servers see by default is the standard MTA-STS policy fetch.
 
     Returns:
         Tuple of (TenantInfo, list[SourceResult]) so the CLI can show verbose info.
@@ -396,7 +416,7 @@ async def resolve_tenant(
 
     try:
         info, all_results = await asyncio.wait_for(
-            _resolve_tenant_inner(domain, pool, client, skip_ct=skip_ct),
+            _resolve_tenant_inner(domain, pool, client, skip_ct=skip_ct, active_probes=active_probes),
             timeout=timeout,
         )
     except TimeoutError:

@@ -15,7 +15,7 @@ This tool is intended for legitimate purposes such as:
 
 ## What sees your queries
 
-The queried domain's servers never receive a packet from this tool. However, the intermediary services that the tool queries will see your IP address in their access logs:
+Most of what this tool queries is third-party infrastructure, which will see your IP address in its access logs. A small number of requests go directly to hosts the queried domain controls; by default that is only the MTA-STS policy fetch, and the two direct-probe enrichments below are opt-in (`--direct-probes`) and off unless you ask for them:
 
 | Service queried | What it sees | Who operates it |
 |---|---|---|
@@ -24,10 +24,11 @@ The queried domain's servers never receive a packet from this tool. However, the
 | `accounts.google.com` | Google Workspace identity routing probe for the queried domain | Google |
 | `crt.sh` | Certificate transparency search for the queried domain | Sectigo (community service) |
 | `api.certspotter.com` (fallback) | Certificate transparency search, only when crt.sh is unavailable | SSLMate |
-| `cse.{domain}` | Google Workspace CSE configuration probe | Google (via the domain's subdomain) |
-| `mta-sts.{domain}` | MTA-STS policy file fetch | Hosted by the domain owner (this is the one exception: it's a direct HTTPS GET to a domain-controlled subdomain, but the endpoint is a public standard designed for external consumption) |
+| `mta-sts.{domain}` | MTA-STS policy file fetch | Hosted by the domain owner; a direct HTTPS GET to a domain-controlled subdomain, but a public-standard endpoint designed for external consumption |
+| `cse.{domain}` (opt-in) | Google Workspace CSE configuration probe, only with `--direct-probes` | Google (via the domain's subdomain) |
+| BIMI VMC URL (opt-in) | One HTTPS GET for the verified-mark certificate named in the domain's BIMI record, only with `--direct-probes` | Hosted by the domain owner or its VMC issuer |
 
-The queried domain itself only appears as a parameter in queries to third-party services. The only direct contact with domain-controlled infrastructure is the MTA-STS policy fetch (`https://mta-sts.{domain}/.well-known/mta-sts.txt`), which is a publicly documented, standards-compliant endpoint designed for external consumption.
+The queried domain itself appears only as a parameter in queries to third-party services, with two exceptions. By default, the single direct contact with domain-controlled infrastructure is the MTA-STS policy fetch (`https://mta-sts.{domain}/.well-known/mta-sts.txt`). When `--direct-probes` is set, recon also makes the Google CSE discovery probe (`https://cse.{domain}/.well-known/cse-configuration`) and, if the domain publishes a BIMI record naming one, fetches the verified-mark certificate it points to. Each is a publicly documented, unauthenticated endpoint designed for external consumption.
 
 You are responsible for ensuring your use complies with all applicable laws, regulations, and terms of service in your jurisdiction. The authors are not responsible for how this tool is used.
 

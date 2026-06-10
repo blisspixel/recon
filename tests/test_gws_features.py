@@ -215,7 +215,8 @@ class TestParseBimiVmc:
             patch("recon_tool.sources.dns._http_client", return_value=mock_client),
             patch.dict("sys.modules", {"cryptography": None, "cryptography.x509": None}),
         ):
-            result = await DNSSource().lookup("example.com")
+            # VMC fetch is opt-in (--direct-probes); enable it for this test.
+            result = await DNSSource().lookup("example.com", active_probes=True)
 
         assert result.bimi_identity is not None
         assert result.bimi_identity.organization == "Northwind Traders"
@@ -467,7 +468,7 @@ class TestGoogleSourceLookup:
 
         with patch("recon_tool.sources.google.http_client", return_value=mock_client):
             source = GoogleSource()
-            result = await source.lookup("example.com")
+            result = await source.lookup("example.com", active_probes=True)
 
         assert "Google Workspace CSE" in result.detected_services
         assert "google-cse" in result.detected_slugs
@@ -486,7 +487,7 @@ class TestGoogleSourceLookup:
 
         with patch("recon_tool.sources.google.http_client", return_value=mock_client):
             source = GoogleSource()
-            result = await source.lookup("example.com")
+            result = await source.lookup("example.com", active_probes=True)
 
         assert result.error is not None
         assert not result.is_success
@@ -500,7 +501,7 @@ class TestGoogleSourceLookup:
 
         with patch("recon_tool.sources.google.http_client", return_value=mock_client):
             source = GoogleSource()
-            result = await source.lookup("example.com")
+            result = await source.lookup("example.com", active_probes=True)
 
         assert result.error is not None
 

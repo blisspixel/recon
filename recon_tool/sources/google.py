@@ -91,6 +91,11 @@ class GoogleSource:
         Currently checks:
         - CSE configuration endpoint (high-security signal)
 
+        The CSE check is a direct HTTPS GET to ``cse.<domain>``, a host the
+        looked-up party controls, so it is gated behind the opt-in
+        ``active_probes`` kwarg. Without it (the default) this source makes no
+        network call and returns an empty result, keeping collection passive.
+
         Returns SourceResult with detected services and slugs.
         Never raises — always returns a SourceResult.
         """
@@ -99,6 +104,12 @@ class GoogleSource:
                 source_name="google_workspace",
                 error=f"Invalid domain format: {domain!r}",
             )
+
+        # Passive by default: the CSE discovery probe is a direct request to a
+        # target-controlled subdomain, so skip it unless the operator opted in
+        # via --direct-probes (active_probes). No error, just no contribution.
+        if not bool(kwargs.get("active_probes", False)):
+            return SourceResult(source_name="google_workspace")
 
         services: list[str] = []
         slugs: list[str] = []

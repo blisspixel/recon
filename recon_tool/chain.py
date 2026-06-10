@@ -41,6 +41,7 @@ async def chain_resolve(
     depth: int = 1,
     pool: SourcePool | None = None,
     skip_ct: bool = False,
+    active_probes: bool = False,
 ) -> ChainReport:
     """BFS resolution of related domains up to *depth* levels.
 
@@ -58,6 +59,9 @@ async def chain_resolve(
             domain visited in the chain. Forwarded into each
             ``resolve_tenant`` call so ``--no-ct`` is honored across
             the BFS, not just the seed domain.
+        active_probes: When True, forward the opt-in direct-probe choice
+            (Google CSE, BIMI VMC) into each ``resolve_tenant`` call so
+            ``--direct-probes`` is honored across the whole chain.
 
     Returns:
         ChainReport with all resolved domains and metadata.
@@ -118,6 +122,7 @@ async def chain_resolve(
                     pool=pool,
                     timeout=RESOLVE_TIMEOUT,
                     skip_ct=skip_ct,
+                    active_probes=active_probes,
                 )
                 results.append(
                     ChainResult(
