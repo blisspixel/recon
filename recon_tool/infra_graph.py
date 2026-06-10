@@ -1,4 +1,4 @@
-"""CT co-occurrence graph + community detection (v1.8+).
+"""CT co-occurrence graph + community detection.
 
 Build an in-memory undirected graph from a domain's certificate
 transparency entries, then run Louvain community detection (via
@@ -258,7 +258,7 @@ def _dominant_issuer_for_members(
 def build_infrastructure_clusters(
     entries: list[dict[str, Any]],
 ) -> InfrastructureClusterReport:
-    """Run the v1.8 graph layer over cert entries.
+    """Run the graph layer over cert entries.
 
     Always returns a report. The shape of the report is stable:
 

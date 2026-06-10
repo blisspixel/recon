@@ -121,7 +121,7 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "wrike",
         "yandex",
         "zendesk",
-        # v1.9.22: cname_target slugs discovered via the corpus loop that
+        # cname_target slugs discovered via the corpus loop that
         # roll up to Business Apps (marketing / DAM / PR / generic SaaS).
         "act-on",
         "brandfolder",
@@ -133,7 +133,7 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "partnerpage",
         "substack",
         "tally",
-        # v1.9.23: TXT verification slugs from the corpus mine that roll up
+        # TXT verification slugs from the corpus mine that roll up
         # to Business Apps (generic SaaS / dev / marketing / commerce).
         "amazon-business",
         "bitrise",
@@ -161,7 +161,7 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "tiktok",
         "uber-business",
         "zapier",
-        # v1.9.23: cname_target slugs from the CNAME discovery run.
+        # cname_target slugs from the CNAME discovery run.
         "adlegend",
         "avature",
         "crownpeak",
@@ -273,11 +273,11 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "musictoday",
         "ogopendata",
         "cvent",
-        # v1.9.82: cname_target slug from a live-analysis gap (LMS / online-
+        # cname_target slug from a live-analysis gap (LMS / online-
         # course platform; same conservative Business-Apps bucket as its peers
         # coursera and northpass).
         "thinkific",
-        # v1.9.83: cname_target slugs from a live-analysis discovery batch.
+        # cname_target slugs from a live-analysis discovery batch.
         # Generic B2B SaaS (localization, encryption-relay, LMS, PSA/onboarding,
         # community, PRM) with no specific panel-category home; conservative
         # Business-Apps bucket.
@@ -287,7 +287,7 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "rocketlane",
         "bettermode",
         "impartner",
-        # v1.9.84: second cname_target discovery batch (intranet, data-
+        # Second cname_target discovery batch (intranet, data-
         # tokenization proxy, compliance automation, user-research, employee
         # handbook, fraud biometrics). Conservative Business-Apps panel bucket.
         "lumapps",
@@ -297,12 +297,12 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "heymarvin",
         "airmason",
         "nudata",
-        # v1.9.85: third cname_target discovery batch (ITSM, developer PaaS,
+        # Third cname_target discovery batch (ITSM, developer PaaS,
         # mobile deep-linking). Conservative Business-Apps panel bucket.
         "manageengine",
         "northflank",
         "urlgenius",
-        # v1.9.86: fourth cname_target discovery batch (referral marketing,
+        # Fourth cname_target discovery batch (referral marketing,
         # employee comms, affiliate commerce, data-privacy/consent).
         "extole",
         "staffbase",

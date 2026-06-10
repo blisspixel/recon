@@ -1,4 +1,4 @@
-"""v2.0.1 panel disclosure: posterior-backed confidence dots and the clause.
+"""Panel disclosure: posterior-backed confidence dots and the clause.
 
 With fusion (default from v2.0), the Confidence dots reflect the weakest claimed
 node's posterior support and a dimmed line speaks up when a claimed node is thin

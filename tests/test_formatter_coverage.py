@@ -2,7 +2,7 @@
 
 Exercises panel render branches that weren't hit by the existing test
 files: empty services, no cert_summary, degraded sources with and
-without CT provider attribution, the v0.9.2 render_source_status_panel,
+without CT provider attribution, render_source_status_panel,
 detect_provider edge cases, etc. No real company names.
 """
 
@@ -149,14 +149,14 @@ class TestDetectProviderEdgeCases:
             email_gateway="Proofpoint",
             likely_primary_email_provider=None,
         )
-        # v0.9.3 format: "{gateway} gateway (no inferable downstream)"
+        # Format: "{gateway} gateway (no inferable downstream)"
         assert "Proofpoint" in result
         assert "gateway" in result
         assert "no inferable downstream" in result
 
     def test_likely_only_no_primary_no_gateway(self) -> None:
         """When only likely_primary is set (weird but possible), render it
-        with the '(likely primary)' v0.9.3 qualifier."""
+        with the '(likely primary)' qualifier."""
         result = detect_provider(
             services=(),
             slugs=(),
@@ -190,10 +190,9 @@ class TestDetectProviderEdgeCases:
         assert "Microsoft 365" in result
 
     def test_zoho_slug_fallback(self) -> None:
-        # v0.9.3 (second revision): default has_mx_records=True —
-        # assumes custom MX unless the caller explicitly passes
-        # has_mx_records=False. See TestBackwardCompatDetectProvider
-        # for the full rationale.
+        # Default has_mx_records=True — assumes custom MX unless the
+        # caller explicitly passes has_mx_records=False. See
+        # TestBackwardCompatDetectProvider for the full rationale.
         result = detect_provider(services=(), slugs=("zoho",))
         assert result == "Zoho Mail (account detected, custom MX)"
 
@@ -233,7 +232,7 @@ class TestRenderTenantPanelEdgeCases:
         )
         from recon_tool.formatter import get_console
 
-        # v0.9.3: Certs section is shown only under --verbose to keep
+        # Certs section is shown only under --verbose to keep
         # the default view tight. Pass verbose=True to exercise it.
         get_console().print(render_tenant_panel(info, verbose=True))
         out = _strip(buf.getvalue())
@@ -251,13 +250,13 @@ class TestRenderTenantPanelEdgeCases:
 
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
-        # v0.9.3 format: "Note" header + "Some sources unavailable (...)"
+        # Format: "Note" header + "Some sources unavailable (...)"
         assert "Note" in out
         assert "crt.sh" in out
         assert "unavailable" in out
 
     def test_ct_provider_without_degraded_suppresses_note(self) -> None:
-        """v0.9.2 Phase 2d: when CT succeeded cleanly (no degraded sources),
+        """When CT succeeded cleanly (no degraded sources),
         the panel does NOT show a Note line. The CT provenance is still
         available via --json and --verbose for users who need it; the
         panel stays uncluttered on the happy path."""
@@ -274,7 +273,7 @@ class TestRenderTenantPanelEdgeCases:
         assert "Note:" not in out
 
     def test_degraded_plus_ct_provider_fallback(self) -> None:
-        """v0.10: routine CT fallback notes are suppressed in panel output.
+        """Routine CT fallback notes are suppressed in panel output.
         CT provenance is still available in --json."""
         _, buf = _make_console()
         info = _minimal_info(
@@ -291,7 +290,7 @@ class TestRenderTenantPanelEdgeCases:
         assert "Note" not in out
 
     def test_related_domains_truncation(self) -> None:
-        """v0.9.3: more than 8 related domains shows a compact
+        """More than 8 related domains shows a compact
         '(N total — M more, use --full to see all)' footer."""
         _, buf = _make_console()
         info = _minimal_info(
@@ -334,7 +333,7 @@ class TestRenderTenantPanelEdgeCases:
 
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
-        # v0.9.3 format: the label is "Tenant" (no " ID:" suffix) and
+        # Format: the label is "Tenant" (no " ID:" suffix) and
         # the tenant UUID appears on the same line.
         assert "Tenant" in out
         assert "a1b2c3d4" in out
@@ -384,7 +383,7 @@ class TestRenderTenantPanelEdgeCases:
 
         get_console().print(render_tenant_panel(info, explain=True))
         out = _strip(buf.getvalue())
-        # v0.9.3 format: the Provider line carries the primary/gateway
+        # Format: the Provider line carries the primary/gateway
         # classification inline. No separate "[Primary (MX): …]"
         # classification block.
         assert "Microsoft 365 (primary)" in out
@@ -392,7 +391,7 @@ class TestRenderTenantPanelEdgeCases:
 
 
 class TestRenderSourceStatusPanel:
-    """v0.9.2 render_source_status_panel for --explain output."""
+    """render_source_status_panel for --explain output."""
 
     def test_empty_results_returns_none(self) -> None:
         assert render_source_status_panel([]) is None

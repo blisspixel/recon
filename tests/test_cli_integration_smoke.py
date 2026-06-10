@@ -1,6 +1,6 @@
-"""v1.9.9 — CLI integration smoke tests.
+"""CLI integration smoke tests.
 
-Every v1.9.9 test exercises ``render_tenant_panel`` directly through
+Every test exercises ``render_tenant_panel`` directly through
 its Python API. None of them invoke the actual ``recon`` command-line
 entry point. A wiring bug in ``recon_tool/cli.py`` between argument
 parsing and rendering would slip past the unit and snapshot tests

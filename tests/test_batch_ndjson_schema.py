@@ -1,4 +1,4 @@
-"""Batch / NDJSON record contract (v1.9.26).
+"""Batch / NDJSON record contract.
 
 The single-domain ``--json`` contract is pinned by
 ``test_json_schema_contract.py`` and ``test_json_schema_file.py``. Batch
@@ -6,7 +6,7 @@ runs (``recon batch --json`` and ``recon batch --ndjson``) interleave two
 record shapes per line / element: a single-domain success object and a
 ``{domain, error}`` error record emitted when a domain fails validation or
 lookup. Those two shapes, and the deterministic rule a consumer applies to
-tell them apart, are the v1.9.26 schema-contract polish.
+tell them apart, are the schema-contract polish.
 
 These tests validate a synthetic batch NDJSON sample with the single
 deterministic rule set (``classify_batch_record``): success records carry

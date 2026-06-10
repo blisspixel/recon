@@ -26,7 +26,7 @@ class TestFallbackChain:
 
     @pytest.fixture
     def _bypass_ct_cache_first(self):
-        """v1.9.25 added a cache-first short-circuit to _detect_cert_intel.
+        """A cache-first short-circuit guards _detect_cert_intel.
         Tests that exercise the live-provider fallback chain need to
         force a cache miss so providers actually get called; tests that
         exercise the cache itself opt out of this fixture."""
@@ -271,7 +271,7 @@ class TestFallbackChain:
 
     @pytest.mark.asyncio
     async def test_empty_providers_no_cache_records_soft_attribution(self, tmp_path, monkeypatch):
-        """v1.8.1 — when all providers return empty AND no cache exists,
+        """When all providers return empty AND no cache exists,
         the panel still attributes to the first provider that responded.
         Better than leaving ct_provider_used unset (which would suggest
         no provider was tried)."""

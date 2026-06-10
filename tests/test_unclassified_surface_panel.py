@@ -1,4 +1,4 @@
-"""v1.9.3.10 — unclassified-surface output in the default panel.
+"""Unclassified-surface output in the default panel.
 
 The default-panel rendering now exposes the chain walker's
 unclassified termini — CNAME chains the walker reached but the

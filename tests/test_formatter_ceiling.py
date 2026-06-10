@@ -1,4 +1,4 @@
-"""v1.9.9 — passive-DNS ceiling phrasing in the default panel.
+"""Passive-DNS ceiling phrasing in the default panel.
 
 The default panel grew a one-line teaching footer that fires when the
 panel looks sparse on a domain that probably has more public services

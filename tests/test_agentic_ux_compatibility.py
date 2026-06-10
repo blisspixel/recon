@@ -1,4 +1,4 @@
-"""v1.9.9 — re-render the v1.9.2 agentic UX fixtures through v1.9.9.
+"""Re-render the v1.9.2 agentic UX fixtures through v1.9.9.
 
 The v1.9.2 agentic-UX milestone validated that AI agents read the panel
 correctly on two reference fixtures: ``contoso-dense.json`` (rich

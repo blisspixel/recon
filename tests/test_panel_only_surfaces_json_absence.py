@@ -1,7 +1,7 @@
-"""v1.9.9 — JSON-absence contract: new surfaces are panel-only.
+"""JSON-absence contract: new surfaces are panel-only.
 
 The Multi-cloud rollup and Passive-DNS ceiling phrasing are panel
-output added in v1.9.9. By design they are *renderer-side derivations*
+output. By design they are *renderer-side derivations*
 from the existing TenantInfo data model, not new JSON schema fields.
 The JSON output of ``recon <domain> --json`` and the MCP tool responses
 must stay schema-stable; adding a panel string to the JSON would be a
@@ -106,9 +106,9 @@ class TestCeilingPhrasingNotInJson:
 
 
 class TestJsonShapeContainsOnlyDataFields:
-    """The v1.9.9 surfaces are renderer-side derivations; the
+    """These surfaces are renderer-side derivations; the
     serialized dict must continue to expose the same field set the
-    pre-v1.9.9 schema documented. Any v1.9.9-introduced data field
+    documented schema describes. Any newly introduced data field
     would show up as a new top-level key on this serialized shape and
     surface in the assertion below."""
 

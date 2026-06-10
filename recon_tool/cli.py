@@ -216,7 +216,7 @@ def main(
 def _print_welcome_banner() -> None:
     """Print the curated onboarding banner shown when ``recon`` is run
     with no arguments. Replaces the raw Typer help dump that was
-    shown prior to v0.9.3.
+    shown before.
 
     Kept tight — fits on ~15 lines — with a one-line value prop, the
     recommended first command, progressive disclosure, three real
@@ -928,7 +928,7 @@ def mcp_install_command(
     console.print(f"  [green]wrote {result.path}[/green]")
     console.print()
 
-    # v1.9.3.4: emit the cwd-shadow warning when the fallback launch
+    # Emit the cwd-shadow warning when the fallback launch
     # form was persisted. Informational only — the persisted env
     # carries PYTHONSAFEPATH=1 plus the runtime guard in server.py,
     # so MCP clients on Python 3.11+ are protected.
@@ -1056,7 +1056,7 @@ def cache_clear(
 ) -> None:
     """Clear both CT subdomain cache and TenantInfo result cache.
 
-    Prior to v1.0.3 this only cleared the CT cache, which left stale
+    Earlier this only cleared the CT cache, which left stale
     TenantInfo results silently served from ``~/.recon/cache/`` even
     after a ``recon cache clear``.
     """
@@ -1652,7 +1652,7 @@ def fingerprints_check(
     from pathlib import Path as _Path
 
     if path is None:
-        # Prefer the directory layout if it exists (v1.1+); fall back to
+        # Prefer the directory layout if it exists; fall back to
         # the monolith while both coexist.
         base = _Path(__file__).parent / "data"
         split_dir = base / "fingerprints"
@@ -1948,7 +1948,7 @@ def delta(
 def _doctor_print_header(console: Any) -> None:
     """Print the version line with the schema-stability indicator, plus Python.
 
-    v1.9.11+: the substring "v2.0 stable schema" (vs "pre-v2.0 schema") lets an
+    The substring "v2.0 stable schema" (vs "pre-v2.0 schema") lets an
     operator see at a glance whether Bayesian fusion is opt-in (pre-v2.0) or
     stable per the schema-lock disposition table; the v2.0 quality bar requires
     that text.
@@ -2096,7 +2096,7 @@ def _doctor_signal_db_check() -> DoctorCheck:
 def _doctor_schema_fields_check() -> DoctorCheck:
     """Verify the locked-schema top-level fields are still emitted by ``format_tenant_json``.
 
-    v1.9.11+ / v2.0 quality bar: synthesise a minimal TenantInfo, render it
+    The v2.0 quality bar: synthesise a minimal TenantInfo, render it
     through the JSON formatter, and confirm every required top-level field from
     ``recon_tool.schema_contract.REQUIRED_TOP_LEVEL_FIELDS`` appears. Drift
     between that tuple and ``docs/recon-schema.json#/required`` is caught at PR
@@ -2220,7 +2220,7 @@ def _build_explanations(
     signals = load_signals()
     signal_matches = evaluate_signals(context)
 
-    # Third pass: absence signals + positive hardening observations (v0.9.3)
+    # Third pass: absence signals + positive hardening observations
     absence_matches = evaluate_absence_signals(signal_matches, signals, frozenset(info.slugs))
     positive_matches = evaluate_positive_absence(signal_matches, signals, frozenset(info.slugs))
     all_signal_matches = signal_matches + absence_matches + positive_matches
@@ -2657,7 +2657,7 @@ def _lookup_compute_observations(info: Any, profile_name: str | None, show_postu
         from recon_tool.profiles import apply_profile, compute_baseline_anomalies
 
         raw_observations = analyze_posture(info)
-        # v1.8: append vertical-baseline anomalies before profile reweighting so
+        # Append vertical-baseline anomalies before profile reweighting so
         # profile boosts apply uniformly. Empty tuple when no profile or when the
         # profile has no expectations.
         anomalies = compute_baseline_anomalies(
@@ -2712,7 +2712,7 @@ def _lookup_emit_json(
 
         explanations = _build_explanations(info, results)
         tenant_dict["explanations"] = format_explanations_list(explanations)
-        # v0.9.3: structured provenance DAG for programmatic consumers. Lives
+        # Structured provenance DAG for programmatic consumers. Lives
         # alongside the flat list; both are emitted so existing tooling doesn't
         # break.
         tenant_dict["explanation_dag"] = build_explanation_dag(explanations, info.evidence)
@@ -2823,7 +2823,7 @@ def _lookup_emit_panel(
     if show_explain:
         from recon_tool.formatter import render_explanations_panel, render_source_status_panel
 
-        # U1 (v0.9.2): always render per-source status under --explain so users
+        # U1: always render per-source status under --explain so users
         # can see which sources succeeded, which failed, and why. Previously this
         # was only available via --verbose.
         status_results: list[Any] = results
@@ -3147,7 +3147,7 @@ def _batch_validate_flags(
     if sum([json_output, markdown, csv_output, ndjson]) > 1:
         render_error("--json, --md, --csv, and --ndjson are mutually exclusive")
         raise typer.Exit(code=EXIT_VALIDATION)
-    # v2.1: --summary is a batch-scope aggregate. It pairs with --json (machine
+    # --summary is a batch-scope aggregate. It pairs with --json (machine
     # output) or stands alone (panel); the per-domain formats have no cohort view.
     if summary and (markdown or csv_output or ndjson):
         render_error("--summary cannot combine with --md, --csv, or --ndjson")
@@ -3158,7 +3158,7 @@ def _batch_validate_flags(
     if summary and include_ecosystem:
         render_error("--summary cannot combine with --include-ecosystem")
         raise typer.Exit(code=EXIT_VALIDATION)
-    # v1.8: --include-ecosystem requires --json. The hypergraph is a batch-scope
+    # --include-ecosystem requires --json. The hypergraph is a batch-scope
     # envelope sibling to the per-domain entries with no natural place in the
     # panel, markdown, CSV, or NDJSON outputs (NDJSON streams per-domain and the
     # hypergraph needs the full set).
@@ -3254,7 +3254,7 @@ def _batch_apply_fusion(info: Any) -> Any:
 
 
 def _batch_attach_shared_tokens(json_results: list[dict[str, Any]], batch_infos: dict[str, Any]) -> None:
-    """Attach ``shared_verification_tokens`` peer lists in place (v0.9.3).
+    """Attach ``shared_verification_tokens`` peer lists in place.
 
     Keyed by ``queried_domain`` (the canonical normalized form) when at least two
     domains in the batch publish the same site-verification token.
@@ -3275,7 +3275,7 @@ def _batch_attach_shared_tokens(json_results: list[dict[str, Any]], batch_infos:
 
 
 def _batch_attach_peers(json_results: list[dict[str, Any]], batch_infos: dict[str, Any]) -> None:
-    """Attach ``shared_tenant`` and ``shared_display_name`` peer lists in place (v1.3).
+    """Attach ``shared_tenant`` and ``shared_display_name`` peer lists in place.
 
     Tenant-ID sharing is cryptographically strong (same M365 customer account);
     display-name overlap is hedged (same brand / likely related, but
@@ -3332,7 +3332,7 @@ def _batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, incl
         _batch_attach_shared_tokens(json_results, batch_infos)
         _batch_attach_peers(json_results, batch_infos)
 
-    # v1.8: ecosystem hypergraph. Off by default. When opted in via
+    # Ecosystem hypergraph. Off by default. When opted in via
     # --include-ecosystem, emit hyperedges over the batch's TenantInfo set as a
     # top-level envelope sibling to the per-domain entries.
     if include_ecosystem:
@@ -3365,7 +3365,7 @@ def _batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, incl
 
 
 def _batch_emit_summary(batch_infos: dict[str, Any], attempted: int, console: Any, *, as_json: bool) -> None:
-    """Emit one aggregate-only cohort summary over the resolved batch (v2.1).
+    """Emit one aggregate-only cohort summary over the resolved batch.
 
     Stateless: computed live from the resolved records, stores nothing, ships no
     baselines, names no domain. The richer caller-grouped analysis lives in the
@@ -3628,7 +3628,7 @@ async def _batch(
 
     semaphore = asyncio.Semaphore(concurrency)
 
-    # v0.9.3: batch-scope token clustering. Each successful resolution
+    # Batch-scope token clustering. Each successful resolution
     # stashes its TenantInfo here keyed by the *input* domain string,
     # so the post-processing pass can compute `shared_verification_tokens`
     # across every domain in the batch. Scoped to this batch run — never
@@ -3678,7 +3678,7 @@ async def _batch(
     tasks = [_tracked(d) for d in domain_list]
     results = await asyncio.gather(*tasks)
 
-    # v2.1: --summary collapses the batch into one aggregate-only cohort summary.
+    # --summary collapses the batch into one aggregate-only cohort summary.
     if summary:
         _batch_emit_summary(batch_infos, len(domain_list), console, as_json=json_output)
         return

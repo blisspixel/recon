@@ -1,5 +1,5 @@
 """Custom profile templates — reweight and filter posture observations
-for a specific audience lens (v0.9.3).
+for a specific audience lens.
 
 A profile is a YAML file in either the built-in ``data/profiles/``
 directory or in ``~/.recon/profiles/`` (override via
@@ -89,7 +89,7 @@ class Profile:
     focus_categories: tuple[str, ...] = ()
     exclude_signals: tuple[str, ...] = ()
     prepend_note: str = ""
-    # v1.8 vertical-baseline anomaly rules. Each expected_categories
+    # Vertical-baseline anomaly rules. Each expected_categories
     # entry is a fingerprint *category* (e.g. ``Security``) that the
     # vertical typically uses; absence of any matching detected slug
     # surfaces a hedged "absence is observable" observation. Each
@@ -311,7 +311,7 @@ def compute_baseline_anomalies(
     detected_slugs: tuple[str, ...],
     chain_motif_names: tuple[str, ...],
 ) -> tuple[Observation, ...]:
-    """Surface vertical-baseline anomalies as hedged observations (v1.8+).
+    """Surface vertical-baseline anomalies as hedged observations.
 
     Compares the profile's ``expected_categories`` against the
     fingerprint categories implied by ``detected_slugs``, and the

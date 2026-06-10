@@ -1,4 +1,4 @@
-"""v1.9.3.4 — MCP path-isolation regression tests.
+"""MCP path-isolation regression tests.
 
 Pins the three defense layers that close the audit finding "MCP doctor
 /install can execute shadowed recon_tool package" (HIGH):
@@ -92,7 +92,7 @@ class TestMcpInstallPersistsSafeEnv:
     warning when the fallback is in use."""
 
     def test_fallback_block_uses_safe_launcher_args(self, monkeypatch):
-        """v1.9.9: the fallback uses ``python -c "<launcher>"`` so the
+        """The fallback uses ``python -c "<launcher>"`` so the
         cwd-shadow attack is blocked at the language level on every
         supported Python version (including Python 3.10 where
         ``PYTHONSAFEPATH`` is a no-op). The launcher strips empty
@@ -156,7 +156,7 @@ class TestMcpInstallPersistsSafeEnv:
         warning = warn_if_fallback()
         assert warning is not None
         assert "PATH" in warning
-        # v1.9.9: warning describes the cwd-stripping launcher protection
+        # Warning describes the cwd-stripping launcher protection
         # rather than the prior PYTHONSAFEPATH framing (which was
         # incomplete for Python 3.10).
         assert "sys.path" in warning, (
@@ -264,7 +264,7 @@ class TestShadowWorkspaceIntegration:
     3.10 the env var is a no-op, so direct ``python -m
     recon_tool.server`` from a hostile cwd will load the shadow —
     Python's lookup unavoidably prepends cwd to ``sys.path``. The
-    v1.9.3.4 product defenses avoid this invocation pattern entirely:
+    product defenses avoid this invocation pattern entirely:
     ``mcp_doctor`` sets ``cwd`` to an empty tempdir, and
     ``mcp_install``'s preferred form uses the ``recon`` script entry
     point (no ``-m``). The runtime guard in ``server.py`` is the
@@ -344,7 +344,7 @@ class TestShadowWorkspaceIntegration:
         reason="Windows subprocess + tempdir cleanup interacts poorly with test isolation.",
     )
     def test_v199_fallback_launcher_blocks_shadow_on_all_pythons(self, tmp_path):
-        """v1.9.9 closure: the new fallback launcher uses
+        """The fallback launcher uses
         ``python -c "<sys.path-stripping launcher>"`` instead of
         ``python -m recon_tool.server``. The launcher strips the cwd
         entry from ``sys.path`` BEFORE any ``recon_tool`` import, so

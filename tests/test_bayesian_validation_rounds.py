@@ -1,4 +1,4 @@
-"""v1.9 validation rounds — properties that must hold across the
+"""Validation rounds: properties that must hold across the
 engine. These are not unit tests of single functions; they exercise
 the whole inference pipeline with a variety of evidence shapes and
 assert structural invariants.

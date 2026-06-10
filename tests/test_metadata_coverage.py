@@ -1,7 +1,7 @@
-"""Tests for the v1.9.7 metadata-coverage CI gate script.
+"""Tests for the metadata-coverage CI gate script.
 
-The gate flipped from a percentage threshold to a presence check in
-v1.9.7. Every detection in every category must carry a non-empty
+The gate flipped from a percentage threshold to a presence check.
+Every detection in every category must carry a non-empty
 ``description`` field, or the script exits non-zero.
 """
 
@@ -63,7 +63,7 @@ def _run_script(corpus_dir: Path, *extra_args: str) -> subprocess.CompletedProce
 
 class TestCoverageGate:
     def test_passes_when_every_detection_has_description(self, tmp_path: Path) -> None:
-        """v1.9.7 gate: every detection in every category has a
+        """Gate: every detection in every category has a
         non-empty description.
         """
         corpus = _make_corpus(
@@ -199,7 +199,7 @@ class TestCoverageGate:
         assert result.returncode == 0
 
     def test_runs_against_shipped_catalog(self) -> None:
-        """v1.9.7+: the shipped catalog is at 100 percent description
+        """The shipped catalog is at 100 percent description
         coverage, so the gate must exit 0 without ``--report-only``.
         """
         result = subprocess.run(  # noqa: S603

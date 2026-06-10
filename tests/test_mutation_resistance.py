@@ -1,4 +1,4 @@
-"""v1.9.9 — targeted mutation resistance tests.
+"""Targeted mutation resistance tests.
 
 Line coverage measures execution, not test quality. A function with
 100% line coverage may still ship buggy if the tests only assert on
@@ -9,7 +9,7 @@ break the implementation, confirm the tests fail.
 Full-tree mutation tools (``mutmut``, ``cosmic-ray``) are heavyweight
 and ``mutmut`` does not run on Windows. This module is a focused,
 hand-rolled equivalent: each test case applies a *specific named
-mutation* to a v1.9.9 helper, runs a relevant assertion path, and
+mutation* to a helper, runs a relevant assertion path, and
 verifies the suite catches the regression.
 
 The mutations chosen are the ones most likely to slip past careful

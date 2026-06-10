@@ -299,7 +299,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         # peers from a previous batch run.
     }
 
-    # CertSummary → nested dict or None. v1.8.1: include the v1.7
+    # CertSummary → nested dict or None. Include the v1.7
     # additions (wildcard_sibling_clusters, deployment_bursts) so a
     # cache hit doesn't silently drop signal that was present in the
     # original lookup.
@@ -366,7 +366,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         for sa in info.surface_attributions
     ]
 
-    # InfrastructureClusterReport (v1.8) → nested dict or None.
+    # InfrastructureClusterReport → nested dict or None.
     if info.infrastructure_clusters is not None:
         ic = info.infrastructure_clusters
         d["infrastructure_clusters"] = {
@@ -403,9 +403,9 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         {"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains
     ]
 
-    # ChainMotifObservation tuple → list of dicts (v1.8.1 — was being
+    # ChainMotifObservation tuple → list of dicts. These were being
     # dropped on cache write, so a cached lookup served motif_count = 0
-    # even when the original resolve produced matches).
+    # even when the original resolve produced matches.
     d["chain_motifs"] = [
         {
             "motif_name": cm.motif_name,
@@ -584,7 +584,7 @@ def _surface_attributions_from_dict(data: dict[str, Any]) -> tuple[SurfaceAttrib
 
 
 def _infrastructure_clusters_from_dict(data: dict[str, Any]) -> InfrastructureClusterReport | None:
-    """Deserialize the ``infrastructure_clusters`` (v1.8) envelope, or None
+    """Deserialize the ``infrastructure_clusters`` envelope, or None
     when absent. A missing algorithm maps to ``skipped`` so the contract
     matches a live run that did not build clusters."""
     ic_data = data.get("infrastructure_clusters")
@@ -660,7 +660,7 @@ def _unclassified_chains_from_dict(data: dict[str, Any]) -> tuple[UnclassifiedCn
 
 
 def _chain_motifs_from_dict(data: dict[str, Any]) -> tuple[ChainMotifObservation, ...]:
-    """Deserialize the ``chain_motifs`` list (v1.8.1)."""
+    """Deserialize the ``chain_motifs`` list."""
     motifs_list = data.get("chain_motifs", [])
     if not isinstance(motifs_list, list):
         return ()

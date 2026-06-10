@@ -109,7 +109,7 @@ _LIKELY_PROVIDER_SLUG_NAMES: dict[str, str] = {
 }
 
 
-# v0.9.3: humanize raw slugs for insight text. Without this, insight
+# Humanize raw slugs for insight text. Without this, insight
 # strings leak identifiers like "google-managed", "crewai-aid",
 # "cosign-attestation" that read as developer jargon to users. Map
 # known technical slugs to user-friendly display names; everything
@@ -160,7 +160,7 @@ _SLUG_HUMAN_NAMES: dict[str, str] = {
     "crowdstrike": "CrowdStrike",
     "paloalto": "Palo Alto",
     "letsencrypt": "Let's Encrypt",
-    # v0.9.3 refinement: proper-case brand names so insight text
+    # Proper-case brand names so insight text
     # doesn't title-case them into wrong forms like "Sendgrid" or
     # "Cloudflare" when they have distinctive casing.
     "sendgrid": "SendGrid",
@@ -262,7 +262,7 @@ def _humanize_slug(slug: str) -> str:
     return " ".join(out)
 
 
-# v0.9.3: when a signal's matched-slug list contains both a base
+# When a signal's matched-slug list contains both a base
 # slug (``google-workspace``) and a variant slug (``google-managed``,
 # ``google-federated``) that represents the same product with an
 # identity-mode qualifier, collapse the variant into the base. Without
@@ -403,7 +403,7 @@ def compute_inference_confidence(results: list[SourceResult]) -> ConfidenceLevel
     LOW when single record type with no corroboration.
     MEDIUM otherwise.
 
-    Corroboration (v0.9.2): now accepts Google Workspace auth type as a
+    Corroboration: now accepts Google Workspace auth type as a
     valid signal in addition to Microsoft-side fields. A domain with an
     OIDC tenant_id AND a Google identity endpoint response is fully
     corroborated from two independent providers — the previous check
@@ -563,7 +563,7 @@ def build_insights_with_signals(
     )
     active_signals = evaluate_signals(context)
     for sig in active_signals:
-        # v0.9.3 hardening: meta-signals (requires_signals only, no
+        # Hardening: meta-signals (requires_signals only, no
         # candidates) have empty sig.matched. Emit a bare name instead
         # of a "Name: " dead-end that used to render with no value.
         # Also humanize known slugs and dedup variant slugs so
@@ -587,7 +587,7 @@ def build_insights_with_signals(
         else:
             insights.append(sig.name)
 
-    # v0.9.3: positive-when-absent pass — hedged hardening observations.
+    # Positive-when-absent pass for hedged hardening observations.
     # Runs on the *base* fired set (not including absence signals) so a
     # hardening observation only fires from a genuine positive signal
     # match, never from an absence signal firing.
@@ -653,7 +653,7 @@ def compute_confidence(results: list[SourceResult]) -> tuple[ConfidenceLevel, bo
     return ConfidenceLevel.LOW, False
 
 
-# v0.11: placeholder tenant display names that are meaningless to a user.
+# Placeholder tenant display names that are meaningless to a user.
 # "Default Directory" is what Microsoft shows when a tenant owner never set a
 # custom name — it's a placeholder, not the organization's name. The merge
 # falls through to better signals (BIMI, domain) when it sees one. Exposed at
@@ -863,7 +863,7 @@ def extract_spf_include_count(services: set[str]) -> int | None:
 def _merge_ct_metadata(results: list[SourceResult]) -> tuple[str | None, int, int | None, str | None]:
     """Propagate CT provider attribution (first wins) and the first CT attempt outcome.
 
-    v0.9.2 / v1.9.25: ``ct_attempt_outcome`` can be set without a provider (e.g.
+    ``ct_attempt_outcome`` can be set without a provider (e.g.
     "live_rate_limited"), so it is taken independently of ``ct_provider_used``.
     """
     ct_provider_used: str | None = None
@@ -924,7 +924,7 @@ def _finalize_confidence(
 ) -> tuple[ConfidenceLevel, ConfidenceLevel, ConfidenceLevel]:
     """Combine the base, evidence, and inference confidences and apply the degraded downgrade.
 
-    v0.9.3: skip the downgrade when the only degraded sources are CT providers
+    Skip the downgrade when the only degraded sources are CT providers
     and a CT fallback recovered the data (``ct_provider_used`` is set); penalising
     a successful recovery would undersell the result.
     """
@@ -943,7 +943,7 @@ def _finalize_confidence(
 def _append_lexical_observations(insights: list[str], related: set[str], queried_domain: str) -> tuple[str, ...]:
     """Append lexical-taxonomy observations to insights and return their statements.
 
-    v0.9.3: pure re-projection of related_domains through a rule-based parser; no
+    Pure re-projection of related_domains through a rule-based parser; no
     new network calls, no generated candidates.
     """
     lex_obs = lexical_observations([d for d in related if "*" not in d], base_domain=queried_domain)
@@ -1039,7 +1039,7 @@ def merge_results(
     evidence_tuple = _collect_evidence(results)
     primary_email_provider, email_gateway, likely_primary_email_provider = _compute_email_topology(evidence_tuple)
     dmarc_pct: int | None = _first_non_none(results, "dmarc_pct")
-    # v0.9.3: True if ANY MX evidence exists, regardless of slug match — lets
+    # True if ANY MX evidence exists, regardless of slug match — lets
     # downstream insights distinguish "no email" from "custom / self-hosted".
     has_mx_records = any(e.source_type == "MX" for e in evidence_tuple)
 

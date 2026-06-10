@@ -39,7 +39,7 @@ logger = logging.getLogger("recon")
 # all source queries and related domain enrichment. Prevents runaway lookups
 # from blocking the CLI or MCP server indefinitely.
 # Default aggregate wall-clock timeout for a full resolve (all sources +
-# related-domain enrichment). Raised from 60s to 120s in v0.9.2 after
+# related-domain enrichment). Raised from 60s to 120s after
 # observing that CT-heavy domains with degraded crt.sh fell back to
 # CertSpotter pagination, then ran related-domain enrichment, and
 # consistently blew past 60s — producing catastrophic 25–93% batch
@@ -135,7 +135,7 @@ async def _enrich_from_related(
     # corpus. The prioritization (high-signal prefixes first) ensures
     # the most useful subdomains still make the cap.
     MAX_RELATED_ENRICHMENTS = 15
-    # v0.10.2: top-signal subdomain prefixes get deeper DNS enrichment
+    # Top-signal subdomain prefixes get deeper DNS enrichment
     # (adds MX + DKIM probing). Capped small so we don't blow the DNS
     # budget — only the prefixes most likely to publish their own
     # verification records distinct from the apex.
@@ -224,7 +224,7 @@ async def _enrich_from_related(
         ", ".join((capped_subs + capped_separate)[:5]) + ("..." if len(capped_subs) + len(capped_separate) > 5 else ""),
     )
 
-    # v0.10.2: split capped subdomains into medium-tier (MX + DKIM) and
+    # Split capped subdomains into medium-tier (MX + DKIM) and
     # lightweight (CNAME + TXT only). Medium tier gets the top-signal
     # prefixes most likely to publish their own verification records.
     def _is_medium_tier(name: str) -> bool:

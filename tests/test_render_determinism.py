@@ -1,4 +1,4 @@
-"""v1.9.9 — render-time determinism property tests.
+"""Render-time determinism property tests.
 
 The user-facing contract of ``render_tenant_panel`` is that the same
 TenantInfo always produces the same output. Non-deterministic

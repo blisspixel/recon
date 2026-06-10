@@ -1,4 +1,4 @@
-"""v1.9.9 — render-time fuzz tests on render_tenant_panel.
+"""Render-time fuzz tests on render_tenant_panel.
 
 Fixture and snapshot tests pin specific inputs. Property tests pin
 specific function-level invariants. Fuzz tests exercise the full render
@@ -7,7 +7,7 @@ catch crashes, exceptions, and rendering edge cases that pre-canonical
 fixtures miss.
 
 The Hypothesis strategy below builds a TenantInfo from random choices
-across the dimensions that interact with the v1.9.9 surfaces:
+across the dimensions that interact with the new surfaces:
 
   * services / slugs (vary count, identity, cloud-vs-saas mix).
   * surface_attributions (vary count, vendor, tier).
@@ -15,9 +15,9 @@ across the dimensions that interact with the v1.9.9 surfaces:
   * show_domains flag (toggle --full mode).
 
 The single invariant under test is operational, not semantic: the
-renderer must not raise on any input the data model accepts. v1.9.9
-added two new branches with non-trivial conditions; a fuzz run is the
-quickest way to catch a NoneType or KeyError lurking in either.
+renderer must not raise on any input the data model accepts. The two
+new branches carry non-trivial conditions; a fuzz run is the quickest
+way to catch a NoneType or KeyError lurking in either.
 """
 
 from __future__ import annotations

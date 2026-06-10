@@ -1,4 +1,4 @@
-"""v1.9.9 — Hypothesis property tests on count_cloud_vendors.
+"""Hypothesis property tests on count_cloud_vendors.
 
 The fixture-based tests in ``test_multi_cloud_rollup.py`` pin specific
 input → output cases. Property tests pin invariants that should hold

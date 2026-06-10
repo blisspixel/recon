@@ -233,7 +233,7 @@ class TestLikelyPrimaryInference:
         )
 
     def test_gateway_with_dkim_downstream_confirms_google(self) -> None:
-        """v0.10.1: DKIM behind a gateway promotes to primary (confirmed)."""
+        """DKIM behind a gateway promotes to primary (confirmed)."""
         from recon_tool.merger import _compute_email_topology
 
         evidence = (

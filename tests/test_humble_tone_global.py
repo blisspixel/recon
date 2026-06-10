@@ -1,4 +1,4 @@
-"""v1.9.9 — suite-wide humble-tone enforcement on user-facing strings.
+"""Suite-wide humble-tone enforcement on user-facing strings.
 
 The project's tone discipline (no overclaim words, no marketing
 language, hedged framing) was previously enforced locally at the

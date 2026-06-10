@@ -1,4 +1,4 @@
-"""v1.9.9 — catalog-driven Hypothesis corpus.
+"""Catalog-driven Hypothesis corpus.
 
 The hand-curated synthetic corpus at
 ``validation/synthetic_corpus/fixtures/`` is consistency-checking by

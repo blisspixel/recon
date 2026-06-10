@@ -8,7 +8,7 @@ Implements the criterion-(a) test from ``docs/roadmap.md`` §v1.9.5:
     propagation works as designed for that node, not just that the
     engine runs Bayes."
 
-For every node in the v1.9.3+ topology, this module asserts two
+For every node in the topology, this module asserts two
 properties against the bundled ``bayesian_network.yaml``:
 
 1. **Bound-evidence sensitivity.** Adding any one of the node's
@@ -91,7 +91,7 @@ _NODE_BINDINGS: dict[str, list[tuple[str, str]]] = {
         ("signal", "dmarc_reject"),
         ("signal", "dmarc_quarantine"),
         ("signal", "mta_sts_enforce"),
-        # v1.9.6: dkim_present removed as evidence binding — DKIM
+        # dkim_present removed as evidence binding: DKIM
         # publication is a deliverability hygiene signal, not a
         # policy-enforcement signal. See bayesian_network.yaml
         # `email_security_policy_enforcing` for the concept comment
@@ -245,7 +245,7 @@ def test_baseline_root_posteriors_equal_priors() -> None:
 def test_node_bindings_directory_is_complete() -> None:
     """Every node in the shipped network appears in either the
     direct-bindings or pure-propagation directory. Catches the case
-    where a future v1.9.x patch adds a node but forgets to extend
+    where a future patch adds a node but forgets to extend
     this test.
     """
     declared = set(_NODE_BINDINGS) | set(_PURE_PROPAGATION_NODES)
