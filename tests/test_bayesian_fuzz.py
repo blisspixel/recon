@@ -22,6 +22,9 @@ from recon_tool.bayesian import (
     load_priors_override,
 )
 
+# Part of the dedicated hostile-input fuzz gate (run with `-m hostile_input`).
+pytestmark = pytest.mark.hostile_input
+
 
 def _write(path: Path, spec: object) -> Path:
     path.write_text(yaml.safe_dump(spec), encoding="utf-8")

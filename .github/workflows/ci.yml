@@ -196,3 +196,33 @@ jobs:
         # allows past-tense prose discussion in roadmap and
         # migration docs.
         run: uv run python scripts/check_no_experimental_labels.py
+
+  hostile-input-fuzz:
+    # Dedicated gate for the adversarial / oversized / malformed parser tests and
+    # the Hypothesis fuzz suites (the `hostile_input` marker). Promotes them from
+    # incidental coverage under the `test` job to an authoritative, separately
+    # visible gate, run at a higher Hypothesis example budget (RECON_FUZZ). The
+    # same tests still run inside `test` (where they count toward coverage); this
+    # job exists so a parser-bound regression is its own red check.
+    runs-on: ubuntu-latest
+    env:
+      # .python-version pins the toolchain to 3.14; force the matrix interpreter.
+      UV_PYTHON: "3.11"
+      # Load the higher-budget Hypothesis profile (conftest.py) for this job.
+      RECON_FUZZ: "1"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run hostile-input fuzz gate
+        run: uv run pytest tests/ -m "hostile_input and not integration"
