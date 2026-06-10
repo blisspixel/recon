@@ -414,11 +414,13 @@ candidates below; they are the work that matters most.
 
 Each item ships with acceptance criteria, checkable gates rather than "improved
 tests," and where it produces a durable artifact it ships a doc so the trust is
-inspectable rather than asserted: a threat model (`docs/threat-model.md`), an
-assurance case mapping each promise to its mechanism, its test, and its residual
-risk (`docs/assurance-case.md`), an operational contract (timeouts, caps, exit
-codes, cache and partial-result semantics, determinism), a data-handling policy
-(what may and may not enter the public repo, down to comments and fixtures), and a
+inspectable rather than asserted. Shipped: the engineering threat model
+(`docs/security.md`), the assurance case mapping each promise to its mechanism,
+its test, and its residual risk (`docs/assurance-case.md`), the operational
+contract (`docs/operational-contract.md`: timeouts, caps, exit codes, cache and
+partial-result semantics, determinism), and the supply-chain / release-integrity
+doc (`docs/supply-chain.md`). Still to write: a data-handling policy (what may and
+may not enter the public repo, down to comments and fixtures), and a
 statistical-assurance dossier that separates what is observed, what is
 consistency, what is evidence-responsive, and what has empirical coverage. This is
 a standing track across the 2.x line, not a single release, and it adds no

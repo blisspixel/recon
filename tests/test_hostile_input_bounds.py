@@ -26,6 +26,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from recon_tool.fingerprints import match_txt
 from recon_tool.models import SourceResult
 from recon_tool.sources import dns as dns_mod
 from recon_tool.sources.azure_metadata import AzureMetadataSource
@@ -294,6 +295,14 @@ class TestDnsParserBounds:
         ):
             await dns_mod._detect_cname_infra(ctx, "contoso.com")
         assert "fakecdn" in ctx.slugs
+
+    def test_match_txt_oversized_value_is_skipped(self) -> None:
+        """match_txt early-returns None when the TXT value exceeds
+        _MAX_TXT_MATCH_LENGTH (4096), before any regex runs, so a crafted multi-KB
+        TXT cannot amplify backtracking on the apex-TXT matcher path."""
+        rule = SimpleNamespace(pattern="match-me", name="X", slug="x", type="txt")
+        assert match_txt("match-me", [rule]) is not None  # within cap matches
+        assert match_txt("match-me" + "a" * 5000, [rule]) is None  # oversized skipped
 
 
 # ── Source-level free-text field cap ──────────────────────────────────────

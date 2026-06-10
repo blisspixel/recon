@@ -25,7 +25,17 @@ tooling expects them there: `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
 | Upgrading from v1.x to v2.0 | [migration-v2.md](migration-v2.md) |
 | Performance expectations | [performance.md](performance.md) |
 | Intended-use and query exposure | [legal.md](legal.md) |
+
+## Trust and assurance
+
+For anyone evaluating recon as a primitive to build on.
+
+| Topic | Read |
+|---|---|
 | Engineering threat model | [security.md](security.md) |
+| Auditable claim → mechanism → test → residual | [assurance-case.md](assurance-case.md) |
+| Runtime contract (timeouts, caps, exit codes, determinism) | [operational-contract.md](operational-contract.md) |
+| Release integrity (reproducible, signed, attested builds) | [supply-chain.md](supply-chain.md) |
 
 ## Extending recon
 

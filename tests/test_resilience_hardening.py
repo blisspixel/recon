@@ -30,12 +30,16 @@ from recon_tool import cache as cache_mod
 from recon_tool import ct_cache as ct_cache_mod
 from recon_tool.http import (
     _COMPRESSING_ENCODINGS,
+    _MAX_TOTAL_RETRY_SLEEP,
+    MAX_REDIRECTS,
     _MaxBytesStream,
     _RefusingStream,
+    _RetryTransport,
     _SSRFSafeTransport,
     http_client,
 )
 from recon_tool.infra_graph import _MAX_EDGE_ISSUER_SAMPLES, _build_graph, build_infrastructure_clusters
+from recon_tool.rate_limit import AdaptiveRateLimiter, rate_limit_state_dir
 from recon_tool.sources.cert_providers import CertSpotterProvider, CrtshProvider
 
 # Part of the dedicated hostile-input fuzz gate (run with `-m hostile_input`).
@@ -168,6 +172,16 @@ class TestPoisonedCacheDegrades:
         _write_ct_cache(monkeypatch, tmp_path, _DEEPLY_NESTED_JSON)
         assert ct_cache_mod.ct_cache_show("contoso.com") is None
 
+    def test_rate_limit_load_persisted_degrades_on_poison(self) -> None:
+        # A deeply-nested persisted limiter-state file must not crash limiter
+        # construction: _load_persisted catches RecursionError and degrades to
+        # fresh defaults. RECON_CONFIG_DIR is isolated by the autouse fixture.
+        sd = rate_limit_state_dir()
+        sd.mkdir(parents=True, exist_ok=True)
+        (sd / "poison.json").write_text(_DEEPLY_NESTED_JSON, encoding="utf-8")
+        lim = AdaptiveRateLimiter("poison", 0.1, 1.0, persist=True)
+        assert lim.name == "poison"
+
 
 # ── 3. CT graph is bounded by entry count, not just node count ────────────
 
@@ -233,3 +247,37 @@ class TestCtProviderRecursionError:
         monkeypatch.setattr(cp, "http_client", _fake_ct_client(_DEEPLY_NESTED_JSON.encode()))
         with pytest.raises(httpx.HTTPError):
             await CertSpotterProvider().query("contoso.com")
+
+
+# ── HTTP retry / redirect bounds ──────────────────────────────────────────
+
+
+class TestHttpBounds:
+    @pytest.mark.asyncio
+    async def test_client_bounds_redirects(self) -> None:
+        """The shared client caps redirects at MAX_REDIRECTS (5), so an
+        attacker-influenced redirect chain cannot loop unbounded."""
+        async with http_client() as client:
+            assert MAX_REDIRECTS == 5
+            assert client.max_redirects == MAX_REDIRECTS
+
+    @pytest.mark.asyncio
+    async def test_retry_cumulative_sleep_is_capped(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Repeated 429s with a large Retry-After cannot stack retry sleep past
+        _MAX_TOTAL_RETRY_SLEEP (30s), so an attacker-influenced endpoint cannot
+        burn the aggregate resolve budget through rate-limit backoff."""
+        slept: list[float] = []
+
+        async def _record(seconds: float) -> None:
+            slept.append(seconds)
+
+        monkeypatch.setattr("recon_tool.http.asyncio.sleep", _record)
+
+        class _Always429(httpx.AsyncHTTPTransport):
+            async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+                return httpx.Response(429, headers={"Retry-After": "30"}, content=b"", request=request)
+
+        transport = _RetryTransport(wrapped=_Always429())
+        resp = await transport.handle_async_request(httpx.Request("GET", "https://example.com/"))
+        assert resp.status_code == 429  # last response returned after retries exhausted
+        assert sum(slept) <= _MAX_TOTAL_RETRY_SLEEP + 1e-9
