@@ -47,6 +47,11 @@ CT_CACHE_TTL: int = 2592000  # 30 days in seconds.
 # across the build-up runs without forcing re-fetch when nothing
 # meaningful about a domain's cert posture is likely to have changed.
 
+# A CT cache entry is small (up to ~100 subdomains plus a cert summary). Skip a
+# file larger than this before read_text/json.loads so a corrupt or hostile
+# oversized file is not read whole into memory.
+_MAX_CT_CACHE_FILE_BYTES = 5 * 1024 * 1024
+
 
 @dataclass(frozen=True)
 class CTCacheEntry:
@@ -114,8 +119,11 @@ def ct_cache_get(domain: str, ttl: int = CT_CACHE_TTL) -> CTCacheEntry | None:
         path = _safe_path(domain)
         if not path.exists():
             return None
-        mtime = path.stat().st_mtime
-        age_seconds = time.time() - mtime
+        stat = path.stat()
+        if stat.st_size > _MAX_CT_CACHE_FILE_BYTES:
+            logger.debug("CT cache file for %s exceeds %d bytes; treating as a miss", domain, _MAX_CT_CACHE_FILE_BYTES)
+            return None
+        age_seconds = time.time() - stat.st_mtime
         if age_seconds > ttl:
             logger.debug("CT cache stale for %s (age %.0f s > %d s)", domain, age_seconds, ttl)
             return None
@@ -123,7 +131,9 @@ def ct_cache_get(domain: str, ttl: int = CT_CACHE_TTL) -> CTCacheEntry | None:
         if not isinstance(data, dict):
             raise ValueError("CT cache payload must be a JSON object")
         return _entry_from_dict(data, age_seconds)
-    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+    except (OSError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
+        # RecursionError (a deeply-nested poisoned file) escapes the other
+        # entries; degrade to a clean miss rather than crash the caller.
         logger.debug("CT cache read failed for %s", domain, exc_info=True)
         return None
 
@@ -184,6 +194,9 @@ def ct_cache_show(domain: str) -> CTCacheInfo | None:
         if not path.exists():
             return None
         stat = path.stat()
+        if stat.st_size > _MAX_CT_CACHE_FILE_BYTES:
+            logger.debug("CT cache file for %s exceeds %d bytes; treating as a miss", domain, _MAX_CT_CACHE_FILE_BYTES)
+            return None
         age_seconds = time.time() - stat.st_mtime
         data = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
@@ -196,7 +209,7 @@ def ct_cache_show(domain: str) -> CTCacheInfo | None:
             age_days=int(age_seconds / 86400),
             file_size_bytes=stat.st_size,
         )
-    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+    except (OSError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
         logger.debug("CT cache show failed for %s", domain, exc_info=True)
         return None
 

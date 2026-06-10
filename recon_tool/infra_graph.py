@@ -88,6 +88,18 @@ MAX_EDGES_RETAINED = 2000
 # hundreds of SANs cannot blow up the edge count quadratically.
 _MAX_SANS_PER_CERT_FOR_EDGES = 60
 
+# Bound graph construction by the number of cert entries processed, not just by
+# node growth. A fixed small SAN set reused across tens of thousands of certs
+# never trips MAX_GRAPH_NODES, yet still re-runs combinations() per entry and
+# accumulates one issuer sample per edge per entry, so the entry count is the
+# real amplification dimension. 1000 matches the crt.sh cert-summary cap.
+_MAX_GRAPH_ENTRIES = 1000
+
+# Cap how many issuer samples accumulate per edge. The dominant issuer only
+# needs the most-common, not every contribution, so a handful of samples is
+# enough and the per-edge list cannot grow with the entry count.
+_MAX_EDGE_ISSUER_SAMPLES = 32
+
 # Seed for Louvain — keeps partitions stable across runs.
 _LOUVAIN_SEED = 1729
 
@@ -142,7 +154,14 @@ def _build_graph(
     edge_issuers: dict[tuple[str, str], list[str]] = {}
     truncated = False
 
-    for entry in entries:
+    for idx, entry in enumerate(entries):
+        if idx >= _MAX_GRAPH_ENTRIES:
+            # Bound work by entry count even when the node count is frozen
+            # (a small SAN set reused across many certs never trips the node
+            # cap but still re-runs combinations() and grows edge_issuers).
+            # Route to the connected-components fallback on the partial graph.
+            truncated = True
+            break
         if g.number_of_nodes() >= MAX_GRAPH_NODES:
             # Stop adding new certs once the node cap is reached.
             # Existing edges still aggregate their issuer lists for
@@ -171,7 +190,9 @@ def _build_graph(
             else:
                 g.add_edge(a, b, shared_certs=1, weight=1.0)
             if issuer:
-                edge_issuers.setdefault((a, b), []).append(issuer)
+                samples = edge_issuers.setdefault((a, b), [])
+                if len(samples) < _MAX_EDGE_ISSUER_SAMPLES:
+                    samples.append(issuer)
     return g, edge_issuers, truncated
 
 

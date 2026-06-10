@@ -181,7 +181,7 @@ async def test_resolve_tenant_threads_active_probes() -> None:
 
 pytest.importorskip("mcp")
 
-from recon_tool.server import _cache_clear, _rate_limit, analyze_posture  # noqa: E402
+from recon_tool.server import _cache_clear, _rate_limit, analyze_posture
 
 _POSTURE_INFO = TenantInfo(
     tenant_id=_TENANT_UUID,
