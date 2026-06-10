@@ -18,6 +18,59 @@ notes, see [`docs/security.md`](security.md).
 
 ---
 
+## Closed: ingestion-boundary resilience round (v2.1.9)
+
+| Field | Value |
+|---|---|
+| **Severity (as audited)** | High (HTTP decompression bomb); Medium / Low (the rest) |
+| **Source** | Internal boundary fault-injection audit (2026-06), adversarially verified |
+| **Fully closed** | **v2.1.9** |
+| **Pinned by** | `tests/test_resilience_hardening.py` |
+
+A fault-injection sweep across every external-input boundary (DNS, CT / cert,
+identity endpoints, HTTP, file / cache) confirmed four gaps an attacker who
+controls a queried domain (or a CT provider) could reach. Each now degrades
+cleanly with no crash, hang, or unbounded resource use.
+
+- **HTTP decompression bomb (High).** `_MaxBytesStream` caps the response body
+  at 10 MB, but it counts the *compressed* transfer bytes; httpx decodes
+  Content-Encoding downstream of the transport stream, so a ~9 MB gzip body
+  could decode to ~9 GB and exhaust memory on `resp.json()` / `resp.text`. The
+  hosts behind `mta-sts.<domain>`, `cse.<domain>`, the BIMI VMC URL, and the CT
+  providers are attacker-influenceable. **Fix:** recon requests
+  `Accept-Encoding: identity` and the SSRF transport refuses any response that
+  still carries a compressing Content-Encoding (`_RefusingStream`), since a host
+  that ignores the identity request is the bomb vector. The two `http.py`
+  docstrings that incorrectly claimed the byte cap defended against this are
+  corrected to describe the actual mechanism.
+- **Poisoned-cache RecursionError (Medium).** A deeply-nested JSON file under
+  `~/.recon` raises `RecursionError` (a `RuntimeError`, not a `ValueError`),
+  which the cache loaders' except tuples did not catch, so a poisoned cache file
+  crashed the next lookup instead of degrading to a clean miss. **Fix:**
+  `RecursionError` added to the catch in `cache_get`, `ct_cache_get`,
+  `ct_cache_show`, and `rate_limit._load_persisted`, plus a pre-read file-size
+  cap on the cache loaders.
+- **CT graph entry-count amplification (Medium).** A fixed small SAN set reused
+  across tens of thousands of CertSpotter issuances never tripped
+  `MAX_GRAPH_NODES`, yet re-ran the per-cert clique build and accumulated one
+  issuer string per edge per entry (quadratic in entries; about 21 s and
+  150 MB in the measured worst case, blocking the event loop). **Fix:**
+  `_build_graph` is bounded by `_MAX_GRAPH_ENTRIES`, per-edge issuer samples are
+  capped at `_MAX_EDGE_ISSUER_SAMPLES`, and CertSpotter's accumulated entry list
+  is capped like crt.sh's.
+- **CT provider RecursionError (Low).** The providers' `resp.json()` guard
+  caught only `ValueError`, so a deeply-nested CT payload skipped the
+  provider-local degrade (the limiter health signal). The orchestrator's broad
+  `except` still prevented a crash, so this is a degrade-fidelity gap, not a DoS.
+  **Fix:** the guard now catches `(ValueError, RecursionError)`.
+
+The same audit *rejected* seven other candidate gaps as already neutralized by
+existing guards (the aggregate 120 s resolve timeout bounding the SPF
+redirect fan-out, the 64 KB DNS message ceiling, the per-cert SAN slice and
+entry caps, the 10 MB body cap on the identity path, and PyYAML's
+reference-shared alias handling for the home-directory overlay loaders), which
+is recorded here so a re-scan does not re-open them.
+
 ## Closed: MCP doctor/install can execute shadowed `recon_tool` package
 
 | Field | Value |

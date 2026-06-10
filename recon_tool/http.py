@@ -47,12 +47,26 @@ _MAX_TOTAL_RETRY_SLEEP = 30.0
 # fetches have a host influenced by the looked-up domain owner
 # (cse.<domain>, mta-sts.<domain>, the BIMI a= VMC URL, autodiscover
 # redirects), and CT providers are third parties. resp.json() / resp.text
-# buffer the whole body into memory, so without a cap a multi-GB or
-# gzip-decompression-bomb response could OOM the process (or the MCP
-# server). 10 MB is far above any legitimate response recon reads (CT
-# JSON pages are bounded by their own entry caps; policy/config files are
-# tiny). Enforced by _MaxBytesStream during the body read.
+# buffer the whole body into memory, so without a cap a multi-GB response
+# could OOM the process (or the MCP server). 10 MB is far above any
+# legitimate response recon reads (CT JSON pages are bounded by their own
+# entry caps; policy/config files are tiny).
+#
+# _MaxBytesStream counts the bytes recon reads off the wire, which are the
+# COMPRESSED transfer bytes: httpx decodes Content-Encoding downstream of
+# the transport stream, so the byte cap alone does NOT bound a gzip
+# decompression bomb (a few MB of gzip expand to many GB after decode).
+# recon defends that separately: it requests ``Accept-Encoding: identity``
+# so a cooperating server sends the body uncompressed (making the raw cap
+# the decoded cap), and refuses any response that still carries a
+# compressing Content-Encoding via _RefusingStream, since an attacker-
+# controlled host that ignores the identity request is the bomb vector.
 _MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+
+# Content-Encoding values whose decoded body can be far larger than the
+# transfer. recon requests identity and refuses a response carrying any of
+# these rather than let httpx decode an attacker-sized payload past the cap.
+_COMPRESSING_ENCODINGS = frozenset({"gzip", "x-gzip", "deflate", "br", "compress", "zstd"})
 
 # IP networks that must never be reached via redirects (SSRF protection).
 # Covers loopback, private RFC1918, link-local, and cloud metadata ranges.
@@ -176,6 +190,29 @@ class _MaxBytesStream(httpx.AsyncByteStream):
         await self._stream.aclose()
 
 
+class _RefusingStream(httpx.AsyncByteStream):
+    """A response stream that refuses to yield a body, raising on first read.
+
+    Installed when a response carries a compressing Content-Encoding despite
+    recon's ``Accept-Encoding: identity`` request. Reading the body would let
+    httpx decode an attacker-controlled payload whose decoded size the transfer
+    cap does not bound (a decompression bomb), so we refuse before any decode.
+    The caller's body read raises httpx.ReadError and the source degrades
+    cleanly, exactly like any other transport failure.
+    """
+
+    def __init__(self, encoding: str) -> None:
+        self._encoding = encoding
+
+    async def __aiter__(self) -> AsyncGenerator[bytes]:
+        msg = f"refusing {self._encoding!r}-encoded response (identity requested; possible decompression bomb)"
+        raise httpx.ReadError(msg)
+        yield b""  # pragma: no cover - unreachable; makes this an async generator
+
+    async def aclose(self) -> None:
+        return None
+
+
 class _SSRFSafeTransport(httpx.AsyncHTTPTransport):
     """Transport wrapper that blocks requests to private/internal IPs.
 
@@ -184,10 +221,13 @@ class _SSRFSafeTransport(httpx.AsyncHTTPTransport):
     open redirects on upstream endpoints, including DNS rebinding attacks
     where a hostname resolves to an internal IP.
 
-    It also wraps the response body in _MaxBytesStream so an oversized or
-    decompression-bomb response is aborted during the read rather than
-    buffered whole. Uses async DNS resolution to avoid blocking the event
-    loop. See module docstring for TOCTOU limitations.
+    It also bounds the response body two ways: an oversized identity body is
+    aborted mid-read by _MaxBytesStream, and a response that carries a
+    compressing Content-Encoding (despite recon's ``Accept-Encoding: identity``
+    request) is refused outright by _RefusingStream, since the byte cap counts
+    compressed transfer bytes and cannot bound a decompression bomb. Uses async
+    DNS resolution to avoid blocking the event loop. See module docstring for
+    TOCTOU limitations.
     """
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
@@ -196,7 +236,15 @@ class _SSRFSafeTransport(httpx.AsyncHTTPTransport):
             raise httpx.ConnectError(f"SSRF blocked: request to private/internal IP {host}")
         response = await super().handle_async_request(request)
         if isinstance(response.stream, httpx.AsyncByteStream):
-            response.stream = _MaxBytesStream(response.stream, _MAX_RESPONSE_BYTES)
+            encodings = {e.strip() for e in response.headers.get("content-encoding", "").lower().split(",")}
+            compressing = encodings & _COMPRESSING_ENCODINGS
+            if compressing:
+                # Server compressed despite our identity request. Decoding could
+                # be a decompression bomb (the byte cap counts compressed bytes),
+                # so refuse the body instead of buffering the decode.
+                response.stream = _RefusingStream(", ".join(sorted(compressing)))
+            else:
+                response.stream = _MaxBytesStream(response.stream, _MAX_RESPONSE_BYTES)
         return response
 
 
@@ -304,7 +352,11 @@ async def http_client(
         client = httpx.AsyncClient(
             transport=transport,
             timeout=timeout,
-            headers={"User-Agent": _user_agent()},
+            # Request identity (uncompressed) so a cooperating server's body is
+            # bounded by the same _MAX_RESPONSE_BYTES cap that counts wire bytes.
+            # A host that ignores this and compresses anyway is refused by the
+            # transport (decompression-bomb guard); see _SSRFSafeTransport.
+            headers={"User-Agent": _user_agent(), "Accept-Encoding": "identity"},
             follow_redirects=True,
             max_redirects=MAX_REDIRECTS,
         )

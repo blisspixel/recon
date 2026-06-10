@@ -683,7 +683,10 @@ class CrtshProvider:
                 raise httpx.HTTPStatusError(msg, request=resp.request, response=resp)
             try:
                 data = resp.json()
-            except ValueError as exc:
+            except (ValueError, RecursionError) as exc:
+                # RecursionError (deeply-nested JSON) is a RuntimeError, not a
+                # ValueError, so it bypassed this guard and skipped the limiter
+                # update; catch it so the provider degrades like any bad payload.
                 limiter.on_other_failure()
                 msg = f"crt.sh returned invalid JSON for {domain}"
                 raise httpx.HTTPError(msg) from exc
@@ -765,6 +768,33 @@ class CertSpotterProvider:
             params["after"] = after_cursor
         return await client.get(self._BASE_URL, params=params)
 
+    @staticmethod
+    def _accumulate_issuances(
+        data: list[Any],
+        all_raw_names: list[str],
+        all_cert_entries: list[dict[str, str | int | list[str] | None]],
+    ) -> str | None:
+        """Accumulate one page's issuances into the running lists, and return the
+        last issuance id (the pagination cursor) or None.
+
+        Capped at ``_MAX_CRTSH_CERT_SUMMARY_ENTRIES`` the way crt.sh already is: a
+        10 MB page can carry thousands of issuances reusing one small SAN set,
+        which the unique-name early-exit never catches and which would otherwise
+        feed an unbounded entry count into the graph builder.
+        """
+        last_id: str | None = None
+        for issuance in data:
+            if len(all_cert_entries) >= _MAX_CRTSH_CERT_SUMMARY_ENTRIES:
+                break
+            names, cert_entry, issuance_id = _parse_certspotter_issuance(issuance)
+            if cert_entry is None:
+                continue
+            all_raw_names.extend(names)
+            all_cert_entries.append(cert_entry)
+            if issuance_id is not None:
+                last_id = issuance_id
+        return last_id
+
     async def query(
         self,
         domain: str,
@@ -831,7 +861,9 @@ class CertSpotterProvider:
                     raise httpx.HTTPStatusError(msg, request=resp.request, response=resp)
                 try:
                     data = resp.json()
-                except ValueError as exc:
+                except (ValueError, RecursionError) as exc:
+                    # RecursionError (deeply-nested JSON) is a RuntimeError, not a
+                    # ValueError; catch it so a hostile payload degrades cleanly.
                     limiter.on_other_failure()
                     msg = f"CertSpotter returned invalid JSON for {domain}"
                     raise httpx.HTTPError(msg) from exc
@@ -843,23 +875,17 @@ class CertSpotterProvider:
                     # list (genuine empty success, not rate-limited).
                     break
 
-                # Parse each issuance via the shared helper so this method
-                # stays a thin pagination driver. A non-mapping issuance
-                # yields a None entry and is skipped.
-                last_id: str | None = None
-                for issuance in data:
-                    names, cert_entry, issuance_id = _parse_certspotter_issuance(issuance)
-                    if cert_entry is None:
-                        continue
-                    all_raw_names.extend(names)
-                    all_cert_entries.append(cert_entry)
-                    if issuance_id is not None:
-                        last_id = issuance_id
+                # Accumulate this page's issuances (entry-count capped) via the
+                # helper so this method stays a thin pagination driver.
+                last_id = self._accumulate_issuances(data, all_raw_names, all_cert_entries)
 
                 # If we already have enough unique candidate names to
-                # fill MAX_SUBDOMAINS after filtering, stop early. No
-                # point paying for more pages.
-                if len(set(all_raw_names)) >= MAX_SUBDOMAINS * 2:
+                # fill MAX_SUBDOMAINS after filtering, or have hit the entry
+                # cap, stop early. No point paying for more pages.
+                if (
+                    len(set(all_raw_names)) >= MAX_SUBDOMAINS * 2
+                    or len(all_cert_entries) >= _MAX_CRTSH_CERT_SUMMARY_ENTRIES
+                ):
                     break
 
                 # Advance the cursor. If the response didn't include

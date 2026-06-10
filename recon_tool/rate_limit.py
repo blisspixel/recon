@@ -175,7 +175,10 @@ class AdaptiveRateLimiter:
             return
         try:
             data = json.loads(text)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, RecursionError):
+            # RecursionError (a deeply-nested state file) is a RuntimeError, not
+            # a ValueError, so it escaped the original tuple; fall back to fresh
+            # defaults rather than propagate it out of the warm-start path.
             return
         if not isinstance(data, dict):
             return

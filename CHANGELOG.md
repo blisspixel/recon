@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.9] - 2026-06-09
+
+### Resilience: close confirmed ingestion-boundary fault-injection gaps
+
+A fault-injection sweep across every external-input boundary (DNS, CT / cert,
+identity endpoints, HTTP, file / cache) confirmed four gaps reachable by an
+attacker who controls a queried domain or a CT provider. Each now degrades
+cleanly. The same sweep rejected seven other candidates as already neutralized
+by existing guards (recorded in `docs/security-audit-resolutions.md`).
+
+- **HTTP decompression bomb (High):** the 10 MB body cap counts compressed
+  transfer bytes, but httpx decodes Content-Encoding downstream, so a ~9 MB gzip
+  body could decode to ~9 GB and exhaust memory on `resp.json()` / `resp.text`.
+  recon now requests `Accept-Encoding: identity` and the SSRF transport refuses
+  any response that still carries a compressing Content-Encoding (a host that
+  ignores the identity request is the bomb vector). The two `http.py` docstrings
+  that claimed the byte cap defended against this are corrected.
+- **Poisoned-cache RecursionError (Medium):** a deeply-nested JSON file under
+  `~/.recon` raises `RecursionError` (a `RuntimeError`, not `ValueError`), which
+  the cache loaders did not catch, so a poisoned file crashed the next lookup
+  instead of degrading to a clean miss. `RecursionError` is now caught in
+  `cache_get`, `ct_cache_get`, `ct_cache_show`, and `rate_limit._load_persisted`,
+  with a pre-read file-size cap on the cache loaders.
+- **CT graph entry-count amplification (Medium):** a small SAN set reused across
+  many CertSpotter issuances never tripped the node cap but re-ran the per-cert
+  clique build and grew the per-edge issuer list without bound (about 21 s and
+  150 MB worst case, blocking the event loop). Graph construction is now bounded
+  by `_MAX_GRAPH_ENTRIES`, per-edge issuer samples by `_MAX_EDGE_ISSUER_SAMPLES`,
+  and CertSpotter's accumulated entry list is capped like crt.sh's.
+- **CT provider RecursionError (Low):** the providers' `resp.json()` guard caught
+  only `ValueError`, so a deeply-nested payload skipped the provider-local
+  degrade (the orchestrator still prevented a crash); it now catches
+  `(ValueError, RecursionError)`.
+
+Gate: full pytest (2853 passed), ruff, pyright (0 errors), validate_fingerprint (841), branch coverage 85%.
+
 ## [2.1.8] - 2026-06-09
 
 ### Passive by default: direct probes to target-controlled hosts are opt-in

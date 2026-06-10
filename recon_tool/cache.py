@@ -54,6 +54,14 @@ DEFAULT_TTL: int = 86400  # 24 hours
 
 _CACHE_VERSION = 1
 
+# A cache entry is a serialized TenantInfo (a few KB, up to ~100 KB with CT
+# data). Skip a file larger than this before read_text/json.loads so a corrupt
+# or hostile oversized file cannot be read whole into memory. Pairs with the
+# RecursionError catch below: a deeply-nested JSON file raises RecursionError
+# (a RuntimeError, not a ValueError), so without the catch a poisoned cache file
+# would crash the next lookup instead of degrading to a clean cache miss.
+_MAX_CACHE_FILE_BYTES = 5 * 1024 * 1024
+
 
 def cache_dir() -> Path:
     """Return the cache directory path, respecting RECON_CONFIG_DIR."""
@@ -77,9 +85,14 @@ def cache_get(domain: str, ttl: int = DEFAULT_TTL) -> TenantInfo | None:
             return None
         if not path.exists():
             return None
+        st = path.stat()
+        # Bound the read: an oversized (corrupt/hostile) file is not a valid
+        # cache entry, so skip it rather than read it whole into memory.
+        if st.st_size > _MAX_CACHE_FILE_BYTES:
+            logger.debug("Cache file for %s exceeds %d bytes; treating as a miss", domain, _MAX_CACHE_FILE_BYTES)
+            return None
         # Lazy eviction: check mtime against TTL
-        mtime = path.stat().st_mtime
-        if time.time() - mtime > ttl:
+        if time.time() - st.st_mtime > ttl:
             logger.debug("Cache stale for %s (age > %d s)", domain, ttl)
             return None
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -88,7 +101,10 @@ def cache_get(domain: str, ttl: int = DEFAULT_TTL) -> TenantInfo | None:
         if isinstance(cached_at, str) and cached_at:
             info = dataclasses.replace(info, cached_at=cached_at)
         return info
-    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+    except (OSError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
+        # RecursionError (a RuntimeError, not ValueError) escapes the other
+        # entries; a deeply-nested poisoned cache file must degrade to a clean
+        # miss, not crash the lookup. See the module docstring's "never raises".
         logger.debug("Cache read failed for %s", domain, exc_info=True)
         return None
 
@@ -676,9 +692,7 @@ def _read_slug_confidences(raw: object) -> tuple[tuple[str, float], ...]:
     if isinstance(raw, dict):
         return tuple((str(k), float(v)) for k, v in raw.items())
     if isinstance(raw, list | tuple):
-        return tuple(
-            (str(e[0]), float(e[1])) for e in raw if isinstance(e, list | tuple) and len(e) == 2
-        )
+        return tuple((str(e[0]), float(e[1])) for e in raw if isinstance(e, list | tuple) and len(e) == 2)
     return ()
 
 
