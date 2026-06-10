@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.13] - 2026-06-10
+
+### Assurance: auditable trust docs + closed proving-test gaps
+
+Makes recon's trust claims inspectable for anyone evaluating it as a primitive to
+build on. A traceability audit (each mitigation mapped to its implementing code
+and the test that proves it) produced two durable artifacts and surfaced a few
+mechanisms that were present but not directly asserted; the cheap ones are now
+closed.
+
+- **`docs/assurance-case.md`** maps each promise (passive, bounded / resilient,
+  safe output, safe-to-point-at-an-untrusted-target, honest about uncertainty,
+  verifiable artifact) to its mechanism, its proving test, and its residual risk,
+  and lists the standing proving-test gaps honestly.
+- **`docs/operational-contract.md`** documents the concrete runtime contract:
+  timeouts, resource caps, exit codes, cache and partial-result semantics, and
+  determinism. The docs index gains a "Trust and assurance" section linking these
+  plus the existing threat model and the supply-chain doc.
+- Closed four proving-test gaps the audit named: the `match_txt`
+  `_MAX_TXT_MATCH_LENGTH` cap, the `MAX_REDIRECTS` redirect bound, the cumulative
+  retry-sleep cap (`_MAX_TOTAL_RETRY_SLEEP`), and the rate-limiter
+  `_load_persisted` RecursionError degrade on a poisoned state file.
+
+Docs and tests only; no package code changed.
+
+Gate: full pytest (2905 passed), ruff, pyright (0 errors), validate_fingerprint (841), branch coverage 85%.
+
 ## [2.1.12] - 2026-06-10
 
 ### Assurance: reproducible builds + sigstore-signed PyPI attestations
