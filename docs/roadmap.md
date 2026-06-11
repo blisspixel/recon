@@ -150,11 +150,11 @@ Five tracks run as a sequence of focused, CI-green 1.9.x patches:
 ### Remaining work to v2.0 (the execution queue)
 
 > **All shipped (historical).** Everything in this subsection and the v2.0 lock
-> ceremony below was completed; v2.0.0 and the v2.1.x line have all shipped (the
-> current release is v2.1.10). The detail is kept for the rationale and the
-> per-item disposition; the forward plan is the post-2.0 assurance track above
-> and the feature candidates below. Per-release detail lives in
-> [CHANGELOG.md](../CHANGELOG.md).
+> ceremony below was completed; v2.0.0 and the v2.1.x line have all shipped (see
+> the status header at the top of this file for the current release). The detail
+> is kept for the rationale and the per-item disposition; the forward plan is the
+> post-2.0 assurance track above and the feature candidates below. Per-release
+> detail lives in [CHANGELOG.md](../CHANGELOG.md).
 
 This subsection is the single source of truth for what is left before the v2.0
 lock. The five tracks above describe the shape of the work; the queue below
