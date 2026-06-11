@@ -4,8 +4,8 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-> **Status (2026-06):** v2.1.10 is the current release. The v2.0 schema lock, the
-> v2.1 cohort summary (`recon batch --summary`), and the v2.1.1-v2.1.10 hardening,
+> **Status (2026-06):** v2.1.14 is the current release. The v2.0 schema lock, the
+> v2.1 cohort summary (`recon batch --summary`), and the v2.1.1-v2.1.14 hardening,
 > security, and assurance patches have all shipped; per-release detail is in
 > [CHANGELOG.md](../CHANGELOG.md) and upgrade notes in
 > [migration-v2.md](migration-v2.md).
