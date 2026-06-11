@@ -82,19 +82,22 @@ CI: cosmic-ray mutation testing over the inference core, blocking with a score
 floor.
 
 - **Gate.** `.github/workflows/mutation.yml` mutates `recon_tool/bayesian.py`
-  (1,642 mutants) and runs a focused four-file kill-set per mutant
-  (`test_bayesian_inference`, `test_bayesian_canonical`,
-  `test_bayesian_evidence_groups`, `test_drift_check`; about 1.5 s per mutant).
-  A baseline step proves the kill-set passes unmutated first, and
-  `cr-rate --fail-over 5` fails the job if survival exceeds 5% (kill score
-  below 95%). Blocking on any change to the mutated surface, the kill-set, the
-  config, or the workflow; weekly on a schedule; on demand via dispatch. Not
-  per-push: a docs or catalog change cannot change the mutation score of an
-  untouched module.
-- **Baseline result.** The 2026-06 sweep killed 1,642 of 1,642 mutants (100%
-  kill score, zero survivors to disposition). Scope rationale, kill-set
-  economics, survivor policy, and local-run instructions:
-  `validation/mutation-gate.md`.
+  and runs a focused kill-set per mutant, with a baseline step proving the
+  kill-set passes unmutated first and a score floor failing the job if survival
+  over tested mutants exceeds the bound. Blocking on any change to the mutated
+  surface, the kill-set, the config, or the workflow; weekly on a schedule; on
+  demand via dispatch. Not per-push: a docs or catalog change cannot change the
+  mutation score of an untouched module.
+- **Baseline result (corrected).** The kill-score figure first reported in this
+  entry, "1,642 of 1,642 (100%)", was a wrong-interpreter artifact: the local
+  sweep ran its kill-set under an interpreter that could not import the test
+  conftest, so every mutant died of a collection error rather than a test
+  verdict. The CI baseline step exposed it. The corrected authoritative sweep
+  measured 123 survivors of 1,431 tested (8.6% survival, 91.4% kill), with the
+  residual classified as equivalent-by-construction. The full story, the
+  equivalent-mutant classification, and the honest 12%-survival floor are in
+  `validation/mutation-gate.md`. (Corrected after release; the gate's own
+  baseline check is what caught the false number.)
 - **Tooling.** New `mutation` dependency group (cosmic-ray) so the per-push dev
   environment stays lean; `mutation.toml` is the committed config; the session
   DB is gitignored. cosmic-ray runs on both the Linux CI runner and Windows, so
