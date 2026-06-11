@@ -206,6 +206,7 @@ def _posterior_clause(obs: PosteriorObservation, fill: int) -> str:
         return f"thin on {claim}"
     return f"the evidence does not back {claim}"
 
+
 # M365-specific service keywords for display categorization (--services, markdown).
 # COUPLING WARNING: If you add a new M365 service to fingerprints.yaml, you may
 # need to add a keyword here too, or it will show up under "Tech Stack" instead
@@ -325,7 +326,6 @@ _PANEL_WIDTH = 78  # One char narrower than an 80-col terminal to avoid
 # filled. The layout has no border, so the
 # effective content width equals the panel width.
 _LABEL_WIDTH = 13  # columns for Provider/Tenant/Auth/Confidence labels
-_CATEGORY_WIDTH = 15  # columns for Services sub-category labels
 
 # Category display order. Each service is classified into exactly one
 # of these by _categorize_service; "Business Apps" is the fallback.
@@ -339,6 +339,15 @@ _SERVICE_CATEGORIES_ORDER: tuple[str, ...] = (
     "Collaboration",
     "Business Apps",
 )
+
+# Minimum columns for the Services sub-category labels. The effective
+# width per render is max(this floor, longest label present + 1), so a
+# panel that only shows short labels keeps the established 15-col column
+# (and its value width), while a panel that shows a long label widens
+# just enough to keep one space before the value. A fixed 15 silently
+# collided "Data & Analytics" (16 cols) onto its value
+# ("Data & AnalyticsMongoDB Atlas"); the +1 guarantees the gap.
+_CATEGORY_WIDTH = 15
 
 # Service → display-category classification. Checked in order; the first
 # matcher wins. Prefer slug lookups over service-name substring matches
@@ -1360,9 +1369,7 @@ def _provider_from_topology(
         primary_name, inferred_secondaries = _pick_single_primary(likely_primary_email_provider)
         primary_label = "(likely primary)"
 
-    slug_secondaries = _topology_slug_secondaries(
-        set(slugs), primary_name, inferred_secondaries, email_confirmed_slugs
-    )
+    slug_secondaries = _topology_slug_secondaries(set(slugs), primary_name, inferred_secondaries, email_confirmed_slugs)
 
     all_secondaries: list[str] = []
     for n in inferred_secondaries + slug_secondaries:
@@ -2247,7 +2254,10 @@ def _render_services(info: TenantInfo, verbose: bool, show_domains: bool) -> tup
     categorized = _categorize_services(info)
     if not verbose and "Email" in categorized:
         _strip_email_noise(categorized, info)
-    max_width = _CATEGORY_WIDTH
+    # Widen the label column only when a label present in this render needs
+    # it, so short-label panels keep their value width and a long label
+    # (e.g. "Data & Analytics") still gets one space before its value.
+    max_width = max(_CATEGORY_WIDTH, max((len(c) for c in categorized), default=0) + 1)
     for cat, svcs in categorized.items():
         svc_block.append("  ")
         svc_block.append(cat.ljust(max_width), style="dim")
