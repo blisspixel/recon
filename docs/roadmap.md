@@ -431,11 +431,15 @@ Trusted (the artifact and the answer are both verifiable):
   byte-identical output on every matrix cell.
 - Mutation testing promoted to a gate with a score floor, and a
   requirements-and-invariants traceability matrix so every promise maps to the
-  test that keeps it. *The mutation half shipped in v2.1.16:* cosmic-ray over
-  `recon_tool/bayesian.py` (1,642 mutants, all killed in the 2026-06 baseline
-  sweep), a four-file kill-set proven green before scoring, and a blocking 95%
-  kill-score floor, running on changes to the mutated surface, weekly, and on
-  demand (`.github/workflows/mutation.yml`, `validation/mutation-gate.md`).
+  test that keeps it. *The mutation half shipped in v2.1.16 and was corrected
+  afterward:* cosmic-ray over `recon_tool/bayesian.py`, a kill-set proven green
+  before scoring, equivalent-by-construction operators filtered, and a blocking
+  88%-kill (12%-survival) floor. The first reported "all killed" was a
+  wrong-interpreter artifact the CI baseline step caught; the corrected
+  authoritative sweep measured 91.4% kill (123 survivors of 1,431, residual
+  classified equivalent), and that honest baseline plus the survivor
+  classification is the standing record
+  (`.github/workflows/mutation.yml`, `validation/mutation-gate.md`).
   *The traceability half shipped in v2.1.17:* `docs/traceability-matrix.md`
   maps the box invariants, the operational-contract bounds, the output
   contract, and the inference trust chain to the test that keeps each one,

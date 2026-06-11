@@ -90,7 +90,10 @@ trajectory, against the false v2.1.16 "1,642 of 1,642":
 |---|---|---|---|---|---|
 | 1 (corrected) | 1,465 | 1,252 | 213 | 14.5% | interpreter fixed, BitOr filter, unit-math anchors |
 | 2 | 1,465 | 1,312 | 153 | 10.4% | loader-edge + n_eff tests added |
-| 3 (final) | ~1,453 | ~1,317 | ~136 | ~9% | Is/IsNot filtered, bound + penalty + absence kills |
+| 3 (final) | 1,431 | 1,308 | 123 | 8.6% | Is/IsNot filtered, bound + penalty + absence kills |
+
+(Final run: 1,642 mutants generated, 210 filtered as equivalent-by-construction,
+1 incompetent within tolerance, so 1,431 tested.)
 
 The first two rounds killed 60+ genuine survivors that were real test
 gaps the gate exposed (loaders, n_eff arithmetic, interval math,
@@ -99,7 +102,7 @@ identity-comparison mutants (equivalent by construction) and kills the
 last cheap genuine survivors (out-of-range bound checks, the conflict
 penalty constant asserted as a literal, the `absence_informative` flip).
 
-**The residual ~9% is dominated by equivalent mutants**, classified from
+**The residual 8.6% is dominated by equivalent mutants**, classified from
 the survivor diffs (the session DB is uploaded as a CI artifact on every
 run, so this is checkable):
 
@@ -131,7 +134,7 @@ run, so this is checkable):
 `scripts/mutation_floor.py mutation.sqlite --fail-over 12`: survival over
 **tested** mutants (killed + survived) must stay at or under 12% (kill
 score at or above 88%). The floor sits above the documented
-equivalent-mutant residue (~9%) with margin, so it ratchets the current
+equivalent-mutant residue (measured 8.6%) with margin, so it ratchets the current
 kill strength and fails when real coverage regresses (untested new code
 spikes survival well past the residue), without demanding tests for
 provably-equivalent mutants. This is the standard mutation-testing
