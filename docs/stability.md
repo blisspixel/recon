@@ -7,7 +7,7 @@ the Bayesian fusion surfaces (`--fusion`, `--explain-dag`,
 `posterior_observations`, `slug_confidences`, MCP `get_posteriors` and
 `explain_dag`) from their pre-v2.0 experimental status into the stable
 set. The disposition table that anchors the promotion lives in
-[`roadmap.md`](roadmap.md#v200--maturity).
+[`roadmap-history.md`](roadmap-history.md#v200--maturity).
 
 For the JSON output contract in full field-by-field detail, see
 [`schema.md`](schema.md). For the release process, see
@@ -74,7 +74,7 @@ and return-payload shapes will not change between patch or minor releases.
 New optional parameters may be added. The Bayesian-fusion tools
 (`get_posteriors`, `explain_dag`) ship pre-v2.0 under experimental
 labels and graduate to stable in v2.0 per the disposition table in
-[`roadmap.md`](roadmap.md#v200--maturity).
+[`roadmap-history.md`](roadmap-history.md#v200--maturity).
 
 | Tool | Parameters |
 |---|---|
@@ -118,7 +118,7 @@ of stability tags:
 - **Bayesian fusion fields** (`slug_confidences`,
   `posterior_observations`): pre-v2.0 experimental, stable v2.0+ per
   the schema-lock disposition table in
-  [`roadmap.md`](roadmap.md#v200--maturity).
+  [`roadmap-history.md`](roadmap-history.md#v200--maturity).
 - **Schema-hardening fields**, all stable (v2.0+):
   - `fusion_enabled` (bool): true when the Bayesian fusion layer ran.
   - `record_type` (output-mode discriminator): `"lookup"` on a
@@ -154,7 +154,7 @@ patch and minor releases without modification.
 
 The following surfaces shipped pre-v2.0 under an experimental label
 and graduate to stable in v2.0 per the schema-lock disposition table
-in [`roadmap.md`](roadmap.md#v200--maturity). Each one's pre-v2.0
+in [`roadmap-history.md`](roadmap-history.md#v200--maturity). Each one's pre-v2.0
 shape is preserved unchanged; only the EXPERIMENTAL qualifier in
 docstrings and schema descriptions is removed.
 
