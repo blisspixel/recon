@@ -544,6 +544,90 @@ candidate that does not improve trust or clarity waits.
 | PV1 | Local cohort summary over recon output | E / agent QoL | Local, caller-owned statistical analysis over a batch, built as a reducer that consumes recon's `--json` / `--ndjson` rather than as core logic, so core recon stays frozen and stateless. The caller owns the domain set and any grouping (by industry, portfolio, vendor set, location, or arbitrary type); those grouping files stay local and gitignored, never committed. The reducer emits aggregate-only views: provider / cloud / CDN / email-posture mix, concentration (entropy or HHI), and the Bayesian-claim prevalences. The honest-statistics discipline (refined from a 2026-06 review): observability-adjusted prevalence reported as three numbers (observed rate on the observable denominator, conservative lower bound over the whole cohort, observability fraction) so MNAR absence is encoded correctly; aggregate posterior mass plus a separate high-confidence (non-sparse, posterior > 0.8) share; hierarchical partial pooling of group rates only when the caller's batch has multiple strata, pooling toward the caller's own global across those strata and never a shipped baseline (a single cohort uses a Wilson interval, since there is nothing to pool toward); compositional treatment of mixes (entropy / divergence / log-ratios, not independent percent columns); weighted log-odds with a Dirichlet prior (the Fightin' Words method) for distinctive-slug ranking that shrinks unstable rare counts; Benjamini-Hochberg FDR control and paired permutation tests for any multi-cohort comparison; small-cell suppression (suppress counts of 1 to 10, caution below about 30); and ecological-fallacy discipline in the wording ("within this cohort tagged X, among observable signals, we saw Y", never "industry X does Y"). Guardrails: no persistent aggregated store (compute-and-forget; the SQLite / DuckDB hard-no holds, and with nothing persisted no differential privacy is needed); recon ships no curated lists and no industry baselines; humble naming ("cohort summary", not authoritative "industry insights"). The committed artifact is a methodology doc (`docs/aggregate-state.md`) with the metric definitions, the honesty rules, and a fully synthetic (Contoso-style) worked example with fabricated numbers; the real grouped numbers stay in gitignored local runs. Build and validate locally heading toward 2.1; if it proves out, the only thing upstreamed into core is the thinnest `recon batch --summary`, one cohort at a time, no grouping logic. v2.1 candidate, off the v2.0 schema. (Explicitly rejected, including ideas that keep resurfacing under "keep recon recon" cover: a persistent local learning store; accumulated or shipped industry baselines (including per-industry centroids in `verticals.yaml`, which is a fingerprint catalog, not a baseline store); Mahalanobis or Z-score anomaly scoring against shipped baselines; putting aggregate state into core (a top-level schema field, a core MCP tool, or a core `--aggregate` flag) instead of a downstream reducer; "industry benchmarking" or "industry intelligence" framing; inferring hidden or unobserved services from industry priors, which overclaims past the passive channel; and K-means / Markov / clustering / differential privacy over stored scans. The dependency floor holds: no pandas, numpy, scipy, matplotlib, or persistent store in core; a local sidecar may use heavier tools. All of these break the compute-and-forget, no-baseline, passive-only, defensive-only invariants.) |
 | PV2 | Agentic maintainer-validation loop | maintainer ops | A periodic, maintainer-side validation loop, run by an agent rather than by hand, that keeps the Bayesian CPT numbers and the catalog honest as the world drifts. Premise: the priors and likelihoods are directionally-accurate, corpus-grounded estimates, not values precise to many decimals, and they are not meant to be; the credible interval already carries the residual uncertainty, so the right discipline is "grounded this release, re-checked next," not false precision. The loop: (1) a fresh corpus scan (`scan.py`), (2) re-ground the base rates from it, (3) the synthetic calibration and likelihood-sensitivity (CAL8) harnesses, (4) the external case-study spot-check, (5) a drift comparison against the previous release that an agent reads and, if a number moved materially, opens an issue or proposes a CPT-update PR with the reasoning (under the CPT-change discipline, with the maintainer approving any semantic change). Tiered by data sensitivity: the synthetic harnesses run anywhere with no data, the spot-check needs only public web plus recon, and the corpus re-grounding stays local on the maintainer's machine because the corpus is gitignored, aggregate-only output. Maintainer-facing, never something an end-user runs, and a natural fit for the existing agent surface (the MCP server, `agents/` scaffolding, and a `/schedule`-style routine). Not a v2.0 gate. |
 
+#### Research write-up (aspirational): an arXiv paper
+
+A standing, aspirational deliverable, not a release gate and not on the critical
+path of any version. The assurance track has accumulated most of the substance a
+paper would need (the formal missing-data treatment in `correlation.md`, the
+calibration harnesses, the differential verification, the interval-coverage and
+mutation gates), so the work is mostly packaging the existing rigor for an
+outside reader, plus the few additional experiments below. It is recorded here so
+the experiments are designed into the validation harnesses rather than
+retrofitted.
+
+**The contribution, stated honestly.** The claim is not a new algorithm; variable
+elimination, Louvain, and Beta-style credible intervals are textbook. The claim
+is a *combination* that is uncommon in the passive-recon literature: a
+zero-credential, strictly-passive external-surface tool that preserves full
+provenance (every conclusion reachable through the evidence DAG), pairs
+deterministic graph correlation over certificate-transparency co-occurrence with
+a small auditable Bayesian network, and treats missing evidence as
+*adversarially* missing (the MNAR / `LR = 1` absence rule, grounded in m-graphs
+and Manski partial identification) so the credible interval widens on hardened
+targets instead of collapsing to a false verdict. The honest-evaluation posture
+is itself part of the contribution: the paper would be unusually explicit about
+what it does and does not validate (the near-tautological consistency check, the
+synthetic-versus-real distinction, perturbation coverage framed as model-internal
+rather than ground-truth, per CAL1 and CAL13), which is rarer in the area than it
+should be.
+
+**Working title candidates** (humble, descriptive): "Calibrated, Provenance-Aware
+Passive Inference for External Attack-Surface Management"; "Evidence-Responsive
+Uncertainty for Zero-Credential Infrastructure Fingerprinting". Primary category
+cs.CR; secondary stat.ML for the inference framing or cs.SE for the
+artifact/engineering angle. Independent submission, no affiliation needed.
+
+**The data-publication constraint is a first-class design problem, not an
+afterthought.** The repository invariants (no real company data, ever; the corpus
+stays gitignored; committed examples use the Microsoft fictional brands) mean the
+empirical section cannot print the targets. The paper turns that into a
+methodological feature: every empirical claim is reproducible against *public
+oracles* anyone can re-query (DMARC / SPF / MTA-STS records as their own truth;
+the Microsoft and Google identity endpoints for tenancy) plus the fully synthetic
+calibration harnesses, so the results are checkable without the private corpus.
+Only aggregate, posture-stratified statistics, synthetic reproductions, and the
+public-oracle calibration are published; the per-domain corpus never appears.
+This is the same discipline PV1 and the maintainer-validation loop already
+follow.
+
+**Additional experiments to design in** (each maps to a harness that exists or is
+a small extension; none crosses an invariant):
+
+- *Ablations on the layers.* Quantify what the graph layer and the Bayesian layer
+  add over single-source slug matching: drop each and measure the change in
+  recovered structure on the synthetic corpus and the public-oracle set. This is
+  the clearest way to show the combination earns its complexity.
+- *Public-oracle coverage* (the CAL3 / CAL4 work already on the assurance track):
+  empirical interval coverage and calibration against the authoritative records,
+  reported with uncertainty (Wilson / bootstrap), never as a bare percentage.
+- *Posture stratification.* Aggregate behaviour across hardening postures
+  (edge-proxied, privacy-focused, financial, government-adjacent) using the
+  failure-mode catalogue in `correlation.md` 4.10 to 4.11, reported as
+  distributions, not exemplars.
+- *Information recovered.* The per-domain entropy-reduction distribution (CAL10)
+  across postures, as the operational reading of "what the public channel still
+  leaks" after hardening.
+- *Figures.* An architecture diagram, the nine-node network as a clean DAG,
+  reliability diagrams with the posterior histogram, and an
+  interval-width-versus-evidence-count plot that surfaces the documented
+  correlated-binding over-confidence (CAL7). Colour-blind-safe palettes.
+
+**What is already paper-ready** (no new work): the formal model and its
+references; the calibration-legitimacy framing (CAL1 to CAL14); the
+differential-verification, interval-coverage, and mutation evidence; the
+operational contract and assurance case; and the artifact itself, since the repo
+is reproducible (bit-for-bit builds, signed releases, a locked JSON schema, the
+test and gate suite). The honest framing is that recon is "most of the way there"
+on substance; the remaining effort is the additional experiments above and the
+writing, which is itself bounded by the no-real-data rule.
+
+**Explicitly out of scope for the paper**, because the tool's invariants forbid
+them and the paper must describe the tool as it is: any internet-wide active scan,
+any learned-weight or trained-model component, any released target list or
+deanonymizable corpus, and any claim of ground-truth calibration the passive
+channel cannot support. A paper that respects those limits is the only kind this
+project can honestly publish.
+
 **Track E - CLI and agent quality-of-life.** Complete. The seven items (exit-code
 reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
 `autoApprove` guidance, the `recon://schema` discovery resource, and the

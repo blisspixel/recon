@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.18] - 2026-06-11
+
+### Fixed
+
+- **Services panel: long category labels no longer collide with their value.**
+  The sub-category label column was a fixed 15 characters, one short of the
+  longest label ("Data & Analytics", 16), so `ljust(15)` left no trailing space
+  and a value rendered flush against the label ("Data & AnalyticsMongoDB
+  Atlas"). The column width is now `max(15, longest label present + 1)`, so a
+  long label gets its gap while short-label panels keep their established width
+  and value space (existing output is byte-identical). Regression tests in
+  `tests/test_services_label_width.py`.
+
+### Changed
+
+- **Lookup spinner now rotates through a wider, themed message pool.** The
+  status pool grew from 11 to 28 messages grouped by what recon is actually
+  doing (DNS, certificate transparency, identity endpoints, the inference layer,
+  posture) plus a few that nod to the passive-only ethos, and a single lookup
+  now cycles a shuffled sequence rather than showing one static line. The
+  rotation is purely cosmetic and wrapped so a status-update failure can never
+  affect a lookup's result; `tests/test_status_spinner.py` pins that contract.
+
+### Docs
+
+- Roadmap gains an aspirational "Research write-up (arXiv paper)" item: an
+  honest contribution statement, the no-real-data publication constraint treated
+  as a reproducibility-against-public-oracles feature, and the additional
+  experiments (layer ablations, public-oracle coverage, posture stratification,
+  entropy-reduction) to design into the existing validation harnesses.
+
 ## [2.1.17] - 2026-06-11
 
 ### Assurance: requirements-and-invariants traceability matrix, machine-checked

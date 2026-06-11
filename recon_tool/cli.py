@@ -109,21 +109,51 @@ def _fmt_exc(exc: BaseException) -> str:
     return str(exc) or type(exc).__name__
 
 
-# Spinner messages — one is picked at random for each lookup.
-# Keeps the CLI feeling alive without being gimmicky.
+# Spinner messages. A lookup shuffles these and rotates through them while
+# it waits, so the CLI feels alive without being gimmicky. They are grouped
+# by what recon is actually doing (DNS, CT, identity endpoints, the
+# inference layer, posture) plus a few that wink at the passive-only ethos;
+# all stay honest about the method.
 _STATUS_MESSAGES = (
+    # DNS and records
     "Querying public DNS records...",
     "Following CNAME breadcrumbs...",
     "Reading the TXT record tea leaves...",
-    "Fingerprinting the SaaS stack...",
+    "Asking the MX records who handles the mail...",
+    "Untangling the SPF include chain...",
+    "Reading DMARC policy, strictly as published...",
+    # Certificate transparency
+    "Sifting certificate transparency logs...",
+    "Clustering SAN sets into communities...",
+    "Watching for certificate issuance bursts...",
+    # Identity endpoints
     "Checking Microsoft's public tenant registry...",
+    "Asking Google Workspace, no credentials required...",
+    "Knocking politely on the OIDC discovery endpoint...",
+    # Fingerprinting / stack
+    "Fingerprinting the SaaS stack...",
+    "Matching slugs against the catalog...",
+    "Assembling the tech stack mosaic...",
+    "Tracing domain verification trails...",
+    # The inference layer (a wink at the Bayesian core)
+    "Updating priors, declining to overclaim...",
+    "Propagating beliefs through the network...",
+    "Widening the interval where evidence is thin...",
+    "Letting absent evidence stay absent...",
+    "Computing credible intervals, not false certainties...",
+    # Posture and footprint
+    "Scoring the email security posture...",
     "Mapping the organizational footprint...",
     "Extracting signal from the public noise...",
-    "Tracing domain verification trails...",
-    "Scoring the email security posture...",
-    "Assembling the tech stack mosaic...",
+    # Passive-only ethos
     "No credentials were harmed in this lookup...",
+    "Strictly passive; nobody on the other end noticed...",
+    "Reading only what was left out in the open...",
+    "Observing from a respectful distance...",
 )
+
+# How long each spinner message lingers before the next one rotates in.
+_STATUS_ROTATE_SECONDS = 2.5
 
 
 class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseClass, reportAttributeAccessIssue]
@@ -2311,11 +2341,38 @@ async def _resolve_with_spinner(
 
     if quiet:
         return await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct, active_probes=active_probes)
+
+    coro = resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct, active_probes=active_probes)
+    return await _run_with_rotating_status(console, coro)
+
+
+async def _run_with_rotating_status(console: Any, coro: Any) -> Any:
+    """Await ``coro`` while rotating spinner messages, so a slow lookup shows
+    a shuffled sequence of status lines rather than one static message.
+
+    The rotation is purely cosmetic: the awaited coroutine runs to completion
+    regardless, and any exception it raises propagates unchanged. Falls back to
+    a single static status if anything about the rotation goes wrong, so the
+    spinner can never break a lookup.
+    """
+    import asyncio
     import random
 
-    msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
-    with console.status(msg):
-        return await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct, active_probes=active_probes)
+    order = list(_STATUS_MESSAGES)
+    random.shuffle(order)
+    task = asyncio.ensure_future(coro)
+    with console.status(order[0]) as status:
+        idx = 0
+        while True:
+            try:
+                return await asyncio.wait_for(asyncio.shield(task), timeout=_STATUS_ROTATE_SECONDS)
+            except TimeoutError:
+                # The lookup is still running; advance to the next message.
+                idx += 1
+                try:
+                    status.update(order[idx % len(order)])
+                except Exception:  # a status-update failure must not abort the lookup
+                    return await task
 
 
 async def _resolve_cached(
