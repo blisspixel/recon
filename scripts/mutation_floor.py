@@ -52,6 +52,17 @@ def main() -> int:
         default=5.0,
         help="Maximum tested-mutant survival rate, as a percentage (default 5).",
     )
+    parser.add_argument(
+        "--max-incompetent",
+        type=int,
+        default=1,
+        help=(
+            "Incompetent results tolerated before failing (default 1: cosmic-ray "
+            "8.4.6's ExceptionReplacer deterministically crashes on one parso node "
+            "shape in this module, recorded in validation/mutation-gate.md). More "
+            "than the tolerance means a broken worker environment."
+        ),
+    )
     args = parser.parse_args()
     if not args.session.is_file():
         print(f"FAIL: session file not found: {args.session}")
@@ -69,8 +80,11 @@ def main() -> int:
     if c["pending"]:
         print(f"FAIL: {c['pending']} job(s) never ran; the score is not a full-sweep number.")
         return 1
-    if c["incompetent"]:
-        print(f"FAIL: {c['incompetent']} incompetent result(s); fix the worker environment before scoring.")
+    if c["incompetent"] > args.max_incompetent:
+        print(
+            f"FAIL: {c['incompetent']} incompetent result(s) (tolerance {args.max_incompetent}); "
+            "fix the worker environment before scoring."
+        )
         return 1
     if not tested:
         print("FAIL: no tested mutants; nothing was measured.")

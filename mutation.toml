@@ -10,7 +10,7 @@ excluded-modules = []
 # resolves to the base interpreter (no test deps), which silently turns
 # every mutant into a false kill via a conftest ImportError. The
 # baseline step exists to catch exactly that class of breakage.
-test-command = "pytest -x -q -p no:cacheprovider tests/test_bayesian_unit_math.py tests/test_bayesian_inference.py tests/test_bayesian_canonical.py tests/test_bayesian_evidence_groups.py tests/test_drift_check.py tests/test_bayesian_validation_rounds.py tests/test_bayesian_topology.py tests/test_bayesian_dag.py"
+test-command = "pytest -x -q -p no:cacheprovider tests/test_bayesian_unit_math.py tests/test_bayesian_loader_edges.py tests/test_bayesian_inference.py tests/test_bayesian_canonical.py tests/test_bayesian_evidence_groups.py tests/test_drift_check.py tests/test_bayesian_validation_rounds.py tests/test_bayesian_topology.py tests/test_bayesian_dag.py"
 
 [cosmic-ray.distributor]
 name = "local"
