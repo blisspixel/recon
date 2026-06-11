@@ -29,7 +29,13 @@ This file is forward-looking. Shipped work belongs in
 > `validation/interval-coverage.md`), and the mutation gate in v2.1.16
 > (cosmic-ray over the inference core, 1,642 of 1,642 mutants killed,
 > `cr-rate --fail-over 5` blocking in `.github/workflows/mutation.yml`; memo in
-> `validation/mutation-gate.md`). **Next:** the traceability matrix. This file
+> `validation/mutation-gate.md`). The traceability matrix shipped in v2.1.17
+> (`docs/traceability-matrix.md`, machine-checked by
+> `scripts/check_traceability.py` and gated by `tests/test_traceability.py`),
+> which completes the committed post-2.0 assurance track. What remains on that
+> track is operator-paced or standing work: the CAL3/CAL4 oracle-calibration
+> run, the C3 CT-enabled corpus pass, the data-handling policy and
+> statistical-assurance dossier docs, and the candidate diagnostics. This file
 > is the plan from here.
 
 ## Pre-2.0 hardening (shipped) and the road past v2.0
@@ -426,7 +432,13 @@ Trusted (the artifact and the answer are both verifiable):
   sweep), a four-file kill-set proven green before scoring, and a blocking 95%
   kill-score floor, running on changes to the mutated surface, weekly, and on
   demand (`.github/workflows/mutation.yml`, `validation/mutation-gate.md`).
-  The traceability matrix is the remaining half.
+  *The traceability half shipped in v2.1.17:* `docs/traceability-matrix.md`
+  maps the box invariants, the operational-contract bounds, the output
+  contract, and the inference trust chain to the test that keeps each one,
+  and `scripts/check_traceability.py` (gated by `tests/test_traceability.py`)
+  resolves every backticked reference there and in `assurance-case.md`
+  against the AST of the current tree, so a renamed test breaks CI instead
+  of orphaning a doc row.
 
 Priority order, highest trust-per-effort first. **Done:** differential
 verification of the inference core (v2.1.7); the fault-injection sweep and its
@@ -435,10 +447,13 @@ residuals, the source-level `region` cap, and the boundary-by-mode matrix
 (v2.1.11); and reproducible builds plus sigstore-signed PyPI attestations
 (v2.1.12); the auditable assurance case + operational contract (v2.1.13); the
 PV2 inference drift gate + maintainer-validation loop (v2.1.14); the
-credible-interval perturbation-coverage gate (v2.1.15); and mutation-as-a-gate
-(v2.1.16). **Remaining:** the traceability matrix. None of these is on the
-critical path of the feature candidates below; they are the work that matters
-most.
+credible-interval perturbation-coverage gate (v2.1.15); mutation-as-a-gate
+(v2.1.16); and the traceability matrix (v2.1.17). **The committed track is
+complete.** What remains is operator-paced or standing: the CAL3/CAL4
+oracle-calibration run and the C3 CT-enabled corpus pass (corpus-driven,
+maintainer-local), the data-handling policy and statistical-assurance dossier
+docs, and the evidence-semantics diagnostics candidates. None of these is on
+the critical path of the feature candidates below.
 
 Each item ships with acceptance criteria, checkable gates rather than "improved
 tests," and where it produces a durable artifact it ships a doc so the trust is

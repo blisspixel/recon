@@ -17,7 +17,11 @@ is [supply-chain.md](supply-chain.md); the uncertainty model is
 
 Every "proven by" reference is a test that exercises the actual code path. Where
 a mechanism is real but not yet directly asserted, it is listed in
-[Standing gaps](#standing-gaps) rather than claimed as proven.
+[Standing gaps](#standing-gaps) rather than claimed as proven. The references in
+this document and in the [traceability matrix](traceability-matrix.md) are
+machine-checked in CI (`scripts/check_traceability.py`, gated by
+`tests/test_traceability.py`): a renamed test or constant fails the build rather
+than orphaning a row here.
 
 ## Promise 1: Passive by default
 
