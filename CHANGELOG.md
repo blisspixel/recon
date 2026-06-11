@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No unreleased changes pending.
+Docs and CI only; no packaged change, so no version bump yet. Folded into the
+next release's entry when one is cut.
+
+- **Docs:** added `docs/data-handling-policy.md` (the complete "no real-company
+  data, ever" policy mapped to its enforcing mechanisms); added the version
+  milestone map and consolidated build order to `docs/roadmap.md`; corrected the
+  mutation-gate kill-score claims in the CHANGELOG, the traceability matrix, and
+  the roadmap to the measured 91.4% (the v2.1.16 "100%" was a wrong-interpreter
+  artifact the CI baseline step caught).
+- **CI:** the mutation gate now filters equivalent-by-construction operators,
+  scores survival over tested mutants with an explicit floor
+  (`scripts/mutation_floor.py`), and runs a strengthened kill-set; bumped
+  `astral-sh/setup-uv` 8.1.0 to 8.2.0 across the workflows.
 
 ## [2.1.18] - 2026-06-11
 
