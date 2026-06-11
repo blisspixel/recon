@@ -1,0 +1,93 @@
+name: Mutation gate
+
+# Mutation testing promoted to a blocking gate with a score floor
+# (roadmap, assurance track). cosmic-ray mutates the inference core
+# (recon_tool/bayesian.py, 1,642 mutants) and runs the focused kill-set
+# against every mutant; the job fails if the survival rate exceeds the
+# floor below. Full design, kill-set rationale, and survivor policy:
+# validation/mutation-gate.md.
+#
+# The job runs when the mutated surface or its kill-set changes (where
+# it is a required, blocking check), on a weekly schedule (so drift in
+# the toolchain or an unnoticed interaction still surfaces), and on
+# demand. It deliberately does not run on every push: a full sweep
+# costs ~30 minutes, and a docs or catalog change cannot change the
+# mutation score of an untouched module.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "recon_tool/bayesian.py"
+      - "tests/test_bayesian_inference.py"
+      - "tests/test_bayesian_canonical.py"
+      - "tests/test_bayesian_evidence_groups.py"
+      - "tests/test_drift_check.py"
+      - "mutation.toml"
+      - ".github/workflows/mutation.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "recon_tool/bayesian.py"
+      - "tests/test_bayesian_inference.py"
+      - "tests/test_bayesian_canonical.py"
+      - "tests/test_bayesian_evidence_groups.py"
+      - "tests/test_drift_check.py"
+      - "mutation.toml"
+      - ".github/workflows/mutation.yml"
+  schedule:
+    # Weekly, Monday 06:17 UTC (off the top of the hour to avoid the
+    # scheduled-job thundering herd).
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      # .python-version pins the local toolchain to 3.14; force the CI
+      # interpreter, mirroring the test matrix.
+      UV_PYTHON: "3.11"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies (dev + mutation group)
+        run: uv sync --group mutation
+
+      - name: Baseline (kill-set must pass unmutated)
+        # A failing or flaky kill-set would count every mutant as killed
+        # and make the score meaningless; prove it green first. The
+        # --group flag keeps uv run's implicit sync from dropping the
+        # mutation group installed above.
+        run: uv run --group mutation cosmic-ray baseline mutation.toml
+
+      - name: Initialize session
+        run: uv run --group mutation cosmic-ray init mutation.toml mutation.sqlite
+
+      - name: Execute mutants
+        run: uv run --group mutation cosmic-ray exec mutation.toml mutation.sqlite
+
+      - name: Report
+        run: uv run --group mutation cr-report mutation.sqlite | tail -n 5
+
+      - name: Enforce score floor (survival must stay under 5%)
+        # Kill score >= 95%. The 2026-06 baseline sweep killed 1,642 of
+        # 1,642 mutants (see validation/mutation-gate.md); 5% survival
+        # is headroom for benign equivalent mutants, not a tuned-to-pass
+        # bound. A new survivor above the floor must be killed with a
+        # test or accepted explicitly in the memo before this gate goes
+        # green again.
+        run: uv run --group mutation cr-rate mutation.sqlite --fail-over 5

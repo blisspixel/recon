@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.16] - 2026-06-11
+
+### Assurance: mutation testing promoted to a gate with a score floor
+
+The next assurance-track item, completing the plan the v1.9.10 memo deferred to
+CI: cosmic-ray mutation testing over the inference core, blocking with a score
+floor.
+
+- **Gate.** `.github/workflows/mutation.yml` mutates `recon_tool/bayesian.py`
+  (1,642 mutants) and runs a focused four-file kill-set per mutant
+  (`test_bayesian_inference`, `test_bayesian_canonical`,
+  `test_bayesian_evidence_groups`, `test_drift_check`; about 1.5 s per mutant).
+  A baseline step proves the kill-set passes unmutated first, and
+  `cr-rate --fail-over 5` fails the job if survival exceeds 5% (kill score
+  below 95%). Blocking on any change to the mutated surface, the kill-set, the
+  config, or the workflow; weekly on a schedule; on demand via dispatch. Not
+  per-push: a docs or catalog change cannot change the mutation score of an
+  untouched module.
+- **Baseline result.** The 2026-06 sweep killed 1,642 of 1,642 mutants (100%
+  kill score, zero survivors to disposition). Scope rationale, kill-set
+  economics, survivor policy, and local-run instructions:
+  `validation/mutation-gate.md`.
+- **Tooling.** New `mutation` dependency group (cosmic-ray) so the per-push dev
+  environment stays lean; `mutation.toml` is the committed config; the session
+  DB is gitignored. cosmic-ray runs on both the Linux CI runner and Windows, so
+  the local gate can match CI.
+
+Gate: full pytest, ruff, pyright (0 errors), validate_fingerprint (841), branch
+coverage 85%, actionlint on the new workflow.
+
 ## [2.1.15] - 2026-06-11
 
 ### Assurance: credible-interval perturbation-coverage gate
