@@ -42,6 +42,101 @@ This file is forward-looking. Shipped work belongs in
 > and statistical-assurance dossier docs, and the candidate diagnostics. This
 > file is the plan from here.
 
+## Version milestones and build order
+
+recon is past its expansion phase. v1.0 set the stability contract and v2.0
+locked the schema; the project is now in a deepen-not-expand phase, so the
+version number is meant to climb slowly and deliberately. This section is the
+single statement of what each milestone means and the order the remaining work
+runs in. The per-release detail is in [CHANGELOG.md](../CHANGELOG.md); the semver
+rules are in [release-process.md](release-process.md#version-numbering).
+
+### What each milestone meant, and means
+
+- **0.x (done).** Pre-contract. Breaking changes were allowed within minors while
+  the core took shape (passive collection, the fingerprint catalogue, the panel).
+- **1.0 (done).** The stability commitment. The CLI surface and the v1.0 JSON
+  contract became stable surfaces ([stability.md](stability.md)); semver is
+  enforced from here.
+- **1.x (done).** Additive growth: graph correlation (1.8), the Bayesian fusion
+  layer (1.9, experimental at first), and the long 1.9.x hardening run that drove
+  the engine and catalogue to the v2.0 bar.
+- **2.0 (done).** The schema lock and maturity capstone. Promoted the fusion
+  surfaces from experimental to stable, flipped `--fusion` default-on, and locked
+  the v2.0 JSON contract. Deliberately a mechanical ceremony over already-proven
+  work, not a feature event.
+- **2.1.x (current, through 2.1.18).** The post-2.0 assurance and thin-feature
+  line: the cohort summary (PV1), then the assurance track (differential
+  verification, the inference drift gate, the interval-coverage and mutation
+  gates, the traceability matrix), plus UX polish. Everything additive, off the
+  locked v2.0 schema.
+
+### Where the next numbers sit
+
+- **2.2 and later minors (not yet triggered).** A minor bump is earned by a
+  coherent new *stable surface*, not by more internal hardening, which stays
+  patch-level. The next candidate is the evidence-semantics diagnostics shipping
+  as new `--explain` / JSON fields or a new MCP tool (entropy-reduction
+  surfacing, exact leave-one-group-out counterfactuals, graph partition
+  stability). Until a named new surface ships, the line stays in 2.1.x patches.
+- **3.0 (intentionally deferred, possibly never).** A major bump is forced only by
+  an unavoidable *breaking* change to a stable surface, with the deprecation
+  window the stability policy requires. The pre-2.0 schema-hardening (SH1 to SH9)
+  was done specifically so no foreseeable change needs one, so there is no planned
+  3.0; it is reserved for a breaking necessity that does not currently exist. The
+  project does not invent a 3.0 to look like it is progressing.
+- **Intentionally never (permanent, not version-gated).** These are out of the box
+  by design, not deferred to some future major: active scanning, paid APIs,
+  credentialed access, learned weights or bundled ML, bundled ASN / GeoIP, a
+  persistent aggregate store, user-code plugins, remote / HTTP MCP transport, and
+  a hosted service. They will not appear in 3.0 or 4.0 either; they are the
+  boundary that makes recon what it is (see [Intentionally Out Of
+  Scope](#intentionally-out-of-scope)).
+
+The honest reading: a slowing version number here is a sign of a settled shape,
+not stagnation. The work that remains deepens trust in what exists rather than
+enlarging the surface.
+
+### Build order for the remaining work
+
+Highest trust-per-effort first, each item noting where its detailed design lives.
+None is on the critical path of another except where noted.
+
+1. **CAL3 / CAL4 oracle calibration** (assurance; highest open value). The one
+   check that tests the CPT values against external truth rather than
+   self-consistency: empirical interval coverage and calibration against
+   authoritative public oracles (DMARC / SPF / MTA-STS records as their own
+   truth; the Microsoft and Google identity endpoints for tenancy). The oracle
+   approach is publishable; the corpus tier stays maintainer-local. *Design:*
+   [correlation.md](correlation.md) section 4.7 and the CAL track table below;
+   the run produces a validation memo, aggregates only.
+2. **Statistical-assurance dossier** (assurance doc; capstone). A single ledger
+   that separates, for each claim recon makes, what is observed, what is
+   consistency (near-tautological, per CAL1), what is evidence-responsive
+   (CAL13), and what has empirical coverage (CAL3). Pure docs, fully publishable,
+   and the backbone of the paper. *Design:* a new `docs/statistical-assurance.md`,
+   drawing on [assurance-case.md](assurance-case.md) and
+   [correlation.md](correlation.md).
+3. **Evidence-semantics diagnostics** (2.2 candidate; the next new surface).
+   Entropy-reduction per node, exact leave-one-evidence-group-out counterfactual
+   influence (framed as evidence counterfactuals over the model, never causal
+   claims), and graph partition stability, as additive `--explain` and JSON
+   diagnostics that leave the default panel unchanged. A named new stable surface,
+   so it carries a minor bump. *Design:* the Evidence-semantics-diagnostics
+   paragraph in the assurance track below, plus `correlation.md` for the model
+   semantics.
+4. **The arXiv write-up** (packaging). Depends on items 1 to 3 for its empirical
+   and framing substance, and on [data-handling-policy.md](data-handling-policy.md)
+   for its publication constraints. The additional experiments (layer ablations,
+   oracle coverage, posture stratification, entropy distributions) are designed
+   into the harnesses above so the paper is assembled, not retrofitted. *Design:*
+   the Research write-up item further below.
+
+Standing, maintainer-paced, off this critical path: the weekly PV2 validation
+routine (live), the mutation gate (live), and corpus-driven catalogue growth
+(local, aggregate-only). These run continuously and do not gate the sequence
+above.
+
 ## Pre-2.0 hardening (shipped) and the road past v2.0
 
 The pre-2.0 hardening below shipped with the v2.0 lock; the v1.9.x track detail
@@ -332,21 +427,26 @@ and the build order below stays simple.
 
 #### Post-2.0 release sequence
 
-The shape of the post-2.0 line, in order:
+This is the original post-2.0 sequencing note, kept for the rationale. The
+current, consolidated version plan and build order live in [Version milestones
+and build order](#version-milestones-and-build-order) at the top of this file;
+prefer that section, which is kept current. What this note described has all
+shipped:
 
-- **2.0.x: trust hardening.** The assurance work below, differential verification
-  of the inference core first. This is the priority; the product is trust, not
-  surface area.
-- **2.1: aggregate state, thin and doc-first, in two stages (shipped).** 2.1a
-  shipped the methodology doc (`docs/aggregate-state.md`), a synthetic fixture,
-  and a local reducer script, with no change to core. 2.1b shipped the thinnest
-  core surface: `recon batch --summary` (add `--json`), one cohort at a time,
-  carrying its own `cohort_summary` record type and `schema_version` 2.1. It met
-  the acceptance bar: no persistent store, no industry taxonomy or baselines in
-  core, no multi-cohort ranking in core, no real apexes in committed examples, and
-  the output carries the observability denominators and the sparse share. See PV1.
-- **2.2 or later: maintainer validation loop formalized.** PV2 promoted from the
-  by-hand re-grounding already done to a gated routine with drift detection.
+- **2.0.x: trust hardening.** The assurance work, differential verification of
+  the inference core first. The product is trust, not surface area. *Shipped
+  across the 2.1.x assurance track.*
+- **2.1: aggregate state, thin and doc-first, in two stages.** 2.1a shipped the
+  methodology doc (`docs/aggregate-state.md`), a synthetic fixture, and a local
+  reducer script, with no change to core. 2.1b shipped the thinnest core surface:
+  `recon batch --summary` (with `--json`), one cohort at a time, carrying its own
+  `cohort_summary` record type and `schema_version` 2.1, with no persistent
+  store, no industry taxonomy or baselines in core, and the observability
+  denominators in the output. See PV1.
+- **2.2 or later: maintainer validation loop formalized.** *Shipped earlier than
+  planned, in v2.1.14:* PV2's committable core (the inference drift gate) plus the
+  documented tiered loop, with the corpus-free tiers now wired to a weekly
+  `/schedule` routine (see [maintainer-validation.md](maintainer-validation.md)).
 
 Everything past the lock is additive and off the v2.0 schema; the lock stays
 clean. The assurance items are not on the critical path of the feature
