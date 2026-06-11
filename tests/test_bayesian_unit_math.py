@@ -239,6 +239,46 @@ class TestNetworkGet:
             net.get("no_such_node")
 
 
+# ── n_eff arithmetic, pinned exactly ───────────────────────────────────
+
+
+class TestNEffExactValues:
+    # n_eff is an exposed NodePosterior field, so the arithmetic
+    # (_MIN_N_EFF + count * _EVIDENCE_N_EFF_CONTRIB - conflicts *
+    # _CONFLICT_N_EFF_PENALTY, floored at _MIN_N_EFF) can be pinned to
+    # exact values. The values depend on the shipped network's bindings;
+    # a deliberate network change that moves them shows up here next to
+    # the drift-gate baseline it also has to update.
+
+    def test_two_ungrouped_bindings(self) -> None:
+        net = load_network()
+        result = infer(net, ["cloudflare", "akamai"], [], priors_override={})
+        post = {p.name: p for p in result.posteriors}
+        assert post["cdn_fronting"].n_eff == 6.0
+
+    def test_conflict_subtracts_exactly_its_penalty(self) -> None:
+        net = load_network()
+        result = infer(net, ["cloudflare", "akamai"], [], conflict_field_count=1, priors_override={})
+        post = {p.name: p for p in result.posteriors}
+        assert post["cdn_fronting"].n_eff == 6.0 - _CONFLICT_N_EFF_PENALTY
+
+    def test_floor_holds_for_evidence_free_node_under_conflict(self) -> None:
+        net = load_network()
+        result = infer(net, [], [], conflict_field_count=1, priors_override={})
+        post = {p.name: p for p in result.posteriors}
+        assert post["cdn_fronting"].n_eff == 4.0
+
+    def test_declarative_informative_absences_count(self) -> None:
+        # With nothing fired, the declarative policy node still earns
+        # n_eff from its informative absences: the absent dmarc_policy
+        # group (|LLR| 2.8) and the absent spf_strict complement (|LLR|
+        # 0.44) count; the near-neutral mta_sts complement does not.
+        net = load_network()
+        result = infer(net, [], [], priors_override={})
+        post = {p.name: p for p in result.posteriors}
+        assert post["email_security_policy_enforcing"].n_eff == 6.0
+
+
 # ── Contract predicates ────────────────────────────────────────────────
 
 
@@ -317,6 +357,10 @@ class TestSignalsFromTenantInfo:
             evidence=(SimpleNamespace(source_type="SPF", raw_value="v=spf1 include:foo-all.example ~all"),)
         )
         assert signals_from_tenant_info(info) == set()
+
+    def test_spf_value_matching_is_case_insensitive(self) -> None:
+        info = SimpleNamespace(evidence=(SimpleNamespace(source_type="SPF", raw_value="V=SPF1 -ALL"),))
+        assert signals_from_tenant_info(info) == {"spf_strict"}
 
     def test_empty_info_yields_nothing(self) -> None:
         assert signals_from_tenant_info(SimpleNamespace()) == set()

@@ -20,6 +20,7 @@ on:
     paths:
       - "recon_tool/bayesian.py"
       - "tests/test_bayesian_unit_math.py"
+      - "tests/test_bayesian_loader_edges.py"
       - "tests/test_bayesian_inference.py"
       - "tests/test_bayesian_canonical.py"
       - "tests/test_bayesian_evidence_groups.py"
@@ -34,6 +35,7 @@ on:
     paths:
       - "recon_tool/bayesian.py"
       - "tests/test_bayesian_unit_math.py"
+      - "tests/test_bayesian_loader_edges.py"
       - "tests/test_bayesian_inference.py"
       - "tests/test_bayesian_canonical.py"
       - "tests/test_bayesian_evidence_groups.py"
