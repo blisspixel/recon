@@ -466,12 +466,13 @@ inspectable rather than asserted. Shipped: the engineering threat model
 its test, and its residual risk (`docs/assurance-case.md`), the operational
 contract (`docs/operational-contract.md`: timeouts, caps, exit codes, cache and
 partial-result semantics, determinism), and the supply-chain / release-integrity
-doc (`docs/supply-chain.md`). Still to write: a data-handling policy (what may and
-may not enter the public repo, down to comments and fixtures), and a
-statistical-assurance dossier that separates what is observed, what is
-consistency, what is evidence-responsive, and what has empirical coverage. This is
-a standing track across the 2.x line, not a single release, and it adds no
-discovery surface.
+doc (`docs/supply-chain.md`), and the data-handling policy
+(`docs/data-handling-policy.md`: what may and may not enter the public repo,
+down to comments and fixtures, each rule mapped to its enforcing mechanism).
+Still to write: a statistical-assurance dossier that separates what is observed,
+what is consistency, what is evidence-responsive, and what has empirical
+coverage. This is a standing track across the 2.x line, not a single release, and
+it adds no discovery surface.
 
 Kept proportionate to what recon is. The exhaustive differential cross-check, over
 a few thousand enumerable states, is the right level of formal verification here;
