@@ -4,8 +4,8 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-> **Status (2026-06):** v2.1.14 is the current release. The v2.0 schema lock, the
-> v2.1 cohort summary (`recon batch --summary`), and the v2.1.1-v2.1.14 hardening,
+> **Status (2026-06):** v2.1.18 is the current release. The v2.0 schema lock, the
+> v2.1 cohort summary (`recon batch --summary`), and the v2.1.1-v2.1.18 hardening,
 > security, and assurance patches have all shipped; per-release detail is in
 > [CHANGELOG.md](../CHANGELOG.md) and upgrade notes in
 > [migration-v2.md](migration-v2.md).
@@ -27,16 +27,20 @@ This file is forward-looking. Shipped work belongs in
 > (`validation/interval_coverage.py`, gated by
 > `tests/test_interval_coverage.py`, memo in
 > `validation/interval-coverage.md`), and the mutation gate in v2.1.16
-> (cosmic-ray over the inference core, 1,642 of 1,642 mutants killed,
-> `cr-rate --fail-over 5` blocking in `.github/workflows/mutation.yml`; memo in
-> `validation/mutation-gate.md`). The traceability matrix shipped in v2.1.17
-> (`docs/traceability-matrix.md`, machine-checked by
+> (cosmic-ray over the inference core, blocking in
+> `.github/workflows/mutation.yml`; the corrected baseline, the
+> equivalent-mutant classification, and the honest score floor are in
+> `validation/mutation-gate.md`, which also records why v2.1.16's first
+> reported kill score was a wrong-interpreter artifact). The traceability matrix
+> shipped in v2.1.17 (`docs/traceability-matrix.md`, machine-checked by
 > `scripts/check_traceability.py` and gated by `tests/test_traceability.py`),
-> which completes the committed post-2.0 assurance track. What remains on that
-> track is operator-paced or standing work: the CAL3/CAL4 oracle-calibration
-> run, the C3 CT-enabled corpus pass, the data-handling policy and
-> statistical-assurance dossier docs, and the candidate diagnostics. This file
-> is the plan from here.
+> which completes the committed post-2.0 assurance track. v2.1.18 was UX and docs
+> polish (the services-panel label-collision fix, the rotating-spinner variety,
+> and the aspirational arXiv-paper roadmap item below). What remains on the
+> assurance track is operator-paced or standing work: the CAL3/CAL4
+> oracle-calibration run, the C3 CT-enabled corpus pass, the data-handling policy
+> and statistical-assurance dossier docs, and the candidate diagnostics. This
+> file is the plan from here.
 
 ## Pre-2.0 hardening (shipped) and the road past v2.0
 
