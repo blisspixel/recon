@@ -99,3 +99,11 @@ release regardless of whether the loop ran.
 This is a natural fit for the existing agent surface (the harnesses, the
 `agents/` scaffolding, and a `/schedule`-style routine). It is not a v2.0 gate
 and not a hosted service; it is a maintainer routine.
+
+As of 2026-06-11 the corpus-free portion is wired: a weekly scheduled agent
+routine (`pv2-maintainer-validation`, Mondays) runs Tier 0, the Tier 1
+harnesses, and the interval-coverage check against the documented bands, and
+opens an aggregate-numbers-only issue when something moves materially. The
+routine is barred from changing CPT semantics (the CPT-change discipline holds)
+and from including any real company name or apex in anything it writes. Tier 3
+remains maintainer-local by design.
