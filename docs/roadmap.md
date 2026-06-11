@@ -22,9 +22,12 @@ This file is forward-looking. Shipped work belongs in
 > v2.1.12 (see [supply-chain.md](supply-chain.md)), the auditable assurance case
 > and operational contract in v2.1.13, and the PV2 maintainer-validation loop with
 > a committed, CI-gated inference drift gate in v2.1.14 (see
-> [maintainer-validation.md](maintainer-validation.md)). **Next:** the
-> credible-interval coverage check, then the mutation gate plus traceability
-> matrix. This file is the plan from here.
+> [maintainer-validation.md](maintainer-validation.md)). The credible-interval
+> perturbation-coverage gate shipped in v2.1.15
+> (`validation/interval_coverage.py`, gated by
+> `tests/test_interval_coverage.py`, memo in
+> `validation/interval-coverage.md`). **Next:** the mutation gate, then the
+> traceability matrix. This file is the plan from here.
 
 ## Pre-2.0 hardening (shipped) and the road past v2.0
 
@@ -382,7 +385,15 @@ Adaptive (stays correct as the world drifts):
   the loop on a `/schedule` routine is the remaining operator step.
 - A coverage check on the credible intervals, even a proxy-label or case-study
   version, framed exactly as honestly as CAL1 requires (consistency and
-  evidence-responsiveness, never claimed ground-truth calibration).
+  evidence-responsiveness, never claimed ground-truth calibration). *Shipped in
+  v2.1.15* as perturbation coverage: `validation/interval_coverage.py` builds
+  synthetic worlds whose evidence likelihoods sit anywhere in the CAL8 +/-20%
+  band, takes the truth from the independent full-joint reference (never the
+  engine), and measures how often the shipped 80% interval contains the
+  correct-world conditional; `tests/test_interval_coverage.py` gates the
+  nominal-80% floor (measured at or above 0.999), the delta=0 consistency row,
+  and a falsifiability case proving the check can still fail. Memo with the
+  full sweep and the MAR diagnostic: `validation/interval-coverage.md`.
 
 Trusted (the artifact and the answer are both verifiable):
 - Differential verification of the inference core: brute-force enumeration over
@@ -414,11 +425,12 @@ verification of the inference core (v2.1.7); the fault-injection sweep and its
 four fixes (v2.1.9) plus the hostile-input fuzz gate (v2.1.10); the "Resilient"
 residuals, the source-level `region` cap, and the boundary-by-mode matrix
 (v2.1.11); and reproducible builds plus sigstore-signed PyPI attestations
-(v2.1.12); the auditable assurance case + operational contract (v2.1.13); and the
-PV2 inference drift gate + maintainer-validation loop (v2.1.14). **Remaining, in
-order:** the credible-interval coverage check; then mutation-as-a-gate and the
-traceability matrix. None of these is on the critical path of the feature
-candidates below; they are the work that matters most.
+(v2.1.12); the auditable assurance case + operational contract (v2.1.13); the
+PV2 inference drift gate + maintainer-validation loop (v2.1.14); and the
+credible-interval perturbation-coverage gate (v2.1.15). **Remaining, in
+order:** mutation-as-a-gate, then the traceability matrix. None of these is on
+the critical path of the feature candidates below; they are the work that
+matters most.
 
 Each item ships with acceptance criteria, checkable gates rather than "improved
 tests," and where it produces a durable artifact it ships a doc so the trust is

@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.15] - 2026-06-11
+
+### Assurance: credible-interval perturbation-coverage gate
+
+The next assurance-track item: a standing, CI-gated coverage check on the 80%
+credible intervals, framed per CAL1/CAL13 as model-internal coverage against
+parameter misspecification, never as ground-truth calibration.
+
+- **Harness.** `validation/interval_coverage.py` builds synthetic worlds whose
+  evidence likelihoods (and declarative `group_absence` pairs) are each scaled
+  by an independent factor inside a band, samples domains from those worlds,
+  runs the shipped model on the observations, and measures how often the
+  shipped 80% interval contains the world's own conditional probability. The
+  truth path is the independent full-joint reference from
+  `validation/differential_verification.py`, not the engine. Synthetic-only,
+  offline, aggregate output, reproducible under a fixed seed.
+- **Result.** At the CAL8 +/-20% band, per-node coverage measured at or above
+  0.999, marginal and conditional-on-fired-evidence; under gross
+  misspecification (delta >= 0.5) coverage degrades first on the
+  narrowest-interval node, the expected failure order. A diagnostic column
+  also quantifies, with a number, the documented cost of the MNAR absence rule
+  in a world where absence is genuine evidence. Full sweep and framing in
+  `validation/interval-coverage.md`.
+- **Gate.** `tests/test_interval_coverage.py` runs a reduced seed-pinned sweep
+  in CI: total coverage at delta=0 (truth-path sanity), the nominal-80% floor
+  on every node at delta=0.2, a falsifiability case at delta=0.9 proving the
+  check can still fail, plus hand-computed anchors for both truth paths.
+- `docs/assurance-case.md` Promise 5 gains the corresponding mechanism row;
+  the roadmap assurance track marks the item shipped.
+
+Gate: full pytest + new coverage tests, ruff, pyright (0 errors),
+validate_fingerprint (841), branch coverage 85%.
+
 ## [2.1.14] - 2026-06-10
 
 ### Assurance: PV2 maintainer-validation loop + inference drift gate
