@@ -91,3 +91,20 @@ jobs:
         # test or accepted explicitly in the memo before this gate goes
         # green again.
         run: uv run --group mutation cr-rate mutation.sqlite --fail-over 5
+
+      - name: Dump surviving mutants (diagnostics)
+        # Survivor diffs and test output, so a floor failure is
+        # diagnosable from the log without re-running the hour-long
+        # sweep. Capped: the artifact below carries the full session.
+        if: failure()
+        run: uv run --group mutation cr-report mutation.sqlite --surviving-only --show-diff --show-output | head -n 800
+
+      - name: Upload session DB
+        # The full per-mutant record (operator, diff, test output,
+        # outcome) for post-mortem analysis on any outcome.
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-session
+          path: mutation.sqlite
+          retention-days: 14
