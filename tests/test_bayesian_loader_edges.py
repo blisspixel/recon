@@ -54,15 +54,17 @@ class TestPriorAndCptValidation:
     def test_prior_must_be_numeric(self, tmp_path: Path) -> None:
         _rejects(tmp_path, _spec(prior="high"), "requires numeric 'prior'")
 
-    @pytest.mark.parametrize("bad", [0.0, 1.0, -0.2, 1.5])
+    @pytest.mark.parametrize("bad", [0.0, 1.0, -0.2, 1.5, 1.9, -0.5])
     def test_prior_open_interval_boundaries(self, tmp_path: Path, bad: float) -> None:
-        # 0.0 and 1.0 sit exactly on the bounds: a < flipped to <= accepts them.
+        # 0.0 / 1.0 sit on the bounds (a < flipped to <= accepts them); the
+        # well-outside 1.9 / -0.5 kill a bound-constant mutation that widens
+        # the interval (e.g. ``< 1.0`` -> ``< 2.0`` or ``0.0 <`` -> ``-1.0 <``).
         _rejects(tmp_path, _spec(prior=bad), r"outside \(0, 1\)")
 
     def test_parents_require_cpt(self, tmp_path: Path) -> None:
         _rejects(tmp_path, _spec(prior=None, parents=["root"]), "requires 'cpt'")
 
-    @pytest.mark.parametrize("bad", [0.0, 1.0])
+    @pytest.mark.parametrize("bad", [0.0, 1.0, 1.9, -0.5])
     def test_cpt_values_open_interval(self, tmp_path: Path, bad: float) -> None:
         spec = _spec(prior=None, parents=["root"], cpt={"root=present": bad, "root=absent": 0.2})
         _rejects(tmp_path, spec, r"outside \(0, 1\)")
@@ -107,8 +109,12 @@ class TestEvidenceValidation:
             r"must be \[float, float\]",
         )
 
-    @pytest.mark.parametrize("pair", [[0.0, 0.1], [1.0, 0.1], [0.8, 0.0], [0.8, 1.0]])
+    @pytest.mark.parametrize(
+        "pair", [[0.0, 0.1], [1.0, 0.1], [0.8, 0.0], [0.8, 1.0], [1.9, 0.1], [-0.5, 0.1], [0.8, 1.9], [0.8, -0.5]]
+    )
     def test_likelihood_open_interval_boundaries(self, tmp_path: Path, pair: list[float]) -> None:
+        # Boundary values catch a strict/loose comparison flip; the
+        # well-outside 1.9 / -0.5 (per element) catch a widened bound constant.
         _rejects(
             tmp_path,
             _spec(evidence=[{"slug": "m", "likelihood": pair}]),
@@ -209,7 +215,7 @@ class TestGroupAbsenceValidation:
     def test_pair_shape(self, tmp_path: Path) -> None:
         _rejects(tmp_path, _declarative({"gx": [0.2]}), r"must be \[float, float\]")
 
-    @pytest.mark.parametrize("pair", [[0.0, 0.8], [0.2, 1.0]])
+    @pytest.mark.parametrize("pair", [[0.0, 0.8], [0.2, 1.0], [1.9, 0.8], [0.2, -0.5]])
     def test_pair_open_interval_boundaries(self, tmp_path: Path, pair: list[float]) -> None:
         _rejects(tmp_path, _declarative({"gx": pair}), r"in \(0, 1\)")
 

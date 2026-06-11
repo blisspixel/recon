@@ -205,8 +205,14 @@ class TestLoadPriorsOverride:
         assert load_priors_override(tmp_path / "absent.yaml") == {}
 
     def test_priors_mapping_with_invalid_values_filtered(self, tmp_path) -> None:
+        # 1.5 (above) and -0.5 (below) both fall outside the open (0, 1)
+        # interval: -0.5 also kills a lower-bound constant mutation
+        # (``0.0 < fv`` -> ``-1.0 < fv``) that the above-only case misses.
         f = tmp_path / "p.yaml"
-        f.write_text("priors:\n  m365_tenant: 0.5\n  out_of_range: 1.5\n  not_a_number: x\n", encoding="utf-8")
+        f.write_text(
+            "priors:\n  m365_tenant: 0.5\n  too_high: 1.5\n  too_low: -0.5\n  not_a_number: x\n",
+            encoding="utf-8",
+        )
         assert load_priors_override(f) == {"m365_tenant": 0.5}
 
     def test_top_level_mapping_form(self, tmp_path) -> None:
@@ -260,7 +266,11 @@ class TestNEffExactValues:
         net = load_network()
         result = infer(net, ["cloudflare", "akamai"], [], conflict_field_count=1, priors_override={})
         post = {p.name: p for p in result.posteriors}
-        assert post["cdn_fronting"].n_eff == 6.0 - _CONFLICT_N_EFF_PENALTY
+        # Asserted as a literal (6.0 - 1.5), not 6.0 - _CONFLICT_N_EFF_PENALTY:
+        # the symbolic form moves with a mutation to the constant and so
+        # cannot catch it. The constant is cross-checked separately below.
+        assert post["cdn_fronting"].n_eff == 4.5
+        assert _CONFLICT_N_EFF_PENALTY == 1.5
 
     def test_floor_holds_for_evidence_free_node_under_conflict(self) -> None:
         net = load_network()
@@ -277,6 +287,16 @@ class TestNEffExactValues:
         result = infer(net, [], [], priors_override={})
         post = {p.name: p for p in result.posteriors}
         assert post["email_security_policy_enforcing"].n_eff == 6.0
+
+    def test_absence_informative_flag_tracks_declarative_missingness(self) -> None:
+        # The exposed ``absence_informative`` field is True for the one
+        # declarative node and False for every hideable node. Pinning both
+        # sides kills a flip of the ``missingness == "declarative"`` test.
+        net = load_network()
+        post = {p.name: p for p in infer(net, [], [], priors_override={}).posteriors}
+        assert post["email_security_policy_enforcing"].absence_informative is True
+        assert post["m365_tenant"].absence_informative is False
+        assert post["cdn_fronting"].absence_informative is False
 
 
 # ── Contract predicates ────────────────────────────────────────────────
