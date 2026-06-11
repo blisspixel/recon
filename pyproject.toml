@@ -1,6 +1,6 @@
 [project]
 name = "recon-tool"
-version = "2.1.15"
+version = "2.1.16"
 description = "Domain intelligence CLI and MCP server — tech stack, email security, and signal intelligence from DNS."
 requires-python = ">=3.11"
 readme = "README.md"
@@ -75,6 +75,12 @@ dev = [
     "pyright>=1.1",
     "pre-commit>=3.0",
     "pip-audit>=2.7",
+]
+# Mutation-testing gate (the `mutation-gate` CI workflow). Separate group so
+# the per-push dev environment stays lean; cosmic-ray is pulled only by the
+# mutation job and by a maintainer running the sweep locally.
+mutation = [
+    "cosmic-ray>=8.4",
 ]
 
 [tool.pytest.ini_options]

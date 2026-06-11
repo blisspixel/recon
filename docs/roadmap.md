@@ -26,8 +26,11 @@ This file is forward-looking. Shipped work belongs in
 > perturbation-coverage gate shipped in v2.1.15
 > (`validation/interval_coverage.py`, gated by
 > `tests/test_interval_coverage.py`, memo in
-> `validation/interval-coverage.md`). **Next:** the mutation gate, then the
-> traceability matrix. This file is the plan from here.
+> `validation/interval-coverage.md`), and the mutation gate in v2.1.16
+> (cosmic-ray over the inference core, 1,642 of 1,642 mutants killed,
+> `cr-rate --fail-over 5` blocking in `.github/workflows/mutation.yml`; memo in
+> `validation/mutation-gate.md`). **Next:** the traceability matrix. This file
+> is the plan from here.
 
 ## Pre-2.0 hardening (shipped) and the road past v2.0
 
@@ -418,7 +421,12 @@ Trusted (the artifact and the answer are both verifiable):
   byte-identical output on every matrix cell.
 - Mutation testing promoted to a gate with a score floor, and a
   requirements-and-invariants traceability matrix so every promise maps to the
-  test that keeps it.
+  test that keeps it. *The mutation half shipped in v2.1.16:* cosmic-ray over
+  `recon_tool/bayesian.py` (1,642 mutants, all killed in the 2026-06 baseline
+  sweep), a four-file kill-set proven green before scoring, and a blocking 95%
+  kill-score floor, running on changes to the mutated surface, weekly, and on
+  demand (`.github/workflows/mutation.yml`, `validation/mutation-gate.md`).
+  The traceability matrix is the remaining half.
 
 Priority order, highest trust-per-effort first. **Done:** differential
 verification of the inference core (v2.1.7); the fault-injection sweep and its
@@ -426,11 +434,11 @@ four fixes (v2.1.9) plus the hostile-input fuzz gate (v2.1.10); the "Resilient"
 residuals, the source-level `region` cap, and the boundary-by-mode matrix
 (v2.1.11); and reproducible builds plus sigstore-signed PyPI attestations
 (v2.1.12); the auditable assurance case + operational contract (v2.1.13); the
-PV2 inference drift gate + maintainer-validation loop (v2.1.14); and the
-credible-interval perturbation-coverage gate (v2.1.15). **Remaining, in
-order:** mutation-as-a-gate, then the traceability matrix. None of these is on
-the critical path of the feature candidates below; they are the work that
-matters most.
+PV2 inference drift gate + maintainer-validation loop (v2.1.14); the
+credible-interval perturbation-coverage gate (v2.1.15); and mutation-as-a-gate
+(v2.1.16). **Remaining:** the traceability matrix. None of these is on the
+critical path of the feature candidates below; they are the work that matters
+most.
 
 Each item ships with acceptance criteria, checkable gates rather than "improved
 tests," and where it produces a durable artifact it ships a doc so the trust is

@@ -64,6 +64,9 @@ docs/accuracy.md
 # aggregate numbers, no target data. Imported and gated by the test.
 !/validation/interval_coverage.py
 !/validation/interval-coverage.md
+# Mutation-gate memo: scope, kill-set rationale, score floor, survivor
+# dispositions. Counts and node ids only, no target data.
+!/validation/mutation-gate.md
 # v2.1a: aggregate-state methodology example. Fully synthetic (fictional
 # brands, fabricated numbers); the reference reducer, generator, and synthetic
 # cohort are public. Real cohorts stay local. The reducer run-output is a
@@ -256,3 +259,6 @@ secrets.yml
 /archive
 docs/archive/
 _local_gate.sh
+
+# Mutation-testing session DB (regenerable; the config mutation.toml is committed).
+/mutation.sqlite
