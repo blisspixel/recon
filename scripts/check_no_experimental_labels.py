@@ -30,6 +30,7 @@ Run from repo root: ``python scripts/check_no_experimental_labels.py``
 
 from __future__ import annotations
 
+import argparse
 import re
 from pathlib import Path
 
@@ -82,14 +83,32 @@ def scan_file(path: Path) -> list[tuple[int, str]]:
     return hits
 
 
-def main() -> int:
+def _display(path: Path) -> str:
+    """Repo-relative path when possible, else the path as given (test fixtures
+    live outside the repo root)."""
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Fail on active EXPERIMENTAL labels in user-facing surfaces.")
+    parser.add_argument(
+        "paths",
+        nargs="*",
+        type=Path,
+        help="Files to scan. Default: the built-in user-facing surface list.",
+    )
+    args = parser.parse_args(argv)
+    targets = args.paths if args.paths else list(_SCANNED_FILES)
+
     total_hits = 0
-    for path in _SCANNED_FILES:
+    for path in targets:
         hits = scan_file(path)
         if hits:
             total_hits += len(hits)
-            rel = path.relative_to(REPO_ROOT)
-            print(f"\n{rel} ({len(hits)} hit{'s' if len(hits) != 1 else ''}):")
+            print(f"\n{_display(path)} ({len(hits)} hit{'s' if len(hits) != 1 else ''}):")
             for line_num, text in hits:
                 print(f"  {line_num}: {text}")
 
