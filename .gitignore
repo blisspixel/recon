@@ -60,6 +60,10 @@ docs/accuracy.md
 # network. No corpus / company data (node names + numbers only). Gated by the test.
 !/validation/drift_check.py
 !/validation/inference_baseline.json
+# Credible-interval perturbation-coverage harness + memo: synthetic worlds only,
+# aggregate numbers, no target data. Imported and gated by the test.
+!/validation/interval_coverage.py
+!/validation/interval-coverage.md
 # v2.1a: aggregate-state methodology example. Fully synthetic (fictional
 # brands, fabricated numbers); the reference reducer, generator, and synthetic
 # cohort are public. Real cohorts stay local. The reducer run-output is a
