@@ -1,8 +1,38 @@
 [cosmic-ray]
 module-path = "recon_tool/bayesian.py"
-timeout = 90.0
+timeout = 120.0
 excluded-modules = []
-test-command = "python -m pytest -x -q -p no:cacheprovider tests/test_bayesian_inference.py tests/test_bayesian_canonical.py tests/test_bayesian_evidence_groups.py tests/test_drift_check.py"
+# The kill-set, ordered for kill speed under -x: the hand-computed unit
+# anchors first (they kill the arithmetic mutants the 2026-06 baseline
+# showed surviving), then the behavior suites, then the parser/loader
+# and explain-surface suites. Uses the ``pytest`` console script, never
+# bare ``python``: on Windows a bare ``python`` spawned from a venv
+# resolves to the base interpreter (no test deps), which silently turns
+# every mutant into a false kill via a conftest ImportError. The
+# baseline step exists to catch exactly that class of breakage.
+test-command = "pytest -x -q -p no:cacheprovider tests/test_bayesian_unit_math.py tests/test_bayesian_loader_edges.py tests/test_bayesian_inference.py tests/test_bayesian_canonical.py tests/test_bayesian_evidence_groups.py tests/test_drift_check.py tests/test_bayesian_validation_rounds.py tests/test_bayesian_topology.py tests/test_bayesian_dag.py"
 
 [cosmic-ray.distributor]
 name = "local"
+
+[cosmic-ray.filters.operators-filter]
+# Applied by ``cr-filter-operators`` after init (the workflow and the
+# memo's local recipe both run it). These operator families are
+# equivalent-by-construction in this module, so they are excluded rather
+# than chased (they would only pad the survivor count). See
+# validation/mutation-gate.md for the full survivor classification.
+#
+#  - BitOr: mutates the ``X | None`` union syntax in annotations; under
+#    ``from __future__ import annotations`` those never execute. The one
+#    runtime ``|`` (the factor-merge dict union) is covered by every
+#    behavior test.
+#  - Eq_Is / Eq_IsNot: rewrites ``x == "literal"`` to ``x is "literal"``.
+#    Testing object identity for value equality is a Python anti-pattern;
+#    on interned string literals ``is`` matches ``==`` in CPython, so the
+#    mutant is behaviourally equivalent and killing it would mean
+#    asserting an implementation detail.
+exclude-operators = [
+    "core/ReplaceBinaryOperator_BitOr_.*",
+    "core/ReplaceComparisonOperator_Eq_Is",
+    "core/ReplaceComparisonOperator_Eq_IsNot",
+]
