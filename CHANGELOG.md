@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes pending.
 
+## [2.1.17] - 2026-06-11
+
+### Assurance: requirements-and-invariants traceability matrix, machine-checked
+
+Completes the committed post-2.0 assurance track: every promise maps to the
+test that keeps it, and the map itself cannot rot.
+
+- **`docs/traceability-matrix.md`** maps the six box invariants, the
+  operational-contract bounds (each named constant to the test that pins it),
+  the output contract (schema drift, batch shapes, exit codes), the layered
+  inference trust chain (differential verification, drift gate, interval
+  coverage, mutation gate, evidence semantics), and release integrity. Rows
+  whose proof is structural rather than test-shaped say so explicitly, as
+  closable gaps.
+- **`scripts/check_traceability.py`** resolves every backticked reference in
+  the matrix and in `docs/assurance-case.md` against the AST of the current
+  tree: test files, test nodes (including `file::method` shorthand and
+  `Class::method` chains), source constants (`recon_tool/x.py::NAME`), and
+  referenced files. No imports, no test execution; prose tokens are skipped.
+- **`tests/test_traceability.py`** is the CI gate: a renamed or deleted test or
+  constant now fails the build instead of silently orphaning a trust-doc row.
+  The negative tests prove the checker catches broken references and ignores
+  prose. The checker also surfaced and the matrix now corrects two stale
+  constant homes (`_MAX_TXT_MATCH_LENGTH` lives in `fingerprints.py`; the exit
+  codes live in `exit_codes.py`).
+- Docs index gains the matrix under Trust and assurance; the roadmap marks the
+  committed assurance track complete (remaining items are operator-paced:
+  CAL3/CAL4 oracle calibration, the C3 CT-enabled corpus pass, two docs, and
+  the diagnostics candidates).
+
+Gate: full pytest + the new gate, ruff, pyright (0 errors), validate_fingerprint
+(841), branch coverage 85%.
+
 ## [2.1.16] - 2026-06-11
 
 ### Assurance: mutation testing promoted to a gate with a score floor
