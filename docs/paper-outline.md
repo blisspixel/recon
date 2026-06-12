@@ -191,7 +191,7 @@ correlation.md section 4.3.
 | Experiment | What it shows | Harness / status |
 |---|---|---|
 | Reference calibration (DMARC) | the email-policy posterior agrees with the DMARC record (ECE about 0.077, miss conservative); tier 4 for the strict-SPF + MTA-STS residual only, since DMARC is also the dominant input | `validation/reference_calibration.py`; shipped |
-| Held-out residual calibration | recompute the policy posterior with the DMARC bindings removed and calibrate the residual against the DMARC label, so predictor and label are disjoint (a clean tier-4 claim) | extension of `validation/reference_calibration.py`; not yet built |
+| Held-out residual calibration | recompute the policy posterior with the DMARC unit masked as structurally unobserved (`masked_units`, not "absent" — the declarative node would read deletion as disconfirmation) and calibrate the residual against the DMARC label, so predictor and label are disjoint (a clean tier-4 claim) | `validation/reference_calibration.py` (both modes print full + held-out blocks); harness shipped, maintainer run pending |
 | Conformal coverage on labelable nodes | a distribution-free finite-sample coverage statement beside the Bayesian interval, with the exchangeability boundary stated | candidate validation extension; not yet built |
 | Interval coverage (synthetic) | the 80% interval absorbs the elicitation imprecision under the CAL8 band | `validation/interval_coverage.py`; shipped |
 | Likelihood sensitivity (CAL8) | the posteriors and agreement are stable under a plus-or-minus-20-percent likelihood perturbation | `validation/likelihood_sensitivity.py`; shipped |

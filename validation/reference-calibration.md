@@ -117,14 +117,45 @@ removes the DMARC bindings and scores the residual against the DMARC label is
 what would make the whole posterior tier 4. None of this generalizes to the
 hideable nodes, where no external reference exists.
 
+## The held-out residual (harness shipped; run pending)
+
+The clean construction the section above asks for now ships in the same
+harness: every run computes, beside the full posterior, a *held-out residual*
+posterior with the `dmarc_policy` evidence unit masked as structurally
+unobserved (`infer(..., masked_units=("dmarc_policy",))`, the
+leave-one-unit-out primitive in `recon_tool/bayesian.py`, pinned by
+`tests/test_bayesian_masked_units.py`). Masking matters because the policy
+node is declarative: simply deleting the fired DMARC signal would let the
+informative-absence rule read the domain as *disconfirmed* ("no DMARC
+published"), contaminating the residual with the very record the label is
+made from. The mask suppresses both directions, so the residual predictor
+sees only the strict-SPF and MTA-STS channel and the DMARC record serves
+purely as the label — predictor and label disjoint by construction.
+
+Two things to expect from the run, so the numbers are read honestly:
+
+- The residual predictor is weak by design (DMARC is the dominant input; the
+  residual lives in roughly the 0.27 to 0.75 band, populating exactly the
+  interior bins the full-posterior run left empty). The claim under test is
+  its *calibration*, not its strength: in each residual-posterior bin, does
+  the empirical enforcing rate match?
+- The residual is invariant to the DMARC signal in either direction
+  (unit-tested), so no leakage path from label to predictor remains inside
+  the inference.
+
+A maintainer-local run over the corpus fills in this section's numbers; the
+output's second block ("Held-out residual") is the one to copy here,
+aggregates only.
+
 ## Status
 
-The harness, its unit tests, and the result above ship. The
-statistical-assurance dossier records `email_security_policy_enforcing` as
-tier 4 for the strict-SPF + MTA-STS residual and an agreement check for the
-DMARC-driven bulk, not tier 4 for the whole posterior. The remaining work is
-the held-out calibration that would make the residual claim clean (recompute
-the posterior with the DMARC bindings removed and score it against the DMARC
-label), and the optional per-vertical stratification (does the calibration
-hold across industries), for which the `by-vertical/` corpus lists are the
-input.
+The harness, its unit tests, the full-posterior result above, and the
+held-out residual mode all ship. The statistical-assurance dossier records
+`email_security_policy_enforcing` as tier 4 for the strict-SPF + MTA-STS
+residual and an agreement check for the DMARC-driven bulk, not tier 4 for
+the whole posterior; the held-out residual *run* (the numbers for the
+section above) is what would make the residual claim clean, and it is the
+remaining step, together with the optional per-vertical stratification
+(does the calibration hold across industries), for which the `by-vertical/`
+corpus lists are the input (`--stratify-dir` now reports full and held-out
+blocks per stratum).

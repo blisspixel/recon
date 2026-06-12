@@ -127,7 +127,7 @@ exactly where the top of that spectrum reaches:
 | `okta_idp`, `federated_identity` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: federation indicators are hideable |
 | `email_gateway_present`, `cdn_fronting`, `aws_hosting` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: all hideable infrastructure |
 | `email_security_modern_provider` | Consistency | Pure propagation from parents (no own evidence), so it inherits its parents' tier | Not an independent measurement |
-| `email_security_policy_enforcing` | Tier 4 for the non-DMARC residual; an agreement check for the rest | Calibrated against the DMARC record on real domains (ECE about 0.077, miss conservative), but DMARC is also the node's dominant input, so the agreement is largely definitional and only the strict-SPF + MTA-STS residual is independently tested; see `validation/reference-calibration.md` | The result is for a domain *declaring* an enforcing policy, not enforcing it, and the declaration is forgeable at zero cost (correlation.md 4.11, Pattern I); held-out calibration of the residual is the open item |
+| `email_security_policy_enforcing` | Tier 4 for the non-DMARC residual; an agreement check for the rest | Calibrated against the DMARC record on real domains (ECE about 0.077, miss conservative), but DMARC is also the node's dominant input, so the agreement is largely definitional and only the strict-SPF + MTA-STS residual is independently tested; see `validation/reference-calibration.md` | The result is for a domain *declaring* an enforcing policy, not enforcing it, and the declaration is forgeable at zero cost (correlation.md 4.11, Pattern I); the held-out residual mode (the `dmarc_policy` unit masked via `masked_units`, so predictor and label are disjoint) ships in the harness, and its maintainer-local run is the open item |
 | The 80% credible interval (all nodes) | Evidence-responsive | Differential verification plus perturbation coverage (v2.1.15) | Frequentist ground-truth coverage (tier 4) only where a public reference exists |
 | Cohort-summary prevalences (PV1) | Observed plus evidence-responsive | Observability-adjusted rates over the caller's set, with denominators | Ecological-fallacy discipline; never a population claim |
 
@@ -158,8 +158,12 @@ committed, per [data-handling-policy.md](data-handling-policy.md); detail in
 `validation/reference-calibration.md`). Because DMARC is also the node's dominant
 input, the honest reading is tier 4 for the strict-SPF + MTA-STS residual and a
 largely-definitional agreement check for the DMARC-driven bulk; a held-out
-calibration of the residual is what would make the whole posterior tier 4. What
-remains is bounded and honest:
+calibration of the residual is what would make the whole posterior tier 4. The
+held-out construction now ships in the harness (the `dmarc_policy` evidence
+unit masked as structurally unobserved, so predictor and label are disjoint;
+`validation/reference-calibration.md` has the method), and the maintainer-local
+run over the corpus is what fills in its numbers. What remains is bounded and
+honest:
 
 - The tenancy claims (`m365_tenant`, `google_workspace_tenant`) can be
   corroborated against the providers' own identity endpoints the same way, which

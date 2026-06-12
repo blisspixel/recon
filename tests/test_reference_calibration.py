@@ -15,6 +15,7 @@ import pytest
 from validation.reference_calibration import (
     CalibrationRecord,
     calibration_summary,
+    held_out_policy_posterior,
     reference_label_email_policy,
     stratified_summary,
     wilson_interval,
@@ -97,6 +98,31 @@ class TestCalibrationSummary:
         for row in s["reliability"]:  # type: ignore[attr-defined]
             assert set(row) == {"bin_low", "bin_high", "enforcing_rate", "count"}
             assert all(isinstance(v, int | float) for v in row.values())
+
+
+class TestHeldOutPolicyPosterior:
+    """The residual predictor masks the dmarc_policy unit, so the DMARC
+    signal must not influence it in either direction. Hand values use the
+    shipped network (prior 0.62) with priors_override={} so a local
+    ~/.recon/priors.yaml cannot leak in; see
+    tests/test_bayesian_masked_units.py for the arithmetic."""
+
+    def test_invariant_to_the_dmarc_signal(self) -> None:
+        with_dmarc = held_out_policy_posterior(set(), {"dmarc_reject", "spf_strict"}, priors_override={})
+        without_dmarc = held_out_policy_posterior(set(), {"spf_strict"}, priors_override={})
+        assert with_dmarc == without_dmarc
+
+    def test_hand_computed_spf_only_residual(self) -> None:
+        # 0.62*0.53*0.94 / (0.62*0.53*0.94 + 0.38*0.27*0.99) = 0.7525
+        p = held_out_policy_posterior(set(), {"spf_strict"}, priors_override={})
+        assert p == pytest.approx(0.7525, abs=1e-4)
+
+    def test_hand_computed_no_signal_residual(self) -> None:
+        # Strict SPF genuinely absent (declarative complement [0.47, 0.73]),
+        # MTA-STS absent (near-neutral complement [0.94, 0.99]):
+        # 0.62*0.47*0.94 / (0.62*0.47*0.94 + 0.38*0.73*0.99) = 0.4994
+        p = held_out_policy_posterior(set(), set(), priors_override={})
+        assert p == pytest.approx(0.4994, abs=1e-4)
 
 
 class TestStratifiedSummary:

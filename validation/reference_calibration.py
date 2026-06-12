@@ -25,6 +25,21 @@ node's definition) is calibrated against the authoritative DMARC-only
 definition. Where recon over-weights SPF or MTA-STS and reports a high
 posterior on a domain whose DMARC is ``p=none``, the reference catches it.
 
+The held-out residual, computed alongside. To remove that input overlap
+entirely, each run also computes a *held-out residual* posterior: the same
+inference with the ``dmarc_policy`` evidence unit masked as structurally
+unobserved (``infer(..., masked_units=("dmarc_policy",))``), so the
+predictor sees only the strict-SPF and MTA-STS channel and the DMARC
+record serves purely as the label. Masking is not the same as the signal
+not firing — the policy node is declarative, so a non-firing DMARC group
+would count as disconfirming absence; the mask suppresses both directions
+(see ``recon_tool/bayesian.py``). Predictor and label are disjoint by
+construction, which is the clean tier-4 claim: it asks how much the
+residual public channel alone says about enforcement. Expect it to be much
+weaker than the full posterior (DMARC is the dominant input by design);
+the honest result is the calibration of that weak predictor, not its
+strength.
+
 Why calibration and not interval coverage. The reference label is binary
 (enforcing or not), and a credible interval is for the probability, so
 "does the 80% interval contain the label" is a category mismatch.
@@ -81,6 +96,39 @@ _POLICY_NODE = "email_security_policy_enforcing"
 _ENFORCING_POLICIES = frozenset({"reject", "quarantine"})
 _NON_ENFORCING_POLICIES = frozenset({"none"})
 
+# The evidence unit masked for the held-out residual: the mutually-exclusive
+# DMARC policy-level group, which is also what defines the reference label.
+_DMARC_UNIT = "dmarc_policy"
+
+
+def held_out_policy_posterior(
+    slugs: set[str],
+    signals: set[str],
+    network: object | None = None,
+    priors_override: dict[str, float] | None = None,
+) -> float | None:
+    """The policy-node posterior with the DMARC evidence unit masked.
+
+    This is the held-out residual predictor: inference over the same
+    observation set but with the ``dmarc_policy`` unit treated as
+    structurally unobserved, so the DMARC record influences the label only.
+    Returns None if the policy node is absent (a custom network).
+    """
+    from recon_tool.bayesian import infer, load_network
+
+    net = network if network is not None else load_network()
+    result = infer(
+        net,  # type: ignore[arg-type]
+        observed_slugs=slugs,
+        observed_signals=signals,
+        priors_override=priors_override,
+        masked_units=(_DMARC_UNIT,),
+    )
+    for p in result.posteriors:
+        if p.name == _POLICY_NODE:
+            return float(p.posterior)
+    return None
+
 
 def reference_label_email_policy(dmarc_policy: str | None) -> int | None:
     """The authoritative enforcing/not label from a domain's DMARC policy.
@@ -127,6 +175,19 @@ class CalibrationRecord:
 
     posterior: float
     label: int
+
+
+@dataclass(frozen=True)
+class CalibrationPair:
+    """One domain's full and held-out-residual records (no apex).
+
+    ``full`` is the shipped posterior (DMARC evidence included, so the label
+    overlaps the input); ``held_out`` is the residual posterior with the
+    ``dmarc_policy`` unit masked, so predictor and label are disjoint.
+    """
+
+    full: CalibrationRecord
+    held_out: CalibrationRecord
 
 
 def calibration_summary(records: list[CalibrationRecord], bins: int = 10) -> dict[str, object]:
@@ -184,13 +245,13 @@ def stratified_summary(
 
 async def _collect_one(
     domain: str, *, timeout: float, skip_ct: bool, sem: asyncio.Semaphore
-) -> CalibrationRecord | None:
-    """Resolve one domain, infer, and pair the policy posterior with the
+) -> CalibrationPair | None:
+    """Resolve one domain, infer, and pair both posteriors with the
     reference label. Returns None when the domain has no DMARC reference truth.
 
     The apex is used only to resolve; it is never returned or logged.
     """
-    from recon_tool.bayesian import infer_from_tenant_info
+    from recon_tool.bayesian import infer_from_tenant_info, signals_from_tenant_info
     from recon_tool.resolver import resolve_tenant
 
     async with sem:
@@ -205,10 +266,19 @@ async def _collect_one(
     node = posteriors.get(_POLICY_NODE)
     if node is None:
         return None
-    return CalibrationRecord(posterior=float(node.posterior), label=label)
+    residual = held_out_policy_posterior(
+        set(getattr(info, "slugs", ()) or ()),
+        signals_from_tenant_info(info),
+    )
+    if residual is None:
+        return None
+    return CalibrationPair(
+        full=CalibrationRecord(posterior=float(node.posterior), label=label),
+        held_out=CalibrationRecord(posterior=residual, label=label),
+    )
 
 
-async def collect(domains: list[str], *, timeout: float, skip_ct: bool, concurrency: int) -> list[CalibrationRecord]:
+async def collect(domains: list[str], *, timeout: float, skip_ct: bool, concurrency: int) -> list[CalibrationPair]:
     sem = asyncio.Semaphore(concurrency)
     tasks = [_collect_one(d, timeout=timeout, skip_ct=skip_ct, sem=sem) for d in domains]
     results = await asyncio.gather(*tasks)
@@ -236,10 +306,21 @@ def _print_summary(summary: dict[str, object], header: str) -> None:
 
 
 _TRAILER = (
-    "\nThis is reference-anchored calibration (the label is the authoritative DMARC\n"
-    "policy, an external definition), firmer than tier-2 consistency but not the\n"
-    "fully-independent ground truth of an ideal study; see docs/statistical-assurance.md."
+    "\nTwo constructions, two tiers. The full-posterior block is reference-anchored\n"
+    "calibration (the label is the authoritative DMARC policy, an external\n"
+    "definition), firmer than tier-2 consistency but with predictor/label overlap\n"
+    "on the DMARC input. The held-out block masks the dmarc_policy evidence unit,\n"
+    "so predictor and label are disjoint — the clean tier-4 construction; expect a\n"
+    "weak (near-prior) predictor there, and judge its calibration, not its\n"
+    "strength. See docs/statistical-assurance.md."
 )
+
+
+def _print_both(pairs: list[CalibrationPair], *, bins: int) -> None:
+    full = calibration_summary([p.full for p in pairs], bins=bins)
+    _print_summary(full, "Email-policy node calibrated against the DMARC record (full posterior)")
+    held_out = calibration_summary([p.held_out for p in pairs], bins=bins)
+    _print_summary(held_out, "Held-out residual (dmarc_policy masked; predictor and label disjoint)")
 
 
 def _run_single(path: Path, *, bins: int, concurrency: int, timeout: float) -> int:
@@ -247,14 +328,24 @@ def _run_single(path: Path, *, bins: int, concurrency: int, timeout: float) -> i
     print(f"Resolving {len(domains)} domains against the DMARC record (aggregates only, no apex printed)...")
     # CT is skipped throughout: the policy node's evidence is DNS-only (DMARC /
     # SPF / MTA-STS), so a CT pass would add cost without changing the posterior.
-    records = asyncio.run(collect(domains, timeout=timeout, skip_ct=True, concurrency=concurrency))
-    summary = calibration_summary(records, bins=bins)
-    if summary["n"] == 0:
+    pairs = asyncio.run(collect(domains, timeout=timeout, skip_ct=True, concurrency=concurrency))
+    if not pairs:
         print("No domains carried a DMARC reference label; nothing to calibrate.")
         return 0
-    _print_summary(summary, "Email-policy node calibrated against the DMARC record")
+    _print_both(pairs, bins=bins)
     print(_TRAILER)
     return 0
+
+
+def _print_strata_table(result: dict[str, object], *, min_cell: int, title: str) -> None:
+    print(f"\n{title} (cells with n < {min_cell} suppressed)")
+    print(f"  {'stratum':<28}{'n':>5}{'ECE':>8}{'agree':>8}{'base':>8}")
+    print("  " + "-" * 57)
+    for name, s in result["strata"].items():  # type: ignore[attr-defined]
+        if s.get("suppressed"):
+            print(f"  {name:<28}{s['n']:>5}{'  suppressed':>24}")
+        else:
+            print(f"  {name:<28}{s['n']:>5}{s['ece']:>8.3f}{s['agreement_rate']:>8.3f}{s['base_rate_enforcing']:>8.2f}")
 
 
 def _run_stratified(directory: Path, *, bins: int, concurrency: int, timeout: float, min_cell: int) -> int:
@@ -263,20 +354,22 @@ def _run_stratified(directory: Path, *, bins: int, concurrency: int, timeout: fl
         print(f"FAIL: no .txt domain lists in {directory}")
         return 1
     print(f"Calibrating per stratum over {len(files)} lists (aggregates only, no apex printed)...")
-    strata: dict[str, list[CalibrationRecord]] = {}
+    strata_pairs: dict[str, list[CalibrationPair]] = {}
     for f in files:
-        records = asyncio.run(collect(_read_domains(f), timeout=timeout, skip_ct=True, concurrency=concurrency))
-        strata[f.stem] = records
-    result = stratified_summary(strata, min_cell=min_cell, bins=bins)
-    print(f"\nPer-stratum email-policy calibration (cells with n < {min_cell} suppressed)")
-    print(f"  {'stratum':<28}{'n':>5}{'ECE':>8}{'agree':>8}{'base':>8}")
-    print("  " + "-" * 57)
-    for name, s in result["strata"].items():  # type: ignore[attr-defined]
-        if s.get("suppressed"):
-            print(f"  {name:<28}{s['n']:>5}{'  suppressed':>24}")
-        else:
-            print(f"  {name:<28}{s['n']:>5}{s['ece']:>8.3f}{s['agreement_rate']:>8.3f}{s['base_rate_enforcing']:>8.2f}")
-    _print_summary(result["pooled"], "Pooled across all strata")  # type: ignore[arg-type]
+        pairs = asyncio.run(collect(_read_domains(f), timeout=timeout, skip_ct=True, concurrency=concurrency))
+        strata_pairs[f.stem] = pairs
+    full_result = stratified_summary(
+        {name: [p.full for p in pairs] for name, pairs in strata_pairs.items()}, min_cell=min_cell, bins=bins
+    )
+    _print_strata_table(full_result, min_cell=min_cell, title="Per-stratum email-policy calibration (full posterior)")
+    _print_summary(full_result["pooled"], "Pooled across all strata (full posterior)")  # type: ignore[arg-type]
+    held_out_result = stratified_summary(
+        {name: [p.held_out for p in pairs] for name, pairs in strata_pairs.items()}, min_cell=min_cell, bins=bins
+    )
+    _print_strata_table(
+        held_out_result, min_cell=min_cell, title="Per-stratum held-out residual (dmarc_policy masked)"
+    )
+    _print_summary(held_out_result["pooled"], "Pooled across all strata (held-out residual)")  # type: ignore[arg-type]
     print(_TRAILER)
     return 0
 
