@@ -11,19 +11,25 @@ shipped live in the [roadmap](roadmap.md) research write-up section.
 
 When a classifier's ground truth is structurally unobservable and the
 subject can choose what to reveal, calibration-against-truth is the wrong
-bar for most of its claims. The honest substitute is a layered argument:
+bar for the claims whose signals an operator can hide (about half of
+recon's nine nodes). The honest substitute is a layered argument:
 (1) structural guarantees that hold by construction, including under
-adversarial hiding; (2) genuine calibration on the subset of claims that
-have a self-defining external reference; and (3) an explicit ledger that
-states, per claim, the highest tier of support it has and where that
-support stops. recon is the worked artifact for that argument in passive
-external attack-surface measurement.
+adversarial hiding; (2) a partial external check on the subset of claims
+that have a self-defining reference; and (3) an explicit ledger that states,
+per claim, the highest tier of support it has and where that support stops.
+recon is the worked artifact for that argument in passive external
+attack-surface measurement.
 
-The seam the paper is built around: the boundary where the calibration and
-conformal guarantees stop being available is the same boundary where the
-structural guarantee keeps holding, and both coincide with the
-passive/active measurement line. Stated in the project's existing terms,
-the model is robust to hiding and is explicitly not robust to lying.
+The seam the paper is built around is evidence *removal* versus *addition*.
+The structural guarantee holds against removal: hiding signals can only move
+a claim toward its baseline, never to a confident false positive. It does not
+hold against addition: a fully passive operator who publishes one truthful
+decoy record can plant a confident false positive, and recon cannot tell a
+decoy from a real record without the active probing it forbids. So the honest
+contract is *robust to evidence removal, exposed to evidence addition*, and
+that line is not the passive/active measurement line, because the cheap attack
+is itself passive. The earlier "robust to hiding, not to lying" phrasing holds
+only if "lying" is read to include truthful-but-decoy records.
 
 ## Honest contribution statement
 
@@ -108,17 +114,18 @@ verdict can be confidently wrong. We present a passive, zero-credential
 inference tool that pairs deterministic certificate-transparency
 correlation with a small auditable Bayesian network and treats absent
 evidence as adversarially missing, so the reported credible interval
-widens rather than collapses when a target is hardened. We give a
-suppression-monotonicity result showing that hiding any observed signal
-can only move a claim toward its prior baseline, never to a confident
-false positive, and we identify the passive/active boundary as the limit
-of that guarantee. Where a self-defining external reference exists (a
-DMARC record for email-policy enforcement, provider identity endpoints for
-tenancy) we calibrate against it and add a distribution-free conformal
-coverage check; everywhere else we report principle-compliant
-evidence-responsiveness and say so. We evaluate against public references
-and synthetic harnesses that need no private data, and we release a
-reproducible, signed artifact.
+widens rather than collapses when a target is hardened. We prove a
+suppression-monotonicity property: hiding any observed signal can only move
+a claim toward its all-absent baseline, never to a confident false positive.
+We are explicit about its limit: the guarantee bounds evidence removal, not
+addition, and a fully passive operator who plants one truthful decoy record
+can still force a confident false positive. On the one node whose label is a
+public self-declaration (the DMARC email-policy record) we report a partial
+calibration against that record, honest that the label is also the node's
+dominant input; everywhere else we report evidence-responsiveness, which
+governs interval width and not point-estimate accuracy, and say so. We
+evaluate against public references and synthetic harnesses that need no
+private data, and we release a reproducible, signed artifact.
 
 ## Section skeleton
 
@@ -136,7 +143,7 @@ reproducible, signed artifact.
    provider-attested).
 4. Adversarial missing data. The MNAR / likelihood-ratio-one absence rule;
    m-graphs and Manski partial identification; the suppression-monotonicity
-   theorem statement and proof sketch; the passive/active boundary as the
+   proposition and proof; the removal-versus-addition boundary as the
    guarantee limit.
 5. The layered assurance argument. The four-tier evidence ledger; the
    structural guarantees as principle compliance; reference calibration on
@@ -152,19 +159,27 @@ reproducible, signed artifact.
    harnesses, the bit-for-bit reproducible signed artifact and locked
    schema.
 
-## Theorem 1 (suppression-monotonicity), as it will be stated
+## Proposition 1 (suppression-monotonicity), as it will be stated
 
-Under the positive-indicator hypothesis (each evidence binding has a
-presence likelihood ratio of at least one), a node's presence posterior
-odds equal its baseline odds times the product of the likelihood ratios of
-the bindings that fired. Hiding any fired binding removes a factor of at
-least one, so the posterior odds move monotonically toward the baseline
-and stay within the closed interval from the baseline value to the
-fully-observed value. Hiding therefore cannot raise a claim above its
-fully-observed posterior and cannot manufacture confidence; it can only
-move the claim toward "we cannot tell." The guarantee covers hiding
-(suppressing true signals) and explicitly does not cover forging
-(emitting false signals), and that division is the passive/active line.
+Hold all evidence outside a node X fixed, and reduce X's bindings to
+evidence units (one independent binding, or one mutually-exclusive group).
+X's presence-posterior odds equal a prior baseline odds times a product of
+per-unit likelihood ratios. Under the hypotheses (each fired unit is a
+positive indicator with ratio at least one, and on the declarative node each
+not-fired unit is disconfirming with ratio at most one), hiding any fired
+binding replaces a ratio of at least one with a ratio of at most one, so the
+posterior moves monotonically down toward the node's suppression floor B_X,
+the all-absent posterior, and never above the fully-observed value. For a
+hideable node B_X is the prior baseline; for the declarative node it is the
+strictly lower all-absent posterior (the policy node's is about 0.055, below
+its 0.62 prior). Hiding therefore cannot manufacture confidence; it can only
+move a claim toward "we cannot tell."
+
+The result is elementary and bounds only evidence removal. It says nothing
+about evidence addition: publishing a record that fires a unit raises the
+posterior on a premise recon cannot check passively, so a planted truthful
+decoy defeats it. That removal-versus-addition line, not the passive/active
+line, is the limit of the guarantee.
 
 Machine-checked by `validation/adversarial_properties.py`, gated by
 `tests/test_adversarial_properties.py`, with the full statement in
@@ -174,7 +189,8 @@ correlation.md section 4.3.
 
 | Experiment | What it shows | Harness / status |
 |---|---|---|
-| Reference calibration (DMARC) | the email-policy posterior is calibrated against an authoritative external definition on real records | `validation/reference_calibration.py`; shipped, tier 4, ECE about 0.077, conservative direction |
+| Reference calibration (DMARC) | the email-policy posterior agrees with the DMARC record (ECE about 0.077, miss conservative); tier 4 for the strict-SPF + MTA-STS residual only, since DMARC is also the dominant input | `validation/reference_calibration.py`; shipped |
+| Held-out residual calibration | recompute the policy posterior with the DMARC bindings removed and calibrate the residual against the DMARC label, so predictor and label are disjoint (a clean tier-4 claim) | extension of `validation/reference_calibration.py`; not yet built |
 | Conformal coverage on labelable nodes | a distribution-free finite-sample coverage statement beside the Bayesian interval, with the exchangeability boundary stated | candidate validation extension; not yet built |
 | Interval coverage (synthetic) | the 80% interval absorbs the elicitation imprecision under the CAL8 band | `validation/interval_coverage.py`; shipped |
 | Likelihood sensitivity (CAL8) | the posteriors and agreement are stable under a plus-or-minus-20-percent likelihood perturbation | `validation/likelihood_sensitivity.py`; shipped |

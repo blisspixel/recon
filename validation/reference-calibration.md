@@ -88,10 +88,14 @@ robustness signal worth more than either number alone.
 
 Reading it honestly:
 
-- The posterior distribution is bimodal (near 0 or near 0.9), as expected
-  for a node that fires hard on a clear DMARC signal. The empirical
-  enforcing-rate matches the bin in every populated bin: 0.000 where the
-  posterior is near 0, 1.000 where it is high.
+- The posterior distribution is bimodal (near 0 or near 0.9) on this corpus,
+  because most domains either publish a clear enforcing DMARC policy or none.
+  That is a corpus-composition artifact, not a property of the node: it does
+  emit mid-range posteriors (roughly 0.27 to 0.53) on domains that publish
+  strict SPF or MTA-STS without an enforcing DMARC, which is exactly the
+  stratum a held-out residual calibration would populate. The interior bins
+  [0.30, 0.80) are empty here, so the calibration is untested there. The
+  empirical enforcing-rate matches the bin in every populated bin.
 - The whole ECE (about 0.077) comes from the model being *under*-confident
   on enforcing domains: it reports 0.85 to 0.95 where the reference says
   100%. It never runs the other way (no bin where the posterior exceeds
@@ -103,15 +107,24 @@ Reading it honestly:
   the node, the documented overlap, so the reliability table and ECE are
   the informative figures here, not the agreement rate.
 
-This is a genuine tier-4 result for this one node: a calibration of the
-posterior against an authoritative external definition on real records,
-which the synthetic harnesses cannot supply. It does not generalize to
-the hideable-infrastructure nodes, where no such reference exists.
+This is a partial tier-4 result for this one node, not a clean one. Because
+DMARC is also the node's dominant input, the agreement is largely
+definitional, and the honest tier-4 claim is only for the strict-SPF +
+MTA-STS residual. The result also says nothing about whether the policy is
+*enforced*, only that it is *declared*, and the declaration is forgeable at
+zero cost (correlation.md 4.11, Pattern I). A held-out calibration that
+removes the DMARC bindings and scores the residual against the DMARC label is
+what would make the whole posterior tier 4. None of this generalizes to the
+hideable nodes, where no external reference exists.
 
 ## Status
 
-The harness, its unit tests, and the calibration result above ship. The
-statistical-assurance dossier moves `email_security_policy_enforcing` to
-tier 4 on the strength of this run. The remaining work is the optional
-per-vertical stratification (does the calibration hold across industries),
-for which the `by-vertical/` corpus lists are the input.
+The harness, its unit tests, and the result above ship. The
+statistical-assurance dossier records `email_security_policy_enforcing` as
+tier 4 for the strict-SPF + MTA-STS residual and an agreement check for the
+DMARC-driven bulk, not tier 4 for the whole posterior. The remaining work is
+the held-out calibration that would make the residual claim clean (recompute
+the posterior with the DMARC bindings removed and score it against the DMARC
+label), and the optional per-vertical stratification (does the calibration
+hold across industries), for which the `by-vertical/` corpus lists are the
+input.
