@@ -11,9 +11,13 @@ shipped live in the [roadmap](roadmap.md) research write-up section.
 
 When a classifier's ground truth is structurally unobservable and the
 subject can choose what to reveal, calibration-against-truth is the wrong
-bar for the claims whose signals an operator can hide (five of recon's nine
-nodes have no external reference; the engine applies the MNAR absence rule to
-eight, the ninth being the declarative policy node). The honest substitute is a layered argument:
+bar for the claims whose signals an operator can hide (of recon's nine
+nodes, two carry a two-class external reference — the declarative policy
+node and the provider-attested M365 tenancy node — one carries only a
+one-sided attestation, the Google channel being behavioral with no
+authoritative negative, and the remaining six have none; the engine applies
+the MNAR absence rule to eight, the ninth being the declarative policy
+node). The honest substitute is a layered argument:
 (1) structural guarantees that hold by construction, including under
 adversarial hiding; (2) a partial external check on the subset of claims
 that have a self-defining reference; and (3) an explicit ledger that states,
@@ -192,6 +196,7 @@ correlation.md section 4.3.
 |---|---|---|
 | Reference calibration (DMARC) | the email-policy posterior agrees with the DMARC record (ECE about 0.077, miss conservative); tier 4 for the strict-SPF + MTA-STS residual only, since DMARC is also the dominant input | `validation/reference_calibration.py`; shipped |
 | Held-out residual calibration | recompute the policy posterior with the DMARC unit masked as structurally unobserved (`masked_units`, not "absent" — the declarative node would read deletion as disconfirmation) and calibrate the residual against the DMARC label, so predictor and label are disjoint (a clean tier-4 claim) | `validation/reference_calibration.py` (both modes print full + held-out blocks); harness shipped, maintainer run pending |
+| Tenancy corroboration (provider endpoints) | the M365 tenancy posterior computed from the DNS channel alone, calibrated against Microsoft's own endpoint attestation (two-class label: tenant ID / namespace positive, documented not-found negative) — predictor and label disjoint by observation channel; GWS reported one-sided (recall on attested-federated) because the Google channel has no authoritative negative | `validation/tenancy_reference_calibration.py`; harness shipped, maintainer run pending |
 | Conformal coverage on labelable nodes | a distribution-free finite-sample coverage statement beside the Bayesian interval, with the exchangeability boundary stated | candidate validation extension; not yet built |
 | Interval coverage (synthetic) | the 80% interval absorbs the elicitation imprecision under the CAL8 band | `validation/interval_coverage.py`; shipped |
 | Likelihood sensitivity (CAL8) | the posteriors and agreement are stable under a plus-or-minus-20-percent likelihood perturbation | `validation/likelihood_sensitivity.py`; shipped |
@@ -224,11 +229,12 @@ in [data-handling-policy.md](data-handling-policy.md).
 
 Evidence not yet in hand, in roughly the order the roadmap sequences it:
 
-- per-vertical stratification of the reference calibration;
-- provider-endpoint corroboration for the tenancy nodes (which also gives
-  those nodes a reference label, extending calibration and the conformal
-  check past the single email-policy node);
-- the conformal coverage harness on the labelable nodes, if adopted;
+- the maintainer-local runs of the shipped harnesses: the held-out residual
+  and per-vertical stratification (`validation/reference_calibration.py`),
+  the tenancy corroboration (`validation/tenancy_reference_calibration.py`,
+  M365 two-class; GWS one-sided by the channel's nature), and the conformal
+  coverage pass (`validation/conformal_coverage.py`) — every harness now
+  exists, so this is collection, not construction;
 - the layer ablations and the posture-stratified aggregates;
 - the writing itself.
 

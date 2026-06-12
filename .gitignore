@@ -81,6 +81,11 @@ docs/accuracy.md
 # labelable nodes (pure logic plus a maintainer-local orchestration that prints
 # aggregates only). No target data; the pure logic is unit-tested.
 !/validation/conformal_coverage.py
+# Tenancy reference-calibration harness: corroborates the M365 tenancy posterior
+# (DNS channel only) against the provider's identity-endpoint attestation; GWS
+# reported one-sided. Pure label/channel-split logic is unit-tested; the
+# orchestration is maintainer-local and prints aggregates only. No target data.
+!/validation/tenancy_reference_calibration.py
 # v2.1a: aggregate-state methodology example. Fully synthetic (fictional
 # brands, fabricated numbers); the reference reducer, generator, and synthetic
 # cohort are public. Real cohorts stay local. The reducer run-output is a

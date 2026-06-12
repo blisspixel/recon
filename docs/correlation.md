@@ -1126,21 +1126,34 @@ recon do better than the worst case on the claims that matter most.
   by the platform the operator depends on. The Microsoft 365
   tenant-discovery endpoints (the unauthenticated OIDC metadata and
   GetUserRealm responses at `login.microsoftonline.com`, keyed on the
-  domain) and the Google Workspace equivalents report whether a domain is
-  a tenant *from the provider's own registry*. The operator does not
-  control those responses, and querying them contacts Microsoft or Google
-  rather than the target, so it stays passive with respect to the target
-  while reading an authoritative answer the target cannot suppress. To
-  make the endpoint stop attesting a tenant the operator has to actually
-  leave the tenant, which is a functional change, not concealment.
+  domain) report whether a domain is a tenant *from the provider's own
+  registry*, in both directions: a resolved tenant ID or a
+  Managed/Federated namespace attests presence, and the documented
+  tenant-not-found response (OIDC HTTP 400, NameSpaceType Unknown)
+  attests absence. The operator does not control those responses, and
+  querying them contacts Microsoft rather than the target, so it stays
+  passive with respect to the target while reading an authoritative
+  answer the target cannot suppress. To make the endpoint stop attesting
+  a tenant the operator has to actually leave the tenant, which is a
+  functional change, not concealment. The Google Workspace channel is
+  weaker and one-sided, and the distinction matters: recon's passive
+  Google probe (the login-routing classification) attests a Workspace
+  tenant only when a federated-IdP redirect is actually observed, never
+  attests a managed tenant, and has no authoritative negative — so it is
+  provider-*behavioral* evidence, not a registry answer, and it cannot
+  serve as a two-class reference label.
 
 The consequence sharpens the tier picture in
 [statistical-assurance.md](statistical-assurance.md). A node whose
 load-bearing evidence is provider-attested is not "hideable
 infrastructure" in the worst-case sense: like the declarative DMARC node,
 it has an external attestor the operator cannot hide, so its tenancy claim
-is reference-calibratable (the open extension of
-`validation/reference_calibration.py`). The genuinely worst-case nodes are
+is reference-calibratable — for `m365_tenant` with both label classes
+(`validation/tenancy_reference_calibration.py`, which splits predictor and
+label by observation channel: the DNS-driven posterior corroborated
+against the endpoint attestation), while `google_workspace_tenant` admits
+only a one-sided recall check on attested-federated tenants, by the
+channel limitation above. The genuinely worst-case nodes are
 the ones whose evidence is entirely operator-controlled DNS or CT, where
 no external attestor exists, for example a CDN-fronting claim. So a flat
 "hideable" label understates the position: the most load-bearing evidence,
