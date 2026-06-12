@@ -38,11 +38,12 @@ This file is forward-looking. Shipped work belongs in
 > polish (the services-panel label-collision fix, the rotating-spinner variety,
 > and the aspirational arXiv-paper roadmap item below). Since v2.1.18 the
 > unreleased docs-and-validation track has closed most of what remained: the
-> suppression-monotonicity theorem is now formalized in `correlation.md` section
-> 4.3 and machine-checked by `validation/adversarial_properties.py` (the one
-> formal guarantee, that hiding evidence can only move a claim toward the baseline,
-> never to a confident false positive); the CAL3/CAL4 reference-calibration run
-> landed (`email_security_policy_enforcing` now at tier 4); and the data-handling
+> suppression-monotonicity proposition is now formalized in `correlation.md`
+> section 4.3 and machine-checked by `validation/adversarial_properties.py` (the
+> one formal result, that hiding evidence can only move a claim toward its
+> all-absent baseline, never to a confident false positive by hiding); the
+> CAL3/CAL4 reference-calibration run landed (`email_security_policy_enforcing`
+> at tier 4 for the strict-SPF + MTA-STS residual only); and the data-handling
 > policy and statistical-assurance dossier docs shipped. What is still open is
 > operator-paced or standing: the provider-endpoint corroboration and optional
 > per-vertical stratification for reference calibration, the C3 CT-enabled corpus

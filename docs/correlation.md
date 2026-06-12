@@ -161,7 +161,7 @@ data-file-only schema for fingerprints/CPTs, the opt-in
 This is also why the Bayesian layer is deliberately small and
 hand-specified rather than learned. A reader can mistake that for a
 limitation; it is the precondition for what the layer can promise. The
-suppression theorem (§4.3) rests on every binding being a hand-set
+suppression proposition (§4.3) rests on every binding being a hand-set
 positive indicator with an inspectable likelihood, a property a learned
 model could not certify, and the evidence DAG is auditable only because
 no weight is fit at runtime. The smallness is what buys the proof and
@@ -943,7 +943,7 @@ rationale first.
 #### The suppression guarantee: a monotonicity property
 
 The $LR = 1$ rule is not only a modelling choice; it buys a provable
-adversarial property, the one formal guarantee recon makes. State it
+adversarial property, the one formal result recon leans on. State it
 first in plain terms: **an operator who hides indicators can only move a
 claim toward "we cannot tell," never toward a confident wrong answer.**
 The rest of this subsection makes that precise and proves it.
@@ -1101,7 +1101,7 @@ above is its justification, not the check.
 
 #### What is actually hideable: the operator/provider spectrum
 
-The suppression theorem is a worst case: it grants the operator the power
+The suppression proposition is a worst case: it grants the operator the power
 to delete any binding. Real bindings differ in how freely they can be
 deleted, and the difference is itself defensive information that lets
 recon do better than the worst case on the claims that matter most.

@@ -96,7 +96,8 @@ exactly where the top of that spectrum reaches:
   not control and cannot suppress without actually leaving the tenant. For the
   policy node the calibration has run: against the DMARC record on real domains,
   two independent samples agree at ECE about 0.077 with the miss in the
-  conservative (under-confident) direction, so it is reported at tier 4
+  conservative (under-confident) direction, so it is reported at tier 4 for the
+  strict-SPF + MTA-STS residual, an agreement check for the DMARC-driven bulk
   (`validation/reference-calibration.md`). The tenancy nodes (`m365_tenant`,
   `google_workspace_tenant`) are provider-attested in the same way and are the
   open extension of the reference-calibration harness.

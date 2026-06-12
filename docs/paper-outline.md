@@ -11,8 +11,9 @@ shipped live in the [roadmap](roadmap.md) research write-up section.
 
 When a classifier's ground truth is structurally unobservable and the
 subject can choose what to reveal, calibration-against-truth is the wrong
-bar for the claims whose signals an operator can hide (about half of
-recon's nine nodes). The honest substitute is a layered argument:
+bar for the claims whose signals an operator can hide (five of recon's nine
+nodes have no external reference; the engine applies the MNAR absence rule to
+eight, the ninth being the declarative policy node). The honest substitute is a layered argument:
 (1) structural guarantees that hold by construction, including under
 adversarial hiding; (2) a partial external check on the subset of claims
 that have a self-defining reference; and (3) an explicit ledger that states,
