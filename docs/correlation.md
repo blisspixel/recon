@@ -931,6 +931,152 @@ choice is annotated in `recon_tool/bayesian.py` so future
 contributors who reach for symmetric conditioning read the
 rationale first.
 
+#### The suppression guarantee: a monotonicity theorem
+
+The $LR = 1$ rule is not only a modelling choice; it buys a provable
+adversarial property, the one formal guarantee recon makes. State it
+first in plain terms: **an operator who hides indicators can only move a
+claim toward "we cannot tell," never toward a confident wrong answer.**
+The rest of this subsection makes that precise and proves it.
+
+Fix a node $X$ and hold all evidence outside $X$'s own bindings fixed.
+Let $F = O \cap B(X)$ be the set of $X$'s bindings that fired, and write
+$\alpha_b = \ell_b(\text{present})$, $\beta_b = \ell_b(\text{absent})$.
+The node's observation factor is $\phi_X(x) = \prod_{b \in F} \ell_b(x)$,
+which enters $X$'s marginal multiplicatively, so in variable elimination
+$X$'s posterior odds factor exactly as
+
+$$\frac{P(X = \text{present} \mid F)}{P(X = \text{absent} \mid F)}
+  \;=\; \Omega_X^{0} \, \prod_{b \in F} \frac{\alpha_b}{\beta_b},
+  \qquad
+  \Omega_X^{0} = \frac{P(X = \text{present} \mid \varnothing)}{P(X = \text{absent} \mid \varnothing)},$$
+
+where $\Omega_X^{0}$ is the **baseline odds**: the message $X$ receives
+from its priors, parents, and children with none of its own bindings
+fired. $\Omega_X^{0}$ does not depend on $F$, so the whole effect of the
+observed evidence is the product term.
+
+The catalogue enforces that every binding is a *positive indicator*:
+$\alpha_b \ge \beta_b$, equivalently $\lambda_b = \log(\alpha_b/\beta_b)
+\ge 0$ (a fired slug favours presence). This is the theorem's one
+hypothesis, and it is checked as a standing invariant
+(`validation/adversarial_properties.py`).
+
+> **Theorem (suppression monotonicity).** Let $F' \subseteq F$ be any
+> subset obtained by an operator hiding some of the fired bindings. Under
+> the positive-indicator hypothesis, with all other evidence fixed,
+> $$P(X = \text{present} \mid \varnothing)
+>   \;\le\; P(X = \text{present} \mid F')
+>   \;\le\; P(X = \text{present} \mid F).$$
+> Suppression moves the presence-posterior monotonically down toward the
+> baseline and never above the fully-observed value.
+
+*Proof.* By the factorisation, the posterior odds under $F'$ equal
+$\Omega_X^{0} \prod_{b \in F'} (\alpha_b/\beta_b)$. Each factor is
+$\ge 1$, so dropping factors (passing from $F$ to $F' \subseteq F$)
+weakly decreases the product and hence the odds; the odds-to-probability
+map $\omega \mapsto \omega/(1+\omega)$ is strictly increasing, giving the
+upper bound. Taking $F' = \varnothing$ leaves exactly $\Omega_X^{0}$, and
+any $F' \supseteq \varnothing$ multiplies in factors $\ge 1$, giving the
+lower bound. $\blacksquare$
+
+Two corollaries carry the security content.
+
+*No suppression-induced false positive.* There is no hiding strategy
+$F' \subseteq F$ with $P(X = \text{present} \mid F') > P(X = \text{present}
+\mid F)$. An adversary deleting public indicators cannot raise the
+presence-posterior above what the unhidden channel supports, so confident
+"present" cannot be manufactured by hiding.
+
+*Suppression is visible, not silent.* The effective sample size
+$n_{\mathrm{eff}}$ is non-decreasing in the contributing-binding count
+(§4.4), and the credible-interval half-width is decreasing in
+$n_{\mathrm{eff}}$, so hiding weakly *widens* the 80% interval. The act of
+suppression raises the reported uncertainty rather than passing unseen;
+the wide interval on a hardened target is a proven consequence of hiding,
+not an unexplained hedge.
+
+For the one **declarative** node (§4.8.3) the bound is only stronger:
+hiding a fired binding there converts it from a positive factor
+($\ge 1$) into an informative absence ($< 1$), so the posterior drops
+further. The premise that earns that node its empirical-coverage status
+(§4.7) is exactly that its signals are public declarations an operator
+*cannot* hide.
+
+**The asymmetry, and why it is exactly the passive/active line.** The
+theorem bounds the *removal* of evidence. It says nothing about the
+*fabrication* of evidence, and that gap is not an oversight but the
+defining limit of passive observation. An operator who publishes a record
+that fires binding $b$ adds a factor $\alpha_b/\beta_b \ge 1$ and raises
+the posterior on a false premise. recon cannot distinguish a fabricated
+fired binding from a genuine one without sending traffic to the service
+to check it, which the strictly-passive, zero-credential invariant
+forbids (§6). So the boundary of the guarantee coincides exactly with the
+passive/active boundary: recon is **monotone-safe against the suppression
+of evidence and exposed to the fabrication of evidence**, and the same
+refusal to probe that makes it safe to point at an untrusted target
+(§4.4, the SSRF/DNS-leak posture) is what leaves injection out of reach.
+Stated as the contract: *provably robust to hiding, explicitly not robust
+to lying.* The deception-posture catalogue (§4.11) is the honest
+enumeration of the lying side.
+
+Read through the threat model, the theorem says recon structurally avoids
+the most dangerous error, a *confident false negative*. A hideable node
+with no fired evidence returns the baseline with a wide interval (the
+identifiability floor, §4.5), never a confident "absent," so suppression
+yields "we cannot tell," not a false "they are clean." The residual
+exposure is the false *positive* an injection can plant, which is
+catalogued, not claimed away. The monotonicity and the bounds are not
+only argued here; they are verified exhaustively over every enumerable
+per-node binding subset in `validation/adversarial_properties.py`, so the
+theorem ships as a machine-checked invariant alongside its proof.
+
+#### What is actually hideable: the operator/provider spectrum
+
+The suppression theorem is a worst case: it grants the operator the power
+to delete any binding. Real bindings differ in how freely they can be
+deleted, and the difference is itself defensive information that lets
+recon do better than the worst case on the claims that matter most.
+
+- **Operator-vanity bindings.** Records published purely as a hint, with
+  no functional load: an autodiscover CNAME, a domain-verification TXT.
+  These delete for free, and the MNAR worst case applies in full.
+- **Operator-functional bindings.** Records that route a live service.
+  The MX RRset is the canonical case: delete it and the apex receives no
+  mail. An operator running Microsoft 365 mail on the apex therefore
+  cannot silently drop the MX; they can only repoint it at a mail
+  gateway, which fires `email_gateway_present` and is itself observed.
+  The absence of an MX is then not "no signal" but the positive fact "no
+  direct mail on this apex," which constrains the claim rather than
+  vacating it. Hiding a functional binding carries a service cost, so it
+  is rarer than hiding a vanity one, and it tends to *relocate* the
+  evidence rather than erase it.
+- **Provider-attested bindings.** Signals served not by the operator but
+  by the platform the operator depends on. The Microsoft 365
+  tenant-discovery endpoints (the unauthenticated OIDC metadata and
+  GetUserRealm responses at `login.microsoftonline.com`, keyed on the
+  domain) and the Google Workspace equivalents report whether a domain is
+  a tenant *from the provider's own registry*. The operator does not
+  control those responses, and querying them contacts Microsoft or Google
+  rather than the target, so it stays passive with respect to the target
+  while reading an authoritative answer the target cannot suppress. To
+  make the endpoint stop attesting a tenant the operator has to actually
+  leave the tenant, which is a functional change, not concealment.
+
+The consequence sharpens the tier picture in
+[statistical-assurance.md](statistical-assurance.md). A node whose
+load-bearing evidence is provider-attested is not "hideable
+infrastructure" in the worst-case sense: like the declarative DMARC node,
+it has an external attestor the operator cannot hide, so its tenancy claim
+is reference-calibratable (the open extension of
+`validation/reference_calibration.py`). The genuinely worst-case nodes are
+the ones whose evidence is entirely operator-controlled DNS or CT, where
+no external attestor exists, for example a CDN-fronting claim. So a flat
+"hideable" label understates the position: the most load-bearing evidence,
+provider attestation and functional records, is precisely the evidence
+hardest to hide, which is why staying strictly passive still leaves recon
+with a firm footing on the high-value claims.
+
 #### Conditionally-dependent bindings and the over-counting correction
 
 The likelihood factor $L(O \mid X) = \prod_{b \in O \cap B(X)} \ell_b(X)$

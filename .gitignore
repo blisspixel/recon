@@ -56,6 +56,10 @@ docs/accuracy.md
 # Differential verification of the inference core: independent full-joint
 # reference, no target data (synthetic network only). Imported by the test.
 !/validation/differential_verification.py
+# Adversarial-property check: the suppression-monotonicity theorem as an
+# exhaustive machine-checked invariant over the shipped network. No target
+# data (network dataclasses only). Imported and gated by the test.
+!/validation/adversarial_properties.py
 # PV2 inference drift gate: deterministic CPT-implied marginals of the shipped
 # network. No corpus / company data (node names + numbers only). Gated by the test.
 !/validation/drift_check.py

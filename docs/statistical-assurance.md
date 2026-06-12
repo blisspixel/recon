@@ -60,33 +60,38 @@ The honest shape of recon's assurance is: well-grounded at tiers 1 to 3
 everywhere, and tier 4 reachable on the claims where a public reference can stand in
 for ground truth.
 
-## Why tier 4 is unavailable for most nodes, and reachable for one
+## Why tier 4 is reachable for some nodes and not others
 
-recon's adversarial-missingness model (the MNAR / LR=1 absence rule,
-[correlation.md](correlation.md) section 4.3) is the reason, and it splits the
-nodes:
+The dividing line is not "is the claim important" but "does an external attestor
+exist that the operator cannot hide." recon's evidence sits on a spectrum from
+operator-controlled to provider-attested ([correlation.md](correlation.md)
+section 4.3, the operator/provider hideability spectrum), and tier 4 is reachable
+exactly where the top of that spectrum reaches:
 
-- **Hideable infrastructure** (`m365_tenant`, `google_workspace_tenant`,
-  `federated_identity`, `okta_idp`, `email_gateway_present`, `cdn_fronting`,
-  `aws_hosting`). A hardened operator can strip the public indicators of these,
-  so their absence is adversarially missing and the passive channel cannot
-  observe the ground truth on a hardened target. There is no label set to compute
-  frequentist coverage against, by the nature of the setting. These claims are
-  honest at tiers 1 to 3, tier 4 is not available, and the interval's widening is
-  the model declining to claim what it cannot see.
+- **An external attestor exists (tier 4 reachable).** Two kinds. A *public
+  declaration*: the email policy's DMARC record is its own ground truth (an
+  enforcing `p=reject` is a fact anyone can read, not an inference; CAL14 made the
+  node `declarative`). And *provider attestation*: whether a domain is a
+  Microsoft 365 or Google Workspace tenant is answered by the provider's own
+  unauthenticated identity endpoint, keyed on the domain, which the operator does
+  not control and cannot suppress without actually leaving the tenant. For the
+  policy node the calibration has run: against the DMARC record on real domains,
+  two independent samples agree at ECE about 0.077 with the miss in the
+  conservative (under-confident) direction, so it is reported at tier 4
+  (`validation/reference-calibration.md`). The tenancy nodes (`m365_tenant`,
+  `google_workspace_tenant`) are provider-attested in the same way and are the
+  open extension of the reference-calibration harness.
 
-- **Public declaration** (`email_security_policy_enforcing`). This node's evidence
-  is DMARC / SPF / MTA-STS policy, a public declaration whose absence cannot be
-  hidden from passive DNS (CAL14 made this node `declarative`, conditioning on
-  informative absence). Here the record is its own ground truth: an enforcing
-  DMARC policy is a fact anyone can read, not an inference. So tier 4 is reachable
-  for this node by calibrating against the authoritative record itself
-  (CAL3 / CAL4), and that calibration has now run: against the DMARC record on
-  real domains, two independent samples agree at ECE about 0.077 with the miss in
-  the conservative (under-confident) direction, so this node is reported at tier 4
-  (`validation/reference-calibration.md`). The M365 / Google Workspace tenancy
-  claims can be corroborated against the providers' own identity endpoints in the
-  same way, which remains the open extension.
+- **No external attestor (tier 4 unavailable by the nature of the setting).**
+  `cdn_fronting`, `aws_hosting`, `okta_idp`, `email_gateway_present`, and the
+  non-provider parts of `federated_identity` rest on operator-controlled DNS and
+  CT. A hardened operator can strip those indicators, so their absence is
+  adversarially missing and there is no label set to compute frequentist coverage
+  against. These claims are honest at tiers 1 to 3, tier 4 is not available, and
+  the interval's widening is the model declining to claim what it cannot see. The
+  suppression theorem (correlation.md 4.3) is what makes that honest rather than
+  merely cautious: hiding can only push these toward "we cannot tell," never to a
+  confident false answer.
 
 ## The ledger
 
