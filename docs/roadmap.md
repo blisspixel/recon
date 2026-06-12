@@ -104,12 +104,15 @@ None is on the critical path of another except where noted.
 
 1. **CAL3 / CAL4 oracle calibration** (assurance; highest open value). The one
    check that tests the CPT values against external truth rather than
-   self-consistency: empirical interval coverage and calibration against
-   authoritative public oracles (DMARC / SPF / MTA-STS records as their own
-   truth; the Microsoft and Google identity endpoints for tenancy). The oracle
-   approach is publishable; the corpus tier stays maintainer-local. *Design:*
-   [correlation.md](correlation.md) section 4.7 and the CAL track table below;
-   the run produces a validation memo, aggregates only.
+   self-consistency: calibration of the email-policy posterior against the
+   authoritative DMARC record (its own ground truth), with the tenancy claims
+   corroborable against the providers' own identity endpoints. *Harness shipped:*
+   `validation/oracle_calibration.py` (pure label / Wilson / calibration logic,
+   unit-tested in `tests/test_oracle_calibration.py`; aggregates-only network
+   orchestration), memo in `validation/oracle-calibration.md`. *Remaining:* the
+   calibration run itself stays maintainer-local against the gitignored corpus
+   and produces an aggregate-only follow-up memo, after which the
+   statistical-assurance dossier moves this node to tier 4.
 2. **Statistical-assurance dossier** (assurance doc; capstone). *Shipped:*
    [statistical-assurance.md](statistical-assurance.md) is the single ledger
    that places each claim recon makes at the highest of four evidence tiers,
