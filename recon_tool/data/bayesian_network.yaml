@@ -26,7 +26,7 @@
 #            on DMARC/DKIM/SPF/MTA-STS). Expanded federated_identity
 #            parents to include google_workspace_tenant. Resolves the
 #            52.6% v1.9.0 corpus disagreement on email_security_strong
-#            (definitional gap — see docs/correlation.md §4.8.x and
+#            (definitional gap — see docs/correlation.md §4.3 and
 #            validation/v1.9.3-calibration.md). Net: 9 nodes.
 #
 # Validation: see validation/v1.9-validation-summary.md for
@@ -96,7 +96,7 @@ nodes:
     # a domain exposing one usually exposes the others, so they co-fire and are
     # not conditionally independent. The shared `group` makes them contribute a
     # single effective likelihood ratio rather than the over-counted product.
-    # See correlation.md §4.8.3.
+    # See correlation.md §4.3.
     evidence:
       - slug: microsoft365
         likelihood: [0.95, 0.03]

@@ -11,7 +11,7 @@ run; aggregate numbers only.
 
 ## What is being claimed, and what is not
 
-The interval's stated job (README, `correlation.md` 4.8.4) is to carry
+The interval's stated job (README, `correlation.md` 4.4) is to carry
 the model's honest uncertainty: it widens when evidence is thin, and
 its width also has to absorb the acknowledged imprecision of the
 hand-elicited CPT likelihoods, which are directionally-accurate
@@ -74,7 +74,7 @@ The harness also reports coverage against the raw generative
 conditional, where a non-fired binding counts as disconfirming
 evidence for every node. The shipped model deliberately refuses that
 conditioning for hideable nodes (the MNAR absence rule,
-`correlation.md` 4.8.3), so this column quantifies what that refusal
+`correlation.md` 4.3), so this column quantifies what that refusal
 costs in a synthetic world where absence happens to be genuine
 evidence:
 

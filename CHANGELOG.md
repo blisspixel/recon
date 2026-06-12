@@ -1506,7 +1506,7 @@ cluster ~0.08).
   enforcing a DMARC reject/quarantine policy, so its discriminating power for
   full enforcement is weak (the same reasoning that removed `dkim_present` in
   v1.9.6). This took the node to conditional ECE ~0.28.
-- **Node-dependent missingness finding** (`docs/correlation.md` §4.8.3, roadmap
+- **Node-dependent missingness finding** (`docs/correlation.md` §4.3, roadmap
   CAL14): the residual is the missingness regime, not one binding. The
   asymmetric / LR=1 absence rule is right for hideable infrastructure (m365,
   okta) but wrong for public-declaration signals (DMARC / SPF / MTA-STS policy)
@@ -1523,7 +1523,7 @@ weak-signal-only domains.
 
 ### Evidence-group correction for conditionally-dependent bindings
 
-Bayesian-core math (roadmap CAL7; `docs/correlation.md` §4.8.3). The likelihood
+Bayesian-core math (roadmap CAL7; `docs/correlation.md` §4.3). The likelihood
 product `L(O | X) = prod ell_b` treated a node's fired bindings as conditionally
 independent given the node. For co-firing correlated readings of one fact
 (`microsoft365` + `entra-id` + `exchange-online` for `m365_tenant`, or the two
@@ -3773,7 +3773,7 @@ release artifacts match the polished version visible on `main`.
   as a node id; `graph` is a reserved Mermaid keyword and GitHub's
   parser rejected the entire block. Renamed the node id to
   `graphL`.
-- **correlation.md §4.8.3 display math.** The DRO formula
+- **correlation.md §4.3 display math.** The DRO formula
   `$$P^*(X \mid E^* = \text{missing}) \;=\; ...$$` confused
   GitHub's markdown→MathJax pipeline because the asterisks were
   eaten as italic-emphasis delimiters across math boundaries.
@@ -3789,10 +3789,10 @@ release artifacts match the polished version visible on `main`.
 ### Changed
 
 - **correlation.md redundancy trim** (82 lines cut, formal content
-  unchanged). The §4.8.3 literature parade (Manski + Jeffrey +
+  unchanged). The §4.3 literature parade (Manski + Jeffrey +
   Walley + Augustin + Taroni) compressed to one paragraph with
-  inline citations preserved. §4.8.13 (v1.9.7/v1.9.8 narrative)
-  and §4.8.14 (v1.9.9 panel surfaces) collapsed; per-release
+  inline citations preserved. §4.13 (v1.9.7/v1.9.8 narrative)
+  and §4.14 (v1.9.9 panel surfaces) collapsed; per-release
   detail moved to the linked validation memos.
 
 ### Validation
@@ -4902,7 +4902,7 @@ policy:
 
 **v1.9.4 bridge milestone - hardened-adversarial behavior validation.**
 Validates the **design property** behind the v1.9 asymmetric-
-likelihood Bayesian layer (`docs/correlation.md` §4.8.3): on
+likelihood Bayesian layer (`docs/correlation.md` §4.3): on
 minimal-DNS / wildcard-cert / heavily-fronted apexes, the layer
 must hedge - flagging `sparse=true`, reporting wide credible
 intervals, and refusing to assert high-confidence posteriors on
@@ -4941,7 +4941,7 @@ hedges on hardened targets without over-claiming.
   trend, survival-ratio, and per-category aggregates from the
   hardened + soft-current + soft-original NDJSON runs. Output is
   publicly-reproducible (no proprietary data).
-- **`docs/correlation.md` §4.8.10 - Failure-mode catalog:
+- **`docs/correlation.md` §4.10 - Failure-mode catalog:
   hardening pattern fingerprints.** Documents the distinctive
   sparse-rate fingerprint each hardening pattern produces at the
   Bayesian layer, with per-pattern defensive read. Patterns
@@ -5011,7 +5011,7 @@ Per the project's no-real-company-data policy:
   (`validation/corpus-private/v1.9.4-hardened/results.ndjson`) is
   gitignored.
 - The calibration report (`validation/v1.9.4-calibration.md`) and
-  failure-mode catalog (`docs/correlation.md` §4.8.10) carry only
+  failure-mode catalog (`docs/correlation.md` §4.10) carry only
   category-level aggregates: per-pattern sparse rates, per-pattern
   defensive reads. No per-organization detail.
 - The analyzer script
@@ -6004,7 +6004,7 @@ for the full calibration aggregate and reproducibility instructions.
 - **`validation/v1.9.3-calibration.md`** - per-release calibration
   aggregate (sensitivity, synthetic ECE, spot-check); part of the
   standing per-release publish discipline.
-- **`docs/correlation.md §4.8.9`** - *Definitional discipline: the
+- **`docs/correlation.md §4.9`** - *Definitional discipline: the
   v1.9.3 split.* The v1.9.3 gate the roadmap required: explicit
   definitions of both new nodes, why they are separate claims, and
   the principle behind questioning topology before tuning numbers.

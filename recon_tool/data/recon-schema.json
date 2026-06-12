@@ -559,7 +559,7 @@
       }
     },
     "PosteriorObservation": {
-      "description": "Per-node Bayesian posterior with an 80% credible interval (v1.9; stable v2.0+). The interval is evidence-responsive: it widens monotonically as evidence thins and narrows as it accumulates (a construction property; it is not a frequentist coverage interval, see correlation.md section 4.8.4). ``sparse=true`` flags the passive-observation ceiling for a node whose absence carries no disconfirming weight; a declarative node (one whose absent public-declaration signals are themselves evidence, CAL14) can be confidently-absent, with a low posterior, a narrow interval, and ``sparse=false``. ``conflict_provenance`` (v1.9.1+) carries the source-pair detail behind any n_eff penalty.",
+      "description": "Per-node Bayesian posterior with an 80% credible interval (v1.9; stable v2.0+). The interval is evidence-responsive: it widens monotonically as evidence thins and narrows as it accumulates (a construction property; it is not a frequentist coverage interval, see correlation.md section 4.4). ``sparse=true`` flags the passive-observation ceiling for a node whose absence carries no disconfirming weight; a declarative node (one whose absent public-declaration signals are themselves evidence, CAL14) can be confidently-absent, with a low posterior, a narrow interval, and ``sparse=false``. ``conflict_provenance`` (v1.9.1+) carries the source-pair detail behind any n_eff penalty.",
       "type": "object",
       "required": [
         "name",

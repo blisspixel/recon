@@ -178,7 +178,7 @@ boundary between them, which coincides with the passive/active line.
 
 ## Pointers
 
-- The formal model and the suppression theorem: [correlation.md](correlation.md), sections 1.5, 4.3, 4.8.3.
+- The formal model and the suppression theorem: [correlation.md](correlation.md), sections 1.5, 4.3, 4.3.
 - Where each claim sits on the evidence ledger: [statistical-assurance.md](statistical-assurance.md).
 - The reference-calibration result: [../validation/reference-calibration.md](../validation/reference-calibration.md).
 - The paper skeleton these notes feed: [paper-outline.md](paper-outline.md).
