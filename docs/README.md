@@ -41,6 +41,16 @@ For anyone evaluating recon as a primitive to build on.
 | What may and may not enter the public repo (data-handling policy) | [data-handling-policy.md](data-handling-policy.md) |
 | What each number is backed by (observed / consistency / evidence-responsive / coverage) | [statistical-assurance.md](statistical-assurance.md) |
 
+## Research and theory
+
+The aspirational write-up and where recon sits in the literature.
+
+| Topic | Read |
+|---|---|
+| Why correlation works the way it does (the formal model) | [correlation.md](correlation.md) |
+| Calibration without observable ground truth (literature positioning) | [related-work.md](related-work.md) |
+| The paper skeleton and experiment inventory | [paper-outline.md](paper-outline.md) |
+
 ## Extending recon
 
 | Topic | Read |
