@@ -54,6 +54,39 @@ instance a measurement or security conference, primary category cs.CR,
 secondary stat.ML or cs.SE), not a machine-learning theory venue. This is
 an independent submission with no affiliation needed.
 
+## Writing standard (how this paper should read)
+
+Clarity is the bar, not a trade against rigor. The papers that get cited read
+like a sharp colleague explaining something at lunch, not a performance. The
+rules we hold this draft to:
+
+- Abstract in 150 to 250 words, plain enough for someone outside the subfield:
+  one sentence of problem, one of what we did, one of why it matters, one of the
+  result. No undefined jargon.
+- The first two paragraphs of the introduction land for a reader in the broader
+  field (security or measurement), starting from the real problem before zooming
+  in. If the contribution does not fit in one plain-English sentence, it is not
+  yet understood well enough.
+- Explain before formalizing, in every technical section: the intuition (a toy
+  example or a figure), then the math, then why it works in words.
+- Define every term and acronym on first use; prefer short common words; active
+  voice ("we show", not "it is shown"). Read each sentence as if saying it to a
+  colleague, and cut whatever sounds pompous.
+- Structure for skimming: abstract, introduction with a contributions bullet
+  list, related work that is generous and fair, preliminaries, method (figures
+  and pseudocode), experiments (tables with error bars and ablations),
+  discussion and limitations, short conclusion.
+- One figure on page 1 or 2 that tells the whole story. The likely candidate is
+  the node-tiering picture: which nodes carry which guarantee, and why.
+- Own the limitations early and credit prior work generously; the field is
+  small. Honesty reads as trust here, and it is the posture the tool already
+  takes everywhere else.
+- Target 8 to 12 pages plus appendix; shorter is usually better. Link the
+  reproducible artifact (the public references and the synthetic harnesses) so a
+  reader can run it in an afternoon.
+- Draft the prose before every experiment is in. Writing forces the idea to
+  clarify, and the harness inventory above is built to be filled in.
+
 ## Working title candidates
 
 Humble and descriptive:
