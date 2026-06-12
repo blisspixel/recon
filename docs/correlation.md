@@ -158,6 +158,15 @@ intro above. Everything else (the lack of telemetry, the
 data-file-only schema for fingerprints/CPTs, the opt-in
 `--fusion`-gated Bayesian layer) falls out of them.
 
+This is also why the Bayesian layer is deliberately small and
+hand-specified rather than learned. A reader can mistake that for a
+limitation; it is the precondition for what the layer can promise. The
+suppression theorem (§4.3) rests on every binding being a hand-set
+positive indicator with an inspectable likelihood, a property a learned
+model could not certify, and the evidence DAG is auditable only because
+no weight is fit at runtime. The smallness is what buys the proof and
+the provenance, not a capability the layer gave up.
+
 ## 2. The three correlation layers
 
 Three layers ship side-by-side, in increasing order of statistical
