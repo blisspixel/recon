@@ -132,6 +132,102 @@ governs interval width and not point-estimate accuracy, and say so. We
 evaluate against public references and synthetic harnesses that need no
 private data, and we release a reproducible, signed artifact.
 
+## Introduction (draft)
+
+Security teams increasingly need to know what an organization's external
+footprint reveals before an attacker reads the same channel: which identity
+provider a domain delegates to, whether its mail policy is enforced, what
+fronts its origin. External attack-surface tools answer these questions
+from public signals — DNS records, certificate-transparency logs,
+unauthenticated provider endpoints — and they answer confidently. The
+confidence is the problem. The ground truth behind these claims is not
+observable from outside, and the subject of the measurement controls most
+of the evidence: a hardened organization publishes less, a careless one
+publishes more, and a tool that reads "no signal" as "no technology" is
+confidently wrong about exactly the targets that matter most.
+
+The standard remedy — calibrate the classifier against labeled truth — is
+structurally unavailable here. There is no label set for "what this
+organization actually runs"; the operator can delete most of the
+indicators a passive observer relies on; and the deletion is not random,
+it correlates with security maturity, which is often the very thing being
+estimated. This is missingness that is not at random in the adversarial
+sense, and the calibration literature's usual assumptions (exchangeable
+data, missingness independent of the input) exclude it by construction.
+
+We present recon, a deployed, open-source, zero-credential
+external-surface tool built around that predicament rather than despite
+it. Every conclusion is reachable through an evidence DAG of re-queryable
+public observations; high-level claims are computed by a nine-node
+Bayesian network small enough to audit by hand and verified exhaustively
+against its full joint; and absent evidence on hideable claims
+contributes a likelihood ratio of one — absence of evidence is treated as
+no evidence, never as evidence of absence — so the reported 80% credible
+interval widens on hardened targets instead of collapsing to a false
+verdict. In one sentence: this paper contributes a validation
+architecture for inference whose ground truth is structurally
+unobservable and partly adversarial, worked end-to-end in a real tool.
+
+The architecture stands on one seam, stated early because it bounds
+everything else: evidence *removal* versus evidence *addition*. We prove
+a suppression-monotonicity property — holding other evidence fixed,
+hiding any observed indicator can only move a claim toward its all-absent
+baseline, never to a confident false positive — and we machine-check it
+over every per-node evidence subset. The guarantee does not extend to
+addition: a fully passive operator who publishes one truthful decoy
+record can plant a confident false positive, and no passive tool can
+distinguish a decoy from a real record. The honest contract is therefore
+"robust to hiding, exposed to planting," and the boundary is not the
+passive/active measurement line, because the cheap attack is itself
+passive.
+
+Validation then proceeds by tier, with the tier decided by whether an
+external reference the operator cannot suppress exists. Where one does —
+the DMARC record is its own definition of an enforcing mail policy;
+Microsoft's identity endpoints attest tenancy in both directions — we
+calibrate against it, including a held-out construction that masks the
+label-defining evidence out of the predictor, and we add a
+distribution-free conformal coverage statement with its exchangeability
+boundary made explicit. Where no reference exists, we claim only the
+structural properties, and we say so. We also measure what the honesty
+costs: in a synthetic ablation against the model's own generative
+process, the adversarial-missingness stance pays a quantified Brier
+penalty on hideable claims under benign missingness (a hard detector
+that reads absence wins pooled scores by roughly 0.05 to 0.10), while
+the one claim whose absence is genuinely informative — the declarative
+mail-policy node, where the model does condition on absence — wins
+outright. The price of refusing to read absence is real, bounded, and
+paid deliberately; we believe reporting it is more useful than hiding
+it.
+
+Concretely, this paper contributes:
+
+- a deployed passive-inference system that preserves full provenance and
+  pairs deterministic certificate-transparency correlation with a small,
+  exhaustively-verified Bayesian network (Section 3);
+- an adversarial missing-data treatment (the likelihood-ratio-one absence
+  rule, grounded in m-graphs and partial identification) with a proved
+  and machine-checked suppression-monotonicity guarantee, and an explicit
+  statement of its limit at evidence addition (Section 4);
+- a node-tiered validation architecture — reference calibration and
+  conformal coverage where a self-defining label exists, structural
+  principle-compliance everywhere else — with the boundary between tiers
+  derived from who controls the evidence (Section 5);
+- an evaluation that includes the cost of the design, not only its
+  benefit: layer ablations quantifying the MNAR price under benign worlds
+  and the fusion gain in the fired regime, alongside reference
+  calibration on real public records and synthetic coverage under
+  parameter imprecision (Section 6);
+- a reproducible artifact: every empirical claim is checkable against
+  public references anyone can re-query or fully synthetic harnesses,
+  because the tool's own data-handling policy forbids publishing targets
+  (Section 9).
+
+Section 2 places this against the label-free calibration, conformal, and
+principle-based-validation threads; Sections 7 and 8 state what remains
+unvalidated and why, which we consider part of the contribution rather
+than its caveat.
+
 ## Section skeleton
 
 1. Introduction. The passive EASM task; the unobservable-ground-truth
