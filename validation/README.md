@@ -168,6 +168,11 @@ Synthetic / no-network (runnable by anyone, deterministic):
   slug-matching baselines (pooled and fired-regime), and Louvain vs
   connected components on planted partitions under bridging noise. Run
   and committed (fully synthetic): `layer-ablation.md`.
+- `posture_distributions.py` — reads the engine's per-domain behaviour as
+  distributions: information recovered (CAL10 entropy reduction) bucketed
+  by observable hardening posture, and interval width vs evidence (the
+  CAL7 over-confidence diagnostic). Pure aggregation unit-tested; the
+  run is network/maintainer-local (aggregates only).
 
 Reference-anchored / network (maintainer-local, aggregates only):
 

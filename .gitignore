@@ -90,6 +90,12 @@ docs/accuracy.md
 # partitions, fictional hostnames), deterministic, publishable. No target data.
 !/validation/layer_ablation.py
 !/validation/layer-ablation.md
+# Posture-distribution harness + memo: entropy-reduction and interval-width
+# distributions stratified by observable posture. Pure aggregation logic is
+# unit-tested; the orchestration is maintainer-local and prints aggregates
+# only (quantiles, bucket means). No target data.
+!/validation/posture_distributions.py
+!/validation/public-list-calibration.md
 # v2.1a: aggregate-state methodology example. Fully synthetic (fictional
 # brands, fabricated numbers); the reference reducer, generator, and synthetic
 # cohort are public. Real cohorts stay local. The reducer run-output is a
