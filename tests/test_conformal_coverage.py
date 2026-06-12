@@ -18,6 +18,7 @@ import random
 
 import pytest
 
+import validation.reference_calibration as refcal
 from validation.conformal_coverage import (
     binary_nonconformity,
     conformal_quantile,
@@ -25,6 +26,10 @@ from validation.conformal_coverage import (
     evaluate_explicit,
     prediction_set,
 )
+from validation.conformal_coverage import (
+    main as conformal_main,
+)
+from validation.reference_calibration import CalibrationPair, CalibrationRecord
 
 
 class TestNonconformity:
@@ -143,6 +148,43 @@ class TestExchangeabilityIsLoadBearing:
         )
         assert out["coverage"] < 0.9
         assert out["coverage"] == pytest.approx(0.0)
+
+
+class TestCollectorContract:
+    """Guard the cross-harness contract this harness reuses.
+
+    `conformal_coverage.main` consumes `reference_calibration.collect`, which
+    returns a `CalibrationPair` per domain. A 2026-06 change to the collector
+    (adding the held-out residual, so it returns pairs not bare records) broke
+    this orchestration, and only a live run caught it because the network path
+    is otherwise untested. This pins the contract — main() must read the full
+    posterior off each pair and run to completion — with the collector
+    monkeypatched so no network is touched.
+    """
+
+    def test_main_runs_against_paired_collector(self, tmp_path, monkeypatch, capsys) -> None:
+        domains_file = tmp_path / "domains.txt"
+        domains_file.write_text("contoso.com\nnorthwind.com\nfabrikam.com\n", encoding="utf-8")
+
+        pairs = [
+            CalibrationPair(
+                full=CalibrationRecord(posterior=0.9 if i % 2 else 0.1, label=i % 2),
+                held_out=CalibrationRecord(posterior=0.45, label=i % 2),
+            )
+            for i in range(40)
+        ]
+
+        async def _fake_collect(domains, *, timeout, skip_ct, concurrency):
+            return pairs
+
+        # Patch on the source module: conformal imports the names inside main(),
+        # so the binding resolves at call time against this attribute.
+        monkeypatch.setattr(refcal, "collect", _fake_collect)
+
+        rc = conformal_main([str(domains_file)])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "coverage" in out.lower()
 
 
 class TestAggregatesOnly:

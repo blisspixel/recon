@@ -251,11 +251,13 @@ def _print(domain_records: list[DomainRecord], width_records: list[NodeWidthReco
                 cell = rows[label]
                 print(f"    n_eff {label:<14} mean width {cell['mean_width']:.4f}  (n {cell['n']})")
     print(
-        "\nReading: entropy reduction should fall in the edge-proxied / sparse buckets if"
-        "\nhardening reduces what the channel leaks; interval width should fall as n_eff"
-        "\nrises (evidence-responsiveness), with grouped nodes no wider than ungrouped at"
-        "\nmatched n_eff (the CAL7 co-firing reduction). Aggregates only; see"
-        "\ndocs/statistical-assurance.md and validation/layer-ablation.md."
+        "\nReading: the hardening signal is the SPARSE evidence tier (little fired, so"
+        "\nlittle recovered) — not the edge-proxied flag, which marks a CDN that was"
+        "\nDETECTED and so adds information rather than hiding it. Interval width should"
+        "\nfall as n_eff rises (evidence-responsiveness); grouped nodes are not narrower"
+        "\nthan ungrouped at matched n_eff, which is the CAL7 co-firing correction"
+        "\nworking (it prevents over-confidence rather than causing it). Aggregates"
+        "\nonly; see docs/statistical-assurance.md and validation/layer-ablation.md."
     )
 
 
