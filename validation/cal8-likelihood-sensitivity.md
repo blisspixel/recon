@@ -62,4 +62,4 @@ model (it includes the sparse / no-binding-fired cohort; see CAL9 and the
 evidence-responsive framing in CAL13). CAL8 says only that whatever the
 calibration is, it does not swing on small changes to the elicited likelihoods.
 It complements, and does not replace, the calibration-quality work (the
-oracle-backed calibration and the CAL14 missingness fix).
+reference-backed calibration and the CAL14 missingness fix).

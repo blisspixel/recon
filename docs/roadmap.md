@@ -36,11 +36,18 @@ This file is forward-looking. Shipped work belongs in
 > `scripts/check_traceability.py` and gated by `tests/test_traceability.py`),
 > which completes the committed post-2.0 assurance track. v2.1.18 was UX and docs
 > polish (the services-panel label-collision fix, the rotating-spinner variety,
-> and the aspirational arXiv-paper roadmap item below). What remains on the
-> assurance track is operator-paced or standing work: the CAL3/CAL4
-> reference-calibration run, the C3 CT-enabled corpus pass, the data-handling policy
-> and statistical-assurance dossier docs, and the candidate diagnostics. This
-> file is the plan from here.
+> and the aspirational arXiv-paper roadmap item below). Since v2.1.18 the
+> unreleased docs-and-validation track has closed most of what remained: the
+> suppression-monotonicity theorem is now formalized in `correlation.md` section
+> 4.3 and machine-checked by `validation/adversarial_properties.py` (the one
+> formal guarantee, that hiding evidence can only move a claim toward the baseline,
+> never to a confident false positive); the CAL3/CAL4 reference-calibration run
+> landed (`email_security_policy_enforcing` now at tier 4); and the data-handling
+> policy and statistical-assurance dossier docs shipped. What is still open is
+> operator-paced or standing: the provider-endpoint corroboration and optional
+> per-vertical stratification for reference calibration, the C3 CT-enabled corpus
+> pass, the candidate diagnostics, and the arXiv write-up. This file is the plan
+> from here.
 
 ## Version milestones and build order
 

@@ -7,17 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Docs and CI only; no packaged change, so no version bump yet. Folded into the
-next release's entry when one is cut.
+Docs, validation, and CI only; no packaged change to `recon_tool`, so no version
+bump yet. Folded into the next release's entry when one is cut.
 
-- **Docs:** added `docs/data-handling-policy.md` (the complete "no real-company
-  data, ever" policy mapped to its enforcing mechanisms); added the version
-  milestone map and consolidated build order to `docs/roadmap.md`; corrected the
-  mutation-gate kill-score claims in the CHANGELOG, the traceability matrix, and
-  the roadmap to the measured 91.4% (the v2.1.16 "100%" was a wrong-interpreter
-  artifact the CI baseline step caught).
-- **CI:** the mutation gate now filters equivalent-by-construction operators,
-  scores survival over tested mutants with an explicit floor
+### Theory
+
+- **The suppression-monotonicity theorem, formalized and machine-checked.**
+  `docs/correlation.md` section 4.3 now states and proves the one formal
+  guarantee: holding other evidence fixed, a node's presence posterior factors
+  as a baseline odds times a product of per-binding likelihood ratios, so
+  under the positive-indicator hypothesis hiding any fired binding moves the
+  posterior monotonically toward the baseline and stays at or below the
+  fully-observed value. An operator can only move a claim toward "we cannot
+  tell," never to a confident false positive; the precise contract is
+  "provably robust to hiding, explicitly not robust to lying," with the
+  boundary of the guarantee equal to the passive/active line.
+  `validation/adversarial_properties.py` ships it as an
+  exhaustive machine-checked invariant over every per-node binding subset (zero
+  violations on the shipped network), gated by `tests/test_adversarial_properties.py`.
+- **The operator/provider hideability spectrum.** A new subsection distinguishes
+  operator-vanity bindings (free to hide), operator-functional bindings (MX
+  cannot be dropped without breaking mail, and relocates rather than erases the
+  evidence), and provider-attested bindings (the M365/GWS identity endpoints the
+  operator cannot hide at all), which is why the tenancy claims are
+  reference-calibratable. Section 1.5 reframes the small, hand-specified Bayesian
+  layer as the precondition for the guarantee, not a limitation.
+
+### Assurance
+
+- **Reference calibration against the DMARC record (CAL3/CAL4), shipped and run.**
+  `validation/reference_calibration.py` calibrates the `email_security_policy_enforcing`
+  posterior against the authoritative DMARC policy (its own ground truth), with
+  pure label/Wilson/calibration logic unit-tested in
+  `tests/test_reference_calibration.py` and a per-vertical `--stratify-dir` mode.
+  The maintainer-local run landed: two independent corpus samples agree at ECE
+  about 0.077, agreement about 1.0, the miss conservative (under-confident), so
+  the policy node now sits at tier 4. Aggregates only, no apexes; memo in
+  `validation/reference-calibration.md`.
+- **The statistical-assurance dossier** (`docs/statistical-assurance.md`) places
+  every claim at the highest of four evidence tiers (observed / consistency /
+  evidence-responsive / empirical coverage) and says where the support stops; the
+  assurance case gains the suppression-guarantee and reference-calibration rows.
+- **The data-handling policy** (`docs/data-handling-policy.md`): the complete
+  "no real-company data, ever" rule mapped to its enforcing mechanisms.
+
+### Tests
+
+- Pinned the Brier/ECE calibration math the assurance claims rest on
+  (`tests/test_calibration_metrics.py`), the mutation-gate floor-script decision
+  logic (`tests/test_mutation_floor.py`), and the EXPERIMENTAL-label CI gate
+  (`tests/test_no_experimental_labels.py`, made testable via an optional path
+  argument).
+
+### Docs
+
+- Added the version milestone map and consolidated build order to the roadmap,
+  and archived about 1,470 lines of shipped-release history into
+  `docs/roadmap-history.md` so the roadmap stays forward-looking (now about
+  2,090 lines).
+- Corrected the mutation-gate kill-score claims (the v2.1.16 "1,642 of 1,642 /
+  100%" was a wrong-interpreter artifact the CI baseline step caught) to the
+  measured 91.4% (123 survivors of 1,431 tested), in the CHANGELOG, the
+  traceability matrix, the roadmap, and `validation/mutation-gate.md`.
+
+### CI
+
+- The mutation gate now filters equivalent-by-construction operators, scores
+  survival over tested mutants with an explicit honest floor
   (`scripts/mutation_floor.py`), and runs a strengthened kill-set; bumped
   `astral-sh/setup-uv` 8.1.0 to 8.2.0 across the workflows.
 

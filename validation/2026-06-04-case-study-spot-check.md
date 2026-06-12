@@ -73,6 +73,6 @@ studies. It is a sanity check, not a frequentist coverage claim, and it carries
 the direction-ambiguity caveat surfaced in earlier prototyping (a "company plus
 vendor" relationship can run several ways; a published case study scopes it, but
 the claim must still be matched to recon's actual observable). It complements,
-and does not replace, the oracle-backed calibration (DMARC / SPF / MTA-STS
+and does not replace, the reference-backed calibration (DMARC / SPF / MTA-STS
 records as their own truth; M365 / GWS tenancy via the providers' own endpoints)
 planned for the C3 calibration work.
