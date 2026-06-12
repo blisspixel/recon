@@ -409,8 +409,18 @@ node's `dmarc_reject` and `dmarc_quarantine` bindings are mutually exclusive, so
 correct absence-conditioning rule must operate per evidence-group with new
 absence-likelihood parameters (each a claim under the CPT-change discipline), not
 per independent non-fired binding; it is the heaviest remaining change and ships
-with the maintainer in the loop on those modeling choices. Remaining open: the
-CAL3 / CAL4 reference calibration run, CAL6, CAL9, CAL11, CAL12, and CAL14.
+with the maintainer in the loop on those modeling choices. (CAL14 shipped as the
+`missingness: declarative` model with `group_absence`; the design memo is
+`validation/cal14-missingness-design.md`.) Since then: the CAL3/CAL4
+reference-calibration run landed (the email-policy node at tier 4 for the
+residual); CAL11 shipped as the 2.2 `partition_stability` field (Louvain
+seed-sweep consensus as mean pairwise ARI); and CAL9's harness half shipped
+(`calibration_summary` now leads with the proper log-score beside Brier/ECE —
+the reliability-diagram-and-sparse-cohort memo discipline applies at the next
+corpus run). Remaining open: CAL6 (the stratified corpus *run*; the
+`--stratify-dir` modes exist on both calibration harnesses) and CAL12 (the
+priors-vs-base-rates elicitation write-up; partially grounded in the 2026-06
+corpus re-grounding recorded in `bayesian_network.yaml`).
 
 | # | Refinement | Acceptance |
 |---|---|---|
