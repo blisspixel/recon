@@ -2399,7 +2399,12 @@ async def get_infrastructure_clusters(domain: str) -> str:
         in ``docs/recon-schema.json``. The ``algorithm`` field reflects
         which path produced the partition (``louvain`` |
         ``connected_components`` | ``skipped``); ``skipped`` means the
-        graph was empty or had no edges.
+        graph was empty or had no edges. ``partition_stability`` (2.2.0+)
+        is the Louvain seed-sweep consensus (mean pairwise adjusted Rand
+        index over ``stability_runs`` seeds; null outside the Louvain
+        path) — 1.0 means every seed produced the identical partition,
+        lower values flag partition degeneracy a single modularity score
+        cannot see.
     """
     resolved = await _resolve_or_cache(domain)
     if isinstance(resolved, str):
@@ -2412,6 +2417,8 @@ async def get_infrastructure_clusters(domain: str) -> str:
                 "domain": info.queried_domain,
                 "algorithm": "skipped",
                 "modularity": 0.0,
+                "partition_stability": None,
+                "stability_runs": 0,
                 "node_count": 0,
                 "edge_count": 0,
                 "clusters": [],
@@ -2423,6 +2430,10 @@ async def get_infrastructure_clusters(domain: str) -> str:
             "domain": info.queried_domain,
             "algorithm": ic.algorithm,
             "modularity": ic.modularity,
+            # 2.2.0 (additive): Louvain seed-sweep consensus (mean pairwise
+            # ARI; CAL11). null outside the Louvain path.
+            "partition_stability": ic.partition_stability,
+            "stability_runs": ic.stability_runs,
             "node_count": ic.node_count,
             "edge_count": ic.edge_count,
             "clusters": [
@@ -2836,7 +2847,14 @@ async def get_posteriors(domain: str) -> str:
       ``interval_low`` / ``interval_high`` (float, 80% credible interval),
       ``evidence_used`` (list of slug/signal bindings that fired),
       ``n_eff`` (effective sample size used to derive the interval),
-      ``sparse`` (bool — True flags the passive-observation ceiling).
+      ``sparse`` (bool — True flags the passive-observation ceiling),
+      ``entropy_reduction_nats`` (float, 2.2.0+ — this node's share of the
+      information the channel recovered, signed),
+      ``unit_counterfactuals`` (list, 2.2.0+ — exact leave-one-unit-out
+      re-inference per informative evidence unit: ``unit``, ``kind``,
+      ``observed`` ("fired"/"absent"), ``posterior_without``, ``delta``;
+      an evidence counterfactual over the model, never a causal claim,
+      and deltas are not additive across units).
 
     Stable v2.0+. The Beta layer (``slug_confidences`` on
     ``lookup_tenant``) operates on raw evidence weights; this network
@@ -2914,6 +2932,20 @@ async def get_posteriors(domain: str) -> str:
                 "evidence_used": list(p.evidence_used),
                 "n_eff": p.n_eff,
                 "sparse": p.sparse,
+                # 2.2.0 evidence-semantics diagnostics (additive): the
+                # node's share of the recovered information, and the exact
+                # leave-one-unit-out counterfactual per informative unit.
+                "entropy_reduction_nats": p.entropy_reduction_nats,
+                "unit_counterfactuals": [
+                    {
+                        "unit": c.unit,
+                        "kind": c.kind,
+                        "observed": c.observed,
+                        "posterior_without": c.posterior_without,
+                        "delta": c.delta,
+                    }
+                    for c in p.unit_counterfactuals
+                ],
             }
             for p in inference.posteriors
         ],

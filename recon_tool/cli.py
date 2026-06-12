@@ -2603,7 +2603,7 @@ def _lookup_apply_fusion(info: Any) -> Any:
 
     from recon_tool.bayesian import infer_from_tenant_info
     from recon_tool.fusion import compute_slug_posteriors
-    from recon_tool.models import NodeConflict, NodeEvidence, PosteriorObservation
+    from recon_tool.models import NodeConflict, NodeEvidence, NodeUnitCounterfactual, PosteriorObservation
 
     bayesian_result = infer_from_tenant_info(info)
     bayesian_observations = tuple(
@@ -2627,6 +2627,17 @@ def _lookup_apply_fusion(info: Any) -> Any:
                     influence_pct=e.influence_pct,
                 )
                 for e in p.evidence_ranked
+            ),
+            entropy_reduction_nats=p.entropy_reduction_nats,
+            unit_counterfactuals=tuple(
+                NodeUnitCounterfactual(
+                    unit=c.unit,
+                    kind=c.kind,
+                    observed=c.observed,
+                    posterior_without=c.posterior_without,
+                    delta=c.delta,
+                )
+                for c in p.unit_counterfactuals
             ),
         )
         for p in bayesian_result.posteriors
@@ -3285,7 +3296,7 @@ def _batch_apply_fusion(info: Any) -> Any:
 
     from recon_tool.bayesian import infer_from_tenant_info
     from recon_tool.fusion import compute_slug_posteriors
-    from recon_tool.models import NodeConflict, PosteriorObservation
+    from recon_tool.models import NodeConflict, NodeUnitCounterfactual, PosteriorObservation
 
     result = infer_from_tenant_info(info)
     return replace(
@@ -3303,6 +3314,20 @@ def _batch_apply_fusion(info: Any) -> Any:
                 sparse=p.sparse,
                 conflict_provenance=tuple(
                     NodeConflict(field=c.field, sources=c.sources, magnitude=c.magnitude) for c in p.conflict_provenance
+                ),
+                # evidence_ranked stays deliberately omitted here (the batch
+                # JSON shape freeze predates it); the 2.2.0 diagnostics are
+                # additive and carried in both lookup and batch shapes.
+                entropy_reduction_nats=p.entropy_reduction_nats,
+                unit_counterfactuals=tuple(
+                    NodeUnitCounterfactual(
+                        unit=c.unit,
+                        kind=c.kind,
+                        observed=c.observed,
+                        posterior_without=c.posterior_without,
+                        delta=c.delta,
+                    )
+                    for c in p.unit_counterfactuals
                 ),
             )
             for p in result.posteriors

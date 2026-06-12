@@ -23,6 +23,7 @@ __all__ = [
     "InfrastructureEdge",
     "MergeConflicts",
     "MetadataCondition",
+    "NodeUnitCounterfactual",
     "Observation",
     "ReconLookupError",
     "SignalContext",
@@ -197,6 +198,28 @@ class NodeEvidence:
 
 
 @dataclass(frozen=True)
+class NodeUnitCounterfactual:
+    """One evidence unit's exact leave-one-out influence on a node's posterior.
+
+    Public-facing counterpart to ``recon_tool.bayesian.UnitCounterfactual``,
+    surfaced through ``PosteriorObservation.unit_counterfactuals`` (added
+    2.2.0; schema-additive). ``posterior_without`` is the node's posterior
+    with this evidence unit masked as structurally unobserved (the exact
+    leave-one-unit-out re-inference, global across the DAG); ``delta`` is
+    ``posterior - posterior_without``. ``observed`` is ``"fired"`` for a
+    fired unit or ``"absent"`` for an informative absence on a declarative
+    node. Deltas are individually exact but not additive — units interact
+    through the DAG.
+    """
+
+    unit: str  # group name, or the ungrouped binding's slug/signal name
+    kind: str  # "group", "slug", or "signal"
+    observed: str  # "fired" or "absent"
+    posterior_without: float
+    delta: float
+
+
+@dataclass(frozen=True)
 class PosteriorObservation:
     """Per-node posterior from the v1.9 Bayesian network (stable v2.0+).
 
@@ -235,6 +258,17 @@ class PosteriorObservation:
     Same shape/order as the engine's
     ``EvidenceContribution`` tuple; default empty tuple preserves
     backward-compatibility with v1.9.0 / v1.9.3 JSON consumers."""
+
+    entropy_reduction_nats: float = 0.0
+    """This node's share of the information recovered: H(prior marginal) -
+    H(posterior) in nats, signed. Per-node breakdown of the result-level
+    total (CAL10). Added 2.2.0; schema-additive (default 0.0 preserves
+    prior shapes)."""
+
+    unit_counterfactuals: tuple[NodeUnitCounterfactual, ...] = ()
+    """Exact leave-one-unit-out counterfactuals for the evidence units
+    informative for this node, sorted by absolute delta descending. Added
+    2.2.0; schema-additive (default empty tuple preserves prior shapes)."""
 
 
 @dataclass(frozen=True)
@@ -411,6 +445,16 @@ class InfrastructureClusterReport:
     # ``recon_tool/infra_graph.MAX_EDGES_RETAINED``. Surfaced via the
     # MCP ``export_graph`` tool, not the default --json envelope.
     edges: tuple[InfrastructureEdge, ...] = ()
+    # Partition stability across a Louvain seed sweep (CAL11): the mean
+    # pairwise adjusted Rand index between the partitions produced by
+    # ``stability_runs`` different seeds. 1.0 means every seed produced
+    # the identical partition; lower values flag partition degeneracy
+    # (Good et al. 2010), which a single modularity score cannot see.
+    # None when the Louvain path did not run (skipped / fallback), where
+    # the partition is deterministic and the measure is not applicable.
+    # Added 2.2.0; schema-additive.
+    partition_stability: float | None = None
+    stability_runs: int = 0
 
 
 @dataclass(frozen=True)

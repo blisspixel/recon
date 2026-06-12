@@ -287,6 +287,17 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
                     }
                     for e in p.evidence_ranked
                 ],
+                "entropy_reduction_nats": p.entropy_reduction_nats,
+                "unit_counterfactuals": [
+                    {
+                        "unit": c.unit,
+                        "kind": c.kind,
+                        "observed": c.observed,
+                        "posterior_without": c.posterior_without,
+                        "delta": c.delta,
+                    }
+                    for c in p.unit_counterfactuals
+                ],
             }
             for p in info.posterior_observations
         ],
@@ -372,6 +383,8 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         d["infrastructure_clusters"] = {
             "algorithm": ic.algorithm,
             "modularity": ic.modularity,
+            "partition_stability": ic.partition_stability,
+            "stability_runs": ic.stability_runs,
             "node_count": ic.node_count,
             "edge_count": ic.edge_count,
             "clusters": [
@@ -436,7 +449,7 @@ def _parse_posterior_observations(data: dict[str, Any]) -> tuple[Any, ...]:
     raw = data.get("posterior_observations")
     if not isinstance(raw, list):
         return ()
-    from recon_tool.models import NodeConflict, NodeEvidence, PosteriorObservation
+    from recon_tool.models import NodeConflict, NodeEvidence, NodeUnitCounterfactual, PosteriorObservation
 
     out: list[PosteriorObservation] = []
     for entry in raw:
@@ -471,6 +484,22 @@ def _parse_posterior_observations(data: dict[str, Any]) -> tuple[Any, ...]:
                 )
             except (KeyError, TypeError, ValueError):
                 continue
+        counterfactuals: list[NodeUnitCounterfactual] = []
+        for raw_cf in entry.get("unit_counterfactuals", []) or []:
+            if not isinstance(raw_cf, dict):
+                continue
+            try:
+                counterfactuals.append(
+                    NodeUnitCounterfactual(
+                        unit=str(raw_cf["unit"]),
+                        kind=str(raw_cf["kind"]),
+                        observed=str(raw_cf["observed"]),
+                        posterior_without=float(raw_cf["posterior_without"]),
+                        delta=float(raw_cf["delta"]),
+                    )
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
         try:
             out.append(
                 PosteriorObservation(
@@ -484,6 +513,11 @@ def _parse_posterior_observations(data: dict[str, Any]) -> tuple[Any, ...]:
                     sparse=bool(entry.get("sparse", False)),
                     conflict_provenance=tuple(conflicts),
                     evidence_ranked=tuple(ranked),
+                    # Pre-2.2 cache entries lack the diagnostics; defaults
+                    # apply (0.0 / empty), the load-known/ignore-missing
+                    # cache discipline.
+                    entropy_reduction_nats=float(entry.get("entropy_reduction_nats", 0.0)),
+                    unit_counterfactuals=tuple(counterfactuals),
                 )
             )
         except (KeyError, TypeError, ValueError):
@@ -627,6 +661,15 @@ def _infrastructure_clusters_from_dict(data: dict[str, Any]) -> InfrastructureCl
                     shared_cert_count=int(entry.get("shared_cert_count", 1)),
                 )
             )
+    stability_raw = ic_data.get("partition_stability")
+    try:
+        partition_stability = float(stability_raw) if stability_raw is not None else None
+    except (TypeError, ValueError):
+        partition_stability = None
+    try:
+        stability_runs = int(ic_data.get("stability_runs", 0))
+    except (TypeError, ValueError):
+        stability_runs = 0
     return InfrastructureClusterReport(
         clusters=tuple(cluster_records),
         modularity=float(ic_data.get("modularity", 0.0) or 0.0),
@@ -634,6 +677,10 @@ def _infrastructure_clusters_from_dict(data: dict[str, Any]) -> InfrastructureCl
         node_count=int(ic_data.get("node_count", 0)),
         edge_count=int(ic_data.get("edge_count", 0)),
         edges=tuple(edge_records),
+        # Pre-2.2 cache entries lack the stability fields; None/0 is the
+        # honest "not measured" default, not a fabricated 1.0.
+        partition_stability=partition_stability,
+        stability_runs=stability_runs,
     )
 
 
