@@ -121,7 +121,13 @@ None is on the critical path of another except where noted.
    tier 4 in the dossier (`validation/reference-calibration.md`, aggregates only).
    *Remaining extensions:* corroborate the tenancy claims against the providers'
    identity endpoints, and the optional per-vertical stratification (the
-   `by-vertical/` corpus lists are the input).
+   `by-vertical/` corpus lists are the input). A third, surfaced by the
+   2026-06 literature review, is a distribution-free conformal coverage check on
+   the labelable nodes (the email-policy node now, the tenancy nodes once the
+   endpoint corroboration gives them a reference label): a finite-sample
+   coverage statement beside the Bayesian interval, honest that its guarantee is
+   conditional on exchangeability and so is not claimed for hardened targets. See
+   the positioning note below and [related-work.md](related-work.md).
 2. **Statistical-assurance dossier** (assurance doc; capstone). *Shipped:*
    [statistical-assurance.md](statistical-assurance.md) is the single ledger
    that places each claim recon makes at the highest of four evidence tiers,
@@ -141,8 +147,10 @@ None is on the critical path of another except where noted.
    and framing substance, and on [data-handling-policy.md](data-handling-policy.md)
    for its publication constraints. The additional experiments (layer ablations,
    reference coverage, posture stratification, entropy distributions) are designed
-   into the harnesses above so the paper is assembled, not retrofitted. *Design:*
-   the Research write-up item further below.
+   into the harnesses above so the paper is assembled, not retrofitted. The
+   skeleton and the literature positioning now live in
+   [paper-outline.md](paper-outline.md) and [related-work.md](related-work.md).
+   *Design:* the Research write-up item further below.
 
 Standing, maintainer-paced, off this critical path: the weekly PV2 validation
 routine (live), the mutation gate (live), and corpus-driven catalogue growth
@@ -692,6 +700,28 @@ what it does and does not validate (the near-tautological consistency check, the
 synthetic-versus-real distinction, perturbation coverage framed as model-internal
 rather than ground-truth, per CAL1 and CAL13), which is rarer in the area than it
 should be.
+
+**Positioning, and the one validate-differently implication (2026-06 review).**
+A pass over the maintainer's research library placed recon inside the label-free
+calibration conversation and surfaced one change worth making before
+building more, both captured in [related-work.md](related-work.md). The
+positioning: recon occupies the corner that the label-free estimators and the
+conformal-under-noise methods each exclude. Confidence-based performance
+estimation assumes the calibration recon declines to assert for hideable nodes
+and offers nothing under shift; noise-aware conformal prediction assumes the
+missingness is independent of the input, while recon's is feature-dependent and
+adversarial by construction. The honest answer recon already gives (structural
+guarantees that hold under hiding, calibration only where a self-defining
+reference exists) is the principle-compliance methodology that the epistemic-
+uncertainty-calibration line argues for. The implication worth acting on: recon's
+nodes tier by whether an external reference label exists, and that tier decides
+the guarantee. Provider-attested tenancy and the public-declaration email-policy
+node admit calibration and, newly, a distribution-free conformal coverage check;
+the hideable nodes carry only the structural guarantees. The conformal complement
+is a small validation-only harness (a quantile of sorted nonconformity scores, no
+new dependency, maintainer-local, aggregates only) and is recorded as a candidate
+extension on reference calibration above, not yet built. Nothing else in the
+review changed the build or validate plan; it sharpened the framing.
 
 **Working title candidates** (humble, descriptive): "Calibrated, Provenance-Aware
 Passive Inference for External Attack-Surface Management"; "Evidence-Responsive
