@@ -39,7 +39,7 @@ jobs:
         run: uv sync
 
       - name: Lint
-        run: uv run ruff check recon_tool/
+        run: uv run ruff check .
 
   typecheck:
     runs-on: ubuntu-latest
