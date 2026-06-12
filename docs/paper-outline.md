@@ -157,7 +157,17 @@ private data, and we release a reproducible, signed artifact.
 6. Evaluation. The experiment inventory below, each mapped to a harness.
 7. Discussion. What is and is not validated; the honest boundary; threats
    to validity (the documented correlated-binding over-confidence, the
-   near-tautological consistency check, synthetic versus real).
+   near-tautological consistency check, synthetic versus real). Include the
+   measured price of honesty from the ablation
+   (`validation/layer-ablation.md`): under benign missingness the hideable
+   nodes pay a quantified ~0.05–0.10 Brier for the MNAR stance a hard
+   detector does not pay, while the declarative node — where absence is
+   honestly informative — wins outright; the trade the theory argues for,
+   demonstrated with numbers. Pairs with the CAL7 observation that one
+   strong binding nearly ties full fusion on simple roots: the machinery
+   earns its keep exactly where the model has structure (DAG nodes,
+   multi-signal declarative nodes), which is the right shape for a tool
+   whose claims are the structured ones.
 8. Limitations and ethics. Passive-only, defensive-only, no released
    target list, the data-handling policy as a design constraint.
 9. Reproducibility. Public references anyone can re-query, the synthetic
