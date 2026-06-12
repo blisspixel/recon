@@ -38,7 +38,7 @@ This file is forward-looking. Shipped work belongs in
 > polish (the services-panel label-collision fix, the rotating-spinner variety,
 > and the aspirational arXiv-paper roadmap item below). What remains on the
 > assurance track is operator-paced or standing work: the CAL3/CAL4
-> oracle-calibration run, the C3 CT-enabled corpus pass, the data-handling policy
+> reference-calibration run, the C3 CT-enabled corpus pass, the data-handling policy
 > and statistical-assurance dossier docs, and the candidate diagnostics. This
 > file is the plan from here.
 
@@ -102,14 +102,14 @@ enlarging the surface.
 Highest trust-per-effort first, each item noting where its detailed design lives.
 None is on the critical path of another except where noted.
 
-1. **CAL3 / CAL4 oracle calibration** (assurance; highest open value). The one
+1. **CAL3 / CAL4 reference calibration** (assurance; highest open value). The one
    check that tests the CPT values against external truth rather than
    self-consistency: calibration of the email-policy posterior against the
    authoritative DMARC record (its own ground truth), with the tenancy claims
    corroborable against the providers' own identity endpoints. *Harness shipped:*
-   `validation/oracle_calibration.py` (pure label / Wilson / calibration logic,
-   unit-tested in `tests/test_oracle_calibration.py`; aggregates-only network
-   orchestration), memo in `validation/oracle-calibration.md`. *Remaining:* the
+   `validation/reference_calibration.py` (pure label / Wilson / calibration logic,
+   unit-tested in `tests/test_reference_calibration.py`; aggregates-only network
+   orchestration), memo in `validation/reference-calibration.md`. *Remaining:* the
    calibration run itself stays maintainer-local against the gitignored corpus
    and produces an aggregate-only follow-up memo, after which the
    statistical-assurance dossier moves this node to tier 4.
@@ -118,7 +118,7 @@ None is on the critical path of another except where noted.
    that places each claim recon makes at the highest of four evidence tiers,
    observed / consistency (near-tautological, per CAL1) / evidence-responsive
    (CAL13) / empirical coverage (CAL3), and says where the support stops. It
-   makes the tier-4 gap explicit, which is what item 1 (oracle calibration) then
+   makes the tier-4 gap explicit, which is what item 1 (reference calibration) then
    closes for the public-declaration node and the tenancy claims.
 3. **Evidence-semantics diagnostics** (2.2 candidate; the next new surface).
    Entropy-reduction per node, exact leave-one-evidence-group-out counterfactual
@@ -131,7 +131,7 @@ None is on the critical path of another except where noted.
 4. **The arXiv write-up** (packaging). Depends on items 1 to 3 for its empirical
    and framing substance, and on [data-handling-policy.md](data-handling-policy.md)
    for its publication constraints. The additional experiments (layer ablations,
-   oracle coverage, posture stratification, entropy distributions) are designed
+   reference coverage, posture stratification, entropy distributions) are designed
    into the harnesses above so the paper is assembled, not retrofitted. *Design:*
    the Research write-up item further below.
 
@@ -353,7 +353,7 @@ v1.9.61 to v1.9.71 calibration work. CAL13 (evidence-responsive framing in
 `threshold_sensitivity.py`, which sweeps trigger thresholds) with worst-case
 dECE <= 0.032 and decision flips <= 1.3% under a +/-20% perturbation, artifact
 in `validation/cal8-likelihood-sensitivity.md`. CAL3 / CAL4 are reframed around
-authoritative public oracles (DMARC / SPF / MTA-STS records as their own truth;
+authoritative public records (DMARC / SPF / MTA-STS records as their own truth;
 M365 / GWS tenancy via the providers' own endpoints) plus an optional, external,
 anonymized case-study sanity check (`validation/2026-06-04-case-study-spot-check.md`,
 first sample: 7 of 7 positive detections corroborated, 0 false positives), rather
@@ -363,7 +363,7 @@ correct absence-conditioning rule must operate per evidence-group with new
 absence-likelihood parameters (each a claim under the CPT-change discipline), not
 per independent non-fired binding; it is the heaviest remaining change and ships
 with the maintainer in the loop on those modeling choices. Remaining open: the
-CAL3 / CAL4 oracle calibration run, CAL6, CAL9, CAL11, CAL12, and CAL14.
+CAL3 / CAL4 reference calibration run, CAL6, CAL9, CAL11, CAL12, and CAL14.
 
 | # | Refinement | Acceptance |
 |---|---|---|
@@ -561,7 +561,7 @@ PV2 inference drift gate + maintainer-validation loop (v2.1.14); the
 credible-interval perturbation-coverage gate (v2.1.15); mutation-as-a-gate
 (v2.1.16); and the traceability matrix (v2.1.17). **The committed track is
 complete.** What remains is operator-paced or standing: the CAL3/CAL4
-oracle-calibration run and the C3 CT-enabled corpus pass (corpus-driven,
+reference-calibration run and the C3 CT-enabled corpus pass (corpus-driven,
 maintainer-local), the data-handling policy and statistical-assurance dossier
 docs, and the evidence-semantics diagnostics candidates. None of these is on
 the critical path of the feature candidates below.
@@ -695,11 +695,11 @@ afterthought.** The repository invariants (no real company data, ever; the corpu
 stays gitignored; committed examples use the Microsoft fictional brands) mean the
 empirical section cannot print the targets. The paper turns that into a
 methodological feature: every empirical claim is reproducible against *public
-oracles* anyone can re-query (DMARC / SPF / MTA-STS records as their own truth;
+references* anyone can re-query (DMARC / SPF / MTA-STS records as their own truth;
 the Microsoft and Google identity endpoints for tenancy) plus the fully synthetic
 calibration harnesses, so the results are checkable without the private corpus.
 Only aggregate, posture-stratified statistics, synthetic reproductions, and the
-public-oracle calibration are published; the per-domain corpus never appears.
+public-reference calibration are published; the per-domain corpus never appears.
 This is the same discipline PV1 and the maintainer-validation loop already
 follow.
 
@@ -708,9 +708,9 @@ a small extension; none crosses an invariant):
 
 - *Ablations on the layers.* Quantify what the graph layer and the Bayesian layer
   add over single-source slug matching: drop each and measure the change in
-  recovered structure on the synthetic corpus and the public-oracle set. This is
+  recovered structure on the synthetic corpus and the public-reference set. This is
   the clearest way to show the combination earns its complexity.
-- *Public-oracle coverage* (the CAL3 / CAL4 work already on the assurance track):
+- *Public-reference coverage* (the CAL3 / CAL4 work already on the assurance track):
   empirical interval coverage and calibration against the authoritative records,
   reported with uncertainty (Wilson / bootstrap), never as a bare percentage.
 - *Posture stratification.* Aggregate behaviour across hardening postures
