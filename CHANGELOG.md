@@ -7,8 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Docs, validation, and CI only; no packaged change to `recon_tool`, so no version
-bump yet. Folded into the next release's entry when one is cut.
+Now carries a packaged (additive, non-breaking) change to `recon_tool`, so the
+next release cut takes a version bump.
+
+### Added
+
+- **Leave-one-unit-out inference: `infer(..., masked_units=...)`.** The engine
+  (and `infer_from_tenant_info`) accepts evidence units — a correlation-group
+  name (`m365_indicators`, `dmarc_policy`) or an ungrouped binding's name — to
+  treat as *structurally unobserved*: no firing contribution, no
+  informative-absence contribution on declarative nodes, no n_eff contribution.
+  On hideable nodes masking equals the unit not firing (the MNAR LR=1 rule);
+  on the declarative policy node the two differ, which is the point — masking
+  is "unobserved", not "observed to be absent". Default empty; behaviour is
+  unchanged (pinned by an equivalence property in
+  `tests/test_bayesian_masked_units.py`: masking a unit reproduces, exactly,
+  the unmasked engine on a network with that unit deleted, plus hand-computed
+  posteriors on the isolated policy node). This is the primitive under the
+  held-out reference calibration below and the planned evidence-semantics
+  counterfactual diagnostics.
+
+### Assurance
+
+- **Held-out residual reference calibration (the clean tier-4 construction).**
+  `validation/reference_calibration.py` now computes, beside the full
+  posterior, a held-out residual posterior with the `dmarc_policy` unit
+  masked, so the predictor sees only the strict-SPF + MTA-STS channel and the
+  DMARC record serves purely as the label — predictor and label disjoint by
+  construction (the overlap caveat the shipped tier-4 claim carries). Both
+  single and `--stratify-dir` modes print full and held-out blocks; the
+  residual's invariance to the DMARC signal and its hand-computed values are
+  unit-tested. The maintainer-local corpus run fills in the numbers
+  (`validation/reference-calibration.md` has the method and the honest
+  expectations: a deliberately weak predictor whose *calibration* is the
+  claim under test).
 
 ### Theory
 

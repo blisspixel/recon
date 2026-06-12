@@ -613,6 +613,20 @@ def _binding_llr(ev: _Evidence) -> float:
     return math.log(ev.likelihood_present / ev.likelihood_absent)
 
 
+def _unit_name(ev: _Evidence) -> str:
+    """The evidence-unit identifier for a binding.
+
+    An evidence *unit* is the granularity at which evidence is independent
+    in the model: a correlation group counts as one unit (its members are
+    redundant readings of one fact, reduced by :func:`_contributing_evidence`),
+    and an ungrouped binding is its own unit. Masking (``masked_units`` on
+    :func:`infer`) and the leave-one-unit-out counterfactuals operate at this
+    granularity — individual members of a group cannot be masked separately,
+    because the model treats them as one observation.
+    """
+    return ev.group if ev.group is not None else ev.name
+
+
 def _contributing_evidence(fired_evidence: list[_Evidence]) -> list[_Evidence]:
     """Reduce co-firing correlated bindings to one effective binding per group.
 
@@ -640,7 +654,11 @@ def _contributing_evidence(fired_evidence: list[_Evidence]) -> list[_Evidence]:
 
 
 @deal.post(_factor_is_strictly_positive)  # pyright: ignore[reportUntypedFunctionDecorator]
-def _factor_for_evidence(node: _Node, fired_evidence: list[_Evidence]) -> Factor | None:
+def _factor_for_evidence(
+    node: _Node,
+    fired_evidence: list[_Evidence],
+    masked_units: frozenset[str] = frozenset(),
+) -> Factor | None:
     """Build the observation factor for a node given which of its bindings fired.
 
     Contract: when a factor is returned, every likelihood entry is
@@ -676,6 +694,16 @@ def _factor_for_evidence(node: _Node, fired_evidence: list[_Evidence]) -> Factor
       mutually-exclusive group (e.g. the DMARC policy level) contributes its
       explicit ``group_absence`` pair, because its members are alternatives,
       not independent features, so the complement-product would double-count.
+
+    ``masked_units`` names evidence units (a correlation-group name, or an
+    ungrouped binding's name — see :func:`_unit_name`) to treat as
+    *structurally unobserved*: the unit contributes no factor in either
+    direction. The caller must have already removed the masked units' fired
+    bindings from ``fired_evidence`` (``infer`` does); this function's job is
+    to also suppress the masked units' informative-absence contribution on
+    declarative nodes, which is what distinguishes "unobserved" from "absent"
+    there. On hideable nodes absence already contributes nothing, so the
+    filtering of fired bindings is the whole story.
     """
     if node.missingness != "declarative":
         # Hideable (MNAR): only fired bindings contribute.
@@ -703,6 +731,8 @@ def _factor_for_evidence(node: _Node, fired_evidence: list[_Evidence]) -> Factor
     grp_absence = {g: (lp, la) for g, lp, la in node.group_absence}
     seen_groups: set[str] = set()
     for ev in node.evidence:
+        if _unit_name(ev) in masked_units:
+            continue
         if ev.name in fired_names:
             continue
         if ev.group:
@@ -722,7 +752,11 @@ def _factor_for_evidence(node: _Node, fired_evidence: list[_Evidence]) -> Factor
     }
 
 
-def _declarative_evidence_count(node: _Node, fired_evidence: list[_Evidence]) -> int:
+def _declarative_evidence_count(
+    node: _Node,
+    fired_evidence: list[_Evidence],
+    masked_units: frozenset[str] = frozenset(),
+) -> int:
     """Effective evidence-unit count for a declarative node's ``n_eff``.
 
     Counts each evidence unit (a correlation group, or an independent binding)
@@ -740,6 +774,8 @@ def _declarative_evidence_count(node: _Node, fired_evidence: list[_Evidence]) ->
     grp_absence = {g: (lp, la) for g, lp, la in node.group_absence}
     seen_groups: set[str] = set()
     for ev in node.evidence:
+        if _unit_name(ev) in masked_units:
+            continue
         if ev.name in fired_names:
             continue
         if ev.group:
@@ -891,6 +927,7 @@ def infer(
     conflict_field_count: int = 0,
     priors_override: dict[str, float] | None = None,
     conflicts: tuple[ConflictProvenance, ...] = (),
+    masked_units: Iterable[str] = (),
 ) -> InferenceResult:
     """Run inference for one domain.
 
@@ -915,6 +952,25 @@ def infer(
             magnitude). When supplied, these surface on every
             ``NodePosterior.conflict_provenance`` and replace the count
             argument. Empty tuple preserves the legacy count-only path.
+        masked_units: evidence units to treat as *structurally
+            unobserved* — the exact leave-one-unit-out counterfactual
+            primitive. A unit is a correlation-group name (e.g.
+            ``m365_indicators``, ``dmarc_policy``) or an ungrouped
+            binding's slug/signal name (e.g. ``okta``, ``spf_strict``);
+            individual members of a group cannot be masked separately
+            because the model treats a group as one observation. A
+            masked unit contributes nothing in either direction: its
+            fired bindings are dropped from the evidence (and from
+            ``evidence_used`` / ``evidence_ranked`` / ``n_eff``), and on
+            declarative nodes its informative-absence factor is
+            suppressed too — which is what distinguishes "unobserved"
+            from "observed to be absent" there. On hideable nodes,
+            masking a unit is exactly equivalent to its bindings never
+            firing (the MNAR absence rule already contributes LR=1).
+            Default empty: behaviour is unchanged. Used by the held-out
+            reference calibration (mask the unit that defines the label,
+            so predictor and label are disjoint) and the
+            evidence-semantics counterfactual diagnostics.
 
     Returns:
         ``InferenceResult`` with one ``NodePosterior`` per node.
@@ -928,6 +984,7 @@ def infer(
 
     slug_set = set(observed_slugs)
     signal_set = set(observed_signals)
+    masked = frozenset(masked_units)
 
     # Build factor set: one per node (CPT) + one per node-with-fired-evidence.
     factors: list[Factor] = []
@@ -935,8 +992,10 @@ def infer(
     for node in network.nodes:
         factors.append(_factor_for_node(node))
         fired = _evidence_for_domain(node, slug_set, signal_set)
+        if masked:
+            fired = [ev for ev in fired if _unit_name(ev) not in masked]
         fired_per_node[node.name] = fired
-        ev_factor = _factor_for_evidence(node, fired)
+        ev_factor = _factor_for_evidence(node, fired, masked)
         if ev_factor is not None:
             factors.append(ev_factor)
 
@@ -964,7 +1023,9 @@ def infer(
         # node gets a narrow interval around a low posterior rather than a
         # wide "sparse" one.
         n_eff_count = (
-            _declarative_evidence_count(node, fired) if node.missingness == "declarative" else len(contributing)
+            _declarative_evidence_count(node, fired, masked)
+            if node.missingness == "declarative"
+            else len(contributing)
         )
         n_eff = max(
             _MIN_N_EFF,
@@ -1166,6 +1227,7 @@ def infer_from_tenant_info(
     info: object,
     network: BayesianNetwork | None = None,
     priors_override: dict[str, float] | None = None,
+    masked_units: Iterable[str] = (),
 ) -> InferenceResult:
     """Convenience wrapper that runs inference from a ``TenantInfo``.
 
@@ -1175,6 +1237,8 @@ def infer_from_tenant_info(
         network: optionally supply a pre-loaded network. When omitted,
             the bundled YAML is loaded on each call (cheap — small file).
         priors_override: as for ``infer``.
+        masked_units: as for ``infer`` — evidence units to treat as
+            structurally unobserved (default empty, behaviour unchanged).
 
     Returns:
         ``InferenceResult`` ready for serialization or downstream use.
@@ -1191,4 +1255,5 @@ def infer_from_tenant_info(
         conflict_field_count=len(conflict_records),
         priors_override=priors_override,
         conflicts=conflict_records,
+        masked_units=masked_units,
     )
