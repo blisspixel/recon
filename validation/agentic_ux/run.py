@@ -23,7 +23,7 @@ import re
 import sys
 import textwrap
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -537,7 +537,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    started = datetime.now(timezone.utc)
+    started = datetime.now(UTC)
     try:
         records = run_matrix(
             provider,
@@ -548,7 +548,7 @@ def main(argv: list[str] | None = None) -> int:
     except ProviderError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    finished = datetime.now(timezone.utc)
+    finished = datetime.now(UTC)
 
     summary = score_records(records)
     report = render_report(records, summary, started_at=started, finished_at=finished)
