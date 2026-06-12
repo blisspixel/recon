@@ -113,6 +113,14 @@ this: a coherent new surface, not internal hardening.
   channel-split exclusion and the no-footprint-stays-near-prior property);
   `--stratify-dir` supported; maintainer-local run pending.
 
+- **CAL9: the proper scoring rule leads the calibration output.**
+  `calibration_summary` (shared by the reference- and tenancy-calibration
+  harnesses) now computes and prints `log_score`, the mean negative
+  log-likelihood, beside Brier and ECE — the proper scoring rule CAL9 asks
+  the memos to lead with. Clamped at 1e-6 so a confidently-wrong record
+  costs ~13.8 nats instead of returning infinity (reported behaviour, not
+  hidden); hand-pinned in `tests/test_reference_calibration.py`.
+
 ### Theory
 
 - **The suppression-monotonicity proposition, formalized and machine-checked.**

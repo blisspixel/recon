@@ -353,6 +353,7 @@ def _read_domains(path: Path) -> list[str]:
 def _print_summary(summary: dict[str, object], header: str) -> None:
     print(f"\n{header} (n={summary['n']} with a provider label)")
     print(f"  base rate tenant:      {summary['base_rate_enforcing']}")
+    print(f"  log score (proper):    {summary['log_score']}")
     print(f"  Brier:                 {summary['brier']}")
     print(f"  ECE:                   {summary['ece']}")
     print(f"  agreement rate:        {summary['agreement_rate']}  Wilson80 {summary['agreement_wilson80']}")

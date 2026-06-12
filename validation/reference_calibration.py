@@ -190,12 +190,33 @@ class CalibrationPair:
     held_out: CalibrationRecord
 
 
+def mean_log_score(records: list[CalibrationRecord], clamp: float = 1e-6) -> float:
+    """Mean negative log-likelihood of the labels under the posteriors.
+
+    The proper scoring rule CAL9 asks the memos to lead with (lower is
+    better; a perfectly-confident correct predictor scores ~0, the
+    always-0.5 predictor scores ln 2 ~ 0.693). Posteriors are clamped away
+    from {0, 1} so a single confidently-wrong record cannot return inf —
+    the clamp is reported behaviour, not hidden: at the default 1e-6 a
+    confident miss costs ~13.8 nats, which dominates the mean exactly as a
+    proper scoring rule should.
+    """
+    if not records:
+        return 0.0
+    total = 0.0
+    for r in records:
+        p = min(max(r.posterior, clamp), 1.0 - clamp)
+        total += -math.log(p if r.label == 1 else 1.0 - p)
+    return total / len(records)
+
+
 def calibration_summary(records: list[CalibrationRecord], bins: int = 10) -> dict[str, object]:
     """Aggregate calibration of the posteriors against the reference labels.
 
-    Returns Brier, ECE, the reliability table, the agreement rate (point
-    estimate ``posterior >= 0.5`` versus the label) with an 80% Wilson
-    interval, and the base rate. All aggregate; no per-record data.
+    Returns Brier, the mean log-score (the proper scoring rule, per CAL9),
+    ECE, the reliability table, the agreement rate (point estimate
+    ``posterior >= 0.5`` versus the label) with an 80% Wilson interval, and
+    the base rate. All aggregate; no per-record data.
     """
     n = len(records)
     if n == 0:
@@ -209,6 +230,7 @@ def calibration_summary(records: list[CalibrationRecord], bins: int = 10) -> dic
         "n": n,
         "base_rate_enforcing": round(sum(labels) / n, 4),
         "brier": round(_brier(preds, labels), 4),
+        "log_score": round(mean_log_score(records), 4),
         "ece": round(_expected_calibration_error(table, n), 4),
         "agreement_rate": round(agree / n, 4),
         "agreement_wilson80": (round(wlo, 4), round(whi, 4)),
@@ -297,6 +319,7 @@ def _read_domains(path: Path) -> list[str]:
 def _print_summary(summary: dict[str, object], header: str) -> None:
     print(f"\n{header} (n={summary['n']} with a published policy)")
     print(f"  base rate enforcing:   {summary['base_rate_enforcing']}")
+    print(f"  log score (proper):    {summary['log_score']}")
     print(f"  Brier:                 {summary['brier']}")
     print(f"  ECE:                   {summary['ece']}")
     print(f"  agreement rate:        {summary['agreement_rate']}  Wilson80 {summary['agreement_wilson80']}")
