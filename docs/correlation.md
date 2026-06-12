@@ -940,7 +940,7 @@ choice is annotated in `recon_tool/bayesian.py` so future
 contributors who reach for symmetric conditioning read the
 rationale first.
 
-#### The suppression guarantee: a monotonicity theorem
+#### The suppression guarantee: a monotonicity property
 
 The $LR = 1$ rule is not only a modelling choice; it buys a provable
 adversarial property, the one formal guarantee recon makes. State it
@@ -949,45 +949,71 @@ claim toward "we cannot tell," never toward a confident wrong answer.**
 The rest of this subsection makes that precise and proves it.
 
 Fix a node $X$ and hold all evidence outside $X$'s own bindings fixed.
-Let $F = O \cap B(X)$ be the set of $X$'s bindings that fired, and write
-$\alpha_b = \ell_b(\text{present})$, $\beta_b = \ell_b(\text{absent})$.
-The node's observation factor is $\phi_X(x) = \prod_{b \in F} \ell_b(x)$,
-which enters $X$'s marginal multiplicatively, so in variable elimination
-$X$'s posterior odds factor exactly as
+Write $\Omega_X^{0} = P(X=\text{present}\mid\varnothing_{\mathrm{obs}}) /
+P(X=\text{absent}\mid\varnothing_{\mathrm{obs}})$ for the **prior baseline
+odds**: the message $X$ receives from its priors, parents, and children
+when none of its own observation factors is applied. Reduce $X$'s bindings
+to evidence *units*, where a unit is one independent binding or one
+mutually-exclusive group (the reduction that keeps co-firing readings from
+being over-counted is §4.3 below, "Conditionally-dependent bindings"). Each
+unit $u$ contributes one factor to $X$'s observation likelihood, with
+present/absent odds ratio $\rho_u$ that depends on what was observed:
 
-$$\frac{P(X = \text{present} \mid F)}{P(X = \text{absent} \mid F)}
-  \;=\; \Omega_X^{0} \, \prod_{b \in F} \frac{\alpha_b}{\beta_b},
-  \qquad
-  \Omega_X^{0} = \frac{P(X = \text{present} \mid \varnothing)}{P(X = \text{absent} \mid \varnothing)},$$
+- a unit whose binding **fired** contributes $\rho_u = \alpha_u/\beta_u
+  \ge 1$, where $\alpha_u = \ell_u(\text{present})$, $\beta_u =
+  \ell_u(\text{absent})$;
+- a unit that **did not fire** contributes $\rho_u = 1$ on a hideable node
+  (absence is not conditioned on), or a disconfirming $\rho_u \le 1$ on a
+  declarative node (absence is informative: the independent complement
+  $(1-\alpha_u)/(1-\beta_u)$, or the group's explicit `group_absence`
+  ratio).
 
-where $\Omega_X^{0}$ is the **baseline odds**: the message $X$ receives
-from its priors, parents, and children with none of its own bindings
-fired. $\Omega_X^{0}$ does not depend on $F$, so the whole effect of the
-observed evidence is the product term.
+The observation factor enters $X$'s marginal multiplicatively, so in
+variable elimination $X$'s posterior odds factor as
 
-The catalogue enforces that every binding is a *positive indicator*:
-$\alpha_b \ge \beta_b$, equivalently $\lambda_b = \log(\alpha_b/\beta_b)
-\ge 0$ (a fired slug favours presence). This is the theorem's one
-hypothesis, and it is checked as a standing invariant
-(`validation/adversarial_properties.py`).
+$$\frac{P(X = \text{present} \mid \mathrm{obs})}{P(X = \text{absent} \mid \mathrm{obs})}
+  \;=\; \Omega_X^{0} \, \prod_{u} \rho_u .$$
 
-> **Theorem (suppression monotonicity).** Let $F' \subseteq F$ be any
-> subset obtained by an operator hiding some of the fired bindings. Under
-> the positive-indicator hypothesis, with all other evidence fixed,
-> $$P(X = \text{present} \mid \varnothing)
+Define the node's **suppression floor** $B_X$ as the posterior reached when
+none of $X$'s bindings fire, every unit sitting at its not-fired factor. For
+a **hideable** node every not-fired ratio is $1$, so $B_X$ is the prior
+baseline $\Omega_X^{0}/(1+\Omega_X^{0})$. For the **declarative** node the
+not-fired ratios are $\le 1$, so $B_X$ sits *below* the prior baseline: the
+policy node with no DMARC, SPF, or MTA-STS signal has an all-absent
+posterior of about **0.055**, not its **0.62** prior, because the absence of
+a public declaration is itself disconfirming (§4.3 below, "Node-dependent
+missingness"). $B_X$ is the quantity the harness reads as
+`post[frozenset()]`.
+
+The catalogue enforces that every fired binding is a *positive indicator*:
+$\alpha_u \ge \beta_u$, equivalently $\lambda_u = \log(\alpha_u/\beta_u)
+\ge 0$ (a fired slug favours presence); on a declarative node it also
+enforces that each not-fired factor is disconfirming,
+$\rho_u^{\,\mathrm{absent}} \le 1$ (a missing public declaration favours
+absence). These are the proposition's hypotheses, checked as standing
+invariants (`validation/adversarial_properties.py`).
+
+> **Proposition (suppression monotonicity).** Let $F$ be the bindings that
+> fired and $F' \subseteq F$ any subset an operator leaves visible after
+> hiding the rest. Under the hypotheses above, with all other evidence
+> fixed,
+> $$B_X
 >   \;\le\; P(X = \text{present} \mid F')
 >   \;\le\; P(X = \text{present} \mid F).$$
 > Suppression moves the presence-posterior monotonically down toward the
-> baseline and never above the fully-observed value.
+> suppression floor $B_X$ and never above the fully-observed value. For a
+> hideable node $B_X$ is the prior baseline; for the declarative node it is
+> the strictly lower all-absent posterior.
 
-*Proof.* By the factorisation, the posterior odds under $F'$ equal
-$\Omega_X^{0} \prod_{b \in F'} (\alpha_b/\beta_b)$. Each factor is
-$\ge 1$, so dropping factors (passing from $F$ to $F' \subseteq F$)
-weakly decreases the product and hence the odds; the odds-to-probability
-map $\omega \mapsto \omega/(1+\omega)$ is strictly increasing, giving the
-upper bound. Taking $F' = \varnothing$ leaves exactly $\Omega_X^{0}$, and
-any $F' \supseteq \varnothing$ multiplies in factors $\ge 1$, giving the
-lower bound. $\blacksquare$
+*Proof.* Hiding a fired binding replaces its unit's fired ratio $\rho_u \ge
+1$ with that unit's not-fired ratio $\rho_u^{\,\mathrm{absent}}$, which is
+$1$ on a hideable node and $\le 1$ on a declarative one, and leaves every
+other unit's ratio unchanged; in both cases $\rho_u^{\,\mathrm{absent}} \le
+\rho_u$. So each hiding step weakly decreases the product $\prod_u \rho_u$,
+and the odds-to-probability map $\omega \mapsto \omega/(1+\omega)$ is
+increasing, giving monotone descent and the upper bound at $F$. Hiding all
+of $F$ leaves every unit at its not-fired ratio, which is by definition
+$B_X$, giving the lower bound. $\blacksquare$
 
 Two corollaries carry the security content.
 
@@ -1005,40 +1031,45 @@ suppression raises the reported uncertainty rather than passing unseen;
 the wide interval on a hardened target is a proven consequence of hiding,
 not an unexplained hedge.
 
-For the one **declarative** node (§4.8.3) the bound is only stronger:
-hiding a fired binding there converts it from a positive factor
-($\ge 1$) into an informative absence ($< 1$), so the posterior drops
-further. The premise that earns that node its empirical-coverage status
-(§4.7) is exactly that its signals are public declarations an operator
-*cannot* hide.
+The declarative policy node is the one place $B_X$ falls below the prior:
+its signals are public declarations an operator cannot *hide*, so
+suppressing them is genuine disconfirmation that drives the posterior down
+to about 0.055. The same node can still be pushed *up* by a forged
+declaration; that is the addition side below, which the proposition does
+not bound.
 
-**The asymmetry, and why it is exactly the passive/active line.** The
-theorem bounds the *removal* of evidence. It says nothing about the
-*fabrication* of evidence, and that gap is not an oversight but the
-defining limit of passive observation. An operator who publishes a record
-that fires binding $b$ adds a factor $\alpha_b/\beta_b \ge 1$ and raises
-the posterior on a false premise. recon cannot distinguish a fabricated
-fired binding from a genuine one without sending traffic to the service
-to check it, which the strictly-passive, zero-credential invariant
-forbids (§6). So the boundary of the guarantee coincides exactly with the
-passive/active boundary: recon is **monotone-safe against the suppression
-of evidence and exposed to the fabrication of evidence**, and the same
-refusal to probe that makes it safe to point at an untrusted target
-(§4.4, the SSRF/DNS-leak posture) is what leaves injection out of reach.
-Stated as the contract: *provably robust to hiding, explicitly not robust
-to lying.* The deception-posture catalogue (§4.11) is the honest
-enumeration of the lying side.
+**The asymmetry: removal versus addition, which is not the passive/active
+line.** The proposition bounds the *removal* of evidence. It says nothing
+about the *addition* of evidence, and that gap, not the passive/active
+line, is the real boundary of the guarantee. An operator who publishes a
+record that fires unit $u$ adds a factor $\rho_u \ge 1$ and raises the
+posterior on a premise recon cannot check without sending traffic to the
+service, which the strictly-passive, zero-credential invariant forbids
+(§6). The tempting shorthand, that the guarantee boundary is the
+passive/active line, is wrong: publishing a decoy TXT record, SPF include,
+or CNAME is fully passive on the operator's side and on recon's side (recon
+re-reads a genuine, tier-1 "Observed" fact), costs nothing, and lands a
+confident false positive. So the same passive posture that makes recon safe
+to *point at* an untrusted target does not make it safe *from* a target
+that plants. Stated as the contract: *robust to evidence removal, exposed
+to evidence addition*; the older "robust to hiding, not to lying" phrasing
+holds only if "lying" is read to include truthful-but-decoy records. The
+deception-posture catalogue (§4.11) enumerates the addition side, and its
+cheapest member (Pattern I, a static decoy verification token) defeats the
+highest-confidence bindings at zero cost.
 
-Read through the threat model, the theorem says recon structurally avoids
-the most dangerous error, a *confident false negative*. A hideable node
-with no fired evidence returns the baseline with a wide interval (the
-identifiability floor, §4.5), never a confident "absent," so suppression
-yields "we cannot tell," not a false "they are clean." The residual
-exposure is the false *positive* an injection can plant, which is
-catalogued, not claimed away. The monotonicity and the bounds are not
-only argued here; they are verified exhaustively over every enumerable
-per-node binding subset in `validation/adversarial_properties.py`, so the
-theorem ships as a machine-checked invariant alongside its proof.
+Read through the threat model, the proposition says recon structurally
+avoids a *confident false negative* from suppression. A hideable node with
+no fired evidence returns its baseline with a wide interval (the
+identifiability floor, §4.5), never a confident "absent," so hiding yields
+"we cannot tell," not a false "they are clean." The residual exposure is
+the false *positive* an addition can plant (§4.11), which is catalogued,
+not claimed away. The monotonicity and the bounds, with $B_X$ the
+all-absent floor the harness reads as `post[frozenset()]`, are verified
+exhaustively over every enumerable per-node binding subset in
+`validation/adversarial_properties.py`, so the property ships as a
+machine-checked invariant; the proof above is its justification, not the
+check.
 
 #### What is actually hideable: the operator/provider spectrum
 
@@ -1913,7 +1944,7 @@ an adversarial corpus we do not have. The point is to document the
 predicted behaviour so future calibration runs can confirm or
 refute it.
 
-Three deception postures are worth distinguishing because they
+Four deception postures are worth distinguishing because they
 exercise different parts of the inference pipeline.
 
 #### Pattern F: wildcard-cert rotation
@@ -2001,6 +2032,48 @@ The defense is upstream of the Bayesian layer: the deterministic
 pipeline's "slug requires corroboration, not just a cert claim"
 discipline is what makes this pattern fail. The Bayesian layer
 inherits the protection and surfaces it in the explanation.
+
+#### Pattern I: static decoy verification tokens
+
+Pattern: the apex publishes one or more administrative verification TXT
+records, or an SPF `include:`, for vendors it does not actually use
+(`MS=ms12345678`, `_oktaverification=...`,
+`google-site-verification=...`, `include:_spf.salesforce.com`). Each is a
+single static record, costs nothing, is truthful as a DNS fact, and is
+published by the operator itself, so no active probe and no fabricated
+traffic is involved. This is the cheapest member of the addition side of
+the removal-versus-addition boundary (§4.3).
+
+Predicted Bayesian behaviour, and why the existing patterns miss it:
+
+- **The targeted node fires at full strength.** These tokens are exactly
+  the bindings the slug classifier keys on, so `m365_tenant`, `okta_idp`,
+  or a SaaS node receives its full likelihood ratio (roughly 30 to 46 on
+  the administrative tokens) and the posterior goes confident-present,
+  non-sparse. The engine applies the catalogue likelihood ratio without
+  regard to whether the detection is a functional deployment (an MX or
+  CNAME the org depends on) or a free administrative string, so a planted
+  token is arithmetically identical to a real tenant.
+- **On the declarative node the absence disconfirmer is switched off, not
+  just bypassed.** A planted `v=DMARC1; p=reject` TXT both adds the
+  positive factor and removes the group-absence factor that would
+  otherwise pull the posterior down (§4.3), so the swing is larger than a
+  hideable node's.
+- **The other patterns do not catch it.** There is no cross-source
+  conflict, so Pattern G's `n_eff` dampening never engages; there is no
+  cert involved, so Pattern H is irrelevant; the provenance is honest, so
+  `--explain-dag` shows a genuine TXT source and flags nothing.
+
+Unlike Patterns F to H, the engine has no current defense here, so the
+honest status is a known confident-false-positive vector, not a posture
+the layer already handles. The mitigation is to weight a binding by
+detection provenance, gating an administrative-only token behind a
+functional corroborator (an MX, CNAME, or NS the operator cannot publish
+without actually routing through the vendor) before the binding
+contributes its full likelihood ratio. The catalogue files already
+prescribe that corroboration discipline (`email.yaml`, `security.yaml`),
+but the inference layer does not yet honor it; closing that gap is tracked
+engine work, not claimed as shipped.
 
 #### What the catalog explicitly does NOT validate
 
