@@ -170,14 +170,17 @@ it, and that tracks the hideability spectrum in correlation.md.
 | Node class | Example nodes | Reference label | Guarantees available |
 |---|---|---|---|
 | Provider-attested | m365_tenant, google_workspace_tenant | the provider's own identity endpoint (authoritative) | calibration (CAL3/CAL4) and, as a candidate, conformal coverage; plus the structural guarantees |
-| Public-declaration | email_security_policy_enforcing | the DMARC record (its own definition of enforcing) | calibration, shipped at tier 4; conformal coverage as a candidate; plus the structural guarantees |
+| Public-declaration | email_security_policy_enforcing | the DMARC record (its own definition of enforcing) | calibration, tier 4 for the strict-SPF + MTA-STS residual only (DMARC is also the input, so the bulk is a definitional agreement check); conformal coverage as a candidate; plus the structural guarantees |
 | Hideable | okta_idp, federated_identity, cdn_fronting, aws_hosting, email_gateway_present | none (absence may be genuine or adversarial) | structural guarantees only: suppression-monotonicity and interval widening (evidence-responsive, CAL13) |
 
 The paper's claim is not that recon calibrates everything. It is that the
 honest envelope for a passive classifier is this tiering: full
 calibration where a self-defining reference exists, principle-compliant
 evidence-responsiveness everywhere else, and a clear statement of the
-boundary between them, which coincides with the passive/active line.
+boundary between them: a node is calibratable only where a reference an
+operator cannot hide exists (the labelable-versus-hideable line), which is a
+different cut than the suppression proposition's removal-versus-addition
+boundary.
 
 ## Pointers
 
