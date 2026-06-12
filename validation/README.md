@@ -140,6 +140,49 @@ corpora live entirely under `validation/corpus-private/` and never leave
 your machine; only the generic patterns surfaced for triage become
 candidate PRs.
 
+## Assurance and calibration harnesses
+
+The statistical-assurance side of this directory (the dossier that reads
+them: [docs/statistical-assurance.md](../docs/statistical-assurance.md)).
+Synthetic harnesses run anywhere and their committed memos carry real
+numbers; reference harnesses resolve real apexes, so their runs stay
+maintainer-local and emit aggregates only
+([docs/data-handling-policy.md](../docs/data-handling-policy.md)).
+
+Synthetic / no-network (runnable by anyone, deterministic):
+
+- `synthetic_calibration.py` — model-grounded calibration: samples worlds
+  from the network's own priors/CPTs and checks reliability, ECE, Brier.
+- `interval_coverage.py` — the v2.1.15 perturbation-coverage gate: the 80%
+  interval against the CAL8 ±20% likelihood band, truth from an
+  independent full-joint reference. Memo: `interval-coverage.md`.
+- `differential_verification.py` — variable elimination cross-checked
+  against naive full-joint enumeration over the enumerable evidence sweep.
+- `adversarial_properties.py` — the machine-checked suppression-
+  monotonicity proposition (correlation.md 4.3).
+- `likelihood_sensitivity.py` — CAL8: posteriors/agreement under ±20%
+  likelihood perturbation. Memo: `cal8-likelihood-sensitivity.md`.
+- `drift_check.py` — the PV2 inference drift gate against
+  `inference_baseline.json` (CI-gated).
+- `layer_ablation.py` — what each layer adds: the Bayesian posterior vs
+  slug-matching baselines (pooled and fired-regime), and Louvain vs
+  connected components on planted partitions under bridging noise. Run
+  and committed (fully synthetic): `layer-ablation.md`.
+
+Reference-anchored / network (maintainer-local, aggregates only):
+
+- `reference_calibration.py` — CAL3/CAL4: the email-policy posterior
+  against the authoritative DMARC record, plus the held-out residual
+  (the `dmarc_policy` unit masked, so predictor and label are disjoint).
+  `--stratify-dir` for per-vertical cells. Memo:
+  `reference-calibration.md`.
+- `tenancy_reference_calibration.py` — the M365 tenancy posterior (DNS
+  channel only) against Microsoft's endpoint attestation; GWS reported
+  one-sided (the channel has no authoritative negative).
+- `conformal_coverage.py` — distribution-free split-conformal coverage on
+  the labelable nodes, with a deliberate falsifiability split showing the
+  exchangeability boundary.
+
 ## The fingerprint catalog audit
 
 Run alongside live validation when changing fingerprint YAMLs:
