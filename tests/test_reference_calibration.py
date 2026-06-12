@@ -16,6 +16,7 @@ from validation.reference_calibration import (
     CalibrationRecord,
     calibration_summary,
     reference_label_email_policy,
+    stratified_summary,
     wilson_interval,
 )
 
@@ -96,3 +97,32 @@ class TestCalibrationSummary:
         for row in s["reliability"]:  # type: ignore[attr-defined]
             assert set(row) == {"bin_low", "bin_high", "enforcing_rate", "count"}
             assert all(isinstance(v, int | float) for v in row.values())
+
+
+class TestStratifiedSummary:
+    def test_small_cells_are_suppressed(self) -> None:
+        strata = {
+            "big": [CalibrationRecord(posterior=0.9, label=1) for _ in range(12)],
+            "tiny": [CalibrationRecord(posterior=0.9, label=1) for _ in range(3)],
+        }
+        out = stratified_summary(strata, min_cell=10)
+        assert out["strata"]["tiny"] == {"n": 3, "suppressed": True}
+        assert out["strata"]["big"]["n"] == 12
+        assert "ece" in out["strata"]["big"]
+
+    def test_pooled_includes_suppressed_records(self) -> None:
+        # Suppression hides a stratum's row but its records still count in the
+        # pooled total, so the headline number is over the whole set.
+        strata = {
+            "a": [CalibrationRecord(posterior=0.9, label=1) for _ in range(8)],
+            "b": [CalibrationRecord(posterior=0.1, label=0) for _ in range(8)],
+        }
+        out = stratified_summary(strata, min_cell=10)
+        assert out["strata"]["a"]["suppressed"] is True
+        assert out["strata"]["b"]["suppressed"] is True
+        assert out["pooled"]["n"] == 16
+
+    def test_strata_keys_carry_no_apex(self) -> None:
+        strata = {"banking": [CalibrationRecord(posterior=0.9, label=1) for _ in range(10)]}
+        out = stratified_summary(strata, min_cell=10)
+        assert all("." not in name for name in out["strata"])
