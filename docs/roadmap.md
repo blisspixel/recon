@@ -418,9 +418,10 @@ seed-sweep consensus as mean pairwise ARI); and CAL9's harness half shipped
 (`calibration_summary` now leads with the proper log-score beside Brier/ECE —
 the reliability-diagram-and-sparse-cohort memo discipline applies at the next
 corpus run). Remaining open: CAL6 (the stratified corpus *run*; the
-`--stratify-dir` modes exist on both calibration harnesses) and CAL12 (the
-priors-vs-base-rates elicitation write-up; partially grounded in the 2026-06
-corpus re-grounding recorded in `bayesian_network.yaml`).
+`--stratify-dir` modes exist on both calibration harnesses) and the
+measurement half of CAL12 (the elicitation ledger is now written —
+`bayesian-cpt-discipline.md`, "The priors ledger" — with the unrecorded
+corpus rates marked as the open cells the next full-corpus pass fills).
 
 | # | Refinement | Acceptance |
 |---|---|---|
