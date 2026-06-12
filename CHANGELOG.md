@@ -12,6 +12,19 @@ including a named new stable surface (the evidence-semantics diagnostics), so
 the next release cut is the **2.2.0 minor** the roadmap reserves for exactly
 this: a coherent new surface, not internal hardening.
 
+### Fixed (validation)
+
+- **`conformal_coverage` consumed the reference collector's old shape.** When
+  the held-out residual landed, `reference_calibration.collect` started
+  returning `CalibrationPair` (full + held-out) instead of bare
+  `CalibrationRecord`; `conformal_coverage.main` still read `.posterior`
+  directly and crashed at runtime. The unit tests missed it because the
+  network orchestration was untested — a live public-list run surfaced it. It
+  now reads `.full` (conformal is a statement about the deployed predictor),
+  and a monkeypatched `main()` contract test
+  (`tests/test_conformal_coverage.py::TestCollectorContract`) pins the
+  cross-harness shape so it can't drift silently again.
+
 ### Added — evidence-semantics diagnostics (the 2.2 surface)
 
 - **Per-node `entropy_reduction_nats`.** Every `posterior_observations` entry

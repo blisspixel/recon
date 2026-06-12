@@ -49,6 +49,10 @@ Run (maintainer-local, network):
     python -m validation.conformal_coverage domains.txt --alpha 0.1 --trials 50
 """
 
+# Reuses the reference-calibration collector and its tested ``_read_domains``
+# helper (the single source for resolve+label+drop-apex); same cross-harness
+# allowance the other validation scripts take.
+# pyright: reportPrivateUsage=false
 from __future__ import annotations
 
 import argparse
@@ -238,15 +242,18 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FAIL: domains file not found: {args.domains}")
         return 1
 
-    # Reuse the reference-calibration collector: it already pairs each domain's
-    # policy posterior with the DMARC reference label and drops the apex.
+    # Reuse the reference-calibration collector: it pairs each domain's policy
+    # posterior with the DMARC reference label and drops the apex. It returns a
+    # CalibrationPair per domain (``.full`` = the shipped posterior, ``.held_out``
+    # = the dmarc-masked residual); conformal coverage is a statement about the
+    # deployed predictor, so we take ``.full``.
     from validation.reference_calibration import _read_domains, collect
 
     domains = _read_domains(args.domains)
     print(f"Resolving {len(domains)} domains against the DMARC record (aggregates only, no apex printed)...")
-    records = asyncio.run(collect(domains, timeout=args.timeout, skip_ct=True, concurrency=args.concurrency))
-    posteriors = [r.posterior for r in records]
-    labels = [r.label for r in records]
+    pairs = asyncio.run(collect(domains, timeout=args.timeout, skip_ct=True, concurrency=args.concurrency))
+    posteriors = [p.full.posterior for p in pairs]
+    labels = [p.full.label for p in pairs]
     summary = evaluate_cv(posteriors, labels, alpha=args.alpha, trials=args.trials)
     _print_summary(summary)
     print(_TRAILER)
