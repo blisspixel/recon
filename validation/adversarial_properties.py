@@ -1,32 +1,41 @@
 """Machine-checked adversarial properties of the inference layer.
 
-This harness ships the suppression-monotonicity theorem
+This harness ships the suppression-monotonicity proposition
 (correlation.md section 4.3) as an exhaustive, checkable invariant. The
-theorem's plain statement: an operator who hides indicators can only move
-a claim toward "we cannot tell," never toward a confident wrong answer.
-Formally, for a node X with all other evidence fixed, the presence
-posterior factors as a baseline odds times a product of per-binding
-likelihood ratios, and under the positive-indicator hypothesis
-(alpha_b >= beta_b for every binding, a fired slug favours presence) the
-posterior is monotone non-decreasing in the fired set and bounded in
-[baseline, fully-observed].
+plain statement: an operator who hides indicators can only move a claim
+toward "we cannot tell," never toward a confident wrong answer. Formally,
+for a node X with all other evidence fixed, the presence posterior factors
+as a prior baseline odds times a product of per-evidence-unit likelihood
+ratios, and under the hypotheses (every fired binding a positive indicator,
+alpha_b >= beta_b; and on a declarative node every not-fired factor
+disconfirming, ratio <= 1) the posterior is monotone non-decreasing in the
+fired set and bounded in [B_X, fully-observed]. The suppression floor B_X is
+the all-absent observation posterior: for a hideable node it equals the
+prior baseline, but for the declarative node it sits below the prior,
+because the absence of a public declaration is itself disconfirming. B_X is
+the quantity this harness reads as post[frozenset()].
 
-Two checks, both over the shipped network:
+Three checks, all over the shipped network:
 
-  * ``positive_indicator_violations`` verifies the theorem's one
-    hypothesis as a catalogue invariant: every binding has
+  * ``positive_indicator_violations`` verifies the first hypothesis as a
+    catalogue invariant: every fired binding has
     ``likelihood_present >= likelihood_absent``. A negative-indicator
     binding would break the guarantee, so this is a standing gate on the
     network YAML.
+  * ``disconfirming_absence_violations`` verifies the second hypothesis on
+    the declarative node: every ``group_absence`` pair is disconfirming
+    (``present <= absent``), so a missing public declaration favours absent
+    and hiding a fired group member can only lower the posterior. Without
+    this, an all-absent group could favour presence and break monotonicity.
   * ``suppression_violations`` verifies the conclusion on the engine
     itself: for every node, over every subset of its bindings, the
     presence posterior never rises when a fired binding is hidden, and
-    stays within [no-evidence baseline, all-fired]. Because the node
+    stays within [B_X all-absent baseline, all-fired]. Because the node
     observation factor enters the marginal multiplicatively (the exact
     factorisation differential_verification.py confirms), checking the
     no-external-evidence instance is sufficient: external evidence only
     rescales the baseline odds by a positive constant and cannot change
-    the sign of a per-binding likelihood ratio.
+    the sign of a per-unit likelihood ratio.
 
 Synthetic and offline: no corpus, no network calls, no target data. The
 nine-node network has at most four bindings on any node, so the full
@@ -84,6 +93,30 @@ def positive_indicator_violations(network: BayesianNetwork) -> list[str]:
     return out
 
 
+def disconfirming_absence_violations(network: BayesianNetwork) -> list[str]:
+    """Declarative ``group_absence`` pairs that are not disconfirming.
+
+    The declarative branch of the proposition needs every not-fired factor to
+    have ratio <= 1, so hiding a fired binding can only lower the posterior. For
+    a mutually-exclusive group that means the ``group_absence`` likelihood of
+    presence must not exceed its likelihood of absence; otherwise an all-absent
+    group would favour presence and break monotonicity. (Independent non-fired
+    bindings use the complement ``(1 - present) / (1 - absent)``, which is
+    already <= 1 whenever the positive-indicator check passes.)
+    """
+    out: list[str] = []
+    for n in network.nodes:
+        if n.missingness != "declarative":
+            continue
+        for group, lp, la in n.group_absence:
+            if lp > la:
+                out.append(
+                    f"{n.name}/{group}: group_absence present {lp} > absent {la} "
+                    f"(a missing public declaration must favour absent)"
+                )
+    return out
+
+
 def suppression_violations(network: BayesianNetwork, tol: float = _TOL) -> list[str]:
     """Subsets where hiding a fired binding raises the posterior, or where the
     posterior escapes [baseline, fully-observed]. Empty list means the theorem
@@ -116,24 +149,31 @@ def suppression_violations(network: BayesianNetwork, tol: float = _TOL) -> list[
 def main() -> int:
     network = load_network()
     pos = positive_indicator_violations(network)
+    absent = disconfirming_absence_violations(network)
     sup = suppression_violations(network)
 
     print("Adversarial-property check over the shipped network")
-    print(f"  positive-indicator hypothesis (alpha >= beta): {len(pos)} violation(s)")
-    print(f"  suppression monotonicity + bounds:             {len(sup)} violation(s)")
+    print(f"  positive-indicator hypothesis (alpha >= beta):  {len(pos)} violation(s)")
+    print(f"  disconfirming-absence hypothesis (declarative): {len(absent)} violation(s)")
+    print(f"  suppression monotonicity + bounds:              {len(sup)} violation(s)")
     if pos:
         print("\nPositive-indicator violations:")
         for v in pos:
+            print(f"  {v}")
+    if absent:
+        print("\nDisconfirming-absence violations:")
+        for v in absent:
             print(f"  {v}")
     if sup:
         print("\nSuppression violations:")
         for v in sup:
             print(f"  {v}")
-    if pos or sup:
+    if pos or absent or sup:
         print("\nFAIL: the suppression guarantee (correlation.md 4.3) does not hold as stated.")
         return 1
-    print("\nOK: hiding any fired binding only moves a claim toward the baseline; no false")
-    print("positive can be manufactured by suppression. The theorem holds on the engine.")
+    print("\nOK: hiding any fired binding only moves a claim toward the all-absent floor;")
+    print("no false positive can be manufactured by suppression. The property holds on the")
+    print("engine.")
     return 0
 
 
