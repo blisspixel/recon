@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from recon_tool.validation_runner import (
@@ -21,7 +21,7 @@ from recon_tool.validation_runner import (
 
 
 def _default_output_dir(base: Path) -> Path:
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%SZ")
     return base / "live_runs" / stamp
 
 

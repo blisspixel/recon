@@ -31,7 +31,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -39,7 +39,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _utc_stamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
+    return datetime.now(UTC).strftime("%Y%m%d-%H%M%SZ")
 
 
 def _count_corpus(corpus: Path) -> int:
@@ -110,7 +110,7 @@ def _write_ct_budget_summary(results_path: Path, run_dir: Path) -> None:
         "records_total": total,
         "outcome_counts": outcome_counts,
         "limiter_snapshots": limiter_snapshots,
-        "written_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "written_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
     }
     (run_dir / "ct_budget_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     # Short stdout note so the operator sees the headline.
@@ -138,8 +138,10 @@ def _run_step(cmd: list[str], description: str) -> None:
         raise SystemExit(2)
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Run the full discovery scan: corpus to results to gaps to candidates to diff."
+    )
     parser.add_argument(
         "--corpus",
         type=Path,
@@ -211,50 +213,163 @@ def main() -> None:
             "domains that already succeeded. Implies --ct."
         ),
     )
-    args = parser.parse_args()
+    return parser
+
+
+def _synthesize_ct_retry_corpus(retry_from: Path, output_root: Path) -> Path:
+    """Build a filtered corpus of only the CT-degraded domains from a prior run.
+
+    Reads the prior run's ``results.ndjson``, collects the domains whose
+    ``ct_attempt_outcome`` shows a degradation, and writes them to a
+    synthesized corpus file whose path is returned. Exits with code 2 on a bad
+    path and with code 0 (nothing to do) when no degraded records are found.
+    The caller treats this as implying ``--ct``.
+    """
+    if not retry_from.exists():
+        print(f"error: --ct-retry-from path not found: {retry_from}", file=sys.stderr)
+        raise SystemExit(2)
+    prior = retry_from
+    if prior.is_dir():
+        prior = prior / "results.ndjson"
+    if not prior.exists():
+        print(f"error: results.ndjson not found in {retry_from}", file=sys.stderr)
+        raise SystemExit(2)
+    degraded_outcomes = {
+        "live_rate_limited",
+        "breaker_open",
+        "live_other_failure",
+        "cache_miss",
+    }
+    degraded_domains: list[str] = []
+    with prior.open(encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            rec = json.loads(line)
+            outcome = rec.get("ct_attempt_outcome")
+            if outcome in degraded_outcomes:
+                dom = rec.get("queried_domain")
+                if dom:
+                    degraded_domains.append(dom)
+    if not degraded_domains:
+        print("--ct-retry-from: no degraded records in prior run; nothing to retry")
+        raise SystemExit(0)
+    synth = output_root.parent / f"_ct-retry-{datetime.now(UTC).strftime('%Y%m%d-%H%M%SZ')}.txt"
+    synth.parent.mkdir(parents=True, exist_ok=True)
+    synth.write_text("\n".join(degraded_domains) + "\n", encoding="utf-8")
+    print(
+        f"--ct-retry-from {retry_from}: re-running CT for "
+        f"{len(degraded_domains)} degraded domains via {synth}"
+    )
+    return synth
+
+
+def _run_batch(
+    corpus: Path, run_dir: Path, *, concurrency: int, ct: bool, json_array: bool, domain_count: int
+) -> Path:
+    """Run the recon batch resolve, streaming output into the run directory.
+
+    Default is NDJSON streaming (one line per domain, flushed as completed) so
+    very large corpora stay memory-bounded and produce visible progress;
+    ``--json-array`` opts back into the legacy single-array output. Returns the
+    results path; exits with code 2 if the batch subprocess fails.
+    """
+    output_mode = "--json" if json_array else "--ndjson"
+    batch_cmd = [
+        sys.executable,
+        "-m",
+        "recon_tool.cli",
+        "batch",
+        str(corpus),
+        output_mode,
+        "--include-unclassified",
+        "--concurrency",
+        str(concurrency),
+    ]
+    if not ct:
+        batch_cmd.append("--no-ct")
+
+    ct_str = "on" if ct else "off"
+    fmt_str = "json-array" if json_array else "ndjson"
+    print(
+        f"  resolving {domain_count} domains (concurrency={concurrency}, ct={ct_str}, format={fmt_str}) ...",
+        flush=True,
+    )
+    results_path = run_dir / ("results.json" if json_array else "results.ndjson")
+    with results_path.open("w", encoding="utf-8") as out:
+        result = subprocess.run(  # noqa: S603 — arg list constructed locally
+            batch_cmd,
+            stdout=out,
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=str(REPO_ROOT),
+            check=False,
+        )
+    if result.returncode != 0:
+        print(f"    FAILED: {result.stderr.strip()}", file=sys.stderr)
+        raise SystemExit(2)
+    return results_path
+
+
+def _maybe_run_diff(
+    results_path: Path,
+    run_dir: Path,
+    stamp: str,
+    *,
+    output_root: Path,
+    compare_to: Path | None,
+    no_compare: bool,
+) -> tuple[Path | None, Path | None]:
+    """Diff this run against a prior one. Returns ``(diff_path, compare_target)``.
+
+    Picks the most recent prior run when ``--compare-to`` is not given, unless
+    ``--no-compare`` is set. ``diff_path`` is set only when a diff actually ran;
+    ``compare_target`` reflects the run that was (or would have been) compared.
+    """
+    diff_path: Path | None = None
+    compare_target = compare_to
+    if compare_target is None and not no_compare:
+        # Pick the most recent existing run that isn't this one.
+        prior_candidates = [p for p in sorted(output_root.iterdir()) if p.is_dir() and p.name != stamp]
+        if prior_candidates:
+            compare_target = prior_candidates[-1]
+
+    if compare_target is not None and not no_compare:
+        # Prior runs may have written either ``results.ndjson`` (current
+        # default) or ``results.json`` (legacy ``--json-array``); accept both.
+        prior_ndjson = compare_target / "results.ndjson"
+        prior_json = compare_target / "results.json"
+        prior_results = prior_ndjson if prior_ndjson.exists() else prior_json
+        if prior_results.exists():
+            diff_path = run_dir / "diff.json"
+            _run_step(
+                [
+                    sys.executable,
+                    "validation/diff_runs.py",
+                    "--before",
+                    str(prior_results),
+                    "--after",
+                    str(results_path),
+                    "--output",
+                    str(diff_path),
+                ],
+                f"diff_runs vs {compare_target.name}",
+            )
+        else:
+            print(f"  skipping diff: no results.ndjson or results.json in {compare_target}")
+            diff_path = None
+    return diff_path, compare_target
+
+
+def main() -> None:
+    args = _build_parser().parse_args()
 
     corpus = args.corpus
-    # --ct-retry-from synthesizes a filtered corpus file from the prior
-    # run, listing only the domains whose CT was degraded. It implies
-    # --ct (re-fetching with CT off would defeat the purpose).
+    # --ct-retry-from synthesizes a filtered corpus from the prior run, listing
+    # only the domains whose CT was degraded. It implies --ct (re-fetching with
+    # CT off would defeat the purpose).
     if args.ct_retry_from is not None:
-        if not args.ct_retry_from.exists():
-            print(f"error: --ct-retry-from path not found: {args.ct_retry_from}", file=sys.stderr)
-            raise SystemExit(2)
-        prior = args.ct_retry_from
-        if prior.is_dir():
-            prior = prior / "results.ndjson"
-        if not prior.exists():
-            print(f"error: results.ndjson not found in {args.ct_retry_from}", file=sys.stderr)
-            raise SystemExit(2)
-        degraded_outcomes = {
-            "live_rate_limited",
-            "breaker_open",
-            "live_other_failure",
-            "cache_miss",
-        }
-        degraded_domains: list[str] = []
-        with prior.open(encoding="utf-8") as fh:
-            for line in fh:
-                if not line.strip():
-                    continue
-                rec = json.loads(line)
-                outcome = rec.get("ct_attempt_outcome")
-                if outcome in degraded_outcomes:
-                    dom = rec.get("queried_domain")
-                    if dom:
-                        degraded_domains.append(dom)
-        if not degraded_domains:
-            print("--ct-retry-from: no degraded records in prior run; nothing to retry")
-            raise SystemExit(0)
-        synth = args.output_root.parent / f"_ct-retry-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%SZ')}.txt"
-        synth.parent.mkdir(parents=True, exist_ok=True)
-        synth.write_text("\n".join(degraded_domains) + "\n", encoding="utf-8")
-        print(
-            f"--ct-retry-from {args.ct_retry_from}: re-running CT for "
-            f"{len(degraded_domains)} degraded domains via {synth}"
-        )
-        corpus = synth
+        corpus = _synthesize_ct_retry_corpus(args.ct_retry_from, args.output_root)
         args.ct = True
 
     if not corpus.exists():
@@ -270,52 +385,18 @@ def main() -> None:
     print(f"Scan {stamp} — {domain_count} domains, corpus={corpus}")
     print(f"Run directory: {run_dir}")
 
-    # Step 1: batch resolve. Default is NDJSON streaming (one line per
-    # domain, flushed as completed) so very large corpora stay memory-bounded
-    # and produce visible progress in real time. ``--json-array`` opts back
-    # into the legacy single-array output.
-    output_mode = "--json" if args.json_array else "--ndjson"
-    batch_cmd = [
-        sys.executable,
-        "-m",
-        "recon_tool.cli",
-        "batch",
-        str(corpus),
-        output_mode,
-        "--include-unclassified",
-        "--concurrency",
-        str(args.concurrency),
-    ]
-    if not args.ct:
-        batch_cmd.append("--no-ct")
-
-    ct_str = "on" if args.ct else "off"
-    fmt_str = "json-array" if args.json_array else "ndjson"
-    print(
-        f"  resolving {domain_count} domains (concurrency={args.concurrency}, ct={ct_str}, format={fmt_str}) ...",
-        flush=True,
+    # Step 1: batch resolve.
+    results_path = _run_batch(
+        corpus,
+        run_dir,
+        concurrency=args.concurrency,
+        ct=args.ct,
+        json_array=args.json_array,
+        domain_count=domain_count,
     )
-    results_filename = "results.json" if args.json_array else "results.ndjson"
-    results_path = run_dir / results_filename
-    with results_path.open("w", encoding="utf-8") as out:
-        result = subprocess.run(  # noqa: S603 — arg list constructed locally
-            batch_cmd,
-            stdout=out,
-            stderr=subprocess.PIPE,
-            text=True,
-            cwd=str(REPO_ROOT),
-            check=False,
-        )
-    if result.returncode != 0:
-        print(f"    FAILED: {result.stderr.strip()}", file=sys.stderr)
-        raise SystemExit(2)
 
-    # Step 1.5: write ct_budget_summary.json. Aggregates per-domain
-    # ct_attempt_outcome counts from the just-completed batch and pulls
-    # the persisted limiter state from ~/.recon/rate-limit-state/.
-    # Operator can see at a glance: how many records hit cache, how
-    # many got fresh CT, how many were rate-limited / breaker-blocked,
-    # and what state the limiters wound down in.
+    # Step 1.5: write ct_budget_summary.json (CT runs only). Aggregates the
+    # per-domain ct_attempt_outcome counts and the persisted limiter state.
     if args.ct:
         _write_ct_budget_summary(results_path, run_dir)
 
@@ -352,39 +433,14 @@ def main() -> None:
     )
 
     # Step 4: diff against prior (optional)
-    diff_path: Path | None = None
-    compare_target: Path | None = args.compare_to
-    if compare_target is None and not args.no_compare:
-        # Pick the most recent existing run that isn't this one.
-        prior_candidates = [p for p in sorted(args.output_root.iterdir()) if p.is_dir() and p.name != stamp]
-        if prior_candidates:
-            compare_target = prior_candidates[-1]
-
-    if compare_target is not None and not args.no_compare:
-        diff_path = run_dir / "diff.json"
-        # Prior runs may have written either ``results.ndjson`` (current
-        # default) or ``results.json`` (legacy ``--json-array``); accept
-        # both. ``diff_runs.py`` already reads NDJSON.
-        prior_ndjson = compare_target / "results.ndjson"
-        prior_json = compare_target / "results.json"
-        prior_results = prior_ndjson if prior_ndjson.exists() else prior_json
-        if prior_results.exists():
-            _run_step(
-                [
-                    sys.executable,
-                    "validation/diff_runs.py",
-                    "--before",
-                    str(prior_results),
-                    "--after",
-                    str(results_path),
-                    "--output",
-                    str(diff_path),
-                ],
-                f"diff_runs vs {compare_target.name}",
-            )
-        else:
-            print(f"  skipping diff: no results.ndjson or results.json in {compare_target}")
-            diff_path = None
+    diff_path, compare_target = _maybe_run_diff(
+        results_path,
+        run_dir,
+        stamp,
+        output_root=args.output_root,
+        compare_to=args.compare_to,
+        no_compare=args.no_compare,
+    )
 
     # Step 5: meta.json
     gaps_count = 0
@@ -396,7 +452,7 @@ def main() -> None:
 
     meta: dict[str, Any] = {
         "scan_stamp": stamp,
-        "scan_started_utc": datetime.now(timezone.utc).isoformat(),
+        "scan_started_utc": datetime.now(UTC).isoformat(),
         "label": args.label,
         "corpus_path": str(corpus),
         "domain_count": domain_count,
