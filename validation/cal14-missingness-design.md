@@ -41,7 +41,7 @@ The observation factor for a node is built in `recon_tool/bayesian.py`,
   prior.
 
 The rationale is documented in the code and in `docs/correlation.md` section
-4.8.3: passive collection cannot distinguish "this node truly lacks the binding"
+4.3: passive collection cannot distinguish "this node truly lacks the binding"
 from "the binding is there but the operator hid it," so conditioning on absence
 would over-claim absence on hardened targets. This is the right call for
 hideable infrastructure (m365, okta, aws hosting, CDN).

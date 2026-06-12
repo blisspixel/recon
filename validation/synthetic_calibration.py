@@ -25,7 +25,7 @@ We report two reliability views per node:
   - **Conditional-on-fired-evidence calibration.** Restricted to
     samples where at least one binding fired for the node. This is
     the calibration claim recon's asymmetric-likelihood model
-    actually makes (see correlation.md §4.8.3): we deliberately do
+    actually makes (see correlation.md §4.3): we deliberately do
     not condition on absence, so marginal posteriors are NOT
     calibrated to long-run frequency in the sparse-evidence regime.
     Conditional-on-evidence posteriors *are*.
@@ -211,7 +211,7 @@ def main() -> int:
 
         # Conditional calibration — over samples where ≥1 binding
         # fired for this node. This is the calibration claim the
-        # model actually makes (see correlation.md §4.8.3).
+        # model actually makes (see correlation.md §4.3).
         cond_pred = [p for p, f in zip(predicted, fired, strict=True) if f]
         cond_out = [o for o, f in zip(outcome, fired, strict=True) if f]
 
@@ -245,7 +245,7 @@ def main() -> int:
             print(f"  Sample-weighted ECE (conditional): {avg_ece_cond:.4f}")
         print()
         print("  Marginal ECE is high by design: under the asymmetric-")
-        print("  likelihood model (correlation.md section 4.8.3), posteriors in")
+        print("  likelihood model (correlation.md section 4.3), posteriors in")
         print("  no-evidence-fired regime equal the network prior, not the")
         print("  posterior conditional on absence. We sacrifice marginal")
         print("  calibration to refuse overconfident verdicts on hardened")

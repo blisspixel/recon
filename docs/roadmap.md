@@ -365,7 +365,7 @@ C3 calibration claims and the `correlation.md` polish (G3).
 
 **Shipped so far (2026-06):** CAL1, CAL2, CAL5, CAL7, CAL10 landed in the
 v1.9.61 to v1.9.71 calibration work. CAL13 (evidence-responsive framing in
-`correlation.md` section 4.8.4) and CAL8 shipped 2026-06-04; CAL8 is a new
+`correlation.md` section 4.4) and CAL8 shipped 2026-06-04; CAL8 is a new
 `validation/likelihood_sensitivity.py` harness (cleaner than overloading
 `threshold_sensitivity.py`, which sweeps trigger thresholds) with worst-case
 dECE <= 0.032 and decision flips <= 1.3% under a +/-20% perturbation, artifact
@@ -876,7 +876,7 @@ above is green; Outstanding item 5):
 |---|---|---|---|
 | G1 | Schema lock | done (2.0.0) | `docs/recon-schema.json` (both copies) bumped from "Stable v1.0 contract" to "Stable v2.0 contract", additive-within-2.x; README, the formatter comments, and the contract-test docstring updated; `recon doctor` first line reads "v2.0 stable schema" (version-driven). EXPERIMENTAL labels were already zero in user-facing surfaces (stripped in v1.9.11). |
 | G2 | `--fusion` default-on | done (2.0.0); panel speak-up done (2.0.1) | Fusion runs on every lookup; `--json` always emits the posteriors; `fusion_enabled` disambiguates; `--no-fusion` (new) opts out; `--fusion` is a now-default no-op. v2.0.1 added the panel "speak up": posterior-backed confidence dots (the weakest claimed node's interval position relative to the threshold), a dimmed plain-language clause when a claimed node is thin or contested, and the per-node intervals under `--verbose`. Without posteriors the panel is byte-identical to v1.x. See the v2.0.1 panel-disclosure design note below. |
-| G3 | `correlation.md` promotion | done | Promoted from living draft to the polished reference: the header framing updated, the node-dependent-missingness section (4.8.3) rewritten to the shipped CAL14 reality (declarative email-policy node, the n_eff / stability ripples handled, corpus-grounded numbers, ECE about 0.31 to about 0.03). The four required sections are present (defense-correlation mapping 4a, prior-art 4b, dependency-floor manifesto 4c, failure-mode catalog 4.8.10); the CAL13 evidence-responsive framing and the ground-truth / independence-bias caveats are in place. No math removed. |
+| G3 | `correlation.md` promotion | done | Promoted from living draft to the polished reference: the header framing updated, the node-dependent-missingness section (4.3) rewritten to the shipped CAL14 reality (declarative email-policy node, the n_eff / stability ripples handled, corpus-grounded numbers, ECE about 0.31 to about 0.03). The four required sections are present (defense-correlation mapping 4a, prior-art 4b, dependency-floor manifesto 4c, failure-mode catalog 4.10); the CAL13 evidence-responsive framing and the ground-truth / independence-bias caveats are in place. No math removed. |
 | G4 | Changelog move + tag | done (2.0.0 commit); tag pending operator | `CHANGELOG.md` carries the `## [2.0.0]` entry summarizing the lock; `docs/migration-v2.md` finalized (draft banner removed); version bumped to 2.0.0. The `v2.0.0` tag is the one remaining operator action (it publishes to PyPI), held for explicit go. |
 
 Schema-contract polish (the original Outstanding item 1) shipped in v1.9.26 and
@@ -1737,7 +1737,7 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
     benefit.
   - **Stacking Generalized Bayesian Inference or IDM on
     compiled circuits is an open research problem.** The
-    correlation.md §4.8.4 framework adopts Generalized Bayes
+    correlation.md §4.4 framework adopts Generalized Bayes
     for the conflict-penalty term and notes IDM as the
     second-order-uncertainty upgrade path. Both modifications
     are straightforward to apply post-hoc to a VE marginal
@@ -1831,7 +1831,7 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   distinction first; this entry is the deeper refactor that
   would replace point-CPTs entirely once the lightweight
   version proves operators actually consume the ignorance
-  signal. Cited in `correlation.md` §4.8.4 as prior art.
+  signal. Cited in `correlation.md` §4.4 as prior art.
 
   **This is not a drop-in refactor of `bayesian.py`.** Adopting
   IDM converts the Bayesian network into a **Credal Network**
@@ -1850,7 +1850,7 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
      dependency floor admits this but adds substantial
      algorithmic complexity to `bayesian.py`.
   2. **Stick with the post-hoc $n_{\mathrm{eff}}$ widening.**
-     The correlation.md §4.8.4 framework now justifies the
+     The correlation.md §4.4 framework now justifies the
      current heuristic as a tractable approximation of
      Generalized Bayesian Inference (Bissiri, Holmes, and
      Walker 2016) with an engineered conflict-penalty loss

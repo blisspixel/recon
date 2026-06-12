@@ -250,7 +250,7 @@ every node for definitional clarity in one pass - is in
 #### v1.9.4 - Hardened-adversarial behavior validation
 
 The v1.9.0 corpus skewed enterprise. The asymmetric-likelihood
-design (§4.8.3) was justified specifically for hardened targets,
+design (§4.3) was justified specifically for hardened targets,
 which v1.9.0 did not exercise. This milestone validates the
 *design property*, not just the calibration:
 
@@ -298,7 +298,7 @@ which v1.9.0 did not exercise. This milestone validates the
   re-running the v1.9.0 corpus shows the same 100% per-node
   agreement (other than `email_security_strong` which is gone).
 - [ ] **Failure-mode catalog cross-referenced** to specific
-  defensive guidance in correlation.md §4.8.8 (Defensive value):
+  defensive guidance in correlation.md §4.8 (Defensive value):
   "if you're worried about X, the correlation layer that surfaces
   it is Y; if X is hardened away, the layer reports Z."
 - [ ] **Reproducibility section** in `v1.9.4-calibration.md` shows

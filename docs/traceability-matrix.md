@@ -64,7 +64,7 @@ layer with its own gate:
 | Change control | A CPT edit that shifts an implied marginal beyond the band must be acknowledged in the diff | `validation/drift_check.py`, `validation/inference_baseline.json` | `tests/test_drift_check.py` |
 | Uncertainty honesty | The 80% interval absorbs the acknowledged elicitation imprecision (CAL8 band) | `validation/interval_coverage.py`, memo `interval-coverage.md` | `tests/test_interval_coverage.py` |
 | Test strength | The suite notices subtle defects: 91.4% mutation kill over tested mutants (123 survivors of 1,431, residual classified equivalent), floor at 88% | `mutation.toml`, memo `mutation-gate.md` | `mutation.yml` (blocking on the mutated surface; weekly) |
-| Evidence semantics | CAL7 group reduction and CAL14 declarative absence behave as documented | [correlation.md](correlation.md) section 4.8.3 | `tests/test_bayesian_evidence_groups.py` |
+| Evidence semantics | CAL7 group reduction and CAL14 declarative absence behave as documented | [correlation.md](correlation.md) section 4.3 | `tests/test_bayesian_evidence_groups.py` |
 | Adversarial robustness | Hiding any observed evidence moves a node's presence posterior monotonically toward its baseline, never to a confident false positive (the suppression-monotonicity theorem under the positive-indicator hypothesis, [correlation.md](correlation.md) section 4.3) | `validation/adversarial_properties.py` | `tests/test_adversarial_properties.py` |
 
 ## Release integrity

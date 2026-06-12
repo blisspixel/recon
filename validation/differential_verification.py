@@ -94,7 +94,7 @@ def _binding_abs_llr(ev: _Evidence) -> float:
 def _reference_contributing(fired: list[_Evidence]) -> list[_Evidence]:
     """One effective binding per correlation group, plus every ungrouped one.
 
-    Re-derived from the documented spec (correlation.md 4.8.3): bindings that
+    Re-derived from the documented spec (correlation.md 4.3): bindings that
     share a ``group`` are redundant readings of one fact, so the group
     contributes only its strongest member (largest ``|log LR|``) rather than
     the product of all members. Written from the definition, independently of

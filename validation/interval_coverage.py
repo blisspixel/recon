@@ -33,7 +33,7 @@ Method, per perturbation level ``delta``:
 4. Report, per node, how often the shipped interval contains the
    world's conditional probability: marginally and conditional on at
    least one binding having fired (the regime where the model makes a
-   claim; see correlation.md 4.8.3).
+   claim; see correlation.md 4.3).
 
 At ``delta = 0`` the world equals the model, the reference equals the
 engine (verified differentially in v2.1.7), and coverage is total by
@@ -274,7 +274,7 @@ def _print_report(results: dict[str, Any]) -> None:
     print("perturbed world's conditional probability under the model's own")
     print("conditioning semantics (the gated number, conditional on fired evidence).")
     print("mar: the same against the raw generative conditional where absence is")
-    print("informative for every node; diagnostic only (correlation.md 4.8.3).")
+    print("informative for every node; diagnostic only (correlation.md 4.3).")
     for delta_key, level in results["deltas"].items():
         print()
         tautological = " (consistency sanity row; total by construction)" if float(delta_key) == 0.0 else ""

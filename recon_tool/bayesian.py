@@ -120,7 +120,7 @@ class _Evidence:
     # redundant readings of one underlying fact (conditionally dependent given
     # the node), so a group contributes only its strongest fired binding rather
     # than the naive independent product. None = independent (legacy behaviour).
-    # See correlation.md §4.8.3 "Conditionally-dependent bindings".
+    # See correlation.md §4.3 "Conditionally-dependent bindings".
     group: str | None = None
 
 
@@ -625,7 +625,7 @@ def _contributing_evidence(fired_evidence: list[_Evidence]) -> list[_Evidence]:
     :math:`\\lambda_g = \\max_{b \\in g} \\lambda_b` rather than the sum.
     Ungrouped bindings (``group`` None) each contribute independently, so this is
     a strict refinement that changes only nodes whose YAML declares groups. See
-    correlation.md §4.8.3.
+    correlation.md §4.3.
     """
     independent: list[_Evidence] = []
     strongest: dict[str, _Evidence] = {}
@@ -659,7 +659,7 @@ def _factor_for_evidence(node: _Node, fired_evidence: list[_Evidence]) -> Factor
     the node, the standard naive-Bayes treatment; co-firing bindings within one
     group are first reduced to their strongest member by
     :func:`_contributing_evidence`, so redundant readings of one fact are not
-    multiplied as if independent (correlation.md §4.8.3).
+    multiplied as if independent (correlation.md §4.3).
 
     Missingness (roadmap CAL14):
 
@@ -667,7 +667,7 @@ def _factor_for_evidence(node: _Node, fired_evidence: list[_Evidence]) -> Factor
       binding contributes nothing (LR=1). Passive collection cannot distinguish
       "this node truly lacks the binding" from "the binding is there but the
       operator hid it", so conditioning on absence would over-claim absence on
-      hardened targets (correlation.md §4.8.3, the MNAR argument).
+      hardened targets (correlation.md §4.3, the MNAR argument).
     - **Declarative nodes** DO condition on absence: a binding that could fire
       but did not is genuine disconfirming evidence, because the signal is a
       public declaration whose absence cannot be hidden from passive DNS
@@ -956,7 +956,7 @@ def infer(
         # binding per group (_contributing_evidence). Reporting, n_eff, and
         # influence ranking use that same contributing set, not the raw fired
         # list, otherwise they over-count grouped evidence and report it as
-        # separate influence with too tight an interval. See correlation.md 4.8.3.
+        # separate influence with too tight an interval. See correlation.md 4.3.
         contributing = _contributing_evidence(fired)
         total_evidence += len(contributing)
         # Hideable nodes count contributing bindings; declarative nodes also

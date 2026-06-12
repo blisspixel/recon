@@ -240,7 +240,7 @@ class TestRenderDagDotTop3:
 # also reflect that single effective binding (one "Top influence", n_eff=5.00),
 # not two; the Evidence line still lists both observed slugs. The posterior is
 # 0.950 with a wider interval than the pre-grouping 0.998 / [0.977, 1.000]. See
-# correlation.md 4.8.3.
+# correlation.md 4.3.
 _SNAPSHOT_FRAGMENT = (
     "## m365_tenant\n"
     "_Domain has a Microsoft 365 / Entra tenant._\n"
