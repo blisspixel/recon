@@ -1081,9 +1081,12 @@ to *point at* an untrusted target does not make it safe *from* a target
 that plants. Stated as the contract: *robust to evidence removal, exposed
 to evidence addition*; the older "robust to hiding, not to lying" phrasing
 holds only if "lying" is read to include truthful-but-decoy records. The
-deception-posture catalogue (§4.11) enumerates the addition side, and its
-cheapest member (Pattern I, a static decoy verification token) defeats the
-highest-confidence bindings at zero cost.
+deception-posture catalogue (§4.11) records the cheapest addition-side
+pattern (Pattern I, a static decoy verification token, which defeats the
+highest-confidence bindings at zero cost); the addition side is larger than
+that one pattern, because additions compose through the DAG (a planted
+parent binding lifts a child's floor) and cascade across nodes, neither of
+which the one-node proposition bounds.
 
 Read through the threat model, the proposition says recon structurally
 avoids a *confident false negative* from suppression. A hideable node with
@@ -2074,19 +2077,35 @@ the removal-versus-addition boundary (§4.3).
 
 Predicted Bayesian behaviour, and why the existing patterns miss it:
 
-- **The targeted node fires at full strength.** These tokens are exactly
-  the bindings the slug classifier keys on, so `m365_tenant`, `okta_idp`,
-  or a SaaS node receives its full likelihood ratio (roughly 30 to 46 on
-  the administrative tokens) and the posterior goes confident-present,
-  non-sparse. The engine applies the catalogue likelihood ratio without
-  regard to whether the detection is a functional deployment (an MX or
-  CNAME the org depends on) or a free administrative string, so a planted
-  token is arithmetically identical to a real tenant.
+- **The targeted node fires at full strength, and an obscure token can beat
+  the headline one.** These tokens are exactly the bindings the slug
+  classifier keys on, so `m365_tenant`, `okta_idp`, or a SaaS node receives
+  its full likelihood ratio (roughly 30 to 46 on the administrative tokens)
+  and the posterior goes confident-present, non-sparse. The engine applies
+  the catalogue likelihood ratio without regard to whether the detection is a
+  functional deployment (an MX or CNAME the org depends on) or a free
+  administrative string, so a planted token is arithmetically identical to a
+  real tenant. Because `_contributing_evidence` keeps only the strongest-LR
+  member of a correlation group, the most effective single decoy is often not
+  the headline slug: on `m365_tenant` the `entra-id` token (LR about 44) and
+  `exchange-online` (about 42) both outrank the `microsoft365` slug (about
+  32), so a planted `entra-id` verification string is the cheapest route to
+  the highest posterior.
 - **On the declarative node the absence disconfirmer is switched off, not
   just bypassed.** A planted `v=DMARC1; p=reject` TXT both adds the
   positive factor and removes the group-absence factor that would
   otherwise pull the posterior down (§4.3), so the swing is larger than a
   hideable node's.
+- **Additions cascade across nodes and compose through the DAG.** The
+  within-node proposition bounds removal at one node; it says nothing about
+  an addition that touches several. Two free strings, `microsoft365` and
+  `okta`, drive four nodes across 0.50 at once: `m365_tenant` to about 0.97,
+  `email_security_modern_provider` to about 0.95, `federated_identity` to
+  about 0.90, with `okta_idp` just under at about 0.88. An addition at a
+  *parent* also lifts a child without touching the child's own binding:
+  planting the `federated_sso_hub` signal raises `okta_idp`'s floor from
+  about 0.08 to about 0.26. So the addition side is not a single-node
+  phenomenon, and the proposition's one-node scope is a real limit.
 - **The other patterns do not catch it.** There is no cross-source
   conflict, so Pattern G's `n_eff` dampening never engages; there is no
   cert involved, so Pattern H is irrelevant; the provenance is honest, so
@@ -2098,10 +2117,14 @@ the layer already handles. The mitigation is to weight a binding by
 detection provenance, gating an administrative-only token behind a
 functional corroborator (an MX, CNAME, or NS the operator cannot publish
 without actually routing through the vendor) before the binding
-contributes its full likelihood ratio. The catalogue files already
-prescribe that corroboration discipline (`email.yaml`, `security.yaml`),
-but the inference layer does not yet honor it; closing that gap is tracked
-engine work, not claimed as shipped.
+contributes its full likelihood ratio. That corroborator is assumed
+unforgeable, which is itself not proven: a CNAME to a real vendor edge, a
+nested SPF `include:` of a real vendor, or an NS-delegation decoy might pass
+such a gate, so provenance-weighting is necessary but not obviously
+sufficient. The catalogue files already prescribe that corroboration
+discipline (`email.yaml`, `security.yaml`), but the inference layer does not
+yet honor it; closing that gap is tracked engine work, not claimed as
+shipped.
 
 #### What the catalog explicitly does NOT validate
 
