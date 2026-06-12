@@ -66,6 +66,19 @@ this: a coherent new surface, not internal hardening.
 
 ### Assurance
 
+- **Posture-distribution harness (the paper's last two experiments).**
+  `validation/posture_distributions.py` reads the engine's per-domain
+  behaviour as distributions, both consuming the 2.2 diagnostics: the
+  information-recovered distribution (CAL10 entropy reduction) bucketed by
+  observable hardening posture (edge-proxied vs direct × evidence tier),
+  and the interval-width-vs-evidence diagnostic (CAL7) reporting mean 80%
+  interval width per node by n_eff bucket, grouped vs ungrouped nodes
+  separated so the documented residual over-confidence on
+  richly-instrumented grouped nodes is a number, not just catalogued.
+  Pure classification/aggregation unit-tested
+  (`tests/test_posture_distributions.py`); the run is maintainer-local,
+  aggregates only. Completes the paper's evaluation inventory — every row
+  now maps to a built harness.
 - **Layer ablations, shipped and run (the paper's ablation experiment).**
   `validation/layer_ablation.py` measures, on fully synthetic data
   (model-sampled worlds; planted partitions with fictional hostnames; no
