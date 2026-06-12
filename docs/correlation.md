@@ -974,6 +974,15 @@ variable elimination $X$'s posterior odds factor as
 $$\frac{P(X = \text{present} \mid \mathrm{obs})}{P(X = \text{absent} \mid \mathrm{obs})}
   \;=\; \Omega_X^{0} \, \prod_{u} \rho_u .$$
 
+This factorisation is exact when $X$ is an evidence-isolated root. When $X$ has
+parents or children, external evidence rescales $\Omega_X^{0}$ (and so $B_X$)
+and couples slightly through the polytree, so the equality is no longer
+literal; what survives, and is all the proposition needs, is that the
+observation factor $\prod_u \rho_u$ is non-decreasing in the fired set. The
+harness therefore checks the conclusion directly across a sweep of
+external-evidence contexts (`validation/adversarial_properties.py`) rather than
+relying on the clean factorisation.
+
 Define the node's **suppression floor** $B_X$ as the posterior reached when
 none of $X$'s bindings fire, every unit sitting at its not-fired factor. For
 a **hideable** node every not-fired ratio is $1$, so $B_X$ is the prior
@@ -1005,15 +1014,24 @@ invariants (`validation/adversarial_properties.py`).
 > hideable node $B_X$ is the prior baseline; for the declarative node it is
 > the strictly lower all-absent posterior.
 
-*Proof.* Hiding a fired binding replaces its unit's fired ratio $\rho_u \ge
-1$ with that unit's not-fired ratio $\rho_u^{\,\mathrm{absent}}$, which is
-$1$ on a hideable node and $\le 1$ on a declarative one, and leaves every
-other unit's ratio unchanged; in both cases $\rho_u^{\,\mathrm{absent}} \le
-\rho_u$. So each hiding step weakly decreases the product $\prod_u \rho_u$,
-and the odds-to-probability map $\omega \mapsto \omega/(1+\omega)$ is
-increasing, giving monotone descent and the upper bound at $F$. Hiding all
-of $F$ leaves every unit at its not-fired ratio, which is by definition
-$B_X$, giving the lower bound. $\blacksquare$
+*Proof.* For an independent unit, hiding its binding replaces $\rho_u \ge 1$
+with the not-fired ratio $\rho_u^{\,\mathrm{absent}}$, which is $1$ on a
+hideable node and $\le 1$ on a declarative one. For a grouped unit the fired
+ratio is $\rho_u = \max_{b \in F \cap u} \alpha_b/\beta_b$, the strongest
+co-fired member (by `_contributing_evidence`): hiding a non-strongest member
+leaves $\rho_u$ unchanged, hiding the strongest drops it to the
+next-strongest, and only hiding the last member moves the unit to its
+not-fired ratio. Either way each hiding step weakly decreases that unit's
+ratio ($\rho_u^{\,\mathrm{absent}} \le \rho_u$ by the positive-indicator and
+disconfirming-absence invariants) and leaves every other unit's ratio
+unchanged, so it weakly decreases the product $\prod_u \rho_u$. The
+odds-to-probability map $\omega \mapsto \omega/(1+\omega)$ is increasing,
+giving monotone descent and the upper bound at $F$. Hiding all of $F$ leaves
+every unit at its not-fired ratio, which is by definition $B_X$, giving the
+lower bound. The product is the observation factor only; for a parented node
+the external rescale of $\Omega_X^{0}$ is a positive constant within a fixed
+external context, so the descent holds in every context, which the harness
+confirms by sweeping them. $\blacksquare$
 
 Two corollaries carry the security content.
 
@@ -1023,13 +1041,22 @@ $F' \subseteq F$ with $P(X = \text{present} \mid F') > P(X = \text{present}
 presence-posterior above what the unhidden channel supports, so confident
 "present" cannot be manufactured by hiding.
 
-*Suppression is visible, not silent.* The effective sample size
-$n_{\mathrm{eff}}$ is non-decreasing in the contributing-binding count
-(§4.4), and the credible-interval half-width is decreasing in
-$n_{\mathrm{eff}}$, so hiding weakly *widens* the 80% interval. The act of
-suppression raises the reported uncertainty rather than passing unseen;
-the wide interval on a hardened target is a proven consequence of hiding,
-not an unexplained hedge.
+*Suppression is visible on hideable nodes.* On a hideable node the effective
+sample size $n_{\mathrm{eff}}$ is non-decreasing in the contributing-binding
+count (§4.4), and the credible-interval half-width is decreasing in
+$n_{\mathrm{eff}}$, so hiding weakly *widens* the 80% interval: the act of
+suppression raises the reported uncertainty rather than passing unseen. This
+corollary is specific to hideable nodes. On the declarative node it runs the
+other way, and by design: there $n_{\mathrm{eff}}$ counts informative
+*absences* (`_declarative_evidence_count`), not fired bindings, so suppressing
+a public declaration is itself evidence. Hiding the lone strict-SPF binding on
+the policy node *narrows* the half-width (about 0.34 to about 0.18) and yields
+a confident low posterior (about 0.055, not flagged sparse), a confident "not
+enforcing." That still obeys the proposition (the posterior moved down toward
+$B_X$), but it is the opposite of "hiding widens," and it is the correct
+reading: a public declaration an operator withholds is genuine
+disconfirmation, not a hidden truth, which is the whole point of treating that
+node as declarative.
 
 The declarative policy node is the one place $B_X$ falls below the prior:
 its signals are public declarations an operator cannot *hide*, so
@@ -1065,11 +1092,12 @@ identifiability floor, §4.5), never a confident "absent," so hiding yields
 "we cannot tell," not a false "they are clean." The residual exposure is
 the false *positive* an addition can plant (§4.11), which is catalogued,
 not claimed away. The monotonicity and the bounds, with $B_X$ the
-all-absent floor the harness reads as `post[frozenset()]`, are verified
-exhaustively over every enumerable per-node binding subset in
-`validation/adversarial_properties.py`, so the property ships as a
-machine-checked invariant; the proof above is its justification, not the
-check.
+all-absent floor recomputed per context, are verified over every per-node
+binding subset under a sweep of representative external-evidence contexts in
+`validation/adversarial_properties.py` (the contexts exercise each node's
+Markov blanket, since the floor and the realized odds depend on the external
+evidence), so the property ships as a machine-checked invariant; the proof
+above is its justification, not the check.
 
 #### What is actually hideable: the operator/provider spectrum
 

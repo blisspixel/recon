@@ -4,16 +4,21 @@ This harness ships the suppression-monotonicity proposition
 (correlation.md section 4.3) as an exhaustive, checkable invariant. The
 plain statement: an operator who hides indicators can only move a claim
 toward "we cannot tell," never toward a confident wrong answer. Formally,
-for a node X with all other evidence fixed, the presence posterior factors
-as a prior baseline odds times a product of per-evidence-unit likelihood
-ratios, and under the hypotheses (every fired binding a positive indicator,
-alpha_b >= beta_b; and on a declarative node every not-fired factor
-disconfirming, ratio <= 1) the posterior is monotone non-decreasing in the
-fired set and bounded in [B_X, fully-observed]. The suppression floor B_X is
-the all-absent observation posterior: for a hideable node it equals the
-prior baseline, but for the declarative node it sits below the prior,
-because the absence of a public declaration is itself disconfirming. B_X is
-the quantity this harness reads as post[frozenset()].
+fixing all evidence outside a node X, the presence posterior is monotone
+non-decreasing in X's fired set and bounded in [B_X, fully-observed], under
+the hypotheses (every fired binding a positive indicator, alpha_b >= beta_b;
+and on a declarative node every not-fired factor disconfirming, ratio <= 1).
+The suppression floor B_X is the all-absent observation posterior: for a
+hideable node it equals the prior baseline, but for the declarative node it
+sits below the prior, because the absence of a public declaration is itself
+disconfirming. The clean factorisation "prior baseline odds times a product
+of per-unit likelihood ratios" is exact only for an evidence-isolated root;
+for a node with parents or children the external evidence rescales the
+baseline (and B_X) and couples slightly through the polytree, so the
+no-external-evidence instance does not by itself settle the conclusion. The
+monotonicity still holds in every external context (X's observation factor is
+non-decreasing in the fired set and enters multiplicatively), which is what
+this harness checks directly rather than assuming.
 
 Three checks, all over the shipped network:
 
@@ -28,18 +33,21 @@ Three checks, all over the shipped network:
     and hiding a fired group member can only lower the posterior. Without
     this, an all-absent group could favour presence and break monotonicity.
   * ``suppression_violations`` verifies the conclusion on the engine
-    itself: for every node, over every subset of its bindings, the
-    presence posterior never rises when a fired binding is hidden, and
-    stays within [B_X all-absent baseline, all-fired]. Because the node
-    observation factor enters the marginal multiplicatively (the exact
-    factorisation differential_verification.py confirms), checking the
-    no-external-evidence instance is sufficient: external evidence only
-    rescales the baseline odds by a positive constant and cannot change
-    the sign of a per-unit likelihood ratio.
+    itself: for every node, over every subset of its bindings, swept under a
+    set of representative external-evidence contexts, the presence posterior
+    never rises when a fired binding is hidden and stays within
+    [B_X, all-fired], with B_X recomputed per context (it depends on the
+    external evidence). The contexts are the extremes (no external evidence;
+    every other node firing its strongest binding) and each other node firing
+    its strongest binding alone, which exercises X's Markov blanket without a
+    2^k blow-up; bindings whose name collides with X's own are excluded so
+    external evidence never fires a binding of X. This replaces an earlier,
+    incorrect justification that the no-external-evidence instance alone
+    sufficed.
 
 Synthetic and offline: no corpus, no network calls, no target data. The
-nine-node network has at most four bindings on any node, so the full
-per-node subset sweep is trivially enumerable.
+nine-node network has at most four bindings on any node, so the per-node
+subset sweep under the sampled contexts is small and enumerable.
 
 Run:
 
@@ -69,15 +77,64 @@ def _subsets(items: list[_Evidence]) -> list[tuple[_Evidence, ...]]:
     return list(chain.from_iterable(combinations(items, r) for r in range(len(items) + 1)))
 
 
-def node_presence_posterior(network: BayesianNetwork, node: _Node, fired: tuple[_Evidence, ...]) -> float:
-    """``P(node = present | fired)`` with no other evidence, via the engine."""
-    slugs = [e.name for e in fired if e.kind == "slug"]
-    signals = [e.name for e in fired if e.kind == "signal"]
+def node_presence_posterior(
+    network: BayesianNetwork,
+    node: _Node,
+    fired: tuple[_Evidence, ...],
+    ext_slugs: tuple[str, ...] = (),
+    ext_signals: tuple[str, ...] = (),
+) -> float:
+    """``P(node = present | fired, external)`` via the engine.
+
+    ``ext_slugs`` / ``ext_signals`` are evidence on *other* nodes, the external
+    context the proposition holds fixed. With both empty this is the
+    no-external-evidence instance.
+    """
+    slugs = [e.name for e in fired if e.kind == "slug"] + list(ext_slugs)
+    signals = [e.name for e in fired if e.kind == "signal"] + list(ext_signals)
     result = infer(network, slugs, signals, priors_override={})
     for p in result.posteriors:
         if p.name == node.name:
             return p.posterior
     raise KeyError(node.name)
+
+
+def _binding_strength(e: _Evidence) -> float:
+    return e.likelihood_present / e.likelihood_absent
+
+
+def _external_contexts(network: BayesianNetwork, node: _Node) -> list[tuple[tuple[str, ...], tuple[str, ...]]]:
+    """Representative external-evidence contexts for testing ``node`` under coupling.
+
+    The proposition fixes all evidence outside X; the floor B_X and the realized
+    odds depend on that external evidence, so the no-external instance alone does
+    not establish the conclusion for a node with parents or children. We sweep
+    the extremes (no external evidence; every other node firing its strongest
+    binding) and each other node firing its strongest binding alone, which
+    exercises X's Markov blanket without a 2^k blow-up. Bindings whose name
+    collides with one of X's own are excluded, so external evidence never
+    accidentally fires a binding of X.
+    """
+    own = {e.name for e in node.evidence}
+    others: list[_Evidence] = []
+    for n in network.nodes:
+        if n.name == node.name:
+            continue
+        fireable = [e for e in n.evidence if e.name not in own]
+        if fireable:
+            others.append(max(fireable, key=_binding_strength))
+
+    def split(evs: list[_Evidence]) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        return (
+            tuple(e.name for e in evs if e.kind == "slug"),
+            tuple(e.name for e in evs if e.kind == "signal"),
+        )
+
+    contexts: list[tuple[tuple[str, ...], tuple[str, ...]]] = [((), ())]
+    for e in others:
+        contexts.append(split([e]))
+    contexts.append(split(others))
+    return contexts
 
 
 def positive_indicator_violations(network: BayesianNetwork) -> list[str]:
@@ -119,30 +176,39 @@ def disconfirming_absence_violations(network: BayesianNetwork) -> list[str]:
 
 def suppression_violations(network: BayesianNetwork, tol: float = _TOL) -> list[str]:
     """Subsets where hiding a fired binding raises the posterior, or where the
-    posterior escapes [baseline, fully-observed]. Empty list means the theorem
+    posterior escapes [B_X, fully-observed], swept over representative external-
+    evidence contexts. B_X (the all-absent posterior) is recomputed per context,
+    since it depends on the external evidence. Empty list means the proposition
     holds on the engine for this network."""
     out: list[str] = []
     for node in network.nodes:
         evidence = list(node.evidence)
         if not evidence:
             continue
-        post: dict[frozenset[str], float] = {}
-        for subset in _subsets(evidence):
-            post[frozenset(e.name for e in subset)] = node_presence_posterior(network, node, subset)
-        baseline = post[frozenset()]
-        full = post[frozenset(e.name for e in evidence)]
-        for subset in _subsets(evidence):
-            key = frozenset(e.name for e in subset)
-            p = post[key]
-            if not (baseline - tol <= p <= full + tol):
-                out.append(f"{node.name}: subset {sorted(key)} posterior {p} outside [{baseline}, {full}]")
-            for e in subset:
-                p_hidden = post[key - {e.name}]
-                if p_hidden > p + tol:
+        for ext_slugs, ext_signals in _external_contexts(network, node):
+            ctx = sorted(ext_slugs) + sorted(ext_signals)
+            post: dict[frozenset[str], float] = {}
+            for subset in _subsets(evidence):
+                post[frozenset(e.name for e in subset)] = node_presence_posterior(
+                    network, node, subset, ext_slugs, ext_signals
+                )
+            baseline = post[frozenset()]
+            full = post[frozenset(e.name for e in evidence)]
+            for subset in _subsets(evidence):
+                key = frozenset(e.name for e in subset)
+                p = post[key]
+                if not (baseline - tol <= p <= full + tol):
                     out.append(
-                        f"{node.name}: hiding {e.name!r} from {sorted(key)} raised the posterior "
-                        f"{p} -> {p_hidden} (suppression must not increase presence)"
+                        f"{node.name} [ext {ctx}]: subset {sorted(key)} posterior {p} "
+                        f"outside [{baseline}, {full}]"
                     )
+                for e in subset:
+                    p_hidden = post[key - {e.name}]
+                    if p_hidden > p + tol:
+                        out.append(
+                            f"{node.name} [ext {ctx}]: hiding {e.name!r} from {sorted(key)} "
+                            f"raised the posterior {p} -> {p_hidden}"
+                        )
     return out
 
 
