@@ -80,13 +80,13 @@ nodes:
   hidden from passive DNS (CAL14 made this node `declarative`, conditioning on
   informative absence). Here the record is its own ground truth: an enforcing
   DMARC policy is a fact anyone can read, not an inference. So tier 4 is reachable
-  for this node by calibrating against the authoritative records themselves
-  (CAL3 / CAL4), and the M365 / Google Workspace tenancy claims can be
-  corroborated against the providers' own identity endpoints in the same way. That
-  reference-calibration harness is the open assurance item (see the build order in
-  [roadmap.md](roadmap.md#version-milestones-and-build-order)); when it lands, the
-  policy node and the tenancy corroboration move to tier 4 and this dossier
-  records the coverage number.
+  for this node by calibrating against the authoritative record itself
+  (CAL3 / CAL4), and that calibration has now run: against the DMARC record on
+  real domains, two independent samples agree at ECE about 0.077 with the miss in
+  the conservative (under-confident) direction, so this node is reported at tier 4
+  (`validation/reference-calibration.md`). The M365 / Google Workspace tenancy
+  claims can be corroborated against the providers' own identity endpoints in the
+  same way, which remains the open extension.
 
 ## The ledger
 
@@ -97,7 +97,7 @@ nodes:
 | `okta_idp`, `federated_identity` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: federation indicators are hideable |
 | `email_gateway_present`, `cdn_fronting`, `aws_hosting` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: all hideable infrastructure |
 | `email_security_modern_provider` | Consistency | Pure propagation from parents (no own evidence), so it inherits its parents' tier | Not an independent measurement |
-| `email_security_policy_enforcing` | Evidence-responsive, tier 4 reachable | Tiers 1 to 3 now; the DMARC / SPF / MTA-STS record is its own ground truth | Tier 4 pending the reference-calibration run |
+| `email_security_policy_enforcing` | Empirical coverage (tier 4) | Calibrated against the DMARC record on real domains: ECE about 0.077, agreement about 1.0, the miss conservative (under-confident); see `validation/reference-calibration.md` | The input overlap means agreement is partly definitional; the reliability table and ECE are the load-bearing figures |
 | The 80% credible interval (all nodes) | Evidence-responsive | Differential verification plus perturbation coverage (v2.1.15) | Frequentist ground-truth coverage (tier 4) only where a public reference exists |
 | Cohort-summary prevalences (PV1) | Observed plus evidence-responsive | Observability-adjusted rates over the caller's set, with denominators | Ecological-fallacy discipline; never a population claim |
 
@@ -117,18 +117,23 @@ nodes:
 - **Empirical coverage** licenses the frequentist statement. It is claimed only
   where measured, and today it is the open frontier.
 
-## The open frontier
+## The frontier
 
-The single most valuable remaining assurance item is the CAL3 / CAL4 reference
-calibration: compute empirical interval coverage and calibration for the
-public-declaration node and the tenancy claims against authoritative public
-references (the DMARC / SPF / MTA-STS records as their own truth; the Microsoft and
-Google identity endpoints for tenancy), reported with uncertainty (Wilson or
-bootstrap), aggregates only, no real apexes committed (see
-[data-handling-policy.md](data-handling-policy.md)). Until it lands, this dossier
-reports tier 4 as open for every claim, and the firmest words stay reserved for
-tiers 1 to 3.
+The CAL3 / CAL4 reference calibration has reached the one node where it is
+possible: `email_security_policy_enforcing` is now at tier 4, calibrated against
+the DMARC record on real domains (aggregates only, no apexes committed, per
+[data-handling-policy.md](data-handling-policy.md); detail in
+`validation/reference-calibration.md`). What remains is bounded and honest:
+
+- The tenancy claims (`m365_tenant`, `google_workspace_tenant`) can be
+  corroborated against the providers' own identity endpoints the same way, which
+  is the next extension of the reference-calibration harness.
+- The hideable-infrastructure nodes have no external reference by the nature of
+  the adversarial-missingness setting, so they stay at tier 3 by design, not by
+  omission. The dossier reports them that way rather than implying coverage it
+  cannot have.
 
 This is the honest position: recon's numbers are well-supported where the passive
-channel and an exact, verified inference engine can support them, and recon says
-where that support ends rather than implying more.
+channel and an exact, verified inference engine can support them, one node now
+has real ground-truth calibration to show for it, and recon says where that
+support ends rather than implying more.
