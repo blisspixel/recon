@@ -70,6 +70,7 @@ __all__ = [
     "EvidenceContribution",
     "InferenceResult",
     "NodePosterior",
+    "UnitCounterfactual",
     "infer",
     "infer_from_tenant_info",
     "load_network",
@@ -214,6 +215,46 @@ class EvidenceContribution:
 
 
 @dataclass(frozen=True)
+class UnitCounterfactual:
+    """One evidence unit's exact leave-one-out influence on a node's posterior.
+
+    For each evidence unit that is informative for a node in this run (a
+    fired unit, or — on a declarative node — an informatively-absent unit),
+    the engine re-runs exact inference with that unit masked as structurally
+    unobserved (``masked_units``) and reports the counterfactual posterior
+    and the delta the unit contributes. This is an *evidence counterfactual
+    over the model* — "what would this claim's posterior be had this unit
+    not been observed" — never a causal claim about the world.
+
+    ``observed`` is ``"fired"`` when the unit's evidence fired, or
+    ``"absent"`` when the unit is an informative absence on a declarative
+    node (there, ``delta`` is typically negative: the absence drags the
+    posterior down, so removing it raises the counterfactual). ``delta`` is
+    ``posterior - posterior_without``: positive when the unit pushes the
+    node up, negative when it pushes it down.
+
+    Two reading rules. The mask is global and the inference exact, so
+    ``posterior_without`` reflects everything else still observed — including
+    support flowing through the DAG from other nodes' evidence (a masked
+    ``m365_indicators`` does not drop ``m365_tenant`` to its prior while a
+    federation signal still supports it through the child CPT). And the
+    deltas are individually exact but **not additive**: units interact
+    through the DAG, so the sum of deltas need not equal the distance to the
+    all-masked posterior.
+
+    Added in 2.2.0 as part of the evidence-semantics diagnostics;
+    schema-additive (the default empty tuple on
+    ``NodePosterior.unit_counterfactuals`` preserves prior shapes).
+    """
+
+    unit: str  # group name, or the ungrouped binding's slug/signal name
+    kind: str  # "group", "slug", or "signal"
+    observed: str  # "fired" or "absent"
+    posterior_without: float  # P(node=present | E with this unit masked)
+    delta: float  # posterior - posterior_without
+
+
+@dataclass(frozen=True)
 class NodePosterior:
     """Per-node inference output."""
 
@@ -245,6 +286,18 @@ class NodePosterior:
     follows priors" phrasing when an empty ``evidence_used`` reflects
     informative absence rather than missing data. Default False keeps
     hideable nodes unchanged."""
+
+    entropy_reduction_nats: float = 0.0
+    """This node's share of the information recovered: H(prior marginal) -
+    H(posterior), in nats, signed (negative when evidence widens the node).
+    The per-node breakdown of the existing ``InferenceResult``-level total
+    (CAL10). Added in 2.2.0; schema-additive."""
+
+    unit_counterfactuals: tuple[UnitCounterfactual, ...] = ()
+    """Exact leave-one-unit-out counterfactuals for every evidence unit that
+    is informative for this node in this run, sorted by absolute delta
+    descending (ties broken by unit name for diff-stability). Empty when no
+    unit is informative. Added in 2.2.0; schema-additive."""
 
 
 @dataclass(frozen=True)
@@ -752,23 +805,24 @@ def _factor_for_evidence(
     }
 
 
-def _declarative_evidence_count(
+def _informative_absent_units(
     node: _Node,
     fired_evidence: list[_Evidence],
     masked_units: frozenset[str] = frozenset(),
-) -> int:
-    """Effective evidence-unit count for a declarative node's ``n_eff``.
+) -> list[tuple[str, str]]:
+    """The (unit, kind) pairs whose absence is informative on a declarative node.
 
-    Counts each evidence unit (a correlation group, or an independent binding)
-    that is informative: fired, or absent with a non-trivial absence
-    likelihood ratio. A confidently-disconfirmed declarative node (its strong
-    signals genuinely absent) therefore earns evidence toward ``n_eff`` and is
-    not flagged sparse, symmetric with a confidently-confirmed one. Weak
-    absences (LR ~1, e.g. a rarely-published signal that is simply missing) do
-    not count, so they neither tighten nor widen the interval.
+    A unit is a correlation group (kind ``"group"``) or an ungrouped binding
+    (kind = the binding's slug/signal kind). An absence is informative when
+    its likelihood ratio is non-trivial (``|LLR| > eps``); weak absences
+    (LR ~1, e.g. a rarely-published signal that is simply missing) are
+    excluded, so they neither tighten nor widen the interval nor earn a
+    counterfactual entry. Masked units are skipped: structurally unobserved
+    is not absent. Single source of truth for ``n_eff`` counting and the
+    leave-one-unit-out counterfactual enumeration.
     """
     eps = 0.2  # |LLR| below which an absence is treated as uninformative
-    count = len(_contributing_evidence(fired_evidence))
+    out: list[tuple[str, str]] = []
     fired_groups = {ev.group for ev in fired_evidence if ev.group}
     fired_names = {ev.name for ev in fired_evidence}
     grp_absence = {g: (lp, la) for g, lp, la in node.group_absence}
@@ -784,10 +838,29 @@ def _declarative_evidence_count(
             seen_groups.add(ev.group)
             pair = grp_absence.get(ev.group)
             if pair is not None and abs(math.log(pair[0] / pair[1])) > eps:
-                count += 1
+                out.append((ev.group, "group"))
         elif abs(math.log((1.0 - ev.likelihood_present) / (1.0 - ev.likelihood_absent))) > eps:
-            count += 1
-    return count
+            out.append((ev.name, ev.kind))
+    return out
+
+
+def _declarative_evidence_count(
+    node: _Node,
+    fired_evidence: list[_Evidence],
+    masked_units: frozenset[str] = frozenset(),
+) -> int:
+    """Effective evidence-unit count for a declarative node's ``n_eff``.
+
+    Counts each evidence unit (a correlation group, or an independent binding)
+    that is informative: fired, or absent with a non-trivial absence
+    likelihood ratio (per :func:`_informative_absent_units`). A
+    confidently-disconfirmed declarative node (its strong signals genuinely
+    absent) therefore earns evidence toward ``n_eff`` and is not flagged
+    sparse, symmetric with a confidently-confirmed one.
+    """
+    return len(_contributing_evidence(fired_evidence)) + len(
+        _informative_absent_units(node, fired_evidence, masked_units)
+    )
 
 
 def _multiply(a: Factor, b: Factor) -> Factor:
@@ -920,6 +993,87 @@ def _erfinv(y: float) -> float:
 # ── Public API ─────────────────────────────────────────────────────────
 
 
+def _build_factors(
+    network: BayesianNetwork,
+    slug_set: set[str],
+    signal_set: set[str],
+    masked: frozenset[str],
+) -> tuple[list[Factor], dict[str, list[_Evidence]]]:
+    """Build the factor set for one evidence configuration.
+
+    One CPT/prior factor per node, plus one observation factor per node with
+    fired (or, on declarative nodes, informatively-absent) evidence, with
+    ``masked`` units treated as structurally unobserved throughout. Extracted
+    from :func:`infer` so the leave-one-unit-out counterfactuals re-run the
+    exact same construction with one more unit masked.
+    """
+    factors: list[Factor] = []
+    fired_per_node: dict[str, list[_Evidence]] = {}
+    for node in network.nodes:
+        factors.append(_factor_for_node(node))
+        fired = _evidence_for_domain(node, slug_set, signal_set)
+        if masked:
+            fired = [ev for ev in fired if _unit_name(ev) not in masked]
+        fired_per_node[node.name] = fired
+        ev_factor = _factor_for_evidence(node, fired, masked)
+        if ev_factor is not None:
+            factors.append(ev_factor)
+    return factors, fired_per_node
+
+
+def _unit_counterfactuals(
+    network: BayesianNetwork,
+    node: _Node,
+    posterior: float,
+    contributing: list[_Evidence],
+    fired: list[_Evidence],
+    slug_set: set[str],
+    signal_set: set[str],
+    masked: frozenset[str],
+    all_vars: list[str],
+) -> tuple[UnitCounterfactual, ...]:
+    """Exact leave-one-unit-out counterfactuals for one node.
+
+    Enumerates the units informative for this node in this run — the fired
+    contributing units, plus (declarative nodes) the informative absences —
+    and for each re-runs exact inference with that unit additionally masked,
+    globally: if a unit also feeds another node, the counterfactual world
+    lacks the observation everywhere, which is the honest reading of "had
+    this unit not been observed". Sorted by absolute delta descending, ties
+    broken by unit name, so the output is diff-stable.
+    """
+    units: list[tuple[str, str, str]] = []
+    seen: set[str] = set()
+    for ev in contributing:
+        unit = _unit_name(ev)
+        if unit not in seen:
+            seen.add(unit)
+            units.append((unit, "group" if ev.group is not None else ev.kind, "fired"))
+    if node.missingness == "declarative":
+        for unit, kind in _informative_absent_units(node, fired, masked):
+            if unit not in seen:
+                seen.add(unit)
+                units.append((unit, kind, "absent"))
+    if not units:
+        return ()
+    out: list[UnitCounterfactual] = []
+    for unit, kind, observed in units:
+        cf_factors, _ = _build_factors(network, slug_set, signal_set, masked | {unit})
+        cf_marginal = _query_marginal(cf_factors, node.name, all_vars)
+        cf_post = max(0.0, min(1.0, cf_marginal.get("present", 0.5)))
+        out.append(
+            UnitCounterfactual(
+                unit=unit,
+                kind=kind,
+                observed=observed,
+                posterior_without=round(cf_post, 4),
+                delta=round(posterior - cf_post, 4),
+            )
+        )
+    out.sort(key=lambda c: (-abs(c.delta), c.unit))
+    return tuple(out)
+
+
 def infer(
     network: BayesianNetwork,
     observed_slugs: Iterable[str],
@@ -986,18 +1140,7 @@ def infer(
     signal_set = set(observed_signals)
     masked = frozenset(masked_units)
 
-    # Build factor set: one per node (CPT) + one per node-with-fired-evidence.
-    factors: list[Factor] = []
-    fired_per_node: dict[str, list[_Evidence]] = {}
-    for node in network.nodes:
-        factors.append(_factor_for_node(node))
-        fired = _evidence_for_domain(node, slug_set, signal_set)
-        if masked:
-            fired = [ev for ev in fired if _unit_name(ev) not in masked]
-        fired_per_node[node.name] = fired
-        ev_factor = _factor_for_evidence(node, fired, masked)
-        if ev_factor is not None:
-            factors.append(ev_factor)
+    factors, fired_per_node = _build_factors(network, slug_set, signal_set, masked)
 
     all_vars = list(network.node_names)
 
@@ -1044,6 +1187,9 @@ def infer(
         total_entropy_reduction += entropy_reduction
 
         evidence_ranked = _rank_evidence(contributing)
+        counterfactuals = _unit_counterfactuals(
+            network, node, post, contributing, fired, slug_set, signal_set, masked, all_vars
+        )
 
         posteriors.append(
             NodePosterior(
@@ -1060,6 +1206,8 @@ def infer(
                 conflict_provenance=conflicts,
                 evidence_ranked=evidence_ranked,
                 absence_informative=node.missingness == "declarative",
+                entropy_reduction_nats=round(entropy_reduction, 4),
+                unit_counterfactuals=counterfactuals,
             )
         )
 

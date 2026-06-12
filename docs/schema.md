@@ -192,7 +192,7 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | `bimi_identity` | object | yes | n/a | stable | BIMI VMC identity: `{organization, country, state, locality, trademark}`. |
 | `evidence_conflicts` | `list[EvidenceConflict]` | no | n/a | stable (v1.7+) | Cross-source disagreements: each entry names a merged field where 2+ sources gave different values, with all candidates preserved. Empty array when sources agreed. |
 | `chain_motifs` | `list[ChainMotif]` | no | n/a | stable (v1.7+) | CNAME chain motifs that fired on related subdomains, e.g. Cloudflare → AWS origin, Akamai → Azure origin. Observable proxy/origin shape only; never an ownership claim. Catalog at `recon_tool/data/motifs.yaml`. |
-| `infrastructure_clusters` | `InfrastructureClusterReport` | no | always | stable (v1.8+) | CT co-occurrence community detection report. `algorithm` ∈ {`louvain`, `connected_components`, `skipped`}; `modularity` is 0.0 in fallback / skipped paths. Members sorted; clusters sorted by size desc. |
+| `infrastructure_clusters` | `InfrastructureClusterReport` | no | always | stable (v1.8+) | CT co-occurrence community detection report. `algorithm` ∈ {`louvain`, `connected_components`, `skipped`}; `modularity` is 0.0 in fallback / skipped paths. `partition_stability` / `stability_runs` (additive, 2.2.0+) report the Louvain seed-sweep consensus (mean pairwise ARI; null outside the Louvain path). Members sorted; clusters sorted by size desc. |
 | `fingerprint_metadata` | `dict[string, FingerprintMetadata]` | no | always | stable (v1.8+) | Per-slug `{product_family, parent_vendor, bimi_org}` for detected slugs that carry relationship hints in their fingerprint YAML. Slugs without metadata are omitted. Empty object when nothing applies. Drives the v1.8 ecosystem hypergraph; never an ownership assertion. |
 
 ### Bayesian fusion fields (stable v2.0+)
@@ -289,6 +289,8 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 {
   "algorithm": "louvain",
   "modularity": 0.42,
+  "partition_stability": 0.93,
+  "stability_runs": 8,
   "node_count": 18,
   "edge_count": 31,
   "clusters": [
@@ -309,6 +311,16 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 - `louvain`: graph fits inside the 500-node cap; partition is meaningful.
 - `connected_components`: graph above cap; deterministic fallback. `modularity` is 0.0.
 - `skipped`: empty graph or no edges. `clusters` is empty.
+
+`partition_stability` (number or null, additive, 2.2.0+) is the partition
+consensus across a Louvain seed sweep: the mean pairwise adjusted Rand
+index between the partitions produced by `stability_runs` distinct seeds
+(CAL11). 1.0 means every seed landed on the identical partition; lower
+values flag the partition degeneracy a single modularity score cannot see
+(near-equal-modularity partitions that differ structurally). It is `null`
+outside the Louvain path, where the partition is deterministic and the
+measure is not applicable; the *reported* clusters always come from the
+fixed shipped seed, so output stays deterministic.
 
 Each cluster member is a SAN hostname. Clusters describe **observed
 co-issuance** (names that show up on the same certificates), never
@@ -431,7 +443,15 @@ array when fusion runs (empty array otherwise).
   "evidence_used": ["slug:microsoft365", "slug:entra-id"],
   "n_eff": 6.0,
   "sparse": false,
-  "conflict_provenance": []
+  "conflict_provenance": [],
+  "evidence_ranked": [
+    {"kind": "slug", "name": "microsoft365", "llr": 3.4549, "influence_pct": 100.0}
+  ],
+  "entropy_reduction_nats": 0.4773,
+  "unit_counterfactuals": [
+    {"unit": "m365_indicators", "kind": "group", "observed": "fired",
+     "posterior_without": 0.3, "delta": 0.67}
+  ]
 }
 ```
 
@@ -446,6 +466,29 @@ array when fusion runs (empty array otherwise).
 | `sparse` | bool | stable (v2.0+) | `true` when `n_eff` is at the floor and absence carried no disconfirming weight, the passive-observation ceiling for this node. |
 | `evidence_used` | `list[string]` | stable (v2.0+) | Bound observations that fired, formatted `slug:<name>` or `signal:<name>`. |
 | `conflict_provenance` | `list[string]` | stable (v2.0+) | Cross-source disagreements that contributed to this node's `n_eff` penalty (v1.9.1+). Empty when none. |
+| `evidence_ranked` | `list[NodeEvidence]` | stable (v1.9.3.2+) | Fired bindings ranked by absolute LLR contribution, descending (the contributing set, one per correlation group). Empty when nothing fired; omitted on batch records, whose shape predates it. |
+| `entropy_reduction_nats` | number | stable, additive (2.2.0+) | This node's share of the information recovered: H(prior marginal) − H(posterior) in nats, signed (negative when evidence widens the node). The per-node breakdown of the top-level total (CAL10). |
+| `unit_counterfactuals` | `list[NodeUnitCounterfactual]` | stable, additive (2.2.0+) | Exact leave-one-unit-out counterfactuals for every evidence unit informative for this node, sorted by absolute `delta` descending. See the sub-table below. |
+
+#### `NodeUnitCounterfactual` (2.2.0+)
+
+One evidence unit's exact leave-one-out influence on the node's posterior:
+the engine re-runs exact inference with the unit masked as *structurally
+unobserved* (not "observed to be absent" — the distinction matters on the
+declarative policy node) and reports the counterfactual. The mask is global
+across the DAG, so `posterior_without` reflects everything else still
+observed, including support flowing from other nodes' evidence through the
+CPTs. This is an evidence counterfactual over the model, never a causal
+claim about the world, and the deltas are individually exact but **not
+additive** — units interact through the DAG.
+
+| Field | Type | Description |
+|---|---|---|
+| `unit` | string | Evidence-unit name: a correlation-group name (`m365_indicators`, `dmarc_policy`) or an ungrouped binding's slug/signal name. |
+| `kind` | string | `group`, `slug`, or `signal`. |
+| `observed` | string | `fired`, or `absent` for an informative absence on a declarative node (there `delta` is typically negative). |
+| `posterior_without` | number | P(node=present \| evidence with this unit masked), in `[0, 1]`. |
+| `delta` | number | `posterior − posterior_without`: positive when the unit pushes the node up. |
 
 The model, the asymmetric (MNAR) likelihood, and what the 80% interval does and
 does not claim live in [`correlation.md`](correlation.md).

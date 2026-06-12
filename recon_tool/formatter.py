@@ -3095,6 +3095,21 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
                     }
                     for e in p.evidence_ranked
                 ],
+                # 2.2.0 evidence-semantics diagnostics (schema-additive):
+                # the node's share of the recovered information, and the
+                # exact leave-one-unit-out counterfactual per informative
+                # evidence unit.
+                "entropy_reduction_nats": p.entropy_reduction_nats,
+                "unit_counterfactuals": [
+                    {
+                        "unit": c.unit,
+                        "kind": c.kind,
+                        "observed": c.observed,
+                        "posterior_without": c.posterior_without,
+                        "delta": c.delta,
+                    }
+                    for c in p.unit_counterfactuals
+                ],
             }
             for p in info.posterior_observations
         ],
@@ -3185,6 +3200,12 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         d["infrastructure_clusters"] = {
             "algorithm": ic.algorithm,
             "modularity": ic.modularity,
+            # 2.2.0 (schema-additive): partition consensus across a Louvain
+            # seed sweep (mean pairwise adjusted Rand index; CAL11). null
+            # outside the Louvain path, where the partition is deterministic
+            # and the measure is not applicable.
+            "partition_stability": ic.partition_stability,
+            "stability_runs": ic.stability_runs,
             "node_count": ic.node_count,
             "edge_count": ic.edge_count,
             "clusters": [
@@ -3202,6 +3223,8 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         d["infrastructure_clusters"] = {
             "algorithm": "skipped",
             "modularity": 0.0,
+            "partition_stability": None,
+            "stability_runs": 0,
             "node_count": 0,
             "edge_count": 0,
             "clusters": [],

@@ -469,6 +469,15 @@
           "type": "number",
           "description": "Newman-Girvan modularity for the Louvain partition. 0.0 in the fallback / skipped paths."
         },
+        "partition_stability": {
+          "type": ["number", "null"],
+          "description": "Partition consensus across a Louvain seed sweep: the mean pairwise adjusted Rand index between the partitions produced by stability_runs different seeds (CAL11). 1.0 means every seed produced the identical partition; lower values flag partition degeneracy that a single modularity score cannot see. null outside the Louvain path (fallback / skipped), where the partition is deterministic and the measure is not applicable. Added 2.2.0; schema-additive."
+        },
+        "stability_runs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of distinct Louvain seeds in the partition-stability sweep. 0 when partition_stability is null. Added 2.2.0; schema-additive."
+        },
         "node_count": {"type": "integer", "minimum": 0, "description": "Distinct non-wildcard SAN hostnames observed across the cert entries."},
         "edge_count": {"type": "integer", "minimum": 0, "description": "Edges in the co-occurrence graph (each edge weights co-issuance count)."},
         "clusters": {
@@ -589,7 +598,44 @@
           "type": "array",
           "description": "Cross-source disagreements that contributed to this node's n_eff penalty (v1.9.1+). Empty array when no conflicts dampened the interval. Surfaces the source-pair detail dropped by the legacy count-only path; pairs with the existing top-level ``evidence_conflicts`` array.",
           "items": {"$ref": "#/$defs/NodeConflict"}
+        },
+        "evidence_ranked": {
+          "type": "array",
+          "description": "Fired bindings ranked by absolute log-likelihood-ratio contribution, descending (v1.9.3.2+; the contributing set, one per correlation group). Empty when no bindings fired, and omitted on batch records (the batch shape predates it).",
+          "items": {"$ref": "#/$defs/NodeEvidence"}
+        },
+        "entropy_reduction_nats": {
+          "type": "number",
+          "description": "This node's share of the information recovered: H(prior marginal) - H(posterior) in nats, signed (negative when evidence widens the node). Per-node breakdown of the top-level entropy-reduction total (CAL10). Added 2.2.0; schema-additive."
+        },
+        "unit_counterfactuals": {
+          "type": "array",
+          "description": "Exact leave-one-unit-out counterfactuals for every evidence unit informative for this node in this run, sorted by absolute delta descending. An evidence counterfactual over the model, never a causal claim about the world. Deltas are individually exact but not additive (units interact through the DAG). Added 2.2.0; schema-additive.",
+          "items": {"$ref": "#/$defs/NodeUnitCounterfactual"}
         }
+      }
+    },
+    "NodeEvidence": {
+      "description": "One fired binding's quantified influence on a node's posterior (v1.9.3.2+). llr is the natural-log likelihood ratio (positive favours present); influence_pct normalizes |llr| to a percentage across the node's fired bindings.",
+      "type": "object",
+      "required": ["kind", "name", "llr", "influence_pct"],
+      "properties": {
+        "kind": {"type": "string", "enum": ["slug", "signal"], "description": "Binding kind."},
+        "name": {"type": "string", "description": "Slug or signal name that fired."},
+        "llr": {"type": "number", "description": "Natural-log likelihood ratio for the fired observation."},
+        "influence_pct": {"type": "number", "minimum": 0, "maximum": 100, "description": "|llr| as a share of the node's total fired |llr|, in percent."}
+      }
+    },
+    "NodeUnitCounterfactual": {
+      "description": "One evidence unit's exact leave-one-out influence on a node's posterior (added 2.2.0). The engine re-runs exact inference with the unit masked as structurally unobserved, globally across the DAG, so posterior_without reflects everything else still observed - including support flowing from other nodes' evidence through the CPTs.",
+      "type": "object",
+      "required": ["unit", "kind", "observed", "posterior_without", "delta"],
+      "properties": {
+        "unit": {"type": "string", "description": "Evidence-unit name: a correlation-group name (e.g. m365_indicators, dmarc_policy) or an ungrouped binding's slug/signal name."},
+        "kind": {"type": "string", "enum": ["group", "slug", "signal"], "description": "Unit kind: a correlation group, or the ungrouped binding's kind."},
+        "observed": {"type": "string", "enum": ["fired", "absent"], "description": "Whether the unit fired, or is an informative absence on a declarative node (there delta is typically negative: the absence drags the posterior down)."},
+        "posterior_without": {"type": "number", "minimum": 0, "maximum": 1, "description": "P(node=present | evidence with this unit masked as structurally unobserved)."},
+        "delta": {"type": "number", "minimum": -1, "maximum": 1, "description": "posterior - posterior_without: positive when the unit pushes the node up. Individually exact, not additive across units."}
       }
     },
     "NodeConflict": {

@@ -232,6 +232,87 @@ def _connected_components_partition(
     return comm_list, 0.0, "connected_components"
 
 
+# Number of Louvain runs (distinct seeds) in the partition-stability sweep.
+# Small on purpose: the sweep multiplies Louvain cost, and the CT graphs the
+# layer sees are small and sparse, where a handful of seeds already exposes
+# degeneracy when it exists.
+_STABILITY_RUNS = 8
+
+
+def adjusted_rand_index(p1: list[set[str]], p2: list[set[str]]) -> float:
+    """Adjusted Rand index between two partitions of the same node set.
+
+    Computed from the contingency table (Hubert & Arabie 1985), pure Python.
+    By convention the degenerate case (expected index equals maximum index,
+    e.g. both partitions trivial — all-singletons or one block) returns 1.0
+    when the partitions are identical and 0.0 otherwise, so a stable trivial
+    partition does not read as unstable.
+    """
+
+    def _comb2(n: int) -> int:
+        return n * (n - 1) // 2
+
+    label1: dict[str, int] = {}
+    for i, block in enumerate(p1):
+        for node in block:
+            label1[node] = i
+    label2: dict[str, int] = {}
+    for j, block in enumerate(p2):
+        for node in block:
+            label2[node] = j
+
+    contingency: dict[tuple[int, int], int] = {}
+    for node, i in label1.items():
+        key = (i, label2[node])
+        contingency[key] = contingency.get(key, 0) + 1
+
+    sum_ij = sum(_comb2(n) for n in contingency.values())
+    sum_i = sum(_comb2(len(block)) for block in p1)
+    sum_j = sum(_comb2(len(block)) for block in p2)
+    total = _comb2(sum(len(block) for block in p1))
+    if total == 0:
+        return 1.0
+    expected = (sum_i * sum_j) / total
+    maximum = (sum_i + sum_j) / 2.0
+    if abs(maximum - expected) < 1e-12:
+        return 1.0 if sum_ij == maximum else 0.0
+    return (sum_ij - expected) / (maximum - expected)
+
+
+def _partition_stability(g: nx.Graph[str], runs: int = _STABILITY_RUNS) -> float | None:
+    """Mean pairwise ARI of Louvain partitions across a seed sweep (CAL11).
+
+    Louvain is degenerate on many graphs (Good et al. 2010): near-equal-
+    modularity partitions can differ structurally, and a single modularity
+    score cannot see that. The honest report is consensus across seeds: 1.0
+    when every seed lands on the same partition, lower when the partition is
+    seed-dependent. Returns None when a sweep run fails — stability is then
+    unknown, not 1.0.
+    """
+    ordered: nx.Graph[str] = nx.Graph()
+    ordered.add_nodes_from(sorted(g.nodes()))
+    ordered.add_edges_from(g.edges(data=True))
+    partitions: list[list[set[str]]] = []
+    for offset in range(runs):
+        try:
+            communities = nx.community.louvain_communities(  # type: ignore[attr-defined]
+                ordered,
+                weight="weight",
+                seed=_LOUVAIN_SEED + offset,
+            )
+        except (nx.NetworkXError, RuntimeError, ValueError):
+            return None
+        partitions.append([set(c) for c in communities])
+    scores = [
+        adjusted_rand_index(partitions[i], partitions[j])
+        for i in range(len(partitions))
+        for j in range(i + 1, len(partitions))
+    ]
+    if not scores:
+        return None
+    return round(sum(scores) / len(scores), 4)
+
+
 def _dominant_issuer_for_members(
     members: set[str],
     edge_issuers: dict[tuple[str, str], list[str]],
@@ -285,6 +366,8 @@ def build_infrastructure_clusters(
             edge_count=edge_count,
         )
 
+    partition_stability: float | None = None
+    stability_runs = 0
     if truncated or node_count > MAX_GRAPH_NODES:
         comms, modularity, algorithm = _connected_components_partition(g)
     else:
@@ -297,6 +380,10 @@ def build_infrastructure_clusters(
                 exc,
             )
             comms, modularity, algorithm = _connected_components_partition(g)
+        if algorithm == "louvain":
+            partition_stability = _partition_stability(g)
+            if partition_stability is not None:
+                stability_runs = _STABILITY_RUNS
 
     # Sort communities by size desc, then alphabetically by min-member
     # for deterministic ordering when sizes tie.
@@ -350,4 +437,6 @@ def build_infrastructure_clusters(
         node_count=node_count,
         edge_count=edge_count,
         edges=surfaced_edges,
+        partition_stability=partition_stability,
+        stability_runs=stability_runs,
     )

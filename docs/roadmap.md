@@ -51,10 +51,13 @@ This file is forward-looking. Shipped work belongs in
 > the reference calibration, and the tenancy corroboration harness
 > (`validation/tenancy_reference_calibration.py`; M365 two-class via the
 > channel split, GWS honestly one-sided) all ship with unit-tested pure logic.
-> What is still open is operator-paced or standing: the maintainer-local runs
-> of those harnesses (held-out residual, tenancy corroboration, per-vertical
-> stratification, conformal pass — collection now, not construction), the C3
-> CT-enabled corpus pass, the candidate diagnostics (the 2.2 surface), and the
+> The evidence-semantics diagnostics (the 2.2 surface) are also built — per-node
+> entropy reduction, exact leave-one-unit-out counterfactuals, and graph
+> partition stability, as additive JSON / MCP fields — so the next release cut
+> is 2.2.0. What is still open is operator-paced or standing: the
+> maintainer-local runs of the calibration harnesses (held-out residual,
+> tenancy corroboration, per-vertical stratification, conformal pass —
+> collection now, not construction), the C3 CT-enabled corpus pass, and the
 > arXiv write-up. This file is the plan from here.
 
 ## Version milestones and build order
@@ -88,12 +91,13 @@ rules are in [release-process.md](release-process.md#version-numbering).
 
 ### Where the next numbers sit
 
-- **2.2 and later minors (not yet triggered).** A minor bump is earned by a
+- **2.2 (triggered; awaiting the release cut).** A minor bump is earned by a
   coherent new *stable surface*, not by more internal hardening, which stays
-  patch-level. The next candidate is the evidence-semantics diagnostics shipping
-  as new `--explain` / JSON fields or a new MCP tool (entropy-reduction
-  surfacing, exact leave-one-group-out counterfactuals, graph partition
-  stability). Until a named new surface ships, the line stays in 2.1.x patches.
+  patch-level. The evidence-semantics diagnostics earned it and are built:
+  per-node entropy-reduction surfacing, exact leave-one-unit-out
+  counterfactuals, and graph partition stability, as additive JSON / MCP
+  fields (see the build order below). The next release cut is therefore
+  2.2.0. Later minors wait for the next named surface.
 - **3.0 (intentionally deferred, possibly never).** A major bump is forced only by
   an unavoidable *breaking* change to a stable surface, with the deprecation
   window the stability policy requires. The pre-2.0 schema-hardening (SH1 to SH9)
@@ -153,14 +157,22 @@ None is on the critical path of another except where noted.
    (CAL13) / empirical coverage (CAL3), and says where the support stops. It
    makes the tier-4 gap explicit, which is what item 1 (reference calibration) then
    closes for the public-declaration node and the tenancy claims.
-3. **Evidence-semantics diagnostics** (2.2 candidate; the next new surface).
-   Entropy-reduction per node, exact leave-one-evidence-group-out counterfactual
-   influence (framed as evidence counterfactuals over the model, never causal
-   claims), and graph partition stability, as additive `--explain` and JSON
-   diagnostics that leave the default panel unchanged. A named new stable surface,
-   so it carries a minor bump. *Design:* the Evidence-semantics-diagnostics
-   paragraph in the assurance track below, plus `correlation.md` for the model
-   semantics.
+3. **Evidence-semantics diagnostics** (the 2.2 surface). *Built; ships with the
+   next release cut, which it makes a 2.2.0 minor.* All three diagnostics landed
+   as additive JSON / MCP fields with the default panel unchanged: per-node
+   `entropy_reduction_nats` (the CAL10 breakdown), `unit_counterfactuals`
+   (exact leave-one-unit-out re-inference per informative evidence unit, on the
+   `masked_units` primitive — framed as evidence counterfactuals over the
+   model, never causal claims, with the non-additivity of deltas documented),
+   and `partition_stability` on `infrastructure_clusters` (Louvain seed-sweep
+   consensus as mean pairwise ARI, CAL11). Schema rows in `schema.md`, both
+   `recon-schema.json` copies updated, cache round-trip covered, and the
+   counterfactuals cross-checked against actual masked runs in
+   `tests/test_evidence_semantics_diagnostics.py`. A `--explain` panel
+   rendering of the same diagnostics is a possible small follow-up; the JSON /
+   MCP surface is the 2.2 deliverable. *Design:* the
+   Evidence-semantics-diagnostics paragraph in the assurance track below, plus
+   `correlation.md` for the model semantics.
 4. **The arXiv write-up** (packaging). Depends on items 1 to 3 for its empirical
    and framing substance, and on [data-handling-policy.md](data-handling-policy.md)
    for its publication constraints. The additional experiments (layer ablations,
