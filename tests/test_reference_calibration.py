@@ -16,6 +16,7 @@ from validation.reference_calibration import (
     CalibrationRecord,
     calibration_summary,
     held_out_policy_posterior,
+    mean_log_score,
     reference_label_email_policy,
     stratified_summary,
     wilson_interval,
@@ -98,6 +99,35 @@ class TestCalibrationSummary:
         for row in s["reliability"]:  # type: ignore[attr-defined]
             assert set(row) == {"bin_low", "bin_high", "enforcing_rate", "count"}
             assert all(isinstance(v, int | float) for v in row.values())
+
+
+class TestMeanLogScore:
+    def test_hand_computed(self) -> None:
+        # -[ln(0.9) + ln(1 - 0.2)] / 2 = (0.10536 + 0.22314) / 2 = 0.16425
+        records = [
+            CalibrationRecord(posterior=0.9, label=1),
+            CalibrationRecord(posterior=0.2, label=0),
+        ]
+        assert mean_log_score(records) == pytest.approx(0.16425, abs=1e-5)
+
+    def test_uninformative_predictor_scores_ln2(self) -> None:
+        records = [CalibrationRecord(posterior=0.5, label=i % 2) for i in range(10)]
+        import math
+
+        assert mean_log_score(records) == pytest.approx(math.log(2.0), abs=1e-9)
+
+    def test_confident_miss_is_finite_and_dominant(self) -> None:
+        # A posterior of exactly 1.0 against label 0 must clamp, not inf.
+        records = [CalibrationRecord(posterior=1.0, label=0)]
+        score = mean_log_score(records)
+        assert score == pytest.approx(13.8155, abs=1e-3)
+
+    def test_empty_is_zero(self) -> None:
+        assert mean_log_score([]) == 0.0
+
+    def test_summary_carries_it(self) -> None:
+        records = [CalibrationRecord(posterior=0.9, label=1)]
+        assert "log_score" in calibration_summary(records)
 
 
 class TestHeldOutPolicyPosterior:
