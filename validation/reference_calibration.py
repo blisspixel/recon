@@ -158,6 +158,30 @@ def calibration_summary(records: list[CalibrationRecord], bins: int = 10) -> dic
     }
 
 
+def stratified_summary(
+    strata: dict[str, list[CalibrationRecord]], min_cell: int = 10, bins: int = 10
+) -> dict[str, object]:
+    """Per-stratum calibration plus the pooled total.
+
+    Each stratum (e.g. a vertical) reports its own ``calibration_summary``.
+    A stratum with fewer than ``min_cell`` usable records is suppressed to a
+    ``{"n": n, "suppressed": True}`` stub rather than reported, the
+    small-cell discipline (a calibration number on a handful of domains is
+    noise, and small cells are also more identifying). Strata are keyed by a
+    generic label only; the keys never carry an apex.
+    """
+    out_strata: dict[str, object] = {}
+    pooled: list[CalibrationRecord] = []
+    for name in sorted(strata):
+        records = strata[name]
+        pooled.extend(records)
+        if len(records) < min_cell:
+            out_strata[name] = {"n": len(records), "suppressed": True}
+        else:
+            out_strata[name] = calibration_summary(records, bins=bins)
+    return {"strata": out_strata, "pooled": calibration_summary(pooled, bins=bins), "min_cell": min_cell}
+
+
 async def _collect_one(
     domain: str, *, timeout: float, skip_ct: bool, sem: asyncio.Semaphore
 ) -> CalibrationRecord | None:
@@ -200,28 +224,8 @@ def _read_domains(path: Path) -> list[str]:
     return out
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Calibrate the email-policy posterior against the DMARC record.")
-    parser.add_argument("domains", type=Path, help="File with one apex per line (gitignored; stays local).")
-    parser.add_argument("--bins", type=int, default=10, help="Reliability bins (default 10).")
-    parser.add_argument("--concurrency", type=int, default=5, help="Concurrent resolves (default 5).")
-    parser.add_argument("--timeout", type=float, default=120.0, help="Per-domain resolve timeout seconds.")
-    args = parser.parse_args(argv)
-    if not args.domains.is_file():
-        print(f"FAIL: domains file not found: {args.domains}")
-        return 1
-
-    domains = _read_domains(args.domains)
-    print(f"Resolving {len(domains)} domains against the DMARC record (aggregates only, no apex printed)...")
-    # CT is skipped throughout: the policy node's evidence is DNS-only (DMARC /
-    # SPF / MTA-STS), so a CT pass would add cost without changing the posterior.
-    records = asyncio.run(collect(domains, timeout=args.timeout, skip_ct=True, concurrency=args.concurrency))
-    summary = calibration_summary(records, bins=args.bins)
-    if summary["n"] == 0:
-        print("No domains carried a DMARC reference label; nothing to calibrate.")
-        return 0
-
-    print(f"\nEmail-policy node calibrated against the DMARC record (n={summary['n']} with a published policy)")
+def _print_summary(summary: dict[str, object], header: str) -> None:
+    print(f"\n{header} (n={summary['n']} with a published policy)")
     print(f"  base rate enforcing:   {summary['base_rate_enforcing']}")
     print(f"  Brier:                 {summary['brier']}")
     print(f"  ECE:                   {summary['ece']}")
@@ -229,10 +233,83 @@ def main(argv: list[str] | None = None) -> int:
     print("  reliability (posterior bin -> empirical enforcing rate):")
     for row in summary["reliability"]:  # type: ignore[attr-defined]
         print(f"    [{row['bin_low']:.2f}, {row['bin_high']:.2f})  rate {row['enforcing_rate']:.3f}  n {row['count']}")
-    print("\nThis is reference-anchored calibration (the label is the authoritative DMARC")
-    print("policy, an external definition), firmer than tier-2 consistency but not the")
-    print("fully-independent ground truth of an ideal study; see docs/statistical-assurance.md.")
+
+
+_TRAILER = (
+    "\nThis is reference-anchored calibration (the label is the authoritative DMARC\n"
+    "policy, an external definition), firmer than tier-2 consistency but not the\n"
+    "fully-independent ground truth of an ideal study; see docs/statistical-assurance.md."
+)
+
+
+def _run_single(path: Path, *, bins: int, concurrency: int, timeout: float) -> int:
+    domains = _read_domains(path)
+    print(f"Resolving {len(domains)} domains against the DMARC record (aggregates only, no apex printed)...")
+    # CT is skipped throughout: the policy node's evidence is DNS-only (DMARC /
+    # SPF / MTA-STS), so a CT pass would add cost without changing the posterior.
+    records = asyncio.run(collect(domains, timeout=timeout, skip_ct=True, concurrency=concurrency))
+    summary = calibration_summary(records, bins=bins)
+    if summary["n"] == 0:
+        print("No domains carried a DMARC reference label; nothing to calibrate.")
+        return 0
+    _print_summary(summary, "Email-policy node calibrated against the DMARC record")
+    print(_TRAILER)
     return 0
+
+
+def _run_stratified(directory: Path, *, bins: int, concurrency: int, timeout: float, min_cell: int) -> int:
+    files = sorted(directory.glob("*.txt"))
+    if not files:
+        print(f"FAIL: no .txt domain lists in {directory}")
+        return 1
+    print(f"Calibrating per stratum over {len(files)} lists (aggregates only, no apex printed)...")
+    strata: dict[str, list[CalibrationRecord]] = {}
+    for f in files:
+        records = asyncio.run(collect(_read_domains(f), timeout=timeout, skip_ct=True, concurrency=concurrency))
+        strata[f.stem] = records
+    result = stratified_summary(strata, min_cell=min_cell, bins=bins)
+    print(f"\nPer-stratum email-policy calibration (cells with n < {min_cell} suppressed)")
+    print(f"  {'stratum':<28}{'n':>5}{'ECE':>8}{'agree':>8}{'base':>8}")
+    print("  " + "-" * 57)
+    for name, s in result["strata"].items():  # type: ignore[attr-defined]
+        if s.get("suppressed"):
+            print(f"  {name:<28}{s['n']:>5}{'  suppressed':>24}")
+        else:
+            print(f"  {name:<28}{s['n']:>5}{s['ece']:>8.3f}{s['agreement_rate']:>8.3f}{s['base_rate_enforcing']:>8.2f}")
+    _print_summary(result["pooled"], "Pooled across all strata")  # type: ignore[arg-type]
+    print(_TRAILER)
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Calibrate the email-policy posterior against the DMARC record.")
+    parser.add_argument("domains", type=Path, nargs="?", help="File with one apex per line (gitignored; local).")
+    parser.add_argument(
+        "--stratify-dir", type=Path, default=None, help="Directory of per-stratum *.txt lists; calibrate each."
+    )
+    parser.add_argument(
+        "--min-cell", type=int, default=10, help="Suppress strata below this many records (default 10)."
+    )
+    parser.add_argument("--bins", type=int, default=10, help="Reliability bins (default 10).")
+    parser.add_argument("--concurrency", type=int, default=5, help="Concurrent resolves (default 5).")
+    parser.add_argument("--timeout", type=float, default=120.0, help="Per-domain resolve timeout seconds.")
+    args = parser.parse_args(argv)
+
+    if args.stratify_dir is not None:
+        if not args.stratify_dir.is_dir():
+            print(f"FAIL: stratify directory not found: {args.stratify_dir}")
+            return 1
+        return _run_stratified(
+            args.stratify_dir,
+            bins=args.bins,
+            concurrency=args.concurrency,
+            timeout=args.timeout,
+            min_cell=args.min_cell,
+        )
+    if args.domains is None or not args.domains.is_file():
+        print("FAIL: provide a domains file or --stratify-dir DIR")
+        return 1
+    return _run_single(args.domains, bins=args.bins, concurrency=args.concurrency, timeout=args.timeout)
 
 
 if __name__ == "__main__":
