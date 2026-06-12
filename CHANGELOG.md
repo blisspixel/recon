@@ -7,8 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Now carries a packaged (additive, non-breaking) change to `recon_tool`, so the
-next release cut takes a version bump.
+Now carries packaged (additive, non-breaking) changes to `recon_tool`,
+including a named new stable surface (the evidence-semantics diagnostics), so
+the next release cut is the **2.2.0 minor** the roadmap reserves for exactly
+this: a coherent new surface, not internal hardening.
+
+### Added — evidence-semantics diagnostics (the 2.2 surface)
+
+- **Per-node `entropy_reduction_nats`.** Every `posterior_observations` entry
+  (JSON, MCP `get_posteriors`, cache) now carries its share of the recovered
+  information — H(prior marginal) − H(posterior), signed — the per-node
+  breakdown of the existing result-level CAL10 total.
+- **`unit_counterfactuals`: exact leave-one-unit-out influence.** For every
+  evidence unit informative for a node (fired units, plus informative
+  absences on the declarative node), the engine re-runs exact inference with
+  that unit masked as structurally unobserved and reports
+  `posterior_without` and `delta`, sorted by `|delta|`. The mask is global
+  across the DAG, so the counterfactual honestly reflects support still
+  flowing from other nodes' evidence through the CPTs (a masked
+  `m365_indicators` does not collapse `m365_tenant` to its prior while a
+  federation signal still supports it through the child CPT). Framed as
+  evidence counterfactuals over the model, never causal claims; deltas are
+  individually exact but not additive (units interact through the DAG). The
+  load-bearing test cross-checks every reported counterfactual against an
+  actual `masked_units` run (`tests/test_evidence_semantics_diagnostics.py`).
+- **`partition_stability` on `infrastructure_clusters` (CAL11).** The graph
+  layer now reports partition consensus across an 8-seed Louvain sweep (mean
+  pairwise adjusted Rand index, pure-Python contingency implementation):
+  1.0 means every seed produced the identical partition; lower values flag
+  the partition degeneracy (Good et al. 2010) a single modularity score
+  cannot see. Null outside the Louvain path, where the partition is
+  deterministic; the *reported* clusters still come from the fixed shipped
+  seed, so output stays deterministic.
+- All three are schema-additive: `docs/recon-schema.json` (and the bundled
+  copy served by the MCP schema-discovery resource) gains `NodeEvidence`
+  (closing a pre-existing gap — `evidence_ranked` was emitted but never in
+  the schema file) and `NodeUnitCounterfactual` definitions plus the new
+  properties; `docs/schema.md` documents each with its stability marker. The
+  cache round-trips the new fields in both directions (pre-2.2 entries load
+  with honest "not measured" defaults). The default panel is unchanged.
 
 ### Added
 
@@ -29,6 +66,22 @@ next release cut takes a version bump.
 
 ### Assurance
 
+- **Layer ablations, shipped and run (the paper's ablation experiment).**
+  `validation/layer_ablation.py` measures, on fully synthetic data
+  (model-sampled worlds; planted partitions with fictional hostnames; no
+  corpus, no network, deterministic, publishable), what each layer adds:
+  the Bayesian posterior vs the deterministic any-fired baseline and a
+  strongest-single-binding baseline (with the node's marginal prior, so the
+  comparison isolates evidence propagation), pooled and split by fired
+  regime; and Louvain vs connected components on planted org clusters under
+  shared-CDN bridging noise (scored by ARI). The committed run
+  (`validation/layer-ablation.md`) shows the posterior winning the fired
+  regime on every node, the DAG-only propagation node unreachable by slug
+  matching, the declarative policy node winning pooled (the CAL14 asymmetry
+  demonstrated), the hideable roots paying a quantified ~0.05-0.10 Brier
+  MNAR price under benign missingness (the deliberate trade, now measured),
+  and Louvain holding ARI 1.0 across a noise grid where naive grouping
+  collapses to 0. Unit tests in `tests/test_layer_ablation.py`.
 - **Held-out residual reference calibration (the clean tier-4 construction).**
   `validation/reference_calibration.py` now computes, beside the full
   posterior, a held-out residual posterior with the `dmarc_policy` unit

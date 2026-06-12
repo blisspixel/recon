@@ -86,6 +86,10 @@ docs/accuracy.md
 # reported one-sided. Pure label/channel-split logic is unit-tested; the
 # orchestration is maintainer-local and prints aggregates only. No target data.
 !/validation/tenancy_reference_calibration.py
+# Layer-ablation harness + memo: fully synthetic (model-sampled worlds, planted
+# partitions, fictional hostnames), deterministic, publishable. No target data.
+!/validation/layer_ablation.py
+!/validation/layer-ablation.md
 # v2.1a: aggregate-state methodology example. Fully synthetic (fictional
 # brands, fabricated numbers); the reference reducer, generator, and synthetic
 # cohort are public. Real cohorts stay local. The reducer run-output is a

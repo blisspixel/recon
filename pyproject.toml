@@ -130,6 +130,8 @@ max-complexity = 15
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["E402", "S101"]  # allow assert in tests
 "validation/aggregate/make_synthetic_cohort.py" = ["S311"]  # seeded RNG for synthetic fixtures, not cryptographic
+"validation/layer_ablation.py" = ["S311"]  # seeded RNG for synthetic worlds / planted partitions, not cryptographic
+"tests/test_layer_ablation.py" = ["S311"]  # seeded RNG driving the synthetic fixtures under test
 
 [tool.bandit]
 # Bandit duplicates ruff's S-rules. We keep bandit available for
