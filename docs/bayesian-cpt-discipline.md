@@ -169,6 +169,47 @@ distribution" is a concept comment.
   v1.9.6 binding removal) is explicitly authorized when the
   network's structure is asking the wrong question.
 
+## The priors ledger (CAL12)
+
+CAL12 requires the elicitation of every root prior to be written down
+against the observed corpus base rate, because the prior is load-bearing
+exactly where recon says the honest field lives: strong likelihoods wash
+the prior out of a densely-evidenced point estimate, but the sparse-case
+posterior and the credible interval inherit it directly. This ledger is
+that record. Two readings to hold while using it:
+
+- A corpus *detection* rate is not a population base rate. The
+  maintainer's corpus skews enterprise (it exists to exercise the
+  catalogue), and a "high-confidence rate" is bounded by what passive
+  observation can see — it estimates `P(detected)` on that sample, not
+  `P(present)` for an arbitrary queried domain. A deliberate gap between
+  prior and corpus rate is therefore not automatically an error; an
+  *undocumented* gap is.
+- The prior answers "an arbitrary domain someone points recon at."
+  Operators whose scope skews (an M365-heavy consultancy, a
+  fintech-only portfolio) are expected to override via
+  `~/.recon/priors.yaml`; that override path exists precisely so the
+  shipped priors can stay population-shaped rather than corpus-shaped.
+
+| Node | Prior | Status | Observed (2026-06 corpus, ~5.2k domains) | Elicitation note |
+|---|---|---|---|---|
+| `email_security_policy_enforcing` | 0.62 | **corpus-grounded** | 61.7% of 5,238 publish an enforcing DMARC policy | Re-grounded from a hand-set 0.25 in the 2026-06 pass; the one prior whose reference is a public declaration, so the corpus rate *is* the base rate for the declaring population |
+| `m365_tenant` | 0.30 | hand-set; known corpus gap, kept deliberately | high-confidence M365 in ~60% of corpus domains | The corpus is enterprise-skewed by construction; 0.30 is the arbitrary-domain stance. The gap is the documented CAL12 mismatch — revisit if the PV2 re-grounding shows the *general*-population rate drifting |
+| `google_workspace_tenant` | 0.25 | hand-set | not separately recorded | Elicited as "somewhat less common than M365 in the queried population"; the PV2 loop should record its corpus rate next pass |
+| `email_gateway_present` | 0.18 | hand-set | not separately recorded | Third-party gateways are a minority posture even among enterprises; awaiting a recorded rate |
+| `cdn_fronting` | 0.45 | hand-set | not separately recorded | Near-half reflects how common edge-proxying is among domains worth querying; awaiting a recorded rate |
+| `aws_hosting` | 0.40 | hand-set; known corpus gap | ~28% observable AWS | Kept above the observed rate because AWS presence is under-detected passively (internal workloads invisible — the limitations doc's ceiling); the gap direction is deliberate, its size is judgement |
+| `federated_identity` | CPT | seeded + tuned | — | GWS-path entries seeded at v1.9.3 (see the YAML comment); the M365-path entries carried from v1.9.0 |
+| `okta_idp` | CPT | hand-set | — | 0.30 given federation, 0.005 without: Okta's share of the federated-IdP market vs near-zero outside it |
+| `email_security_modern_provider` | CPT | hand-set, propagation-only | — | No own evidence; the CPT is the claim (provider presence given parents), preserved from the v1.9.0 structure |
+
+The maintenance loop: the PV2 routine re-grounds the recordable rates each
+release (`docs/maintainer-validation.md`), and any prior move it proposes
+is a CPT change under this file's discipline — concept comment, validation
+rerun, drift-gate acknowledgement. The "not separately recorded" cells are
+the open half of CAL12: the next full-corpus pass should fill them, after
+which this table carries a number or a documented refusal for every row.
+
 ## Enforcement
 
 The PR template (`.github/pull_request_template.md`) carries a

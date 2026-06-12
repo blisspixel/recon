@@ -74,18 +74,23 @@ What recon can take, on the nodes where a label exists: split conformal
 is adoptable as a complementary, distribution-free coverage statement for
 any node that has an external reference. That is the email-policy node
 (the DMARC record is its own reference, per the existing reference
-calibration) and, once provider-endpoint corroboration lands, the two
-tenancy nodes (the Microsoft and Google identity endpoints are
-authoritative). For those nodes recon can report a conformal prediction
+calibration) and the M365 tenancy node (Microsoft's identity endpoints
+are an authoritative two-class attestation; the Google channel turned out
+one-sided on source review — federated redirects only, no managed
+detection, no authoritative negative — so `google_workspace_tenant`
+carries a recall check, not a label, see correlation.md 4.3). For the
+labelable nodes recon can report a conformal prediction
 set beside the Bayesian credible interval: two guarantees of different
 kinds, one subjective-Bayesian and one frequentist-distribution-free,
 with an explicit note that the conformal guarantee is conditional on
 exchangeability and so is not claimed for hardened targets. The boundary
 where conformal coverage stops being guaranteed is the same boundary
 where the suppression guarantee keeps holding, which is the honest seam
-the paper is built around. This is the one concrete validate-differently
-implication of the library; it is recorded as a candidate validation
-extension in the [roadmap](roadmap.md), not yet built.
+the paper is built around. This was the one concrete validate-differently
+implication of the library; it has since shipped as
+`validation/conformal_coverage.py` (with a deliberate falsifiability
+split demonstrating the exchangeability boundary), and the tenancy label
+side as `validation/tenancy_reference_calibration.py`.
 
 ## Principle-based calibration of epistemic uncertainty (arXiv:2407.12211)
 

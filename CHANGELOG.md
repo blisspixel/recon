@@ -113,6 +113,17 @@ this: a coherent new surface, not internal hardening.
   channel-split exclusion and the no-footprint-stays-near-prior property);
   `--stratify-dir` supported; maintainer-local run pending.
 
+- **CAL12: the priors-elicitation ledger, written down.**
+  `docs/bayesian-cpt-discipline.md` gains "The priors ledger": every root
+  prior with its grounding status (corpus-grounded / hand-set /
+  hand-set-with-known-gap), the observed 2026-06 corpus rate where one was
+  recorded, and the elicitation reasoning — including why the documented
+  m365 (0.30 vs ~60% corpus) and aws (0.40 vs ~28% observable) gaps are
+  deliberate (enterprise-skewed corpus vs arbitrary-domain stance;
+  passive under-detection), with `~/.recon/priors.yaml` as the
+  scope-skew escape hatch. The unrecorded rates are marked as the open
+  cells the next full-corpus pass fills; prior moves stay under the
+  CPT-change discipline.
 - **CAL9: the proper scoring rule leads the calibration output.**
   `calibration_summary` (shared by the reference- and tenancy-calibration
   harnesses) now computes and prints `log_score`, the mean negative
