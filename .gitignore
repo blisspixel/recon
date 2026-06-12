@@ -77,6 +77,10 @@ docs/accuracy.md
 # logic is unit-tested.
 !/validation/reference_calibration.py
 !/validation/reference-calibration.md
+# Conformal-coverage harness: distribution-free split-conformal coverage on the
+# labelable nodes (pure logic plus a maintainer-local orchestration that prints
+# aggregates only). No target data; the pure logic is unit-tested.
+!/validation/conformal_coverage.py
 # v2.1a: aggregate-state methodology example. Fully synthetic (fictional
 # brands, fabricated numbers); the reference reducer, generator, and synthetic
 # cohort are public. Real cohorts stay local. The reducer run-output is a
