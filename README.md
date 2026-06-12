@@ -111,13 +111,61 @@ release; the catalog grows from observed gaps, not invented entries.
 
 ## Install
 
-Requires Python 3.11+.
+**recon works on Windows, macOS, and Linux.**
+
+It is a pure-Python CLI (plus optional MCP server). No compilation or external services required.
+
+**Requirements:** Python 3.11 or newer.
+
+### Recommended way (virtual environment or pipx)
+
+This is the most reliable method on all platforms and prevents common PATH problems.
 
 ```bash
-pip install recon-tool                 # includes MCP server
-pip install -U recon-tool              # upgrade
-recon doctor                           # verify connectivity
+# 1. Create a virtual environment
+python -m venv .venv          # some systems: python3 -m venv .venv
+
+# 2. Activate the environment
+#   Windows (PowerShell):   .\.venv\Scripts\Activate.ps1
+#   macOS / Linux:          source .venv/bin/activate
+
+# 3. Install (includes MCP support)
+pip install -U recon-tool
+
+# 4. Verify everything works
+recon doctor
 ```
+
+**Even simpler alternative: pipx** (excellent for command-line tools):
+
+```bash
+pipx install recon-tool
+recon doctor
+```
+
+pipx creates an isolated environment for you and ensures the `recon` command is always on PATH.
+
+### Fast one-liner (bare pip install)
+
+```bash
+pip install recon-tool
+recon doctor
+```
+
+**If the `recon` command is not found after install (common on Windows):**
+- You are probably using a system-wide Python install without admin rights. The scripts went into your user Scripts folder, which may not be in PATH.
+- Best fix: use the **Recommended** venv or pipx method above.
+- Quick workaround: add `%APPDATA%\Python\Python312\Scripts` (adjust for your Python version) to your user PATH and restart the terminal.
+
+### From a git checkout (editable / development install)
+
+```bash
+git clone https://github.com/blisspixel/recon.git
+cd recon
+pip install -e .          # or: uv sync  (see CONTRIBUTING.md for full dev setup)
+```
+
+Upgrade later with the usual `pip install -U recon-tool`.
 
 ## Usage
 
@@ -191,7 +239,7 @@ Installed but the tools don't appear? Run `recon doctor --client=<name>` to conf
 
 **Quickest install for AI clients with file-write tools.** Paste this prompt to your AI:
 
-> Fetch `https://raw.githubusercontent.com/blisspixel/recon/main/agents/claude-code/skills/recon/SKILL.md` and save it to my Claude Code skills directory (`~/.claude/skills/recon/SKILL.md`), or to `~/.kiro/skills/recon/SKILL.md` if I'm using Kiro. Then run `pip install recon-tool` and `recon doctor` to verify.
+> Fetch `https://raw.githubusercontent.com/blisspixel/recon/main/agents/claude-code/skills/recon/SKILL.md` and save it to my Claude Code skills directory (`~/.claude/skills/recon/SKILL.md`), or to `~/.kiro/skills/recon/SKILL.md` if I'm using Kiro. Then `pip install recon-tool` (use a venv or pipx if `recon` is not found afterward) and run `recon doctor` to verify.
 
 The SKILL.md follows the open [agentskills.io](https://agentskills.io) standard, so the same file works in Claude Code and Kiro.
 
