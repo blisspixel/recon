@@ -1,7 +1,7 @@
-"""Pin the oracle-calibration harness's pure logic.
+"""Pin the reference-calibration harness's pure logic.
 
-`validation/oracle_calibration.py` calibrates the email-policy posterior
-against the DMARC oracle (the record that is its own ground truth). The
+`validation/reference_calibration.py` calibrates the email-policy posterior
+against the DMARC record (the record that is its own ground truth). The
 network orchestration is maintainer-local, but the label derivation, the
 Wilson interval, and the aggregate calibration are pure functions whose
 correctness the published number depends on. These tests pin them with
@@ -12,29 +12,29 @@ from __future__ import annotations
 
 import pytest
 
-from validation.oracle_calibration import (
-    OracleRecord,
+from validation.reference_calibration import (
+    CalibrationRecord,
     calibration_summary,
-    oracle_label_email_policy,
+    reference_label_email_policy,
     wilson_interval,
 )
 
 
-class TestOracleLabel:
+class TestReferenceLabel:
     @pytest.mark.parametrize("policy", ["reject", "quarantine", "Reject", "  QUARANTINE  "])
     def test_enforcing_policies_label_one(self, policy: str) -> None:
-        assert oracle_label_email_policy(policy) == 1
+        assert reference_label_email_policy(policy) == 1
 
     def test_none_policy_labels_zero(self) -> None:
-        assert oracle_label_email_policy("none") == 0
-        assert oracle_label_email_policy("NONE") == 0
+        assert reference_label_email_policy("none") == 0
+        assert reference_label_email_policy("NONE") == 0
 
     def test_absent_or_unknown_policy_has_no_label(self) -> None:
-        # No DMARC record, or an unrecognized value, carries no oracle
+        # No DMARC record, or an unrecognized value, carries no reference
         # truth and is excluded rather than guessed.
-        assert oracle_label_email_policy(None) is None
-        assert oracle_label_email_policy("") is None
-        assert oracle_label_email_policy("p=reject") is None  # raw token, not the parsed level
+        assert reference_label_email_policy(None) is None
+        assert reference_label_email_policy("") is None
+        assert reference_label_email_policy("p=reject") is None  # raw token, not the parsed level
 
 
 class TestWilsonInterval:
@@ -68,10 +68,10 @@ class TestCalibrationSummary:
         # Three enforcing (posterior high, label 1), one not (posterior low,
         # label 0): base rate 0.75, all four agree on the 0.5 threshold.
         records = [
-            OracleRecord(posterior=0.9, label=1),
-            OracleRecord(posterior=0.85, label=1),
-            OracleRecord(posterior=0.7, label=1),
-            OracleRecord(posterior=0.2, label=0),
+            CalibrationRecord(posterior=0.9, label=1),
+            CalibrationRecord(posterior=0.85, label=1),
+            CalibrationRecord(posterior=0.7, label=1),
+            CalibrationRecord(posterior=0.2, label=0),
         ]
         s = calibration_summary(records)
         assert s["n"] == 4
@@ -79,11 +79,11 @@ class TestCalibrationSummary:
         assert s["agreement_rate"] == 1.0
 
     def test_disagreement_lowers_agreement_rate(self) -> None:
-        # One miscalibrated domain: high posterior but the DMARC oracle says
-        # not enforcing (the exact case oracle calibration is meant to catch).
+        # One miscalibrated domain: high posterior but the DMARC Reference says
+        # not enforcing (the exact case Reference calibration is meant to catch).
         records = [
-            OracleRecord(posterior=0.9, label=1),
-            OracleRecord(posterior=0.88, label=0),  # over-confident vs the oracle
+            CalibrationRecord(posterior=0.9, label=1),
+            CalibrationRecord(posterior=0.88, label=0),  # over-confident vs the Reference
         ]
         s = calibration_summary(records)
         assert s["agreement_rate"] == 0.5
@@ -91,7 +91,7 @@ class TestCalibrationSummary:
         assert abs(s["brier"] - ((0.9 - 1) ** 2 + 0.88**2) / 2) < 1e-9
 
     def test_reliability_rows_are_aggregate_only(self) -> None:
-        records = [OracleRecord(posterior=0.05 + 0.1 * i, label=i % 2) for i in range(10)]
+        records = [CalibrationRecord(posterior=0.05 + 0.1 * i, label=i % 2) for i in range(10)]
         s = calibration_summary(records)
         for row in s["reliability"]:  # type: ignore[attr-defined]
             assert set(row) == {"bin_low", "bin_high", "enforcing_rate", "count"}

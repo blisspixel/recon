@@ -67,12 +67,12 @@ docs/accuracy.md
 # Mutation-gate memo: scope, kill-set rationale, score floor, survivor
 # dispositions. Counts and node ids only, no target data.
 !/validation/mutation-gate.md
-# Oracle-calibration harness + memo: pure label/Wilson/calibration logic plus a
+# Reference-calibration harness + memo: pure label/Wilson/calibration logic plus a
 # maintainer-local network orchestration that prints aggregates only. The
 # committed files carry no target data (synthetic worked example only). The pure
 # logic is unit-tested.
-!/validation/oracle_calibration.py
-!/validation/oracle-calibration.md
+!/validation/reference_calibration.py
+!/validation/reference-calibration.md
 # v2.1a: aggregate-state methodology example. Fully synthetic (fictional
 # brands, fabricated numbers); the reference reducer, generator, and synthetic
 # cohort are public. Real cohorts stay local. The reducer run-output is a

@@ -57,7 +57,7 @@ is stated, not hidden.
    rather than implying it is met.
 
 The honest shape of recon's assurance is: well-grounded at tiers 1 to 3
-everywhere, and tier 4 reachable on the claims where a public oracle can stand in
+everywhere, and tier 4 reachable on the claims where a public reference can stand in
 for ground truth.
 
 ## Why tier 4 is unavailable for most nodes, and reachable for one
@@ -83,7 +83,7 @@ nodes:
   for this node by calibrating against the authoritative records themselves
   (CAL3 / CAL4), and the M365 / Google Workspace tenancy claims can be
   corroborated against the providers' own identity endpoints in the same way. That
-  oracle-calibration harness is the open assurance item (see the build order in
+  reference-calibration harness is the open assurance item (see the build order in
   [roadmap.md](roadmap.md#version-milestones-and-build-order)); when it lands, the
   policy node and the tenancy corroboration move to tier 4 and this dossier
   records the coverage number.
@@ -93,12 +93,12 @@ nodes:
 | Claim / node | Highest tier today | What backs it | Where it stops |
 |---|---|---|---|
 | Fired slugs and signals (the evidence layer) | Observed | The underlying DNS / CT / identity query, re-runnable | Heuristic catalogue; a rule can mis-fire, so each carries a vendor-doc reference |
-| `m365_tenant`, `google_workspace_tenant` | Evidence-responsive | Tiers 1 to 3; tenancy is corroborable against the providers' own endpoints | Tier 4 (oracle corroboration) is the open CAL3 / CAL4 item |
+| `m365_tenant`, `google_workspace_tenant` | Evidence-responsive | Tiers 1 to 3; tenancy is corroborable against the providers' own endpoints | Tier 4 (reference corroboration) is the open CAL3 / CAL4 item |
 | `okta_idp`, `federated_identity` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: federation indicators are hideable |
 | `email_gateway_present`, `cdn_fronting`, `aws_hosting` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: all hideable infrastructure |
 | `email_security_modern_provider` | Consistency | Pure propagation from parents (no own evidence), so it inherits its parents' tier | Not an independent measurement |
-| `email_security_policy_enforcing` | Evidence-responsive, tier 4 reachable | Tiers 1 to 3 now; the DMARC / SPF / MTA-STS record is its own ground truth | Tier 4 pending the oracle-calibration run |
-| The 80% credible interval (all nodes) | Evidence-responsive | Differential verification plus perturbation coverage (v2.1.15) | Frequentist ground-truth coverage (tier 4) only where a public oracle exists |
+| `email_security_policy_enforcing` | Evidence-responsive, tier 4 reachable | Tiers 1 to 3 now; the DMARC / SPF / MTA-STS record is its own ground truth | Tier 4 pending the reference-calibration run |
+| The 80% credible interval (all nodes) | Evidence-responsive | Differential verification plus perturbation coverage (v2.1.15) | Frequentist ground-truth coverage (tier 4) only where a public reference exists |
 | Cohort-summary prevalences (PV1) | Observed plus evidence-responsive | Observability-adjusted rates over the caller's set, with denominators | Ecological-fallacy discipline; never a population claim |
 
 ## What each tier licenses, and what it does not
@@ -119,10 +119,10 @@ nodes:
 
 ## The open frontier
 
-The single most valuable remaining assurance item is the CAL3 / CAL4 oracle
+The single most valuable remaining assurance item is the CAL3 / CAL4 reference
 calibration: compute empirical interval coverage and calibration for the
 public-declaration node and the tenancy claims against authoritative public
-oracles (the DMARC / SPF / MTA-STS records as their own truth; the Microsoft and
+references (the DMARC / SPF / MTA-STS records as their own truth; the Microsoft and
 Google identity endpoints for tenancy), reported with uncertainty (Wilson or
 bootstrap), aggregates only, no real apexes committed (see
 [data-handling-policy.md](data-handling-policy.md)). Until it lands, this dossier
