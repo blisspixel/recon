@@ -91,16 +91,23 @@ exactly where the top of that spectrum reaches:
   declaration*: the email policy's DMARC record is its own ground truth (an
   enforcing `p=reject` is a fact anyone can read, not an inference; CAL14 made the
   node `declarative`). And *provider attestation*: whether a domain is a
-  Microsoft 365 or Google Workspace tenant is answered by the provider's own
-  unauthenticated identity endpoint, keyed on the domain, which the operator does
-  not control and cannot suppress without actually leaving the tenant. For the
+  Microsoft 365 tenant is answered by Microsoft's own unauthenticated identity
+  endpoints, keyed on the domain, in both directions (a resolved tenant ID or
+  Managed/Federated namespace attests presence; the documented tenant-not-found
+  response attests absence), which the operator does not control and cannot
+  suppress without actually leaving the tenant. For the
   policy node the calibration has run: against the DMARC record on real domains,
   two independent samples agree at ECE about 0.077 with the miss in the
   conservative (under-confident) direction, so it is reported at tier 4 for the
   strict-SPF + MTA-STS residual, an agreement check for the DMARC-driven bulk
-  (`validation/reference-calibration.md`). The tenancy nodes (`m365_tenant`,
-  `google_workspace_tenant`) are provider-attested in the same way and are the
-  open extension of the reference-calibration harness.
+  (`validation/reference-calibration.md`). For `m365_tenant` the corroboration
+  harness ships (`validation/tenancy_reference_calibration.py`: predictor and
+  label split by observation channel — the DNS-driven posterior against the
+  endpoint attestation), with the maintainer-local run as the open step. The
+  Google channel is one-sided (it attests only observed federated routing,
+  never managed tenancy, and has no authoritative negative; correlation.md
+  4.3), so `google_workspace_tenant` admits a recall check on attested
+  positives, not a calibration, and stays at tier 3.
 
 - **No external attestor (tier 4 unavailable by the nature of the setting).**
   `cdn_fronting`, `aws_hosting`, `okta_idp`, `email_gateway_present`, and the
@@ -123,7 +130,8 @@ exactly where the top of that spectrum reaches:
 | Claim / node | Highest tier today | What backs it | Where it stops |
 |---|---|---|---|
 | Fired slugs and signals (the evidence layer) | Observed | The underlying DNS / CT / identity query, re-runnable | Heuristic catalogue; a rule can mis-fire, so each carries a vendor-doc reference |
-| `m365_tenant`, `google_workspace_tenant` | Evidence-responsive | Tiers 1 to 3; tenancy is corroborable against the providers' own endpoints | Tier 4 (reference corroboration) is the open CAL3 / CAL4 item |
+| `m365_tenant` | Evidence-responsive | Tiers 1 to 3; two-class provider attestation exists (tenant ID / namespace, and the documented not-found response), and the channel-split corroboration harness ships (`validation/tenancy_reference_calibration.py`) | The maintainer-local run is the open CAL3 / CAL4 step; until it lands, tier 4 is reachable, not reached |
+| `google_workspace_tenant` | Evidence-responsive | Tiers 1 to 3; the provider channel attests only observed federated routing (one-sided, no authoritative negative, no managed detection) | Tier 4 unreachable on this channel: a one-sided recall check on attested positives is reported, never a calibration |
 | `okta_idp`, `federated_identity` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: federation indicators are hideable |
 | `email_gateway_present`, `cdn_fronting`, `aws_hosting` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: all hideable infrastructure |
 | `email_security_modern_provider` | Consistency | Pure propagation from parents (no own evidence), so it inherits its parents' tier | Not an independent measurement |
@@ -165,9 +173,12 @@ unit masked as structurally unobserved, so predictor and label are disjoint;
 run over the corpus is what fills in its numbers. What remains is bounded and
 honest:
 
-- The tenancy claims (`m365_tenant`, `google_workspace_tenant`) can be
-  corroborated against the providers' own identity endpoints the same way, which
-  is the next extension of the reference-calibration harness.
+- The `m365_tenant` claim can be corroborated against Microsoft's own identity
+  endpoints with both label classes; the harness ships
+  (`validation/tenancy_reference_calibration.py`) and its maintainer-local run
+  is the remaining step. `google_workspace_tenant` gets only the one-sided
+  recall check the Google channel supports — a calibration there would need a
+  two-class attestor recon's passive channel does not have.
 - The hideable-infrastructure nodes have no external reference by the nature of
   the adversarial-missingness setting, so they stay at tier 3 by design, not by
   omission. The dossier reports them that way rather than implying coverage it

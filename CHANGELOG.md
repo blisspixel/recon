@@ -41,6 +41,24 @@ next release cut takes a version bump.
   (`validation/reference-calibration.md` has the method and the honest
   expectations: a deliberately weak predictor whose *calibration* is the
   claim under test).
+- **Tenancy reference calibration against the provider endpoints
+  (CAL3/CAL4 tenancy extension).** New
+  `validation/tenancy_reference_calibration.py` corroborates the
+  `m365_tenant` posterior against Microsoft's own identity-endpoint
+  attestation, with predictor and label split by *observation channel*:
+  the predictor is inference over the DNS channel alone (the `dns_records`
+  source re-merged by itself — masking cannot decircularize this node, its
+  whole direct evidence is one group), and the label is the endpoint answer
+  (tenant ID / Managed / Federated positive; OIDC HTTP 400 or NameSpaceType
+  Unknown negative; channel disagreement lands in a counted conflict
+  bucket, never a guess). The full-pipeline posterior is reported only as a
+  CAL1-style consistency number. Google Workspace is reported one-sided
+  (recall on attested-federated tenants) because recon's passive Google
+  channel never attests managed tenancy and has no authoritative negative —
+  a calibration there would restate the channel, not test it. Pure logic
+  unit-tested (`tests/test_tenancy_reference_calibration.py`, including the
+  channel-split exclusion and the no-footprint-stays-near-prior property);
+  `--stratify-dir` supported; maintainer-local run pending.
 
 ### Theory
 
@@ -67,6 +85,16 @@ next release cut takes a version bump.
   operator cannot hide at all), which is why the tenancy claims are
   reference-calibratable. Section 1.5 reframes the small, hand-specified Bayesian
   layer as the precondition for the guarantee, not a limitation.
+- **The provider-attested tier, sharpened by the tenancy-harness source review.**
+  The spectrum subsection now distinguishes the two providers honestly:
+  Microsoft's endpoints are a two-class registry answer (presence *and* the
+  documented tenant-not-found negative), while recon's passive Google channel is
+  provider-*behavioral* and one-sided (it attests only an observed federated-IdP
+  redirect, never managed tenancy, no authoritative negative — managed-Workspace
+  response heuristics were removed as a false-positive source). So
+  `m365_tenant` is reference-calibratable with both label classes;
+  `google_workspace_tenant` is not, and the dossier ledger now splits the two
+  nodes accordingly.
 
 ### Assurance
 
