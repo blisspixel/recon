@@ -227,7 +227,7 @@ a different tool.
 ```bash
 uv sync                                # installs the dev group (pip: pip install -e . --group dev, pip 25.1+)
 pytest tests/                          # full test suite
-ruff check recon_tool/                 # lint
+ruff check .                           # lint
 pyright recon_tool/                    # type check
 pre-commit install                     # activate pre-commit hooks
 ```
