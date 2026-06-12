@@ -96,15 +96,18 @@ uncertainty rises as model expressiveness grows) and tests compliance
 rather than coverage.
 
 This is the methodology recon already follows without having named it.
-The suppression-monotonicity theorem (correlation.md section 4.3) is a
+The suppression-monotonicity property (correlation.md section 4.3) is a
 principle-compliance result: hiding an observed binding moves a node's
-presence posterior toward its baseline, never to a confident false
-positive. The interval-widening property (the credible interval grows as
-n_eff falls) is a second such principle. Framing recon's guarantees this
+presence posterior toward its all-absent baseline, never to a confident
+false positive (it bounds evidence removal, and not the addition of decoy
+records). The interval-widening property (the credible interval grows as
+n_eff falls) is a second such principle, governing interval width. Framing recon's guarantees this
 way places them in a recognized methodological tradition and makes the
-reservation precise: recon says "calibrated" only for the nodes where
-CAL3 / CAL4 coverage exists, and "evidence-responsive, principle-
-compliant" everywhere else (CAL13). recon can name its principle suite
+reservation precise: recon says "calibrated" only where an external
+reference exists, and even there only partially (the DMARC node shares its
+label with its dominant input, so only the residual is independently
+checked), and "evidence-responsive, principle-compliant" everywhere else
+(CAL13). recon can name its principle suite
 explicitly and test compliance as a standing gate, which the existing
 `validation/adversarial_properties.py` already begins.
 
@@ -178,7 +181,7 @@ boundary between them, which coincides with the passive/active line.
 
 ## Pointers
 
-- The formal model and the suppression theorem: [correlation.md](correlation.md), sections 1.5, 4.3, 4.3.
+- The formal model and the suppression proposition: [correlation.md](correlation.md), sections 1.5 and 4.3.
 - Where each claim sits on the evidence ledger: [statistical-assurance.md](statistical-assurance.md).
 - The reference-calibration result: [../validation/reference-calibration.md](../validation/reference-calibration.md).
 - The paper skeleton these notes feed: [paper-outline.md](paper-outline.md).

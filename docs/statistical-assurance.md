@@ -16,9 +16,25 @@ a single map. The mechanism-to-test mapping is in
 constraint that shapes how any of this can be reported is in
 [data-handling-policy.md](data-handling-policy.md).
 
-## The four tiers of evidence
+## The four tiers of evidence, on two axes
 
-Every recon claim sits at one of four tiers. Higher tiers carry more weight; a
+Every recon claim sits at one of four tiers, but the tiers are not one monotone
+scale of trust. Reading them as "a higher tier means the number is more likely
+right" is the specific error this dossier exists to prevent. They answer two
+different questions:
+
+- **Provenance and internal soundness:** is the observation a real,
+  re-queryable fact, and is the inference computed faithfully from the model?
+  Tier 1 (Observed) and tier 3 (Evidence-responsive) live here, with tier 2
+  (Consistency) a near-tautological special case.
+- **External validation:** is the inferred number right against a truth recon
+  did not itself produce? Only tier 4 (Empirical coverage) lives here.
+
+The consequence a careful reader must hold onto: a tier-3 node has a
+faithfully-computed, honestly-widening interval, but with respect to whether its
+point estimate is *correct* it is just as unvalidated as a tier-1 raw fact. Tiers
+2 and 3 are properties that hold by construction, and a property true by
+construction carries no information about whether the model tracks reality. A
 claim is reported at the highest tier its evidence reaches, and the gap above it
 is stated, not hidden.
 
@@ -56,9 +72,12 @@ is stated, not hidden.
    recon's claims this tier is structurally unavailable, and the dossier says so
    rather than implying it is met.
 
-The honest shape of recon's assurance is: well-grounded at tiers 1 to 3
-everywhere, and tier 4 reachable on the claims where a public reference can stand in
-for ground truth.
+The honest shape of recon's assurance is: provenance and internal soundness
+established at tiers 1 to 3, external validation (tier 4) reached on the one node
+where a public reference exists, open on the provider-attested tenancy nodes, and
+absent by the nature of the setting on the hideable nodes. Tiers 1 to 3 are not a
+substitute for tier 4; they are a different axis, and on the hideable nodes the
+point estimate stays unvalidated against truth.
 
 ## Why tier 4 is reachable for some nodes and not others
 
@@ -89,9 +108,14 @@ exactly where the top of that spectrum reaches:
   adversarially missing and there is no label set to compute frequentist coverage
   against. These claims are honest at tiers 1 to 3, tier 4 is not available, and
   the interval's widening is the model declining to claim what it cannot see. The
-  suppression theorem (correlation.md 4.3) is what makes that honest rather than
-  merely cautious: hiding can only push these toward "we cannot tell," never to a
-  confident false answer.
+  suppression proposition (correlation.md 4.3) is what makes that honest rather
+  than merely cautious in the hiding direction: hiding can only push these toward
+  "we cannot tell," never to a confident false answer. It does not protect the
+  other direction: a forged administrative token fires these nodes at full
+  strength (correlation.md 4.11, Pattern I) and the ungrouped dense nodes
+  over-count co-firing evidence (correlation.md 4.3), so a confident false
+  positive can be planted or over-counted here even though it cannot be hidden
+  into existence.
 
 ## The ledger
 
@@ -102,7 +126,7 @@ exactly where the top of that spectrum reaches:
 | `okta_idp`, `federated_identity` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: federation indicators are hideable |
 | `email_gateway_present`, `cdn_fronting`, `aws_hosting` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: all hideable infrastructure |
 | `email_security_modern_provider` | Consistency | Pure propagation from parents (no own evidence), so it inherits its parents' tier | Not an independent measurement |
-| `email_security_policy_enforcing` | Empirical coverage (tier 4) | Calibrated against the DMARC record on real domains: ECE about 0.077, agreement about 1.0, the miss conservative (under-confident); see `validation/reference-calibration.md` | The input overlap means agreement is partly definitional; the reliability table and ECE are the load-bearing figures |
+| `email_security_policy_enforcing` | Tier 4 for the non-DMARC residual; an agreement check for the rest | Calibrated against the DMARC record on real domains (ECE about 0.077, miss conservative), but DMARC is also the node's dominant input, so the agreement is largely definitional and only the strict-SPF + MTA-STS residual is independently tested; see `validation/reference-calibration.md` | The result is for a domain *declaring* an enforcing policy, not enforcing it, and the declaration is forgeable at zero cost (correlation.md 4.11, Pattern I); held-out calibration of the residual is the open item |
 | The 80% credible interval (all nodes) | Evidence-responsive | Differential verification plus perturbation coverage (v2.1.15) | Frequentist ground-truth coverage (tier 4) only where a public reference exists |
 | Cohort-summary prevalences (PV1) | Observed plus evidence-responsive | Observability-adjusted rates over the caller's set, with denominators | Ecological-fallacy discipline; never a population claim |
 
@@ -117,18 +141,24 @@ exactly where the top of that spectrum reaches:
   to prevent.
 - **Evidence-responsive** licenses "the interval honestly tracks how much the
   channel constrains the claim, and absorbs the acknowledged likelihood
-  imprecision." It does not license "the interval has 80% frequentist coverage
-  against ground truth," which is tier 4.
+  imprecision." It governs the interval's *width* and is silent about its
+  *location*: a wrong CPT produces a tight interval around the wrong mean, and
+  evidence-responsiveness does not catch that. It does not license "the interval
+  has 80% frequentist coverage against ground truth," which is tier 4.
 - **Empirical coverage** licenses the frequentist statement. It is claimed only
   where measured, and today it is the open frontier.
 
 ## The frontier
 
 The CAL3 / CAL4 reference calibration has reached the one node where it is
-possible: `email_security_policy_enforcing` is now at tier 4, calibrated against
-the DMARC record on real domains (aggregates only, no apexes committed, per
-[data-handling-policy.md](data-handling-policy.md); detail in
-`validation/reference-calibration.md`). What remains is bounded and honest:
+possible, and even there only in part: `email_security_policy_enforcing` is
+checked against the DMARC record on real domains (aggregates only, no apexes
+committed, per [data-handling-policy.md](data-handling-policy.md); detail in
+`validation/reference-calibration.md`). Because DMARC is also the node's dominant
+input, the honest reading is tier 4 for the strict-SPF + MTA-STS residual and a
+largely-definitional agreement check for the DMARC-driven bulk; a held-out
+calibration of the residual is what would make the whole posterior tier 4. What
+remains is bounded and honest:
 
 - The tenancy claims (`m365_tenant`, `google_workspace_tenant`) can be
   corroborated against the providers' own identity endpoints the same way, which
@@ -138,7 +168,9 @@ the DMARC record on real domains (aggregates only, no apexes committed, per
   omission. The dossier reports them that way rather than implying coverage it
   cannot have.
 
-This is the honest position: recon's numbers are well-supported where the passive
-channel and an exact, verified inference engine can support them, one node now
-has real ground-truth calibration to show for it, and recon says where that
-support ends rather than implying more.
+This is the honest position: recon's numbers have sound provenance and a faithful,
+verified inference engine behind them, one node now has a partial ground-truth
+check to show for it (the residual after removing the shared DMARC input), and
+recon says where that support ends rather than implying more. The point estimates
+on the hideable nodes remain unvalidated against truth, by the nature of the
+passive setting.
