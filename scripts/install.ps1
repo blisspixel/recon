@@ -1,4 +1,4 @@
-# Easy one-line installer for recon (Windows PowerShell)
+﻿# Easy one-line installer for recon (Windows PowerShell)
 # Usage (recommended):
 #   powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
 

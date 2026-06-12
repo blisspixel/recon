@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # Easy one-line installer for recon (macOS / Linux)
 # Usage (recommended):
 #   curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
