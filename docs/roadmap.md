@@ -110,13 +110,13 @@ None is on the critical path of another except where noted.
    approach is publishable; the corpus tier stays maintainer-local. *Design:*
    [correlation.md](correlation.md) section 4.7 and the CAL track table below;
    the run produces a validation memo, aggregates only.
-2. **Statistical-assurance dossier** (assurance doc; capstone). A single ledger
-   that separates, for each claim recon makes, what is observed, what is
-   consistency (near-tautological, per CAL1), what is evidence-responsive
-   (CAL13), and what has empirical coverage (CAL3). Pure docs, fully publishable,
-   and the backbone of the paper. *Design:* a new `docs/statistical-assurance.md`,
-   drawing on [assurance-case.md](assurance-case.md) and
-   [correlation.md](correlation.md).
+2. **Statistical-assurance dossier** (assurance doc; capstone). *Shipped:*
+   [statistical-assurance.md](statistical-assurance.md) is the single ledger
+   that places each claim recon makes at the highest of four evidence tiers,
+   observed / consistency (near-tautological, per CAL1) / evidence-responsive
+   (CAL13) / empirical coverage (CAL3), and says where the support stops. It
+   makes the tier-4 gap explicit, which is what item 1 (oracle calibration) then
+   closes for the public-declaration node and the tenancy claims.
 3. **Evidence-semantics diagnostics** (2.2 candidate; the next new surface).
    Entropy-reduction per node, exact leave-one-evidence-group-out counterfactual
    influence (framed as evidence counterfactuals over the model, never causal
@@ -572,11 +572,12 @@ contract (`docs/operational-contract.md`: timeouts, caps, exit codes, cache and
 partial-result semantics, determinism), and the supply-chain / release-integrity
 doc (`docs/supply-chain.md`), and the data-handling policy
 (`docs/data-handling-policy.md`: what may and may not enter the public repo,
-down to comments and fixtures, each rule mapped to its enforcing mechanism).
-Still to write: a statistical-assurance dossier that separates what is observed,
-what is consistency, what is evidence-responsive, and what has empirical
-coverage. This is a standing track across the 2.x line, not a single release, and
-it adds no discovery surface.
+down to comments and fixtures, each rule mapped to its enforcing mechanism), and
+the statistical-assurance dossier (`docs/statistical-assurance.md`: each claim
+placed at the highest of four evidence tiers, observed / consistency /
+evidence-responsive / empirical coverage, with the tier-4 gap stated). This is a
+standing track across the 2.x line, not a single release, and it adds no
+discovery surface.
 
 Kept proportionate to what recon is. The exhaustive differential cross-check, over
 a few thousand enumerable states, is the right level of formal verification here;

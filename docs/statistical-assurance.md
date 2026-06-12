@@ -1,0 +1,134 @@
+# Statistical-assurance dossier
+
+This document is one honest ledger of what recon's numbers are backed by. For
+each statistical claim the tool emits, it names the highest tier of evidence that
+supports it, and says plainly where that support stops. It is written for a
+reader deciding how much weight to put on a recon posterior or interval, and for
+an external write-up that must not overstate what the passive channel can show.
+
+The discipline behind it is the calibration-legitimacy track (CAL1 to CAL14 in
+[correlation.md](correlation.md)): name what each number tests, never let a
+self-consistency check read as ground-truth calibration, and reserve the firmest
+words for the best-supported evidence. This dossier collects that discipline into
+a single map. The mechanism-to-test mapping is in
+[assurance-case.md](assurance-case.md); the interval coverage detail is in
+[interval-coverage.md](../validation/interval-coverage.md); the publication
+constraint that shapes how any of this can be reported is in
+[data-handling-policy.md](data-handling-policy.md).
+
+## The four tiers of evidence
+
+Every recon claim sits at one of four tiers. Higher tiers carry more weight; a
+claim is reported at the highest tier its evidence reaches, and the gap above it
+is stated, not hidden.
+
+1. **Observed.** A direct, re-queryable fact: a DNS record, a
+   certificate-transparency SAN, a fired fingerprint slug, an identity-endpoint
+   response. Anyone can re-run the underlying query and see the same observation.
+   This is the evidence layer, and it is the highest tier because it asserts
+   nothing beyond what the public channel literally returned.
+
+2. **Consistency.** Agreement between the deterministic pipeline and the Bayesian
+   layer: a high, non-sparse posterior is backed by a fired deterministic
+   detection. CAL1 shows this agreement is near-tautological under the
+   virtual-evidence construction (a high non-sparse posterior requires a fired
+   positive binding, which is itself a deterministic detection), so it tests the
+   inference plumbing and the binding wiring, not the CPT or likelihood values.
+   It is reported as a real but weak regression guard, never as calibration. The
+   full-corpus result to date is that every high-confidence posterior is backed
+   by a deterministic detection, which is near-tautological by construction.
+
+3. **Evidence-responsive.** The credible interval widens on sparse or hardened
+   evidence and narrows as the channel constrains the claim. CAL13 reserves this
+   term: it is a monotonicity property of the interval, shown two ways. The
+   differential-verification harness proves the interval is computed faithfully
+   from the model, exhaustively over the enumerable joint (nine binary nodes), and
+   the perturbation-coverage gate (v2.1.15) shows the 80% interval contains the
+   correct-world conditional under a plus-or-minus 20% likelihood-imprecision band
+   on every node, measured at or above 0.999 and gated at the nominal 0.80. This
+   is model-internal coverage against parameter misspecification, not ground-truth
+   calibration.
+
+4. **Empirical coverage.** Frequentist coverage against an independent
+   ground-truth label: over many domains whose true state is known, does the 80%
+   interval contain the truth about 80% of the time? This is the only tier that
+   can falsify the CPT and likelihood values themselves (CAL3). For most of
+   recon's claims this tier is structurally unavailable, and the dossier says so
+   rather than implying it is met.
+
+The honest shape of recon's assurance is: well-grounded at tiers 1 to 3
+everywhere, and tier 4 reachable on the claims where a public oracle can stand in
+for ground truth.
+
+## Why tier 4 is unavailable for most nodes, and reachable for one
+
+recon's adversarial-missingness model (the MNAR / LR=1 absence rule,
+[correlation.md](correlation.md) section 4.3) is the reason, and it splits the
+nodes:
+
+- **Hideable infrastructure** (`m365_tenant`, `google_workspace_tenant`,
+  `federated_identity`, `okta_idp`, `email_gateway_present`, `cdn_fronting`,
+  `aws_hosting`). A hardened operator can strip the public indicators of these,
+  so their absence is adversarially missing and the passive channel cannot
+  observe the ground truth on a hardened target. There is no label set to compute
+  frequentist coverage against, by the nature of the setting. These claims are
+  honest at tiers 1 to 3, tier 4 is not available, and the interval's widening is
+  the model declining to claim what it cannot see.
+
+- **Public declaration** (`email_security_policy_enforcing`). This node's evidence
+  is DMARC / SPF / MTA-STS policy, a public declaration whose absence cannot be
+  hidden from passive DNS (CAL14 made this node `declarative`, conditioning on
+  informative absence). Here the record is its own ground truth: an enforcing
+  DMARC policy is a fact anyone can read, not an inference. So tier 4 is reachable
+  for this node by calibrating against the authoritative records themselves
+  (CAL3 / CAL4), and the M365 / Google Workspace tenancy claims can be
+  corroborated against the providers' own identity endpoints in the same way. That
+  oracle-calibration harness is the open assurance item (see the build order in
+  [roadmap.md](roadmap.md#version-milestones-and-build-order)); when it lands, the
+  policy node and the tenancy corroboration move to tier 4 and this dossier
+  records the coverage number.
+
+## The ledger
+
+| Claim / node | Highest tier today | What backs it | Where it stops |
+|---|---|---|---|
+| Fired slugs and signals (the evidence layer) | Observed | The underlying DNS / CT / identity query, re-runnable | Heuristic catalogue; a rule can mis-fire, so each carries a vendor-doc reference |
+| `m365_tenant`, `google_workspace_tenant` | Evidence-responsive | Tiers 1 to 3; tenancy is corroborable against the providers' own endpoints | Tier 4 (oracle corroboration) is the open CAL3 / CAL4 item |
+| `okta_idp`, `federated_identity` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: federation indicators are hideable |
+| `email_gateway_present`, `cdn_fronting`, `aws_hosting` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: all hideable infrastructure |
+| `email_security_modern_provider` | Consistency | Pure propagation from parents (no own evidence), so it inherits its parents' tier | Not an independent measurement |
+| `email_security_policy_enforcing` | Evidence-responsive, tier 4 reachable | Tiers 1 to 3 now; the DMARC / SPF / MTA-STS record is its own ground truth | Tier 4 pending the oracle-calibration run |
+| The 80% credible interval (all nodes) | Evidence-responsive | Differential verification plus perturbation coverage (v2.1.15) | Frequentist ground-truth coverage (tier 4) only where a public oracle exists |
+| Cohort-summary prevalences (PV1) | Observed plus evidence-responsive | Observability-adjusted rates over the caller's set, with denominators | Ecological-fallacy discipline; never a population claim |
+
+## What each tier licenses, and what it does not
+
+- **Observed** licenses "the public channel returned this." It does not license
+  "the organization runs this," because a record can be stale or a slug can
+  mis-fire; that is why every detection carries a re-verification reference.
+- **Consistency** licenses "the two layers agree." It does not license "the CPT
+  values are right," because the agreement is near-tautological (CAL1). Reading
+  the consistency number as calibration is the specific error this dossier exists
+  to prevent.
+- **Evidence-responsive** licenses "the interval honestly tracks how much the
+  channel constrains the claim, and absorbs the acknowledged likelihood
+  imprecision." It does not license "the interval has 80% frequentist coverage
+  against ground truth," which is tier 4.
+- **Empirical coverage** licenses the frequentist statement. It is claimed only
+  where measured, and today it is the open frontier.
+
+## The open frontier
+
+The single most valuable remaining assurance item is the CAL3 / CAL4 oracle
+calibration: compute empirical interval coverage and calibration for the
+public-declaration node and the tenancy claims against authoritative public
+oracles (the DMARC / SPF / MTA-STS records as their own truth; the Microsoft and
+Google identity endpoints for tenancy), reported with uncertainty (Wilson or
+bootstrap), aggregates only, no real apexes committed (see
+[data-handling-policy.md](data-handling-policy.md)). Until it lands, this dossier
+reports tier 4 as open for every claim, and the firmest words stay reserved for
+tiers 1 to 3.
+
+This is the honest position: recon's numbers are well-supported where the passive
+channel and an exact, verified inference engine can support them, and recon says
+where that support ends rather than implying more.
