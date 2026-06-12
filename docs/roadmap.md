@@ -102,17 +102,19 @@ enlarging the surface.
 Highest trust-per-effort first, each item noting where its detailed design lives.
 None is on the critical path of another except where noted.
 
-1. **CAL3 / CAL4 reference calibration** (assurance; highest open value). The one
+1. **CAL3 / CAL4 reference calibration** (assurance). *Shipped and run.* The one
    check that tests the CPT values against external truth rather than
    self-consistency: calibration of the email-policy posterior against the
-   authoritative DMARC record (its own ground truth), with the tenancy claims
-   corroborable against the providers' own identity endpoints. *Harness shipped:*
-   `validation/reference_calibration.py` (pure label / Wilson / calibration logic,
-   unit-tested in `tests/test_reference_calibration.py`; aggregates-only network
-   orchestration), memo in `validation/reference-calibration.md`. *Remaining:* the
-   calibration run itself stays maintainer-local against the gitignored corpus
-   and produces an aggregate-only follow-up memo, after which the
-   statistical-assurance dossier moves this node to tier 4.
+   authoritative DMARC record (its own ground truth).
+   `validation/reference_calibration.py` carries the pure label / Wilson /
+   calibration logic (unit-tested in `tests/test_reference_calibration.py`), and
+   the maintainer-local run landed: two independent corpus samples agree at ECE
+   about 0.077, agreement about 1.0, the miss in the conservative
+   (under-confident) direction, so `email_security_policy_enforcing` now sits at
+   tier 4 in the dossier (`validation/reference-calibration.md`, aggregates only).
+   *Remaining extensions:* corroborate the tenancy claims against the providers'
+   identity endpoints, and the optional per-vertical stratification (the
+   `by-vertical/` corpus lists are the input).
 2. **Statistical-assurance dossier** (assurance doc; capstone). *Shipped:*
    [statistical-assurance.md](statistical-assurance.md) is the single ledger
    that places each claim recon makes at the highest of four evidence tiers,

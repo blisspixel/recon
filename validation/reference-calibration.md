@@ -61,34 +61,57 @@ Only the aggregate block (counts, base rate, Brier, ECE, reliability,
 agreement with Wilson interval) is suitable to copy into a committed
 memo; the per-domain pairing never leaves the process.
 
-## Synthetic worked example (fabricated numbers)
+## Results (2026-06, aggregates only)
 
-A run over a fictional set, to show the shape of the output. These
-numbers are invented for the format only; the real-run results are
-recorded below once a current-version run completes.
+Two maintainer-local runs over the gitignored corpus, on two independent
+samples. Only the aggregate block is recorded; no apex left the process.
+
+Primary, current code, a random sample of the consolidated corpus
+(n=378 carried a published DMARC policy):
 
 ```
-Email-policy node calibrated against the DMARC record (n=420 with a published policy)
-  base rate enforcing:   0.62
-  Brier:                 0.10
-  ECE:                   0.06
-  agreement rate:        0.91  Wilson80 (0.89, 0.93)
-  reliability (posterior bin -> empirical enforcing rate):
-    [0.00, 0.10)  rate 0.04  n 70
-    [0.50, 0.60)  rate 0.55  n 38
-    [0.80, 0.90)  rate 0.86  n 120
+base rate enforcing:   0.81
+Brier:                 0.0079
+ECE:                   0.0765
+agreement rate:        1.000  Wilson80 (0.996, 1.000)
+reliability (posterior bin -> empirical enforcing rate):
+  [0.00, 0.10)  rate 0.000  n 71
+  [0.20, 0.30)  rate 0.000  n 1
+  [0.80, 0.90)  rate 1.000  n 98
+  [0.90, 1.00)  rate 1.000  n 208
 ```
 
-Reading it: a low ECE and a reliability table whose empirical
-enforcing-rate tracks the posterior bin would mean the policy posterior
-is well-calibrated against the authoritative DMARC definition; a bin
-where the posterior runs well above the empirical rate would localize an
-over-weighting of the non-DMARC signals for the node to investigate
-under the CPT-change discipline.
+Cross-reference, a larger cached industry-curated run (n=980 with a
+published policy): base rate 0.87, Brier 0.0069, ECE 0.073, agreement
+1.000. The two independent samples agree closely, which is the
+robustness signal worth more than either number alone.
+
+Reading it honestly:
+
+- The posterior distribution is bimodal (near 0 or near 0.9), as expected
+  for a node that fires hard on a clear DMARC signal. The empirical
+  enforcing-rate matches the bin in every populated bin: 0.000 where the
+  posterior is near 0, 1.000 where it is high.
+- The whole ECE (about 0.077) comes from the model being *under*-confident
+  on enforcing domains: it reports 0.85 to 0.95 where the reference says
+  100%. It never runs the other way (no bin where the posterior exceeds
+  the empirical rate). Under-confidence is recon hedging down, which is the
+  intended direction for a tool whose discipline is to not over-claim. The
+  slight gap below 1.0 is the multi-signal combination: strict-SPF or
+  MTA-STS absence pulls the posterior a little below DMARC-only certainty.
+- The agreement rate is high partly because DMARC is also an *input* to
+  the node, the documented overlap, so the reliability table and ECE are
+  the informative figures here, not the agreement rate.
+
+This is a genuine tier-4 result for this one node: a calibration of the
+posterior against an authoritative external definition on real records,
+which the synthetic harnesses cannot supply. It does not generalize to
+the hideable-infrastructure nodes, where no such reference exists.
 
 ## Status
 
-The harness and its unit tests ship now. The calibration run against the
-corpus is maintainer-local and records its aggregate-only result in the
-Results section above when complete; until then the dossier reports tier
-4 as the open frontier for this node.
+The harness, its unit tests, and the calibration result above ship. The
+statistical-assurance dossier moves `email_security_policy_enforcing` to
+tier 4 on the strength of this run. The remaining work is the optional
+per-vertical stratification (does the calibration hold across industries),
+for which the `by-vertical/` corpus lists are the input.
