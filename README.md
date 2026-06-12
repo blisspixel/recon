@@ -111,6 +111,22 @@ release; the catalog grows from observed gaps, not invented entries.
 
 ## Install
 
+**One-line install**
+
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
+```
+
+**macOS / Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
+```
+
+After the installer finishes, open a **new** terminal and run `recon doctor`.
+
+---
+
 **recon works on Windows, macOS, and Linux.**
 
 It is a pure-Python CLI (plus optional MCP server). No compilation or external services required.
