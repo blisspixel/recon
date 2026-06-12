@@ -44,11 +44,18 @@ This file is forward-looking. Shipped work belongs in
 > all-absent baseline, never to a confident false positive by hiding); the
 > CAL3/CAL4 reference-calibration run landed (`email_security_policy_enforcing`
 > at tier 4 for the strict-SPF + MTA-STS residual only); and the data-handling
-> policy and statistical-assurance dossier docs shipped. What is still open is
-> operator-paced or standing: the provider-endpoint corroboration and optional
-> per-vertical stratification for reference calibration, the C3 CT-enabled corpus
-> pass, the candidate diagnostics, and the arXiv write-up. This file is the plan
-> from here.
+> policy and statistical-assurance dossier docs shipped. The calibration
+> harness set is now complete: the conformal-coverage complement
+> (`validation/conformal_coverage.py`), the leave-one-unit-out inference
+> primitive (`infer(..., masked_units=...)`) with the held-out residual mode in
+> the reference calibration, and the tenancy corroboration harness
+> (`validation/tenancy_reference_calibration.py`; M365 two-class via the
+> channel split, GWS honestly one-sided) all ship with unit-tested pure logic.
+> What is still open is operator-paced or standing: the maintainer-local runs
+> of those harnesses (held-out residual, tenancy corroboration, per-vertical
+> stratification, conformal pass — collection now, not construction), the C3
+> CT-enabled corpus pass, the candidate diagnostics (the 2.2 surface), and the
+> arXiv write-up. This file is the plan from here.
 
 ## Version milestones and build order
 
@@ -120,14 +127,24 @@ None is on the critical path of another except where noted.
    about 0.077, agreement about 1.0, the miss in the conservative
    (under-confident) direction, so `email_security_policy_enforcing` now sits at
    tier 4 in the dossier (`validation/reference-calibration.md`, aggregates only).
-   *Remaining extensions:* corroborate the tenancy claims against the providers'
-   identity endpoints, and the optional per-vertical stratification (the
-   `by-vertical/` corpus lists are the input). A third, surfaced by the
-   2026-06 literature review, is a distribution-free conformal coverage check on
-   the labelable nodes (the email-policy node now, the tenancy nodes once the
-   endpoint corroboration gives them a reference label): a finite-sample
-   coverage statement beside the Bayesian interval, honest that its guarantee is
-   conditional on exchangeability and so is not claimed for hardened targets. See
+   *Extensions, all built; runs pending.* The held-out residual mode ships
+   inside the same harness (the `dmarc_policy` unit masked via the new
+   `infer(..., masked_units=...)` primitive, so predictor and label are
+   disjoint — the clean tier-4 construction). The tenancy corroboration ships
+   as `validation/tenancy_reference_calibration.py`: the `m365_tenant`
+   posterior computed from the DNS channel alone, calibrated against
+   Microsoft's two-class endpoint attestation; `google_workspace_tenant` is
+   honestly one-sided (recall on attested-federated only — the passive Google
+   channel never attests managed tenancy and has no authoritative negative,
+   so it cannot carry a calibration). The distribution-free conformal coverage
+   check surfaced by the 2026-06 literature review ships as
+   `validation/conformal_coverage.py` (a finite-sample coverage statement
+   beside the Bayesian interval, honest that its guarantee is conditional on
+   exchangeability and so is not claimed for hardened targets, with a
+   deliberate falsifiability split). Per-vertical stratification is a
+   `--stratify-dir` mode on both calibration harnesses (the `by-vertical/`
+   corpus lists are the input). What remains for all of these is the
+   maintainer-local corpus runs — collection, not construction. See
    the positioning note below and [related-work.md](related-work.md).
 2. **Statistical-assurance dossier** (assurance doc; capstone). *Shipped:*
    [statistical-assurance.md](statistical-assurance.md) is the single ledger
@@ -716,12 +733,15 @@ guarantees that hold under hiding, calibration only where a self-defining
 reference exists) is the principle-compliance methodology that the epistemic-
 uncertainty-calibration line argues for. The implication worth acting on: recon's
 nodes tier by whether an external reference label exists, and that tier decides
-the guarantee. Provider-attested tenancy and the public-declaration email-policy
-node admit calibration and, newly, a distribution-free conformal coverage check;
-the hideable nodes carry only the structural guarantees. The conformal complement
-is a small validation-only harness (a quantile of sorted nonconformity scores, no
-new dependency, maintainer-local, aggregates only) and is recorded as a candidate
-extension on reference calibration above, not yet built. Nothing else in the
+the guarantee. Provider-attested M365 tenancy and the public-declaration
+email-policy node admit calibration and, newly, a distribution-free conformal
+coverage check (Google tenancy is one-sided — the channel has no authoritative
+negative — so it carries a recall check, not a calibration); the hideable nodes
+carry only the structural guarantees. The conformal complement is a small
+validation-only harness (a quantile of sorted nonconformity scores, no new
+dependency, maintainer-local, aggregates only), shipped as
+`validation/conformal_coverage.py` with its falsifiability split, unit-tested
+in `tests/test_conformal_coverage.py`. Nothing else in the
 review changed the build or validate plan; it sharpened the framing.
 
 **Working title candidates** (humble, descriptive): "Calibrated, Provenance-Aware
