@@ -87,6 +87,18 @@ Before running `scripts/release.py`:
 - [ ] `docs/schema.md` has been updated if any top-level JSON field changed.
 - [ ] README examples and docs references still match the shipped CLI behavior.
 
+After the tag is published and the PyPI release exists, refresh the Homebrew
+formula so `brew install` tracks the new version, then copy it to the tap repo:
+
+- [ ] `python scripts/update_homebrew_formula.py` (rewrites the sdist `url` +
+      `sha256` in `packaging/homebrew/recon.rb` from PyPI), commit the change.
+- [ ] Copy `packaging/homebrew/recon.rb` to `blisspixel/homebrew-tap`'s
+      `Formula/recon.rb` (see `packaging/homebrew/README.md`). Verify with
+      `python scripts/update_homebrew_formula.py --check`.
+
+The `pipx` / `uv` / `pip` install paths need no per-release action — they
+resolve the latest from PyPI automatically.
+
 ---
 
 ## Hotfix releases
