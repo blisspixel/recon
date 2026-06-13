@@ -6,12 +6,13 @@ ToolAnnotations values, and tool docstrings.
 
 from __future__ import annotations
 
-import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 pytest.importorskip("mcp")
+
+from mcp.server.fastmcp.exceptions import ToolError
 
 from recon_tool.models import (
     ConfidenceLevel,
@@ -88,8 +89,7 @@ class TestAssessExposure:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_returns_valid_json(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await assess_exposure("northwindtraders.com")
-        data = json.loads(result)
+        data = await assess_exposure("northwindtraders.com")
         assert "domain" in data
         assert "email_posture" in data
         assert "identity_posture" in data
@@ -102,8 +102,7 @@ class TestAssessExposure:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_posture_score_in_range(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await assess_exposure("northwindtraders.com")
-        data = json.loads(result)
+        data = await assess_exposure("northwindtraders.com")
         assert 0 <= data["posture_score"] <= 100
 
     @pytest.mark.asyncio
@@ -113,7 +112,7 @@ class TestAssessExposure:
         # much it could understate the true posture, so "quiet" isn't read as
         # "weak". (SAMPLE_INFO has no email gateway, so the floor is non-trivial.)
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        data = json.loads(await assess_exposure("northwindtraders.com"))
+        data = await assess_exposure("northwindtraders.com")
         obs = data["observability"]
         assert {"score_is_lower_bound", "unconfirmable_absent_points", "score_ceiling", "note"} <= set(obs)
         assert obs["unconfirmable_absent_points"] >= 0
@@ -122,8 +121,8 @@ class TestAssessExposure:
 
     @pytest.mark.asyncio
     async def test_validation_failure(self) -> None:
-        result = await assess_exposure("not a domain")
-        assert result.startswith("Error:")
+        with pytest.raises(ToolError):
+            await assess_exposure("not a domain")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -133,16 +132,15 @@ class TestAssessExposure:
             message="No data",
             error_type="all_sources_failed",
         )
-        result = await assess_exposure("unknown.com")
-        assert "No information found for unknown.com" in result
+        with pytest.raises(ToolError, match=r"No information found for unknown\.com"):
+            await assess_exposure("unknown.com")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_unexpected_exception(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = RuntimeError("connection timeout")
-        result = await assess_exposure("example.com")
-        assert "Error looking up example.com" in result
-        assert "internal error" in result
+        with pytest.raises(ToolError, match=r"Error looking up example\.com"):
+            await assess_exposure("example.com")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -153,8 +151,8 @@ class TestAssessExposure:
         # Clear cache but keep rate limit
         _cache_clear()
         # Second call should be rate limited
-        result = await assess_exposure("northwindtraders.com")
-        assert "Rate limited" in result
+        with pytest.raises(ToolError, match="Rate limited"):
+            await assess_exposure("northwindtraders.com")
 
 
 # ── find_hardening_gaps tests ──────────────────────────────────────────
@@ -165,8 +163,7 @@ class TestFindHardeningGaps:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_returns_valid_json(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await find_hardening_gaps("northwindtraders.com")
-        data = json.loads(result)
+        data = await find_hardening_gaps("northwindtraders.com")
         assert "domain" in data
         assert "gaps" in data
         assert "disclaimer" in data
@@ -180,8 +177,7 @@ class TestFindHardeningGaps:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_gaps_have_valid_structure(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await find_hardening_gaps("northwindtraders.com")
-        data = json.loads(result)
+        data = await find_hardening_gaps("northwindtraders.com")
         for gap in data["gaps"]:
             assert "category" in gap
             assert "severity" in gap
@@ -190,8 +186,8 @@ class TestFindHardeningGaps:
 
     @pytest.mark.asyncio
     async def test_validation_failure(self) -> None:
-        result = await find_hardening_gaps("not a domain")
-        assert result.startswith("Error:")
+        with pytest.raises(ToolError):
+            await find_hardening_gaps("not a domain")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -201,16 +197,15 @@ class TestFindHardeningGaps:
             message="No data",
             error_type="all_sources_failed",
         )
-        result = await find_hardening_gaps("unknown.com")
-        assert "No information found for unknown.com" in result
+        with pytest.raises(ToolError, match=r"No information found for unknown\.com"):
+            await find_hardening_gaps("unknown.com")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_unexpected_exception(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = RuntimeError("timeout")
-        result = await find_hardening_gaps("example.com")
-        assert "Error looking up example.com" in result
-        assert "internal error" in result
+        with pytest.raises(ToolError, match=r"Error looking up example\.com"):
+            await find_hardening_gaps("example.com")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -218,8 +213,8 @@ class TestFindHardeningGaps:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         await find_hardening_gaps("northwindtraders.com")
         _cache_clear()
-        result = await find_hardening_gaps("northwindtraders.com")
-        assert "Rate limited" in result
+        with pytest.raises(ToolError, match="Rate limited"):
+            await find_hardening_gaps("northwindtraders.com")
 
 
 # ── compare_postures tests ─────────────────────────────────────────────
@@ -233,8 +228,7 @@ class TestComparePostures:
             (SAMPLE_INFO, SAMPLE_RESULTS),
             (SAMPLE_INFO_B, SAMPLE_RESULTS_B),
         ]
-        result = await compare_postures("northwindtraders.com", "contoso.com")
-        data = json.loads(result)
+        data = await compare_postures("northwindtraders.com", "contoso.com")
         assert "domain_a" in data
         assert "domain_b" in data
         assert "metrics" in data
@@ -250,8 +244,8 @@ class TestComparePostures:
             message="No data",
             error_type="all_sources_failed",
         )
-        result = await compare_postures("bad.com", "contoso.com")
-        assert "Could not resolve domain_a" in result
+        with pytest.raises(ToolError, match=r"No information found for bad\.com"):
+            await compare_postures("bad.com", "contoso.com")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -261,8 +255,8 @@ class TestComparePostures:
             (SAMPLE_INFO, SAMPLE_RESULTS),
             ReconLookupError(domain="bad.com", message="No data", error_type="all_sources_failed"),
         ]
-        result = await compare_postures("northwindtraders.com", "bad.com")
-        assert "Could not resolve domain_b" in result
+        with pytest.raises(ToolError, match=r"No information found for bad\.com"):
+            await compare_postures("northwindtraders.com", "bad.com")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -272,19 +266,19 @@ class TestComparePostures:
             message="No data",
             error_type="all_sources_failed",
         )
-        result = await compare_postures("bad.com", "worse.com")
         # domain_a fails first (fail-fast)
-        assert "Could not resolve domain_a" in result
+        with pytest.raises(ToolError, match=r"No information found for bad\.com"):
+            await compare_postures("bad.com", "worse.com")
 
     @pytest.mark.asyncio
     async def test_validation_failure_domain_a(self) -> None:
-        result = await compare_postures("not a domain", "contoso.com")
-        assert result.startswith("Error:")
+        with pytest.raises(ToolError):
+            await compare_postures("not a domain", "contoso.com")
 
     @pytest.mark.asyncio
     async def test_validation_failure_domain_b(self) -> None:
-        result = await compare_postures("contoso.com", "not a domain")
-        assert result.startswith("Error:")
+        with pytest.raises(ToolError):
+            await compare_postures("contoso.com", "not a domain")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -293,8 +287,8 @@ class TestComparePostures:
         # Resolve domain_a once to set rate limit
         await assess_exposure("northwindtraders.com")
         _cache_clear()
-        result = await compare_postures("northwindtraders.com", "contoso.com")
-        assert "Rate limited" in result
+        with pytest.raises(ToolError, match="Rate limited"):
+            await compare_postures("northwindtraders.com", "contoso.com")
 
 
 # ── ToolAnnotations tests ──────────────────────────────────────────────
