@@ -14,10 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CI-gated. `formatter.py` is down to ~2160 lines (from 4413): the markdown
   report renderer moved to `formatter_markdown.py` and the non-Rich data
   serializers (the json-dict / json / plain / CSV layer, including the shared
-  `format_tenant_dict`) to `formatter_serialize.py`. `cli.py` decomposition began
-  under a sibling-module pattern — the `cache` Typer sub-app moved to
-  `cli_cache.py` (it defines and exports the sub-app; `cli.py` registers it). No
-  behavior or contract change. See the roadmap "Module decomposition" section.
+  `format_tenant_dict`) to `formatter_serialize.py`. `cli.py` is down from 3943
+  to ~2830: all four Typer sub-apps moved to sibling modules under a pattern
+  where the sub-app defines and exports its `Typer` and `cli.py` registers it —
+  `cache` → `cli_cache.py`, `mcp` → `cli_mcp.py`, `signals` → `cli_signals.py`,
+  `fingerprints` → `cli_fingerprints.py` — with the one cross-module helper
+  (`_fmt_exc`) lifted to `cli_shared.py` first to avoid a cycle. No behavior or
+  contract change. See the roadmap "Module decomposition" section.
 
 ## [2.2.0] - 2026-06-13
 
