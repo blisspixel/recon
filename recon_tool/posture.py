@@ -12,7 +12,6 @@ Set RECON_CONFIG_DIR to override the custom directory.
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -259,9 +258,10 @@ def load_posture_rules() -> tuple[_PostureRule, ...]:
     Results are cached for the process lifetime. Call reload_posture()
     to pick up changes in long-lived processes (MCP server).
     """
+    from recon_tool.paths import config_dir
+
     data_path = Path(__file__).parent / "data" / "posture.yaml"
-    custom_dir = os.environ.get("RECON_CONFIG_DIR")
-    custom_path = Path(custom_dir) / "posture.yaml" if custom_dir else Path.home() / ".recon" / "posture.yaml"
+    custom_path = config_dir() / "posture.yaml"
 
     entries: list[_PostureRule] = []
     entries.extend(_load_from_path(data_path))

@@ -804,12 +804,11 @@ def _doctor_client(client: str) -> None:
 
 def _doctor_fix() -> None:
     """Scaffold template fingerprints.yaml and signals.yaml in config dir."""
-    import os
-    from pathlib import Path
+
+    from recon_tool.paths import config_dir as _config_dir
 
     console = get_console()
-    config_dir_env = os.environ.get("RECON_CONFIG_DIR")
-    config_dir = Path(config_dir_env) if config_dir_env else Path.home() / ".recon"
+    config_dir = _config_dir()
 
     try:
         config_dir.mkdir(parents=True, exist_ok=True)
@@ -899,7 +898,6 @@ def mcp_install_command(
     `mcp.json`-shaped config so a fresh install of a supported AI
     client picks up recon without any copy-paste.
     """
-    import os
     from pathlib import Path
 
     from recon_tool.mcp_install import (
@@ -1617,7 +1615,9 @@ def fingerprints_test(
 
     using_example_corpus = False
     if corpus is None:
-        user_corpus = _Path.home() / ".recon" / "corpus.txt"
+        from recon_tool.paths import config_dir as _config_dir
+
+        user_corpus = _config_dir() / "corpus.txt"
         example = _Path(__file__).parent.parent / "tests" / "fixtures" / "corpus-example.txt"
         if user_corpus.exists():
             corpus_path = user_corpus
@@ -2120,9 +2120,10 @@ def _doctor_fingerprint_db_check() -> DoctorCheck:
 
 
 def _doctor_custom_path(filename: str) -> Path:
-    """Resolve a custom config file path under RECON_CONFIG_DIR or ~/.recon."""
-    custom_dir = os.environ.get("RECON_CONFIG_DIR")
-    return Path(custom_dir) / filename if custom_dir else Path.home() / ".recon" / filename
+    """Resolve a custom config file path in the config dir (env / legacy / XDG)."""
+    from recon_tool.paths import config_dir
+
+    return config_dir() / filename
 
 
 def _doctor_custom_fingerprints_check() -> DoctorCheck:

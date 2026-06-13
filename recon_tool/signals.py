@@ -16,7 +16,6 @@ Set RECON_CONFIG_DIR to override the custom directory.
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -355,9 +354,10 @@ def load_signals() -> tuple[Signal, ...]:
     (short-lived process). In the MCP server (long-lived), call
     reload_signals() to pick up changes.
     """
+    from recon_tool.paths import config_dir
+
     data_path = Path(__file__).parent / "data" / "signals.yaml"
-    custom_dir = os.environ.get("RECON_CONFIG_DIR")
-    custom_path = Path(custom_dir) / "signals.yaml" if custom_dir else Path.home() / ".recon" / "signals.yaml"
+    custom_path = config_dir() / "signals.yaml"
 
     entries: list[Signal] = []
     entries.extend(_load_from_path(data_path))

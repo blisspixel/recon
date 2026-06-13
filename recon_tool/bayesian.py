@@ -103,7 +103,6 @@ _CONFLICT_N_EFF_PENALTY = 1.5
 # Default file paths. Operators can pass alternates to ``load_network``
 # / ``load_priors_override`` for testing.
 _DEFAULT_NETWORK_PATH = Path(__file__).resolve().parent / "data" / "bayesian_network.yaml"
-_DEFAULT_PRIORS_OVERRIDE_PATH = Path.home() / ".recon" / "priors.yaml"
 
 
 # ── Data structures ────────────────────────────────────────────────────
@@ -544,13 +543,18 @@ def _enumerate_parent_assignments(parents: tuple[str, ...]) -> set[str]:
 
 
 def load_priors_override(path: Path | None = None) -> dict[str, float]:
-    """Load operator-supplied prior overrides from ``~/.recon/priors.yaml``.
+    """Load operator-supplied prior overrides from ``priors.yaml`` in the
+    config directory (RECON_CONFIG_DIR / legacy ~/.recon / XDG config).
 
     Returns an empty dict when the file does not exist or is malformed.
     Logs a warning on parse failure so the operator is not silently
     ignored. Never raises — bad override file should not crash inference.
     """
-    target = path or _DEFAULT_PRIORS_OVERRIDE_PATH
+    if path is None:
+        from recon_tool.paths import config_dir
+
+        path = config_dir() / "priors.yaml"
+    target = path
     if not target.exists():
         return {}
     try:
