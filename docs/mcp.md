@@ -124,6 +124,29 @@ Domain-analysis tools are cache-first and may resolve the domain when no fresh
 cache entry exists. The server includes a bounded TTL cache (120s) and
 per-domain rate limiting.
 
+### Tool output: structured content and errors
+
+Aligned with the MCP 2025-11-25 specification, the data tools return their
+results as navigable `structuredContent` with a generated per-tool
+`outputSchema`, so a client can consume and validate fields directly rather than
+re-parsing a JSON string. For backward compatibility each result also carries the
+same payload as serialized-JSON text content, so a text-only consumer still
+works. The structured tools are the catalog, posture, graph, ephemeral, and
+inference tools (`get_fingerprints`, `get_signals`, `explain_signal`,
+`assess_exposure`, `find_hardening_gaps`, `compare_postures`, `analyze_posture`,
+`discover_fingerprint_candidates`, `test_hypothesis`, `simulate_hardening`,
+`cluster_verification_tokens`, `get_infrastructure_clusters`, `export_graph`,
+`get_posteriors`, and the ephemeral-fingerprint tools).
+
+The narrative tools render prose or DOT and intentionally return text:
+`lookup_tenant` (its `format` selects `text` / `json` / `markdown`),
+`explain_dag` (Rich tree or Graphviz DOT), `chain_lookup`, and `reload_data`.
+
+Errors are reported the spec-correct way: an invalid argument, an unresolvable or
+uncached domain, a rate-limit, or an internal failure comes back as a tool result
+flagged `isError: true` (a raised `ToolError`), not as a success-shaped
+`{"error": ...}` payload, so the model can recognize the failure and self-correct.
+
 ### Read-only vs stateful (autoApprove guidance)
 
 Each tool carries a `readOnlyHint` annotation so a consuming agent can reason
