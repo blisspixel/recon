@@ -14,6 +14,7 @@ import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from mcp.server.fastmcp.exceptions import ToolError
 
 from recon_tool.models import (
     ConfidenceLevel,
@@ -144,8 +145,8 @@ class TestExplainDag:
 class TestClusterVerificationTokens:
     @pytest.mark.asyncio
     async def test_empty_input_errors(self) -> None:
-        data = json.loads(await cluster_verification_tokens([]))
-        assert "error" in data
+        with pytest.raises(ToolError, match="At least one domain"):
+            await cluster_verification_tokens([])
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -155,7 +156,7 @@ class TestClusterVerificationTokens:
             (_info("contoso.com", tokens=shared), SAMPLE_RESULTS),
             (_info("northwindtraders.com", tokens=shared), SAMPLE_RESULTS),
         ]
-        data = json.loads(await cluster_verification_tokens(["contoso.com", "northwindtraders.com"]))
+        data = await cluster_verification_tokens(["contoso.com", "northwindtraders.com"])
         assert data["errors"] == []
         assert "disclaimer" in data
         # Both domains share the token, so each lists the other as a peer.
@@ -166,5 +167,5 @@ class TestClusterVerificationTokens:
     async def test_too_many_domains_rejected(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (_info("example.com"), SAMPLE_RESULTS)
         many = [f"d{i}.com" for i in range(101)]
-        data = json.loads(await cluster_verification_tokens(many))
-        assert "Too many domains" in data["error"]
+        with pytest.raises(ToolError, match="Too many domains"):
+            await cluster_verification_tokens(many)

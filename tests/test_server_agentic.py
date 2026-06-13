@@ -461,6 +461,5 @@ class TestClusterVerificationTokensCap:
         from recon_tool.server import cluster_verification_tokens
 
         domains = [f"d{i}.example.com" for i in range(101)]  # > 100 distinct
-        payload = json.loads(await cluster_verification_tokens(domains))
-        assert "error" in payload
-        assert "max" in payload["error"].lower()
+        with pytest.raises(ToolError, match="max"):
+            await cluster_verification_tokens(domains)
