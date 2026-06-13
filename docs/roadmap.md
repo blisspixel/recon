@@ -4,9 +4,15 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
-> **Status (2026-06):** v2.1.18 is the current release. The v2.0 schema lock, the
-> v2.1 cohort summary (`recon batch --summary`), and the v2.1.1-v2.1.18 hardening,
-> security, and assurance patches have all shipped; per-release detail is in
+> **Status (2026-06):** v2.2.0 is the current release (shipped 2026-06-13 to
+> PyPI). It delivered the evidence-semantics diagnostics (per-node entropy
+> reduction, exact leave-one-unit-out counterfactuals, graph partition
+> stability), the MCP tool-output contract revision (navigable
+> `structuredContent` + per-tool `outputSchema` + `isError` across the eighteen
+> data tools, aligned to MCP 2025-11-25), the 2026 CLI-ergonomics pass, and OSC 8
+> hyperlinks. The v2.0 schema lock, the v2.1 cohort summary
+> (`recon batch --summary`), and the v2.1.x through v2.2.0 hardening, security,
+> and assurance work have all shipped; per-release detail is in
 > [CHANGELOG.md](../CHANGELOG.md) and upgrade notes in
 > [migration-v2.md](migration-v2.md).
 >
@@ -51,14 +57,23 @@ This file is forward-looking. Shipped work belongs in
 > the reference calibration, and the tenancy corroboration harness
 > (`validation/tenancy_reference_calibration.py`; M365 two-class via the
 > channel split, GWS honestly one-sided) all ship with unit-tested pure logic.
-> The evidence-semantics diagnostics (the 2.2 surface) are also built — per-node
-> entropy reduction, exact leave-one-unit-out counterfactuals, and graph
-> partition stability, as additive JSON / MCP fields — so the next release cut
-> is 2.2.0. What is still open is operator-paced or standing: the
-> maintainer-local runs of the calibration harnesses (held-out residual,
-> tenancy corroboration, per-vertical stratification, conformal pass —
-> collection now, not construction), the C3 CT-enabled corpus pass, and the
-> arXiv write-up. This file is the plan from here.
+> The evidence-semantics diagnostics (the 2.2 surface) were the headline of
+> v2.2.0, shipped 2026-06-13 alongside the MCP structured-output contract
+> revision and OSC 8 hyperlinks.
+>
+> **Post-2.2.0, the active engineering track is the god-file decomposition**
+> (see the dedicated section below): `formatter.py` is down from 4413 to ~2160
+> lines across five extracted modules (`formatter_exposure`,
+> `formatter_classify`, `formatter_classify_tables`, `formatter_markdown`,
+> `formatter_serialize`), and `cli.py` decomposition has begun with the `cache`
+> sub-app split into `cli_cache.py` under a proven sibling-module pattern. Every
+> split is golden-byte-identical and CI-gated by the file-size ratchet.
+>
+> What is otherwise open is operator-paced or standing: the maintainer-local
+> runs of the calibration harnesses (held-out residual, tenancy corroboration,
+> per-vertical stratification, conformal pass — collection now, not
+> construction), the C3 CT-enabled corpus pass, and the arXiv write-up. This
+> file is the plan from here.
 
 ## Version milestones and build order
 
@@ -91,13 +106,20 @@ rules are in [release-process.md](release-process.md#version-numbering).
 
 ### Where the next numbers sit
 
-- **2.2 (triggered; awaiting the release cut).** A minor bump is earned by a
-  coherent new *stable surface*, not by more internal hardening, which stays
-  patch-level. The evidence-semantics diagnostics earned it and are built:
-  per-node entropy-reduction surfacing, exact leave-one-unit-out
-  counterfactuals, and graph partition stability, as additive JSON / MCP
-  fields (see the build order below). The next release cut is therefore
-  2.2.0. Later minors wait for the next named surface.
+- **2.2 (shipped 2026-06-13).** A minor bump is earned by a coherent new
+  *stable surface*, not by internal hardening, which stays patch-level. v2.2.0
+  carried two surfaces: the evidence-semantics diagnostics (per-node entropy
+  reduction, exact leave-one-unit-out counterfactuals, graph partition
+  stability, as additive JSON / MCP fields) and the MCP tool-output contract
+  revision (navigable `structuredContent` + per-tool `outputSchema` + `isError`
+  across the data tools; see [mcp.md](mcp.md)). The 2026 CLI-ergonomics pass and
+  OSC 8 hyperlinks rode along.
+- **2.3+ (no surface currently queued).** The next minor waits for the next
+  genuinely new named surface, and none is planned: the project is in its
+  deepen-not-expand phase. The active post-2.2.0 work is either internal (the
+  god-file decomposition, patch-level) or produces assurance memos and a paper
+  rather than a user-facing surface, so the version number may rest while that
+  work proceeds. A minor is cut only when a coherent new surface earns it.
 - **3.0 (intentionally deferred, possibly never).** A major bump is forced only by
   an unavoidable *breaking* change to a stable surface, with the deprecation
   window the stability policy requires. The pre-2.0 schema-hardening (SH1 to SH9)
@@ -118,74 +140,40 @@ enlarging the surface.
 
 ### Build order for the remaining work
 
-Highest trust-per-effort first, each item noting where its detailed design lives.
-None is on the critical path of another except where noted.
+The v2.2.0 assurance and diagnostics items (the CAL3/CAL4 reference calibration,
+the statistical-assurance dossier, and the evidence-semantics diagnostics) have
+shipped; their detail is kept in [Assurance and trust hardening](#assurance-and-trust-hardening-the-post-20-north-star)
+and the `validation/` memos for rationale. What remains, in logical order:
 
-1. **CAL3 / CAL4 reference calibration** (assurance). *Shipped and run.* The one
-   check that tests the CPT values against external truth rather than
-   self-consistency: calibration of the email-policy posterior against the
-   authoritative DMARC record (its own ground truth).
-   `validation/reference_calibration.py` carries the pure label / Wilson /
-   calibration logic (unit-tested in `tests/test_reference_calibration.py`), and
-   the maintainer-local run landed: two independent corpus samples agree at ECE
-   about 0.077, agreement about 1.0, the miss in the conservative
-   (under-confident) direction, so `email_security_policy_enforcing` now sits at
-   tier 4 in the dossier (`validation/reference-calibration.md`, aggregates only).
-   *Extensions, all built; runs pending.* The held-out residual mode ships
-   inside the same harness (the `dmarc_policy` unit masked via the new
-   `infer(..., masked_units=...)` primitive, so predictor and label are
-   disjoint — the clean tier-4 construction). The tenancy corroboration ships
-   as `validation/tenancy_reference_calibration.py`: the `m365_tenant`
-   posterior computed from the DNS channel alone, calibrated against
-   Microsoft's two-class endpoint attestation; `google_workspace_tenant` is
-   honestly one-sided (recall on attested-federated only — the passive Google
-   channel never attests managed tenancy and has no authoritative negative,
-   so it cannot carry a calibration). The distribution-free conformal coverage
-   check surfaced by the 2026-06 literature review ships as
-   `validation/conformal_coverage.py` (a finite-sample coverage statement
-   beside the Bayesian interval, honest that its guarantee is conditional on
-   exchangeability and so is not claimed for hardened targets, with a
-   deliberate falsifiability split). Per-vertical stratification is a
-   `--stratify-dir` mode on both calibration harnesses (the `by-vertical/`
-   corpus lists are the input). What remains for all of these is the
-   maintainer-local corpus runs — collection, not construction. See
-   the positioning note below and [related-work.md](related-work.md).
-2. **Statistical-assurance dossier** (assurance doc; capstone). *Shipped:*
-   [statistical-assurance.md](statistical-assurance.md) is the single ledger
-   that places each claim recon makes at the highest of four evidence tiers,
-   observed / consistency (near-tautological, per CAL1) / evidence-responsive
-   (CAL13) / empirical coverage (CAL3), and says where the support stops. It
-   makes the tier-4 gap explicit, which is what item 1 (reference calibration) then
-   closes for the public-declaration node and the tenancy claims.
-3. **Evidence-semantics diagnostics** (the 2.2 surface). *Built; ships with the
-   next release cut, which it makes a 2.2.0 minor.* All three diagnostics landed
-   as additive JSON / MCP fields with the default panel unchanged: per-node
-   `entropy_reduction_nats` (the CAL10 breakdown), `unit_counterfactuals`
-   (exact leave-one-unit-out re-inference per informative evidence unit, on the
-   `masked_units` primitive — framed as evidence counterfactuals over the
-   model, never causal claims, with the non-additivity of deltas documented),
-   and `partition_stability` on `infrastructure_clusters` (Louvain seed-sweep
-   consensus as mean pairwise ARI, CAL11). Schema rows in `schema.md`, both
-   `recon-schema.json` copies updated, cache round-trip covered, and the
-   counterfactuals cross-checked against actual masked runs in
-   `tests/test_evidence_semantics_diagnostics.py`. A `--explain` panel
-   rendering of the same diagnostics is a possible small follow-up; the JSON /
-   MCP surface is the 2.2 deliverable. *Design:* the
-   Evidence-semantics-diagnostics paragraph in the assurance track below, plus
-   `correlation.md` for the model semantics.
-4. **The arXiv write-up** (packaging). Depends on items 1 to 3 for its empirical
-   and framing substance, and on [data-handling-policy.md](data-handling-policy.md)
-   for its publication constraints. The additional experiments (layer ablations,
-   reference coverage, posture stratification, entropy distributions) are designed
-   into the harnesses above so the paper is assembled, not retrofitted. The
-   skeleton and the literature positioning now live in
-   [paper-outline.md](paper-outline.md) and [related-work.md](related-work.md).
-   *Design:* the Research write-up item further below.
+1. **God-file decomposition** (engineering; in progress, patch-level — no version
+   bump). Split each module over the ~1000-line convention into cohesive
+   sub-modules, preserving the public import path and keeping golden/snapshot
+   output byte-identical, each step CI-gated by the file-size ratchet. Order of
+   operations: `formatter.py` (done — five modules extracted, 4413 to ~2160),
+   then `cli.py` (in progress — the `cache` sub-app is split out under a
+   sibling-module pattern; `mcp` / `signals` / `fingerprints` are next, the last
+   behind a small shared-helpers extraction), then `server.py`, then
+   `sources/dns.py`. *Design:* the "Module decomposition (god-file split)"
+   section below, [engineering-practices.md](engineering-practices.md), and
+   [adr/](adr/).
+2. **Calibration corpus runs** (operator-paced; maintainer-local). The harnesses
+   are built and unit-tested; what remains is running them over the gitignored
+   corpus and committing the aggregate metrics: the held-out residual and tenancy
+   corroboration calibrations, per-vertical stratification (the `--stratify-dir`
+   mode), the conformal-coverage pass, and the C3 CT-enabled full-corpus pass.
+   *Design:* [statistical-assurance.md](statistical-assurance.md),
+   `validation/reference-calibration.md`, and [related-work.md](related-work.md).
+3. **The arXiv write-up** (packaging; aspirational, off the critical path).
+   Assembles the existing rigor for an outside reader, plus the few additional
+   experiments already designed into the harnesses above, within the no-real-data
+   publication rule. *Design:* [paper-outline.md](paper-outline.md),
+   [related-work.md](related-work.md), the [Research write-up](#research-write-up-aspirational-an-arxiv-paper)
+   section below, and the constraints in
+   [data-handling-policy.md](data-handling-policy.md).
 
-Standing, maintainer-paced, off this critical path: the weekly PV2 validation
-routine (live), the mutation gate (live), and corpus-driven catalogue growth
-(local, aggregate-only). These run continuously and do not gate the sequence
-above.
+Standing, maintainer-paced, off this critical path: the PV2 validation routine
+(live), the mutation gate (live), and corpus-driven catalogue growth (local,
+aggregate-only). These run continuously and do not gate the sequence above.
 
 ## Pre-2.0 hardening (shipped) and the road past v2.0
 
@@ -915,32 +903,35 @@ regrow and new modules cap at 1000 lines. The work is to split each into a
 cohesive subpackage while preserving the public import path and keeping the
 golden/snapshot tests byte-identical:
 
-1. `formatter.py` → split by render target. **Done:** (a) exposure/gaps
-   rendering → `formatter_exposure.py` (clean, no shared coupling; golden
-   byte-identical); (b) the shared *service-classification* layer →
-   `formatter_classify.py` (logic: slug→category / slug→cloud-vendor,
-   provider-line detection, the two-pass categorizer, the fingerprint lookups)
-   plus `formatter_classify_tables.py` (the ~880-line slug/vendor/keyword data
-   dicts), with `formatter` re-exporting both under their historical `_NAME`
-   aliases so the test/validation import surface stays byte-identical
-   (`formatter.py` 4160 → ~2800). **Learned constraint (why classify came
-   first):** the markdown / json-dict / panel renderers all depend on that
-   classification layer (`_service_provider_group`, `_is_m365_service`,
-   `_is_gws_service`, `_categorize_services`, `detect_provider`, the
-   `_M365_KEYWORDS` constants), so they could not be extracted cleanly in
-   isolation. A naive markdown extraction hit exactly this and was reverted.
-   With the layer extracted, the remaining sub-steps split markdown / plain /
-   json-dict / panel on top of it, each golden-byte-identical and gate-verified.
-   **Naming note:** names that cross a module boundary inside `recon_tool/` must
-   be public. The pyright-strict gate flags cross-module underscore access as
-   `reportPrivateUsage` (the `tests/` executionEnvironment relaxes it; production
-   code does not), so the new modules expose public names and `formatter` aliases
-   them back to the historical `_NAME`s.
-2. `cli.py` → split the command groups (`lookup`, `batch`, `cache`,
-   `fingerprints`, `signals`, `mcp`, `doctor`, `update`) into `cli/` submodules
-   registered on the shared Typer app.
+1. `formatter.py` → split by render concern. **Done (4413 → ~2160, five
+   modules):** exposure/gaps rendering → `formatter_exposure.py`; the shared
+   service-classification layer → `formatter_classify.py` (logic) plus
+   `formatter_classify_tables.py` (the ~880-line slug/vendor/keyword data dicts);
+   the markdown report renderer → `formatter_markdown.py`; and the non-Rich data
+   serializers (the json-dict / json / plain / CSV layer, including the shared
+   `format_tenant_dict`) → `formatter_serialize.py`. `formatter` re-exports every
+   moved public name and aliases the historical `_NAME`s, so the import/test
+   surface is byte-identical. What remains in `formatter.py` is the cohesive Rich
+   panel core (`render_tenant_panel` and the secondary panels), now ratchet-capped.
+   **Two learned constraints, recorded so the cli/server/dns splits reuse them:**
+   (a) *extract the shared layer first* — the renderers all depend on the
+   classification layer, so a renderer-first extraction was reverted until
+   classify came out; (b) *cross-module names must be public* — pyright-strict
+   flags cross-module underscore access as `reportPrivateUsage` (the `tests/`
+   executionEnvironment relaxes it, production does not), so a moved module
+   exposes public names and the origin module aliases them back to `_NAME`. Where
+   a module exceeds the 1000-line cap on its own (the classification data dicts),
+   split the data tables from the logic.
+2. `cli.py` → split each self-contained Typer sub-app into a sibling module that
+   defines and exports the sub-app; `cli.py` imports it and keeps the
+   `app.add_typer(...)` registration (no package conversion, no circular import,
+   since the sub-app pulls nothing from `cli.py` and its commands use inline
+   imports). **In progress (3941 → 3823):** the `cache` sub-app is out as
+   `cli_cache.py`. Next: the other self-contained sub-apps (`mcp`, `signals`),
+   then `fingerprints` behind a small shared-helpers extraction (`_fmt_exc`,
+   `_config_dir`) that the self-contained ones do not need.
 3. `server.py` → group the MCP tools by domain (lookup/posture/graph/introspection)
-   into a `server/` package.
+   into sibling modules or a `server/` package, the same way.
 4. `sources/dns.py` → split by record family / parser.
 
 Each split is its own commit: move code, re-export from the original path so

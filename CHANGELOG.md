@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Internal
+
+- **God-file decomposition (continued).** Further split the oversized modules
+  under the file-size ratchet, each step golden/snapshot byte-identical and
+  CI-gated. `formatter.py` is down to ~2160 lines (from 4413): the markdown
+  report renderer moved to `formatter_markdown.py` and the non-Rich data
+  serializers (the json-dict / json / plain / CSV layer, including the shared
+  `format_tenant_dict`) to `formatter_serialize.py`. `cli.py` decomposition began
+  under a sibling-module pattern — the `cache` Typer sub-app moved to
+  `cli_cache.py` (it defines and exports the sub-app; `cli.py` registers it). No
+  behavior or contract change. See the roadmap "Module decomposition" section.
+
 ## [2.2.0] - 2026-06-13
 
 The 2.2.0 minor: a coherent batch of new *stable surfaces* off the locked v2.0
