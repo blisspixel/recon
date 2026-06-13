@@ -681,7 +681,7 @@ async def analyze_posture(
     domain: str,
     explain: bool = False,
     profile: str | None = None,
-) -> str:
+) -> list[dict[str, Any]] | dict[str, Any]:
     """Analyze a domain's configuration posture and return neutral observations.
 
     Returns factual observations about the domain's email security, identity,
@@ -704,59 +704,7 @@ async def analyze_posture(
     request_id = uuid.uuid4().hex[:12]
     start_time = time.monotonic()
 
-    try:
-        validated = validate_domain(domain)
-    except ValueError as exc:
-        _log_structured(
-            logging.WARNING,
-            "validation_failed",
-            request_id=request_id,
-            domain=domain,
-            error=str(exc),
-        )
-        return f"Error: {exc}"
-
-    # Check cache first
-    cached = _cache_get(validated)
-    if cached is not None:
-        info, _results = cached
-        _log_structured(
-            logging.INFO,
-            "cache_hit",
-            request_id=request_id,
-            domain=validated,
-        )
-    else:
-        if not _rate_limit_try_acquire(validated):
-            cached = _cache_get(validated)
-            if cached is None:
-                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
-            info, _results = cached
-        else:
-            try:
-                info, results = await resolve_tenant(validated)
-            except ReconLookupError as exc:
-                _rate_limit_release(validated)
-                elapsed = time.monotonic() - start_time
-                _log_structured(
-                    logging.INFO,
-                    "no_data",
-                    request_id=request_id,
-                    domain=domain,
-                    elapsed_s=round(elapsed, 2),
-                    error=exc.message,
-                )
-                return f"No information found for {domain}"
-            except Exception:
-                _rate_limit_release(validated)
-                logger.exception(
-                    "Unexpected error looking up %s (request_id=%s)",
-                    domain,
-                    request_id,
-                )
-                return f"Error looking up {domain}: an internal error occurred"
-
-            _cache_set(validated, info, results)
+    info = await _resolve_single_for_tool(domain, request_id)
 
     from recon_tool.formatter import format_posture_observations
     from recon_tool.posture import analyze_posture as _analyze_posture
@@ -775,12 +723,7 @@ async def analyze_posture(
         prof = load_profile(profile)
         if prof is None:
             available = ", ".join(p.name for p in list_profiles()) or "(none)"
-            return json_mod.dumps(
-                {
-                    "error": f"Unknown profile {profile!r}",
-                    "available_profiles": available,
-                }
-            )
+            raise ToolError(f"Unknown profile {profile!r}. Available profiles: {available}")
         observations = apply_profile(tuple(observations), prof)
         profile_note = prof.prepend_note or prof.description
 
@@ -803,14 +746,14 @@ async def analyze_posture(
         posture_rules = load_posture_rules()
         explanation_records = explain_observations(observations, posture_rules, info.evidence, info.detection_scores)
         explanations = [serialize_explanation(rec) for rec in explanation_records]
-        payload: dict[str, object] = {"observations": result_list, "explanations": explanations}
+        payload: dict[str, Any] = {"observations": result_list, "explanations": explanations}
         if profile_note:
             payload["profile_note"] = profile_note
-        return json_mod.dumps(payload, indent=2)
+        return payload
 
     if profile_note:
-        return json_mod.dumps({"observations": result_list, "profile_note": profile_note}, indent=2)
-    return json_mod.dumps(result_list, indent=2)
+        return {"observations": result_list, "profile_note": profile_note}
+    return result_list
 
 
 @mcp.tool(
@@ -904,7 +847,7 @@ async def discover_fingerprint_candidates(
     skip_ct: bool = False,
     keep_intra_org: bool = False,
     min_count: int = 1,
-) -> str:
+) -> list[dict[str, Any]]:
     """Mine a single domain for new-fingerprint candidates.
 
     Bundles ``recon discover`` into one tool call: resolves the domain with
@@ -935,7 +878,6 @@ async def discover_fingerprint_candidates(
         JSON array of candidate dicts: ``[{suffix, count, samples: [{subdomain,
         terminal, chain}]}, ...]``. Sorted by count desc, then suffix.
     """
-    import json as json_mod
     from pathlib import Path
 
     from recon_tool.discovery import find_candidates
@@ -953,7 +895,7 @@ async def discover_fingerprint_candidates(
             domain=domain,
             error=str(exc),
         )
-        return f"Error: {exc}"
+        raise ToolError(str(exc)) from exc
 
     # Mirror the lookup_tenant cache + per-domain rate-limit pattern so a
     # prompt-injected MCP client cannot force repeated full resolutions
@@ -974,22 +916,22 @@ async def discover_fingerprint_candidates(
         if not _rate_limit_try_acquire(validated):
             cached = _cache_get(validated)
             if cached is None:
-                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+                raise ToolError(f"Rate limited: {domain} was looked up recently. Try again in a few seconds.")
             info, _results = cached
         else:
             try:
                 info, results = await resolve_tenant(validated, skip_ct=skip_ct)
             except ReconLookupError as exc:
                 _rate_limit_release(validated)
-                return f"Error: {exc}"
-            except Exception:
+                raise ToolError(str(exc)) from exc
+            except Exception as exc:
                 _rate_limit_release(validated)
                 logger.exception(
                     "Unexpected error in discover for %s (request_id=%s)",
                     domain,
                     request_id,
                 )
-                return f"Error mining {domain}: an internal error occurred"
+                raise ToolError(f"Error mining {domain}: an internal error occurred") from exc
 
             _cache_set(validated, info, list(results))
 
@@ -1013,7 +955,7 @@ async def discover_fingerprint_candidates(
         elapsed_s=round(elapsed, 2),
     )
 
-    return json_mod.dumps(candidates, indent=2)
+    return candidates
 
 
 @mcp.tool(
@@ -1677,7 +1619,7 @@ _HYPOTHESIS_KEYWORDS: dict[str, list[str]] = {
         openWorldHint=True,
     ),
 )
-async def test_hypothesis(domain: str, hypothesis: str) -> str:
+async def test_hypothesis(domain: str, hypothesis: str) -> dict[str, Any]:
     """Test a theory about a domain against signals and evidence.
 
     Proposes a theory (e.g., "this organization appears to be mid-migration
@@ -1700,7 +1642,7 @@ async def test_hypothesis(domain: str, hypothesis: str) -> str:
     hypothesis = hypothesis[:4000]
     resolved = await _resolve_or_cache(domain)
     if isinstance(resolved, str):
-        return resolved
+        raise ToolError(resolved)
 
     info, _results = resolved
 
@@ -1807,7 +1749,7 @@ async def test_hypothesis(domain: str, hypothesis: str) -> str:
             "do not confirm organizational intent or internal decisions."
         ),
     }
-    return json_mod.dumps(result, indent=2)
+    return result
 
 
 @dataclass
@@ -1906,7 +1848,7 @@ def _simulate_fixes(fixes_lower: list[str], info: TenantInfo) -> tuple[list[str]
         openWorldHint=True,
     ),
 )
-async def simulate_hardening(domain: str, fixes: list[str]) -> str:
+async def simulate_hardening(domain: str, fixes: list[str]) -> dict[str, Any]:
     """What-if simulation: re-compute exposure score with hypothetical fixes.
 
     Accepts a list of fix descriptions (e.g., "DMARC reject", "MTA-STS enforce")
@@ -1928,7 +1870,7 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> str:
     fixes = fixes[:100]
     resolved = await _resolve_or_cache(domain)
     if isinstance(resolved, str):
-        return resolved
+        raise ToolError(resolved)
 
     info, _results = resolved
 
@@ -1999,7 +1941,7 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> str:
             "hardening actions, not as a guarantee of security posture improvement."
         ),
     }
-    return json_mod.dumps(result, indent=2)
+    return result
 
 
 # ── Ephemeral Fingerprint MCP Tools ─────────────────────────────────────
@@ -2741,7 +2683,7 @@ def main() -> None:
         openWorldHint=True,
     ),
 )
-async def get_posteriors(domain: str) -> str:
+async def get_posteriors(domain: str) -> dict[str, Any]:
     """Compute v1.9 Bayesian-network posteriors over high-level claims.
 
     Runs a normal recon lookup (cached + rate-limited like ``lookup_tenant``),
@@ -2785,58 +2727,14 @@ async def get_posteriors(domain: str) -> str:
     Returns:
         JSON string with the posterior block for the queried domain.
     """
-    import json as json_mod
-
     from recon_tool.bayesian import infer_from_tenant_info
 
     request_id = uuid.uuid4().hex[:12]
-
-    try:
-        validated = validate_domain(domain)
-    except ValueError as exc:
-        _log_structured(
-            logging.WARNING,
-            "validation_failed",
-            request_id=request_id,
-            domain=domain,
-            error=str(exc),
-        )
-        return f"Error: {exc}"
-
-    cached = _cache_get(validated)
-    if cached is not None:
-        info, _results = cached
-        _log_structured(
-            logging.INFO,
-            "cache_hit",
-            request_id=request_id,
-            domain=validated,
-        )
-    else:
-        if not _rate_limit_try_acquire(validated):
-            cached = _cache_get(validated)
-            if cached is None:
-                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
-            info, _results = cached
-        else:
-            try:
-                info, results = await resolve_tenant(validated)
-            except ReconLookupError as exc:
-                _rate_limit_release(validated)
-                return f"Error: {exc}"
-            except Exception:
-                _rate_limit_release(validated)
-                logger.exception(
-                    "Unexpected error in get_posteriors for %s (request_id=%s)",
-                    domain,
-                    request_id,
-                )
-                return f"Error computing posteriors for {domain}: an internal error occurred"
-            _cache_set(validated, info, list(results))
+    info = await _resolve_single_for_tool(domain, request_id)
 
     inference = infer_from_tenant_info(info)
-    payload: dict[str, object] = {
-        "domain": validated,
+    payload: dict[str, Any] = {
+        "domain": info.queried_domain,
         "entropy_reduction_nats": inference.entropy_reduction,
         "evidence_count": inference.evidence_count,
         "conflict_count": inference.conflict_count,
@@ -2872,7 +2770,7 @@ async def get_posteriors(domain: str) -> str:
             for p in inference.posteriors
         ],
     }
-    return json_mod.dumps(payload, indent=2)
+    return payload
 
 
 @mcp.tool(

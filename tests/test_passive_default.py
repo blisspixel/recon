@@ -14,7 +14,6 @@ not raise ``TypeError`` on the length slice.
 
 from __future__ import annotations
 
-import json
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -208,9 +207,9 @@ async def test_analyze_posture_non_string_profile_does_not_crash() -> None:
 
     with patch("recon_tool.server.resolve_tenant", new_callable=AsyncMock) as mock_resolve:
         mock_resolve.return_value = (_POSTURE_INFO, [])
-        result = await analyze_posture("contoso.com", profile=123)  # type: ignore[arg-type]
-    # Valid JSON, and not the "Unknown profile" error (a non-string is no lens).
-    parsed = json.loads(result)
+        parsed = await analyze_posture("contoso.com", profile=123)  # type: ignore[arg-type]
+    # A non-string profile is treated as no lens, so this returns the plain
+    # observation list, not the "Unknown profile" ToolError.
     assert isinstance(parsed, list)
     _cache_clear()
     _rate_limit.clear()

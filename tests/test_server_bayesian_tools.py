@@ -10,7 +10,6 @@ branch coverage (B4).
 
 from __future__ import annotations
 
-import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -72,8 +71,7 @@ class TestGetPosteriors:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_returns_posterior_block(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (_info("northwindtraders.com"), SAMPLE_RESULTS)
-        result = await get_posteriors("northwindtraders.com")
-        data = json.loads(result)
+        data = await get_posteriors("northwindtraders.com")
         assert data["domain"] == "northwindtraders.com"
         assert "entropy_reduction_nats" in data
         assert "evidence_count" in data
@@ -95,20 +93,22 @@ class TestGetPosteriors:
 
     @pytest.mark.asyncio
     async def test_validation_failure(self) -> None:
-        assert (await get_posteriors("not a domain")).startswith("Error:")
+        with pytest.raises(ToolError):
+            await get_posteriors("not a domain")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_recon_lookup_error(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = ReconLookupError(domain="x.com", message="No data", error_type="all_sources_failed")
-        assert (await get_posteriors("x.com")).startswith("Error:")
+        with pytest.raises(ToolError, match="No information found"):
+            await get_posteriors("x.com")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_unexpected_error(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = RuntimeError("boom")
-        result = await get_posteriors("example.com")
-        assert "internal error" in result
+        with pytest.raises(ToolError, match="internal error"):
+            await get_posteriors("example.com")
 
 
 class TestExplainDag:

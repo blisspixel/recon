@@ -14,7 +14,6 @@ so no real network calls happen.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterator
 from unittest.mock import patch
 
@@ -205,7 +204,7 @@ class TestHypothesis:
     async def test_returns_structured_assessment(self, mocked_resolve) -> None:
         from recon_tool.server import test_hypothesis
 
-        result = json.loads(await test_hypothesis("contoso.com", "they are doing email migration"))
+        result = await test_hypothesis("contoso.com", "they are doing email migration")
         # Required keys
         for key in (
             "domain",
@@ -226,7 +225,7 @@ class TestHypothesis:
     async def test_unsupported_when_no_relevant_signals(self, mocked_resolve) -> None:
         from recon_tool.server import test_hypothesis
 
-        result = json.loads(await test_hypothesis("contoso.com", "this organization is using a quantum SaaS"))
+        result = await test_hypothesis("contoso.com", "this organization is using a quantum SaaS")
         # No matching signals → unsupported
         assert result["likelihood"] == "unsupported"
 
@@ -234,7 +233,7 @@ class TestHypothesis:
     async def test_disclaimer_always_present(self, mocked_resolve) -> None:
         from recon_tool.server import test_hypothesis
 
-        result = json.loads(await test_hypothesis("contoso.com", "they use cloud identity"))
+        result = await test_hypothesis("contoso.com", "they use cloud identity")
         assert "indicators" in result["disclaimer"].lower()
 
 
@@ -246,7 +245,7 @@ class TestSimulateHardening:
     async def test_returns_score_delta(self, mocked_resolve) -> None:
         from recon_tool.server import simulate_hardening
 
-        result = json.loads(await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"]))
+        result = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
         assert "current_score" in result
         assert "simulated_score" in result
         assert "score_delta" in result
@@ -256,7 +255,7 @@ class TestSimulateHardening:
     async def test_applies_known_fixes(self, mocked_resolve) -> None:
         from recon_tool.server import simulate_hardening
 
-        result = json.loads(await simulate_hardening("contoso.com", ["DKIM", "BIMI", "SPF strict"]))
+        result = await simulate_hardening("contoso.com", ["DKIM", "BIMI", "SPF strict"])
         applied = result["applied_fixes"]
         # All three should be recognized
         assert any("DKIM" in a for a in applied)
@@ -267,7 +266,7 @@ class TestSimulateHardening:
     async def test_unrecognized_fix_noted(self, mocked_resolve) -> None:
         from recon_tool.server import simulate_hardening
 
-        result = json.loads(await simulate_hardening("contoso.com", ["something completely made up"]))
+        result = await simulate_hardening("contoso.com", ["something completely made up"])
         applied = result["applied_fixes"]
         assert any("Unrecognized" in a for a in applied)
 
@@ -282,7 +281,7 @@ class TestSimulateHardening:
             return _info(dmarc_policy="none"), _results()
 
         with patch("recon_tool.server._resolve_or_cache", side_effect=fake):
-            result = json.loads(await simulate_hardening("contoso.com", ["DMARC reject"]))
+            result = await simulate_hardening("contoso.com", ["DMARC reject"])
         assert result["score_delta"] >= 0
 
 
@@ -311,21 +310,19 @@ class TestEphemeralFingerprints:
         )
 
         # Inject one
-        inject_result = json.loads(
-            await inject_ephemeral_fingerprint(
-                name="Test Platform",
-                slug="test-platform",
-                category="SaaS",
-                confidence="medium",
-                detections=[{"type": "txt", "pattern": "test-platform-verify="}],
-            )
+        inject_result = await inject_ephemeral_fingerprint(
+            name="Test Platform",
+            slug="test-platform",
+            category="SaaS",
+            confidence="medium",
+            detections=[{"type": "txt", "pattern": "test-platform-verify="}],
         )
         assert inject_result["status"] == "ok"
         assert inject_result["slug"] == "test-platform"
         assert inject_result["detections_accepted"] == 1
 
         # List shows it
-        listed = json.loads(await list_ephemeral_fingerprints())
+        listed = await list_ephemeral_fingerprints()
         assert any(fp["slug"] == "test-platform" for fp in listed)
 
         _cache["contoso.com"] = (time.monotonic(), _info(display_name="Before Clear"), tuple(_results()))
@@ -333,12 +330,12 @@ class TestEphemeralFingerprints:
         # Clear removes it
         refreshed_info = _info(display_name="After Clear")
         with patch("recon_tool.merger.merge_results", return_value=refreshed_info):
-            cleared = json.loads(await clear_ephemeral_fingerprints())
+            cleared = await clear_ephemeral_fingerprints()
         assert cleared["status"] == "ok"
         assert cleared["removed"] >= 1
 
         # List is now empty (or doesn't have our slug)
-        listed_after = json.loads(await list_ephemeral_fingerprints())
+        listed_after = await list_ephemeral_fingerprints()
         assert not any(fp["slug"] == "test-platform" for fp in listed_after)
         assert _cache["contoso.com"][1].display_name == "After Clear"
 
@@ -347,7 +344,7 @@ class TestEphemeralFingerprints:
         from recon_tool.server import inject_ephemeral_fingerprint
 
         # Invalid: detection type not in valid set
-        result = json.loads(
+        with pytest.raises(ToolError):
             await inject_ephemeral_fingerprint(
                 name="Bad",
                 slug="bad",
@@ -355,15 +352,13 @@ class TestEphemeralFingerprints:
                 confidence="high",
                 detections=[{"type": "totally_invalid_type", "pattern": "foo"}],
             )
-        )
-        assert "error" in result
 
     @pytest.mark.asyncio
     async def test_inject_invalid_regex_returns_error(self) -> None:
         from recon_tool.server import inject_ephemeral_fingerprint
 
         # Invalid: unbalanced regex
-        result = json.loads(
+        with pytest.raises(ToolError):
             await inject_ephemeral_fingerprint(
                 name="BadRegex",
                 slug="bad-regex",
@@ -371,8 +366,6 @@ class TestEphemeralFingerprints:
                 confidence="high",
                 detections=[{"type": "txt", "pattern": "[unclosed"}],
             )
-        )
-        assert "error" in result
 
 
 # ── reevaluate_domain ────────────────────────────────────────────────
@@ -383,16 +376,15 @@ class TestReevaluateDomain:
     async def test_no_cache_returns_error(self, fresh_server_cache: None) -> None:
         from recon_tool.server import reevaluate_domain
 
-        result = json.loads(await reevaluate_domain("not-cached.example"))
-        assert "error" in result
-        assert "No cached data" in result["error"]
+        with pytest.raises(ToolError, match="No cached data"):
+            await reevaluate_domain("not-cached.example")
 
     @pytest.mark.asyncio
     async def test_invalid_domain_returns_error(self) -> None:
         from recon_tool.server import reevaluate_domain
 
-        result = json.loads(await reevaluate_domain("not a valid domain!!"))
-        assert "error" in result
+        with pytest.raises(ToolError):
+            await reevaluate_domain("not a valid domain!!")
 
     @pytest.mark.asyncio
     async def test_cached_domain_reevaluates(self, fresh_server_cache: None) -> None:
@@ -405,9 +397,8 @@ class TestReevaluateDomain:
         results = _results()
         _cache["contoso.com"] = (time.monotonic(), info, tuple(results))
 
-        result = json.loads(await reevaluate_domain("contoso.com"))
-        # Should NOT be an error — should be a tenant-info dict
-        assert "error" not in result
+        result = await reevaluate_domain("contoso.com")
+        # A tenant-info dict (raises ToolError on failure, never an error payload)
         assert result.get("display_name") == "Contoso Ltd"
 
     @pytest.mark.asyncio
@@ -422,7 +413,7 @@ class TestReevaluateDomain:
         _cache["contoso.com"] = (time.monotonic(), original, tuple(results))
 
         with patch("recon_tool.merger.merge_results", return_value=refreshed):
-            result = json.loads(await reevaluate_domain("contoso.com"))
+            result = await reevaluate_domain("contoso.com")
 
         assert result["display_name"] == "Refreshed"
         cached = _cache_get("contoso.com")

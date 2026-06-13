@@ -341,8 +341,7 @@ class TestTestHypothesis:
     @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_returns_correct_structure(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        result = await mcp_test_hypothesis("contoso.com", "mid-migration to cloud identity")
-        data = json.loads(result)
+        data = await mcp_test_hypothesis("contoso.com", "mid-migration to cloud identity")
         assert "likelihood" in data
         assert "supporting_signals" in data
         assert "contradicting_signals" in data
@@ -355,8 +354,7 @@ class TestTestHypothesis:
     async def test_keyword_matching(self, mock_resolve: AsyncMock) -> None:
         """Hypothesis keywords map to relevant signals."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        result = await mcp_test_hypothesis("contoso.com", "security posture assessment")
-        data = json.loads(result)
+        data = await mcp_test_hypothesis("contoso.com", "security posture assessment")
         # Should have some signals matched via keyword matching
         assert isinstance(data["supporting_signals"], list)
         assert isinstance(data["contradicting_signals"], list)
@@ -367,8 +365,7 @@ class TestTestHypothesis:
     async def test_hedged_language(self, mock_resolve: AsyncMock) -> None:
         """Output uses hedged language (indicators suggest, not confirms)."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        result = await mcp_test_hypothesis("contoso.com", "email security")
-        data = json.loads(result)
+        data = await mcp_test_hypothesis("contoso.com", "email security")
         disclaimer = data["disclaimer"]
         assert "suggest" in disclaimer.lower() or "indicators" in disclaimer.lower()
         assert "confirm" not in disclaimer.lower() or "do not confirm" in disclaimer.lower()
@@ -377,8 +374,8 @@ class TestTestHypothesis:
     @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_error_on_invalid_domain(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = "Error: invalid domain"
-        result = await mcp_test_hypothesis("not-a-domain", "test")
-        assert "Error" in result
+        with pytest.raises(ToolError):
+            await mcp_test_hypothesis("not-a-domain", "test")
 
 
 # ── 11.4 simulate_hardening MCP tool ────────────────────────────────────
@@ -391,8 +388,7 @@ class TestSimulateHardening:
     @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_returns_correct_structure(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        result = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
-        data = json.loads(result)
+        data = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
         assert "current_score" in data
         assert "simulated_score" in data
         assert "score_delta" in data
@@ -407,8 +403,7 @@ class TestSimulateHardening:
         # Use info without DMARC to ensure gaps exist
         info_no_dmarc = replace(SAMPLE_INFO, dmarc_policy=None, services=("Exchange Online",))
         mock_resolve.return_value = (info_no_dmarc, list(SAMPLE_RESULTS))
-        result = await simulate_hardening("contoso.com", ["BIMI"])
-        data = json.loads(result)
+        data = await simulate_hardening("contoso.com", ["BIMI"])
         # Check remaining_gaps have recommendation text
         for gap in data["remaining_gaps"]:
             assert "recommendation" in gap
@@ -420,16 +415,15 @@ class TestSimulateHardening:
         """Applying fixes should not decrease the score."""
         info_weak = replace(SAMPLE_INFO, dmarc_policy=None, mta_sts_mode=None)
         mock_resolve.return_value = (info_weak, list(SAMPLE_RESULTS))
-        result = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
-        data = json.loads(result)
+        data = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
         assert data["score_delta"] >= 0
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_error_on_invalid_domain(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = "Error: invalid domain"
-        result = await simulate_hardening("bad", [])
-        assert "Error" in result
+        with pytest.raises(ToolError):
+            await simulate_hardening("bad", [])
 
 
 # ── 11.5 explain parameter on lookup_tenant and analyze_posture ──────────
@@ -483,8 +477,7 @@ class TestAnalyzePostureExplain:
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
     async def test_explain_true_includes_explanations(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await analyze_posture("contoso.com", explain=True)
-        data = json.loads(result)
+        data = await analyze_posture("contoso.com", explain=True)
         assert "explanations" in data
         assert isinstance(data["explanations"], list)
 
@@ -492,8 +485,7 @@ class TestAnalyzePostureExplain:
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
     async def test_explain_false_no_explanations(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await analyze_posture("contoso.com", explain=False)
-        data = json.loads(result)
+        data = await analyze_posture("contoso.com", explain=False)
         # Without explain, result is a plain list of observations
         assert isinstance(data, list)
 
@@ -501,8 +493,7 @@ class TestAnalyzePostureExplain:
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
     async def test_explain_omitted_no_explanations(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await analyze_posture("contoso.com")
-        data = json.loads(result)
+        data = await analyze_posture("contoso.com")
         assert isinstance(data, list)
 
 
