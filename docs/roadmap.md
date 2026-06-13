@@ -150,9 +150,8 @@ and the `validation/` memos for rationale. What remains, in logical order:
    sub-modules, preserving the public import path and keeping golden/snapshot
    output byte-identical, each step CI-gated by the file-size ratchet. Order of
    operations: `formatter.py` (done — five modules extracted, 4413 to ~2160),
-   then `cli.py` (in progress — the `cache` sub-app is split out under a
-   sibling-module pattern; `mcp` / `signals` / `fingerprints` are next, the last
-   behind a small shared-helpers extraction), then `server.py`, then
+   then `cli.py` (its four Typer sub-apps extracted to sibling modules, 3943 to
+   ~2830; the main-app command core remains), then `server.py`, then
    `sources/dns.py`. *Design:* the "Module decomposition (god-file split)"
    section below, [engineering-practices.md](engineering-practices.md), and
    [adr/](adr/).
@@ -926,12 +925,19 @@ golden/snapshot tests byte-identical:
    defines and exports the sub-app; `cli.py` imports it and keeps the
    `app.add_typer(...)` registration (no package conversion, no circular import,
    since the sub-app pulls nothing from `cli.py` and its commands use inline
-   imports). **In progress (3941 → 3823):** the `cache` sub-app is out as
-   `cli_cache.py`. Next: the other self-contained sub-apps (`mcp`, `signals`),
-   then `fingerprints` behind a small shared-helpers extraction (`_fmt_exc`,
-   `_config_dir`) that the self-contained ones do not need.
+   imports). **Done for the sub-apps (3943 → ~2830):** `cache` → `cli_cache.py`,
+   `mcp` → `cli_mcp.py`, `signals` → `cli_signals.py` (with its signal-render
+   helpers), and `fingerprints` → `cli_fingerprints.py`. The one shared helper a
+   sibling needed (`_fmt_exc`, used across ~20 sites) moved to `cli_shared.py`
+   first so the sibling could import it without a cycle. What remains in `cli.py`
+   is the main-app command core (`lookup` / `batch` / `delta` / `discover` /
+   `doctor` / `update`) plus `run()`; extracting those `@app.command` groups needs
+   the app-sharing variant of the pattern (the command module imports the shared
+   `app`), a heavier change with more blast radius, so it is sequenced after
+   `server.py` / `dns.py`.
 3. `server.py` → group the MCP tools by domain (lookup/posture/graph/introspection)
-   into sibling modules or a `server/` package, the same way.
+   into sibling modules or a `server/` package, the same way (the tools share the
+   FastMCP instance, so it follows the app-sharing variant).
 4. `sources/dns.py` → split by record family / parser.
 
 Each split is its own commit: move code, re-export from the original path so
