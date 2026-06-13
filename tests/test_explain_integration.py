@@ -20,6 +20,7 @@ import pytest
 
 pytest.importorskip("mcp")
 
+from mcp.server.fastmcp.exceptions import ToolError
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
@@ -221,16 +222,14 @@ class TestGetFingerprints:
     """Unit tests for get_fingerprints MCP tool."""
 
     @pytest.mark.asyncio
-    async def test_returns_json_array(self) -> None:
-        result = await get_fingerprints()
-        data = json.loads(result)
+    async def test_returns_list(self) -> None:
+        data = await get_fingerprints()
         assert isinstance(data, list)
         assert len(data) > 0
 
     @pytest.mark.asyncio
     async def test_has_required_fields(self) -> None:
-        result = await get_fingerprints()
-        data = json.loads(result)
+        data = await get_fingerprints()
         first = data[0]
         assert "slug" in first
         assert "name" in first
@@ -242,10 +241,8 @@ class TestGetFingerprints:
     @pytest.mark.asyncio
     async def test_category_filter(self) -> None:
         """Category filter is case-insensitive partial match."""
-        result_all = await get_fingerprints()
-        result_email = await get_fingerprints(category="email")
-        all_data = json.loads(result_all)
-        email_data = json.loads(result_email)
+        all_data = await get_fingerprints()
+        email_data = await get_fingerprints(category="email")
         assert len(email_data) > 0
         assert len(email_data) < len(all_data)
         for fp in email_data:
@@ -255,24 +252,22 @@ class TestGetFingerprints:
     async def test_category_filter_case_insensitive(self) -> None:
         result_lower = await get_fingerprints(category="email")
         result_upper = await get_fingerprints(category="EMAIL")
-        assert json.loads(result_lower) == json.loads(result_upper)
+        assert result_lower == result_upper
 
 
 class TestGetSignals:
     """Unit tests for get_signals MCP tool."""
 
     @pytest.mark.asyncio
-    async def test_returns_json_array(self) -> None:
-        result = await get_signals()
-        data = json.loads(result)
+    async def test_returns_list(self) -> None:
+        data = await get_signals()
         assert isinstance(data, list)
         assert len(data) > 0
 
     @pytest.mark.asyncio
     async def test_has_new_fields(self) -> None:
         """New v0.7.0 fields are present."""
-        result = await get_signals()
-        data = json.loads(result)
+        data = await get_signals()
         first = data[0]
         assert "contradicts" in first
         assert "requires_signals" in first
@@ -281,16 +276,14 @@ class TestGetSignals:
 
     @pytest.mark.asyncio
     async def test_category_filter(self) -> None:
-        result = await get_signals(category="security")
-        data = json.loads(result)
+        data = await get_signals(category="security")
         assert len(data) > 0
         for sig in data:
             assert "security" in sig["category"].lower()
 
     @pytest.mark.asyncio
     async def test_layer_filter(self) -> None:
-        result = await get_signals(layer=1)
-        data = json.loads(result)
+        data = await get_signals(layer=1)
         assert len(data) > 0
         for sig in data:
             assert sig["layer"] == 1
@@ -309,8 +302,7 @@ class TestExplainSignal:
         assert len(signals) > 0
         sig_name = signals[0].name
 
-        result = await explain_signal(sig_name)
-        data = json.loads(result)
+        data = await explain_signal(sig_name)
         assert "name" in data
         assert data["name"] == sig_name
         assert "trigger_conditions" in data
@@ -318,13 +310,9 @@ class TestExplainSignal:
 
     @pytest.mark.asyncio
     async def test_unknown_signal(self) -> None:
-        """Unknown signal returns error with available names."""
-        result = await explain_signal("Nonexistent Signal That Does Not Exist")
-        data = json.loads(result)
-        assert "error" in data
-        assert "available_signals" in data
-        assert isinstance(data["available_signals"], list)
-        assert len(data["available_signals"]) > 0
+        """Unknown signal raises ToolError (isError) so the model can self-correct."""
+        with pytest.raises(ToolError, match="not found"):
+            await explain_signal("Nonexistent Signal That Does Not Exist")
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)
@@ -337,8 +325,7 @@ class TestExplainSignal:
         signals = load_signals()
         sig_name = signals[0].name
 
-        result = await explain_signal(sig_name, domain="contoso.com")
-        data = json.loads(result)
+        data = await explain_signal(sig_name, domain="contoso.com")
         assert "domain" in data
         assert "fired" in data
         assert "matched_slugs" in data
