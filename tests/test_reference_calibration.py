@@ -10,12 +10,17 @@ hand-computed values and synthetic records (no network, no real apex).
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
+from validation import reference_calibration as refcal
 from validation.reference_calibration import (
+    CalibrationPair,
     CalibrationRecord,
     calibration_summary,
     held_out_policy_posterior,
+    main,
     mean_log_score,
     reference_label_email_policy,
     stratified_summary,
@@ -182,3 +187,72 @@ class TestStratifiedSummary:
         strata = {"banking": [CalibrationRecord(posterior=0.9, label=1) for _ in range(10)]}
         out = stratified_summary(strata, min_cell=10)
         assert all("." not in name for name in out["strata"])
+
+
+class TestJsonMain:
+    """Pin the --json orchestration (the maintainer / PV2-drift surface).
+
+    Like the conformal collector contract, main()'s glue is otherwise only
+    exercised by a live run. The collector is monkeypatched so no network is
+    touched; the test asserts main() emits one valid JSON object carrying the
+    full and held-out aggregates, and nothing that looks like an apex.
+    """
+
+    @staticmethod
+    def _pairs(n: int) -> list[CalibrationPair]:
+        return [
+            CalibrationPair(
+                full=CalibrationRecord(posterior=0.9 if i % 2 else 0.1, label=i % 2),
+                held_out=CalibrationRecord(posterior=0.45, label=i % 2),
+            )
+            for i in range(n)
+        ]
+
+    def test_single_json_is_parseable_aggregate(self, tmp_path, monkeypatch, capsys) -> None:
+        domains_file = tmp_path / "domains.txt"
+        domains_file.write_text("contoso.com\nfabrikam.com\n", encoding="utf-8")
+
+        async def _fake_collect(domains, *, timeout, skip_ct, concurrency):
+            return self._pairs(20)
+
+        monkeypatch.setattr(refcal, "collect", _fake_collect)
+        rc = main([str(domains_file), "--json"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        doc = json.loads(out)
+        assert doc["mode"] == "single"
+        assert doc["n"] == 20
+        assert doc["full"]["n"] == 20
+        assert doc["held_out"]["n"] == 20
+        # No apex leaks into the structured output.
+        assert "contoso" not in out
+        assert "fabrikam" not in out
+
+    def test_single_json_empty_is_clean(self, tmp_path, monkeypatch, capsys) -> None:
+        domains_file = tmp_path / "domains.txt"
+        domains_file.write_text("contoso.com\n", encoding="utf-8")
+
+        async def _fake_collect(domains, *, timeout, skip_ct, concurrency):
+            return []
+
+        monkeypatch.setattr(refcal, "collect", _fake_collect)
+        rc = main([str(domains_file), "--json"])
+        assert rc == 0
+        doc = json.loads(capsys.readouterr().out)
+        assert doc == {"mode": "single", "n": 0, "full": {"n": 0}, "held_out": {"n": 0}}
+
+    def test_stratified_json_carries_both_constructions(self, tmp_path, monkeypatch, capsys) -> None:
+        (tmp_path / "alpha.txt").write_text("contoso.com\n", encoding="utf-8")
+        (tmp_path / "beta.txt").write_text("fabrikam.com\n", encoding="utf-8")
+
+        async def _fake_collect(domains, *, timeout, skip_ct, concurrency):
+            return self._pairs(12)
+
+        monkeypatch.setattr(refcal, "collect", _fake_collect)
+        rc = main(["--stratify-dir", str(tmp_path), "--json"])
+        assert rc == 0
+        doc = json.loads(capsys.readouterr().out)
+        assert doc["mode"] == "stratified"
+        assert doc["full"]["pooled"]["n"] == 24
+        assert doc["held_out"]["pooled"]["n"] == 24
+        assert set(doc["full"]["strata"]) == {"alpha", "beta"}

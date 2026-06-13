@@ -139,6 +139,34 @@ this: a coherent new surface, not internal hardening.
   channel-split exclusion and the no-footprint-stays-near-prior property);
   `--stratify-dir` supported; maintainer-local run pending.
 
+- **`--json` structured output on both calibration harnesses.**
+  `reference_calibration.py` and `tenancy_reference_calibration.py` gain a
+  `--json` flag that emits the same aggregates as a machine-readable object
+  (no apex, exactly the text path's numbers) for cross-list agreement checks
+  and the PV2 drift loop. Single mode emits the full/held-out (refcal) or
+  DNS-only/full/GWS (tenancy) summaries; `--stratify-dir` emits the
+  per-stratum + pooled structure. The orchestration is covered by a
+  monkeypatched-collector `main()` integration test on each harness
+  (`TestJsonMain`), guarding the untested-network-path regression class that
+  the conformal collector bug came from — the machine-readable path the
+  multi-list comparison depends on is tested, not just the pure functions.
+
+- **Multi-list public calibration cross-check, two independent lists agree.**
+  `validation/public-list-calibration.md` now reports two sector-disjoint,
+  public, reproducible lists side by side (List A ~210 domains across
+  banking/healthcare/SaaS/higher-ed/public-sector/retail/tech; List B ~175
+  across automotive/consumer-internet/energy-industrial/media/nonprofit/
+  telecom/travel). The harnesses reproduce across the two independent samples:
+  email-policy ECE 0.061 vs 0.069 (base rate 0.876 vs 0.878, both at agreement
+  1.000, both populating the empirical-zero `p=none` class); M365 DNS-only
+  corroboration ECE 0.082 vs 0.105 (the same low-DNS-visibility 0.2–0.3
+  reliability bin on both); conformal coverage 0.986 and 1.000 (both ≥ 0.90);
+  posture entropy reduction p50 1.967 vs 1.932 with the sparse tier the
+  hardening signal on both. Agreement across disjoint lists is the evidence
+  the harnesses measure a property of the method, not one sample's bias — the
+  reproducibility column the paper rests on, beside the private-corpus tier.
+  Aggregates only; the lists live outside the repo and are never committed.
+
 - **CAL12: the priors-elicitation ledger, written down.**
   `docs/bayesian-cpt-discipline.md` gains "The priors ledger": every root
   prior with its grounding status (corpus-grounded / hand-set /

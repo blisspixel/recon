@@ -64,6 +64,12 @@ Run (maintainer-local, network):
 
     python -m validation.reference_calibration domains.txt
     python -m validation.reference_calibration domains.txt --bins 10 --concurrency 5
+    python -m validation.reference_calibration domains.txt --json   # structured aggregates
+    python -m validation.reference_calibration --stratify-dir by-vertical/ --json
+
+The ``--json`` form emits the same aggregates as a machine-readable object
+(no apex, same data-handling rule) so two lists can be compared for agreement
+programmatically and the PV2 drift loop can diff release-over-release.
 """
 
 # Reuses the tested calibration internals (_brier / _reliability_table /
@@ -75,6 +81,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import math
 import sys
 from dataclasses import dataclass
@@ -346,12 +353,28 @@ def _print_both(pairs: list[CalibrationPair], *, bins: int) -> None:
     _print_summary(held_out, "Held-out residual (dmarc_policy masked; predictor and label disjoint)")
 
 
-def _run_single(path: Path, *, bins: int, concurrency: int, timeout: float) -> int:
+def _run_single(path: Path, *, bins: int, concurrency: int, timeout: float, as_json: bool = False) -> int:
     domains = _read_domains(path)
-    print(f"Resolving {len(domains)} domains against the DMARC record (aggregates only, no apex printed)...")
+    if not as_json:
+        print(f"Resolving {len(domains)} domains against the DMARC record (aggregates only, no apex printed)...")
     # CT is skipped throughout: the policy node's evidence is DNS-only (DMARC /
     # SPF / MTA-STS), so a CT pass would add cost without changing the posterior.
     pairs = asyncio.run(collect(domains, timeout=timeout, skip_ct=True, concurrency=concurrency))
+    if as_json:
+        # Structured output for downstream cross-list agreement checks and the
+        # PV2 drift loop. Aggregates only, same as the text path.
+        print(
+            json.dumps(
+                {
+                    "mode": "single",
+                    "n": len(pairs),
+                    "full": calibration_summary([p.full for p in pairs], bins=bins) if pairs else {"n": 0},
+                    "held_out": calibration_summary([p.held_out for p in pairs], bins=bins) if pairs else {"n": 0},
+                },
+                indent=2,
+            )
+        )
+        return 0
     if not pairs:
         print("No domains carried a DMARC reference label; nothing to calibrate.")
         return 0
@@ -371,12 +394,15 @@ def _print_strata_table(result: dict[str, object], *, min_cell: int, title: str)
             print(f"  {name:<28}{s['n']:>5}{s['ece']:>8.3f}{s['agreement_rate']:>8.3f}{s['base_rate_enforcing']:>8.2f}")
 
 
-def _run_stratified(directory: Path, *, bins: int, concurrency: int, timeout: float, min_cell: int) -> int:
+def _run_stratified(
+    directory: Path, *, bins: int, concurrency: int, timeout: float, min_cell: int, as_json: bool = False
+) -> int:
     files = sorted(directory.glob("*.txt"))
     if not files:
         print(f"FAIL: no .txt domain lists in {directory}")
         return 1
-    print(f"Calibrating per stratum over {len(files)} lists (aggregates only, no apex printed)...")
+    if not as_json:
+        print(f"Calibrating per stratum over {len(files)} lists (aggregates only, no apex printed)...")
     strata_pairs: dict[str, list[CalibrationPair]] = {}
     for f in files:
         pairs = asyncio.run(collect(_read_domains(f), timeout=timeout, skip_ct=True, concurrency=concurrency))
@@ -384,11 +410,14 @@ def _run_stratified(directory: Path, *, bins: int, concurrency: int, timeout: fl
     full_result = stratified_summary(
         {name: [p.full for p in pairs] for name, pairs in strata_pairs.items()}, min_cell=min_cell, bins=bins
     )
-    _print_strata_table(full_result, min_cell=min_cell, title="Per-stratum email-policy calibration (full posterior)")
-    _print_summary(full_result["pooled"], "Pooled across all strata (full posterior)")  # type: ignore[arg-type]
     held_out_result = stratified_summary(
         {name: [p.held_out for p in pairs] for name, pairs in strata_pairs.items()}, min_cell=min_cell, bins=bins
     )
+    if as_json:
+        print(json.dumps({"mode": "stratified", "full": full_result, "held_out": held_out_result}, indent=2))
+        return 0
+    _print_strata_table(full_result, min_cell=min_cell, title="Per-stratum email-policy calibration (full posterior)")
+    _print_summary(full_result["pooled"], "Pooled across all strata (full posterior)")  # type: ignore[arg-type]
     _print_strata_table(
         held_out_result, min_cell=min_cell, title="Per-stratum held-out residual (dmarc_policy masked)"
     )
@@ -409,6 +438,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--bins", type=int, default=10, help="Reliability bins (default 10).")
     parser.add_argument("--concurrency", type=int, default=5, help="Concurrent resolves (default 5).")
     parser.add_argument("--timeout", type=float, default=120.0, help="Per-domain resolve timeout seconds.")
+    parser.add_argument(
+        "--json", action="store_true", help="Emit aggregates as JSON (for cross-list comparison / PV2 drift)."
+    )
     args = parser.parse_args(argv)
 
     if args.stratify_dir is not None:
@@ -421,11 +453,14 @@ def main(argv: list[str] | None = None) -> int:
             concurrency=args.concurrency,
             timeout=args.timeout,
             min_cell=args.min_cell,
+            as_json=args.json,
         )
     if args.domains is None or not args.domains.is_file():
         print("FAIL: provide a domains file or --stratify-dir DIR")
         return 1
-    return _run_single(args.domains, bins=args.bins, concurrency=args.concurrency, timeout=args.timeout)
+    return _run_single(
+        args.domains, bins=args.bins, concurrency=args.concurrency, timeout=args.timeout, as_json=args.json
+    )
 
 
 if __name__ == "__main__":

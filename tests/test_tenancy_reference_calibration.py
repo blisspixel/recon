@@ -10,20 +10,25 @@ SourceResults (no network, no real apex — fictional brands only).
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from recon_tool.models import SourceResult
+from validation import tenancy_reference_calibration as tenancy
 from validation.tenancy_reference_calibration import (
     CONFLICT,
     NEGATIVE,
     POSITIVE,
     UNLABELED,
+    TenancyCounts,
     TenancyRecord,
     dns_only_tenancy_posteriors,
     gws_attested_federated,
     gws_attested_posteriors,
     m365_calibration_records,
     m365_reference_label,
+    main,
     one_sided_recall_summary,
     percentile,
 )
@@ -196,3 +201,66 @@ class TestRecordSelection:
             _record(UNLABELED, gws_attested=False, gws_dns_only=0.9),
         ]
         assert gws_attested_posteriors(records) == [0.8]
+
+
+class TestJsonMain:
+    """Pin the --json orchestration (the cross-list / PV2-drift surface).
+
+    main()'s glue is otherwise only exercised by a live run; this monkeypatches
+    the collector so no network or real apex is touched, and asserts the
+    structured output is one valid JSON object carrying the DNS-only
+    corroboration, the full-pipeline consistency block, and the one-sided GWS
+    check — aggregates only.
+    """
+
+    @staticmethod
+    def _records() -> list[TenancyRecord]:
+        out: list[TenancyRecord] = []
+        for i in range(20):
+            disp = POSITIVE if i % 2 else NEGATIVE
+            out.append(
+                _record(
+                    disp,
+                    dns_only=0.9 if i % 2 else 0.1,
+                    full=0.95 if i % 2 else 0.05,
+                    gws_attested=(i % 5 == 0),
+                    gws_dns_only=0.8 if i % 5 == 0 else None,
+                )
+            )
+        return out
+
+    def _patch_collect(self, monkeypatch) -> None:
+        records = self._records()
+
+        async def _fake_collect(domains, *, timeout, skip_ct, concurrency):
+            return records, TenancyCounts(resolved=len(records))
+
+        monkeypatch.setattr(tenancy, "collect", _fake_collect)
+
+    def test_single_json_is_parseable_aggregate(self, tmp_path, monkeypatch, capsys) -> None:
+        domains_file = tmp_path / "domains.txt"
+        domains_file.write_text("contoso.com\nfabrikam.com\n", encoding="utf-8")
+        self._patch_collect(monkeypatch)
+        rc = main([str(domains_file), "--json"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        doc = json.loads(out)
+        assert doc["mode"] == "single"
+        assert doc["m365_dns_only"]["n"] == 20
+        assert doc["m365_full"]["n"] == 20
+        assert doc["gws_one_sided"]["n"] == 4
+        assert "counts" in doc
+        assert "contoso" not in out
+        assert "fabrikam" not in out
+
+    def test_stratified_json_carries_dns_and_gws(self, tmp_path, monkeypatch, capsys) -> None:
+        (tmp_path / "alpha.txt").write_text("contoso.com\n", encoding="utf-8")
+        (tmp_path / "beta.txt").write_text("fabrikam.com\n", encoding="utf-8")
+        self._patch_collect(monkeypatch)
+        rc = main(["--stratify-dir", str(tmp_path), "--json"])
+        assert rc == 0
+        doc = json.loads(capsys.readouterr().out)
+        assert doc["mode"] == "stratified"
+        assert doc["m365_dns_only"]["pooled"]["n"] == 40
+        assert set(doc["m365_dns_only"]["strata"]) == {"alpha", "beta"}
+        assert "gws_one_sided" in doc
