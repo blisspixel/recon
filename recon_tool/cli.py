@@ -2381,7 +2381,8 @@ async def _resolve_with_spinner(
         return await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct, active_probes=active_probes)
 
     coro = resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct, active_probes=active_probes)
-    return await _run_with_rotating_status(console, coro)
+    # Spinner goes to stderr so it never contaminates the stdout data stream.
+    return await _run_with_rotating_status(get_err_console(), coro)
 
 
 async def _run_with_rotating_status(console: Any, coro: Any) -> Any:
@@ -2399,7 +2400,7 @@ async def _run_with_rotating_status(console: Any, coro: Any) -> Any:
     order = list(_STATUS_MESSAGES)
     random.shuffle(order)
     task = asyncio.ensure_future(coro)
-    with get_err_console().status(order[0]) as status:
+    with console.status(order[0]) as status:
         idx = 0
         while True:
             try:
