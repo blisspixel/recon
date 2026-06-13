@@ -233,6 +233,8 @@ See [docs/README.md](docs/README.md) for the organized documentation index.
 
 recon runs as an MCP server for Claude, Cursor, VS Code, ChatGPT, or any MCP client. The Model Context Protocol lets AI agents call tools like recon directly from your chat.
 
+The data tools return navigable structured content with a per-tool output schema (aligned to the current MCP spec), so an agent consumes the fields directly instead of re-parsing text, and a failed lookup comes back flagged as an error the model can recover from rather than a success-shaped payload. See [docs/mcp.md](docs/mcp.md#tool-output-structured-content-and-errors).
+
 **One-shot install.** Let recon write the right config block for you:
 
 ```bash
