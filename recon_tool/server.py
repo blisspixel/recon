@@ -1073,7 +1073,7 @@ async def reload_data() -> str:
         openWorldHint=True,
     ),
 )
-async def assess_exposure(domain: str) -> str:
+async def assess_exposure(domain: str) -> dict[str, Any]:
     """Assess a domain's publicly observable security posture for defensive review.
 
     For defensive security posture assessment only.
@@ -1098,75 +1098,23 @@ async def assess_exposure(domain: str) -> str:
     request_id = uuid.uuid4().hex[:12]
     start_time = time.monotonic()
 
-    try:
-        validated = validate_domain(domain)
-    except ValueError as exc:
-        _log_structured(
-            logging.WARNING,
-            "validation_failed",
-            request_id=request_id,
-            domain=domain,
-            error=str(exc),
-        )
-        return f"Error: {exc}"
-
-    # Check cache first
-    cached = _cache_get(validated)
-    if cached is not None:
-        info, _results = cached
-        _log_structured(
-            logging.INFO,
-            "cache_hit",
-            request_id=request_id,
-            domain=validated,
-        )
-    else:
-        if not _rate_limit_try_acquire(validated):
-            cached = _cache_get(validated)
-            if cached is None:
-                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
-            info, _results = cached
-        else:
-            try:
-                info, results = await resolve_tenant(validated)
-            except ReconLookupError:
-                _rate_limit_release(validated)
-                elapsed = time.monotonic() - start_time
-                _log_structured(
-                    logging.INFO,
-                    "no_data",
-                    request_id=request_id,
-                    domain=domain,
-                    elapsed_s=round(elapsed, 2),
-                )
-                return f"No information found for {domain}"
-            except Exception:
-                _rate_limit_release(validated)
-                logger.exception(
-                    "Unexpected error looking up %s (request_id=%s)",
-                    domain,
-                    request_id,
-                )
-                return f"Error looking up {domain}: an internal error occurred"
-
-            _cache_set(validated, info, results)
+    info = await _resolve_single_for_tool(domain, request_id)
 
     from recon_tool.exposure import assess_exposure_from_info
-    from recon_tool.formatter import format_exposure_json
+    from recon_tool.formatter import format_exposure_dict
 
     assessment = assess_exposure_from_info(info)
 
-    elapsed = time.monotonic() - start_time
     _log_structured(
         logging.INFO,
         "exposure_assessed",
         request_id=request_id,
         domain=domain,
         posture_score=assessment.posture_score,
-        elapsed_s=round(elapsed, 2),
+        elapsed_s=round(time.monotonic() - start_time, 2),
     )
 
-    return format_exposure_json(assessment)
+    return format_exposure_dict(assessment)
 
 
 @mcp.tool(
@@ -1177,7 +1125,7 @@ async def assess_exposure(domain: str) -> str:
         openWorldHint=True,
     ),
 )
-async def find_hardening_gaps(domain: str) -> str:
+async def find_hardening_gaps(domain: str) -> dict[str, Any]:
     """Identify hardening opportunities in a domain's public configuration.
 
     For defensive security posture assessment only.
@@ -1198,75 +1146,23 @@ async def find_hardening_gaps(domain: str) -> str:
     request_id = uuid.uuid4().hex[:12]
     start_time = time.monotonic()
 
-    try:
-        validated = validate_domain(domain)
-    except ValueError as exc:
-        _log_structured(
-            logging.WARNING,
-            "validation_failed",
-            request_id=request_id,
-            domain=domain,
-            error=str(exc),
-        )
-        return f"Error: {exc}"
-
-    # Check cache first
-    cached = _cache_get(validated)
-    if cached is not None:
-        info, _results = cached
-        _log_structured(
-            logging.INFO,
-            "cache_hit",
-            request_id=request_id,
-            domain=validated,
-        )
-    else:
-        if not _rate_limit_try_acquire(validated):
-            cached = _cache_get(validated)
-            if cached is None:
-                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
-            info, _results = cached
-        else:
-            try:
-                info, results = await resolve_tenant(validated)
-            except ReconLookupError:
-                _rate_limit_release(validated)
-                elapsed = time.monotonic() - start_time
-                _log_structured(
-                    logging.INFO,
-                    "no_data",
-                    request_id=request_id,
-                    domain=domain,
-                    elapsed_s=round(elapsed, 2),
-                )
-                return f"No information found for {domain}"
-            except Exception:
-                _rate_limit_release(validated)
-                logger.exception(
-                    "Unexpected error looking up %s (request_id=%s)",
-                    domain,
-                    request_id,
-                )
-                return f"Error looking up {domain}: an internal error occurred"
-
-            _cache_set(validated, info, results)
+    info = await _resolve_single_for_tool(domain, request_id)
 
     from recon_tool.exposure import find_gaps_from_info
-    from recon_tool.formatter import format_gaps_json
+    from recon_tool.formatter import format_gaps_dict
 
     report = find_gaps_from_info(info)
 
-    elapsed = time.monotonic() - start_time
     _log_structured(
         logging.INFO,
         "gaps_analyzed",
         request_id=request_id,
         domain=domain,
         gaps=len(report.gaps),
-        elapsed_s=round(elapsed, 2),
+        elapsed_s=round(time.monotonic() - start_time, 2),
     )
 
-    return format_gaps_json(report)
+    return format_gaps_dict(report)
 
 
 @mcp.tool(
@@ -1277,12 +1173,12 @@ async def find_hardening_gaps(domain: str) -> str:
         openWorldHint=True,
     ),
 )
-async def compare_postures(domain_a: str, domain_b: str) -> str:
+async def compare_postures(domain_a: str, domain_b: str) -> dict[str, Any]:
     """Compare the security postures of two domains side by side.
 
     For defensive security posture assessment only.
 
-    Returns a structured JSON comparison with side-by-side metrics,
+    Returns a structured comparison with side-by-side metrics,
     control differences, and relative posture assessment.
 
     Args:
@@ -1290,104 +1186,30 @@ async def compare_postures(domain_a: str, domain_b: str) -> str:
         domain_b: Second domain to compare (e.g., "contoso.com")
 
     Returns:
-        JSON object with the posture comparison, or an error message.
+        A structured posture comparison. Raises ToolError (isError) when either
+        domain is invalid or cannot be resolved (both must resolve to compare).
     """
     request_id = uuid.uuid4().hex[:12]
     start_time = time.monotonic()
 
-    # Validate both domains
-    try:
-        validated_a = validate_domain(domain_a)
-    except ValueError as exc:
-        _log_structured(
-            logging.WARNING,
-            "validation_failed",
-            request_id=request_id,
-            domain=domain_a,
-            error=str(exc),
-        )
-        return f"Error: {exc}"
-
-    try:
-        validated_b = validate_domain(domain_b)
-    except ValueError as exc:
-        _log_structured(
-            logging.WARNING,
-            "validation_failed",
-            request_id=request_id,
-            domain=domain_b,
-            error=str(exc),
-        )
-        return f"Error: {exc}"
-
-    # Resolve domain_a
-    cached_a = _cache_get(validated_a)
-    if cached_a is not None:
-        info_a, _ = cached_a
-    else:
-        if not _rate_limit_try_acquire(validated_a):
-            cached_a = _cache_get(validated_a)
-            if cached_a is None:
-                return f"Rate limited: {domain_a} was looked up recently. Try again in a few seconds."
-            info_a, _ = cached_a
-        else:
-            try:
-                info_a, results_a = await resolve_tenant(validated_a)
-            except ReconLookupError:
-                _rate_limit_release(validated_a)
-                return f"Could not resolve domain_a: {domain_a}. The comparison requires both domains to be resolvable."
-            except Exception:
-                _rate_limit_release(validated_a)
-                logger.exception(
-                    "Unexpected error looking up %s (request_id=%s)",
-                    domain_a,
-                    request_id,
-                )
-                return f"Error looking up {domain_a}: an internal error occurred"
-            _cache_set(validated_a, info_a, results_a)
-
-    # Resolve domain_b
-    cached_b = _cache_get(validated_b)
-    if cached_b is not None:
-        info_b, _ = cached_b
-    else:
-        if not _rate_limit_try_acquire(validated_b):
-            cached_b = _cache_get(validated_b)
-            if cached_b is None:
-                return f"Rate limited: {domain_b} was looked up recently. Try again in a few seconds."
-            info_b, _ = cached_b
-        else:
-            try:
-                info_b, results_b = await resolve_tenant(validated_b)
-            except ReconLookupError:
-                _rate_limit_release(validated_b)
-                return f"Could not resolve domain_b: {domain_b}. The comparison requires both domains to be resolvable."
-            except Exception:
-                _rate_limit_release(validated_b)
-                logger.exception(
-                    "Unexpected error looking up %s (request_id=%s)",
-                    domain_b,
-                    request_id,
-                )
-                return f"Error looking up {domain_b}: an internal error occurred"
-            _cache_set(validated_b, info_b, results_b)
+    info_a = await _resolve_single_for_tool(domain_a, request_id)
+    info_b = await _resolve_single_for_tool(domain_b, request_id)
 
     from recon_tool.exposure import compare_postures_from_infos
-    from recon_tool.formatter import format_comparison_json
+    from recon_tool.formatter import format_comparison_dict
 
     comparison = compare_postures_from_infos(info_a, info_b)
 
-    elapsed = time.monotonic() - start_time
     _log_structured(
         logging.INFO,
         "postures_compared",
         request_id=request_id,
         domain_a=domain_a,
         domain_b=domain_b,
-        elapsed_s=round(elapsed, 2),
+        elapsed_s=round(time.monotonic() - start_time, 2),
     )
 
-    return format_comparison_json(comparison)
+    return format_comparison_dict(comparison)
 
 
 def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResult]) -> str:
@@ -1509,6 +1331,47 @@ async def _resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]
 
     _cache_set(validated, info, results)
     return info, list(results)
+
+
+async def _resolve_single_for_tool(domain: str, request_id: str) -> TenantInfo:
+    """Resolve a domain for a structured (dict-returning) posture tool.
+
+    Centralizes the validate / cache / rate-limit / resolve flow the posture
+    tools share, raising ToolError on every failure path (invalid domain, rate
+    limit, no data, internal error). FastMCP turns that into a tool result with
+    isError=true, the spec-correct category for execution and input-validation
+    errors, so a consuming model can self-correct rather than parse an
+    error-shaped success payload.
+    """
+    try:
+        validated = validate_domain(domain)
+    except ValueError as exc:
+        _log_structured(logging.WARNING, "validation_failed", request_id=request_id, domain=domain, error=str(exc))
+        raise ToolError(str(exc)) from exc
+
+    cached = _cache_get(validated)
+    if cached is not None:
+        _log_structured(logging.INFO, "cache_hit", request_id=request_id, domain=validated)
+        return cached[0]
+
+    if not _rate_limit_try_acquire(validated):
+        cached = _cache_get(validated)
+        if cached is None:
+            raise ToolError(f"Rate limited: {domain} was looked up recently. Try again in a few seconds.")
+        return cached[0]
+
+    try:
+        info, results = await resolve_tenant(validated)
+    except ReconLookupError as exc:
+        _rate_limit_release(validated)
+        raise ToolError(f"No information found for {domain}") from exc
+    except Exception as exc:
+        _rate_limit_release(validated)
+        logger.exception("Unexpected error looking up %s (request_id=%s)", domain, request_id)
+        raise ToolError(f"Error looking up {domain}: an internal error occurred") from exc
+
+    _cache_set(validated, info, results)
+    return info
 
 
 # ── MCP Introspection Tools ─────────────────────────────────────────────
