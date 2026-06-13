@@ -253,6 +253,28 @@ class TestJsonMain:
         assert "contoso" not in out
         assert "fabrikam" not in out
 
+    def test_single_json_full_block_independent_of_dns_block(self, tmp_path, monkeypatch, capsys) -> None:
+        # Regression: m365_full must be gated on its OWN records, not on the
+        # DNS-only list. When the DNS channel failed for every labeled domain
+        # (m365_dns_only is None) but the full pipeline produced posteriors, the
+        # JSON must still report m365_full, not silently drop it to n=0.
+        domains_file = tmp_path / "domains.txt"
+        domains_file.write_text("contoso.com\n", encoding="utf-8")
+        records = [
+            _record(POSITIVE if i % 2 else NEGATIVE, dns_only=None, full=0.95 if i % 2 else 0.05)
+            for i in range(12)
+        ]
+
+        async def _fake_collect(domains, *, timeout, skip_ct, concurrency):
+            return records, TenancyCounts(resolved=len(records))
+
+        monkeypatch.setattr(tenancy, "collect", _fake_collect)
+        rc = main([str(domains_file), "--json"])
+        assert rc == 0
+        doc = json.loads(capsys.readouterr().out)
+        assert doc["m365_dns_only"] == {"n": 0}  # DNS channel failed for all
+        assert doc["m365_full"]["n"] == 12  # full pipeline still calibrated
+
     def test_stratified_json_carries_dns_and_gws(self, tmp_path, monkeypatch, capsys) -> None:
         (tmp_path / "alpha.txt").write_text("contoso.com\n", encoding="utf-8")
         (tmp_path / "beta.txt").write_text("fabrikam.com\n", encoding="utf-8")
