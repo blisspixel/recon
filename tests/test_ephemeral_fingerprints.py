@@ -13,8 +13,6 @@ Validates:
 
 from __future__ import annotations
 
-import json
-
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
@@ -33,6 +31,8 @@ from recon_tool.fingerprints import (
 )
 
 pytest.importorskip("mcp")
+
+from mcp.server.fastmcp.exceptions import ToolError
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
@@ -218,7 +218,7 @@ class TestInjectEphemeralFingerprintMCP:
             confidence="high",
             detections=[{"type": "txt", "pattern": "^contoso-analytics="}],
         )
-        data = json.loads(result)
+        data = result
         assert data["status"] == "ok"
         assert data["name"] == "Contoso Analytics"
         assert data["slug"] == "contoso-analytics"
@@ -229,45 +229,42 @@ class TestInjectEphemeralFingerprintMCP:
         """Invalid detection type → error JSON."""
         from recon_tool.server import inject_ephemeral_fingerprint
 
-        result = await inject_ephemeral_fingerprint(
-            name="Fabrikam Widget",
-            slug="fabrikam-widget",
-            category="SaaS",
-            confidence="high",
-            detections=[{"type": "invalid_type", "pattern": "fabrikam"}],
-        )
-        data = json.loads(result)
-        assert "error" in data
+        with pytest.raises(ToolError):
+            await inject_ephemeral_fingerprint(
+                name="Fabrikam Widget",
+                slug="fabrikam-widget",
+                category="SaaS",
+                confidence="high",
+                detections=[{"type": "invalid_type", "pattern": "fabrikam"}],
+            )
 
     @pytest.mark.asyncio
     async def test_redos_unsafe_pattern_returns_error(self) -> None:
         """ReDoS-unsafe pattern → error JSON."""
         from recon_tool.server import inject_ephemeral_fingerprint
 
-        result = await inject_ephemeral_fingerprint(
-            name="Northwind Unsafe",
-            slug="northwind-unsafe",
-            category="SaaS",
-            confidence="high",
-            detections=[{"type": "txt", "pattern": "(a+)+"}],
-        )
-        data = json.loads(result)
-        assert "error" in data
+        with pytest.raises(ToolError):
+            await inject_ephemeral_fingerprint(
+                name="Northwind Unsafe",
+                slug="northwind-unsafe",
+                category="SaaS",
+                confidence="high",
+                detections=[{"type": "txt", "pattern": "(a+)+"}],
+            )
 
     @pytest.mark.asyncio
     async def test_empty_detections_returns_error(self) -> None:
         """Empty detections list → error JSON."""
         from recon_tool.server import inject_ephemeral_fingerprint
 
-        result = await inject_ephemeral_fingerprint(
-            name="Contoso Empty",
-            slug="contoso-empty",
-            category="SaaS",
-            confidence="high",
-            detections=[],
-        )
-        data = json.loads(result)
-        assert "error" in data
+        with pytest.raises(ToolError):
+            await inject_ephemeral_fingerprint(
+                name="Contoso Empty",
+                slug="contoso-empty",
+                category="SaaS",
+                confidence="high",
+                detections=[],
+            )
 
     @pytest.mark.asyncio
     async def test_invalid_confidence_defaults_to_medium(self) -> None:
@@ -281,7 +278,7 @@ class TestInjectEphemeralFingerprintMCP:
             confidence="ultra-high",
             detections=[{"type": "txt", "pattern": "^fabrikam-conf="}],
         )
-        data = json.loads(result)
+        data = result
         # _validate_fingerprint defaults invalid confidence to "medium" and still succeeds
         assert data["status"] == "ok"
 
@@ -300,7 +297,7 @@ class TestInjectEphemeralFingerprintMCP:
                 {"type": "spf", "pattern": "include:contoso.example.com"},
             ],
         )
-        data = json.loads(result)
+        data = result
         assert data["status"] == "ok"
         assert data["detections_accepted"] == 2
 
@@ -309,16 +306,14 @@ class TestInjectEphemeralFingerprintMCP:
         """MCP injection rejects oversized detection arrays before validation."""
         from recon_tool.server import inject_ephemeral_fingerprint
 
-        result = await inject_ephemeral_fingerprint(
-            name="Contoso Oversized",
-            slug="contoso-oversized",
-            category="SaaS",
-            confidence="high",
-            detections=[{"type": "invalid_type", "pattern": f"^contoso-{idx}="} for idx in range(21)],
-        )
-        data = json.loads(result)
-        assert "error" in data
-        assert "detection cap" in data["error"]
+        with pytest.raises(ToolError, match="detection cap"):
+            await inject_ephemeral_fingerprint(
+                name="Contoso Oversized",
+                slug="contoso-oversized",
+                category="SaaS",
+                confidence="high",
+                detections=[{"type": "invalid_type", "pattern": f"^contoso-{idx}="} for idx in range(21)],
+            )
         assert get_ephemeral() == ()
 
 
@@ -334,7 +329,7 @@ class TestListEphemeralFingerprintsMCP:
         from recon_tool.server import list_ephemeral_fingerprints
 
         result = await list_ephemeral_fingerprints()
-        data = json.loads(result)
+        data = result
         assert data == []
 
     @pytest.mark.asyncio
@@ -351,7 +346,7 @@ class TestListEphemeralFingerprintsMCP:
         inject_ephemeral(fp)
 
         result = await list_ephemeral_fingerprints()
-        data = json.loads(result)
+        data = result
         assert len(data) == 1
         assert data[0]["name"] == "Northwind CRM"
         assert data[0]["slug"] == "northwind-crm"
@@ -372,7 +367,7 @@ class TestClearEphemeralFingerprintsMCP:
         from recon_tool.server import clear_ephemeral_fingerprints
 
         result = await clear_ephemeral_fingerprints()
-        data = json.loads(result)
+        data = result
         assert data["status"] == "ok"
         assert data["removed"] == 0
 
@@ -385,7 +380,7 @@ class TestClearEphemeralFingerprintsMCP:
         inject_ephemeral(_make_fingerprint(slug="contoso-y"))
 
         result = await clear_ephemeral_fingerprints()
-        data = json.loads(result)
+        data = result
         assert data["status"] == "ok"
         assert data["removed"] == 2
 
@@ -414,10 +409,8 @@ class TestReevaluateDomainMCP:
         """Uncached domain → error JSON 'No cached data...'."""
         from recon_tool.server import reevaluate_domain
 
-        result = await reevaluate_domain("contoso.example.com")
-        data = json.loads(result)
-        assert "error" in data
-        assert "No cached data" in data["error"]
+        with pytest.raises(ToolError, match="No cached data"):
+            await reevaluate_domain("contoso.example.com")
 
     @pytest.mark.asyncio
     async def test_cached_domain_returns_updated_info(self) -> None:
@@ -447,7 +440,7 @@ class TestReevaluateDomainMCP:
         _cache_set("contoso.example.com", info, [source])
 
         result = await reevaluate_domain("contoso.example.com")
-        data = json.loads(result)
+        data = result
         # Should return valid tenant info JSON
         assert "display_name" in data
         assert data["queried_domain"] == "contoso.example.com"
@@ -478,7 +471,7 @@ class TestReevaluateDomainMCP:
             result = await reevaluate_domain("fabrikam.example.com")
             mock_resolve.assert_not_called()
 
-        data = json.loads(result)
+        data = result
         assert "error" not in data
 
     @pytest.mark.asyncio
@@ -519,7 +512,7 @@ class TestReevaluateDomainMCP:
         inject_ephemeral(fp)
 
         result = await reevaluate_domain("northwind.example.com")
-        data = json.loads(result)
+        data = result
         # The tool should succeed without error
         assert "error" not in data
         assert "queried_domain" in data
