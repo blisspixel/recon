@@ -3838,10 +3838,29 @@ def format_exposure_dict(assessment: ExposureAssessment) -> dict[str, Any]:
     ip = assessment.identity_posture
     infra = assessment.infrastructure_footprint
 
+    unconfirmable = assessment.unconfirmable_absent_points
     d: dict[str, Any] = {
         "domain": assessment.domain,
         "posture_score": assessment.posture_score,
         "posture_score_label": assessment.posture_score_label,
+        # The score counts only observed-present controls, so it is a lower
+        # bound. This envelope tells a consuming agent how much that floor could
+        # understate the true posture: a low score may mean "hardened but quiet",
+        # not "weak". Absent declarative records (DMARC/MTA-STS/TLS-RPT/CAA) are
+        # genuinely absent and are not part of this ambiguity.
+        "observability": {
+            "score_is_lower_bound": unconfirmable > 0,
+            "unconfirmable_absent_points": unconfirmable,
+            "score_ceiling": min(100, assessment.posture_score + unconfirmable),
+            "note": (
+                "posture_score counts only observed-present controls; up to "
+                f"{unconfirmable} more point(s) come from controls whose absence "
+                "the passive channel cannot confirm (DKIM at non-standard "
+                "selectors, security tooling, an email gateway behind non-MX "
+                "routing). A low score may reflect limited observability, not "
+                "weak posture."
+            ),
+        },
         "email_posture": {
             "dmarc_policy": ep.dmarc_policy,
             "dkim_configured": ep.dkim_configured,
@@ -3907,6 +3926,12 @@ def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
     score_style = "#a3d9a5" if score >= 60 else "#7ec8e3" if score >= 30 else "#e07a5f"
     text.append(f"{score}/100", style=score_style)
     text.append(f" ({assessment.posture_score_label})\n", style="dim")
+    if assessment.unconfirmable_absent_points > 0:
+        ceiling = min(100, score + assessment.unconfirmable_absent_points)
+        text.append(
+            f"    (lower bound; up to {ceiling}/100 if unobservable controls are present)\n",
+            style="dim",
+        )
 
     # Email posture
     ep = assessment.email_posture
@@ -3994,6 +4019,10 @@ def format_gaps_dict(report: GapReport) -> dict[str, Any]:
                 "severity": gap.severity,
                 "observation": gap.observation,
                 "recommendation": gap.recommendation,
+                # False = this gap rests on not observing a hideable control, so
+                # it may be a false positive (the control could be present but
+                # unobservable). True = a confirmed public-records fact.
+                "absence_confirmable": gap.absence_confirmable,
                 "evidence": [
                     {
                         "source_type": r.source_type,
