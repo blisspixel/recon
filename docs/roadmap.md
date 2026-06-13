@@ -860,19 +860,27 @@ regrow and new modules cap at 1000 lines. The work is to split each into a
 cohesive subpackage while preserving the public import path and keeping the
 golden/snapshot tests byte-identical:
 
-1. `formatter.py` → split by render target. **Done so far:** exposure/gaps
-   rendering → `formatter_exposure.py` (clean, no shared coupling; shipped,
-   golden byte-identical). **Learned constraint:** the markdown / json-dict /
-   panel renderers all depend on a shared *service-classification* helper layer
-   (`_service_provider_group`, `_is_m365_service`, `_is_gws_service`,
-   `_categorize_services`, `detect_provider`, the `_M365_KEYWORDS` constants),
-   so they cannot be extracted cleanly in isolation — a naive markdown
-   extraction hit exactly this and was reverted before shipping. The correct
-   next move is therefore to extract that shared layer first into a
-   `formatter_classify.py` (imported by both the remaining `formatter.py` panel
-   code and the new renderer modules), *then* split markdown / plain / json-dict
-   / panel on top of it. Bigger than the exposure step, so its own sequenced
-   sub-steps, each golden-byte-identical and gate-verified.
+1. `formatter.py` → split by render target. **Done:** (a) exposure/gaps
+   rendering → `formatter_exposure.py` (clean, no shared coupling; golden
+   byte-identical); (b) the shared *service-classification* layer →
+   `formatter_classify.py` (logic: slug→category / slug→cloud-vendor,
+   provider-line detection, the two-pass categorizer, the fingerprint lookups)
+   plus `formatter_classify_tables.py` (the ~880-line slug/vendor/keyword data
+   dicts), with `formatter` re-exporting both under their historical `_NAME`
+   aliases so the test/validation import surface stays byte-identical
+   (`formatter.py` 4160 → ~2800). **Learned constraint (why classify came
+   first):** the markdown / json-dict / panel renderers all depend on that
+   classification layer (`_service_provider_group`, `_is_m365_service`,
+   `_is_gws_service`, `_categorize_services`, `detect_provider`, the
+   `_M365_KEYWORDS` constants), so they could not be extracted cleanly in
+   isolation. A naive markdown extraction hit exactly this and was reverted.
+   With the layer extracted, the remaining sub-steps split markdown / plain /
+   json-dict / panel on top of it, each golden-byte-identical and gate-verified.
+   **Naming note:** names that cross a module boundary inside `recon_tool/` must
+   be public. The pyright-strict gate flags cross-module underscore access as
+   `reportPrivateUsage` (the `tests/` executionEnvironment relaxes it; production
+   code does not), so the new modules expose public names and `formatter` aliases
+   them back to the historical `_NAME`s.
 2. `cli.py` → split the command groups (`lookup`, `batch`, `cache`,
    `fingerprints`, `signals`, `mcp`, `doctor`, `update`) into `cli/` submodules
    registered on the shared Typer app.
