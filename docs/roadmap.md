@@ -850,6 +850,33 @@ explicitly first); and (d) grapheme/East-Asian-width column padding in the
 catalog-listing tables (today `len()`-based; low impact since the content is
 ASCII slugs/categories). None is on any release's critical path.
 
+**Module decomposition (god-file split) — open, ratcheted.** A 2026 metrics
+pass found several modules far over the ~1000-line convention: `formatter.py`
+(4413), `cli.py` (3941), `server.py` (3114), `sources/dns.py` (2524),
+`bayesian.py` (1411), `merger.py` (1131), `exposure.py` (1130). Track A
+decomposed *functions* (the C901 cap) but never *files*. `scripts/check_file_size.py`
+now baselines these as ceilings that may only shrink (CI-gated), so they cannot
+regrow and new modules cap at 1000 lines. The work is to split each into a
+cohesive subpackage while preserving the public import path and keeping the
+golden/snapshot tests byte-identical:
+
+1. `formatter.py` → a `formatter/` package by render target (panel, markdown,
+   plain, json-dict, exposure, explanation) over shared helpers — the biggest
+   win and the cleanest seams (each renderer is already a distinct function set).
+2. `cli.py` → split the command groups (`lookup`, `batch`, `cache`,
+   `fingerprints`, `signals`, `mcp`, `doctor`, `update`) into `cli/` submodules
+   registered on the shared Typer app.
+3. `server.py` → group the MCP tools by domain (lookup/posture/graph/introspection)
+   into a `server/` package.
+4. `sources/dns.py` → split by record family / parser.
+
+Each split is its own commit: move code, re-export from the original path so
+imports and the locked surface are unchanged, run the full gate + golden tests,
+then lower the ratchet baseline via `scripts/check_file_size.py --update`.
+Sequenced highest-value-and-cleanest-seam first; none changes behavior or the
+v2.0 contract. Standards and rationale: [engineering-practices.md](engineering-practices.md),
+[adr/](adr/).
+
 **Track A - Complexity decomposition.** Complete as of v1.9.76. Zero
 `# noqa: C901` markers remain in `recon_tool/`, so the mccabe cap of 15 from
 v1.9.37 now holds the whole tree, not just new code. The full sweep (formatter,
