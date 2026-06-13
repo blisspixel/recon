@@ -197,6 +197,53 @@ class TestStdoutStderrDiscipline:
         assert "contoso.example" not in captured.out
 
 
+class TestColorSuppressionContract:
+    """Color follows the --color / NO_COLOR / TERM rules (clig.dev, no-color.org).
+
+    recon delegates auto-detection to Rich and only forces or disables via
+    --color / --no-color. These guard recon's override logic and the Rich
+    behavior recon relies on: NO_COLOR disables color only when present AND
+    non-empty, and TERM=dumb yields no color system. The empty-NO_COLOR case is
+    the Windows env-var gotcha flagged in the 2026 CLI best-practices review, so
+    it is pinned explicitly here rather than assumed.
+    """
+
+    def test_no_color_flag_disables(self) -> None:
+        from recon_tool.formatter import _make_console, set_color_override
+
+        try:
+            set_color_override(False)
+            assert _make_console(stderr=False).no_color is True
+        finally:
+            set_color_override(None)
+
+    def test_color_flag_forces_terminal(self) -> None:
+        from recon_tool.formatter import _make_console, set_color_override
+
+        try:
+            set_color_override(True)
+            console = _make_console(stderr=False)
+            assert console.is_terminal is True
+            assert console.no_color is False
+        finally:
+            set_color_override(None)
+
+    def test_empty_no_color_keeps_color(self, monkeypatch) -> None:
+        # Present-but-empty NO_COLOR must NOT disable color (no-color.org rule).
+        monkeypatch.setenv("NO_COLOR", "")
+        monkeypatch.delenv("TERM", raising=False)
+        assert Console(force_terminal=True).no_color is False
+
+    def test_nonempty_no_color_disables(self, monkeypatch) -> None:
+        monkeypatch.setenv("NO_COLOR", "1")
+        assert Console(force_terminal=True).no_color is True
+
+    def test_term_dumb_yields_no_color_system(self, monkeypatch) -> None:
+        monkeypatch.delenv("NO_COLOR", raising=False)
+        monkeypatch.setenv("TERM", "dumb")
+        assert Console(force_terminal=True).color_system is None
+
+
 class TestNotFoundWarningContainsDomain:
     """Property 10: Not-found warning contains queried domain.
 
