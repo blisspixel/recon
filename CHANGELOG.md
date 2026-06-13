@@ -7,10 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Now carries packaged (additive, non-breaking) changes to `recon_tool`,
-including a named new stable surface (the evidence-semantics diagnostics), so
-the next release cut is the **2.2.0 minor** the roadmap reserves for exactly
-this: a coherent new surface, not internal hardening.
+## [2.2.0] - 2026-06-13
+
+The 2.2.0 minor: a coherent batch of new *stable surfaces* off the locked v2.0
+JSON contract. The headlines are the evidence-semantics diagnostics (per-node
+entropy reduction, exact leave-one-unit-out counterfactuals, graph partition
+stability) and the MCP tool-output contract revision below. The CLI `--json`
+v2.0 schema is unchanged.
+
+### Changed — MCP tool output contract (aligned to MCP 2025-11-25)
+
+The MCP data tools now return structured results instead of JSON strings, so a
+client gets navigable `structuredContent` with a generated per-tool
+`outputSchema`, while the same payload still ships as serialized-JSON text for
+backward compatibility. Tool failures (invalid input, an unresolvable or
+uncached domain, a rate limit, an internal error) now surface as `isError` tool
+results (a raised `ToolError`) so a model can recognize the failure and
+self-correct, instead of a success-shaped `{"error": ...}` payload. Eighteen data
+tools are affected (catalog, posture, graph, ephemeral, and inference tools); the
+narrative tools (`lookup_tenant`, `chain_lookup`, `reload_data`, `explain_dag`)
+render prose or DOT and stay text. The posture tools now share a single
+resolve-or-raise helper.
+
+Note for MCP consumers: this revises the agent-consumed wire shape. Errors now
+arrive as `isError` rather than an `error` field, and the text representation of
+the list tools is one JSON block per item. The CLI `--json` / `--ndjson` / delta
+contract (the locked v2.0 schema in `docs/recon-schema.json`) is a separate
+surface and is unchanged. Full contract in [docs/mcp.md](docs/mcp.md). Pinned by
+`tests/test_mcp_structured_output.py`.
 
 ### Added — CLI ergonomics & robustness (best-practices pass, tier 1)
 
@@ -46,11 +70,14 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
 - **`get_fingerprints` pagination (tier 2, additive).** The MCP tool gains
   optional `limit`/`offset` so an agent that needs only a slice of the ~840
   fingerprints can cap the response; omitting them returns the full list, so the
-  result shape is backward-compatible. (The contract-sensitive remainder of the
-  agent-protocol polish — `structuredContent`/`outputSchema`, `isError`
-  flagging, and a default pagination envelope — is deferred to a deliberate
-  version-noted MCP-contract revision rather than changing the locked wire shape
-  in passing; see roadmap "CLI best-practices pass (2026)".)
+  result shape is backward-compatible. (The `structuredContent` / `outputSchema`
+  / `isError` half of the agent-protocol polish shipped in this release; see
+  "Changed — MCP tool output contract" above. A default pagination *envelope* on
+  the list tools remains deferred.)
+- **OSC 8 terminal hyperlinks.** Vendor-doc reference URLs in `fingerprints show`,
+  the crash-log file path, and the issues URL in the crash handler are now
+  clickable on capable terminals via the OSC 8 standard (rendered through Rich's
+  `link` style), with a plain-URL fallback when piped or unsupported.
 - **XDG Base Directory support (tier 2).** A new `recon_tool.paths` module
   centralizes config/cache/state resolution. Behavior is unchanged for existing
   setups — `RECON_CONFIG_DIR` (the test/CI seam) still maps every category under
@@ -364,6 +391,9 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   100%" was a wrong-interpreter artifact the CI baseline step caught) to the
   measured 91.4% (123 survivors of 1,431 tested), in the CHANGELOG, the
   traceability matrix, the roadmap, and `validation/mutation-gate.md`.
+- Added `CODE_OF_CONDUCT.md` and linked it from `CONTRIBUTING.md`, completing the
+  GitHub community-health profile; documented the MCP output contract in
+  `docs/mcp.md` and gave the docs index self-routing descriptors.
 
 ### CI
 
@@ -371,6 +401,16 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   survival over tested mutants with an explicit honest floor
   (`scripts/mutation_floor.py`), and runs a strengthened kill-set; bumped
   `astral-sh/setup-uv` 8.1.0 to 8.2.0 across the workflows.
+
+### Internal
+
+- **God-file decomposition (formatter).** Began splitting the ~4,400-line
+  `formatter.py` by concern, preserving the public import path and keeping golden
+  renders byte-identical: exposure/gaps rendering moved to `formatter_exposure`,
+  and the shared service-classification layer to `formatter_classify` (logic) plus
+  `formatter_classify_tables` (data). A CI-gated file-size ratchet
+  (`scripts/check_file_size.py`) baselines the remaining oversized modules as
+  shrink-only ceilings so they cannot regrow, and new modules cap at 1,000 lines.
 
 ## [2.1.18] - 2026-06-11
 
