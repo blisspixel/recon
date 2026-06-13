@@ -121,6 +121,13 @@ class TestDirectDomainLookup:
         result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--plain"])
         assert result.exit_code == 2
 
+    def test_lookup_plain_rejected_with_alternate_modes(self) -> None:
+        # --plain only governs the standard render; combining it with a mode
+        # that has its own output is rejected, not silently ignored.
+        for mode in ("--exposure", "--gaps", "--chain"):
+            result = runner.invoke(app, ["lookup", "contoso.com", "--plain", mode])
+            assert result.exit_code == 2, f"--plain {mode} should be rejected"
+
 
 class TestLookupSubcommand:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)

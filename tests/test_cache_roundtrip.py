@@ -326,7 +326,7 @@ class TestCacheDirRespectsEnvVar:
     def test_default_legacy_when_recon_dir_present(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # Back-compat: an existing ~/.recon keeps being used.
         monkeypatch.delenv("RECON_CONFIG_DIR", raising=False)
-        monkeypatch.setattr(Path, "home", lambda *a, **k: tmp_path)
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
         (tmp_path / ".recon").mkdir()
         assert cache_dir() == tmp_path / ".recon" / "cache"
 
@@ -334,7 +334,7 @@ class TestCacheDirRespectsEnvVar:
         # Fresh install (no ~/.recon): XDG cache home.
         monkeypatch.delenv("RECON_CONFIG_DIR", raising=False)
         monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
-        monkeypatch.setattr(Path, "home", lambda *a, **k: tmp_path)
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
         assert cache_dir() == tmp_path / ".cache" / "recon" / "cache"
 
 

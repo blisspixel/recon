@@ -17,7 +17,7 @@ from recon_tool.paths import cache_root, config_dir, state_dir
 
 @pytest.fixture
 def home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
-    monkeypatch.setattr(Path, "home", lambda *a, **k: tmp_path)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
     for var in ("RECON_CONFIG_DIR", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME"):
         monkeypatch.delenv(var, raising=False)
     return tmp_path
