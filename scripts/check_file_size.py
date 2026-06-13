@@ -35,8 +35,8 @@ SOFT_CAP = 1000
 BASELINE: dict[str, int] = {
     "cli.py": 3943,
     "server.py": 2859,
-    "formatter.py": 2605,
     "sources/dns.py": 2524,
+    "formatter.py": 2164,
     "bayesian.py": 1411,
     "merger.py": 1131,
     "exposure.py": 1130,
