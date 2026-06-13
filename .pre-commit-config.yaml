@@ -14,7 +14,9 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        args: [recon_tool/]
+        # Match CI exactly (.github/workflows/ci.yml: pyright recon_tool/ tests/).
+        # A narrower scope here let test-file type errors reach CI red.
+        args: [recon_tool/, tests/]
 
       - id: metadata-coverage
         name: metadata-coverage (descriptions on every fingerprint detection)
