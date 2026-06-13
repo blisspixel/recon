@@ -67,6 +67,13 @@ Run (maintainer-local, network):
 
     python -m validation.tenancy_reference_calibration domains.txt
     python -m validation.tenancy_reference_calibration domains.txt --stratify-dir validation/corpus-private/by-vertical
+    python -m validation.tenancy_reference_calibration domains.txt --json   # structured aggregates
+
+The ``--json`` form emits the same aggregates as a machine-readable object
+(``m365_dns_only`` / ``m365_full`` / ``gws_one_sided`` / ``counts`` for the
+single mode; ``m365_dns_only`` / ``gws_one_sided`` for ``--stratify-dir``),
+for cross-list agreement checks and the PV2 drift loop. Aggregates only,
+exactly as the text path; no apex is ever serialized.
 """
 
 # Reuses the tested calibration internals from reference_calibration (the
@@ -76,8 +83,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -396,14 +404,33 @@ _TRAILER = (
 )
 
 
-def _run_single(path: Path, *, bins: int, concurrency: int, timeout: float) -> int:
+def _run_single(path: Path, *, bins: int, concurrency: int, timeout: float, as_json: bool = False) -> int:
     domains = _read_domains(path)
-    print(f"Resolving {len(domains)} domains against the provider endpoints (aggregates only, no apex printed)...")
+    if not as_json:
+        print(f"Resolving {len(domains)} domains against the provider endpoints (aggregates only, no apex printed)...")
     # CT is skipped: the tenancy nodes' evidence is DNS/endpoint-driven, and
     # the DNS-only predictor uses the dns_records source alone.
     records, counts = asyncio.run(collect(domains, timeout=timeout, skip_ct=True, concurrency=concurrency))
-    _print_counts(counts)
     dns_records_cal = m365_calibration_records(records, full_pipeline=False)
+    if as_json:
+        # Structured aggregates for cross-list agreement checks and PV2 drift.
+        # Same numbers as the text path; no apex ever appears.
+        print(
+            json.dumps(
+                {
+                    "mode": "single",
+                    "counts": asdict(counts),
+                    "m365_dns_only": calibration_summary(dns_records_cal, bins=bins) if dns_records_cal else {"n": 0},
+                    "m365_full": calibration_summary(m365_calibration_records(records, full_pipeline=True), bins=bins)
+                    if dns_records_cal
+                    else {"n": 0},
+                    "gws_one_sided": one_sided_recall_summary(gws_attested_posteriors(records)),
+                },
+                indent=2,
+            )
+        )
+        return 0
+    _print_counts(counts)
     if not dns_records_cal:
         print("\nNo domains carried a provider label with a DNS channel; nothing to calibrate.")
         return 0
@@ -420,12 +447,15 @@ def _run_single(path: Path, *, bins: int, concurrency: int, timeout: float) -> i
     return 0
 
 
-def _run_stratified(directory: Path, *, bins: int, concurrency: int, timeout: float, min_cell: int) -> int:
+def _run_stratified(
+    directory: Path, *, bins: int, concurrency: int, timeout: float, min_cell: int, as_json: bool = False
+) -> int:
     files = sorted(directory.glob("*.txt"))
     if not files:
         print(f"FAIL: no .txt domain lists in {directory}")
         return 1
-    print(f"Calibrating per stratum over {len(files)} lists (aggregates only, no apex printed)...")
+    if not as_json:
+        print(f"Calibrating per stratum over {len(files)} lists (aggregates only, no apex printed)...")
     strata: dict[str, list[CalibrationRecord]] = {}
     gws_all: list[float] = []
     for f in files:
@@ -435,6 +465,18 @@ def _run_stratified(directory: Path, *, bins: int, concurrency: int, timeout: fl
         strata[f.stem] = m365_calibration_records(records, full_pipeline=False)
         gws_all.extend(gws_attested_posteriors(records))
     result = stratified_summary(strata, min_cell=min_cell, bins=bins)
+    if as_json:
+        print(
+            json.dumps(
+                {
+                    "mode": "stratified",
+                    "m365_dns_only": result,
+                    "gws_one_sided": one_sided_recall_summary(gws_all),
+                },
+                indent=2,
+            )
+        )
+        return 0
     print(f"\nPer-stratum M365 DNS-only corroboration (cells with n < {min_cell} suppressed)")
     print(f"  {'stratum':<28}{'n':>5}{'ECE':>8}{'agree':>8}{'base':>8}")
     print("  " + "-" * 57)
@@ -463,6 +505,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--bins", type=int, default=10, help="Reliability bins (default 10).")
     parser.add_argument("--concurrency", type=int, default=5, help="Concurrent resolves (default 5).")
     parser.add_argument("--timeout", type=float, default=120.0, help="Per-domain resolve timeout seconds.")
+    parser.add_argument(
+        "--json", action="store_true", help="Emit aggregates as JSON (for cross-list comparison / PV2 drift)."
+    )
     args = parser.parse_args(argv)
 
     if args.stratify_dir is not None:
@@ -475,11 +520,14 @@ def main(argv: list[str] | None = None) -> int:
             concurrency=args.concurrency,
             timeout=args.timeout,
             min_cell=args.min_cell,
+            as_json=args.json,
         )
     if args.domains is None or not args.domains.is_file():
         print("FAIL: provide a domains file or --stratify-dir DIR")
         return 1
-    return _run_single(args.domains, bins=args.bins, concurrency=args.concurrency, timeout=args.timeout)
+    return _run_single(
+        args.domains, bins=args.bins, concurrency=args.concurrency, timeout=args.timeout, as_json=args.json
+    )
 
 
 if __name__ == "__main__":
