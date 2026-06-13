@@ -34,7 +34,7 @@ SOFT_CAP = 1000
 # entry gone, every module under SOFT_CAP.
 BASELINE: dict[str, int] = {
     "cli.py": 3943,
-    "server.py": 3114,
+    "server.py": 2859,
     "formatter.py": 2798,
     "sources/dns.py": 2524,
     "bayesian.py": 1411,

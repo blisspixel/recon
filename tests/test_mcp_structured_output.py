@@ -1,0 +1,85 @@
+"""Contract guard for the MCP structured-output revision (stable 2025-11-25 spec).
+
+The data tools return objects rather than JSON strings, so FastMCP surfaces them
+as navigable ``structuredContent`` with a generated ``outputSchema`` while still
+including the serialized-JSON text block for backward compatibility. These tests
+pin that contract through the same dispatch the stdio transport uses
+(``mcp.call_tool`` / ``mcp.list_tools``), so a regression to string returns or a
+dropped schema fails CI.
+
+Narrative tools (lookup_tenant, chain_lookup, reload_data, explain_dag) render
+prose/DOT and intentionally stay text; they are not asserted here.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+
+import pytest
+
+pytest.importorskip("mcp")
+
+from recon_tool.server import get_fingerprints, get_signals, mcp
+
+# The data tools converted to structured output. Each must advertise an
+# outputSchema so a consuming agent can validate the result it gets back.
+STRUCTURED_TOOLS = frozenset(
+    {
+        "get_fingerprints",
+        "get_signals",
+        "explain_signal",
+        "cluster_verification_tokens",
+        "get_infrastructure_clusters",
+        "export_graph",
+        "inject_ephemeral_fingerprint",
+        "list_ephemeral_fingerprints",
+        "clear_ephemeral_fingerprints",
+        "reevaluate_domain",
+        "assess_exposure",
+        "find_hardening_gaps",
+        "compare_postures",
+        "analyze_posture",
+        "discover_fingerprint_candidates",
+        "test_hypothesis",
+        "simulate_hardening",
+        "get_posteriors",
+    }
+)
+
+
+def test_structured_tools_advertise_output_schema() -> None:
+    """Every converted data tool exposes an outputSchema in tools/list."""
+    tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
+    missing = [name for name in STRUCTURED_TOOLS if name in tools and tools[name].outputSchema is None]
+    assert not missing, f"these structured tools have no outputSchema: {missing}"
+
+
+def test_get_fingerprints_emits_navigable_structured_content() -> None:
+    """call_tool surfaces the list as real structured data (not a JSON-string
+    blob) plus a serialized-JSON text block for back-compat."""
+    content, structured = asyncio.run(mcp.call_tool("get_fingerprints", {"limit": 3}))
+
+    # structuredContent is the navigable object, not a stringified blob. FastMCP
+    # wraps a top-level list under "result"; the entries are real dicts.
+    assert isinstance(structured, dict)
+    items = structured["result"]
+    assert isinstance(items, list)
+    assert items
+    assert all(isinstance(entry, dict) for entry in items)
+    assert "slug" in items[0]
+
+    # Back-compat: FastMCP also emits the data as text content (one serialized
+    # JSON block per list element), so a text-only consumer still sees it.
+    assert content, "expected TextContent block(s) for backward compatibility"
+    parsed_items = [json.loads(block.text) for block in content]
+    assert parsed_items == items
+
+
+def test_direct_call_returns_python_objects_not_strings() -> None:
+    """Calling the tool functions directly yields Python objects, the basis for
+    the structured surface (a regression to ``json.dumps`` would return str)."""
+    fingerprints = asyncio.run(get_fingerprints(limit=1))
+    signals = asyncio.run(get_signals(layer=1))
+    assert isinstance(fingerprints, list)
+    assert isinstance(signals, list)
