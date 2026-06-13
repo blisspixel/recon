@@ -1520,7 +1520,9 @@ def fingerprints_show(
         if d.description:
             console.print(f"         {d.description}")
         if d.reference:
-            console.print(f"         ref: {d.reference}")
+            # OSC 8 hyperlink on capable terminals; Rich renders it as the plain
+            # URL when piped or on a terminal without hyperlink support.
+            console.print(f"         ref: [link={d.reference}]{escape(d.reference)}[/link]")
     console.print()
 
 
@@ -3929,12 +3931,14 @@ def run() -> None:
             stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
             crash_path = Path(tempfile.gettempdir()) / f"recon-crash-{stamp}.log"
             crash_path.write_text(traceback.format_exc(), encoding="utf-8")
-            where = str(crash_path)
+            # Clickable file:// link on capable terminals; plain path when piped.
+            where = f"[link={crash_path.as_uri()}]{escape(str(crash_path))}[/link]"
         except Exception:  # never fail inside the crash handler
             where = "(could not write a crash log)"
+        issues = "https://github.com/blisspixel/recon/issues"
         get_err_console().print(
-            f"[red]recon hit an unexpected error.[/red] Details written to {escape(where)}\n"
-            "Please report it at https://github.com/blisspixel/recon/issues and attach that file."
+            f"[red]recon hit an unexpected error.[/red] Details written to {where}\n"
+            f"Please report it at [link={issues}]{issues}[/link] and attach that file."
         )
         raise SystemExit(EXIT_INTERNAL) from None
 
