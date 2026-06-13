@@ -14,6 +14,7 @@ import asyncio
 import json
 
 import pytest
+from mcp.server.fastmcp.exceptions import ToolError
 
 from recon_tool import server
 from recon_tool.models import (
@@ -91,8 +92,7 @@ def stub_resolve(monkeypatch: pytest.MonkeyPatch):
 class TestGetInfrastructureClusters:
     def test_returns_cluster_envelope(self, stub_resolve):
         stub_resolve(_info_with_clusters())
-        out = asyncio.run(server.get_infrastructure_clusters("example.com"))
-        payload = json.loads(out)
+        payload = asyncio.run(server.get_infrastructure_clusters("example.com"))
         assert payload["domain"] == "example.com"
         assert payload["algorithm"] == "louvain"
         assert payload["modularity"] == pytest.approx(0.42)
@@ -107,24 +107,21 @@ class TestGetInfrastructureClusters:
 
     def test_skipped_envelope_when_no_report(self, stub_resolve):
         stub_resolve(_info_without_clusters())
-        out = asyncio.run(server.get_infrastructure_clusters("empty.com"))
-        payload = json.loads(out)
+        payload = asyncio.run(server.get_infrastructure_clusters("empty.com"))
         assert payload["algorithm"] == "skipped"
         assert payload["modularity"] == 0.0
         assert payload["clusters"] == []
 
-    def test_resolver_error_returns_error_field(self, stub_resolve):
+    def test_resolver_error_raises_tool_error(self, stub_resolve):
         stub_resolve("Domain validation failed")
-        out = asyncio.run(server.get_infrastructure_clusters("bad..com"))
-        payload = json.loads(out)
-        assert "error" in payload
+        with pytest.raises(ToolError, match="Domain validation failed"):
+            asyncio.run(server.get_infrastructure_clusters("bad..com"))
 
 
 class TestExportGraph:
     def test_returns_nodes_and_edges(self, stub_resolve):
         stub_resolve(_info_with_clusters())
-        out = asyncio.run(server.export_graph("example.com"))
-        payload = json.loads(out)
+        payload = asyncio.run(server.export_graph("example.com"))
         assert payload["domain"] == "example.com"
         assert payload["algorithm"] == "louvain"
         assert payload["node_count"] == 4
@@ -139,8 +136,7 @@ class TestExportGraph:
 
     def test_cluster_assignment_maps_members(self, stub_resolve):
         stub_resolve(_info_with_clusters())
-        out = asyncio.run(server.export_graph("example.com"))
-        payload = json.loads(out)
+        payload = asyncio.run(server.export_graph("example.com"))
         assignment = payload["cluster_assignment"]
         assert assignment["a.example.com"] == 0
         assert assignment["b.example.com"] == 0
@@ -149,25 +145,22 @@ class TestExportGraph:
 
     def test_includes_disclaimer(self, stub_resolve):
         stub_resolve(_info_with_clusters())
-        out = asyncio.run(server.export_graph("example.com"))
-        payload = json.loads(out)
+        payload = asyncio.run(server.export_graph("example.com"))
         assert "disclaimer" in payload
         assert "ownership" in payload["disclaimer"].lower()
 
     def test_skipped_envelope_when_no_report(self, stub_resolve):
         stub_resolve(_info_without_clusters())
-        out = asyncio.run(server.export_graph("empty.com"))
-        payload = json.loads(out)
+        payload = asyncio.run(server.export_graph("empty.com"))
         assert payload["algorithm"] == "skipped"
         assert payload["nodes"] == []
         assert payload["edges"] == []
         assert payload["cluster_assignment"] == {}
 
-    def test_resolver_error_returns_error_field(self, stub_resolve):
+    def test_resolver_error_raises_tool_error(self, stub_resolve):
         stub_resolve("Domain validation failed")
-        out = asyncio.run(server.export_graph("bad..com"))
-        payload = json.loads(out)
-        assert "error" in payload
+        with pytest.raises(ToolError, match="Domain validation failed"):
+            asyncio.run(server.export_graph("bad..com"))
 
 
 # ── v1.8.1: end-to-end FastMCP transport smoke test ───────────────────
@@ -199,8 +192,10 @@ class TestMcpToolRegistry:
         assert payload["domain"] == "example.com"
         assert payload["algorithm"] == "louvain"
         assert payload["clusters"], "cluster list should be non-empty"
-        # Structured output mirrors the text content.
-        assert "result" in structured
+        # Structured output is the navigable object itself (not a {"result": ...}
+        # wrapper): the tool returns a dict, so FastMCP surfaces it directly.
+        assert structured["domain"] == "example.com"
+        assert structured["algorithm"] == "louvain"
 
     def test_export_graph_via_call_tool(self, stub_resolve):
         from recon_tool.server import mcp

@@ -2346,7 +2346,7 @@ async def reevaluate_domain(domain: str) -> str:
         openWorldHint=True,
     ),
 )
-async def cluster_verification_tokens(domains: list[str]) -> str:
+async def cluster_verification_tokens(domains: list[str]) -> dict[str, Any]:
     """Cluster a list of domains by shared site-verification tokens.
 
     For defensive OSINT and vendor due-diligence only.
@@ -2382,7 +2382,7 @@ async def cluster_verification_tokens(domains: list[str]) -> str:
     from recon_tool.clustering import compute_shared_tokens
 
     if not domains:
-        return json_mod.dumps({"error": "At least one domain is required"})
+        raise ToolError("At least one domain is required")
 
     # Cap and dedup the input, matching the CLI batch path. Without this
     # the MCP tool lets a caller drive unbounded sequential resolves (each
@@ -2398,7 +2398,7 @@ async def cluster_verification_tokens(domains: list[str]) -> str:
             seen_keys.add(key)
             deduped.append(raw)
     if len(deduped) > _MAX_CLUSTER_DOMAINS:
-        return json_mod.dumps({"error": f"Too many domains: {len(deduped)} distinct (max {_MAX_CLUSTER_DOMAINS})"})
+        raise ToolError(f"Too many domains: {len(deduped)} distinct (max {_MAX_CLUSTER_DOMAINS})")
     domains = deduped
 
     domain_tokens: dict[str, tuple[str, ...]] = {}
@@ -2430,7 +2430,7 @@ async def cluster_verification_tokens(domains: list[str]) -> str:
             "not a verdict."
         ),
     }
-    return json_mod.dumps(payload, indent=2)
+    return payload
 
 
 @mcp.tool(
@@ -2441,7 +2441,7 @@ async def cluster_verification_tokens(domains: list[str]) -> str:
         openWorldHint=True,
     ),
 )
-async def get_infrastructure_clusters(domain: str) -> str:
+async def get_infrastructure_clusters(domain: str) -> dict[str, Any]:
     """Return the CT co-occurrence community-detection report for a domain.
 
     Surfaces the same ``infrastructure_clusters`` envelope that ships in
@@ -2472,47 +2472,41 @@ async def get_infrastructure_clusters(domain: str) -> str:
     """
     resolved = await _resolve_or_cache(domain)
     if isinstance(resolved, str):
-        return json_mod.dumps({"error": resolved})
+        raise ToolError(resolved)
     info, _results = resolved
     ic = info.infrastructure_clusters
     if ic is None:
-        return json_mod.dumps(
-            {
-                "domain": info.queried_domain,
-                "algorithm": "skipped",
-                "modularity": 0.0,
-                "partition_stability": None,
-                "stability_runs": 0,
-                "node_count": 0,
-                "edge_count": 0,
-                "clusters": [],
-            },
-            indent=2,
-        )
-    return json_mod.dumps(
-        {
+        return {
             "domain": info.queried_domain,
-            "algorithm": ic.algorithm,
-            "modularity": ic.modularity,
-            # 2.2.0 (additive): Louvain seed-sweep consensus (mean pairwise
-            # ARI; CAL11). null outside the Louvain path.
-            "partition_stability": ic.partition_stability,
-            "stability_runs": ic.stability_runs,
-            "node_count": ic.node_count,
-            "edge_count": ic.edge_count,
-            "clusters": [
-                {
-                    "cluster_id": c.cluster_id,
-                    "size": c.size,
-                    "members": list(c.members),
-                    "shared_cert_count": c.shared_cert_count,
-                    "dominant_issuer": c.dominant_issuer,
-                }
-                for c in ic.clusters
-            ],
-        },
-        indent=2,
-    )
+            "algorithm": "skipped",
+            "modularity": 0.0,
+            "partition_stability": None,
+            "stability_runs": 0,
+            "node_count": 0,
+            "edge_count": 0,
+            "clusters": [],
+        }
+    return {
+        "domain": info.queried_domain,
+        "algorithm": ic.algorithm,
+        "modularity": ic.modularity,
+        # 2.2.0 (additive): Louvain seed-sweep consensus (mean pairwise
+        # ARI; CAL11). null outside the Louvain path.
+        "partition_stability": ic.partition_stability,
+        "stability_runs": ic.stability_runs,
+        "node_count": ic.node_count,
+        "edge_count": ic.edge_count,
+        "clusters": [
+            {
+                "cluster_id": c.cluster_id,
+                "size": c.size,
+                "members": list(c.members),
+                "shared_cert_count": c.shared_cert_count,
+                "dominant_issuer": c.dominant_issuer,
+            }
+            for c in ic.clusters
+        ],
+    }
 
 
 @mcp.tool(
@@ -2523,7 +2517,7 @@ async def get_infrastructure_clusters(domain: str) -> str:
         openWorldHint=True,
     ),
 )
-async def export_graph(domain: str) -> str:
+async def export_graph(domain: str) -> dict[str, Any]:
     """Return the raw CT co-occurrence graph (nodes + weighted edges).
 
     Companion to ``get_infrastructure_clusters``: surfaces the underlying
@@ -2555,22 +2549,19 @@ async def export_graph(domain: str) -> str:
     """
     resolved = await _resolve_or_cache(domain)
     if isinstance(resolved, str):
-        return json_mod.dumps({"error": resolved})
+        raise ToolError(resolved)
     info, _results = resolved
     ic = info.infrastructure_clusters
     if ic is None:
-        return json_mod.dumps(
-            {
-                "domain": info.queried_domain,
-                "algorithm": "skipped",
-                "node_count": 0,
-                "edge_count": 0,
-                "nodes": [],
-                "edges": [],
-                "cluster_assignment": {},
-            },
-            indent=2,
-        )
+        return {
+            "domain": info.queried_domain,
+            "algorithm": "skipped",
+            "node_count": 0,
+            "edge_count": 0,
+            "nodes": [],
+            "edges": [],
+            "cluster_assignment": {},
+        }
 
     cluster_assignment: dict[str, int] = {}
     for cluster in ic.clusters:
@@ -2583,29 +2574,26 @@ async def export_graph(domain: str) -> str:
         nodes_set.add(edge.target)
     nodes_sorted = sorted(nodes_set)
 
-    return json_mod.dumps(
-        {
-            "domain": info.queried_domain,
-            "algorithm": ic.algorithm,
-            "node_count": ic.node_count,
-            "edge_count": ic.edge_count,
-            "nodes": nodes_sorted,
-            "edges": [
-                {
-                    "source": e.source,
-                    "target": e.target,
-                    "shared_cert_count": e.shared_cert_count,
-                }
-                for e in ic.edges
-            ],
-            "cluster_assignment": cluster_assignment,
-            "disclaimer": (
-                "Graph describes observable certificate SAN co-occurrence. "
-                "Edges are co-issuance evidence, not ownership claims."
-            ),
-        },
-        indent=2,
-    )
+    return {
+        "domain": info.queried_domain,
+        "algorithm": ic.algorithm,
+        "node_count": ic.node_count,
+        "edge_count": ic.edge_count,
+        "nodes": nodes_sorted,
+        "edges": [
+            {
+                "source": e.source,
+                "target": e.target,
+                "shared_cert_count": e.shared_cert_count,
+            }
+            for e in ic.edges
+        ],
+        "cluster_assignment": cluster_assignment,
+        "disclaimer": (
+            "Graph describes observable certificate SAN co-occurrence. "
+            "Edges are co-issuance evidence, not ownership claims."
+        ),
+    }
 
 
 @mcp.prompt()
