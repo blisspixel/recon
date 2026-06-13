@@ -111,7 +111,12 @@ release; the catalog grows from observed gaps, not invented entries.
 
 ## Install
 
-**One-line install**
+**One-line install — and update**
+
+The same command installs recon or upgrades an existing install to the latest
+version, so re-running it later is how you update. It prefers
+[`uv`](https://docs.astral.sh/uv/) (fast, manages its own Python), falls back to
+`pipx`, and bootstraps `pipx` from system Python if neither is present.
 
 **Windows (PowerShell):**
 ```powershell
@@ -124,6 +129,10 @@ curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/insta
 ```
 
 After the installer finishes, open a **new** terminal and run `recon doctor`.
+
+**Update:** re-run the one-liner above. (Or directly: `uv tool upgrade recon-tool`
+/ `pipx upgrade recon-tool` / `pip install -U recon-tool`.)
+**Uninstall:** `uv tool uninstall recon-tool` (or `pipx uninstall recon-tool`).
 
 ---
 
