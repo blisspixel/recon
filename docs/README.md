@@ -6,6 +6,8 @@ tooling expects them there: `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
 
 ## Start Here
 
+First read: what recon is, why it works this way, and what it promises.
+
 | Need | Read |
 |---|---|
 | Product scope and next work | [roadmap.md](roadmap.md) |
@@ -16,6 +18,8 @@ tooling expects them there: `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
 | Release checklist and tag flow | [release-process.md](release-process.md) |
 
 ## Using recon
+
+Operating recon day to day: output formats, the MCP server, cohorts, upgrades.
 
 | Topic | Read |
 |---|---|
@@ -52,6 +56,8 @@ The aspirational write-up and where recon sits in the literature.
 | The paper skeleton and experiment inventory | [paper-outline.md](paper-outline.md) |
 
 ## Extending recon
+
+For contributors: the fingerprint catalog, derived signals, and the workflow.
 
 | Topic | Read |
 |---|---|

@@ -1,7 +1,8 @@
 # Contributing
 
 Thanks for your interest in contributing to recon. Read the section below
-first: it is the project's single non-negotiable rule.
+first: it is the project's single non-negotiable rule. By taking part you also
+agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## No real company data, ever
 
