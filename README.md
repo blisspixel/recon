@@ -134,6 +134,10 @@ After the installer finishes, open a **new** terminal and run `recon doctor`.
 / `pipx upgrade recon-tool` / `pip install -U recon-tool`.)
 **Uninstall:** `uv tool uninstall recon-tool` (or `pipx uninstall recon-tool`).
 
+**Homebrew (macOS / Linux):** `brew install blisspixel/tap/recon` once the tap is
+published; see [packaging/homebrew](packaging/homebrew/README.md). (Windows uses
+the PowerShell one-liner above — a Python package is a poor fit for Scoop/winget.)
+
 ---
 
 **recon works on Windows, macOS, and Linux.**
