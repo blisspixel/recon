@@ -323,11 +323,19 @@ class TestCacheDirRespectsEnvVar:
         monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
         assert cache_dir() == tmp_path / "cache"
 
-    def test_default_when_env_missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_default_legacy_when_recon_dir_present(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # Back-compat: an existing ~/.recon keeps being used.
         monkeypatch.delenv("RECON_CONFIG_DIR", raising=False)
-        d = cache_dir()
-        assert d.name == "cache"
-        assert d.parent.name == ".recon"
+        monkeypatch.setattr(Path, "home", lambda *a, **k: tmp_path)
+        (tmp_path / ".recon").mkdir()
+        assert cache_dir() == tmp_path / ".recon" / "cache"
+
+    def test_default_xdg_when_no_legacy_dir(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # Fresh install (no ~/.recon): XDG cache home.
+        monkeypatch.delenv("RECON_CONFIG_DIR", raising=False)
+        monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
+        monkeypatch.setattr(Path, "home", lambda *a, **k: tmp_path)
+        assert cache_dir() == tmp_path / ".cache" / "recon" / "cache"
 
 
 class TestDictShape:

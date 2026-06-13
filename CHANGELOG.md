@@ -36,6 +36,19 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
 - **`cache clear --all` is guarded.** It now confirms interactively (TTY) or
   requires `--force` in a non-interactive context, instead of wiping all cached
   data unprompted.
+- **XDG Base Directory support (tier 2).** A new `recon_tool.paths` module
+  centralizes config/cache/state resolution. Behavior is unchanged for existing
+  setups — `RECON_CONFIG_DIR` (the test/CI seam) still maps every category under
+  one directory, and an existing `~/.recon/` keeps being used so no data moves —
+  but a *fresh* install now uses `$XDG_CONFIG_HOME/recon`, `$XDG_CACHE_HOME/recon`,
+  and `$XDG_STATE_HOME/recon` (defaults `~/.config`, `~/.cache`,
+  `~/.local/state`) instead of littering `~/.recon`. The spec's
+  relative-`XDG_*`-path-is-invalid rule is honored. All thirteen previously
+  inlined resolution sites (cache, CT cache, rate-limit state, priors, motifs,
+  fingerprints/signals/posture/profiles overlays, corpus, doctor) now delegate
+  to it; the priors loader, which previously ignored `RECON_CONFIG_DIR`
+  entirely, now honors it (tighter test hermeticity). Covered by
+  `tests/test_paths.py` (override / legacy / XDG tiers).
 
 ### Fixed (validation)
 

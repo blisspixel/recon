@@ -184,7 +184,13 @@ def _load_from_path(path: Path) -> list[ChainMotif]:
 
 
 _BUILTIN_PATH = Path(__file__).parent / "data" / "motifs.yaml"
-_USER_PATHS: tuple[Path, ...] = (Path.home() / ".recon" / "motifs.yaml",)
+
+
+def _user_paths() -> tuple[Path, ...]:
+    """User motif files, in the config dir (RECON_CONFIG_DIR / legacy / XDG)."""
+    from recon_tool.paths import config_dir
+
+    return (config_dir() / "motifs.yaml",)
 
 
 @dataclass
@@ -207,7 +213,7 @@ def load_motifs(reload: bool = False) -> tuple[ChainMotif, ...]:
         return _cache_state.motifs
     motifs: list[ChainMotif] = []
     seen_names: set[str] = set()
-    for path in (_BUILTIN_PATH, *_USER_PATHS):
+    for path in (_BUILTIN_PATH, *_user_paths()):
         for m in _load_from_path(path):
             if m.name in seen_names:
                 continue

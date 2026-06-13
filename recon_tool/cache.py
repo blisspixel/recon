@@ -64,10 +64,10 @@ _MAX_CACHE_FILE_BYTES = 5 * 1024 * 1024
 
 
 def cache_dir() -> Path:
-    """Return the cache directory path, respecting RECON_CONFIG_DIR."""
-    config = os.environ.get("RECON_CONFIG_DIR")
-    base = Path(config) if config else Path.home() / ".recon"
-    return base / "cache"
+    """Return the result-cache directory (RECON_CONFIG_DIR / legacy / XDG cache)."""
+    from recon_tool.paths import cache_root
+
+    return cache_root() / "cache"
 
 
 def cache_get(domain: str, ttl: int = DEFAULT_TTL) -> TenantInfo | None:

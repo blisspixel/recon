@@ -53,7 +53,6 @@ Invariants
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
@@ -230,9 +229,10 @@ def _profile_search_dirs() -> list[Path]:
     exception to the usual additive-only invariant — profiles are
     user-facing lenses and explicit override is the expected mode).
     """
+    from recon_tool.paths import config_dir
+
     builtin = Path(__file__).parent / "data" / "profiles"
-    custom_dir = os.environ.get("RECON_CONFIG_DIR")
-    custom = Path(custom_dir) / "profiles" if custom_dir else Path.home() / ".recon" / "profiles"
+    custom = config_dir() / "profiles"
     return [builtin, custom]
 
 

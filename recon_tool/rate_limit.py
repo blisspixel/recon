@@ -45,7 +45,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -62,14 +61,13 @@ __all__ = [
 
 
 def rate_limit_state_dir() -> Path:
-    """Directory holding persisted limiter state. Sibling of the CT cache.
+    """Directory holding persisted limiter state.
 
-    Override via ``RECON_CONFIG_DIR`` for tests / non-default homes;
-    matches the convention used by ``recon_tool.ct_cache.ct_cache_dir``.
+    RECON_CONFIG_DIR / legacy ~/.recon / XDG state dir, via recon_tool.paths.
     """
-    base = os.environ.get("RECON_CONFIG_DIR")
-    root = Path(base) if base else Path.home() / ".recon"
-    return root / "rate-limit-state"
+    from recon_tool.paths import state_dir
+
+    return state_dir() / "rate-limit-state"
 
 
 # Maximum age for a persisted snapshot. Older state is ignored on

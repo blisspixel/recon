@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -77,10 +76,10 @@ class CTCacheInfo:
 
 
 def ct_cache_dir() -> Path:
-    """Return the CT cache directory, respecting RECON_CONFIG_DIR."""
-    config = os.environ.get("RECON_CONFIG_DIR")
-    base = Path(config) if config else Path.home() / ".recon"
-    return base / "ct-cache"
+    """Return the CT cache directory (RECON_CONFIG_DIR / legacy / XDG cache)."""
+    from recon_tool.paths import cache_root
+
+    return cache_root() / "ct-cache"
 
 
 def _safe_path(domain: str) -> Path:

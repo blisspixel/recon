@@ -50,12 +50,19 @@ SAMPLE_CERT_SUMMARY = CertSummary(
 
 
 class TestCTCacheDir:
-    def test_default_dir(self) -> None:
-        env = {k: v for k, v in os.environ.items() if k != "RECON_CONFIG_DIR"}
-        with patch.dict(os.environ, env, clear=True):
-            d = ct_cache_dir()
-            assert d.name == "ct-cache"
-            assert d.parent == Path.home() / ".recon"
+    def test_legacy_recon_dir_when_present(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # Back-compat: an existing ~/.recon keeps being used (no data moves).
+        monkeypatch.delenv("RECON_CONFIG_DIR", raising=False)
+        monkeypatch.setattr(Path, "home", lambda *a, **k: tmp_path)
+        (tmp_path / ".recon").mkdir()
+        assert ct_cache_dir() == tmp_path / ".recon" / "ct-cache"
+
+    def test_xdg_cache_when_no_legacy_dir(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # Fresh install (no ~/.recon): XDG cache home.
+        monkeypatch.delenv("RECON_CONFIG_DIR", raising=False)
+        monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
+        monkeypatch.setattr(Path, "home", lambda *a, **k: tmp_path)
+        assert ct_cache_dir() == tmp_path / ".cache" / "recon" / "ct-cache"
 
     def test_custom_dir(self, tmp_path: Path) -> None:
         with patch.dict(os.environ, {"RECON_CONFIG_DIR": str(tmp_path)}):

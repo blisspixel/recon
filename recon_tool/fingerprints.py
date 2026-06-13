@@ -17,7 +17,6 @@ Also supports custom fingerprints from ~/.recon/fingerprints.yaml
 from __future__ import annotations
 
 import logging
-import os
 import re
 import threading
 from dataclasses import dataclass, field
@@ -666,8 +665,9 @@ def load_fingerprints() -> tuple[Fingerprint, ...]:
         data_dir = base / "fingerprints"
         data_file = base / "fingerprints.yaml"
 
-        custom_dir_env = os.environ.get("RECON_CONFIG_DIR")
-        custom_base = Path(custom_dir_env) if custom_dir_env else Path.home() / ".recon"
+        from recon_tool.paths import config_dir
+
+        custom_base = config_dir()
         custom_file = custom_base / "fingerprints.yaml"
         custom_dir = custom_base / "fingerprints"
 
