@@ -308,6 +308,7 @@ def lookup(
     domain: str = typer.Argument(help="Domain to look up"),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
     markdown: bool = typer.Option(False, "--md", help="Markdown report"),
+    plain: bool = typer.Option(False, "--plain", help="Plain linear text (greppable, screen-reader-friendly)"),
     services: bool = typer.Option(False, "--services", "-s", help="M365 vs tech stack breakdown"),
     domains: bool = typer.Option(False, "--domains", "-d", help="All tenant domains"),
     full: bool = typer.Option(False, "--full", "-f", help="Everything (verbose + services + domains + posture)"),
@@ -404,6 +405,7 @@ def lookup(
             domain,
             json_output,
             markdown,
+            plain,
             verbose,
             services,
             domains,
@@ -2332,6 +2334,7 @@ def _lookup_validate(
     *,
     json_output: bool,
     markdown: bool,
+    plain: bool = False,
     chain_mode: bool,
     compare_file: str | None,
     show_exposure: bool,
@@ -2354,8 +2357,8 @@ def _lookup_validate(
     if show_gaps and (chain_mode or compare_file):
         render_error("--gaps and --chain/--compare are mutually exclusive")
         raise typer.Exit(code=EXIT_VALIDATION) from None
-    if sum([json_output, markdown]) > 1:
-        render_error("--json and --md are mutually exclusive")
+    if sum([json_output, markdown, plain]) > 1:
+        render_error("--json, --md, and --plain are mutually exclusive")
         raise typer.Exit(code=EXIT_VALIDATION) from None
     if chain_depth > 1 and not chain_mode:
         render_error("--depth requires --chain")
@@ -2850,6 +2853,13 @@ def _lookup_emit_markdown(
     typer.echo(md)
 
 
+def _lookup_emit_plain(info: Any, *, include_unclassified: bool) -> None:
+    """Emit the tenant report as plain, linear, greppable text (no panel)."""
+    from recon_tool.formatter import format_tenant_plain
+
+    typer.echo(format_tenant_plain(info, include_unclassified=include_unclassified))
+
+
 def _synthetic_source_results(info: Any) -> list[Any]:
     """Reconstruct minimal SourceResults from a cached TenantInfo.
 
@@ -2949,6 +2959,7 @@ async def _lookup_standard(
     *,
     json_output: bool,
     markdown: bool,
+    plain: bool,
     verbose: bool,
     show_services: bool,
     show_domains: bool,
@@ -3007,6 +3018,9 @@ async def _lookup_standard(
         if markdown:
             _lookup_emit_markdown(info, results, observations, show_posture=show_posture, show_explain=show_explain)
             return
+        if plain:
+            _lookup_emit_plain(info, include_unclassified=include_unclassified)
+            return
 
         _lookup_emit_panel(
             console,
@@ -3033,6 +3047,7 @@ async def _lookup(
     domain: str,
     json_output: bool,
     markdown: bool,
+    plain: bool,
     verbose: bool,
     show_services: bool,
     show_domains: bool,
@@ -3081,6 +3096,7 @@ async def _lookup(
         domain,
         json_output=json_output,
         markdown=markdown,
+        plain=plain,
         chain_mode=chain_mode,
         compare_file=compare_file,
         show_exposure=show_exposure,
@@ -3151,6 +3167,7 @@ async def _lookup(
         domain,
         json_output=json_output,
         markdown=markdown,
+        plain=plain,
         verbose=verbose,
         show_services=show_services,
         show_domains=show_domains,

@@ -107,6 +107,20 @@ class TestDirectDomainLookup:
         assert result.exit_code == 0
         assert "# " in result.output
 
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_lookup_plain(self, mock_resolve) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        result = runner.invoke(app, ["lookup", "contoso.com", "--plain", "--no-cache"])
+        assert result.exit_code == 0
+        assert "queried_domain: contoso.com" in result.output
+        # Linear text — no box-drawing characters.
+        assert "─" not in result.output
+        assert "│" not in result.output
+
+    def test_lookup_json_plain_mutually_exclusive(self) -> None:
+        result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--plain"])
+        assert result.exit_code == 2
+
 
 class TestLookupSubcommand:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)

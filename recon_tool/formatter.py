@@ -3339,6 +3339,48 @@ def format_tenant_json(info: TenantInfo, *, include_unclassified: bool = False) 
     return json.dumps(format_tenant_dict(info, include_unclassified=include_unclassified), indent=2)
 
 
+def _plain_lines(value: Any, key: str, indent: int) -> list[str]:
+    """Render one (key, value) as linear, indented `key: value` lines.
+
+    Recurses into dicts and lists. No color, no box-drawing, no markup — a
+    greppable, screen-reader-friendly serialization. Strings are control-char
+    stripped (the same untrusted-content discipline the panel/markdown sinks
+    use); empty/None values are omitted to keep the output scannable.
+    """
+    pad = "  " * indent
+    if value is None or value == "" or value == [] or value == {}:
+        return []
+    if isinstance(value, dict):
+        lines = [f"{pad}{key}:"]
+        for k, v in value.items():
+            lines.extend(_plain_lines(v, str(k), indent + 1))
+        return lines
+    if isinstance(value, list):
+        lines = [f"{pad}{key}:"]
+        for item in value:
+            if isinstance(item, dict | list):
+                lines.extend(_plain_lines(item, "-", indent + 1))
+            else:
+                lines.append(f"{pad}  - {strip_control_chars(str(item))}")
+        return lines
+    return [f"{pad}{key}: {strip_control_chars(str(value))}"]
+
+
+def format_tenant_plain(info: TenantInfo, *, include_unclassified: bool = False) -> str:
+    """Format TenantInfo as plain, linear, greppable text (no Rich panel).
+
+    Built from the same dict as the JSON output, so it carries every field the
+    structured output does — but as ``key: value`` lines a screen reader reads
+    linearly and ``grep``/``awk`` can slice, with no color or box-drawing. This
+    is the accessibility / scripting complement to the default panel.
+    """
+    data = format_tenant_dict(info, include_unclassified=include_unclassified)
+    lines: list[str] = []
+    for key, value in data.items():
+        lines.extend(_plain_lines(value, str(key), 0))
+    return "\n".join(lines)
+
+
 # Backslash-escape the Markdown structural characters most useful for
 # injection (links, emphasis, code spans, tables, inline HTML). Applied to
 # attacker-derived free text (issuer names, display_name) in the markdown
