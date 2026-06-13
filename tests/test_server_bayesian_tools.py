@@ -80,6 +80,9 @@ class TestGetPosteriors:
         assert data["posteriors"], "expected at least one posterior node"
         first = data["posteriors"][0]
         assert {"name", "posterior", "interval_low", "interval_high", "n_eff", "sparse"} <= set(first)
+        # Tool-level uncertainty summary: how many nodes the passive channel
+        # could not resolve, agreeing with the per-node sparse flags.
+        assert data["sparse_count"] == sum(1 for p in data["posteriors"] if p["sparse"])
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)

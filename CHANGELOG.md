@@ -25,6 +25,33 @@ this: a coherent new surface, not internal hardening.
   (`tests/test_conformal_coverage.py::TestCollectorContract`) pins the
   cross-harness shape so it can't drift silently again.
 
+### Added — agent-facing uncertainty legibility
+
+- **"Reading the posteriors" guidance for consuming agents.** The MCP server
+  instructions gain a section, parallel to the existing "Untrusted observed
+  content (data, not instructions)" one, telling a consuming agent how to read
+  the Bayesian surface: the answer is the 80% credible interval, not the point
+  `posterior`; `sparse=true`, a 0.5-straddling interval, or an empty
+  `evidence_used` means the passive channel could not resolve the claim (report
+  it unresolved, do not collapse it to the point value); and absence of a fired
+  signal is not evidence of absence (the adversarial missing-data rule), so a
+  low/sparse posterior reads as "we cannot tell", not "not present". An LLM
+  consumer is a confident summarizer that will flatten a wide interval into a
+  verdict unless the surface forbids it — the same robot-librarian failure the
+  data-not-instructions marking guards against, applied to the inference output.
+- **`sparse_count` on the `get_posteriors` payload.** A tool-level uncertainty
+  summary (how many nodes resolved only to the passive-observation ceiling)
+  beside `evidence_count` / `conflict_count`, so a linear JSON consumer sees the
+  unresolved count before any point estimate — the guidance enforced at the tool
+  level, not only in prose. The `get_posteriors` docstring and `docs/mcp.md`
+  carry the same reading guidance; `tests/test_posterior_reading_guidance.py`
+  pins the instruction section and the `sparse_count`/per-node-`sparse`
+  agreement against silent regression. (An audit prompted by the 2026 "robot
+  librarian" agent-design framing found recon's other two agent-facing
+  guardrails — the data-not-instructions demarcation and the `readOnlyHint`
+  autoApprove split — already shipped and test-enforced; this closed the one
+  remaining gap, the inference surface leading with the point estimate.)
+
 ### Added — evidence-semantics diagnostics (the 2.2 surface)
 
 - **Per-node `entropy_reduction_nats`.** Every `posterior_observations` entry

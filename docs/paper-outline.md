@@ -331,6 +331,29 @@ published; the per-domain corpus never appears. This is the discipline the
 cohort summary and the maintainer-validation loop already follow, recorded
 in [data-handling-policy.md](data-handling-policy.md).
 
+## Candidate framing: why the honesty matters operationally (Discussion)
+
+A short motivation paragraph worth landing in the introduction or discussion,
+drafted here as a candidate. recon is increasingly *consumed by LLM agents*
+(it ships an MCP server), and that sharpens why evidence-responsive honesty is
+the right design rather than a concession. An agent is a confident summarizer:
+given a point estimate it will state a verdict, and given a wide interval it
+will round it away unless the surface forbids it. The honest contract recon
+already makes — a low or sparse posterior means "we cannot tell from the
+public channel", not "not present" (the MNAR rule) — is exactly the property a
+downstream agent cannot reconstruct for itself, because the missingness
+structure lives in recon, not in the agent's context. So recon's value in an
+agent stack is as a *grounding/verifier primitive*: it supplies the calibrated
+"we cannot tell" that the consumer would otherwise hallucinate past. This is
+the same argument the paper makes for human operators, but it bites harder for
+automated consumers, and it motivates surfacing uncertainty at the tool level
+(the `sparse_count` summary and the per-node interval lead the machine-readable
+output, with explicit reading guidance in the server instructions), not only
+in prose. The point is not that recon does AI; it is that recon is the honest
+input an AI consumer needs and cannot fake. (Implementation: the MCP
+"Reading the posteriors" instruction and `get_posteriors` `sparse_count`,
+pinned by `tests/test_posterior_reading_guidance.py`.)
+
 ## Open items before this is submittable
 
 Evidence not yet in hand, in roughly the order the roadmap sequences it:

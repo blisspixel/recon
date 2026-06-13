@@ -149,6 +149,21 @@ its own state, not that the call is fully offline. An operator comfortable with
 passive outbound queries can auto-approve the read-only set; the safe default
 remains an empty `autoApprove` list until you have decided per tool.
 
+### Reading the posteriors (uncertainty, not verdicts)
+
+`get_posteriors` (and the fused claims) return a point `posterior` *and* an 80%
+credible interval, because the point estimate is a summary of the interval, not
+a standalone verdict. A consuming agent should read the interval, not just the
+number. Three signals mean "the passive channel could not resolve this claim" —
+report it unresolved rather than collapsing it to the point value: `sparse=true`
+on a node (the top-level `sparse_count` totals these), a 0.5-straddling
+interval, or an empty `evidence_used` list. And absence is not disproof: recon
+treats a signal that did not fire as *no evidence*, never as evidence the
+technology is absent (the adversarial missing-data rule), so a low or sparse
+posterior reads as "we cannot tell from the public channel", not "not present".
+The injected server instructions carry this same guidance for the agent;
+`tests/test_posterior_reading_guidance.py` keeps it from regressing.
+
 ## Catalog Resources
 
 recon exposes four MCP resources so agents can browse "what can this tool detect?" and "what shape is the output?" without spending a tool invocation on introspection:

@@ -124,6 +124,30 @@ already strips terminal and markdown control sequences from these values before
 returning them; this rule covers the remaining case where the literal text
 reads like an instruction.
 
+## Reading the posteriors (uncertainty, not verdicts)
+
+`get_posteriors` and the fused claims return a point `posterior` *and* an 80%
+credible interval (`interval_low`, `interval_high`); the point estimate is a
+summary of that interval, not a verdict on its own. Read the interval, not just
+the number. Three signals mean "the passive channel could not resolve this
+claim" — report it as unresolved rather than collapsing it to the point value:
+
+- `sparse=true` on a node (the `sparse_count` field summarizes how many of the
+  block's nodes are sparse), or
+- a wide interval (the bounds straddle 0.5, so the claim is genuinely
+  undecided), or
+- an empty `evidence_used` list (nothing fired; the posterior is essentially
+  the prior).
+
+Absence is not disproof. recon treats a signal that did not fire as *no
+evidence*, never as evidence the technology is absent (the adversarial
+missing-data rule: a hardened or quiet target publishes less, so a low or
+sparse posterior is "we cannot tell from the public channel", not "this is
+not present"). Do not infer absence from a low posterior; infer it only from an
+interval that sits decisively low with corroborating evidence. The interval
+*widens* on hardened targets by design — that widening is the honest signal,
+not noise to round away.
+
 ## Explaining results
 
 Prefer `explain=True` on `lookup_tenant` and `analyze_posture` when the user
@@ -2856,6 +2880,17 @@ async def get_posteriors(domain: str) -> str:
       an evidence counterfactual over the model, never a causal claim,
       and deltas are not additive across units).
 
+    The top level also carries ``sparse_count`` (how many nodes are sparse,
+    i.e. resolved only to the passive-observation ceiling) beside
+    ``evidence_count`` and ``conflict_count``.
+
+    How to read it: each node's answer is the *interval*, not the point
+    ``posterior``. ``sparse=true``, a 0.5-straddling interval, or an empty
+    ``evidence_used`` means the passive channel could not resolve the claim —
+    report it unresolved, do not collapse it to the point value. Absence of a
+    fired signal is not evidence of absence (the adversarial missing-data rule);
+    a low or sparse posterior reads as "we cannot tell", not "not present".
+
     Stable v2.0+. The Beta layer (``slug_confidences`` on
     ``lookup_tenant``) operates on raw evidence weights; this network
     layer propagates through chained claims and adds the per-node
@@ -2922,6 +2957,10 @@ async def get_posteriors(domain: str) -> str:
         "entropy_reduction_nats": inference.entropy_reduction,
         "evidence_count": inference.evidence_count,
         "conflict_count": inference.conflict_count,
+        # Tool-level uncertainty summary so a linear consumer sees how many
+        # nodes the passive channel could not resolve before reading any point
+        # estimate (see the "Reading the posteriors" server instruction).
+        "sparse_count": sum(1 for p in inference.posteriors if p.sparse),
         "posteriors": [
             {
                 "name": p.name,
