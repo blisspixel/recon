@@ -197,6 +197,12 @@ jobs:
         # migration docs.
         run: uv run python scripts/check_no_experimental_labels.py
 
+      - name: Enforce the file-size ratchet (no god files)
+        # New modules cap at 1000 lines; the oversized modules predating the
+        # guard are baselined as ceilings that may only shrink (see
+        # scripts/check_file_size.py and the decomposition track in roadmap.md).
+        run: uv run python scripts/check_file_size.py
+
   hostile-input-fuzz:
     # Dedicated gate for the adversarial / oversized / malformed parser tests and
     # the Hypothesis fuzz suites (the `hostile_input` marker). Promotes them from

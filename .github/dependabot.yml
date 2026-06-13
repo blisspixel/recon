@@ -27,3 +27,17 @@ updates:
         update-types:
           - "minor"
           - "patch"
+
+  # pre-commit hook revisions (ruff-pre-commit, actionlint, etc.). Dependabot
+  # gained native pre-commit support in 2026-03; without it the pinned hook revs
+  # silently go stale — the exact "standards drift" failure mode we guard
+  # against. Weekly, grouped, comments preserved.
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      pre-commit:
+        patterns:
+          - "*"
