@@ -593,6 +593,64 @@ def doctor(
     asyncio.run(_doctor())
 
 
+@app.command()
+def update(
+    check: bool = typer.Option(False, "--check", help="Only report whether a newer version exists; do not install."),
+) -> None:
+    """Check for and install the latest recon release.
+
+    Detects how recon was installed (pipx / uv / pip / Homebrew / editable) and
+    runs the matching upgrade, or prints the exact command when it can't safely
+    self-upgrade. ``--check`` only reports. Status goes to stderr; the result
+    line to stdout, so `recon update --check` is scriptable.
+    """
+    import subprocess
+
+    from recon_tool import updater
+    from recon_tool.formatter import render_error
+
+    console = get_console()
+    err = get_err_console()
+    current = updater.current_version()
+
+    err.print(f"recon {current} — checking PyPI for updates...")
+    latest = updater.fetch_latest_version()
+    if latest is None:
+        render_error("Could not reach PyPI to check for updates. Try again, or upgrade manually.")
+        raise typer.Exit(code=EXIT_ERROR)
+
+    if updater.compare_versions(current, latest) >= 0:
+        suffix = f" (latest on PyPI: {latest})" if current != latest else "."
+        console.print(f"[green]recon {current} is up to date{suffix}[/green]")
+        return
+
+    console.print(f"Update available: [bold]{current}[/bold] -> [bold]{latest}[/bold]")
+    method = updater.detect_install_method()
+    cmd = updater.upgrade_command(method)
+
+    if check:
+        hint = " ".join(cmd) if cmd else updater.manual_hint(method)
+        console.print(f"  install method: {method}")
+        console.print(f"  to upgrade:     [cyan]{hint}[/cyan]   (or just: recon update)")
+        return
+    if cmd is None:
+        console.print(f"Detected a {method} install — upgrade with: [cyan]{updater.manual_hint(method)}[/cyan]")
+        return
+
+    err.print(f"==> upgrading via {method}: {' '.join(cmd)}")
+    try:
+        # cmd is a fixed argv from updater.upgrade_command's install-method
+        # table (pipx/uv/pip), never user input.
+        rc = subprocess.run(cmd, check=False).returncode  # noqa: S603
+    except OSError as exc:
+        render_error(f"Could not start the upgrade ({exc}). Run manually: {updater.manual_hint(method)}")
+        raise typer.Exit(code=EXIT_ERROR) from None
+    if rc != 0:
+        render_error(f"Upgrade failed (exit {rc}). Try manually: {updater.manual_hint(method)}")
+        raise typer.Exit(code=EXIT_ERROR)
+    console.print(f"[green]Updated to {latest}. Open a new shell and run `recon --version` to confirm.[/green]")
+
+
 # ── Template content for doctor --fix ────────────────────────────────────
 
 _FINGERPRINTS_TEMPLATE = """\
