@@ -39,7 +39,7 @@ BASELINE: dict[str, int] = {
     "formatter.py": 2164,
     "bayesian.py": 1411,
     "merger.py": 1131,
-    "exposure.py": 1130,
+    "exposure.py": 983,
 }
 
 
