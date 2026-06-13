@@ -62,8 +62,15 @@ git clone https://github.com/blisspixel/recon.git
 cd recon
 uv sync                    # installs the dev group (pip: pip install -e . --group dev, pip 25.1+)
 pre-commit install                     # activate pre-commit hooks
-uv run pytest tests/                   # or: pytest tests/
+uv run python scripts/check.py         # the full CI gate locally (--fast to skip tests)
 ```
+
+`scripts/check.py` runs the **exact** CI gate (ruff, pyright over
+`recon_tool/ tests/`, the coverage-gated test run, the catalog/label and
+file-size checks), so "green locally ⇒ green in CI." Run it before every push.
+The standards this project holds itself (and any AI working in it) to are in
+[docs/engineering-practices.md](docs/engineering-practices.md); load-bearing
+design decisions are in [docs/adr/](docs/adr/).
 
 ---
 
