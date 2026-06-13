@@ -152,8 +152,10 @@ def _reset_global_console():
     import recon_tool.formatter as _formatter
 
     _formatter._console = None
+    _formatter._err_console = None
     yield
     _formatter._console = None
+    _formatter._err_console = None
 
 
 @pytest.fixture(autouse=True)

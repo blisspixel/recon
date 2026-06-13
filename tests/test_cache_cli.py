@@ -91,9 +91,16 @@ class TestCacheClear:
     def test_clear_all(self, tmp_cache: Path) -> None:
         ct_cache_put("a.com", ["x.a.com"], None, "crt.sh")
         ct_cache_put("b.com", ["x.b.com"], None, "crt.sh")
-        result = runner.invoke(app, ["cache", "clear", "--all"])
+        result = runner.invoke(app, ["cache", "clear", "--all", "--force"])
         assert result.exit_code == 0
         assert "Cleared 2 CT cache" in result.output
+
+    def test_clear_all_refuses_without_force_when_noninteractive(self, tmp_cache: Path) -> None:
+        # CliRunner stdin is not a TTY, so --all must refuse (exit 2) without
+        # --force rather than wipe everything unprompted (old behavior: exit 0).
+        ct_cache_put("a.com", ["x.a.com"], None, "crt.sh")
+        result = runner.invoke(app, ["cache", "clear", "--all"])
+        assert result.exit_code == 2
 
     def test_clear_no_args(self, tmp_cache: Path) -> None:
         result = runner.invoke(app, ["cache", "clear"])

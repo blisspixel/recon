@@ -166,7 +166,7 @@ class TestRenderErrorSanitization:
         from recon_tool.formatter import render_error
 
         buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
+        with contextlib.redirect_stderr(buf):  # render_error writes to stderr
             render_error("bad-domain\x1b[2J\x07 [blink]evil[/blink]")
         out = buf.getvalue()
         assert "\x1b" not in out  # terminal escape stripped
@@ -188,7 +188,7 @@ class TestOutputInjectionSweep:
         err = ReconLookupError(domain="x", message="no data", error_type="not_found")
         err.source_errors = (("dns", "fail \x1b[2J [bold]evil[/bold]"),)
         buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
+        with contextlib.redirect_stderr(buf):  # render_warning writes to stderr
             render_warning("contoso.com\x1b[2J\x07", err)
         out = buf.getvalue()
         assert "\x1b" not in out

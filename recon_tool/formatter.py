@@ -87,6 +87,32 @@ __all__ = [
 # a console parameter through every function would be noisy. The global is
 # effectively a singleton with a test seam via set_console().
 _console: Console | None = None
+# Separate console bound to stderr for diagnostics (errors, warnings, progress
+# spinners). Keeping these off stdout means a consumer piping `recon ... --json`
+# gets only the data stream, never an error line or a spinner mixed into it —
+# the core clig.dev / 12-factor-CLI rule. Test seam via set_err_console().
+_err_console: Console | None = None
+# Explicit color override from --color/--no-color: True forces color (even when
+# piped), False disables it (overriding NO_COLOR's auto behavior), None = auto
+# (Rich's TTY/NO_COLOR detection). Applied to both consoles at creation.
+_color_override: bool | None = None
+
+
+def _make_console(*, stderr: bool) -> Console:
+    """Construct a Console honoring the --color/--no-color override."""
+    if _color_override is False:
+        return Console(stderr=stderr, no_color=True)
+    if _color_override is True:
+        return Console(stderr=stderr, force_terminal=True)
+    return Console(stderr=stderr)
+
+
+def set_color_override(value: bool | None) -> None:
+    """Force (True) / disable (False) / auto (None) color, rebuilding consoles."""
+    global _color_override, _console, _err_console  # noqa: PLW0603
+    _color_override = value
+    _console = None
+    _err_console = None
 
 
 def get_console() -> Console:
@@ -113,14 +139,34 @@ def get_console() -> Console:
                 stderr_any.reconfigure(encoding="utf-8", errors="replace")
         except Exception as exc:
             logger.debug("stdout UTF-8 reconfigure failed: %s", exc)
-        _console = Console()
+        _console = _make_console(stderr=False)
     return _console
+
+
+def get_err_console() -> Console:
+    """Return the active stderr console, creating a default if needed.
+
+    Diagnostics — errors, warnings, and progress spinners — go here so they
+    never contaminate the stdout data stream that a pipe or agent consumes.
+    stderr is already reconfigured to UTF-8 in get_console().
+    """
+    global _err_console  # noqa: PLW0603
+    if _err_console is None:
+        get_console()  # ensure stdout/stderr UTF-8 reconfigure has run
+        _err_console = _make_console(stderr=True)
+    return _err_console
 
 
 def set_console(console: Console) -> None:
     """Replace the active console (for testing)."""
     global _console  # noqa: PLW0603
     _console = console
+
+
+def set_err_console(console: Console) -> None:
+    """Replace the active stderr console (for testing)."""
+    global _err_console  # noqa: PLW0603
+    _err_console = console
 
 
 CONFIDENCE_COLORS: dict[ConfidenceLevel, str] = {
@@ -2982,7 +3028,7 @@ def render_warning(domain: str, error: ReconLookupError | None = None) -> None:
     hid real data. Without ``error`` (or when no source_errors are
     populated), the original one-liner is used.
     """
-    console = get_console()
+    console = get_err_console()
     safe_domain = escape(strip_control_chars(domain))
     console.print(f"[yellow]No information found for {safe_domain}[/yellow]")
     if error is not None and getattr(error, "source_errors", ()):
@@ -2992,11 +3038,13 @@ def render_warning(domain: str, error: ReconLookupError | None = None) -> None:
 
 
 def render_error(message: str) -> None:
-    """Print a red error message. The message is escaped and control-stripped so
-    untrusted content (for example a batch-file domain echoed back in the error)
-    cannot inject rich markup or terminal escapes into the console."""
+    """Print a red error message to stderr. The message is escaped and
+    control-stripped so untrusted content (for example a batch-file domain
+    echoed back in the error) cannot inject rich markup or terminal escapes
+    into the console. Goes to stderr so it never pollutes a piped stdout
+    data stream."""
     safe = escape(strip_control_chars(message))
-    get_console().print(f"[red]{safe}[/red]")
+    get_err_console().print(f"[red]{safe}[/red]")
 
 
 def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) -> dict[str, Any]:

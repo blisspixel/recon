@@ -12,6 +12,31 @@ including a named new stable surface (the evidence-semantics diagnostics), so
 the next release cut is the **2.2.0 minor** the roadmap reserves for exactly
 this: a coherent new surface, not internal hardening.
 
+### Added — CLI ergonomics & robustness (best-practices pass, tier 1)
+
+Graded against the 2026 CLI-first rubric (clig.dev, 12-factor CLI), this closes
+the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
+
+- **stdout/stderr discipline.** Errors, warnings, and progress spinners now go
+  to a dedicated stderr `Console` (`get_err_console()`), never stdout — so a
+  consumer piping `recon … --json` gets only the data stream, never an error
+  line or spinner mixed in. `render_error`/`render_warning`, the three
+  `console.status` spinners, and the batch `[n/total]` counter were moved;
+  pinned by `tests/test_formatter.py::TestStdoutStderrDiscipline`.
+- **`-h` and `-V` aliases.** `recon -h` (and any subcommand `-h`) now shows
+  help, and `recon -V` shows the version; previously both errored with exit 2.
+- **Clean crash & interrupt handling.** `run()` now wraps the app: an
+  unexpected exception writes its full traceback to a `recon-crash-*.log` file
+  and prints a clean one-liner with the path (no raw stack trace on the
+  terminal, exit 4); Ctrl-C exits 130 quietly; normal Typer/Click exits pass
+  through. Covered by `tests/test_cli_crash_handler.py`.
+- **`--color` / `--no-color`.** Explicit global flags to force or disable
+  colored output, overriding `NO_COLOR`/TTY auto-detection (which is still
+  honored by default).
+- **`cache clear --all` is guarded.** It now confirms interactively (TTY) or
+  requires `--force` in a non-interactive context, instead of wiping all cached
+  data unprompted.
+
 ### Fixed (validation)
 
 - **`conformal_coverage` consumed the reference collector's old shape.** When
