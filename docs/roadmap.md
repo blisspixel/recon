@@ -850,6 +850,50 @@ explicitly first); and (d) grapheme/East-Asian-width column padding in the
 catalog-listing tables (today `len()`-based; low impact since the content is
 ASCII slugs/categories). None is on any release's critical path.
 
+**MCP structured-output revision (designed and verified 2026-06-13; next dedicated PR).**
+A mid-2026 research pass (cited best-practices report) plus a code investigation
+turned deferred item (a) into a ready-to-execute plan. Findings:
+
+- *Spec currency.* The current stable MCP revision is **2025-11-25** (recon's
+  citation is correct). A **2026-07-28** revision exists only as a release
+  candidate, is explicitly not final, and carries breaking changes, so the
+  revision targets 2025-11-25 and does not chase the RC items
+  (`structuredContent` as any JSON value, full 2020-12 composition,
+  `tools/list` `ttlMs`/`cacheScope`).
+- *FastMCP 1.27 mechanics (verified empirically).* A typed return value
+  auto-generates `outputSchema`, populates `structuredContent`, AND emits a
+  serialized-JSON text block for back-compat. A `-> str` return (every recon
+  tool today) wraps as `structuredContent = {"result": "<string>"}`, so the
+  JSON-returning tools currently emit their JSON as a double-encoded string
+  blob, not navigable data. A raised exception is wrapped as `ToolError` and the
+  low-level server converts it to an `isError: true` tool result, which is the
+  spec-correct category for execution and input-validation errors.
+- *Phase 1 change.* Pure-data tools return the object instead of
+  `json_mod.dumps(obj)` (`-> dict`/`-> list[dict[str, Any]]`); error `return`
+  paths become `raise ToolError(...)` so `isError` is set and the model can
+  self-correct; permissive `outputSchema` (`additionalProperties: true`) is
+  acceptable, with precise TypedDict/Pydantic models a later phase. Dual-format
+  and narrative tools (e.g. `lookup_tenant` text) stay `-> str`.
+- *Why one coherent PR, not tool-by-tool.* It is all-or-nothing for contract
+  consistency: a half-migrated server gives some tools navigable
+  `structuredContent` + correct `isError` and leaves most as string blobs with
+  `isError` always false, which is more confusing than the status quo. The blast
+  radius is real: each return-type change ripples into the direct-call tests
+  that do `json.loads(await tool())` and flips the error tests to
+  `pytest.raises(ToolError)`. The three introspection tools alone touch ~40 test
+  sites across `test_explain_integration.py`, `test_mcp_introspection.py`, and
+  `test_server_agentic.py`; all 22 tools span more. Update `mcp.md`; the locked
+  CLI `--json` v2.0 schema is a separate surface and stays untouched.
+
+Verified-already-correct in the same pass (no change needed): the
+`NO_COLOR`/`TERM=dumb` contract (recon delegates to Rich 15, which honors the
+present-and-non-empty rule and yields no color system on `TERM=dumb`; pinned by
+`tests/test_formatter.py::TestColorSuppressionContract`), and deterministic
+`tools/list` ordering (FastMCP preserves decorator-registration order). OSC 8
+terminal hyperlinks for printed URLs (vendor-doc links, crash-log path), with a
+plain-text fallback off a TTY, remain an available polish item (Rich supports
+them natively).
+
 **Module decomposition (god-file split) — open, ratcheted.** A 2026 metrics
 pass found several modules far over the ~1000-line convention: `formatter.py`
 (4413), `cli.py` (3941), `server.py` (3114), `sources/dns.py` (2524),
