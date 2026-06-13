@@ -3351,18 +3351,18 @@ def _plain_lines(value: Any, key: str, indent: int) -> list[str]:
     if value is None or value == "" or value == [] or value == {}:
         return []
     if isinstance(value, dict):
-        lines = [f"{pad}{key}:"]
+        children: list[str] = []
         for k, v in value.items():
-            lines.extend(_plain_lines(v, str(k), indent + 1))
-        return lines
+            children.extend(_plain_lines(v, str(k), indent + 1))
+        return [f"{pad}{key}:", *children] if children else []
     if isinstance(value, list):
-        lines = [f"{pad}{key}:"]
+        children = []
         for item in value:
             if isinstance(item, dict | list):
-                lines.extend(_plain_lines(item, "-", indent + 1))
+                children.extend(_plain_lines(item, "-", indent + 1))
             else:
-                lines.append(f"{pad}  - {strip_control_chars(str(item))}")
-        return lines
+                children.append(f"{pad}  - {strip_control_chars(str(item))}")
+        return [f"{pad}{key}:", *children] if children else []
     return [f"{pad}{key}: {strip_control_chars(str(value))}"]
 
 

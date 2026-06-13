@@ -1126,7 +1126,11 @@ def cache_clear(
 
     if all_domains:
         if not force:
-            if sys.stdin.isatty():
+            try:
+                interactive = sys.stdin is not None and sys.stdin.isatty()
+            except (ValueError, OSError):  # detached / closed stdin → treat as non-interactive
+                interactive = False
+            if interactive:
                 if not typer.confirm("Clear ALL cached CT and result data?", err=True):
                     console.print("  Aborted.")
                     raise typer.Exit()
@@ -2359,6 +2363,12 @@ def _lookup_validate(
         raise typer.Exit(code=EXIT_VALIDATION) from None
     if sum([json_output, markdown, plain]) > 1:
         render_error("--json, --md, and --plain are mutually exclusive")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+    if plain and (chain_mode or compare_file or show_exposure or show_gaps):
+        # --plain only governs the standard lookup render; the chain / compare /
+        # exposure / gaps modes have their own output. Reject rather than
+        # silently ignore --plain and fall back to the colored panel.
+        render_error("--plain cannot be combined with --chain/--compare/--exposure/--gaps")
         raise typer.Exit(code=EXIT_VALIDATION) from None
     if chain_depth > 1 and not chain_mode:
         render_error("--depth requires --chain")

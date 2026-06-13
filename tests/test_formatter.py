@@ -139,6 +139,25 @@ class TestPlainOutput:
         # Lists render as indented "- item" lines.
         assert "  - microsoft365" in out
 
+    def test_falsy_scalars_are_preserved_not_dropped(self) -> None:
+        # A 0 / False field is real data and must survive --plain (the explicit
+        # empty-sentinel check, not a naive `if not value`).
+        from recon_tool.formatter import _plain_lines
+
+        lines = _plain_lines({"score": 0, "flag": False, "ratio": 0.0, "blank": "", "none": None}, "m", 0)
+        text = "\n".join(lines)
+        assert "score: 0" in text
+        assert "flag: False" in text
+        assert "ratio: 0.0" in text
+        assert "blank" not in text  # empty string dropped
+        assert "none" not in text  # None dropped
+
+    def test_no_dangling_header_for_all_empty_container(self) -> None:
+        from recon_tool.formatter import _plain_lines
+
+        # A dict whose every child is empty emits nothing (no bare "key:").
+        assert _plain_lines({"a": "", "b": None, "c": []}, "parent", 0) == []
+
     def test_strips_control_chars_from_untrusted_values(self) -> None:
         from recon_tool.formatter import format_tenant_plain
 
