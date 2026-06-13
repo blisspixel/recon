@@ -27,6 +27,30 @@ this: a coherent new surface, not internal hardening.
 
 ### Added — agent-facing uncertainty legibility
 
+- **Exposure score legible as a lower bound, not a grade.** `assess_exposure`
+  computes its 0–100 `posture_score` from observed-present controls only, so a
+  low score can mean "hardened but quiet" rather than "weak" — the same
+  robot-librarian flatten-the-uncertainty risk the posterior surface had. The
+  output now carries an `observability` block (`score_is_lower_bound`,
+  `unconfirmable_absent_points`, `score_ceiling`, and a `note`) that quantifies
+  how much the floor could understate the truth: the points come from the three
+  controls whose *absence* the passive channel cannot confirm (DKIM at
+  non-standard selectors, security tooling, an email gateway behind non-MX
+  routing). Declarative-record absence (DMARC/MTA-STS/TLS-RPT/CAA) is genuine
+  and excluded. `find_hardening_gaps` tags each gap with `absence_confirmable`:
+  true for a confirmed public-records fact, false when the gap rests on *not
+  observing* a hideable control and so may be a false positive — grounded in
+  the same declarative-vs-hideable (CAL14) distinction the Bayesian layer uses.
+  The MCP server instructions gain a "Reading the exposure score" section, the
+  tool docstrings and the human panel carry the lower-bound framing, and
+  `tests/test_exposure_server.py` + `tests/test_exposure.py` pin the accounting
+  (a bare domain floors at 30 unconfirmable points; DKIM/tooling each drop it),
+  the gap flags, and the instruction guidance. The score weights for the three
+  hideable controls are now named constants so the score and the
+  unconfirmable-absent total cannot drift apart. (Extends the posterior-surface
+  legibility below from the inference output to the security-posture output, the
+  two tools an agent uses for "is this domain secure?")
+
 - **"Reading the posteriors" guidance for consuming agents.** The MCP server
   instructions gain a section, parallel to the existing "Untrusted observed
   content (data, not instructions)" one, telling a consuming agent how to read

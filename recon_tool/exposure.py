@@ -238,6 +238,14 @@ class ExposureAssessment:
     posture_score_label: str
     disclaimer: str
     evidence: tuple[EvidenceReference, ...]
+    # The score counts only observed-present controls, so it is a *lower bound*:
+    # this is how many points come from controls whose absence the passive
+    # channel cannot confirm (DKIM at non-standard selectors, security tooling,
+    # an email gateway behind non-MX routing). The true posture may be this much
+    # higher. Declarative-record absence (DMARC/MTA-STS/TLS-RPT/CAA) is genuine
+    # and is not counted here. See the "Reading the exposure score" MCP note and
+    # docs/correlation.md on the hideability spectrum.
+    unconfirmable_absent_points: int = 0
 
 
 @dataclass(frozen=True)
@@ -249,6 +257,12 @@ class HardeningGap:
     observation: str
     recommendation: str
     evidence: tuple[EvidenceReference, ...]
+    # True when the gap is a confirmed public-records fact (a declarative record
+    # is absent or observed-weak). False when the gap rests on *not observing* a
+    # hideable control (DKIM at non-standard selectors, security tooling), so it
+    # may be a false positive — the control could be present but unobservable
+    # from the passive channel. Absence is not disproof (the MNAR rule).
+    absence_confirmable: bool = True
 
 
 @dataclass(frozen=True)
@@ -576,6 +590,36 @@ def _compute_hardening_status(info: TenantInfo) -> HardeningStatus:
     return HardeningStatus(controls=tuple(controls))
 
 
+# Point weights for the three controls whose *absence* the passive channel
+# cannot confirm (hideable / selector-dependent). Named so the score and the
+# unconfirmable-absent total below cannot drift apart.
+_SCORE_DKIM = 15
+_SCORE_SECURITY_TOOLING = 10
+_SCORE_EMAIL_GATEWAY = 5
+
+
+def _unconfirmable_absent_points(email: EmailPosture, info: TenantInfo) -> int:
+    """Points from absent controls whose absence is *not* passively confirmable.
+
+    The posture score counts only observed-present controls, so a low score can
+    mean "hardened but quiet" rather than "weak". This is the size of that
+    ambiguity: how many points come from controls that were not observed but
+    whose absence the passive channel cannot establish (DKIM at non-standard
+    selectors, security tooling that leaves no public trace, an email gateway
+    behind non-MX routing). The true score could be this much higher. Absent
+    declarative records (DMARC / MTA-STS / TLS-RPT / CAA) are genuinely absent
+    and are deliberately excluded — their absence *is* confirmable.
+    """
+    points = 0
+    if not email.dkim_configured:
+        points += _SCORE_DKIM
+    if len(set(info.slugs) & _SECURITY_TOOL_SLUGS) < 2:
+        points += _SCORE_SECURITY_TOOLING
+    if email.email_gateway is None:
+        points += _SCORE_EMAIL_GATEWAY
+    return points
+
+
 def _compute_posture_score(
     email: EmailPosture,
     identity: IdentityPosture,
@@ -595,7 +639,7 @@ def _compute_posture_score(
 
     # DKIM: 15
     if email.dkim_configured:
-        score += 15
+        score += _SCORE_DKIM
 
     # SPF strict: 10
     if email.spf_strict:
@@ -628,11 +672,11 @@ def _compute_posture_score(
     # Security tooling (2+ tools): 10
     security_count = len(slugs_set & _SECURITY_TOOL_SLUGS)
     if security_count >= 2:
-        score += 10
+        score += _SCORE_SECURITY_TOOLING
 
     # Enterprise email gateway: 5
     if email.email_gateway is not None:
-        score += 5
+        score += _SCORE_EMAIL_GATEWAY
 
     return min(score, 100)
 
@@ -679,6 +723,7 @@ def assess_exposure_from_info(info: TenantInfo) -> ExposureAssessment:
         posture_score_label=_check_neutral_copy("based on publicly observable controls"),
         disclaimer=_check_neutral_copy(_ASSESSMENT_DISCLAIMER),
         evidence=tuple(all_evidence),
+        unconfirmable_absent_points=_unconfirmable_absent_points(email, info),
     )
 
 
@@ -744,6 +789,9 @@ def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
                     "deploying signing with a common selector name"
                 ),
                 evidence=(),
+                # DKIM uses operator-chosen selectors; absence at the common
+                # names recon probes does not establish absence of DKIM.
+                absence_confirmable=False,
             )
         )
 
@@ -866,6 +914,9 @@ def _detect_inconsistencies(info: TenantInfo) -> list[HardeningGap]:
                     "Consider reviewing consumer-grade SaaS usage alongside enterprise security controls"
                 ),
                 evidence=_build_evidence_refs(info, consumer_present),
+                # Rests on *not* observing security tooling, which is hideable
+                # (leaves no public trace if not DNS-bound); may be a false gap.
+                absence_confirmable=False,
             )
         )
 

@@ -107,6 +107,20 @@ class TestAssessExposure:
         assert 0 <= data["posture_score"] <= 100
 
     @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_observability_envelope_present(self, mock_resolve: AsyncMock) -> None:
+        # The score is a lower bound; the envelope tells a consuming agent how
+        # much it could understate the true posture, so "quiet" isn't read as
+        # "weak". (SAMPLE_INFO has no email gateway, so the floor is non-trivial.)
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        data = json.loads(await assess_exposure("northwindtraders.com"))
+        obs = data["observability"]
+        assert {"score_is_lower_bound", "unconfirmable_absent_points", "score_ceiling", "note"} <= set(obs)
+        assert obs["unconfirmable_absent_points"] >= 0
+        assert data["posture_score"] <= obs["score_ceiling"] <= 100
+        assert obs["score_is_lower_bound"] == (obs["unconfirmable_absent_points"] > 0)
+
+    @pytest.mark.asyncio
     async def test_validation_failure(self) -> None:
         result = await assess_exposure("not a domain")
         assert result.startswith("Error:")
@@ -157,6 +171,10 @@ class TestFindHardeningGaps:
         assert "gaps" in data
         assert "disclaimer" in data
         assert isinstance(data["gaps"], list)
+        # Every gap carries the confirmability flag so an agent can tell a real
+        # public-records fact from a "could not observe" (possibly false) gap.
+        for gap in data["gaps"]:
+            assert isinstance(gap["absence_confirmable"], bool)
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -334,3 +352,23 @@ class TestToolDocstrings:
         doc = compare_postures.__doc__
         assert doc is not None
         assert "defensive security posture assessment only" in doc.lower()
+
+
+class TestExposureReadingGuidance:
+    """The "Reading the exposure score" guidance must stay in the instructions.
+
+    An LLM consumer reads a 0-100 score as a grade unless told it is a lower
+    bound; the injected server instructions tell it to report the score as a
+    floor (with its ceiling) and to treat an `absence_confirmable=false` gap as
+    "not observed", not a definite weakness. This guards that guidance, the same
+    discipline as the posterior-reading and data-not-instructions sections.
+    """
+
+    def test_instructions_carry_the_exposure_guidance(self) -> None:
+        from recon_tool.server import _SERVER_INSTRUCTIONS  # pyright: ignore[reportPrivateUsage]
+
+        collapsed = " ".join(_SERVER_INSTRUCTIONS.lower().split())
+        assert "reading the exposure score" in collapsed
+        assert "lower bound" in collapsed
+        assert "score_ceiling" in collapsed
+        assert "absence_confirmable" in collapsed

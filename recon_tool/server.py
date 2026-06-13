@@ -148,6 +148,25 @@ interval that sits decisively low with corroborating evidence. The interval
 *widens* on hardened targets by design — that widening is the honest signal,
 not noise to round away.
 
+## Reading the exposure score (a lower bound, not a grade)
+
+`assess_exposure` returns a `posture_score` (0–100) that counts only controls
+recon observed as present, so it is a *lower bound*, not a verdict on the
+organization. A low score can mean "hardened but quiet" rather than "weak". The
+`observability` block says how much the floor could understate the truth:
+`score_is_lower_bound`, `unconfirmable_absent_points` (points from controls
+whose absence the passive channel cannot confirm — DKIM at non-standard
+selectors, security tooling, an email gateway behind non-MX routing), and
+`score_ceiling`. Report the score as a floor with its ceiling, not as a grade.
+
+On `find_hardening_gaps`, each gap carries `absence_confirmable`. When true, the
+gap is a confirmed public-records fact (a declarative record like DMARC or
+MTA-STS is genuinely absent or weak). When false, the gap rests on *not
+observing* a hideable control and may be a false positive — the control could
+be present but unobservable. Do not report an `absence_confirmable=false` gap as
+a definite weakness; report it as "not observed", consistent with the
+absence-is-not-disproof rule above.
+
 ## Explaining results
 
 Prefer `explain=True` on `lookup_tenant` and `analyze_posture` when the user
@@ -1057,6 +1076,12 @@ async def assess_exposure(domain: str) -> str:
     hardening status, and an overall posture score (0–100) based on publicly
     observable controls.
 
+    The score counts only observed-present controls, so it is a lower bound: the
+    ``observability`` block carries ``score_is_lower_bound``,
+    ``unconfirmable_absent_points`` (points from controls whose absence the
+    passive channel cannot confirm), and ``score_ceiling``. Report the score as
+    a floor with its ceiling; a low score can mean "quiet", not "weak".
+
     Args:
         domain: A domain name to assess (e.g., "northwindtraders.com")
 
@@ -1151,7 +1176,11 @@ async def find_hardening_gaps(domain: str) -> str:
     For defensive security posture assessment only.
 
     Returns a JSON array of hardening gaps, each with category, severity,
-    observation, suggested action, and supporting evidence references.
+    observation, suggested action, supporting evidence references, and an
+    ``absence_confirmable`` flag: true when the gap is a confirmed public-records
+    fact (a declarative record is absent or observed-weak), false when it rests
+    on not observing a hideable control and so may be a false positive. Report a
+    false-flagged gap as "not observed", not as a confirmed gap.
 
     Args:
         domain: A domain name to analyze (e.g., "northwindtraders.com")

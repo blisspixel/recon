@@ -724,3 +724,59 @@ class TestNeutralCopyIntegration:
                 # Use word boundary to avoid false positives (e.g. "hardening" vs "harden")
                 pattern = rf"\b{re.escape(term)}\b"
                 assert not re.search(pattern, lower), f"Discouraged copy term '{term}' in docstring of {func.__name__}"
+
+
+# ── Observability legibility: the score is a lower bound ───────────────
+# The posture score counts only observed-present controls, so a low score can
+# mean "hardened but quiet". These tests pin the lower-bound accounting and the
+# gap confirmability flag that make that legible to a consuming agent.
+
+
+class TestScoreObservability:
+    @staticmethod
+    def _info(*, services: tuple[str, ...] = (), slugs: tuple[str, ...] = ()) -> TenantInfo:
+        return TenantInfo(
+            tenant_id=None,
+            display_name="Test Corp",
+            default_domain="test.onmicrosoft.com",
+            queried_domain="test.com",
+            confidence=ConfidenceLevel.LOW,
+            sources=("test_source",),
+            services=services,
+            slugs=slugs,
+        )
+
+    def test_bare_domain_floor_is_thirty(self) -> None:
+        # No DKIM (+15), <2 security tools (+10), no email gateway (+5) = 30.
+        result = assess_exposure_from_info(self._info())
+        assert result.unconfirmable_absent_points == 30
+
+    def test_observed_dkim_drops_the_floor_by_fifteen(self) -> None:
+        from recon_tool.constants import SVC_DKIM
+
+        result = assess_exposure_from_info(self._info(services=(SVC_DKIM,)))
+        assert result.unconfirmable_absent_points == 15
+
+    def test_two_security_tools_drop_the_floor_by_ten(self) -> None:
+        result = assess_exposure_from_info(self._info(slugs=("crowdstrike", "okta")))
+        assert result.unconfirmable_absent_points == 20
+
+    def test_floor_never_pushes_ceiling_past_100(self) -> None:
+        result = assess_exposure_from_info(self._info())
+        ceiling = min(100, result.posture_score + result.unconfirmable_absent_points)
+        assert result.posture_score <= ceiling <= 100
+
+    def test_dkim_gap_is_not_absence_confirmable(self) -> None:
+        # DKIM uses operator-chosen selectors, so its absence is not confirmable
+        # from the common-selector probe; the gap must flag that.
+        report = find_gaps_from_info(self._info())
+        dkim_gaps = [g for g in report.gaps if "dkim" in g.observation.lower()]
+        assert dkim_gaps
+        assert all(not g.absence_confirmable for g in dkim_gaps)
+
+    def test_missing_dmarc_gap_is_absence_confirmable(self) -> None:
+        # A missing DMARC record is a genuine public-records fact.
+        report = find_gaps_from_info(self._info())
+        dmarc_gaps = [g for g in report.gaps if "dmarc" in g.observation.lower()]
+        assert dmarc_gaps
+        assert all(g.absence_confirmable for g in dmarc_gaps)
