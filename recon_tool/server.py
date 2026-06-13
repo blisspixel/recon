@@ -15,8 +15,10 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass, field
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_VALIDATION
@@ -1515,12 +1517,16 @@ async def _resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]
         openWorldHint=False,
     ),
 )
-async def get_fingerprints(category: str | None = None, limit: int | None = None, offset: int = 0) -> str:
+async def get_fingerprints(
+    category: str | None = None, limit: int | None = None, offset: int = 0
+) -> list[dict[str, Any]]:
     """List all loaded fingerprints with slugs, categories, and detection types.
 
-    Returns a JSON array of fingerprint summaries from both built-in and custom
+    Returns a list of fingerprint summaries from both built-in and custom
     sources. Each entry includes name, slug, category, confidence, match_mode,
-    provider_group, display_group, and the set of detection types used.
+    provider_group, display_group, and the set of detection types used. The MCP
+    layer surfaces the list as navigable ``structuredContent`` with an
+    ``outputSchema``, alongside the serialized-JSON text block for compatibility.
 
     Args:
         category: Optional category filter (case-insensitive partial match).
@@ -1530,7 +1536,7 @@ async def get_fingerprints(category: str | None = None, limit: int | None = None
         offset: Starting index for the page (default 0). Ignored without limit.
 
     Returns:
-        JSON array of fingerprint summaries (a page of it when limit is given).
+        A list of fingerprint summaries (a page of it when limit is given).
     """
     from recon_tool.fingerprints import load_fingerprints
 
@@ -1541,7 +1547,7 @@ async def get_fingerprints(category: str | None = None, limit: int | None = None
     if limit is not None:
         start = max(0, offset)
         fps = fps[start : start + max(0, limit)]
-    result = [
+    return [
         {
             "name": fp.name,
             "slug": fp.slug,
@@ -1554,7 +1560,6 @@ async def get_fingerprints(category: str | None = None, limit: int | None = None
         }
         for fp in fps
     ]
-    return json_mod.dumps(result, indent=2)
 
 
 def _classify_signal_layer(sig: object) -> int:
@@ -1586,13 +1591,15 @@ def _classify_signal_layer(sig: object) -> int:
         openWorldHint=False,
     ),
 )
-async def get_signals(category: str | None = None, layer: int | None = None) -> str:
+async def get_signals(category: str | None = None, layer: int | None = None) -> list[dict[str, Any]]:
     """List all loaded signals with rules, layers, and conditions.
 
-    Returns a JSON array of signal definitions from both built-in and custom
+    Returns a list of signal definitions from both built-in and custom
     sources. Each entry includes name, category, confidence, description,
     candidates, min_matches, metadata conditions, contradicts, requires_signals,
-    explain, and computed layer.
+    explain, and computed layer. The MCP layer surfaces the list as navigable
+    ``structuredContent`` with an ``outputSchema``, alongside the serialized-JSON
+    text block for compatibility.
 
     Layers: 1=basic, 2=composite (has metadata), 3=consistency, 4=meta (requires_signals).
 
@@ -1601,7 +1608,7 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
         layer: Optional layer filter (1, 2, 3, or 4).
 
     Returns:
-        JSON array of signal definitions.
+        A list of signal definitions.
     """
     from recon_tool.signals import load_signals
 
@@ -1628,7 +1635,7 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
                 "layer": sig_layer,
             }
         )
-    return json_mod.dumps(result, indent=2)
+    return result
 
 
 @mcp.tool(
@@ -1639,7 +1646,7 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
         openWorldHint=True,
     ),
 )
-async def explain_signal(signal_name: str, domain: str | None = None) -> str:
+async def explain_signal(signal_name: str, domain: str | None = None) -> dict[str, Any]:
     """Query a specific signal's trigger conditions and current state for a domain.
 
     Without a domain: returns the signal's definition, trigger conditions,
@@ -1667,10 +1674,7 @@ async def explain_signal(signal_name: str, domain: str | None = None) -> str:
 
     if sig is None:
         available = sorted(s.name for s in all_signals)
-        return json_mod.dumps(
-            {"error": f"Signal '{signal_name}' not found", "available_signals": available},
-            indent=2,
-        )
+        raise ToolError(f"Signal '{signal_name}' not found. Available signals: {', '.join(available)}")
 
     # Build base definition
     definition: dict[str, object] = {
@@ -1691,12 +1695,12 @@ async def explain_signal(signal_name: str, domain: str | None = None) -> str:
     }
 
     if domain is None:
-        return json_mod.dumps(definition, indent=2)
+        return definition
 
     # Resolve domain and evaluate signal
     resolved = await _resolve_or_cache(domain)
     if isinstance(resolved, str):
-        return resolved
+        raise ToolError(resolved)
 
     info, _results = resolved
 
@@ -1757,7 +1761,7 @@ async def explain_signal(signal_name: str, domain: str | None = None) -> str:
         "matched_evidence": evidence_list,
         "domain_weakening_conditions": list(weakening),
     }
-    return json_mod.dumps(evaluation, indent=2)
+    return evaluation
 
 
 def _static_weakening_conditions(sig: object) -> list[str]:

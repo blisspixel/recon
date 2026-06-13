@@ -19,6 +19,8 @@ import pytest
 
 pytest.importorskip("mcp")
 
+from mcp.server.fastmcp.exceptions import ToolError
+
 from recon_tool.models import (
     CandidateValue,
     ConfidenceLevel,
@@ -122,18 +124,16 @@ class TestGetFingerprints:
     """Unit tests for get_fingerprints MCP tool."""
 
     @pytest.mark.asyncio
-    async def test_returns_valid_json_array(self) -> None:
-        """get_fingerprints returns a valid JSON array."""
-        result = await get_fingerprints()
-        data = json.loads(result)
+    async def test_returns_list(self) -> None:
+        """get_fingerprints returns a list of summaries."""
+        data = await get_fingerprints()
         assert isinstance(data, list)
         assert len(data) > 0
 
     @pytest.mark.asyncio
     async def test_entries_have_expected_fields(self) -> None:
         """Each fingerprint entry has slug, name, category, confidence, match_mode, detection_types."""
-        result = await get_fingerprints()
-        data = json.loads(result)
+        data = await get_fingerprints()
         expected_fields = {
             "slug",
             "name",
@@ -148,10 +148,8 @@ class TestGetFingerprints:
     @pytest.mark.asyncio
     async def test_category_filter_narrows_results(self) -> None:
         """Category filter returns a subset matching the category."""
-        result_all = await get_fingerprints()
-        result_email = await get_fingerprints(category="email")
-        all_data = json.loads(result_all)
-        email_data = json.loads(result_email)
+        all_data = await get_fingerprints()
+        email_data = await get_fingerprints(category="email")
         assert len(email_data) > 0
         assert len(email_data) < len(all_data)
         for fp in email_data:
@@ -160,17 +158,17 @@ class TestGetFingerprints:
     @pytest.mark.asyncio
     async def test_category_filter_case_insensitive(self) -> None:
         """Category filter is case-insensitive."""
-        lower = json.loads(await get_fingerprints(category="email"))
-        upper = json.loads(await get_fingerprints(category="EMAIL"))
+        lower = await get_fingerprints(category="email")
+        upper = await get_fingerprints(category="EMAIL")
         assert lower == upper
 
     @pytest.mark.asyncio
     async def test_pagination_is_additive(self) -> None:
         """limit/offset slice the list; omitting them returns the full list
         (backward-compatible default)."""
-        full = json.loads(await get_fingerprints())
-        page1 = json.loads(await get_fingerprints(limit=5))
-        page2 = json.loads(await get_fingerprints(limit=5, offset=5))
+        full = await get_fingerprints()
+        page1 = await get_fingerprints(limit=5)
+        page2 = await get_fingerprints(limit=5, offset=5)
         assert len(page1) == 5
         assert len(page2) == 5
         assert page1 == full[:5]
@@ -184,18 +182,16 @@ class TestGetSignals:
     """Unit tests for get_signals MCP tool."""
 
     @pytest.mark.asyncio
-    async def test_returns_valid_json_array(self) -> None:
-        """get_signals returns a valid JSON array."""
-        result = await get_signals()
-        data = json.loads(result)
+    async def test_returns_list(self) -> None:
+        """get_signals returns a list of definitions."""
+        data = await get_signals()
         assert isinstance(data, list)
         assert len(data) > 0
 
     @pytest.mark.asyncio
     async def test_entries_have_new_fields(self) -> None:
         """Signal entries include contradicts, requires_signals, explain, layer."""
-        result = await get_signals()
-        data = json.loads(result)
+        data = await get_signals()
         new_fields = {"contradicts", "requires_signals", "explain", "layer"}
         for sig in data:
             assert new_fields.issubset(sig.keys()), f"Missing new fields in signal: {new_fields - sig.keys()}"
@@ -203,8 +199,7 @@ class TestGetSignals:
     @pytest.mark.asyncio
     async def test_category_filter(self) -> None:
         """Category filter returns only matching signals."""
-        result = await get_signals(category="security")
-        data = json.loads(result)
+        data = await get_signals(category="security")
         assert len(data) > 0
         for sig in data:
             assert "security" in sig["category"].lower()
@@ -212,8 +207,7 @@ class TestGetSignals:
     @pytest.mark.asyncio
     async def test_layer_filter(self) -> None:
         """Layer filter returns only signals in the specified layer."""
-        result = await get_signals(layer=1)
-        data = json.loads(result)
+        data = await get_signals(layer=1)
         assert len(data) > 0
         for sig in data:
             assert sig["layer"] == 1
@@ -234,21 +228,16 @@ class TestExplainSignal:
         assert len(signals) > 0
         sig_name = signals[0].name
 
-        result = await explain_signal(sig_name)
-        data = json.loads(result)
+        data = await explain_signal(sig_name)
         assert data["name"] == sig_name
         assert "trigger_conditions" in data
         assert "weakening_conditions" in data
 
     @pytest.mark.asyncio
-    async def test_unknown_signal_returns_error_with_available(self) -> None:
-        """Unknown signal name returns error with list of available names."""
-        result = await explain_signal("Nonexistent Fabrikam Signal")
-        data = json.loads(result)
-        assert "error" in data
-        assert "available_signals" in data
-        assert isinstance(data["available_signals"], list)
-        assert len(data["available_signals"]) > 0
+    async def test_unknown_signal_raises_tool_error(self) -> None:
+        """Unknown signal name raises ToolError (isError) listing available names."""
+        with pytest.raises(ToolError, match="not found"):
+            await explain_signal("Nonexistent Fabrikam Signal")
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)
@@ -261,8 +250,7 @@ class TestExplainSignal:
         signals = load_signals()
         sig_name = signals[0].name
 
-        result = await explain_signal(sig_name, domain="contoso.com")
-        data = json.loads(result)
+        data = await explain_signal(sig_name, domain="contoso.com")
         assert "domain" in data
         assert "fired" in data
         assert isinstance(data["fired"], bool)

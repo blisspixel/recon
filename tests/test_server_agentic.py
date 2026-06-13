@@ -22,6 +22,8 @@ import pytest
 
 pytest.importorskip("mcp")
 
+from mcp.server.fastmcp.exceptions import ToolError
+
 from recon_tool.models import (
     ConfidenceLevel,
     SourceResult,
@@ -101,8 +103,7 @@ class TestGetFingerprints:
     async def test_returns_array_of_fingerprints(self) -> None:
         from recon_tool.server import get_fingerprints
 
-        result = await get_fingerprints()
-        data = json.loads(result)
+        data = await get_fingerprints()
         assert isinstance(data, list)
         assert len(data) > 0
         # Each entry has expected fields
@@ -116,12 +117,12 @@ class TestGetFingerprints:
     async def test_category_filter_narrows_results(self) -> None:
         from recon_tool.server import get_fingerprints
 
-        all_fps = json.loads(await get_fingerprints())
+        all_fps = await get_fingerprints()
         # Pick the first category that appears
         if not all_fps:
             return
         target_cat = all_fps[0]["category"]
-        filtered = json.loads(await get_fingerprints(category=target_cat))
+        filtered = await get_fingerprints(category=target_cat)
         # All filtered entries share the category (case-insensitive partial match)
         for fp in filtered:
             assert target_cat.lower() in fp["category"].lower()
@@ -130,7 +131,7 @@ class TestGetFingerprints:
     async def test_category_filter_no_match_returns_empty(self) -> None:
         from recon_tool.server import get_fingerprints
 
-        result = json.loads(await get_fingerprints(category="absolutely-no-such-category"))
+        result = await get_fingerprints(category="absolutely-no-such-category")
         assert result == []
 
 
@@ -142,7 +143,7 @@ class TestGetSignals:
     async def test_returns_array_of_signals(self) -> None:
         from recon_tool.server import get_signals
 
-        result = json.loads(await get_signals())
+        result = await get_signals()
         assert isinstance(result, list)
         assert len(result) > 0
 
@@ -150,7 +151,7 @@ class TestGetSignals:
     async def test_category_filter(self) -> None:
         from recon_tool.server import get_signals
 
-        result = json.loads(await get_signals(category="email"))
+        result = await get_signals(category="email")
         for sig in result:
             assert "email" in sig.get("category", "").lower()
 
@@ -158,7 +159,7 @@ class TestGetSignals:
     async def test_layer_filter(self) -> None:
         from recon_tool.server import get_signals
 
-        result = json.loads(await get_signals(layer=1))
+        result = await get_signals(layer=1)
         for sig in result:
             assert sig.get("layer") == 1
 
@@ -172,7 +173,7 @@ class TestExplainSignal:
         """Without a domain, returns the signal's static definition."""
         from recon_tool.server import explain_signal
 
-        result = json.loads(await explain_signal("AI Adoption"))
+        result = await explain_signal("AI Adoption")
         assert result["name"] == "AI Adoption"
         assert "trigger_conditions" in result
         assert "weakening_conditions" in result
@@ -180,19 +181,17 @@ class TestExplainSignal:
         assert "fired" not in result
 
     @pytest.mark.asyncio
-    async def test_unknown_signal_returns_error_with_available(self) -> None:
+    async def test_unknown_signal_raises_tool_error(self) -> None:
         from recon_tool.server import explain_signal
 
-        result = json.loads(await explain_signal("NoSuchSignal"))
-        assert "error" in result
-        assert "available_signals" in result
-        assert isinstance(result["available_signals"], list)
+        with pytest.raises(ToolError, match="not found"):
+            await explain_signal("NoSuchSignal")
 
     @pytest.mark.asyncio
     async def test_with_domain_evaluates_signal(self, mocked_resolve) -> None:
         from recon_tool.server import explain_signal
 
-        result = json.loads(await explain_signal("AI Adoption", domain="contoso.com"))
+        result = await explain_signal("AI Adoption", domain="contoso.com")
         assert "fired" in result
         assert "matched_slugs" in result
         assert result["domain"] == "contoso.com"
