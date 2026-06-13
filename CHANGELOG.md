@@ -36,6 +36,13 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
 - **`cache clear --all` is guarded.** It now confirms interactively (TTY) or
   requires `--force` in a non-interactive context, instead of wiping all cached
   data unprompted.
+- **`--plain` linear output (tier 2, accessibility).** `recon <domain> --plain`
+  emits the lookup as greppable, screen-reader-friendly `key: value` lines with
+  no color or box-drawing — the accessibility/scripting complement to the
+  default Rich panel. Built from the same dict as `--json`, so it carries every
+  field; mutually exclusive with `--json`/`--md`. Untrusted values are
+  control-char stripped like the other sinks. Covered by
+  `tests/test_formatter.py::TestPlainOutput` and a CLI exclusivity test.
 - **XDG Base Directory support (tier 2).** A new `recon_tool.paths` module
   centralizes config/cache/state resolution. Behavior is unchanged for existing
   setups — `RECON_CONFIG_DIR` (the test/CI seam) still maps every category under

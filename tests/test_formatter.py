@@ -109,6 +109,53 @@ class TestRichPanelOutputContainsAllFields:
         )
 
 
+class TestPlainOutput:
+    """`--plain` linear output: greppable, screen-reader-friendly, no markup."""
+
+    @staticmethod
+    def _info() -> TenantInfo:
+        return TenantInfo(
+            tenant_id="aaaa-bbbb",
+            display_name="Contoso",
+            default_domain="contoso.onmicrosoft.com",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.HIGH,
+            services=("Microsoft 365", "DMARC"),
+            slugs=("microsoft365", "dmarc"),
+            dmarc_policy="reject",
+        )
+
+    def test_is_linear_keyvalue_with_no_ansi_or_boxdrawing(self) -> None:
+        from recon_tool.formatter import format_tenant_plain
+
+        out = format_tenant_plain(self._info())
+        assert "\x1b" not in out  # no ANSI color
+        # no box-drawing characters
+        assert "─" not in out
+        assert "│" not in out
+        assert "╭" not in out
+        assert "tenant_id: aaaa-bbbb" in out
+        assert "dmarc_policy: reject" in out
+        # Lists render as indented "- item" lines.
+        assert "  - microsoft365" in out
+
+    def test_strips_control_chars_from_untrusted_values(self) -> None:
+        from recon_tool.formatter import format_tenant_plain
+
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Evil\x1b[2J\x07Corp",
+            default_domain="x.onmicrosoft.com",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.LOW,
+        )
+        out = format_tenant_plain(info)
+        assert "\x1b" not in out  # ESC control byte stripped
+        assert "\x07" not in out  # BEL control byte stripped
+        assert "Evil" in out  # printable text preserved
+        assert "Corp" in out
+
+
 class TestStdoutStderrDiscipline:
     """Diagnostics go to stderr, not stdout.
 
