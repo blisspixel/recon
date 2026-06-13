@@ -19,10 +19,12 @@ from recon_tool.formatter import (
     format_tenant_json,
     format_tenant_markdown,
     get_console,
+    get_err_console,
     render_tenant_panel,
     render_verbose_sources,
     render_warning,
     set_console,
+    set_err_console,
 )
 from recon_tool.models import ConfidenceLevel, SourceResult, TenantInfo
 
@@ -107,6 +109,28 @@ class TestRichPanelOutputContainsAllFields:
         )
 
 
+class TestStdoutStderrDiscipline:
+    """Diagnostics go to stderr, not stdout.
+
+    A consumer piping `recon ... --json` must get only the data stream on
+    stdout; errors and warnings belong on stderr (clig.dev / 12-factor CLI).
+    """
+
+    def test_render_error_goes_to_stderr_not_stdout(self, capsys) -> None:
+        from recon_tool.formatter import render_error
+
+        render_error("boom-message-xyz")
+        captured = capsys.readouterr()
+        assert "boom-message-xyz" in captured.err
+        assert "boom-message-xyz" not in captured.out
+
+    def test_render_warning_goes_to_stderr_not_stdout(self, capsys) -> None:
+        render_warning("contoso.example")
+        captured = capsys.readouterr()
+        assert "contoso.example" in captured.err
+        assert "contoso.example" not in captured.out
+
+
 class TestNotFoundWarningContainsDomain:
     """Property 10: Not-found warning contains queried domain.
 
@@ -126,14 +150,14 @@ class TestNotFoundWarningContainsDomain:
             no_color=True,
             highlight=False,
         )
-        original = get_console()
-        set_console(test_console)
+        original = get_err_console()
+        set_err_console(test_console)
         try:
             render_warning(domain)
             output = buf.getvalue()
             assert domain in output, f"domain {domain!r} not found in warning output"
         finally:
-            set_console(original)
+            set_err_console(original)
 
 
 class TestJsonOutputRoundTrip:

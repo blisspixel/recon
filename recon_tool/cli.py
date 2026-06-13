@@ -25,7 +25,7 @@ import click
 import typer
 from rich.markup import escape
 
-from recon_tool.formatter import get_console
+from recon_tool.formatter import get_console, get_err_console
 from recon_tool.validator import strip_control_chars
 
 McpCheck: TypeAlias = tuple[str, bool, str]
@@ -188,6 +188,9 @@ app = typer.Typer(
     help="Domain intelligence from the command line.",
     rich_markup_mode="rich",
     cls=_DomainGroup,
+    # `-h` as a help alias everywhere (Click propagates help_option_names to
+    # every subcommand context), matching the near-universal CLI convention.
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
 
 
@@ -198,6 +201,15 @@ def version_callback(value: bool) -> None:
 
         get_console().print(f"recon [bold]{__version__}[/bold]")
         raise typer.Exit()
+
+
+def _color_callback(value: bool | None) -> None:
+    """Force (--color) or disable (--no-color) colored output."""
+    if value is None:
+        return
+    from recon_tool.formatter import set_color_override
+
+    set_color_override(value)
 
 
 def _debug_callback(value: bool) -> None:
@@ -218,6 +230,7 @@ def main(
     ctx: typer.Context,
     version: bool | None = typer.Option(
         None,
+        "-V",
         "--version",
         callback=version_callback,
         is_eager=True,
@@ -229,6 +242,13 @@ def main(
         callback=_debug_callback,
         is_eager=True,
         help="Enable debug logging.",
+    ),
+    color: bool | None = typer.Option(
+        None,
+        "--color/--no-color",
+        callback=_color_callback,
+        is_eager=True,
+        help="Force or disable colored output (overrides NO_COLOR / TTY detection).",
     ),
 ) -> None:
     """
@@ -1083,13 +1103,19 @@ def cache_show(
 def cache_clear(
     domain: str = typer.Argument(None, help="Domain to clear (omit with --all for everything)"),
     all_domains: bool = typer.Option(False, "--all", help="Clear all cached data"),
+    force: bool = typer.Option(False, "--force", "-f", help="Skip the confirmation prompt for --all."),
 ) -> None:
     """Clear both CT subdomain cache and TenantInfo result cache.
 
     Earlier this only cleared the CT cache, which left stale
     TenantInfo results silently served from ``~/.recon/cache/`` even
     after a ``recon cache clear``.
+
+    ``--all`` wipes everything, so it confirms first when run interactively and
+    requires ``--force`` in a non-interactive (scripted) context.
     """
+    import sys
+
     from recon_tool.cache import cache_clear as result_cache_clear
     from recon_tool.cache import cache_clear_all as result_cache_clear_all
     from recon_tool.ct_cache import ct_cache_clear, ct_cache_clear_all
@@ -1099,6 +1125,14 @@ def cache_clear(
     console = get_console()
 
     if all_domains:
+        if not force:
+            if sys.stdin.isatty():
+                if not typer.confirm("Clear ALL cached CT and result data?", err=True):
+                    console.print("  Aborted.")
+                    raise typer.Exit()
+            else:
+                render_error("Refusing to clear all cached data without confirmation; re-run with --force.")
+                raise typer.Exit(code=EXIT_VALIDATION)
         ct_count = ct_cache_clear_all()
         result_count = result_cache_clear_all()
         console.print(f"  Cleared {ct_count} CT cache entr{'ies' if ct_count != 1 else 'y'}.")
@@ -1637,7 +1671,7 @@ def fingerprints_test(
             "  [dim]Supply --corpus path/to/file or drop ~/.recon/corpus.txt to test against real apexes.[/dim]"
         )
     console.print()
-    with console.status(f"Resolving {len(domains)} domains..."):
+    with get_err_console().status(f"Resolving {len(domains)} domains..."):
         results = asyncio.run(_resolve_all())
 
     if json_output:
@@ -2361,7 +2395,7 @@ async def _run_with_rotating_status(console: Any, coro: Any) -> Any:
     order = list(_STATUS_MESSAGES)
     random.shuffle(order)
     task = asyncio.ensure_future(coro)
-    with console.status(order[0]) as status:
+    with get_err_console().status(order[0]) as status:
         idx = 0
         while True:
             try:
@@ -2473,7 +2507,7 @@ async def _lookup_chain(
             import random
 
             msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
-            with console.status(msg):
+            with get_err_console().status(msg):
                 report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct, active_probes=active_probes)
         else:
             report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct, active_probes=active_probes)
@@ -3749,7 +3783,7 @@ async def _batch(
         completed += 1
         if not summary and not json_output and not markdown and not csv_output:
             safe = escape(strip_control_chars(domain))
-            console.print(f"  [{completed}/{total}] {safe}", style="dim", highlight=False)
+            get_err_console().print(f"  [{completed}/{total}] {safe}", style="dim", highlight=False)
         return result
 
     # NDJSON streaming path, flushed per-domain (see helper for the trade-off).
@@ -3782,8 +3816,38 @@ def run() -> None:
 
     The callback handles shorthand domain syntax (e.g., `recon contoso.com`)
     via invoke_without_command routing. No preprocessing needed.
+
+    Wraps the app in a last-resort handler so an *unexpected* crash writes its
+    full traceback to a file and prints a clean one-liner (no raw stack trace on
+    the terminal), and a Ctrl-C exits quietly with code 130. Normal Typer/Click
+    exits (help, version, usage errors) pass through untouched.
     """
-    app()
+    try:
+        app()
+    except KeyboardInterrupt:
+        get_err_console().print("[yellow]Interrupted.[/yellow]")
+        raise SystemExit(130) from None
+    except SystemExit:
+        raise
+    except Exception:  # top-level last-resort crash handler (catch-all is intentional)
+        import tempfile
+        import traceback
+        from datetime import UTC, datetime
+
+        from recon_tool.exit_codes import EXIT_INTERNAL
+
+        try:
+            stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+            crash_path = Path(tempfile.gettempdir()) / f"recon-crash-{stamp}.log"
+            crash_path.write_text(traceback.format_exc(), encoding="utf-8")
+            where = str(crash_path)
+        except Exception:  # never fail inside the crash handler
+            where = "(could not write a crash log)"
+        get_err_console().print(
+            f"[red]recon hit an unexpected error.[/red] Details written to {escape(where)}\n"
+            "Please report it at https://github.com/blisspixel/recon/issues and attach that file."
+        )
+        raise SystemExit(EXIT_INTERNAL) from None
 
 
 if __name__ == "__main__":
