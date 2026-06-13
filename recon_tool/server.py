@@ -1515,7 +1515,7 @@ async def _resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]
         openWorldHint=False,
     ),
 )
-async def get_fingerprints(category: str | None = None) -> str:
+async def get_fingerprints(category: str | None = None, limit: int | None = None, offset: int = 0) -> str:
     """List all loaded fingerprints with slugs, categories, and detection types.
 
     Returns a JSON array of fingerprint summaries from both built-in and custom
@@ -1524,9 +1524,13 @@ async def get_fingerprints(category: str | None = None) -> str:
 
     Args:
         category: Optional category filter (case-insensitive partial match).
+        limit: Optional page size. With ~840 fingerprints loaded, an agent that
+            only needs a slice can cap the response; omit (default) for the full
+            list, which keeps the result shape backward-compatible.
+        offset: Starting index for the page (default 0). Ignored without limit.
 
     Returns:
-        JSON array of fingerprint summaries.
+        JSON array of fingerprint summaries (a page of it when limit is given).
     """
     from recon_tool.fingerprints import load_fingerprints
 
@@ -1534,6 +1538,9 @@ async def get_fingerprints(category: str | None = None) -> str:
     if category:
         cat_lower = category.lower()
         fps = tuple(fp for fp in fps if cat_lower in fp.category.lower())
+    if limit is not None:
+        start = max(0, offset)
+        fps = fps[start : start + max(0, limit)]
     result = [
         {
             "name": fp.name,

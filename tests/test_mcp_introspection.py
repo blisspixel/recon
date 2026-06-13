@@ -164,6 +164,18 @@ class TestGetFingerprints:
         upper = json.loads(await get_fingerprints(category="EMAIL"))
         assert lower == upper
 
+    @pytest.mark.asyncio
+    async def test_pagination_is_additive(self) -> None:
+        """limit/offset slice the list; omitting them returns the full list
+        (backward-compatible default)."""
+        full = json.loads(await get_fingerprints())
+        page1 = json.loads(await get_fingerprints(limit=5))
+        page2 = json.loads(await get_fingerprints(limit=5, offset=5))
+        assert len(page1) == 5
+        assert len(page2) == 5
+        assert page1 == full[:5]
+        assert page2 == full[5:10]
+
 
 # ── 11.2 get_signals ────────────────────────────────────────────────────
 

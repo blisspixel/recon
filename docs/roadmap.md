@@ -830,6 +830,26 @@ reference, `_SUBCOMMANDS` consistency, `batch` stdin, shell-completion docs,
 data-not-instructions demarcation) shipped in v1.9.55 to v1.9.60; see the
 CHANGELOG for the per-patch detail.
 
+**CLI best-practices pass (2026).** A grade against the 2026 CLI-first rubric
+(clig.dev, 12-factor CLI, MCP 2025-11, XDG, NO_COLOR, WCAG) drove a two-tier
+ergonomics pass, all in the Unreleased CHANGELOG section. *Tier 1 (shipped):*
+stdout/stderr discipline (diagnostics + spinners off stdout), `-h`/`-V` aliases,
+a clean crash/SIGINT handler, `--color`/`--no-color`, and a `cache clear --all`
+guard. *Tier 2 (shipped):* XDG base-dir support via `recon_tool.paths`
+(back-compat preserved), `--plain` linear/screen-reader output, and additive
+`limit`/`offset` pagination on `get_fingerprints`. *Deliberately deferred —
+contract-sensitive, want a dedicated version-noted pass, not a rushed change:*
+(a) migrating the MCP tools from JSON-string returns to `structuredContent` +
+per-tool `outputSchema` and `isError` flagging (changes the locked,
+agent-consumed wire shape and the text representation; additive in principle but
+deserves a deliberate contract revision); (b) a default pagination *envelope*
+(`{total, offset, next, items}`) on the list tools (changes the bare-array
+shape); (c) terminal-width detection replacing the fixed 80/120 widths (the
+golden-render tests pin width, so this needs the tests reworked to force width
+explicitly first); and (d) grapheme/East-Asian-width column padding in the
+catalog-listing tables (today `len()`-based; low impact since the content is
+ASCII slugs/categories). None is on any release's critical path.
+
 **Track A - Complexity decomposition.** Complete as of v1.9.76. Zero
 `# noqa: C901` markers remain in `recon_tool/`, so the mccabe cap of 15 from
 v1.9.37 now holds the whole tree, not just new code. The full sweep (formatter,

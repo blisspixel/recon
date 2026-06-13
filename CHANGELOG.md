@@ -43,6 +43,14 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   field; mutually exclusive with `--json`/`--md`. Untrusted values are
   control-char stripped like the other sinks. Covered by
   `tests/test_formatter.py::TestPlainOutput` and a CLI exclusivity test.
+- **`get_fingerprints` pagination (tier 2, additive).** The MCP tool gains
+  optional `limit`/`offset` so an agent that needs only a slice of the ~840
+  fingerprints can cap the response; omitting them returns the full list, so the
+  result shape is backward-compatible. (The contract-sensitive remainder of the
+  agent-protocol polish — `structuredContent`/`outputSchema`, `isError`
+  flagging, and a default pagination envelope — is deferred to a deliberate
+  version-noted MCP-contract revision rather than changing the locked wire shape
+  in passing; see roadmap "CLI best-practices pass (2026)".)
 - **XDG Base Directory support (tier 2).** A new `recon_tool.paths` module
   centralizes config/cache/state resolution. Behavior is unchanged for existing
   setups — `RECON_CONFIG_DIR` (the test/CI seam) still maps every category under
