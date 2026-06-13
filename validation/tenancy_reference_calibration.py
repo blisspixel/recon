@@ -414,16 +414,19 @@ def _run_single(path: Path, *, bins: int, concurrency: int, timeout: float, as_j
     dns_records_cal = m365_calibration_records(records, full_pipeline=False)
     if as_json:
         # Structured aggregates for cross-list agreement checks and PV2 drift.
-        # Same numbers as the text path; no apex ever appears.
+        # Same numbers as the text path; no apex ever appears. Each block is
+        # gated on its OWN record list: the full-pipeline label set is not the
+        # DNS-only set (a domain with a failed dns_records source still has a
+        # full posterior), so gating m365_full on dns_records_cal would silently
+        # drop it to n=0 — the text path computes each independently.
+        full_records_cal = m365_calibration_records(records, full_pipeline=True)
         print(
             json.dumps(
                 {
                     "mode": "single",
                     "counts": asdict(counts),
                     "m365_dns_only": calibration_summary(dns_records_cal, bins=bins) if dns_records_cal else {"n": 0},
-                    "m365_full": calibration_summary(m365_calibration_records(records, full_pipeline=True), bins=bins)
-                    if dns_records_cal
-                    else {"n": 0},
+                    "m365_full": calibration_summary(full_records_cal, bins=bins) if full_records_cal else {"n": 0},
                     "gws_one_sided": one_sided_recall_summary(gws_attested_posteriors(records)),
                 },
                 indent=2,

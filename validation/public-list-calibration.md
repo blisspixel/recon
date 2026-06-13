@@ -1,14 +1,18 @@
 # Public-list calibration cross-check (preliminary, reproducible)
 
 > **What this is, and is not.** This is a *preliminary* calibration
-> cross-check against **two independent, public, reproducible** lists of
+> cross-check against **three independent, public, reproducible** lists of
 > well-known organization domains. **List A** is ~210 domains across seven
 > verticals (banking, healthcare, SaaS, higher-ed, public-sector, retail,
 > tech), n≈30 each. **List B** is ~175 domains across seven *different*
 > sectors (automotive, consumer-internet, energy/industrial, media,
-> nonprofit, telecom, travel), n≈25 each. The sector sets are disjoint by
-> construction, so the two runs are independent samples, not a re-shuffle of
-> one. Neither is the private-corpus tier-4 record in
+> nonprofit, telecom, travel), n≈25 each. **List C** is ~190 domains across
+> eight further sectors (pharma/biotech, semiconductors, airlines,
+> hospitality, insurance, logistics, space/government, international tech),
+> n≈24 each. All three sector sets are disjoint by construction, so the runs
+> are independent samples, not a re-shuffle of one — about 575 domains across
+> 22 non-overlapping sectors in total. None is the private-corpus tier-4
+> record in
 > [reference-calibration.md](reference-calibration.md), and neither changes
 > any dossier tier. Their value is threefold: (1) they confirm the harnesses
 > run end-to-end on real data and the numbers land where the private corpus
@@ -21,41 +25,44 @@
 > sample's bias. The domain lists live outside the repository and are never
 > committed (data-handling-policy.md); only these aggregates are.
 
-Both lists are convenience samples of large, well-known organizations, so
-both skew toward DMARC-mature, M365-heavy targets — within List A the
-higher-ed and retail strata bring the `p=none` and Google-Workspace
-diversity; within List B the automotive, media, and nonprofit strata do. Read
-every number through that shared bias; a balanced or long-tail list would move
-the base rates on both. n≈25–30 per stratum means per-stratum figures carry
-wide Wilson intervals (the harness prints them) and the interior reliability
-bins stay thin. This is a smoke-plus-signal pass, not the calibration — but
-two of them agreeing is the part worth reading.
+All three lists are convenience samples of large, well-known organizations, so
+all skew toward DMARC-mature, M365-heavy targets — within List A the higher-ed
+and retail strata bring the `p=none` and Google-Workspace diversity; within
+List B the automotive, media, and nonprofit strata do; within List C the
+pharma, semiconductor, and space/government strata do. Read every number
+through that shared bias; a balanced or long-tail list would move the base
+rates on all three. n≈24–30 per stratum means per-stratum figures carry wide
+Wilson intervals (the harness prints them) and the interior reliability bins
+stay thin. This is a smoke-plus-signal pass, not the calibration — but three of
+them agreeing is the part worth reading.
 
-## The headline: two independent lists agree
+## The headline: three independent lists agree
 
 The single most informative view is the side-by-side. If the harnesses were
-fitting noise in one list, the second (disjoint sectors) would not reproduce
-the numbers. It does, to within the sampling slack n≈30 buys:
+fitting noise in one list, the others (disjoint sectors, built and run after
+the first was written up) would not reproduce the numbers. They do, to within
+the sampling slack n≈25–30 buys:
 
-| metric | List A (n≈210) | List B (n≈175) | Δ |
-|---|---|---|---|
-| email-policy ECE (full posterior) | 0.061 | 0.069 | 0.008 |
-| email-policy base rate (enforcing) | 0.876 | 0.878 | 0.002 |
-| email-policy agreement rate | 1.000 | 1.000 | 0.000 |
-| `p=none` negative class populated | n=26, rate 0.000 | n=21, rate 0.000 | — |
-| M365 DNS-only corroboration ECE | 0.082 | 0.105 | 0.023 |
-| M365 base rate (tenant) | 0.952 | 0.942 | 0.010 |
-| M365 DNS-only agreement rate | 0.933 | 0.884 | 0.049 |
-| conformal mean coverage (target 0.90) | 0.986 | 1.000 | — both ≥ target |
-| posture entropy reduction, overall p50 | 1.967 | 1.932 | 0.035 |
+| metric | List A (n≈210) | List B (n≈175) | List C (n≈190) | spread |
+|---|---|---|---|---|
+| email-policy ECE (full posterior) | 0.061 | 0.069 | 0.068 | 0.008 |
+| email-policy base rate (enforcing) | 0.876 | 0.878 | 0.832 | 0.046 |
+| email-policy agreement rate | 1.000 | 1.000 | 1.000 | 0.000 |
+| `p=none` negative class populated | yes | yes | yes | — |
+| M365 DNS-only corroboration ECE | 0.082 | 0.105 | 0.046 | 0.059 |
+| M365 base rate (tenant) | 0.952 | 0.942 | 0.936 | 0.016 |
+| M365 DNS-only agreement rate | 0.933 | 0.884 | 0.947 | 0.063 |
+| conformal mean coverage (target 0.90) | 0.986 | 1.000 | 1.000 | all ≥ target |
+| posture entropy reduction, overall p50 | 1.967 | 1.932 | 1.846 | 0.121 |
 
-The email-policy node agrees almost exactly (ECE within 0.008, base rate
-within 0.002, both at agreement 1.000, both correctly populating the
-empirical-zero `p=none` bin). The tenancy node agrees a little less tightly
-(ECE within 0.023, base rate within 0.010), and the place it diverges is
-itself interpretable — see the M365 section. The posture median entropy
-reduction lands within 0.035 nats. None of these were tuned to match; List B
-was built and run after List A was already written up.
+The email-policy node agrees almost exactly across all three (ECE in a 0.008
+band, all at agreement 1.000, all correctly populating the empirical-zero
+`p=none` bin; List C's lower base rate 0.832 reflects its pharma / semiconductor
+/ space-gov mix, which carries more `p=none`, yet its ECE is unchanged — the
+node behaves the same regardless of the negative-class share). The tenancy node
+agrees within a 0.059 ECE band; List C is actually the *cleanest* (ECE 0.046),
+which is the opposite of overfitting. The posture median entropy reduction lands
+in a 0.12-nat band. None of these was tuned to match.
 
 ## Email-policy node vs the DMARC record (CAL3/CAL4)
 
@@ -67,21 +74,24 @@ construction).
 
 **Full posterior, pooled:**
 
-| | List A (n=209) | List B (n=172) |
-|---|---|---|
-| base rate enforcing | 0.876 | 0.878 |
-| log score (proper) | 0.057 | 0.067 |
-| Brier | 0.0043 | 0.006 |
-| ECE | 0.061 | 0.069 |
-| agreement (Wilson80) | 1.000 (0.992, 1.000) | 1.000 (0.990, 1.000) |
+| | List A (n=209) | List B (n=172) | List C (n=184) |
+|---|---|---|---|
+| base rate enforcing | 0.876 | 0.878 | 0.832 |
+| log score (proper) | 0.057 | 0.067 | 0.067 |
+| Brier | 0.0043 | 0.006 | 0.006 |
+| ECE | 0.061 | 0.069 | 0.068 |
+| agreement (Wilson80) | 1.000 (0.992, 1.000) | 1.000 (0.990, 1.000) | 1.000 (0.991, 1.000) |
 
 List A reliability: `[0.00,0.10)` rate 0.000 n=26; `[0.80,0.90)` rate 1.000
 n=23; `[0.90,1.00)` rate 1.000 n=160. List B reliability: `[0.00,0.10)` rate
 0.000 n=21; `[0.80,0.90)` rate 1.000 n=32; `[0.90,1.00)` rate 1.000 n=119.
-Both land at ECE ~0.06–0.07, consistent with (slightly better than) the
-private-corpus 0.077, and — the part the enterprise-only smoke could not
-produce — both populate the empirical-zero negative class: 26 and 21 domains
-respectively with empirical enforcing rate 0.000, correctly predicted low.
+List C reliability: `[0.00,0.10)` rate 0.000 n=31; `[0.80,0.90)` rate 1.000
+n=33; `[0.90,1.00)` rate 1.000 n=120. All three land at ECE ~0.06–0.07,
+consistent with (slightly better than) the private-corpus 0.077, and — the
+part the enterprise-only smoke could not produce — all populate the
+empirical-zero negative class (26 / 21 / 31 domains with empirical enforcing
+rate 0.000, correctly predicted low). List C's larger negative class (n=31, the
+pharma / semiconductor / space-gov mix) leaves its ECE unchanged.
 
 **Per-stratum (full posterior), ECE / agreement / base rate:**
 
@@ -125,13 +135,13 @@ HTTP 400 / NameSpaceType Unknown negative) — disjoint observation channels.
 
 **M365 DNS-only corroboration, pooled:**
 
-| | List A (n=208) | List B (n=173) |
-|---|---|---|
-| base rate tenant | 0.952 | 0.942 |
-| log score (proper) | 0.165 | 0.221 |
-| Brier | 0.043 | 0.067 |
-| ECE | 0.082 | 0.105 |
-| agreement (Wilson80) | 0.933 (0.907, 0.952) | 0.884 (0.850, 0.912) |
+| | List A (n=208) | List B (n=173) | List C (n=187) |
+|---|---|---|---|
+| base rate tenant | 0.952 | 0.942 | 0.936 |
+| log score (proper) | 0.165 | 0.221 | 0.166 |
+| Brier | 0.043 | 0.067 | 0.041 |
+| ECE | 0.082 | 0.105 | 0.046 |
+| agreement (Wilson80) | 0.933 (0.907, 0.952) | 0.884 (0.850, 0.912) | 0.947 (0.921, 0.964) |
 
 List A reliability: `[0.20,0.30)` rate 0.611 n=18; `[0.90,1.00)` rate 0.995
 n=186. List B reliability: `[0.20,0.30)` rate 0.667 n=27; `[0.30,0.40)` rate
@@ -161,18 +171,19 @@ never a calibration — and the tiny n on both lists confirms why
 Harness: `validation/conformal_coverage.py` (split conformal on the
 email-policy node, 20 random calibration/test splits averaged).
 
-| | List A | List B |
-|---|---|---|
-| n / splits | 207 / 20 | 172 / 20 |
-| target coverage | 0.90 | 0.90 |
-| mean coverage | 0.986 | 1.000 |
-| worst-split coverage | 0.846 | 1.000 |
-| mean set size | 0.986 | 1.000 |
+| | List A | List B | List C |
+|---|---|---|---|
+| n / splits | 207 / 20 | 172 / 20 | 184 / 20 |
+| target coverage | 0.90 | 0.90 | 0.90 |
+| mean coverage | 0.986 | 1.000 | 1.000 |
+| worst-split coverage | 0.846 | 1.000 | 1.000 |
+| mean set size | 0.986 | 1.000 | 1.000 |
 
-The distribution-free guarantee holds on both lists: averaged coverage sits
-at or above the 0.90 target (0.986 and 1.000), and the prediction sets are
-decisive (mean size ~1.0, not abstaining to the full {enforcing, not} set).
-List B's perfect coverage reflects its slightly cleaner bimodal split. The
+The distribution-free guarantee holds on all three lists: averaged coverage
+sits at or above the 0.90 target (0.986 / 1.000 / 1.000), and the prediction
+sets are decisive (mean size ~1.0, not abstaining to the full {enforcing, not}
+set). Lists B and C's perfect coverage reflects their slightly cleaner bimodal
+split. The
 guarantee is for typical, exchangeable targets and explicitly not for
 adversarially hardened ones — the same boundary the suppression theorem names
 (correlation.md 4.3), demonstrated as a falsifiability case in the harness's
@@ -184,76 +195,79 @@ Harness: `validation/posture_distributions.py`.
 
 **Information recovered (CAL10), per-domain entropy reduction in nats:**
 
-| bucket | List A p25/p50/p75 (n) | List B p25/p50/p75 (n) |
-|---|---|---|
-| overall | 1.534 / 1.967 / 2.260 (210) | 1.518 / 1.932 / 2.213 (175) |
-| direct / sparse | 0.742 / 0.999 / 1.260 (17) | 0.490 / 0.742 / 0.999 (15) |
-| direct / moderate | 1.417 / 1.699 / 2.004 (47) | 1.417 / 1.739 / 1.987 (38) |
-| edge-proxied / moderate | 1.714 / 2.105 / 2.260 (128) | 1.811 / 1.978 / 2.217 (106) |
-| edge-proxied / rich | 2.615 / 2.699 / 3.055 (8) | 2.844 / 2.859 / 2.906 (4) |
+| bucket | List A p25/p50/p75 (n) | List B p25/p50/p75 (n) | List C p25/p50/p75 (n) |
+|---|---|---|---|
+| overall | 1.534 / 1.967 / 2.260 (210) | 1.518 / 1.932 / 2.213 (175) | 1.518 / 1.846 / 2.179 (192) |
+| direct / sparse | 0.742 / 0.999 / 1.260 (17) | 0.490 / 0.742 / 0.999 (15) | 0.450 / 0.721 / 0.999 (20) |
+| direct / moderate | 1.417 / 1.699 / 2.004 (47) | 1.417 / 1.739 / 1.987 (38) | 1.301 / 1.653 / 1.923 (41) |
+| edge-proxied / moderate | 1.714 / 2.105 / 2.260 (128) | 1.811 / 1.978 / 2.217 (106) | 1.809 / 1.977 / 2.226 (116) |
+| edge-proxied / rich | 2.615 / 2.699 / 3.055 (8) | 2.844 / 2.859 / 2.906 (4) | 2.647 / 2.733 / 2.825 (4) |
 
-The instructive result reproduces on both lists: the **sparse evidence tier
-is the hardening signal**, not the edge-proxied flag. `direct / sparse`
+The instructive result reproduces on all three lists: the **sparse evidence
+tier is the hardening signal**, not the edge-proxied flag. `direct / sparse`
 (little fired) leaks the least (median ~0.7–1.0 nats); `edge-proxied / rich`
 leaks the most (median ~2.7–2.9). That inverts the naive "edge-proxying hides
-things" hypothesis, for a reason the harness makes visible on both lists: an
+things" hypothesis, for a reason the harness makes visible on every list: an
 *edge-proxied* domain here is one where a CDN was **detected**
 (cdn_fronting posterior ≥ 0.5), and detecting a CDN is itself information — it
 fires a node — so it raises entropy reduction. What hides information is the
-absence of any strong signal, which the *sparse* tier captures directly. Both
-overall medians (~1.93–1.97 nats) are well above the prior private-corpus pass
-(~0.85), as expected for lists of large, heavily-instrumented organizations.
-The honest north-star number for "what the channel leaks after hardening" is
-therefore the sparse-tier figure, ~0.7–1.0 nats, not the list-wide median —
-and it agrees across both lists.
+absence of any strong signal, which the *sparse* tier captures directly. All
+three overall medians (~1.85–1.97 nats) are well above the prior private-corpus
+pass (~0.85), as expected for lists of large, heavily-instrumented
+organizations. The honest north-star number for "what the channel leaks after
+hardening" is therefore the sparse-tier figure, ~0.7–1.0 nats, not the
+list-wide median — and it agrees across all three lists.
 
 **Interval width vs evidence (CAL7 diagnostic), mean 80% width by n_eff:**
 
-| n_eff bucket | List A ungrouped (n) | List A grouped (n) | List B ungrouped (n) | List B grouped (n) |
-|---|---|---|---|---|
-| ceiling (≤4) | 0.451 (849) | 0.557 (162) | 0.450 (731) | 0.551 (137) |
-| 5–6 | 0.177 (411) | 0.189 (461) | 0.170 (319) | 0.198 (384) |
-| 7–9 | — | 0.056 (7) | — | 0.047 (4) |
+| n_eff bucket | A ungrouped | A grouped | B ungrouped | B grouped | C ungrouped | C grouped |
+|---|---|---|---|---|---|---|
+| ceiling (≤4) | 0.451 | 0.557 | 0.450 | 0.551 | 0.454 | 0.547 |
+| 5–6 | 0.177 | 0.189 | 0.170 | 0.198 | 0.177 | 0.191 |
+| 7–9 | — | 0.056 | — | 0.047 | — | 0.047 |
 
-Two things, both reproduced. Evidence-responsiveness: width falls sharply as
-n_eff rises, on both grouped and ungrouped nodes and on both lists (≈0.45 →
-0.18 ungrouped; ≈0.55 → 0.19 → 0.05 grouped). And the CAL7 correction working
-as intended: grouped nodes are **not narrower** than ungrouped at matched
-n_eff (slightly wider at the ceiling on both lists), i.e. the co-firing
-reduction is preventing the over-confidence it was designed to prevent — the
-three M365 indicators contribute one effective unit, not three, so the node
-stays in a lower-n_eff (wider) bucket rather than collapsing to a falsely
-tight interval. The matched-bucket widths agree across lists to within ~0.01.
+Two things, reproduced on all three lists. Evidence-responsiveness: width falls
+sharply as n_eff rises, on both grouped and ungrouped nodes (≈0.45 → 0.18
+ungrouped; ≈0.55 → 0.19 → 0.05 grouped). And the CAL7 correction working as
+intended: grouped nodes are **not narrower** than ungrouped at matched n_eff
+(slightly wider at the ceiling on every list), i.e. the co-firing reduction is
+preventing the over-confidence it was designed to prevent — the three M365
+indicators contribute one effective unit, not three, so the node stays in a
+lower-n_eff (wider) bucket rather than collapsing to a falsely tight interval.
+The matched-bucket widths agree across all three lists to within ~0.01.
 
 ## Bottom line
 
-Run on **two independent, sector-disjoint, public, reproducible lists**, all
-four harnesses run end-to-end and land where the theory predicts — and, more
-to the point, they land in the *same* place on both lists:
+Run on **three independent, sector-disjoint, public, reproducible lists**
+(~575 domains across 22 non-overlapping sectors), all four harnesses run
+end-to-end and land where the theory predicts — and, more to the point, they
+land in the *same* place on all three:
 
-- email-policy calibration ECE 0.061 (A) vs 0.069 (B), base rate 0.876 vs
-  0.878, both at agreement 1.000, both populating the empirical-zero `p=none`
-  negative class (private corpus: ECE 0.077);
-- M365 tenancy corroboration ECE 0.082 (A) vs 0.105 (B), predictor (DNS) and
+- email-policy calibration ECE 0.061 / 0.069 / 0.068 (A/B/C), all at agreement
+  1.000, all populating the empirical-zero `p=none` negative class even as the
+  base rate ranges 0.832–0.878 across the sector mixes (private corpus: ECE
+  0.077);
+- M365 tenancy corroboration ECE 0.082 / 0.105 / 0.046, predictor (DNS) and
   label (provider endpoint) disjoint by observation channel, the same
-  low-DNS-visibility 0.2–0.3 reliability bin showing up on both;
-- conformal coverage 0.986 (A) and 1.000 (B), both ≥ the 0.90 target, decisive
+  low-DNS-visibility 0.2–0.3 reliability bin showing up on all three;
+- conformal coverage 0.986 / 1.000 / 1.000, all ≥ the 0.90 target, decisive
   sets;
 - posture distributions showing the sparse tier as the genuine hardening
   signal (~0.7–1.0 nats leaked) and the CAL7 grouping correction holding, with
-  matched-bucket widths agreeing to ~0.01.
+  matched-bucket interval widths agreeing across all three to ~0.01.
 
 This is a preliminary cross-check, not the tier-4 record; the larger private
 corpus run remains what the dossier tier rests on, and no tier moved on the
-strength of n≈210 + n≈175. **The standing value is the agreement itself:** two
-lists drawn from disjoint sectors, built and run separately, reproduce each
-other's numbers — which is the evidence that the harnesses measure a property
-of the method rather than of one sample's bias. That is exactly why multiple
-public lists beat one private corpus for the *reproducibility* claim (anyone
-can re-derive these from public records), even though the private corpus is
-what carries the *tier*. The paper can therefore report a public, reproducible
-calibration column with a built-in robustness check, beside the private-corpus
-one.
+strength of n≈575 across three public lists. **The standing value is the
+agreement itself:** three lists drawn from disjoint sectors, built and run
+separately, reproduce each other's numbers — strong evidence that the harnesses
+measure a property of the method rather than of one sample's bias, and that
+adding a third disjoint draw did not perturb the result. That is exactly why
+multiple public lists beat one private corpus for the *reproducibility* claim
+(anyone can re-derive these from public records), even though the private
+corpus is what carries the *tier*. The paper can therefore report a public,
+reproducible calibration column with a built-in three-way robustness check,
+beside the private-corpus one.
 
 A bug an earlier pass earned its keep: the live run caught that
 `conformal_coverage` had broken when the reference collector started returning
