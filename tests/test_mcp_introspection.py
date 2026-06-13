@@ -269,8 +269,7 @@ class TestTestHypothesis:
     async def test_returns_correct_json_structure(self, mock_resolve: AsyncMock) -> None:
         """test_hypothesis returns JSON with likelihood, supporting, contradicting, etc."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        result = await mcp_test_hypothesis("contoso.com", "mid-migration to cloud identity")
-        data = json.loads(result)
+        data = await mcp_test_hypothesis("contoso.com", "mid-migration to cloud identity")
         assert "likelihood" in data
         assert data["likelihood"] in {"strong", "moderate", "weak", "unsupported"}
         assert "supporting_signals" in data
@@ -287,8 +286,7 @@ class TestTestHypothesis:
     async def test_keyword_matching_maps_hypothesis(self, mock_resolve: AsyncMock) -> None:
         """Hypothesis keywords map to relevant signals via keyword matching."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        result = await mcp_test_hypothesis("contoso.com", "security posture assessment")
-        data = json.loads(result)
+        data = await mcp_test_hypothesis("contoso.com", "security posture assessment")
         # The tool should produce lists (possibly empty) for all signal categories
         assert isinstance(data["supporting_signals"], list)
         assert isinstance(data["contradicting_signals"], list)
@@ -299,8 +297,7 @@ class TestTestHypothesis:
     async def test_hedged_language_in_disclaimer(self, mock_resolve: AsyncMock) -> None:
         """Output uses hedged language ('indicators suggest', not 'confirms')."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        result = await mcp_test_hypothesis("contoso.com", "email security")
-        data = json.loads(result)
+        data = await mcp_test_hypothesis("contoso.com", "email security")
         disclaimer = data.get("disclaimer", "")
         assert "suggest" in disclaimer.lower() or "indicators" in disclaimer.lower()
         # "confirm" should only appear in negated form
@@ -318,8 +315,7 @@ class TestSimulateHardening:
     async def test_returns_correct_json_structure(self, mock_resolve: AsyncMock) -> None:
         """simulate_hardening returns JSON with score delta and applied fixes."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        result = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
-        data = json.loads(result)
+        data = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
         assert "current_score" in data
         assert isinstance(data["current_score"], int)
         assert "simulated_score" in data
@@ -337,8 +333,7 @@ class TestSimulateHardening:
         """Remaining gaps use 'Consider' language in recommendations."""
         info_weak = replace(SAMPLE_INFO, dmarc_policy=None, services=("Exchange Online",))
         mock_resolve.return_value = (info_weak, list(SAMPLE_RESULTS))
-        result = await simulate_hardening("contoso.com", ["BIMI"])
-        data = json.loads(result)
+        data = await simulate_hardening("contoso.com", ["BIMI"])
         for gap in data["remaining_gaps"]:
             assert "recommendation" in gap
             assert "observation" in gap
@@ -349,8 +344,7 @@ class TestSimulateHardening:
         """Applying hardening fixes should not decrease the posture score."""
         info_weak = replace(SAMPLE_INFO, dmarc_policy=None, mta_sts_mode=None)
         mock_resolve.return_value = (info_weak, list(SAMPLE_RESULTS))
-        result = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
-        data = json.loads(result)
+        data = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
         assert data["score_delta"] >= 0
 
 
@@ -412,8 +406,7 @@ class TestAnalyzePostureExplain:
     async def test_explain_true_includes_explanations(self, mock_resolve: AsyncMock) -> None:
         """explain=True on analyze_posture includes explanations in response."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await analyze_posture("contoso.com", explain=True)
-        data = json.loads(result)
+        data = await analyze_posture("contoso.com", explain=True)
         assert "explanations" in data
         assert isinstance(data["explanations"], list)
 
@@ -422,8 +415,7 @@ class TestAnalyzePostureExplain:
     async def test_explain_false_returns_plain_list(self, mock_resolve: AsyncMock) -> None:
         """explain=False on analyze_posture returns a plain observation list."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await analyze_posture("contoso.com", explain=False)
-        data = json.loads(result)
+        data = await analyze_posture("contoso.com", explain=False)
         assert isinstance(data, list)
 
     @pytest.mark.asyncio
@@ -431,6 +423,5 @@ class TestAnalyzePostureExplain:
     async def test_explain_omitted_returns_plain_list(self, mock_resolve: AsyncMock) -> None:
         """Omitting explain on analyze_posture returns a plain observation list."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await analyze_posture("contoso.com")
-        data = json.loads(result)
+        data = await analyze_posture("contoso.com")
         assert isinstance(data, list)

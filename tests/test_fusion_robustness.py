@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
+import pytest
 import yaml
 
 from recon_tool.bayesian import (
@@ -365,13 +366,12 @@ class TestScale:
 
 class TestMCPErrorPaths:
     def test_get_posteriors_invalid_domain(self) -> None:
+        from mcp.server.fastmcp.exceptions import ToolError
+
         from recon_tool.server import get_posteriors
 
-        async def main():
-            return await get_posteriors("not a valid domain!")
-
-        result = asyncio.run(main())
-        assert result.startswith("Error:")
+        with pytest.raises(ToolError):
+            asyncio.run(get_posteriors("not a valid domain!"))
 
     def test_explain_dag_invalid_domain(self) -> None:
         from recon_tool.server import explain_dag
