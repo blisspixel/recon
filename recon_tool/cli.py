@@ -58,7 +58,9 @@ from recon_tool.exit_codes import (  # noqa: E402
 # Must equal the registered command tree; `tests/test_subcommands.py` pins it,
 # so a new command that is not added here fails CI rather than silently
 # mis-routing a dotted first argument.
-_SUBCOMMANDS = frozenset({"doctor", "batch", "lookup", "mcp", "cache", "delta", "discover", "fingerprints", "signals"})
+_SUBCOMMANDS = frozenset(
+    {"doctor", "update", "batch", "lookup", "mcp", "cache", "delta", "discover", "fingerprints", "signals"}
+)
 
 # Batch-input safety bounds. Cap the per-line read (so a newline-free
 # multi-GB "line" cannot be buffered whole), the cumulative bytes (so a stream
