@@ -860,9 +860,19 @@ regrow and new modules cap at 1000 lines. The work is to split each into a
 cohesive subpackage while preserving the public import path and keeping the
 golden/snapshot tests byte-identical:
 
-1. `formatter.py` → a `formatter/` package by render target (panel, markdown,
-   plain, json-dict, exposure, explanation) over shared helpers — the biggest
-   win and the cleanest seams (each renderer is already a distinct function set).
+1. `formatter.py` → split by render target. **Done so far:** exposure/gaps
+   rendering → `formatter_exposure.py` (clean, no shared coupling; shipped,
+   golden byte-identical). **Learned constraint:** the markdown / json-dict /
+   panel renderers all depend on a shared *service-classification* helper layer
+   (`_service_provider_group`, `_is_m365_service`, `_is_gws_service`,
+   `_categorize_services`, `detect_provider`, the `_M365_KEYWORDS` constants),
+   so they cannot be extracted cleanly in isolation — a naive markdown
+   extraction hit exactly this and was reverted before shipping. The correct
+   next move is therefore to extract that shared layer first into a
+   `formatter_classify.py` (imported by both the remaining `formatter.py` panel
+   code and the new renderer modules), *then* split markdown / plain / json-dict
+   / panel on top of it. Bigger than the exposure step, so its own sequenced
+   sub-steps, each golden-byte-identical and gate-verified.
 2. `cli.py` → split the command groups (`lookup`, `batch`, `cache`,
    `fingerprints`, `signals`, `mcp`, `doctor`, `update`) into `cli/` submodules
    registered on the shared Typer app.
