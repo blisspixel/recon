@@ -850,7 +850,18 @@ explicitly first); and (d) grapheme/East-Asian-width column padding in the
 catalog-listing tables (today `len()`-based; low impact since the content is
 ASCII slugs/categories). None is on any release's critical path.
 
-**MCP structured-output revision (designed and verified 2026-06-13; next dedicated PR).**
+**MCP structured-output revision (Phase 1 shipped 2026-06-13).** Closes deferred
+item (a). All eighteen data tools now return Python objects, so FastMCP emits
+navigable `structuredContent` with a per-tool `outputSchema` plus the back-compat
+serialized-JSON text block; failures raise `ToolError`, surfaced as `isError`
+tool results. Narrative tools (`lookup_tenant`, `chain_lookup`, `reload_data`,
+`explain_dag`) stay text by design. Posture tools share a `_resolve_single_for_tool`
+helper that raises on every failure path. Pinned by
+`tests/test_mcp_structured_output.py`; contract documented in `mcp.md`. Deferred
+items (b) pagination envelope, (c) terminal-width, (d) grapheme width, and the
+precise-typed-schema Phase 2 (TypedDict/Pydantic `outputSchema`s) remain open.
+The design record that drove it, kept for rationale:
+
 A mid-2026 research pass (cited best-practices report) plus a code investigation
 turned deferred item (a) into a ready-to-execute plan. Findings:
 
