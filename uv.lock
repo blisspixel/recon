@@ -1463,6 +1463,15 @@ wheels = [
 ]
 
 [[package]]
+name = "publicsuffixlist"
+version = "1.0.2.20260611"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7c/cc/8f38c85cf1193e544f6b226044cdb406cdc06e9781ed5fe039a5d6984316/publicsuffixlist-1.0.2.20260611.tar.gz", hash = "sha256:cf0151d45e32aa8d0eeeb2c76e141c68f971567b6d11aca593f76e897ed2c5c6", size = 108769, upload-time = "2026-06-11T08:10:56.442Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b8/d8/5b6db00403ceca15450f13ff8a5f44fee0b3f0e20d51e019d33256101eda/publicsuffixlist-1.0.2.20260611-py2.py3-none-any.whl", hash = "sha256:9806e124086967d0294a685a5a412c8119217a641ec1fa4afef61551e5f49a01", size = 108547, upload-time = "2026-06-11T08:10:55.171Z" },
+]
+
+[[package]]
 name = "py-serializable"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1809,7 +1818,7 @@ wheels = [
 
 [[package]]
 name = "recon-tool"
-version = "2.1.15"
+version = "2.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "deal" },
@@ -1818,6 +1827,7 @@ dependencies = [
     { name = "httpx" },
     { name = "mcp" },
     { name = "networkx" },
+    { name = "publicsuffixlist" },
     { name = "python-multipart" },
     { name = "pyyaml" },
     { name = "rich" },
@@ -1847,6 +1857,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp", specifier = ">=1.0" },
     { name = "networkx", specifier = ">=3.0" },
+    { name = "publicsuffixlist", specifier = ">=1.0" },
     { name = "python-multipart", specifier = ">=0.0.27" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rich", specifier = ">=13.0" },

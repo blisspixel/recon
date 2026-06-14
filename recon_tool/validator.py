@@ -103,7 +103,7 @@ def _is_normalized_domain(domain: str) -> bool:
 
 
 @deal.post(_is_normalized_domain)  # pyright: ignore[reportUntypedFunctionDecorator]
-def validate_domain(raw_input: str) -> str:
+def validate_domain(raw_input: str, *, apex: bool = True) -> str:
     """Validate and normalize a domain string.
 
     - Strips leading/trailing whitespace
@@ -111,10 +111,18 @@ def validate_domain(raw_input: str) -> str:
     - Strips http:// or https:// schemes (case-insensitive)
     - Strips trailing slashes and paths after the hostname
     - Validates domain format
+    - Reduces to the registrable apex (eTLD+1) unless ``apex=False``
     - Returns normalized lowercase domain
 
     Args:
         raw_input: Raw domain string from user input.
+        apex: When True (default), reduce the validated host to its
+            registrable domain via the Public Suffix List, so a pasted URL or
+            sub-host (``https://mail.acme.co.uk/x``) is analyzed at the apex
+            (``acme.co.uk``) where recon's signal lives. This subsumes the old
+            special-case ``www.`` strip. Pass False (``recon --exact``) to keep
+            the literal host for the narrow "DNS facts about this one host"
+            case.
 
     Returns:
         Normalized lowercase domain string.
@@ -141,7 +149,9 @@ def validate_domain(raw_input: str) -> str:
 
     # Strip www. prefix — people paste URLs from browsers, and www.example.com
     # is never the domain you want for tenant/DNS lookups. The zone apex
-    # (example.com) is where TXT verification records and MX records live.
+    # (example.com) is where TXT verification records and MX records live. This
+    # is independent of apex reduction: even --exact (apex=False) drops www.,
+    # because a literal www host is never a meaningful analysis target.
     if domain.startswith("www."):
         domain = domain[4:]
 
@@ -169,5 +179,16 @@ def validate_domain(raw_input: str) -> str:
     # Validate format
     if not _DOMAIN_RE.match(domain):
         raise ValueError(f"Invalid domain format: {raw_input}")
+
+    # Reduce to the registrable apex (eTLD+1) so a pasted URL or sub-host is
+    # analyzed where recon's signal lives. Imported lazily because constructing
+    # the Public Suffix List parses a bundled data file, and callers that pass
+    # apex=False (recon --exact) should not pay that cost. to_apex falls back to
+    # the validated host when it is already an apex or is itself a public
+    # suffix, so the postcondition (lowercase, matches _DOMAIN_RE) still holds.
+    if apex:
+        from recon_tool.psl import to_apex
+
+        domain = to_apex(domain)
 
     return domain

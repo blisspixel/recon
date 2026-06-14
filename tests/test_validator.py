@@ -13,8 +13,38 @@ class TestValidateDomain:
     def test_simple_domain(self):
         assert validate_domain("contoso.com") == "contoso.com"
 
-    def test_subdomain(self):
-        assert validate_domain("mail.google.com") == "mail.google.com"
+    def test_subdomain_reduced_to_apex(self):
+        # By default a sub-host is reduced to its registrable apex, where
+        # recon's signal (MX, tenant, _dmarc, CT) lives.
+        assert validate_domain("mail.google.com") == "google.com"
+
+    def test_subdomain_exact_preserves_host(self):
+        # apex=False (recon --exact) keeps the literal sub-host.
+        assert validate_domain("mail.google.com", apex=False) == "mail.google.com"
+
+    def test_deep_subdomain_reduced_to_apex(self):
+        assert validate_domain("autodiscover.mail.contoso.com") == "contoso.com"
+
+    def test_cctld_apex_reduction(self):
+        # Multi-label public suffixes (ccTLDs) reduce correctly — the whole
+        # reason recon carries the Public Suffix List rather than a naive
+        # last-two-labels rule.
+        assert validate_domain("mail.acme.co.uk") == "acme.co.uk"
+
+    def test_apex_input_idempotent(self):
+        assert validate_domain("contoso.com") == "contoso.com"
+
+    def test_apex_false_still_strips_www(self):
+        # www. stripping is part of base normalization, independent of apex
+        # reduction: --exact (apex=False) still drops www. but keeps a real
+        # sub-host (see test_subdomain_exact_preserves_host).
+        assert validate_domain("www.contoso.com", apex=False) == "contoso.com"
+
+    def test_public_suffix_input_falls_back_to_host(self):
+        # A bare public suffix has no registrable part above it; rather than
+        # returning None, to_apex falls back to the validated host so the
+        # caller always has a usable value.
+        assert validate_domain("co.uk") == "co.uk"
 
     def test_uppercase_normalized(self):
         assert validate_domain("Contoso.COM") == "contoso.com"
