@@ -19,8 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   where the sub-app defines and exports its `Typer` and `cli.py` registers it —
   `cache` → `cli_cache.py`, `mcp` → `cli_mcp.py`, `signals` → `cli_signals.py`,
   `fingerprints` → `cli_fingerprints.py` — with the one cross-module helper
-  (`_fmt_exc`) lifted to `cli_shared.py` first to avoid a cycle. No behavior or
-  contract change. See the roadmap "Module decomposition" section.
+  (`_fmt_exc`) lifted to `cli_shared.py` first to avoid a cycle. The two modules
+  just over the cap are now under it: `exposure.py` (1130 → 983) split its frozen
+  result-type family (`EmailPosture` / `ExposureAssessment` / `GapReport` /
+  `PostureComparison` and kin) to `exposure_models.py`, and `merger.py` (1131 →
+  958) split its gateway/provider slug sets and slug-humanizing name maps to
+  `merger_tables.py`. Both origin modules re-export every moved name (the merger
+  tables under their historical `_NAME` aliases) so the import and test surface is
+  unchanged. No behavior or contract change. See the roadmap "Module
+  decomposition" section.
 
 ## [2.2.0] - 2026-06-13
 
