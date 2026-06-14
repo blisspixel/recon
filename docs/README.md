@@ -11,6 +11,7 @@ First read: what recon is, why it works this way, and what it promises.
 | Need | Read |
 |---|---|
 | Product scope and next work | [roadmap.md](roadmap.md) |
+| When to use a rule vs agent judgment (read before adding either) | [agentic-balance.md](agentic-balance.md) |
 | Why correlation works the way it does | [correlation.md](correlation.md) |
 | Known passive-collection limits | [limitations.md](limitations.md) |
 | Sparse or thin-looking results | [weak-areas.md](weak-areas.md) |

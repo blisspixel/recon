@@ -4,6 +4,14 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
+> **Before adding a rule or an agentic behavior, read
+> [agentic-balance.md](agentic-balance.md).** recon's observe-infer-report core
+> is rules-based by invariant; agent judgment belongs outside it (the MCP
+> consumer, maintainer loops). Most of our self-inflicted wounds were brittle
+> rules that should have been principled rules, not rules that should have been
+> agentic. That doc is the standing decision guide and the catalog of
+> brittle-rule smells; keep it current as the boundary moves.
+
 > **Status (2026-06):** v2.2.0 is the current release (shipped 2026-06-13 to
 > PyPI). It delivered the evidence-semantics diagnostics (per-node entropy
 > reduction, exact leave-one-unit-out counterfactuals, graph partition
