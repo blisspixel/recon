@@ -37,7 +37,6 @@ BASELINE: dict[str, int] = {
     "cli.py": 2800,
     "formatter.py": 2164,
     "bayesian.py": 1411,
-    "sources/dns.py": 1318,
     "exposure.py": 983,
     "merger.py": 958,
 }

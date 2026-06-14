@@ -58,8 +58,8 @@ class TestFallbackChain:
         mock_cs.query = _cs_ok
 
         with (
-            patch("recon_tool.sources.dns.CrtshProvider", return_value=mock_crtsh),
-            patch("recon_tool.sources.dns.CertSpotterProvider", return_value=mock_cs),
+            patch("recon_tool.sources.dns_infra.CrtshProvider", return_value=mock_crtsh),
+            patch("recon_tool.sources.dns_infra.CertSpotterProvider", return_value=mock_cs),
         ):
             ctx = _DetectionCtx()
             await _detect_cert_intel(ctx, "example.com")
@@ -93,8 +93,8 @@ class TestFallbackChain:
         mock_cs.query = _cs_ok
 
         with (
-            patch("recon_tool.sources.dns.CrtshProvider", return_value=mock_crtsh),
-            patch("recon_tool.sources.dns.CertSpotterProvider", return_value=mock_cs),
+            patch("recon_tool.sources.dns_infra.CrtshProvider", return_value=mock_crtsh),
+            patch("recon_tool.sources.dns_infra.CertSpotterProvider", return_value=mock_cs),
         ):
             ctx = _DetectionCtx()
             await _detect_cert_intel(ctx, "example.com")
@@ -125,8 +125,8 @@ class TestFallbackChain:
         mock_cs.query = _cs_fail
 
         with (
-            patch("recon_tool.sources.dns.CrtshProvider", return_value=mock_crtsh),
-            patch("recon_tool.sources.dns.CertSpotterProvider", return_value=mock_cs),
+            patch("recon_tool.sources.dns_infra.CrtshProvider", return_value=mock_crtsh),
+            patch("recon_tool.sources.dns_infra.CertSpotterProvider", return_value=mock_cs),
         ):
             ctx = _DetectionCtx()
             await _detect_cert_intel(ctx, "example.com")
@@ -166,8 +166,8 @@ class TestFallbackChain:
         mock_cs.query = _cs_ok
 
         with (
-            patch("recon_tool.sources.dns.CrtshProvider", return_value=mock_crtsh),
-            patch("recon_tool.sources.dns.CertSpotterProvider", return_value=mock_cs),
+            patch("recon_tool.sources.dns_infra.CrtshProvider", return_value=mock_crtsh),
+            patch("recon_tool.sources.dns_infra.CertSpotterProvider", return_value=mock_cs),
         ):
             ctx = _DetectionCtx()
             await _detect_cert_intel(ctx, "example.com")
@@ -196,7 +196,7 @@ class TestFallbackChain:
 
         mock_crtsh.query = _crtsh_ok
 
-        with patch("recon_tool.sources.dns.CrtshProvider", return_value=mock_crtsh):
+        with patch("recon_tool.sources.dns_infra.CrtshProvider", return_value=mock_crtsh):
             ctx = _DetectionCtx()
             await _detect_cert_intel(ctx, "example.com")
 
@@ -251,8 +251,8 @@ class TestFallbackChain:
         mock_cs.query = _cs_empty
 
         with (
-            patch("recon_tool.sources.dns.CrtshProvider", return_value=mock_crtsh),
-            patch("recon_tool.sources.dns.CertSpotterProvider", return_value=mock_cs),
+            patch("recon_tool.sources.dns_infra.CrtshProvider", return_value=mock_crtsh),
+            patch("recon_tool.sources.dns_infra.CertSpotterProvider", return_value=mock_cs),
         ):
             ctx = _DetectionCtx()
             await _detect_cert_intel(ctx, "example.com")
@@ -296,8 +296,8 @@ class TestFallbackChain:
         mock_cs.query = _cs_empty
 
         with (
-            patch("recon_tool.sources.dns.CrtshProvider", return_value=mock_crtsh),
-            patch("recon_tool.sources.dns.CertSpotterProvider", return_value=mock_cs),
+            patch("recon_tool.sources.dns_infra.CrtshProvider", return_value=mock_crtsh),
+            patch("recon_tool.sources.dns_infra.CertSpotterProvider", return_value=mock_cs),
         ):
             ctx = _DetectionCtx()
             await _detect_cert_intel(ctx, "example.com")
