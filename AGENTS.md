@@ -59,6 +59,8 @@ Lowercase the input, strip any leading `https://` / `http://` / `www.`, then mat
 
 Pass the validated domain inside double quotes in the Bash command (`recon "validated.example.com"`) as defense-in-depth; the regex is the primary control. The MCP path takes structured arguments and is not subject to this rule.
 
+Once a domain passes that validation, recon itself reduces it to the registrable apex (eTLD+1) before analysis, so `mail.acme.co.uk` is analyzed as `acme.co.uk` and the result's `queried_domain` is the apex. This is almost always what you want, since the signal (tenant, MX, `_dmarc`, CT) lives at the apex. Pass `--exact` only when the user specifically wants DNS facts about that one literal sub-host. This does not relax the validation rule above — still reject malformed or injection-bearing input rather than fixing it up.
+
 ## Two invocation modes
 
 ### Default mode: panel output

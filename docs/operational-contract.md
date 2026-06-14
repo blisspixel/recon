@@ -91,3 +91,10 @@ A script can branch on the outcome without parsing output (full contract in
   (`SOURCE_DATE_EPOCH` pinned to the tagged commit), gated by the
   `reproducible-build` CI job and verifiable by a consumer; see
   [supply-chain.md](supply-chain.md).
+- **Apex normalization is deterministic per installed version.** Input is
+  reduced to its registrable apex (eTLD+1) using the Public Suffix List bundled
+  in the pinned `publicsuffixlist` dependency, so the same input yields the same
+  `queried_domain` for a given install. The reduction can change only when that
+  dependency is upgraded and the PSL itself has changed (a new or retired public
+  suffix), never within a version. It is not a security boundary: an unknown
+  suffix falls back to the validated host rather than guessing.
