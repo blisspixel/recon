@@ -112,7 +112,7 @@ Server Instructions document those boundaries for agents each session.
 The full top-level JSON contract is in [`schema.md`](schema.md). Summary
 of stability tags:
 
-- **~45 stable fields** covering identity, provider, sources, services,
+- **47 stable fields** covering identity, provider, sources, services,
   domains, email security, CT metadata, sovereignty, and nested
   `cert_summary` / `bimi_identity` objects.
 - **Bayesian fusion fields** (`slug_confidences`,
