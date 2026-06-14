@@ -155,7 +155,7 @@ and the `validation/` memos for rationale. What remains, in logical order:
    sub-modules, preserving the public import path and keeping golden/snapshot
    output byte-identical, each step CI-gated by the file-size ratchet. Order of
    operations: `formatter.py` (done — five modules extracted, 4413 to ~2160),
-   `cli.py` (done for its four Typer sub-apps, 3943 to ~2830; the main-app command
+   `cli.py` (done for its four Typer sub-apps, 3941 to ~2830; the main-app command
    core remains), `exposure.py` (done — result dataclasses to `exposure_models.py`,
    1130 to 983), and `merger.py` (done — slug tables to `merger_tables.py`, 1131 to
    958); then the four large modules `bayesian.py`, `server.py`, `cli.py`'s command
@@ -939,7 +939,7 @@ app-sharing variant. Those are sequenced as focused operations, not quick lifts:
    defines and exports the sub-app; `cli.py` imports it and keeps the
    `app.add_typer(...)` registration (no package conversion, no circular import,
    since the sub-app pulls nothing from `cli.py` and its commands use inline
-   imports). **Done for the sub-apps (3943 → ~2830):** `cache` → `cli_cache.py`,
+   imports). **Done for the sub-apps (3941 → ~2830):** `cache` → `cli_cache.py`,
    `mcp` → `cli_mcp.py`, `signals` → `cli_signals.py` (with its signal-render
    helpers), and `fingerprints` → `cli_fingerprints.py`. The one shared helper a
    sibling needed (`_fmt_exc`, used across ~20 sites) moved to `cli_shared.py`
