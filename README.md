@@ -319,6 +319,12 @@ pyright recon_tool/                    # type check
 pre-commit install                     # activate pre-commit hooks
 ```
 
+**Contributing, including AI coding agents (read this):** match the surrounding
+code, and run `python scripts/check.py` before pushing (it mirrors CI). House
+rules: no AI attribution in commits or PRs, no em-dashes or emojis anywhere, no
+AI slop (no comments that narrate the code, no defensive checks inside validated
+boundaries). Full guide: [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 MIT. See [LICENSE](LICENSE) for details.
