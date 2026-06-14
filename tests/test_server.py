@@ -18,7 +18,7 @@ from recon_tool.models import (
 )
 from recon_tool.server import _cache_clear, _print_mcp_banner, _rate_limit, lookup_tenant
 
-RESOLVE_PATH = "recon_tool.server.resolve_tenant"
+RESOLVE_PATH = "recon_tool.server_app.resolve_tenant"
 
 SAMPLE_INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",

@@ -48,8 +48,8 @@ from recon_tool.server import test_hypothesis as mcp_test_hypothesis
 runner = CliRunner()
 
 RESOLVE_PATH = "recon_tool.resolver.resolve_tenant"
-SERVER_RESOLVE_PATH = "recon_tool.server.resolve_tenant"
-SERVER_RESOLVE_OR_CACHE = "recon_tool.server._resolve_or_cache"
+SERVER_RESOLVE_PATH = "recon_tool.server_app.resolve_tenant"
+SERVER_RESOLVE_OR_CACHE = "recon_tool.server_app.resolve_or_cache"
 
 # Fictional company fixture data
 _EVIDENCE = (

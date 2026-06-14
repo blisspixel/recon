@@ -90,7 +90,7 @@ def mocked_resolve(fresh_server_cache: None):
     async def fake(domain: str):
         return _info(queried_domain=domain), _results()
 
-    with patch("recon_tool.server._resolve_or_cache", side_effect=fake):
+    with patch("recon_tool.server_app.resolve_or_cache", side_effect=fake):
         yield
 
 
@@ -280,7 +280,7 @@ class TestSimulateHardening:
         async def fake(domain: str):
             return _info(dmarc_policy="none"), _results()
 
-        with patch("recon_tool.server._resolve_or_cache", side_effect=fake):
+        with patch("recon_tool.server_app.resolve_or_cache", side_effect=fake):
             result = await simulate_hardening("contoso.com", ["DMARC reject"])
         assert result["score_delta"] >= 0
 

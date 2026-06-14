@@ -469,7 +469,7 @@ class TestReevaluateDomainMCP:
         _cache_set("fabrikam.com", info, [source])
 
         # Patch resolve_tenant to verify it's never called
-        with patch("recon_tool.server.resolve_tenant", new_callable=AsyncMock) as mock_resolve:
+        with patch("recon_tool.server_app.resolve_tenant", new_callable=AsyncMock) as mock_resolve:
             result = await reevaluate_domain("fabrikam.com")
             mock_resolve.assert_not_called()
 

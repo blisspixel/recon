@@ -41,8 +41,8 @@ from recon_tool.server import (
 )
 from recon_tool.server import test_hypothesis as mcp_test_hypothesis
 
-SERVER_RESOLVE_PATH = "recon_tool.server.resolve_tenant"
-SERVER_RESOLVE_OR_CACHE = "recon_tool.server._resolve_or_cache"
+SERVER_RESOLVE_PATH = "recon_tool.server_app.resolve_tenant"
+SERVER_RESOLVE_OR_CACHE = "recon_tool.server_app.resolve_or_cache"
 
 # ── Fixture data ─────────────────────────────────────────────────────────
 

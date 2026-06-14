@@ -16,7 +16,7 @@ import json
 import pytest
 from mcp.server.fastmcp.exceptions import ToolError
 
-from recon_tool import server
+from recon_tool import server, server_app
 from recon_tool.models import (
     ConfidenceLevel,
     InfrastructureCluster,
@@ -84,7 +84,7 @@ def stub_resolve(monkeypatch: pytest.MonkeyPatch):
                 return info  # error message
             return (info, ())
 
-        monkeypatch.setattr(server, "_resolve_or_cache", _stub)
+        monkeypatch.setattr(server_app, "resolve_or_cache", _stub)
 
     return _make
 
