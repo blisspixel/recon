@@ -135,7 +135,7 @@ def _resolve_factory(rec: dict[str, list[str]]):
 
 
 @pytest.mark.asyncio
-@patch("recon_tool.sources.dns._safe_resolve")
+@patch("recon_tool.sources.dns_base.safe_resolve")
 async def test_surface_attributions_emitted_via_full_pipeline(mock_resolve):
     """End-to-end: a related domain with a Shopify CNAME yields a surface attribution."""
     mock_resolve.side_effect = _resolve_factory(
@@ -158,7 +158,7 @@ async def test_surface_attributions_emitted_via_full_pipeline(mock_resolve):
 
 
 @pytest.mark.asyncio
-@patch("recon_tool.sources.dns._safe_resolve")
+@patch("recon_tool.sources.dns_base.safe_resolve")
 async def test_surface_attribution_does_not_pollute_apex_slugs(mock_resolve):
     """Surface attributions stay distinct from apex Services / slugs.
 
@@ -191,7 +191,7 @@ async def test_surface_attribution_does_not_pollute_apex_slugs(mock_resolve):
 
 
 @pytest.mark.asyncio
-@patch("recon_tool.sources.dns._safe_resolve")
+@patch("recon_tool.sources.dns_base.safe_resolve")
 async def test_surface_classifier_drops_private_cname_target_without_evidence(mock_resolve):
     """Private CNAME targets are not followed or emitted in surface evidence."""
 
@@ -295,7 +295,7 @@ def test_dns_module_classifier_present() -> None:
 
 
 @pytest.mark.asyncio
-@patch("recon_tool.sources.dns._safe_resolve")
+@patch("recon_tool.sources.dns_base.safe_resolve")
 async def test_unclassified_cname_chain_captured(mock_resolve):
     """Chains that don't match any cname_target rule populate
     unclassified_cname_chains so the discovery loop can surface them.
@@ -363,7 +363,7 @@ def test_format_tenant_dict_emits_unclassified_when_opted_in() -> None:
 
 
 @pytest.mark.asyncio
-@patch("recon_tool.sources.dns._safe_resolve")
+@patch("recon_tool.sources.dns_base.safe_resolve")
 async def test_skip_ct_omits_cert_intel_probe(mock_resolve):
     """When skip_ct=True is passed, the CT-provider probe does not run.
 

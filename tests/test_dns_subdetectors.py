@@ -12,7 +12,8 @@ from unittest.mock import patch
 import pytest
 
 from recon_tool.sources import dns as dns_source
-from recon_tool.sources.dns import DNSSource, _parse_rdata
+from recon_tool.sources.dns import DNSSource
+from recon_tool.sources.dns_tables import parse_rdata as _parse_rdata
 
 
 def _mock_safe_resolve_factory(records_by_query: dict[str, list[str]]):
@@ -33,7 +34,7 @@ def _mock_safe_resolve_factory(records_by_query: dict[str, list[str]]):
 
 class TestBIMIDetection:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_bimi_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -46,7 +47,7 @@ class TestBIMIDetection:
         assert "BIMI" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_bimi_not_detected_without_record(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -60,7 +61,7 @@ class TestBIMIDetection:
 
 class TestMTASTSDetection:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_mta_sts_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -75,7 +76,7 @@ class TestMTASTSDetection:
 
 class TestNSDetection:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_cloudflare_ns_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -88,7 +89,7 @@ class TestNSDetection:
         assert "Cloudflare" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_aws_route53_ns_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -101,7 +102,7 @@ class TestNSDetection:
         assert "AWS Route 53" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_godaddy_ns_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -116,7 +117,7 @@ class TestNSDetection:
 
 class TestCNAMEInfraDetection:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_cloudfront_cname_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -129,7 +130,7 @@ class TestCNAMEInfraDetection:
         assert "AWS CloudFront" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_vercel_cname_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -142,7 +143,7 @@ class TestCNAMEInfraDetection:
         assert "Vercel" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_netlify_cname_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -155,7 +156,7 @@ class TestCNAMEInfraDetection:
         assert "Netlify" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_akamai_cname_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -170,7 +171,7 @@ class TestCNAMEInfraDetection:
 
 class TestDomainConnectDetection:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_azure_domain_connect(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -183,7 +184,7 @@ class TestDomainConnectDetection:
         assert "Domain Connect (Azure)" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_godaddy_domain_connect(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -198,7 +199,7 @@ class TestDomainConnectDetection:
 
 class TestDMARCPolicyExtraction:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_dmarc_reject_policy(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -211,7 +212,7 @@ class TestDMARCPolicyExtraction:
         assert result.dmarc_policy == "reject"
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_dmarc_none_policy(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -224,7 +225,7 @@ class TestDMARCPolicyExtraction:
         assert result.dmarc_policy == "none"
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_no_dmarc_returns_none(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -238,7 +239,7 @@ class TestDMARCPolicyExtraction:
 
 class TestSPFAnalysis:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_spf_strict_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -250,7 +251,7 @@ class TestSPFAnalysis:
         assert "SPF: strict (-all)" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_spf_softfail_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -262,7 +263,7 @@ class TestSPFAnalysis:
         assert "SPF: softfail (~all)" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_spf_complexity_large(self, mock_resolve):
         includes = " ".join(f"include:svc{i}.example.com" for i in range(9))
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -277,7 +278,7 @@ class TestSPFAnalysis:
         assert "large" in complexity_svcs[0]
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_spf_complexity_medium(self, mock_resolve):
         includes = " ".join(f"include:svc{i}.example.com" for i in range(5))
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -294,7 +295,7 @@ class TestSPFAnalysis:
 
 class TestMsoidCNAME:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_msoid_cname_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -310,7 +311,7 @@ class TestMsoidCNAME:
 
 class TestSRVDetection:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_teams_via_srv_federation(self, mock_resolve):
         """SRV record for _sipfederationtls._tcp should detect Teams."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -327,7 +328,7 @@ class TestSRVDetection:
 
 class TestSubdomainTxtDetection:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_slack_enterprise_grid_via_subdomain(self, mock_resolve):
         """_slack-challenge subdomain TXT should detect Slack."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -342,7 +343,7 @@ class TestSubdomainTxtDetection:
         assert "slack" in result.detected_slugs
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_gitlab_via_subdomain(self, mock_resolve):
         """_gitlab-pages-verification-code subdomain TXT should detect GitLab."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -357,7 +358,7 @@ class TestSubdomainTxtDetection:
         assert "gitlab" in result.detected_slugs
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_crewai_aid_via_agent_subdomain(self, mock_resolve):
         """_agent subdomain TXT should detect CrewAI AID."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -372,7 +373,7 @@ class TestSubdomainTxtDetection:
         assert "crewai-aid" in result.detected_slugs
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_mcp_discovery_via_mcp_subdomain(self, mock_resolve):
         """_mcp subdomain TXT should detect MCP DNS Discovery."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -387,7 +388,7 @@ class TestSubdomainTxtDetection:
         assert "mcp-discovery" in result.detected_slugs
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_github_advanced_security_via_challenge_subdomain(self, mock_resolve):
         """_github-challenge subdomain TXT should detect GitHub Advanced Security."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -402,7 +403,7 @@ class TestSubdomainTxtDetection:
         assert "github-advanced-security" in result.detected_slugs
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_no_subdomain_txt_no_match(self, mock_resolve):
         """No subdomain TXT records should not produce false positives."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -418,7 +419,7 @@ class TestSubdomainTxtDetection:
 
 class TestCAADetection:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_letsencrypt_caa(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -431,7 +432,7 @@ class TestCAADetection:
         assert "CAA: Let's Encrypt" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_digicert_caa(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -444,7 +445,7 @@ class TestCAADetection:
         assert "CAA: DigiCert" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_aws_acm_caa(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -457,7 +458,7 @@ class TestCAADetection:
         assert "CAA: AWS Certificate Manager" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_no_caa_no_match(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -482,7 +483,7 @@ class TestMultiPartTxtRecords:
         assert _parse_rdata(raw) == "v=spf1 include:_spf.google.com -all"
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_dmarc_split_across_chunks(self, mock_resolve):
         """DMARC record split across chunks should parse policy correctly."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -497,7 +498,7 @@ class TestMultiPartTxtRecords:
         assert "DMARC" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_spf_split_across_chunks(self, mock_resolve):
         """SPF record should still detect includes."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -521,7 +522,7 @@ class TestExchangeOnpremAutodiscover:
     """
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_autodiscover_cname_to_m365_cloud_is_not_onprem(self, mock_resolve):
         # Classic M365 pattern: autodiscover CNAMEs to autodiscover.outlook.com.
         # Slug must NOT fire — this is Exchange Online, not on-prem.
@@ -536,7 +537,7 @@ class TestExchangeOnpremAutodiscover:
         assert "Exchange Server (on-prem / hybrid)" not in (result.detected_services or ())
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_autodiscover_cname_to_org_infra_is_onprem(self, mock_resolve):
         # Genuine hybrid: autodiscover CNAMEs to an org-owned endpoint.
         # Slug must fire.
@@ -551,7 +552,7 @@ class TestExchangeOnpremAutodiscover:
         assert "Exchange Server (on-prem / hybrid)" in (result.detected_services or ())
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_autodiscover_direct_a_is_onprem(self, mock_resolve):
         # No CNAME, direct A — self-operated autodiscover responder.
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -565,7 +566,7 @@ class TestExchangeOnpremAutodiscover:
         assert "Exchange Server (on-prem / hybrid)" in (result.detected_services or ())
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_autodiscover_cname_to_mail_protection_is_not_onprem(self, mock_resolve):
         # Suffix match: anything under *.mail.protection.outlook.com is M365.
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -579,7 +580,7 @@ class TestExchangeOnpremAutodiscover:
         assert "Exchange Server (on-prem / hybrid)" not in (result.detected_services or ())
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_owa_direct_a_still_fires(self, mock_resolve):
         # Non-autodiscover prefix path: owa A-resolves → on-prem.
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -609,7 +610,7 @@ class TestHostingPtrDetection:
             "198.51.100.1",
         ],
     )
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_non_global_a_record_skips_ptr_lookup(self, mock_resolve, ip: str):
         calls: list[tuple[str, str]] = []
 
@@ -632,7 +633,7 @@ class TestHostingPtrDetection:
         assert ctx.raw_dns_records["A"] == [ip]
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_global_a_record_allows_ptr_hosting_detection(self, mock_resolve):
         calls: list[tuple[str, str]] = []
 

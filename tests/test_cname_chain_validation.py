@@ -58,6 +58,7 @@ from typing import Any
 import pytest
 
 from recon_tool.sources import dns as dns_mod
+from recon_tool.sources import dns_base
 
 # ── Layer 1: suffix denylist ───────────────────────────────────────
 
@@ -151,7 +152,7 @@ class TestResolveCnameChainBlocksPrivateTargets:
         plan: dict[tuple[str, str], list[str]] = {
             ("attacker.example.com", "CNAME"): ["internal.corp"],
         }
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
+        monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve(plan))
         chain = await dns_mod._resolve_cname_chain("attacker.example.com")
         assert chain == [], f"walker should not record a hop whose suffix marks it as private; got chain={chain!r}"
 
@@ -181,7 +182,7 @@ class TestResolveCnameChainBlocksPrivateTargets:
             queries_made.append((domain, rdtype))
             return list(plan.get((domain, rdtype), []))
 
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
+        monkeypatch.setattr(dns_base, "safe_resolve", _tracking_resolve)
         chain = await dns_mod._resolve_cname_chain("attacker.example.com")
 
         assert chain == ["split.attacker-domain.com"], f"walker should accept a public-suffix hop; got chain={chain!r}"
@@ -199,7 +200,7 @@ class TestResolveCnameChainBlocksPrivateTargets:
         plan: dict[tuple[str, str], list[str]] = {
             ("contoso.com", "CNAME"): ["contoso.azurewebsites.net"],
         }
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
+        monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve(plan))
         chain = await dns_mod._resolve_cname_chain("contoso.com")
         assert chain == ["contoso.azurewebsites.net"], (
             f"walker should follow a legitimate public CNAME; got chain={chain!r}"
@@ -215,7 +216,7 @@ class TestResolveCnameChainBlocksPrivateTargets:
             ("apex.example.com", "CNAME"): ["edge.fastly.net"],
             ("edge.fastly.net", "CNAME"): ["origin.attacker.corp"],
         }
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
+        monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve(plan))
         chain = await dns_mod._resolve_cname_chain("apex.example.com")
         # First hop (edge.fastly.net) passes suffix; second hop
         # (origin.attacker.corp) fails suffix (private .corp). Walker
@@ -251,7 +252,7 @@ class TestSpfRedirectBlocksPrivateTargets:
             # name, this -all answer would wrongly credit SPF strict.
             return ["v=spf1 -all"]
 
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
+        monkeypatch.setattr(dns_base, "safe_resolve", _tracking_resolve)
         ctx = dns_mod._DetectionCtx()
         await dns_mod._follow_spf_redirect(
             ctx,
@@ -277,7 +278,7 @@ class TestSpfRedirectBlocksPrivateTargets:
                 "v=spf1 include:spf.protection.outlook.com -all",
             ],
         }
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
+        monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve(plan))
         ctx = dns_mod._DetectionCtx()
         await dns_mod._follow_spf_redirect(
             ctx,
@@ -307,7 +308,7 @@ class TestEntryPointValidation:
             queries_made.append((domain, rdtype))
             return []
 
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
+        monkeypatch.setattr(dns_base, "safe_resolve", _tracking_resolve)
         chain = await dns_mod._resolve_cname_chain("internal.corp")
         assert chain == [], f"private-suffix entry point should return empty chain; got {chain!r}"
         assert queries_made == [], (
@@ -322,7 +323,7 @@ class TestEntryPointValidation:
             queries_made.append((domain, rdtype))
             return []
 
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
+        monkeypatch.setattr(dns_base, "safe_resolve", _tracking_resolve)
         chain = await dns_mod._resolve_cname_chain("10.0.0.1")
         assert chain == []
         assert queries_made == [], f"got queries={queries_made!r}"
@@ -335,7 +336,7 @@ class TestEntryPointValidation:
             queries_made.append((domain, rdtype))
             return []
 
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
+        monkeypatch.setattr(dns_base, "safe_resolve", _tracking_resolve)
         chain = await dns_mod._resolve_cname_chain("hostname")
         assert chain == []
         assert queries_made == []
@@ -352,7 +353,7 @@ class TestEntryPointValidation:
         plan: dict[tuple[str, str], list[str]] = {
             ("attacker.example.com", "CNAME"): ["attacker.example.com"],  # self-loop
         }
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
+        monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve(plan))
         chain = await dns_mod._resolve_cname_chain("Attacker.example.com")
         # Self-loop detected immediately; no hops recorded.
         assert chain == [], f"case-mismatched self-loop should be detected without recording a hop; got chain={chain!r}"
@@ -384,7 +385,7 @@ class TestNoAAAAQueriesFromWalker:
             queries_made.append((domain, rdtype))
             return list(plan.get((domain, rdtype), []))
 
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
+        monkeypatch.setattr(dns_base, "safe_resolve", _tracking_resolve)
         chain = await dns_mod._resolve_cname_chain("attacker.example.com")
         assert chain == [
             "hop1.attacker.example.com",
@@ -409,7 +410,7 @@ class TestNoAAAAQueriesFromWalker:
             queries_made.append((domain, rdtype))
             return list(plan.get((domain, rdtype), []))
 
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
+        monkeypatch.setattr(dns_base, "safe_resolve", _tracking_resolve)
         chain = await dns_mod._resolve_cname_chain("h0.example.com")
         assert chain == [
             "h1.example.com",
@@ -433,7 +434,7 @@ class TestNoAAAAQueriesFromWalker:
             queries_made.append((domain, rdtype))
             return list(plan.get((domain, rdtype), []))
 
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _tracking_resolve)
+        monkeypatch.setattr(dns_base, "safe_resolve", _tracking_resolve)
         chain = await dns_mod._resolve_cname_chain("apex.example.com")
         assert chain == ["edge.fastly.net"]
         a_aaaa = [q for q in queries_made if q[1] in ("A", "AAAA")]
@@ -462,7 +463,7 @@ class TestM365RedirectDomainFilter:
         async def _stub(domain: str, rdtype: str, **kwargs: Any) -> list[str]:
             return list(plan.get((domain, rdtype), []))
 
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub)
+        monkeypatch.setattr(dns_base, "safe_resolve", _stub)
         ctx = dns_mod._DetectionCtx()
         await dns_mod._detect_m365_cnames(ctx, "attacker.example")
         assert "internal.corp" not in ctx.related_domains, (
@@ -483,7 +484,7 @@ class TestM365RedirectDomainFilter:
         async def _stub(domain: str, rdtype: str, **kwargs: Any) -> list[str]:
             return list(plan.get((domain, rdtype), []))
 
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub)
+        monkeypatch.setattr(dns_base, "safe_resolve", _stub)
         ctx = dns_mod._DetectionCtx()
         await dns_mod._detect_m365_cnames(ctx, "legit.example")
         assert "partner.com" in ctx.related_domains
@@ -542,8 +543,8 @@ class TestSafeResolveCanonicalGuard:
         # internal.corp. The resolver answers with IPs whose canonical
         # name is internal.corp; the guard discards the whole answer.
         answer = _FakeAnswer("internal.corp.", ["10.0.0.1"])
-        monkeypatch.setattr(dns_mod, "_get_resolver", lambda: _fake_resolver(answer))
-        result = await dns_mod._safe_resolve("owa.example.com", "A")
+        monkeypatch.setattr(dns_base, "get_resolver", lambda: _fake_resolver(answer))
+        result = await dns_base.safe_resolve("owa.example.com", "A")
         assert result == [], (
             f"A answer whose canonical name chased to a private suffix must be discarded; got {result!r}"
         )
@@ -552,16 +553,16 @@ class TestSafeResolveCanonicalGuard:
     async def test_public_canonical_chase_is_kept(self, monkeypatch):
         # Legitimate public CNAME delegation (DKIM selector -> provider).
         answer = _FakeAnswer("sel._domainkey.provider.net.", ["v=DKIM1; k=rsa; p=AAA"])
-        monkeypatch.setattr(dns_mod, "_get_resolver", lambda: _fake_resolver(answer))
-        result = await dns_mod._safe_resolve("sel._domainkey.example.com", "TXT")
+        monkeypatch.setattr(dns_base, "get_resolver", lambda: _fake_resolver(answer))
+        result = await dns_base.safe_resolve("sel._domainkey.example.com", "TXT")
         assert result == ["v=DKIM1; k=rsa; p=AAA"]
 
     @pytest.mark.asyncio
     async def test_no_chase_direct_record_is_kept(self, monkeypatch):
         # canonical == queried name: no CNAME chase, keep the record.
         answer = _FakeAnswer("example.com.", ["v=spf1 -all"])
-        monkeypatch.setattr(dns_mod, "_get_resolver", lambda: _fake_resolver(answer))
-        result = await dns_mod._safe_resolve("example.com", "TXT")
+        monkeypatch.setattr(dns_base, "get_resolver", lambda: _fake_resolver(answer))
+        result = await dns_base.safe_resolve("example.com", "TXT")
         assert result == ["v=spf1 -all"]
 
     @pytest.mark.asyncio
@@ -569,8 +570,8 @@ class TestSafeResolveCanonicalGuard:
         # CNAME queries are exempt: the walker validates targets itself,
         # and a CNAME query returns the immediate record without chasing.
         answer = _FakeAnswer("x.example.com.", ["internal.corp"])
-        monkeypatch.setattr(dns_mod, "_get_resolver", lambda: _fake_resolver(answer))
-        result = await dns_mod._safe_resolve("x.example.com", "CNAME")
+        monkeypatch.setattr(dns_base, "get_resolver", lambda: _fake_resolver(answer))
+        result = await dns_base.safe_resolve("x.example.com", "CNAME")
         assert result == ["internal.corp"]
 
     @pytest.mark.asyncio
@@ -578,8 +579,8 @@ class TestSafeResolveCanonicalGuard:
         # PTR is exempt: RFC 2317 classless reverse delegation
         # legitimately CNAMEs within the .arpa tree.
         answer = _FakeAnswer("1.0.0.10.in-addr.arpa.", ["host.example.com."])
-        monkeypatch.setattr(dns_mod, "_get_resolver", lambda: _fake_resolver(answer))
-        result = await dns_mod._safe_resolve("1.0.0.10.in-addr.arpa", "PTR")
+        monkeypatch.setattr(dns_base, "get_resolver", lambda: _fake_resolver(answer))
+        result = await dns_base.safe_resolve("1.0.0.10.in-addr.arpa", "PTR")
         assert result == ["host.example.com"]
 
 
@@ -592,7 +593,7 @@ class TestResolvesToPublicEndpoint:
     @pytest.mark.asyncio
     async def test_public_cname_target_is_true(self, monkeypatch):
         plan = {("sso.example.com", "CNAME"): ["edge.okta.com"]}
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
+        monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve(plan))
         assert await dns_mod._resolves_to_public_endpoint("sso.example.com") is True
 
     @pytest.mark.asyncio
@@ -603,7 +604,7 @@ class TestResolvesToPublicEndpoint:
             queries.append((domain, rdtype))
             return ["internal.corp"] if rdtype == "CNAME" else ["10.0.0.1"]
 
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _track)
+        monkeypatch.setattr(dns_base, "safe_resolve", _track)
         result = await dns_mod._resolves_to_public_endpoint("sso.example.com")
         assert result is False
         assert ("sso.example.com", "A") not in queries, (
@@ -613,12 +614,12 @@ class TestResolvesToPublicEndpoint:
     @pytest.mark.asyncio
     async def test_direct_a_record_is_true(self, monkeypatch):
         plan = {("idp.example.com", "A"): ["203.0.113.10"]}
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve(plan))
+        monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve(plan))
         assert await dns_mod._resolves_to_public_endpoint("idp.example.com") is True
 
     @pytest.mark.asyncio
     async def test_no_records_is_false(self, monkeypatch):
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _stub_safe_resolve({}))
+        monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve({}))
         assert await dns_mod._resolves_to_public_endpoint("idp.example.com") is False
 
     @pytest.mark.asyncio
@@ -629,6 +630,6 @@ class TestResolvesToPublicEndpoint:
             queries.append((domain, rdtype))
             return []
 
-        monkeypatch.setattr(dns_mod, "_safe_resolve", _track)
+        monkeypatch.setattr(dns_base, "safe_resolve", _track)
         assert await dns_mod._resolves_to_public_endpoint("host.corp") is False
         assert queries == [], "non-public entry name must be rejected before any query"

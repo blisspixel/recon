@@ -62,7 +62,7 @@ class TestDmarcPctParsing:
     """Verify pct= parsing in _detect_email_security via DNSSource."""
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_valid_pct_50(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         """pct=50 → dmarc_pct == 50."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -72,7 +72,7 @@ class TestDmarcPctParsing:
         assert result.dmarc_pct == 50
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_valid_pct_0(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         """pct=0 → dmarc_pct == 0 (monitoring only)."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -82,7 +82,7 @@ class TestDmarcPctParsing:
         assert result.dmarc_pct == 0
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_valid_pct_100(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         """pct=100 → dmarc_pct == 100 (full enforcement)."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -92,7 +92,7 @@ class TestDmarcPctParsing:
         assert result.dmarc_pct == 100
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_absent_pct(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         """No pct= tag → dmarc_pct is None (not defaulting to 100)."""
         mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject"]})
@@ -100,7 +100,7 @@ class TestDmarcPctParsing:
         assert result.dmarc_pct is None
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_non_integer_pct(self, mock_resolve, caplog: pytest.LogCaptureFixture) -> None:  # type: ignore[no-untyped-def]
         """pct=abc → warning logged, dmarc_pct is None."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -112,7 +112,7 @@ class TestDmarcPctParsing:
         assert any("not a valid integer" in r.message for r in caplog.records)
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_out_of_range_pct_150(self, mock_resolve, caplog: pytest.LogCaptureFixture) -> None:  # type: ignore[no-untyped-def]
         """pct=150 → warning logged, dmarc_pct is None."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -124,7 +124,7 @@ class TestDmarcPctParsing:
         assert any("out of range" in r.message for r in caplog.records)
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_out_of_range_pct_negative(self, mock_resolve, caplog: pytest.LogCaptureFixture) -> None:  # type: ignore[no-untyped-def]
         """pct=-5 → warning logged, dmarc_pct is None."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -196,7 +196,7 @@ class TestDmarcRuaExtraction:
         assert "rua=mailto:" in evidence[0].raw_value
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_rua_extraction_via_dns_source(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         """End-to-end: DNSSource extracts rua= and detects vendor slug."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -415,7 +415,7 @@ class TestProperty3DmarcPctParsing:
                 return [f"v=DMARC1; p=reject; pct={n}"]
             return []
 
-        with patch("recon_tool.sources.dns._safe_resolve", side_effect=_mock_resolve):
+        with patch("recon_tool.sources.dns_base.safe_resolve", side_effect=_mock_resolve):
             asyncio.new_event_loop().run_until_complete(_detect_email_security(ctx, "contoso.com"))
 
         assert ctx.dmarc_pct == n, f"Expected dmarc_pct={n}, got {ctx.dmarc_pct}"
@@ -433,7 +433,7 @@ class TestProperty3DmarcPctParsing:
                 return [f"v=DMARC1; p={policy}"]
             return []
 
-        with patch("recon_tool.sources.dns._safe_resolve", side_effect=_mock_resolve):
+        with patch("recon_tool.sources.dns_base.safe_resolve", side_effect=_mock_resolve):
             asyncio.new_event_loop().run_until_complete(_detect_email_security(ctx, "contoso.com"))
 
         assert ctx.dmarc_pct is None, f"Expected None for absent pct=, got {ctx.dmarc_pct}"
@@ -461,7 +461,7 @@ class TestProperty3DmarcPctParsing:
                 return [f"v=DMARC1; p=reject; pct={bad_val}"]
             return []
 
-        with patch("recon_tool.sources.dns._safe_resolve", side_effect=_mock_resolve):
+        with patch("recon_tool.sources.dns_base.safe_resolve", side_effect=_mock_resolve):
             asyncio.new_event_loop().run_until_complete(_detect_email_security(ctx, "contoso.com"))
 
         assert ctx.dmarc_pct is None, f"Expected None for invalid pct={bad_val}, got {ctx.dmarc_pct}"

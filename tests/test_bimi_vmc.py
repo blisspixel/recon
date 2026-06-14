@@ -22,6 +22,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from recon_tool.sources import dns as dns_mod
+from recon_tool.sources import dns_base
 
 
 class _Resp:
@@ -93,7 +94,7 @@ async def test_malformed_port_does_not_abort_email_security():
 
     with (
         patch.object(dns_mod, "_parse_bimi_vmc", _boom),
-        patch.object(dns_mod, "_safe_resolve", _txt_for),
+        patch.object(dns_base, "safe_resolve", _txt_for),
     ):
         # Must complete without raising; BIMI service still recorded.
         await dns_mod._detect_email_security(ctx, "example.com")
