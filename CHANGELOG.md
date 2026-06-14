@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Exact-host lookups (`--exact`).** `recon <host> --exact` analyzes the literal
+  host you typed instead of reducing to the registrable apex, for the narrow case
+  of wanting DNS facts about one specific sub-host.
+
+### Changed
+
+- **Apex input normalization.** Any lookup target is now reduced to its
+  registrable apex (eTLD+1) by default, so a pasted browser URL or sub-host
+  (`https://mail.acme.co.uk/login`) is analyzed at `acme.co.uk`, where recon's
+  signal lives (tenant, MX, `_dmarc`, CT). This generalizes the previous
+  special-case `www.` strip and is backed by the Public Suffix List, so
+  multi-label TLDs (`acme.co.uk`, `acme.com.au`) reduce correctly. A sub-host
+  reduction prints a one-line note naming what was analyzed; `--exact` opts out.
+  Applies everywhere a domain is validated (CLI, batch, delta, MCP, cache keys).
+
+### Dependencies
+
+- **Added `publicsuffixlist`** (MPL-2.0) for apex reduction. Pure-Python with
+  zero required runtime dependencies and a bundled, self-updating Public Suffix
+  List, so it adds no transitive tree and stays within recon's lean, offline,
+  no-C-extension floor. It flows through the existing supply-chain controls
+  automatically: hash-pinned in `uv.lock`, surfaced in the CycloneDX SBOM, and
+  scanned by `pip-audit` in CI. This is recon's first non-permissive (weak
+  copyleft) dependency license; MPL-2.0 is file-level and does not affect recon's
+  MIT licensing, since recon consumes the package unmodified.
+
 ### Internal
 
 - **God-file decomposition (continued).** Further split the oversized modules

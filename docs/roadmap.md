@@ -1394,13 +1394,88 @@ A few patterns are distinctive enough to call out:
 - **Pure-Python dependency floor.** No numpy, no scipy, no
   probabilistic-programming framework, no C-extension of our own
   choosing. `pip install recon-tool` pulls roughly eight runtime
-  packages. One deliberate addition was made in v1.9.31: `deal`
+  packages. Two deliberate additions have been made. v1.9.31: `deal`
   (pure-Python Design-by-Contract), adopted from the 2026-05 standards
   review; it is a no-op in production under `-O`, so it adds an import,
-  not runtime cost. The floor stays a hard constraint
-  otherwise: `cryptography` and `pydantic-core` are the only compiled
+  not runtime cost. 2026-06-13: `publicsuffixlist`, for registrable-apex
+  input reduction (a naive last-two-labels rule mishandles ccTLDs). It was
+  chosen over `tldextract` precisely to hold this floor: it is pure-Python
+  with *zero required transitive dependencies* (tldextract drags in
+  `requests` + three more), and bundles a self-updating Public Suffix List.
+  It is recon's first MPL-2.0 dependency (recorded in `THIRD-PARTY-NOTICES.md`);
+  MPL-2.0 is file-level copyleft and does not affect recon's MIT license,
+  since the package is consumed unmodified. Dependency-hygiene note: the apex
+  reduction is only as fresh as the pinned `publicsuffixlist` version, so PSL
+  currency rides the normal dependency-bump cadence (the package self-updates
+  its list per dated release); it is not a security boundary — `to_apex` falls
+  back to the validated host on any unknown suffix. The floor stays a hard
+  constraint otherwise: `cryptography` and `pydantic-core` are the only compiled
   pieces in the tree, and both arrive transitively through `mcp` rather
   than by our choice.
+
+### The trust bar: toward high-assurance use (aspirational — grill into this)
+
+> Status: **north star, not committed scope.** This is a placeholder to
+> interrogate deliberately later, not a queued milestone. The ambition: recon
+> should be trustworthy enough that a high-assurance consumer — pick your
+> safety-critical, audit-heavy, "show me why I should believe this" operator —
+> could adopt it without a leap of faith. The bar for a *passive, probabilistic*
+> tool is specific and worth stating plainly so we can hold ourselves to it.
+
+For a tool that infers rather than observes, "trusted" does not mean "always
+right" — that is impossible from the passive channel. It means **never
+confidently wrong, always auditable, always reproducible, and honest about its
+own uncertainty.** Concretely, the threads to grill into, hardest-lever first:
+
+1. **Empirical calibration against ground truth (the load-bearing gap).** Today
+   the credible intervals are *evidence-responsive* but not *empirically
+   calibrated* — we say so in the README and `correlation.md`. High-assurance
+   means a documented, reproducible calibration story: a maintained
+   ground-truth corpus (verified tenants/IdPs), measured coverage (does the 80%
+   interval contain truth ~80% of the time, per stratum), conformal guarantees
+   where they apply, and a published reliability diagram per node. Until an 80%
+   interval *demonstrably* means 80%, every other trust property is built on
+   sand. See `statistical-assurance.md`, `interval-coverage.md`, and the CAL\*
+   track below — this is where the real work is.
+2. **Reproducible analysis, not just reproducible builds.** We already ship
+   byte-identical wheels. Extend that to the *analysis*: pin the PSL and
+   fingerprint/signal catalog snapshots into each result's provenance, and build
+   a record-replay harness so a captured DNS/CT/identity-endpoint snapshot
+   re-runs to an identical verdict months later. A claim you cannot reproduce is
+   a claim you cannot audit.
+3. **End-to-end provenance on every field.** The evidence DAG is strong; the bar
+   is that *every* emitted field traces to (raw observation → rule → catalog
+   version → model version) such that an auditor can re-derive it offline. Tie
+   outputs to the exact catalog/engine versions that produced them.
+4. **Adversarial robustness with a written threat model.** No public source can
+   crash, hang, or mislead the engine. We already bound hostile inputs
+   (`strip_control_chars`, length caps, CNAME-chain validation); high-assurance
+   means a documented threat model, a fuzz corpus in CI, and metamorphic tests
+   that assert the absent-evidence discipline holds under hostile sparsity.
+5. **Formal-ish verification of the inference core.** Push past `deal` contracts
+   + Hypothesis: a full-joint reference oracle for the Bayesian core (partly
+   planned below), high mutation-testing thresholds on the engine, and invariant
+   proofs for the load-bearing rules (strict-positive likelihoods, LR=1 absence,
+   no degenerate factors).
+6. **Supply chain to SLSA L3.** Currently deferred (see `supply-chain.md`) as
+   more than a single-maintainer passive tool warrants — but it is explicitly on
+   *this* bar. Reproducible + attested + provenance-pinned dependencies, the
+   whole chain verifiable from two independent roots.
+7. **A complete, maintained assurance case.** `assurance-case.md` exists; the bar
+   is a living GSN-style argument where every top-level trust claim is decomposed
+   to evidence that CI keeps green, so "why should I trust this" has a single,
+   current, verifiable answer rather than a scatter of docs.
+8. **Uncertainty legibility as a first-class output.** The deepest trust property
+   for an inference tool: it must make over-trust *hard*. Quantified confidence,
+   explicit "the channel cannot see this" rather than a confident-wrong point
+   estimate, and the `sparse`/ceiling signals surfaced everywhere a consumer (or
+   an agent) might otherwise over-read. This is the [[recon-as-agent-verifier-primitive]]
+   thesis taken to its conclusion.
+
+When we return to this: rank by *trust delivered per unit of complexity added*,
+and refuse anything that breaks the Invariants box above. The first three items
+(calibration, reproducible analysis, per-field provenance) are almost certainly
+the highest-leverage and should be grilled first.
 
 ### External standards review (2026-05)
 

@@ -130,8 +130,11 @@ curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/insta
 
 After the installer finishes, open a **new** terminal and run `recon doctor`.
 
-**Update:** re-run the one-liner above. (Or directly: `uv tool upgrade recon-tool`
-/ `pipx upgrade recon-tool` / `pip install -U recon-tool`.)
+**Update:** run `recon update` — it detects how recon was installed
+(pipx / uv / pip / Homebrew) and runs the matching upgrade; `recon update --check`
+only reports whether a newer release exists. (Equivalently, re-run the install
+one-liner above, or upgrade directly with `uv tool upgrade recon-tool` /
+`pipx upgrade recon-tool` / `pip install -U recon-tool`.)
 **Uninstall:** `uv tool uninstall recon-tool` (or `pipx uninstall recon-tool`).
 
 **Homebrew (macOS / Linux):** `brew install blisspixel/tap/recon` once the tap is
@@ -200,6 +203,9 @@ Upgrade later with the usual `pip install -U recon-tool`.
 
 ```bash
 recon contoso.com                              # default panel
+recon https://www.contoso.com/path             # URLs, www., and paths normalize to the apex (contoso.com)
+recon mail.contoso.com                          # sub-hosts also reduce to the registrable apex
+recon mail.contoso.com --exact                  # ...unless you want DNS facts for that exact host
 recon contoso.com --explain                    # full reasoning + provenance DAG
 recon contoso.com --full                       # everything (services + domains + posture)
 recon contoso.com --profile fintech            # apply a posture lens
@@ -217,6 +223,8 @@ recon mcp                                      # start MCP server (stdio)
 ```
 
 Built-in profiles: `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`. Custom profiles live in `~/.recon/profiles/*.yaml`.
+
+**Input is forgiving.** Paste a full browser URL, a `www.` host, or any sub-host: recon strips the scheme and path and reduces the target to its registrable apex, where the tenant, MX, and DMARC records live. It uses the Public Suffix List, so multi-label TLDs like `acme.co.uk` reduce correctly. Pass `--exact` when you specifically want DNS facts for the literal host you typed.
 
 **Shell completion.** recon ships tab-completion for the command tree and flags (via Typer). Install it for your current shell, or print the script to wire it up yourself:
 
