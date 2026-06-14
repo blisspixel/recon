@@ -1,0 +1,611 @@
+"""Posture MCP tools: analyze, exposure, gaps, compare, hypothesis, simulate.
+
+Extracted from server.py (docs/roadmap.md god-file track, app-sharing variant).
+Registers its tools on the shared ``mcp`` instance imported from server_app;
+server.py imports this module to trigger registration and re-exports the tool
+functions for the test surface. Imports server_app / server_runtime; never the
+reverse.
+"""
+
+from __future__ import annotations
+
+import logging
+import time
+import uuid
+from dataclasses import dataclass
+from typing import Any
+
+from mcp.server.fastmcp.exceptions import ToolError
+from mcp.types import ToolAnnotations
+
+from recon_tool import server_app
+from recon_tool.models import TenantInfo
+from recon_tool.server_app import mcp
+from recon_tool.server_runtime import (
+    log_structured,
+)
+from recon_tool.validator import strip_control_chars
+
+logger = logging.getLogger("recon")
+
+
+# Keyword groups for hypothesis matching — maps keywords to signal/slug categories
+_HYPOTHESIS_KEYWORDS: dict[str, list[str]] = {
+    "migration": ["migration", "migrate", "transition", "moving", "switching"],
+    "security": ["security", "secure", "protection", "defense", "defensive"],
+    "email": ["email", "mail", "dmarc", "dkim", "spf", "mta-sts", "bimi"],
+    "identity": ["identity", "sso", "federated", "okta", "entra", "auth", "authentication"],
+    "cloud": ["cloud", "aws", "azure", "gcp", "saas"],
+    "ai": ["ai", "artificial intelligence", "llm", "openai", "generative", "machine learning"],
+    "compliance": ["compliance", "governance", "audit", "regulation"],
+    "collaboration": ["collaboration", "teams", "slack", "zoom", "communication"],
+    "monitoring": ["monitoring", "observability", "logging", "telemetry"],
+    "cdn": ["cdn", "edge", "waf", "firewall", "cloudflare", "akamai"],
+}
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def analyze_posture(
+    domain: str,
+    explain: bool = False,
+    profile: str | None = None,
+) -> list[dict[str, Any]] | dict[str, Any]:
+    """Analyze a domain's configuration posture and return neutral observations.
+
+    Returns factual observations about the domain's email security, identity,
+    infrastructure, SaaS footprint, certificate activity, and configuration
+    consistency. Observations are neutral — they describe what is, not what
+    should be.
+
+    Args:
+        domain: A domain name to analyze (e.g., "northwindtraders.com")
+        explain: When true, include explanation data for each posture observation.
+        profile: Optional profile name (e.g. "fintech", "healthcare",
+            "saas-b2b", "high-value-target", "public-sector"). Reweights
+            and filters observations to the profile's lens without
+            adding new intelligence.
+
+    Returns:
+        JSON array of observations, each with category, salience, statement,
+        and related_slugs. When explain is true, includes explanation data.
+    """
+    request_id = uuid.uuid4().hex[:12]
+    start_time = time.monotonic()
+
+    info = await server_app.resolve_single_for_tool(domain, request_id)
+
+    from recon_tool.formatter import format_posture_observations
+    from recon_tool.posture import analyze_posture as _analyze_posture
+    from recon_tool.profiles import apply_profile, list_profiles, load_profile
+
+    observations = _analyze_posture(info)
+
+    # Apply profile lens if requested. ``profile`` is typed
+    # ``str | None``, but MCP arguments arrive unenforced at runtime (the same
+    # caveat the detection-list guard below notes), so a truthy non-string would
+    # raise ``TypeError`` on the ``profile[:100]`` slice. Guard the type and
+    # treat a non-string as no lens, matching the ``None`` case.
+    profile_note: str | None = None
+    if isinstance(profile, str) and profile:  # pyright: ignore[reportUnnecessaryIsInstance]
+        profile = profile[:100]
+        prof = load_profile(profile)
+        if prof is None:
+            available = ", ".join(p.name for p in list_profiles()) or "(none)"
+            raise ToolError(f"Unknown profile {profile!r}. Available profiles: {available}")
+        observations = apply_profile(tuple(observations), prof)
+        profile_note = prof.prepend_note or prof.description
+
+    elapsed = time.monotonic() - start_time
+    log_structured(
+        logging.INFO,
+        "posture_analyzed",
+        request_id=request_id,
+        domain=domain,
+        observations=len(observations),
+        elapsed_s=round(elapsed, 2),
+    )
+
+    result_list = format_posture_observations(observations)
+
+    if explain:
+        from recon_tool.explanation import explain_observations, serialize_explanation
+        from recon_tool.posture import load_posture_rules
+
+        posture_rules = load_posture_rules()
+        explanation_records = explain_observations(observations, posture_rules, info.evidence, info.detection_scores)
+        explanations = [serialize_explanation(rec) for rec in explanation_records]
+        payload: dict[str, Any] = {"observations": result_list, "explanations": explanations}
+        if profile_note:
+            payload["profile_note"] = profile_note
+        return payload
+
+    if profile_note:
+        return {"observations": result_list, "profile_note": profile_note}
+    return result_list
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def assess_exposure(domain: str) -> dict[str, Any]:
+    """Assess a domain's publicly observable security posture for defensive review.
+
+    For defensive security posture assessment only.
+
+    Returns a structured JSON object containing email security posture, identity
+    posture, infrastructure footprint, configuration consistency observations,
+    hardening status, and an overall posture score (0–100) based on publicly
+    observable controls.
+
+    The score counts only observed-present controls, so it is a lower bound: the
+    ``observability`` block carries ``score_is_lower_bound``,
+    ``unconfirmable_absent_points`` (points from controls whose absence the
+    passive channel cannot confirm), and ``score_ceiling``. Report the score as
+    a floor with its ceiling; a low score can mean "quiet", not "weak".
+
+    Args:
+        domain: A domain name to assess (e.g., "northwindtraders.com")
+
+    Returns:
+        JSON object with the full exposure assessment, or an error message.
+    """
+    request_id = uuid.uuid4().hex[:12]
+    start_time = time.monotonic()
+
+    info = await server_app.resolve_single_for_tool(domain, request_id)
+
+    from recon_tool.exposure import assess_exposure_from_info
+    from recon_tool.formatter import format_exposure_dict
+
+    assessment = assess_exposure_from_info(info)
+
+    log_structured(
+        logging.INFO,
+        "exposure_assessed",
+        request_id=request_id,
+        domain=domain,
+        posture_score=assessment.posture_score,
+        elapsed_s=round(time.monotonic() - start_time, 2),
+    )
+
+    return format_exposure_dict(assessment)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def find_hardening_gaps(domain: str) -> dict[str, Any]:
+    """Identify hardening opportunities in a domain's public configuration.
+
+    For defensive security posture assessment only.
+
+    Returns a JSON array of hardening gaps, each with category, severity,
+    observation, suggested action, supporting evidence references, and an
+    ``absence_confirmable`` flag: true when the gap is a confirmed public-records
+    fact (a declarative record is absent or observed-weak), false when it rests
+    on not observing a hideable control and so may be a false positive. Report a
+    false-flagged gap as "not observed", not as a confirmed gap.
+
+    Args:
+        domain: A domain name to analyze (e.g., "northwindtraders.com")
+
+    Returns:
+        JSON object with the gap report, or an error message.
+    """
+    request_id = uuid.uuid4().hex[:12]
+    start_time = time.monotonic()
+
+    info = await server_app.resolve_single_for_tool(domain, request_id)
+
+    from recon_tool.exposure import find_gaps_from_info
+    from recon_tool.formatter import format_gaps_dict
+
+    report = find_gaps_from_info(info)
+
+    log_structured(
+        logging.INFO,
+        "gaps_analyzed",
+        request_id=request_id,
+        domain=domain,
+        gaps=len(report.gaps),
+        elapsed_s=round(time.monotonic() - start_time, 2),
+    )
+
+    return format_gaps_dict(report)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def compare_postures(domain_a: str, domain_b: str) -> dict[str, Any]:
+    """Compare the security postures of two domains side by side.
+
+    For defensive security posture assessment only.
+
+    Returns a structured comparison with side-by-side metrics,
+    control differences, and relative posture assessment.
+
+    Args:
+        domain_a: First domain to compare (e.g., "northwindtraders.com")
+        domain_b: Second domain to compare (e.g., "contoso.com")
+
+    Returns:
+        A structured posture comparison. Raises ToolError (isError) when either
+        domain is invalid or cannot be resolved (both must resolve to compare).
+    """
+    request_id = uuid.uuid4().hex[:12]
+    start_time = time.monotonic()
+
+    info_a = await server_app.resolve_single_for_tool(domain_a, request_id)
+    info_b = await server_app.resolve_single_for_tool(domain_b, request_id)
+
+    from recon_tool.exposure import compare_postures_from_infos
+    from recon_tool.formatter import format_comparison_dict
+
+    comparison = compare_postures_from_infos(info_a, info_b)
+
+    log_structured(
+        logging.INFO,
+        "postures_compared",
+        request_id=request_id,
+        domain_a=domain_a,
+        domain_b=domain_b,
+        elapsed_s=round(time.monotonic() - start_time, 2),
+    )
+
+    return format_comparison_dict(comparison)
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def test_hypothesis(domain: str, hypothesis: str) -> dict[str, Any]:
+    """Test a theory about a domain against signals and evidence.
+
+    Proposes a theory (e.g., "this organization appears to be mid-migration
+    to Entra ID") and receives a structured assessment of likelihood,
+    supporting evidence, contradicting evidence, and what is missing.
+
+    Operates purely on cached pipeline data — zero additional network calls
+    beyond the initial domain resolution.
+
+    Args:
+        domain: A domain name to test against (e.g., "northwindtraders.com").
+        hypothesis: A theory to evaluate (e.g., "mid-migration to cloud identity").
+
+    Returns:
+        JSON object with likelihood, supporting_signals, contradicting_signals,
+        missing_evidence, and confidence.
+    """
+    # Bound the free-text hypothesis so a multi-megabyte argument cannot
+    # multiply the per-signal substring scan cost.
+    hypothesis = hypothesis[:4000]
+    resolved = await server_app.resolve_or_cache(domain)
+    if isinstance(resolved, str):
+        raise ToolError(resolved)
+
+    info, _results = resolved
+
+    from recon_tool.models import SignalContext
+    from recon_tool.signals import evaluate_signals, load_signals
+
+    context = SignalContext(
+        detected_slugs=frozenset(info.slugs),
+        dmarc_policy=info.dmarc_policy,
+        auth_type=info.auth_type,
+        email_security_score=sum(
+            1
+            for svc in info.services
+            if svc
+            in {
+                "DMARC",
+                "DKIM (Exchange Online)",
+                "DKIM",
+                "SPF: strict (-all)",
+                "MTA-STS",
+                "BIMI",
+            }
+        ),
+    )
+    signal_matches = evaluate_signals(context)
+    all_signals = load_signals()
+    fired_names = {m.name for m in signal_matches}
+
+    # Map hypothesis to relevant categories via keyword matching
+    hyp_lower = hypothesis.lower()
+    relevant_categories: set[str] = set()
+    for cat, keywords in _HYPOTHESIS_KEYWORDS.items():
+        if any(kw in hyp_lower for kw in keywords):
+            relevant_categories.add(cat)
+
+    # Find supporting and contradicting signals
+    supporting: list[str] = []
+    contradicting: list[str] = []
+    missing: list[str] = []
+
+    for sig in all_signals:
+        # Check if signal is relevant to hypothesis via keyword matching
+        sig_text = f"{sig.name} {sig.description} {sig.category} {sig.explain}".lower()
+        is_relevant = any(kw in sig_text for kw in hyp_lower.split()) or any(
+            any(kw in sig_text for kw in keywords)
+            for cat, keywords in _HYPOTHESIS_KEYWORDS.items()
+            if cat in relevant_categories
+        )
+        if not is_relevant:
+            continue
+
+        if sig.name in fired_names:
+            supporting.append(sig.name)
+        else:
+            # Check if it contradicts or is just missing
+            has_contradiction_slugs = sig.contradicts and any(
+                slug in context.detected_slugs for slug in sig.contradicts
+            )
+            if has_contradiction_slugs:
+                contradicting.append(sig.name)
+            else:
+                missing.append(
+                    f"Signal '{sig.name}' did not fire — "
+                    f"detecting additional slugs ({', '.join(sig.candidates[:3])}) "
+                    f"could strengthen or weaken this hypothesis"
+                    if sig.candidates
+                    else f"Signal '{sig.name}' did not fire — metadata conditions not met"
+                )
+
+    # Determine likelihood
+    if supporting and not contradicting:
+        if len(supporting) >= 3:
+            likelihood = "strong"
+        elif len(supporting) >= 1:
+            likelihood = "moderate"
+        else:
+            likelihood = "weak"
+    elif contradicting and not supporting:
+        likelihood = "unsupported"
+    elif supporting and contradicting:
+        likelihood = "moderate" if len(supporting) > len(contradicting) else "weak"
+    else:
+        likelihood = "unsupported"
+
+    # Determine confidence based on data completeness
+    if info.degraded_sources:
+        confidence = "low"
+    elif len(info.sources) >= 3:
+        confidence = "high"
+    else:
+        confidence = "medium"
+
+    result: dict[str, object] = {
+        "domain": domain,
+        "hypothesis": hypothesis,
+        "likelihood": likelihood,
+        "supporting_signals": supporting,
+        "contradicting_signals": contradicting,
+        "missing_evidence": missing,
+        "confidence": confidence,
+        "disclaimer": (
+            "This assessment is based on publicly observable indicators and "
+            "cached pipeline data. Indicators suggest possible patterns but "
+            "do not confirm organizational intent or internal decisions."
+        ),
+    }
+    return result
+
+
+@dataclass
+class _SimState:
+    """Mutable simulation state for ``simulate_hardening`` fix application."""
+
+    services: set[str]
+    slugs: set[str]
+    dmarc: str | None
+    mta_sts: str | None
+
+
+def _apply_dmarc_fix(fix: str, state: _SimState) -> str | None:
+    """Apply a DMARC fix; return the applied message, or None when it is a no-op."""
+    if "reject" in fix:
+        state.dmarc = "reject"
+        return "DMARC policy set to reject"
+    if "quarantine" in fix:
+        if state.dmarc != "reject":
+            state.dmarc = "quarantine"
+            return "DMARC policy set to quarantine"
+        return None
+    if state.dmarc is None or state.dmarc == "none":
+        state.dmarc = "reject"
+        return "DMARC policy set to reject"
+    return None
+
+
+def _apply_mta_sts_fix(fix: str, state: _SimState) -> str | None:
+    """Apply an MTA-STS fix; return the applied message, or None when already set.
+
+    Mirrors the original: an explicit "enforce" always applies, while a bare
+    "mta-sts" applies only when no mode is currently set.
+    """
+    if "enforce" in fix or state.mta_sts is None:
+        state.mta_sts = "enforce"
+        state.services.add("MTA-STS")
+        state.slugs.add("mta-sts-enforce")
+        return "MTA-STS set to enforce"
+    return None
+
+
+def _apply_one_fix(fix: str, state: _SimState) -> str | None:
+    """Apply a single lowercased fix to the simulation state.
+
+    Returns the applied message, or None when the fix is a recognised no-op.
+    Keyword precedence mirrors the original elif chain: the first match wins.
+    """
+    if "dmarc" in fix:
+        return _apply_dmarc_fix(fix, state)
+    if "dkim" in fix:
+        state.services.add("DKIM")
+        state.slugs.add("dkim")
+        return "DKIM configured"
+    if "mta-sts" in fix:
+        return _apply_mta_sts_fix(fix, state)
+    if "bimi" in fix:
+        state.services.add("BIMI")
+        state.slugs.add("bimi")
+        return "BIMI configured"
+    if "spf" in fix and ("strict" in fix or "hardfail" in fix or "-all" in fix):
+        state.services.add("SPF: strict (-all)")
+        return "SPF set to strict (-all)"
+    if "tls-rpt" in fix or "tlsrpt" in fix:
+        state.slugs.add("tls-rpt")
+        return "TLS-RPT configured"
+    if "caa" in fix:
+        state.slugs.add("letsencrypt")
+        return "CAA records configured"
+    # Note the unrecognized fix, but sanitize and bound the caller-supplied
+    # string so it cannot inject control sequences into the response.
+    return f"Unrecognized fix: {strip_control_chars(fix)[:80]}"
+
+
+def _simulate_fixes(fixes_lower: list[str], info: TenantInfo) -> tuple[list[str], _SimState]:
+    """Apply each fix to a fresh simulation state seeded from ``info``."""
+    state = _SimState(
+        services=set(info.services),
+        slugs=set(info.slugs),
+        dmarc=info.dmarc_policy,
+        mta_sts=info.mta_sts_mode,
+    )
+    applied: list[str] = []
+    for fix in fixes_lower:
+        message = _apply_one_fix(fix, state)
+        if message is not None:
+            applied.append(message)
+    return applied, state
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
+)
+async def simulate_hardening(domain: str, fixes: list[str]) -> dict[str, Any]:
+    """What-if simulation: re-compute exposure score with hypothetical fixes.
+
+    Accepts a list of fix descriptions (e.g., "DMARC reject", "MTA-STS enforce")
+    and simulates what the posture score would be if those fixes were applied.
+
+    Operates purely on cached pipeline data — zero additional network calls
+    beyond the initial domain resolution.
+
+    Args:
+        domain: A domain name to simulate against (e.g., "northwindtraders.com").
+        fixes: Array of fix descriptions or gap slugs to hypothetically apply.
+
+    Returns:
+        JSON object with current_score, simulated_score, score_delta,
+        applied_fixes, and remaining_gaps.
+    """
+    # Bound the fix list so a multi-million-element argument cannot drive
+    # O(n) work and a proportionally huge response.
+    fixes = fixes[:100]
+    resolved = await server_app.resolve_or_cache(domain)
+    if isinstance(resolved, str):
+        raise ToolError(resolved)
+
+    info, _results = resolved
+
+    from recon_tool.exposure import assess_exposure_from_info, find_gaps_from_info
+
+    current_assessment = assess_exposure_from_info(info)
+    current_score = current_assessment.posture_score
+
+    # Parse fixes and simulate by mutating a copy of TenantInfo fields
+    applied, state = _simulate_fixes([f.lower() for f in fixes], info)
+
+    # Build simulated TenantInfo
+    sim_info = TenantInfo(
+        tenant_id=info.tenant_id,
+        display_name=info.display_name,
+        default_domain=info.default_domain,
+        queried_domain=info.queried_domain,
+        confidence=info.confidence,
+        region=info.region,
+        sources=info.sources,
+        services=tuple(sorted(state.services)),
+        slugs=tuple(sorted(state.slugs)),
+        auth_type=info.auth_type,
+        dmarc_policy=state.dmarc,
+        domain_count=info.domain_count,
+        tenant_domains=info.tenant_domains,
+        related_domains=info.related_domains,
+        insights=info.insights,
+        degraded_sources=info.degraded_sources,
+        cert_summary=info.cert_summary,
+        evidence=info.evidence,
+        evidence_confidence=info.evidence_confidence,
+        inference_confidence=info.inference_confidence,
+        detection_scores=info.detection_scores,
+        bimi_identity=info.bimi_identity,
+        site_verification_tokens=info.site_verification_tokens,
+        mta_sts_mode=state.mta_sts,
+        google_auth_type=info.google_auth_type,
+        google_idp_name=info.google_idp_name,
+        merge_conflicts=info.merge_conflicts,
+    )
+
+    sim_assessment = assess_exposure_from_info(sim_info)
+    simulated_score = sim_assessment.posture_score
+
+    # Compute remaining gaps on simulated info
+    sim_gap_report = find_gaps_from_info(sim_info)
+    remaining_gaps = [
+        {
+            "category": gap.category,
+            "severity": gap.severity,
+            "observation": gap.observation,
+            "recommendation": gap.recommendation,
+        }
+        for gap in sim_gap_report.gaps
+    ]
+
+    result: dict[str, object] = {
+        "domain": domain,
+        "current_score": current_score,
+        "simulated_score": simulated_score,
+        "score_delta": simulated_score - current_score,
+        "applied_fixes": applied,
+        "remaining_gaps": remaining_gaps,
+        "disclaimer": (
+            "This simulation is based on publicly observable configuration data. "
+            "Consider these results as directional guidance for prioritizing "
+            "hardening actions, not as a guarantee of security posture improvement."
+        ),
+    }
+    return result
