@@ -14,13 +14,14 @@ import json as json_mod
 import logging
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
+from recon_tool import server_runtime as _server_runtime
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_VALIDATION
 from recon_tool.formatter import (
     detect_provider,
@@ -44,6 +45,28 @@ if not logger.handlers:
     logger.setLevel(logging.INFO)
 
 _VALID_FORMATS = frozenset({"text", "json", "markdown"})
+
+# Re-export facade for the server runtime state (see server_runtime.py).
+# Preserves the recon_tool.server import path for the tools and tests.
+CACHE_TTL = _server_runtime.CACHE_TTL
+CACHE_MAX_SIZE = _server_runtime.CACHE_MAX_SIZE
+RATE_LIMIT_WINDOW = _server_runtime.RATE_LIMIT_WINDOW
+_RATE_LIMIT_MAX_SIZE = _server_runtime.RATE_LIMIT_MAX_SIZE
+_cache = _server_runtime.cache
+_rate_limit = _server_runtime.rate_limit
+_cache_evict_expired = _server_runtime.cache_evict_expired
+_cache_get = _server_runtime.cache_get
+_cache_set = _server_runtime.cache_set
+_cache_clear = _server_runtime.cache_clear
+_cache_refresh_info = _server_runtime.cache_refresh_info
+_remerge_cached_infos = _server_runtime.remerge_cached_infos
+_rate_limit_evict_expired = _server_runtime.rate_limit_evict_expired
+_rate_limit_check = _server_runtime.rate_limit_check
+_rate_limit_record = _server_runtime.rate_limit_record
+_rate_limit_try_acquire = _server_runtime.rate_limit_try_acquire
+_rate_limit_release = _server_runtime.rate_limit_release
+_rate_limit_clear = _server_runtime.rate_limit_clear
+_log_structured = _server_runtime.log_structured
 
 # Server Instructions — injected into the model's context each session so the
 # agent knows how to compose recon's tools without requiring the user to
@@ -195,181 +218,11 @@ mcp = FastMCP("recon-tool", instructions=_SERVER_INSTRUCTIONS)
 # together in one typed object makes the bounded-size and lifetime invariants
 # easier to reason about and test.
 
-CACHE_TTL = 120.0  # seconds
-CACHE_MAX_SIZE = 1000
-
-_CacheEntry = tuple[float, TenantInfo, tuple[SourceResult, ...]]
-
-
-@dataclass(slots=True)
-class _ServerRuntimeState:
-    cache: dict[str, _CacheEntry] = field(default_factory=dict)
-    rate_limit: dict[str, float] = field(default_factory=dict)
-
-    def cache_evict_expired(self) -> None:
-        now = time.monotonic()
-        expired = [k for k, (ts, _, _) in self.cache.items() if now - ts > CACHE_TTL]
-        for key in expired:
-            del self.cache[key]
-
-    def cache_get(self, domain: str) -> tuple[TenantInfo, tuple[SourceResult, ...]] | None:
-        entry = self.cache.get(domain)
-        if entry is None:
-            return None
-        ts, info, results = entry
-        if time.monotonic() - ts > CACHE_TTL:
-            del self.cache[domain]
-            return None
-        return info, results
-
-    def cache_set(self, domain: str, info: TenantInfo, results: list[SourceResult]) -> None:
-        if len(self.cache) >= CACHE_MAX_SIZE:
-            self.cache_evict_expired()
-        if len(self.cache) >= CACHE_MAX_SIZE:
-            oldest_key = min(self.cache.items(), key=lambda item: item[1][0])[0]
-            del self.cache[oldest_key]
-        self.cache[domain] = (time.monotonic(), info, tuple(results))
-
-    def cache_clear(self) -> None:
-        self.cache.clear()
-
-    def cache_refresh_info(
-        self,
-        domain: str,
-        info: TenantInfo,
-        results: tuple[SourceResult, ...],
-    ) -> None:
-        self.cache[domain] = (time.monotonic(), info, results)
-
-    def remerge_cached_infos(self) -> None:
-        from recon_tool.merger import merge_results
-
-        for domain, (_ts, _info, results) in list(self.cache.items()):
-            try:
-                refreshed = merge_results(list(results), domain)
-            except Exception:
-                logger.exception("Failed to refresh cached TenantInfo for %s", domain)
-                self.cache.pop(domain, None)
-                continue
-            self.cache_refresh_info(domain, refreshed, results)
-
-    def rate_limit_evict_expired(self) -> None:
-        now = time.monotonic()
-        expired = [k for k, ts in self.rate_limit.items() if now - ts >= RATE_LIMIT_WINDOW]
-        for key in expired:
-            del self.rate_limit[key]
-
-    def rate_limit_check(self, domain: str) -> bool:
-        now = time.monotonic()
-        last = self.rate_limit.get(domain, 0.0)
-        return now - last >= RATE_LIMIT_WINDOW
-
-    def rate_limit_record(self, domain: str) -> None:
-        if len(self.rate_limit) >= _RATE_LIMIT_MAX_SIZE:
-            self.rate_limit_evict_expired()
-        if len(self.rate_limit) >= _RATE_LIMIT_MAX_SIZE:
-            oldest_key = min(self.rate_limit.items(), key=lambda item: item[1])[0]
-            del self.rate_limit[oldest_key]
-        self.rate_limit[domain] = time.monotonic()
-
-    def rate_limit_try_acquire(self, domain: str) -> bool:
-        now = time.monotonic()
-        last = self.rate_limit.get(domain)
-        if last is not None and now - last < RATE_LIMIT_WINDOW:
-            return False
-        if len(self.rate_limit) >= _RATE_LIMIT_MAX_SIZE and domain not in self.rate_limit:
-            self.rate_limit_evict_expired()
-        if len(self.rate_limit) >= _RATE_LIMIT_MAX_SIZE and domain not in self.rate_limit:
-            oldest_key = min(self.rate_limit.items(), key=lambda item: item[1])[0]
-            del self.rate_limit[oldest_key]
-        self.rate_limit[domain] = now
-        return True
-
-    def rate_limit_release(self, domain: str) -> None:
-        self.rate_limit.pop(domain, None)
-
-    def rate_limit_clear(self) -> None:
-        self.rate_limit.clear()
-
-
-_STATE = _ServerRuntimeState()
-_cache = _STATE.cache
-
-
-def _cache_evict_expired() -> None:  # pyright: ignore[reportUnusedFunction]
-    _STATE.cache_evict_expired()
-
-
-def _cache_get(domain: str) -> tuple[TenantInfo, tuple[SourceResult, ...]] | None:
-    return _STATE.cache_get(domain)
-
-
-def _cache_set(domain: str, info: TenantInfo, results: list[SourceResult]) -> None:
-    _STATE.cache_set(domain, info, results)
-
-
-def _cache_clear() -> None:
-    _STATE.cache_clear()
-
-
-def _cache_refresh_info(domain: str, info: TenantInfo, results: tuple[SourceResult, ...]) -> None:
-    _STATE.cache_refresh_info(domain, info, results)
-
-
-def _remerge_cached_infos() -> None:
-    _STATE.remerge_cached_infos()
-
 
 # ── Bounded per-domain rate limiter ─────────────────────────────────────
 # Prevents abuse by limiting how often the same domain can be looked up
 # (cache misses only). Uses a simple timestamp-based approach with periodic
 # eviction to prevent unbounded memory growth.
-
-RATE_LIMIT_WINDOW = 5.0  # seconds between lookups for the same domain
-_RATE_LIMIT_MAX_SIZE = 5000
-
-_rate_limit = _STATE.rate_limit
-
-
-def _rate_limit_evict_expired() -> None:  # pyright: ignore[reportUnusedFunction]
-    _STATE.rate_limit_evict_expired()
-
-
-def _rate_limit_check(domain: str) -> bool:  # pyright: ignore[reportUnusedFunction]
-    """Return True if the domain lookup should be allowed.
-
-    Does NOT record the timestamp — call _rate_limit_record() after a
-    successful lookup so transient failures don't block retries.
-    """
-    return _STATE.rate_limit_check(domain)
-
-
-def _rate_limit_record(domain: str) -> None:  # pyright: ignore[reportUnusedFunction]
-    _STATE.rate_limit_record(domain)
-
-
-def _rate_limit_try_acquire(domain: str) -> bool:
-    return _STATE.rate_limit_try_acquire(domain)
-
-
-def _rate_limit_release(domain: str) -> None:
-    _STATE.rate_limit_release(domain)
-
-
-def _rate_limit_clear() -> None:  # pyright: ignore[reportUnusedFunction]
-    _STATE.rate_limit_clear()
-
-
-def _log_structured(level: int, msg: str, **fields: object) -> None:
-    """Emit a structured log entry as JSON for machine-parseable logging.
-
-    Falls back to standard logging format when JSON serialization fails.
-    """
-    entry = {"msg": msg, **fields}
-    try:
-        logger.log(level, json_mod.dumps(entry))
-    except (TypeError, ValueError):
-        logger.log(level, msg, extra=fields)
 
 
 # ── MCP resources ────────────────────────────────────────────────────
