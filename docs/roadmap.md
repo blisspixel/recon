@@ -77,10 +77,15 @@ This file is forward-looking. Shipped work belongs in
 > Typer sub-apps split into sibling modules; and the two modules just over the
 > cap are now under it — `exposure.py` (1130 → 983, result dataclasses to
 > `exposure_models.py`) and `merger.py` (1131 → 958, slug tables to
-> `merger_tables.py`). What remains is the four large modules (`server.py`,
-> `cli.py`'s command core, `sources/dns.py`, `bayesian.py`), sequenced as
-> focused operations. Every split is golden-byte-identical and CI-gated by the
-> file-size ratchet.
+> `merger_tables.py`). `sources/dns.py` is now fully decomposed and under the
+> cap (2524 → 840) across four extracted leaves — `dns_tables` (static catalogs
+> + pure parsers), `dns_base` (resolver primitives + `DetectionCtx`),
+> `dns_email` (SPF/MX/DKIM/DMARC/BIMI/MTA-STS detectors), and `dns_infra`
+> (M365/GWS CNAME, NS/CNAME/hosting/CAA/SRV, CT fallback) — leaving `dns.py`
+> as the `DNSSource` orchestrator plus its surface-classification pipeline.
+> What remains is the three large modules (`server.py`, `cli.py`'s command
+> core, `bayesian.py`), sequenced as focused operations. Every split is
+> golden-byte-identical and CI-gated by the file-size ratchet.
 >
 > What is otherwise open is operator-paced or standing: the maintainer-local
 > runs of the calibration harnesses (held-out residual, tenancy corroboration,
@@ -171,8 +176,10 @@ and the `validation/` memos for rationale. What remains, in logical order:
    `cli.py` (done for its four Typer sub-apps, 3941 to ~2830; the main-app command
    core remains), `exposure.py` (done — result dataclasses to `exposure_models.py`,
    1130 to 983), and `merger.py` (done — slug tables to `merger_tables.py`, 1131 to
-   958); then the four large modules `bayesian.py`, `server.py`, `cli.py`'s command
-   core, and `sources/dns.py`. *Design:* the "Module decomposition (god-file split)"
+   958), and `sources/dns.py` (done — 2524 to 840 across `dns_tables`, `dns_base`,
+   `dns_email`, `dns_infra`); then the three large modules `bayesian.py`,
+   `server.py`, and `cli.py`'s command
+   core. *Design:* the "Module decomposition (god-file split)"
    section below, [engineering-practices.md](engineering-practices.md), and
    [adr/](adr/).
 2. **Calibration corpus runs** (operator-paced; maintainer-local). The harnesses
@@ -922,9 +929,9 @@ regrow and new modules cap at 1000 lines. The work is to split each into a
 cohesive subpackage while preserving the public import path and keeping the
 golden/snapshot tests byte-identical.
 
-The two remaining over-cap modules in the 1000-1130 band are now under the cap;
-the open work is the four genuinely large modules (`server.py`, `cli.py`'s
-command core, `sources/dns.py`, `bayesian.py`), which all share the harder
+The two over-cap modules in the 1000-1130 band and `sources/dns.py` are now
+under the cap; the open work is the three genuinely large modules (`server.py`,
+`cli.py`'s command core, `bayesian.py`), which all share the harder
 trait — internal names that must be publicized with broad reference churn, and
 in `server.py`/`cli.py` a shared FastMCP/Typer instance that forces the
 app-sharing variant. Those are sequenced as focused operations, not quick lifts:
@@ -961,7 +968,7 @@ app-sharing variant. Those are sequenced as focused operations, not quick lifts:
    `doctor` / `update`) plus `run()`; extracting those `@app.command` groups needs
    the app-sharing variant of the pattern (the command module imports the shared
    `app`), a heavier change with more blast radius, so it is sequenced after
-   `server.py` / `dns.py`.
+   `server.py`.
 3. `exposure.py` → **Done (1130 → 983):** the frozen result-type family
    (`EvidenceReference` / `EmailPosture` / `IdentityPosture` / `ExposureAssessment`
    / `GapReport` / `PostureComparison` and kin) split to `exposure_models.py`, a
@@ -979,7 +986,16 @@ app-sharing variant. Those are sequenced as focused operations, not quick lifts:
 6. `server.py` → group the MCP tools by domain (lookup/posture/graph/introspection)
    into sibling modules or a `server/` package, the same way (the tools share the
    FastMCP instance, so it follows the app-sharing variant).
-7. `sources/dns.py` → split by record family / parser.
+7. `sources/dns.py` → **Done (2524 → 840, four leaves):** the static catalogs +
+   pure parsers → `dns_tables.py`; the resolver primitives + `DetectionCtx` →
+   `dns_base.py` (the `safe_resolve` seam tests monkeypatch, so detectors call it
+   qualified and patches live in one place); the email-channel detectors →
+   `dns_email.py`; and the infra/hosting/CT detectors → `dns_infra.py`. `dns.py`
+   keeps the `DNSSource` orchestrator and its surface-classification pipeline and
+   re-exports each moved `detect_*` under its `_NAME`. Reused the formatter
+   constraints (extract the shared leaf first; cross-module names public) and
+   added one: the resolver/provider/fingerprint-getter monkeypatch seam moves
+   with the code, so test patches retarget to the defining module.
 
 Each split is its own commit: move code, re-export from the original path so
 imports and the locked surface are unchanged, run the full gate + golden tests,
