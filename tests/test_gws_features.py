@@ -212,7 +212,7 @@ class TestParseBimiVmc:
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("recon_tool.sources.dns._http_client", return_value=mock_client),
+            patch("recon_tool.sources.dns_email._http_client", return_value=mock_client),
             patch.dict("sys.modules", {"cryptography": None, "cryptography.x509": None}),
         ):
             # VMC fetch is opt-in (--direct-probes); enable it for this test.
@@ -259,7 +259,7 @@ class TestParseBimiVmc:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns._http_client", return_value=mock_client):
+        with patch("recon_tool.sources.dns_email._http_client", return_value=mock_client):
             result = await DNSSource().lookup("example.com")
 
         assert "BIMI" in result.detected_services
@@ -288,7 +288,7 @@ class TestFetchMtaStsPolicy:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns._http_client", return_value=mock_client):
+        with patch("recon_tool.sources.dns_email._http_client", return_value=mock_client):
             result = await DNSSource().lookup("example.com")
 
         assert "MTA-STS" in result.detected_services
@@ -315,7 +315,7 @@ class TestFetchMtaStsPolicy:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns._http_client", return_value=mock_client):
+        with patch("recon_tool.sources.dns_email._http_client", return_value=mock_client):
             result = await DNSSource().lookup("example.com")
 
         assert result.mta_sts_mode == "testing"
@@ -335,7 +335,7 @@ class TestFetchMtaStsPolicy:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("recon_tool.sources.dns._http_client", return_value=mock_client):
+        with patch("recon_tool.sources.dns_email._http_client", return_value=mock_client):
             result = await DNSSource().lookup("example.com")
 
         assert "MTA-STS" in result.detected_services

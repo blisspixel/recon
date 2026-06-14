@@ -25,7 +25,8 @@ from recon_tool.fingerprints import get_dmarc_rua_patterns, load_fingerprints, r
 from recon_tool.models import ConfidenceLevel, SignalContext, TenantInfo
 from recon_tool.posture import analyze_posture, reload_posture
 from recon_tool.signals import evaluate_signals, load_signals, reload_signals
-from recon_tool.sources.dns import DNSSource, _detect_email_security, _DetectionCtx, _extract_dmarc_rua
+from recon_tool.sources.dns import DNSSource, _detect_email_security, _DetectionCtx
+from recon_tool.sources.dns_email import extract_dmarc_rua as _extract_dmarc_rua
 
 # ── Helpers ───────────────────────────────────────────────────────────
 

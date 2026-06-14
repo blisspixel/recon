@@ -29,7 +29,7 @@ from hypothesis import strategies as st
 from recon_tool.fingerprints import match_txt
 from recon_tool.models import SourceResult
 from recon_tool.sources import dns as dns_mod
-from recon_tool.sources import dns_base
+from recon_tool.sources import dns_base, dns_email
 from recon_tool.sources.azure_metadata import AzureMetadataSource
 from recon_tool.sources.cert_providers import (
     _MAX_BURSTS,
@@ -213,7 +213,7 @@ class TestDnsParserBounds:
 
         ctx = dns_mod._DetectionCtx()
         with patch.object(dns_base, "safe_resolve", _fake_resolve):
-            await dns_mod._follow_spf_redirect(ctx, "v=spf1 redirect=_spf.fabrikam.com", depth=0, max_depth=3)
+            await dns_email._follow_spf_redirect(ctx, "v=spf1 redirect=_spf.fabrikam.com", depth=0, max_depth=3)
         # depth 0 starts the walk; at most max_depth resolver queries follow.
         assert len(calls) <= 3
 
@@ -224,7 +224,7 @@ class TestDnsParserBounds:
         record = f"v=DMARC1; p=reject; rua={addrs}"
         ctx = dns_mod._DetectionCtx()
         # Must complete and not raise; the rua matcher is linear in the record.
-        dns_mod._extract_dmarc_rua(ctx, record)
+        dns_email.extract_dmarc_rua(ctx, record)
 
     @pytest.mark.asyncio
     async def test_subdomain_txt_oversized_is_skipped(self) -> None:
