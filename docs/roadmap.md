@@ -86,10 +86,16 @@ This file is forward-looking. Shipped work belongs in
 > `bayesian.py` is likewise decomposed and under the cap (1411 → 926): the
 > result dataclasses moved to `bayesian_models.py` and the YAML loaders to
 > `bayesian_loader.py`, leaving the inference engine in place so the
-> mutation-gated surface stays byte-identical. What remains is the two large
-> modules (`server.py`, `cli.py`'s command core), which need the app-sharing
-> variant (a shared FastMCP / Typer instance), sequenced as focused operations.
-> Every split is golden-byte-identical and CI-gated by the file-size ratchet.
+> mutation-gated surface stays byte-identical. `server.py` is likewise
+> decomposed and under the cap (2859 → 406) via the app-sharing variant: the
+> shared FastMCP instance and resolve seam moved to `server_app.py`, the runtime
+> state to `server_runtime.py`, and the MCP tools into per-domain modules
+> (`server_ephemeral`, `server_lookup`, `server_posture`, `server_graph`,
+> `server_introspection`), all registering on the shared instance. What remains
+> is the one large module, `cli.py`'s command core, which needs the same
+> app-sharing variant for the shared Typer instance, sequenced as a focused
+> operation. Every split is golden-byte-identical and CI-gated by the file-size
+> ratchet.
 >
 > What is otherwise open is operator-paced or standing: the maintainer-local
 > runs of the calibration harnesses (held-out residual, tenancy corroboration,
@@ -934,12 +940,12 @@ regrow and new modules cap at 1000 lines. The work is to split each into a
 cohesive subpackage while preserving the public import path and keeping the
 golden/snapshot tests byte-identical.
 
-The two over-cap modules in the 1000-1130 band, `sources/dns.py`, and
-`bayesian.py` are now under the cap; the open work is the two genuinely large
-modules (`server.py`, `cli.py`'s command core), which share the harder
-trait — internal names that must be publicized with broad reference churn, and
-a shared FastMCP/Typer instance that forces the
-app-sharing variant. Those are sequenced as focused operations, not quick lifts:
+The two over-cap modules in the 1000-1130 band, `sources/dns.py`,
+`bayesian.py`, and `server.py` are now under the cap; the open work is the one
+genuinely large module, `cli.py`'s command core, which shares the harder
+trait — internal names that must be publicized with broad reference churn, and a
+shared Typer instance that forces the app-sharing variant. It is sequenced as a
+focused operation, not a quick lift:
 
 1. `formatter.py` → split by render concern. **Done (4413 → ~2160, five
    modules):** exposure/gaps rendering → `formatter_exposure.py`; the shared
@@ -972,8 +978,10 @@ app-sharing variant. Those are sequenced as focused operations, not quick lifts:
    is the main-app command core (`lookup` / `batch` / `delta` / `discover` /
    `doctor` / `update`) plus `run()`; extracting those `@app.command` groups needs
    the app-sharing variant of the pattern (the command module imports the shared
-   `app`), a heavier change with more blast radius, so it is sequenced after
-   `server.py`.
+   `app`), a heavier change with more blast radius. With `server.py` now done,
+   this is the last remaining god-file and the next decomposition target; the
+   server split's seam lessons (route shared calls through one place, retarget
+   the corresponding test monkeypatches) carry directly over.
 3. `exposure.py` → **Done (1130 → 983):** the frozen result-type family
    (`EvidenceReference` / `EmailPosture` / `IdentityPosture` / `ExposureAssessment`
    / `GapReport` / `PostureComparison` and kin) split to `exposure_models.py`, a
@@ -995,9 +1003,20 @@ app-sharing variant. Those are sequenced as focused operations, not quick lifts:
    drift / contract harnesses are unchanged. The loaders and dataclasses keep
    their unit-test coverage but sit outside the inference-core mutation surface by
    design (see `validation/mutation-gate.md`).
-6. `server.py` → group the MCP tools by domain (lookup/posture/graph/introspection)
-   into sibling modules or a `server/` package, the same way (the tools share the
-   FastMCP instance, so it follows the app-sharing variant).
+6. `server.py` → **Done (2859 → 406, app-sharing variant):** the shared FastMCP
+   instance, server instructions, and the validate/cache/rate-limit/resolve seam
+   moved to `server_app.py`; the in-process runtime state (TTL cache, rate
+   limiter, structured logging) to `server_runtime.py`; and the MCP tools grouped
+   by domain into `server_ephemeral`, `server_lookup`, `server_posture`,
+   `server_graph`, and `server_introspection` (the last also holds the four
+   catalog resources). Each tool module imports `mcp` from `server_app` and
+   registers on it; `server.py` imports them for the registration side-effect,
+   keeps the prompt and the `main()` entry point, and re-exports every tool plus
+   the runtime facade for the test surface. The one new lesson over the dns split:
+   every resolve call (helpers and the inline tool resolutions) routes through
+   `server_app.resolve_tenant` so the network seam is patchable from one place,
+   and the resolve/cache monkeypatch targets retarget to `server_app` /
+   `server_runtime` accordingly.
 7. `sources/dns.py` → **Done (2524 → 840, four leaves):** the static catalogs +
    pure parsers → `dns_tables.py`; the resolver primitives + `DetectionCtx` →
    `dns_base.py` (the `safe_resolve` seam tests monkeypatch, so detectors call it
