@@ -58,7 +58,7 @@ from typing import Any
 import pytest
 
 from recon_tool.sources import dns as dns_mod
-from recon_tool.sources import dns_base
+from recon_tool.sources import dns_base, dns_email
 
 # ── Layer 1: suffix denylist ───────────────────────────────────────
 
@@ -254,7 +254,7 @@ class TestSpfRedirectBlocksPrivateTargets:
 
         monkeypatch.setattr(dns_base, "safe_resolve", _tracking_resolve)
         ctx = dns_mod._DetectionCtx()
-        await dns_mod._follow_spf_redirect(
+        await dns_email._follow_spf_redirect(
             ctx,
             "v=spf1 redirect=secret.internal.corp",
             depth=0,
@@ -264,7 +264,7 @@ class TestSpfRedirectBlocksPrivateTargets:
         assert queries_made == [], (
             f"SPF redirect chaser must not issue any query for a private-suffix target; queries={queries_made!r}"
         )
-        assert dns_mod.SVC_SPF_STRICT not in ctx.services, (
+        assert dns_email.SVC_SPF_STRICT not in ctx.services, (
             "a rejected internal redirect target must not credit SPF strict"
         )
 
@@ -280,13 +280,13 @@ class TestSpfRedirectBlocksPrivateTargets:
         }
         monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve(plan))
         ctx = dns_mod._DetectionCtx()
-        await dns_mod._follow_spf_redirect(
+        await dns_email._follow_spf_redirect(
             ctx,
             "v=spf1 redirect=_spf.mail.contoso.com",
             depth=0,
             max_depth=3,
         )
-        assert dns_mod.SVC_SPF_STRICT in ctx.services, (
+        assert dns_email.SVC_SPF_STRICT in ctx.services, (
             "a legitimate public redirect target ending in -all must credit SPF strict"
         )
 

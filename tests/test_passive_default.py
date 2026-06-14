@@ -25,6 +25,7 @@ from recon_tool.constants import SVC_BIMI
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, SourceResult, TenantInfo
 from recon_tool.resolver import SourcePool, resolve_tenant
 from recon_tool.sources import dns as dns_mod
+from recon_tool.sources import dns_email
 from recon_tool.sources.google import GoogleSource
 
 _TENANT_UUID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
@@ -109,8 +110,8 @@ async def test_bimi_vmc_not_fetched_by_default() -> None:
     """BIMI presence is recorded from DNS, but the VMC URL is not fetched."""
     ctx = dns_mod._DetectionCtx()  # active_probes defaults to False
     calls: list[str] = []
-    with patch.object(dns_mod, "_http_client", _fake_http_client(_Resp(200, "pem"), calls)):
-        await dns_mod._apply_bimi(ctx, ["v=BIMI1; a=https://logo.example/vmc.pem"], "contoso.com")
+    with patch.object(dns_email, "_http_client", _fake_http_client(_Resp(200, "pem"), calls)):
+        await dns_email._apply_bimi(ctx, ["v=BIMI1; a=https://logo.example/vmc.pem"], "contoso.com")
     assert SVC_BIMI in ctx.services, "BIMI presence must still be detected from the TXT record"
     assert calls == [], "the VMC fetch must not run by default"
     assert ctx.bimi_identity is None
@@ -124,8 +125,8 @@ async def test_bimi_vmc_fetched_when_active() -> None:
     calls: list[str] = []
     # A public-DNS https .pem host (fictional brand) that passes the SSRF guard.
     a_url = "https://bimi.fabrikam.com/vmc.pem"
-    with patch.object(dns_mod, "_http_client", _fake_http_client(_Resp(200, "not-a-real-pem"), calls)):
-        await dns_mod._apply_bimi(ctx, [f"v=BIMI1; a={a_url}"], "contoso.com")
+    with patch.object(dns_email, "_http_client", _fake_http_client(_Resp(200, "not-a-real-pem"), calls)):
+        await dns_email._apply_bimi(ctx, [f"v=BIMI1; a={a_url}"], "contoso.com")
     assert SVC_BIMI in ctx.services
     assert calls == [a_url], "the VMC fetch must run when opted in"
 

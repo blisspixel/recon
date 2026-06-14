@@ -20,33 +20,19 @@ if TYPE_CHECKING:
 
 
 from recon_tool.constants import (
-    SVC_BIMI,
-    SVC_DKIM,
-    SVC_DKIM_EXCHANGE,
-    SVC_DMARC,
     SVC_EXCHANGE_AUTODISCOVER,
     SVC_INTUNE_MDM,
     SVC_MICROSOFT_TEAMS,
-    SVC_MTA_STS,
     SVC_OFFICE_PROPLUS,
-    SVC_SPF_SOFTFAIL,
-    SVC_SPF_STRICT,
 )
 from recon_tool.fingerprints import (
-    filter_shadowed_matches,
     get_caa_patterns,
     get_cname_patterns,
     get_cname_target_rules,
-    get_mx_patterns,
     get_ns_patterns,
-    get_spf_patterns,
     get_subdomain_txt_patterns,
-    get_txt_patterns,
-    match_txt,
 )
-from recon_tool.http import http_client as _http_client
 from recon_tool.models import (
-    BIMIIdentity,
     ChainMotifObservation,
     EvidenceRecord,
     SourceResult,
@@ -59,23 +45,26 @@ from recon_tool.sources.cert_providers import CertIntelProvider, CertSpotterProv
 from recon_tool.sources.dns_base import (  # re-exported: stable import path after the split
     DetectionCtx as _DetectionCtx,
 )
+from recon_tool.sources.dns_email import (
+    detect_dkim as _detect_dkim,
+)
+from recon_tool.sources.dns_email import (
+    detect_email_security as _detect_email_security,
+)
+from recon_tool.sources.dns_email import (
+    detect_mx as _detect_mx,
+)
+from recon_tool.sources.dns_email import (  # re-exported: stable import path after the split
+    detect_txt as _detect_txt,
+)
 from recon_tool.sources.dns_tables import (
     COMMON_SUBDOMAIN_PREFIXES as _COMMON_SUBDOMAIN_PREFIXES,
-)
-from recon_tool.sources.dns_tables import (
-    ESP_DKIM_SELECTORS as _ESP_DKIM_SELECTORS,
-)
-from recon_tool.sources.dns_tables import (
-    GENERIC_DKIM_SELECTORS as _GENERIC_DKIM_SELECTORS,
 )
 from recon_tool.sources.dns_tables import (
     HOSTING_PTR_PATTERNS as _HOSTING_PTR_PATTERNS,
 )
 from recon_tool.sources.dns_tables import (
     IDP_SUBDOMAIN_PREFIXES as _IDP_SUBDOMAIN_PREFIXES,
-)
-from recon_tool.sources.dns_tables import (
-    bimi_vmc_url_is_safe as _bimi_vmc_url_is_safe,
 )
 from recon_tool.sources.dns_tables import (
     classify_chain as _classify_chain,
@@ -87,15 +76,8 @@ from recon_tool.sources.dns_tables import (
     ct_failure_outcome as _ct_failure_outcome,
 )
 from recon_tool.sources.dns_tables import (
-    extract_bimi_vmc_url as _extract_bimi_vmc_url,
-)
-from recon_tool.sources.dns_tables import (
     is_public_dns_name as _is_public_dns_name,
 )
-from recon_tool.sources.dns_tables import (
-    parse_vmc_subject as _parse_vmc_subject,
-)
-from recon_tool.validator import strip_control_chars
 
 logger = logging.getLogger("recon")
 
@@ -122,233 +104,6 @@ _MAX_CNAME_MATCH_LEN = 255
 # Each function handles one DNS record type. All are async and operate
 # on the shared _DetectionCtx. They are gathered concurrently in
 # _detect_services for maximum throughput.
-
-
-async def _detect_txt(ctx: _DetectionCtx, domain: str) -> None:
-    """Scan TXT records for service fingerprints and SPF analysis."""
-    txt_patterns = get_txt_patterns()
-    spf_patterns = get_spf_patterns()
-
-    txt_records = await dns_base.safe_resolve(domain, "TXT")
-    ctx.raw_dns_records.setdefault("TXT", []).extend(txt_records)
-
-    for txt in txt_records:
-        txt_lower = txt.lower()
-
-        result = match_txt(txt, txt_patterns)
-        if result:
-            ctx.add(result.name, result.slug, source_type="TXT", raw_value=txt)
-            ctx.record_fp_match(result.slug, "txt", result.pattern)
-
-        # Extract google-site-verification tokens for relationship mapping.
-        # Strip control bytes: the token is attacker-controlled and is
-        # serialized into JSON / MCP output and clustering. JSON escaping
-        # contains it today, but stripping at ingestion keeps any future
-        # non-JSON renderer safe by construction (tokens are base64/hex, so
-        # this is lossless for legitimate values).
-        if txt_lower.startswith("google-site-verification="):
-            token = strip_control_chars(txt[len("google-site-verification=") :].strip())
-            if token:
-                ctx.site_verification_tokens.add(token)
-
-        if txt_lower.startswith("v=spf1"):
-            ctx.spf_include_count = txt_lower.count("include:")
-            # SPF patterns use substring matching on the include: values.
-            # This is intentional - SPF includes are domain names, and we
-            # match on the authoritative portion (e.g. "spf.protection.outlook.com").
-            # Unlike TXT patterns (which use regex), SPF patterns are plain
-            # substrings because the YAML values are literal domain fragments.
-            #
-            # Multiple distinct vendors can legitimately fire on one SPF
-            # record (e.g. M365 + Salesforce includes), so we accumulate
-            # rather than break-on-first-match. We then apply
-            # ``filter_shadowed_matches`` so that when a broad pattern
-            # (e.g. ``cisco.com``) and a narrow one
-            # (e.g. ``ess.cisco.com``) both match, only the narrow one's
-            # slug fires , preventing double-counting of the same vendor.
-            spf_matches = [det for det in spf_patterns if det.pattern.lower() in txt_lower]
-            for det in filter_shadowed_matches(spf_matches):
-                ctx.add(det.name, det.slug)
-                ctx.record_fp_match(det.slug, "spf", det.pattern)
-            if txt_lower.rstrip().endswith("-all"):
-                ctx.services.add(SVC_SPF_STRICT)
-            elif txt_lower.rstrip().endswith("~all"):
-                ctx.services.add(SVC_SPF_SOFTFAIL)
-            # Follow SPF redirect= chains. A record like
-            # "v=spf1 redirect=_spf.mail.umich.edu" means "use that
-            # domain's SPF as mine" - RFC 7208 §6.1. Higher-ed and
-            # enterprise domains commonly use redirect to point at
-            # a shared SPF zone they manage separately. Without
-            # following the chain, we score the redirected domain
-            # as having no SPF strict even when the redirect target
-            # does end in -all. Follow up to 3 chain hops to prevent
-            # loops, mark each redirect target for SPF fingerprint
-            # scanning too.
-            if "redirect=" in txt_lower and not txt_lower.rstrip().endswith(("-all", "~all")):
-                await _follow_spf_redirect(ctx, txt_lower, depth=0, max_depth=3)
-
-    # SPF complexity summary - runs once per domain after the TXT
-    # record scan, regardless of how many SPF variants the loop saw.
-    # This block belongs to _detect_txt, not _follow_spf_redirect.
-    if ctx.spf_include_count >= 8:
-        ctx.services.add(f"SPF complexity: {ctx.spf_include_count} includes (large)")
-    elif ctx.spf_include_count >= 4:
-        ctx.services.add(f"SPF complexity: {ctx.spf_include_count} includes")
-
-
-async def _follow_spf_redirect(ctx: _DetectionCtx, spf_text: str, depth: int, max_depth: int) -> None:
-    """Follow SPF redirect= chain up to ``max_depth`` hops.
-
-    When a domain's SPF is ``v=spf1 redirect=<other>``, we need to
-    query the redirected domain's SPF to know whether the chain
-    ultimately ends in ``-all`` (strict) or ``~all`` (softfail).
-    Without following the chain, recon scores 0 on SPF strict for
-    every domain that uses the redirect pattern - and that pattern
-    is extremely common in higher-ed and enterprise deployments
-    where SPF is managed as a single zone across many brand
-    domains.
-
-    Any failure (network error, parse error, missing pattern)
-    silently no-ops - this is an enrichment path, not a critical
-    detection, and it must never break the parent DNS source.
-    """
-    if depth >= max_depth:
-        return
-    try:
-        import re
-
-        match = re.search(r"redirect=([^\s]+)", spf_text)
-        if not match:
-            return
-        target = match.group(1).strip().rstrip(".")
-        if not target or "." not in target:
-            return
-        # Security: the redirect= target is attacker-controlled. The owner
-        # of the queried domain authors their own SPF record, so a record
-        # like "v=spf1 redirect=secret.internal.corp" would otherwise make
-        # the operator's resolver query an internal/split-horizon name and
-        # turn recon into an internal-DNS oracle. This is the same class as
-        # the CNAME chain-walker leak; we reuse the same suffix denylist
-        # (_is_public_dns_name) and refuse the hop before any query. The
-        # check covers the recursive hop below too, since each recursion
-        # re-enters here with the next target. Legitimate public targets
-        # such as "_spf.mail.example.edu" pass unchanged. See
-        # docs/security-audit-resolutions.md.
-        if not _is_public_dns_name(target):
-            logger.debug(
-                "SPF redirect chain: refusing non-public-suffix target %s",
-                target,
-            )
-            return
-        target_records = await dns_base.safe_resolve(target, "TXT")
-        patterns = get_spf_patterns()
-        for record in target_records:
-            rec_lower = record.strip().lower()
-            if not rec_lower.startswith("v=spf1"):
-                continue
-            # Run the same fingerprint pass on the target's SPF, with
-            # specificity suppression for shadow patterns (see the
-            # comment in _detect_txt above).
-            spf_matches = [det for det in patterns if det.pattern.lower() in rec_lower]
-            for det in filter_shadowed_matches(spf_matches):
-                ctx.add(det.name, det.slug)
-                ctx.record_fp_match(det.slug, "spf", det.pattern)
-            # Propagate the policy qualifier from the redirect
-            # target up to the origin - if _spf.mail.umich.edu
-            # ends in -all, then umich.edu's SPF effectively ends
-            # in -all via the redirect, and we credit the origin
-            # with SPF strict.
-            if rec_lower.rstrip().endswith("-all"):
-                ctx.services.add(SVC_SPF_STRICT)
-                return
-            if rec_lower.rstrip().endswith("~all"):
-                ctx.services.add(SVC_SPF_SOFTFAIL)
-                return
-            # Chain continues: recurse one more hop.
-            if "redirect=" in rec_lower:
-                await _follow_spf_redirect(ctx, rec_lower, depth + 1, max_depth)
-                return
-    except Exception as exc:
-        logger.debug("SPF redirect chain follow failed: %s", exc)
-
-
-async def _detect_mx(ctx: _DetectionCtx, domain: str) -> None:
-    """Scan MX records for email provider and gateway detection.
-
-    Passes source_type="MX" and the raw record so an EvidenceRecord is
-    created - the email topology computation in merger.py filters evidence
-    by source_type == "MX" to distinguish true primary providers (direct
-    MX) from secondary residue (DKIM/TXT/identity endpoint).
-
-    Emit a generic EvidenceRecord for EVERY MX host
-    found, whether or not a fingerprint pattern matched. This lets
-    downstream code distinguish "no MX records at all" (domain has no
-    email) from "MX records exist but the host isn't in our fingerprint
-    set" (domain has custom / self-hosted email like Apache's own mail
-    servers). Previously, apache.org looked identical to
-    balcaninnovations.com from the evidence perspective - both had
-    zero MX evidence records even though apache.org has three real
-    MX hosts. The "generic MX evidence" carries an empty slug so it
-    doesn't pollute the detected_slugs set.
-    """
-    mx_records = await dns_base.safe_resolve(domain, "MX")
-    ctx.raw_dns_records.setdefault("MX", []).extend(mx_records)
-
-    # Sort MX patterns longest-first so the most specific pattern wins per
-    # MX record (the loop below stops at the first match). Without this,
-    # a broader pattern listed earlier in the catalog could shadow a
-    # narrower one (e.g. `cisco.com` shadowing `ess.cisco.com`).
-    mx_patterns_sorted = sorted(get_mx_patterns(), key=lambda d: -len(d.pattern))
-
-    unmatched_hosts: list[str] = []
-    any_matched = False
-    for mx in mx_records:
-        mx_lower = mx.lower()
-        matched = False
-        for det in mx_patterns_sorted:
-            if det.pattern in mx_lower:
-                ctx.add(det.name, det.slug, source_type="MX", raw_value=mx)
-                ctx.record_fp_match(det.slug, "mx", det.pattern)
-                matched = True
-                any_matched = True
-                break
-        if not matched:
-            # Emit a generic MX evidence record so downstream code can
-            # tell that MX records exist, even though this host doesn't
-            # match any provider fingerprint. Empty slug keeps it out
-            # of the slug set; source_type="MX" is what the email
-            # topology + has_mx_records check looks at.
-            ctx.evidence.append(
-                EvidenceRecord(
-                    source_type="MX",
-                    raw_value=mx,
-                    rule_name="Custom MX host",
-                    slug="",
-                )
-            )
-            # Track unmatched MX hosts for self-hosted-mail inference.
-            # MX record format is ``<priority> <host>`` - extract host.
-            parts = mx.strip().split()
-            if len(parts) >= 2:
-                unmatched_hosts.append(parts[-1].rstrip(".").lower())
-
-    # Self-hosted-mail inference. When MX records exist and none of
-    # them match a known cloud provider or gateway, attribute the
-    # primary provider as "Self-hosted mail". This rescues orgs whose
-    # MX targets live under the queried apex or under an operator-owned
-    # sibling domain - they otherwise fall through to the weaker
-    # ``exchange-onprem`` attribution driven by ``owa.`` / ``autodiscover.``
-    # probes. ``Self-hosted`` is a conservative label that may in rare
-    # cases cover obscure cloud providers we don't yet fingerprint - in
-    # both cases the MX hosts are surfaced in the evidence so the user
-    # can see what's actually being used.
-    if unmatched_hosts and not any_matched:
-        ctx.add(
-            "Self-hosted mail",
-            "self-hosted-mail",
-            source_type="MX",
-            raw_value=", ".join(sorted(set(unmatched_hosts))),
-        )
 
 
 async def _detect_m365_cnames(ctx: _DetectionCtx, domain: str) -> None:
@@ -461,289 +216,6 @@ async def _detect_gws_cnames(ctx: _DetectionCtx, domain: str) -> None:
 
     if active_modules:
         ctx.slugs.add("google-workspace-modules")
-
-
-def _apply_exchange_dkim(ctx: _DetectionCtx, selector_groups: tuple[list[str], list[str]]) -> None:
-    """Attribute Exchange Online DKIM and capture the onmicrosoft.com tenant domain."""
-    for selector_results in selector_groups:
-        for cname in selector_results:
-            cl = cname.lower()
-            if "protection.outlook.com" in cl or "onmicrosoft.com" in cl:
-                ctx.add(SVC_DKIM_EXCHANGE, "microsoft365", source_type="DKIM", raw_value=cname)
-                ctx.m365 = True
-                if "onmicrosoft.com" in cl:
-                    parts = cl.split("._domainkey.")
-                    if len(parts) == 2 and parts[1].endswith("onmicrosoft.com") and "." in parts[1]:
-                        ctx.related_domains.add(parts[1])
-                break
-
-
-def _apply_google_dkim(ctx: _DetectionCtx, txt_results: list[str], cname_results: list[str]) -> None:
-    """Attribute Google Workspace DKIM. TXT first, then CNAME delegation.
-
-    source_type="DKIM" is required for the email-topology inference in
-    merger.py to recognise this as downstream-provider evidence when MX
-    points to a gateway (Proofpoint, etc.).
-    """
-    for record in txt_results:
-        if "v=dkim1" in record.lower():
-            ctx.services.add(SVC_DKIM)
-            ctx.add("DKIM (Google Workspace)", "google-workspace", source_type="DKIM", raw_value=record)
-            return
-    for cname in cname_results:
-        if "google.com" in cname.lower():
-            ctx.services.add(SVC_DKIM)
-            ctx.add("DKIM (Google Workspace)", "google-workspace", source_type="DKIM", raw_value=cname)
-            return
-
-
-def _apply_esp_dkim(
-    ctx: _DetectionCtx,
-    esp_selectors: list[tuple[str, str, str, str]],
-    esp_results: list[list[str]],
-) -> None:
-    """Attribute ESP DKIM (Mailchimp, SendGrid, ...) when a selector CNAME matches its hint."""
-    for (_, hint, svc_name, slug), cname_results in zip(esp_selectors, esp_results, strict=True):
-        for cname in cname_results:
-            if hint in cname.lower():
-                ctx.add(svc_name, slug, source_type="DKIM", raw_value=cname)
-                ctx.services.add(SVC_DKIM)
-                break
-
-
-def _apply_generic_dkim(ctx: _DetectionCtx, generic_results: list[list[str]]) -> None:
-    """Confirm DKIM exists via generic selectors when no provider-specific DKIM fired.
-
-    Only feeds the email-security score; does not attribute a provider.
-    """
-    if SVC_DKIM in ctx.services:
-        return
-    for txt_records in generic_results:
-        for record in txt_records:
-            if "v=dkim1" in record.lower():
-                ctx.services.add(SVC_DKIM)
-                return
-
-
-async def _detect_dkim(ctx: _DetectionCtx, domain: str) -> None:
-    """Check DKIM selectors for Exchange Online, Google, and common providers.
-
-    Exchange uses selector1/selector2, Google uses 'google', and many ESPs
-    use 's1'/'s2', 'k1', 'default', 'dkim', 'mail', or 'em' selectors. Fires
-    all the common selector probes concurrently, then applies each provider's
-    attribution. Also extracts the onmicrosoft.com domain from Exchange DKIM
-    CNAMEs, which reveals the tenant's internal domain name.
-    """
-    sel1_task = dns_base.safe_resolve(f"selector1._domainkey.{domain}", "CNAME")
-    sel2_task = dns_base.safe_resolve(f"selector2._domainkey.{domain}", "CNAME")
-    google_txt_task = dns_base.safe_resolve(f"google._domainkey.{domain}", "TXT")
-    google_cname_task = dns_base.safe_resolve(f"google._domainkey.{domain}", "CNAME")
-    esp_tasks = [dns_base.safe_resolve(f"{sel}._domainkey.{domain}", "CNAME") for sel, _, _, _ in _ESP_DKIM_SELECTORS]
-    generic_dkim_tasks = [dns_base.safe_resolve(f"{sel}._domainkey.{domain}", "TXT") for sel in _GENERIC_DKIM_SELECTORS]
-
-    all_results = await asyncio.gather(
-        sel1_task,
-        sel2_task,
-        google_txt_task,
-        google_cname_task,
-        *esp_tasks,
-        *generic_dkim_tasks,
-    )
-
-    esp_end = 4 + len(_ESP_DKIM_SELECTORS)
-    sel1_results, sel2_results, google_txt_results, google_cname_results = all_results[:4]
-    esp_results = all_results[4:esp_end]
-    generic_dkim_results = all_results[esp_end:]
-
-    _apply_exchange_dkim(ctx, (sel1_results, sel2_results))
-    _apply_google_dkim(ctx, google_txt_results, google_cname_results)
-    _apply_esp_dkim(ctx, _ESP_DKIM_SELECTORS, esp_results)
-    _apply_generic_dkim(ctx, generic_dkim_results)
-
-
-async def _parse_bimi_vmc(ctx: _DetectionCtx, bimi_txt: str) -> None:
-    """Fetch the VMC PEM from a BIMI ``a=`` URL and extract corporate identity.
-
-    BIMI TXT records may carry an ``a=`` tag pointing to a ``.pem`` VMC
-    (Verified Mark Certificate). VMCs require strict legal verification, so the
-    Subject fields are high-confidence corporate identity data. The fetch is
-    SSRF-guarded and the parsed fields are control-stripped before they reach
-    any sink.
-    """
-    a_url = _extract_bimi_vmc_url(bimi_txt)
-    if a_url is None or not _bimi_vmc_url_is_safe(a_url):
-        return
-
-    try:
-        async with _http_client(timeout=5.0) as client:
-            resp = await client.get(a_url, follow_redirects=False)
-            if resp.status_code != 200:
-                return
-            pem_data = resp.text
-
-        org, country, state, locality = _parse_vmc_subject(pem_data)
-        if not org:
-            return
-        # The VMC subject fields come from a PEM served at the attacker-
-        # influenced a= URL. Strip control bytes before any panel / markdown /
-        # MCP sink.
-        org = strip_control_chars(org)
-        ctx.bimi_identity = BIMIIdentity(
-            organization=org,
-            country=strip_control_chars(country) if country else None,
-            state=strip_control_chars(state) if state else None,
-            locality=strip_control_chars(locality) if locality else None,
-            trademark=None,
-        )
-        ctx.slugs.add("bimi-vmc")
-        ctx.evidence.append(
-            EvidenceRecord(
-                source_type="HTTP",
-                raw_value=f"VMC Organization={org}",
-                rule_name="BIMI VMC",
-                slug="bimi-vmc",
-            )
-        )
-    except Exception as exc:
-        logger.debug("BIMI VMC parsing failed: %s", exc)
-
-
-async def _fetch_mta_sts_policy(domain: str) -> str | None:
-    """Fetch MTA-STS policy mode from the well-known endpoint.
-
-    Returns the policy mode ("enforce", "testing", "none") or None
-    if the policy file is unreachable or malformed.
-    """
-    url = f"https://mta-sts.{domain}/.well-known/mta-sts.txt"
-    try:
-        async with _http_client(timeout=5.0) as client:
-            resp = await client.get(url)
-            if resp.status_code == 200:
-                for line in resp.text.splitlines():
-                    stripped = line.strip().lower()
-                    if stripped.startswith("mode:"):
-                        mode = stripped.split(":", 1)[1].strip()
-                        if mode in ("enforce", "testing", "none"):
-                            return mode
-    except Exception as exc:
-        logger.debug("MTA-STS policy fetch failed for %s: %s", domain, exc)
-    return None
-
-
-_RUA_MAILTO_RE = re.compile(r"rua\s*=\s*mailto:([^;,\s]+)", re.IGNORECASE)
-
-
-def _extract_dmarc_rua(ctx: _DetectionCtx, dmarc_record: str) -> None:
-    """Extract rua=mailto: addresses and match vendor domains against fingerprints."""
-    from recon_tool.fingerprints import get_dmarc_rua_patterns
-
-    matches = _RUA_MAILTO_RE.findall(dmarc_record)
-    # Sort longest-first so the most specific pattern wins per rua address
-    # (consistent with MX / NS / CAA / cname_target , see
-    # filter_shadowed_matches).
-    rua_patterns = sorted(get_dmarc_rua_patterns(), key=lambda d: -len(d.pattern))
-
-    for addr in matches:
-        # Extract domain portion from email address
-        if "@" not in addr:
-            continue
-        rua_domain = addr.split("@", 1)[1].lower().rstrip(".")
-
-        # Match against dmarc_rua fingerprint patterns
-        for det in rua_patterns:
-            if det.pattern.lower() in rua_domain:
-                ctx.add(
-                    det.name,
-                    det.slug,
-                    source_type="DMARC_RUA",
-                    raw_value=f"rua=mailto:{addr}",
-                )
-                ctx.record_fp_match(det.slug, "dmarc_rua", det.pattern)
-                break  # first match wins per RUA address
-
-
-def _apply_dmarc_pct(ctx: _DetectionCtx, raw_pct: str, domain: str) -> None:
-    """Validate and record a DMARC ``pct=`` value (0-100), warning on bad input."""
-    try:
-        pct_val = int(raw_pct)
-    except ValueError:
-        logger.warning("DMARC pct= value %r is not a valid integer for %s - ignored", raw_pct, domain)
-        return
-    if 0 <= pct_val <= 100:
-        ctx.dmarc_pct = pct_val
-    else:
-        logger.warning("DMARC pct= value %d out of range for %s - ignored", pct_val, domain)
-
-
-def _apply_dmarc(ctx: _DetectionCtx, dmarc_results: list[str], domain: str) -> None:
-    """Record DMARC presence, policy, pct, and rua mailto fingerprints."""
-    for txt in dmarc_results:
-        if not txt.lower().startswith("v=dmarc1"):
-            continue
-        ctx.services.add(SVC_DMARC)
-        for part in txt.split(";"):
-            cleaned = part.strip().lower()
-            if cleaned.startswith("p="):
-                ctx.dmarc_policy = cleaned[2:].strip()
-            elif cleaned.startswith("pct="):
-                _apply_dmarc_pct(ctx, cleaned[4:].strip(), domain)
-        _extract_dmarc_rua(ctx, txt)
-
-
-async def _apply_bimi(ctx: _DetectionCtx, bimi_results: list[str], domain: str) -> None:
-    """Record BIMI presence and attempt best-effort VMC identity enrichment.
-
-    BIMI presence is read from the DNS TXT record (passive). The VMC enrichment
-    fetches the ``a=`` certificate URL, a direct request to a host the looked-up
-    party influences, so it is gated behind ``ctx.active_probes`` (--direct-probes)
-    and skipped by default. When it does run it must never abort the DNS source:
-    anything it raises is caught and the BIMI detection plus the rest of the DNS
-    intelligence is kept.
-    """
-    for txt in bimi_results:
-        if "v=bimi1" in txt.lower():
-            ctx.services.add(SVC_BIMI)
-            if not ctx.active_probes:
-                continue
-            try:
-                await _parse_bimi_vmc(ctx, txt)
-            except Exception as exc:
-                logger.debug("BIMI VMC enrichment failed for %s: %s", domain, exc)
-
-
-async def _apply_mta_sts(ctx: _DetectionCtx, mta_sts_results: list[str], domain: str) -> None:
-    """Record MTA-STS presence and, when the TXT fires, fetch the policy mode."""
-    mta_sts_detected = any("v=stsv1" in txt.lower() for txt in mta_sts_results)
-    if not mta_sts_detected:
-        return
-    ctx.services.add(SVC_MTA_STS)
-    policy_mode = await _fetch_mta_sts_policy(domain)
-    if policy_mode:
-        ctx.mta_sts_mode = policy_mode
-        if policy_mode == "enforce":
-            ctx.slugs.add("mta-sts-enforce")
-
-
-def _apply_tls_rpt(ctx: _DetectionCtx, tls_rpt_results: list[str]) -> None:
-    """Record TLS-RPT presence."""
-    for txt in tls_rpt_results:
-        if "v=tlsrptv1" in txt.lower():
-            ctx.add("TLS-RPT", "tls-rpt", source_type="TXT", raw_value=txt)
-            break
-
-
-async def _detect_email_security(ctx: _DetectionCtx, domain: str) -> None:
-    """Check DMARC, BIMI, MTA-STS, and TLS-RPT records concurrently."""
-    dmarc_results, bimi_results, mta_sts_results, tls_rpt_results = await asyncio.gather(
-        dns_base.safe_resolve(f"_dmarc.{domain}", "TXT"),
-        dns_base.safe_resolve(f"default._bimi.{domain}", "TXT"),
-        dns_base.safe_resolve(f"_mta-sts.{domain}", "TXT"),
-        dns_base.safe_resolve(f"_smtp._tls.{domain}", "TXT"),
-    )
-    _apply_dmarc(ctx, dmarc_results, domain)
-    await _apply_bimi(ctx, bimi_results, domain)
-    await _apply_mta_sts(ctx, mta_sts_results, domain)
-    _apply_tls_rpt(ctx, tls_rpt_results)
 
 
 async def _detect_ns(ctx: _DetectionCtx, domain: str) -> None:

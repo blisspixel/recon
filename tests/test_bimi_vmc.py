@@ -22,7 +22,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from recon_tool.sources import dns as dns_mod
-from recon_tool.sources import dns_base
+from recon_tool.sources import dns_base, dns_email
 
 
 class _Resp:
@@ -68,10 +68,10 @@ def _fake_http_client(resp: _Resp, calls: list[tuple[str, dict[str, Any]]]) -> A
 async def test_refuses_unsafe_a_url(a_url: str):
     ctx = dns_mod._DetectionCtx()
     calls: list[tuple[str, dict[str, Any]]] = []
-    with patch.object(dns_mod, "_http_client", _fake_http_client(_Resp(200, "x"), calls)):
+    with patch.object(dns_email, "_http_client", _fake_http_client(_Resp(200, "x"), calls)):
         # Must not raise: a crafted a= URL is an enrichment input, never a
         # source-aborting exception.
-        await dns_mod._parse_bimi_vmc(ctx, f"v=BIMI1; l=https://logo.example/l.svg; a={a_url}")
+        await dns_email._parse_bimi_vmc(ctx, f"v=BIMI1; l=https://logo.example/l.svg; a={a_url}")
     assert calls == [], f"must not fetch unsafe a= URL: {a_url}"
     assert ctx.bimi_identity is None
 
@@ -93,13 +93,13 @@ async def test_malformed_port_does_not_abort_email_security():
         return []
 
     with (
-        patch.object(dns_mod, "_parse_bimi_vmc", _boom),
+        patch.object(dns_email, "_parse_bimi_vmc", _boom),
         patch.object(dns_base, "safe_resolve", _txt_for),
     ):
         # Must complete without raising; BIMI service still recorded.
         await dns_mod._detect_email_security(ctx, "example.com")
 
-    assert dns_mod.SVC_BIMI in ctx.services
+    assert dns_email.SVC_BIMI in ctx.services
 
 
 @pytest.mark.asyncio
@@ -118,10 +118,10 @@ async def test_accepts_public_https_and_scrubs_subject():
     fake_cert.subject = [org_attr, country_attr]
 
     with (
-        patch.object(dns_mod, "_http_client", _fake_http_client(_Resp(200, pem), calls)),
+        patch.object(dns_email, "_http_client", _fake_http_client(_Resp(200, pem), calls)),
         patch("cryptography.x509.load_pem_x509_certificate", return_value=fake_cert),
     ):
-        await dns_mod._parse_bimi_vmc(ctx, "v=BIMI1; a=https://amplify.contoso.com/vmc.pem")
+        await dns_email._parse_bimi_vmc(ctx, "v=BIMI1; a=https://amplify.contoso.com/vmc.pem")
 
     # A legitimate public https URL is fetched, with redirects disabled.
     assert len(calls) == 1
