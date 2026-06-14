@@ -29,7 +29,7 @@ from recon_tool.server import (
     find_hardening_gaps,
 )
 
-RESOLVE_PATH = "recon_tool.server.resolve_tenant"
+RESOLVE_PATH = "recon_tool.server_app.resolve_tenant"
 
 SAMPLE_INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",

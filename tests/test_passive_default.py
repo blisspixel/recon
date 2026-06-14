@@ -206,7 +206,7 @@ async def test_analyze_posture_non_string_profile_does_not_crash() -> None:
     _rate_limit.clear()
     from unittest.mock import AsyncMock
 
-    with patch("recon_tool.server.resolve_tenant", new_callable=AsyncMock) as mock_resolve:
+    with patch("recon_tool.server_app.resolve_tenant", new_callable=AsyncMock) as mock_resolve:
         mock_resolve.return_value = (_POSTURE_INFO, [])
         parsed = await analyze_posture("contoso.com", profile=123)  # type: ignore[arg-type]
     # A non-string profile is treated as no lens, so this returns the plain

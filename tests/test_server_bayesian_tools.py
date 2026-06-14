@@ -30,7 +30,7 @@ from recon_tool.server import (
     get_posteriors,
 )
 
-RESOLVE_PATH = "recon_tool.server.resolve_tenant"
+RESOLVE_PATH = "recon_tool.server_app.resolve_tenant"
 
 
 def _info(queried: str, *, tokens: tuple[str, ...] = ()) -> TenantInfo:
