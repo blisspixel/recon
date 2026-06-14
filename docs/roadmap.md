@@ -83,9 +83,13 @@ This file is forward-looking. Shipped work belongs in
 > `dns_email` (SPF/MX/DKIM/DMARC/BIMI/MTA-STS detectors), and `dns_infra`
 > (M365/GWS CNAME, NS/CNAME/hosting/CAA/SRV, CT fallback) — leaving `dns.py`
 > as the `DNSSource` orchestrator plus its surface-classification pipeline.
-> What remains is the three large modules (`server.py`, `cli.py`'s command
-> core, `bayesian.py`), sequenced as focused operations. Every split is
-> golden-byte-identical and CI-gated by the file-size ratchet.
+> `bayesian.py` is likewise decomposed and under the cap (1411 → 926): the
+> result dataclasses moved to `bayesian_models.py` and the YAML loaders to
+> `bayesian_loader.py`, leaving the inference engine in place so the
+> mutation-gated surface stays byte-identical. What remains is the two large
+> modules (`server.py`, `cli.py`'s command core), which need the app-sharing
+> variant (a shared FastMCP / Typer instance), sequenced as focused operations.
+> Every split is golden-byte-identical and CI-gated by the file-size ratchet.
 >
 > What is otherwise open is operator-paced or standing: the maintainer-local
 > runs of the calibration harnesses (held-out residual, tenancy corroboration,
@@ -177,8 +181,9 @@ and the `validation/` memos for rationale. What remains, in logical order:
    core remains), `exposure.py` (done — result dataclasses to `exposure_models.py`,
    1130 to 983), and `merger.py` (done — slug tables to `merger_tables.py`, 1131 to
    958), and `sources/dns.py` (done — 2524 to 840 across `dns_tables`, `dns_base`,
-   `dns_email`, `dns_infra`); then the three large modules `bayesian.py`,
-   `server.py`, and `cli.py`'s command
+   `dns_email`, `dns_infra`), and `bayesian.py` (done — 1411 to 926, dataclasses
+   to `bayesian_models.py` and loaders to `bayesian_loader.py`); then the two
+   large modules `server.py` and `cli.py`'s command
    core. *Design:* the "Module decomposition (god-file split)"
    section below, [engineering-practices.md](engineering-practices.md), and
    [adr/](adr/).
@@ -929,11 +934,11 @@ regrow and new modules cap at 1000 lines. The work is to split each into a
 cohesive subpackage while preserving the public import path and keeping the
 golden/snapshot tests byte-identical.
 
-The two over-cap modules in the 1000-1130 band and `sources/dns.py` are now
-under the cap; the open work is the three genuinely large modules (`server.py`,
-`cli.py`'s command core, `bayesian.py`), which all share the harder
+The two over-cap modules in the 1000-1130 band, `sources/dns.py`, and
+`bayesian.py` are now under the cap; the open work is the two genuinely large
+modules (`server.py`, `cli.py`'s command core), which share the harder
 trait — internal names that must be publicized with broad reference churn, and
-in `server.py`/`cli.py` a shared FastMCP/Typer instance that forces the
+a shared FastMCP/Typer instance that forces the
 app-sharing variant. Those are sequenced as focused operations, not quick lifts:
 
 1. `formatter.py` → split by render concern. **Done (4413 → ~2160, five
@@ -978,11 +983,18 @@ app-sharing variant. Those are sequenced as focused operations, not quick lifts:
    slug-humanizing name maps split to `merger_tables.py`; `merger` re-exports each
    under its historical `_NAME` so internal callers and `test_email_topology.py`
    are unchanged. Same data-table lift as `formatter_classify_tables`.
-5. `bayesian.py` → split the inference engine (variable elimination + factor math)
-   from the network loaders and the public API. Needs the models-first variant
-   (the `_Node` / `_Evidence` dataclasses move to a shared `bayesian_models.py`
-   first, publicized, so the loader and engine modules import them without a
-   cycle), then the engine extraction clears the cap.
+5. `bayesian.py` → **Done (1411 → 926):** the models-first variant as planned.
+   The `_Node` / `_Evidence` (publicized to `Node` / `Evidence`) and the result
+   dataclasses moved to `bayesian_models.py`; the YAML loaders, parsers, topology
+   validation, and prior-override application moved to `bayesian_loader.py`
+   (importing the dataclasses, one-directional). The inference engine and the
+   `TenantInfo` adapters stayed in `bayesian.py`, moved byte-identically, so the
+   cosmic-ray mutation surface (the inference core) is unchanged and its 12%
+   floor holds; `bayesian.py` re-exports every name (aliasing `Evidence` / `Node`
+   back to `_Evidence` / `_Node`), so the import path and the differential /
+   drift / contract harnesses are unchanged. The loaders and dataclasses keep
+   their unit-test coverage but sit outside the inference-core mutation surface by
+   design (see `validation/mutation-gate.md`).
 6. `server.py` → group the MCP tools by domain (lookup/posture/graph/introspection)
    into sibling modules or a `server/` package, the same way (the tools share the
    FastMCP instance, so it follows the app-sharing variant).

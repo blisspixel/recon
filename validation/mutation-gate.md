@@ -48,9 +48,17 @@ Two mechanical fixes prevent recurrence:
 
 ## Scope: the inference core first
 
-The mutated surface is `recon_tool/bayesian.py`: the network loader,
-factor construction, variable elimination, the credible interval, and
-the n_eff machinery. Chosen first because it is the highest
+The mutated surface is `recon_tool/bayesian.py`: factor construction,
+variable elimination, the credible interval, and the n_eff machinery.
+(The YAML network loaders and the result dataclasses were later split into
+`bayesian_loader.py` and `bayesian_models.py` as part of the god-file
+decomposition. They sit outside this mutation surface by design: the loaders
+are config/parsing covered by `test_bayesian_loader_edges` /
+`test_bayesian_topology` / `test_bayesian_validation_rounds`, and the
+dataclasses are pure frozen data whose mutants are equivalent-by-construction,
+the category the floor already discounts. The inference functions themselves
+were moved byte-identically, so the kill score is unchanged; the next sweep
+re-establishes the absolute mutant count.) Chosen first because it is the highest
 trust-per-effort surface: the numbers it emits are the product recon
 asks operators to rely on, it is already the most-verified module in
 the tree (differential verification v2.1.7, drift gate v2.1.14,
