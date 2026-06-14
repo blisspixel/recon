@@ -29,7 +29,7 @@ from hypothesis import strategies as st
 from recon_tool.fingerprints import match_txt
 from recon_tool.models import SourceResult
 from recon_tool.sources import dns as dns_mod
-from recon_tool.sources import dns_base, dns_email
+from recon_tool.sources import dns_base, dns_email, dns_infra
 from recon_tool.sources.azure_metadata import AzureMetadataSource
 from recon_tool.sources.cert_providers import (
     _MAX_BURSTS,
@@ -237,7 +237,7 @@ class TestDnsParserBounds:
 
         ctx = dns_mod._DetectionCtx()
         with (
-            patch.object(dns_mod, "get_subdomain_txt_patterns", return_value=[rule]),
+            patch.object(dns_infra, "get_subdomain_txt_patterns", return_value=[rule]),
             patch.object(dns_base, "safe_resolve", _resolve),
         ):
             await dns_mod._detect_subdomain_txt(ctx, "contoso.com")
@@ -254,7 +254,7 @@ class TestDnsParserBounds:
 
         ctx = dns_mod._DetectionCtx()
         with (
-            patch.object(dns_mod, "get_subdomain_txt_patterns", return_value=[rule]),
+            patch.object(dns_infra, "get_subdomain_txt_patterns", return_value=[rule]),
             patch.object(dns_base, "safe_resolve", _resolve),
         ):
             await dns_mod._detect_subdomain_txt(ctx, "contoso.com")
@@ -273,7 +273,7 @@ class TestDnsParserBounds:
 
         ctx = dns_mod._DetectionCtx()
         with (
-            patch.object(dns_mod, "get_cname_patterns", return_value=[rule]),
+            patch.object(dns_infra, "get_cname_patterns", return_value=[rule]),
             patch.object(dns_base, "safe_resolve", _resolve),
         ):
             await dns_mod._detect_cname_infra(ctx, "contoso.com")
@@ -291,7 +291,7 @@ class TestDnsParserBounds:
 
         ctx = dns_mod._DetectionCtx()
         with (
-            patch.object(dns_mod, "get_cname_patterns", return_value=[rule]),
+            patch.object(dns_infra, "get_cname_patterns", return_value=[rule]),
             patch.object(dns_base, "safe_resolve", _resolve),
         ):
             await dns_mod._detect_cname_infra(ctx, "contoso.com")
