@@ -73,7 +73,7 @@ class TestMatchModeAll:
         ctx.record_fp_match("contoso-platform", "txt", "^contoso-verify=")
         ctx.record_fp_match("contoso-platform", "cname", "login.contoso.com")
 
-        with patch("recon_tool.sources.dns.load_fingerprints", return_value=(fp,)):
+        with patch("recon_tool.sources.dns_base.load_fingerprints", return_value=(fp,)):
             ctx.enforce_match_mode_all()
 
         assert "contoso-platform" in ctx.slugs
@@ -99,7 +99,7 @@ class TestMatchModeAll:
         # Only record one of two detections
         ctx.record_fp_match("contoso-platform", "txt", "^contoso-verify=")
 
-        with patch("recon_tool.sources.dns.load_fingerprints", return_value=(fp,)):
+        with patch("recon_tool.sources.dns_base.load_fingerprints", return_value=(fp,)):
             ctx.enforce_match_mode_all()
 
         assert "contoso-platform" not in ctx.slugs
@@ -124,7 +124,7 @@ class TestMatchModeAll:
         ctx.add("Northwind Analytics", "northwind-analytics", source_type="TXT", raw_value="northwind-verify=xyz")
         ctx.record_fp_match("northwind-analytics", "txt", "^northwind-verify=")
 
-        with patch("recon_tool.sources.dns.load_fingerprints", return_value=(fp,)):
+        with patch("recon_tool.sources.dns_base.load_fingerprints", return_value=(fp,)):
             ctx.enforce_match_mode_all()
 
         # match_mode: any — single match is enough
@@ -690,7 +690,7 @@ class TestPBTMatchModeAll:
             if i != missing_index:
                 ctx.record_fp_match("contoso-multi", "txt", f"^pattern-{i}=")
 
-        with patch("recon_tool.sources.dns.load_fingerprints", return_value=(fp,)):
+        with patch("recon_tool.sources.dns_base.load_fingerprints", return_value=(fp,)):
             ctx.enforce_match_mode_all()
 
         assert "contoso-multi" not in ctx.slugs
@@ -722,7 +722,7 @@ class TestPBTMatchModeAll:
         for i in range(num_detections):
             ctx.record_fp_match("contoso-full", "txt", f"^pattern-{i}=")
 
-        with patch("recon_tool.sources.dns.load_fingerprints", return_value=(fp,)):
+        with patch("recon_tool.sources.dns_base.load_fingerprints", return_value=(fp,)):
             ctx.enforce_match_mode_all()
 
         assert "contoso-full" in ctx.slugs

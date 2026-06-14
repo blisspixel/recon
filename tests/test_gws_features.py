@@ -68,7 +68,7 @@ def _make_info(
 
 class TestDetectGwsCnames:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_single_gws_module_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -82,7 +82,7 @@ class TestDetectGwsCnames:
         assert "google-workspace" in result.detected_slugs
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_multiple_gws_modules_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -100,7 +100,7 @@ class TestDetectGwsCnames:
         assert "google-workspace-modules" in result.detected_slugs
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_non_gws_cname_ignored(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -116,7 +116,7 @@ class TestDetectGwsCnames:
 
 class TestSiteVerificationTokenExtraction:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_google_site_verification_extracted(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -128,7 +128,7 @@ class TestSiteVerificationTokenExtraction:
         assert "abc123xyz" in result.site_verification_tokens
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_multiple_tokens_extracted(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -144,7 +144,7 @@ class TestSiteVerificationTokenExtraction:
         assert "token2" in result.site_verification_tokens
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_no_verification_token(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -158,7 +158,7 @@ class TestSiteVerificationTokenExtraction:
 
 class TestTlsRptDetection:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_tls_rpt_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -172,7 +172,7 @@ class TestTlsRptDetection:
         assert "tls-rpt" in result.detected_slugs
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_tls_rpt_not_detected_without_record(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -186,7 +186,7 @@ class TestTlsRptDetection:
 
 class TestParseBimiVmc:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_bimi_vmc_identity_extracted(self, mock_resolve):
         """BIMI with a= PEM URL should extract VMC corporate identity."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -223,7 +223,7 @@ class TestParseBimiVmc:
         assert result.bimi_identity.country == "US"
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_bimi_no_a_tag_skips_vmc(self, mock_resolve):
         """BIMI without a= tag should not attempt VMC fetch."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -238,7 +238,7 @@ class TestParseBimiVmc:
         assert result.bimi_identity is None
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_bimi_vmc_http_error(self, mock_resolve):
         """BIMI VMC fetch returning non-200 should not crash."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -268,7 +268,7 @@ class TestParseBimiVmc:
 
 class TestFetchMtaStsPolicy:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_mta_sts_enforce_mode(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -295,7 +295,7 @@ class TestFetchMtaStsPolicy:
         assert result.mta_sts_mode == "enforce"
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_mta_sts_testing_mode(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -321,7 +321,7 @@ class TestFetchMtaStsPolicy:
         assert result.mta_sts_mode == "testing"
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_mta_sts_policy_fetch_failure(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {

@@ -29,6 +29,7 @@ from hypothesis import strategies as st
 from recon_tool.fingerprints import match_txt
 from recon_tool.models import SourceResult
 from recon_tool.sources import dns as dns_mod
+from recon_tool.sources import dns_base
 from recon_tool.sources.azure_metadata import AzureMetadataSource
 from recon_tool.sources.cert_providers import (
     _MAX_BURSTS,
@@ -211,7 +212,7 @@ class TestDnsParserBounds:
             return ["v=spf1 redirect=_spf.fabrikam.com"]
 
         ctx = dns_mod._DetectionCtx()
-        with patch.object(dns_mod, "_safe_resolve", _fake_resolve):
+        with patch.object(dns_base, "safe_resolve", _fake_resolve):
             await dns_mod._follow_spf_redirect(ctx, "v=spf1 redirect=_spf.fabrikam.com", depth=0, max_depth=3)
         # depth 0 starts the walk; at most max_depth resolver queries follow.
         assert len(calls) <= 3
@@ -237,7 +238,7 @@ class TestDnsParserBounds:
         ctx = dns_mod._DetectionCtx()
         with (
             patch.object(dns_mod, "get_subdomain_txt_patterns", return_value=[rule]),
-            patch.object(dns_mod, "_safe_resolve", _resolve),
+            patch.object(dns_base, "safe_resolve", _resolve),
         ):
             await dns_mod._detect_subdomain_txt(ctx, "contoso.com")
         assert "fakevendor" not in ctx.slugs
@@ -254,7 +255,7 @@ class TestDnsParserBounds:
         ctx = dns_mod._DetectionCtx()
         with (
             patch.object(dns_mod, "get_subdomain_txt_patterns", return_value=[rule]),
-            patch.object(dns_mod, "_safe_resolve", _resolve),
+            patch.object(dns_base, "safe_resolve", _resolve),
         ):
             await dns_mod._detect_subdomain_txt(ctx, "contoso.com")
         assert "fakevendor" in ctx.slugs
@@ -273,7 +274,7 @@ class TestDnsParserBounds:
         ctx = dns_mod._DetectionCtx()
         with (
             patch.object(dns_mod, "get_cname_patterns", return_value=[rule]),
-            patch.object(dns_mod, "_safe_resolve", _resolve),
+            patch.object(dns_base, "safe_resolve", _resolve),
         ):
             await dns_mod._detect_cname_infra(ctx, "contoso.com")
         assert "fakecdn" not in ctx.slugs
@@ -291,7 +292,7 @@ class TestDnsParserBounds:
         ctx = dns_mod._DetectionCtx()
         with (
             patch.object(dns_mod, "get_cname_patterns", return_value=[rule]),
-            patch.object(dns_mod, "_safe_resolve", _resolve),
+            patch.object(dns_base, "safe_resolve", _resolve),
         ):
             await dns_mod._detect_cname_infra(ctx, "contoso.com")
         assert "fakecdn" in ctx.slugs

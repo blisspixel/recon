@@ -33,7 +33,7 @@ class TestDNSSourceBasics:
 
 class TestM365Detection:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_exchange_via_mx(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -46,7 +46,7 @@ class TestM365Detection:
         assert "Microsoft 365" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_exchange_via_spf(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -59,7 +59,7 @@ class TestM365Detection:
         assert "Microsoft 365" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_domain_verification(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -72,7 +72,7 @@ class TestM365Detection:
         assert "Microsoft 365" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_teams_via_lyncdiscover(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -85,7 +85,7 @@ class TestM365Detection:
         assert "Microsoft Teams" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_intune_via_enterpriseregistration(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -98,7 +98,7 @@ class TestM365Detection:
         assert "Intune / MDM" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_dkim_exchange(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -111,7 +111,7 @@ class TestM365Detection:
         assert "DKIM (Exchange Online)" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_dkim_exchange_onmicrosoft(self, mock_resolve):
         """DKIM CNAME pointing to *.onmicrosoft.com should also be detected."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -127,7 +127,7 @@ class TestM365Detection:
         assert "DKIM (Exchange Online)" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_autodiscover(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -142,7 +142,7 @@ class TestM365Detection:
 
 class TestTechStackFingerprinting:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_google_site_verified_and_workspace_mx(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -155,7 +155,7 @@ class TestTechStackFingerprinting:
         assert "Google Workspace" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_salesforce(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -167,7 +167,7 @@ class TestTechStackFingerprinting:
         assert "Salesforce" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_hubspot(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -179,7 +179,7 @@ class TestTechStackFingerprinting:
         assert "HubSpot" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_proofpoint_mx_and_spf(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -191,7 +191,7 @@ class TestTechStackFingerprinting:
         assert "Proofpoint" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_knowbe4(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -203,7 +203,7 @@ class TestTechStackFingerprinting:
         assert "KnowBe4" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_crowdstrike(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -215,7 +215,7 @@ class TestTechStackFingerprinting:
         assert "CrowdStrike Falcon" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_slack_and_atlassian(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -231,7 +231,7 @@ class TestTechStackFingerprinting:
         assert "Atlassian (Jira/Confluence)" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_kartra_via_cname(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -246,7 +246,7 @@ class TestTechStackFingerprinting:
         assert any(e.source_type == "CNAME" and e.slug == "kartra" for e in result.evidence)
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_disciple_media_via_cname(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -261,7 +261,7 @@ class TestTechStackFingerprinting:
         assert any(e.source_type == "CNAME" and e.slug == "disciple-media" for e in result.evidence)
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_sendgrid_and_aws_ses(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -274,7 +274,7 @@ class TestTechStackFingerprinting:
         assert "AWS SES" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_mimecast_mx(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -286,7 +286,7 @@ class TestTechStackFingerprinting:
         assert "Mimecast" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_dmarc_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -299,7 +299,7 @@ class TestTechStackFingerprinting:
         assert "DMARC" in result.detected_services
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_no_services_detected(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -315,7 +315,7 @@ class TestTechStackFingerprinting:
         assert result.detected_services == ("Self-hosted mail",)
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_full_stack_detection(self, mock_resolve):
         """A domain with many services should detect them all."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -340,7 +340,7 @@ class TestTechStackFingerprinting:
 
 class TestDNSSourceErrorHandling:
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_all_queries_fail_returns_no_services(self, mock_resolve):
         async def always_empty(*args, **kwargs):
             return []
@@ -359,7 +359,7 @@ class TestDNSSourceErrorHandling:
             assert isinstance(result, SourceResult)
 
     @pytest.mark.asyncio
-    @patch("recon_tool.sources.dns._safe_resolve")
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_one_failing_detector_does_not_abort_source(self, mock_resolve):
         """A single detector raising on crafted input must NOT abort the whole
         DNS source. The gather isolates per-detector failures (v1.9.20),
