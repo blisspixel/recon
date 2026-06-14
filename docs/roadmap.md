@@ -125,6 +125,11 @@ rules are in [release-process.md](release-process.md#version-numbering).
   god-file decomposition, patch-level) or produces assurance memos and a paper
   rather than a user-facing surface, so the version number may rest while that
   work proceeds. A minor is cut only when a coherent new surface earns it.
+  Recent patch-level work (post-2.2.0, unreleased): input is now normalized to
+  the registrable apex via the Public Suffix List with an `--exact` opt-out, and
+  `recon update` is surfaced in the docs — UX/ergonomics hardening, not a new
+  surface (see the CHANGELOG and the dependency-floor note above for the
+  `publicsuffixlist` addition).
 - **3.0 (intentionally deferred, possibly never).** A major bump is forced only by
   an unavoidable *breaking* change to a stable surface, with the deprecation
   window the stability policy requires. The pre-2.0 schema-hardening (SH1 to SH9)
@@ -1413,9 +1418,9 @@ A few patterns are distinctive enough to call out:
   pieces in the tree, and both arrive transitively through `mcp` rather
   than by our choice.
 
-### The trust bar: toward high-assurance use (aspirational — grill into this)
+### The trust bar: toward high-assurance use (the vision — grill into this)
 
-> Status: **north star, not committed scope.** This is a placeholder to
+> Status: **vision, not committed scope.** This is the guiding vision to
 > interrogate deliberately later, not a queued milestone. The ambition: recon
 > should be trustworthy enough that a high-assurance consumer — pick your
 > safety-critical, audit-heavy, "show me why I should believe this" operator —

@@ -112,7 +112,7 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | `tenant_id` | string | yes | UUID | stable | Microsoft 365 tenant UUID. `null` for non-M365 domains. |
 | `display_name` | string | no | n/a | stable | Organization display name. Falls back to the queried domain when no better signal is available. |
 | `default_domain` | string | no | n/a | stable | Primary domain within the tenant. Falls back to the queried domain when no tenant was detected. |
-| `queried_domain` | string | no | n/a | stable | The domain the user passed (after validation + lowercasing). |
+| `queried_domain` | string | no | n/a | stable | The registrable apex (eTLD+1) recon analyzed, after validating and normalizing the input. A pasted URL or sub-host is reduced to its apex (`mail.acme.co.uk` → `acme.co.uk`); `--exact` keeps the literal host. |
 
 ### Provider & confidence
 
