@@ -480,6 +480,20 @@ at "high" salience).
 - Integration tests (`pytest -m integration`) require network access and are skipped by default.
 - Keep PRs focused: one concern per PR.
 
+### House style (all contributions: code, docs, comments, commits, PRs)
+
+Applies to humans and AI coding agents alike.
+
+- No AI attribution: never add `Co-Authored-By`, "Generated with Claude", or any
+  assistant / vendor mention to commits or PRs.
+- No em-dashes and no emojis, anywhere (this generalizes the catalog-description
+  rule above). Use commas, colons, or parentheses.
+- Professional, idiomatic code that matches the surrounding file's style and
+  density. No AI slop: no comments that narrate the code, no defensive checks
+  inside already-validated boundaries, no `try/except` that only re-raises, no
+  single-use abstractions.
+- Concise, direct prose in docs. State what is true; do not pad.
+
 ### Post-1.0 bar for code changes
 
 From 1.0 onward, `docs/stability.md` defines the stable public surface.
