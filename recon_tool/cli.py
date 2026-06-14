@@ -390,6 +390,17 @@ def lookup(
             "policy fetch. BIMI presence is detected from DNS either way."
         ),
     ),
+    exact: bool = typer.Option(
+        False,
+        "--exact",
+        help=(
+            "Analyze the exact host given instead of reducing to the "
+            "registrable apex. By default a pasted URL or sub-host "
+            "(mail.acme.co.uk) is reduced to its apex (acme.co.uk), where "
+            "recon's signal lives; --exact keeps the literal host for the "
+            "narrow case of wanting DNS facts about that one sub-host."
+        ),
+    ),
 ) -> None:
     """
     Look up a domain. This is the default command.
@@ -425,6 +436,7 @@ def lookup(
             include_unclassified=include_unclassified,
             skip_ct=no_ct,
             active_probes=direct_probes,
+            exact=exact,
         )
     )
 
@@ -1294,10 +1306,13 @@ def _lookup_validate(
     show_exposure: bool,
     show_gaps: bool,
     chain_depth: int,
+    exact: bool = False,
 ) -> str:
     """Check the mutually-exclusive flag combinations and validate the domain.
 
     Returns the validated domain or raises ``typer.Exit`` with EXIT_VALIDATION.
+    By default the domain is reduced to its registrable apex (eTLD+1); with
+    ``exact`` the literal host is kept and a sub-host reduction note is shown.
     """
     from recon_tool.formatter import render_error
     from recon_tool.validator import validate_domain
@@ -1324,11 +1339,29 @@ def _lookup_validate(
         render_error("--depth requires --chain")
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
+    # Validate the literal host first (apex=False), then decide whether to
+    # reduce. --exact keeps the literal host; otherwise we reduce to the
+    # registrable apex and tell the operator what was actually analyzed.
     try:
-        return validate_domain(domain)
+        literal = validate_domain(domain, apex=False)
     except ValueError as exc:
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    if exact:
+        return literal
+
+    from recon_tool.psl import to_apex
+
+    apex = to_apex(literal)
+    # Surface a genuine sub-host reduction so the operator knows what was
+    # analyzed. Stay silent for the trivial www. case (it always collapses to
+    # the apex and surprises nobody), matching recon's prior behavior.
+    if apex != literal and literal != f"www.{apex}":
+        get_err_console().print(
+            f"[dim]Analyzing apex {apex} (from {literal}). Use --exact to query {literal} directly.[/dim]"
+        )
+    return apex
 
 
 async def _resolve_with_spinner(
@@ -2032,6 +2065,7 @@ async def _lookup(
     include_unclassified: bool = False,
     skip_ct: bool = False,
     active_probes: bool = False,
+    exact: bool = False,
 ) -> None:
     """Async lookup implementation.
 
@@ -2063,6 +2097,7 @@ async def _lookup(
         show_exposure=show_exposure,
         show_gaps=show_gaps,
         chain_depth=chain_depth,
+        exact=exact,
     )
 
     if compare_file:

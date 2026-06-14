@@ -436,14 +436,16 @@ class TestReevaluateDomainMCP:
         )
         from recon_tool.merger import merge_results
 
-        info = merge_results([source], "contoso.example.com")
-        _cache_set("contoso.example.com", info, [source])
+        # Use an apex domain: reevaluate_domain validates input, which reduces a
+        # sub-host to its registrable apex, so the cache key must be the apex too.
+        info = merge_results([source], "contoso.com")
+        _cache_set("contoso.com", info, [source])
 
-        result = await reevaluate_domain("contoso.example.com")
+        result = await reevaluate_domain("contoso.com")
         data = result
         # Should return valid tenant info JSON
         assert "display_name" in data
-        assert data["queried_domain"] == "contoso.example.com"
+        assert data["queried_domain"] == "contoso.com"
 
     @pytest.mark.asyncio
     async def test_zero_network_calls(self) -> None:
@@ -463,12 +465,12 @@ class TestReevaluateDomainMCP:
         )
         from recon_tool.merger import merge_results
 
-        info = merge_results([source], "fabrikam.example.com")
-        _cache_set("fabrikam.example.com", info, [source])
+        info = merge_results([source], "fabrikam.com")
+        _cache_set("fabrikam.com", info, [source])
 
         # Patch resolve_tenant to verify it's never called
         with patch("recon_tool.server.resolve_tenant", new_callable=AsyncMock) as mock_resolve:
-            result = await reevaluate_domain("fabrikam.example.com")
+            result = await reevaluate_domain("fabrikam.com")
             mock_resolve.assert_not_called()
 
         data = result
@@ -498,8 +500,8 @@ class TestReevaluateDomainMCP:
         )
         from recon_tool.merger import merge_results
 
-        info = merge_results([source], "northwind.example.com")
-        _cache_set("northwind.example.com", info, [source])
+        info = merge_results([source], "northwind.com")
+        _cache_set("northwind.com", info, [source])
 
         # Inject an ephemeral fingerprint — note: reevaluate_domain re-runs
         # merge_results on cached SourceResults, so the ephemeral fingerprint
@@ -511,7 +513,7 @@ class TestReevaluateDomainMCP:
         fp = _make_fingerprint(slug="northwind-ephemeral", pattern="^northwind-verification=")
         inject_ephemeral(fp)
 
-        result = await reevaluate_domain("northwind.example.com")
+        result = await reevaluate_domain("northwind.com")
         data = result
         # The tool should succeed without error
         assert "error" not in data
