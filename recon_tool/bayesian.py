@@ -474,10 +474,15 @@ def _credible_interval(
     """Compute the central credible interval treating ``posterior`` as the
     mean of a Beta(α, β) with effective sample size ``n_eff``.
 
-    Uses a normal approximation (Wilson-style) to avoid pulling in
-    scipy. With our n_eff range (4 to ~14) the approximation is
-    accurate to ±0.02 against exact Beta quantiles, which is well
-    inside the calibration uncertainty of the model itself.
+    Uses a normal approximation (Wald-style) to avoid pulling in
+    scipy. The approximation is rough near the probability boundary:
+    measured against exact Beta quantiles over our n_eff range (4 to
+    ~14) it deviates by up to ~0.06 as ``posterior`` approaches 0 or 1
+    (the [0, 1] clip and the Wald form's known degradation there) and
+    up to ~0.05 in the interior. Treat the bound as approximate, not
+    exact; swapping in the exact Beta central quantile is a tracked
+    follow-up. The deviation magnitude is pinned by
+    ``tests/test_bayesian_inference.py::TestCredibleIntervalVsBeta``.
     """
     if n_eff <= 0:
         return (0.0, 1.0)

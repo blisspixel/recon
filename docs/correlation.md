@@ -1317,15 +1317,25 @@ approximate with a normal-approximation (Wald) interval
 
 $$\hat{p} \pm z_{0.90} \cdot \sqrt{\frac{\hat{p}(1-\hat{p})}{n_{\mathrm{eff}}}}, \qquad z_{0.90} \approx 1.282,$$
 
-clipped to $[0, 1]$. The approximation is accurate to within
-$\pm 0.02$ of the exact Beta quantile across the $n_{\mathrm{eff}}$
-range we operate in, verified by
-`tests/test_bayesian_inference.py::test_credible_interval_matches_beta_quantile`.
+clipped to $[0, 1]$. This Wald form is a rough approximation, not a
+tight one: measured against the exact Beta quantile (scipy-free, in the
+test cited below) it deviates by up to $\approx 0.06$ as $\hat{p}$
+approaches 0 or 1, where the $[0,1]$ clip bites and the Wald interval is
+known to degrade (Brown, Cai & DasGupta 2001), and by up to
+$\approx 0.05$ in the interior, across the $n_{\mathrm{eff}}$ range we
+operate in. That is comparable to the model's own calibration error, so
+the interval bound is approximate, not exact, and the headline regime
+(posteriors near 0 or 1 with small $n_{\mathrm{eff}}$) is exactly where
+the approximation is worst. Replacing the Wald band with the exact Beta
+central quantile (an incomplete-beta inversion, no new dependency) is a
+tracked follow-up; the deviation magnitude is pinned by
+`tests/test_bayesian_inference.py::TestCredibleIntervalVsBeta`.
 
-**What the 80% interval is, and what it is not.** It is the
+**What the 80% interval is, and what it is not.** It is intended as the
 central-80% quantile of the moment-matching $\mathrm{Beta}$
-$(\alpha_{\mathrm{eff}}, \beta_{\mathrm{eff}})$ that we
-constructed on top of the exact posterior. It is *not* a
+$(\alpha_{\mathrm{eff}}, \beta_{\mathrm{eff}})$ constructed on top of the
+exact posterior, computed in practice via the Wald approximation above
+(with the deviation just stated). It is *not* a
 frequentist coverage interval against the underlying generative
 process, because there is no underlying generative process we have
 access to (the latent claim is unobserved by design and there is
