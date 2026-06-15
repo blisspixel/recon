@@ -57,8 +57,9 @@ are config/parsing covered by `test_bayesian_loader_edges` /
 `test_bayesian_topology` / `test_bayesian_validation_rounds`, and the
 dataclasses are pure frozen data whose mutants are equivalent-by-construction,
 the category the floor already discounts. The inference functions themselves
-were moved byte-identically, so the kill score is unchanged; the next sweep
-re-establishes the absolute mutant count.) Chosen first because it is the highest
+were moved byte-identically, so the kill *strength* on the inference core is
+unchanged; the post-decomposition sweep (round 4 below) re-established the
+absolute counts.) Chosen first because it is the highest
 trust-per-effort surface: the numbers it emits are the product recon
 asks operators to rely on, it is already the most-verified module in
 the tree (differential verification v2.1.7, drift gate v2.1.14,
@@ -98,10 +99,31 @@ trajectory, against the false v2.1.16 "1,642 of 1,642":
 |---|---|---|---|---|---|
 | 1 (corrected) | 1,465 | 1,252 | 213 | 14.5% | interpreter fixed, BitOr filter, unit-math anchors |
 | 2 | 1,465 | 1,312 | 153 | 10.4% | loader-edge + n_eff tests added |
-| 3 (final) | 1,431 | 1,308 | 123 | 8.6% | Is/IsNot filtered, bound + penalty + absence kills |
+| 3 (pre-split) | 1,431 | 1,308 | 123 | 8.6% | Is/IsNot filtered, bound + penalty + absence kills |
+| 4 (post-decomposition) | 1,083 | 981 | 102 | 9.4% | bayesian.py split; v2.2 output-field + counterfactual kills |
 
-(Final run: 1,642 mutants generated, 210 filtered as equivalent-by-construction,
+(Round 3 run: 1,642 mutants generated, 210 filtered as equivalent-by-construction,
 1 incompetent within tolerance, so 1,431 tested.)
+
+Round 4 re-established the baseline after the god-file decomposition moved the
+YAML loaders and result dataclasses out of `bayesian.py` (1,212 generated, 129
+filtered, 0 incompetent, 1,083 tested). The split removed ~360 readily-killed
+loader / dataclass mutants from the surface, so the equivalent-mutant residue,
+which lives in the inference core that stayed, became a larger *fraction* of the
+smaller denominator even though the suite's kill strength on that core is
+unchanged. The 2026-06 scheduled sweep first surfaced this at 12.5% (135 of
+1,083): the v2.2 evidence-semantics surface (per-node entropy reduction, the
+exact leave-one-unit-out counterfactuals) had shipped output fields whose
+rounding and arithmetic the kill-set pinned only in aggregate. The aggregate
+`TestOutputRounding` form (`all(v == round(v, 4))` plus `any(round(v, 3) != v)`)
+cannot catch a *single* field rounding coarser, because the other fields keep
+the `any()` satisfied. Per-field exact-literal anchors in
+`tests/test_bayesian_unit_math.py` (`TestOutputRounding`,
+`TestUnitCounterfactuals`, and the `_rank_evidence` order anchor) close that gap:
+they killed 33 survivors (`posterior` / `interval` / `entropy_reduction(_nats)` /
+`posterior_without` / `delta` rounding in both directions, the counterfactual
+`delta = posterior - posterior_without` subtraction, and the descending-absolute
+sort-key sign), taking the surface to 9.4%.
 
 The first two rounds killed 60+ genuine survivors that were real test
 gaps the gate exposed (loaders, n_eff arithmetic, interval math,
@@ -110,9 +132,9 @@ identity-comparison mutants (equivalent by construction) and kills the
 last cheap genuine survivors (out-of-range bound checks, the conflict
 penalty constant asserted as a literal, the `absence_informative` flip).
 
-**The residual 8.6% is dominated by equivalent mutants**, classified from
-the survivor diffs (the session DB is uploaded as a CI artifact on every
-run, so this is checkable):
+**The residual (8.6% pre-split, 9.4% post-decomposition) is dominated by
+equivalent mutants**, classified from the survivor diffs (the session DB is
+uploaded as a CI artifact on every run, so this is checkable):
 
 - *Identity for value equality* (`==` to `is`): filtered. Testing object
   identity for an interned-literal comparison asserts a CPython
@@ -136,13 +158,21 @@ run, so this is checkable):
   `pop(-1)`, some `continue` to `break`): the topological sort accepts any
   valid order and checks only the visited count, so the traversal order
   does not change the result.
+- *Coarser/finer rounding on a value with no decimals to lose* (`round(n_eff,
+  2)` to `round(_, 1)` / `round(_, 3)`): `n_eff` is always a multiple of `0.5`
+  (`_MIN_N_EFF` plus integer-count multiples of `_EVIDENCE_N_EFF_CONTRIB` and
+  `_CONFLICT_N_EFF_PENALTY`), so it carries no second decimal and the
+  granularity argument is irrelevant. Equivalent. The float-bearing output
+  fields (`posterior`, intervals, entropy, counterfactual `delta`) are *not*
+  equivalent and are pinned per field, above.
 
 ## The floor
 
 `scripts/mutation_floor.py mutation.sqlite --fail-over 12`: survival over
 **tested** mutants (killed + survived) must stay at or under 12% (kill
 score at or above 88%). The floor sits above the documented
-equivalent-mutant residue (measured 8.6%) with margin, so it ratchets the current
+equivalent-mutant residue (measured 8.6% pre-split, 9.4% post-decomposition)
+with margin, so it ratchets the current
 kill strength and fails when real coverage regresses (untested new code
 spikes survival well past the residue), without demanding tests for
 provably-equivalent mutants. This is the standard mutation-testing
@@ -182,7 +212,7 @@ uv run --group mutation cosmic-ray baseline mutation.toml   # mandatory
 uv run --group mutation cosmic-ray init mutation.toml mutation.sqlite
 uv run --group mutation cr-filter-operators mutation.sqlite mutation.toml
 uv run --group mutation cosmic-ray exec mutation.toml mutation.sqlite
-uv run python scripts/mutation_floor.py mutation.sqlite --fail-over 5
+uv run python scripts/mutation_floor.py mutation.sqlite --fail-over 12
 ```
 
 cosmic-ray mutates the working copy of `recon_tool/bayesian.py` in
