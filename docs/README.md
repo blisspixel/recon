@@ -55,6 +55,7 @@ The aspirational write-up and where recon sits in the literature.
 | Why correlation works the way it does (the formal model) | [correlation.md](correlation.md) |
 | Calibration without observable ground truth (literature positioning) | [related-work.md](related-work.md) |
 | The paper skeleton and experiment inventory | [paper-outline.md](paper-outline.md) |
+| The paper draft (prose expansion of the outline) | [paper-draft.md](paper-draft.md) |
 
 ## Extending recon
 
