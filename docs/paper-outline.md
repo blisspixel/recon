@@ -7,6 +7,9 @@ here survives between work sessions. The literature positioning lives in
 [related-work.md](related-work.md); the forward plan and which pieces are
 shipped live in the [roadmap](roadmap.md) research write-up section.
 
+The prose expansion of this outline (full section drafts, with corpus-gated
+empirical cells marked pending) lives in [paper-draft.md](paper-draft.md).
+
 ## Thesis
 
 When a classifier's ground truth is structurally unobservable and the
