@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Internal
 
-- **God-file decomposition (continued).** Further split the oversized modules
+- **God-file decomposition (completed).** Further split the oversized modules
   under the file-size ratchet, each step golden/snapshot byte-identical and
   CI-gated. `formatter.py` is down to ~2160 lines (from 4413): the markdown
   report renderer moved to `formatter_markdown.py` and the non-Rich data
@@ -54,7 +54,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   958) split its gateway/provider slug sets and slug-humanizing name maps to
   `merger_tables.py`. Both origin modules re-export every moved name (the merger
   tables under their historical `_NAME` aliases) so the import and test surface is
-  unchanged. No behavior or contract change. See the roadmap "Module
+  unchanged. The four large modules then followed the same pattern and the track
+  is now complete: `sources/dns.py` (2524 → 840) into `dns_tables` / `dns_base` /
+  `dns_email` / `dns_infra`; `bayesian.py` (1411 → 926) into `bayesian_models` /
+  `bayesian_loader`, with the inference engine left in place so the mutation-gated
+  surface stays byte-identical; `server.py` (2859 → 406) into `server_app` /
+  `server_runtime` plus the per-domain tool modules registering on the shared
+  FastMCP instance; and `cli.py` (→ 702) into `cli_lookup` / `cli_batch` /
+  `cli_doctor`. Every package module is now under the 1000-line cap except
+  `formatter.py`'s cohesive panel core (~2160, kept whole by design). No behavior
+  or contract change. See the roadmap "Module
   decomposition" section.
 
 ## [2.2.0] - 2026-06-13
