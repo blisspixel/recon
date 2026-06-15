@@ -26,3 +26,9 @@ little real gain. Flat layout remains acceptable for established projects.
   imports), mitigated by CI running against the built/installed package.
 - Should the package ever be restructured for another reason, revisit this
   decision rather than treating flat layout as permanent.
+- The 2026-06 god-file decomposition followed this principle: each oversized
+  module was split into flat **sibling** modules (`server_app`, `server_lookup`,
+  `dns_tables`, `bayesian_loader`, `cli_doctor`, and so on) re-exported from the
+  original, rather than converted into subpackages. This keeps the locked import
+  paths intact (ADR-0003) and avoids the package-conversion churn, consistent
+  with the reasoning above.

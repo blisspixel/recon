@@ -150,7 +150,7 @@ What we already do well, and the named open items — no pretending.
 | CI↔local parity (`scripts/check.py`), file-size ratchet | ✅ | closes the CI-red root cause |
 | ADRs for load-bearing decisions | ✅ (initial set) | extend as decisions are made |
 | Noun-verb CLI consistency, `--plain`/`--json`, stdout/stderr discipline | ✅ | |
-| **God-file decomposition** (formatter/cli/server/dns) | ⏳ **open** | ratcheted; sequenced in roadmap |
+| **God-file decomposition** (formatter/cli/exposure/merger/dns/bayesian/server) | ✅ | complete 2026-06-14; every module under the 1000-line cap except formatter's cohesive panel core (~2160, kept whole by design) |
 | **`PLR09xx` function-size rules** (statements/branches/args/returns) | ⏳ partial | only `C901` today; tighten gradually |
 | **Per-PR diff coverage** | ⏳ partial | total `fail_under` only; add diff-cover |
 
