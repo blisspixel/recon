@@ -13,8 +13,10 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from recon_tool import cli
-from recon_tool.cli import _BatchInputError, _read_batch_domains, app  # pyright: ignore[reportPrivateUsage]
+from recon_tool import cli, cli_batch
+from recon_tool.cli import app
+from recon_tool.cli_batch import _BatchInputError
+from recon_tool.cli_batch import read_batch_domains as _read_batch_domains
 from recon_tool.models import ConfidenceLevel, SourceResult, TenantInfo
 
 runner = CliRunner()
@@ -40,14 +42,14 @@ def test_read_batch_domains_skips_blanks_and_comments() -> None:
 
 
 def test_read_batch_domains_enforces_domain_cap(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(cli, "_MAX_BATCH_DOMAINS", 2)
+    monkeypatch.setattr(cli_batch, "_MAX_BATCH_DOMAINS", 2)
     stream = io.StringIO("a.com\nb.com\nc.com\n")
     with pytest.raises(_BatchInputError, match="maximum of 2 domains"):
         _read_batch_domains(stream)
 
 
 def test_read_batch_domains_enforces_size_cap(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(cli, "_MAX_BATCH_FILE_BYTES", 8)
+    monkeypatch.setattr(cli_batch, "_MAX_BATCH_FILE_BYTES", 8)
     stream = io.StringIO("aaaa.com\nbbbb.com\n")
     with pytest.raises(_BatchInputError, match="maximum size"):
         _read_batch_domains(stream)
