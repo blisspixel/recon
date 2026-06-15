@@ -69,9 +69,9 @@ This file is forward-looking. Shipped work belongs in
 > v2.2.0, shipped 2026-06-13 alongside the MCP structured-output contract
 > revision and OSC 8 hyperlinks.
 >
-> **Post-2.2.0, the active engineering track is the god-file decomposition**
-> (see the dedicated section below): `formatter.py` is down from 4413 to ~2160
-> lines across five extracted modules (`formatter_exposure`,
+> **Post-2.2.0, the god-file decomposition track ran as the active engineering
+> work and is now complete** (see the dedicated section below): `formatter.py` is
+> down from 4413 to ~2160 lines across five extracted modules (`formatter_exposure`,
 > `formatter_classify`, `formatter_classify_tables`, `formatter_markdown`,
 > `formatter_serialize`); `cli.py` is down from 3941 to ~2830 with its four
 > Typer sub-apps split into sibling modules; and the two modules just over the
@@ -91,11 +91,17 @@ This file is forward-looking. Shipped work belongs in
 > shared FastMCP instance and resolve seam moved to `server_app.py`, the runtime
 > state to `server_runtime.py`, and the MCP tools into per-domain modules
 > (`server_ephemeral`, `server_lookup`, `server_posture`, `server_graph`,
-> `server_introspection`), all registering on the shared instance. What remains
-> is the one large module, `cli.py`'s command core, which needs the same
-> app-sharing variant for the shared Typer instance, sequenced as a focused
-> operation. Every split is golden-byte-identical and CI-gated by the file-size
-> ratchet.
+> `server_introspection`), all registering on the shared instance. And `cli.py`
+> is decomposed and under the cap (2800 → 702): its command-implementation
+> helper families moved to `cli_lookup` / `cli_batch` / `cli_doctor`, with the
+> Typer app and the thin `@app.command` wrappers staying in `cli.py` (the
+> helpers use `get_console()` rather than module state, so a plain leaf split and
+> an assignment facade sufficed, no app-sharing needed). **The planned god-file
+> decomposition track is now complete:** every module the 2026 metrics pass
+> flagged has been split and is under the 1000-line cap, except `formatter.py`
+> (~2160), whose remaining cohesive Rich panel core is deliberately kept whole
+> and ratchet-capped rather than fragmented. Every split was
+> golden-byte-identical and CI-gated by the file-size ratchet.
 >
 > What is otherwise open is operator-paced or standing: the maintainer-local
 > runs of the calibration harnesses (held-out residual, tenancy corroboration,
@@ -178,19 +184,21 @@ the statistical-assurance dossier, and the evidence-semantics diagnostics) have
 shipped; their detail is kept in [Assurance and trust hardening](#assurance-and-trust-hardening-the-post-20-north-star)
 and the `validation/` memos for rationale. What remains, in logical order:
 
-1. **God-file decomposition** (engineering; in progress, patch-level — no version
+1. **God-file decomposition** (engineering; complete, patch-level — no version
    bump). Split each module over the ~1000-line convention into cohesive
    sub-modules, preserving the public import path and keeping golden/snapshot
-   output byte-identical, each step CI-gated by the file-size ratchet. Order of
-   operations: `formatter.py` (done — five modules extracted, 4413 to ~2160),
-   `cli.py` (done for its four Typer sub-apps, 3941 to ~2830; the main-app command
-   core remains), `exposure.py` (done — result dataclasses to `exposure_models.py`,
-   1130 to 983), and `merger.py` (done — slug tables to `merger_tables.py`, 1131 to
-   958), and `sources/dns.py` (done — 2524 to 840 across `dns_tables`, `dns_base`,
-   `dns_email`, `dns_infra`), and `bayesian.py` (done — 1411 to 926, dataclasses
-   to `bayesian_models.py` and loaders to `bayesian_loader.py`); then the two
-   large modules `server.py` and `cli.py`'s command
-   core. *Design:* the "Module decomposition (god-file split)"
+   output byte-identical, each step CI-gated by the file-size ratchet. Done:
+   `formatter.py` (five modules, 4413 to ~2160 cohesive panel core),
+   `cli.py` (four Typer sub-apps + the command-impl families to `cli_lookup` /
+   `cli_batch` / `cli_doctor`, 3941 to 702), `exposure.py` (result dataclasses to
+   `exposure_models.py`, 1130 to 983), `merger.py` (slug tables to
+   `merger_tables.py`, 1131 to 958), `sources/dns.py` (2524 to 840 across
+   `dns_tables`, `dns_base`, `dns_email`, `dns_infra`), `bayesian.py` (1411 to
+   926, dataclasses to `bayesian_models.py` and loaders to `bayesian_loader.py`),
+   and `server.py` (2859 to 406 across `server_app`, `server_runtime`, and the
+   per-domain tool modules). Every package module is now under the 1000-line cap
+   except `formatter.py`'s deliberately-whole panel core. *Design:* the "Module
+   decomposition (god-file split)"
    section below, [engineering-practices.md](engineering-practices.md), and
    [adr/](adr/).
 2. **Calibration corpus runs** (operator-paced; maintainer-local). The harnesses
@@ -940,12 +948,12 @@ regrow and new modules cap at 1000 lines. The work is to split each into a
 cohesive subpackage while preserving the public import path and keeping the
 golden/snapshot tests byte-identical.
 
-The two over-cap modules in the 1000-1130 band, `sources/dns.py`,
-`bayesian.py`, and `server.py` are now under the cap; the open work is the one
-genuinely large module, `cli.py`'s command core, which shares the harder
-trait — internal names that must be publicized with broad reference churn, and a
-shared Typer instance that forces the app-sharing variant. It is sequenced as a
-focused operation, not a quick lift:
+All seven flagged modules are now decomposed: the two in the 1000-1130 band,
+`sources/dns.py`, `bayesian.py`, `server.py`, and `cli.py` are under the cap,
+and `formatter.py` is reduced to its cohesive panel core (~2160, kept whole by
+design). The decomposition track below is complete; each entry is marked Done
+with the approach taken, kept as the record of how the splits were sequenced and
+what was learned:
 
 1. `formatter.py` → split by render concern. **Done (4413 → ~2160, five
    modules):** exposure/gaps rendering → `formatter_exposure.py`; the shared
@@ -974,14 +982,17 @@ focused operation, not a quick lift:
    `mcp` → `cli_mcp.py`, `signals` → `cli_signals.py` (with its signal-render
    helpers), and `fingerprints` → `cli_fingerprints.py`. The one shared helper a
    sibling needed (`_fmt_exc`, used across ~20 sites) moved to `cli_shared.py`
-   first so the sibling could import it without a cycle. What remains in `cli.py`
-   is the main-app command core (`lookup` / `batch` / `delta` / `discover` /
-   `doctor` / `update`) plus `run()`; extracting those `@app.command` groups needs
-   the app-sharing variant of the pattern (the command module imports the shared
-   `app`), a heavier change with more blast radius. With `server.py` now done,
-   this is the last remaining god-file and the next decomposition target; the
-   server split's seam lessons (route shared calls through one place, retarget
-   the corresponding test monkeypatches) carry directly over.
+   first so the sibling could import it without a cycle. **Done for the command
+   core too (2800 → 702):** the `@app.command` functions turned out to be thin
+   wrappers delegating to helper families, so the app-sharing variant was not
+   needed after all. The `_lookup_*` / `_batch_*` / `_doctor_*` implementation
+   helpers moved to `cli_lookup` / `cli_batch` / `cli_doctor` (plain leaves, since
+   they call `get_console()` rather than touch module state); `cli.py` keeps the
+   Typer `app`, the thin commands, and the sub-app registration, and references
+   the orchestrators through an assignment facade so no call site is qualified.
+   The white-box tests that reach into the batch reader and the status spinner
+   point at the impl modules, including the `_MAX_BATCH_*` and
+   `_STATUS_ROTATE_SECONDS` monkeypatch targets.
 3. `exposure.py` → **Done (1130 → 983):** the frozen result-type family
    (`EvidenceReference` / `EmailPosture` / `IdentityPosture` / `ExposureAssessment`
    / `GapReport` / `PostureComparison` and kin) split to `exposure_models.py`, a
