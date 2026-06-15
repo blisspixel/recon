@@ -13,7 +13,7 @@ import asyncio
 
 import pytest
 
-from recon_tool.cli import _STATUS_MESSAGES, _run_with_rotating_status
+from recon_tool.cli_lookup import _STATUS_MESSAGES, _run_with_rotating_status
 
 
 class _FakeStatus:
@@ -64,7 +64,7 @@ def test_propagates_exceptions() -> None:
 
 def test_rotates_message_while_waiting(monkeypatch: pytest.MonkeyPatch) -> None:
     # Shrink the rotation interval so a short sleep crosses several ticks.
-    monkeypatch.setattr("recon_tool.cli._STATUS_ROTATE_SECONDS", 0.01)
+    monkeypatch.setattr("recon_tool.cli_lookup._STATUS_ROTATE_SECONDS", 0.01)
 
     async def slow() -> str:
         await asyncio.sleep(0.05)
@@ -79,7 +79,7 @@ def test_rotates_message_while_waiting(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_broken_status_update_still_finishes(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("recon_tool.cli._STATUS_ROTATE_SECONDS", 0.01)
+    monkeypatch.setattr("recon_tool.cli_lookup._STATUS_ROTATE_SECONDS", 0.01)
 
     async def slow() -> str:
         await asyncio.sleep(0.05)
