@@ -938,7 +938,7 @@ terminal hyperlinks for printed URLs (vendor-doc links, crash-log path), with a
 plain-text fallback off a TTY, remain an available polish item (Rich supports
 them natively).
 
-**Module decomposition (god-file split) — open, ratcheted.** A 2026 metrics
+**Module decomposition (god-file split) — complete (2026-06-14), ratcheted.** A 2026 metrics
 pass found several modules far over the ~1000-line convention: `formatter.py`
 (4413), `cli.py` (3941), `server.py` (3114), `sources/dns.py` (2524),
 `bayesian.py` (1411), `merger.py` (1131), `exposure.py` (1130). Track A
