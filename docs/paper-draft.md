@@ -28,14 +28,21 @@ fixed, hiding any observed signal can only move a claim toward its all-absent
 baseline, never to a confident false positive. We are explicit about the limit:
 the guarantee bounds evidence removal, not addition, and a fully passive
 operator who publishes one truthful decoy record can still force a confident
-false positive. On the nodes whose label is an external reference the operator
-cannot suppress (the DMARC mail-policy record, the providers' own tenancy
-endpoints) we report calibration and a distribution-free conformal coverage
-statement with its exchangeability boundary made explicit; everywhere else we
-report evidence-responsiveness, which governs interval width and not
-point-estimate accuracy, and say so. We evaluate against public references
-anyone can re-query and synthetic harnesses that need no private data, and we
-release a reproducible, signed artifact.
+false positive. Our headline empirical finding is a negative one, from the one
+construction that makes a predictor disjoint from its label: with the defining
+DMARC record masked out of the public-declaration mail-policy node, the
+multi-signal posterior does not recover enforcing policy from the
+non-suppressible residual (ECE 0.34, agreement 0.22 over 4,284 domains). The
+full-posterior agreement with the DMARC record is near-perfect, but we label it
+consistency, not calibration, because the record is also the node's dominant
+input. The provider-attested tenancy node admits a channel-split check (a
+DNS-only predictor against the identity-endpoint label, ECE 0.045) that we report
+with its shared-common-cause caveat, plus a distribution-free conformal coverage
+statement on the labelable nodes with its exchangeability boundary made explicit.
+Every hideable node carries only the structural guarantees, and we say so. We
+evaluate against public references anyone can re-query and synthetic harnesses
+that need no private data, on a curated cohort whose selection bias we state, and
+we release a reproducible, signed artifact.
 
 ---
 
@@ -251,9 +258,13 @@ with un-fired bindings contributing nothing. Equivalently, the likelihood ratio
 recon assigns to the *absence* of a binding is exactly 1: an absent binding
 provides no discriminatory power between "X is truly absent" and "X is present
 and the operator hid the indicator." This is the precise mathematical content of
-"we do not condition on absence" (correlation.md 4.3; the m-graph derivation
-follows Mohan and Pearl 2021, the conservatism follows Manski partial
-identification). The one exception is the declarative mail-policy node, where the
+"we do not condition on absence" (correlation.md 4.3). We are careful not to
+overstate the formal grounding: the m-graph framework (Mohan and Pearl 2021)
+supplies a non-recoverability verdict for this missingness structure, it does not
+by itself derive the LR=1 choice, which is a modeling decision we make and then
+defend by the monotonicity lemma below and a machine check; the Manski reference
+is the partial-identification posture, not a bound we compute. The one exception
+is the declarative mail-policy node, where the
 reference (the DMARC/SPF/MTA-STS records) is itself public and non-hideable, so
 its absence *is* informative and the model conditions on it (the CAL14
 "missingness: declarative" model with grouped absence; `validation/cal14-missingness-design.md`).
@@ -319,24 +330,57 @@ boundary.
 
 ## 6. Evaluation
 
-Each experiment maps to a committed harness. Synthetic and public-reference
-results need no private data and are reproducible by any reader; corpus-stratified
-readouts are marked pending because the corpus is intentionally not published
-(Section 9).
+Each experiment maps to a committed harness. The corpus runs below were executed
+once over a curated cohort of 5,241 domains (0 resolve failures); the cohort's
+selection bias is stated under Threats below, and the per-domain data is never
+published (Section 9), only the aggregates here.
 
-| Experiment | What it shows | Status |
+| Experiment | Result | Status |
 |---|---|---|
 | Differential verification | variable elimination matches a full-joint reference on every enumerable configuration | shipped (`validation/differential_verification.py`) |
 | Interval coverage (synthetic) | the 80% interval absorbs elicitation imprecision under the +/-20% likelihood band | shipped (`validation/interval_coverage.py`) |
-| Likelihood sensitivity | posteriors and agreement stay stable under a +/-20% likelihood perturbation | shipped (`validation/likelihood_sensitivity.py`, `validation/cal8-likelihood-sensitivity.md`) |
-| Layer ablations | what the graph and Bayesian layers add over single-source slug matching, and the price of the MNAR stance | shipped and run, synthetic (`validation/layer_ablation.py`, `validation/layer-ablation.md`) |
-| Reference calibration (DMARC) | the email-policy posterior agrees with the DMARC record; tier 4 for the strict-SPF + MTA-STS residual | harness shipped (`validation/reference_calibration.py`); maintainer run pending |
-| Held-out residual calibration | recompute the policy posterior with the DMARC unit masked, calibrate the residual (predictor and label disjoint) | harness shipped; **[corpus-run pending]** |
-| Tenancy corroboration | M365 tenancy from DNS alone, calibrated against Microsoft's endpoint attestation (two-class); GWS reported one-sided (recall only) | harness shipped (`validation/tenancy_reference_calibration.py`); **[corpus-run pending]** |
-| Conformal coverage | distribution-free coverage on labelable nodes, with the exchangeability boundary demonstrated | harness shipped (`validation/conformal_coverage.py`); **[corpus-run pending]** |
-| Information recovered | per-domain entropy-reduction distribution across postures | per-node field shipped (2.2 `entropy_reduction_nats`); posture-stratified distribution **[corpus-run pending]** (first pass measured median ~0.85 nats) |
-| Posture stratification | aggregate behavior across hardening postures, as distributions not exemplars | harness shipped (`validation/posture_distributions.py`); **[corpus-run pending]** |
-| Per-vertical stratification | the calibration holds across industries | **[corpus-run pending]** |
+| Likelihood sensitivity | posteriors and agreement stable under a +/-20% likelihood perturbation | shipped (`validation/likelihood_sensitivity.py`) |
+| Layer ablations (synthetic) | the MNAR price and the fusion gain (below) | shipped and run (`validation/layer-ablation.md`) |
+| Held-out residual (the headline) | DMARC unit masked, predictor and label disjoint: ECE 0.339, Brier 0.246, agreement 0.221 (n=4,284). The residual (strict SPF plus MTA-STS) does NOT recover enforcing policy once the defining record is removed. A real, falsifiable negative result. | run 2026-06-15 |
+| DMARC full posterior | agreement 1.000, ECE 0.075, Brier 0.0075 (n=4,284). Labeled CONSISTENCY, not calibration: the DMARC record is the node's dominant input, so this is a definitional-agreement check. | run 2026-06-15 |
+| Tenancy, M365 | DNS-only predictor vs the identity-endpoint label: ECE 0.045, Brier 0.087, agreement 0.879 (n=5,182). Caveat: the two channels share the tenant-provisioning common cause, so this controls shared measurement error, not confounding; the base rate is 0.75, so agreement is only modestly above always-present. | run 2026-06-15 |
+| Tenancy, Google Workspace | one-sided recall 0.545 (n=22); no authoritative negative on the Google channel. | run 2026-06-15 |
+| Conformal coverage | mean coverage 0.999 vs 0.90 target, set size ~1.0 (decisive), n=4,283, 20 splits. Over-covers on this exchangeable cohort; not claimed for hardened (non-exchangeable) targets. | run 2026-06-15 |
+| Information recovered, posture stratification | per-domain entropy reduction (n=5,241): overall median 1.483 nats (p25 0.975, p75 1.907). The hardening signal is the sparse-evidence tier (direct/sparse median 0.490), not the edge-proxied flag (a detected CDN adds information). CAL7 width diagnostic: grouped nodes are not narrower than ungrouped at matched n_eff (0.555 vs 0.468 at n_eff<=4), consistent with the co-firing correction preventing over-confidence where it is applied. | run 2026-06-15 |
+| Per-vertical stratification (31 industries, min cell 10) | the pattern is uniform: full-posterior consistency ECE ~0.05-0.10 (pooled 0.072, agreement 1.0), held-out residual ECE ~0.21-0.53 (pooled 0.411, agreement 0.156). The negative finding generalizes across every vertical; base rates 0.67-1.0 (banking, cybersecurity at 1.0) confirm the cohort skew. | run 2026-06-15 |
+
+**The headline result is a negative one, reported as such.** The one construction
+that makes predictor and label disjoint, the held-out residual on the only node
+with an external non-suppressible reference, shows the multi-signal posterior
+cannot recover enforcing mail policy from the residual signals once the defining
+DMARC record is masked (ECE 0.339, agreement 0.221, below the cohort's ~0.80
+constant-predict baseline). We foreground this rather than the near-perfect
+full-posterior agreement, because the latter scores the node against its own
+dominant input and is a consistency check, not calibration. The tenancy
+channel-split (ECE 0.045) is the strongest genuinely-disjoint signal, and even it
+is confounded by a shared upstream and flattered by a 0.75 base rate. The honest
+summary: recon currently has no node with a clean, independent, passing
+calibration result, and the experiment built to produce one instead falsifies it.
+That is a finding, not a gap to paper over. The per-vertical stratification rules
+out a single-sector artifact: the residual fails uniformly across all 31
+industries (pooled held-out ECE 0.411, agreement 0.156), while the full-posterior
+consistency is equally uniform (pooled ECE 0.072), which is exactly what a
+definitional-agreement check looks like when read honestly.
+
+**Threats this evaluation does not control.** (1) The cohort is ~5,200 curated,
+tech-forward firms (about 80 percent DMARC-enforcing, 75 percent M365), which
+over-represents well-instrumented, non-hardened targets, the easy regime the
+adversarial-missingness design claims not to need; the hardened cell the thesis
+is about is nearly empty, and the reliability mid-range (0.4 to 0.7) is
+unpopulated, which partly explains the low ECE. A stratified probability sample
+from a public zone, stratified by a hardening proxy, is required before any rate
+transfers beyond this population. (2) The credible interval is a Wald
+approximation to the moment-matching Beta, not the exact quantile; it deviates by
+up to ~0.06 near the probability boundary (Section 3), exactly the regime most
+posteriors occupy, so interval-derived numbers carry that slack until the exact
+Beta replacement lands. (3) The conformal over-coverage with decisive set size is
+expected on a bimodal, exchangeable cohort and says nothing about hardened
+targets.
 
 **The cost of honesty, with numbers.** The layer ablation runs over 20,000
 synthetic worlds drawn from the model's own generative process and is fully
@@ -423,6 +467,18 @@ The artifact is a bit-for-bit reproducible build with sigstore-signed PyPI
 attestations and a locked JSON schema, so the tool a reader runs is the tool the
 paper describes.
 
+We separate two reproducibility claims that are easy to conflate. Build
+reproducibility (the signed, bit-identical artifact) is real and complete. Result
+reproducibility is not: the corpus aggregates above (for example the M365 ECE of
+0.045) cannot be regenerated by an outsider, because the domain list is gitignored
+by invariant and DNS/CT state drifts daily, and the synthetic harnesses reproduce
+the method and the relative-layer results but not the public-cohort numbers. The
+planned remedy is to release a frozen, content-hash-pinned snapshot of the public
+labels (the DMARC records and endpoint attestations are themselves public) as an
+identifier list with a capture date, which makes the public-reference cells
+re-checkable without publishing the corpus. Until then, the corpus numbers are
+maintainer-reproducible only.
+
 ---
 
 ## 10. Conclusion
@@ -440,19 +496,29 @@ passive observer can and cannot promise.
 
 ---
 
-## Open items before submission (corpus-gated, not writing-gated)
+## Open items before submission
 
-Per [roadmap.md](roadmap.md), the gating items are empirical runs over the
-gitignored corpus, not the prose:
+Done (run 2026-06-15, aggregates in Section 6): the held-out residual, the DMARC
+full-posterior consistency check, the M365 and Google tenancy calibrations, and
+the conformal coverage pass. Still open, in priority order:
 
-- maintainer-local runs of the shipped harnesses: held-out residual and
-  per-vertical stratification (`validation/reference_calibration.py`), tenancy
-  corroboration (`validation/tenancy_reference_calibration.py`), and the
-  conformal coverage pass (`validation/conformal_coverage.py`);
-- the posture-stratified aggregates (`validation/posture_distributions.py`);
-- figures: an architecture diagram, the nine-node DAG, reliability diagrams with
-  the posterior histogram, and the interval-width-versus-evidence-count plot that
-  surfaces the CAL7 over-confidence (color-blind-safe palettes).
-
-Once those land, the **[corpus-run pending]** cells in Section 6 are filled from
-aggregate-only outputs and the draft is submittable.
+- The scientific reframe the held-out result forces: this draft now leads with the
+  negative finding, but the next pass should diagnose WHY the residual collapses
+  (are strict SPF and MTA-STS too rare or confounded to predict enforcement?),
+  which is the actual contribution.
+- Replace the curated cohort with a stratified public probability sample and
+  release a frozen, hash-pinned public-label snapshot (fixes both the selection
+  bias and the result-reproducibility gap in Sections 6 and 9).
+- Re-do the M365 calibration against an instrument with no mail-routing path to
+  the endpoint label, to remove the shared-upstream confound.
+- The posture-stratified aggregates (`validation/posture_distributions.py`) and
+  per-vertical stratification (running / pending).
+- Engine follow-up: swap the Wald interval for the exact Beta central quantile
+  (Section 3), then re-run the coverage and calibration cells.
+- A debiased ECE estimator (in-bin mean confidence, equal-mass bins, bootstrap CI)
+  so the reported error separates estimator from model.
+- An adversarial planting/stripping test set that measures the threat model
+  directly rather than asserting it.
+- Figures: architecture diagram, the nine-node DAG, reliability diagrams with the
+  posterior histogram, and the interval-width-versus-evidence-count plot for CAL7
+  (color-blind-safe palettes).
