@@ -45,6 +45,13 @@ def _ev(name: str, lp: float, la: float, group: str | None = None, kind: str = "
     return _Evidence(kind=kind, name=name, likelihood_present=lp, likelihood_absent=la, group=group)
 
 
+# Deterministic rich-evidence input shared by the output-field anchors: fires
+# bindings across hideable and declarative nodes so posteriors, intervals,
+# entropy reductions, and unit counterfactuals all carry pinnable values.
+_RICH_SLUGS = ["microsoft365", "okta", "cloudflare"]
+_RICH_SIGNALS = ["dmarc_reject", "spf_strict", "federated_sso_hub"]
+
+
 # ── _credible_interval ─────────────────────────────────────────────────
 
 
@@ -193,6 +200,16 @@ class TestRankEvidence:
         ranked = _rank_evidence([b, a])
         assert [(c.kind, c.name) for c in ranked] == [("signal", "zzz"), ("slug", "aaa")]
 
+    def test_strongest_ranks_first_against_name_order(self) -> None:
+        # The strong binding sorts LAST by (kind, name) but FIRST by
+        # descending |LLR|. Pinning that the strong one leads kills a
+        # sort-key sign flip (``-abs`` -> ``+abs`` / ``not abs``), which a
+        # case whose magnitude order matches name order cannot catch.
+        strong = _ev("zzz_strong", 0.95, 0.05)
+        weak = _ev("aaa_weak", 0.55, 0.45)
+        ranked = _rank_evidence([weak, strong])
+        assert [c.name for c in ranked] == ["zzz_strong", "aaa_weak"]
+
     def test_empty_is_empty(self) -> None:
         assert _rank_evidence([]) == ()
 
@@ -333,17 +350,81 @@ class TestContractPredicates:
 
 
 class TestOutputRounding:
+    # ``infer`` rounds each exposed numeric field to a fixed number of
+    # decimals (4 for posteriors / intervals / entropy, 2 for n_eff). The
+    # aggregate test below pins the contract; the per-field exact anchors
+    # that follow pin one node's emitted values to hand-recorded literals.
+    # Pinning a literal kills the rounding mutants in both directions per
+    # field: a 3-decimal emission and a 5-decimal emission both diverge
+    # from the recorded 4-decimal value. The aggregate any()/all() form
+    # alone cannot catch a single field rounding coarser, because the other
+    # fields keep the any() satisfied. The literals depend on the shipped
+    # network's bindings; a deliberate network change that moves them shows
+    # up here next to the drift-gate baseline it also has to update.
+
     def test_posteriors_and_intervals_round_to_four_decimals(self) -> None:
-        # ``infer`` rounds posterior and interval bounds to exactly four
-        # decimals. Both directions are pinned: every value must already
-        # be at 4-decimal granularity (a 5-decimal emission fails the
-        # equality), and at least one value across the nodes must carry a
-        # nonzero fourth decimal (a 3-decimal emission fails the any()).
+        # Every exposed value must already be at 4-decimal granularity (a
+        # 5-decimal emission fails the equality), and at least one must
+        # carry a nonzero fourth decimal (a 3-decimal emission fails the
+        # any()). The per-field anchors below close the single-field gap.
         net = load_network()
         result = infer(net, ["microsoft365", "okta"], ["dmarc_reject", "spf_strict"], priors_override={})
         values = [v for p in result.posteriors for v in (p.posterior, p.interval_low, p.interval_high)]
         assert all(v == round(v, 4) for v in values)
         assert any(round(v, 3) != v for v in values)
+
+    def test_posterior_interval_and_entropy_fields_pinned(self) -> None:
+        net = load_network()
+        post = {p.name: p for p in infer(net, _RICH_SLUGS, _RICH_SIGNALS, priors_override={}).posteriors}
+        m365 = post["m365_tenant"]
+        # posterior raw 0.97655696..., interval_low raw 0.88983...: the
+        # 4-decimal literal differs from both its 3- and 5-decimal forms.
+        assert m365.posterior == 0.9766
+        assert m365.interval_low == 0.8898
+        # entropy_reduction_nats raw 0.49971224...: a per-node entropy field.
+        assert m365.entropy_reduction_nats == 0.4997
+        # interval_high is clamped to 1.0 on m365 (no fractional decimal to
+        # pin); take a node whose upper bound stays inside the unit range.
+        assert post["google_workspace_tenant"].interval_high == 0.5643
+
+    def test_total_entropy_reduction_rounds_to_four_decimals(self) -> None:
+        # The InferenceResult-level total. raw 0.99850...: a 3-decimal
+        # emission (0.999) fails the literal, pinning round(_, 4).
+        net = load_network()
+        result = infer(net, ["microsoft365"], ["dmarc_reject"], priors_override={})
+        assert result.entropy_reduction == 0.9985
+
+
+class TestUnitCounterfactuals:
+    # The exact leave-one-unit-out counterfactual surface (v2.2). Each
+    # UnitCounterfactual carries ``posterior_without`` and ``delta =
+    # posterior - posterior_without``, both rounded to 4 decimals, and the
+    # list is sorted by descending absolute delta (ties by unit name).
+    # These fields are exercised only here, so without exact pins the
+    # rounding, the delta subtraction, and the sort-key sign all survive
+    # mutation. Literals depend on the shipped network (see TestOutputRounding).
+
+    def test_posterior_without_and_delta_pinned(self) -> None:
+        net = load_network()
+        post = {p.name: p for p in infer(net, _RICH_SLUGS, _RICH_SIGNALS, priors_override={}).posteriors}
+        cfs = {c.unit: c for c in post["m365_tenant"].unit_counterfactuals}
+        cf = cfs["m365_indicators"]
+        # posterior_without raw 0.56812246..., delta raw 0.40843449...: the
+        # 4-decimal literals differ from their 3- and 5-decimal forms, and
+        # the delta literal also dies under any non-subtraction operator
+        # (present + / * / // / % / ** absent diverge by orders of magnitude).
+        assert cf.posterior_without == 0.5681
+        assert cf.delta == 0.4084
+
+    def test_counterfactuals_sorted_by_descending_absolute_delta(self) -> None:
+        # The policy node fires two units with unequal influence. The
+        # stronger (dmarc_policy, delta 0.2334) must precede the weaker
+        # (spf_strict, delta 0.0132); an ascending or unsigned sort key flips
+        # the order.
+        net = load_network()
+        post = {p.name: p for p in infer(net, _RICH_SLUGS, _RICH_SIGNALS, priors_override={}).posteriors}
+        order = [c.unit for c in post["email_security_policy_enforcing"].unit_counterfactuals]
+        assert order == ["dmarc_policy", "spf_strict"]
 
 
 # ── TenantInfo adapters ────────────────────────────────────────────────
