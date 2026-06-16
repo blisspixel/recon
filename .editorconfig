@@ -1,0 +1,23 @@
+# EditorConfig (https://editorconfig.org): editor-layer defaults that complement
+# ruff. ruff formats Python after save; this governs charset, line endings, and
+# whitespace across every file type before it.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{yml,yaml,json,toml,cff}]
+indent_size = 2
+
+[*.md]
+# Markdown uses two trailing spaces for hard line breaks.
+trim_trailing_whitespace = false
+
+[*.ps1]
+# Matches .gitattributes (*.ps1 eol=crlf).
+end_of_line = crlf
