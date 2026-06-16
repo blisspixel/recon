@@ -423,7 +423,7 @@ def main() -> None:
             "--gaps",
             str(run_dir / "gaps.json"),
             "--fingerprints",
-            "recon_tool/data/fingerprints/",
+            "src/recon_tool/data/fingerprints/",
             "--output",
             str(run_dir / "candidates.json"),
             "--min-count",

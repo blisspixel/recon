@@ -120,7 +120,7 @@ class TestPanelStringConstants:
         import ast
         from pathlib import Path
 
-        formatter_path = Path("recon_tool/formatter.py")
+        formatter_path = Path("src/recon_tool/formatter.py")
         if not formatter_path.exists():
             pytest.skip("formatter.py not found at expected path")
 

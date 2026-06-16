@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
-_PKG = _ROOT / "recon_tool"
+_PKG = _ROOT / "src" / "recon_tool"
 
 # New modules must come in under this. Mature guidance puts a module that needs
 # splitting somewhere around here; recon's own already-decomposed modules sit

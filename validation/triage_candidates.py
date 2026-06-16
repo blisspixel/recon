@@ -139,8 +139,8 @@ def main() -> None:
     parser.add_argument(
         "--fingerprints",
         type=Path,
-        default=Path("recon_tool/data/fingerprints"),
-        help="Directory of fingerprint YAML files (default: recon_tool/data/fingerprints).",
+        default=Path("src/recon_tool/data/fingerprints"),
+        help="Directory of fingerprint YAML files (default: src/recon_tool/data/fingerprints).",
     )
     parser.add_argument(
         "--output",

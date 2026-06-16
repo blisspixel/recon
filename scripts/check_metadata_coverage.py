@@ -375,7 +375,7 @@ def main() -> int:
     parser.add_argument(
         "--fingerprints-dir",
         type=Path,
-        default=Path(__file__).resolve().parent.parent / "recon_tool" / "data" / "fingerprints",
+        default=Path(__file__).resolve().parent.parent / "src" / "recon_tool" / "data" / "fingerprints",
         help="Directory of fingerprint YAML files to audit.",
     )
     args = parser.parse_args()

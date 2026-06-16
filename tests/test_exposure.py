@@ -573,7 +573,7 @@ class TestImportSafety:
 
     def test_exposure_module_has_no_network_imports(self) -> None:
         """Verify exposure.py doesn't import network-facing modules."""
-        source = Path("recon_tool/exposure.py").read_text()
+        source = Path("src/recon_tool/exposure.py").read_text()
         tree = ast.parse(source)
 
         # Collect all import names

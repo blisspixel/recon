@@ -63,7 +63,7 @@ jobs:
         run: uv sync
 
       - name: Type check
-        run: uv run pyright recon_tool/ tests/
+        run: uv run pyright src/recon_tool/ tests/
 
   test:
     runs-on: ${{ matrix.os }}
@@ -175,7 +175,7 @@ jobs:
         # pools slugs across files for a cross-file duplicate-slug check.
         # The validator accepts a directory as of v1.1 (same CLI, different
         # argument shape).
-        run: uv run python scripts/validate_fingerprint.py recon_tool/data/fingerprints/ --quiet
+        run: uv run python scripts/validate_fingerprint.py src/recon_tool/data/fingerprints/ --quiet
 
       - name: Enforce fingerprint metadata coverage (v1.9.7+)
         # Per-detection presence gate: every detection in every

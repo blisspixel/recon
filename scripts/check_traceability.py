@@ -56,11 +56,11 @@ _KNOWN_SUFFIXES = (".py", ".yml", ".yaml", ".md", ".toml", ".json")
 # Where a bare file name of each suffix may legitimately live.
 _SEARCH_DIRS = {
     ".yml": (".github/workflows", "."),
-    ".yaml": (".github/workflows", "recon_tool/data", "recon_tool/data/fingerprints", "."),
+    ".yaml": (".github/workflows", "src/recon_tool/data", "src/recon_tool/data/fingerprints", "."),
     ".md": ("docs", "validation", "."),
     ".toml": (".",),
     ".json": ("docs", "validation", "."),
-    ".py": ("tests", "scripts", "validation", "recon_tool", "recon_tool/sources", "."),
+    ".py": ("tests", "scripts", "validation", "src/recon_tool", "src/recon_tool/sources", "."),
 }
 
 
@@ -146,6 +146,11 @@ def _resolve_file(token_path: str) -> Path | None:
     direct = REPO_ROOT / token_path
     if direct.is_file():
         return direct
+    # src layout: the docs reference the package by its logical path
+    # (recon_tool/x.py), which lives under src/. Resolve that rooted form too.
+    src_rooted = REPO_ROOT / "src" / token_path
+    if src_rooted.is_file():
+        return src_rooted
     if "/" in token_path or "\\" in token_path:
         return None
     suffix = Path(token_path).suffix
