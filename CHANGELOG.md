@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.2] - 2026-06-16
+
+### Fixed
+
+- **Credible-interval accuracy claim.** The `_credible_interval` docstring and
+  `correlation.md` section 4.4 stated the Wald-style normal band matches exact
+  Beta quantiles to within +/-0.02. Measured against exact Beta quantiles the
+  deviation reaches ~0.06 near the 0/1 probability boundary and ~0.05 in the
+  interior, so the stated bound is corrected and the interval is documented as
+  approximate, with `TestCredibleIntervalVsBeta` added to pin the deviation. The
+  shipped interval values are unchanged: this is a documentation and test
+  correction, not a behavior change.
+
+### Security
+
+- **Transitive dependency CVE bumps.** Bumped cryptography, python-multipart, and
+  starlette in the lockfile to pick up published CVE fixes. These are transitive
+  and dev-environment dependencies; recon's runtime requirement specifiers in
+  `pyproject.toml` are unchanged, so already-installed wheels are unaffected.
+
 ## [2.2.1] - 2026-06-14
 
 ### Added
