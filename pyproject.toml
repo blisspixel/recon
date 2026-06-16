@@ -43,7 +43,7 @@ dependencies = [
     # no-C-extension floor. Contracts (pre / post / inv) document and
     # enforce the inference-core invariants under test and local dev, and
     # are turned into no-ops in production via `deal.disable()` when
-    # `__debug__` is false (see recon_tool/__init__.py), so installed users
+    # `__debug__` is false (see src/recon_tool/__init__.py), so installed users
     # pay no runtime cost.
     "deal>=4.24.0",
     # Security floor on a transitive dependency: mcp pulls in python-multipart,
@@ -66,7 +66,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["recon_tool"]
+packages = ["src/recon_tool"]
 
 # PEP 735 dependency group. uv treats `dev` as a default group, so
 # `uv sync` installs it and `uv sync --no-dev` / `uv export --no-dev`
@@ -175,12 +175,13 @@ typeCheckingMode = "strict"
 # additions that only exist in the working copy.
 venv = ".venv"
 venvPath = "."
-# Resolve repo-root packages (recon_tool, validation) for imports without
-# analyzing all of validation/. tests/test_drift_check.py imports
-# validation.drift_check, and at runtime pytest puts the repo root on sys.path;
-# mirror that for pyright so the import resolves.
-extraPaths = ["."]
-include = ["recon_tool", "tests", "validation/corpus_aggregator.py", "validation/drift_check.py"]
+# Resolve the src-layout package (recon_tool, under src/) and repo-root
+# packages (validation) for imports without analyzing all of validation/.
+# tests/test_drift_check.py imports validation.drift_check, and at runtime
+# pytest puts the repo root on sys.path; mirror that for pyright, plus src/ so
+# `import recon_tool` resolves to the source under the src layout.
+extraPaths = [".", "src"]
+include = ["src/recon_tool", "tests", "validation/corpus_aggregator.py", "validation/drift_check.py"]
 # Global reportUnknown* suppressions — needed across multiple files, not just YAML loaders.
 # Root causes: (1) yaml.safe_load returns Any, propagating through fingerprints.py and
 # signals.py; (2) dnspython's type stubs are incomplete (dns.py); (3) urllib.parse.urlparse

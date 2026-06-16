@@ -35,7 +35,7 @@ _CORE = "core"
 _TEST = "test"
 _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "ruff", [_PY, "-m", "ruff", "check", "."]),
-    (_CORE, "pyright", [_PY, "-m", "pyright", "recon_tool/", "tests/"]),
+    (_CORE, "pyright", [_PY, "-m", "pyright", "src/recon_tool/", "tests/"]),
     (
         _TEST,
         "pytest+cov",
@@ -44,7 +44,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (
         _CORE,
         "validate-fingerprints",
-        [_PY, "scripts/validate_fingerprint.py", "recon_tool/data/fingerprints/", "--quiet"],
+        [_PY, "scripts/validate_fingerprint.py", "src/recon_tool/data/fingerprints/", "--quiet"],
     ),
     (_CORE, "metadata-coverage", [_PY, "scripts/check_metadata_coverage.py"]),
     (_CORE, "no-experimental-labels", [_PY, "scripts/check_no_experimental_labels.py"]),

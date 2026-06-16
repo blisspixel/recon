@@ -446,7 +446,7 @@ def test_find_candidates_filters_intra_org_and_covered() -> None:
             ],
         )
     ]
-    fingerprints = _Path("recon_tool/data/fingerprints").resolve()
+    fingerprints = _Path("src/recon_tool/data/fingerprints").resolve()
     candidates = find_candidates(runs, fingerprints_dir=fingerprints)
     suffixes = {c["suffix"] for c in candidates}
     # The 3-label suffix bucket includes the parent label of "edge.".

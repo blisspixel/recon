@@ -2,7 +2,7 @@ name: Mutation gate
 
 # Mutation testing promoted to a blocking gate with a score floor
 # (roadmap, assurance track). cosmic-ray mutates the inference core
-# (recon_tool/bayesian.py) and runs the focused kill-set against every
+# (src/recon_tool/bayesian.py) and runs the focused kill-set against every
 # mutant; the job fails if the survival rate exceeds the floor below. The
 # mutant count dropped from the 2026-06 baseline of ~1,642 when the YAML
 # loaders and result dataclasses were split into bayesian_loader.py and
@@ -22,12 +22,12 @@ on:
   push:
     branches: [main]
     paths:
-      - "recon_tool/bayesian.py"
+      - "src/recon_tool/bayesian.py"
       # The inference core stays in bayesian.py (the mutated surface). These
       # siblings (dataclasses, YAML loaders) were split out of it and feed it,
       # so re-run the gate when they change even though they are not mutated.
-      - "recon_tool/bayesian_models.py"
-      - "recon_tool/bayesian_loader.py"
+      - "src/recon_tool/bayesian_models.py"
+      - "src/recon_tool/bayesian_loader.py"
       - "tests/test_bayesian_unit_math.py"
       - "tests/test_bayesian_loader_edges.py"
       - "tests/test_bayesian_inference.py"
@@ -42,12 +42,12 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "recon_tool/bayesian.py"
+      - "src/recon_tool/bayesian.py"
       # The inference core stays in bayesian.py (the mutated surface). These
       # siblings (dataclasses, YAML loaders) were split out of it and feed it,
       # so re-run the gate when they change even though they are not mutated.
-      - "recon_tool/bayesian_models.py"
-      - "recon_tool/bayesian_loader.py"
+      - "src/recon_tool/bayesian_models.py"
+      - "src/recon_tool/bayesian_loader.py"
       - "tests/test_bayesian_unit_math.py"
       - "tests/test_bayesian_loader_edges.py"
       - "tests/test_bayesian_inference.py"

@@ -151,8 +151,8 @@ def _check_changelog_has_entry(new_version: str) -> None:
 def _run_quality_gate() -> None:
     """Run ruff, pyright, pytest with coverage. Abort on any failure."""
     steps: list[tuple[str, list[str]]] = [
-        ("ruff", ["uv", "run", "ruff", "check", "recon_tool/", "tests/", "scripts/"]),
-        ("pyright", ["uv", "run", "pyright", "recon_tool/"]),
+        ("ruff", ["uv", "run", "ruff", "check", "src/recon_tool/", "tests/", "scripts/"]),
+        ("pyright", ["uv", "run", "pyright", "src/recon_tool/"]),
         (
             "pytest",
             [
@@ -261,7 +261,7 @@ def main(argv: list[str] | None = None) -> int:
                 "git",
                 "add",
                 "pyproject.toml",
-                "recon_tool/__init__.py",
+                "src/recon_tool/__init__.py",
                 "uv.lock",
                 "CHANGELOG.md",
             ],

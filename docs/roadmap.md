@@ -1822,18 +1822,22 @@ pyOpenSci ask for and most corporate-backed packages ship. The residual gaps are
 *citability and presentation*, not engineering, so this track is small,
 operator-paced, off the critical path, and touches no schema or engine surface.
 
-**`src/` layout: deliberately not adopted.** The src layout is PyPA-*suggested*,
-not required, and its one technical benefit (preventing an in-tree import from
-masking a packaging bug such as a missing data file) is already covered here by
-the CI-gated byte-identical build plus the installed-path `validate_fingerprint`
-step, which catch the same failure mode more strongly. A migration would churn
-roughly eight path-coupled references in the assurance plumbing itself (the
-file-size ratchet, `check_traceability.py`, `mutation.toml`, the CI/pre-commit
-`recon_tool/` filters), where a silent path error makes a guard quietly stop
-guarding, and would break `git blame` continuity across the whole package just as
-the arXiv write-up begins to cite the code. Flat is the defensible choice; this
-is recorded so the question is settled, not re-litigated. (The import name
-`recon_tool` and `--cov=recon_tool` are layout-invariant either way.)
+**`src/` layout: adopted (2026-06-16).** The package moved from a flat layout
+(`recon_tool/` at the repo root) to a `src/` layout (`src/recon_tool/`), the
+PyPA-suggested default, so the in-tree-import class of packaging bug is
+structurally impossible rather than only caught after the fact. The migration ran
+as one atomic commit: `git mv` plus every path-coupled reference it touches (the
+`[tool.hatch.build.targets.wheel] packages` target, the pyright `include` /
+`extraPaths`, the file-size-ratchet root, `check_traceability.py` (a `src/`
+resolution fallback so the trust-doc references still resolve),
+`check_metadata_coverage.py`, `mutation.toml`, the CI / release / mutation
+workflows, the pre-commit pyright and fingerprint filters, and the handful of
+tests that read package source by path). The import name `recon_tool` and
+`--cov=recon_tool` are layout-invariant, so no `from recon_tool import ...` and no
+downstream consumer moved. Verified non-functional: the built wheel is
+byte-for-byte identical to the pre-move wheel (same sha256), so the published
+2.2.2 artifact is unchanged and no release was triggered, and the full gate stays
+green.
 
 The elevation items, ranked by value over effort, each its own small patch.
 **Status (2026-06-16):** items 1 (partial), 3, and 4 shipped this pass; the

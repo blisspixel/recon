@@ -1,5 +1,5 @@
 [cosmic-ray]
-module-path = "recon_tool/bayesian.py"
+module-path = "src/recon_tool/bayesian.py"
 timeout = 120.0
 excluded-modules = []
 # The kill-set, ordered for kill speed under -x: the hand-computed unit

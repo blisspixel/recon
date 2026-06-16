@@ -17,7 +17,7 @@ from recon_tool.server import mcp
 
 _REPO = Path(__file__).resolve().parents[1]
 _DOCS_SCHEMA = _REPO / "docs" / "recon-schema.json"
-_PACKAGED_SCHEMA = _REPO / "recon_tool" / "data" / "recon-schema.json"
+_PACKAGED_SCHEMA = _REPO / "src" / "recon_tool" / "data" / "recon-schema.json"
 
 
 def _normalize(text: str) -> str:

@@ -14,16 +14,16 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        # Match CI exactly (.github/workflows/ci.yml: pyright recon_tool/ tests/).
+        # Match CI exactly (.github/workflows/ci.yml: pyright src/recon_tool/ tests/).
         # A narrower scope here let test-file type errors reach CI red.
-        args: [recon_tool/, tests/]
+        args: [src/recon_tool/, tests/]
 
       - id: metadata-coverage
         name: metadata-coverage (descriptions on every fingerprint detection)
         entry: python scripts/check_metadata_coverage.py
         language: system
         pass_filenames: false
-        files: ^recon_tool/data/fingerprints/.*\.yaml$
+        files: ^src/recon_tool/data/fingerprints/.*\.yaml$
 
   # Static lint for GitHub Actions workflow YAML. Catches:
   #   - unresolved action refs (the ``setup-uv@v8`` non-tag that broke
