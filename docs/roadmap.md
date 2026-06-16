@@ -1811,6 +1811,65 @@ Hypothesis, 3.14t) and mutation testing running alongside or post-v2.0.
 v2.0 itself stays the mechanical schema-lock event with no new engine
 work.
 
+### Reference-grade repository elevation (post-2.2.2)
+
+A 2026-06 review against current (PyPA, pyOpenSci, JOSS, OpenSSF, CFF)
+reference-grade practice found the repo already past the bar those checklists
+target: the engineering substance (reproducible byte-identical builds,
+PEP 740 / SLSA attestations, CycloneDX SBOM, the mutation gate, differential
+verification, the traceability matrix, the assurance case) exceeds what JOSS and
+pyOpenSci ask for and most corporate-backed packages ship. The residual gaps are
+*citability and presentation*, not engineering, so this track is small,
+operator-paced, off the critical path, and touches no schema or engine surface.
+
+**`src/` layout: deliberately not adopted.** The src layout is PyPA-*suggested*,
+not required, and its one technical benefit (preventing an in-tree import from
+masking a packaging bug such as a missing data file) is already covered here by
+the CI-gated byte-identical build plus the installed-path `validate_fingerprint`
+step, which catch the same failure mode more strongly. A migration would churn
+roughly eight path-coupled references in the assurance plumbing itself (the
+file-size ratchet, `check_traceability.py`, `mutation.toml`, the CI/pre-commit
+`recon_tool/` filters), where a silent path error makes a guard quietly stop
+guarding, and would break `git blame` continuity across the whole package just as
+the arXiv write-up begins to cite the code. Flat is the defensible choice; this
+is recorded so the question is settled, not re-litigated. (The import name
+`recon_tool` and `--cov=recon_tool` are layout-invariant either way.)
+
+The elevation items, ranked by value over effort, each its own small patch:
+
+1. **`CITATION.cff` (+ a Zenodo concept DOI on releases).** Highest leverage and
+   the precondition for the planned arXiv paper to cite its own software cleanly:
+   GitHub renders a "Cite this repository" button and BibTeX export, and the
+   GitHub to Zenodo linkage mints a versioned DOI under a stable concept DOI per
+   release. Seed `CITATION.cff` now (author, title, version, repo); add the
+   `preferred-citation` block when the paper lands. Pairs with
+   [paper-outline.md](paper-outline.md).
+2. **A one-command "reproduce the paper's numbers" entry point.** The calibration
+   harnesses, differential verification, and held-out residual already exist; what
+   is missing is a single documented command that regenerates the paper's headline
+   figures from a clean checkout, surfacing the byte-identical guarantee. This is
+   the move both an academic and a security-engineering reader weight most, the
+   difference between claiming reproducibility and handing over a runnable path.
+3. **Surface the assurance stack on the README front door.** The
+   provenance / SBOM / mutation / reproducibility work is currently buried in
+   `docs/`; a short "Assurance" section with an OpenSSF Scorecard badge (which
+   scores high here at near-zero new work), the DOI badge, and a four-line summary
+   linking [assurance-case.md](assurance-case.md) makes the first-impression match
+   the actual rigor.
+4. **`.editorconfig`.** Editor-layer settings (indent, final newline, charset)
+   that complement rather than duplicate ruff; cheap, and its absence is the one
+   "not quite finished" tell a sharp reviewer notices.
+
+Deferred, not skipped: a rendered docs site (mkdocs-material entered maintenance
+mode in early 2026 with its successor still stabilizing, and the markdown `docs/`
+are already reviewer-legible) revisited once the paper is out and there is an
+external-user reason. Explicitly out of scope, for the same deepen-not-expand and
+solo-maintainer reasons as the rest of this file: an `src/` migration (above),
+generated API reference docs (recon is a CLI / MCP server, not an imported
+library; the MCP tool schema is the real API surface and is already documented),
+a `FUNDING` file, and the OpenSSF Best-Practices *Gold* badge (it structurally
+requires multiple maintainers; target passing / silver).
+
 ## Success Metrics (Post-1.0)
 
 These are directional measures, not product OKRs:
