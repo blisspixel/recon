@@ -479,13 +479,19 @@ at "high" salience).
 - Run `pytest tests/ --cov=recon_tool --cov-branch`; branch coverage must stay above 82%.
 - Integration tests (`pytest -m integration`) require network access and are skipped by default.
 - Keep PRs focused: one concern per PR.
+- Keep the branch list clean: `main` is the only long-lived branch. PRs and
+  feature branches are encouraged, but they stay short-lived and are deleted on
+  merge (the repo auto-deletes merged PR branches); leave no stale local or
+  remote branches behind, bot branches included.
 
 ### House style (all contributions: code, docs, comments, commits, PRs)
 
 Applies to humans and AI coding agents alike.
 
 - No AI attribution: never add `Co-Authored-By`, "Generated with Claude", or any
-  assistant / vendor mention to commits or PRs.
+  assistant / vendor mention to commits or PRs. The same applies to bot
+  authorship: re-author or close Dependabot PRs rather than merging under the
+  bot's name.
 - No em-dashes and no emojis, anywhere (this generalizes the catalog-description
   rule above). Use commas, colons, or parentheses.
 - Professional, idiomatic code that matches the surrounding file's style and
