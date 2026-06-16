@@ -1835,7 +1835,10 @@ the arXiv write-up begins to cite the code. Flat is the defensible choice; this
 is recorded so the question is settled, not re-litigated. (The import name
 `recon_tool` and `--cov=recon_tool` are layout-invariant either way.)
 
-The elevation items, ranked by value over effort, each its own small patch:
+The elevation items, ranked by value over effort, each its own small patch.
+**Status (2026-06-16):** items 1 (partial), 3, and 4 shipped this pass; the
+remaining open work is the Zenodo DOI (a one-time maintainer toggle), the
+`preferred-citation` block (pending the paper), and item 2.
 
 1. **`CITATION.cff` (+ a Zenodo concept DOI on releases).** Highest leverage and
    the precondition for the planned arXiv paper to cite its own software cleanly:
