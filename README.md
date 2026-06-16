@@ -4,6 +4,7 @@
 [![PyPI](https://img.shields.io/pypi/v/recon-tool.svg?cacheSeconds=300)](https://pypi.org/project/recon-tool/)
 [![Python](https://img.shields.io/pypi/pyversions/recon-tool.svg?cacheSeconds=300)](https://pypi.org/project/recon-tool/)
 [![License](https://img.shields.io/pypi/l/recon-tool.svg?cacheSeconds=300)](LICENSE)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/blisspixel/recon/badge)](https://scorecard.dev/viewer/?uri=github.com/blisspixel/recon)
 
 Passive domain intelligence from public sources. Queries DNS records, Microsoft/Google identity endpoints, and certificate transparency logs to build a picture of an organization's technology stack: no credentials, no API keys, no active scanning.
 
@@ -308,6 +309,25 @@ a different tool.
 - **Coverage depends on public DNS.** Organizations behind heavy proxies, with minimal DNS records, or that don't publish SaaS verification tokens will return sparse results. This is fundamental to passive-only collection. When sources transiently fail, the CLI tells you which one and why so you can retry or accept the partial answer.
 - **Internal workloads are structurally invisible.** Server-side API consumption (an org running internal Google Cloud ML, internal AWS data pipelines, internal Snowflake warehouses without public verification tokens, and so on) leaves no trace in public DNS, CT logs, or unauthenticated identity-discovery endpoints. recon cannot tell you what runs internally; it can only tell you what the org publishes externally. The CLI panel calls this out explicitly: the "Cloud" line surfaces what is observable, and on sparse-but-multi-domain apexes a one-line "Passive-DNS ceiling" footer notes that internal workloads and SaaS without DNS verification do not appear in public DNS records. A "Multi-cloud" indicator collapses sibling slugs (Route 53 + CloudFront = one AWS) when the public footprint touches more than one cloud vendor.
 - **Heuristic, not ground truth.** The fingerprint database and signal rules are rule-based and solo-maintained. Confident-looking output can still be wrong. The credible interval is the load-bearing field, not the point estimate: by construction, sparse evidence on hardened targets produces a wide interval rather than a confident-looking point estimate, and the `sparse=true` flag in the JSON output is the operator-facing signal that the layer has hit the passive-observation ceiling. Every detection in the catalog carries a description and a vendor doc URL, so a finding can be re-verified against the vendor's own documentation before action. Treat results as indicators for investigation, not as definitive assessments. Don't make business decisions based solely on this output. See [docs/correlation.md](docs/correlation.md) for the calibration principles the interval satisfies and the failure-mode catalog across hardening postures.
+
+## Assurance
+
+recon treats trust as the product, so the engine and the release pipeline carry
+more than a passing test suite. The full picture, each claim mapped to the
+mechanism and the test that keeps it, is in
+[docs/assurance-case.md](docs/assurance-case.md); the highlights:
+
+- **Reproducible, byte-identical builds**, CI-gated (`SOURCE_DATE_EPOCH`), shipped
+  with sigstore / PEP 740 publish attestations, GitHub build provenance, and a
+  CycloneDX SBOM on every release ([docs/supply-chain.md](docs/supply-chain.md)).
+- **Differential verification** of the Bayesian inference core (exact enumeration
+  cross-checked against variable elimination over the full evidence sweep) plus a
+  **mutation-testing gate** with a kill-score floor
+  ([validation/mutation-gate.md](validation/mutation-gate.md)).
+- **A traceability matrix** resolving every invariant to its enforcing test in CI
+  ([docs/traceability-matrix.md](docs/traceability-matrix.md)), and a
+  **statistical-assurance dossier** that places each claim at an honest evidence
+  tier ([docs/statistical-assurance.md](docs/statistical-assurance.md)).
 
 ## Development
 
