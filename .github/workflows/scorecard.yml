@@ -1,0 +1,49 @@
+name: Scorecard supply-chain security
+
+# OpenSSF Scorecard: an automated, auditable read on the repo's supply-chain
+# posture (pinned deps, branch protection, signed/attested releases, SAST,
+# token permissions). Runs weekly and on push to main, and publishes the result
+# so the README badge and https://scorecard.dev/ stay current.
+on:
+  branch_protection_rule:
+  schedule:
+    - cron: "20 7 * * 1"
+  push:
+    branches: ["main"]
+
+# Top-level least-privilege; the analysis job opts into exactly what it needs.
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      # Needed to upload the SARIF results to the code-scanning dashboard.
+      security-events: write
+      # Needed for the OIDC token that publishes results to the public API.
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@v2.4.3
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+
+      - name: Upload to code-scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
