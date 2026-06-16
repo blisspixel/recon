@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use recon in academic or published work, please cite it using the metadata below."
+title: "recon: passive, provenance-aware domain intelligence"
+abstract: >-
+  recon is a zero-credential, strictly passive external-surface intelligence
+  tool. It reads public DNS records, certificate-transparency logs, and the
+  unauthenticated identity-discovery endpoints providers publish, then reports
+  each high-level claim through a small, auditable Bayesian network as an
+  evidence-responsive credible interval rather than a yes/no verdict, with full
+  provenance and no active scanning or credentialed access.
+type: software
+authors:
+  - family-names: Seal
+    given-names: Nick
+    # orcid: "https://orcid.org/0000-0000-0000-0000"  # add when available
+repository-code: "https://github.com/blisspixel/recon"
+url: "https://github.com/blisspixel/recon"
+license: MIT
+version: 2.2.2
+date-released: "2026-06-16"
+keywords:
+  - passive reconnaissance
+  - external attack surface management
+  - certificate transparency
+  - Bayesian inference
+  - uncertainty calibration
+  - provenance
+# When the paper lands, add a preferred-citation block (type: article, with the
+# arXiv id / DOI) so "Cite this repository" points at the paper, not just the code.
