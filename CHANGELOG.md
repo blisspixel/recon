@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   matching main CI.
 - **Homebrew formula freshness.** The bundled formula now points at the current
   `recon-tool` 2.2.3 sdist and checksum.
+- **Portable Unix installer version check.** `scripts/install.sh` no longer uses
+  GNU-only `sort -V`, so the Python 3.11+ fallback path works on macOS as well
+  as Linux.
+- **Development command drift.** README and contributor setup instructions now
+  use the `src/recon_tool/` typecheck path and include `tests/`, matching CI.
 
 ## [2.2.3] - 2026-06-17
 

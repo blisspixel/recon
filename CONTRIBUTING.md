@@ -67,7 +67,7 @@ uv run python scripts/check.py         # the full CI gate locally (--fast to ski
 ```
 
 `scripts/check.py` runs the **exact** CI gate (ruff, pyright over
-`recon_tool/ tests/`, the coverage-gated test run, the catalog/label and
+`src/recon_tool/ tests/`, the coverage-gated test run, the catalog/label and
 file-size checks), so "green locally ⇒ green in CI." Run it before every push.
 The standards this project holds itself (and any AI working in it) to are in
 [docs/engineering-practices.md](docs/engineering-practices.md); load-bearing
@@ -475,7 +475,7 @@ at "high" salience).
 
 ## Code changes
 
-- Run `pre-commit run --all-files` or `ruff check recon_tool/` and `pyright recon_tool/` before submitting.
+- Run `pre-commit run --all-files` or `ruff check .` and `pyright src/recon_tool/ tests/` before submitting.
 - Run `pytest tests/ --cov=recon_tool --cov-branch`; branch coverage must stay above 82%.
 - Integration tests (`pytest -m integration`) require network access and are skipped by default.
 - Keep PRs focused: one concern per PR.
