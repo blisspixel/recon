@@ -74,7 +74,7 @@ turn it into an SSRF vector or an internal-DNS oracle.
 
 | Threat | Mechanism | Proven by | Residual |
 |---|---|---|---|
-| SSRF to a private/metadata IP (incl. via redirect) | `_SSRFSafeTransport` validates every hop's resolved IP against the blocked-network list | `test_http_advanced::TestSSRFSafeTransport` | DNS rebinding with sub-second TTL is not fully defeated (TOCTOU, documented in `http.py`) |
+| SSRF to a non-global or special-use IP (incl. via redirect) | `_SSRFSafeTransport` validates every hop's resolved IP against the public-unicast policy | `test_http_advanced::TestSSRFSafeTransport` | DNS rebinding with sub-second TTL is not fully defeated (TOCTOU, documented in `http.py`) |
 | SSRF via an attacker-authored BIMI `a=` URL | `_bimi_vmc_url_is_safe` (https, public host, no IP literal, no creds, default port, no redirects) | `test_bimi_vmc::test_refuses_unsafe_a_url` | Host check is suffix/charset-based, not a live public-suffix lookup |
 | Internal-DNS leak: attacker CNAME / SPF redirect to an internal name | per-hop `_is_public_dns_name` denylist; CNAME-only walk (no recursive A/AAAA chase); canonical-name guard in `_safe_resolve` | `test_cname_chain_validation` (entry-point, no-A/AAAA-during-walk, canonical guard, SPF/redirect filters) | Documented tradeoff: split-horizon termini are not dropped; one blind query in the type-dependent-answer case still leaves the resolver (see `security-audit-resolutions.md`) |
 | Path traversal / symlink overwrite via a crafted cache key | `_safe_cache_path` containment; atomic `mkstemp` (`O_CREAT|O_EXCL`) write | `test_cache_roundtrip::TestCacheDiskOperations` | No dedicated planted-symlink test on the temp name; the random `O_EXCL` name removes the predictable-target vector |
