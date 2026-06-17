@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import click
 import typer
 from rich.markup import escape
 
@@ -40,6 +40,9 @@ _doctor = cli_doctor.doctor
 _doctor_fix = cli_doctor.doctor_fix
 _doctor_client = cli_doctor.doctor_client
 _doctor_mcp = cli_doctor.doctor_mcp
+
+if TYPE_CHECKING:
+    import click
 
 
 __all__ = [

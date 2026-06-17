@@ -86,6 +86,21 @@ class TestValidateDomain:
     def test_strip_scheme_with_path(self):
         assert validate_domain("https://contoso.com/some/path") == "contoso.com"
 
+    def test_strip_scheme_with_query(self):
+        assert validate_domain("https://www.contoso.com?utm=1") == "contoso.com"
+
+    def test_strip_scheme_with_fragment(self):
+        assert validate_domain("https://www.contoso.com#section") == "contoso.com"
+
+    def test_strip_scheme_with_port(self):
+        assert validate_domain("https://www.contoso.com:443/some/path") == "contoso.com"
+
+    def test_strip_bare_query(self):
+        assert validate_domain("contoso.com?utm=1") == "contoso.com"
+
+    def test_strip_bare_fragment(self):
+        assert validate_domain("contoso.com#section") == "contoso.com"
+
     def test_strip_trailing_slash(self):
         assert validate_domain("contoso.com/") == "contoso.com"
 

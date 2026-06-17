@@ -55,6 +55,13 @@ def test_read_batch_domains_enforces_size_cap(monkeypatch: pytest.MonkeyPatch) -
         _read_batch_domains(stream)
 
 
+def test_read_batch_domains_rejects_overlong_line(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli_batch, "_MAX_BATCH_LINE_BYTES", 8)
+    stream = io.StringIO("averylongdomain.example\n")
+    with pytest.raises(_BatchInputError, match="line exceeds maximum length"):
+        _read_batch_domains(stream)
+
+
 @patch(RESOLVE_PATH, new_callable=AsyncMock)
 def test_batch_reads_domains_from_stdin(mock_resolve: AsyncMock) -> None:
     mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
@@ -69,3 +76,10 @@ def test_batch_empty_stdin_is_validation_error() -> None:
     result = runner.invoke(app, ["batch", "-"], input="# only a comment\n\n")
     assert result.exit_code == cli.EXIT_VALIDATION
     assert "No domains found in stdin" in result.output
+
+
+def test_batch_stdin_overlong_line_is_validation_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli_batch, "_MAX_BATCH_LINE_BYTES", 8)
+    result = runner.invoke(app, ["batch", "-"], input="averylongdomain.example\n")
+    assert result.exit_code == cli.EXIT_VALIDATION
+    assert "line exceeds maximum length" in result.output

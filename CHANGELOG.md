@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.3] - 2026-06-17
+
+### Fixed
+
+- **Browser URL normalization.** Lookup validation now parses `http://` and
+  `https://` inputs through the URL host field, so copied browser URLs with a
+  query string, fragment, or explicit port normalize to the registrable apex
+  instead of failing validation.
+- **Batch input line bounds.** Batch input now rejects a logical line that
+  exceeds the per-line cap instead of splitting it into multiple pseudo-domains.
+  This keeps the documented hostile-input bound enforceable for file and stdin
+  batch inputs.
+- **Release-script source-layout path.** `scripts/release.py` now reads and
+  bumps `src/recon_tool/__init__.py`, matching the package layout. The previous
+  path would abort a clean release before version consistency checks could pass.
+
+### Dependencies
+
+- **Typer floor and lockfile.** Raised the runtime Typer floor to `>=0.24.1`
+  and refreshed the lockfile to Typer `0.26.7`. This avoids the older
+  Typer/newer Click help-rendering crash while staying current with the
+  published Typer line.
+
 ## [2.2.2] - 2026-06-16
 
 ### Fixed

@@ -27,7 +27,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = ROOT / "pyproject.toml"
-INIT_PY = ROOT / "recon_tool" / "__init__.py"
+INIT_PY = ROOT / "src" / "recon_tool" / "__init__.py"
 CHANGELOG = ROOT / "CHANGELOG.md"
 
 _VERSION_RE = re.compile(r'^version\s*=\s*"([^"]+)"', re.MULTILINE)

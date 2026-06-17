@@ -53,9 +53,12 @@ def read_batch_domains(stream: TextIO) -> list[str]:
     domains: list[str] = []
     total_bytes = 0
     while True:
-        line = stream.readline(_MAX_BATCH_LINE_BYTES)
+        line = stream.readline(_MAX_BATCH_LINE_BYTES + 1)
         if not line:
             break
+        if len(line) > _MAX_BATCH_LINE_BYTES:
+            msg = f"Batch input line exceeds maximum length of {_MAX_BATCH_LINE_BYTES} bytes"
+            raise _BatchInputError(msg)
         total_bytes += len(line)
         if total_bytes > _MAX_BATCH_FILE_BYTES:
             msg = f"Batch input exceeds maximum size of {_MAX_BATCH_FILE_BYTES // (1024 * 1024)} MB"

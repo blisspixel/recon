@@ -2,6 +2,7 @@
 
 import contextlib
 import re
+from urllib.parse import urlsplit
 
 import deal
 
@@ -138,11 +139,14 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
     if len(stripped) > _MAX_INPUT_LENGTH:
         raise ValueError(f"Input too long ({len(stripped)} chars, max {_MAX_INPUT_LENGTH})")
 
-    # Strip scheme
-    domain = _SCHEME_RE.sub("", stripped)
-
-    # Strip trailing path and slashes (take only the hostname part)
-    domain = domain.split("/")[0]
+    if _SCHEME_RE.match(stripped):
+        try:
+            domain = urlsplit(stripped).hostname or ""
+        except ValueError:
+            domain = ""
+    else:
+        # Bare host input may still include a copied query, fragment, or path.
+        domain = re.split(r"[/?#]", stripped, maxsplit=1)[0]
 
     # Normalize to lowercase
     domain = domain.lower()
