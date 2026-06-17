@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Source-tree version resolution.** `_source_tree_version()` now reads
+  `pyproject.toml` from the repository root after the `src/` layout move, so a
+  source checkout reports the checked-in version instead of stale editable
+  metadata or the baked fallback.
+- **Release typecheck parity.** The local release script and tag-triggered
+  release workflow now run pyright over both `src/recon_tool/` and `tests/`,
+  matching main CI.
+- **Homebrew formula freshness.** The bundled formula now points at the current
+  `recon-tool` 2.2.3 sdist and checksum.
+
 ## [2.2.3] - 2026-06-17
 
 ### Fixed

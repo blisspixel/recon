@@ -15,6 +15,15 @@ def _load_release_workflow() -> dict[str, Any]:
     return data
 
 
+def _step_text(step: dict[str, Any]) -> str:
+    parts: list[str] = []
+    if isinstance(step.get("run"), str):
+        parts.append(step["run"])
+    if isinstance(step.get("uses"), str):
+        parts.append(step["uses"])
+    return "\n".join(parts)
+
+
 def test_release_workflow_does_not_grant_workflow_level_oidc() -> None:
     workflow = _load_release_workflow()
     permissions = workflow.get("permissions")
@@ -42,3 +51,12 @@ def test_release_test_and_build_jobs_are_read_only() -> None:
 
     assert jobs["test"]["permissions"] == {"contents": "read"}
     assert jobs["build"]["permissions"] == {"contents": "read"}
+
+
+def test_release_test_job_typechecks_source_and_tests() -> None:
+    workflow = _load_release_workflow()
+    steps = workflow["jobs"]["test"]["steps"]
+    step_text = "\n".join(_step_text(step) for step in steps)
+
+    assert "actions/setup-node" in step_text
+    assert "uv run pyright src/recon_tool/ tests/" in step_text

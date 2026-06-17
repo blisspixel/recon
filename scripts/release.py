@@ -152,7 +152,7 @@ def _run_quality_gate() -> None:
     """Run ruff, pyright, pytest with coverage. Abort on any failure."""
     steps: list[tuple[str, list[str]]] = [
         ("ruff", ["uv", "run", "ruff", "check", "src/recon_tool/", "tests/", "scripts/"]),
-        ("pyright", ["uv", "run", "pyright", "src/recon_tool/"]),
+        ("pyright", ["uv", "run", "pyright", "src/recon_tool/", "tests/"]),
         (
             "pytest",
             [
