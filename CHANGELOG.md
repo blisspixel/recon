@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.6] - 2026-06-17
+
 ### Fixed
 
 - **Homebrew formula freshness.** The bundled formula now points at the current
   `recon-tool` 2.2.5 sdist and checksum.
+- **Roadmap and assurance docs currency.** The roadmap now names v2.2.6 as the
+  current release, and the assurance case describes the broadened HTTP
+  non-global IP guard.
 
 ## [2.2.5] - 2026-06-17
 
