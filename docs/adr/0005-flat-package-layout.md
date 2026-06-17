@@ -1,6 +1,6 @@
 # ADR-0005: Keep flat package layout (not src-layout)
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0006
 - **Date:** 2026-06-13
 
 ## Context

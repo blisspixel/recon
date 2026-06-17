@@ -12,14 +12,14 @@ This file is forward-looking. Shipped work belongs in
 > agentic. That doc is the standing decision guide and the catalog of
 > brittle-rule smells; keep it current as the boundary moves.
 
-> **Status (2026-06):** v2.2.0 is the current release (shipped 2026-06-13 to
-> PyPI). It delivered the evidence-semantics diagnostics (per-node entropy
-> reduction, exact leave-one-unit-out counterfactuals, graph partition
+> **Status (2026-06):** v2.2.4 is the current release (shipped 2026-06-17 to
+> PyPI). The v2.2 line delivered the evidence-semantics diagnostics (per-node
+> entropy reduction, exact leave-one-unit-out counterfactuals, graph partition
 > stability), the MCP tool-output contract revision (navigable
 > `structuredContent` + per-tool `outputSchema` + `isError` across the eighteen
 > data tools, aligned to MCP 2025-11-25), the 2026 CLI-ergonomics pass, and OSC 8
 > hyperlinks. The v2.0 schema lock, the v2.1 cohort summary
-> (`recon batch --summary`), and the v2.1.x through v2.2.0 hardening, security,
+> (`recon batch --summary`), and the v2.1.x through v2.2.4 hardening, security,
 > and assurance work have all shipped; per-release detail is in
 > [CHANGELOG.md](../CHANGELOG.md) and upgrade notes in
 > [migration-v2.md](migration-v2.md).
@@ -51,7 +51,7 @@ This file is forward-looking. Shipped work belongs in
 > which completes the committed post-2.0 assurance track. v2.1.18 was UX and docs
 > polish (the services-panel label-collision fix, the rotating-spinner variety,
 > and the aspirational arXiv-paper roadmap item below). Since v2.1.18 the
-> unreleased docs-and-validation track has closed most of what remained: the
+> docs-and-validation track has closed most of what remained: the
 > suppression-monotonicity proposition is now formalized in `correlation.md`
 > section 4.3 and machine-checked by `validation/adversarial_properties.py` (the
 > one formal result, that hiding evidence can only move a claim toward its
@@ -132,7 +132,7 @@ rules are in [release-process.md](release-process.md#version-numbering).
   surfaces from experimental to stable, flipped `--fusion` default-on, and locked
   the v2.0 JSON contract. Deliberately a mechanical ceremony over already-proven
   work, not a feature event.
-- **2.1.x (current, through 2.1.18).** The post-2.0 assurance and thin-feature
+- **2.1.x (shipped, through 2.1.18).** The post-2.0 assurance and thin-feature
   line: the cohort summary (PV1), then the assurance track (differential
   verification, the inference drift gate, the interval-coverage and mutation
   gates, the traceability matrix), plus UX polish. Everything additive, off the
@@ -154,11 +154,11 @@ rules are in [release-process.md](release-process.md#version-numbering).
   god-file decomposition, patch-level) or produces assurance memos and a paper
   rather than a user-facing surface, so the version number may rest while that
   work proceeds. A minor is cut only when a coherent new surface earns it.
-  Recent patch-level work (post-2.2.0, unreleased): input is now normalized to
-  the registrable apex via the Public Suffix List with an `--exact` opt-out, and
-  `recon update` is surfaced in the docs — UX/ergonomics hardening, not a new
-  surface (see the CHANGELOG and the dependency-floor note above for the
-  `publicsuffixlist` addition).
+  Recent patch-level work (post-2.2.0, shipped through 2.2.4): input is now
+  normalized to the registrable apex via the Public Suffix List with an
+  `--exact` opt-out, `recon update` is surfaced in the docs, and the release,
+  installer, dependency, and source-layout docs drift fixes have shipped as
+  hardening rather than new surface.
 - **3.0 (intentionally deferred, possibly never).** A major bump is forced only by
   an unavoidable *breaking* change to a stable surface, with the deprecation
   window the stability policy requires. The pre-2.0 schema-hardening (SH1 to SH9)
@@ -328,8 +328,9 @@ Five tracks run as a sequence of focused, CI-green 1.9.x patches:
 ### Remaining work to v2.0 (the execution queue)
 
 > **All shipped (historical).** Everything in this subsection and the v2.0 lock
-> ceremony below was completed; v2.0.0 and the v2.1.x line have all shipped (see
-> the status header at the top of this file for the current release). The detail
+> ceremony below was completed; v2.0.0, the v2.1.x line, and the v2.2.0 surface
+> release have all shipped (see the status header at the top of this file for
+> the current release). The detail
 > is kept for the rationale and the per-item disposition; the forward plan is the
 > post-2.0 assurance track above and the feature candidates below. Per-release
 > detail lives in [CHANGELOG.md](../CHANGELOG.md).
@@ -865,7 +866,7 @@ CHANGELOG for the per-patch detail.
 
 **CLI best-practices pass (2026).** A grade against the 2026 CLI-first rubric
 (clig.dev, 12-factor CLI, MCP 2025-11, XDG, NO_COLOR, WCAG) drove a two-tier
-ergonomics pass, all in the Unreleased CHANGELOG section. *Tier 1 (shipped):*
+ergonomics pass, recorded in the v2.2.0 CHANGELOG section. *Tier 1 (shipped):*
 stdout/stderr discipline (diagnostics + spinners off stdout), `-h`/`-V` aliases,
 a clean crash/SIGINT handler, `--color`/`--no-color`, and a `cache clear --all`
 guard. *Tier 2 (shipped):* XDG base-dir support via `recon_tool.paths`

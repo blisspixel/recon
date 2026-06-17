@@ -35,7 +35,7 @@ no inbound network listeners, no user-code execution.
 
 **Surface:** A user (or an agent) passes an arbitrary string to `recon <domain>` or a MCP tool.
 
-**Mitigation:** [`recon_tool/validator.py`](../recon_tool/validator.py) line 18-85:
+**Mitigation:** [`recon_tool/validator.py`](../src/recon_tool/validator.py) line 18-85:
 - Domain regex: labels must be 1-63 chars, alphanumeric + hyphens, TLD ≥ 2 alpha chars
 - Max input length: 500 chars
 - Schemes (`http://`, `https://`, `ftp://`) stripped
@@ -86,7 +86,7 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 
 **Surface:** Custom fingerprint/signal YAML files under `~/.recon/` can contain arbitrary regex patterns.
 
-**Mitigation:** [`recon_tool/fingerprints.py`](../recon_tool/fingerprints.py):
+**Mitigation:** [`recon_tool/fingerprints.py`](../src/recon_tool/fingerprints.py):
 - `yaml.safe_load` (not `yaml.load`) - no arbitrary constructor execution
 - Pattern length capped at 500 chars
 - ReDoS heuristic (`_validate_regex` in `fingerprints.py`) rejects nested
@@ -104,7 +104,7 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 
 **Surface:** An adversarial upstream (or a DNS-rebound attacker) could redirect an HTTP request to a private/internal IP, potentially exposing cloud-metadata services (169.254.169.254) or internal infrastructure.
 
-**Mitigation:** [`recon_tool/http.py`](../recon_tool/http.py) `_SSRFSafeTransport`:
+**Mitigation:** [`recon_tool/http.py`](../src/recon_tool/http.py) `_SSRFSafeTransport`:
 - Every hop - initial request AND every redirect - validated
 - Blocked networks: `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16` (link-local/cloud metadata), IPv6 `fc00::/7`, `fe80::/10`
 - Literal IP check on URL host
@@ -117,7 +117,7 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 
 **Surface:** `recon cache show ../../etc/passwd`, `recon cache clear ../../settings`, or a crafted `RECON_CONFIG_DIR` could cause a cache layer to read, write, or delete outside its intended directory.
 
-**Mitigation:** [`recon_tool/ct_cache.py`](../recon_tool/ct_cache.py) `_safe_path` and [`recon_tool/cache.py`](../recon_tool/cache.py) `_safe_cache_path`:
+**Mitigation:** [`recon_tool/ct_cache.py`](../src/recon_tool/ct_cache.py) `_safe_path` and [`recon_tool/cache.py`](../src/recon_tool/cache.py) `_safe_cache_path`:
 - Resolves the target path
 - Asserts the resolved path starts with the resolved cache directory
 - Rejects traversal separators and malformed domains before filesystem access

@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.4] - 2026-06-17
+
 ### Fixed
 
+- **Live docs currency.** Fixed source-layout relative links in schema and
+  security docs, updated roadmap and ADR layout guidance to match v2.2.4 and
+  the adopted `src/` package layout, and added a regression test for relative
+  Markdown links in live docs.
 - **Source-tree version resolution.** `_source_tree_version()` now reads
   `pyproject.toml` from the repository root after the `src/` layout move, so a
   source checkout reports the checked-in version instead of stale editable
@@ -16,8 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Release typecheck parity.** The local release script and tag-triggered
   release workflow now run pyright over both `src/recon_tool/` and `tests/`,
   matching main CI.
-- **Homebrew formula freshness.** The bundled formula now points at the current
-  `recon-tool` 2.2.3 sdist and checksum.
+- **Homebrew formula freshness.** The bundled formula was refreshed after the
+  2.2.3 publish so local checks no longer lag the latest released sdist and
+  checksum.
 - **Portable Unix installer version check.** `scripts/install.sh` no longer uses
   GNU-only `sort -V`, so the Python 3.11+ fallback path works on macOS as well
   as Linux.
