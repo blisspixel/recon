@@ -25,7 +25,7 @@ def _source_tree_version() -> str | None:
     — the caller falls back to package metadata, then to
     ``_FALLBACK_VERSION``.
     """
-    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
     if not pyproject.exists():
         return None
     try:
