@@ -335,7 +335,7 @@ mechanism and the test that keeps it, is in
 uv sync                                # installs the dev group (pip: pip install -e . --group dev, pip 25.1+)
 pytest tests/                          # full test suite
 ruff check .                           # lint
-pyright recon_tool/                    # type check
+pyright src/recon_tool/ tests/         # type check
 pre-commit install                     # activate pre-commit hooks
 ```
 

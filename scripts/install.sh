@@ -36,7 +36,7 @@ elif have pipx; then
 elif have python3; then
     # No isolated-tool installer yet. Bootstrap pipx with the system Python.
     PYVER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
-    if [ "$(printf '%s\n' "3.11" "$PYVER" | sort -V | head -1)" != "3.11" ]; then
+    if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
         echo "Error: Python 3.11+ is required (found $PYVER), or install uv first:" >&2
         echo "  curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
         exit 1
