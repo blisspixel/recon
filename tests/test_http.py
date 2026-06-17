@@ -28,6 +28,19 @@ class TestSSRFProtection:
     def test_link_local_blocked(self):
         assert _is_private_ip("169.254.169.254") is True
 
+    @pytest.mark.parametrize(
+        "addr",
+        [
+            "0.0.0.0",  # noqa: S104 - test fixture for unspecified-address SSRF blocking
+            "100.64.0.1",
+            "224.0.0.1",
+            "192.0.2.1",
+            "2001:db8::1",
+        ],
+    )
+    def test_special_use_blocked(self, addr: str):
+        assert _is_private_ip(addr) is True
+
     def test_ipv6_loopback_blocked(self):
         assert _is_private_ip("::1") is True
 

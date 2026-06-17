@@ -102,13 +102,15 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 
 ### SSRF via malicious HTTP redirects
 
-**Surface:** An adversarial upstream (or a DNS-rebound attacker) could redirect an HTTP request to a private/internal IP, potentially exposing cloud-metadata services (169.254.169.254) or internal infrastructure.
+**Surface:** An adversarial upstream (or a DNS-rebound attacker) could redirect an HTTP request to a private, internal, or special-use IP, potentially exposing cloud-metadata services (169.254.169.254) or internal infrastructure.
 
 **Mitigation:** [`recon_tool/http.py`](../src/recon_tool/http.py) `_SSRFSafeTransport`:
 - Every hop - initial request AND every redirect - validated
-- Blocked networks: `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16` (link-local/cloud metadata), IPv6 `fc00::/7`, `fe80::/10`
+- Blocks anything that is not globally routable unicast, including loopback,
+  private, link-local, shared-address, unspecified, reserved, documentation,
+  multicast, and IPv6 unique-local ranges
 - Literal IP check on URL host
-- Asynchronous DNS resolution check (IP from resolver vs allowlist)
+- Asynchronous DNS resolution check (IP from resolver vs public-unicast policy)
 - Used by default in all outbound HTTP (OIDC discovery, UserRealm, cert providers, Google identity)
 
 **Known limitation:** DNS rebinding with sub-second TTLs is not fully defeated (`http.py:9-16`). The check happens before the request, and `httpx` resolves the hostname again for the actual connection. For typical attacker TTLs (minutes) this is safe; for millisecond-TTL rebinding it is not. An attacker who controls both a public hostname and can flip its DNS within the connection window could bypass the check. This is documented in-code as a known tradeoff.
