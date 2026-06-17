@@ -51,7 +51,8 @@ a named cap and timeout.
 | CT response flood (entries, SANs, bursts, clusters) | `_MAX_CRTSH_ENTRIES`, `_MAX_SANS_PER_CERT`, `_MAX_CRTSH_CERT_SUMMARY_ENTRIES` (CertSpotter too), `_MAX_PAGES`, burst/cluster caps | `test_hostile_input_bounds::TestCrtshEntryBounds`, `::TestCtGroupingBounds`; `test_crtsh.py` | none material |
 | ReDoS via a crafted DNS value + catalog/custom/ephemeral regex | structural validator (`_REDOS_RE` / `_alternation_redos` / `_has_nested_quantifier`) + input-length caps (`_MAX_TXT_MATCH_LENGTH`, `_MAX_CNAME_MATCH_LEN`, `_MAX_SUBDOMAIN_TXT_MATCH_LEN`) | `test_security::TestReDoSPrevention`; `test_hostile_input_bounds::TestDnsParserBounds` (`test_match_txt_oversized_value_is_skipped`, `test_cname_match_is_length_bounded`, `test_subdomain_txt_oversized_is_skipped`) | The validator is a heuristic, not a proof; the length caps are the real backstop (documented) |
 | SPF redirect loop / Autodiscover domain flood / XML entity expansion | SPF depth cap 3; `_MAX_AUTODISCOVER_DOMAINS`; defusedxml | `test_hostile_input_bounds::TestDnsParserBounds::test_spf_redirect_loop_terminates`, `::TestAutodiscoverBounds` | none material |
-| A hanging or slow source | aggregate `asyncio.wait_for(RESOLVE_TIMEOUT)`; per-query `DNS_QUERY_TIMEOUT`; bounded redirects and cumulative retry sleep | `test_source_fault_injection::test_hanging_source_trips_the_aggregate_timeout`; `test_resilience_hardening::TestHttpBounds` (redirect cap, retry-sleep cap) | The 5 s per-query DNS timeout is exercised through the aggregate path, not asserted in isolation (see Standing gaps) |
+| A hanging or slow source | aggregate `asyncio.wait_for(RESOLVE_TIMEOUT)`; per-query `DNS_QUERY_TIMEOUT`; bounded redirects and cumulative retry sleep | `test_source_fault_injection::test_hanging_source_trips_the_aggregate_timeout`; `test_resilience_hardening::TestHttpBounds` (production constants, redirect cap, retry-sleep cap); `test_resilience_hardening::TestDnsBounds` (per-query DNS timeout) | none material |
+| Hostile home-directory YAML overlay | profile and motif loaders pre-cap YAML documents at 1 MiB, catch `RecursionError`, validate structure, and skip bad custom files while preserving built-ins | `test_baseline_anomalies::TestProfileSchemaExtension`; `test_motifs::TestUserConfigAdditive` | none material for these loaders |
 | Every boundary x failure-mode (malformed / oversized / wrong-shape / 404 / 500 / timeout / network error / empty) | each HTTP identity source returns a clean `SourceResult`, never raises | `test_hostile_input_bounds::TestSourceFaultMatrix` (the explicit matrix) | none material for the HTTP sources |
 
 ## Promise 3: Output is safe to render
@@ -110,22 +111,16 @@ deferred as disproportionate for a passive single-maintainer tool.
 
 ## Standing gaps
 
-Mechanisms that are present in code but whose exact bound is asserted only
-indirectly. None is a known defect; each is a place a regression could pass CI,
-so they are the proving-test backlog.
+No standing proving-test gaps are currently tracked in this document. The
+2026-06 proving backlog that previously lived here is now closed:
 
-- **Production constants not pinned by value.** Several bound tests pass a small
-  cap to the unit under test (e.g. `_MaxBytesStream(max_bytes=8192)`) rather than
-  asserting the production constant (`_MAX_RESPONSE_BYTES` = 10 MB,
-  `RESOLVE_TIMEOUT` = 120 s). The mechanism is proven; the specific value is not.
-- **Per-query DNS timeout.** `DNS_QUERY_TIMEOUT` (5 s) is exercised through the
-  aggregate-timeout path; no test asserts a slow resolver is bounded at the
-  per-query level in isolation.
-- **Home-directory YAML overlays.** `profiles.py` and `motifs.py` use the same
-  `yaml.safe_load` + guarded-skip + cap pattern as the Bayesian-network loader
-  (which is hostile-input fuzzed), but lack a dedicated hostile-YAML test of
-  their own. `yaml.safe_load` also does not bound a YAML alias bomb by document
-  size; recon's loaders do not recurse into the parsed structure, so the
-  reference-shared parse stays cheap, but no test pins that.
+- Production HTTP and resolver bounds are pinned by
+  `test_resilience_hardening::TestHttpBounds`.
+- The per-query DNS timeout is asserted in isolation by
+  `test_resilience_hardening::TestDnsBounds`.
+- Profile and motif home-directory YAML overlays have dedicated hostile-input
+  coverage in `test_baseline_anomalies::TestProfileSchemaExtension` and
+  `test_motifs::TestUserConfigAdditive`.
 
-These are tracked on the assurance track in [roadmap.md](roadmap.md).
+New residuals should be added here when a mechanism is present in code but not
+yet directly asserted by a test.

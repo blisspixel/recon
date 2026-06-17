@@ -7,10 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.7] - 2026-06-17
+
 ### Fixed
 
 - **Homebrew formula freshness.** The bundled formula now points at the current
   `recon-tool` 2.2.6 sdist and checksum.
+- **Assurance proving-test backlog.** Production HTTP and resolver bounds are
+  now pinned by value, the DNS per-query timeout is asserted in isolation, and
+  custom profile and motif YAML overlays now have hostile-input coverage.
+- **Profile and motif YAML overlay bounds.** Custom profile and motif YAML
+  documents over 1 MiB are skipped before parsing, and recursive parse failures
+  degrade cleanly instead of escaping the loader.
 
 ## [2.2.6] - 2026-06-17
 
