@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Homebrew formula freshness.** The bundled formula now points at the current
+  `recon-tool` 2.2.5 sdist and checksum.
+
 ## [2.2.5] - 2026-06-17
 
 ### Fixed
@@ -15,8 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   non-global or special-use IP literals and resolved addresses, not just the
   explicit RFC1918, loopback, and link-local ranges. This closes gaps for
   unspecified, shared-address, documentation, multicast, and reserved addresses.
-- **Homebrew formula freshness.** The bundled formula now points at the current
-  `recon-tool` 2.2.4 sdist and checksum.
+- **Homebrew formula freshness.** The bundled formula was refreshed after the
+  2.2.4 publish so local checks no longer lag the latest released sdist and
+  checksum.
 
 ## [2.2.4] - 2026-06-17
 
