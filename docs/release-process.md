@@ -24,7 +24,7 @@ The script enforces the pre-release checklist automatically. It runs:
 
 1. **Branch check**: must be on `main` (refuses otherwise).
 2. **Clean tree check**: no staged or unstaged changes (refuses otherwise).
-3. **Version consistency**: `pyproject.toml` and `recon_tool/__init__.py`
+3. **Version consistency**: `pyproject.toml` and `src/recon_tool/__init__.py`
    must currently agree on the old version.
 4. **Prompt for the new version**: enforces `X.Y.Z` semver format, must be
    strictly greater than the current.
@@ -35,7 +35,7 @@ The script enforces the pre-release checklist automatically. It runs:
    Refuses on any failure.
 7. **Confirmation prompt**: y/N, defaults to N. Abort here and nothing has
    changed.
-8. **Version bump**: updates `pyproject.toml`, `recon_tool/__init__.py`
+8. **Version bump**: updates `pyproject.toml`, `src/recon_tool/__init__.py`
    fallback, and regenerates `uv.lock`.
 9. **Git commit + tag**: commits the bumped files, tags `vX.Y.Z`.
 10. **Push prompt**: y/N, defaults to N. If declined, the commit and tag

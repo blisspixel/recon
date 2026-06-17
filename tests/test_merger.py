@@ -10,7 +10,7 @@ Tests Properties 12-15 from the design document:
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 
-from recon_tool.merger import compute_confidence, merge_results
+from recon_tool.merger import _PLACEHOLDER_DISPLAY_NAMES, compute_confidence, merge_results
 from recon_tool.models import ConfidenceLevel, SourceResult
 
 # Strategies
@@ -20,6 +20,7 @@ non_empty_str = st.text(
     min_size=1,
     max_size=20,
 )
+display_name_str = non_empty_str.filter(lambda s: s.strip().lower() not in _PLACEHOLDER_DISPLAY_NAMES)
 source_name_str = st.text(
     alphabet=st.characters(whitelist_categories=("L", "N")),
     min_size=1,
@@ -94,7 +95,7 @@ class TestMergeFillsMissingFields:
 
     @given(
         uuid1=uuid_str,
-        display=non_empty_str,
+        display=display_name_str,
         name1=source_name_str,
         name2=source_name_str,
         domain=non_empty_str,
