@@ -21,6 +21,24 @@ class TestIsBlockedIp:
     def test_cloud_metadata(self):
         assert _is_blocked_ip("169.254.169.254") is True
 
+    @pytest.mark.parametrize(
+        "addr",
+        [
+            "0.0.0.0",  # noqa: S104 - test fixture for unspecified-address SSRF blocking
+            "100.64.0.1",
+            "192.0.2.1",
+            "198.51.100.1",
+            "203.0.113.1",
+            "224.0.0.1",
+            "240.0.0.1",
+            "::",
+            "2001:db8::1",
+            "ff02::1",
+        ],
+    )
+    def test_special_use_ranges_blocked(self, addr: str):
+        assert _is_blocked_ip(addr) is True
+
     def test_rfc1918_10(self):
         assert _is_blocked_ip("10.255.255.255") is True
 
@@ -41,6 +59,9 @@ class TestIsBlockedIp:
 
     def test_public_ip(self):
         assert _is_blocked_ip("8.8.8.8") is False
+
+    def test_public_ipv6(self):
+        assert _is_blocked_ip("2001:4860:4860::8888") is False
 
     def test_invalid_string(self):
         assert _is_blocked_ip("not-an-ip") is False
@@ -67,6 +88,20 @@ class TestIsPrivateIpAsync:
         assert await _is_private_ip_async("169.254.169.254") is True
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "host",
+        [
+            "0.0.0.0",  # noqa: S104 - test fixture for unspecified-address SSRF blocking
+            "100.64.0.1",
+            "224.0.0.1",
+            "2001:db8::1",
+            "ff02::1",
+        ],
+    )
+    async def test_literal_special_use_blocked(self, host: str):
+        assert await _is_private_ip_async(host) is True
+
+    @pytest.mark.asyncio
     async def test_hostname_resolving_to_public(self):
         # Real hostname that resolves to public IP
         assert await _is_private_ip_async("login.microsoftonline.com") is False
@@ -89,6 +124,13 @@ class TestSSRFSafeTransport:
     async def test_blocks_metadata_ip(self):
         transport = _SSRFSafeTransport()
         request = httpx.Request("GET", "http://169.254.169.254/latest/meta-data/")
+        with pytest.raises(httpx.ConnectError, match="SSRF blocked"):
+            await transport.handle_async_request(request)
+
+    @pytest.mark.asyncio
+    async def test_blocks_unspecified_ip(self):
+        transport = _SSRFSafeTransport()
+        request = httpx.Request("GET", "http://0.0.0.0/")
         with pytest.raises(httpx.ConnectError, match="SSRF blocked"):
             await transport.handle_async_request(request)
 

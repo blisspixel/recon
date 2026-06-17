@@ -69,6 +69,8 @@ _MAX_RESPONSE_BYTES = 10 * 1024 * 1024
 _COMPRESSING_ENCODINGS = frozenset({"gzip", "x-gzip", "deflate", "br", "compress", "zstd"})
 
 # IP networks that must never be reached via redirects (SSRF protection).
+# Kept for explicit high-signal ranges and as a readability anchor; the
+# predicate below also blocks all non-global or special-use IP literals.
 # Covers loopback, private RFC1918, link-local, and cloud metadata ranges.
 _BLOCKED_NETWORKS = [
     ipaddress.ip_network("127.0.0.0/8"),
@@ -82,11 +84,25 @@ _BLOCKED_NETWORKS = [
 ]
 
 
+def _addr_is_blocked(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    """Return True for any IP that is not globally routable unicast."""
+    return (
+        any(addr in net for net in _BLOCKED_NETWORKS)
+        or not addr.is_global
+        or addr.is_private
+        or addr.is_loopback
+        or addr.is_link_local
+        or addr.is_reserved
+        or addr.is_multicast
+        or addr.is_unspecified
+    )
+
+
 def _is_blocked_ip(addr_str: str) -> bool:
-    """Check if an IP address string falls within a blocked network."""
+    """Check if an IP address string is private, internal, or special-use."""
     try:
         addr = ipaddress.ip_address(addr_str)
-        return any(addr in net for net in _BLOCKED_NETWORKS)
+        return _addr_is_blocked(addr)
     except ValueError:
         return False
 
@@ -104,7 +120,7 @@ async def _is_private_ip_async(host: str) -> bool:
     # Layer 1: literal IP check (fast path, no I/O)
     try:
         addr = ipaddress.ip_address(host)
-        return any(addr in net for net in _BLOCKED_NETWORKS)
+        return _addr_is_blocked(addr)
     except ValueError:
         pass  # Not an IP literal — fall through to DNS resolution
 
@@ -118,7 +134,7 @@ async def _is_private_ip_async(host: str) -> bool:
             ip_str = sockaddr[0]
             if _is_blocked_ip(ip_str):
                 logger.warning(
-                    "SSRF blocked: hostname %s resolves to private IP %s",
+                    "SSRF blocked: hostname %s resolves to non-public IP %s",
                     host,
                     ip_str,
                 )
@@ -142,7 +158,7 @@ def _is_private_ip(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
     # Layer 1: literal IP check (fast path)
     try:
         addr = ipaddress.ip_address(host)
-        return any(addr in net for net in _BLOCKED_NETWORKS)
+        return _addr_is_blocked(addr)
     except ValueError:
         pass
 
@@ -155,7 +171,7 @@ def _is_private_ip(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
             ip_str = str(sockaddr[0])
             if _is_blocked_ip(ip_str):
                 logger.warning(
-                    "SSRF blocked: hostname %s resolves to private IP %s",
+                    "SSRF blocked: hostname %s resolves to non-public IP %s",
                     host,
                     ip_str,
                 )
@@ -233,7 +249,7 @@ class _SSRFSafeTransport(httpx.AsyncHTTPTransport):
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         host = request.url.host or ""
         if await _is_private_ip_async(host):
-            raise httpx.ConnectError(f"SSRF blocked: request to private/internal IP {host}")
+            raise httpx.ConnectError(f"SSRF blocked: request to non-public/internal IP {host}")
         response = await super().handle_async_request(request)
         if isinstance(response.stream, httpx.AsyncByteStream):
             encodings = {e.strip() for e in response.headers.get("content-encoding", "").lower().split(",")}
