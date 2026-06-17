@@ -16,8 +16,8 @@ last six months unless the repo's automation tells it.
 
 ## 1. The one command before you push
 
-`python scripts/check.py` runs the **exact** CI gate locally — ruff, pyright
-over `recon_tool/ tests/` (the same scope CI uses), the coverage-gated test run,
+`python scripts/check.py` runs the **exact** CI gate locally: ruff, pyright
+over `src/recon_tool/ tests/` (the same scope CI uses), the coverage-gated test run,
 and the catalog/label/file-size checks. "Green here ⇒ green in CI." Use
 `--fast` to skip the test run for rapid iteration; never push on `--fast` alone.
 
@@ -43,10 +43,10 @@ fix, encoded once. The pre-commit hooks mirror the same scopes.
   that may only *shrink* — see the decomposition track in
   [roadmap.md](roadmap.md). Goal state: every baseline entry gone, every module
   under the cap.
-- **`pyproject.toml` is flat-layout, deliberately.** src-layout is the default
-  recommendation for *new* packages; recon is an established package with a
-  stable import path and a locked schema, so the churn of migrating isn't worth
-  it. Recorded as a decision, not an oversight (see `docs/adr/`).
+- **`src/` layout is the package layout.** Source files live under
+  `src/recon_tool/`; the public import name remains `recon_tool`. This keeps
+  tests honest about installed-package behavior and avoids repo-root import
+  shadowing. ADR-0006 supersedes the previous flat-layout decision.
 - **Significant or hard-to-reverse decisions get an ADR** (`docs/adr/`), one
   decision per record, immutable once accepted. The invariants, the MNAR absence
   rule, the schema lock, and the no-numpy choice are recorded there so the
