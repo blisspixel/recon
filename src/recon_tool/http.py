@@ -1,8 +1,8 @@
 """Shared HTTP client context manager for lookup sources.
 
 Includes SSRF protection with DNS rebinding defense: both literal IP addresses
-and resolved hostnames are validated against a blocklist of private/link-local/
-loopback IP ranges before connecting.
+and resolved hostnames are validated against a public-unicast policy before
+connecting.
 
 Includes retry logic for transient failures (429, 503) with exponential backoff.
 

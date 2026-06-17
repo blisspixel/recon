@@ -54,6 +54,38 @@ class TestProfileSchemaExtension:
         assert p.expected_categories == ()
         assert p.expected_motifs == ()
 
+    def test_oversized_custom_profile_is_skipped(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        from recon_tool import profiles as profiles_mod
+
+        custom_dir = tmp_path / "profiles"
+        custom_dir.mkdir()
+        payload = "name: oversized\ndescription: " + "x" * profiles_mod._MAX_PROFILE_YAML_BYTES + "\n"
+        (custom_dir / "oversized.yaml").write_text(payload, encoding="utf-8")
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
+
+        reload_profiles()
+        assert load_profile("oversized") is None
+        assert load_profile("fintech") is not None
+
+    def test_recursive_yaml_parse_failure_is_skipped(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        from recon_tool import profiles as profiles_mod
+
+        original_safe_load = profiles_mod.yaml.safe_load
+
+        def _safe_load(text: str):
+            if "raise-recursion" in text:
+                raise RecursionError("too deep")
+            return original_safe_load(text)
+
+        custom_dir = tmp_path / "profiles"
+        custom_dir.mkdir()
+        (custom_dir / "poison.yaml").write_text("raise-recursion\n", encoding="utf-8")
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
+        monkeypatch.setattr(profiles_mod.yaml, "safe_load", _safe_load)
+
+        reload_profiles()
+        assert load_profile("fintech") is not None
+
 
 class TestComputeBaselineAnomalies:
     def test_none_profile_returns_empty(self):

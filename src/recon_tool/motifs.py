@@ -40,6 +40,8 @@ MOTIF_CHAIN_HARD_CAP = 4
 MAX_MOTIFS = 200
 # Hard cap on substrings per marker.
 MAX_PATTERNS_PER_MARKER = 12
+# Hard cap on each built-in or custom motif YAML document before parsing.
+_MAX_MOTIF_YAML_BYTES = 1024 * 1024
 
 _VALID_CONFIDENCE = {"high", "medium", "low"}
 
@@ -159,9 +161,13 @@ def _load_from_path(path: Path) -> list[ChainMotif]:
     if not path.exists():
         return []
     try:
+        stat = path.stat()
+        if stat.st_size > _MAX_MOTIF_YAML_BYTES:
+            logger.warning("Motif file %s exceeds %d bytes, skipped", path, _MAX_MOTIF_YAML_BYTES)
+            return []
         text = path.read_text(encoding="utf-8")
         loaded = yaml.safe_load(text)
-    except (yaml.YAMLError, OSError) as exc:
+    except (yaml.YAMLError, OSError, RecursionError) as exc:
         logger.warning("Failed to load motifs from %s: %s", path, exc)
         return []
     raw_list: list[Any]

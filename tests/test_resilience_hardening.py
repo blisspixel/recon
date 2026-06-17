@@ -30,6 +30,7 @@ from recon_tool import cache as cache_mod
 from recon_tool import ct_cache as ct_cache_mod
 from recon_tool.http import (
     _COMPRESSING_ENCODINGS,
+    _MAX_RESPONSE_BYTES,
     _MAX_TOTAL_RETRY_SLEEP,
     MAX_REDIRECTS,
     _MaxBytesStream,
@@ -40,6 +41,8 @@ from recon_tool.http import (
 )
 from recon_tool.infra_graph import _MAX_EDGE_ISSUER_SAMPLES, _build_graph, build_infrastructure_clusters
 from recon_tool.rate_limit import AdaptiveRateLimiter, rate_limit_state_dir
+from recon_tool.resolver import RESOLVE_TIMEOUT
+from recon_tool.sources import dns_base
 from recon_tool.sources.cert_providers import CertSpotterProvider, CrtshProvider
 
 # Part of the dedicated hostile-input fuzz gate (run with `-m hostile_input`).
@@ -253,6 +256,15 @@ class TestCtProviderRecursionError:
 
 
 class TestHttpBounds:
+    def test_production_bound_constants_are_pinned(self) -> None:
+        assert _MAX_RESPONSE_BYTES == 10 * 1024 * 1024
+        assert MAX_REDIRECTS == 5
+        assert _MAX_TOTAL_RETRY_SLEEP == 30.0
+        assert RESOLVE_TIMEOUT == 120.0
+        assert dns_base.DNS_QUERY_TIMEOUT == 5.0
+        assert dns_base.DNS_QUERY_TIMEOUT < RESOLVE_TIMEOUT
+        assert _MAX_TOTAL_RETRY_SLEEP < RESOLVE_TIMEOUT
+
     @pytest.mark.asyncio
     async def test_client_bounds_redirects(self) -> None:
         """The shared client caps redirects at MAX_REDIRECTS (5), so an
@@ -281,3 +293,23 @@ class TestHttpBounds:
         resp = await transport.handle_async_request(httpx.Request("GET", "https://example.com/"))
         assert resp.status_code == 429  # last response returned after retries exhausted
         assert sum(slept) <= _MAX_TOTAL_RETRY_SLEEP + 1e-9
+
+
+class TestDnsBounds:
+    @pytest.mark.asyncio
+    async def test_safe_resolve_uses_production_query_timeout(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import dns.exception
+
+        class _TimeoutResolver:
+            def __init__(self) -> None:
+                self.calls: list[tuple[str, str, float]] = []
+
+            async def resolve(self, domain: str, rdtype: str, *, lifetime: float) -> list[str]:
+                self.calls.append((domain, rdtype, lifetime))
+                raise dns.exception.Timeout
+
+        resolver = _TimeoutResolver()
+        monkeypatch.setattr(dns_base, "get_resolver", lambda: resolver)
+
+        assert await dns_base.safe_resolve("contoso.com", "TXT") == []
+        assert resolver.calls == [("contoso.com", "TXT", dns_base.DNS_QUERY_TIMEOUT)]

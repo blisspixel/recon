@@ -64,6 +64,8 @@ from recon_tool.models import Observation
 
 logger = logging.getLogger("recon")
 
+_MAX_PROFILE_YAML_BYTES = 1024 * 1024
+
 __all__ = [
     "Profile",
     "apply_profile",
@@ -251,8 +253,16 @@ def _load_all_profiles() -> dict[str, Profile]:
             continue
         for path in sorted(directory.glob("*.yaml")):
             try:
+                stat = path.stat()
+                if stat.st_size > _MAX_PROFILE_YAML_BYTES:
+                    logger.warning(
+                        "Profile file %s exceeds %d bytes, skipped",
+                        path,
+                        _MAX_PROFILE_YAML_BYTES,
+                    )
+                    continue
                 raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-            except (yaml.YAMLError, OSError) as exc:
+            except (yaml.YAMLError, OSError, RecursionError) as exc:
                 logger.warning("Failed to load profile from %s: %s", path, exc)
                 continue
             if not isinstance(raw, dict):

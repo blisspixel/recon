@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from recon_tool.motifs import (
+    _MAX_MOTIF_YAML_BYTES,
     MOTIF_CHAIN_HARD_CAP,
     ChainMotif,
     load_motifs,
@@ -129,6 +130,41 @@ class TestUserConfigAdditive:
         # The default user path may not exist; loader must tolerate that.
         motifs = load_motifs(reload=True)
         assert len(motifs) > 0  # built-ins still loaded
+
+    def test_oversized_user_yaml_is_skipped(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
+        payload = (
+            "motifs:\n"
+            "  - name: oversized\n"
+            "    display_name: oversized\n"
+            "    confidence: medium\n"
+            "    description: "
+            + "x" * _MAX_MOTIF_YAML_BYTES
+            + "\n    chain: [{name: a, match: [example.com]}]\n"
+        )
+        (tmp_path / "motifs.yaml").write_text(payload, encoding="utf-8")
+
+        motifs = load_motifs(reload=True)
+        names = {m.name for m in motifs}
+        assert "oversized" not in names
+        assert "cloudflare_to_aws" in names
+
+    def test_recursive_yaml_parse_failure_is_skipped(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        import recon_tool.motifs as motifs_mod
+
+        original_safe_load = motifs_mod.yaml.safe_load
+
+        def _safe_load(text: str):
+            if "raise-recursion" in text:
+                raise RecursionError("too deep")
+            return original_safe_load(text)
+
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
+        monkeypatch.setattr(motifs_mod.yaml, "safe_load", _safe_load)
+        (tmp_path / "motifs.yaml").write_text("raise-recursion\n", encoding="utf-8")
+
+        motifs = load_motifs(reload=True)
+        assert {m.name for m in motifs}
 
 
 class TestValidatorRejects:
