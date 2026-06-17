@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Homebrew formula freshness.** The bundled formula now points at the current
+  `recon-tool` 2.2.8 sdist and checksum.
+
 ## [2.2.8] - 2026-06-17
 
 ### Fixed
