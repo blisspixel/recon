@@ -12,14 +12,14 @@ This file is forward-looking. Shipped work belongs in
 > agentic. That doc is the standing decision guide and the catalog of
 > brittle-rule smells; keep it current as the boundary moves.
 
-> **Status (2026-06):** v2.2.7 is the current release (shipped 2026-06-17 to
+> **Status (2026-06):** v2.2.8 is the current release (shipped 2026-06-17 to
 > PyPI). The v2.2 line delivered the evidence-semantics diagnostics (per-node
 > entropy reduction, exact leave-one-unit-out counterfactuals, graph partition
 > stability), the MCP tool-output contract revision (navigable
 > `structuredContent` + per-tool `outputSchema` + `isError` across the eighteen
 > data tools, aligned to MCP 2025-11-25), the 2026 CLI-ergonomics pass, and OSC 8
 > hyperlinks. The v2.0 schema lock, the v2.1 cohort summary
-> (`recon batch --summary`), and the v2.1.x through v2.2.7 hardening, security,
+> (`recon batch --summary`), and the v2.1.x through v2.2.8 hardening, security,
 > and assurance work have all shipped; per-release detail is in
 > [CHANGELOG.md](../CHANGELOG.md) and upgrade notes in
 > [migration-v2.md](migration-v2.md).
@@ -154,13 +154,14 @@ rules are in [release-process.md](release-process.md#version-numbering).
   god-file decomposition, patch-level) or produces assurance memos and a paper
   rather than a user-facing surface, so the version number may rest while that
   work proceeds. A minor is cut only when a coherent new surface earns it.
-  Recent patch-level work (post-2.2.0, shipped through 2.2.7): input is now
+  Recent patch-level work (post-2.2.0, shipped through 2.2.8): input is now
   normalized to the registrable apex via the Public Suffix List with an
   `--exact` opt-out, `recon update` is surfaced in the docs, and the release,
   installer, dependency, source-layout docs drift, and HTTP non-global IP guard
   fixes have shipped as hardening rather than new surface. The public assurance
   proving-test backlog is also closed: production bounds, the DNS per-query
-  timeout, and profile / motif overlay YAML hardening are now directly pinned.
+  timeout, profile / motif overlay YAML hardening, and the wheel package
+  invariant are now directly pinned.
 - **3.0 (intentionally deferred, possibly never).** A major bump is forced only by
   an unavoidable *breaking* change to a stable surface, with the deprecation
   window the stability policy requires. The pre-2.0 schema-hardening (SH1 to SH9)

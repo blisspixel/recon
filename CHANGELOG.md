@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.8] - 2026-06-17
+
 ### Fixed
 
+- **Wheel package invariant.** CI now builds and inspects the wheel to pin the
+  intended data files and direct runtime dependency surface, keeping ML, ASN,
+  GeoIP, aggregate stores, and paid-vendor SDKs out of the package.
 - **Homebrew formula freshness.** The bundled formula now points at the current
   `recon-tool` 2.2.7 sdist and checksum.
 
