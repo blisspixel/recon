@@ -95,6 +95,28 @@ string because it arrived through a tool call; auto-approving a stateful tool;
 and the cardinal one, putting any learned or LLM component inside the
 deterministic core.
 
+## Allowed loop shapes
+
+Agent loops are useful when they make maintenance more repeatable without
+changing what recon is. The loop may perceive repo state, run deterministic
+checks, propose a patch, and summarize evidence. It must have a clear stop
+condition and a human gate for semantic changes.
+
+| Loop | Good use | Stop condition | Human gate |
+|---|---|---|---|
+| Release readiness | Check version references, README examples, schema copies, Homebrew formula freshness, no-real-data examples, `scripts/check.py`, and CI status | All gates pass, or the loop opens a reviewed issue/PR with failures grouped by source | Required before tagging, publishing, or changing release artifacts |
+| CI failure repair | Read failing checks, inspect logs, patch code/tests/docs, rerun the narrow failing gate and then the broad check | Failing check passes, or a reproducible blocker is documented | Required before merge |
+| Calibration orchestration | Run existing validation harnesses over the private corpus and produce aggregate-only memos | Aggregate metrics are produced and checked for policy compliance, or the run fails with logs | Required before committing any memo or CPT change |
+| Fingerprint triage | Read local gap output, propose YAML, references, sparse-result wording, and regression tests | Proposed diff includes evidence and tests, or candidate is rejected | Required before catalog or motif changes |
+| Docs/context packaging | Generate an agent-readable surface inventory or OKF-style bundle from existing docs | Generated artifact matches sources under a drift gate | Required before making the artifact a stable surface |
+
+The common constraints are strict: no target data in committed output, no
+persistent aggregate scan database, no autonomous catalog/CPT/schema mutation,
+no hosted service inside recon, and no agent-written inference logic. If a loop
+needs to keep state, that state belongs in git, in committed baselines, in
+gitignored maintainer-local validation outputs, or in the operator's external
+automation system.
+
 ## A checklist before you add a rule or an agentic behavior
 
 - Does it keep collection passive and credential-free?

@@ -103,11 +103,12 @@ This file is forward-looking. Shipped work belongs in
 > and ratchet-capped rather than fragmented. Every split was
 > golden-byte-identical and CI-gated by the file-size ratchet.
 >
-> What is otherwise open is operator-paced or standing: the maintainer-local
-> runs of the calibration harnesses (held-out residual, tenancy corroboration,
-> per-vertical stratification, conformal pass — collection now, not
-> construction), the C3 CT-enabled corpus pass, and the arXiv write-up. This
-> file is the plan from here.
+> What is otherwise open is operator-paced or standing: maintainer loops that run
+> existing validation gates and propose reviewed changes, the maintainer-local runs of the
+> calibration harnesses (held-out residual, tenancy corroboration, per-vertical
+> stratification, conformal pass - collection now, not construction), the C3
+> CT-enabled corpus pass, and the arXiv write-up. This file is the plan from
+> here.
 
 ## Version milestones and build order
 
@@ -148,20 +149,27 @@ rules are in [release-process.md](release-process.md#version-numbering).
   revision (navigable `structuredContent` + per-tool `outputSchema` + `isError`
   across the data tools; see [mcp.md](mcp.md)). The 2026 CLI-ergonomics pass and
   OSC 8 hyperlinks rode along.
-- **2.3+ (no surface currently queued).** The next minor waits for the next
-  genuinely new named surface, and none is planned: the project is in its
-  deepen-not-expand phase. The active post-2.2.0 work is either internal (the
-  god-file decomposition, patch-level) or produces assurance memos and a paper
-  rather than a user-facing surface, so the version number may rest while that
-  work proceeds. A minor is cut only when a coherent new surface earns it.
-  Recent patch-level work (post-2.2.0, shipped through 2.2.8): input is now
-  normalized to the registrable apex via the Public Suffix List with an
-  `--exact` opt-out, `recon update` is surfaced in the docs, and the release,
-  installer, dependency, source-layout docs drift, and HTTP non-global IP guard
-  fixes have shipped as hardening rather than new surface. The public assurance
-  proving-test backlog is also closed: production bounds, the DNS per-query
-  timeout, profile / motif overlay YAML hardening, and the wheel package
-  invariant are now directly pinned.
+- **2.2.1 through 2.2.8 (shipped through 2026-06-17).** Patch-level UX,
+  maintainability, docs, and assurance hardening: input is normalized to the
+  registrable apex via the Public Suffix List with an `--exact` opt-out,
+  `recon update` is surfaced in the docs, the god-file decomposition track is
+  complete, the release / installer / dependency / source-layout docs drift and
+  HTTP non-global IP guard fixes have shipped, and the public assurance
+  proving-test backlog is closed. No locked JSON shape changed.
+- **2.2.x (active patch line).** The next work is ordered by dependency, not by
+  calendar estimate: release-readiness maintainer loops, private-corpus
+  calibration runs, aggregate-only validation memos, and the surface-inventory
+  design decision. These are patch-level unless they add a new stable user or
+  agent-consumed surface.
+- **2.3+ (reserved for a real surface).** The next minor waits for a coherent
+  named surface. The only current candidate that plausibly earns one is an
+  agent-consumable surface inventory: a generated CLI/MCP/schema manifest or
+  comparable agent-context bundle that removes drift between README examples,
+  MCP docs, CLI help, and skills. If it is only documentation, it stays
+  patch-level. If it becomes a stable command or committed machine-readable
+  contract, it can be 2.3. An OKF-compatible bundle is considered only as a
+  packaging shape for recon's own docs/runbooks, not as a recon findings export
+  and not while OKF remains a draft spec without a concrete recon consumer.
 - **3.0 (intentionally deferred, possibly never).** A major bump is forced only by
   an unavoidable *breaking* change to a stable surface, with the deprecation
   window the stability policy requires. The pre-2.0 schema-hardening (SH1 to SH9)
@@ -185,34 +193,36 @@ enlarging the surface.
 The v2.2.0 assurance and diagnostics items (the CAL3/CAL4 reference calibration,
 the statistical-assurance dossier, and the evidence-semantics diagnostics) have
 shipped; their detail is kept in [Assurance and trust hardening](#assurance-and-trust-hardening-the-post-20-north-star)
-and the `validation/` memos for rationale. What remains, in logical order:
+and the `validation/` memos for rationale. The god-file decomposition track also
+shipped in v2.2.1. What remains is dependency-ordered work with no calendar
+estimates:
 
-1. **God-file decomposition** (engineering; complete, patch-level — no version
-   bump). Split each module over the ~1000-line convention into cohesive
-   sub-modules, preserving the public import path and keeping golden/snapshot
-   output byte-identical, each step CI-gated by the file-size ratchet. Done:
-   `formatter.py` (five modules, 4413 to ~2160 cohesive panel core),
-   `cli.py` (four Typer sub-apps + the command-impl families to `cli_lookup` /
-   `cli_batch` / `cli_doctor`, 3941 to 702), `exposure.py` (result dataclasses to
-   `exposure_models.py`, 1130 to 983), `merger.py` (slug tables to
-   `merger_tables.py`, 1131 to 958), `sources/dns.py` (2524 to 840 across
-   `dns_tables`, `dns_base`, `dns_email`, `dns_infra`), `bayesian.py` (1411 to
-   926, dataclasses to `bayesian_models.py` and loaders to `bayesian_loader.py`),
-   and `server.py` (2859 to 406 across `server_app`, `server_runtime`, and the
-   per-domain tool modules). Every package module is now under the 1000-line cap
-   except `formatter.py`'s deliberately-whole panel core. *Design:* the "Module
-   decomposition (god-file split)"
-   section below, [engineering-practices.md](engineering-practices.md), and
-   [adr/](adr/).
-2. **Calibration corpus runs** (operator-paced; maintainer-local). The harnesses
-   are built and unit-tested; what remains is running them over the gitignored
-   corpus and committing the aggregate metrics: the held-out residual and tenancy
-   corroboration calibrations, per-vertical stratification (the `--stratify-dir`
-   mode), the conformal-coverage pass, and the C3 CT-enabled full-corpus pass.
-   *Design:* [statistical-assurance.md](statistical-assurance.md),
+1. **Release-readiness maintainer loop** (maintainer ops, patch-level). Encode a
+   reviewed loop around existing deterministic gates: version/reference drift,
+   README usage examples, schema files, Homebrew formula checks, no-real-data
+   hygiene, `scripts/check.py`, and CI status. The loop may open an issue or
+   draft PR with a proposed fix; it must not change semantic catalog entries,
+   CPTs, release tags, or distribution artifacts without human approval.
+2. **Calibration corpus runs** (maintainer-local, aggregate-only, patch-level).
+   The harnesses are built and unit-tested; what remains is running them over
+   the gitignored corpus and committing only aggregate metrics: held-out
+   residual calibration, tenancy corroboration, per-vertical stratification
+   (`--stratify-dir`), conformal coverage, and the C3 CT-enabled full-corpus
+   pass. *Design:* [statistical-assurance.md](statistical-assurance.md),
    `validation/reference-calibration.md`, and [related-work.md](related-work.md).
-3. **The arXiv write-up** (packaging; aspirational, off the critical path).
-   Assembles the existing rigor for an outside reader, plus the few additional
+3. **Fingerprint and motif triage loop** (maintainer-local, reviewed proposals,
+   patch-level unless it adds a stable surface). Use existing scan/gap outputs
+   to propose catalog or motif changes with vendor references, before/after
+   aggregate deltas, sparse-result wording, and regression tests. The loop can
+   prepare YAML and test patches, but catalog changes still require human
+   review under [agentic-balance.md](agentic-balance.md).
+4. **Agent-consumable surface inventory decision** (possible 2.3 surface). If
+   README examples, CLI help, MCP docs, and agent skills keep drifting, design a
+   generated CLI/MCP/schema manifest or equivalent docs bundle with a CI drift
+   gate. If the artifact is a stable machine-readable command or contract, that
+   is the likely 2.3 candidate. If it is just a checked doc, keep it patch-level.
+5. **The arXiv write-up** (packaging; aspirational, off the critical path).
+   Assemble the existing rigor for an outside reader, plus the few additional
    experiments already designed into the harnesses above, within the no-real-data
    publication rule. *Design:* [paper-outline.md](paper-outline.md),
    [related-work.md](related-work.md), the [Research write-up](#research-write-up-aspirational-an-arxiv-paper)
@@ -222,6 +232,41 @@ and the `validation/` memos for rationale. What remains, in logical order:
 Standing, maintainer-paced, off this critical path: the PV2 validation routine
 (live), the mutation gate (live), and corpus-driven catalogue growth (local,
 aggregate-only). These run continuously and do not gate the sequence above.
+
+### Agent loops and OKF disposition (2026-06 external review)
+
+The current agentic-AI tooling discussion is useful for recon only where it
+reinforces the boundary in [agentic-balance.md](agentic-balance.md): agents may
+orchestrate work around recon, but recon's observe-infer-report core remains
+deterministic. The relevant external shape is now well documented by the agent
+platforms themselves: Codex describes the agent loop as a harness that prepares
+context, lets the model request tool calls, observes tool results, and repeats
+until the model returns a final message
+([OpenAI, "Unrolling the Codex agent loop"](https://openai.com/index/unrolling-the-codex-agent-loop/));
+Claude Code describes the same evaluate/tool/observe cycle and exposes routines
+for scheduled, API-triggered, and GitHub-triggered runs
+([Claude Code agent loop](https://code.claude.com/docs/en/agent-sdk/agent-loop),
+[Claude Code routines](https://code.claude.com/docs/en/routines)). Google OKF is
+also relevant as a file-based agent-context convention: markdown files with YAML
+frontmatter, cross-links, optional indexes, and optional logs
+([Google Cloud OKF intro](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing),
+[OKF v0.1 spec](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)).
+
+Disposition for recon:
+
+| Pattern | Applies to recon | Boundary |
+|---|---|---|
+| Goal-driven agent loops | Yes, for release readiness, CI triage, private-corpus calibration orchestration, and fingerprint proposal drafts | The loop runs existing tools and proposes changes. It does not silently mutate CPTs, fingerprints, schema, releases, or distribution artifacts. |
+| Manager/worker or subagent loops | Yes, for read-heavy review: docs drift, test-log triage, schema checks, and catalog candidate review | Parallel agents summarize evidence back to one reviewed decision. Avoid parallel write-heavy code edits. |
+| Self-critique/eval loops | Yes, when the verifier is deterministic or separately reviewable: `scripts/check.py`, schema drift tests, coverage, mutation gate, no-real-data review, aggregate-only validation memos | The agent may critique output; deterministic gates decide whether the repo is clean. Human review decides semantic changes. |
+| Persistent memory | Limited | Use committed docs, validation baselines, and git history. Do not add a persistent aggregate scan database or target-memory store. |
+| OKF-style knowledge bundles | Maybe, as an agent-readable packaging pattern for recon's own runbooks, invariants, schemas, and surface inventory | Do not export target findings as OKF. Do not duplicate docs into a second source of truth unless a generator and drift gate make it derived. |
+| Scheduled hosted operation | No, inside recon | Scheduling belongs to Codex, Claude Code, GitHub Actions, cron, or the operator's environment. recon stays a local CLI/library/MCP server. |
+
+The near-term implementation is therefore not "make recon agentic." It is:
+define reviewed maintainer loops, give them explicit stop conditions and gates,
+and use file-based context only where it reduces drift for agents that consume
+recon.
 
 ## Pre-2.0 hardening (shipped) and the road past v2.0
 
@@ -2332,14 +2377,16 @@ are picked up alongside the build plan above.
 - Add tests around parser, cache, MCP, or formatter edge cases discovered from
   real validation output.
 - Add one entry to a new `motifs.yaml` describing a recurring CNAME or NS
-  chain pattern (e.g., `cloudflare → akamai → custom-origin`) with a
+  chain pattern (e.g., `cloudflare -> akamai -> custom-origin`) with a
   before/after corpus delta showing the pattern actually fires.
 - Add one vertical-baseline absence rule in `verticals.yaml` with a clear
   passive-ceiling note (e.g., "fintech profile expects WAF motif; absence
   is observable, not a verdict").
-- Implement one Bayesian CPT in a draft `bayesian_network.yaml` covering
-  email security + M365 federation, with the schema marked EXPERIMENTAL and
-  the output gated behind the existing `--fusion` flag.
+- Add a small aggregate-only validation memo from a local harness run, with no
+  real apexes, tenant IDs, or per-domain output.
+- Add a focused release-readiness check that catches one known drift class
+  (README usage, version references, schema copies, Homebrew formula freshness,
+  or no-real-data examples).
 - Move the n_eff calibration constants
   (`_EVIDENCE_N_EFF_CONTRIB`, `_CONFLICT_N_EFF_PENALTY`,
   `_MIN_N_EFF`) from `recon_tool/bayesian.py` into a top-level
@@ -2351,9 +2398,11 @@ are picked up alongside the build plan above.
 
 ## Opportunistic Refactoring
 
-`formatter.py`, `server.py`, and `cli.py` carry disproportionate maintenance
-burden. Split them when a feature or bug fix naturally opens the seam; do not
-create a standalone refactor milestone without behavioral payoff.
+The god-file decomposition track is complete. `formatter.py` remains the only
+deliberately-large module because its Rich panel core is cohesive and
+ratchet-capped. Future refactors should happen only when a feature, bug fix, or
+test gap opens a real boundary; do not create a standalone refactor milestone
+without behavioral payoff.
 
 ## Intentionally Out Of Scope
 
@@ -2469,17 +2518,16 @@ proposal:
 **Not this tool:** company research, firmographic enrichment, news/funding
 feeds, hiring signals, GTM briefings, contact data, maturity scores, HTML
 dashboards, TUI, REPL, daemon mode, scheduled monitoring, STIX/Maltego/MISP
-exports, Prometheus metrics, Docker image, Homebrew tap, PDF reports.
+exports, Prometheus metrics, Docker image, PDF reports.
 
 **Distribution we don't ship:** static binaries (PyInstaller / shiv /
-PEX), self-contained installers, OS-native packages (.deb / .rpm /
-MSI), Homebrew tap. recon ships as a Python wheel on PyPI; that's
-the contract. Static-binary distribution adds signing,
-notarization, per-OS verification, and reproducible-build
-overhead disproportionate to the audience size. Operators who
-need a containerised recon can run it under `uv run` or any
-ephemeral Python sandbox; we do not gain from owning that
-distribution surface.
+PEX), self-contained installers, and OS-native packages (.deb / .rpm /
+MSI). recon ships as a Python wheel on PyPI, with a lightweight Homebrew formula
+that installs from PyPI into an isolated virtualenv. Static-binary and native
+package distribution add signing, notarization, per-OS verification, and
+reproducible-build overhead disproportionate to the audience size. Operators who
+need a containerized recon can run it under `uv run` or any ephemeral Python
+sandbox; we do not gain from owning that distribution surface.
 
 Use `--json` (or `--ndjson` for big batches) as the integration surface. If
 you need rendered graphs, reports, SIEM ingestion, or company research, pipe
