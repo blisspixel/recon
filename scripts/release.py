@@ -160,7 +160,7 @@ def _run_quality_gate() -> None:
                 "run",
                 "pytest",
                 "tests/",
-                "--cov=recon_tool",
+                "--cov=src/recon_tool",
                 "--cov-branch",
                 "--cov-fail-under=82",
                 "-q",
