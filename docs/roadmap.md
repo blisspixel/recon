@@ -198,12 +198,13 @@ shipped in v2.2.1. What remains is dependency-ordered work with no calendar
 estimates:
 
 1. **Release-readiness maintainer loop** (maintainer ops, optional, patch-level).
-   Encode a reviewed loop around existing deterministic gates:
-   version/reference drift, README usage examples, schema files, Homebrew
-   formula checks, no-real-data hygiene, `scripts/check.py`, and CI status. This
-   is not an end-user feature and not part of the normal `recon` CLI workflow.
-   The loop may open an issue or draft PR with a proposed fix; it must not
-   change semantic catalog entries, CPTs, release tags, or distribution
+   Start with a deterministic local gate, `scripts/release_readiness.py`, around
+   version/reference drift, README usage anchors, Homebrew formula freshness,
+   no-real-data hygiene, coverage-gate parity, latest-commit attribution
+   hygiene, `uv.lock`, and optional CI status. This is not an end-user feature
+   and not part of the normal `recon` CLI workflow. Any later loop simply wraps
+   that JSON output and may open an issue or draft PR with a proposed fix; it
+   must not change semantic catalog entries, CPTs, release tags, or distribution
    artifacts without human approval.
 2. **Calibration corpus runs** (maintainer-local, aggregate-only, patch-level).
    The harnesses are built and unit-tested; what remains is running them over
