@@ -47,9 +47,9 @@ Insights
 
 > Examples use [Microsoft's fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam). Tenant IDs, services, and domains are fabricated. No real company is depicted.
 
-Works for Microsoft 365, Google Workspace, or any provider. Also runs as an [MCP server](docs/mcp.md) for AI agents; the default `pip install recon-tool` includes MCP support.
+Works for Microsoft 365, Google Workspace, or any provider. It can also run as an optional [MCP server](docs/mcp.md); the default `pip install recon-tool` includes MCP support, but normal CLI and JSON use do not require AI.
 
-**Jump to:** [Install](#install) · [Usage](#usage) · [How it works](#how-recon-works) · [AI agents and MCP](#mcp-server) · [Automation and JSON](#automation-and-json) · [Limitations](#limitations) · [Docs index](docs/README.md)
+**Jump to:** [Install](#install) · [Usage](#usage) · [How it works](#how-recon-works) · [MCP server](#mcp-server) · [Automation and JSON](#automation-and-json) · [Limitations](#limitations) · [Docs index](docs/README.md)
 
 ## Why recon?
 
@@ -112,7 +112,7 @@ release; the catalog grows from observed gaps, not invented entries.
 
 ## Install
 
-**One-line install — and update**
+**One-line install and update**
 
 The same command installs recon or upgrades an existing install to the latest
 version, so re-running it later is how you update. It prefers
@@ -131,7 +131,7 @@ curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/insta
 
 After the installer finishes, open a **new** terminal and run `recon doctor`.
 
-**Update:** run `recon update` — it detects how recon was installed
+**Update:** run `recon update`. It detects how recon was installed
 (pipx / uv / pip / Homebrew) and runs the matching upgrade; `recon update --check`
 only reports whether a newer release exists. (Equivalently, re-run the install
 one-liner above, or upgrade directly with `uv tool upgrade recon-tool` /
@@ -140,7 +140,7 @@ one-liner above, or upgrade directly with `uv tool upgrade recon-tool` /
 
 **Homebrew (macOS / Linux):** `brew install blisspixel/tap/recon` once the tap is
 published; see [packaging/homebrew](packaging/homebrew/README.md). (Windows uses
-the PowerShell one-liner above — a Python package is a poor fit for Scoop/winget.)
+the PowerShell one-liner above, since a Python package is a poor fit for Scoop/winget.)
 
 ---
 
@@ -320,6 +320,9 @@ mechanism and the test that keeps it, is in
 - **Reproducible, byte-identical builds**, CI-gated (`SOURCE_DATE_EPOCH`), shipped
   with sigstore / PEP 740 publish attestations, GitHub build provenance, and a
   CycloneDX SBOM on every release ([docs/supply-chain.md](docs/supply-chain.md)).
+- **Supply-chain posture checks**, including read-only workflow token defaults,
+  CodeQL, Dependabot for uv and GitHub Actions, secret scanning, and OpenSSF
+  Scorecard publication.
 - **Differential verification** of the Bayesian inference core (exact enumeration
   cross-checked against variable elimination over the full evidence sweep) plus a
   **mutation-testing gate** with a kill-score floor
@@ -332,15 +335,15 @@ mechanism and the test that keeps it, is in
 ## Development
 
 ```bash
-uv sync                                # installs the dev group (pip: pip install -e . --group dev, pip 25.1+)
-pytest tests/                          # full test suite
-ruff check .                           # lint
-pyright src/recon_tool/ tests/         # type check
-pre-commit install                     # activate pre-commit hooks
+uv sync                                           # install the dev group
+pre-commit install                                # activate pre-commit hooks
+uv run python scripts/release_readiness.py --allow-dirty
+uv run python scripts/check.py                    # full local CI gate
+uv run python scripts/release_readiness.py        # strict pre-push readiness
 ```
 
 **Contributing, including AI coding agents (read this):** match the surrounding
-code, and run `python scripts/check.py` before pushing (it mirrors CI). House
+code, and run `uv run python scripts/check.py` before pushing (it mirrors CI). House
 rules: no AI attribution in commits or PRs, no em-dashes or emojis anywhere, no
 AI slop (no comments that narrate the code, no defensive checks inside validated
 boundaries). Full guide: [CONTRIBUTING.md](CONTRIBUTING.md).

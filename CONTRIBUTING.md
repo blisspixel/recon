@@ -63,12 +63,13 @@ git clone https://github.com/blisspixel/recon.git
 cd recon
 uv sync                    # installs the dev group (pip: pip install -e . --group dev, pip 25.1+)
 pre-commit install                     # activate pre-commit hooks
+uv run python scripts/release_readiness.py --allow-dirty
 uv run python scripts/check.py         # the full CI gate locally (--fast to skip tests)
 ```
 
 `scripts/check.py` runs the **exact** CI gate (ruff, pyright over
 `src/recon_tool/ tests/`, the coverage-gated test run, the catalog/label and
-file-size checks), so "green locally ⇒ green in CI." Run it before every push.
+file-size checks), so green locally means green in CI. Run it before every push.
 The standards this project holds itself (and any AI working in it) to are in
 [docs/engineering-practices.md](docs/engineering-practices.md); load-bearing
 design decisions are in [docs/adr/](docs/adr/).
@@ -125,7 +126,7 @@ spend effort on PRs that will be closed:
 - Scheduled / daemon mode with alerts
 - Generic subdomain brute-forcing (DNS wordlist attacks)
 - People-search / email-harvesting OSINT
-- Docker image, Homebrew tap, PyInstaller single-binary
+- Docker image, PyInstaller single-binary
 
 If you want any of these, **pipe `--json` into the right tool**. recon is a
 CLI + a local-stdio MCP server; the integration surface is JSON, pipe it
@@ -476,7 +477,7 @@ at "high" salience).
 ## Code changes
 
 - Run `pre-commit run --all-files` or `ruff check .` and `pyright src/recon_tool/ tests/` before submitting.
-- Run `pytest tests/ --cov=recon_tool --cov-branch`; branch coverage must stay above 82%.
+- Run `pytest tests/ --cov=src/recon_tool --cov-branch`; branch coverage must stay above 82%.
 - Integration tests (`pytest -m integration`) require network access and are skipped by default.
 - Keep PRs focused: one concern per PR.
 - Keep the branch list clean: `main` is the only long-lived branch. PRs and

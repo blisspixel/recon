@@ -157,10 +157,13 @@ rules are in [release-process.md](release-process.md#version-numbering).
   HTTP non-global IP guard fixes have shipped, and the public assurance
   proving-test backlog is closed. No locked JSON shape changed.
 - **2.2.x (active patch line).** The next work is ordered by dependency, not by
-  calendar estimate: optional maintainer loops, private-corpus calibration runs,
-  aggregate-only validation memos, and the surface-inventory design decision.
-  These are patch-level unless they add a new stable user or agent-consumed
-  surface. None of this makes AI a requirement for using recon.
+  calendar estimate. Current `main` now has the local release-readiness
+  preflight and the Scorecard-facing supply-chain posture pass. The remaining
+  order is private-corpus calibration runs, aggregate-only validation memos,
+  optional reviewed maintainer loops around those deterministic gates, and the
+  surface-inventory design decision. These are patch-level unless they add a new
+  stable user or agent-consumed surface. None of this makes AI a requirement for
+  using recon.
 - **2.3+ (reserved for a real surface).** The next minor waits for a coherent
   named surface. The only current candidate that plausibly earns one is an
   agent-consumable surface inventory: a generated CLI/MCP/schema manifest or
@@ -194,43 +197,65 @@ The v2.2.0 assurance and diagnostics items (the CAL3/CAL4 reference calibration,
 the statistical-assurance dossier, and the evidence-semantics diagnostics) have
 shipped; their detail is kept in [Assurance and trust hardening](#assurance-and-trust-hardening-the-post-20-north-star)
 and the `validation/` memos for rationale. The god-file decomposition track also
-shipped in v2.2.1. What remains is dependency-ordered work with no calendar
-estimates:
+shipped in v2.2.1. Before any item below, run the local maintainer preflight:
+`uv run python scripts/release_readiness.py --allow-dirty` during edits,
+`uv run python scripts/check.py` before commit, and
+`uv run python scripts/release_readiness.py --remote` after pushing `main`.
+What remains is dependency-ordered work with no calendar estimates:
 
-1. **Release-readiness maintainer loop** (maintainer ops, optional, patch-level).
-   Start with a deterministic local gate, `scripts/release_readiness.py`, around
-   version/reference drift, README usage anchors, Homebrew formula freshness,
-   no-real-data hygiene, coverage-gate parity, latest-commit attribution
-   hygiene, `uv.lock`, and optional CI status. This is not an end-user feature
-   and not part of the normal `recon` CLI workflow. Any later loop simply wraps
-   that JSON output and may open an issue or draft PR with a proposed fix; it
-   must not change semantic catalog entries, CPTs, release tags, or distribution
-   artifacts without human approval.
-2. **Calibration corpus runs** (maintainer-local, aggregate-only, patch-level).
+1. **Calibration corpus runs** (maintainer-local, aggregate-only, patch-level).
    The harnesses are built and unit-tested; what remains is running them over
    the gitignored corpus and committing only aggregate metrics: held-out
    residual calibration, tenancy corroboration, per-vertical stratification
    (`--stratify-dir`), conformal coverage, and the C3 CT-enabled full-corpus
    pass. *Design:* [statistical-assurance.md](statistical-assurance.md),
    `validation/reference-calibration.md`, and [related-work.md](related-work.md).
-3. **Fingerprint and motif triage loop** (maintainer-local, optional, reviewed
+2. **Fingerprint and motif triage loop** (maintainer-local, optional, reviewed
    proposals, patch-level unless it adds a stable surface). Use existing
    scan/gap outputs to propose catalog or motif changes with vendor references,
    before/after aggregate deltas, sparse-result wording, and regression tests.
    The loop can prepare YAML and test patches, but catalog changes still require
    human review under [agentic-balance.md](agentic-balance.md).
-4. **Agent-consumable surface inventory decision** (possible 2.3 surface). If
+3. **Agent-consumable surface inventory decision** (possible 2.3 surface). If
    README examples, CLI help, MCP docs, and agent skills keep drifting, design a
    generated CLI/MCP/schema manifest or equivalent docs bundle with a CI drift
    gate. If the artifact is a stable machine-readable command or contract, that
    is the likely 2.3 candidate. If it is just a checked doc, keep it patch-level.
-5. **The arXiv write-up** (packaging; aspirational, off the critical path).
+4. **The arXiv write-up** (packaging; aspirational, off the critical path).
    Assemble the existing rigor for an outside reader, plus the few additional
    experiments already designed into the harnesses above, within the no-real-data
    publication rule. *Design:* [paper-outline.md](paper-outline.md),
    [related-work.md](related-work.md), the [Research write-up](#research-write-up-aspirational-an-arxiv-paper)
    section below, and the constraints in
    [data-handling-policy.md](data-handling-policy.md).
+
+Decided not to do now:
+
+- **Branch protection.** This would improve Scorecard but changes how the
+  single-maintainer `main` flow works. Keep the local readiness gate plus remote
+  CI verification as the current guardrail unless the repo starts taking regular
+  external PRs.
+- **Pin every GitHub Action to a commit SHA.** It would improve Scorecard's
+  pinned-dependencies check, but it adds noisy maintenance across every workflow.
+  Keep version-tagged actions plus Dependabot action updates for now; revisit if
+  the project needs a stricter supply-chain profile.
+- **Attach separate signature files to GitHub releases.** PyPI attestations,
+  GitHub build provenance, SBOMs, and reproducible builds are already in place.
+  Scorecard does not fully credit that shape today. Consider extra GitHub
+  release assets only if consumers need that verification path.
+- **Scorecard-recognized fuzzing integration.** Hypothesis and hostile-input
+  tests already exercise parser boundaries. Do not add OSS-Fuzz or a similar
+  service only for a badge; research it if parser risk grows.
+
+Research and consider:
+
+- A generated surface inventory that keeps README examples, CLI help, MCP docs,
+  and agent guidance in sync.
+- A derived docs bundle for maintainer runbooks if the same context is being
+  copied into multiple agents. OKF remains only a packaging candidate, not a
+  recon findings export.
+- Diff coverage as an additional maintainer signal, only if it stays local-first
+  and does not make small documentation changes painful.
 
 Standing, maintainer-paced, off this critical path: the PV2 validation routine
 (live), the mutation gate (live), and corpus-driven catalogue growth (local,
@@ -1885,12 +1910,12 @@ as one atomic commit: `git mv` plus every path-coupled reference it touches (the
 resolution fallback so the trust-doc references still resolve),
 `check_metadata_coverage.py`, `mutation.toml`, the CI / release / mutation
 workflows, the pre-commit pyright and fingerprint filters, and the handful of
-tests that read package source by path). The import name `recon_tool` and
-`--cov=recon_tool` are layout-invariant, so no `from recon_tool import ...` and no
-downstream consumer moved. Verified non-functional: the built wheel is
-byte-for-byte identical to the pre-move wheel (same sha256), so the published
-2.2.2 artifact is unchanged and no release was triggered, and the full gate stays
-green.
+tests that read package source by path). The import name `recon_tool` stayed
+stable for consumers, while coverage gates now target `--cov=src/recon_tool` so
+local and CI coverage measure the moved source tree. Verified non-functional:
+the built wheel is byte-for-byte identical to the pre-move wheel (same sha256),
+so the published 2.2.2 artifact is unchanged and no release was triggered, and
+the full gate stays green.
 
 The elevation items, ranked by value over effort, each its own small patch.
 **Status (2026-06-16):** items 1 (partial), 3, and 4 shipped this pass; the
@@ -2388,9 +2413,6 @@ are picked up alongside the build plan above.
   is observable, not a verdict").
 - Add a small aggregate-only validation memo from a local harness run, with no
   real apexes, tenant IDs, or per-domain output.
-- Add a focused release-readiness check that catches one known drift class
-  (README usage, version references, schema copies, Homebrew formula freshness,
-  or no-real-data examples).
 - Move the n_eff calibration constants
   (`_EVIDENCE_N_EFF_CONTRIB`, `_CONFLICT_N_EFF_PENALTY`,
   `_MIN_N_EFF`) from `recon_tool/bayesian.py` into a top-level
