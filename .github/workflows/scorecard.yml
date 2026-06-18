@@ -12,13 +12,15 @@ on:
     branches: ["main"]
 
 # Top-level least-privilege; the analysis job opts into exactly what it needs.
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   analysis:
     name: Scorecard analysis
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       # Needed to upload the SARIF results to the code-scanning dashboard.
       security-events: write
       # Needed for the OIDC token that publishes results to the public API.
