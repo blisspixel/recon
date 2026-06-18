@@ -102,6 +102,12 @@ changing what recon is. The loop may perceive repo state, run deterministic
 checks, propose a patch, and summarize evidence. It must have a clear stop
 condition and a human gate for semantic changes.
 
+These loops are optional maintainer/developer workflows, not a user-facing
+requirement. A user can install and run recon as a CLI, library, JSON producer,
+or MCP server without using an AI assistant. If loop prompts, schedules, or
+agent-context bundles live in the repository, they are examples and runbooks for
+maintainers and operators who want them, not part of recon's runtime contract.
+
 | Loop | Good use | Stop condition | Human gate |
 |---|---|---|---|
 | Release readiness | Check version references, README examples, schema copies, Homebrew formula freshness, no-real-data examples, `scripts/check.py`, and CI status | All gates pass, or the loop opens a reviewed issue/PR with failures grouped by source | Required before tagging, publishing, or changing release artifacts |
@@ -112,10 +118,10 @@ condition and a human gate for semantic changes.
 
 The common constraints are strict: no target data in committed output, no
 persistent aggregate scan database, no autonomous catalog/CPT/schema mutation,
-no hosted service inside recon, and no agent-written inference logic. If a loop
-needs to keep state, that state belongs in git, in committed baselines, in
-gitignored maintainer-local validation outputs, or in the operator's external
-automation system.
+no hosted service inside recon, no user requirement to use AI, and no
+agent-written inference logic. If a loop needs to keep state, that state belongs
+in git, in committed baselines, in gitignored maintainer-local validation
+outputs, or in the operator's external automation system.
 
 ## A checklist before you add a rule or an agentic behavior
 

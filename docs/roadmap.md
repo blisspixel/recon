@@ -157,10 +157,10 @@ rules are in [release-process.md](release-process.md#version-numbering).
   HTTP non-global IP guard fixes have shipped, and the public assurance
   proving-test backlog is closed. No locked JSON shape changed.
 - **2.2.x (active patch line).** The next work is ordered by dependency, not by
-  calendar estimate: release-readiness maintainer loops, private-corpus
-  calibration runs, aggregate-only validation memos, and the surface-inventory
-  design decision. These are patch-level unless they add a new stable user or
-  agent-consumed surface.
+  calendar estimate: optional maintainer loops, private-corpus calibration runs,
+  aggregate-only validation memos, and the surface-inventory design decision.
+  These are patch-level unless they add a new stable user or agent-consumed
+  surface. None of this makes AI a requirement for using recon.
 - **2.3+ (reserved for a real surface).** The next minor waits for a coherent
   named surface. The only current candidate that plausibly earns one is an
   agent-consumable surface inventory: a generated CLI/MCP/schema manifest or
@@ -197,12 +197,14 @@ and the `validation/` memos for rationale. The god-file decomposition track also
 shipped in v2.2.1. What remains is dependency-ordered work with no calendar
 estimates:
 
-1. **Release-readiness maintainer loop** (maintainer ops, patch-level). Encode a
-   reviewed loop around existing deterministic gates: version/reference drift,
-   README usage examples, schema files, Homebrew formula checks, no-real-data
-   hygiene, `scripts/check.py`, and CI status. The loop may open an issue or
-   draft PR with a proposed fix; it must not change semantic catalog entries,
-   CPTs, release tags, or distribution artifacts without human approval.
+1. **Release-readiness maintainer loop** (maintainer ops, optional, patch-level).
+   Encode a reviewed loop around existing deterministic gates:
+   version/reference drift, README usage examples, schema files, Homebrew
+   formula checks, no-real-data hygiene, `scripts/check.py`, and CI status. This
+   is not an end-user feature and not part of the normal `recon` CLI workflow.
+   The loop may open an issue or draft PR with a proposed fix; it must not
+   change semantic catalog entries, CPTs, release tags, or distribution
+   artifacts without human approval.
 2. **Calibration corpus runs** (maintainer-local, aggregate-only, patch-level).
    The harnesses are built and unit-tested; what remains is running them over
    the gitignored corpus and committing only aggregate metrics: held-out
@@ -210,12 +212,12 @@ estimates:
    (`--stratify-dir`), conformal coverage, and the C3 CT-enabled full-corpus
    pass. *Design:* [statistical-assurance.md](statistical-assurance.md),
    `validation/reference-calibration.md`, and [related-work.md](related-work.md).
-3. **Fingerprint and motif triage loop** (maintainer-local, reviewed proposals,
-   patch-level unless it adds a stable surface). Use existing scan/gap outputs
-   to propose catalog or motif changes with vendor references, before/after
-   aggregate deltas, sparse-result wording, and regression tests. The loop can
-   prepare YAML and test patches, but catalog changes still require human
-   review under [agentic-balance.md](agentic-balance.md).
+3. **Fingerprint and motif triage loop** (maintainer-local, optional, reviewed
+   proposals, patch-level unless it adds a stable surface). Use existing
+   scan/gap outputs to propose catalog or motif changes with vendor references,
+   before/after aggregate deltas, sparse-result wording, and regression tests.
+   The loop can prepare YAML and test patches, but catalog changes still require
+   human review under [agentic-balance.md](agentic-balance.md).
 4. **Agent-consumable surface inventory decision** (possible 2.3 surface). If
    README examples, CLI help, MCP docs, and agent skills keep drifting, design a
    generated CLI/MCP/schema manifest or equivalent docs bundle with a CI drift
@@ -264,9 +266,10 @@ Disposition for recon:
 | Scheduled hosted operation | No, inside recon | Scheduling belongs to Codex, Claude Code, GitHub Actions, cron, or the operator's environment. recon stays a local CLI/library/MCP server. |
 
 The near-term implementation is therefore not "make recon agentic." It is:
-define reviewed maintainer loops, give them explicit stop conditions and gates,
-and use file-based context only where it reduces drift for agents that consume
-recon.
+publish optional maintainer/developer runbooks in the repo for the people who
+want them, give those loops explicit stop conditions and gates, and keep the
+installed user path exactly what it is today: local CLI, library, JSON, and MCP
+surfaces that require no AI assistant.
 
 ## Pre-2.0 hardening (shipped) and the road past v2.0
 
