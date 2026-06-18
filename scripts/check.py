@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Run the CI gate locally — one command, exact parity with .github/workflows/ci.yml.
+"""Run the CI gate locally, one command with exact parity to CI.
 
-The point is "green here ⟹ green in CI." The stages mirror the workflow's
+The point is "green here means green in CI." The stages mirror the workflow's
 deterministic, no-network jobs (lint, typecheck over the SAME scope CI uses,
 the coverage-gated test run, and the catalog/label checks). Run it before every
 push:
@@ -11,7 +11,7 @@ push:
 
 Each stage streams its own output; a summary table and a non-zero exit on any
 failure follow. Network-only jobs (pip-audit) and binary-dependent ones
-(actionlint) are intentionally out of scope here — they have their own CI jobs
+(actionlint) are intentionally out of scope here. They have their own CI jobs
 and don't gate code correctness.
 
 History: this exists because a local `pyright recon_tool/` (narrower than CI's
@@ -30,7 +30,7 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parent.parent
 _PY = sys.executable
 
-# (group, label, argv) — argv mirrors the CI run: commands and scopes exactly.
+# (group, label, argv): argv mirrors the CI run: commands and scopes exactly.
 _CORE = "core"
 _TEST = "test"
 _STAGES: list[tuple[str, str, list[str]]] = [
@@ -47,6 +47,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
         [_PY, "scripts/validate_fingerprint.py", "src/recon_tool/data/fingerprints/", "--quiet"],
     ),
     (_CORE, "metadata-coverage", [_PY, "scripts/check_metadata_coverage.py"]),
+    (_CORE, "validation-hygiene", [_PY, "scripts/check_validation_hygiene.py"]),
     (_CORE, "no-experimental-labels", [_PY, "scripts/check_no_experimental_labels.py"]),
     (_CORE, "file-size-ratchet", [_PY, "scripts/check_file_size.py"]),
 ]

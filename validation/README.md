@@ -3,36 +3,37 @@
 Live-validation workspace. The directory hosts the runners, the gap-analysis
 tooling, and the fingerprint-discovery loop, plus a small fictional-example
 corpus. **Real company names are gitignored.** Curate your own private corpus
-locally and the .gitignore keeps it out of commits — see [Policy](#policy)
+locally and the .gitignore keeps it out of commits; see [Policy](#policy)
 below.
 
 ## What's in here
 
 Committed (generic tooling, no company names):
 
-- `run_corpus.py` — batch runner. Calls `recon` across a corpus file, emits
+- `run_corpus.py`: batch runner. Calls `recon` across a corpus file, emits
   `results.json`, `summary.json`, `summary.md` per run.
-- `find_gaps.py` — reads a run (single file or directory of per-domain JSON)
+- `find_gaps.py`: reads a run (single file or directory of per-domain JSON)
   and surfaces unclassified CNAME terminal suffixes ranked by frequency. The
   first half of the fingerprint-discovery loop.
-- `triage_candidates.py` — programmatic filter on `gaps.json`: drops
+- `triage_candidates.py`: programmatic filter on `gaps.json`: drops
   already-fingerprinted patterns, intra-org chains, and one-off noise. The
   output is the LLM-triage-ready candidate list.
-- `diff_runs.py` — compares two run directories. Surfaces newly-attributed
+- `diff_runs.py`: compares two run directories. Surfaces newly-attributed
   subdomains, lost slugs, and aggregate slug-frequency changes. Use after
   adding fingerprints to confirm uplift.
-- `audit_fingerprints.py` — no-network catalog audit. Reports metadata
+- `audit_fingerprints.py`: no-network catalog audit. Reports metadata
   coverage and match-mode classification (`keep_any`, `review_for_all`,
   `tighten_patterns`).
-- `corpus-example.txt` — fictional-company sample showing the format. Safe to
+- `corpus-example.txt`: fictional-company sample showing the format. Safe to
   commit because the names are made up.
 
 Gitignored (your private workspace):
 
-- `corpus-private/` — your curated test bed of real apexes, organized however
+- `corpus-private/`: your curated test bed of real apexes, organized however
   you want (by region, vertical, customer type)
-- `runs-private/` — output dirs from each run (results, gaps, diffs)
-- `local/` — any other scratch space (notes, half-finished YAMLs, etc.)
+- `runs-private/`: output dirs from each run (results, gaps, diffs)
+- `live_runs/`: default output from `run_corpus.py`
+- `local/`: any other scratch space (notes, half-finished YAMLs, etc.)
 
 ## The fingerprint-discovery loop
 
@@ -74,7 +75,7 @@ mkdir -p validation/corpus-private/
 echo "contoso.com" > validation/corpus-private/saas-b2b.txt
 # ... add more domains, organize as you like ...
 
-# Run respectfully — concurrency 2 stays well under crt.sh's tolerance
+# Run respectfully: concurrency 2 stays well under crt.sh's tolerance
 python validation/run_corpus.py \
     --corpus validation/corpus-private/saas-b2b.txt \
     --concurrency 2
@@ -101,10 +102,10 @@ python validation/diff_runs.py \
 
 Both `recon` and `run_corpus.py` accept these:
 
-- `--no-ct` — skip cert-transparency providers entirely. Discovery falls back
+- `--no-ct`: skip cert-transparency providers entirely. Discovery falls back
   to common-subdomain probes + apex CNAME walks. Use for runs of 1000+ domains
   where you want zero load on public CT services.
-- `--concurrency N` (on `run_corpus.py`) — how many `recon` invocations run in
+- `--concurrency N` (on `run_corpus.py`): how many `recon` invocations run in
   parallel. Default is 5; drop to 2 for large runs to stay polite to CT and
   DNS.
 
@@ -122,7 +123,7 @@ python validation/scan.py \
     --label monthly-2026-05 \
     --concurrency 4
 
-# Next month — auto-diffs against the most recent prior scan
+# Next month: auto-diffs against the most recent prior scan
 python validation/scan.py \
     --corpus validation/corpus-private/consolidated.txt \
     --label monthly-2026-06
@@ -134,11 +135,10 @@ Each run directory ends up with `results.json`, `gaps.json`,
 candidate counts. Reading `meta.json` from any run answers "when was
 this scanned, what was found?" without re-running.
 
-For 2500-domain monthly cadence: ~30-50 minutes wall-clock at
-`--concurrency 4` with `--no-ct` (the `scan.py` default). Real-company
-corpora live entirely under `validation/corpus-private/` and never leave
-your machine; only the generic patterns surfaced for triage become
-candidate PRs.
+For large monthly cadence, keep `--no-ct` on unless CT coverage is the point and
+use modest concurrency. Real-company corpora live entirely under
+`validation/corpus-private/` and never leave your machine; only generic patterns
+surfaced for triage become candidate PRs.
 
 ## Assurance and calibration harnesses
 
@@ -151,24 +151,24 @@ maintainer-local and emit aggregates only
 
 Synthetic / no-network (runnable by anyone, deterministic):
 
-- `synthetic_calibration.py` — model-grounded calibration: samples worlds
+- `synthetic_calibration.py`: model-grounded calibration: samples worlds
   from the network's own priors/CPTs and checks reliability, ECE, Brier.
-- `interval_coverage.py` — the v2.1.15 perturbation-coverage gate: the 80%
+- `interval_coverage.py`: the v2.1.15 perturbation-coverage gate: the 80%
   interval against the CAL8 ±20% likelihood band, truth from an
   independent full-joint reference. Memo: `interval-coverage.md`.
-- `differential_verification.py` — variable elimination cross-checked
+- `differential_verification.py`: variable elimination cross-checked
   against naive full-joint enumeration over the enumerable evidence sweep.
-- `adversarial_properties.py` — the machine-checked suppression-
+- `adversarial_properties.py`: the machine-checked suppression-
   monotonicity proposition (correlation.md 4.3).
-- `likelihood_sensitivity.py` — CAL8: posteriors/agreement under ±20%
+- `likelihood_sensitivity.py`: CAL8: posteriors/agreement under ±20%
   likelihood perturbation. Memo: `cal8-likelihood-sensitivity.md`.
-- `drift_check.py` — the PV2 inference drift gate against
+- `drift_check.py`: the PV2 inference drift gate against
   `inference_baseline.json` (CI-gated).
-- `layer_ablation.py` — what each layer adds: the Bayesian posterior vs
+- `layer_ablation.py`: what each layer adds: the Bayesian posterior vs
   slug-matching baselines (pooled and fired-regime), and Louvain vs
   connected components on planted partitions under bridging noise. Run
   and committed (fully synthetic): `layer-ablation.md`.
-- `posture_distributions.py` — reads the engine's per-domain behaviour as
+- `posture_distributions.py`: reads the engine's per-domain behaviour as
   distributions: information recovered (CAL10 entropy reduction) bucketed
   by observable hardening posture, and interval width vs evidence (the
   CAL7 over-confidence diagnostic). Pure aggregation unit-tested; the
@@ -176,17 +176,23 @@ Synthetic / no-network (runnable by anyone, deterministic):
 
 Reference-anchored / network (maintainer-local, aggregates only):
 
-- `reference_calibration.py` — CAL3/CAL4: the email-policy posterior
+- `reference_calibration.py`: CAL3/CAL4: the email-policy posterior
   against the authoritative DMARC record, plus the held-out residual
   (the `dmarc_policy` unit masked, so predictor and label are disjoint).
   `--stratify-dir` for per-vertical cells. Memo:
   `reference-calibration.md`.
-- `tenancy_reference_calibration.py` — the M365 tenancy posterior (DNS
+- `tenancy_reference_calibration.py`: the M365 tenancy posterior (DNS
   channel only) against Microsoft's endpoint attestation; GWS reported
   one-sided (the channel has no authoritative negative).
-- `conformal_coverage.py` — distribution-free split-conformal coverage on
+- `conformal_coverage.py`: distribution-free split-conformal coverage on
   the labelable nodes, with a deliberate falsifiability split showing the
   exchangeability boundary.
+
+Committed memos from these network runs must follow
+[docs/data-handling-policy.md](../docs/data-handling-policy.md): no apexes, no
+organization names, no tenant IDs, no per-domain output, and no small cells.
+Report only aggregate counts, rates, intervals, quantiles, and deltas. Suppress
+or combine any stratum below 10 domains before committing the memo.
 
 ## The fingerprint catalog audit
 
@@ -206,8 +212,10 @@ multi-detection fingerprints as `keep_any`, `review_for_all`, or
 Real apex domains never get committed here, not as corpus files and
 not as artifacts. `CONTRIBUTING.md` codifies the same rule for the
 rest of the repo. The .gitignore carves out `corpus-private/`,
-`runs-private/`, and `local/` so users can curate without worrying about
-accidentally leaking their list.
+`runs-private/`, `live_runs/`, and `local/` so users can curate without worrying
+about accidentally leaking their list. `scripts/check_validation_hygiene.py`
+runs in the local gate and release readiness to catch forced-added private paths
+and target-domain fields in committed validation artifacts.
 
 When you discover a generally-useful pattern (a real third-party SaaS
 that any user would benefit from), open a PR adding the

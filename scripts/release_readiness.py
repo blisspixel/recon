@@ -22,6 +22,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
 
+try:
+    from scripts import check_validation_hygiene
+except ImportError:
+    import check_validation_hygiene  # type: ignore[no-redef]
+
 ROOT = Path(__file__).resolve().parents[1]
 
 Status = Literal["pass", "fail", "warn", "skip"]
@@ -33,17 +38,6 @@ _EXPECTED_COVERAGE_TARGET = "--cov=src/recon_tool"
 _STALE_COVERAGE_TARGET = "--cov=recon_tool"
 _COVERAGE_FLOOR = "--cov-fail-under=82"
 _REQUIRED_REMOTE_WORKFLOWS = ("CI", "Secrets scan", "Scorecard supply-chain security")
-_PRIVATE_PREFIXES = ("validation/corpus-private/", "validation/runs-private/", "validation/local/")
-_ROOT_DUMP_SUFFIXES = (
-    ".com.json",
-    ".org.json",
-    ".net.json",
-    ".io.json",
-    ".so.json",
-    ".gov.json",
-    ".edu.json",
-    ".co.json",
-)
 _ATTRIBUTION_MARKERS = (
     "co-authored-by:",
     "generated-by:",
@@ -248,17 +242,21 @@ def _check_homebrew_formula(root: Path) -> CheckResult:
     return _result("Homebrew formula", "pass", f"formula pins {version}")
 
 
-def _check_private_tracked_files(runner: Runner) -> CheckResult:
+def _check_private_tracked_files(runner: Runner, root: Path = ROOT) -> CheckResult:
     result = runner(["git", "ls-files"])
     if result.returncode != 0:
         return _result("private data", "fail", result.stderr.strip() or "could not list tracked files")
     tracked = [line.strip().replace("\\", "/") for line in result.stdout.splitlines() if line.strip()]
-    private = [path for path in tracked if path.startswith(_PRIVATE_PREFIXES)]
-    dumps = [path for path in tracked if "/" not in path and path.endswith(_ROOT_DUMP_SUFFIXES)]
-    if private or dumps:
-        leaked = sorted(private + dumps)
-        return _result("private data", "fail", ", ".join(leaked), "remove private corpus or per-domain dumps from git")
-    return _result("private data", "pass", "no tracked private corpus or root per-domain JSON dumps")
+    violations = check_validation_hygiene.find_violations(root, tracked)
+    if violations:
+        leaked = sorted(violation.render() for violation in violations)
+        return _result(
+            "private data",
+            "fail",
+            "; ".join(leaked),
+            "remove private validation artifacts or target-specific fields from git",
+        )
+    return _result("private data", "pass", "no tracked private corpus, run output, or target-domain validation fields")
 
 
 def _check_latest_commit_message(runner: Runner) -> CheckResult:
@@ -371,7 +369,7 @@ def collect_checks(
         _check_roadmap_version(root),
         _check_readme_usage(root),
         _check_homebrew_formula(root),
-        _check_private_tracked_files(actual_runner),
+        _check_private_tracked_files(actual_runner, root),
         _check_latest_commit_message(actual_runner),
     ]
     if remote:

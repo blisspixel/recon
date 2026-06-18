@@ -99,13 +99,30 @@ def test_coverage_gate_rejects_stale_src_layout_target(tmp_path: Path) -> None:
 def test_private_tracked_files_fail() -> None:
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         assert cmd == ["git", "ls-files"]
-        return _cp(cmd, stdout="README.md\nvalidation/corpus-private/acme.txt\nexample.com.json\n")
+        return _cp(
+            cmd,
+            stdout="README.md\nvalidation/corpus-private/acme.txt\nvalidation/live_runs/run/results.json\nexample.com.json\n",
+        )
 
     check = release_readiness._check_private_tracked_files(runner)
 
     assert check.status == "fail"
     assert "validation/corpus-private/acme.txt" in check.detail
+    assert "validation/live_runs/run/results.json" in check.detail
     assert "example.com.json" in check.detail
+
+
+def test_private_data_check_rejects_target_domain_fields(tmp_path: Path) -> None:
+    _write_file(tmp_path, "validation/new-calibration.md", "queried_domain: acme.com\n")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        assert cmd == ["git", "ls-files"]
+        return _cp(cmd, stdout="validation/new-calibration.md\n")
+
+    check = release_readiness._check_private_tracked_files(runner, tmp_path)
+
+    assert check.status == "fail"
+    assert "acme.com" in check.detail
 
 
 def test_commit_hygiene_rejects_attribution_marker() -> None:

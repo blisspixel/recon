@@ -331,6 +331,9 @@ mechanism and the test that keeps it, is in
   ([docs/traceability-matrix.md](docs/traceability-matrix.md)), and a
   **statistical-assurance dossier** that places each claim at an honest evidence
   tier ([docs/statistical-assurance.md](docs/statistical-assurance.md)).
+- **Validation hygiene checks** that keep private corpus paths, per-domain JSON
+  dumps, and target-domain fields out of committed validation artifacts
+  ([docs/data-handling-policy.md](docs/data-handling-policy.md)).
 
 ## Development
 
