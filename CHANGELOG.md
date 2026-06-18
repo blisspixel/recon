@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   release-process, and supply-chain docs to reflect the local readiness gate,
   current coverage target, optional MCP positioning, Scorecard posture, and the
   remaining order of operations.
+- **Maintainer automation guidance.** Captured the gate-first rule for any
+  future maintainer loops: repeated task, bounded cost, persistent state, and an
+  automated verifier before the loop is worth keeping.
 - **Scorecard supply-chain posture.** Added explicit read-only workflow token
   defaults, a low-noise Dependabot configuration, and scheduled CodeQL analysis
   so Scorecard-detected token-permissions, dependency-update, and SAST posture
