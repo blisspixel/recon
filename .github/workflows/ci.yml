@@ -190,6 +190,13 @@ jobs:
         # "fix these N entries" rather than a percentage.
         run: uv run python scripts/check_metadata_coverage.py
 
+      - name: Enforce validation artifact hygiene
+        # Release and calibration artifacts may publish aggregate statistics
+        # only. This catches forced-added private run paths, root per-domain
+        # dumps, corpus lines, and target-domain fields in committed validation
+        # artifacts before they reach main.
+        run: uv run python scripts/check_validation_hygiene.py
+
       - name: Enforce zero EXPERIMENTAL labels (v1.9.11+)
         # v2.0 quality bar: no active EXPERIMENTAL label on any
         # operator-facing surface (CLI help, MCP tool descriptions,

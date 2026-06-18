@@ -34,7 +34,7 @@ docs/accuracy.md
 # Local validation sweeps. Real company names and per-domain JSON output
 # live here during accuracy work; never committed. Fictional-example
 # discipline requires anything committed to use Contoso / Northwind /
-# Fabrikam — validation artifacts use real targets and stay local.
+# Fabrikam. Validation artifacts use real targets and stay local.
 # Generic tooling (runner, gap finder, diff, triage) is committed; the
 # corpus and run outputs stay local so users can curate their own
 # private test bed without leaking targets.
@@ -107,7 +107,7 @@ docs/accuracy.md
 # YAML stanzas that are safe to commit. The runner itself is
 # generic catalog-growth tooling.
 !/validation/triage_llm.py
-# Per-release corpus-validation reports — statistics + technical
+# Per-release corpus-validation reports: statistics + technical
 # narrative; no per-domain data. The full result JSONs
 # (v1.8-validation-results*.json, v1.9-validation-results*.json, ...)
 # stay private under the /validation/* glob.
@@ -148,11 +148,11 @@ docs/accuracy.md
 !/validation/corpus_aggregator.py
 !/validation/synthetic_corpus/
 !/validation/synthetic_corpus/**
-# validation/__init__.py — added in v1.9.2 to make ``validation`` a
+# validation/__init__.py: added in v1.9.2 to make ``validation`` a
 # proper package (previously implicit namespace) so static analysis
 # resolves intra-package imports cleanly.
 !/validation/__init__.py
-# v1.9.2 agentic UX validation harness. Dev-only tooling — fixtures use
+# v1.9.2 agentic UX validation harness. Dev-only tooling. Fixtures use
 # Microsoft fictional brands (Contoso/Northwind) so the committed
 # transcripts and report are safe. Any local run outputs against real
 # corpora must stay under runs/ or local/ inside the harness, both of
@@ -165,9 +165,10 @@ docs/accuracy.md
 /validation/agentic_ux/runs/
 /validation/agentic_ux/local/
 !/validation/v1.9.2-agentic-ux.md
-# User-curated private corpus + run outputs — never commit.
+# User-curated private corpus + run outputs. Never commit.
 /validation/corpus-private/
 /validation/runs-private/
+/validation/live_runs/
 /validation/local/
 
 # Per-company live JSON dumps from ad-hoc validation runs. Real
@@ -197,7 +198,7 @@ docs/accuracy.md
 
 # Mutation-testing session state and any other tool-specific
 # scratch files. Tools that need session state should write into
-# .mutmut-cache/, .cosmic-ray/, or similar — never the repo root.
+# .mutmut-cache/, .cosmic-ray/, or similar. Never the repo root.
 # These globs catch the ones that ignore the convention.
 cosmic-ray*.sqlite
 cosmic-ray*.toml
@@ -260,7 +261,7 @@ $RECYCLE.BIN/
 venv/
 env/
 
-# Credentials — defensive rules. A passive-recon tool should never
+# Credentials. Defensive rules. A passive-recon tool should never
 # commit keys or credentials, even local test ones. Prefer
 # RECON_CONFIG_DIR or a secrets manager over dropping files in-tree.
 *.pem

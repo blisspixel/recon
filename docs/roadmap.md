@@ -208,7 +208,10 @@ What remains is dependency-ordered work with no calendar estimates:
    the gitignored corpus and committing only aggregate metrics: held-out
    residual calibration, tenancy corroboration, per-vertical stratification
    (`--stratify-dir`), conformal coverage, and the C3 CT-enabled full-corpus
-   pass. *Design:* [statistical-assurance.md](statistical-assurance.md),
+   pass. The committed memo must follow
+   [data-handling-policy.md](data-handling-policy.md): no apexes, no
+   organization names, no tenant IDs, no per-domain output, and no published
+   stratum below 10 domains. *Design:* [statistical-assurance.md](statistical-assurance.md),
    `validation/reference-calibration.md`, and [related-work.md](related-work.md).
 2. **Fingerprint and motif triage loop** (maintainer-local, optional, reviewed
    proposals, patch-level unless it adds a stable surface). Use existing

@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Maintainer automation guidance.** Captured the gate-first rule for any
   future maintainer loops: repeated task, bounded cost, persistent state, and an
   automated verifier before the loop is worth keeping.
+- **Validation hygiene gate.** Added a local and release-readiness check that
+  blocks forced-added private validation run paths, root per-domain JSON dumps,
+  and target-domain fields in committed validation artifacts. Documented the
+  aggregate-only disclosure controls for future calibration memos.
 - **Scorecard supply-chain posture.** Added explicit read-only workflow token
   defaults, a low-noise Dependabot configuration, and scheduled CodeQL analysis
   so Scorecard-detected token-permissions, dependency-update, and SAST posture

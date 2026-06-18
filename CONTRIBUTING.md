@@ -27,12 +27,16 @@ It does **not** apply to:
   `dns.google`, etc.).
 
 Accuracy reports and live-validation work use real apexes locally;
-that's why `validation/corpus-private/` and `validation/runs-private/`
-are permanently gitignored. The committed validation tooling (the
+that's why `validation/corpus-private/`, `validation/runs-private/`,
+`validation/live_runs/`, and `validation/local/` are permanently gitignored.
+The committed validation tooling (the
 runner, gap finder, triage script, synthetic-corpus generator, the
 synthetic corpus itself) is allowed; real-apex inputs and per-domain
 outputs are not. Aggregate counts produced by the corpus aggregator
 may be committed; per-domain results never.
+`scripts/check_validation_hygiene.py` runs in the local gate and release
+readiness to catch forced-added private paths and target-domain fields in
+validation artifacts. It is a backstop, not a substitute for reviewing prose.
 
 If you're writing a bug report that needs a real domain to reproduce,
 file it privately or describe the behaviour using the fictional
