@@ -65,6 +65,9 @@ on:
     - cron: "17 6 * * 1"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: mutation-${{ github.ref }}
   cancel-in-progress: true

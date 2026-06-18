@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Scorecard supply-chain posture.** Added explicit read-only workflow token
+  defaults, a low-noise Dependabot configuration, and scheduled CodeQL analysis
+  so Scorecard-detected token-permissions, dependency-update, and SAST posture
+  match the repository's intended security baseline.
 - **Release-readiness preflight.** Added a maintainer-local readiness gate for
   branch state, version drift, coverage wiring, lockfile freshness, Homebrew
   formula freshness, private-data hygiene, and latest-commit attribution
