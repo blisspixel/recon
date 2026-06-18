@@ -9,12 +9,60 @@ pre-push steps, and a GitHub Actions workflow that handles build + publish.
 # 1. Write the CHANGELOG entry for the new version.
 #    Add a section starting with "## [X.Y.Z] - YYYY-MM-DD".
 
-# 2. Run the release script.
+# 2. Run the local readiness preflight.
+uv run python scripts/release_readiness.py
+
+# 3. Run the release script.
 uv run python scripts/release.py
 
-# 3. Confirm the push when prompted. Pushing the vX.Y.Z tag triggers:
+# 4. Confirm the push when prompted. Pushing the vX.Y.Z tag triggers:
 #    test → build wheel/sdist → publish to PyPI (OIDC) → GitHub release.
 ```
+
+---
+
+## Local readiness gate: `scripts/release_readiness.py`
+
+This gate is the maintainer-local preflight before relying on GitHub Actions.
+It does not call the network by default and it is not part of the user-facing
+`recon` CLI. It checks:
+
+1. Branch, worktree, and upstream tracking state.
+2. Version consistency across `pyproject.toml`, `src/recon_tool/__init__.py`,
+   `docs/roadmap.md`, and the Homebrew formula.
+3. `uv.lock` freshness with `uv lock --check`.
+4. Coverage target parity across `scripts/check.py`, `scripts/release.py`,
+   `.github/workflows/ci.yml`, and `.github/workflows/release.yml`.
+5. README usage anchors and maintainer house rules.
+6. No tracked private corpus files or root per-domain JSON dumps.
+7. Latest commit message hygiene: no AI attribution markers and no em dash.
+
+During active edits, this is useful as a planning report:
+
+```bash
+uv run python scripts/release_readiness.py --allow-dirty
+```
+
+Before tagging or pushing a release, run it strictly:
+
+```bash
+uv run python scripts/release_readiness.py
+```
+
+After pushing `main`, add the optional remote check:
+
+```bash
+uv run python scripts/release_readiness.py --remote
+```
+
+For automation or an optional maintainer loop, use JSON:
+
+```bash
+uv run python scripts/release_readiness.py --json
+```
+
+The JSON output is deliberately local and deterministic unless `--remote` is
+passed. It is a maintainer signal, not a runtime contract for recon users.
 
 ---
 

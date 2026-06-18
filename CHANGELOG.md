@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Release-readiness preflight.** Added a maintainer-local readiness gate for
+  branch state, version drift, coverage wiring, lockfile freshness, Homebrew
+  formula freshness, private-data hygiene, and latest-commit attribution
+  hygiene before relying on remote CI.
 - **Homebrew formula freshness.** The bundled formula now points at the current
   `recon-tool` 2.2.8 sdist and checksum.
 
