@@ -60,6 +60,23 @@ which are minted from OIDC at publish time rather than handed to every job. The
 full rationale and threat model are documented inline in
 [`release.yml`](../.github/workflows/release.yml).
 
+## Repository posture checks
+
+The repository also runs supply-chain posture checks outside the release flow:
+
+- OpenSSF Scorecard publishes the public posture badge and SARIF results.
+- CodeQL runs as scheduled SAST and can also be run on demand.
+- Dependabot checks `uv` and GitHub Actions dependencies on a low-noise monthly
+  schedule.
+- Secret scanning and push protection are enabled for the repository.
+
+Scorecard currently credits SAST, dependency-update tooling, least-privilege
+workflow tokens, packaging, the security policy, and vulnerability posture.
+Its signed-release check does not fully credit the current PyPI PEP 740
+attestations plus GitHub build-provenance attestation shape, so separate GitHub
+release signature assets remain a decision point rather than an existing
+contract.
+
 ## Deferred, with reasons
 
 - **Full SLSA Level 3 provenance** via the `slsa-framework/slsa-github-generator`

@@ -144,7 +144,7 @@ formula so `brew install` tracks the new version, then copy it to the tap repo:
       `Formula/recon.rb` (see `packaging/homebrew/README.md`). Verify with
       `python scripts/update_homebrew_formula.py --check`.
 
-The `pipx` / `uv` / `pip` install paths need no per-release action — they
+The `pipx` / `uv` / `pip` install paths need no per-release action. They
 resolve the latest from PyPI automatically.
 
 ---
