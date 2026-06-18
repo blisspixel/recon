@@ -94,6 +94,12 @@ mitigations are mechanical and non-negotiable:
   exit code is not proof; read the run's `conclusion`). This was a real lesson:
   an assumed-green run was actually still in progress.
 - **Scale gates with volume.** More generated code requires more verification, not less.
+- **Only loop repeatable work with a hard verifier.** A maintainer automation
+  loop is worth adding only when the task repeats, success is checked by a gate,
+  token and runtime cost are bounded, and the loop can read logs and run the
+  same tools a maintainer would. The minimum shape is one trigger, one scoped
+  runbook or skill, one state file, and one hard gate. If most proposed changes
+  need manual rescue, stop the loop and use a smaller manual workflow.
 
 ## 5. Testing and coverage
 

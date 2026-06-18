@@ -254,6 +254,11 @@ Research and consider:
 - A derived docs bundle for maintainer runbooks if the same context is being
   copied into multiple agents. OKF remains only a packaging candidate, not a
   recon findings export.
+- A tiny maintainer-loop runbook for CI triage or calibration runs, but only
+  where the task repeats, the verifier is automated, the token and runtime cost
+  is bounded, and the loop has the same tools a maintainer would use locally.
+  Track cost per accepted change; a loop that usually needs manual rescue is
+  not buying its keep.
 - Diff coverage as an additional maintainer signal, only if it stays local-first
   and does not make small documentation changes painful.
 
@@ -284,7 +289,7 @@ Disposition for recon:
 
 | Pattern | Applies to recon | Boundary |
 |---|---|---|
-| Goal-driven agent loops | Yes, for release readiness, CI triage, private-corpus calibration orchestration, and fingerprint proposal drafts | The loop runs existing tools and proposes changes. It does not silently mutate CPTs, fingerprints, schema, releases, or distribution artifacts. |
+| Goal-driven agent loops | Yes, for release readiness, CI triage, private-corpus calibration orchestration, and fingerprint proposal drafts | Use them only when the task repeats, success is verified by an automated gate, cost is bounded, and the loop can read logs and run the same local tools a maintainer would. It does not silently mutate CPTs, fingerprints, schema, releases, or distribution artifacts. |
 | Manager/worker or subagent loops | Yes, for read-heavy review: docs drift, test-log triage, schema checks, and catalog candidate review | Parallel agents summarize evidence back to one reviewed decision. Avoid parallel write-heavy code edits. |
 | Self-critique/eval loops | Yes, when the verifier is deterministic or separately reviewable: `scripts/check.py`, schema drift tests, coverage, mutation gate, no-real-data review, aggregate-only validation memos | The agent may critique output; deterministic gates decide whether the repo is clean. Human review decides semantic changes. |
 | Persistent memory | Limited | Use committed docs, validation baselines, and git history. Do not add a persistent aggregate scan database or target-memory store. |
@@ -296,6 +301,13 @@ publish optional maintainer/developer runbooks in the repo for the people who
 want them, give those loops explicit stop conditions and gates, and keep the
 installed user path exactly what it is today: local CLI, library, JSON, and MCP
 surfaces that require no AI assistant.
+
+Minimum viable maintainer loop, if one is worth adding: one automation trigger,
+one scoped runbook or skill, one state file so the next run does not rediscover
+the same facts, and one hard gate such as `scripts/check.py`, release readiness,
+mutation, schema drift, or an aggregate-only calibration metric. The gate is the
+point. Without it, the loop is just an expensive reminder to review the work by
+hand.
 
 ## Pre-2.0 hardening (shipped) and the road past v2.0
 
