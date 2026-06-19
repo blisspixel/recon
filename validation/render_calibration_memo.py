@@ -66,6 +66,10 @@ def _payload_violations(value: object, *, path: str = "$") -> list[str]:
         for raw_key, child in value.items():
             key = str(raw_key)
             key_path = f"{path}.{key}"
+            for match in DOMAIN_RE.finditer(key):
+                domain = match.group(0)
+                if not _is_allowed_domain(domain):
+                    violations.append(f"{key_path}: target-looking domain key is not fictional or reserved")
             if key.lower() in FORBIDDEN_TARGET_KEYS:
                 violations.append(f"{key_path}: target-identifying key is not publishable")
             violations.extend(_payload_violations(child, path=key_path))
@@ -113,6 +117,14 @@ def validate_public_payload(label: str, payload: Mapping[str, object], *, small_
     if violations:
         rendered = "\n".join(f"  - {violation}" for violation in violations)
         raise ValueError(f"{label} payload is not publishable:\n{rendered}")
+
+
+def validate_public_text(label: str, text: str) -> None:
+    """Raise when free-form memo text contains target-looking domains."""
+    violations = _payload_violations(text, path=f"${label}")
+    if violations:
+        rendered = "\n".join(f"  - {violation}" for violation in violations)
+        raise ValueError(f"{label} text is not publishable:\n{rendered}")
 
 
 def load_public_payload(path: Path, label: str, *, small_cell_threshold: int) -> dict[str, object]:
@@ -288,6 +300,7 @@ def render_memo(
     conformal: Mapping[str, object] | None = None,
     small_cell_threshold: int = 10,
 ) -> str:
+    validate_public_text("title", title)
     lines = [
         f"# {title}",
         "",
