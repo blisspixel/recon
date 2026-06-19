@@ -262,6 +262,14 @@ branded email senders. The note explains that `No DKIM observed` means no match
 at the probed selectors, not proof DKIM is absent, and it tells contributors to
 add provider-specific stable selector fingerprints rather than broad guesses.
 
+## Unclassified CNAME Weak-Area Guidance
+
+`docs/weak-areas.md` now explains how to read `Unclassified surface` and
+`unclassified_cname_chains`: recon reached a public CNAME chain terminus but did
+not match a built-in `cname_target` fingerprint. The note points contributors at
+`recon discover <domain>`, public vendor references, repeated validation
+evidence, and negative tests before turning a terminus into a catalog rule.
+
 ## Public Reproduction Smoke Memo
 
 `validation/2026-06-19-paper-reproduction-smoke.md` records an aggregate-only
