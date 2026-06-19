@@ -141,7 +141,9 @@ inference tools (`get_fingerprints`, `get_signals`, `explain_signal`,
 The no-network catalog list tools started the precise-schema Phase 2:
 `get_fingerprints` advertises a `FingerprintSummary` item schema and
 `get_signals` advertises `SignalSummary` plus nested `SignalMetadataSummary`.
-The simple ephemeral-fingerprint session tools now advertise
+`explain_signal` now advertises static-definition and domain-evaluation variants
+with `SignalTriggerConditions` and `SignalEvidenceSummary`. The simple
+ephemeral-fingerprint session tools now advertise
 `EphemeralInjectionResult`, `EphemeralFingerprintSummary`, and
 `EphemeralClearResult`. The graph data tools now advertise
 `VerificationTokenClusterResult`, `InfrastructureClusterEnvelope`, and

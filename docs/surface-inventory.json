@@ -2107,9 +2107,13 @@
         ],
         "name": "explain_signal",
         "output_schema": {
-          "definition_count": 0,
-          "properties": [],
-          "required": [],
+          "definition_count": 5,
+          "properties": [
+            "result"
+          ],
+          "required": [
+            "result"
+          ],
           "type": "object"
         },
         "structured_output": true,

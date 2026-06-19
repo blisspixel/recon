@@ -75,8 +75,8 @@ kept out of scope. The motif queue now includes a complete Microsoft internal
 triad motif for Traffic Manager to Azure Front Door to Microsoft Edge chains,
 with a public candidate-chain delta. The MCP precise-schema Phase 2 has started
 with `TypedDict` output item schemas for the no-network catalog tools, the
-simple ephemeral-fingerprint session tools, the graph data tools, and the
-compact agent-facing posture helpers.
+signal explanation tool, the simple ephemeral-fingerprint session tools, the
+graph data tools, and the compact agent-facing posture helpers.
 
 ## Hard Constraints
 
@@ -139,7 +139,7 @@ The public tree already contains substantial assurance:
 Current local verification in this session:
 
 - `uv run python scripts/check.py` passed.
-- Coverage was 86.22 percent, above the 82 percent configured gate.
+- Coverage was 86.27 percent, above the 82 percent configured gate.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -291,8 +291,9 @@ in order.
 
 ## MCP Output Schema Precision
 
-`get_fingerprints`, `get_signals`, `inject_ephemeral_fingerprint`,
-`list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`,
+`get_fingerprints`, `get_signals`, `explain_signal`,
+`inject_ephemeral_fingerprint`, `list_ephemeral_fingerprints`,
+`clear_ephemeral_fingerprints`,
 `cluster_verification_tokens`, `get_infrastructure_clusters`, and
 `export_graph`, `test_hypothesis`, and `simulate_hardening` now return
 `TypedDict`-annotated shapes. FastMCP turns those annotations into concrete

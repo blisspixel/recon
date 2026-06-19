@@ -72,6 +72,48 @@ class SignalSummary(TypedDict):
     layer: int
 
 
+class SignalTriggerConditions(TypedDict):
+    """Trigger-condition block returned by ``explain_signal``."""
+
+    candidates: list[str]
+    min_matches: int
+    metadata: list[SignalMetadataSummary]
+    contradicts: list[str]
+    requires_signals: list[str]
+
+
+class SignalEvidenceSummary(TypedDict):
+    """Matched evidence item returned by ``explain_signal`` with a domain."""
+
+    source_type: str
+    raw_value: str
+    rule_name: str
+    slug: str
+
+
+class SignalDefinitionResult(TypedDict):
+    """Static ``explain_signal`` result when no domain is supplied."""
+
+    name: str
+    category: str
+    confidence: str
+    description: str
+    explain: str
+    layer: int
+    trigger_conditions: SignalTriggerConditions
+    weakening_conditions: list[str]
+
+
+class SignalEvaluationResult(SignalDefinitionResult):
+    """Domain-evaluation ``explain_signal`` result."""
+
+    domain: str
+    fired: bool
+    matched_slugs: list[str]
+    matched_evidence: list[SignalEvidenceSummary]
+    domain_weakening_conditions: list[str]
+
+
 def _metadata_summary(condition: MetadataCondition) -> SignalMetadataSummary:
     return {"field": condition.field, "operator": condition.operator, "value": condition.value}
 
@@ -336,7 +378,10 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
         openWorldHint=True,
     ),
 )
-async def explain_signal(signal_name: str, domain: str | None = None) -> dict[str, Any]:
+async def explain_signal(
+    signal_name: str,
+    domain: str | None = None,
+) -> SignalDefinitionResult | SignalEvaluationResult:
     """Query a specific signal's trigger conditions and current state for a domain.
 
     Without a domain: returns the signal's definition, trigger conditions,
@@ -367,7 +412,7 @@ async def explain_signal(signal_name: str, domain: str | None = None) -> dict[st
         raise ToolError(f"Signal '{signal_name}' not found. Available signals: {', '.join(available)}")
 
     # Build base definition
-    definition: dict[str, object] = {
+    definition: SignalDefinitionResult = {
         "name": sig.name,
         "category": sig.category,
         "confidence": sig.confidence,
@@ -377,7 +422,7 @@ async def explain_signal(signal_name: str, domain: str | None = None) -> dict[st
         "trigger_conditions": {
             "candidates": list(sig.candidates),
             "min_matches": sig.min_matches,
-            "metadata": [{"field": m.field, "operator": m.operator, "value": m.value} for m in sig.metadata],
+            "metadata": [_metadata_summary(m) for m in sig.metadata],
             "contradicts": list(sig.contradicts),
             "requires_signals": list(sig.requires_signals),
         },
@@ -430,7 +475,7 @@ async def explain_signal(signal_name: str, domain: str | None = None) -> dict[st
     weakening = _weakening_conditions_for_signal(sig, matched_slugs, context_metadata)
 
     # Collect evidence for matched slugs
-    evidence_list: list[dict[str, str]] = []
+    evidence_list: list[SignalEvidenceSummary] = []
     for slug in matched_slugs:
         for ev in info.evidence:
             if ev.slug == slug:
@@ -443,7 +488,7 @@ async def explain_signal(signal_name: str, domain: str | None = None) -> dict[st
                     }
                 )
 
-    evaluation: dict[str, object] = {
+    evaluation: SignalEvaluationResult = {
         **definition,
         "domain": domain,
         "fired": fired,
