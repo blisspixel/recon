@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 import time
@@ -19,12 +18,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from validation.run_path_safety import contained_child, validate_run_stamp
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VALIDATION_ROOT = REPO_ROOT / "validation"
 DEFAULT_OUTPUT_ROOT = VALIDATION_ROOT / "local" / "paper-numbers"
 
 CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
-_SAFE_RUN_STAMP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")
 
 
 @dataclass(frozen=True)
@@ -56,22 +56,6 @@ class ReproductionOutputs:
 
 def _utc_stamp() -> str:
     return datetime.now(UTC).strftime("%Y%m%d-%H%M%SZ")
-
-
-def _validate_run_stamp(stamp: str) -> str:
-    """Return a path-segment-safe run stamp or raise."""
-    if not _SAFE_RUN_STAMP_RE.fullmatch(stamp):
-        raise ValueError("run stamp must be 1-80 letters, digits, dots, underscores, or hyphens")
-    return stamp
-
-
-def _contained_child(parent: Path, child_name: str) -> Path:
-    """Resolve ``child_name`` under ``parent`` and reject traversal."""
-    base = parent.resolve(strict=False)
-    child = (base / child_name).resolve(strict=False)
-    if child != base and base in child.parents:
-        return child
-    raise ValueError(f"run directory escapes output root: {child_name}")
 
 
 def _module_cmd(module: str, *args: str) -> tuple[str, ...]:
@@ -232,8 +216,8 @@ def run_reproduction(
 ) -> ReproductionOutputs:
     """Run the selected reproduction profile and write local artifacts."""
     generated_at = datetime.now(UTC).isoformat()
-    run_stamp = _validate_run_stamp(_utc_stamp() if stamp is None else stamp)
-    run_dir = _contained_child(output_root, run_stamp)
+    run_stamp = validate_run_stamp(_utc_stamp() if stamp is None else stamp)
+    run_dir = contained_child(output_root, run_stamp)
     steps = steps_for_profile(profile)
     manifest_json = run_dir / "manifest.json"
     summary_md = run_dir / "summary.md"
