@@ -62,9 +62,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every top-level JSON Schema property to a `TenantInfo` field or explicit
   formatter, envelope, batch, or explain-mode source, and wired it into the
   local CI mirror.
-- **Stability-doc schema counts.** Updated the JSON contract count summary in
+- **Stability-doc surface counts.** Updated the JSON contract count summary in
   `docs/stability.md` and added a docs test that ties it to
-  `docs/recon-schema.json`.
+  `docs/recon-schema.json` plus the live MCP tool registry.
 - **Advisory diff coverage.** Added `scripts/diff_coverage.py`, a local
   maintainer signal that reports changed executable Python line coverage from
   Coverage.py JSON and a unified diff without gating documentation-only changes.
