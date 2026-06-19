@@ -5,6 +5,15 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Closed the high Dependabot alert for GHSA-6v7p-g79w-8964 after GitHub
+  reported it on the default branch.
+- Confirmed the affected path is dev-audit only:
+  `pip-audit[filecache] -> cachecontrol -> msgpack`.
+- Ran `uv lock --upgrade-package msgpack`, updating `uv.lock` from
+  `msgpack` 1.1.2 to 1.2.1.
+- Verified with `uv tree --invert --package msgpack` and
+  `uv run pip-audit`, which reported no known vulnerabilities.
+- External spend: 0 USD.
 - Updated the stale JSON-contract count in `docs/stability.md`.
 - Added `tests/test_stability_docs.py`, which reads `docs/recon-schema.json`
   and the live MCP tool registry, then verifies the stability summary advertises
