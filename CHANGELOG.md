@@ -68,6 +68,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependabot security alert closure.** Updated the `uv.lock` entry for the
   dev-audit transitive dependency `msgpack` from 1.1.2 to 1.2.1, closing
   GHSA-6v7p-g79w-8964 while leaving runtime dependencies unchanged.
+- **Pydantic settings advisory closure.** Updated `pydantic-settings` from
+  2.14.0 to 2.14.2 in `uv.lock` and the ClusterFuzzLite requirements export,
+  closing GHSA-4xgf-cpjx-pc3j from the MCP dependency path.
 - **ClusterFuzzLite hash-pinned install.** Split the fuzz-build bootstrap into
   hash-pinned runtime requirements and a local `--no-deps` project install so
   the Scorecard Pinned-Dependencies check no longer sees unpinned pip

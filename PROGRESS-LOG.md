@@ -5,6 +5,14 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Closed the moderate Dependabot alert for GHSA-4xgf-cpjx-pc3j after GitHub
+  reported it on the default branch.
+- Confirmed the affected path is `mcp -> pydantic-settings`.
+- Ran `uv lock --upgrade-package pydantic-settings`, updating `uv.lock` from
+  `pydantic-settings` 2.14.0 to 2.14.2.
+- Regenerated `.clusterfuzzlite/requirements.txt` from the patched lockfile so
+  the hash-pinned fuzz build uses the fixed version.
+- External spend: 0 USD.
 - Queried the public Scorecard API after the supply-chain fix; it reported
   score 6.5 for `github.com/blisspixel/recon` at commit
   `65e1e58681242ddc525b7a99c96e426472fab5d4`.
