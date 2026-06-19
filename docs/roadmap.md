@@ -2409,8 +2409,9 @@ are picked up alongside the build plan above.
 - Done 2026-06-19: enrich 5 verification-token fingerprints with official
   public references, and update the advisory metadata richness audit to
   recognize binding-signal scope language without changing detection patterns.
-- Improve a sparse-result explanation for a known weak area without adding new
-  network calls.
+- Done 2026-06-19: improve sparse-result guidance for unclassified CNAME chain
+  termini, clarifying that a reached but unmatched terminus is a fingerprint
+  proposal queue, not a vendor claim.
 - Done 2026-06-19: add a weak-area note for custom DKIM selector false
   negatives, clarifying that `No DKIM observed` means no match at probed
   selectors rather than proof DKIM is absent.

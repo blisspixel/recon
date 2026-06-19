@@ -40,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   recognize account-binding, program-binding, and tenant-binding scope language.
 - **Weak-area guidance.** Added a DKIM selector false-negative note to the
   sparse-result documentation and pinned it with a docs test.
+- **Unclassified CNAME guidance.** Documented how to read unclassified CNAME
+  chain termini as fingerprint proposals rather than vendor claims, with a docs
+  guard test for the conservative wording.
 - **Public validation memo.** Added an aggregate-only smoke memo for
   `validation.reproduce_paper_numbers --profile smoke`, with hygiene tests that
   keep the committed artifact free of per-domain data.

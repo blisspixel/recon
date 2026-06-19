@@ -33,3 +33,22 @@ def test_custom_dkim_selector_false_negative_note_is_explicit() -> None:
     )
     for phrase in required_phrases:
         assert phrase in compact
+
+
+def test_unclassified_cname_termini_note_is_conservative() -> None:
+    section = _section("Unclassified CNAME chain termini")
+    compact = re.sub(r"\s+", " ", section)
+
+    required_phrases = (
+        "Unclassified surface",
+        "--include-unclassified",
+        "unclassified_cname_chains",
+        "no built-in `cname_target` fingerprint matched",
+        "not enough by itself to claim a specific vendor",
+        "recon discover <domain>",
+        "confirm the suffix against public vendor docs or repeated validation evidence",
+        "add negative tests",
+        "Do not turn a bare unknown terminus into a broad service claim",
+    )
+    for phrase in required_phrases:
+        assert phrase in compact

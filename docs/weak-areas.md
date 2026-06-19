@@ -30,6 +30,27 @@ CNAME targets and surfaces related infrastructure, as described in the
 wildcard SAN sibling and chain motif sections of
 [correlation.md](correlation.md).
 
+## Unclassified CNAME chain termini
+
+Symptoms: the panel shows `Unclassified surface`, or `--json
+--include-unclassified` includes `unclassified_cname_chains`, but the
+Services list does not name the SaaS or infrastructure vendor behind those
+chains.
+
+Why: recon reached a public CNAME chain terminus, but no built-in
+`cname_target` fingerprint matched it. That terminus is evidence that a public
+DNS relationship exists; it is not enough by itself to claim a specific vendor
+when the catalog does not recognize the suffix. Shared CDN hostnames,
+customer-specific vanity hosts, intra-org routing names, and newly observed
+SaaS edges can all look similar at this layer.
+
+What to do: use `recon discover <domain>` or inspect
+`unclassified_cname_chains` from `--include-unclassified` as a fingerprint
+proposal queue. Before adding a `cname_target` rule, confirm the suffix against
+public vendor docs or repeated validation evidence, add negative tests, and keep
+the wording hedged. Do not turn a bare unknown terminus into a broad service
+claim.
+
 ## Wildcard-heavy DNS zones
 
 Symptoms: many guessed prefixes resolve, but the services list stays thin or

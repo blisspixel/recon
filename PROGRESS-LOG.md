@@ -266,3 +266,20 @@ planning artifact and does not replace `CHANGELOG.md`.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.14 percent. Tests: 3404 passed, 5 skipped, 4 deselected.
 - External spend: 0 USD.
+- Started the fourteenth cycle from the roadmap's sparse-result weak-area
+  guidance item.
+- Added a `docs/weak-areas.md` section for unclassified CNAME chain termini.
+  The note explains that a reached but unmatched terminus is a fingerprint
+  proposal queue, not a vendor claim, and routes contributors through
+  `recon discover <domain>`, public vendor docs or repeated validation evidence,
+  and negative tests.
+- Added `tests/test_weak_areas_doc.py` coverage that pins the conservative
+  wording.
+- Focused validation:
+  `uv run python -m pytest tests/test_weak_areas_doc.py tests/test_markdown_links.py tests/test_surface_attribution.py tests/test_unclassified_surface_panel.py -q`
+  passed with 35 tests.
+- Focused lint:
+  `uv run python -m ruff check tests/test_weak_areas_doc.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.15 percent. Tests: 3404 passed, 6 skipped, 4 deselected.
+- External spend: 0 USD.
