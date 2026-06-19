@@ -53,6 +53,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "cli-surface-doc", [_PY, "scripts/generate_surface_inventory.py", "--check-cli-surface"]),
     (_CORE, "no-experimental-labels", [_PY, "scripts/check_no_experimental_labels.py"]),
     (_CORE, "file-size-ratchet", [_PY, "scripts/check_file_size.py"]),
+    (_CORE, "plr-ratchet", [_PY, "scripts/check_plr_ratchet.py"]),
 ]
 
 

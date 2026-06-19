@@ -61,6 +61,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Release readiness commit hygiene.** The local readiness check now inspects
   every commit in the `origin/main..HEAD` stack when the branch is ahead, and
   rejects attribution markers, em dashes, or pictographic symbols before push.
+- **PLR size-rule ratchet.** Added `scripts/check_plr_ratchet.py` to block new
+  `PLR0911`, `PLR0912`, `PLR0913`, and `PLR0915` debt while the existing
+  function-size violations are paid down.
 - **MCP output schema precision.** Added precise `TypedDict` item schemas for
   `get_fingerprints`, `get_signals`, `explain_signal`, the simple
   ephemeral-fingerprint session tools, the graph data tools, and the compact

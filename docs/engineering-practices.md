@@ -165,7 +165,7 @@ What we already do well, and the named open items, with no pretending.
 | ADRs for load-bearing decisions | In place initially | Extend as decisions are made |
 | Noun-verb CLI consistency, `--plain`/`--json`, stdout/stderr discipline | In place | |
 | **God-file decomposition** (formatter/cli/exposure/merger/dns/bayesian/server) | In place | Every module under the 1000-line cap except formatter's cohesive panel core (~2160, kept whole by design) |
-| **`PLR09xx` function-size rules** (statements/branches/args/returns) | To consider | Only `C901` today |
+| **`PLR09xx` function-size rules** (statements/branches/args/returns) | Ratcheted | `scripts/check_plr_ratchet.py` blocks new debt while existing violations are paid down |
 | **Per-PR diff coverage** | Advisory | `scripts/diff_coverage.py` reports changed-line coverage from local Coverage.py JSON without making doc-only changes painful |
 
 The open items are tracked, ratcheted, or explicitly deferred. None is a silent gap.

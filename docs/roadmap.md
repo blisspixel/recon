@@ -165,7 +165,8 @@ rules are in [release-process.md](release-process.md#version-numbering).
   PR-scoped ClusterFuzzLite parser-boundary fuzzing. Current `main` also has
   an incremental nested schema drift guard that ties model-backed JSON Schema
   `$defs` to their dataclass fields while the full schema-generation backlog
-  remains open. The remaining order is private-corpus
+  remains open, and a PLR size-rule ratchet prevents new function-size debt
+  while existing violations are paid down. The remaining order is private-corpus
   calibration runs, aggregate-only validation memos, optional reviewed
   maintainer loops around those deterministic gates, and the decision whether
   the derived inventory ever becomes a stable surface. These are
