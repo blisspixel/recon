@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit SHA, replaced the actionlint download-and-run step with a pinned action,
   removed installer-side pipx bootstrapping, and added a local / CI gate that
   keeps workflow pins in place.
+- **Workflow pin gate coverage.** Fixed the workflow-pin checker so it also
+  validates shorthand `- uses:` steps, not only named-step `uses:` lines.
 - **Validation hygiene gate.** Added a local and release-readiness check that
   blocks forced-added private validation run paths, root per-domain JSON dumps,
   and target-domain fields in committed validation artifacts. Documented the
