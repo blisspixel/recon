@@ -47,6 +47,7 @@ Run (maintainer-local, network):
 
     python -m validation.conformal_coverage domains.txt
     python -m validation.conformal_coverage domains.txt --alpha 0.1 --trials 50
+    python -m validation.conformal_coverage domains.txt --json
 """
 
 # Reuses the reference-calibration collector and its tested ``_read_domains``
@@ -57,6 +58,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import math
 import random
 import sys
@@ -218,6 +220,23 @@ def _print_summary(summary: dict[str, float]) -> None:
     print(f"  mean set size:     {summary['mean_set_size']}  (1.0 is fully decisive, 2.0 is always abstaining)")
 
 
+def json_payload(summary: dict[str, float], *, alpha: float, trials: int) -> dict[str, object]:
+    """Machine-readable aggregate output for private-run memo generation."""
+    return {
+        "mode": "single",
+        "node": "email_security_policy_enforcing",
+        "construction": "split_conformal",
+        "alpha": alpha,
+        "trials_requested": trials,
+        "summary": summary,
+        "disclosure": {
+            "aggregate_only": True,
+            "contains_target_rows": False,
+            "small_cell_threshold": 10,
+        },
+    }
+
+
 _TRAILER = (
     "\nDistribution-free finite-sample coverage under exchangeability (split conformal).\n"
     "The guarantee is claimed for typical targets and not for adversarially-hardened\n"
@@ -236,6 +255,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--trials", type=int, default=20, help="Splits to average (default 20).")
     parser.add_argument("--concurrency", type=int, default=5, help="Concurrent resolves (default 5).")
     parser.add_argument("--timeout", type=float, default=120.0, help="Per-domain resolve timeout seconds.")
+    parser.add_argument("--json", action="store_true", help="Emit aggregate coverage as JSON.")
     args = parser.parse_args(argv)
 
     if not args.domains.is_file():
@@ -250,13 +270,17 @@ def main(argv: list[str] | None = None) -> int:
     from validation.reference_calibration import _read_domains, collect
 
     domains = _read_domains(args.domains)
-    print(f"Resolving {len(domains)} domains against the DMARC record (aggregates only, no apex printed)...")
+    if not args.json:
+        print(f"Resolving {len(domains)} domains against the DMARC record (aggregates only, no apex printed)...")
     pairs = asyncio.run(collect(domains, timeout=args.timeout, skip_ct=True, concurrency=args.concurrency))
     posteriors = [p.full.posterior for p in pairs]
     labels = [p.full.label for p in pairs]
     summary = evaluate_cv(posteriors, labels, alpha=args.alpha, trials=args.trials)
-    _print_summary(summary)
-    print(_TRAILER)
+    if args.json:
+        print(json.dumps(json_payload(summary, alpha=args.alpha, trials=args.trials), indent=2, sort_keys=True))
+    else:
+        _print_summary(summary)
+        print(_TRAILER)
     return 0
 
 

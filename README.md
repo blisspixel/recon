@@ -332,7 +332,8 @@ mechanism and the test that keeps it, is in
   **statistical-assurance dossier** that places each claim at an honest evidence
   tier ([docs/statistical-assurance.md](docs/statistical-assurance.md)).
 - **Validation hygiene checks** that keep private corpus paths, per-domain JSON
-  dumps, and target-domain fields out of committed validation artifacts
+  dumps, and target-domain fields out of committed validation artifacts, plus
+  an aggregate memo renderer that rejects undersized strata before publication
   ([docs/data-handling-policy.md](docs/data-handling-policy.md)).
 
 ## Development

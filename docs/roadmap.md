@@ -204,8 +204,10 @@ shipped in v2.2.1. Before any item below, run the local maintainer preflight:
 What remains is dependency-ordered work with no calendar estimates:
 
 1. **Calibration corpus runs** (maintainer-local, aggregate-only, patch-level).
-   The harnesses are built and unit-tested; what remains is running them over
-   the gitignored corpus and committing only aggregate metrics: held-out
+   The harnesses are built and unit-tested, and
+   `validation/render_calibration_memo.py` now provides the publication
+   boundary: run the gitignored corpus to aggregate JSON, render a checked memo,
+   review it, and commit only aggregate metrics. The run order is held-out
    residual calibration, tenancy corroboration, per-vertical stratification
    (`--stratify-dir`), conformal coverage, and the C3 CT-enabled full-corpus
    pass. The committed memo must follow

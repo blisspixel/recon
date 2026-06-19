@@ -81,6 +81,9 @@ docs/accuracy.md
 # labelable nodes (pure logic plus a maintainer-local orchestration that prints
 # aggregates only). No target data; the pure logic is unit-tested.
 !/validation/conformal_coverage.py
+# Aggregate calibration memo renderer: reads private-run aggregate JSON, applies
+# disclosure checks, and emits a reviewable aggregate memo. No target data.
+!/validation/render_calibration_memo.py
 # Tenancy reference-calibration harness: corroborates the M365 tenancy posterior
 # (DNS channel only) against the provider's identity-endpoint attestation; GWS
 # reported one-sided. Pure label/channel-split logic is unit-tested; the

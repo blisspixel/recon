@@ -24,6 +24,9 @@ Committed (generic tooling, no company names):
 - `audit_fingerprints.py`: no-network catalog audit. Reports metadata
   coverage and match-mode classification (`keep_any`, `review_for_all`,
   `tighten_patterns`).
+- `render_calibration_memo.py`: reads aggregate JSON from private calibration
+  runs, rejects target-identifying fields or unsuppressed small strata, and
+  renders a reviewable aggregate memo.
 - `corpus-example.txt`: fictional-company sample showing the format. Safe to
   commit because the names are made up.
 
@@ -187,6 +190,31 @@ Reference-anchored / network (maintainer-local, aggregates only):
 - `conformal_coverage.py`: distribution-free split-conformal coverage on
   the labelable nodes, with a deliberate falsifiability split showing the
   exchangeability boundary.
+
+Private-run memo sequence:
+
+```bash
+python -m validation.reference_calibration \
+  --stratify-dir validation/corpus-private/by-vertical \
+  --json > validation/runs-private/<run>/reference.json
+
+python -m validation.tenancy_reference_calibration \
+  --stratify-dir validation/corpus-private/by-vertical \
+  --json > validation/runs-private/<run>/tenancy.json
+
+python -m validation.conformal_coverage \
+  validation/corpus-private/consolidated.txt \
+  --json > validation/runs-private/<run>/conformal.json
+
+python -m validation.render_calibration_memo \
+  --reference validation/runs-private/<run>/reference.json \
+  --tenancy validation/runs-private/<run>/tenancy.json \
+  --conformal validation/runs-private/<run>/conformal.json \
+  --output validation/runs-private/<run>/memo.md
+```
+
+Review `memo.md` before copying any result into a committed validation memo.
+The renderer is a backstop, not a substitute for review.
 
 Committed memos from these network runs must follow
 [docs/data-handling-policy.md](../docs/data-handling-policy.md): no apexes, no
