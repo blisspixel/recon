@@ -2354,7 +2354,7 @@
         ],
         "name": "analyze_posture",
         "output_schema": {
-          "definition_count": 0,
+          "definition_count": 7,
           "properties": [
             "result"
           ],

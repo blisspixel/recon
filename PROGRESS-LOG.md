@@ -5,6 +5,26 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Extended precise MCP output schemas to `analyze_posture`.
+- Added typed observation and explanation envelopes for the bare list,
+  profiled, explained, and profiled-explained response variants.
+- Preserved the existing compatibility split: unprofiled non-explain calls
+  still return a bare list, while profile or explain calls return envelopes.
+- Regenerated `docs/surface-inventory.json` so the derived inventory records the
+  `analyze_posture` union schema and nested definitions.
+- Focused validation:
+  `uv run python -m pytest tests/test_mcp_structured_output.py tests/test_mcp_introspection.py tests/test_explain_integration.py tests/test_surface_inventory.py -q`
+  passed with 87 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check src/recon_tool/server_posture.py tests/test_mcp_structured_output.py scripts/generate_surface_inventory.py tests/test_surface_inventory.py`
+  and
+  `uv run python -m pyright src/recon_tool/server_posture.py tests/test_mcp_structured_output.py`
+  passed.
+- Surface inventory check:
+  `uv run python scripts/generate_surface_inventory.py --check` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.35 percent. Tests: 3424 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Extended precise MCP output schemas to `discover_fingerprint_candidates`.
 - Added `FingerprintCandidate` and `FingerprintCandidateSample` `TypedDict`
   envelopes for suffix counts and sample unclassified CNAME chains.

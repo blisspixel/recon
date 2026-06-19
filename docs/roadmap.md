@@ -1007,8 +1007,9 @@ now advertises `PosteriorBlockResult`, `PosteriorNodeSummary`, and
 `ExposureAssessmentResult`, `GapReportResult`, and `PostureComparisonResult`
 with nested evidence and posture record definitions.
 `discover_fingerprint_candidates` now advertises `FingerprintCandidate` plus
-nested `FingerprintCandidateSample`. The remaining variable tools stay
-intentionally incremental.
+nested `FingerprintCandidateSample`. `analyze_posture` now advertises its list,
+profiled, explained, and profiled-explained result variants. The remaining
+full-lookup re-evaluation shape stays intentionally incremental.
 The design record that drove it, kept for rationale:
 
 A mid-2026 research pass (cited best-practices report) plus a code investigation

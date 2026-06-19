@@ -154,9 +154,10 @@ now advertises `PosteriorBlockResult`, `PosteriorNodeSummary`, and
 `ExposureAssessmentResult`, `GapReportResult`, and `PostureComparisonResult`
 with nested evidence and posture record definitions.
 `discover_fingerprint_candidates` now advertises `FingerprintCandidate` plus
-nested `FingerprintCandidateSample`. Broader tool output typing remains
-incremental; `reevaluate_domain` and `analyze_posture` still return larger or
-more variable shapes that need focused compatibility passes. The CLI `--json`
+nested `FingerprintCandidateSample`. `analyze_posture` now advertises its
+list, profiled, explained, and profiled-explained result variants. Broader tool
+output typing remains incremental; `reevaluate_domain` still returns the full
+lookup object shape and needs a focused compatibility pass. The CLI `--json`
 v2.0 schema is a separate locked contract.
 
 The narrative tools render prose or DOT and intentionally return text:
