@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   blocks forced-added private validation run paths, root per-domain JSON dumps,
   and target-domain fields in committed validation artifacts. Documented the
   aggregate-only disclosure controls for future calibration memos.
+- **Calibration memo renderer.** Added aggregate JSON output for conformal
+  coverage and a renderer that rejects target-identifying fields and
+  unsuppressed small strata before a private-run validation memo is reviewed.
 - **Scorecard supply-chain posture.** Added explicit read-only workflow token
   defaults, a low-noise Dependabot configuration, and scheduled CodeQL analysis
   so Scorecard-detected token-permissions, dependency-update, and SAST posture

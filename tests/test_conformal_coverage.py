@@ -13,6 +13,7 @@ violated.
 
 from __future__ import annotations
 
+import json
 import math
 import random
 
@@ -24,6 +25,7 @@ from validation.conformal_coverage import (
     conformal_quantile,
     evaluate_cv,
     evaluate_explicit,
+    json_payload,
     prediction_set,
 )
 from validation.conformal_coverage import (
@@ -164,7 +166,7 @@ class TestCollectorContract:
 
     def test_main_runs_against_paired_collector(self, tmp_path, monkeypatch, capsys) -> None:
         domains_file = tmp_path / "domains.txt"
-        domains_file.write_text("contoso.com\nnorthwind.com\nfabrikam.com\n", encoding="utf-8")
+        domains_file.write_text("contoso.com\nnorthwindtraders.com\nfabrikam.com\n", encoding="utf-8")
 
         pairs = [
             CalibrationPair(
@@ -186,6 +188,34 @@ class TestCollectorContract:
         out = capsys.readouterr().out
         assert "coverage" in out.lower()
 
+    def test_main_json_is_aggregate_only(self, tmp_path, monkeypatch, capsys) -> None:
+        domains_file = tmp_path / "domains.txt"
+        domains_file.write_text("contoso.com\nnorthwindtraders.com\nfabrikam.com\n", encoding="utf-8")
+
+        pairs = [
+            CalibrationPair(
+                full=CalibrationRecord(posterior=0.9 if i % 2 else 0.1, label=i % 2),
+                held_out=CalibrationRecord(posterior=0.45, label=i % 2),
+            )
+            for i in range(40)
+        ]
+
+        async def _fake_collect(domains, *, timeout, skip_ct, concurrency):
+            return pairs
+
+        monkeypatch.setattr(refcal, "collect", _fake_collect)
+
+        rc = conformal_main([str(domains_file), "--json"])
+        assert rc == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["mode"] == "single"
+        assert payload["construction"] == "split_conformal"
+        assert payload["disclosure"]["aggregate_only"] is True
+        assert payload["summary"]["n"] == 40.0
+        rendered = json.dumps(payload)
+        assert "contoso" not in rendered
+        assert "fabrikam" not in rendered
+
 
 class TestAggregatesOnly:
     def test_cv_output_is_aggregate_numbers(self) -> None:
@@ -203,3 +233,12 @@ class TestAggregatesOnly:
         }
         assert set(out) <= allowed
         assert all(isinstance(v, int | float) for v in out.values())
+
+    def test_json_payload_carries_no_target_fields(self) -> None:
+        payload = json_payload({"n": 4.0, "insufficient": 1.0}, alpha=0.1, trials=20)
+        assert payload["disclosure"] == {
+            "aggregate_only": True,
+            "contains_target_rows": False,
+            "small_cell_threshold": 10,
+        }
+        assert "domain" not in json.dumps(payload).lower()
