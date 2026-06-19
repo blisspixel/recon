@@ -5,6 +5,20 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Tightened Scorecard-facing workflow-token posture tests.
+- Added a repository-wide assertion that every GitHub Actions workflow defaults
+  to top-level read-only token permissions.
+- Added an allowlist for elevated job scopes so `id-token`, `attestations`,
+  `security-events`, and release write permissions stay tied to named jobs.
+- Focused validation:
+  `uv run python -m pytest tests/test_scorecard_posture.py tests/test_release_workflow_contract.py tests/test_workflow_pins.py -q`
+  passed with 26 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check tests/test_scorecard_posture.py` and
+  `uv run python -m pyright tests/test_scorecard_posture.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.49 percent. Tests: 3456 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Centralized validation-runner path safety.
 - Added `validation.run_path_safety` for safe run-stamp validation and contained
   output-root child resolution.
