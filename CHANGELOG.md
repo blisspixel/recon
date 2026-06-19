@@ -71,6 +71,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pydantic settings advisory closure.** Updated `pydantic-settings` from
   2.14.0 to 2.14.2 in `uv.lock` and the ClusterFuzzLite requirements export,
   closing GHSA-4xgf-cpjx-pc3j from the MCP dependency path.
+- **Dependency currency batch.** Updated `mcp` to 1.28.0,
+  `publicsuffixlist` to 1.0.2.20260615, and the dev toolchain entries for
+  Hypothesis, pytest, pytest-asyncio, Ruff, Pyright, pre-commit, and
+  pip-audit. The newer Pyright check exposed a typed `getaddrinfo` boundary in
+  the SSRF guard, now fixed by normalizing the socket address field before it
+  reaches the IP blocker.
 - **ClusterFuzzLite hash-pinned install.** Split the fuzz-build bootstrap into
   hash-pinned runtime requirements and `PYTHONPATH` source loading, so the
   Scorecard Pinned-Dependencies check no longer sees unpinned pip resolution.

@@ -150,6 +150,10 @@ assistant's lack of time-sense:
 - **Security alerts interrupt normal roadmap work.** Inspect the advisory and
   dependency path, update the lock or constraint to the patched version, and run
   `pip-audit` before resuming feature or docs work.
+- **Unstable dependency PRs are reproduced locally.** Apply the resolver update
+  on top of current `main`, regenerate any derived requirement exports, run the
+  failing gate with the new toolchain, then keep the smallest compatibility fix
+  in the same change set.
 - **The parity gate and pinned tool versions** keep the local and CI toolchains
   identical; `scripts/release_readiness.py` catches release and docs drift before
   remote CI is the first signal.

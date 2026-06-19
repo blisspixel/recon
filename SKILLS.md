@@ -74,6 +74,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - When a push surfaces a Dependabot security alert, interrupt the loop, inspect
   the advisory and dependency path, update the lock or constraint to the patched
   version, then verify with `pip-audit` before continuing.
+- When a Dependabot dependency PR is unstable, reproduce the bump on current
+  `main`, regenerate derived requirement exports, run the failing gate with the
+  updated toolchain, and keep the compatibility fix minimal.
 - For Scorecard Pinned-Dependencies findings on pip commands, split dependency
   installation from local project installation: use a hash-pinned requirements
   file with `--require-hashes`, then load local source through `PYTHONPATH` when

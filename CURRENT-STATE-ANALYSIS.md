@@ -201,7 +201,8 @@ The public tree already contains substantial assurance:
 Current local verification in this session:
 
 - `uv run python scripts/check.py` passed.
-- Coverage was 86.51 percent, above the 82 percent configured gate.
+- Coverage was 86.49 percent, above the 82 percent configured gate.
+- Tests: 3507 passed, 5 skipped, 4 deselected.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -407,11 +408,11 @@ harness-health artifact, not a headline calibration result.
 
 ## Scorecard Posture
 
-The public Scorecard API result checked on 2026-06-19 reported score 6.5 for
-`github.com/blisspixel/recon` at commit `65e1e58681242ddc525b7a99c96e426472fab5d4`.
+The public Scorecard API result checked on 2026-06-19 reported score 6.6 for
+`github.com/blisspixel/recon` at commit `32a7ad025978d64721251bcfe915a8384e5eaec9`.
 The repo already scores 10 on dependency updates, security policy, dangerous
 workflows, token permissions, SAST, binary artifacts, vulnerabilities,
-packaging, fuzzing, and license.
+packaging, fuzzing, Pinned-Dependencies, and license.
 
 After the most recent push, GitHub opened a high Dependabot alert for
 GHSA-6v7p-g79w-8964 through the dev-audit path
@@ -427,7 +428,16 @@ The only remaining local Pinned-Dependencies warning in that scan was the
 ClusterFuzzLite build script's local `pip install .` command. The fuzz build now
 uses a committed hash-pinned runtime requirements export and loads the
 checked-out source through `PYTHONPATH`, leaving only one pip install command
-for Scorecard to inspect without broadening the fuzzer surface.
+for Scorecard to inspect without broadening the fuzzer surface. The follow-up
+Scorecard API result reports Pinned-Dependencies at 10.
+
+The current dependency-currency batch updates the MCP runtime package to 1.28.0
+and the Public Suffix List package to 1.0.2.20260615, plus the dev toolchain
+entries for Hypothesis, pytest, pytest-asyncio, Ruff, Pyright, pre-commit, and
+pip-audit. The newer Pyright check found one typed socket-address boundary in
+the HTTP SSRF guard, now fixed by coercing the `getaddrinfo` address slot to
+`str` before the shared IP blocker sees it. `pip-audit` reports no known
+vulnerabilities, and GitHub Dependabot has no open alerts as of this check.
 
 Local-file work can improve future release posture most directly through the
 Signed-Releases path. The release workflow now waits for build-provenance

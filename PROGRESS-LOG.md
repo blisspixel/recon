@@ -5,6 +5,29 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Reproduced the failing Dependabot python-dependencies typecheck locally after
+  GitHub reported PR #10 as unstable.
+- Updated the lockfile for the grouped dependency batch:
+  `mcp` 1.27.0 to 1.28.0, `hypothesis` 6.152.1 to 6.155.6,
+  `pytest` 9.0.3 to 9.1.1, `pytest-asyncio` 1.3.0 to 1.4.0,
+  `ruff` 0.15.11 to 0.15.18, `pyright` 1.1.408 to 1.1.410,
+  `pre-commit` 4.5.1 to 4.6.0, and `pip-audit` 2.10.0 to 2.10.1.
+- Folded in the clean public suffix dependency PR by updating
+  `publicsuffixlist` from 1.0.2.20260611 to 1.0.2.20260615.
+- Regenerated `.clusterfuzzlite/requirements.txt` from the frozen lockfile so
+  PR fuzzing continues to use hash-pinned runtime requirements.
+- Fixed the Pyright 1.1.410 failure in `src/recon_tool/http.py` by converting
+  the `getaddrinfo` socket-address host field to `str` before passing it to the
+  shared IP blocker.
+- Focused validation passed:
+  `uv run python -m pyright src/recon_tool tests`,
+  `uv run python -m ruff check src/recon_tool/http.py tests/test_http.py tests/test_http_advanced.py`,
+  `uv run python -m pytest tests/test_http.py tests/test_http_advanced.py tests/test_clusterfuzzlite_integration.py -q`,
+  `python -m pip install --dry-run --require-hashes -r .clusterfuzzlite/requirements.txt`,
+  and `uv run pip-audit`.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.49 percent. Tests: 3507 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Closed the moderate Dependabot alert for GHSA-4xgf-cpjx-pc3j after GitHub
   reported it on the default branch.
 - Confirmed the affected path is `mcp -> pydantic-settings`.

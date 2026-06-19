@@ -198,9 +198,9 @@ markdown-it-py==4.0.0 \
     --hash=sha256:87327c59b172c5011896038353a81343b6754500a08cd7a4973bb48c6d578147 \
     --hash=sha256:cb0a2b4aa34f932c007117b194e945bd74e0ec24133ceb5bac59009cda1cb9f3
     # via rich
-mcp==1.27.0 \
-    --hash=sha256:5ce1fa81614958e267b21fb2aa34e0aea8e2c6ede60d52aba45fd47246b4d741 \
-    --hash=sha256:d3dc35a7eec0d458c1da4976a48f982097ddaab87e278c5511d5a4a56e852b83
+mcp==1.28.0 \
+    --hash=sha256:559d3f9943674cafbe5744c5d3794f3237e8b47f9bbc58e20c0fad680d8487c2 \
+    --hash=sha256:9c1e7cf3a9125557e418ecd4fed8e9adddce81b0dfdae4d6601d700f5beb71a4
     # via recon-tool
 mdurl==0.1.2 \
     --hash=sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8 \
@@ -210,9 +210,9 @@ networkx==3.6.1 \
     --hash=sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509 \
     --hash=sha256:d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762
     # via recon-tool
-publicsuffixlist==1.0.2.20260611 \
-    --hash=sha256:9806e124086967d0294a685a5a412c8119217a641ec1fa4afef61551e5f49a01 \
-    --hash=sha256:cf0151d45e32aa8d0eeeb2c76e141c68f971567b6d11aca593f76e897ed2c5c6
+publicsuffixlist==1.0.2.20260615 \
+    --hash=sha256:6566afa2f6183a8d1daabc27185f6bb11583091e87a7a2b3cc7d9c9fe1d3de69 \
+    --hash=sha256:8d52b7b5b5b75f11bac4c034a7b181d1fd1cb27dd440a208e11c2266e631898b
     # via recon-tool
 pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy' \
     --hash=sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29 \

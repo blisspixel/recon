@@ -131,7 +131,7 @@ async def _is_private_ip_async(host: str) -> bool:
         loop = asyncio.get_running_loop()
         addrinfos = await loop.getaddrinfo(host, None, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM)
         for _family, _type, _proto, _canonname, sockaddr in addrinfos:
-            ip_str = sockaddr[0]
+            ip_str = str(sockaddr[0])
             if _is_blocked_ip(ip_str):
                 logger.warning(
                     "SSRF blocked: hostname %s resolves to non-public IP %s",
