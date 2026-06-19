@@ -9,8 +9,9 @@ import json
 import re
 import sys
 from collections.abc import Mapping, Sequence
+from importlib import import_module
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import click
 import typer
@@ -142,7 +143,12 @@ def _schema_types(schema: Mapping[str, Any]) -> list[str]:
 def _schema_parameters(schema: Mapping[str, Any] | None) -> list[dict[str, object]]:
     if not schema:
         return []
-    required = set(schema.get("required", ()))
+    raw_required = schema.get("required", ())
+    required = (
+        {str(item) for item in raw_required}
+        if isinstance(raw_required, Sequence) and not isinstance(raw_required, str | bytes | bytearray)
+        else set()
+    )
     properties = schema.get("properties", {})
     if not isinstance(properties, Mapping):
         return []
@@ -233,7 +239,7 @@ def _walk_click_commands(tokens: tuple[str, ...], command: click.Command) -> lis
 def _cli_inventory() -> dict[str, object]:
     from recon_tool.cli import app
 
-    root = typer.main.get_command(app)
+    root = cast(click.Command, typer.main.get_command(app))
     return {
         "entrypoint": "recon",
         "commands": _walk_click_commands((), root),
@@ -241,12 +247,13 @@ def _cli_inventory() -> dict[str, object]:
 
 
 async def _mcp_inventory_async() -> dict[str, object]:
-    import recon_tool.server  # noqa: F401
+    import_module("recon_tool.server")
     from recon_tool.server_app import mcp
 
     tools = await mcp.list_tools()
+    resources = await mcp.list_resources()
     tool_entries: list[dict[str, object]] = []
-    for tool in tools:
+    for tool in sorted(tools, key=lambda item: item.name):
         annotations = {}
         if tool.annotations is not None:
             annotations = tool.annotations.model_dump(mode="json", exclude_none=True)
@@ -260,10 +267,21 @@ async def _mcp_inventory_async() -> dict[str, object]:
                 "output_schema": _schema_outline(tool.outputSchema),
             }
         )
+    resource_entries = [
+        {
+            "uri": str(resource.uri),
+            "name": resource.name,
+            "summary": _summary(resource.description),
+            "mime_type": resource.mimeType,
+        }
+        for resource in sorted(resources, key=lambda item: str(item.uri))
+    ]
     return {
         "transport": "stdio",
         "tool_count": len(tool_entries),
         "tools": tool_entries,
+        "resource_count": len(resource_entries),
+        "resources": resource_entries,
     }
 
 

@@ -66,7 +66,8 @@ The current active line is v2.2.x. The roadmap says the next work is
 dependency-ordered, not date-driven.
 
 Current maintainer-loop deltas from 2026-06-19 include generated surface
-  inventory checks, public paper-number reproduction tooling, shared
+  inventory checks, the `recon://surface-inventory` local discovery resource,
+  public paper-number reproduction tooling, shared
   validation-runner path-containment hardening, cache edge coverage,
   high-value-target baseline expectations, and a first production
   `match_mode: all` fingerprint for CrowdStrike TXT evidence. The public

@@ -293,6 +293,23 @@ def _resource_schema() -> str:  # pyright: ignore[reportUnusedFunction]
     return packaged_schema_text()
 
 
+@mcp.resource(
+    "recon://surface-inventory",
+    name="Generated surface inventory",
+    description=(
+        "Generated, non-contractual map of recon's local CLI, MCP, JSON-schema, "
+        "and agent-integration surfaces. Use it to choose local commands, tools, "
+        "resources, and guidance files without reading repository files or "
+        "making network calls."
+    ),
+    mime_type="application/json",
+)
+def _resource_surface_inventory() -> str:  # pyright: ignore[reportUnusedFunction]
+    from recon_tool.surface_inventory import packaged_surface_inventory_text
+
+    return packaged_surface_inventory_text()
+
+
 @mcp.tool(
     annotations=ToolAnnotations(
         readOnlyHint=True,

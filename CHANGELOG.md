@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - No runtime CLI command or flag changes; the generated `docs/cli-surface.md`
   reference now mirrors the existing command tree for release-note checks.
+- MCP resources now include `recon://surface-inventory`, a no-network generated
+  discovery snapshot matching `docs/surface-inventory.json`.
 
 ### Fixed
 
@@ -32,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `recon://fingerprints`, `recon://signals`, `recon://profiles`, and
   `recon://schema` so agents can inspect capability context before domain
   analysis calls.
+- **Surface inventory MCP resource.** Added `recon://surface-inventory`, a
+  no-network resource that serves the packaged generated CLI, MCP,
+  JSON-schema, and agent-integration inventory as discovery context, with drift
+  tests keeping it byte-identical to `docs/surface-inventory.json`.
 - **MCP output schema precision.** Added precise `TypedDict` item schemas for
   `get_fingerprints`, `get_signals`, `explain_signal`, the simple
   ephemeral-fingerprint session tools, the graph data tools, and the compact
