@@ -330,8 +330,9 @@ mechanism and the test that keeps it, is in
   with sigstore / PEP 740 publish attestations, GitHub build provenance, and a
   CycloneDX SBOM on every release ([docs/supply-chain.md](docs/supply-chain.md)).
 - **Supply-chain posture checks**, including read-only workflow token defaults,
-  pinned workflow actions, CodeQL, Dependabot for uv and GitHub Actions, secret
-  scanning, and OpenSSF Scorecard publication.
+  pinned workflow actions, CodeQL, Dependabot for uv and GitHub Actions,
+  ClusterFuzzLite PR fuzzing for parser boundaries, secret scanning, and
+  OpenSSF Scorecard publication.
 - **Differential verification** of the Bayesian inference core (exact enumeration
   cross-checked against variable elimination over the full evidence sweep) plus a
   **mutation-testing gate** with a kill-score floor

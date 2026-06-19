@@ -160,8 +160,9 @@ rules are in [release-process.md](release-process.md#version-numbering).
   calendar estimate. Current `main` now has the local release-readiness
   preflight, the Scorecard-facing supply-chain posture pass, the
   pinned-workflow supply-chain pass, the maintainer-local calibration bundle
-  runner, validation-runner path-containment hardening, and the generated
-  surface-inventory drift gate. The remaining order is private-corpus
+  runner, validation-runner path-containment hardening, the generated
+  surface-inventory drift gate, and PR-scoped ClusterFuzzLite parser-boundary
+  fuzzing. The remaining order is private-corpus
   calibration runs, aggregate-only validation memos, optional reviewed
   maintainer loops around those deterministic gates, and the decision whether
   the derived inventory ever becomes a stable surface. These are
@@ -254,9 +255,11 @@ Decided not to do now:
   provenance asset to the GitHub Release. As of the 2026-06-19 Scorecard API
   result, `Signed-Releases` is still 0 because the recent already-published
   releases do not contain a Scorecard-recognized provenance asset.
-- **Scorecard-recognized fuzzing integration.** Hypothesis and hostile-input
-  tests already exercise parser boundaries. Do not add OSS-Fuzz or a similar
-  service only for a badge; research it if parser risk grows.
+- **Scorecard-recognized fuzzing integration.** Done 2026-06-19 with a real
+  ClusterFuzzLite + Atheris target for local parser, normalization, cache
+  deserialization, and formatter-serialization boundaries. This is PR-scoped,
+  read-only, SHA-pinned, and bounded; do not add batch fuzzing or storage repos
+  until crash triage volume justifies the extra moving parts.
 
 Research and consider:
 

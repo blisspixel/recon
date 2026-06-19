@@ -69,6 +69,10 @@ The repository also runs supply-chain posture checks outside the release flow:
 
 - OpenSSF Scorecard publishes the public posture badge and SARIF results.
 - CodeQL runs as scheduled SAST and can also be run on demand.
+- ClusterFuzzLite runs a PR-scoped Atheris fuzzer over recon's local parser,
+  normalization, cache deserialization, and formatter-serialization boundaries.
+  The workflow is read-only, SHA-pinned, and bounded to 180 seconds of fuzzing
+  per run.
 - Dependabot checks `uv` and GitHub Actions dependencies on a low-noise monthly
   schedule.
 - Workflow actions are pinned to full commit SHAs, with the readable version kept
@@ -82,8 +86,9 @@ The repository also runs supply-chain posture checks outside the release flow:
 
 Scorecard currently credits SAST, dependency-update tooling, least-privilege
 workflow tokens, pinned workflow dependencies, packaging, the security policy,
-and vulnerability posture. Its signed-release check looks at recent GitHub
-Release assets, so future releases now attach the exported
+vulnerability posture, and local ClusterFuzzLite configuration once the public
+scan sees this commit. Its signed-release check looks at recent GitHub Release
+assets, so future releases now attach the exported
 `recon-tool-<version>.intoto.jsonl` provenance bundle alongside the wheel, sdist,
 and SBOM.
 
