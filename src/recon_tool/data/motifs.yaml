@@ -225,6 +225,25 @@ motifs:
           - bx-msedge.net
           - msedge.net
 
+  - name: tm_to_azurefd_to_msedge
+    display_name: "Azure Traffic Manager to Azure Front Door to Microsoft Edge"
+    description: Traffic Manager routing through Azure Front Door and onward to the Microsoft Edge fabric, observed as a complete Microsoft internal CNAME chain.
+    confidence: medium
+    chain:
+      - name: traffic_manager
+        match:
+          - trafficmanager.net
+      - name: azure_front_door
+        match:
+          - azurefd.net
+          - tm-azurefd.net
+      - name: msedge
+        match:
+          - t-msedge.net
+          - fb-t-msedge.net
+          - bx-msedge.net
+          - msedge.net
+
   - name: akamai_to_msedge
     display_name: "Akamai → Microsoft Edge"
     description: Akamai fronting a Microsoft Edge endpoint — observed for legacy office.com / outlook.com paths still routed via Akamai.

@@ -71,7 +71,9 @@ high-value-target baseline expectations, and a first production
 `match_mode: all` fingerprint for CrowdStrike TXT evidence. The public
 catalog-growth queue also now includes a Supabase CNAME target sourced from the
 official custom-domain docs, with the generic ACME TXT challenge deliberately
-kept out of scope.
+kept out of scope. The motif queue now includes a complete Microsoft internal
+triad motif for Traffic Manager to Azure Front Door to Microsoft Edge chains,
+with a public candidate-chain delta.
 
 ## Hard Constraints
 
@@ -134,7 +136,7 @@ The public tree already contains substantial assurance:
 Current local verification in this session:
 
 - `uv run python scripts/check.py` passed.
-- Coverage was 86.14 percent, above the 82 percent configured gate.
+- Coverage was 86.18 percent, above the 82 percent configured gate.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -275,6 +277,14 @@ The same docs also describe `_acme-challenge` TXT validation, but that value is
 generic ACME evidence rather than a Supabase-specific token. The catalog keeps it
 out of scope unless a future vendor flow publishes a stable vendor-specific TXT
 shape.
+
+## Microsoft Internal Chain Motif
+
+The motif catalog now includes `tm_to_azurefd_to_msedge`, the complete ordered
+Traffic Manager to Azure Front Door to Microsoft Edge CNAME chain described in
+the prior v1.8 validation summary. The existing pairwise motifs remain in place;
+the triad adds a clearer complete-chain observation when all three markers occur
+in order.
 
 ## DKIM Weak-Area Guidance
 

@@ -2428,9 +2428,10 @@ are picked up alongside the build plan above.
 - Done 2026-06-19: add cache edge tests for URL-to-apex cache keys,
   top-level-only `cache_clear_all()` deletion, and the batch-only
   `shared_verification_tokens` non-persistence contract.
-- Add one entry to a new `motifs.yaml` describing a recurring CNAME or NS
-  chain pattern (e.g., `cloudflare -> akamai -> custom-origin`) with a
-  before/after corpus delta showing the pattern actually fires.
+- Done 2026-06-19: added `tm_to_azurefd_to_msedge` to the built-in
+  `motifs.yaml`, describing the complete Traffic Manager to Azure Front Door to
+  Microsoft Edge CNAME chain, with a public candidate-chain delta in
+  `validation/2026-06-19-msedge-triad-motif.md`.
 - Done 2026-06-19: add high-value-target profile baseline expectations for
   `Identity` and `Security & Compliance`, with tests confirming the absence
   observations stay hedged and suppress when those categories are observed.

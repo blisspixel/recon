@@ -44,6 +44,33 @@ class TestBuiltinCatalog:
         names = {m.name for m in motifs}
         assert "cloudflare_to_aws" in names
 
+    def test_microsoft_triad_motif_present_and_fires(self):
+        motifs = load_motifs()
+        chain = [
+            "contoso.trafficmanager.net",
+            "contoso.azurefd.net",
+            "contoso.t-msedge.net",
+        ]
+
+        matches = match_chain_motifs(chain, motifs, subdomain="api.contoso.com")
+
+        assert any(m.motif_name == "tm_to_azurefd_to_msedge" for m in matches)
+        triad = next(m for m in matches if m.motif_name == "tm_to_azurefd_to_msedge")
+        assert triad.subdomain == "api.contoso.com"
+        assert triad.chain == tuple(chain)
+
+    def test_microsoft_triad_motif_requires_order(self):
+        motifs = load_motifs()
+        chain = [
+            "contoso.azurefd.net",
+            "contoso.trafficmanager.net",
+            "contoso.t-msedge.net",
+        ]
+
+        matches = match_chain_motifs(chain, motifs, subdomain="api.contoso.com")
+
+        assert all(m.motif_name != "tm_to_azurefd_to_msedge" for m in matches)
+
     def test_no_motif_chain_exceeds_cap(self):
         for m in load_motifs():
             assert len(m.markers) <= MOTIF_CHAIN_HARD_CAP
