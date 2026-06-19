@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `recon://fingerprints`, `recon://signals`, `recon://profiles`, and
   `recon://schema` so agents can inspect capability context before domain
   analysis calls.
+- **Automation parser examples.** Added docs for consuming single lookup,
+  batch array, batch wrapper, NDJSON, delta, and cohort-summary JSON modes,
+  with tests that parse the snippets against the schema and runtime classifier.
 - **Workflow action pinning.** Pinned every GitHub Actions dependency to a full
   commit SHA, replaced the actionlint download-and-run step with a pinned action,
   removed installer-side pipx bootstrapping, and added a local / CI gate that

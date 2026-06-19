@@ -174,3 +174,19 @@ planning artifact and does not replace `CHANGELOG.md`.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.16 percent. Tests: 3391 passed, 6 skipped, 4 deselected.
 - External spend: 0 USD.
+- Started the ninth cycle from the roadmap's automation-consumption docs item.
+- Added `docs/automation-examples.md` covering single lookup, batch array, batch
+  wrapper, NDJSON, delta, and cohort-summary JSON consumption.
+- Updated docs and examples indexes so automation parser recipes are discoverable
+  from the main docs tree and from `examples/`.
+- Expanded `examples/sample-output.json` to the full required v2.0 lookup shape
+  while preserving the fictional Northwind fields used by the SIEM examples.
+- Added `tests/test_automation_examples.py` coverage that parses the committed
+  JSON snippets, checks schema-required fields, and verifies batch error records
+  through the runtime classifier.
+- Focused validation:
+  `uv run python -m pytest tests/test_automation_examples.py tests/test_batch_ndjson_schema.py tests/test_json_schema_file.py tests/test_siem_examples.py -q`
+  passed with 59 tests.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.16 percent. Tests: 3396 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.

@@ -2412,8 +2412,9 @@ are picked up alongside the build plan above.
   network calls.
 - Add a short weak-area note when a fingerprint has common legitimate
   false-negative configurations.
-- Add schema or docs examples that make existing behavior easier to consume in
-  automation.
+- Done 2026-06-19: add schema/docs examples that make existing JSON modes
+  easier to consume in automation (`docs/automation-examples.md`, with snippet
+  tests).
 - Done 2026-06-19: improve MCP resource consumption examples for
   `recon://fingerprints`, `recon://signals`, `recon://profiles`, and
   `recon://schema` without adding network behavior.

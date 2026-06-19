@@ -232,6 +232,18 @@ network-capable domain analysis, to omit posture profiles when the target type
 is unclear, and to treat a missing fingerprint as "no published fingerprint,"
 not as evidence that a service is absent.
 
+## Automation Parser Examples
+
+`docs/automation-examples.md` now gives scripts a concrete consumption guide for
+the existing JSON modes: single lookup, batch array, batch wrapper, NDJSON,
+delta reports, and cohort summaries. The examples point consumers at exit-code
+handling, `record_type` routing, schema validation, and unknown-field tolerance.
+
+`examples/sample-output.json` now represents the full required v2.0 lookup
+shape while preserving the fictional Northwind fields used by the SIEM examples.
+`tests/test_automation_examples.py` parses the committed snippets and checks them
+against the schema and runtime batch-record classifier.
+
 ## Scorecard Posture
 
 The public Scorecard API result checked on 2026-06-19 reported score 6.1 for

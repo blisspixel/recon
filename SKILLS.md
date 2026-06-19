@@ -42,6 +42,10 @@ operating rules for future cycles and must not override `AGENTS.md`,
   with loader defaults and invariant tests over module-level engine constants.
   Keep behavior unchanged at default values and update trust docs in the same
   cycle.
+- For JSON-consumer examples, document every output shape with `record_type`
+  routing, exit-code handling, and unknown-field tolerance. Keep examples backed
+  by tests that parse snippets and compare against the schema or runtime
+  classifier.
 - Track external spend explicitly. Default spend is 0 USD.
 - Before closing a cycle, run the narrow relevant gate. Before claiming repo
   readiness, run `uv run python scripts/check.py`.
