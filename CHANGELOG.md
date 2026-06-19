@@ -58,6 +58,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Advisory diff coverage.** Added `scripts/diff_coverage.py`, a local
   maintainer signal that reports changed executable Python line coverage from
   Coverage.py JSON and a unified diff without gating documentation-only changes.
+- **Release readiness commit hygiene.** The local readiness check now inspects
+  every commit in the `origin/main..HEAD` stack when the branch is ahead, and
+  rejects attribution markers, em dashes, or pictographic symbols before push.
 - **MCP output schema precision.** Added precise `TypedDict` item schemas for
   `get_fingerprints`, `get_signals`, `explain_signal`, the simple
   ephemeral-fingerprint session tools, the graph data tools, and the compact

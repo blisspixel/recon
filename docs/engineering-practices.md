@@ -20,6 +20,9 @@ last six months unless the repo's automation tells it.
 over `src/recon_tool/ tests/` (the same scope CI uses), the coverage-gated test run,
 and the catalog/label/file-size checks. Green here means green in CI. Use
 `--fast` to skip the test run for rapid iteration; never push on `--fast` alone.
+Before pushing a local stack, `uv run python scripts/release_readiness.py` also
+checks every `origin/main..HEAD` commit message for attribution markers, em
+dashes, and pictographic symbols.
 
 This exists because local checks that were *narrower* than CI (pyright on
 `recon_tool/` only) let test-file type errors reach a red CI twice. Parity is the

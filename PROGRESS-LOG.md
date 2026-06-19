@@ -5,6 +5,28 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Hardened release-readiness commit hygiene for local stacks.
+- `scripts/release_readiness.py` now checks every commit in `origin/main..HEAD`
+  when the branch is ahead, falls back to `HEAD` otherwise, and rejects
+  attribution markers, em dashes, and pictographic symbols.
+- Added focused tests for ahead-stack attribution detection and pictographic
+  symbol detection.
+- Updated changelog, engineering practices, current-state analysis, and local
+  loop skills.
+- Focused validation:
+  `uv run python -m pytest tests/test_release_readiness.py tests/test_markdown_links.py -q`
+  passed with 13 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check scripts/release_readiness.py tests/test_release_readiness.py`
+  and
+  `uv run python -m pyright scripts/release_readiness.py tests/test_release_readiness.py`
+  passed.
+- Readiness smoke:
+  `uv run python scripts/release_readiness.py --allow-dirty` passed, with the
+  expected dirty-worktree warning during this edit cycle.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.50 percent. Tests: 3495 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Added advisory diff coverage as a maintainer-local signal.
 - Added `scripts/diff_coverage.py` to combine Coverage.py JSON with a unified
   diff, count only changed executable Python lines, report missing changed

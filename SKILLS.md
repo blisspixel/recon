@@ -121,3 +121,6 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - Track external spend explicitly. Default spend is 0 USD.
 - Before closing a cycle, run the narrow relevant gate. Before claiming repo
   readiness, run `uv run python scripts/check.py`.
+- Before pushing a local commit stack, run release readiness so every
+  `origin/main..HEAD` commit message is checked for attribution markers, em
+  dashes, and pictographic symbols, not only the latest commit.
