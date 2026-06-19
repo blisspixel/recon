@@ -145,4 +145,32 @@ planning artifact and does not replace `CHANGELOG.md`.
   `uv run python -m ruff check tests/test_mcp_tool_annotations.py` passed.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.18 percent. Tests: 3387 passed, 6 skipped, 4 deselected.
+- Started the eighth cycle from the user's Scorecard request.
+- Queried the public Scorecard API for `github.com/blisspixel/recon`; current
+  published result is score 6.1 at commit
+  `fc976bcab492232eb35111a26ea8deb14aa00b7e`.
+- Confirmed local-file actionable gaps are primarily future Signed-Releases
+  posture and monitored release-integrity behavior. Branch protection,
+  code-review score, maintained score, contributors, and CII badge require
+  repository settings, PR history, elapsed time, outside contributors, or
+  external OpenSSF badge enrollment.
+- Updated `.github/workflows/release.yml` so PyPI publishing and GitHub release
+  publication wait for build-provenance attestation.
+- Added an `export-attestations` release job that downloads GitHub's signed
+  attestation bundles for the sealed `dist/` artifacts, exports
+  `recon-tool-<version>.intoto.jsonl`, uploads it as a workflow artifact, and
+  attaches it to the GitHub Release.
+- Updated release workflow contract tests and Scorecard posture tests to require
+  the provenance export job, `.intoto.jsonl` asset, and GitHub Release
+  attachment.
+- Updated supply-chain, release-process, roadmap, and changelog docs to describe
+  the fail-closed provenance path and future Scorecard-recognized release asset.
+- Focused validation:
+  `uv run python -m pytest tests/test_release_workflow_contract.py tests/test_release_workflow.py tests/test_scorecard_posture.py -q`
+  passed with 26 tests.
+- Focused lint and workflow pin checks passed:
+  `uv run python -m ruff check tests/test_release_workflow_contract.py tests/test_release_workflow.py tests/test_scorecard_posture.py`
+  and `uv run python scripts/check_workflow_pins.py`.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.16 percent. Tests: 3391 passed, 6 skipped, 4 deselected.
 - External spend: 0 USD.

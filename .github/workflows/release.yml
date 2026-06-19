@@ -28,9 +28,14 @@ on:
 #     in its own workspace and generates the CycloneDX SBOM from the
 #     locked-requirements text. dist/ does not exist in this runner,
 #     so even a compromised pip-audit cannot reach release artifacts.
-#   * ``publish-pypi`` and ``github-release`` download the sealed
-#     artifacts from GitHub storage. They never re-build, never
-#     re-install dev deps, never execute additional dependency code.
+#   * ``export-attestations`` downloads GitHub's signed attestation bundles for
+#     the sealed dist artifacts and stores them as a release-asset-friendly
+#     ``*.intoto.jsonl`` artifact. It runs no project dependency code.
+#   * ``publish-pypi`` and ``github-release`` wait for the provenance
+#     attestation path, then download the sealed artifacts from GitHub storage.
+#     They never re-build, never re-install dev deps, never execute additional
+#     dependency code. If provenance attestation fails, the release fails closed
+#     instead of publishing unauthenticated files.
 #
 # The threat the contract addresses: if a transitive dev dependency
 # of pip-audit (or pip-audit itself) is compromised at the locked
@@ -195,6 +200,55 @@ jobs:
         with:
           subject-path: "dist/*"
 
+  export-attestations:
+    # GitHub artifact attestations live in the GitHub attestation store, but
+    # OpenSSF Scorecard's Signed-Releases check looks for release assets with a
+    # signature/provenance filename. Export the signed attestation bundles into a
+    # release-asset-friendly `*.intoto.jsonl` file without introducing keys,
+    # mutable action refs, or project dependency execution.
+    needs: [build, attest]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dist
+          path: dist/
+
+      - name: Export attestation bundles
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p provenance
+          out="$GITHUB_WORKSPACE/provenance/recon-tool-${version}.intoto.jsonl"
+          : > "$out"
+
+          for artifact in "$GITHUB_WORKSPACE"/dist/*; do
+            work="$(mktemp -d)"
+            (
+              cd "$work"
+              gh attestation download "$artifact" --repo "$GITHUB_REPOSITORY"
+            )
+            bundles=("$work"/*.jsonl)
+            if [ ! -e "${bundles[0]}" ]; then
+              echo "No attestation bundle found for $artifact" >&2
+              exit 1
+            fi
+            cat "${bundles[@]}" >> "$out"
+          done
+
+          test -s "$out"
+
+      - name: Upload provenance artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: provenance
+          path: provenance/
+
   sbom:
     # Separate runner. dist/ does not exist in this workspace. A
     # compromised pip-audit (or any transitive) cannot tamper with
@@ -252,7 +306,7 @@ jobs:
           path: sbom/
 
   publish-pypi:
-    needs: build
+    needs: [build, attest]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -276,7 +330,7 @@ jobs:
           attestations: true
 
   github-release:
-    needs: [build, sbom]
+    needs: [build, attest, export-attestations, sbom]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -303,6 +357,12 @@ jobs:
           name: sbom
           path: sbom/
 
+      - name: Download provenance artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: provenance
+          path: provenance/
+
       - name: Create GitHub Release
         # Native gh CLI rather than a third-party action: it authenticates
         # through the job's GITHUB_TOKEN with no moving major-version tag to
@@ -318,10 +378,10 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/* sbom/* --clobber
+            gh release upload "$GITHUB_REF_NAME" dist/* sbom/* provenance/* --clobber
           else
             gh release create "$GITHUB_REF_NAME" \
               --title "v${version}" \
               --notes-file release_notes.md \
-              dist/* sbom/*
+              dist/* sbom/* provenance/*
           fi
