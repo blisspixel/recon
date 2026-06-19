@@ -111,6 +111,27 @@ def test_get_signals_output_schema_has_precise_items() -> None:
     assert metadata_items["$ref"] == "#/$defs/SignalMetadataSummary"
 
 
+def test_ephemeral_fingerprint_output_schemas_are_precise() -> None:
+    """Session-local ephemeral tools advertise their simple result shapes."""
+    tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
+
+    inject_schema = tools["inject_ephemeral_fingerprint"].outputSchema
+    assert isinstance(inject_schema, dict)
+    assert inject_schema["title"] == "EphemeralInjectionResult"
+    assert set(inject_schema["required"]) == {"status", "name", "slug", "detections_accepted"}
+    assert inject_schema["properties"]["detections_accepted"]["type"] == "integer"
+
+    clear_schema = tools["clear_ephemeral_fingerprints"].outputSchema
+    assert isinstance(clear_schema, dict)
+    assert clear_schema["title"] == "EphemeralClearResult"
+    assert set(clear_schema["required"]) == {"status", "removed"}
+    assert clear_schema["properties"]["removed"]["type"] == "integer"
+
+    item_schema = _array_result_item_schema("list_ephemeral_fingerprints")
+    assert set(item_schema["required"]) == {"name", "slug", "category", "confidence", "detection_count"}
+    assert item_schema["properties"]["detection_count"]["type"] == "integer"
+
+
 def test_get_fingerprints_emits_navigable_structured_content() -> None:
     """call_tool surfaces the list as real structured data (not a JSON-string
     blob) plus a serialized-JSON text block for back-compat."""

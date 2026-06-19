@@ -74,8 +74,8 @@ official custom-domain docs, with the generic ACME TXT challenge deliberately
 kept out of scope. The motif queue now includes a complete Microsoft internal
 triad motif for Traffic Manager to Azure Front Door to Microsoft Edge chains,
 with a public candidate-chain delta. The MCP precise-schema Phase 2 has started
-with `TypedDict` output item schemas for the no-network `get_fingerprints` and
-`get_signals` catalog tools.
+with `TypedDict` output item schemas for the no-network catalog tools and the
+simple ephemeral-fingerprint session tools.
 
 ## Hard Constraints
 
@@ -138,7 +138,7 @@ The public tree already contains substantial assurance:
 Current local verification in this session:
 
 - `uv run python scripts/check.py` passed.
-- Coverage was 86.16 percent, above the 82 percent configured gate.
+- Coverage was 86.22 percent, above the 82 percent configured gate.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -290,14 +290,15 @@ in order.
 
 ## MCP Output Schema Precision
 
-`get_fingerprints` and `get_signals` now return `TypedDict`-annotated list item
-shapes. FastMCP turns those annotations into concrete `$defs` in each tool's
-advertised `outputSchema`, so agents can validate catalog list fields without
-guessing from examples.
+`get_fingerprints`, `get_signals`, `inject_ephemeral_fingerprint`,
+`list_ephemeral_fingerprints`, and `clear_ephemeral_fingerprints` now return
+`TypedDict`-annotated shapes. FastMCP turns those annotations into concrete
+`$defs` or object properties in each tool's advertised `outputSchema`, so agents
+can validate these fields without guessing from examples.
 
-This is intentionally scoped to the no-network catalog tools. The broader
-posture, graph, and inference tools still use the Phase 1 permissive schemas
-until each larger shape gets its own focused compatibility pass.
+This is intentionally scoped to low-risk MCP surfaces. `reevaluate_domain` and
+the broader posture, graph, and inference tools still use the Phase 1 permissive
+schemas until each larger shape gets its own focused compatibility pass.
 
 ## DKIM Weak-Area Guidance
 

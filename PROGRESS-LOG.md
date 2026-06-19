@@ -5,6 +5,28 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Extended precise MCP output schemas to the three simple ephemeral-fingerprint
+  session tools: `inject_ephemeral_fingerprint`, `list_ephemeral_fingerprints`,
+  and `clear_ephemeral_fingerprints`.
+- Left `reevaluate_domain` on the permissive Phase 1 schema because it returns
+  the full lookup object and needs a separate compatibility pass.
+- Added structured-output tests for `EphemeralInjectionResult`,
+  `EphemeralFingerprintSummary`, and `EphemeralClearResult`.
+- Regenerated `docs/surface-inventory.json` so the derived inventory records the
+  new ephemeral output-schema definition counts.
+- Focused validation:
+  `uv run python -m pytest tests/test_surface_inventory.py tests/test_mcp_structured_output.py tests/test_ephemeral_fingerprints.py tests/test_server_agentic.py -q`
+  passed with 72 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check src/recon_tool/server_ephemeral.py tests/test_mcp_structured_output.py scripts/generate_surface_inventory.py tests/test_surface_inventory.py`
+  and
+  `uv run python -m pyright src/recon_tool/server_ephemeral.py tests/test_mcp_structured_output.py`
+  passed.
+- Surface inventory check:
+  `uv run python scripts/generate_surface_inventory.py --check` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.22 percent. Tests: 3417 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Added precise `TypedDict` MCP output item schemas for the no-network catalog
   list tools: `FingerprintSummary` for `get_fingerprints`, and `SignalSummary`
   plus `SignalMetadataSummary` for `get_signals`.

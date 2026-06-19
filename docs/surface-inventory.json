@@ -1741,8 +1741,18 @@
         "name": "inject_ephemeral_fingerprint",
         "output_schema": {
           "definition_count": 0,
-          "properties": [],
-          "required": [],
+          "properties": [
+            "detections_accepted",
+            "name",
+            "slug",
+            "status"
+          ],
+          "required": [
+            "detections_accepted",
+            "name",
+            "slug",
+            "status"
+          ],
           "type": "object"
         },
         "structured_output": true,
@@ -1758,7 +1768,7 @@
         "input_parameters": [],
         "name": "list_ephemeral_fingerprints",
         "output_schema": {
-          "definition_count": 0,
+          "definition_count": 1,
           "properties": [
             "result"
           ],
@@ -1781,8 +1791,14 @@
         "name": "clear_ephemeral_fingerprints",
         "output_schema": {
           "definition_count": 0,
-          "properties": [],
-          "required": [],
+          "properties": [
+            "removed",
+            "status"
+          ],
+          "required": [
+            "removed",
+            "status"
+          ],
           "type": "object"
         },
         "structured_output": true,
