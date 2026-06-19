@@ -1003,8 +1003,10 @@ ephemeral-fingerprint session tools now advertise
 `GraphExportEnvelope`. The compact agent-facing posture helpers now advertise
 `HypothesisAssessmentResult` and `HardeningSimulationResult`. `get_posteriors`
 now advertises `PosteriorBlockResult`, `PosteriorNodeSummary`, and
-`UnitCounterfactualSummary`. The larger posture report tool set remains
-intentionally incremental.
+`UnitCounterfactualSummary`. The exposure report tools now advertise
+`ExposureAssessmentResult`, `GapReportResult`, and `PostureComparisonResult`
+with nested evidence and posture record definitions. The remaining variable
+tools stay intentionally incremental.
 The design record that drove it, kept for rationale:
 
 A mid-2026 research pass (cited best-practices report) plus a code investigation

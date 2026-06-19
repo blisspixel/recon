@@ -13,7 +13,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
@@ -58,6 +58,119 @@ class HardeningSimulationResult(TypedDict):
     score_delta: int
     applied_fixes: list[str]
     remaining_gaps: list[SimulatedGapSummary]
+    disclaimer: str
+
+
+class EvidenceReferenceSummary(TypedDict):
+    source_type: str
+    raw_value: str
+    rule_name: str
+    slug: str
+
+
+class ObservabilitySummary(TypedDict):
+    score_is_lower_bound: bool
+    unconfirmable_absent_points: int
+    score_ceiling: int
+    note: str
+
+
+class EmailPostureSummary(TypedDict):
+    dmarc_policy: str | None
+    dkim_configured: bool
+    spf_strict: bool
+    mta_sts_mode: str | None
+    email_gateway: str | None
+    bimi_configured: bool
+    email_security_score: int
+    evidence: list[EvidenceReferenceSummary]
+
+
+class IdentityPostureSummary(TypedDict):
+    auth_type: str | None
+    identity_provider: str | None
+    google_auth_type: str | None
+    google_idp_name: str | None
+    evidence: list[EvidenceReferenceSummary]
+
+
+class InfrastructureFootprintSummary(TypedDict):
+    cloud_providers: list[str]
+    dns_provider: str | None
+    cdn_waf: list[str]
+    certificate_authorities: list[str]
+    evidence: list[EvidenceReferenceSummary]
+
+
+class ConsistencyObservationSummary(TypedDict):
+    observation: str
+    category: str
+    evidence: list[EvidenceReferenceSummary]
+
+
+class HardeningControlSummary(TypedDict):
+    name: str
+    present: bool
+    detail: str
+    evidence: list[EvidenceReferenceSummary]
+
+
+class HardeningStatusSummary(TypedDict):
+    controls: list[HardeningControlSummary]
+
+
+class ExposureAssessmentResult(TypedDict):
+    domain: str
+    posture_score: int
+    posture_score_label: str
+    observability: ObservabilitySummary
+    email_posture: EmailPostureSummary
+    identity_posture: IdentityPostureSummary
+    infrastructure_footprint: InfrastructureFootprintSummary
+    consistency_observations: list[ConsistencyObservationSummary]
+    hardening_status: HardeningStatusSummary
+    disclaimer: str
+    evidence: list[EvidenceReferenceSummary]
+
+
+class HardeningGapSummary(TypedDict):
+    category: str
+    severity: str
+    observation: str
+    recommendation: str
+    absence_confirmable: bool
+    evidence: list[EvidenceReferenceSummary]
+
+
+class GapReportResult(TypedDict):
+    domain: str
+    gaps: list[HardeningGapSummary]
+    disclaimer: str
+
+
+class PostureMetricSummary(TypedDict):
+    metric_name: str
+    domain_a_value: str
+    domain_b_value: str
+
+
+class PostureDifferenceSummary(TypedDict):
+    description: str
+    domain_a_has: bool
+    domain_b_has: bool
+
+
+class RelativeAssessmentSummary(TypedDict):
+    dimension: str
+    summary: str
+
+
+class PostureComparisonResult(TypedDict):
+    domain_a: str
+    domain_b: str
+    metrics: list[PostureMetricSummary]
+    differences: list[PostureDifferenceSummary]
+    relative_assessment: list[RelativeAssessmentSummary]
     disclaimer: str
 
 
@@ -171,7 +284,7 @@ async def analyze_posture(
         openWorldHint=True,
     ),
 )
-async def assess_exposure(domain: str) -> dict[str, Any]:
+async def assess_exposure(domain: str) -> ExposureAssessmentResult:
     """Assess a domain's publicly observable security posture for defensive review.
 
     For defensive security posture assessment only.
@@ -212,7 +325,7 @@ async def assess_exposure(domain: str) -> dict[str, Any]:
         elapsed_s=round(time.monotonic() - start_time, 2),
     )
 
-    return format_exposure_dict(assessment)
+    return cast(ExposureAssessmentResult, format_exposure_dict(assessment))
 
 
 @mcp.tool(
@@ -223,7 +336,7 @@ async def assess_exposure(domain: str) -> dict[str, Any]:
         openWorldHint=True,
     ),
 )
-async def find_hardening_gaps(domain: str) -> dict[str, Any]:
+async def find_hardening_gaps(domain: str) -> GapReportResult:
     """Identify hardening opportunities in a domain's public configuration.
 
     For defensive security posture assessment only.
@@ -260,7 +373,7 @@ async def find_hardening_gaps(domain: str) -> dict[str, Any]:
         elapsed_s=round(time.monotonic() - start_time, 2),
     )
 
-    return format_gaps_dict(report)
+    return cast(GapReportResult, format_gaps_dict(report))
 
 
 @mcp.tool(
@@ -271,7 +384,7 @@ async def find_hardening_gaps(domain: str) -> dict[str, Any]:
         openWorldHint=True,
     ),
 )
-async def compare_postures(domain_a: str, domain_b: str) -> dict[str, Any]:
+async def compare_postures(domain_a: str, domain_b: str) -> PostureComparisonResult:
     """Compare the security postures of two domains side by side.
 
     For defensive security posture assessment only.
@@ -307,7 +420,7 @@ async def compare_postures(domain_a: str, domain_b: str) -> dict[str, Any]:
         elapsed_s=round(time.monotonic() - start_time, 2),
     )
 
-    return format_comparison_dict(comparison)
+    return cast(PostureComparisonResult, format_comparison_dict(comparison))
 
 
 @mcp.tool(

@@ -286,6 +286,55 @@ def test_get_posteriors_output_schema_is_precise() -> None:
     assert counterfactual["properties"]["posterior_without"]["type"] == "number"
 
 
+def test_exposure_report_output_schemas_are_precise() -> None:
+    """Exposure report tools advertise their nested report envelopes."""
+    assessment_schema = _tool_output_schema("assess_exposure")
+    assert assessment_schema["title"] == "ExposureAssessmentResult"
+    assert set(assessment_schema["required"]) == {
+        "domain",
+        "posture_score",
+        "posture_score_label",
+        "observability",
+        "email_posture",
+        "identity_posture",
+        "infrastructure_footprint",
+        "consistency_observations",
+        "hardening_status",
+        "disclaimer",
+        "evidence",
+    }
+    assessment_props = assessment_schema["properties"]
+    assert assessment_props["observability"]["$ref"] == "#/$defs/ObservabilitySummary"
+    assert assessment_props["email_posture"]["$ref"] == "#/$defs/EmailPostureSummary"
+    assert assessment_props["hardening_status"]["$ref"] == "#/$defs/HardeningStatusSummary"
+    assert assessment_props["evidence"]["items"]["$ref"] == "#/$defs/EvidenceReferenceSummary"
+    email = assessment_schema["$defs"]["EmailPostureSummary"]
+    assert email["properties"]["email_security_score"]["type"] == "integer"
+
+    gaps_schema = _tool_output_schema("find_hardening_gaps")
+    assert gaps_schema["title"] == "GapReportResult"
+    assert set(gaps_schema["required"]) == {"domain", "gaps", "disclaimer"}
+    assert gaps_schema["properties"]["gaps"]["items"]["$ref"] == "#/$defs/HardeningGapSummary"
+    gap = gaps_schema["$defs"]["HardeningGapSummary"]
+    assert gap["properties"]["absence_confirmable"]["type"] == "boolean"
+    assert gap["properties"]["evidence"]["items"]["$ref"] == "#/$defs/EvidenceReferenceSummary"
+
+    comparison_schema = _tool_output_schema("compare_postures")
+    assert comparison_schema["title"] == "PostureComparisonResult"
+    assert set(comparison_schema["required"]) == {
+        "domain_a",
+        "domain_b",
+        "metrics",
+        "differences",
+        "relative_assessment",
+        "disclaimer",
+    }
+    comparison_props = comparison_schema["properties"]
+    assert comparison_props["metrics"]["items"]["$ref"] == "#/$defs/PostureMetricSummary"
+    assert comparison_props["differences"]["items"]["$ref"] == "#/$defs/PostureDifferenceSummary"
+    assert comparison_props["relative_assessment"]["items"]["$ref"] == "#/$defs/RelativeAssessmentSummary"
+
+
 def test_get_fingerprints_emits_navigable_structured_content() -> None:
     """call_tool surfaces the list as real structured data (not a JSON-string
     blob) plus a serialized-JSON text block for back-compat."""
