@@ -23,6 +23,7 @@ import pytest
 from recon_tool.cache import (
     DEFAULT_TTL,
     cache_clear,
+    cache_clear_all,
     cache_dir,
     cache_get,
     cache_put,
@@ -231,6 +232,20 @@ class TestRoundTripAllFields:
         assert restored.likely_primary_email_provider == "Google Workspace"
         assert restored.email_gateway == "Proofpoint"
 
+    def test_shared_verification_tokens_are_not_cached(self) -> None:
+        from dataclasses import replace
+
+        info = replace(
+            _complete_info(),
+            shared_verification_tokens=(("MS=ms12345", "northwind.com"),),
+        )
+
+        data = tenant_info_to_dict(info)
+        assert "shared_verification_tokens" not in data
+
+        restored = tenant_info_from_dict(data)
+        assert restored.shared_verification_tokens == ()
+
 
 class TestCacheDiskOperations:
     """Exercise the cache_put / cache_get disk I/O paths in isolated temp dirs."""
@@ -248,6 +263,15 @@ class TestCacheDiskOperations:
         assert restored is not None
         assert restored.tenant_id == info.tenant_id
         assert restored.display_name == info.display_name
+
+    def test_put_normalizes_url_input_to_apex_cache_key(self) -> None:
+        info = _complete_info()
+
+        cache_put("https://www.contoso.com/path?utm=1", info)
+
+        assert (cache_dir() / "contoso.com.json").exists()
+        assert cache_get("contoso.com") is not None
+        assert cache_get("https://www.contoso.com/path") is not None
 
     def test_get_missing_returns_none(self) -> None:
         assert cache_get("does-not-exist.com") is None
@@ -316,6 +340,21 @@ class TestCacheDiskOperations:
 
         assert cache_clear("../cache-evil/settings") is False
         assert outside.exists()
+
+    def test_clear_all_deletes_only_top_level_json_cache_entries(self) -> None:
+        cache_put("contoso.com", _complete_info())
+        d = cache_dir()
+        nested = d / "nested"
+        nested.mkdir()
+        keep_nested = nested / "nested.com.json"
+        keep_nested.write_text('{"keep": true}', encoding="utf-8")
+        keep_text = d / "notes.txt"
+        keep_text.write_text("keep", encoding="utf-8")
+
+        assert cache_clear_all() == 1
+        assert not (d / "contoso.com.json").exists()
+        assert keep_nested.exists()
+        assert keep_text.exists()
 
 
 class TestCacheDirRespectsEnvVar:

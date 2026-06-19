@@ -304,6 +304,16 @@ finite. The inference engine and conflict provenance use the loaded values, so
 future interval tuning can be reviewed as data while keeping default behavior
 unchanged.
 
+## Cache Edge Coverage
+
+`tests/test_cache_roundtrip.py` now pins three cache-boundary contracts:
+
+- pasted URLs and `www.` hosts normalize to the apex cache key;
+- `cache_clear_all()` deletes only top-level JSON cache entries, leaving nested
+  and non-JSON files alone;
+- `shared_verification_tokens` remains batch-scope state and does not persist
+  through the per-domain disk cache.
+
 ## Decision Rule For The Next Task
 
 When choosing work in the public checkout:

@@ -251,3 +251,18 @@ planning artifact and does not replace `CHANGELOG.md`.
   `uv run python -m pytest tests/test_public_validation_memo.py tests/test_validation_hygiene.py tests/test_reproduce_paper_numbers.py -q`
   and `python scripts/check_validation_hygiene.py` passed.
 - External spend: 0 USD.
+- Started the thirteenth cycle from the roadmap's parser/cache/MCP/formatter
+  edge-test item.
+- Added cache regression tests for pasted URL normalization to apex cache keys,
+  top-level-only `cache_clear_all()` deletion, and the batch-only
+  `shared_verification_tokens` non-persistence contract.
+- Updated the roadmap, changelog, current-state analysis, and maintainer loop
+  skills to record the cache-boundary contract.
+- Focused validation:
+  `uv run python -m pytest tests/test_cache_roundtrip.py tests/test_cache_stateful.py tests/test_cache_cli.py -q`
+  passed with 50 tests.
+- Focused lint:
+  `uv run python -m ruff check tests/test_cache_roundtrip.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.14 percent. Tests: 3404 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
