@@ -52,6 +52,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cache edge coverage.** Added regression tests for URL-to-apex cache-key
   normalization, top-level-only `cache_clear_all()` deletion, and the
   batch-only `shared_verification_tokens` non-persistence contract.
+- **CrowdStrike fingerprint precision.** Converted the CrowdStrike TXT
+  fingerprint to `match_mode: all` and taught TXT bookkeeping to record
+  same-record corroborating matches, so canonical Falcon verification still
+  detects while generic TXT mentions are suppressed.
 - **Workflow action pinning.** Pinned every GitHub Actions dependency to a full
   commit SHA, replaced the actionlint download-and-run step with a pinned action,
   removed installer-side pipx bootstrapping, and added a local / CI gate that

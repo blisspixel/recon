@@ -2402,8 +2402,10 @@ Narrow, useful, aligned with the product shape. Each one is a single PR
 with a corpus-delta or audit note. None of these block a release; they
 are picked up alongside the build plan above.
 
-- Convert one ambiguous fingerprint to `match_mode: all`, with before/after
-  evidence and a regression domain in local validation notes.
+- Done 2026-06-19: convert the CrowdStrike TXT fingerprint to
+  `match_mode: all`, with same-record TXT bookkeeping, before/after audit
+  evidence, and fictional-domain regressions in
+  `validation/2026-06-19-crowdstrike-match-mode.md`.
 - Add one high-confidence fingerprint for a service that publishes a stable
   verification TXT, MX, CNAME, NS, SRV, or CAA pattern.
 - Done 2026-06-19: enrich 5 verification-token fingerprints with official

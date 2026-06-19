@@ -216,6 +216,19 @@ class TestTechStackFingerprinting:
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_crowdstrike_generic_txt_alone_is_not_detected(self, mock_resolve):
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": ["procurement-note=crowdstrike renewal"],
+                "example.com/MX": [],
+            }
+        )
+        result = await DNSSource().lookup("example.com")
+        assert "CrowdStrike Falcon" not in result.detected_services
+        assert "crowdstrike" not in result.detected_slugs
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_slack_and_atlassian(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
