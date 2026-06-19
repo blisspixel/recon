@@ -5,6 +5,34 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Added a PLR size-rule ratchet to the local CI mirror.
+- Added `scripts/check_plr_ratchet.py`, which runs Ruff over `PLR0911`,
+  `PLR0912`, `PLR0913`, and `PLR0915`, parses the statistics output, and fails
+  only when current debt exceeds the recorded ceilings.
+- Wired the ratchet into `scripts/check.py` as a fast core stage.
+- Added `tests/test_plr_ratchet.py` for statistics parsing, missing-rule
+  defaults, and regression detection.
+- Updated engineering practices, roadmap, changelog, current-state analysis,
+  and local loop skills to describe the ratchet as regression prevention rather
+  than instant full PLR enforcement.
+- Focused validation:
+  `uv run python -m pytest tests/test_plr_ratchet.py tests/test_markdown_links.py -q`
+  passed with 4 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check scripts/check_plr_ratchet.py tests/test_plr_ratchet.py scripts/check.py`
+  and
+  `uv run python -m pyright scripts/check_plr_ratchet.py tests/test_plr_ratchet.py scripts/check.py`
+  passed.
+- Ratchet smoke:
+  `uv run python scripts/check_plr_ratchet.py` passed at `PLR0911` 22/22,
+  `PLR0912` 14/14, `PLR0913` 51/51, and `PLR0915` 9/9.
+- Fast local gate:
+  `uv run python scripts/check.py --fast` passed with the new `plr-ratchet`
+  stage included.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Pytest reported 3498 passed, 5 skipped, 4 deselected, with 86.52 percent
+  coverage.
+- External spend: 0 USD.
 - Hardened release-readiness commit hygiene for local stacks.
 - `scripts/release_readiness.py` now checks every commit in `origin/main..HEAD`
   when the branch is ahead, falls back to `HEAD` otherwise, and rejects
