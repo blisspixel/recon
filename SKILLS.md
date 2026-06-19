@@ -15,6 +15,10 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - When the private corpus is unavailable, support the calibration path with
   public-tree docs, guards, tests, or runbooks rather than inventing unrelated
   runtime features.
+- For private corpus calibration, preflight corpus shape before any network
+  harness starts. Fail fast when the consolidated corpus or every stratum is
+  below the publishable `--min-cell` threshold, and report suppressed strata in
+  dry runs.
 - Treat publishable validation memos as a disclosure boundary: target-looking
   strings can appear as values, keys, or free-form titles, so check all three.
 - For paper or assurance reproducibility, add orchestration around existing

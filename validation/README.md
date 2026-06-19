@@ -216,6 +216,11 @@ Use `--dry-run` to print the exact module invocations without network calls.
 If you pass `--stamp`, it must be a single safe path segment: letters, digits,
 dots, underscores, and hyphens only. The runner resolves the final run directory
 under `--output-root` before writing artifacts.
+Before any network harness starts, the runner preflights the private corpus
+inputs locally: the consolidated corpus must meet `--min-cell`, at least one
+stratum file under `by-vertical/` must meet `--min-cell`, and dry runs print the
+eligible and suppressed stratum counts. This catches empty, stale, or
+unpublishable corpus layouts before spending operator time on a live run.
 Review `memo.md` before copying any result into a committed validation memo.
 The renderer is a backstop, not a substitute for review.
 

@@ -5,6 +5,27 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Added a local corpus preflight to the maintainer calibration bundle.
+- The preflight rejects a missing or too-small consolidated corpus, rejects
+  runs where every stratum is below `--min-cell`, and reports eligible versus
+  suppressed strata in dry runs before any network harness starts.
+- Extended calibration bundle metadata with consolidated, eligible-strata, and
+  suppressed-strata counts.
+- Updated validation docs, roadmap, changelog, README assurance notes, current
+  state analysis, and local loop skills.
+- Focused validation:
+  `uv run python -m pytest tests/test_run_calibration_bundle.py -q` passed with
+  15 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check validation/run_calibration_bundle.py tests/test_run_calibration_bundle.py`
+  and
+  `uv run python -m pyright validation/run_calibration_bundle.py tests/test_run_calibration_bundle.py`
+  passed.
+- Validation hygiene:
+  `uv run python scripts/check_validation_hygiene.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.50 percent. Tests: 3470 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Added PR-scoped ClusterFuzzLite parser-boundary fuzzing.
 - Added `.clusterfuzzlite` Python build integration with a digest-pinned
   `base-builder-python` image.

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from validation.run_calibration_bundle import run_bundle
+from validation.run_calibration_bundle import preflight_corpus_inputs, run_bundle
 
 
 def _summary(n: int) -> dict[str, object]:
@@ -79,11 +79,56 @@ CONFORMAL = {
 def _write_private_inputs(root: Path) -> tuple[Path, Path]:
     stratify_dir = root / "corpus-private" / "by-vertical"
     stratify_dir.mkdir(parents=True)
-    (stratify_dir / "saas.txt").write_text("contoso.com\nfabrikam.com\n", encoding="utf-8")
-    (stratify_dir / "security.txt").write_text("northwindtraders.com\n", encoding="utf-8")
+    (stratify_dir / "saas.txt").write_text(
+        "\n".join(f"saas-{index}.example" for index in range(10)) + "\n",
+        encoding="utf-8",
+    )
+    (stratify_dir / "security.txt").write_text(
+        "\n".join(f"security-{index}.example" for index in range(10)) + "\n",
+        encoding="utf-8",
+    )
+    (stratify_dir / "tiny.txt").write_text("tiny-1.example\ntiny-2.example\ntiny-3.example\n", encoding="utf-8")
     consolidated = root / "corpus-private" / "consolidated.txt"
-    consolidated.write_text("contoso.com\nfabrikam.com\nnorthwindtraders.com\n", encoding="utf-8")
+    consolidated.write_text(
+        "\n".join(f"domain-{index}.example" for index in range(23)) + "\n",
+        encoding="utf-8",
+    )
     return stratify_dir, consolidated
+
+
+def test_preflight_reports_eligible_and_suppressed_strata(tmp_path) -> None:
+    stratify_dir, consolidated = _write_private_inputs(tmp_path)
+
+    preflight = preflight_corpus_inputs(stratify_dir=stratify_dir, consolidated=consolidated, min_cell=10)
+
+    assert preflight.consolidated_domain_count == 23
+    assert preflight.stratum_count == 3
+    assert preflight.eligible_strata_count == 2
+    assert preflight.suppressed_strata_count == 1
+    assert [(stratum.name, stratum.domain_count, stratum.eligible) for stratum in preflight.strata] == [
+        ("saas", 10, True),
+        ("security", 10, True),
+        ("tiny", 3, False),
+    ]
+
+
+def test_preflight_rejects_all_small_strata(tmp_path) -> None:
+    stratify_dir = tmp_path / "corpus-private" / "by-vertical"
+    stratify_dir.mkdir(parents=True)
+    (stratify_dir / "tiny.txt").write_text("tiny-1.example\n", encoding="utf-8")
+    consolidated = tmp_path / "corpus-private" / "consolidated.txt"
+    consolidated.write_text("\n".join(f"domain-{index}.example" for index in range(10)) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="no stratum has at least min-cell 10"):
+        preflight_corpus_inputs(stratify_dir=stratify_dir, consolidated=consolidated, min_cell=10)
+
+
+def test_preflight_rejects_small_consolidated_corpus(tmp_path) -> None:
+    stratify_dir, consolidated = _write_private_inputs(tmp_path)
+    consolidated.write_text("only-one.example\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="consolidated corpus has 1 domain"):
+        preflight_corpus_inputs(stratify_dir=stratify_dir, consolidated=consolidated, min_cell=10)
 
 
 def test_run_bundle_writes_json_memo_and_meta(tmp_path) -> None:
@@ -126,8 +171,10 @@ def test_run_bundle_writes_json_memo_and_meta(tmp_path) -> None:
     assert "M365 DNS-only Stratified Corroboration" in memo
     assert "Conformal Coverage" in memo
     meta = json.loads(outputs.meta_json.read_text(encoding="utf-8"))
-    assert meta["strata_count"] == 2
-    assert meta["consolidated_domain_count"] == 3
+    assert meta["strata_count"] == 3
+    assert meta["eligible_strata_count"] == 2
+    assert meta["suppressed_strata_count"] == 1
+    assert meta["consolidated_domain_count"] == 23
     assert meta["disclosure"]["memo_rendered_with_disclosure_checks"] is True
 
 
@@ -149,6 +196,7 @@ def test_dry_run_prints_commands_without_calling_runner(tmp_path, capsys) -> Non
 
     assert not outputs.run_dir.exists()
     out = capsys.readouterr().out
+    assert "Corpus preflight: 23 consolidated domain(s), 2/3 eligible stratum file(s)" in out
     assert "validation.reference_calibration" in out
     assert "validation.tenancy_reference_calibration" in out
     assert "validation.conformal_coverage" in out
