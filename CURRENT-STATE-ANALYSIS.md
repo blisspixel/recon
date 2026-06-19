@@ -153,7 +153,8 @@ map now makes the generator inputs reviewable.
 `docs/stability.md` now summarizes the current schema counts from
 `docs/recon-schema.json`: 56 top-level properties and 47 required fields for a
 single-domain success object. `tests/test_stability_docs.py` ties that summary
-to the schema so the count does not drift again.
+to the schema and live MCP tool registry so the JSON and MCP surface counts do
+not drift again.
 
 ## Diff Coverage Signal
 
