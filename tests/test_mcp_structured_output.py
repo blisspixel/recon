@@ -351,6 +351,34 @@ def test_exposure_report_output_schemas_are_precise() -> None:
     assert comparison_props["relative_assessment"]["items"]["$ref"] == "#/$defs/RelativeAssessmentSummary"
 
 
+def test_analyze_posture_output_schema_has_precise_variants() -> None:
+    """Posture analysis advertises list, profiled, and explained variants."""
+    schema = _tool_output_schema("analyze_posture")
+    assert schema["title"] == "analyze_postureOutput"
+
+    result = schema["properties"]["result"]
+    variant_refs = {entry["$ref"] if "$ref" in entry else entry["items"]["$ref"] for entry in result["anyOf"]}
+    assert variant_refs == {
+        "#/$defs/PostureObservationSummary",
+        "#/$defs/PostureAnalysisEnvelope",
+        "#/$defs/ProfiledPostureAnalysisEnvelope",
+        "#/$defs/ExplainedPostureAnalysisEnvelope",
+        "#/$defs/ProfiledExplainedPostureAnalysisEnvelope",
+    }
+
+    observation = schema["$defs"]["PostureObservationSummary"]
+    assert set(observation["required"]) == {"category", "salience", "statement", "related_slugs"}
+    assert observation["properties"]["related_slugs"]["items"]["type"] == "string"
+
+    explained = schema["$defs"]["ExplainedPostureAnalysisEnvelope"]
+    assert set(explained["required"]) == {"observations", "explanations"}
+    explanation = schema["$defs"]["ExplanationSummary"]
+    assert explanation["properties"]["matched_evidence"]["items"]["$ref"] == "#/$defs/EvidenceReferenceSummary"
+
+    profiled = schema["$defs"]["ProfiledExplainedPostureAnalysisEnvelope"]
+    assert "profile_note" in profiled["required"]
+
+
 def test_get_fingerprints_emits_navigable_structured_content() -> None:
     """call_tool surfaces the list as real structured data (not a JSON-string
     blob) plus a serialized-JSON text block for back-compat."""

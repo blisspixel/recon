@@ -13,7 +13,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any, Literal, cast
+from typing import Literal, cast
 
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
@@ -174,6 +174,48 @@ class PostureComparisonResult(TypedDict):
     disclaimer: str
 
 
+class PostureObservationSummary(TypedDict):
+    category: str
+    salience: str
+    statement: str
+    related_slugs: list[str]
+
+
+class ExplanationSummary(TypedDict):
+    item_name: str
+    item_type: str
+    matched_evidence: list[EvidenceReferenceSummary]
+    fired_rules: list[str]
+    confidence_derivation: str
+    weakening_conditions: list[str]
+    curated_explanation: str
+
+
+class PostureAnalysisEnvelope(TypedDict):
+    observations: list[PostureObservationSummary]
+
+
+class ProfiledPostureAnalysisEnvelope(PostureAnalysisEnvelope):
+    profile_note: str
+
+
+class ExplainedPostureAnalysisEnvelope(PostureAnalysisEnvelope):
+    explanations: list[ExplanationSummary]
+
+
+class ProfiledExplainedPostureAnalysisEnvelope(ExplainedPostureAnalysisEnvelope):
+    profile_note: str
+
+
+AnalyzePostureOutput = (
+    list[PostureObservationSummary]
+    | PostureAnalysisEnvelope
+    | ProfiledPostureAnalysisEnvelope
+    | ExplainedPostureAnalysisEnvelope
+    | ProfiledExplainedPostureAnalysisEnvelope
+)
+
+
 # Keyword groups for hypothesis matching — maps keywords to signal/slug categories
 _HYPOTHESIS_KEYWORDS: dict[str, list[str]] = {
     "migration": ["migration", "migrate", "transition", "moving", "switching"],
@@ -201,7 +243,7 @@ async def analyze_posture(
     domain: str,
     explain: bool = False,
     profile: str | None = None,
-) -> list[dict[str, Any]] | dict[str, Any]:
+) -> AnalyzePostureOutput:
     """Analyze a domain's configuration posture and return neutral observations.
 
     Returns factual observations about the domain's email security, identity,
@@ -257,7 +299,7 @@ async def analyze_posture(
         elapsed_s=round(elapsed, 2),
     )
 
-    result_list = format_posture_observations(observations)
+    result_list = cast(list[PostureObservationSummary], format_posture_observations(observations))
 
     if explain:
         from recon_tool.explanation import explain_observations, serialize_explanation
@@ -265,11 +307,10 @@ async def analyze_posture(
 
         posture_rules = load_posture_rules()
         explanation_records = explain_observations(observations, posture_rules, info.evidence, info.detection_scores)
-        explanations = [serialize_explanation(rec) for rec in explanation_records]
-        payload: dict[str, Any] = {"observations": result_list, "explanations": explanations}
+        explanations = cast(list[ExplanationSummary], [serialize_explanation(rec) for rec in explanation_records])
         if profile_note:
-            payload["profile_note"] = profile_note
-        return payload
+            return {"observations": result_list, "explanations": explanations, "profile_note": profile_note}
+        return {"observations": result_list, "explanations": explanations}
 
     if profile_note:
         return {"observations": result_list, "profile_note": profile_note}
