@@ -163,11 +163,12 @@ rules are in [release-process.md](release-process.md#version-numbering).
   runner, validation-runner path-containment hardening, the calibration
   corpus-shape preflight, the generated surface-inventory drift gate, the
   generated maintainer context-packet inventory, and PR-scoped ClusterFuzzLite
-  parser-boundary fuzzing. Current `main` also has an incremental nested schema
-  drift guard that ties model-backed JSON Schema `$defs` to their dataclass
-  fields while the full schema-generation backlog remains open, and a PLR
-  size-rule ratchet prevents new function-size debt while existing violations
-  are paid down. The remaining order is private-corpus
+  parser-boundary fuzzing. Current `main` also has incremental schema drift
+  guards that tie model-backed JSON Schema `$defs` to their dataclass fields and
+  trace every top-level schema property to a `TenantInfo` field or explicit
+  formatter/mode source while the full schema-generation backlog remains open,
+  and a PLR size-rule ratchet prevents new function-size debt while existing
+  violations are paid down. The remaining order is private-corpus
   calibration runs, aggregate-only validation memos, optional reviewed
   maintainer loops around those deterministic gates, and the decision whether
   the derived inventory ever becomes a stable surface. These are
@@ -2329,10 +2330,12 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   maintaining it manually.** The schema currently lives as a
   hand-maintained JSON file; drift between code and schema is a
   recurring failure mode. The current guard covers top-level formatter output,
-  required-field symmetry, internal `$defs` references, and model-backed nested
-  `$defs` field names. The remaining step is a `scripts/generate_schema.py`
-  that derives the schema from the `TenantInfo` dataclass plus field metadata,
-  then runs in CI to verify the generated schema matches the committed one.
+  required-field symmetry, internal `$defs` references, model-backed nested
+  `$defs` field names, and a top-level source map from schema properties to
+  `TenantInfo` fields or explicit formatter/mode sources. The remaining step is
+  a `scripts/generate_schema.py` that derives the schema from the `TenantInfo`
+  dataclass plus field metadata, then runs in CI to verify the generated schema
+  matches the committed one.
   Stays inside the pure-Python floor (the generator runs over Python typing
   introspection, no JSON-Schema framework required). Pairs with the v2.0
   schema-stability test that fails any committed schema change without a major

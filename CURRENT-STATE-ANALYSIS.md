@@ -143,6 +143,13 @@ the stable JSON envelope. This does not replace the future schema generator, but
 it closes the immediate risk that a nested model field moves without the
 hand-maintained JSON Schema noticing.
 
+`scripts/check_schema_sources.py` now adds the top-level companion guard. It
+traces each `docs/recon-schema.json` property to a `TenantInfo` dataclass field
+or an explicit formatter, static-envelope, batch-mode, or explain-mode source,
+and it fails if a new `TenantInfo` field is left unrepresented without an
+intentional omission. The full schema generator remains open, but the source
+map now makes the generator inputs reviewable.
+
 ## Diff Coverage Signal
 
 `scripts/diff_coverage.py` is now available as an advisory maintainer signal.

@@ -57,6 +57,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
   attempting a generator. Model-backed nested `$defs` should be tied to
   dataclass field sets, and any intentional omission should be explicit in the
   test.
+- For schema-generator prep, add a source map before code generation. Every
+  top-level schema property should trace to a model field, formatter-derived
+  value, static envelope field, or mode-specific extension.
 - For CLI surface docs, generate Markdown from the live Typer command tree and
   gate it in `scripts/check.py`; do not maintain command and flag tables by hand.
 - For release notes about CLI command or flag changes, compare generated
