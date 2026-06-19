@@ -36,6 +36,32 @@ class BundleOutputs:
     meta_json: Path
 
 
+@dataclass(frozen=True)
+class StratumPreflight:
+    name: str
+    domain_count: int
+    eligible: bool
+
+
+@dataclass(frozen=True)
+class CorpusPreflight:
+    min_cell: int
+    consolidated_domain_count: int
+    strata: tuple[StratumPreflight, ...]
+
+    @property
+    def stratum_count(self) -> int:
+        return len(self.strata)
+
+    @property
+    def eligible_strata_count(self) -> int:
+        return sum(1 for stratum in self.strata if stratum.eligible)
+
+    @property
+    def suppressed_strata_count(self) -> int:
+        return self.stratum_count - self.eligible_strata_count
+
+
 def _utc_stamp() -> str:
     return datetime.now(UTC).strftime("%Y%m%d-%H%M%SZ")
 
@@ -50,10 +76,38 @@ def _count_domains(path: Path) -> int:
     )
 
 
-def _count_strata(directory: Path) -> int:
-    if not directory.exists():
-        return 0
-    return sum(1 for path in directory.glob("*.txt") if path.is_file())
+def preflight_corpus_inputs(*, stratify_dir: Path, consolidated: Path, min_cell: int = 10) -> CorpusPreflight:
+    """Check private corpus inputs before any network calibration run starts."""
+    if min_cell < 1:
+        raise ValueError("min-cell must be at least 1")
+    if not stratify_dir.is_dir():
+        raise FileNotFoundError(f"stratify directory not found: {stratify_dir}")
+    if not consolidated.is_file():
+        raise FileNotFoundError(f"consolidated corpus not found: {consolidated}")
+
+    stratum_preflights: list[StratumPreflight] = []
+    for path in sorted(stratify_dir.glob("*.txt")):
+        if not path.is_file():
+            continue
+        domain_count = _count_domains(path)
+        stratum_preflights.append(
+            StratumPreflight(name=path.stem, domain_count=domain_count, eligible=domain_count >= min_cell)
+        )
+    strata = tuple(stratum_preflights)
+    if not strata:
+        raise ValueError(f"no stratum files found under: {stratify_dir}")
+
+    consolidated_count = _count_domains(consolidated)
+    if consolidated_count < min_cell:
+        raise ValueError(f"consolidated corpus has {consolidated_count} domain(s), below min-cell {min_cell}")
+    if not any(stratum.eligible for stratum in strata):
+        raise ValueError(f"no stratum has at least min-cell {min_cell} domain(s)")
+
+    return CorpusPreflight(
+        min_cell=min_cell,
+        consolidated_domain_count=consolidated_count,
+        strata=strata,
+    )
 
 
 def _default_runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
@@ -132,10 +186,11 @@ def run_bundle(
     runner: CommandRunner = _default_runner,
 ) -> BundleOutputs:
     """Run all calibration harnesses and render the aggregate memo."""
-    if not stratify_dir.is_dir():
-        raise FileNotFoundError(f"stratify directory not found: {stratify_dir}")
-    if not consolidated.is_file():
-        raise FileNotFoundError(f"consolidated corpus not found: {consolidated}")
+    preflight = preflight_corpus_inputs(
+        stratify_dir=stratify_dir,
+        consolidated=consolidated,
+        min_cell=min_cell,
+    )
 
     run_stamp = validate_run_stamp(_utc_stamp() if stamp is None else stamp)
     run_dir = contained_child(output_root, run_stamp)
@@ -150,6 +205,12 @@ def run_bundle(
     if dry_run:
         print(f"Dry run for calibration bundle {run_stamp}")
         print(f"Run directory would be: {run_dir}")
+        print(
+            "Corpus preflight: "
+            f"{preflight.consolidated_domain_count} consolidated domain(s), "
+            f"{preflight.eligible_strata_count}/{preflight.stratum_count} eligible stratum file(s), "
+            f"{preflight.suppressed_strata_count} below min-cell {preflight.min_cell}."
+        )
     else:
         run_dir.mkdir(parents=True, exist_ok=False)
 
@@ -218,8 +279,10 @@ def run_bundle(
         "label": label,
         "stratify_dir": str(stratify_dir),
         "consolidated_corpus": str(consolidated),
-        "strata_count": _count_strata(stratify_dir),
-        "consolidated_domain_count": _count_domains(consolidated),
+        "strata_count": preflight.stratum_count,
+        "eligible_strata_count": preflight.eligible_strata_count,
+        "suppressed_strata_count": preflight.suppressed_strata_count,
+        "consolidated_domain_count": preflight.consolidated_domain_count,
         "min_cell": min_cell,
         "bins": bins,
         "concurrency": concurrency,

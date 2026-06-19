@@ -343,7 +343,8 @@ mechanism and the test that keeps it, is in
   tier ([docs/statistical-assurance.md](docs/statistical-assurance.md)).
 - **Validation hygiene checks** that keep private corpus paths, per-domain JSON
   dumps, and target-domain fields out of committed validation artifacts, plus
-  an aggregate memo renderer that rejects undersized strata before publication
+  a private-corpus preflight and aggregate memo renderer that reject undersized
+  inputs and strata before live runs or publication
   ([docs/data-handling-policy.md](docs/data-handling-policy.md)).
 
 ## Development

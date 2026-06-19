@@ -160,9 +160,10 @@ rules are in [release-process.md](release-process.md#version-numbering).
   calendar estimate. Current `main` now has the local release-readiness
   preflight, the Scorecard-facing supply-chain posture pass, the
   pinned-workflow supply-chain pass, the maintainer-local calibration bundle
-  runner, validation-runner path-containment hardening, the generated
-  surface-inventory drift gate, and PR-scoped ClusterFuzzLite parser-boundary
-  fuzzing. The remaining order is private-corpus
+  runner, validation-runner path-containment hardening, the calibration
+  corpus-shape preflight, the generated surface-inventory drift gate, and
+  PR-scoped ClusterFuzzLite parser-boundary fuzzing. The remaining order is
+  private-corpus
   calibration runs, aggregate-only validation memos, optional reviewed
   maintainer loops around those deterministic gates, and the decision whether
   the derived inventory ever becomes a stable surface. These are
@@ -211,11 +212,15 @@ What remains is dependency-ordered work with no calendar estimates:
    The harnesses are built and unit-tested, and
    `validation/run_calibration_bundle.py` now runs the gitignored corpus to
    aggregate JSON and feeds `validation/render_calibration_memo.py`, the
-   publication boundary. The next operator action is to run that local bundle,
-   review `memo.md`, and commit only aggregate metrics. The run order is
-   held-out residual calibration, tenancy corroboration, per-vertical
-   stratification (`--stratify-dir`), conformal coverage, and the C3 CT-enabled
-   full-corpus pass. The committed memo must follow
+   publication boundary. The bundle now performs a no-network corpus preflight
+   first: the consolidated corpus must meet `--min-cell`, at least one
+   per-stratum file must meet `--min-cell`, and dry runs report eligible versus
+   suppressed strata before any live resolution starts. The next operator
+   action is to run that local bundle, review `memo.md`, and commit only
+   aggregate metrics. The run order is held-out residual calibration, tenancy
+   corroboration, per-vertical stratification (`--stratify-dir`), conformal
+   coverage, and the C3 CT-enabled full-corpus pass. The committed memo must
+   follow
    [data-handling-policy.md](data-handling-policy.md): no apexes, no
    organization names, no tenant IDs, no per-domain output, and no published
    stratum below 10 domains. *Design:* [statistical-assurance.md](statistical-assurance.md),

@@ -69,7 +69,8 @@ Current maintainer-loop deltas from 2026-06-19 include generated surface
   inventory checks, the `recon://surface-inventory` local discovery resource,
   PR-scoped ClusterFuzzLite parser-boundary fuzzing, public paper-number
   reproduction tooling, shared
-  validation-runner path-containment hardening, cache edge coverage,
+  validation-runner path-containment hardening, calibration corpus-shape
+  preflight, cache edge coverage,
   high-value-target baseline expectations, and a first production
   `match_mode: all` fingerprint for CrowdStrike TXT evidence. The public
 catalog-growth queue also now includes a Supabase CNAME target sourced from the
@@ -213,7 +214,10 @@ per-harness outputs. The default `paper` profile runs the full public synthetic
 and proof bundle. `--profile smoke` validates the orchestrator quickly. Its
 optional `--stamp` is validated as a single safe path segment before artifact
 paths are resolved under the output root. Private corpus calibration remains
-maintainer-local.
+maintainer-local, but the bundle now performs a local preflight before any
+network harness starts: the consolidated corpus must meet the configured
+`--min-cell`, at least one stratum file must be publishable, and dry runs report
+eligible and suppressed strata.
 
 ## Agent Surface Inventory
 
