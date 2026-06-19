@@ -52,6 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and fingerprint proposal loop contract with ignored local state,
   deterministic gates, explicit stop conditions, spend tracking, and maintainer
   review boundaries.
+- **Nested schema drift guard.** Added tests that bind model-backed JSON Schema
+  `$defs` to their dataclass field sets, with explicit exceptions for
+  intentionally omitted JSON fields.
 - **MCP output schema precision.** Added precise `TypedDict` item schemas for
   `get_fingerprints`, `get_signals`, `explain_signal`, the simple
   ephemeral-fingerprint session tools, the graph data tools, and the compact

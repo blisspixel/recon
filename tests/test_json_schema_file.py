@@ -17,12 +17,29 @@ emitter.
 from __future__ import annotations
 
 import json
+from dataclasses import fields
 from pathlib import Path
 
 import pytest
 
 from recon_tool.formatter import format_tenant_json
-from recon_tool.models import TenantInfo
+from recon_tool.models import (
+    BIMIIdentity,
+    CertBurst,
+    CertSummary,
+    ChainMotifObservation,
+    DeltaReport,
+    EvidenceRecord,
+    InfrastructureCluster,
+    InfrastructureClusterReport,
+    NodeConflict,
+    NodeEvidence,
+    NodeUnitCounterfactual,
+    PosteriorObservation,
+    SurfaceAttribution,
+    TenantInfo,
+    UnclassifiedCnameChain,
+)
 
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "docs" / "recon-schema.json"
 
@@ -103,6 +120,50 @@ def test_batch_mode_defs_present(schema: dict) -> None:
     defs = schema.get("$defs", {})
     for name in ("BatchArray", "BatchNdjsonRecord", "BatchResult", "BatchErrorRecord"):
         assert name in defs, f"missing $defs/{name}"
+
+
+@pytest.mark.parametrize(
+    ("def_name", "model", "omitted_fields", "schema_only_fields"),
+    [
+        ("BIMIIdentity", BIMIIdentity, set(), set()),
+        ("CertBurst", CertBurst, set(), set()),
+        ("CertSummary", CertSummary, set(), set()),
+        ("ChainMotif", ChainMotifObservation, set(), set()),
+        ("DeltaReport", DeltaReport, set(), {"record_type"}),
+        ("EvidenceRecord", EvidenceRecord, set(), set()),
+        ("InfrastructureCluster", InfrastructureCluster, set(), set()),
+        ("InfrastructureClusterReport", InfrastructureClusterReport, {"edges"}, set()),
+        ("NodeConflict", NodeConflict, set(), set()),
+        ("NodeEvidence", NodeEvidence, set(), set()),
+        ("NodeUnitCounterfactual", NodeUnitCounterfactual, set(), set()),
+        ("PosteriorObservation", PosteriorObservation, set(), set()),
+        ("SurfaceAttribution", SurfaceAttribution, set(), set()),
+        ("UnclassifiedCnameChain", UnclassifiedCnameChain, set(), set()),
+    ],
+)
+def test_model_backed_defs_match_dataclass_fields(
+    schema: dict,
+    def_name: str,
+    model: type,
+    omitted_fields: set[str],
+    schema_only_fields: set[str],
+) -> None:
+    """Model-backed $defs must move with their dataclasses.
+
+    The schema remains hand-maintained, but nested model docs should not silently
+    lose or invent fields. Intentional exceptions are explicit here: for example
+    raw infrastructure graph edges are MCP-only and not part of the default JSON
+    envelope.
+    """
+    definition = schema["$defs"][def_name]
+    schema_fields = set(definition["properties"])
+    model_fields = {field.name for field in fields(model)} - omitted_fields
+
+    missing = model_fields - schema_fields
+    unexpected = schema_fields - model_fields - schema_only_fields
+
+    assert not missing, f"{def_name} schema is missing model fields: {sorted(missing)}"
+    assert not unexpected, f"{def_name} schema has fields not on {model.__name__}: {sorted(unexpected)}"
 
 
 def test_schema_contract_constant_matches_required(schema: dict) -> None:
