@@ -38,4 +38,24 @@ planning artifact and does not replace `CHANGELOG.md`.
   passed with 14 tests.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.15 percent. Tests: 3370 passed, 5 skipped, 4 deselected.
+- Started the third cycle from the agent and surface-inventory drift guard
+  track.
+- Extended `scripts/generate_surface_inventory.py` so
+  `docs/surface-inventory.json` now includes agent guidance files, client MCP
+  config templates, Claude Code plugin manifest metadata, and live MCP approval
+  sets derived from tool annotations.
+- Corrected the Claude Code plugin approval note so it no longer claims every
+  MCP tool is read-only. It now names the three local stateful tools and
+  describes the read-only split.
+- Added `tests/test_surface_inventory.py` coverage for agent guidance
+  frontmatter, client config keys, manual approval defaults, and the stateful
+  MCP tool set.
+- Focused validation:
+  `uv run python -m pytest tests/test_surface_inventory.py tests/test_mcp_tool_annotations.py -q`
+  passed with 8 tests.
+- Focused lint:
+  `uv run python -m ruff check scripts/generate_surface_inventory.py tests/test_surface_inventory.py`
+  passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.17 percent. Tests: 3371 passed, 5 skipped, 4 deselected.
 - External spend: 0 USD.

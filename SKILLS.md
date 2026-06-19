@@ -24,6 +24,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - When agent documentation mentions MCP approval, keep the stateful tool split
   explicit: ephemeral fingerprint mutation and data reload are session-local
   mutations even though most recon tools are read-only.
+- When a generated inventory is meant to help agents, include both machine
+  surfaces and the guidance surfaces that teach clients how to call them. Pin
+  the generated approval model to live MCP annotations, not copied prose.
 - Track external spend explicitly. Default spend is 0 USD.
 - Before closing a cycle, run the narrow relevant gate. Before claiming repo
   readiness, run `uv run python scripts/check.py`.
