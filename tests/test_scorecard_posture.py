@@ -10,6 +10,40 @@ import yaml
 
 _ROOT = Path(__file__).resolve().parents[1]
 _PINNED_ACTION_RE = r"^[^@]+@[0-9a-f]{40}$"
+_READ_ONLY_PERMISSIONS = {"contents": "read"}
+_ALLOWED_ELEVATED_JOB_PERMISSIONS = {
+    ".github/workflows/codeql.yml": {
+        "analyze": {
+            "actions": "read",
+            "contents": "read",
+            "security-events": "write",
+        },
+    },
+    ".github/workflows/release.yml": {
+        "attest": {
+            "contents": "read",
+            "id-token": "write",
+            "attestations": "write",
+        },
+        "publish-pypi": {
+            "id-token": "write",
+        },
+        "github-release": {
+            "contents": "write",
+        },
+    },
+    ".github/workflows/scorecard.yml": {
+        "analysis": {
+            "contents": "read",
+            "security-events": "write",
+            "id-token": "write",
+        },
+    },
+}
+
+
+def _workflow_paths() -> list[Path]:
+    return sorted((_ROOT / ".github" / "workflows").glob("*.yml"))
 
 
 def _load_yaml(relative: str) -> dict[Any, Any]:
@@ -24,22 +58,38 @@ def _workflow_on(workflow: dict[Any, Any]) -> dict[str, Any]:
     return raw
 
 
-def test_ci_and_mutation_workflows_default_to_read_only_tokens() -> None:
-    for relative in (".github/workflows/ci.yml", ".github/workflows/mutation.yml"):
+def test_all_workflows_default_to_read_only_tokens() -> None:
+    for path in _workflow_paths():
+        relative = path.relative_to(_ROOT).as_posix()
         workflow = _load_yaml(relative)
-        assert workflow["permissions"] == {"contents": "read"}
+        assert workflow["permissions"] == _READ_ONLY_PERMISSIONS, relative
+
+
+def test_elevated_job_permissions_are_allowlisted() -> None:
+    for path in _workflow_paths():
+        relative = path.relative_to(_ROOT).as_posix()
+        workflow = _load_yaml(relative)
+        jobs = workflow["jobs"]
+        allowed = _ALLOWED_ELEVATED_JOB_PERMISSIONS.get(relative, {})
+        seen_elevated: set[str] = set()
+
+        for name, job in jobs.items():
+            permissions = job.get("permissions")
+            if permissions is None or permissions == _READ_ONLY_PERMISSIONS:
+                continue
+
+            seen_elevated.add(name)
+            assert permissions == allowed.get(name), f"{relative}:{name}"
+
+        assert seen_elevated == set(allowed), relative
 
 
 def test_scorecard_workflow_uses_explicit_least_privilege_permissions() -> None:
     workflow = _load_yaml(".github/workflows/scorecard.yml")
     job = workflow["jobs"]["analysis"]
 
-    assert workflow["permissions"] == {"contents": "read"}
-    assert job["permissions"] == {
-        "contents": "read",
-        "security-events": "write",
-        "id-token": "write",
-    }
+    assert workflow["permissions"] == _READ_ONLY_PERMISSIONS
+    assert job["permissions"] == _ALLOWED_ELEVATED_JOB_PERMISSIONS[".github/workflows/scorecard.yml"]["analysis"]
 
 
 def test_release_workflow_exports_scorecard_recognized_provenance() -> None:
@@ -67,12 +117,8 @@ def test_codeql_workflow_is_scheduled_and_least_privilege() -> None:
     assert "schedule" in triggers
     assert "workflow_dispatch" in triggers
     assert "push" not in triggers
-    assert workflow["permissions"] == {"contents": "read"}
-    assert job["permissions"] == {
-        "actions": "read",
-        "contents": "read",
-        "security-events": "write",
-    }
+    assert workflow["permissions"] == _READ_ONLY_PERMISSIONS
+    assert job["permissions"] == _ALLOWED_ELEVATED_JOB_PERMISSIONS[".github/workflows/codeql.yml"]["analyze"]
     assert "github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e" in step_text
     assert "github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e" in step_text
 
