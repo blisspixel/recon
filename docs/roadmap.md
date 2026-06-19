@@ -273,11 +273,10 @@ Research and consider:
 - A derived docs bundle for maintainer runbooks if the same context is being
   copied into multiple agents. OKF remains only a packaging candidate, not a
   recon findings export.
-- A tiny maintainer-loop runbook for CI triage or calibration runs, but only
-  where the task repeats, the verifier is automated, the token and runtime cost
-  is bounded, and the loop has the same tools a maintainer would use locally.
-  Track cost per accepted change; a loop that usually needs manual rescue is
-  not buying its keep.
+- Done 2026-06-19: added `docs/maintainer-loop-runbook.md`, a compact
+  maintainer-loop contract for CI triage, private calibration, and fingerprint
+  proposal loops. It requires an ignored state file, deterministic gates, stop
+  conditions, spend tracking, and maintainer review for semantic changes.
 - Diff coverage as an additional maintainer signal, only if it stays local-first
   and does not make small documentation changes painful.
 
@@ -321,12 +320,11 @@ want them, give those loops explicit stop conditions and gates, and keep the
 installed user path exactly what it is today: local CLI, library, JSON, and MCP
 surfaces that require no AI assistant.
 
-Minimum viable maintainer loop, if one is worth adding: one automation trigger,
-one scoped runbook or skill, one state file so the next run does not rediscover
-the same facts, and one hard gate such as `scripts/check.py`, release readiness,
-mutation, schema drift, or an aggregate-only calibration metric. The gate is the
-point. Without it, the loop is just an expensive reminder to review the work by
-hand.
+The minimum viable maintainer-loop contract now lives in
+[maintainer-loop-runbook.md](maintainer-loop-runbook.md): one context packet, one
+ignored state file, one deterministic gate, and one explicit stop condition. The
+gate is the point. Without it, the loop is just an expensive reminder to review
+the work by hand.
 
 ## Pre-2.0 hardening (shipped) and the road past v2.0
 

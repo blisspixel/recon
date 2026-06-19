@@ -5,6 +5,25 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Added `docs/maintainer-loop-runbook.md` for optional maintainer loops around
+  CI failure triage, private calibration, and fingerprint proposal work.
+- The runbook pins context packet loading, ignored local state, deterministic
+  gates, explicit stop conditions, spend tracking from 0 USD, and maintainer
+  review for semantic changes.
+- Linked the runbook from the docs index and PV2 maintainer-validation doc, and
+  marked the roadmap research item done.
+- Added `tests/test_maintainer_loop_runbook.py` to keep the loop shapes,
+  preflight/hygiene gates, spend rule, local state path, and agentic boundary in
+  place.
+- Focused validation:
+  `uv run python -m pytest tests/test_maintainer_loop_runbook.py tests/test_markdown_links.py -q`
+  passed with 5 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check tests/test_maintainer_loop_runbook.py` and
+  `uv run python -m pyright tests/test_maintainer_loop_runbook.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.50 percent. Tests: 3474 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Added a local corpus preflight to the maintainer calibration bundle.
 - The preflight rejects a missing or too-small consolidated corpus, rejects
   runs where every stratum is below `--min-cell`, and reports eligible versus

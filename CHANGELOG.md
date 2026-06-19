@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checks the consolidated corpus size and per-stratum `--min-cell` eligibility
   before any network harness starts, and dry runs report eligible and suppressed
   strata.
+- **Maintainer loop runbook.** Added a compact CI triage, private calibration,
+  and fingerprint proposal loop contract with ignored local state,
+  deterministic gates, explicit stop conditions, spend tracking, and maintainer
+  review boundaries.
 - **MCP output schema precision.** Added precise `TypedDict` item schemas for
   `get_fingerprints`, `get_signals`, `explain_signal`, the simple
   ephemeral-fingerprint session tools, the graph data tools, and the compact

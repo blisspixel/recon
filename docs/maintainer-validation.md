@@ -4,6 +4,11 @@ A maintainer-side routine, run by an agent rather than by hand, that keeps the
 Bayesian CPT numbers and the fingerprint catalog honest as the world drifts. It
 is maintainer-facing and never something an end user runs.
 
+Use this with the generic loop guardrails in
+[maintainer-loop-runbook.md](maintainer-loop-runbook.md): ignored local state,
+deterministic gates, explicit stop conditions, spend tracking, and maintainer
+review for semantic changes.
+
 The premise sets the discipline: the priors and likelihoods are
 directionally-accurate, corpus-grounded estimates, not values precise to many
 decimals, and they are not meant to be. The credible interval already carries
