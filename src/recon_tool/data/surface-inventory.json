@@ -130,6 +130,52 @@
         "title": "recon-fingerprint-triage"
       }
     ],
+    "maintainer_context_packet": {
+      "files": [
+        {
+          "exists": true,
+          "path": "README.md",
+          "role": "product_scope_and_usage"
+        },
+        {
+          "exists": true,
+          "path": "AGENTS.md",
+          "role": "portable_agent_guidance"
+        },
+        {
+          "exists": true,
+          "path": "docs/agentic-balance.md",
+          "role": "rules_vs_agentic_boundary"
+        },
+        {
+          "exists": true,
+          "path": "docs/roadmap.md",
+          "role": "current_priority_order"
+        },
+        {
+          "exists": true,
+          "path": "docs/maintainer-validation.md",
+          "role": "validation_loop_boundary"
+        },
+        {
+          "exists": true,
+          "path": "validation/README.md",
+          "role": "local_validation_workspace"
+        },
+        {
+          "exists": true,
+          "path": "PROGRESS-LOG.md",
+          "role": "local_loop_history"
+        },
+        {
+          "exists": true,
+          "path": "SKILLS.md",
+          "role": "local_loop_learnings"
+        }
+      ],
+      "source": "docs/maintainer-loop-runbook.md shared loop contract",
+      "stability": "non_contractual_maintainer_loop_context"
+    },
     "mcp_approval": {
       "iterative_agent_tools": [
         "chain_lookup",

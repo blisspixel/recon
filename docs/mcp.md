@@ -220,7 +220,7 @@ recon exposes five MCP resources so agents can browse "what can this tool detect
 | `recon://signals` | Derived intelligence signals with candidate slugs, min_matches, contradicts/requires relationships, and positive-when-absent inversions |
 | `recon://profiles` | Built-in posture profile lenses (category boosts, signal boosts, focus categories) |
 | `recon://schema` | The JSON-output contract as a JSON Schema (the same document as `docs/recon-schema.json`), so an agent can self-describe the shape of `recon <domain> --json` (plus the batch / delta modes in its `$defs`) without an external fetch. The contract version is in the schema's own `description`. |
-| `recon://surface-inventory` | Generated, non-contractual local map of the CLI, MCP tools, MCP resources, JSON schema, and agent integration surfaces. It is the same inventory as `docs/surface-inventory.json`. |
+| `recon://surface-inventory` | Generated, non-contractual local map of the CLI, MCP tools, MCP resources, JSON schema, agent integration surfaces, and maintainer-loop context packet. It is the same inventory as `docs/surface-inventory.json`. |
 
 The catalog resources return deterministic JSON sourced from the already-loaded YAML catalogs; `recon://schema` returns the bundled schema document; `recon://surface-inventory` returns the bundled generated inventory. No network calls. Changes to custom `~/.recon/fingerprints/` or `~/.recon/signals.yaml` require calling `reload_data` to take effect. The surface inventory is for local discovery and drift checks, not compatibility promises.
 

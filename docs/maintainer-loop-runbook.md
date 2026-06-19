@@ -35,6 +35,10 @@ The state file is operational memory, not product memory. It must not contain
 real apexes, organization names, tenant IDs, per-domain findings, or private
 corpus paths outside the ignored local workspace.
 
+The same context packet is exposed under `agent_surfaces.maintainer_context_packet`
+in the generated `docs/surface-inventory.json` and `recon://surface-inventory`
+resource. That entry is generated discovery context, not a stable API contract.
+
 ## CI Failure Triage Loop
 
 Use when a pull request or local branch has a failing check.
