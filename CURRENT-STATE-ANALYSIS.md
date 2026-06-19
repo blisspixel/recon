@@ -126,7 +126,7 @@ The public tree already contains substantial assurance:
 Current local verification in this session:
 
 - `uv run python scripts/check.py` passed.
-- Coverage was 86.14 percent, above the 82 percent configured gate.
+- Coverage was 86.16 percent, above the 82 percent configured gate.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -217,6 +217,11 @@ reference. It is derived from the same live Typer command tree as
 `docs/surface-inventory.json`, checked by `scripts/check.py`, and intended for
 maintainers, skill authors, and agent prompts that need current CLI usage without
 copying README snippets.
+
+`scripts/summarize_cli_surface_changes.py` compares two generated surface
+inventories and emits the one-line `### Tool Surface Changes` changelog entry
+required by `docs/release-process.md`. It supports `--old-ref vX.Y.Z` for local
+tag comparisons without shell redirection.
 
 ## Bayesian Calibration Data
 

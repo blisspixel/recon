@@ -29,6 +29,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
   the generated approval model to live MCP annotations, not copied prose.
 - For CLI surface docs, generate Markdown from the live Typer command tree and
   gate it in `scripts/check.py`; do not maintain command and flag tables by hand.
+- For release notes about CLI command or flag changes, compare generated
+  `docs/surface-inventory.json` files with
+  `scripts/summarize_cli_surface_changes.py`; do not diff help output manually.
 - For Bayesian tuning knobs, prefer committed data in `bayesian_network.yaml`
   with loader defaults and invariant tests over module-level engine constants.
   Keep behavior unchanged at default values and update trust docs in the same
