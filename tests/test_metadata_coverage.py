@@ -147,6 +147,28 @@ class TestCoverageGate:
         assert "ai" in result.stdout
         assert "category" in result.stdout
 
+    def test_richness_audit_recognizes_binding_scope_language(self, tmp_path: Path) -> None:
+        corpus = _make_corpus(
+            tmp_path,
+            {
+                "security": [
+                    {
+                        "type": "txt",
+                        "pattern": "binding-token",
+                        "description": (
+                            "Vendor domain-verification TXT. Indicates the domain is bound "
+                            "to a SaaS account for SSO or provisioning. Account-binding "
+                            "signal only."
+                        ),
+                    },
+                ],
+            },
+        )
+        result = _run_script(corpus, "--report-richness")
+        assert result.returncode == 0
+        assert "scope-narrow" in result.stdout
+        assert "slug-security-0" not in result.stdout
+
     def test_failure_lists_exact_gap_locations(self, tmp_path: Path) -> None:
         """Per-detection gap report on failure: the script emits the
         exact slug and detection pattern of every detection missing a
@@ -213,3 +235,26 @@ class TestCoverageGate:
             "Shipped catalog must be at 100 percent description coverage. "
             f"Script output:\n{result.stdout}\n{result.stderr}"
         )
+
+    def test_shipped_verification_reference_enrichment_stays_pinned(self) -> None:
+        catalog = yaml.safe_load(
+            (REPO_ROOT / "src" / "recon_tool" / "data" / "fingerprints" / "verifications.yaml").read_text(
+                encoding="utf-8",
+            ),
+        )
+        by_slug = {entry["slug"]: entry for entry in catalog["fingerprints"]}
+
+        expected_refs = {
+            "monday": "https://support.monday.com/hc/en-us/articles/18705654232466-Claim-your-business-domain-on-monday-com",
+            "zoom": "https://developers.zoom.us/docs/build-flow/verify-domains/",
+            "formstack": "https://help.formstack.com/hc/en-us/articles/44591944597395-How-to-Claim-Your-Domain",
+            "coda": "https://help.coda.io/hc/en-us/articles/39555872211341-Add-and-verify-owned-domains",
+            "virtru": "https://support.virtru.com/hc/en-us/articles/360011815534-Prerequisites-to-Virtru-Gateway-Setup",
+        }
+
+        for slug, reference in expected_refs.items():
+            detections = by_slug[slug]["detections"]
+            assert len(detections) == 1
+            detection = detections[0]
+            assert detection["reference"] == reference
+            assert "domain-verification TXT" in detection["description"]

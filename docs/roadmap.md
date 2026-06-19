@@ -2406,8 +2406,9 @@ are picked up alongside the build plan above.
   evidence and a regression domain in local validation notes.
 - Add one high-confidence fingerprint for a service that publishes a stable
   verification TXT, MX, CNAME, NS, SRV, or CAA pattern.
-- Enrich 3-5 fingerprints in an under-described category with descriptions,
-  public references where available, and tighter patterns.
+- Done 2026-06-19: enrich 5 verification-token fingerprints with official
+  public references, and update the advisory metadata richness audit to
+  recognize binding-signal scope language without changing detection patterns.
 - Improve a sparse-result explanation for a known weak area without adding new
   network calls.
 - Add a short weak-area note when a fingerprint has common legitimate

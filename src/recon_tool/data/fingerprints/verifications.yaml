@@ -507,6 +507,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^monday-com-verification=
+    reference: https://support.monday.com/hc/en-us/articles/18705654232466-Claim-your-business-domain-on-monday-com
     description: >-
       Monday.com domain-verification TXT (`monday-com-verification=`). Indicates the
       domain is bound to a Monday.com account or tenant for SSO /
@@ -519,6 +520,7 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^zoom-domain-verification=
+    reference: https://developers.zoom.us/docs/build-flow/verify-domains/
     description: >-
       Zoom domain-verification TXT (`zoom-domain-verification=`). Indicates the
       domain is bound to a Zoom account or tenant for SSO /
@@ -910,9 +912,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^formstack-domain-verification=
+    reference: https://help.formstack.com/hc/en-us/articles/44591944597395-How-to-Claim-Your-Domain
     description: >-
       Formstack (forms / workflow) domain-verification TXT
-      (`formstack-domain-verification=`). Account-binding signal only.
+      (`formstack-domain-verification=`). Indicates the domain is claimed
+      in Formstack's domain workflow. Account-binding signal only; it
+      does not prove active form usage.
 - name: AbuseIPDB
   slug: abuseipdb
   category: Security
@@ -1055,9 +1060,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^coda-verification=
+    reference: https://help.coda.io/hc/en-us/articles/39555872211341-Add-and-verify-owned-domains
     description: >-
       Coda (docs / workspace) domain-verification TXT
-      (`coda-verification=`). Account-binding signal only.
+      (`coda-verification=`). Indicates the domain is verified as an
+      owned domain in Coda. Account-binding signal only; it does not
+      prove active doc or workspace usage.
 - name: Nulab
   slug: nulab
   category: Business Apps
@@ -1085,9 +1093,12 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^virtru-site-verify=
+    reference: https://support.virtru.com/hc/en-us/articles/360011815534-Prerequisites-to-Virtru-Gateway-Setup
     description: >-
       Virtru (email / file encryption) domain-verification TXT
-      (`virtru-site-verify=`). Account-binding signal only.
+      (`virtru-site-verify=`). Indicates the domain has a Virtru
+      ownership-check record for gateway setup. Account-binding signal
+      only; it does not prove encrypted mail is actively flowing.
 - name: Botify
   slug: botify
   category: Business Apps

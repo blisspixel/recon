@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Automation parser examples.** Added docs for consuming single lookup,
   batch array, batch wrapper, NDJSON, delta, and cohort-summary JSON modes,
   with tests that parse the snippets against the schema and runtime classifier.
+- **Verification fingerprint metadata.** Added official references for five
+  verification-token fingerprints and taught the advisory richness audit to
+  recognize account-binding, program-binding, and tenant-binding scope language.
 - **Workflow action pinning.** Pinned every GitHub Actions dependency to a full
   commit SHA, replaced the actionlint download-and-run step with a pinned action,
   removed installer-side pipx bootstrapping, and added a local / CI gate that

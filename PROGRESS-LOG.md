@@ -190,3 +190,23 @@ planning artifact and does not replace `CHANGELOG.md`.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.16 percent. Tests: 3396 passed, 5 skipped, 4 deselected.
 - External spend: 0 USD.
+- Started the tenth cycle from the roadmap's under-described fingerprint
+  metadata item.
+- Added official reference URLs for five high-confidence verification-token
+  fingerprints: Monday.com, Zoom, Formstack, Coda, and Virtru.
+- Tightened the short Formstack, Coda, and Virtru descriptions so they name the
+  observable binding and retain the "does not prove active usage" hedge.
+- Updated the advisory metadata richness audit to recognize account-binding,
+  program-binding, and tenant-binding wording as scope narrowing.
+- Added tests pinning the binding-language heuristic and the five shipped
+  verification references.
+- Focused validation:
+  `uv run python -m pytest tests/test_metadata_coverage.py tests/test_fingerprints.py tests/test_package_invariants.py -q`
+  passed with 56 tests.
+- Focused lint and catalog checks passed:
+  `uv run python -m ruff check scripts/check_metadata_coverage.py tests/test_metadata_coverage.py`,
+  `python scripts/validate_fingerprint.py src/recon_tool/data/fingerprints/verifications.yaml --quiet`,
+  and `uv run python scripts/check_metadata_coverage.py --report-richness`.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.16 percent. Tests: 3398 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
