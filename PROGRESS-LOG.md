@@ -17,11 +17,14 @@ planning artifact and does not replace `CHANGELOG.md`.
 - MCP count focused validation:
   `uv run python -m pytest tests/test_stability_docs.py -q` passed with 2
   tests.
+- MCP table focused validation:
+  `uv run python -m pytest tests/test_stability_docs.py -q` passed with 3
+  tests after adding live-registry membership coverage for the stability table.
 - Focused lint and typing:
   `uv run python -m ruff check tests/test_stability_docs.py` and
   `uv run python -m pyright tests/test_stability_docs.py` passed.
 - Final full local gate with `uv run python scripts/check.py`: pass.
-  Coverage: 86.46 percent. Tests: 3505 passed, 5 skipped, 4 deselected.
+  Coverage: 86.50 percent. Tests: 3506 passed, 5 skipped, 4 deselected.
 - External spend: 0 USD.
 - Added a schema source-map guard as the next incremental step toward generated
   JSON Schema.

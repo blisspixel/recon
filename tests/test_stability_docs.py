@@ -29,3 +29,11 @@ def test_stability_mcp_tool_count_matches_registry() -> None:
     tools = asyncio.run(mcp.list_tools())
 
     assert f"All {len(tools)} MCP tools are **stable**" in text
+
+
+def test_stability_mcp_tool_table_matches_registry() -> None:
+    text = STABILITY.read_text(encoding="utf-8")
+    listed = set(re.findall(r"\| `(\w+)` \|", text))
+    live = {tool.name for tool in asyncio.run(mcp.list_tools())}
+
+    assert listed == live
