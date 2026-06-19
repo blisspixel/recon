@@ -270,8 +270,9 @@ than its caveat.
 8. Limitations and ethics. Passive-only, defensive-only, no released
    target list, the data-handling policy as a design constraint.
 9. Reproducibility. Public references anyone can re-query, the synthetic
-   harnesses, the bit-for-bit reproducible signed artifact and locked
-   schema.
+    harnesses, the bit-for-bit reproducible signed artifact and locked
+    schema. The public no-private-data bundle runs with
+    `python -m validation.reproduce_paper_numbers`.
 
 ## Proposition 1 (suppression-monotonicity), as it will be stated
 
@@ -314,6 +315,11 @@ correlation.md section 4.3.
 | Posture stratification | aggregate behavior across hardening postures, as distributions not exemplars | `validation/posture_distributions.py` (entropy reduction bucketed by edge-proxied/direct × evidence tier; interval width vs n_eff for the CAL7 figure); harness shipped, maintainer run pending; framing in correlation.md 4.10–4.11 |
 | Differential verification | variable elimination matches a full-joint reference on every enumerable configuration | `validation/differential_verification.py`; shipped |
 | Per-vertical stratification | the calibration holds across industries | the by-vertical corpus lists; not yet run |
+
+One-command public reproduction:
+`python -m validation.reproduce_paper_numbers` runs the public rows above that
+do not need private corpora. Use `--profile smoke` for a quick orchestration
+check; the default `paper` profile runs the full local bundle.
 
 Figures: an architecture diagram, the nine-node network as a clean DAG,
 reliability diagrams with the posterior histogram, and an

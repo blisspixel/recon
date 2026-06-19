@@ -17,6 +17,10 @@ operating rules for future cycles and must not override `AGENTS.md`,
   runtime features.
 - Treat publishable validation memos as a disclosure boundary: target-looking
   strings can appear as values, keys, or free-form titles, so check all three.
+- For paper or assurance reproducibility, add orchestration around existing
+  harnesses rather than copying their logic. The orchestrator should capture
+  commands, stdout, stderr, duration, success state, and what remains outside the
+  public no-private-data path.
 - When agent documentation mentions MCP approval, keep the stateful tool split
   explicit: ephemeral fingerprint mutation and data reload are session-local
   mutations even though most recon tools are read-only.
