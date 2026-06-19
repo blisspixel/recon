@@ -200,6 +200,44 @@ recon exposes four MCP resources so agents can browse "what can this tool detect
 
 The catalog resources return deterministic JSON sourced from the already-loaded YAML catalogs; `recon://schema` returns the bundled schema document. No network calls. Changes to custom `~/.recon/fingerprints/` or `~/.recon/signals.yaml` require calling `reload_data` to take effect.
 
+### Resource Consumption Examples
+
+How a client exposes resources varies; use its resource browser or resource-read
+action before spending a domain-analysis tool call when you only need capability
+context.
+
+**Choose a posture profile without guessing.**
+
+1. Read `recon://profiles`.
+2. Compare the target type the operator provided with each profile's
+   `description` and `focus_categories`.
+3. Pass `profile` to `analyze_posture` only when the target type clearly
+   matches a listed profile. If it does not, omit `profile`.
+
+**Check whether recon has a published fingerprint for a service.**
+
+1. Read `recon://fingerprints`.
+2. Filter `fingerprints[]` by `slug`, `name`, `category`, or
+   `detection_types`.
+3. If no entry matches, say that no published fingerprint was found. Do not
+   infer that the service is absent from a target domain.
+
+**Explain a derived signal before or after a lookup.**
+
+1. Read `recon://signals`.
+2. Find the signal by `name` or by a slug in `candidates`.
+3. Use `min_matches`, `contradicts`, `requires_signals`, and
+   `positive_when_absent` to explain what evidence can drive the signal. Keep
+   the language hedged because signals are rule-based observations.
+
+**Validate or inspect JSON shape offline.**
+
+1. Read `recon://schema`.
+2. Use the top-level schema for `lookup_tenant(format="json")` or
+   `recon <domain> --json`.
+3. Use `$defs` for batch, summary, and delta shapes. This is a local resource
+   read; it does not require fetching docs from the network.
+
 ## Staleness Timestamps
 
 Every `TenantInfo` result carries two ISO-8601 UTC fields:

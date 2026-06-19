@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Generated CLI surface reference.** Added a drift-checked
   `docs/cli-surface.md` generated from the live Typer command tree so skill and
   agent authors can sync command and flag usage without copying README snippets.
+- **MCP resource consumption examples.** Documented no-network reads for
+  `recon://fingerprints`, `recon://signals`, `recon://profiles`, and
+  `recon://schema` so agents can inspect capability context before domain
+  analysis calls.
 - **Workflow action pinning.** Pinned every GitHub Actions dependency to a full
   commit SHA, replaced the actionlint download-and-run step with a pinned action,
   removed installer-side pipx bootstrapping, and added a local / CI gate that

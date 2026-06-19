@@ -126,7 +126,7 @@ The public tree already contains substantial assurance:
 Current local verification in this session:
 
 - `uv run python scripts/check.py` passed.
-- Coverage was 86.16 percent, above the 82 percent configured gate.
+- Coverage was 86.18 percent, above the 82 percent configured gate.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -222,6 +222,15 @@ copying README snippets.
 inventories and emits the one-line `### Tool Surface Changes` changelog entry
 required by `docs/release-process.md`. It supports `--old-ref vX.Y.Z` for local
 tag comparisons without shell redirection.
+
+## MCP Resource Consumption
+
+`docs/mcp.md` now includes no-network consumption examples for
+`recon://fingerprints`, `recon://signals`, `recon://profiles`, and
+`recon://schema`. The examples tell agents to inspect capability context before
+network-capable domain analysis, to omit posture profiles when the target type
+is unclear, and to treat a missing fingerprint as "no published fingerprint,"
+not as evidence that a service is absent.
 
 ## Bayesian Calibration Data
 
