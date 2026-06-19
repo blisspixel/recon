@@ -43,6 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Public validation memo.** Added an aggregate-only smoke memo for
   `validation.reproduce_paper_numbers --profile smoke`, with hygiene tests that
   keep the committed artifact free of per-domain data.
+- **Cache edge coverage.** Added regression tests for URL-to-apex cache-key
+  normalization, top-level-only `cache_clear_all()` deletion, and the
+  batch-only `shared_verification_tokens` non-persistence contract.
 - **Workflow action pinning.** Pinned every GitHub Actions dependency to a full
   commit SHA, replaced the actionlint download-and-run step with a pinned action,
   removed installer-side pipx bootstrapping, and added a local / CI gate that

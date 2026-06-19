@@ -56,6 +56,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For committed validation memos, record only aggregate counts, rates, intervals,
   and harness status. Keep local manifests and per-step stdout under ignored
   scratch paths, and pin the memo with validation-hygiene tests.
+- For cache tests, pin the intended boundaries explicitly: normalized URL inputs
+  use apex keys, clear-all touches only top-level JSON cache entries, and
+  batch-only peer fields never survive per-domain cache round-trips.
 - Track external spend explicitly. Default spend is 0 USD.
 - Before closing a cycle, run the narrow relevant gate. Before claiming repo
   readiness, run `uv run python scripts/check.py`.
