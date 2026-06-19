@@ -71,7 +71,7 @@ Current maintainer-loop deltas from 2026-06-19 include generated surface
   reproduction tooling, shared
   validation-runner path-containment hardening, calibration corpus-shape
   preflight, the optional maintainer-loop runbook, nested schema drift
-  hardening, cache edge coverage,
+  hardening, advisory diff coverage, cache edge coverage,
   high-value-target baseline expectations, and a first production
   `match_mode: all` fingerprint for CrowdStrike TXT evidence. The public
 catalog-growth queue also now includes a Supabase CNAME target sourced from the
@@ -141,6 +141,14 @@ their dataclass field sets, with explicit exceptions for fields that are not in
 the stable JSON envelope. This does not replace the future schema generator, but
 it closes the immediate risk that a nested model field moves without the
 hand-maintained JSON Schema noticing.
+
+## Diff Coverage Signal
+
+`scripts/diff_coverage.py` is now available as an advisory maintainer signal.
+It reads Coverage.py JSON plus a unified diff, reports coverage only for changed
+executable Python lines, optionally fails under a caller-supplied threshold, and
+returns success for documentation-only diffs. It is intentionally outside
+`scripts/check.py` so small docs changes do not inherit a per-PR coverage gate.
 
 ## Validation State
 

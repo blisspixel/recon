@@ -279,8 +279,11 @@ Research and consider:
   maintainer-loop contract for CI triage, private calibration, and fingerprint
   proposal loops. It requires an ignored state file, deterministic gates, stop
   conditions, spend tracking, and maintainer review for semantic changes.
-- Diff coverage as an additional maintainer signal, only if it stays local-first
-  and does not make small documentation changes painful.
+- Done 2026-06-19: added `scripts/diff_coverage.py` as an advisory maintainer
+  signal. It reads Coverage.py JSON plus a unified diff, reports changed-line
+  coverage for executable Python lines, can fail under an optional threshold,
+  and treats documentation-only diffs as a successful no-op. It is deliberately
+  outside the blocking gate.
 
 Standing, maintainer-paced, off this critical path: the PV2 validation routine
 (live), the mutation gate (live), and corpus-driven catalogue growth (local,

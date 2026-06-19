@@ -55,6 +55,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Nested schema drift guard.** Added tests that bind model-backed JSON Schema
   `$defs` to their dataclass field sets, with explicit exceptions for
   intentionally omitted JSON fields.
+- **Advisory diff coverage.** Added `scripts/diff_coverage.py`, a local
+  maintainer signal that reports changed executable Python line coverage from
+  Coverage.py JSON and a unified diff without gating documentation-only changes.
 - **MCP output schema precision.** Added precise `TypedDict` item schemas for
   `get_fingerprints`, `get_signals`, `explain_signal`, the simple
   ephemeral-fingerprint session tools, the graph data tools, and the compact

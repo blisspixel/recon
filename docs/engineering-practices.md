@@ -106,6 +106,10 @@ mitigations are mechanical and non-negotiable:
 - **Branch coverage**, gated (`--cov-branch --cov-fail-under=82`). Coverage is a
   floor, not the goal. 100% is explicitly not the target; pair it with quality
   signals.
+- **Diff coverage**, advisory and local-first:
+  `scripts/diff_coverage.py` reads Coverage.py JSON plus a unified diff and
+  reports coverage only for changed executable Python lines. It is not in the
+  blocking gate, so documentation-only changes stay cheap.
 - **Mutation testing** (cosmic-ray, blocking gate over the inference core) proves
   the tests actually *detect* faults, not just execute lines.
 - **Property-based tests** (Hypothesis) for invariants, round-trips, and parsers;
@@ -159,6 +163,6 @@ What we already do well, and the named open items, with no pretending.
 | Noun-verb CLI consistency, `--plain`/`--json`, stdout/stderr discipline | In place | |
 | **God-file decomposition** (formatter/cli/exposure/merger/dns/bayesian/server) | In place | Every module under the 1000-line cap except formatter's cohesive panel core (~2160, kept whole by design) |
 | **`PLR09xx` function-size rules** (statements/branches/args/returns) | To consider | Only `C901` today |
-| **Per-PR diff coverage** | To consider | Total `fail_under` only; research diff-cover fit before adding another gate |
+| **Per-PR diff coverage** | Advisory | `scripts/diff_coverage.py` reports changed-line coverage from local Coverage.py JSON without making doc-only changes painful |
 
 The open items are tracked, ratcheted, or explicitly deferred. None is a silent gap.
