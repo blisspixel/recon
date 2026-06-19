@@ -126,7 +126,7 @@ The public tree already contains substantial assurance:
 Current local verification in this session:
 
 - `uv run python scripts/check.py` passed.
-- Coverage was 86.18 percent, above the 82 percent configured gate.
+- Coverage was 86.16 percent, above the 82 percent configured gate.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -231,6 +231,24 @@ tag comparisons without shell redirection.
 network-capable domain analysis, to omit posture profiles when the target type
 is unclear, and to treat a missing fingerprint as "no published fingerprint,"
 not as evidence that a service is absent.
+
+## Scorecard Posture
+
+The public Scorecard API result checked on 2026-06-19 reported score 6.1 for
+`github.com/blisspixel/recon` at commit `fc976bcab492232eb35111a26ea8deb14aa00b7e`.
+The repo already scores 10 on dependency updates, security policy, dangerous
+workflows, token permissions, SAST, binary artifacts, pinned dependencies,
+vulnerabilities, packaging, and license.
+
+Local-file work can improve future release posture most directly through the
+Signed-Releases path. The release workflow now waits for build-provenance
+attestation, exports the signed GitHub attestation bundles as
+`recon-tool-<version>.intoto.jsonl`, and attaches that provenance asset to the
+GitHub Release. The remaining low scores require external or policy choices:
+branch protection and code-review settings, elapsed repository age, outside
+contributors, OpenSSF Best Practices badge enrollment, and a real
+Scorecard-recognized fuzzing service rather than a badge-only wrapper around
+the existing Hypothesis suites.
 
 ## Bayesian Calibration Data
 

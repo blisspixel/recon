@@ -131,9 +131,12 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
 1. **test**: installs deps, runs `pytest --cov-branch --cov-fail-under=82`, `ruff check`,
    exports locked runtime requirements, and audits those with `pip-audit`.
 2. **build**: `uv build` produces the sdist and wheel under `dist/`.
-3. **publish-pypi**: uses `pypa/gh-action-pypi-publish@release/v1` with
+3. **export-attestations**: exports the GitHub artifact-attestation bundles as
+   `recon-tool-<version>.intoto.jsonl` so the GitHub Release carries an offline,
+   Scorecard-recognized provenance asset.
+4. **publish-pypi**: uses `pypa/gh-action-pypi-publish@release/v1` with
    OIDC (Trusted Publisher) to upload to PyPI. No static API tokens.
-4. **github-release**: extracts the matching `## [X.Y.Z]` section from
+5. **github-release**: extracts the matching `## [X.Y.Z]` section from
    `CHANGELOG.md` as the release body, attaches the built artifacts, creates
    the GitHub release.
 
@@ -167,6 +170,8 @@ formula so `brew install` tracks the new version, then copy it to the tap repo:
 - [ ] Copy `packaging/homebrew/recon.rb` to `blisspixel/homebrew-tap`'s
       `Formula/recon.rb` (see `packaging/homebrew/README.md`). Verify with
       `python scripts/update_homebrew_formula.py --check`.
+- [ ] Confirm the GitHub Release assets include wheel, sdist, SBOM, and
+      `recon-tool-<version>.intoto.jsonl`.
 
 The `pipx` / `uv` / `pip` install paths need no per-release action. They
 resolve the latest from PyPI automatically.

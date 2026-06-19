@@ -42,6 +42,22 @@ def test_scorecard_workflow_uses_explicit_least_privilege_permissions() -> None:
     }
 
 
+def test_release_workflow_exports_scorecard_recognized_provenance() -> None:
+    workflow = _load_yaml(".github/workflows/release.yml")
+    jobs = workflow["jobs"]
+    export_job = jobs["export-attestations"]
+    github_release = jobs["github-release"]
+    export_text = "\n".join(str(step.get("run", "")) for step in export_job["steps"])
+    release_text = "\n".join(str(step.get("run", "")) for step in github_release["steps"])
+
+    assert export_job["needs"] == ["build", "attest"]
+    assert export_job["permissions"] == {"contents": "read"}
+    assert ".intoto.jsonl" in export_text
+    assert "gh attestation download" in export_text
+    assert "export-attestations" in github_release["needs"]
+    assert "provenance/*" in release_text
+
+
 def test_codeql_workflow_is_scheduled_and_least_privilege() -> None:
     workflow = _load_yaml(".github/workflows/codeql.yml")
     triggers = _workflow_on(workflow)

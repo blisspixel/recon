@@ -17,7 +17,7 @@ which produces and publishes:
 | Property | Mechanism | How a consumer verifies it |
 |---|---|---|
 | **Trusted publishing** | PyPI publishes via GitHub OIDC, no long-lived API token (`pypa/gh-action-pypi-publish`) | The PyPI project page shows the publishing workflow as a trusted publisher |
-| **Build-provenance attestation** | GitHub-native, OIDC-signed (`actions/attest-build-provenance`), linking the wheel and sdist to the workflow run | `gh attestation verify <file> --repo blisspixel/recon` |
+| **Build-provenance attestation** | GitHub-native, OIDC-signed (`actions/attest-build-provenance`), linking the wheel and sdist to the workflow run. The signed bundles are also exported to the GitHub Release as `recon-tool-<version>.intoto.jsonl` for offline and Scorecard-compatible inspection | `gh attestation verify <file> --repo blisspixel/recon`; offline consumers can download the `.intoto.jsonl` release asset |
 | **PyPI attestations (PEP 740)** | sigstore-signed attestations generated at publish time (`attestations: true`) and stored on PyPI | Modern installers verify automatically; the attestation is visible on the release's PyPI files |
 | **Reproducible builds** | `SOURCE_DATE_EPOCH` pinned to the tagged commit's timestamp, so the wheel and sdist are byte-identical to a rebuild from the same source | See the recipe below |
 | **CycloneDX SBOM** | Generated from the hash-pinned runtime lock (`pip-audit --format=cyclonedx-json`) and attached to the GitHub Release | Download `recon-tool-<version>.cdx.json` from the release assets |
@@ -55,10 +55,13 @@ The release jobs are scoped to least privilege, and the build is isolated from
 dependency code that could tamper with it. In short: the `build` job is pure
 (`uv build` then immediate artifact upload, no other dependency code runs), the
 `test`, `sbom`, and `attest` jobs run on separate runners that never see
-`dist/`, and only `publish-pypi` / `github-release` hold the elevated scopes,
-which are minted from OIDC at publish time rather than handed to every job. The
-full rationale and threat model are documented inline in
-[`release.yml`](../.github/workflows/release.yml).
+`dist/`, and only dependency-free publish / attestation jobs hold elevated
+scopes minted from OIDC at publish time. The provenance export job downloads the
+signed GitHub attestation bundles and uploads a `.intoto.jsonl` artifact for the
+GitHub Release without running project dependency code. The PyPI and GitHub
+release jobs wait for the provenance attestation path, so a release fails closed
+if artifact attestation fails. The full rationale and threat model are
+documented inline in [`release.yml`](../.github/workflows/release.yml).
 
 ## Repository posture checks
 
@@ -75,10 +78,10 @@ The repository also runs supply-chain posture checks outside the release flow:
 
 Scorecard currently credits SAST, dependency-update tooling, least-privilege
 workflow tokens, pinned workflow dependencies, packaging, the security policy,
-and vulnerability posture. Its signed-release check does not fully credit the
-current PyPI PEP 740 attestations plus GitHub build-provenance attestation shape,
-so separate GitHub release signature assets remain a decision point rather than
-an existing contract.
+and vulnerability posture. Its signed-release check looks at recent GitHub
+Release assets, so future releases now attach the exported
+`recon-tool-<version>.intoto.jsonl` provenance bundle alongside the wheel, sdist,
+and SBOM.
 
 ## Deferred, with reasons
 

@@ -244,10 +244,13 @@ Decided not to do now:
   single-maintainer `main` flow works. Keep the local readiness gate plus remote
   CI verification as the current guardrail unless the repo starts taking regular
   external PRs.
-- **Attach separate signature files to GitHub releases.** PyPI attestations,
-  GitHub build provenance, SBOMs, and reproducible builds are already in place.
-  Scorecard does not fully credit that shape today. Consider extra GitHub
-  release assets only if consumers need that verification path.
+- **Attach separate signature files to GitHub releases.** Done 2026-06-19 for
+  future releases: the release workflow now gates PyPI and GitHub Release
+  publication on successful build-provenance attestation, exports the signed
+  attestation bundles as `recon-tool-<version>.intoto.jsonl`, and attaches that
+  provenance asset to the GitHub Release. As of the 2026-06-19 Scorecard API
+  result, `Signed-Releases` is still 0 because the recent already-published
+  releases do not contain a Scorecard-recognized provenance asset.
 - **Scorecard-recognized fuzzing integration.** Hypothesis and hostile-input
   tests already exercise parser boundaries. Do not add OSS-Fuzz or a similar
   service only for a badge; research it if parser risk grows.

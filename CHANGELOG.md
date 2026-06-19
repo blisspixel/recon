@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   defaults, a low-noise Dependabot configuration, and scheduled CodeQL analysis
   so Scorecard-detected token-permissions, dependency-update, and SAST posture
   match the repository's intended security baseline.
+- **Release provenance gate.** PyPI publishing and GitHub release publication
+  now wait for build-provenance attestation, and GitHub releases attach the
+  exported `recon-tool-<version>.intoto.jsonl` provenance bundle so future
+  releases fail closed and expose Scorecard-recognized provenance.
 - **Release-readiness preflight.** Added a maintainer-local readiness gate for
   branch state, version drift, coverage wiring, lockfile freshness, Homebrew
   formula freshness, private-data hygiene, and latest-commit attribution

@@ -35,6 +35,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For release notes about CLI command or flag changes, compare generated
   `docs/surface-inventory.json` files with
   `scripts/summarize_cli_surface_changes.py`; do not diff help output manually.
+- For Scorecard work, prefer real controls that align with existing invariants.
+  Do not add unpinned workflow dependencies or fake service integrations only to
+  move the badge.
 - For Bayesian tuning knobs, prefer committed data in `bayesian_network.yaml`
   with loader defaults and invariant tests over module-level engine constants.
   Keep behavior unchanged at default values and update trust docs in the same

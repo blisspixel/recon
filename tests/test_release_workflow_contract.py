@@ -217,6 +217,53 @@ class TestSbomJobIsIsolated:
         )
 
 
+class TestProvenanceExportJob:
+    """The release workflow must surface a Scorecard-recognized provenance asset
+    without executing project dependency code."""
+
+    def test_export_attestations_job_exists_and_waits_for_attestation(self, workflow):
+        jobs = workflow.get("jobs", {})
+        assert "export-attestations" in jobs, "release workflow must export attestation bundles for release assets"
+        job = jobs["export-attestations"]
+        needs = job.get("needs")
+        if isinstance(needs, str):
+            needs_list = [needs]
+        elif isinstance(needs, list):
+            needs_list = list(needs)
+        else:
+            needs_list = []
+
+        assert "build" in needs_list, "export-attestations must wait for build (dist/)"
+        assert "attest" in needs_list, "export-attestations must wait for signed build provenance"
+        assert job["permissions"] == {"contents": "read"}
+
+    def test_export_attestations_downloads_dist_and_uploads_provenance(self, workflow):
+        job = workflow["jobs"]["export-attestations"]
+        text = "\n".join(_step_text(step) for step in _steps(job))
+
+        assert "gh attestation download" in text
+        assert ".intoto.jsonl" in text
+        assert "uv sync" not in text
+        assert "uv run" not in text
+
+        downloads = [
+            step
+            for step in _steps(job)
+            if isinstance(step.get("uses"), str) and step["uses"].startswith("actions/download-artifact")
+        ]
+        uploads = [
+            step
+            for step in _steps(job)
+            if isinstance(step.get("uses"), str) and step["uses"].startswith("actions/upload-artifact")
+        ]
+        assert any(isinstance(s.get("with"), dict) and s["with"].get("name") == "dist" for s in downloads), (
+            "export-attestations must download the dist artifact"
+        )
+        assert any(isinstance(s.get("with"), dict) and s["with"].get("name") == "provenance" for s in uploads), (
+            "export-attestations must upload a provenance artifact"
+        )
+
+
 # Jobs allowed to hold id-token: write. The rule is not "only
 # publish-pypi" but "only jobs that run NO project dependency code", so a
 # compromised dependency cannot mint a token. publish-pypi downloads the
@@ -249,6 +296,22 @@ class TestPublishJobIsHardened:
             "publish-pypi must have id-token: write for OIDC trusted publishing"
         )
 
+    def test_publish_pypi_waits_for_provenance_attestation(self, workflow):
+        publish = workflow["jobs"]["publish-pypi"]
+        needs = publish.get("needs")
+        if isinstance(needs, str):
+            needs_list = [needs]
+        elif isinstance(needs, list):
+            needs_list = list(needs)
+        else:
+            needs_list = []
+
+        assert "build" in needs_list, "publish-pypi must wait for build (dist/)"
+        assert "attest" in needs_list, (
+            "publish-pypi must wait for provenance attestation so a release "
+            "cannot publish to PyPI if artifact attestation fails."
+        )
+
     def test_id_token_jobs_do_not_install_or_run_deps(self, workflow):
         # Every job that mints an OIDC token must run no project dependency
         # code, so a compromised dep cannot execute under id-token: write.
@@ -277,7 +340,7 @@ class TestGithubReleaseAttachesBothArtifacts:
     """The github-release job must surface both the wheel/sdist and
     the SBOM so consumers can audit the supply chain."""
 
-    def test_github_release_depends_on_build_and_sbom(self, workflow):
+    def test_github_release_depends_on_build_attestation_and_sbom(self, workflow):
         gh = workflow["jobs"]["github-release"]
         needs = gh.get("needs")
         if isinstance(needs, str):
@@ -287,18 +350,30 @@ class TestGithubReleaseAttachesBothArtifacts:
         else:
             needs_list = []
         assert "build" in needs_list, "github-release must wait for build (dist/)"
+        assert "attest" in needs_list, (
+            "github-release must wait for provenance attestation so a release "
+            "cannot publish GitHub assets if artifact attestation fails."
+        )
+        assert "export-attestations" in needs_list, (
+            "github-release must wait for exported attestation bundles so the "
+            "release exposes a Scorecard-recognized provenance asset."
+        )
         assert "sbom" in needs_list, (
             "github-release must wait for sbom (SBOM artifact). Skipping the SBOM "
             "dependency means the release could ship without an SBOM if sbom fails."
         )
 
-    def test_github_release_downloads_dist_and_sbom(self, workflow):
+    def test_github_release_downloads_dist_sbom_and_provenance(self, workflow):
         gh = workflow["jobs"]["github-release"]
         names = []
+        run_text = ""
         for step in _steps(gh):
             if isinstance(step.get("uses"), str) and step["uses"].startswith("actions/download-artifact"):
                 with_block = step.get("with") or {}
                 if isinstance(with_block, dict):
                     names.append(with_block.get("name"))
+            run_text += _step_text(step)
         assert "dist" in names, "github-release must download the dist artifact"
         assert "sbom" in names, "github-release must download the sbom artifact"
+        assert "provenance" in names, "github-release must download the provenance artifact"
+        assert "provenance/*" in run_text, "github-release must attach exported provenance to the release"
