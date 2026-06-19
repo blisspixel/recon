@@ -1,0 +1,41 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from validation.run_path_safety import contained_child, validate_run_stamp
+
+
+@pytest.mark.parametrize("stamp", ["20260619-000000Z", "safe-run_20260619.1", "a" * 80])
+def test_validate_run_stamp_accepts_safe_segment(stamp: str) -> None:
+    assert validate_run_stamp(stamp) == stamp
+
+
+@pytest.mark.parametrize(
+    "stamp",
+    [
+        "",
+        "../outside",
+        "..\\outside",
+        "/absolute/path",
+        "-leading-dash",
+        "with space",
+        "a" * 81,
+    ],
+)
+def test_validate_run_stamp_rejects_unsafe_segment(stamp: str) -> None:
+    with pytest.raises(ValueError, match="run stamp must be 1-80"):
+        validate_run_stamp(stamp)
+
+
+def test_contained_child_resolves_safe_child_under_parent(tmp_path: Path) -> None:
+    assert contained_child(tmp_path / "runs", "safe-run_20260619.1") == (
+        tmp_path / "runs" / "safe-run_20260619.1"
+    ).resolve(strict=False)
+
+
+@pytest.mark.parametrize("child_name", [".", "../outside", "/absolute/path"])
+def test_contained_child_rejects_escaped_child(tmp_path: Path, child_name: str) -> None:
+    with pytest.raises(ValueError, match="run directory escapes output root"):
+        contained_child(tmp_path / "runs", child_name)

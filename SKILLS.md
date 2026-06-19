@@ -75,6 +75,8 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For maintainer-local validation runners, treat every operator-provided path
   segment as hostile. Validate names with a strict identifier regex and resolve
   final paths under the intended output root before writing artifacts.
+- Keep validation-runner path safety centralized so public and private artifact
+  writers share the same traversal and safe-stamp contract.
 - For cache tests, pin the intended boundaries explicitly: normalized URL inputs
   use apex keys, clear-all touches only top-level JSON cache entries, and
   batch-only peer fields never survive per-domain cache round-trips.

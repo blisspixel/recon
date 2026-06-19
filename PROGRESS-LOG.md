@@ -5,6 +5,24 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Centralized validation-runner path safety.
+- Added `validation.run_path_safety` for safe run-stamp validation and contained
+  output-root child resolution.
+- Switched the calibration bundle and public paper-number reproduction runners
+  to the shared helper so their artifact-boundary behavior cannot drift.
+- Added direct helper tests for accepted stamps, rejected stamps, contained paths,
+  and escaped child paths.
+- Focused validation:
+  `uv run python -m pytest tests/test_run_path_safety.py tests/test_run_calibration_bundle.py tests/test_reproduce_paper_numbers.py -q`
+  passed with 37 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check validation/run_path_safety.py validation/run_calibration_bundle.py validation/reproduce_paper_numbers.py tests/test_run_path_safety.py tests/test_run_calibration_bundle.py tests/test_reproduce_paper_numbers.py`
+  and
+  `uv run python -m pyright validation/run_path_safety.py validation/run_calibration_bundle.py validation/reproduce_paper_numbers.py tests/test_run_path_safety.py tests/test_run_calibration_bundle.py tests/test_reproduce_paper_numbers.py`
+  passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.49 percent. Tests: 3455 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Hardened the public paper-number reproduction runner's run-directory handling.
 - Added safe run-stamp validation and output-root containment to
   `validation.reproduce_paper_numbers`, matching the maintainer-local calibration

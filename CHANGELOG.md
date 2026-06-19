@@ -93,7 +93,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   artifacts are written.
 - **Paper reproduction path containment.** The public paper-number reproduction
   runner now applies the same safe `--stamp` validation and output-root
-  containment before writing local artifacts.
+  containment before writing local artifacts. Both validation runners share the
+  same path-safety helper so the local artifact boundary cannot drift.
 - **Scorecard supply-chain posture.** Added explicit read-only workflow token
   defaults, a low-noise Dependabot configuration, and scheduled CodeQL analysis
   so Scorecard-detected token-permissions, dependency-update, and SAST posture
