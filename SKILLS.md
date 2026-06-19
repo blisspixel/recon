@@ -51,6 +51,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For workflow-token posture, gate both the top-level default permissions and
   the named elevated job scopes. A workflow can need write or OIDC permissions,
   but that exception should be explicit and reviewed.
+- For GitHub Actions checkout, set `persist-credentials: false` unless a job
+  explicitly needs Git to reuse the workflow token. Prefer explicit `GH_TOKEN`
+  environment use for GitHub CLI operations.
 - For Bayesian tuning knobs, prefer committed data in `bayesian_network.yaml`
   with loader defaults and invariant tests over module-level engine constants.
   Keep behavior unchanged at default values and update trust docs in the same

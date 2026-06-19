@@ -100,7 +100,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so Scorecard-detected token-permissions, dependency-update, and SAST posture
   match the repository's intended security baseline. The structural tests now
   require every workflow to default to read-only token permissions and every
-  elevated job scope to match an explicit allowlist.
+  elevated job scope to match an explicit allowlist, and every checkout step
+  disables persisted Git credentials.
 - **Release provenance gate.** PyPI publishing and GitHub release publication
   now wait for build-provenance attestation, and GitHub releases attach the
   exported `recon-tool-<version>.intoto.jsonl` provenance bundle so future

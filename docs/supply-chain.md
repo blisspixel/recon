@@ -74,6 +74,8 @@ The repository also runs supply-chain posture checks outside the release flow:
 - Workflow actions are pinned to full commit SHAs, with the readable version kept
   in a trailing comment. `scripts/check_workflow_pins.py` gates this locally and
   in CI.
+- Checkout steps set `persist-credentials: false`, so the workflow token is not
+  left in the local Git config after source checkout.
 - Secret scanning and push protection are enabled for the repository.
 
 Scorecard currently credits SAST, dependency-update tooling, least-privilege

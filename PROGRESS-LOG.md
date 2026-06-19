@@ -5,6 +5,24 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Hardened GitHub Actions checkout credential handling.
+- Set `persist-credentials: false` on every `actions/checkout` step so workflow
+  tokens are not left in local Git config after checkout.
+- Added a Scorecard posture regression test that parses every workflow and fails
+  if a checkout step persists credentials.
+- Updated supply-chain docs and state notes to record the checkout credential
+  contract.
+- Focused validation:
+  `uv run python -m pytest tests/test_scorecard_posture.py tests/test_release_workflow_contract.py tests/test_workflow_pins.py -q`
+  passed with 27 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check tests/test_scorecard_posture.py` and
+  `uv run python -m pyright tests/test_scorecard_posture.py` passed.
+- Workflow pin check:
+  `uv run python scripts/check_workflow_pins.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.46 percent. Tests: 3457 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Tightened Scorecard-facing workflow-token posture tests.
 - Added a repository-wide assertion that every GitHub Actions workflow defaults
   to top-level read-only token permissions.
