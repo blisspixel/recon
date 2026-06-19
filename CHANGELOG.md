@@ -72,9 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   2.14.0 to 2.14.2 in `uv.lock` and the ClusterFuzzLite requirements export,
   closing GHSA-4xgf-cpjx-pc3j from the MCP dependency path.
 - **ClusterFuzzLite hash-pinned install.** Split the fuzz-build bootstrap into
-  hash-pinned runtime requirements and a local `--no-deps` project install so
-  the Scorecard Pinned-Dependencies check no longer sees unpinned pip
-  resolution.
+  hash-pinned runtime requirements and `PYTHONPATH` source loading, so the
+  Scorecard Pinned-Dependencies check no longer sees unpinned pip resolution.
 - **Advisory diff coverage.** Added `scripts/diff_coverage.py`, a local
   maintainer signal that reports changed executable Python line coverage from
   Coverage.py JSON and a unified diff without gating documentation-only changes.

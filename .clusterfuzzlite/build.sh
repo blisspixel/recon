@@ -1,7 +1,8 @@
 #!/bin/bash -eu
 
 python3 -m pip install --no-cache-dir --require-hashes -r "$SRC/recon/.clusterfuzzlite/requirements.txt"
-python3 -m pip install --no-cache-dir --no-deps .
+
+export PYTHONPATH="$SRC/recon/src${PYTHONPATH:+:$PYTHONPATH}"
 
 for fuzzer in $(find "$SRC/recon/fuzz" -name '*_fuzzer.py' -print); do
   fuzzer_basename=$(basename -s .py "$fuzzer")

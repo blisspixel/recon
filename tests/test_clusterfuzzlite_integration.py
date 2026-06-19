@@ -39,8 +39,8 @@ def test_clusterfuzzlite_python_dependencies_are_hash_pinned() -> None:
     requirements = (ROOT / ".clusterfuzzlite" / "requirements.txt").read_text(encoding="utf-8")
 
     assert "--require-hashes -r \"$SRC/recon/.clusterfuzzlite/requirements.txt\"" in build_script
-    assert "pip install --no-cache-dir --no-deps ." in build_script
-    assert "pip install --no-cache-dir ." not in build_script
+    assert build_script.count("pip install") == 1
+    assert "export PYTHONPATH=\"$SRC/recon/src${PYTHONPATH:+:$PYTHONPATH}\"" in build_script
     assert "--hash=sha256:" in requirements
 
 

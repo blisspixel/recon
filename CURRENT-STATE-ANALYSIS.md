@@ -425,9 +425,9 @@ ClusterFuzzLite runtime requirements export now use `pydantic-settings` 2.14.2.
 
 The only remaining local Pinned-Dependencies warning in that scan was the
 ClusterFuzzLite build script's local `pip install .` command. The fuzz build now
-uses a committed hash-pinned runtime requirements export, then installs the
-checked-out source with `--no-deps`, matching Scorecard's pip-command model
-without broadening the fuzzer surface.
+uses a committed hash-pinned runtime requirements export and loads the
+checked-out source through `PYTHONPATH`, leaving only one pip install command
+for Scorecard to inspect without broadening the fuzzer surface.
 
 Local-file work can improve future release posture most directly through the
 Signed-Releases path. The release workflow now waits for build-provenance

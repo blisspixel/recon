@@ -22,10 +22,13 @@ planning artifact and does not replace `CHANGELOG.md`.
 - Generated `.clusterfuzzlite/requirements.txt` from `uv.lock` with
   `uv export --frozen --no-dev --no-emit-project --format requirements.txt`.
 - Updated `.clusterfuzzlite/build.sh` to install those runtime dependencies
-  with `--require-hashes`, then install the checked-out package with
-  `--no-deps`.
+  with `--require-hashes`, then load the checked-out source through
+  `PYTHONPATH` so the build script has only one pip install command.
+- Rechecked the public Scorecard API and confirmed `pip install --no-deps .`
+  was still scored as an unpinned pip command, so the local project install was
+  removed entirely.
 - Added a ClusterFuzzLite integration test that pins the hash-required
-  requirements install and the no-dependency local package install.
+  requirements install and source-path loading behavior.
 - External spend: 0 USD.
 - Closed the high Dependabot alert for GHSA-6v7p-g79w-8964 after GitHub
   reported it on the default branch.
