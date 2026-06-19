@@ -56,6 +56,7 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -127,6 +128,7 @@ jobs:
     # other jobs that do not touch dist/.
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -188,6 +190,7 @@ jobs:
     # stays deferred as disproportionate (see docs/supply-chain.md).
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -212,6 +215,7 @@ jobs:
     # mutable action refs, or project dependency execution.
     needs: [build, attest]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -260,6 +264,7 @@ jobs:
     # GitHub storage and not present on this filesystem.
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -314,6 +319,7 @@ jobs:
   publish-pypi:
     needs: [build, attest]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment: pypi
     permissions:
       id-token: write
@@ -338,6 +344,7 @@ jobs:
   github-release:
     needs: [build, attest, export-attestations, sbom]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:

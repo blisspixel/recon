@@ -54,6 +54,8 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For GitHub Actions checkout, set `persist-credentials: false` unless a job
   explicitly needs Git to reuse the workflow token. Prefer explicit `GH_TOKEN`
   environment use for GitHub CLI operations.
+- For CI and release workflows, set explicit job-level `timeout-minutes` values
+  and keep a structural test so new jobs cannot hang indefinitely by default.
 - For Bayesian tuning knobs, prefer committed data in `bayesian_network.yaml`
   with loader defaults and invariant tests over module-level engine constants.
   Keep behavior unchanged at default values and update trust docs in the same

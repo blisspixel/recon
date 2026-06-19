@@ -19,6 +19,7 @@ jobs:
   analysis:
     name: Scorecard analysis
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       # Needed to upload the SARIF results to the code-scanning dashboard.

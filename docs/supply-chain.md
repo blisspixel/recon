@@ -76,6 +76,8 @@ The repository also runs supply-chain posture checks outside the release flow:
   in CI.
 - Checkout steps set `persist-credentials: false`, so the workflow token is not
   left in the local Git config after source checkout.
+- Every workflow job has an explicit timeout so CI and release automation fail
+  closed instead of hanging indefinitely.
 - Secret scanning and push protection are enabled for the repository.
 
 Scorecard currently credits SAST, dependency-update tooling, least-privilege

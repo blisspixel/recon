@@ -101,6 +101,18 @@ def test_checkout_steps_do_not_persist_credentials() -> None:
                 assert with_block.get("persist-credentials") is False, f"{relative}:{job_name}"
 
 
+def test_all_workflow_jobs_have_bounded_timeouts() -> None:
+    for path in _workflow_paths():
+        relative = path.relative_to(_ROOT).as_posix()
+        workflow = _load_yaml(relative)
+        jobs = workflow["jobs"]
+
+        for job_name, job in jobs.items():
+            timeout = job.get("timeout-minutes")
+            assert isinstance(timeout, int), f"{relative}:{job_name}"
+            assert 1 <= timeout <= 180, f"{relative}:{job_name}"
+
+
 def test_scorecard_workflow_uses_explicit_least_privilege_permissions() -> None:
     workflow = _load_yaml(".github/workflows/scorecard.yml")
     job = workflow["jobs"]["analysis"]
