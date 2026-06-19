@@ -213,6 +213,9 @@ By default the runner expects:
   `conformal.json`, `memo.md`, and `meta.json`.
 
 Use `--dry-run` to print the exact module invocations without network calls.
+If you pass `--stamp`, it must be a single safe path segment: letters, digits,
+dots, underscores, and hyphens only. The runner resolves the final run directory
+under `--output-root` before writing artifacts.
 Review `memo.md` before copying any result into a committed validation memo.
 The renderer is a backstop, not a substitute for review.
 

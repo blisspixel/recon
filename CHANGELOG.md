@@ -87,6 +87,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the reference, tenancy, and conformal calibration harnesses into a gitignored
   run directory, captures aggregate JSON without shell redirects, and renders
   the checked memo.
+- **Calibration bundle path containment.** The maintainer-local calibration
+  runner now validates `--stamp` as a safe path segment and resolves the run
+  directory under `--output-root`, preventing traversal before private aggregate
+  artifacts are written.
 - **Scorecard supply-chain posture.** Added explicit read-only workflow token
   defaults, a low-noise Dependabot configuration, and scheduled CodeQL analysis
   so Scorecard-detected token-permissions, dependency-update, and SAST posture

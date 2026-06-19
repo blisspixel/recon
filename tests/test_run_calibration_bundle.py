@@ -166,3 +166,46 @@ def test_run_bundle_rejects_missing_private_inputs(tmp_path) -> None:
             label="",
             stamp="20260619-000000Z",
         )
+
+
+@pytest.mark.parametrize(
+    "stamp",
+    [
+        "",
+        "../outside",
+        "..\\outside",
+        "/absolute/path",
+        "C:\\absolute\\path",
+        "-leading-dash",
+        "with space",
+        "a" * 81,
+    ],
+)
+def test_run_bundle_rejects_unsafe_stamp(tmp_path, stamp) -> None:
+    stratify_dir, consolidated = _write_private_inputs(tmp_path)
+
+    with pytest.raises(ValueError, match="run stamp"):
+        run_bundle(
+            stratify_dir=stratify_dir,
+            consolidated=consolidated,
+            output_root=tmp_path / "runs-private",
+            label="",
+            stamp=stamp,
+            dry_run=True,
+        )
+
+
+def test_run_bundle_resolves_safe_stamp_under_output_root(tmp_path) -> None:
+    stratify_dir, consolidated = _write_private_inputs(tmp_path)
+    output_root = tmp_path / "runs-private"
+
+    outputs = run_bundle(
+        stratify_dir=stratify_dir,
+        consolidated=consolidated,
+        output_root=output_root,
+        label="",
+        stamp="safe-run_20260619.1",
+        dry_run=True,
+    )
+
+    assert outputs.run_dir == (output_root / "safe-run_20260619.1").resolve(strict=False)
