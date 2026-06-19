@@ -77,7 +77,7 @@ with a public candidate-chain delta. The MCP precise-schema Phase 2 has started
 with `TypedDict` output item schemas for the no-network catalog tools, the
 signal explanation tool, the simple ephemeral-fingerprint session tools, the
 graph data tools, the compact agent-facing posture helpers, and the posterior
-readout tool.
+readout and exposure report tools.
 
 ## Hard Constraints
 
@@ -140,7 +140,7 @@ The public tree already contains substantial assurance:
 Current local verification in this session:
 
 - `uv run python scripts/check.py` passed.
-- Coverage was 86.31 percent, above the 82 percent configured gate.
+- Coverage was 86.36 percent, above the 82 percent configured gate.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -297,15 +297,16 @@ in order.
 `clear_ephemeral_fingerprints`,
 `cluster_verification_tokens`, `get_infrastructure_clusters`, and
 `export_graph`, `test_hypothesis`, `simulate_hardening`, and `get_posteriors`
-now return `TypedDict`-annotated shapes. FastMCP turns those annotations into
-concrete `$defs` or object properties in each tool's advertised `outputSchema`,
-so agents can validate these fields without guessing from examples.
+plus `assess_exposure`, `find_hardening_gaps`, and `compare_postures` now return
+`TypedDict`-annotated shapes. FastMCP turns those annotations into concrete
+`$defs` or object properties in each tool's advertised `outputSchema`, so agents
+can validate these fields without guessing from examples.
 
 This is intentionally scoped to low-risk MCP surfaces and stable graph
 envelopes plus compact agent-facing helpers. `chain_lookup` remains narrative
-text, while `reevaluate_domain` and the larger posture reports still use the
-Phase 1 permissive schemas until each larger shape gets its own focused
-compatibility pass.
+text, while `reevaluate_domain`, `analyze_posture`, and
+`discover_fingerprint_candidates` still use permissive schemas until each larger
+or more variable shape gets its own focused compatibility pass.
 
 ## DKIM Weak-Area Guidance
 

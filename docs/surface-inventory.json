@@ -2384,9 +2384,33 @@
         ],
         "name": "assess_exposure",
         "output_schema": {
-          "definition_count": 0,
-          "properties": [],
-          "required": [],
+          "definition_count": 8,
+          "properties": [
+            "consistency_observations",
+            "disclaimer",
+            "domain",
+            "email_posture",
+            "evidence",
+            "hardening_status",
+            "identity_posture",
+            "infrastructure_footprint",
+            "observability",
+            "posture_score",
+            "posture_score_label"
+          ],
+          "required": [
+            "consistency_observations",
+            "disclaimer",
+            "domain",
+            "email_posture",
+            "evidence",
+            "hardening_status",
+            "identity_posture",
+            "infrastructure_footprint",
+            "observability",
+            "posture_score",
+            "posture_score_label"
+          ],
           "type": "object"
         },
         "structured_output": true,
@@ -2410,9 +2434,17 @@
         ],
         "name": "find_hardening_gaps",
         "output_schema": {
-          "definition_count": 0,
-          "properties": [],
-          "required": [],
+          "definition_count": 2,
+          "properties": [
+            "disclaimer",
+            "domain",
+            "gaps"
+          ],
+          "required": [
+            "disclaimer",
+            "domain",
+            "gaps"
+          ],
           "type": "object"
         },
         "structured_output": true,
@@ -2443,9 +2475,23 @@
         ],
         "name": "compare_postures",
         "output_schema": {
-          "definition_count": 0,
-          "properties": [],
-          "required": [],
+          "definition_count": 3,
+          "properties": [
+            "differences",
+            "disclaimer",
+            "domain_a",
+            "domain_b",
+            "metrics",
+            "relative_assessment"
+          ],
+          "required": [
+            "differences",
+            "disclaimer",
+            "domain_a",
+            "domain_b",
+            "metrics",
+            "relative_assessment"
+          ],
           "type": "object"
         },
         "structured_output": true,
