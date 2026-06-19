@@ -5,6 +5,25 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Hardened the hand-maintained JSON Schema drift guard for model-backed nested
+  `$defs`.
+- Added dataclass field-set checks for `BIMIIdentity`, `CertBurst`,
+  `CertSummary`, `ChainMotif`, `DeltaReport`, `EvidenceRecord`,
+  `InfrastructureCluster`, `InfrastructureClusterReport`, `NodeConflict`,
+  `NodeEvidence`, `NodeUnitCounterfactual`, `PosteriorObservation`,
+  `SurfaceAttribution`, and `UnclassifiedCnameChain`, with explicit exceptions
+  for schema-only or intentionally omitted JSON fields.
+- Updated roadmap, changelog, current-state analysis, and local loop skills to
+  record this as an incremental drift guard, not full schema generation.
+- Focused validation:
+  `uv run python -m pytest tests/test_json_schema_file.py -q` passed with
+  22 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check tests/test_json_schema_file.py` and
+  `uv run python -m pyright tests/test_json_schema_file.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.51 percent. Tests: 3488 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Added `docs/maintainer-loop-runbook.md` for optional maintainer loops around
   CI failure triage, private calibration, and fingerprint proposal work.
 - The runbook pins context packet loading, ignored local state, deterministic

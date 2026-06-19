@@ -162,8 +162,10 @@ rules are in [release-process.md](release-process.md#version-numbering).
   pinned-workflow supply-chain pass, the maintainer-local calibration bundle
   runner, validation-runner path-containment hardening, the calibration
   corpus-shape preflight, the generated surface-inventory drift gate, and
-  PR-scoped ClusterFuzzLite parser-boundary fuzzing. The remaining order is
-  private-corpus
+  PR-scoped ClusterFuzzLite parser-boundary fuzzing. Current `main` also has
+  an incremental nested schema drift guard that ties model-backed JSON Schema
+  `$defs` to their dataclass fields while the full schema-generation backlog
+  remains open. The remaining order is private-corpus
   calibration runs, aggregate-only validation memos, optional reviewed
   maintainer loops around those deterministic gates, and the decision whether
   the derived inventory ever becomes a stable surface. These are
@@ -2320,15 +2322,15 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
 - **Generate `docs/recon-schema.json` from code rather than
   maintaining it manually.** The schema currently lives as a
   hand-maintained JSON file; drift between code and schema is a
-  recurring failure mode caught only by
-  `tests/test_json_schema_file.py`. Adding a `scripts/generate_schema.py`
-  that derives the schema from the `TenantInfo` dataclass plus
-  field metadata, then runs in CI to verify the generated schema
-  matches the committed one, eliminates the drift class entirely.
-  Stays inside the pure-Python floor (the generator runs over
-  Python typing introspection, no JSON-Schema framework
-  required). Pairs with the v2.0 schema-stability test that
-  fails any committed schema change without a major version bump.
+  recurring failure mode. The current guard covers top-level formatter output,
+  required-field symmetry, internal `$defs` references, and model-backed nested
+  `$defs` field names. The remaining step is a `scripts/generate_schema.py`
+  that derives the schema from the `TenantInfo` dataclass plus field metadata,
+  then runs in CI to verify the generated schema matches the committed one.
+  Stays inside the pure-Python floor (the generator runs over Python typing
+  introspection, no JSON-Schema framework required). Pairs with the v2.0
+  schema-stability test that fails any committed schema change without a major
+  version bump.
 
 **Pre-existing backlog:**
 

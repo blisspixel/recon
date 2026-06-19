@@ -70,7 +70,8 @@ Current maintainer-loop deltas from 2026-06-19 include generated surface
   PR-scoped ClusterFuzzLite parser-boundary fuzzing, public paper-number
   reproduction tooling, shared
   validation-runner path-containment hardening, calibration corpus-shape
-  preflight, the optional maintainer-loop runbook, cache edge coverage,
+  preflight, the optional maintainer-loop runbook, nested schema drift
+  hardening, cache edge coverage,
   high-value-target baseline expectations, and a first production
   `match_mode: all` fingerprint for CrowdStrike TXT evidence. The public
 catalog-growth queue also now includes a Supabase CNAME target sourced from the
@@ -132,6 +133,14 @@ state only to ignored local paths, name a deterministic gate, stop on pass or a
 reproducible blocker, track spend from 0 USD, and leave semantic changes for
 normal maintainer review. The runbook is documentation and guardrail only; it is
 not a runtime scheduler or an agent inside recon.
+
+## Schema Drift Guard
+
+`tests/test_json_schema_file.py` now checks model-backed nested `$defs` against
+their dataclass field sets, with explicit exceptions for fields that are not in
+the stable JSON envelope. This does not replace the future schema generator, but
+it closes the immediate risk that a nested model field moves without the
+hand-maintained JSON Schema noticing.
 
 ## Validation State
 
