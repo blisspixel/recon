@@ -180,6 +180,41 @@ def test_graph_output_schemas_are_precise() -> None:
     assert export_props["cluster_assignment"]["additionalProperties"]["type"] == "integer"
 
 
+def test_agentic_posture_output_schemas_are_precise() -> None:
+    """Compact agent-facing posture helpers advertise their result envelopes."""
+    hypothesis_schema = _tool_output_schema("test_hypothesis")
+    assert hypothesis_schema["title"] == "HypothesisAssessmentResult"
+    assert set(hypothesis_schema["required"]) == {
+        "domain",
+        "hypothesis",
+        "likelihood",
+        "supporting_signals",
+        "contradicting_signals",
+        "missing_evidence",
+        "confidence",
+        "disclaimer",
+    }
+    hypothesis_props = hypothesis_schema["properties"]
+    assert hypothesis_props["likelihood"]["enum"] == ["strong", "moderate", "weak", "unsupported"]
+    assert hypothesis_props["confidence"]["enum"] == ["high", "medium", "low"]
+    assert hypothesis_props["supporting_signals"]["items"]["type"] == "string"
+
+    simulation_schema = _tool_output_schema("simulate_hardening")
+    assert simulation_schema["title"] == "HardeningSimulationResult"
+    assert set(simulation_schema["required"]) == {
+        "domain",
+        "current_score",
+        "simulated_score",
+        "score_delta",
+        "applied_fixes",
+        "remaining_gaps",
+        "disclaimer",
+    }
+    simulation_props = simulation_schema["properties"]
+    assert simulation_props["remaining_gaps"]["items"]["$ref"] == "#/$defs/SimulatedGapSummary"
+    assert simulation_props["applied_fixes"]["items"]["type"] == "string"
+
+
 def test_get_fingerprints_emits_navigable_structured_content() -> None:
     """call_tool surfaces the list as real structured data (not a JSON-string
     blob) plus a serialized-JSON text block for back-compat."""

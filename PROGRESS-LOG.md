@@ -5,6 +5,30 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Extended precise MCP output schemas to the compact agent-facing posture
+  helpers: `test_hypothesis` and `simulate_hardening`.
+- Added `HypothesisAssessmentResult`, `HardeningSimulationResult`, and
+  `SimulatedGapSummary` `TypedDict` envelopes, with enums for hypothesis
+  likelihood and confidence.
+- Left `analyze_posture`, `assess_exposure`, `find_hardening_gaps`,
+  `compare_postures`, `get_posteriors`, and `reevaluate_domain` on permissive
+  schemas for separate compatibility passes because their object graphs are
+  larger.
+- Regenerated `docs/surface-inventory.json` so the derived inventory records the
+  new helper output-schema fields and nested definition count.
+- Focused validation:
+  `uv run python -m pytest tests/test_mcp_structured_output.py tests/test_server_agentic.py tests/test_surface_inventory.py -q`
+  passed with 42 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check src/recon_tool/server_posture.py tests/test_mcp_structured_output.py scripts/generate_surface_inventory.py tests/test_surface_inventory.py`
+  and
+  `uv run python -m pyright src/recon_tool/server_posture.py tests/test_mcp_structured_output.py`
+  passed.
+- Surface inventory check:
+  `uv run python scripts/generate_surface_inventory.py --check` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.22 percent. Tests: 3418 passed, 6 skipped, 4 deselected.
+- External spend: 0 USD.
 - Extended precise MCP output schemas to the graph data tools:
   `cluster_verification_tokens`, `get_infrastructure_clusters`, and
   `export_graph`.
