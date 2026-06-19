@@ -84,6 +84,9 @@ docs/accuracy.md
 # Aggregate calibration memo renderer: reads private-run aggregate JSON, applies
 # disclosure checks, and emits a reviewable aggregate memo. No target data.
 !/validation/render_calibration_memo.py
+# Private calibration bundle runner: orchestrates the reference, tenancy, and
+# conformal harnesses into a gitignored run directory. No target data.
+!/validation/run_calibration_bundle.py
 # Tenancy reference-calibration harness: corroborates the M365 tenancy posterior
 # (DNS channel only) against the provider's identity-endpoint attestation; GWS
 # reported one-sided. Pure label/channel-split logic is unit-tested; the

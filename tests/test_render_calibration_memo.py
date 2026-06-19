@@ -80,6 +80,47 @@ CONFORMAL_SINGLE = {
 }
 
 
+TENANCY_STRATIFIED = {
+    "mode": "stratified",
+    "m365_dns_only": {
+        "min_cell": 10,
+        "pooled": {
+            "n": 20,
+            "base_rate_enforcing": 0.6,
+            "brier": 0.2,
+            "log_score": 0.55,
+            "ece": 0.12,
+            "agreement_rate": 0.7,
+        },
+        "strata": {
+            "saas": {
+                "n": 10,
+                "base_rate_enforcing": 0.6,
+                "brier": 0.2,
+                "log_score": 0.55,
+                "ece": 0.12,
+                "agreement_rate": 0.7,
+            },
+            "security": {
+                "n": 10,
+                "base_rate_enforcing": 0.5,
+                "brier": 0.18,
+                "log_score": 0.49,
+                "ece": 0.09,
+                "agreement_rate": 0.8,
+            },
+        },
+    },
+    "gws_one_sided": {
+        "n": 4,
+        "threshold": 0.5,
+        "recall": 0.75,
+        "recall_wilson80": [0.41, 0.93],
+        "posterior_quartiles": [0.51, 0.63, 0.81],
+    },
+}
+
+
 def test_render_memo_includes_aggregate_sections_only() -> None:
     memo = render_memo(
         title="Aggregate Calibration Validation Memo",
@@ -96,6 +137,18 @@ def test_render_memo_includes_aggregate_sections_only() -> None:
     assert "tenant IDs" in memo
     assert "contoso" not in memo.lower()
     assert "fabrikam" not in memo.lower()
+
+
+def test_render_memo_handles_stratified_tenancy_payload() -> None:
+    memo = render_memo(
+        title="Aggregate Calibration Validation Memo",
+        tenancy=TENANCY_STRATIFIED,
+    )
+
+    assert "M365 DNS-only Stratified Corroboration" in memo
+    assert "Pooled and per-stratum" in memo
+    assert "| saas | 10 | 0.12 | 0.7 | 0.6 |" in memo
+    assert "Full posterior" not in memo
 
 
 def test_validate_public_payload_rejects_target_fields() -> None:

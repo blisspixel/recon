@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Calibration memo renderer.** Added aggregate JSON output for conformal
   coverage and a renderer that rejects target-identifying fields and
   unsuppressed small strata before a private-run validation memo is reviewed.
+- **Calibration bundle runner.** Added a maintainer-local runner that executes
+  the reference, tenancy, and conformal calibration harnesses into a gitignored
+  run directory, captures aggregate JSON without shell redirects, and renders
+  the checked memo.
 - **Scorecard supply-chain posture.** Added explicit read-only workflow token
   defaults, a low-noise Dependabot configuration, and scheduled CodeQL analysis
   so Scorecard-detected token-permissions, dependency-update, and SAST posture

@@ -21,6 +21,9 @@ Committed (generic tooling, no company names):
 - `diff_runs.py`: compares two run directories. Surfaces newly-attributed
   subdomains, lost slugs, and aggregate slug-frequency changes. Use after
   adding fingerprints to confirm uplift.
+- `run_calibration_bundle.py`: maintainer-local wrapper around the reference,
+  tenancy, and conformal calibration harnesses. Captures aggregate JSON without
+  shell redirects and renders the checked memo under `runs-private/`.
 - `audit_fingerprints.py`: no-network catalog audit. Reports metadata
   coverage and match-mode classification (`keep_any`, `review_for_all`,
   `tighten_patterns`).
@@ -194,25 +197,19 @@ Reference-anchored / network (maintainer-local, aggregates only):
 Private-run memo sequence:
 
 ```bash
-python -m validation.reference_calibration \
-  --stratify-dir validation/corpus-private/by-vertical \
-  --json > validation/runs-private/<run>/reference.json
-
-python -m validation.tenancy_reference_calibration \
-  --stratify-dir validation/corpus-private/by-vertical \
-  --json > validation/runs-private/<run>/tenancy.json
-
-python -m validation.conformal_coverage \
-  validation/corpus-private/consolidated.txt \
-  --json > validation/runs-private/<run>/conformal.json
-
-python -m validation.render_calibration_memo \
-  --reference validation/runs-private/<run>/reference.json \
-  --tenancy validation/runs-private/<run>/tenancy.json \
-  --conformal validation/runs-private/<run>/conformal.json \
-  --output validation/runs-private/<run>/memo.md
+python -m validation.run_calibration_bundle \
+  --label "Aggregate Calibration Validation Memo"
 ```
 
+By default the runner expects:
+
+- `validation/corpus-private/by-vertical/*.txt` for per-stratum reference and
+  tenancy calibration.
+- `validation/corpus-private/consolidated.txt` for conformal coverage.
+- `validation/runs-private/<UTC-stamp>/` for `reference.json`, `tenancy.json`,
+  `conformal.json`, `memo.md`, and `meta.json`.
+
+Use `--dry-run` to print the exact module invocations without network calls.
 Review `memo.md` before copying any result into a committed validation memo.
 The renderer is a backstop, not a substitute for review.
 
