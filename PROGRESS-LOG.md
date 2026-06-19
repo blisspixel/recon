@@ -5,6 +5,27 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Added the `tm_to_azurefd_to_msedge` built-in chain motif for complete
+  Traffic Manager to Azure Front Door to Microsoft Edge CNAME chains.
+- Kept the existing pairwise Microsoft motifs intact. The new motif adds a
+  complete-chain observation when all three ordered markers appear in the same
+  chain.
+- Added regressions proving the triad motif loads, fires on a fictional
+  `trafficmanager.net` to `azurefd.net` to `t-msedge.net` chain, and does not
+  fire when the first two markers are reversed.
+- Added `validation/2026-06-19-msedge-triad-motif.md` with a public
+  before/after candidate-chain delta: the triad motif count moves from 0 to 1
+  while the existing pairwise motifs still fire.
+- Focused validation:
+  `uv run python -m pytest tests/test_motifs.py tests/test_validation_hygiene.py -q`
+  passed with 25 tests.
+- Focused lint:
+  `uv run python -m ruff check tests/test_motifs.py` passed.
+- Validation hygiene:
+  `uv run python scripts/check_validation_hygiene.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.18 percent. Tests: 3413 passed, 6 skipped, 4 deselected.
+- External spend: 0 USD.
 - Added a high-confidence Supabase `cname_target` fingerprint from the official
   custom-domain docs. The rule attributes branded CNAMEs that terminate at a
   Supabase project hostname without claiming database contents or plan details.

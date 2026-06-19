@@ -72,6 +72,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
   `_acme-challenge` TXT flow, fingerprint the vendor-specific CNAME and leave
   the ACME TXT out of the catalog unless the TXT value itself carries
   vendor-specific structure.
+- For motif catalog growth, prefer complete ordered-chain motifs only when they
+  add information beyond existing pairwise motifs. Record the before/after
+  firing delta on fictional or aggregate-safe chain inputs.
 - Track external spend explicitly. Default spend is 0 USD.
 - Before closing a cycle, run the narrow relevant gate. Before claiming repo
   readiness, run `uv run python scripts/check.py`.
