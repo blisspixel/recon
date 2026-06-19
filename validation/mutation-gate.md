@@ -145,9 +145,10 @@ uploaded as a CI artifact on every run, so this is checkable):
   operand domains (`"DKIM"`, `"slug"`, `"declarative"`, ...) have no
   lexicographic neighbour the test data could exercise. Accepted, not
   filtered, so a future numeric `==` is not silently masked.
-- *Arithmetic by 1.0* (`*` to `/` / `**` / `//` on `_EVIDENCE_N_EFF_CONTRIB`,
-  which is `1.0`): `x * 1.0 == x / 1.0 == x ** 1.0`, so the operator is
-  irrelevant. Mathematically equivalent.
+- *Arithmetic by 1.0* (`*` to `/` / `**` / `//` on the loaded
+  `evidence_n_eff_contrib`, which is `1.0` in the shipped
+  `bayesian_network.yaml`): `x * 1.0 == x / 1.0 == x ** 1.0`, so the
+  operator is irrelevant. Mathematically equivalent.
 - *Frozen-dataclass flags* (`frozen=True` to `False`): no code path mutates
   these instances, so the flag is behaviourally invisible; killing it would
   mean asserting that assignment raises, a language-feature test.
@@ -159,12 +160,13 @@ uploaded as a CI artifact on every run, so this is checkable):
   valid order and checks only the visited count, so the traversal order
   does not change the result.
 - *Coarser/finer rounding on a value with no decimals to lose* (`round(n_eff,
-  2)` to `round(_, 1)` / `round(_, 3)`): `n_eff` is always a multiple of `0.5`
-  (`_MIN_N_EFF` plus integer-count multiples of `_EVIDENCE_N_EFF_CONTRIB` and
-  `_CONFLICT_N_EFF_PENALTY`), so it carries no second decimal and the
-  granularity argument is irrelevant. Equivalent. The float-bearing output
-  fields (`posterior`, intervals, entropy, counterfactual `delta`) are *not*
-  equivalent and are pinned per field, above.
+  2)` to `round(_, 1)` / `round(_, 3)`): with the shipped calibration block,
+  `n_eff` is always a multiple of `0.5` (`min_n_eff` plus integer-count
+  multiples of `evidence_n_eff_contrib` and `conflict_n_eff_penalty`), so it
+  carries no second decimal and the granularity argument is irrelevant.
+  Equivalent. The float-bearing output fields (`posterior`, intervals,
+  entropy, counterfactual `delta`) are *not* equivalent and are pinned per
+  field, above.
 
 ## The floor
 

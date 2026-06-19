@@ -63,8 +63,8 @@ _EDGE_THRESHOLD = 0.5
 _SPARSE_MAX = 2
 _MODERATE_MAX = 6
 
-# n_eff buckets for the interval-width diagnostic. The floor is 4.0
-# (_MIN_N_EFF), so the first bucket is the passive-observation ceiling.
+# n_eff buckets for the interval-width diagnostic. The shipped calibration floor
+# is 4.0, so the first bucket is the passive-observation ceiling.
 _NEFF_BUCKETS: tuple[tuple[str, float, float], ...] = (
     ("ceiling (<=4)", 0.0, 4.0001),
     ("5-6", 4.0001, 6.0001),
@@ -74,7 +74,7 @@ _NEFF_BUCKETS: tuple[tuple[str, float, float], ...] = (
 
 
 def edge_posture(cdn_posterior: float | None, threshold: float = _EDGE_THRESHOLD) -> str:
-    """"edge-proxied" when a CDN/edge fronts the origin, else "direct"."""
+    """Return "edge-proxied" when a CDN/edge fronts the origin, else "direct"."""
     if cdn_posterior is None:
         return "direct"
     return "edge-proxied" if cdn_posterior >= threshold else "direct"

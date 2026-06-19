@@ -77,6 +77,9 @@ class TestSchemaValidation:
     def test_loads_shipped_network(self, shipped_network: BayesianNetwork) -> None:
         assert shipped_network.version == 1
         assert len(shipped_network.nodes) >= 5
+        assert shipped_network.calibration.min_n_eff == 4.0
+        assert shipped_network.calibration.evidence_n_eff_contrib == 1.0
+        assert shipped_network.calibration.conflict_n_eff_penalty == 1.5
         # Roots must have priors; children must have CPTs.
         for n in shipped_network.nodes:
             if n.parents:
@@ -162,6 +165,40 @@ class TestSchemaValidation:
         p = tmp_path / "badver.yaml"
         p.write_text(yaml.safe_dump(spec), encoding="utf-8")
         with pytest.raises(ValueError, match="unsupported schema version"):
+            load_network(p)
+
+    def test_missing_calibration_uses_defaults(self, toy_network_yaml: Path) -> None:
+        net = load_network(toy_network_yaml)
+        assert net.calibration.min_n_eff == 4.0
+        assert net.calibration.evidence_n_eff_contrib == 1.0
+        assert net.calibration.conflict_n_eff_penalty == 1.5
+
+    def test_loads_top_level_calibration(self, tmp_path: Path) -> None:
+        spec = {
+            "version": 1,
+            "calibration": {
+                "min_n_eff": 6.0,
+                "evidence_n_eff_contrib": 2.0,
+                "conflict_n_eff_penalty": 0.5,
+            },
+            "nodes": [{"name": "a", "description": "x", "prior": 0.5}],
+        }
+        p = tmp_path / "calibrated.yaml"
+        p.write_text(yaml.safe_dump(spec), encoding="utf-8")
+        net = load_network(p)
+        assert net.calibration.min_n_eff == 6.0
+        assert net.calibration.evidence_n_eff_contrib == 2.0
+        assert net.calibration.conflict_n_eff_penalty == 0.5
+
+    def test_rejects_invalid_calibration(self, tmp_path: Path) -> None:
+        spec = {
+            "version": 1,
+            "calibration": {"min_n_eff": 0.0},
+            "nodes": [{"name": "a", "description": "x", "prior": 0.5}],
+        }
+        p = tmp_path / "bad-calibration.yaml"
+        p.write_text(yaml.safe_dump(spec), encoding="utf-8")
+        with pytest.raises(ValueError, match=r"calibration\.min_n_eff"):
             load_network(p)
 
     def test_rejects_non_mapping_top(self, tmp_path: Path) -> None:

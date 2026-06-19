@@ -58,4 +58,24 @@ planning artifact and does not replace `CHANGELOG.md`.
   passed.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.17 percent. Tests: 3371 passed, 5 skipped, 4 deselected.
+- Started the fourth cycle from the roadmap's no-behavior-change Bayesian
+  calibration data item.
+- Added a top-level `calibration:` block to
+  `src/recon_tool/data/bayesian_network.yaml` for `min_n_eff`,
+  `evidence_n_eff_contrib`, and `conflict_n_eff_penalty`.
+- Added `CalibrationSettings` to the loaded Bayesian network, with loader
+  defaults for older test fixtures and strict positive finite validation.
+- Updated inference and conflict provenance to use the loaded network
+  calibration values while preserving the historical module constants for
+  internal compatibility.
+- Updated roadmap, correlation, traceability, mutation-gate, and validation
+  helper docs so they describe the YAML-backed calibration shape.
+- Focused validation:
+  `uv run python -m pytest tests/test_bayesian_inference.py tests/test_bayesian_unit_math.py tests/test_bayesian_network_invariants.py tests/test_bayesian_hypothesis.py tests/test_bayesian_fuzz.py tests/test_bayesian_masked_units.py tests/test_adversarial_properties.py tests/test_bayesian_sensitivity.py -q`
+  passed with 178 tests.
+- Focused lint and traceability:
+  `uv run python -m ruff check ...` passed, and
+  `uv run python scripts/check_traceability.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.18 percent. Tests: 3376 passed, 6 skipped, 4 deselected.
 - External spend: 0 USD.

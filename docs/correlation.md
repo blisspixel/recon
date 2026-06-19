@@ -2039,7 +2039,7 @@ Predicted Bayesian behaviour:
   the TTL/target inconsistency as a `merge_conflicts` field on
   the `TenantInfo`; the Bayesian layer reads `merge_conflicts`
   count via `_conflict_provenance` and dampens `n_eff` globally
-  by `_CONFLICT_N_EFF_PENALTY` per conflict (§4.1, asymmetric
+  by the loaded `conflict_n_eff_penalty` per conflict (§4.1, asymmetric
   likelihood discussion).
 - **Credible intervals widen automatically.** With `n_eff` dampened,
   $1/\sqrt{n_{\text{eff}}}$ grows; the 80% credible interval in

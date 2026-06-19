@@ -62,6 +62,15 @@
 #       Both in (0, 1). The "observed" side is what enters as
 #       evidence; the "not observed" side is implicit (1 - likelihood).
 #
+# calibration (optional, mapping): effective-sample-size settings for
+#   the reported credible interval. All values are positive finite
+#   numbers. Defaults live in the loader for old test fixtures, but the
+#   shipped network carries the explicit block below so tuning can be
+#   reviewed as data rather than inference-code edits.
+#   min_n_eff: floor for interval evidence strength.
+#   evidence_n_eff_contrib: per effective evidence-unit contribution.
+#   conflict_n_eff_penalty: per cross-source conflict subtraction.
+#
 # Inference operates on the marginal posterior P(node=present | E)
 # where E is the observed-evidence set for the queried domain. Exact
 # inference via variable elimination — see ``recon_tool/bayesian.py``.
@@ -86,6 +95,11 @@
 # Slug-level posteriors live in the existing ``fusion.py`` Beta layer.
 
 version: 1
+
+calibration:
+  min_n_eff: 4.0
+  evidence_n_eff_contrib: 1.0
+  conflict_n_eff_penalty: 1.5
 
 nodes:
   # ── Identity layer ─────────────────────────────────────────────────

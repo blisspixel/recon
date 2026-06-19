@@ -209,6 +209,22 @@ and JSON-schema surfaces:
 The generator derives approval semantics from MCP annotations, so a new stateful
 tool or annotation change must update both the generated inventory and its tests.
 
+## Bayesian Calibration Data
+
+The n_eff interval calibration knobs now live in
+`src/recon_tool/data/bayesian_network.yaml` under a top-level `calibration:`
+block:
+
+- `min_n_eff`
+- `evidence_n_eff_contrib`
+- `conflict_n_eff_penalty`
+
+`load_network()` reads the block into `BayesianNetwork.calibration`, defaults
+older fixtures to the current values, and validates every value as positive and
+finite. The inference engine and conflict provenance use the loaded values, so
+future interval tuning can be reviewed as data while keeping default behavior
+unchanged.
+
 ## Decision Rule For The Next Task
 
 When choosing work in the public checkout:

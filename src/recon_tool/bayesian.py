@@ -62,6 +62,7 @@ from recon_tool.bayesian_loader import apply_priors_override as _apply_priors_ov
 from recon_tool.bayesian_loader import load_network, load_priors_override
 from recon_tool.bayesian_models import (  # re-exported: stable import path after the split
     BayesianNetwork,
+    CalibrationSettings,
     ConflictProvenance,
     EvidenceContribution,
     InferenceResult,
@@ -75,6 +76,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "BayesianNetwork",
+    "CalibrationSettings",
     "ConflictProvenance",
     "EvidenceContribution",
     "InferenceResult",
@@ -93,10 +95,14 @@ __all__ = [
 # module level so downstream consumers can document the contract.
 _CREDIBLE_INTERVAL_WIDTH = 0.80
 
-# Minimum effective sample size — the interval never collapses to a
-# point even with abundant evidence. Reflects the passive-observation
-# ceiling: we are inferring from public DNS / CT, not from authoritative
-# tenant inventory.
+# Default effective-sample-size settings. load_network() reads the same values
+# from bayesian_network.yaml's top-level calibration block; these constants
+# remain for historical internal imports and default BayesianNetwork(...)
+# construction.
+#
+# Minimum effective sample size: the interval never collapses to a point even
+# with abundant evidence. Reflects the passive-observation ceiling: we are
+# inferring from public DNS / CT, not from authoritative tenant inventory.
 _MIN_N_EFF = 4.0
 
 # Per-evidence-record contribution to n_eff. With 1 record n_eff ≈ 5,
@@ -514,6 +520,10 @@ def _erfinv(y: float) -> float:
     return math.copysign(math.sqrt(math.sqrt(first * first - ln / a) - first), y)
 
 
+def _network_calibration(network: BayesianNetwork) -> CalibrationSettings:
+    return network.calibration
+
+
 # ── Public API ─────────────────────────────────────────────────────────
 
 
@@ -659,6 +669,7 @@ def infer(
 
     if conflicts:
         conflict_field_count = len(conflicts)
+    calibration = _network_calibration(network)
 
     slug_set = set(observed_slugs)
     signal_set = set(observed_signals)
@@ -690,13 +701,13 @@ def infer(
         # node gets a narrow interval around a low posterior rather than a
         # wide "sparse" one.
         n_eff_count = (
-            _declarative_evidence_count(node, fired, masked)
-            if node.missingness == "declarative"
-            else len(contributing)
+            _declarative_evidence_count(node, fired, masked) if node.missingness == "declarative" else len(contributing)
         )
         n_eff = max(
-            _MIN_N_EFF,
-            _MIN_N_EFF + n_eff_count * _EVIDENCE_N_EFF_CONTRIB - conflict_field_count * _CONFLICT_N_EFF_PENALTY,
+            calibration.min_n_eff,
+            calibration.min_n_eff
+            + n_eff_count * calibration.evidence_n_eff_contrib
+            - conflict_field_count * calibration.conflict_n_eff_penalty,
         )
         low, high = _credible_interval(post, n_eff)
 
@@ -726,7 +737,7 @@ def infer(
                 # the influence ranking above reflects the contributing set.
                 evidence_used=tuple(f"{ev.kind}:{ev.name}" for ev in fired),
                 n_eff=round(n_eff, 2),
-                sparse=n_eff <= _MIN_N_EFF,
+                sparse=n_eff <= calibration.min_n_eff,
                 conflict_provenance=conflicts,
                 evidence_ranked=evidence_ranked,
                 absence_informative=node.missingness == "declarative",
@@ -863,7 +874,10 @@ _CONFLICT_FIELDS: tuple[str, ...] = (
 )
 
 
-def _conflict_provenance(info: object) -> tuple[ConflictProvenance, ...]:
+def _conflict_provenance(
+    info: object,
+    conflict_n_eff_penalty: float = _CONFLICT_N_EFF_PENALTY,
+) -> tuple[ConflictProvenance, ...]:
     """Extract per-field conflict records from a TenantInfo's merge_conflicts.
 
     Returns empty tuple when there are no conflicts. Each record names
@@ -889,7 +903,7 @@ def _conflict_provenance(info: object) -> tuple[ConflictProvenance, ...]:
             ConflictProvenance(
                 field=field,
                 sources=tuple(sources),
-                magnitude=_CONFLICT_N_EFF_PENALTY,
+                magnitude=conflict_n_eff_penalty,
             )
         )
     return tuple(out)
@@ -919,7 +933,7 @@ def infer_from_tenant_info(
         network = load_network()
     slugs = set(getattr(info, "slugs", ()) or ())
     signals = signals_from_tenant_info(info)
-    conflict_records = _conflict_provenance(info)
+    conflict_records = _conflict_provenance(info, _network_calibration(network).conflict_n_eff_penalty)
     return infer(
         network,
         observed_slugs=slugs,
