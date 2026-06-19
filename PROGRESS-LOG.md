@@ -100,4 +100,29 @@ planning artifact and does not replace `CHANGELOG.md`.
   and `uv run python scripts/generate_surface_inventory.py --check --check-cli-surface`.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.14 percent. Tests: 3380 passed, 5 skipped, 4 deselected.
+- Started the sixth cycle from the remaining CLI surface release-note polish.
+- Added `scripts/summarize_cli_surface_changes.py`, a maintainer-local comparer
+  for generated `docs/surface-inventory.json` files that emits the
+  changelog-ready `Tool surface changes:` line.
+- The helper supports direct inventory paths, `--old-ref vX.Y.Z` for git-tag
+  comparisons without shell redirection, and `--json` for structured release
+  automation.
+- Added `tests/test_summarize_cli_surface_changes.py` covering command deltas,
+  flag deltas, no-change summaries, JSON output, argument validation, and git
+  ref failures.
+- Updated `docs/release-process.md` to require a `### Tool Surface Changes`
+  entry per release and to document the helper.
+- Updated `CHANGELOG.md` with the current no-runtime-CLI-change surface line and
+  `docs/roadmap.md` to mark the CLI surface inventory release-note item done.
+- Focused validation:
+  `uv run python -m pytest tests/test_summarize_cli_surface_changes.py -q`
+  passed with 7 tests.
+- Focused lint:
+  `uv run python -m ruff check scripts/summarize_cli_surface_changes.py tests/test_summarize_cli_surface_changes.py`
+  passed.
+- Helper smoke:
+  `uv run python scripts/summarize_cli_surface_changes.py --old-ref HEAD`
+  returned `Tool surface changes: no CLI command or flag changes.`
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.16 percent. Tests: 3387 passed, 5 skipped, 4 deselected.
 - External spend: 0 USD.

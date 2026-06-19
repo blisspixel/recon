@@ -8,6 +8,8 @@ pre-push steps, and a GitHub Actions workflow that handles build + publish.
 ```bash
 # 1. Write the CHANGELOG entry for the new version.
 #    Add a section starting with "## [X.Y.Z] - YYYY-MM-DD".
+#    Generate the CLI surface line if commands or flags changed:
+#    uv run python scripts/summarize_cli_surface_changes.py --old-ref vX.Y.Z
 
 # 2. Run the local readiness preflight.
 uv run python scripts/release_readiness.py
@@ -63,6 +65,27 @@ uv run python scripts/release_readiness.py --json
 
 The JSON output is deliberately local and deterministic unless `--remote` is
 passed. It is a maintainer signal, not a runtime contract for recon users.
+
+---
+
+## CLI surface change line: `scripts/summarize_cli_surface_changes.py`
+
+Every release section should include a short `### Tool Surface Changes` entry
+so skill and agent authors can scan command and flag changes without diffing
+help output. Generate the line from the checked surface inventory:
+
+```bash
+uv run python scripts/summarize_cli_surface_changes.py --old-ref vX.Y.Z
+```
+
+Replace `vX.Y.Z` with the last released tag. The helper reads
+`docs/surface-inventory.json` from that tag with `git show`, compares it with
+the current generated inventory, and prints one changelog-ready sentence. Use
+`--json` when release automation needs the structured diff instead of prose.
+
+If commands and flags did not change, keep the generated no-change line. It
+is cheap signal for downstream skill maintainers and avoids forcing them to
+infer silence from the rest of the changelog.
 
 ---
 
@@ -133,6 +156,7 @@ Before running `scripts/release.py`:
       duplicate `CHANGELOG.md`.
 - [ ] `docs/stability.md` has been updated if any public surface changed.
 - [ ] `docs/schema.md` has been updated if any top-level JSON field changed.
+- [ ] `CHANGELOG.md` includes the generated `### Tool Surface Changes` line.
 - [ ] README examples and docs references still match the shipped CLI behavior.
 
 After the tag is published and the PyPI release exists, refresh the Homebrew

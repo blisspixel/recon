@@ -2374,14 +2374,12 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   `docs/surface-inventory.json` now carries the machine-readable local CLI, MCP,
   JSON-schema, and agent-integration map, and `docs/cli-surface.md` now carries
   the generated human-readable command and flag reference. `scripts/check.py`
-  drift-checks both files. Remaining release-process polish:
-  1. A "Tool surface changes" one-liner per release in the
-     CHANGELOG, focused on the user-visible CLI surface (new
-     subcommands, new flags). Lets skill maintainers do a
-     30-second sync check between releases without diffing
-     `recon --help` output. The current CHANGELOG mixes
-     surface changes into the narrative; a single-line
-     callout per release would be more scannable.
+  drift-checks both files.
+  1. Done 2026-06-19: `scripts/summarize_cli_surface_changes.py`
+     compares generated surface inventories and emits the
+     changelog-ready "Tool surface changes" one-liner for user-visible
+     CLI commands and flags. Release docs now require a
+     `### Tool Surface Changes` entry per release.
   2. Done 2026-06-19: `docs/cli-surface.md` is generated from
      the live Typer command tree and lists every flag and
      subcommand in one place, suitable for skill files or AI

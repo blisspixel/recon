@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Tool Surface Changes
+
+- No runtime CLI command or flag changes; the generated `docs/cli-surface.md`
+  reference now mirrors the existing command tree for release-note checks.
+
 ### Fixed
 
 - **Docs currency.** Updated README, contributor, roadmap, engineering-practice,
