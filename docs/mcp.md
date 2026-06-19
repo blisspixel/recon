@@ -138,11 +138,15 @@ inference tools (`get_fingerprints`, `get_signals`, `explain_signal`,
 `cluster_verification_tokens`, `get_infrastructure_clusters`, `export_graph`,
 `get_posteriors`, and the ephemeral-fingerprint tools).
 
-The no-network catalog list tools now start the precise-schema Phase 2:
+The no-network catalog list tools started the precise-schema Phase 2:
 `get_fingerprints` advertises a `FingerprintSummary` item schema and
 `get_signals` advertises `SignalSummary` plus nested `SignalMetadataSummary`.
-Broader tool output typing remains incremental; the CLI `--json` v2.0 schema is
-a separate locked contract.
+The simple ephemeral-fingerprint session tools now advertise
+`EphemeralInjectionResult`, `EphemeralFingerprintSummary`, and
+`EphemeralClearResult`. Broader tool output typing remains incremental;
+`reevaluate_domain` and the domain-analysis tools still return larger shapes
+that need focused compatibility passes. The CLI `--json` v2.0 schema is a
+separate locked contract.
 
 The narrative tools render prose or DOT and intentionally return text:
 `lookup_tenant` (its `format` selects `text` / `json` / `markdown`),

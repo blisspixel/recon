@@ -13,11 +13,38 @@ from typing import Any
 
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
+from typing_extensions import TypedDict
 
 from recon_tool.formatter import format_tenant_dict
 from recon_tool.server_app import mcp
 from recon_tool.server_runtime import cache, cache_get, cache_refresh_info, remerge_cached_infos
 from recon_tool.validator import validate_domain
+
+
+class EphemeralInjectionResult(TypedDict):
+    """Structured MCP output for ``inject_ephemeral_fingerprint``."""
+
+    status: str
+    name: str
+    slug: str
+    detections_accepted: int
+
+
+class EphemeralFingerprintSummary(TypedDict):
+    """Structured MCP output item for ``list_ephemeral_fingerprints``."""
+
+    name: str
+    slug: str
+    category: str
+    confidence: str
+    detection_count: int
+
+
+class EphemeralClearResult(TypedDict):
+    """Structured MCP output for ``clear_ephemeral_fingerprints``."""
+
+    status: str
+    removed: int
 
 
 @mcp.tool(
@@ -34,7 +61,7 @@ async def inject_ephemeral_fingerprint(
     category: str,
     confidence: str,
     detections: list[dict[str, str]],
-) -> dict[str, Any]:
+) -> EphemeralInjectionResult:
     """Inject a temporary fingerprint for the current session.
 
     The fingerprint is validated through the same pipeline as built-in
@@ -123,7 +150,7 @@ async def inject_ephemeral_fingerprint(
         openWorldHint=False,
     ),
 )
-async def list_ephemeral_fingerprints() -> list[dict[str, Any]]:
+async def list_ephemeral_fingerprints() -> list[EphemeralFingerprintSummary]:
     """List all ephemeral fingerprints loaded in the current session.
 
     Returns a list of fingerprint summaries (navigable ``structuredContent``
@@ -151,7 +178,7 @@ async def list_ephemeral_fingerprints() -> list[dict[str, Any]]:
         openWorldHint=False,
     ),
 )
-async def clear_ephemeral_fingerprints() -> dict[str, Any]:
+async def clear_ephemeral_fingerprints() -> EphemeralClearResult:
     """Remove all ephemeral fingerprints from the current session.
 
     Returns confirmation with the count of fingerprints removed.
