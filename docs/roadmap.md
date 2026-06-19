@@ -2427,9 +2427,9 @@ are picked up alongside the build plan above.
 - Add one entry to a new `motifs.yaml` describing a recurring CNAME or NS
   chain pattern (e.g., `cloudflare -> akamai -> custom-origin`) with a
   before/after corpus delta showing the pattern actually fires.
-- Add one vertical-baseline absence rule in `verticals.yaml` with a clear
-  passive-ceiling note (e.g., "fintech profile expects WAF motif; absence
-  is observable, not a verdict").
+- Done 2026-06-19: add high-value-target profile baseline expectations for
+  `Identity` and `Security & Compliance`, with tests confirming the absence
+  observations stay hedged and suppress when those categories are observed.
 - Done 2026-06-19: add a small aggregate-only public smoke memo from
   `validation.reproduce_paper_numbers --profile smoke`, with hygiene tests and
   no real apexes, tenant IDs, or per-domain output.

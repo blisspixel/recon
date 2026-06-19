@@ -31,3 +31,9 @@ prepend_note: |
   rigor, layered email security, and hardening-pattern
   observations are prioritised. Sparse-data targets are expected —
   the absence of consumer SaaS is itself a signal at this level.
+# v1.8 vertical-baseline anomaly rules. High-value targets often expose
+# identity and security-control evidence in the passive channel. Absence
+# is surfaced as an observable ceiling note, not a verdict.
+expected_categories:
+  - Identity
+  - Security & Compliance

@@ -42,6 +42,12 @@ class TestProfileSchemaExtension:
         assert p is not None
         assert "cloudflare_to_aws" in p.expected_motifs
 
+    def test_high_value_target_has_expected_categories(self):
+        p = load_profile("high-value-target")
+        assert p is not None
+        assert "Identity" in p.expected_categories
+        assert "Security & Compliance" in p.expected_categories
+
     def test_loader_handles_missing_fields(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         # A profile without expected_* fields should still load.
         custom_dir = tmp_path / "profiles"
@@ -146,3 +152,22 @@ class TestComputeBaselineAnomalies:
         # Verdict / commanding language NOT present
         for forbidden in ("must", "should fix", "vulnerability", "broken"):
             assert forbidden not in statement.lower()
+
+    def test_high_value_target_missing_security_category_is_hedged(self):
+        p = load_profile("high-value-target")
+        assert p is not None
+
+        anomalies = compute_baseline_anomalies(p, ("okta",), ())
+        statements = [a.statement for a in anomalies]
+
+        assert any("Security & Compliance" in statement for statement in statements)
+        assert not any("'Identity'" in statement for statement in statements)
+        assert all("absence is observable, not a verdict" in statement for statement in statements)
+
+    def test_high_value_target_expectations_suppress_when_categories_present(self):
+        p = load_profile("high-value-target")
+        assert p is not None
+
+        anomalies = compute_baseline_anomalies(p, ("okta", "crowdstrike"), ())
+
+        assert anomalies == ()
