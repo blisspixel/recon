@@ -177,7 +177,7 @@ remains an empty `autoApprove` list until you have decided per tool.
 `get_posteriors` (and the fused claims) return a point `posterior` *and* an 80%
 credible interval, because the point estimate is a summary of the interval, not
 a standalone verdict. A consuming agent should read the interval, not just the
-number. Three signals mean "the passive channel could not resolve this claim" —
+number. Three signals mean "the passive channel could not resolve this claim":
 report it unresolved rather than collapsing it to the point value: `sparse=true`
 on a node (the top-level `sparse_count` totals these), a 0.5-straddling
 interval, or an empty `evidence_used` list. And absence is not disproof: recon
@@ -322,4 +322,4 @@ This is a common failure mode, and it usually is not a broken config. A healthy 
 The two ways recon's tools get registered default to different approval behavior, which is worth knowing if you install by both:
 
 - **`recon mcp install` (or a hand-edited config).** The stanza carries `"autoApprove": []`, so every tool call waits for manual approval. This is the safe default and is what the manual-install JSON above shows.
-- **The Claude Code plugin.** Plugin-bundled MCP servers are auto-approved when the plugin is enabled, and the plugin `.mcp.json` schema has no `autoApprove` field. recon's MCP tools are read-only by design, so this is reasonable, but if you have installed both ways you will have two registrations with different approval semantics. Picking one path avoids the ambiguity.
+- **The Claude Code plugin.** Plugin-bundled MCP servers are auto-approved when the plugin is enabled, and the plugin `.mcp.json` schema has no `autoApprove` field. Most recon MCP tools are read-only, but `inject_ephemeral_fingerprint`, `clear_ephemeral_fingerprints`, and `reload_data` are stateful for the running session. If you have installed both ways you will have two registrations with different approval semantics. Picking one path avoids the ambiguity, and stateful tools should stay manual unless you deliberately trust that session-local effect.

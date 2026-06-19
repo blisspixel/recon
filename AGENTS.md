@@ -59,7 +59,7 @@ Lowercase the input, strip any leading `https://` / `http://` / `www.`, then mat
 
 Pass the validated domain inside double quotes in the Bash command (`recon "validated.example.com"`) as defense-in-depth; the regex is the primary control. The MCP path takes structured arguments and is not subject to this rule.
 
-Once a domain passes that validation, recon itself reduces it to the registrable apex (eTLD+1) before analysis, so `mail.acme.co.uk` is analyzed as `acme.co.uk` and the result's `queried_domain` is the apex. This is almost always what you want, since the signal (tenant, MX, `_dmarc`, CT) lives at the apex. Pass `--exact` only when the user specifically wants DNS facts about that one literal sub-host. This does not relax the validation rule above — still reject malformed or injection-bearing input rather than fixing it up.
+Once a domain passes that validation, recon itself reduces it to the registrable apex (eTLD+1) before analysis, so `mail.acme.co.uk` is analyzed as `acme.co.uk` and the result's `queried_domain` is the apex. This is almost always what you want, since the signal (tenant, MX, `_dmarc`, CT) lives at the apex. Pass `--exact` only when the user specifically wants DNS facts about that one literal sub-host. This does not relax the validation rule above: still reject malformed or injection-bearing input rather than fixing it up.
 
 ## Two invocation modes
 
@@ -113,10 +113,10 @@ Trigger this mode when the user explicitly says "full", "max details", "give me 
 recon "<domain>" --full --json
 ```
 
-In this mode, **do not dump the JSON inline.** Output is typically 3–10 KB depending on org size and consumes context for no benefit. Instead:
+In this mode, **do not dump the JSON inline.** Output is typically 3-10 KB depending on org size and consumes context for no benefit. Instead:
 
 1. Capture stdout from the Bash call. Use your file-write tool to save it to `recon-<validated-domain>.json` in the current working directory (or a path the user specifies). Never substitute the unvalidated domain into a shell redirect.
-2. Reply with a 3-line headline only (field names per [`docs/recon-schema.json`](docs/recon-schema.json) v1.0 contract):
+2. Reply with a 3-line headline only (field names per the stable v2.0 contract in [`docs/recon-schema.json`](docs/recon-schema.json)):
    > **{display_name}**: {provider}, confidence {confidence}.
    > {N services detected, {ct_subdomain_count} CT subdomains, email security {email_security_score}/5}.
    > Full JSON saved to `recon-{domain}.json`. Ready for the next ask.
@@ -136,7 +136,7 @@ When the `recon` MCP server is connected, use it instead of shelling out; it ret
 
 - `lookup_tenant(domain, format="json", explain=true)`: full domain intelligence with provenance.
 - `analyze_posture(domain, profile=...)`: posture observations, optionally biased by a profile lens.
-- `assess_exposure(domain)`: posture score (0–100). Operates on already-collected data; no extra network calls.
+- `assess_exposure(domain)`: posture score (0-100). Operates on already-collected data; no extra network calls.
 - `find_hardening_gaps(domain)`: categorized gaps with neutral "Consider" notes.
 - `simulate_hardening(domain, fixes=[...])`: what-if scoring with hypothetical fixes applied.
 - `compare_postures(domain_a, domain_b)`: side-by-side posture comparison.

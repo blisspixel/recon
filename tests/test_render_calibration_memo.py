@@ -5,7 +5,7 @@ import json
 import pytest
 
 from validation.render_calibration_memo import main as memo_main
-from validation.render_calibration_memo import render_memo, validate_public_payload
+from validation.render_calibration_memo import render_memo, validate_public_payload, validate_public_text
 
 REFERENCE_SINGLE = {
     "mode": "single",
@@ -161,6 +161,32 @@ def test_validate_public_payload_rejects_target_fields() -> None:
 def test_validate_public_payload_rejects_domain_values_under_other_keys() -> None:
     with pytest.raises(ValueError, match="target-looking domain"):
         validate_public_payload("reference", {"source": "private-corpus.example"})
+
+
+def test_validate_public_payload_rejects_domain_keys() -> None:
+    payload = {
+        "mode": "stratified",
+        "full": {
+            "min_cell": 10,
+            "pooled": {"n": 10},
+            "strata": {
+                "private-corpus.example": {"n": 10, "ece": 0.1},
+            },
+        },
+    }
+
+    with pytest.raises(ValueError, match="target-looking domain key"):
+        validate_public_payload("reference", payload)
+
+
+def test_validate_public_text_rejects_domain_values() -> None:
+    with pytest.raises(ValueError, match="title text is not publishable"):
+        validate_public_text("title", "Calibration for private-corpus.example")
+
+
+def test_render_memo_rejects_unsafe_title() -> None:
+    with pytest.raises(ValueError, match="title text is not publishable"):
+        render_memo(title="Calibration for private-corpus.example", reference=REFERENCE_SINGLE)
 
 
 def test_validate_public_payload_rejects_unsuppressed_small_strata() -> None:

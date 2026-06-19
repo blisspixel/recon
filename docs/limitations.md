@@ -46,6 +46,12 @@ cannot.
 
 ### Internal-only services
 
+By default recon does not probe hosts, ports, login pages, or application
+endpoints on the target's own infrastructure. The exceptions are narrow and
+documented: it may fetch the standards-compliant MTA-STS policy at
+`mta-sts.<domain>`, and the CSE / BIMI VMC direct probes run only when
+`--direct-probes` is explicitly enabled.
+
 - **Private SSO** (on-prem ADFS without public autodiscover, internal CAS,
   self-hosted Authelia / Keycloak not exposed via public DNS)
 - **Internal SaaS** (company-internal Jira / Confluence behind VPN with no
