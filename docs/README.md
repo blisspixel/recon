@@ -45,6 +45,7 @@ For anyone evaluating recon as a primitive to build on.
 | Runtime contract (timeouts, caps, exit codes, determinism) | [operational-contract.md](operational-contract.md) |
 | Release integrity (reproducible, signed, attested builds) | [supply-chain.md](supply-chain.md) |
 | Keeping the model honest over time (maintainer loop + drift gate) | [maintainer-validation.md](maintainer-validation.md) |
+| Optional maintainer loop contracts and gates | [maintainer-loop-runbook.md](maintainer-loop-runbook.md) |
 | Requirements-and-invariants map, machine-checked in CI | [traceability-matrix.md](traceability-matrix.md) |
 | What may and may not enter the public repo (data-handling policy) | [data-handling-policy.md](data-handling-policy.md) |
 | What each number is backed by (observed / consistency / evidence-responsive / coverage) | [statistical-assurance.md](statistical-assurance.md) |

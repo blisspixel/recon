@@ -12,6 +12,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - Prefer deterministic gates over prose review.
 - Do not add stable public surfaces without a concrete consumer and a
   compatibility story.
+- For maintainer loop docs, require the four-part contract: context packet,
+  ignored local state, deterministic gate, and explicit stop condition. Include
+  spend tracking and maintainer review boundaries for semantic changes.
 - When the private corpus is unavailable, support the calibration path with
   public-tree docs, guards, tests, or runbooks rather than inventing unrelated
   runtime features.

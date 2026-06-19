@@ -70,7 +70,7 @@ Current maintainer-loop deltas from 2026-06-19 include generated surface
   PR-scoped ClusterFuzzLite parser-boundary fuzzing, public paper-number
   reproduction tooling, shared
   validation-runner path-containment hardening, calibration corpus-shape
-  preflight, cache edge coverage,
+  preflight, the optional maintainer-loop runbook, cache edge coverage,
   high-value-target baseline expectations, and a first production
   `match_mode: all` fingerprint for CrowdStrike TXT evidence. The public
 catalog-growth queue also now includes a Supabase CNAME target sourced from the
@@ -122,6 +122,16 @@ distribution artifacts.
 The project therefore should not add LLM calls, learned classifiers,
 auto-written CPT updates, autonomous catalog mutation, hosted scheduling, or
 agent memory inside runtime behavior.
+
+## Maintainer Loop Runbook
+
+`docs/maintainer-loop-runbook.md` now turns the roadmap's optional loop idea into
+a concrete maintainer contract for CI failure triage, private calibration, and
+fingerprint proposal loops. Each loop must load the same context packet, write
+state only to ignored local paths, name a deterministic gate, stop on pass or a
+reproducible blocker, track spend from 0 USD, and leave semantic changes for
+normal maintainer review. The runbook is documentation and guardrail only; it is
+not a runtime scheduler or an agent inside recon.
 
 ## Validation State
 
