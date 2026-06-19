@@ -351,9 +351,10 @@ attestation, exports the signed GitHub attestation bundles as
 `recon-tool-<version>.intoto.jsonl`, and attaches that provenance asset to the
 GitHub Release. The local Scorecard posture tests now also require every
 workflow to default to read-only token permissions and pin every elevated job
-scope to an allowlist. The remaining low scores require external or policy
-choices: branch protection and code-review settings, elapsed repository age,
-outside contributors, OpenSSF Best Practices badge enrollment, and a real
+scope to an allowlist, and every checkout step disables persisted Git
+credentials. The remaining low scores require external or policy choices:
+branch protection and code-review settings, elapsed repository age, outside
+contributors, OpenSSF Best Practices badge enrollment, and a real
 Scorecard-recognized fuzzing service rather than a badge-only wrapper around the
 existing Hypothesis suites.
 

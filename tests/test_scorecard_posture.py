@@ -84,6 +84,23 @@ def test_elevated_job_permissions_are_allowlisted() -> None:
         assert seen_elevated == set(allowed), relative
 
 
+def test_checkout_steps_do_not_persist_credentials() -> None:
+    for path in _workflow_paths():
+        relative = path.relative_to(_ROOT).as_posix()
+        workflow = _load_yaml(relative)
+        jobs = workflow["jobs"]
+
+        for job_name, job in jobs.items():
+            for step in job.get("steps", []):
+                uses = str(step.get("uses", ""))
+                if not uses.startswith("actions/checkout@"):
+                    continue
+
+                with_block = step.get("with")
+                assert isinstance(with_block, dict), f"{relative}:{job_name}"
+                assert with_block.get("persist-credentials") is False, f"{relative}:{job_name}"
+
+
 def test_scorecard_workflow_uses_explicit_least_privilege_permissions() -> None:
     workflow = _load_yaml(".github/workflows/scorecard.yml")
     job = workflow["jobs"]["analysis"]
