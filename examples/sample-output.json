@@ -5,11 +5,22 @@
   "queried_domain": "northwindtraders.com",
   "provider": "Microsoft 365",
   "confidence": "high",
+  "evidence_confidence": "high",
+  "inference_confidence": "high",
   "region": "NA",
   "auth_type": "Federated",
-  "dmarc_policy": "reject",
-  "domain_count": 3,
-  "sources": ["oidc", "userrealm", "dns"],
+  "google_auth_type": null,
+  "google_idp_name": null,
+  "primary_email_provider": "Microsoft 365",
+  "likely_primary_email_provider": null,
+  "email_gateway": null,
+  "sources": [
+    "oidc",
+    "userrealm",
+    "dns"
+  ],
+  "partial": false,
+  "degraded_sources": [],
   "services": [
     "Anthropic (Claude)",
     "Atlassian (Jira/Confluence)",
@@ -30,27 +41,6 @@
     "SPF: strict (-all)",
     "Zendesk"
   ],
-  "insights": [
-    "Federated identity via Okta",
-    "Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)",
-    "Likely M365 E3/E5 (Intune + federated auth)",
-    "Security stack: KnowBe4 (security training), Okta (identity)",
-    "AI Adoption: anthropic",
-    "Modern Collaboration: slack, miro, atlassian, figma",
-    "Enterprise Security Stack: knowbe4, okta"
-  ],
-  "tenant_domains": [
-    "northwindtraders.com",
-    "northwindtraders.onmicrosoft.com",
-    "northwind-internal.com"
-  ],
-  "related_domains": [
-    "northwind-internal.com"
-  ],
-  "primary_email_provider": "Microsoft 365",
-  "email_security_score": 4,
-  "cloud_instance": "microsoftonline.com",
-  "msgraph_host": "graph.microsoft.com",
   "slugs": [
     "microsoft365",
     "exchange-online",
@@ -65,5 +55,83 @@
     "salesforce",
     "slack",
     "zendesk"
-  ]
+  ],
+  "detection_scores": {
+    "microsoft365": "high",
+    "exchange-online": "high",
+    "intune": "medium",
+    "okta": "medium",
+    "anthropic": "medium",
+    "atlassian": "medium",
+    "docusign": "medium",
+    "figma": "medium",
+    "knowbe4": "medium",
+    "miro": "medium",
+    "salesforce": "medium",
+    "slack": "medium",
+    "zendesk": "medium"
+  },
+  "insights": [
+    "Federated identity via Okta",
+    "Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)",
+    "Likely M365 E3/E5 (Intune + federated auth)",
+    "Security stack: KnowBe4 (security training), Okta (identity)",
+    "AI Adoption: anthropic",
+    "Modern Collaboration: slack, miro, atlassian, figma",
+    "Enterprise Security Stack: knowbe4, okta"
+  ],
+  "domain_count": 3,
+  "tenant_domains": [
+    "northwindtraders.com",
+    "northwindtraders.onmicrosoft.com",
+    "northwind-internal.com"
+  ],
+  "related_domains": [
+    "northwind-internal.com"
+  ],
+  "email_security_score": 4,
+  "dmarc_policy": "reject",
+  "dmarc_pct": 100,
+  "mta_sts_mode": "enforce",
+  "site_verification_tokens": [
+    "MS=ms12345",
+    "google-site-verification=northwind-example"
+  ],
+  "ct_subdomain_count": 8,
+  "cert_summary": {
+    "cert_count": 12,
+    "issuer_diversity": 2,
+    "issuance_velocity": 3,
+    "newest_cert_age_days": 4,
+    "oldest_cert_age_days": 360,
+    "top_issuers": [
+      "DigiCert",
+      "Microsoft Azure TLS Issuing CA"
+    ],
+    "wildcard_sibling_clusters": [],
+    "deployment_bursts": []
+  },
+  "cloud_instance": "microsoftonline.com",
+  "tenant_region_sub_scope": null,
+  "msgraph_host": "graph.microsoft.com",
+  "lexical_observations": [],
+  "bimi_identity": null,
+  "slug_confidences": {},
+  "posterior_observations": [],
+  "fusion_enabled": false,
+  "schema_version": "2.0",
+  "record_type": "lookup",
+  "surface_attributions": [],
+  "evidence_conflicts": [],
+  "chain_motifs": [],
+  "infrastructure_clusters": {
+    "algorithm": "skipped",
+    "modularity": 0.0,
+    "partition_stability": null,
+    "stability_runs": 0,
+    "node_count": 0,
+    "edge_count": 0,
+    "clusters": []
+  },
+  "fingerprint_metadata": {}
 }
