@@ -419,6 +419,10 @@ GHSA-6v7p-g79w-8964 through the dev-audit path
 the patched `msgpack` 1.2.1 release, and `pip-audit` reports no known
 vulnerabilities.
 
+A follow-on moderate alert, GHSA-4xgf-cpjx-pc3j, identified
+`pydantic-settings` through the MCP dependency path. The local lockfile and
+ClusterFuzzLite runtime requirements export now use `pydantic-settings` 2.14.2.
+
 The only remaining local Pinned-Dependencies warning in that scan was the
 ClusterFuzzLite build script's local `pip install .` command. The fuzz build now
 uses a committed hash-pinned runtime requirements export, then installs the
