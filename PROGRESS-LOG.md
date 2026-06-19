@@ -5,6 +5,28 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Added advisory diff coverage as a maintainer-local signal.
+- Added `scripts/diff_coverage.py` to combine Coverage.py JSON with a unified
+  diff, count only changed executable Python lines, report missing changed
+  lines by file, return success for documentation-only diffs, and optionally
+  fail under a caller-supplied threshold.
+- Added `tests/test_diff_coverage.py` for diff parsing, measured-line
+  filtering, Coverage.py JSON loading, documentation-only no-op behavior, and
+  threshold failures.
+- Updated engineering practices, roadmap, changelog, current-state analysis,
+  and local loop skills to keep diff coverage advisory rather than a blocking
+  gate.
+- Focused validation:
+  `uv run python -m pytest tests/test_diff_coverage.py tests/test_markdown_links.py -q`
+  passed with 6 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check scripts/diff_coverage.py tests/test_diff_coverage.py`
+  and
+  `uv run python -m pyright scripts/diff_coverage.py tests/test_diff_coverage.py`
+  passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.49 percent. Tests: 3493 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Hardened the hand-maintained JSON Schema drift guard for model-backed nested
   `$defs`.
 - Added dataclass field-set checks for `BIMIIdentity`, `CertBurst`,
