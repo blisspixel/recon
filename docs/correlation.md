@@ -527,8 +527,8 @@ invisible from any single domain's view.
 
 ### 3.7 Vertical-baseline anomaly rules
 
-`verticals.yaml` defines an expected fingerprint distribution per
-profile (fintech, healthcare, etc.). At runtime we compare the
+Profile YAML files define an expected fingerprint distribution per
+profile (fintech, healthcare, high-value-target, etc.). At runtime we compare the
 observed signal mix against the baseline. The simplest formulation
 is a KL-divergence proxy over vertical-relevant slugs; in practice
 we ship readable absence rules (`expected: WAF`,

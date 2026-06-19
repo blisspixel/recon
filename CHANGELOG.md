@@ -43,6 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Unclassified CNAME guidance.** Documented how to read unclassified CNAME
   chain termini as fingerprint proposals rather than vendor claims, with a docs
   guard test for the conservative wording.
+- **High-value-target profile baseline.** Added explicit `Identity` and
+  `Security & Compliance` expected categories to the high-value-target posture
+  profile, with tests pinning hedged absence observations.
 - **Public validation memo.** Added an aggregate-only smoke memo for
   `validation.reproduce_paper_numbers --profile smoke`, with hygiene tests that
   keep the committed artifact free of per-domain data.

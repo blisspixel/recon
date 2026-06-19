@@ -56,6 +56,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For unclassified CNAME chains, keep the doc voice conservative: a reached
   unmatched terminus is a fingerprint proposal, not a vendor claim. Require
   public docs or repeated validation evidence plus negative tests before a rule.
+- For profile baseline rules, use loaded fingerprint categories that actually
+  suppress on current slugs, and test both the missing-category observation and
+  the present-category suppression path.
 - For committed validation memos, record only aggregate counts, rates, intervals,
   and harness status. Keep local manifests and per-step stdout under ignored
   scratch paths, and pin the memo with validation-hygiene tests.

@@ -322,6 +322,15 @@ unchanged.
 - `shared_verification_tokens` remains batch-scope state and does not persist
   through the per-domain disk cache.
 
+## Profile Baseline Coverage
+
+The `high-value-target` profile now declares `Identity` and
+`Security & Compliance` as expected categories. Missing categories surface
+through the existing vertical-baseline path as medium consistency observations
+with the phrase `absence is observable, not a verdict`. Tests confirm that
+`okta` suppresses the identity expectation and `crowdstrike` suppresses the
+security expectation.
+
 ## Decision Rule For The Next Task
 
 When choosing work in the public checkout:

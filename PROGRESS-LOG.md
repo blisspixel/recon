@@ -283,3 +283,25 @@ planning artifact and does not replace `CHANGELOG.md`.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.15 percent. Tests: 3404 passed, 6 skipped, 4 deselected.
 - External spend: 0 USD.
+- Started the fifteenth cycle from the roadmap's vertical-baseline absence-rule
+  item.
+- Added `Identity` and `Security & Compliance` expected categories to the
+  `high-value-target` profile. These use effective loaded fingerprint
+  categories so observed Okta identity evidence and CrowdStrike security
+  evidence suppress the corresponding absence observations.
+- Corrected the correlation and stability docs to describe profile YAML files
+  as the baseline-rule home, including `expected_categories` and
+  `expected_motifs`.
+- Added `tests/test_baseline_anomalies.py` coverage for the new profile
+  expectations, the missing-security hedged observation, and the fully
+  suppressed identity-plus-security case.
+- Focused validation:
+  `uv run python -m pytest tests/test_baseline_anomalies.py tests/test_profiles.py tests/test_server_resources.py -q`
+  passed with 52 tests.
+- Focused lint and catalog validation:
+  `uv run python -m ruff check tests/test_baseline_anomalies.py` and
+  `python scripts/validate_fingerprint.py src/recon_tool/data/fingerprints/ --quiet`
+  passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.15 percent. Tests: 3408 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.

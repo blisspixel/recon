@@ -142,7 +142,7 @@ patch and minor releases without modification.
 | `~/.recon/fingerprints.yaml` schema | Same. Custom entries are **additive only**; they cannot override built-ins. A `~/.recon/fingerprints/` directory is also accepted (v1.1+). |
 | `data/signals.yaml` schema | Stable. Fields: name, category, confidence, description, requires, metadata, contradicts, requires_signals, expected_counterparts, positive_when_absent. |
 | `~/.recon/signals.yaml` schema | Same. Additive only. |
-| `data/profiles/*.yaml` schema | Stable. Fields: name, description, category_boost, signal_boost, focus_categories, exclude_signals, prepend_note. |
+| `data/profiles/*.yaml` schema | Stable. Fields: name, description, category_boost, signal_boost, focus_categories, exclude_signals, prepend_note, expected_categories, expected_motifs. |
 | `~/.recon/profiles/*.yaml` schema | Same. Additive only. |
 | `~/.recon/cache/*.json` (TenantInfo cache) | Stable. Backward-compatible reads, forward-compatible writes. |
 | `~/.recon/ct-cache/*.json` (per-domain CT cache) | Stable. |
