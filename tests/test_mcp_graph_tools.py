@@ -156,6 +156,7 @@ class TestExportGraph:
         assert payload["nodes"] == []
         assert payload["edges"] == []
         assert payload["cluster_assignment"] == {}
+        assert "ownership" in payload["disclaimer"].lower()
 
     def test_resolver_error_raises_tool_error(self, stub_resolve):
         stub_resolve("Domain validation failed")

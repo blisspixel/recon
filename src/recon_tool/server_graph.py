@@ -12,10 +12,10 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from typing import Any
 
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
+from typing_extensions import TypedDict
 
 from recon_tool import server_app
 from recon_tool.server_app import mcp
@@ -27,6 +27,63 @@ from recon_tool.server_runtime import (
 from recon_tool.validator import validate_domain
 
 logger = logging.getLogger("recon")
+
+GRAPH_EXPORT_DISCLAIMER = (
+    "Graph describes observable certificate SAN co-occurrence. "
+    "Edges are co-issuance evidence, not ownership claims."
+)
+
+
+class SharedVerificationPeer(TypedDict):
+    token: str
+    peer: str
+
+
+class DomainToolError(TypedDict):
+    domain: str
+    error: str
+
+
+class VerificationTokenClusterResult(TypedDict):
+    clusters: dict[str, list[SharedVerificationPeer]]
+    errors: list[DomainToolError]
+    disclaimer: str
+
+
+class InfrastructureClusterSummary(TypedDict):
+    cluster_id: int
+    size: int
+    members: list[str]
+    shared_cert_count: int
+    dominant_issuer: str | None
+
+
+class InfrastructureClusterEnvelope(TypedDict):
+    domain: str
+    algorithm: str
+    modularity: float
+    partition_stability: float | None
+    stability_runs: int
+    node_count: int
+    edge_count: int
+    clusters: list[InfrastructureClusterSummary]
+
+
+class GraphEdgeSummary(TypedDict):
+    source: str
+    target: str
+    shared_cert_count: int
+
+
+class GraphExportEnvelope(TypedDict):
+    domain: str
+    algorithm: str
+    node_count: int
+    edge_count: int
+    nodes: list[str]
+    edges: list[GraphEdgeSummary]
+    cluster_assignment: dict[str, int]
+    disclaimer: str
 
 
 @mcp.tool(
@@ -115,7 +172,7 @@ async def chain_lookup(domain: str, depth: int = 1) -> str:
         openWorldHint=True,
     ),
 )
-async def cluster_verification_tokens(domains: list[str]) -> dict[str, Any]:
+async def cluster_verification_tokens(domains: list[str]) -> VerificationTokenClusterResult:
     """Cluster a list of domains by shared site-verification tokens.
 
     For defensive OSINT and vendor due-diligence only.
@@ -171,7 +228,7 @@ async def cluster_verification_tokens(domains: list[str]) -> dict[str, Any]:
     domains = deduped
 
     domain_tokens: dict[str, tuple[str, ...]] = {}
-    errors: list[dict[str, str]] = []
+    errors: list[DomainToolError] = []
 
     for raw in domains:
         resolved = await server_app.resolve_or_cache(raw)
@@ -184,11 +241,11 @@ async def cluster_verification_tokens(domains: list[str]) -> dict[str, Any]:
     clusters = compute_shared_tokens(domain_tokens)
 
     # Serialize: domain → list of {token, peer}
-    serialized: dict[str, list[dict[str, str]]] = {}
+    serialized: dict[str, list[SharedVerificationPeer]] = {}
     for d, entries in clusters.items():
         serialized[d] = [{"token": e.token, "peer": e.peer} for e in entries]
 
-    payload: dict[str, object] = {
+    payload: VerificationTokenClusterResult = {
         "clusters": serialized,
         "errors": errors,
         "disclaimer": (
@@ -210,7 +267,7 @@ async def cluster_verification_tokens(domains: list[str]) -> dict[str, Any]:
         openWorldHint=True,
     ),
 )
-async def get_infrastructure_clusters(domain: str) -> dict[str, Any]:
+async def get_infrastructure_clusters(domain: str) -> InfrastructureClusterEnvelope:
     """Return the CT co-occurrence community-detection report for a domain.
 
     Surfaces the same ``infrastructure_clusters`` envelope that ships in
@@ -286,7 +343,7 @@ async def get_infrastructure_clusters(domain: str) -> dict[str, Any]:
         openWorldHint=True,
     ),
 )
-async def export_graph(domain: str) -> dict[str, Any]:
+async def export_graph(domain: str) -> GraphExportEnvelope:
     """Return the raw CT co-occurrence graph (nodes + weighted edges).
 
     Companion to ``get_infrastructure_clusters``: surfaces the underlying
@@ -330,6 +387,7 @@ async def export_graph(domain: str) -> dict[str, Any]:
             "nodes": [],
             "edges": [],
             "cluster_assignment": {},
+            "disclaimer": GRAPH_EXPORT_DISCLAIMER,
         }
 
     cluster_assignment: dict[str, int] = {}
@@ -358,8 +416,5 @@ async def export_graph(domain: str) -> dict[str, Any]:
             for e in ic.edges
         ],
         "cluster_assignment": cluster_assignment,
-        "disclaimer": (
-            "Graph describes observable certificate SAN co-occurrence. "
-            "Edges are co-issuance evidence, not ownership claims."
-        ),
+        "disclaimer": GRAPH_EXPORT_DISCLAIMER,
     }
