@@ -74,6 +74,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - When a push surfaces a Dependabot security alert, interrupt the loop, inspect
   the advisory and dependency path, update the lock or constraint to the patched
   version, then verify with `pip-audit` before continuing.
+- For Scorecard Pinned-Dependencies findings on pip commands, split dependency
+  installation from local project installation: use a hash-pinned requirements
+  file with `--require-hashes`, then install local source with `--no-deps`.
 - For Scorecard-recognized fuzzing, use it only when it adds a real parser or
   serializer boundary harness. Keep ClusterFuzzLite read-only, SHA-pinned,
   runtime-bounded, and PR-scoped until crash triage volume justifies batch runs.

@@ -5,6 +5,20 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Queried the public Scorecard API after the supply-chain fix; it reported
+  score 6.5 for `github.com/blisspixel/recon` at commit
+  `65e1e58681242ddc525b7a99c96e426472fab5d4`.
+- Identified the remaining local-file Pinned-Dependencies warning:
+  `.clusterfuzzlite/build.sh` installed the local package through `pip install
+  .`, which let pip resolve dependencies without hashes.
+- Generated `.clusterfuzzlite/requirements.txt` from `uv.lock` with
+  `uv export --frozen --no-dev --no-emit-project --format requirements.txt`.
+- Updated `.clusterfuzzlite/build.sh` to install those runtime dependencies
+  with `--require-hashes`, then install the checked-out package with
+  `--no-deps`.
+- Added a ClusterFuzzLite integration test that pins the hash-required
+  requirements install and the no-dependency local package install.
+- External spend: 0 USD.
 - Closed the high Dependabot alert for GHSA-6v7p-g79w-8964 after GitHub
   reported it on the default branch.
 - Confirmed the affected path is dev-audit only:
