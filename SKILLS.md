@@ -72,6 +72,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For committed validation memos, record only aggregate counts, rates, intervals,
   and harness status. Keep local manifests and per-step stdout under ignored
   scratch paths, and pin the memo with validation-hygiene tests.
+- For maintainer-local validation runners, treat every operator-provided path
+  segment as hostile. Validate names with a strict identifier regex and resolve
+  final paths under the intended output root before writing artifacts.
 - For cache tests, pin the intended boundaries explicitly: normalized URL inputs
   use apex keys, clear-all touches only top-level JSON cache entries, and
   batch-only peer fields never survive per-domain cache round-trips.

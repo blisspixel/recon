@@ -5,6 +5,25 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Hardened the maintainer-local calibration bundle runner's run-directory
+  handling.
+- Added a safe run-stamp validator and containment check so `--stamp` cannot
+  traverse outside `--output-root`.
+- Added focused regression coverage for unsafe stamps and safe resolved run
+  directories.
+- Focused validation:
+  `uv run python -m pytest tests/test_run_calibration_bundle.py -q` passed with
+  12 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check validation/run_calibration_bundle.py tests/test_run_calibration_bundle.py`
+  and
+  `uv run python -m pyright validation/run_calibration_bundle.py tests/test_run_calibration_bundle.py`
+  passed.
+- Validation hygiene:
+  `uv run python scripts/check_validation_hygiene.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.51 percent. Tests: 3433 passed, 6 skipped, 4 deselected.
+- External spend: 0 USD.
 - Extended precise MCP output schemas to `reevaluate_domain`.
 - Added the nested `LookupResult` `TypedDict` family for the cached-domain
   re-evaluation object returned by `format_tenant_dict`.

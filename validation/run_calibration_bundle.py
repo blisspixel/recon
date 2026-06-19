@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from collections.abc import Callable
@@ -23,6 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 VALIDATION_ROOT = REPO_ROOT / "validation"
 
 CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
+_SAFE_RUN_STAMP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")
 
 
 @dataclass(frozen=True)
@@ -37,6 +39,22 @@ class BundleOutputs:
 
 def _utc_stamp() -> str:
     return datetime.now(UTC).strftime("%Y%m%d-%H%M%SZ")
+
+
+def _validate_run_stamp(stamp: str) -> str:
+    """Return a path-segment-safe run stamp or raise."""
+    if not _SAFE_RUN_STAMP_RE.fullmatch(stamp):
+        raise ValueError("run stamp must be 1-80 letters, digits, dots, underscores, or hyphens")
+    return stamp
+
+
+def _contained_child(parent: Path, child_name: str) -> Path:
+    """Resolve ``child_name`` under ``parent`` and reject traversal."""
+    base = parent.resolve(strict=False)
+    child = (base / child_name).resolve(strict=False)
+    if child != base and base in child.parents:
+        return child
+    raise ValueError(f"run directory escapes output root: {child_name}")
 
 
 def _count_domains(path: Path) -> int:
@@ -136,8 +154,8 @@ def run_bundle(
     if not consolidated.is_file():
         raise FileNotFoundError(f"consolidated corpus not found: {consolidated}")
 
-    run_stamp = stamp or _utc_stamp()
-    run_dir = output_root / run_stamp
+    run_stamp = _validate_run_stamp(_utc_stamp() if stamp is None else stamp)
+    run_dir = _contained_child(output_root, run_stamp)
     outputs = BundleOutputs(
         run_dir=run_dir,
         reference_json=run_dir / "reference.json",
