@@ -407,17 +407,23 @@ harness-health artifact, not a headline calibration result.
 
 ## Scorecard Posture
 
-The public Scorecard API result checked on 2026-06-19 reported score 6.1 for
-`github.com/blisspixel/recon` at commit `fc976bcab492232eb35111a26ea8deb14aa00b7e`.
+The public Scorecard API result checked on 2026-06-19 reported score 6.5 for
+`github.com/blisspixel/recon` at commit `65e1e58681242ddc525b7a99c96e426472fab5d4`.
 The repo already scores 10 on dependency updates, security policy, dangerous
-workflows, token permissions, SAST, binary artifacts, pinned dependencies,
-vulnerabilities, packaging, and license.
+workflows, token permissions, SAST, binary artifacts, vulnerabilities,
+packaging, fuzzing, and license.
 
 After the most recent push, GitHub opened a high Dependabot alert for
 GHSA-6v7p-g79w-8964 through the dev-audit path
 `pip-audit[filecache] -> cachecontrol -> msgpack`. The local lockfile now pins
 the patched `msgpack` 1.2.1 release, and `pip-audit` reports no known
 vulnerabilities.
+
+The only remaining local Pinned-Dependencies warning in that scan was the
+ClusterFuzzLite build script's local `pip install .` command. The fuzz build now
+uses a committed hash-pinned runtime requirements export, then installs the
+checked-out source with `--no-deps`, matching Scorecard's pip-command model
+without broadening the fuzzer surface.
 
 Local-file work can improve future release posture most directly through the
 Signed-Releases path. The release workflow now waits for build-provenance

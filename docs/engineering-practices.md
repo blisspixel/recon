@@ -163,7 +163,7 @@ What we already do well, and the named open items, with no pretending.
 | Single toolchain (ruff lint+format), strict pyright, `py.typed` | In place | |
 | Branch coverage gate + mutation + Hypothesis + ClusterFuzzLite + golden + differential | In place | Among the strongest parts |
 | Security + supply chain (pip-audit, ruff-S, CodeQL, SBOM, build provenance, Trusted Publishing, PEP 740) | In place | Scorecard now detects SAST, dependency-update tooling, and least-privilege workflow tokens; ClusterFuzzLite is wired for the next public scan |
-| Dependency + standards currency (Dependabot uv/actions) | In place | Monthly, grouped, low-noise updates |
+| Dependency + standards currency (Dependabot uv/actions) | In place | Monthly, grouped, low-noise updates; pip build commands use hash-pinned requirements plus `--no-deps` local installs where Scorecard can inspect them |
 | CI/local parity (`scripts/check.py`), release readiness, file-size ratchet | In place | Closes the CI-red and docs-drift root causes |
 | ADRs for load-bearing decisions | In place initially | Extend as decisions are made |
 | Noun-verb CLI consistency, `--plain`/`--json`, stdout/stderr discipline | In place | |

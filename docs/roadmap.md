@@ -169,8 +169,10 @@ rules are in [release-process.md](release-process.md#version-numbering).
   formatter/mode source while the full schema-generation backlog remains open,
   a PLR size-rule ratchet prevents new function-size debt while existing
   violations are paid down, and the default branch lockfile has been updated to
-  `msgpack` 1.2.1 for GHSA-6v7p-g79w-8964 in the dev-audit stack. The remaining
-  order is private-corpus
+  `msgpack` 1.2.1 for GHSA-6v7p-g79w-8964 in the dev-audit stack. The
+  ClusterFuzzLite build now also uses hash-pinned runtime requirements plus a
+  no-dependency local install, closing the remaining local Pinned-Dependencies
+  warning from the Scorecard scan. The remaining order is private-corpus
   calibration runs, aggregate-only validation memos, optional reviewed
   maintainer loops around those deterministic gates, and the decision whether
   the derived inventory ever becomes a stable surface. These are
