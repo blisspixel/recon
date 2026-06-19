@@ -8,6 +8,7 @@ fingerprints:
   slug: crowdstrike
   category: Security & Compliance
   confidence: high
+  match_mode: all
   detections:
   - type: txt
     pattern: ^crowdstrike-falcon-site-verification=
@@ -23,12 +24,11 @@ fingerprints:
     reference: https://www.crowdstrike.com/platform/
     description: >-
       Catch-all TXT pattern containing the literal string
-      "crowdstrike". Lower-specificity fallback for legacy or
-      non-standard CrowdStrike verification records. Subject to
-      false positives on TXT records that mention CrowdStrike
-      in unrelated contexts (vendor-procurement notes, asset
-      tags, and so on); confidence relies on the catalog's
-      higher-specificity patterns firing as well.
+      "crowdstrike". This is corroborating evidence for the
+      higher-specificity Falcon verification prefix, not a
+      standalone detection path. Requiring both patterns suppresses
+      unrelated TXT records that merely mention CrowdStrike in
+      procurement notes, asset tags, or similar contexts.
 - name: KnowBe4
   slug: knowbe4
   category: Security & Compliance

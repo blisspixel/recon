@@ -5,6 +5,28 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Converted the CrowdStrike TXT fingerprint to `match_mode: all`, using the
+  canonical `^crowdstrike-falcon-site-verification=` prefix plus the broad
+  literal only as same-record corroboration.
+- Added `match_txt_all()` and updated TXT detector bookkeeping so same-record
+  multiple-pattern matches are recorded for all-mode enforcement while the
+  user-visible first-match behavior remains stable.
+- Added regressions proving `contoso.com` with a canonical Falcon verification
+  token still detects and `northwindtraders.com` with only a generic
+  CrowdStrike TXT mention does not.
+- Added `validation/2026-06-19-crowdstrike-match-mode.md` with before/after
+  audit counts and focused validation commands.
+- Focused validation:
+  `uv run python -m pytest tests/test_fingerprints.py tests/test_sources/test_dns.py -q`
+  passed with 72 tests.
+- Focused lint:
+  `uv run python -m ruff check src/recon_tool/fingerprints.py src/recon_tool/sources/dns_email.py tests/test_fingerprints.py tests/test_sources/test_dns.py`
+  passed.
+- Fingerprint audit after the change reports `match modes: all=1, any=840`
+  and one `already_all` entry.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.15 percent. Tests: 3411 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Created the active goal for autonomous roadmap progress.
 - Inventoried 103 markdown files across root docs, validation reports, agent
   integrations, examples, packaging, and test documentation.

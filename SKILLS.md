@@ -65,6 +65,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For cache tests, pin the intended boundaries explicitly: normalized URL inputs
   use apex keys, clear-all touches only top-level JSON cache entries, and
   batch-only peer fields never survive per-domain cache round-trips.
+- For `match_mode: all` on same-type TXT fingerprints, verify detector
+  bookkeeping records every same-record match while preserving the historical
+  first displayed service. Use fictional domains in validation notes.
 - Track external spend explicitly. Default spend is 0 USD.
 - Before closing a cycle, run the narrow relevant gate. Before claiming repo
   readiness, run `uv run python scripts/check.py`.

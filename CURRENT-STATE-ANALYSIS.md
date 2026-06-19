@@ -65,6 +65,11 @@ The project is past the expansion and lock phases:
 The current active line is v2.2.x. The roadmap says the next work is
 dependency-ordered, not date-driven.
 
+Current maintainer-loop deltas from 2026-06-19 include generated surface
+inventory checks, public paper-number reproduction tooling, cache edge coverage,
+high-value-target baseline expectations, and a first production
+`match_mode: all` fingerprint for CrowdStrike TXT evidence.
+
 ## Hard Constraints
 
 Every proposed change must stay inside this box:

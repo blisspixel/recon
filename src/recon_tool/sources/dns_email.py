@@ -28,7 +28,7 @@ from recon_tool.fingerprints import (
     get_mx_patterns,
     get_spf_patterns,
     get_txt_patterns,
-    match_txt,
+    match_txt_all,
 )
 from recon_tool.http import http_client as _http_client
 from recon_tool.models import BIMIIdentity, EvidenceRecord
@@ -57,10 +57,13 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
     for txt in txt_records:
         txt_lower = txt.lower()
 
-        result = match_txt(txt, txt_patterns)
-        if result:
+        txt_matches = match_txt_all(txt, txt_patterns)
+        if txt_matches:
+            result = txt_matches[0]
             ctx.add(result.name, result.slug, source_type="TXT", raw_value=txt)
-            ctx.record_fp_match(result.slug, "txt", result.pattern)
+            for match in txt_matches:
+                if match.slug == result.slug:
+                    ctx.record_fp_match(match.slug, "txt", match.pattern)
 
         # Extract google-site-verification tokens for relationship mapping.
         # Strip control bytes: the token is attacker-controlled and is

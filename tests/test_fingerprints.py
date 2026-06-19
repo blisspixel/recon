@@ -15,6 +15,7 @@ from recon_tool.fingerprints import (
     get_txt_patterns,
     load_fingerprints,
     match_txt,
+    match_txt_all,
 )
 
 
@@ -227,6 +228,21 @@ class TestMatchTxt:
         result = match_txt("MS=ms12345678", patterns)
         assert result is not None
         assert "Microsoft" in result.name
+
+    def test_all_matches_preserves_same_record_corroboration(self):
+        patterns = get_txt_patterns()
+        result = match_txt_all("crowdstrike-falcon-site-verification=abc123", patterns)
+
+        crowdstrike_patterns = [match.pattern for match in result if match.slug == "crowdstrike"]
+        assert "^crowdstrike-falcon-site-verification=" in crowdstrike_patterns
+        assert "crowdstrike" in crowdstrike_patterns
+
+    def test_all_matches_honors_length_bound(self):
+        patterns = get_txt_patterns()
+
+        result = match_txt_all("crowdstrike" + ("a" * 5000), patterns)
+
+        assert result == ()
 
 
 # ── Relationship metadata ──────────────────────────────────────────────

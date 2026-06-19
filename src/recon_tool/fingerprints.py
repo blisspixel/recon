@@ -51,6 +51,7 @@ __all__ = [
     "inject_ephemeral",
     "load_fingerprints",
     "match_txt",
+    "match_txt_all",
     "reload_fingerprints",
     "validate_ephemeral_input_size",
 ]
@@ -874,16 +875,30 @@ def match_txt(txt_value: str, patterns: tuple[Detection, ...] | list[Detection])
 
     Rejects excessively long input to bound regex execution time.
     """
+    matches = match_txt_all(txt_value, patterns)
+    return matches[0] if matches else None
+
+
+def match_txt_all(txt_value: str, patterns: tuple[Detection, ...] | list[Detection]) -> tuple[Detection, ...]:
+    """Match all TXT patterns while preserving catalog order.
+
+    ``match_txt`` keeps its first-match API for callers that need the historical
+    behavior. The full match list lets detector bookkeeping record every rule
+    matched by the same TXT record, which is required for ``match_mode: all``
+    fingerprints with multiple TXT patterns.
+    """
     if len(txt_value) > _MAX_TXT_MATCH_LENGTH:
-        return None
+        return ()
+
+    matches: list[Detection] = []
     for det in patterns:
         try:
             if re.search(det.pattern, txt_value, re.IGNORECASE):
-                return det
+                matches.append(det)
         except re.error:
             # Defensive: pattern was validated on load, but guard against edge cases
             continue
-    return None
+    return tuple(matches)
 
 
 def _no_shadowed_pairs_survive(result: list[Detection]) -> bool:
