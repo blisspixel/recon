@@ -1005,8 +1005,10 @@ ephemeral-fingerprint session tools now advertise
 now advertises `PosteriorBlockResult`, `PosteriorNodeSummary`, and
 `UnitCounterfactualSummary`. The exposure report tools now advertise
 `ExposureAssessmentResult`, `GapReportResult`, and `PostureComparisonResult`
-with nested evidence and posture record definitions. The remaining variable
-tools stay intentionally incremental.
+with nested evidence and posture record definitions.
+`discover_fingerprint_candidates` now advertises `FingerprintCandidate` plus
+nested `FingerprintCandidateSample`. The remaining variable tools stay
+intentionally incremental.
 The design record that drove it, kept for rationale:
 
 A mid-2026 research pass (cited best-practices report) plus a code investigation

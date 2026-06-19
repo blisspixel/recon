@@ -286,6 +286,22 @@ def test_get_posteriors_output_schema_is_precise() -> None:
     assert counterfactual["properties"]["posterior_without"]["type"] == "number"
 
 
+def test_discover_fingerprint_candidates_schema_has_precise_items() -> None:
+    """Discovery candidate lists advertise suffix and sample chain fields."""
+    schema = _tool_output_schema("discover_fingerprint_candidates")
+    assert schema["properties"]["result"]["items"]["$ref"] == "#/$defs/FingerprintCandidate"
+
+    item_schema = schema["$defs"]["FingerprintCandidate"]
+    assert item_schema["title"] == "FingerprintCandidate"
+    assert set(item_schema["required"]) == {"suffix", "count", "samples"}
+    assert item_schema["properties"]["count"]["type"] == "integer"
+    assert item_schema["properties"]["samples"]["items"]["$ref"] == "#/$defs/FingerprintCandidateSample"
+
+    sample = schema["$defs"]["FingerprintCandidateSample"]
+    assert set(sample["required"]) == {"subdomain", "terminal", "chain"}
+    assert sample["properties"]["chain"]["items"]["type"] == "string"
+
+
 def test_exposure_report_output_schemas_are_precise() -> None:
     """Exposure report tools advertise their nested report envelopes."""
     assessment_schema = _tool_output_schema("assess_exposure")
