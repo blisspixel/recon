@@ -413,6 +413,12 @@ The repo already scores 10 on dependency updates, security policy, dangerous
 workflows, token permissions, SAST, binary artifacts, pinned dependencies,
 vulnerabilities, packaging, and license.
 
+After the most recent push, GitHub opened a high Dependabot alert for
+GHSA-6v7p-g79w-8964 through the dev-audit path
+`pip-audit[filecache] -> cachecontrol -> msgpack`. The local lockfile now pins
+the patched `msgpack` 1.2.1 release, and `pip-audit` reports no known
+vulnerabilities.
+
 Local-file work can improve future release posture most directly through the
 Signed-Releases path. The release workflow now waits for build-provenance
 attestation, exports the signed GitHub attestation bundles as

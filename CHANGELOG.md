@@ -65,6 +65,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Stability-doc surface counts.** Updated the JSON contract count summary in
   `docs/stability.md` and added a docs test that ties it to
   `docs/recon-schema.json` plus the live MCP tool registry and stability table.
+- **Dependabot security alert closure.** Updated the `uv.lock` entry for the
+  dev-audit transitive dependency `msgpack` from 1.1.2 to 1.2.1, closing
+  GHSA-6v7p-g79w-8964 while leaving runtime dependencies unchanged.
 - **Advisory diff coverage.** Added `scripts/diff_coverage.py`, a local
   maintainer signal that reports changed executable Python line coverage from
   Coverage.py JSON and a unified diff without gating documentation-only changes.

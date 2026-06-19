@@ -147,6 +147,9 @@ assistant's lack of time-sense:
 - **Dependabot** over the `uv` and `github-actions` ecosystems, monthly and
   grouped with a low PR limit, so runtime dependencies and workflow actions do
   not silently rot.
+- **Security alerts interrupt normal roadmap work.** Inspect the advisory and
+  dependency path, update the lock or constraint to the patched version, and run
+  `pip-audit` before resuming feature or docs work.
 - **The parity gate and pinned tool versions** keep the local and CI toolchains
   identical; `scripts/release_readiness.py` catches release and docs drift before
   remote CI is the first signal.

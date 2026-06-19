@@ -71,6 +71,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For Scorecard work, prefer real controls that align with existing invariants.
   Do not add unpinned workflow dependencies or fake service integrations only to
   move the badge.
+- When a push surfaces a Dependabot security alert, interrupt the loop, inspect
+  the advisory and dependency path, update the lock or constraint to the patched
+  version, then verify with `pip-audit` before continuing.
 - For Scorecard-recognized fuzzing, use it only when it adds a real parser or
   serializer boundary harness. Keep ClusterFuzzLite read-only, SHA-pinned,
   runtime-bounded, and PR-scoped until crash triage volume justifies batch runs.
