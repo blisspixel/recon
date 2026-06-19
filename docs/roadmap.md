@@ -2428,8 +2428,9 @@ are picked up alongside the build plan above.
 - Add one vertical-baseline absence rule in `verticals.yaml` with a clear
   passive-ceiling note (e.g., "fintech profile expects WAF motif; absence
   is observable, not a verdict").
-- Add a small aggregate-only validation memo from a local harness run, with no
-  real apexes, tenant IDs, or per-domain output.
+- Done 2026-06-19: add a small aggregate-only public smoke memo from
+  `validation.reproduce_paper_numbers --profile smoke`, with hygiene tests and
+  no real apexes, tenant IDs, or per-domain output.
 
 ## Opportunistic Refactoring
 

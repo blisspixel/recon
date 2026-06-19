@@ -53,6 +53,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For weak-area docs, turn false-negative behavior into operator guidance:
   symptoms, why passive DNS cannot see more, and what to do without broadening
   fingerprints or adding network calls.
+- For committed validation memos, record only aggregate counts, rates, intervals,
+  and harness status. Keep local manifests and per-step stdout under ignored
+  scratch paths, and pin the memo with validation-hygiene tests.
 - Track external spend explicitly. Default spend is 0 USD.
 - Before closing a cycle, run the narrow relevant gate. Before claiming repo
   readiness, run `uv run python scripts/check.py`.
