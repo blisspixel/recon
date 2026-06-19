@@ -249,6 +249,43 @@ def test_agentic_posture_output_schemas_are_precise() -> None:
     assert simulation_props["applied_fixes"]["items"]["type"] == "string"
 
 
+def test_get_posteriors_output_schema_is_precise() -> None:
+    """Posterior blocks advertise node and counterfactual record shapes."""
+    schema = _tool_output_schema("get_posteriors")
+    assert schema["title"] == "PosteriorBlockResult"
+    assert set(schema["required"]) == {
+        "domain",
+        "entropy_reduction_nats",
+        "evidence_count",
+        "conflict_count",
+        "sparse_count",
+        "posteriors",
+    }
+
+    props = schema["properties"]
+    assert props["posteriors"]["items"]["$ref"] == "#/$defs/PosteriorNodeSummary"
+    assert props["sparse_count"]["type"] == "integer"
+
+    node = schema["$defs"]["PosteriorNodeSummary"]
+    assert set(node["required"]) == {
+        "name",
+        "description",
+        "posterior",
+        "interval_low",
+        "interval_high",
+        "evidence_used",
+        "n_eff",
+        "sparse",
+        "entropy_reduction_nats",
+        "unit_counterfactuals",
+    }
+    assert node["properties"]["unit_counterfactuals"]["items"]["$ref"] == "#/$defs/UnitCounterfactualSummary"
+
+    counterfactual = schema["$defs"]["UnitCounterfactualSummary"]
+    assert set(counterfactual["required"]) == {"unit", "kind", "observed", "posterior_without", "delta"}
+    assert counterfactual["properties"]["posterior_without"]["type"] == "number"
+
+
 def test_get_fingerprints_emits_navigable_structured_content() -> None:
     """call_tool surfaces the list as real structured data (not a JSON-string
     blob) plus a serialized-JSON text block for back-compat."""

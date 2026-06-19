@@ -2213,9 +2213,23 @@
         ],
         "name": "get_posteriors",
         "output_schema": {
-          "definition_count": 0,
-          "properties": [],
-          "required": [],
+          "definition_count": 2,
+          "properties": [
+            "conflict_count",
+            "domain",
+            "entropy_reduction_nats",
+            "evidence_count",
+            "posteriors",
+            "sparse_count"
+          ],
+          "required": [
+            "conflict_count",
+            "domain",
+            "entropy_reduction_nats",
+            "evidence_count",
+            "posteriors",
+            "sparse_count"
+          ],
           "type": "object"
         },
         "structured_output": true,
