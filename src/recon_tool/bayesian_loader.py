@@ -9,6 +9,7 @@ prior overrides. Imports the dataclasses from ``bayesian_models``; imported by
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import replace
 from itertools import product
 from pathlib import Path
@@ -16,7 +17,7 @@ from typing import Any
 
 import yaml
 
-from recon_tool.bayesian_models import BayesianNetwork, Evidence, Node
+from recon_tool.bayesian_models import BayesianNetwork, CalibrationSettings, Evidence, Node
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ def load_network(path: Path | None = None) -> BayesianNetwork:
     version = raw.get("version")
     if version != 1:
         raise ValueError(f"bayesian_network: unsupported schema version {version!r}")
+    calibration = _parse_calibration(raw.get("calibration"))
 
     raw_nodes = raw.get("nodes")
     if not isinstance(raw_nodes, list) or not raw_nodes:
@@ -53,7 +55,31 @@ def load_network(path: Path | None = None) -> BayesianNetwork:
     # Validate: parents reference known nodes, DAG, CPT covers all parent assignments.
     _validate_topology(nodes)
 
-    return BayesianNetwork(version=version, nodes=tuple(nodes))
+    return BayesianNetwork(version=version, nodes=tuple(nodes), calibration=calibration)
+
+
+def _parse_calibration(raw: Any) -> CalibrationSettings:
+    """Validate top-level interval calibration settings, with defaults."""
+    defaults = CalibrationSettings()
+    if raw is None:
+        return defaults
+    if not isinstance(raw, dict):
+        raise ValueError("bayesian_network: 'calibration' must be a mapping")
+
+    def _positive_number(key: str, default: float) -> float:
+        value = raw.get(key, default)
+        if not isinstance(value, int | float):
+            raise ValueError(f"bayesian_network.calibration.{key}: expected positive number")
+        value = float(value)
+        if not math.isfinite(value) or value <= 0.0:
+            raise ValueError(f"bayesian_network.calibration.{key}: expected positive finite number")
+        return value
+
+    return CalibrationSettings(
+        min_n_eff=_positive_number("min_n_eff", defaults.min_n_eff),
+        evidence_n_eff_contrib=_positive_number("evidence_n_eff_contrib", defaults.evidence_n_eff_contrib),
+        conflict_n_eff_penalty=_positive_number("conflict_n_eff_penalty", defaults.conflict_n_eff_penalty),
+    )
 
 
 def _parse_node_prior_cpt(
@@ -91,9 +117,7 @@ def _parse_node_evidence(name: str, evidence_raw: Any) -> tuple[Evidence, ...]:
         slug = entry.get("slug")
         signal = entry.get("signal")
         if (slug is None) == (signal is None):
-            raise ValueError(
-                f"bayesian_network[{name}]: evidence entry must specify exactly one of 'slug' / 'signal'"
-            )
+            raise ValueError(f"bayesian_network[{name}]: evidence entry must specify exactly one of 'slug' / 'signal'")
         kind = "slug" if slug else "signal"
         obs_name = slug if slug else signal
         if not isinstance(obs_name, str) or not obs_name:
@@ -312,4 +336,4 @@ def apply_priors_override(network: BayesianNetwork, override: dict[str, float]) 
             new_nodes.append(replace(n, prior=override[n.name]))
         else:
             new_nodes.append(n)
-    return BayesianNetwork(version=network.version, nodes=tuple(new_nodes))
+    return BayesianNetwork(version=network.version, nodes=tuple(new_nodes), calibration=network.calibration)

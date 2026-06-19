@@ -2082,9 +2082,8 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   the existing sensitivity test surface nodes whose interval shape
   only makes sense with per-node scaling.
 - **Per-binding conflict penalty (localize the global `n_eff`
-  conflict deduction).** Today's
-  `_CONFLICT_N_EFF_PENALTY = 1.5` in `recon_tool/bayesian.py`
-  applies globally: any cross-source conflict in the merged
+  conflict deduction).** Today's loaded `conflict_n_eff_penalty`
+  value in `bayesian_network.yaml` applies globally: any cross-source conflict in the merged
   `TenantInfo` widens every node's credible interval, not only the
   nodes whose bindings overlap the conflicting field. The behavior
   is conservative (never under-reports uncertainty) but coarser
@@ -2157,16 +2156,13 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   a per-evidence `mutual_information` field alongside the existing
   LLR contributions. Pure information-theoretic derivation, not
   parameter learning, so it stays inside the invariants.
-- **`bayesian.py` calibration-constants moved to YAML.**
-  Today `_EVIDENCE_N_EFF_CONTRIB`, `_CONFLICT_N_EFF_PENALTY`, and
-  `_MIN_N_EFF` are module-level constants in the engine.
-  Introduce a top-level `calibration:` block in
-  `bayesian_network.yaml` with documented defaults; loader reads
-  the block on `load_network()` with the current constants as
-  fallbacks. Aligns with the roadmap's "engine code grows only
-  when the data file alone cannot express the rule" discipline.
-  Schema-additive, backwards-compatible. Small enough to ship as
-  a "Good First Roadmap Items" PR, listed there as well.
+- **`bayesian.py` calibration constants moved to YAML (done
+  2026-06-19).** `bayesian_network.yaml` now carries a top-level
+  `calibration:` block for `min_n_eff`, `evidence_n_eff_contrib`,
+  and `conflict_n_eff_penalty`. The loader defaults older test
+  fixtures to the same values, and inference reads the loaded
+  settings from `BayesianNetwork.calibration`. This keeps interval
+  tuning reviewable as data rather than inference-code edits.
 - **Scaling exact inference past treewidth handling: compile to
   tractable probabilistic circuits (post-v2.0 candidate).** The
   current variable-elimination engine handles the 9-node v1.9.3+
@@ -2430,15 +2426,6 @@ are picked up alongside the build plan above.
   is observable, not a verdict").
 - Add a small aggregate-only validation memo from a local harness run, with no
   real apexes, tenant IDs, or per-domain output.
-- Move the n_eff calibration constants
-  (`_EVIDENCE_N_EFF_CONTRIB`, `_CONFLICT_N_EFF_PENALTY`,
-  `_MIN_N_EFF`) from `recon_tool/bayesian.py` into a top-level
-  `calibration:` block in `bayesian_network.yaml`. Loader reads
-  the block on startup with the current values as fallbacks.
-  Single PR, no behavior change at default values, no version
-  bump unless the loader needs schema-version handling. See
-  the corresponding Backlog entry for the full motivation.
-
 ## Opportunistic Refactoring
 
 The god-file decomposition track is complete. `formatter.py` remains the only

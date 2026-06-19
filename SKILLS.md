@@ -27,6 +27,10 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - When a generated inventory is meant to help agents, include both machine
   surfaces and the guidance surfaces that teach clients how to call them. Pin
   the generated approval model to live MCP annotations, not copied prose.
+- For Bayesian tuning knobs, prefer committed data in `bayesian_network.yaml`
+  with loader defaults and invariant tests over module-level engine constants.
+  Keep behavior unchanged at default values and update trust docs in the same
+  cycle.
 - Track external spend explicitly. Default spend is 0 USD.
 - Before closing a cycle, run the narrow relevant gate. Before claiming repo
   readiness, run `uv run python scripts/check.py`.

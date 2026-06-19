@@ -8,7 +8,7 @@ spellings), so the ``recon_tool.bayesian`` import path is unchanged.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -56,11 +56,21 @@ class Node:
 
 
 @dataclass(frozen=True)
+class CalibrationSettings:
+    """Effective-sample-size settings for Bayesian interval reporting."""
+
+    min_n_eff: float = 4.0
+    evidence_n_eff_contrib: float = 1.0
+    conflict_n_eff_penalty: float = 1.5
+
+
+@dataclass(frozen=True)
 class BayesianNetwork:
     """Loaded network ready for inference."""
 
     version: int
     nodes: tuple[Node, ...]
+    calibration: CalibrationSettings = field(default_factory=CalibrationSettings)
 
     @property
     def node_names(self) -> tuple[str, ...]:

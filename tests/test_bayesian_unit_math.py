@@ -21,6 +21,8 @@ import pytest
 
 from recon_tool.bayesian import (
     _CONFLICT_N_EFF_PENALTY,
+    BayesianNetwork,
+    CalibrationSettings,
     _conflict_provenance,
     _contributing_evidence,
     _credible_interval,
@@ -305,6 +307,22 @@ class TestNEffExactValues:
         post = {p.name: p for p in result.posteriors}
         assert post["email_security_policy_enforcing"].n_eff == 6.0
 
+    def test_network_calibration_drives_n_eff_arithmetic(self) -> None:
+        base = load_network()
+        net = BayesianNetwork(
+            version=base.version,
+            nodes=base.nodes,
+            calibration=CalibrationSettings(
+                min_n_eff=10.0,
+                evidence_n_eff_contrib=3.0,
+                conflict_n_eff_penalty=1.0,
+            ),
+        )
+        result = infer(net, ["cloudflare"], [], conflict_field_count=1, priors_override={})
+        post = {p.name: p for p in result.posteriors}
+        assert post["cdn_fronting"].n_eff == 12.0
+        assert post["cdn_fronting"].sparse is False
+
     def test_absence_informative_flag_tracks_declarative_missingness(self) -> None:
         # The exposed ``absence_informative`` field is True for the one
         # declarative node and False for every hideable node. Pinning both
@@ -522,3 +540,25 @@ class TestInferFromTenantInfo:
         width = post["m365_tenant"].interval_high - post["m365_tenant"].interval_low
         width2 = post2["m365_tenant"].interval_high - post2["m365_tenant"].interval_low
         assert width2 > width
+
+    def test_conflict_provenance_uses_network_calibration(self) -> None:
+        base = load_network()
+        net = BayesianNetwork(
+            version=base.version,
+            nodes=base.nodes,
+            calibration=CalibrationSettings(conflict_n_eff_penalty=2.0),
+        )
+        conflicted = SimpleNamespace(
+            slugs=("microsoft365",),
+            merge_conflicts=SimpleNamespace(
+                display_name=(),
+                auth_type=(SimpleNamespace(source="dns"), SimpleNamespace(source="oidc")),
+                region=(),
+                tenant_id=(),
+                dmarc_policy=(),
+                google_auth_type=(),
+            ),
+        )
+        result = infer_from_tenant_info(conflicted, network=net, priors_override={})
+        post = {p.name: p for p in result.posteriors}
+        assert post["m365_tenant"].conflict_provenance[0].magnitude == 2.0

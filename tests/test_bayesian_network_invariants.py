@@ -51,6 +51,12 @@ def test_priors_and_cpts_in_unit_interval(network: BayesianNetwork) -> None:
             assert 0.0 < p < 1.0, f"{node.name}[{key}]: CPT value {p} not in (0, 1)"
 
 
+def test_calibration_settings_positive(network: BayesianNetwork) -> None:
+    assert network.calibration.min_n_eff > 0.0
+    assert network.calibration.evidence_n_eff_contrib > 0.0
+    assert network.calibration.conflict_n_eff_penalty > 0.0
+
+
 def test_root_xor_cpt(network: BayesianNetwork) -> None:
     """A node is either a root (prior set, no parents, empty CPT) or has parents
     (no prior, CPT present). The inference engine relies on exactly one being true."""
