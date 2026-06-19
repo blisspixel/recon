@@ -11,13 +11,18 @@ import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
 _INSTALL_SH = _ROOT / "scripts" / "install.sh"
+_INSTALL_PS1 = _ROOT / "scripts" / "install.ps1"
 
 
-def test_unix_installer_uses_portable_python_version_check() -> None:
+def test_installers_do_not_bootstrap_pipx_with_unpinned_pip() -> None:
     script = _INSTALL_SH.read_text(encoding="utf-8")
+    powershell = _INSTALL_PS1.read_text(encoding="utf-8")
 
     assert "sort -V" not in script
-    assert "sys.version_info >= (3, 11)" in script
+    assert "pip install" not in script
+    assert "pip install" not in powershell
+    assert "Error: need uv or pipx" in script
+    assert "Error: need uv or pipx" in powershell
 
 
 def test_unix_installer_shell_syntax() -> None:

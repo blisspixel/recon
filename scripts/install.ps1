@@ -1,13 +1,13 @@
 # One-line installer / updater for recon (Windows PowerShell).
 #
-# Install or update (same command — re-run any time to upgrade to the latest):
+# Install or update (same command - re-run any time to upgrade to the latest):
 #   powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
 #
 # Uninstall:
 #   uv tool uninstall recon-tool   # or: pipx uninstall recon-tool
 #
-# Prefers uv (fast, manages its own Python); falls back to pipx; bootstraps pipx
-# with system Python if neither is present. Idempotent: a second run upgrades.
+# Prefers uv (fast, manages its own Python); falls back to pipx. Idempotent: a
+# second run upgrades.
 
 $ErrorActionPreference = "Stop"
 
@@ -42,25 +42,10 @@ elseif (Test-Have "pipx") {
     Install-OrUpgrade-Pipx
 }
 else {
-    $python = "python"
-    if (-not (Test-Have $python)) { $python = "py" }
-    if (-not (Test-Have $python)) {
-        Write-Host "Error: need uv, pipx, or Python 3.11+. Install uv (recommended):" -ForegroundColor Red
-        Write-Host '  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"'
-        Write-Host "then re-run this installer."
-        exit 1
-    }
-    $ver = & $python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
-    if (-not $ver -or ([version]$ver -lt [version]"3.11")) {
-        Write-Host "Error: Python 3.11+ is required (found $ver), or install uv first:" -ForegroundColor Red
-        Write-Host '  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"'
-        exit 1
-    }
-    Write-Host "==> pipx/uv not found; bootstrapping pipx with Python ..." -ForegroundColor Yellow
-    & $python -m pip install --user pipx --quiet
-    & $python -m pipx ensurepath
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-    Install-OrUpgrade-Pipx
+    Write-Host "Error: need uv or pipx. Install uv (recommended):" -ForegroundColor Red
+    Write-Host '  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"'
+    Write-Host "then re-run this installer."
+    exit 1
 }
 
 Write-Host ""

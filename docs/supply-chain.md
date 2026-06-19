@@ -68,14 +68,17 @@ The repository also runs supply-chain posture checks outside the release flow:
 - CodeQL runs as scheduled SAST and can also be run on demand.
 - Dependabot checks `uv` and GitHub Actions dependencies on a low-noise monthly
   schedule.
+- Workflow actions are pinned to full commit SHAs, with the readable version kept
+  in a trailing comment. `scripts/check_workflow_pins.py` gates this locally and
+  in CI.
 - Secret scanning and push protection are enabled for the repository.
 
 Scorecard currently credits SAST, dependency-update tooling, least-privilege
-workflow tokens, packaging, the security policy, and vulnerability posture.
-Its signed-release check does not fully credit the current PyPI PEP 740
-attestations plus GitHub build-provenance attestation shape, so separate GitHub
-release signature assets remain a decision point rather than an existing
-contract.
+workflow tokens, pinned workflow dependencies, packaging, the security policy,
+and vulnerability posture. Its signed-release check does not fully credit the
+current PyPI PEP 740 attestations plus GitHub build-provenance attestation shape,
+so separate GitHub release signature assets remain a decision point rather than
+an existing contract.
 
 ## Deferred, with reasons
 
