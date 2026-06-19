@@ -45,6 +45,7 @@ behavior. The full threat-by-threat version is assurance-case Promise 2.
 | DNS regex-match input caps (TXT / CNAME / subdomain-TXT) | `recon_tool/fingerprints.py::_MAX_TXT_MATCH_LENGTH` and siblings | `test_hostile_input_bounds::TestDnsParserBounds` |
 | CT entry / SAN / page floods | `recon_tool/sources/cert_providers.py::_MAX_CRTSH_ENTRIES` and siblings | `test_hostile_input_bounds::TestCrtshEntryBounds`, `test_hostile_input_bounds::TestCtGroupingBounds` |
 | Every HTTP identity source x failure mode degrades to a clean result | per-source guards; clean `SourceResult` on every failure | `test_hostile_input_bounds::TestSourceFaultMatrix` |
+| PR-scoped coverage-guided parser fuzzing | `.github/workflows/clusterfuzzlite.yml`, `.clusterfuzzlite/project.yaml`, `fuzz/recon_input_fuzzer.py` | `tests/test_clusterfuzzlite_integration.py` |
 
 ## The output contract
 

@@ -51,6 +51,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For Scorecard work, prefer real controls that align with existing invariants.
   Do not add unpinned workflow dependencies or fake service integrations only to
   move the badge.
+- For Scorecard-recognized fuzzing, use it only when it adds a real parser or
+  serializer boundary harness. Keep ClusterFuzzLite read-only, SHA-pinned,
+  runtime-bounded, and PR-scoped until crash triage volume justifies batch runs.
 - For workflow-token posture, gate both the top-level default permissions and
   the named elevated job scopes. A workflow can need write or OIDC permissions,
   but that exception should be explicit and reviewed.

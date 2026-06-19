@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reference now mirrors the existing command tree for release-note checks.
 - MCP resources now include `recon://surface-inventory`, a no-network generated
   discovery snapshot matching `docs/surface-inventory.json`.
+- CI now includes a SHA-pinned ClusterFuzzLite PR fuzzing workflow for local
+  parser and serializer boundaries.
 
 ### Fixed
 
@@ -38,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no-network resource that serves the packaged generated CLI, MCP,
   JSON-schema, and agent-integration inventory as discovery context, with drift
   tests keeping it byte-identical to `docs/surface-inventory.json`.
+- **ClusterFuzzLite parser fuzzing.** Added a Python Atheris fuzz target for
+  domain normalization, control-byte stripping, cache deserialization, and
+  formatter serialization, plus a read-only, SHA-pinned, runtime-bounded PR
+  workflow and local config tests.
 - **MCP output schema precision.** Added precise `TypedDict` item schemas for
   `get_fingerprints`, `get_signals`, `explain_signal`, the simple
   ephemeral-fingerprint session tools, the graph data tools, and the compact

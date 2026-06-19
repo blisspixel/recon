@@ -5,6 +5,31 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Added PR-scoped ClusterFuzzLite parser-boundary fuzzing.
+- Added `.clusterfuzzlite` Python build integration with a digest-pinned
+  `base-builder-python` image.
+- Added a Python Atheris fuzzer for local domain normalization, control-byte
+  stripping, cache serialization/deserialization, and formatter serialization.
+- Added a read-only, SHA-pinned, bounded ClusterFuzzLite workflow using the
+  pinned `google/clusterfuzzlite` v1 action SHA.
+- Added local tests for ClusterFuzzLite config, workflow bounds, and fuzzer seed
+  inputs.
+- Focused validation:
+  `uv run python -m pytest tests/test_clusterfuzzlite_integration.py tests/test_scorecard_posture.py tests/test_workflow_pins.py -q`
+  passed with 16 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check fuzz/recon_input_fuzzer.py tests/test_clusterfuzzlite_integration.py`
+  and `uv run python -m pyright tests/test_clusterfuzzlite_integration.py`
+  passed.
+- Workflow pin check:
+  `uv run python scripts/check_workflow_pins.py` passed.
+- Shell syntax check:
+  `C:\Program Files\Git\bin\bash.exe -n .clusterfuzzlite/build.sh` passed.
+- Docker validation note: Docker Desktop's Linux engine was unavailable in this
+  environment, so the ClusterFuzzLite container build was not run locally.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.50 percent. Tests: 3467 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Added the `recon://surface-inventory` MCP resource.
 - Packaged the generated surface inventory beside the JSON schema so MCP
   clients can read local CLI, MCP, JSON-schema, and agent guidance context

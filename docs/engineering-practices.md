@@ -109,8 +109,9 @@ mitigations are mechanical and non-negotiable:
 - **Mutation testing** (cosmic-ray, blocking gate over the inference core) proves
   the tests actually *detect* faults, not just execute lines.
 - **Property-based tests** (Hypothesis) for invariants, round-trips, and parsers;
-  **golden/snapshot tests** for rendered output (reviewed on diff, never
-  blind-updated, redacted for determinism).
+  **coverage-guided PR fuzzing** (ClusterFuzzLite + Atheris) for parser and
+  serialization boundaries; **golden/snapshot tests** for rendered output
+  (reviewed on diff, never blind-updated, redacted for determinism).
 - **Differential verification** of the inference core against an independent
   full-joint reference. Honest-evaluation discipline (CAL1–CAL14): consistency
   vs calibration named precisely, never overclaimed.
@@ -150,8 +151,8 @@ What we already do well, and the named open items, with no pretending.
 | Area | Status | Note |
 |---|---|---|
 | Single toolchain (ruff lint+format), strict pyright, `py.typed` | In place | |
-| Branch coverage gate + mutation + Hypothesis + golden + differential | In place | Among the strongest parts |
-| Security + supply chain (pip-audit, ruff-S, CodeQL, SBOM, build provenance, Trusted Publishing, PEP 740) | In place | Scorecard now detects SAST, dependency-update tooling, and least-privilege workflow tokens |
+| Branch coverage gate + mutation + Hypothesis + ClusterFuzzLite + golden + differential | In place | Among the strongest parts |
+| Security + supply chain (pip-audit, ruff-S, CodeQL, SBOM, build provenance, Trusted Publishing, PEP 740) | In place | Scorecard now detects SAST, dependency-update tooling, and least-privilege workflow tokens; ClusterFuzzLite is wired for the next public scan |
 | Dependency + standards currency (Dependabot uv/actions) | In place | Monthly, grouped, low-noise updates |
 | CI/local parity (`scripts/check.py`), release readiness, file-size ratchet | In place | Closes the CI-red and docs-drift root causes |
 | ADRs for load-bearing decisions | In place initially | Extend as decisions are made |
