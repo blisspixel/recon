@@ -121,7 +121,7 @@ Use the absolute path to your Python or `uvx` binary if neither is on PATH for t
 
 ## Approval policy
 
-Plugin-bundled MCP servers are auto-approved by Claude Code when the plugin is enabled — there is no `autoApprove` field in the plugin `.mcp.json` schema. recon's MCP tools are read-only by design, but the user can still review or disable individual tool calls through Claude Code's normal MCP approval UI. Users who want stricter manual approval should add recon as a user-level MCP server in their own Claude Code config rather than relying on the plugin form.
+Plugin-bundled MCP servers are auto-approved by Claude Code when the plugin is enabled; there is no `autoApprove` field in the plugin `.mcp.json` schema. recon marks local session and catalog mutations (`inject_ephemeral_fingerprint`, `clear_ephemeral_fingerprints`, `reload_data`) with `readOnlyHint: false`; all other MCP tools are annotated read-only. Users who want stricter manual approval should add recon as a user-level MCP server in their own Claude Code config rather than relying on the plugin form.
 
 Concretely, the two paths default differently. The `recon mcp install --client=claude-code` path seeds `"autoApprove": []` into `~/.claude.json`, so every tool waits for manual approval. The plugin path auto-approves. Installing by both leaves two registrations with different approval semantics, so it is cleaner to pick one path.
 

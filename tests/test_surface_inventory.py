@@ -77,6 +77,40 @@ def test_surface_inventory_summarizes_json_schema_contract() -> None:
     assert "DeltaReport" in schema["defs"]
 
 
+def test_surface_inventory_has_agent_surfaces() -> None:
+    agent_surfaces = _inventory()["agent_surfaces"]
+    guidance_files = {entry["path"]: entry for entry in agent_surfaces["guidance_files"]}
+    client_configs = {entry["client"]: entry for entry in agent_surfaces["client_configs"]}
+
+    assert "AGENTS.md" in guidance_files
+    assert "agents/claude-code/skills/recon/SKILL.md" in guidance_files
+    assert guidance_files["agents/claude-code/skills/recon/SKILL.md"]["frontmatter"]["name"] == "recon"
+    assert guidance_files["agents/claude-code/skills/recon-fingerprint-triage/SKILL.md"]["frontmatter"]["name"] == (
+        "recon-fingerprint-triage"
+    )
+
+    assert client_configs["claude-code"]["server_key"] == "mcpServers"
+    assert client_configs["vscode"]["server_key"] == "servers"
+    assert client_configs["kiro"]["auto_approve_declared"] is True
+    assert client_configs["kiro"]["auto_approve"] == []
+    assert client_configs["cursor"]["auto_approve_declared"] is False
+
+    approval = agent_surfaces["mcp_approval"]
+    assert approval["stateful_tools"] == [
+        "clear_ephemeral_fingerprints",
+        "inject_ephemeral_fingerprint",
+        "reload_data",
+    ]
+    assert "lookup_tenant" in approval["read_only_tools"]
+    assert {"compare_postures", "reevaluate_domain", "simulate_hardening", "test_hypothesis"} <= set(
+        approval["iterative_agent_tools"]
+    )
+
+    plugin = agent_surfaces["claude_code_plugin"]
+    assert plugin["path"] == "agents/claude-code/.claude-plugin/plugin.json"
+    assert plugin["name"] == "recon"
+
+
 def test_surface_inventory_is_ascii_and_target_free() -> None:
     rendered = cast(str, GENERATOR.render_inventory_json())
     parsed = json.loads(rendered)

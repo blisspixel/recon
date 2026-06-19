@@ -1,4 +1,179 @@
 {
+  "agent_surfaces": {
+    "claude_code_plugin": {
+      "description": "Passive domain intelligence - Microsoft 365 / Google Workspace tenant identification, email security observation (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting, certificate-transparency findings, and posture analysis. Bundles the recon MCP server and a skill that teaches Claude when and how to use it.",
+      "keyword_count": 8,
+      "name": "recon",
+      "path": "agents/claude-code/.claude-plugin/plugin.json",
+      "version": "1.8.1"
+    },
+    "client_configs": [
+      {
+        "args": [
+          "mcp"
+        ],
+        "auto_approve_declared": false,
+        "client": "claude-code",
+        "command": "recon",
+        "has_recon_server": true,
+        "path": "agents/claude-code/.mcp.json",
+        "scope": "plugin_bundle",
+        "server_key": "mcpServers"
+      },
+      {
+        "args": [
+          "mcp"
+        ],
+        "auto_approve_declared": false,
+        "client": "cursor",
+        "command": "recon",
+        "has_recon_server": true,
+        "path": "agents/cursor/mcp.json",
+        "scope": "template",
+        "server_key": "mcpServers"
+      },
+      {
+        "args": [
+          "mcp"
+        ],
+        "auto_approve": [],
+        "auto_approve_declared": true,
+        "client": "kiro",
+        "command": "recon",
+        "disabled": false,
+        "has_recon_server": true,
+        "path": "agents/kiro/mcp.json",
+        "scope": "template",
+        "server_key": "mcpServers"
+      },
+      {
+        "args": [
+          "mcp"
+        ],
+        "auto_approve_declared": false,
+        "client": "vscode",
+        "command": "recon",
+        "has_recon_server": true,
+        "path": "agents/vscode/mcp.json",
+        "scope": "template",
+        "server_key": "servers"
+      },
+      {
+        "args": [
+          "mcp"
+        ],
+        "auto_approve_declared": false,
+        "client": "windsurf",
+        "command": "recon",
+        "has_recon_server": true,
+        "path": "agents/windsurf/mcp_config.json",
+        "scope": "template",
+        "server_key": "mcpServers"
+      }
+    ],
+    "guidance_files": [
+      {
+        "kind": "portable_agent_guidance",
+        "path": "AGENTS.md",
+        "title": "AGENTS.md: recon"
+      },
+      {
+        "kind": "agent_integration_overview",
+        "path": "agents/README.md",
+        "title": "Agent integrations"
+      },
+      {
+        "kind": "claude_code_plugin_docs",
+        "path": "agents/claude-code/README.md",
+        "title": "recon - Claude Code plugin"
+      },
+      {
+        "kind": "cursor_docs",
+        "path": "agents/cursor/README.md",
+        "title": "recon - Cursor install"
+      },
+      {
+        "kind": "kiro_docs",
+        "path": "agents/kiro/README.md",
+        "title": "recon - Kiro install"
+      },
+      {
+        "kind": "vscode_docs",
+        "path": "agents/vscode/README.md",
+        "title": "recon - VS Code (with GitHub Copilot) install"
+      },
+      {
+        "kind": "windsurf_docs",
+        "path": "agents/windsurf/README.md",
+        "title": "recon - Windsurf install"
+      },
+      {
+        "frontmatter": {
+          "allowed-tools": "Bash(recon:*)",
+          "argument-hint": "<domain> [--full] [--explain] [--json]",
+          "description": "Passive domain intelligence - Microsoft 365 / Google Workspace tenant identification, email security configuration (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting from DNS, certificate-transparency findings, related-domain discovery. Use when a domain name appears alongside phrases like \"what does <company> use\", \"tenant\", \"DMARC\", \"email security posture\", \"SaaS stack\", \"fingerprint\", \"passive recon\", or \"vendor diligence\". Strictly passive - never use for active scanning, port scans, credentialed access, or vulnerability checks.",
+          "name": "recon"
+        },
+        "kind": "skill",
+        "path": "agents/claude-code/skills/recon/SKILL.md",
+        "title": "recon"
+      },
+      {
+        "frontmatter": {
+          "allowed-tools": "Bash(recon:*), Read, Edit, Write",
+          "argument-hint": "<domain | path/to/candidates.json>",
+          "description": "Triage fingerprint-discovery candidates from recon's CNAME-chain classifier. Reads either a single `recon <domain> --json --include-unclassified` payload or a `candidates.json` produced by `validation/triage_candidates.py`, then proposes new `cname_target` fingerprint stanzas for `surface.yaml`. Use when the user asks to \"find new fingerprints\", \"what SaaS are we missing\", \"discover unclassified CNAME targets\", or wants to extend recon's catalog from a fresh scan or validation corpus run.",
+          "name": "recon-fingerprint-triage"
+        },
+        "kind": "skill",
+        "path": "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md",
+        "title": "recon-fingerprint-triage"
+      }
+    ],
+    "mcp_approval": {
+      "iterative_agent_tools": [
+        "chain_lookup",
+        "clear_ephemeral_fingerprints",
+        "cluster_verification_tokens",
+        "compare_postures",
+        "discover_fingerprint_candidates",
+        "inject_ephemeral_fingerprint",
+        "list_ephemeral_fingerprints",
+        "reevaluate_domain",
+        "reload_data",
+        "simulate_hardening",
+        "test_hypothesis"
+      ],
+      "read_only_tools": [
+        "analyze_posture",
+        "assess_exposure",
+        "chain_lookup",
+        "cluster_verification_tokens",
+        "compare_postures",
+        "discover_fingerprint_candidates",
+        "explain_dag",
+        "explain_signal",
+        "export_graph",
+        "find_hardening_gaps",
+        "get_fingerprints",
+        "get_infrastructure_clusters",
+        "get_posteriors",
+        "get_signals",
+        "list_ephemeral_fingerprints",
+        "lookup_tenant",
+        "reevaluate_domain",
+        "simulate_hardening",
+        "test_hypothesis"
+      ],
+      "source": "live MCP tool annotations",
+      "stateful_tools": [
+        "clear_ephemeral_fingerprints",
+        "inject_ephemeral_fingerprint",
+        "reload_data"
+      ]
+    },
+    "stability": "non_contractual_generated_inventory"
+  },
   "cli": {
     "commands": [
       {
@@ -2273,7 +2448,9 @@
   "sources": [
     "src/recon_tool/cli.py",
     "src/recon_tool/server*.py",
-    "docs/recon-schema.json"
+    "docs/recon-schema.json",
+    "AGENTS.md",
+    "agents/**"
   ],
   "stability": "non_contractual_generated_inventory"
 }

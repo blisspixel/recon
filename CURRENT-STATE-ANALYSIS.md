@@ -194,6 +194,21 @@ per-harness outputs. The default `paper` profile runs the full public synthetic
 and proof bundle. `--profile smoke` validates the orchestrator quickly. Private
 corpus calibration remains maintainer-local.
 
+## Agent Surface Inventory
+
+`docs/surface-inventory.json` remains a generated, non-contractual drift guard.
+It now inventories the local agent integration surface alongside the CLI, MCP,
+and JSON-schema surfaces:
+
+- portable and client-specific guidance files;
+- Claude Code skill frontmatter;
+- committed client MCP config templates;
+- Claude Code plugin manifest metadata;
+- live MCP read-only versus stateful approval sets.
+
+The generator derives approval semantics from MCP annotations, so a new stateful
+tool or annotation change must update both the generated inventory and its tests.
+
 ## Decision Rule For The Next Task
 
 When choosing work in the public checkout:
