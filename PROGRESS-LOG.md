@@ -5,6 +5,20 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Updated the stale JSON-contract count in `docs/stability.md`.
+- Added `tests/test_stability_docs.py`, which reads `docs/recon-schema.json`
+  and verifies the stability summary advertises the current top-level property
+  and required-field counts.
+- Updated changelog and local loop skills to record the docs-count guard.
+- Focused validation:
+  `uv run python -m pytest tests/test_stability_docs.py tests/test_markdown_links.py -q`
+  passed with 2 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check tests/test_stability_docs.py` and
+  `uv run python -m pyright tests/test_stability_docs.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.52 percent. Tests: 3504 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Added a schema source-map guard as the next incremental step toward generated
   JSON Schema.
 - Added `scripts/check_schema_sources.py`, which traces every top-level

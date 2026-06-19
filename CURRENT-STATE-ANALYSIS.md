@@ -150,6 +150,11 @@ and it fails if a new `TenantInfo` field is left unrepresented without an
 intentional omission. The full schema generator remains open, but the source
 map now makes the generator inputs reviewable.
 
+`docs/stability.md` now summarizes the current schema counts from
+`docs/recon-schema.json`: 56 top-level properties and 47 required fields for a
+single-domain success object. `tests/test_stability_docs.py` ties that summary
+to the schema so the count does not drift again.
+
 ## Diff Coverage Signal
 
 `scripts/diff_coverage.py` is now available as an advisory maintainer signal.
