@@ -49,6 +49,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "metadata-coverage", [_PY, "scripts/check_metadata_coverage.py"]),
     (_CORE, "validation-hygiene", [_PY, "scripts/check_validation_hygiene.py"]),
     (_CORE, "workflow-pins", [_PY, "scripts/check_workflow_pins.py"]),
+    (_CORE, "schema-sources", [_PY, "scripts/check_schema_sources.py"]),
     (_CORE, "surface-inventory", [_PY, "scripts/generate_surface_inventory.py", "--check"]),
     (_CORE, "cli-surface-doc", [_PY, "scripts/generate_surface_inventory.py", "--check-cli-surface"]),
     (_CORE, "no-experimental-labels", [_PY, "scripts/check_no_experimental_labels.py"]),

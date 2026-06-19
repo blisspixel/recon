@@ -5,6 +5,33 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Added a schema source-map guard as the next incremental step toward generated
+  JSON Schema.
+- Added `scripts/check_schema_sources.py`, which traces every top-level
+  `docs/recon-schema.json` property to a `TenantInfo` dataclass field or an
+  explicit formatter, static-envelope, batch-mode, or explain-mode source.
+- Wired `schema-sources` into `scripts/check.py` as a fast core stage.
+- Added `tests/test_schema_sources.py` for current-schema coverage, explicit
+  formatter-derived fields, unknown schema fields, unrepresented model fields,
+  and stale special-source declarations.
+- Updated roadmap, changelog, engineering practices, current-state analysis,
+  and local loop skills to keep this as generator prep rather than claiming the
+  full schema generator is complete.
+- Focused validation:
+  `uv run python scripts/check_schema_sources.py` passed, and
+  `uv run python -m pytest tests/test_schema_sources.py tests/test_json_schema_file.py tests/test_markdown_links.py -q`
+  passed with 28 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check scripts/check_schema_sources.py tests/test_schema_sources.py scripts/check.py`
+  and
+  `uv run python -m pyright scripts/check_schema_sources.py tests/test_schema_sources.py scripts/check.py`
+  passed.
+- Fast local gate:
+  `uv run python scripts/check.py --fast` passed with the new `schema-sources`
+  stage included.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.50 percent. Tests: 3503 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Added generated maintainer context-packet metadata to the surface inventory.
 - Extended `scripts/generate_surface_inventory.py` so
   `agent_surfaces.maintainer_context_packet` records the shared loop-contract
