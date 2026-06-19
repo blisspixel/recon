@@ -60,6 +60,8 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For schema-generator prep, add a source map before code generation. Every
   top-level schema property should trace to a model field, formatter-derived
   value, static envelope field, or mode-specific extension.
+- When docs summarize machine-readable contracts with counts, add a test that
+  reads the source artifact and verifies the prose count.
 - For CLI surface docs, generate Markdown from the live Typer command tree and
   gate it in `scripts/check.py`; do not maintain command and flag tables by hand.
 - For release notes about CLI command or flag changes, compare generated

@@ -109,12 +109,13 @@ Server Instructions document those boundaries for agents each session.
 
 ### JSON output fields
 
-The full top-level JSON contract is in [`schema.md`](schema.md). Summary
-of stability tags:
+The full top-level JSON contract is in [`schema.md`](schema.md) and the
+machine-readable schema is [`recon-schema.json`](recon-schema.json). Summary of
+stability tags:
 
-- **47 stable fields** covering identity, provider, sources, services,
-  domains, email security, CT metadata, sovereignty, and nested
-  `cert_summary` / `bimi_identity` objects.
+- **56 top-level properties, 47 required on single-domain success output**,
+  covering identity, provider, sources, services, domains, email security, CT
+  metadata, sovereignty, and nested `cert_summary` / `bimi_identity` objects.
 - **Bayesian fusion fields** (`slug_confidences`,
   `posterior_observations`): pre-v2.0 experimental, stable v2.0+ per
   the schema-lock disposition table in
