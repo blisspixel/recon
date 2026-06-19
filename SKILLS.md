@@ -34,6 +34,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
   on simple no-network or session-local tools and pin the advertised `$defs`
   through `mcp.list_tools()` before expanding to higher-blast-radius domain
   tools.
+- For MCP typed envelopes, make every advertised required key present on every
+  runtime branch. FastMCP may treat `TypedDict` optional keys as required, so
+  prefer a small additive field over a schema that lies about skipped results.
 - For CLI surface docs, generate Markdown from the live Typer command tree and
   gate it in `scripts/check.py`; do not maintain command and flag tables by hand.
 - For release notes about CLI command or flag changes, compare generated

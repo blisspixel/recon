@@ -5,6 +5,30 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Extended precise MCP output schemas to the graph data tools:
+  `cluster_verification_tokens`, `get_infrastructure_clusters`, and
+  `export_graph`.
+- Added `TypedDict` envelopes for shared verification peers, graph cluster
+  summaries, graph edges, and the three returned object shapes.
+- Kept `chain_lookup` as narrative text and left posture plus inference tools on
+  the permissive Phase 1 schemas for separate compatibility passes.
+- Added a disclaimer to the skipped `export_graph` branch so every runtime
+  branch satisfies the advertised `GraphExportEnvelope`.
+- Regenerated `docs/surface-inventory.json` so the derived inventory records the
+  new graph output-schema definition counts.
+- Focused validation:
+  `uv run python -m pytest tests/test_surface_inventory.py tests/test_mcp_structured_output.py tests/test_mcp_graph_tools.py -q`
+  passed with 27 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check src/recon_tool/server_graph.py tests/test_mcp_structured_output.py tests/test_mcp_graph_tools.py scripts/generate_surface_inventory.py tests/test_surface_inventory.py`
+  and
+  `uv run python -m pyright src/recon_tool/server_graph.py tests/test_mcp_structured_output.py`
+  passed.
+- Surface inventory check:
+  `uv run python scripts/generate_surface_inventory.py --check` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.23 percent. Tests: 3418 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Extended precise MCP output schemas to the three simple ephemeral-fingerprint
   session tools: `inject_ephemeral_fingerprint`, `list_ephemeral_fingerprints`,
   and `clear_ephemeral_fingerprints`.

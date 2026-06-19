@@ -143,8 +143,10 @@ The no-network catalog list tools started the precise-schema Phase 2:
 `get_signals` advertises `SignalSummary` plus nested `SignalMetadataSummary`.
 The simple ephemeral-fingerprint session tools now advertise
 `EphemeralInjectionResult`, `EphemeralFingerprintSummary`, and
-`EphemeralClearResult`. Broader tool output typing remains incremental;
-`reevaluate_domain` and the domain-analysis tools still return larger shapes
+`EphemeralClearResult`. The graph data tools now advertise
+`VerificationTokenClusterResult`, `InfrastructureClusterEnvelope`, and
+`GraphExportEnvelope`. Broader tool output typing remains incremental;
+`reevaluate_domain`, posture, and inference tools still return larger shapes
 that need focused compatibility passes. The CLI `--json` v2.0 schema is a
 separate locked contract.
 

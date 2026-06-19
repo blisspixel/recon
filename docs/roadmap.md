@@ -996,8 +996,10 @@ Phase 2 has started with low-risk MCP surfaces:
 `get_signals` advertises `SignalSummary` plus nested `SignalMetadataSummary`.
 The simple ephemeral-fingerprint session tools now advertise
 `EphemeralInjectionResult`, `EphemeralFingerprintSummary`, and
-`EphemeralClearResult`. The broader data-tool set remains intentionally
-incremental.
+`EphemeralClearResult`. The graph data tools now advertise
+`VerificationTokenClusterResult`, `InfrastructureClusterEnvelope`, and
+`GraphExportEnvelope`. The broader posture and inference tool set remains
+intentionally incremental.
 The design record that drove it, kept for rationale:
 
 A mid-2026 research pass (cited best-practices report) plus a code investigation

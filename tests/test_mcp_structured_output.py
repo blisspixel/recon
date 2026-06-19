@@ -69,6 +69,13 @@ def _array_result_item_schema(tool_name: str) -> dict[str, object]:
     return item_schema
 
 
+def _tool_output_schema(tool_name: str) -> dict[str, object]:
+    tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
+    schema = tools[tool_name].outputSchema
+    assert isinstance(schema, dict)
+    return schema
+
+
 def test_get_fingerprints_output_schema_has_precise_items() -> None:
     """The catalog list output schema names the fields on each fingerprint."""
     item_schema = _array_result_item_schema("get_fingerprints")
@@ -130,6 +137,47 @@ def test_ephemeral_fingerprint_output_schemas_are_precise() -> None:
     item_schema = _array_result_item_schema("list_ephemeral_fingerprints")
     assert set(item_schema["required"]) == {"name", "slug", "category", "confidence", "detection_count"}
     assert item_schema["properties"]["detection_count"]["type"] == "integer"
+
+
+def test_graph_output_schemas_are_precise() -> None:
+    """Graph data tools advertise their stable envelope fields."""
+    cluster_schema = _tool_output_schema("cluster_verification_tokens")
+    assert cluster_schema["title"] == "VerificationTokenClusterResult"
+    assert set(cluster_schema["required"]) == {"clusters", "errors", "disclaimer"}
+    cluster_props = cluster_schema["properties"]
+    assert cluster_props["clusters"]["additionalProperties"]["items"]["$ref"] == "#/$defs/SharedVerificationPeer"
+    assert cluster_props["errors"]["items"]["$ref"] == "#/$defs/DomainToolError"
+
+    infra_schema = _tool_output_schema("get_infrastructure_clusters")
+    assert infra_schema["title"] == "InfrastructureClusterEnvelope"
+    assert set(infra_schema["required"]) == {
+        "domain",
+        "algorithm",
+        "modularity",
+        "partition_stability",
+        "stability_runs",
+        "node_count",
+        "edge_count",
+        "clusters",
+    }
+    infra_props = infra_schema["properties"]
+    assert infra_props["clusters"]["items"]["$ref"] == "#/$defs/InfrastructureClusterSummary"
+
+    export_schema = _tool_output_schema("export_graph")
+    assert export_schema["title"] == "GraphExportEnvelope"
+    assert set(export_schema["required"]) == {
+        "domain",
+        "algorithm",
+        "node_count",
+        "edge_count",
+        "nodes",
+        "edges",
+        "cluster_assignment",
+        "disclaimer",
+    }
+    export_props = export_schema["properties"]
+    assert export_props["edges"]["items"]["$ref"] == "#/$defs/GraphEdgeSummary"
+    assert export_props["cluster_assignment"]["additionalProperties"]["type"] == "integer"
 
 
 def test_get_fingerprints_emits_navigable_structured_content() -> None:

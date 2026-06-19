@@ -1886,9 +1886,17 @@
         ],
         "name": "cluster_verification_tokens",
         "output_schema": {
-          "definition_count": 0,
-          "properties": [],
-          "required": [],
+          "definition_count": 2,
+          "properties": [
+            "clusters",
+            "disclaimer",
+            "errors"
+          ],
+          "required": [
+            "clusters",
+            "disclaimer",
+            "errors"
+          ],
           "type": "object"
         },
         "structured_output": true,
@@ -1912,9 +1920,27 @@
         ],
         "name": "get_infrastructure_clusters",
         "output_schema": {
-          "definition_count": 0,
-          "properties": [],
-          "required": [],
+          "definition_count": 1,
+          "properties": [
+            "algorithm",
+            "clusters",
+            "domain",
+            "edge_count",
+            "modularity",
+            "node_count",
+            "partition_stability",
+            "stability_runs"
+          ],
+          "required": [
+            "algorithm",
+            "clusters",
+            "domain",
+            "edge_count",
+            "modularity",
+            "node_count",
+            "partition_stability",
+            "stability_runs"
+          ],
           "type": "object"
         },
         "structured_output": true,
@@ -1938,9 +1964,27 @@
         ],
         "name": "export_graph",
         "output_schema": {
-          "definition_count": 0,
-          "properties": [],
-          "required": [],
+          "definition_count": 1,
+          "properties": [
+            "algorithm",
+            "cluster_assignment",
+            "disclaimer",
+            "domain",
+            "edge_count",
+            "edges",
+            "node_count",
+            "nodes"
+          ],
+          "required": [
+            "algorithm",
+            "cluster_assignment",
+            "disclaimer",
+            "domain",
+            "edge_count",
+            "edges",
+            "node_count",
+            "nodes"
+          ],
           "type": "object"
         },
         "structured_output": true,
