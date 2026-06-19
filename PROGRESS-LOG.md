@@ -225,3 +225,29 @@ planning artifact and does not replace `CHANGELOG.md`.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.15 percent. Tests: 3399 passed, 5 skipped, 4 deselected.
 - External spend: 0 USD.
+- Started the twelfth cycle from the roadmap's aggregate-only validation memo
+  item.
+- Ran `uv run python -m validation.reproduce_paper_numbers --profile smoke --stamp roadmap-aggregate-smoke-20260619`.
+- The smoke bundle passed all five public steps: adversarial properties,
+  differential verification, interval coverage, likelihood sensitivity, and
+  layer ablation. It read no private corpora, required no default network, and
+  spent 0 USD.
+- Added `validation/2026-06-19-paper-reproduction-smoke.md` as a committed
+  aggregate-only memo. Local manifest and per-step stdout/stderr remain under
+  ignored scratch paths.
+- Added a narrow `.gitignore` whitelist for the sanitized memo while leaving
+  `validation/local/` ignored.
+- Added `tests/test_public_validation_memo.py` to pin the disclosure controls,
+  headline-result caveat, and validation-hygiene compliance.
+- Focused validation:
+  `uv run python -m pytest tests/test_public_validation_memo.py tests/test_validation_hygiene.py tests/test_reproduce_paper_numbers.py -q`
+  passed with 12 tests.
+- Focused lint and hygiene:
+  `uv run python -m ruff check tests/test_public_validation_memo.py` and
+  `python scripts/check_validation_hygiene.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.16 percent. Tests: 3401 passed, 5 skipped, 4 deselected.
+- Post-whitelist focused validation:
+  `uv run python -m pytest tests/test_public_validation_memo.py tests/test_validation_hygiene.py tests/test_reproduce_paper_numbers.py -q`
+  and `python scripts/check_validation_hygiene.py` passed.
+- External spend: 0 USD.

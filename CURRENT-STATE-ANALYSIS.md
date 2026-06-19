@@ -262,6 +262,14 @@ branded email senders. The note explains that `No DKIM observed` means no match
 at the probed selectors, not proof DKIM is absent, and it tells contributors to
 add provider-specific stable selector fingerprints rather than broad guesses.
 
+## Public Reproduction Smoke Memo
+
+`validation/2026-06-19-paper-reproduction-smoke.md` records an aggregate-only
+smoke run of `validation.reproduce_paper_numbers --profile smoke`. It confirms
+the public paper-number harness still runs without private corpora, default
+network access, paid services, or per-domain output. The memo is intentionally a
+harness-health artifact, not a headline calibration result.
+
 ## Scorecard Posture
 
 The public Scorecard API result checked on 2026-06-19 reported score 6.1 for

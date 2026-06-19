@@ -103,6 +103,7 @@ docs/accuracy.md
 !/validation/posture_distributions.py
 !/validation/public-list-calibration.md
 !/validation/reproduce_paper_numbers.py
+!/validation/2026-06-19-paper-reproduction-smoke.md
 # v2.1a: aggregate-state methodology example. Fully synthetic (fictional
 # brands, fabricated numbers); the reference reducer, generator, and synthetic
 # cohort are public. Real cohorts stay local. The reducer run-output is a
