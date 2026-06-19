@@ -255,6 +255,13 @@ The advisory metadata-richness audit now recognizes the catalog's
 narrowing. That aligns the audit with the wording already used to keep
 verification-token signals hedged.
 
+## DKIM Weak-Area Guidance
+
+`docs/weak-areas.md` now has a dedicated note for custom DKIM selectors and
+branded email senders. The note explains that `No DKIM observed` means no match
+at the probed selectors, not proof DKIM is absent, and it tells contributors to
+add provider-specific stable selector fingerprints rather than broad guesses.
+
 ## Scorecard Posture
 
 The public Scorecard API result checked on 2026-06-19 reported score 6.1 for

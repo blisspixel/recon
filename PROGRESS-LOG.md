@@ -210,3 +210,18 @@ planning artifact and does not replace `CHANGELOG.md`.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.16 percent. Tests: 3398 passed, 5 skipped, 4 deselected.
 - External spend: 0 USD.
+- Started the eleventh cycle from the roadmap's weak-area false-negative note.
+- Added a `docs/weak-areas.md` section for custom DKIM selectors and branded
+  email senders.
+- The note clarifies that `No DKIM observed` means no match at probed selectors,
+  not proof DKIM is absent, and keeps contributor guidance provider-specific
+  rather than broad selector guessing.
+- Added `tests/test_weak_areas_doc.py` to pin the DKIM weak-area language.
+- Focused validation:
+  `uv run python -m pytest tests/test_weak_areas_doc.py tests/test_markdown_links.py -q`
+  passed with 2 tests.
+- Focused lint:
+  `uv run python -m ruff check tests/test_weak_areas_doc.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.15 percent. Tests: 3399 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.

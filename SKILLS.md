@@ -50,6 +50,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
   advisory audit heuristics only when they make provenance or scope clearer.
   Do not change detection patterns or confidence in the same pass unless the
   corpus evidence supports it.
+- For weak-area docs, turn false-negative behavior into operator guidance:
+  symptoms, why passive DNS cannot see more, and what to do without broadening
+  fingerprints or adding network calls.
 - Track external spend explicitly. Default spend is 0 USD.
 - Before closing a cycle, run the narrow relevant gate. Before claiming repo
   readiness, run `uv run python scripts/check.py`.

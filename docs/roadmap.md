@@ -2411,8 +2411,9 @@ are picked up alongside the build plan above.
   recognize binding-signal scope language without changing detection patterns.
 - Improve a sparse-result explanation for a known weak area without adding new
   network calls.
-- Add a short weak-area note when a fingerprint has common legitimate
-  false-negative configurations.
+- Done 2026-06-19: add a weak-area note for custom DKIM selector false
+  negatives, clarifying that `No DKIM observed` means no match at probed
+  selectors rather than proof DKIM is absent.
 - Done 2026-06-19: add schema/docs examples that make existing JSON modes
   easier to consume in automation (`docs/automation-examples.md`, with snippet
   tests).

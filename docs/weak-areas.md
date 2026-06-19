@@ -76,6 +76,25 @@ path (`likely primary provider via <Gateway>`) is doing the right
 work. Don't read "few services" as "unsophisticated stack"; this
 shape is common for enterprises that care about governance.
 
+## Custom DKIM selectors and branded email senders
+
+Symptoms: the email section shows `No DKIM observed` or a lower email
+security score even though the domain publishes DMARC, SPF, MTA-STS,
+or a known mail gateway.
+
+Why: DKIM selectors are not enumerable from DNS. recon probes common
+selectors and known provider patterns, but many senders use per-tenant
+or branded selectors that are only visible if you already know the
+selector name. A missing DKIM match therefore means "not observed at
+the probed selectors," not "DKIM is absent."
+
+What to do: use `--explain` to see which selectors and records were
+actually observed. If a commercial gateway plus enforcing DMARC gives
+enough evidence, recon may credit DKIM as inferred via the gateway.
+If you contribute a DKIM fingerprint, keep it provider-specific and
+anchored to a stable public selector pattern; do not add broad
+selector guesses.
+
 ## Fully self-hosted / air-gapped shops
 
 Symptoms: MX lands on the org's own apex (`mail.<domain>`), tenant ID

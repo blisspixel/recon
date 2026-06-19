@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Verification fingerprint metadata.** Added official references for five
   verification-token fingerprints and taught the advisory richness audit to
   recognize account-binding, program-binding, and tenant-binding scope language.
+- **Weak-area guidance.** Added a DKIM selector false-negative note to the
+  sparse-result documentation and pinned it with a docs test.
 - **Workflow action pinning.** Pinned every GitHub Actions dependency to a full
   commit SHA, replaced the actionlint download-and-run step with a pinned action,
   removed installer-side pipx bootstrapping, and added a local / CI gate that
