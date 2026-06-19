@@ -148,11 +148,13 @@ ephemeral-fingerprint session tools now advertise
 `EphemeralClearResult`. The graph data tools now advertise
 `VerificationTokenClusterResult`, `InfrastructureClusterEnvelope`, and
 `GraphExportEnvelope`. The compact agent-facing posture helpers now advertise
-`HypothesisAssessmentResult` and `HardeningSimulationResult`. Broader tool
-output typing remains incremental; `reevaluate_domain`, `analyze_posture`,
-`assess_exposure`, `find_hardening_gaps`, `compare_postures`, and inference
-tools still return larger shapes that need focused compatibility passes. The CLI
-`--json` v2.0 schema is a separate locked contract.
+`HypothesisAssessmentResult` and `HardeningSimulationResult`. `get_posteriors`
+now advertises `PosteriorBlockResult`, `PosteriorNodeSummary`, and
+`UnitCounterfactualSummary`. Broader tool output typing remains incremental;
+`reevaluate_domain`, `analyze_posture`, `assess_exposure`,
+`find_hardening_gaps`, and `compare_postures` still return larger shapes that
+need focused compatibility passes. The CLI `--json` v2.0 schema is a separate
+locked contract.
 
 The narrative tools render prose or DOT and intentionally return text:
 `lookup_tenant` (its `format` selects `text` / `json` / `markdown`),

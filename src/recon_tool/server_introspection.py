@@ -114,6 +114,42 @@ class SignalEvaluationResult(SignalDefinitionResult):
     domain_weakening_conditions: list[str]
 
 
+class UnitCounterfactualSummary(TypedDict):
+    """Leave-one-unit-out counterfactual item returned by ``get_posteriors``."""
+
+    unit: str
+    kind: str
+    observed: str
+    posterior_without: float
+    delta: float
+
+
+class PosteriorNodeSummary(TypedDict):
+    """Per-node posterior summary returned by ``get_posteriors``."""
+
+    name: str
+    description: str
+    posterior: float
+    interval_low: float
+    interval_high: float
+    evidence_used: list[str]
+    n_eff: float
+    sparse: bool
+    entropy_reduction_nats: float
+    unit_counterfactuals: list[UnitCounterfactualSummary]
+
+
+class PosteriorBlockResult(TypedDict):
+    """Top-level posterior block returned by ``get_posteriors``."""
+
+    domain: str
+    entropy_reduction_nats: float
+    evidence_count: int
+    conflict_count: int
+    sparse_count: int
+    posteriors: list[PosteriorNodeSummary]
+
+
 def _metadata_summary(condition: MetadataCondition) -> SignalMetadataSummary:
     return {"field": condition.field, "operator": condition.operator, "value": condition.value}
 
@@ -700,7 +736,7 @@ async def discover_fingerprint_candidates(
         openWorldHint=True,
     ),
 )
-async def get_posteriors(domain: str) -> dict[str, Any]:
+async def get_posteriors(domain: str) -> PosteriorBlockResult:
     """Compute v1.9 Bayesian-network posteriors over high-level claims.
 
     Runs a normal recon lookup (cached + rate-limited like ``lookup_tenant``),
@@ -750,7 +786,7 @@ async def get_posteriors(domain: str) -> dict[str, Any]:
     info = await server_app.resolve_single_for_tool(domain, request_id)
 
     inference = infer_from_tenant_info(info)
-    payload: dict[str, Any] = {
+    payload: PosteriorBlockResult = {
         "domain": info.queried_domain,
         "entropy_reduction_nats": inference.entropy_reduction,
         "evidence_count": inference.evidence_count,
