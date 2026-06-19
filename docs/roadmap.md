@@ -1946,12 +1946,12 @@ remaining open work is the Zenodo DOI (a one-time maintainer toggle), the
    release. Seed `CITATION.cff` now (author, title, version, repo); add the
    `preferred-citation` block when the paper lands. Pairs with
    [paper-outline.md](paper-outline.md).
-2. **A one-command "reproduce the paper's numbers" entry point.** The calibration
-   harnesses, differential verification, and held-out residual already exist; what
-   is missing is a single documented command that regenerates the paper's headline
-   figures from a clean checkout, surfacing the byte-identical guarantee. This is
-   the move both an academic and a security-engineering reader weight most, the
-   difference between claiming reproducibility and handing over a runnable path.
+2. **A one-command "reproduce the paper's numbers" entry point.** Shipped for the
+   public, no-private-data rows: `python -m validation.reproduce_paper_numbers`
+   runs the synthetic/proof bundle and writes a local manifest plus summary under
+   `validation/local/`. The private-corpus and public-list calibration reruns
+   remain separate until there is a frozen, publishable identifier list or a
+   maintainer-local aggregate memo.
 3. **Surface the assurance stack on the README front door.** The
    provenance / SBOM / mutation / reproducibility work is currently buried in
    `docs/`; a short "Assurance" section with an OpenSSF Scorecard badge (which

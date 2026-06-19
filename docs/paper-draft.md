@@ -465,7 +465,9 @@ appears. This is the discipline recon's cohort summary and maintainer-validation
 loop already follow, recorded in [data-handling-policy.md](data-handling-policy.md).
 The artifact is a bit-for-bit reproducible build with sigstore-signed PyPI
 attestations and a locked JSON schema, so the tool a reader runs is the tool the
-paper describes.
+paper describes. The public no-private-data evidence bundle is reproducible from
+a clean checkout with `python -m validation.reproduce_paper_numbers`; it records
+the exact commands and artifacts in a local manifest under `validation/local/`.
 
 We separate two reproducibility claims that are easy to conflate. Build
 reproducibility (the signed, bit-identical artifact) is real and complete. Result

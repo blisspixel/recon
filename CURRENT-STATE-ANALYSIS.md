@@ -179,6 +179,21 @@ One disclosure-boundary hardening also shipped in the public tree:
 - `validation/render_calibration_memo.py` rejects target-looking domain names in
   aggregate JSON keys and memo titles, not only JSON values.
 
+## Reproducibility Entry Point
+
+The public, no-private-data paper-number rows now have a one-command entry
+point:
+
+```bash
+python -m validation.reproduce_paper_numbers
+```
+
+The command writes local, gitignored artifacts under
+`validation/local/paper-numbers/<UTC-stamp>/`, including a manifest, summary, and
+per-harness outputs. The default `paper` profile runs the full public synthetic
+and proof bundle. `--profile smoke` validates the orchestrator quickly. Private
+corpus calibration remains maintainer-local.
+
 ## Decision Rule For The Next Task
 
 When choosing work in the public checkout:

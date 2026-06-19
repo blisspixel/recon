@@ -75,8 +75,9 @@ as coverage gaps unless the DNS evidence directly supports a stronger claim.
 
 - **Open ports, running services, OS versions**: these are active-scanning
   outputs. recon does not port-scan.
-- **Web server software versions**: these come from HTTP responses, not
-  DNS, and recon makes no HTTP requests to the target's own infrastructure.
+- **Web server software versions**: these come from generic HTTP responses, not
+  DNS. recon does not request those pages; its only target-owned HTTP fetches are
+  the documented MTA-STS policy request and opt-in CSE / BIMI VMC probes.
 - **TLS certificate chain details beyond CT metadata**: recon sees what CT
   logs contain (issuer, not_before/not_after, subject). For live certificate
   detail, use `openssl s_client` or an active TLS scanner.

@@ -30,6 +30,9 @@ Committed (generic tooling, no company names):
 - `render_calibration_memo.py`: reads aggregate JSON from private calibration
   runs, rejects target-identifying fields or unsuppressed small strata, and
   renders a reviewable aggregate memo.
+- `reproduce_paper_numbers.py`: one-command public reproduction bundle for the
+  paper's no-private-data numbers. It runs existing synthetic/proof harnesses and
+  writes local artifacts under `validation/local/`.
 - `corpus-example.txt`: fictional-company sample showing the format. Safe to
   commit because the names are made up.
 
@@ -218,6 +221,20 @@ Committed memos from these network runs must follow
 organization names, no tenant IDs, no per-domain output, and no small cells.
 Report only aggregate counts, rates, intervals, quantiles, and deltas. Suppress
 or combine any stratum below 10 domains before committing the memo.
+
+Public paper-number reproduction (no private corpus, no default network):
+
+```bash
+python -m validation.reproduce_paper_numbers
+```
+
+The default `paper` profile regenerates the public, no-private-data evidence
+rows named in `docs/paper-outline.md`: suppression monotonicity, differential
+verification, synthetic interval coverage, likelihood sensitivity, and layer
+ablations. It writes `summary.md`, `manifest.json`, and per-harness outputs under
+`validation/local/paper-numbers/<UTC-stamp>/`, which is gitignored. Use
+`--profile smoke` to check the orchestrator quickly without waiting for full
+paper-sized sweeps.
 
 ## The fingerprint catalog audit
 

@@ -23,4 +23,19 @@ planning artifact and does not replace `CHANGELOG.md`.
   passed with 10 tests.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.16 percent. Tests: 3365 passed, 6 skipped, 4 deselected.
+- Started the second cycle from the roadmap's reference-grade repository track.
+- Added `validation/reproduce_paper_numbers.py`, a one-command public
+  no-private-data reproduction bundle for the paper's synthetic and proof
+  evidence rows.
+- Documented the command in `validation/README.md`, `docs/roadmap.md`,
+  `docs/paper-outline.md`, and `docs/paper-draft.md`.
+- Added `tests/test_reproduce_paper_numbers.py` covering manifest output,
+  dry-run behavior, failure handling, and profile validation.
+- Ran the smoke profile:
+  `uv run python -m validation.reproduce_paper_numbers --profile smoke --stamp smoke-test`.
+  It passed and wrote ignored artifacts under `validation/local/`.
+- Focused validation: `uv run python -m pytest tests/test_reproduce_paper_numbers.py tests/test_render_calibration_memo.py -q`
+  passed with 14 tests.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.15 percent. Tests: 3370 passed, 5 skipped, 4 deselected.
 - External spend: 0 USD.
