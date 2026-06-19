@@ -1,9 +1,10 @@
 """Tests for the MCP catalog resources.
 
-Agents browse `recon://fingerprints`, `recon://signals`, and
-`recon://profiles` to learn what recon can detect without spending a
-tool invocation on introspection. Each resource is expected to return
-a deterministic JSON projection over the respective in-memory catalog.
+Agents browse `recon://fingerprints`, `recon://signals`,
+`recon://profiles`, and the generated surface inventory to learn what
+recon can detect and expose without spending a tool invocation on
+introspection. Each resource is expected to return a deterministic JSON
+projection over its source data.
 
 These tests exercise the underlying resource functions directly
 (they are module-level callables registered via `@mcp.resource`).
@@ -19,6 +20,7 @@ from recon_tool.server_introspection import (
     _resource_fingerprints,
     _resource_profiles,
     _resource_signals,
+    _resource_surface_inventory,
 )
 from recon_tool.signals import load_signals
 
@@ -118,3 +120,22 @@ class TestProfilesResource:
             assert isinstance(entry["signal_boost"], dict)
             for v in entry["category_boost"].values():
                 assert isinstance(v, int | float)
+
+
+class TestSurfaceInventoryResource:
+    def test_returns_generated_inventory(self) -> None:
+        payload = json.loads(_resource_surface_inventory())
+
+        assert payload["stability"] == "non_contractual_generated_inventory"
+        assert payload["private_data_policy"].startswith("Contains no target-domain output")
+        for key in ("cli", "mcp", "json_schema", "agent_surfaces"):
+            assert key in payload
+
+    def test_inventory_includes_resource_catalog(self) -> None:
+        payload = json.loads(_resource_surface_inventory())
+        mcp_payload = payload["mcp"]
+        resource_uris = {entry["uri"] for entry in mcp_payload["resources"]}
+
+        assert mcp_payload["resource_count"] == len(mcp_payload["resources"])
+        assert "recon://surface-inventory" in resource_uris
+        assert {"recon://fingerprints", "recon://signals", "recon://profiles", "recon://schema"} <= resource_uris

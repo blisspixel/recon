@@ -212,7 +212,7 @@ The injected server instructions carry this same guidance for the agent;
 
 ## Catalog Resources
 
-recon exposes four MCP resources so agents can browse "what can this tool detect?" and "what shape is the output?" without spending a tool invocation on introspection:
+recon exposes five MCP resources so agents can browse "what can this tool detect?", "what shape is the output?", and "what local surfaces exist?" without spending a tool invocation on introspection:
 
 | URI | Content |
 |---|---|
@@ -220,8 +220,9 @@ recon exposes four MCP resources so agents can browse "what can this tool detect
 | `recon://signals` | Derived intelligence signals with candidate slugs, min_matches, contradicts/requires relationships, and positive-when-absent inversions |
 | `recon://profiles` | Built-in posture profile lenses (category boosts, signal boosts, focus categories) |
 | `recon://schema` | The JSON-output contract as a JSON Schema (the same document as `docs/recon-schema.json`), so an agent can self-describe the shape of `recon <domain> --json` (plus the batch / delta modes in its `$defs`) without an external fetch. The contract version is in the schema's own `description`. |
+| `recon://surface-inventory` | Generated, non-contractual local map of the CLI, MCP tools, MCP resources, JSON schema, and agent integration surfaces. It is the same inventory as `docs/surface-inventory.json`. |
 
-The catalog resources return deterministic JSON sourced from the already-loaded YAML catalogs; `recon://schema` returns the bundled schema document. No network calls. Changes to custom `~/.recon/fingerprints/` or `~/.recon/signals.yaml` require calling `reload_data` to take effect.
+The catalog resources return deterministic JSON sourced from the already-loaded YAML catalogs; `recon://schema` returns the bundled schema document; `recon://surface-inventory` returns the bundled generated inventory. No network calls. Changes to custom `~/.recon/fingerprints/` or `~/.recon/signals.yaml` require calling `reload_data` to take effect. The surface inventory is for local discovery and drift checks, not compatibility promises.
 
 ### Resource Consumption Examples
 
@@ -260,6 +261,17 @@ context.
    `recon <domain> --json`.
 3. Use `$defs` for batch, summary, and delta shapes. This is a local resource
    read; it does not require fetching docs from the network.
+
+**Discover local surfaces before choosing a command or tool.**
+
+1. Read `recon://surface-inventory` when a client needs a local map of CLI
+   commands, MCP tools, MCP resources, JSON-schema fields, or agent guidance
+   files.
+2. Use `mcp.tools[]` for tool names, parameters, annotations, and advertised
+   output schemas.
+3. Use `mcp.resources[]` for local resource URIs to read before spending a
+   domain-analysis tool call. Treat the inventory fields as generated discovery
+   context, not as a stable runtime contract.
 
 ## Staleness Timestamps
 

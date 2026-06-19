@@ -40,6 +40,7 @@ _EXPECTED_DATA_FILES = {
     "recon_tool/data/profiles/saas-b2b.yaml",
     "recon_tool/data/recon-schema.json",
     "recon_tool/data/signals.yaml",
+    "recon_tool/data/surface-inventory.json",
 }
 
 _EXPECTED_RUNTIME_DEPENDENCIES = {

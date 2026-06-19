@@ -303,10 +303,11 @@ outcome without parsing output. Full contract:
 Maintainers and agent authors who need a current command and flag reference can
 read [`docs/cli-surface.md`](docs/cli-surface.md). Downstream tooling that needs
 the local CLI, MCP, JSON-schema, and agent-integration map can read
-[`docs/surface-inventory.json`](docs/surface-inventory.json). Both are generated
+[`docs/surface-inventory.json`](docs/surface-inventory.json) or the local
+`recon://surface-inventory` MCP resource. Both generated artifacts are produced
 by `scripts/generate_surface_inventory.py`, and `scripts/check.py` enforces that
-they stay current. They are derived drift guards, not stable runtime API
-contracts.
+they stay current. They are derived drift guards and discovery context, not
+stable runtime API contracts.
 
 ## Limitations
 

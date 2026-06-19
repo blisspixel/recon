@@ -5,6 +5,27 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Added the `recon://surface-inventory` MCP resource.
+- Packaged the generated surface inventory beside the JSON schema so MCP
+  clients can read local CLI, MCP, JSON-schema, and agent guidance context
+  without repository-file access.
+- Extended the surface-inventory generator to include MCP resource metadata.
+- Added drift and registration tests for the packaged inventory copy.
+- Focused validation:
+  `uv run python -m pytest tests/test_surface_inventory.py tests/test_server_resources.py tests/test_schema_resource.py tests/test_package_invariants.py tests/test_mcp_tool_annotations.py -q`
+  passed with 32 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check src/recon_tool/server_introspection.py src/recon_tool/surface_inventory.py scripts/generate_surface_inventory.py tests/test_surface_inventory.py tests/test_server_resources.py tests/test_schema_resource.py tests/test_package_invariants.py tests/test_mcp_tool_annotations.py`
+  and
+  `uv run python -m pyright src/recon_tool/server_introspection.py src/recon_tool/surface_inventory.py scripts/generate_surface_inventory.py tests/test_surface_inventory.py tests/test_server_resources.py tests/test_schema_resource.py tests/test_package_invariants.py tests/test_mcp_tool_annotations.py`
+  passed.
+- Generated-doc checks:
+  `uv run python scripts/generate_surface_inventory.py --check` and
+  `uv run python scripts/generate_surface_inventory.py --check-cli-surface`
+  passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.52 percent. Tests: 3462 passed, 6 skipped, 4 deselected.
+- External spend: 0 USD.
 - Added explicit job timeouts to every GitHub Actions workflow.
 - Set bounded `timeout-minutes` values across CI, CodeQL, Scorecard, secrets
   scan, release, and the existing mutation gate.

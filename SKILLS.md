@@ -30,6 +30,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - When a generated inventory is meant to help agents, include both machine
   surfaces and the guidance surfaces that teach clients how to call them. Pin
   the generated approval model to live MCP annotations, not copied prose.
+- If MCP clients need the generated inventory but may not have repository-file
+  access, expose the packaged snapshot as a local resource and keep it
+  byte-identical to the docs copy with tests.
 - For MCP precise-output-schema work, use `TypedDict` return annotations first
   on simple no-network or session-local tools and pin the advertised `$defs`
   through `mcp.list_tools()` before expanding to higher-blast-radius domain

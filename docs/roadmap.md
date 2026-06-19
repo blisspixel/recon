@@ -227,10 +227,12 @@ What remains is dependency-ordered work with no calendar estimates:
    human review under [agentic-balance.md](agentic-balance.md).
 3. **Surface-inventory promotion decision** (possible 2.3 surface, not needed
    for normal use). `docs/surface-inventory.json` is now generated from the CLI,
-   MCP registry, and JSON schema, and CI checks it for drift. Keep it
-   patch-level while it is only a derived maintainer and agent-author reference.
-   Promote it to a 2.3 surface only if there is a concrete consumer that needs a
-   stable machine-readable command, resource, or contract.
+   MCP registry, JSON schema, and agent guidance, and CI checks it for drift.
+   `recon://surface-inventory` now exposes the same generated snapshot as a
+   local no-network MCP resource for agents that cannot read repository files.
+   Keep it patch-level while it remains derived discovery context. Promote it to
+   a 2.3 contract only if a concrete consumer needs stable machine-readable
+   fields beyond best-effort local discovery.
 4. **The arXiv write-up** (packaging; aspirational, off the critical path).
    Assemble the existing rigor for an outside reader, plus the few additional
    experiments already designed into the harnesses above, within the no-real-data
@@ -2400,8 +2402,10 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
 - **CLI surface inventory for downstream skill and agent authors.** Status:
   `docs/surface-inventory.json` now carries the machine-readable local CLI, MCP,
   JSON-schema, and agent-integration map, and `docs/cli-surface.md` now carries
-  the generated human-readable command and flag reference. `scripts/check.py`
-  drift-checks both files.
+  the generated human-readable command and flag reference.
+  `recon://surface-inventory` exposes the same generated inventory to MCP
+  clients as local discovery context. `scripts/check.py` drift-checks both
+  generated files.
   1. Done 2026-06-19: `scripts/summarize_cli_surface_changes.py`
      compares generated surface inventories and emits the
      changelog-ready "Tool surface changes" one-liner for user-visible
@@ -2411,6 +2415,9 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
      the live Typer command tree and lists every flag and
      subcommand in one place, suitable for skill files or AI
      agent prompts.
+  3. Done 2026-06-19: `recon://surface-inventory` serves the packaged generated
+     inventory to MCP clients, including MCP resource metadata, without adding a
+     network call or a stable field-level contract.
 
   Explicitly out of scope for this entry: Claude-skill-
   specific or agent-behavior guidance in the repo. That
@@ -2447,8 +2454,9 @@ are picked up alongside the build plan above.
   easier to consume in automation (`docs/automation-examples.md`, with snippet
   tests).
 - Done 2026-06-19: improve MCP resource consumption examples for
-  `recon://fingerprints`, `recon://signals`, `recon://profiles`, and
-  `recon://schema` without adding network behavior.
+  `recon://fingerprints`, `recon://signals`, `recon://profiles`,
+  `recon://schema`, and `recon://surface-inventory` without adding network
+  behavior.
 - Done 2026-06-19: add cache edge tests for URL-to-apex cache keys,
   top-level-only `cache_clear_all()` deletion, and the batch-only
   `shared_verification_tokens` non-persistence contract.

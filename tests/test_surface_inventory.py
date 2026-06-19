@@ -70,9 +70,18 @@ def test_surface_inventory_has_expected_cli_surface() -> None:
 def test_surface_inventory_has_expected_mcp_surface() -> None:
     mcp_inventory = _inventory()["mcp"]
     tools = {tool["name"]: tool for tool in mcp_inventory["tools"]}
+    resources = {resource["uri"]: resource for resource in mcp_inventory["resources"]}
 
     assert mcp_inventory["tool_count"] == len(tools)
+    assert mcp_inventory["resource_count"] == len(resources)
     assert {"lookup_tenant", "assess_exposure", "get_posteriors", "inject_ephemeral_fingerprint"} <= set(tools)
+    assert {
+        "recon://fingerprints",
+        "recon://signals",
+        "recon://profiles",
+        "recon://schema",
+        "recon://surface-inventory",
+    } <= set(resources)
 
     lookup = tools["lookup_tenant"]
     lookup_inputs = {param["name"]: param for param in lookup["input_parameters"]}
@@ -83,6 +92,8 @@ def test_surface_inventory_has_expected_mcp_surface() -> None:
     assert lookup["output_schema"]["properties"] == ["result"]
 
     assert tools["inject_ephemeral_fingerprint"]["annotations"]["readOnlyHint"] is False
+    assert resources["recon://surface-inventory"]["mime_type"] == "application/json"
+    assert "non-contractual map" in resources["recon://surface-inventory"]["summary"]
 
 
 def test_surface_inventory_summarizes_json_schema_contract() -> None:
