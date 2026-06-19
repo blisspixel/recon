@@ -9,7 +9,7 @@ reverse.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Literal, cast
 
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
@@ -45,6 +45,204 @@ class EphemeralClearResult(TypedDict):
 
     status: str
     removed: int
+
+
+class LookupEvidenceSummary(TypedDict):
+    source_type: str
+    raw_value: str
+    rule_name: str
+    slug: str
+
+
+class LookupConflictCandidate(TypedDict):
+    value: str
+    source: str
+    confidence: Literal["high", "medium", "low"]
+
+
+class LookupConflictSummary(TypedDict):
+    field: str
+    candidates: list[LookupConflictCandidate]
+
+
+class LookupWildcardClusterSummary(TypedDict):
+    names: list[str]
+
+
+class LookupCertBurstSummary(TypedDict):
+    window_start: str
+    window_end: str
+    span_seconds: int
+    names: list[str]
+
+
+class LookupCertSummary(TypedDict):
+    cert_count: int
+    issuer_diversity: int
+    issuance_velocity: int
+    newest_cert_age_days: int
+    oldest_cert_age_days: int
+    top_issuers: list[str]
+    wildcard_sibling_clusters: list[LookupWildcardClusterSummary]
+    deployment_bursts: list[LookupCertBurstSummary]
+
+
+class LookupBimiIdentitySummary(TypedDict):
+    organization: str
+    country: str | None
+    state: str | None
+    locality: str | None
+    trademark: str | None
+
+
+class LookupNodeConflictSummary(TypedDict):
+    field: str
+    sources: list[str]
+    magnitude: float
+
+
+class LookupEvidenceRankSummary(TypedDict):
+    kind: str
+    name: str
+    llr: float
+    influence_pct: float
+
+
+class LookupUnitCounterfactualSummary(TypedDict):
+    unit: str
+    kind: str
+    observed: str
+    posterior_without: float
+    delta: float
+
+
+class LookupPosteriorObservationSummary(TypedDict):
+    name: str
+    description: str
+    posterior: float
+    interval_low: float
+    interval_high: float
+    evidence_used: list[str]
+    n_eff: float
+    sparse: bool
+    conflict_provenance: list[LookupNodeConflictSummary]
+    evidence_ranked: list[LookupEvidenceRankSummary]
+    entropy_reduction_nats: float
+    unit_counterfactuals: list[LookupUnitCounterfactualSummary]
+
+
+class LookupChainMotifSummary(TypedDict):
+    motif_name: str
+    display_name: str
+    confidence: Literal["high", "medium", "low"]
+    subdomain: str
+    chain: list[str]
+
+
+class LookupInfrastructureClusterSummary(TypedDict):
+    cluster_id: int
+    size: int
+    members: list[str]
+    shared_cert_count: int
+    dominant_issuer: str | None
+
+
+class LookupInfrastructureClusterEnvelope(TypedDict):
+    algorithm: str
+    modularity: float
+    partition_stability: float | None
+    stability_runs: int
+    node_count: int
+    edge_count: int
+    clusters: list[LookupInfrastructureClusterSummary]
+
+
+class LookupFingerprintMetadataSummary(TypedDict):
+    vendor_domain: str | None
+    admin_root: str | None
+    relationship_hint: str | None
+    relationship_basis: str | None
+
+
+class LookupSurfaceAttributionSummary(TypedDict):
+    subdomain: str
+    primary_slug: str
+    primary_name: str
+    primary_tier: str
+    infra_slug: str | None
+    infra_name: str | None
+
+
+class LookupResult(TypedDict):
+    """Structured MCP output for ``reevaluate_domain``.
+
+    Mirrors ``format_tenant_dict`` for the default lookup record shape. The
+    CLI schema remains the stable external contract; this TypedDict gives MCP
+    clients a navigable schema for the same object.
+    """
+
+    tenant_id: str | None
+    display_name: str
+    default_domain: str
+    queried_domain: str
+    provider: str
+    confidence: Literal["high", "medium", "low"]
+    evidence_confidence: Literal["high", "medium", "low"]
+    inference_confidence: Literal["high", "medium", "low"]
+    region: str | None
+    auth_type: Literal["Federated", "Managed"] | None
+    dmarc_policy: Literal["reject", "quarantine", "none"] | None
+    domain_count: int
+    sources: list[str]
+    services: list[str]
+    slugs: list[str]
+    insights: list[str]
+    tenant_domains: list[str]
+    related_domains: list[str]
+    partial: bool
+    degraded_sources: list[str]
+    google_auth_type: Literal["Federated", "Managed"] | None
+    google_idp_name: str | None
+    mta_sts_mode: Literal["enforce", "testing", "none"] | None
+    site_verification_tokens: list[str]
+    primary_email_provider: str | None
+    likely_primary_email_provider: str | None
+    email_gateway: str | None
+    dmarc_pct: int | None
+    ct_provider_used: str | None
+    ct_subdomain_count: int
+    ct_cache_age_days: int | None
+    ct_attempt_outcome: (
+        Literal[
+            "cache_hit",
+            "live_success",
+            "live_rate_limited",
+            "breaker_open",
+            "live_other_failure",
+            "cache_miss",
+            "skipped",
+        ]
+        | None
+    )
+    slug_confidences: dict[str, float]
+    posterior_observations: list[LookupPosteriorObservationSummary]
+    email_security_score: int
+    cloud_instance: str | None
+    tenant_region_sub_scope: Literal["GCC", "DOD", "USGov"] | None
+    msgraph_host: Literal["graph.microsoft.com", "graph.microsoft.us"] | None
+    lexical_observations: list[str]
+    cert_summary: LookupCertSummary | None
+    bimi_identity: LookupBimiIdentitySummary | None
+    detection_scores: dict[str, Literal["low", "medium", "high"]]
+    evidence_conflicts: list[LookupConflictSummary]
+    chain_motifs: list[LookupChainMotifSummary]
+    infrastructure_clusters: LookupInfrastructureClusterEnvelope
+    fingerprint_metadata: dict[str, LookupFingerprintMetadataSummary]
+    surface_attributions: list[LookupSurfaceAttributionSummary]
+    fusion_enabled: bool
+    schema_version: Literal["2.0"]
+    record_type: Literal["lookup"]
+    evidence: list[LookupEvidenceSummary]
 
 
 @mcp.tool(
@@ -199,7 +397,7 @@ async def clear_ephemeral_fingerprints() -> EphemeralClearResult:
         openWorldHint=True,
     ),
 )
-async def reevaluate_domain(domain: str) -> dict[str, Any]:
+async def reevaluate_domain(domain: str) -> LookupResult:
     """Re-evaluate a previously looked-up domain against current fingerprints.
 
     Uses cached raw DNS data from a prior lookup — zero network calls.
@@ -232,4 +430,6 @@ async def reevaluate_domain(domain: str) -> dict[str, Any]:
         raise ToolError(f"Re-evaluation failed: {exc}") from exc
 
     cache_refresh_info(validated, new_info, results)
-    return format_tenant_dict(new_info)
+    payload = format_tenant_dict(new_info)
+    payload.setdefault("evidence", [])
+    return cast(LookupResult, payload)

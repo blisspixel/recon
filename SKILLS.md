@@ -37,6 +37,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For MCP typed envelopes, make every advertised required key present on every
   runtime branch. FastMCP may treat `TypedDict` optional keys as required, so
   prefer a small additive field over a schema that lies about skipped results.
+- For MCP lookup-shaped schemas, do not rely on `NotRequired` to document
+  branch-only keys. Either keep the key out of the advertised type or make the
+  runtime branch emit an empty list/object so the schema stays truthful.
 - For CLI surface docs, generate Markdown from the live Typer command tree and
   gate it in `scripts/check.py`; do not maintain command and flag tables by hand.
 - For release notes about CLI command or flag changes, compare generated

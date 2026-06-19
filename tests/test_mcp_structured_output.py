@@ -173,6 +173,43 @@ def test_ephemeral_fingerprint_output_schemas_are_precise() -> None:
     assert item_schema["properties"]["detection_count"]["type"] == "integer"
 
 
+def test_reevaluate_domain_output_schema_mirrors_lookup_record() -> None:
+    """Re-evaluation advertises the full lookup record shape it returns."""
+    schema = _tool_output_schema("reevaluate_domain")
+    assert schema["title"] == "LookupResult"
+
+    required = set(schema["required"])
+    assert {
+        "tenant_id",
+        "display_name",
+        "queried_domain",
+        "provider",
+        "confidence",
+        "posterior_observations",
+        "infrastructure_clusters",
+        "surface_attributions",
+        "evidence",
+        "schema_version",
+        "record_type",
+    } <= required
+    assert "unclassified_cname_chains" not in schema["properties"]
+
+    props = schema["properties"]
+    assert props["confidence"]["enum"] == ["high", "medium", "low"]
+    assert props["schema_version"]["const"] == "2.0"
+    assert props["record_type"]["const"] == "lookup"
+    assert props["posterior_observations"]["items"]["$ref"] == "#/$defs/LookupPosteriorObservationSummary"
+    assert props["infrastructure_clusters"]["$ref"] == "#/$defs/LookupInfrastructureClusterEnvelope"
+    assert props["surface_attributions"]["items"]["$ref"] == "#/$defs/LookupSurfaceAttributionSummary"
+    assert props["evidence"]["items"]["$ref"] == "#/$defs/LookupEvidenceSummary"
+
+    posterior = schema["$defs"]["LookupPosteriorObservationSummary"]
+    assert {"evidence_ranked", "unit_counterfactuals", "conflict_provenance"} <= set(posterior["required"])
+    assert posterior["properties"]["unit_counterfactuals"]["items"]["$ref"] == (
+        "#/$defs/LookupUnitCounterfactualSummary"
+    )
+
+
 def test_graph_output_schemas_are_precise() -> None:
     """Graph data tools advertise their stable envelope fields."""
     cluster_schema = _tool_output_schema("cluster_verification_tokens")

@@ -155,10 +155,11 @@ now advertises `PosteriorBlockResult`, `PosteriorNodeSummary`, and
 with nested evidence and posture record definitions.
 `discover_fingerprint_candidates` now advertises `FingerprintCandidate` plus
 nested `FingerprintCandidateSample`. `analyze_posture` now advertises its
-list, profiled, explained, and profiled-explained result variants. Broader tool
-output typing remains incremental; `reevaluate_domain` still returns the full
-lookup object shape and needs a focused compatibility pass. The CLI `--json`
-v2.0 schema is a separate locked contract.
+list, profiled, explained, and profiled-explained result variants.
+`reevaluate_domain` now advertises the full cache-only lookup record as
+`LookupResult`, with nested definitions for evidence, posteriors, certificate
+summaries, infrastructure clusters, surface attributions, chain motifs, and
+conflicts. The CLI `--json` v2.0 schema is a separate locked contract.
 
 The narrative tools render prose or DOT and intentionally return text:
 `lookup_tenant` (its `format` selects `text` / `json` / `markdown`),
