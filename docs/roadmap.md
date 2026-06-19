@@ -160,10 +160,11 @@ rules are in [release-process.md](release-process.md#version-numbering).
   calendar estimate. Current `main` now has the local release-readiness
   preflight, the Scorecard-facing supply-chain posture pass, the
   pinned-workflow supply-chain pass, the maintainer-local calibration bundle
-  runner, and the generated surface-inventory drift gate. The remaining order is
-  private-corpus calibration runs, aggregate-only validation memos, optional
-  reviewed maintainer loops around those deterministic gates, and the decision
-  whether the derived inventory ever becomes a stable surface. These are
+  runner, validation-runner path-containment hardening, and the generated
+  surface-inventory drift gate. The remaining order is private-corpus
+  calibration runs, aggregate-only validation memos, optional reviewed
+  maintainer loops around those deterministic gates, and the decision whether
+  the derived inventory ever becomes a stable surface. These are
   patch-level unless they add a new stable user or agent-consumed surface. None
   of this makes AI a requirement for using recon.
 - **2.3+ (reserved for a real surface).** The next minor waits for a coherent
@@ -1974,8 +1975,9 @@ remaining open work is the Zenodo DOI (a one-time maintainer toggle), the
 2. **A one-command "reproduce the paper's numbers" entry point.** Shipped for the
    public, no-private-data rows: `python -m validation.reproduce_paper_numbers`
    runs the synthetic/proof bundle and writes a local manifest plus summary under
-   `validation/local/`. The private-corpus and public-list calibration reruns
-   remain separate until there is a frozen, publishable identifier list or a
+   `validation/local/`, with safe run-stamp validation for local artifact
+   directories. The private-corpus and public-list calibration reruns remain
+   separate until there is a frozen, publishable identifier list or a
    maintainer-local aggregate memo.
 3. **Surface the assurance stack on the README front door.** The
    provenance / SBOM / mutation / reproducibility work is currently buried in

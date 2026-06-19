@@ -5,6 +5,27 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Hardened the public paper-number reproduction runner's run-directory handling.
+- Added safe run-stamp validation and output-root containment to
+  `validation.reproduce_paper_numbers`, matching the maintainer-local calibration
+  bundle rule.
+- Added focused regression coverage for unsafe stamps and safe resolved dry-run
+  directories.
+- Updated the validation docs, roadmap, changelog, and state analysis to record
+  the public reproduction path-containment contract.
+- Focused validation:
+  `uv run python -m pytest tests/test_reproduce_paper_numbers.py tests/test_run_calibration_bundle.py -q`
+  passed with 23 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check validation/reproduce_paper_numbers.py tests/test_reproduce_paper_numbers.py`
+  and
+  `uv run python -m pyright validation/reproduce_paper_numbers.py tests/test_reproduce_paper_numbers.py`
+  passed.
+- Validation hygiene:
+  `uv run python scripts/check_validation_hygiene.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.51 percent. Tests: 3441 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Hardened the maintainer-local calibration bundle runner's run-directory
   handling.
 - Added a safe run-stamp validator and containment check so `--stamp` cannot

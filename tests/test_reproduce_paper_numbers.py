@@ -68,6 +68,23 @@ def test_dry_run_prints_commands_without_creating_run_dir(tmp_path: Path, capsys
     assert "validation.layer_ablation" in out
 
 
+@pytest.mark.parametrize("stamp", ["", "../outside", "nested/stamp", "nested\\stamp", "bad stamp", "a" * 81])
+def test_run_reproduction_rejects_unsafe_stamp(tmp_path: Path, stamp: str) -> None:
+    with pytest.raises(ValueError, match="run stamp must be 1-80"):
+        run_reproduction(profile="smoke", output_root=tmp_path, stamp=stamp, dry_run=True)
+
+
+def test_run_reproduction_resolves_safe_stamp_under_output_root(tmp_path: Path) -> None:
+    outputs = run_reproduction(
+        profile="smoke",
+        output_root=tmp_path,
+        stamp="safe-run_20260619.1",
+        dry_run=True,
+    )
+
+    assert outputs.run_dir == (tmp_path / "safe-run_20260619.1").resolve(strict=False)
+
+
 def test_failure_stops_after_failed_step_and_keeps_manifest(tmp_path: Path) -> None:
     calls: list[list[str]] = []
 
