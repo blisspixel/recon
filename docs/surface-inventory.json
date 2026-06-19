@@ -1967,7 +1967,7 @@
         ],
         "name": "get_fingerprints",
         "output_schema": {
-          "definition_count": 0,
+          "definition_count": 1,
           "properties": [
             "result"
           ],
@@ -2008,7 +2008,7 @@
         ],
         "name": "get_signals",
         "output_schema": {
-          "definition_count": 0,
+          "definition_count": 2,
           "properties": [
             "result"
           ],

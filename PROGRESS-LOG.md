@@ -5,6 +5,30 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Added precise `TypedDict` MCP output item schemas for the no-network catalog
+  list tools: `FingerprintSummary` for `get_fingerprints`, and `SignalSummary`
+  plus `SignalMetadataSummary` for `get_signals`.
+- Kept the returned payloads unchanged while making FastMCP advertise concrete
+  `outputSchema` fields instead of generic object items for those two lists.
+- Added structured-output tests that inspect `mcp.list_tools()` and confirm the
+  catalog list schemas reference the new `$defs` entries and required fields.
+- Regenerated `docs/surface-inventory.json` so the derived MCP inventory records
+  the new output-schema definition counts for both catalog tools.
+- Updated `docs/mcp.md` and `docs/roadmap.md` to record this as the first
+  precise-schema Phase 2 slice, not a complete migration for every data tool.
+- Focused validation:
+  `uv run python -m pytest tests/test_surface_inventory.py tests/test_mcp_structured_output.py tests/test_mcp_introspection.py tests/test_mcp_tool_annotations.py -q`
+  passed with 42 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check src/recon_tool/server_introspection.py tests/test_mcp_structured_output.py scripts/generate_surface_inventory.py tests/test_surface_inventory.py`
+  and
+  `uv run python -m pyright src/recon_tool/server_introspection.py tests/test_mcp_structured_output.py`
+  passed.
+- Surface inventory check:
+  `uv run python scripts/generate_surface_inventory.py --check` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.16 percent. Tests: 3415 passed, 6 skipped, 4 deselected.
+- External spend: 0 USD.
 - Added the `tm_to_azurefd_to_msedge` built-in chain motif for complete
   Traffic Manager to Azure Front Door to Microsoft Edge CNAME chains.
 - Kept the existing pairwise Microsoft motifs intact. The new motif adds a

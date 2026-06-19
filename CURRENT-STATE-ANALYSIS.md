@@ -73,7 +73,9 @@ catalog-growth queue also now includes a Supabase CNAME target sourced from the
 official custom-domain docs, with the generic ACME TXT challenge deliberately
 kept out of scope. The motif queue now includes a complete Microsoft internal
 triad motif for Traffic Manager to Azure Front Door to Microsoft Edge chains,
-with a public candidate-chain delta.
+with a public candidate-chain delta. The MCP precise-schema Phase 2 has started
+with `TypedDict` output item schemas for the no-network `get_fingerprints` and
+`get_signals` catalog tools.
 
 ## Hard Constraints
 
@@ -136,7 +138,7 @@ The public tree already contains substantial assurance:
 Current local verification in this session:
 
 - `uv run python scripts/check.py` passed.
-- Coverage was 86.18 percent, above the 82 percent configured gate.
+- Coverage was 86.16 percent, above the 82 percent configured gate.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -285,6 +287,17 @@ Traffic Manager to Azure Front Door to Microsoft Edge CNAME chain described in
 the prior v1.8 validation summary. The existing pairwise motifs remain in place;
 the triad adds a clearer complete-chain observation when all three markers occur
 in order.
+
+## MCP Output Schema Precision
+
+`get_fingerprints` and `get_signals` now return `TypedDict`-annotated list item
+shapes. FastMCP turns those annotations into concrete `$defs` in each tool's
+advertised `outputSchema`, so agents can validate catalog list fields without
+guessing from examples.
+
+This is intentionally scoped to the no-network catalog tools. The broader
+posture, graph, and inference tools still use the Phase 1 permissive schemas
+until each larger shape gets its own focused compatibility pass.
 
 ## DKIM Weak-Area Guidance
 

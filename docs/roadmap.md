@@ -991,6 +991,10 @@ helper that raises on every failure path. Pinned by
 `tests/test_mcp_structured_output.py`; contract documented in `mcp.md`. Deferred
 items (b) pagination envelope, (c) terminal-width, (d) grapheme width, and the
 precise-typed-schema Phase 2 (TypedDict/Pydantic `outputSchema`s) remain open.
+Phase 2 has started with the no-network catalog list tools:
+`get_fingerprints` now advertises a `FingerprintSummary` item schema and
+`get_signals` advertises `SignalSummary` plus nested `SignalMetadataSummary`;
+the broader data-tool set remains intentionally incremental.
 The design record that drove it, kept for rationale:
 
 A mid-2026 research pass (cited best-practices report) plus a code investigation
