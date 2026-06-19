@@ -91,6 +91,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   runner now validates `--stamp` as a safe path segment and resolves the run
   directory under `--output-root`, preventing traversal before private aggregate
   artifacts are written.
+- **Paper reproduction path containment.** The public paper-number reproduction
+  runner now applies the same safe `--stamp` validation and output-root
+  containment before writing local artifacts.
 - **Scorecard supply-chain posture.** Added explicit read-only workflow token
   defaults, a low-noise Dependabot configuration, and scheduled CodeQL analysis
   so Scorecard-detected token-permissions, dependency-update, and SAST posture

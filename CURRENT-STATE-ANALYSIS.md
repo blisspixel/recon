@@ -66,9 +66,10 @@ The current active line is v2.2.x. The roadmap says the next work is
 dependency-ordered, not date-driven.
 
 Current maintainer-loop deltas from 2026-06-19 include generated surface
-inventory checks, public paper-number reproduction tooling, cache edge coverage,
-high-value-target baseline expectations, and a first production
-`match_mode: all` fingerprint for CrowdStrike TXT evidence. The public
+  inventory checks, public paper-number reproduction tooling, validation-runner
+  path-containment hardening, cache edge coverage, high-value-target baseline
+  expectations, and a first production `match_mode: all` fingerprint for
+  CrowdStrike TXT evidence. The public
 catalog-growth queue also now includes a Supabase CNAME target sourced from the
 official custom-domain docs, with the generic ACME TXT challenge deliberately
 kept out of scope. The motif queue now includes a complete Microsoft internal
@@ -207,8 +208,10 @@ python -m validation.reproduce_paper_numbers
 The command writes local, gitignored artifacts under
 `validation/local/paper-numbers/<UTC-stamp>/`, including a manifest, summary, and
 per-harness outputs. The default `paper` profile runs the full public synthetic
-and proof bundle. `--profile smoke` validates the orchestrator quickly. Private
-corpus calibration remains maintainer-local.
+and proof bundle. `--profile smoke` validates the orchestrator quickly. Its
+optional `--stamp` is validated as a single safe path segment before artifact
+paths are resolved under the output root. Private corpus calibration remains
+maintainer-local.
 
 ## Agent Surface Inventory
 

@@ -237,7 +237,8 @@ verification, synthetic interval coverage, likelihood sensitivity, and layer
 ablations. It writes `summary.md`, `manifest.json`, and per-harness outputs under
 `validation/local/paper-numbers/<UTC-stamp>/`, which is gitignored. Use
 `--profile smoke` to check the orchestrator quickly without waiting for full
-paper-sized sweeps.
+paper-sized sweeps. If you pass `--stamp`, it follows the same single safe
+path-segment rule as the calibration bundle runner.
 
 ## The fingerprint catalog audit
 
