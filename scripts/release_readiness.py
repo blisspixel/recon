@@ -3,7 +3,7 @@
 
 Default mode is local only. It checks the repository state, version references,
 coverage gate wiring, lockfile freshness, docs anchors, private-corpus hygiene,
-Homebrew formula freshness, and latest-commit attribution hygiene.
+Homebrew formula freshness, and local commit-message hygiene.
 
 Use ``--remote`` after pushing when you want the same report to include GitHub
 Actions status for the current commit.
@@ -47,6 +47,10 @@ _ATTRIBUTION_MARKERS = (
     "made by codex",
     "made by claude",
     "made by github copilot",
+)
+_PICTOGRAPH_RANGES = (
+    (0x1F000, 0x1FAFF),
+    (0x2600, 0x27BF),
 )
 
 
@@ -259,18 +263,61 @@ def _check_private_tracked_files(runner: Runner, root: Path = ROOT) -> CheckResu
     return _result("private data", "pass", "no tracked private corpus, run output, or target-domain validation fields")
 
 
-def _check_latest_commit_message(runner: Runner) -> CheckResult:
-    result = runner(["git", "log", "-1", "--pretty=%B"])
-    if result.returncode != 0:
-        return _result("commit hygiene", "warn", result.stderr.strip() or "could not read latest commit")
-    message = result.stdout.strip()
+def _has_pictograph(text: str) -> bool:
+    return any(start <= ord(char) <= end for char in text for start, end in _PICTOGRAPH_RANGES)
+
+
+def _message_markers(message: str) -> list[str]:
     lowered = message.lower()
     markers = [marker for marker in _ATTRIBUTION_MARKERS if marker in lowered]
     if "\u2014" in message:
         markers.append("em dash")
-    if markers:
-        return _result("commit hygiene", "fail", "forbidden marker(s): " + ", ".join(markers))
-    return _result("commit hygiene", "pass", "latest commit message has no AI attribution markers or em dash")
+    if _has_pictograph(message):
+        markers.append("pictograph")
+    return markers
+
+
+def _commit_messages_to_check(runner: Runner) -> tuple[str, list[tuple[str, str]]] | CheckResult:
+    status = runner(["git", "status", "--short", "--branch"])
+    if status.returncode == 0:
+        first = status.stdout.splitlines()[0] if status.stdout.splitlines() else ""
+        if "origin/main" in first and "[ahead " in first:
+            result = runner(["git", "log", "--format=%H%x00%B%x00%x1e", "origin/main..HEAD"])
+            if result.returncode != 0:
+                return _result("commit hygiene", "warn", result.stderr.strip() or "could not read ahead commits")
+            messages: list[tuple[str, str]] = []
+            for record in result.stdout.split("\x1e"):
+                if not record.strip():
+                    continue
+                parts = record.split("\x00", 2)
+                if len(parts) >= 2:
+                    messages.append((parts[0][:12], parts[1].strip()))
+            return "local ahead commit", messages
+
+    result = runner(["git", "log", "-1", "--pretty=%B"])
+    if result.returncode != 0:
+        return _result("commit hygiene", "warn", result.stderr.strip() or "could not read latest commit")
+    return "latest commit", [("HEAD", result.stdout.strip())]
+
+
+def _check_latest_commit_message(runner: Runner) -> CheckResult:
+    scoped_messages = _commit_messages_to_check(runner)
+    if isinstance(scoped_messages, CheckResult):
+        return scoped_messages
+
+    scope, messages = scoped_messages
+    failures: list[str] = []
+    for label, message in messages:
+        markers = _message_markers(message)
+        if markers:
+            failures.append(f"{label}: {', '.join(markers)}")
+    if failures:
+        return _result("commit hygiene", "fail", "forbidden marker(s): " + "; ".join(failures))
+    return _result(
+        "commit hygiene",
+        "pass",
+        f"{scope} message(s) have no AI attribution markers, em dash, or pictograph",
+    )
 
 
 def _repo_name_from_origin(url: str) -> str | None:

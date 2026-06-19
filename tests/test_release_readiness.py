@@ -127,6 +127,8 @@ def test_private_data_check_rejects_target_domain_fields(tmp_path: Path) -> None
 
 def test_commit_hygiene_rejects_attribution_marker() -> None:
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "status", "--short", "--branch"]:
+            return _cp(cmd, stdout="## main...origin/main\n")
         assert cmd == ["git", "log", "-1", "--pretty=%B"]
         return _cp(cmd, stdout="Ship thing\n\nCo-authored-by: tool <tool@example.test>\n")
 
@@ -134,6 +136,38 @@ def test_commit_hygiene_rejects_attribution_marker() -> None:
 
     assert check.status == "fail"
     assert "co-authored-by:" in check.detail
+
+
+def test_commit_hygiene_checks_ahead_stack() -> None:
+    bad_marker = "Generated with " + "Claude"
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "status", "--short", "--branch"]:
+            return _cp(cmd, stdout="## main...origin/main [ahead 2]\n")
+        assert cmd == ["git", "log", "--format=%H%x00%B%x00%x1e", "origin/main..HEAD"]
+        return _cp(
+            cmd,
+            stdout=("abc123456789\x00Clean commit\x00\x1e" f"def123456789\x00Ship thing\n\n{bad_marker}\x00\x1e"),
+        )
+
+    check = release_readiness._check_latest_commit_message(runner)
+
+    assert check.status == "fail"
+    assert "def123456789" in check.detail
+    assert "generated with claude" in check.detail
+
+
+def test_commit_hygiene_rejects_pictograph() -> None:
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "status", "--short", "--branch"]:
+            return _cp(cmd, stdout="## main...origin/main\n")
+        assert cmd == ["git", "log", "-1", "--pretty=%B"]
+        return _cp(cmd, stdout="Ship thing \U0001f680\n")
+
+    check = release_readiness._check_latest_commit_message(runner)
+
+    assert check.status == "fail"
+    assert "pictograph" in check.detail
 
 
 def test_repo_name_from_origin_supports_https_and_ssh() -> None:

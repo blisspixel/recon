@@ -71,7 +71,8 @@ Current maintainer-loop deltas from 2026-06-19 include generated surface
   reproduction tooling, shared
   validation-runner path-containment hardening, calibration corpus-shape
   preflight, the optional maintainer-loop runbook, nested schema drift
-  hardening, advisory diff coverage, cache edge coverage,
+  hardening, advisory diff coverage, local-stack commit hygiene, cache edge
+  coverage,
   high-value-target baseline expectations, and a first production
   `match_mode: all` fingerprint for CrowdStrike TXT evidence. The public
 catalog-growth queue also now includes a Supabase CNAME target sourced from the
@@ -149,6 +150,14 @@ It reads Coverage.py JSON plus a unified diff, reports coverage only for changed
 executable Python lines, optionally fails under a caller-supplied threshold, and
 returns success for documentation-only diffs. It is intentionally outside
 `scripts/check.py` so small docs changes do not inherit a per-PR coverage gate.
+
+## Commit Hygiene
+
+`scripts/release_readiness.py` now checks every commit in `origin/main..HEAD`
+when the local branch is ahead, instead of only the latest message. The check
+falls back to `HEAD` when there is no ahead stack and rejects attribution
+markers, em dashes, and pictographic symbols before the maintainer relies on
+remote CI.
 
 ## Validation State
 
