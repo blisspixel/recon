@@ -2411,8 +2411,9 @@ are picked up alongside the build plan above.
   false-negative configurations.
 - Add schema or docs examples that make existing behavior easier to consume in
   automation.
-- Improve MCP resource consumption examples for `recon://fingerprints`,
-  `recon://signals`, or `recon://profiles`; do not add network behavior.
+- Done 2026-06-19: improve MCP resource consumption examples for
+  `recon://fingerprints`, `recon://signals`, `recon://profiles`, and
+  `recon://schema` without adding network behavior.
 - Add tests around parser, cache, MCP, or formatter edge cases discovered from
   real validation output.
 - Add one entry to a new `motifs.yaml` describing a recurring CNAME or NS

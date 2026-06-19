@@ -40,6 +40,13 @@ def _available_tools_section() -> str:
     return text[start:end]
 
 
+def _catalog_resources_section() -> str:
+    text = _MCP_DOC.read_text(encoding="utf-8")
+    start = text.index("## Catalog Resources")
+    end = text.index("## Staleness Timestamps", start)
+    return text[start:end]
+
+
 def _documented_table_names(section: str) -> set[str]:
     """Tool names from the Available Tools table (first backticked cell)."""
     names: set[str] = set()
@@ -71,3 +78,15 @@ def test_documented_stateful_set_matches_annotations() -> None:
     section = _available_tools_section()
     live_stateful = {name for name, read_only in _tool_hints().items() if not read_only}
     assert _documented_stateful_names(section) == live_stateful
+
+
+def test_catalog_resource_examples_cover_resource_consumption_rules() -> None:
+    section = _catalog_resources_section()
+    compact = re.sub(r"\s+", " ", section)
+
+    for resource in ("recon://fingerprints", "recon://signals", "recon://profiles", "recon://schema"):
+        assert section.count(resource) >= 2
+    assert "If no entry matches, say that no published fingerprint was found." in compact
+    assert "Do not infer that the service is absent from a target domain." in compact
+    assert "Pass `profile` to `analyze_posture` only when the target type clearly" in compact
+    assert "Use `$defs` for batch, summary, and delta shapes." in compact

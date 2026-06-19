@@ -125,4 +125,24 @@ planning artifact and does not replace `CHANGELOG.md`.
   returned `Tool surface changes: no CLI command or flag changes.`
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.16 percent. Tests: 3387 passed, 5 skipped, 4 deselected.
+- Started the seventh cycle from the good-first MCP resource consumption
+  examples item.
+- Expanded `docs/mcp.md` with no-network resource-read workflows for
+  `recon://fingerprints`, `recon://signals`, `recon://profiles`, and
+  `recon://schema`.
+- The examples tell agents to inspect capability context before domain-analysis
+  calls, to choose posture profiles only from explicit target type, to avoid
+  treating missing fingerprints as absence evidence, and to validate JSON shapes
+  from the local schema resource.
+- Added `tests/test_mcp_tool_annotations.py` coverage that pins the new resource
+  consumption examples and the key hedging rules.
+- Updated `CHANGELOG.md` and `docs/roadmap.md` to mark the MCP resource example
+  item complete.
+- Focused validation:
+  `uv run python -m pytest tests/test_mcp_tool_annotations.py tests/test_server_resources.py tests/test_schema_resource.py -q`
+  passed with 16 tests.
+- Focused lint:
+  `uv run python -m ruff check tests/test_mcp_tool_annotations.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.18 percent. Tests: 3387 passed, 6 skipped, 4 deselected.
 - External spend: 0 USD.
