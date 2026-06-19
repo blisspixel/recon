@@ -2459,8 +2459,26 @@
         "name": "test_hypothesis",
         "output_schema": {
           "definition_count": 0,
-          "properties": [],
-          "required": [],
+          "properties": [
+            "confidence",
+            "contradicting_signals",
+            "disclaimer",
+            "domain",
+            "hypothesis",
+            "likelihood",
+            "missing_evidence",
+            "supporting_signals"
+          ],
+          "required": [
+            "confidence",
+            "contradicting_signals",
+            "disclaimer",
+            "domain",
+            "hypothesis",
+            "likelihood",
+            "missing_evidence",
+            "supporting_signals"
+          ],
           "type": "object"
         },
         "structured_output": true,
@@ -2491,9 +2509,25 @@
         ],
         "name": "simulate_hardening",
         "output_schema": {
-          "definition_count": 0,
-          "properties": [],
-          "required": [],
+          "definition_count": 1,
+          "properties": [
+            "applied_fixes",
+            "current_score",
+            "disclaimer",
+            "domain",
+            "remaining_gaps",
+            "score_delta",
+            "simulated_score"
+          ],
+          "required": [
+            "applied_fixes",
+            "current_score",
+            "disclaimer",
+            "domain",
+            "remaining_gaps",
+            "score_delta",
+            "simulated_score"
+          ],
           "type": "object"
         },
         "structured_output": true,

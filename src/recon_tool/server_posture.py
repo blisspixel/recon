@@ -13,10 +13,11 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
+from typing_extensions import TypedDict
 
 from recon_tool import server_app
 from recon_tool.models import TenantInfo
@@ -27,6 +28,37 @@ from recon_tool.server_runtime import (
 from recon_tool.validator import strip_control_chars
 
 logger = logging.getLogger("recon")
+
+HypothesisLikelihood = Literal["strong", "moderate", "weak", "unsupported"]
+HypothesisConfidence = Literal["high", "medium", "low"]
+
+
+class HypothesisAssessmentResult(TypedDict):
+    domain: str
+    hypothesis: str
+    likelihood: HypothesisLikelihood
+    supporting_signals: list[str]
+    contradicting_signals: list[str]
+    missing_evidence: list[str]
+    confidence: HypothesisConfidence
+    disclaimer: str
+
+
+class SimulatedGapSummary(TypedDict):
+    category: str
+    severity: str
+    observation: str
+    recommendation: str
+
+
+class HardeningSimulationResult(TypedDict):
+    domain: str
+    current_score: int
+    simulated_score: int
+    score_delta: int
+    applied_fixes: list[str]
+    remaining_gaps: list[SimulatedGapSummary]
+    disclaimer: str
 
 
 # Keyword groups for hypothesis matching — maps keywords to signal/slug categories
@@ -286,7 +318,7 @@ async def compare_postures(domain_a: str, domain_b: str) -> dict[str, Any]:
         openWorldHint=True,
     ),
 )
-async def test_hypothesis(domain: str, hypothesis: str) -> dict[str, Any]:
+async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentResult:
     """Test a theory about a domain against signals and evidence.
 
     Proposes a theory (e.g., "this organization appears to be mid-migration
@@ -382,7 +414,7 @@ async def test_hypothesis(domain: str, hypothesis: str) -> dict[str, Any]:
     # Determine likelihood
     if supporting and not contradicting:
         if len(supporting) >= 3:
-            likelihood = "strong"
+            likelihood: HypothesisLikelihood = "strong"
         elif len(supporting) >= 1:
             likelihood = "moderate"
         else:
@@ -396,13 +428,13 @@ async def test_hypothesis(domain: str, hypothesis: str) -> dict[str, Any]:
 
     # Determine confidence based on data completeness
     if info.degraded_sources:
-        confidence = "low"
+        confidence: HypothesisConfidence = "low"
     elif len(info.sources) >= 3:
         confidence = "high"
     else:
         confidence = "medium"
 
-    result: dict[str, object] = {
+    result: HypothesisAssessmentResult = {
         "domain": domain,
         "hypothesis": hypothesis,
         "likelihood": likelihood,
@@ -515,7 +547,7 @@ def _simulate_fixes(fixes_lower: list[str], info: TenantInfo) -> tuple[list[str]
         openWorldHint=True,
     ),
 )
-async def simulate_hardening(domain: str, fixes: list[str]) -> dict[str, Any]:
+async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulationResult:
     """What-if simulation: re-compute exposure score with hypothetical fixes.
 
     Accepts a list of fix descriptions (e.g., "DMARC reject", "MTA-STS enforce")
@@ -585,7 +617,7 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> dict[str, Any]:
 
     # Compute remaining gaps on simulated info
     sim_gap_report = find_gaps_from_info(sim_info)
-    remaining_gaps = [
+    remaining_gaps: list[SimulatedGapSummary] = [
         {
             "category": gap.category,
             "severity": gap.severity,
@@ -595,7 +627,7 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> dict[str, Any]:
         for gap in sim_gap_report.gaps
     ]
 
-    result: dict[str, object] = {
+    result: HardeningSimulationResult = {
         "domain": domain,
         "current_score": current_score,
         "simulated_score": simulated_score,
