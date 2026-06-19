@@ -150,6 +150,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "flyio": "Cloud",
     "railway": "Cloud",
     "render": "Cloud",
+    "supabase": "Cloud",
     # Hosting-provider detection from A → PTR
     "aws-ec2": "Cloud",
     "aws-compute": "Cloud",
@@ -761,6 +762,7 @@ CLOUD_VENDOR_BY_SLUG: dict[str, str] = {
     "flyio": "Fly.io",
     "railway": "Railway",
     "render": "Render",
+    "supabase": "Supabase",
     "linode": "Linode",
     "digitalocean": "DigitalOcean",
     "hetzner": "Hetzner",

@@ -2406,8 +2406,10 @@ are picked up alongside the build plan above.
   `match_mode: all`, with same-record TXT bookkeeping, before/after audit
   evidence, and fictional-domain regressions in
   `validation/2026-06-19-crowdstrike-match-mode.md`.
-- Add one high-confidence fingerprint for a service that publishes a stable
-  verification TXT, MX, CNAME, NS, SRV, or CAA pattern.
+- Done 2026-06-19: added a high-confidence Supabase `cname_target`
+  fingerprint from the official custom-domain docs, with classifier coverage
+  and a validation memo explaining why the generic ACME TXT challenge is not
+  catalogued as vendor-specific evidence.
 - Done 2026-06-19: enrich 5 verification-token fingerprints with official
   public references, and update the advisory metadata richness audit to
   recognize binding-signal scope language without changing detection patterns.
