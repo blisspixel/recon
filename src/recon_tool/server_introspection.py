@@ -17,9 +17,10 @@ from typing import Any
 
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
+from typing_extensions import TypedDict
 
 from recon_tool import server_app
-from recon_tool.models import ReconLookupError
+from recon_tool.models import MetadataCondition, ReconLookupError
 from recon_tool.server_app import mcp
 from recon_tool.server_runtime import (
     cache_clear,
@@ -32,6 +33,47 @@ from recon_tool.server_runtime import (
 from recon_tool.validator import validate_domain
 
 logger = logging.getLogger("recon")
+
+
+class FingerprintSummary(TypedDict):
+    """Structured MCP output item for ``get_fingerprints``."""
+
+    name: str
+    slug: str
+    category: str
+    confidence: str
+    match_mode: str
+    provider_group: str | None
+    display_group: str | None
+    detection_types: list[str]
+
+
+class SignalMetadataSummary(TypedDict):
+    """Metadata condition shape nested under ``get_signals`` entries."""
+
+    field: str
+    operator: str
+    value: str | int
+
+
+class SignalSummary(TypedDict):
+    """Structured MCP output item for ``get_signals``."""
+
+    name: str
+    category: str
+    confidence: str
+    description: str
+    candidates: list[str]
+    min_matches: int
+    metadata: list[SignalMetadataSummary]
+    contradicts: list[str]
+    requires_signals: list[str]
+    explain: str
+    layer: int
+
+
+def _metadata_summary(condition: MetadataCondition) -> SignalMetadataSummary:
+    return {"field": condition.field, "operator": condition.operator, "value": condition.value}
 
 
 @mcp.resource(
@@ -167,7 +209,7 @@ def _resource_schema() -> str:  # pyright: ignore[reportUnusedFunction]
 )
 async def get_fingerprints(
     category: str | None = None, limit: int | None = None, offset: int = 0
-) -> list[dict[str, Any]]:
+) -> list[FingerprintSummary]:
     """List all loaded fingerprints with slugs, categories, and detection types.
 
     Returns a list of fingerprint summaries from both built-in and custom
@@ -239,7 +281,7 @@ def _classify_signal_layer(sig: object) -> int:
         openWorldHint=False,
     ),
 )
-async def get_signals(category: str | None = None, layer: int | None = None) -> list[dict[str, Any]]:
+async def get_signals(category: str | None = None, layer: int | None = None) -> list[SignalSummary]:
     """List all loaded signals with rules, layers, and conditions.
 
     Returns a list of signal definitions from both built-in and custom
@@ -261,7 +303,7 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
     from recon_tool.signals import load_signals
 
     sigs = load_signals()
-    result: list[dict[str, object]] = []
+    result: list[SignalSummary] = []
     for sig in sigs:
         sig_layer = _classify_signal_layer(sig)
         if category and category.lower() not in sig.category.lower():
@@ -276,7 +318,7 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
                 "description": sig.description,
                 "candidates": list(sig.candidates),
                 "min_matches": sig.min_matches,
-                "metadata": [{"field": m.field, "operator": m.operator, "value": m.value} for m in sig.metadata],
+                "metadata": [_metadata_summary(m) for m in sig.metadata],
                 "contradicts": list(sig.contradicts),
                 "requires_signals": list(sig.requires_signals),
                 "explain": sig.explain,

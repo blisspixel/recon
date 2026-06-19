@@ -30,6 +30,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - When a generated inventory is meant to help agents, include both machine
   surfaces and the guidance surfaces that teach clients how to call them. Pin
   the generated approval model to live MCP annotations, not copied prose.
+- For MCP precise-output-schema work, use `TypedDict` return annotations first
+  on simple no-network tools and pin the advertised `$defs` through
+  `mcp.list_tools()` before expanding to higher-blast-radius domain tools.
 - For CLI surface docs, generate Markdown from the live Typer command tree and
   gate it in `scripts/check.py`; do not maintain command and flag tables by hand.
 - For release notes about CLI command or flag changes, compare generated

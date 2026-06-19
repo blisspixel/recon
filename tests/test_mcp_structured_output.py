@@ -55,6 +55,62 @@ def test_structured_tools_advertise_output_schema() -> None:
     assert not missing, f"these structured tools have no outputSchema: {missing}"
 
 
+def _array_result_item_schema(tool_name: str) -> dict[str, object]:
+    tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
+    schema = tools[tool_name].outputSchema
+    assert isinstance(schema, dict)
+    result = schema["properties"]["result"]
+    assert isinstance(result, dict)
+    item_ref = result["items"]["$ref"]
+    assert isinstance(item_ref, str)
+    def_name = item_ref.removeprefix("#/$defs/")
+    item_schema = schema["$defs"][def_name]
+    assert isinstance(item_schema, dict)
+    return item_schema
+
+
+def test_get_fingerprints_output_schema_has_precise_items() -> None:
+    """The catalog list output schema names the fields on each fingerprint."""
+    item_schema = _array_result_item_schema("get_fingerprints")
+    properties = item_schema["properties"]
+
+    assert set(item_schema["required"]) == {
+        "name",
+        "slug",
+        "category",
+        "confidence",
+        "match_mode",
+        "provider_group",
+        "display_group",
+        "detection_types",
+    }
+    assert properties["slug"]["type"] == "string"
+    assert properties["detection_types"]["items"]["type"] == "string"
+
+
+def test_get_signals_output_schema_has_precise_items() -> None:
+    """The signal list output schema names nested metadata conditions."""
+    item_schema = _array_result_item_schema("get_signals")
+    properties = item_schema["properties"]
+
+    assert set(item_schema["required"]) == {
+        "name",
+        "category",
+        "confidence",
+        "description",
+        "candidates",
+        "min_matches",
+        "metadata",
+        "contradicts",
+        "requires_signals",
+        "explain",
+        "layer",
+    }
+    assert properties["candidates"]["items"]["type"] == "string"
+    metadata_items = properties["metadata"]["items"]
+    assert metadata_items["$ref"] == "#/$defs/SignalMetadataSummary"
+
+
 def test_get_fingerprints_emits_navigable_structured_content() -> None:
     """call_tool surfaces the list as real structured data (not a JSON-string
     blob) plus a serialized-JSON text block for back-compat."""

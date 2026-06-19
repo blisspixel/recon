@@ -138,6 +138,12 @@ inference tools (`get_fingerprints`, `get_signals`, `explain_signal`,
 `cluster_verification_tokens`, `get_infrastructure_clusters`, `export_graph`,
 `get_posteriors`, and the ephemeral-fingerprint tools).
 
+The no-network catalog list tools now start the precise-schema Phase 2:
+`get_fingerprints` advertises a `FingerprintSummary` item schema and
+`get_signals` advertises `SignalSummary` plus nested `SignalMetadataSummary`.
+Broader tool output typing remains incremental; the CLI `--json` v2.0 schema is
+a separate locked contract.
+
 The narrative tools render prose or DOT and intentionally return text:
 `lookup_tenant` (its `format` selects `text` / `json` / `markdown`),
 `explain_dag` (Rich tree or Graphviz DOT), `chain_lookup`, and `reload_data`.
