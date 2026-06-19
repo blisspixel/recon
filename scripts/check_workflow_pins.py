@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
 INSTALLERS = (ROOT / "scripts" / "install.sh", ROOT / "scripts" / "install.ps1")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
-USES_RE = re.compile(r"^\s*uses:\s*(?P<ref>[^#\s]+)(?:\s+#\s*(?P<comment>\S.*))?$")
+USES_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*(?P<ref>[^#\s]+)(?:\s+#\s*(?P<comment>\S.*))?$")
 DOWNLOAD_THEN_RUN_RE = re.compile(r"(bash\s+<\(\s*curl|curl\b.*\|\s*(?:bash|sh)|wget\b.*\|\s*(?:bash|sh))")
 
 
@@ -20,7 +20,10 @@ def _workflow_files() -> list[Path]:
 
 
 def _repo_path(path: Path) -> str:
-    return path.relative_to(ROOT).as_posix()
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def _check_workflow(path: Path) -> list[str]:
