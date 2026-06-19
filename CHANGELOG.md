@@ -33,10 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `recon://schema` so agents can inspect capability context before domain
   analysis calls.
 - **MCP output schema precision.** Added precise `TypedDict` item schemas for
-  `get_fingerprints`, `get_signals`, the simple ephemeral-fingerprint session
-  tools, the graph data tools, and the compact agent-facing posture helpers, so
-  FastMCP advertises concrete `outputSchema` fields for these low-risk MCP
-  surfaces.
+  `get_fingerprints`, `get_signals`, `explain_signal`, the simple
+  ephemeral-fingerprint session tools, the graph data tools, and the compact
+  agent-facing posture helpers, so FastMCP advertises concrete `outputSchema`
+  fields for these low-risk MCP surfaces.
 - **Automation parser examples.** Added docs for consuming single lookup,
   batch array, batch wrapper, NDJSON, delta, and cohort-summary JSON modes,
   with tests that parse the snippets against the schema and runtime classifier.

@@ -118,6 +118,40 @@ def test_get_signals_output_schema_has_precise_items() -> None:
     assert metadata_items["$ref"] == "#/$defs/SignalMetadataSummary"
 
 
+def test_explain_signal_output_schema_has_precise_variants() -> None:
+    """Signal explanation advertises static and domain-evaluation variants."""
+    schema = _tool_output_schema("explain_signal")
+    assert schema["title"] == "explain_signalOutput"
+
+    result = schema["properties"]["result"]
+    variant_refs = {entry["$ref"] for entry in result["anyOf"]}
+    assert variant_refs == {
+        "#/$defs/SignalDefinitionResult",
+        "#/$defs/SignalEvaluationResult",
+    }
+
+    definition = schema["$defs"]["SignalDefinitionResult"]
+    assert set(definition["required"]) == {
+        "name",
+        "category",
+        "confidence",
+        "description",
+        "explain",
+        "layer",
+        "trigger_conditions",
+        "weakening_conditions",
+    }
+
+    evaluation = schema["$defs"]["SignalEvaluationResult"]
+    assert {"domain", "fired", "matched_slugs", "matched_evidence", "domain_weakening_conditions"} <= set(
+        evaluation["required"]
+    )
+    assert evaluation["properties"]["matched_evidence"]["items"]["$ref"] == "#/$defs/SignalEvidenceSummary"
+    assert schema["$defs"]["SignalTriggerConditions"]["properties"]["metadata"]["items"]["$ref"] == (
+        "#/$defs/SignalMetadataSummary"
+    )
+
+
 def test_ephemeral_fingerprint_output_schemas_are_precise() -> None:
     """Session-local ephemeral tools advertise their simple result shapes."""
     tools = {t.name: t for t in asyncio.run(mcp.list_tools())}

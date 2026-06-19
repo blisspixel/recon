@@ -994,7 +994,9 @@ precise-typed-schema Phase 2 (TypedDict/Pydantic `outputSchema`s) remain open.
 Phase 2 has started with low-risk MCP surfaces:
 `get_fingerprints` now advertises a `FingerprintSummary` item schema and
 `get_signals` advertises `SignalSummary` plus nested `SignalMetadataSummary`.
-The simple ephemeral-fingerprint session tools now advertise
+`explain_signal` now advertises static-definition and domain-evaluation variants
+with `SignalTriggerConditions` and `SignalEvidenceSummary`. The simple
+ephemeral-fingerprint session tools now advertise
 `EphemeralInjectionResult`, `EphemeralFingerprintSummary`, and
 `EphemeralClearResult`. The graph data tools now advertise
 `VerificationTokenClusterResult`, `InfrastructureClusterEnvelope`, and
