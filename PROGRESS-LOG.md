@@ -5,6 +5,31 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Added a high-confidence Supabase `cname_target` fingerprint from the official
+  custom-domain docs. The rule attributes branded CNAMEs that terminate at a
+  Supabase project hostname without claiming database contents or plan details.
+- Updated cloud-vendor classification so Supabase appears as its own cloud
+  vendor in rollups rather than a generic infrastructure marker.
+- Added regressions proving a fictional CNAME chain ending at a Supabase project
+  hostname loads, classifies as application-layer Supabase evidence, and does
+  not create a separate infrastructure attribution.
+- Added `validation/2026-06-19-supabase-cname-target.md` to record the
+  official-doc rationale and the decision not to fingerprint generic
+  `_acme-challenge` TXT records.
+- Focused validation:
+  `uv run python -m pytest tests/test_surface_attribution.py tests/test_fingerprints.py tests/test_multi_cloud_rollup.py tests/test_slug_category_invariant.py tests/test_cloud_vendor_coverage.py tests/test_validation_hygiene.py -q`
+  passed with 96 tests.
+- Focused lint:
+  `uv run python -m ruff check src/recon_tool/formatter_classify_tables.py tests/test_surface_attribution.py tests/test_fingerprints.py tests/test_multi_cloud_rollup.py`
+  passed.
+- Fingerprint validation:
+  `uv run python scripts/validate_fingerprint.py src/recon_tool/data/fingerprints/ --quiet`
+  passed with 842 entries.
+- Validation hygiene:
+  `uv run python scripts/check_validation_hygiene.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.14 percent. Tests: 3411 passed, 6 skipped, 4 deselected.
+- External spend: 0 USD.
 - Converted the CrowdStrike TXT fingerprint to `match_mode: all`, using the
   canonical `^crowdstrike-falcon-site-verification=` prefix plus the broad
   literal only as same-record corroboration.

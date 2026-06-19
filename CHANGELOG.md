@@ -56,6 +56,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fingerprint to `match_mode: all` and taught TXT bookkeeping to record
   same-record corroborating matches, so canonical Falcon verification still
   detects while generic TXT mentions are suppressed.
+- **Supabase surface fingerprint.** Added a high-confidence Supabase
+  `cname_target` fingerprint from the official custom-domain docs, with
+  classifier coverage and a validation memo explaining why the generic ACME TXT
+  challenge is not catalogued as vendor-specific evidence.
 - **Workflow action pinning.** Pinned every GitHub Actions dependency to a full
   commit SHA, replaced the actionlint download-and-run step with a pinned action,
   removed installer-side pipx bootstrapping, and added a local / CI gate that

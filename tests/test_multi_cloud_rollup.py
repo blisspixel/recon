@@ -78,6 +78,7 @@ class TestCanonicalCloudVendor:
         assert canonical_cloud_vendor("fastly") == "Fastly"
         assert canonical_cloud_vendor("akamai") == "Akamai"
         assert canonical_cloud_vendor("vercel") == "Vercel"
+        assert canonical_cloud_vendor("supabase") == "Supabase"
 
     def test_non_cloud_slug_returns_none(self):
         """A non-cloud slug must not pretend to be a cloud vendor.

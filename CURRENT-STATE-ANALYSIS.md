@@ -68,7 +68,10 @@ dependency-ordered, not date-driven.
 Current maintainer-loop deltas from 2026-06-19 include generated surface
 inventory checks, public paper-number reproduction tooling, cache edge coverage,
 high-value-target baseline expectations, and a first production
-`match_mode: all` fingerprint for CrowdStrike TXT evidence.
+`match_mode: all` fingerprint for CrowdStrike TXT evidence. The public
+catalog-growth queue also now includes a Supabase CNAME target sourced from the
+official custom-domain docs, with the generic ACME TXT challenge deliberately
+kept out of scope.
 
 ## Hard Constraints
 
@@ -131,7 +134,7 @@ The public tree already contains substantial assurance:
 Current local verification in this session:
 
 - `uv run python scripts/check.py` passed.
-- Coverage was 86.16 percent, above the 82 percent configured gate.
+- Coverage was 86.14 percent, above the 82 percent configured gate.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -259,6 +262,19 @@ The advisory metadata-richness audit now recognizes the catalog's
 `account-binding`, `program-binding`, and `tenant-binding` wording as scope
 narrowing. That aligns the audit with the wording already used to keep
 verification-token signals hedged.
+
+## Supabase Surface Fingerprint
+
+The catalog now includes a high-confidence Supabase `cname_target` rule for
+project hostnames under `supabase.co`, sourced from the official custom-domain
+docs. The rule is intentionally scoped to routing evidence for a branded
+subdomain and does not infer project plan, database contents, or account
+control.
+
+The same docs also describe `_acme-challenge` TXT validation, but that value is
+generic ACME evidence rather than a Supabase-specific token. The catalog keeps it
+out of scope unless a future vendor flow publishes a stable vendor-specific TXT
+shape.
 
 ## DKIM Weak-Area Guidance
 

@@ -5131,6 +5131,19 @@ fingerprints:
     pattern: platform.sh
     description: >-
       Platform.sh PaaS edge CNAME target (`platform.sh`).
+- name: Supabase
+  slug: supabase
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: supabase.co
+    reference: https://supabase.com/docs/guides/platform/custom-domains
+    description: >-
+      Supabase custom-domain CNAME target (`*.supabase.co`).
+      Indicates a branded subdomain routes to a Supabase project
+      for API, Auth, Storage, or Edge Functions traffic. It does
+      not indicate database contents or project plan.
 - name: K15t (Scroll Viewport)
   slug: k15t-scroll-viewport
   category: Collaboration

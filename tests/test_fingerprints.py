@@ -396,6 +396,7 @@ def test_discovered_cname_targets_classify():
         "arcticwolf.net": "arctic-wolf",
         "usgovcloud.microsoft": "microsoft365-gov",
         "material.security": "material-security",
+        "supabase.co": "supabase",
     }
     for pattern, slug in expected.items():
         assert by_pattern.get(pattern) == slug, f"missing/incorrect cname_target {pattern} -> {slug}"

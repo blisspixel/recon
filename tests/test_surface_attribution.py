@@ -53,6 +53,19 @@ def test_built_in_cname_target_patterns_are_specific() -> None:
     assert not bad, f"overly generic cname_target patterns: {bad!r}"
 
 
+def test_supabase_cname_target_loads_and_classifies() -> None:
+    """Supabase custom-domain CNAMEs attribute to the Supabase project."""
+    rules = get_cname_target_rules()
+    terminal = "abcdefghijklmnopqrst.supabase.co"
+
+    assert any(r.slug == "supabase" and r.pattern in terminal for r in rules)
+    application, infrastructure = _classify_chain(["api.contoso.com", terminal], rules)
+
+    assert application is not None
+    assert application.slug == "supabase"
+    assert infrastructure is None
+
+
 # ── Chain classification ───────────────────────────────────────────────
 
 

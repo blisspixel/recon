@@ -68,6 +68,10 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For `match_mode: all` on same-type TXT fingerprints, verify detector
   bookkeeping records every same-record match while preserving the historical
   first displayed service. Use fictional domains in validation notes.
+- When vendor docs use both a vendor-specific CNAME target and a generic
+  `_acme-challenge` TXT flow, fingerprint the vendor-specific CNAME and leave
+  the ACME TXT out of the catalog unless the TXT value itself carries
+  vendor-specific structure.
 - Track external spend explicitly. Default spend is 0 USD.
 - Before closing a cycle, run the narrow relevant gate. Before claiming repo
   readiness, run `uv run python scripts/check.py`.
