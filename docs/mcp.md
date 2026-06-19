@@ -152,11 +152,12 @@ ephemeral-fingerprint session tools now advertise
 now advertises `PosteriorBlockResult`, `PosteriorNodeSummary`, and
 `UnitCounterfactualSummary`. The exposure report tools now advertise
 `ExposureAssessmentResult`, `GapReportResult`, and `PostureComparisonResult`
-with nested evidence and posture record definitions. Broader tool output typing
-remains incremental; `reevaluate_domain`, `analyze_posture`, and
-`discover_fingerprint_candidates` still return larger or more variable shapes
-that need focused compatibility passes. The CLI `--json` v2.0 schema is a
-separate locked contract.
+with nested evidence and posture record definitions.
+`discover_fingerprint_candidates` now advertises `FingerprintCandidate` plus
+nested `FingerprintCandidateSample`. Broader tool output typing remains
+incremental; `reevaluate_domain` and `analyze_posture` still return larger or
+more variable shapes that need focused compatibility passes. The CLI `--json`
+v2.0 schema is a separate locked contract.
 
 The narrative tools render prose or DOT and intentionally return text:
 `lookup_tenant` (its `format` selects `text` / `json` / `markdown`),

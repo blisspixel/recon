@@ -5,6 +5,24 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Extended precise MCP output schemas to `discover_fingerprint_candidates`.
+- Added `FingerprintCandidate` and `FingerprintCandidateSample` `TypedDict`
+  envelopes for suffix counts and sample unclassified CNAME chains.
+- Regenerated `docs/surface-inventory.json` so the derived inventory records the
+  discovery candidate output-schema fields and nested sample definition.
+- Focused validation:
+  `uv run python -m pytest tests/test_mcp_structured_output.py tests/test_surface_attribution.py tests/test_surface_inventory.py -q`
+  passed with 43 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check src/recon_tool/server_introspection.py tests/test_mcp_structured_output.py scripts/generate_surface_inventory.py tests/test_surface_inventory.py`
+  and
+  `uv run python -m pyright src/recon_tool/server_introspection.py tests/test_mcp_structured_output.py`
+  passed.
+- Surface inventory check:
+  `uv run python scripts/generate_surface_inventory.py --check` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.36 percent. Tests: 3423 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Extended precise MCP output schemas to the exposure report tools:
   `assess_exposure`, `find_hardening_gaps`, and `compare_postures`.
 - Added nested `TypedDict` envelopes for evidence references, observability,

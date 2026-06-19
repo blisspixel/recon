@@ -2183,7 +2183,7 @@
         ],
         "name": "discover_fingerprint_candidates",
         "output_schema": {
-          "definition_count": 0,
+          "definition_count": 2,
           "properties": [
             "result"
           ],

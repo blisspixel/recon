@@ -13,7 +13,7 @@ import json as json_mod
 import logging
 import time
 import uuid
-from typing import Any
+from typing import cast
 
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
@@ -148,6 +148,22 @@ class PosteriorBlockResult(TypedDict):
     conflict_count: int
     sparse_count: int
     posteriors: list[PosteriorNodeSummary]
+
+
+class FingerprintCandidateSample(TypedDict):
+    """Sample unclassified chain returned by ``discover_fingerprint_candidates``."""
+
+    subdomain: str
+    terminal: str
+    chain: list[str]
+
+
+class FingerprintCandidate(TypedDict):
+    """Candidate suffix returned by ``discover_fingerprint_candidates``."""
+
+    suffix: str
+    count: int
+    samples: list[FingerprintCandidateSample]
 
 
 def _metadata_summary(condition: MetadataCondition) -> SignalMetadataSummary:
@@ -617,7 +633,7 @@ async def discover_fingerprint_candidates(
     skip_ct: bool = False,
     keep_intra_org: bool = False,
     min_count: int = 1,
-) -> list[dict[str, Any]]:
+) -> list[FingerprintCandidate]:
     """Mine a single domain for new-fingerprint candidates.
 
     Bundles ``recon discover`` into one tool call: resolves the domain with
@@ -725,7 +741,7 @@ async def discover_fingerprint_candidates(
         elapsed_s=round(elapsed, 2),
     )
 
-    return candidates
+    return cast(list[FingerprintCandidate], candidates)
 
 
 @mcp.tool(
