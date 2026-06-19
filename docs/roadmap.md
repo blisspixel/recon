@@ -158,12 +158,14 @@ rules are in [release-process.md](release-process.md#version-numbering).
   proving-test backlog is closed. No locked JSON shape changed.
 - **2.2.x (active patch line).** The next work is ordered by dependency, not by
   calendar estimate. Current `main` now has the local release-readiness
-  preflight and the Scorecard-facing supply-chain posture pass. The remaining
-  order is private-corpus calibration runs, aggregate-only validation memos,
-  optional reviewed maintainer loops around those deterministic gates, and the
-  surface-inventory design decision. These are patch-level unless they add a new
-  stable user or agent-consumed surface. None of this makes AI a requirement for
-  using recon.
+  preflight, the Scorecard-facing supply-chain posture pass, the
+  pinned-workflow supply-chain pass, the maintainer-local calibration bundle
+  runner, and the generated surface-inventory drift gate. The remaining order is
+  private-corpus calibration runs, aggregate-only validation memos, optional
+  reviewed maintainer loops around those deterministic gates, and the decision
+  whether the derived inventory ever becomes a stable surface. These are
+  patch-level unless they add a new stable user or agent-consumed surface. None
+  of this makes AI a requirement for using recon.
 - **2.3+ (reserved for a real surface).** The next minor waits for a coherent
   named surface. The only current candidate that plausibly earns one is an
   agent-consumable surface inventory: a generated CLI/MCP/schema manifest or
@@ -222,11 +224,12 @@ What remains is dependency-ordered work with no calendar estimates:
    before/after aggregate deltas, sparse-result wording, and regression tests.
    The loop can prepare YAML and test patches, but catalog changes still require
    human review under [agentic-balance.md](agentic-balance.md).
-3. **Agent-consumable surface inventory decision** (possible 2.3 surface). If
-   README examples, CLI help, MCP docs, and agent skills keep drifting, design a
-   generated CLI/MCP/schema manifest or equivalent docs bundle with a CI drift
-   gate. If the artifact is a stable machine-readable command or contract, that
-   is the likely 2.3 candidate. If it is just a checked doc, keep it patch-level.
+3. **Surface-inventory promotion decision** (possible 2.3 surface, not needed
+   for normal use). `docs/surface-inventory.json` is now generated from the CLI,
+   MCP registry, and JSON schema, and CI checks it for drift. Keep it
+   patch-level while it is only a derived maintainer and agent-author reference.
+   Promote it to a 2.3 surface only if there is a concrete consumer that needs a
+   stable machine-readable command, resource, or contract.
 4. **The arXiv write-up** (packaging; aspirational, off the critical path).
    Assemble the existing rigor for an outside reader, plus the few additional
    experiments already designed into the harnesses above, within the no-real-data
@@ -241,10 +244,6 @@ Decided not to do now:
   single-maintainer `main` flow works. Keep the local readiness gate plus remote
   CI verification as the current guardrail unless the repo starts taking regular
   external PRs.
-- **Pin every GitHub Action to a commit SHA.** It would improve Scorecard's
-  pinned-dependencies check, but it adds noisy maintenance across every workflow.
-  Keep version-tagged actions plus Dependabot action updates for now; revisit if
-  the project needs a stricter supply-chain profile.
 - **Attach separate signature files to GitHub releases.** PyPI attestations,
   GitHub build provenance, SBOMs, and reproducible builds are already in place.
   Scorecard does not fully credit that shape today. Consider extra GitHub
@@ -255,8 +254,8 @@ Decided not to do now:
 
 Research and consider:
 
-- A generated surface inventory that keeps README examples, CLI help, MCP docs,
-  and agent guidance in sync.
+- Whether the derived surface inventory should remain a committed drift guard,
+  become an MCP resource, or gain a CLI command once a concrete consumer exists.
 - A derived docs bundle for maintainer runbooks if the same context is being
   copied into multiple agents. OKF remains only a packaging candidate, not a
   recon findings export.

@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Maintainer automation guidance.** Captured the gate-first rule for any
   future maintainer loops: repeated task, bounded cost, persistent state, and an
   automated verifier before the loop is worth keeping.
+- **Surface inventory drift gate.** Added a generated
+  `docs/surface-inventory.json` manifest derived from the CLI command tree, MCP
+  tool registry, and JSON schema, plus a local and CI check that fails when it
+  drifts.
+- **Workflow action pinning.** Pinned every GitHub Actions dependency to a full
+  commit SHA, replaced the actionlint download-and-run step with a pinned action,
+  removed installer-side pipx bootstrapping, and added a local / CI gate that
+  keeps workflow pins in place.
 - **Validation hygiene gate.** Added a local and release-readiness check that
   blocks forced-added private validation run paths, root per-domain JSON dumps,
   and target-domain fields in committed validation artifacts. Documented the

@@ -117,7 +117,7 @@ release; the catalog grows from observed gaps, not invented entries.
 The same command installs recon or upgrades an existing install to the latest
 version, so re-running it later is how you update. It prefers
 [`uv`](https://docs.astral.sh/uv/) (fast, manages its own Python), falls back to
-`pipx`, and bootstraps `pipx` from system Python if neither is present.
+`pipx`, and asks you to install one of those tools first if neither is present.
 
 **Windows (PowerShell):**
 ```powershell
@@ -300,6 +300,13 @@ The CLI also returns stable exit codes (`0` success, `1` general error,
 outcome without parsing output. Full contract:
 [`docs/schema.md`](docs/schema.md#exit-codes).
 
+Maintainers and agent authors who need a current map of the local CLI, MCP, and
+JSON-schema surfaces can read
+[`docs/surface-inventory.json`](docs/surface-inventory.json). It is generated
+from the runtime command tree, MCP tool registry, and JSON schema by
+`scripts/generate_surface_inventory.py`, and `scripts/check.py` enforces that it
+stays current. It is a derived drift guard, not a stable runtime API contract.
+
 ## Limitations
 
 The short version is below; [docs/limitations.md](docs/limitations.md) has the
@@ -321,8 +328,8 @@ mechanism and the test that keeps it, is in
   with sigstore / PEP 740 publish attestations, GitHub build provenance, and a
   CycloneDX SBOM on every release ([docs/supply-chain.md](docs/supply-chain.md)).
 - **Supply-chain posture checks**, including read-only workflow token defaults,
-  CodeQL, Dependabot for uv and GitHub Actions, secret scanning, and OpenSSF
-  Scorecard publication.
+  pinned workflow actions, CodeQL, Dependabot for uv and GitHub Actions, secret
+  scanning, and OpenSSF Scorecard publication.
 - **Differential verification** of the Bayesian inference core (exact enumeration
   cross-checked against variable elimination over the full evidence sweep) plus a
   **mutation-testing gate** with a kill-score floor

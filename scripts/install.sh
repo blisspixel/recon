@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # One-line installer / updater for recon (macOS / Linux).
 #
-# Install or update (same command — re-run any time to upgrade to the latest):
+# Install or update (same command - re-run any time to upgrade to the latest):
 #   curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
 #
 # Uninstall:
 #   uv tool uninstall recon-tool   # or: pipx uninstall recon-tool
 #
-# Prefers uv (fast, manages its own Python); falls back to pipx; bootstraps pipx
-# with system python3 if neither is present. Idempotent: a second run upgrades.
+# Prefers uv (fast, manages its own Python); falls back to pipx. Idempotent: a
+# second run upgrades.
 
 set -euo pipefail
 
@@ -33,21 +33,8 @@ if have uv; then
     install_or_upgrade_uv
 elif have pipx; then
     install_or_upgrade_pipx
-elif have python3; then
-    # No isolated-tool installer yet. Bootstrap pipx with the system Python.
-    PYVER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
-    if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
-        echo "Error: Python 3.11+ is required (found $PYVER), or install uv first:" >&2
-        echo "  curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
-        exit 1
-    fi
-    echo "==> pipx/uv not found; bootstrapping pipx with python3 ..."
-    python3 -m pip install --user --quiet pipx
-    python3 -m pipx ensurepath
-    export PATH="$HOME/.local/bin:$PATH"
-    install_or_upgrade_pipx
 else
-    echo "Error: need uv, pipx, or python3 (3.11+). Install uv (recommended):" >&2
+    echo "Error: need uv or pipx. Install uv (recommended):" >&2
     echo "  curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
     echo "then re-run this installer." >&2
     exit 1
