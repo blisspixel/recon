@@ -161,12 +161,13 @@ rules are in [release-process.md](release-process.md#version-numbering).
   preflight, the Scorecard-facing supply-chain posture pass, the
   pinned-workflow supply-chain pass, the maintainer-local calibration bundle
   runner, validation-runner path-containment hardening, the calibration
-  corpus-shape preflight, the generated surface-inventory drift gate, and
-  PR-scoped ClusterFuzzLite parser-boundary fuzzing. Current `main` also has
-  an incremental nested schema drift guard that ties model-backed JSON Schema
-  `$defs` to their dataclass fields while the full schema-generation backlog
-  remains open, and a PLR size-rule ratchet prevents new function-size debt
-  while existing violations are paid down. The remaining order is private-corpus
+  corpus-shape preflight, the generated surface-inventory drift gate, the
+  generated maintainer context-packet inventory, and PR-scoped ClusterFuzzLite
+  parser-boundary fuzzing. Current `main` also has an incremental nested schema
+  drift guard that ties model-backed JSON Schema `$defs` to their dataclass
+  fields while the full schema-generation backlog remains open, and a PLR
+  size-rule ratchet prevents new function-size debt while existing violations
+  are paid down. The remaining order is private-corpus
   calibration runs, aggregate-only validation memos, optional reviewed
   maintainer loops around those deterministic gates, and the decision whether
   the derived inventory ever becomes a stable surface. These are
@@ -236,9 +237,10 @@ What remains is dependency-ordered work with no calendar estimates:
    human review under [agentic-balance.md](agentic-balance.md).
 3. **Surface-inventory promotion decision** (possible 2.3 surface, not needed
    for normal use). `docs/surface-inventory.json` is now generated from the CLI,
-   MCP registry, JSON schema, and agent guidance, and CI checks it for drift.
-   `recon://surface-inventory` now exposes the same generated snapshot as a
-   local no-network MCP resource for agents that cannot read repository files.
+   MCP registry, JSON schema, agent guidance, and maintainer-loop context
+   packet, and CI checks it for drift. `recon://surface-inventory` now exposes
+   the same generated snapshot as a local no-network MCP resource for agents
+   that cannot read repository files.
    Keep it patch-level while it remains derived discovery context. Promote it to
    a 2.3 contract only if a concrete consumer needs stable machine-readable
    fields beyond best-effort local discovery.

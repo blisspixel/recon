@@ -138,6 +138,23 @@ def test_surface_inventory_has_agent_surfaces() -> None:
     assert plugin["path"] == "agents/claude-code/.claude-plugin/plugin.json"
     assert plugin["name"] == "recon"
 
+    context_packet = agent_surfaces["maintainer_context_packet"]
+    assert context_packet["source"] == "docs/maintainer-loop-runbook.md shared loop contract"
+    assert context_packet["stability"] == "non_contractual_maintainer_loop_context"
+    packet_files = {entry["path"]: entry for entry in context_packet["files"]}
+    assert list(packet_files) == [
+        "README.md",
+        "AGENTS.md",
+        "docs/agentic-balance.md",
+        "docs/roadmap.md",
+        "docs/maintainer-validation.md",
+        "validation/README.md",
+        "PROGRESS-LOG.md",
+        "SKILLS.md",
+    ]
+    assert all(entry["exists"] is True for entry in packet_files.values())
+    assert packet_files["docs/agentic-balance.md"]["role"] == "rules_vs_agentic_boundary"
+
 
 def test_surface_inventory_is_ascii_and_target_free() -> None:
     rendered = cast(str, GENERATOR.render_inventory_json())

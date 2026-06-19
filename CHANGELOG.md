@@ -40,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no-network resource that serves the packaged generated CLI, MCP,
   JSON-schema, and agent-integration inventory as discovery context, with drift
   tests keeping it byte-identical to `docs/surface-inventory.json`.
+- **Maintainer context packet inventory.** Extended the generated surface
+  inventory with the maintainer-loop context packet, including role metadata
+  and path-existence checks for the files every loop must refresh.
 - **ClusterFuzzLite parser fuzzing.** Added a Python Atheris fuzz target for
   domain normalization, control-byte stripping, cache deserialization, and
   formatter serialization, plus a read-only, SHA-pinned, runtime-bounded PR

@@ -28,7 +28,7 @@ Operating recon day to day: output formats, the MCP server, cohorts, upgrades.
 | JSON output contract | [schema.md](schema.md) |
 | Automation parser examples for JSON modes | [automation-examples.md](automation-examples.md) |
 | Generated CLI command and flag reference | [cli-surface.md](cli-surface.md) |
-| Derived CLI/MCP/schema surface inventory | [surface-inventory.json](surface-inventory.json) |
+| Derived CLI/MCP/schema and maintainer context-packet inventory | [surface-inventory.json](surface-inventory.json) |
 | Cohort summaries across many domains | [aggregate-state.md](aggregate-state.md) |
 | Upgrading from v1.x to v2.0 | [migration-v2.md](migration-v2.md) |
 | Performance expectations | [performance.md](performance.md) |

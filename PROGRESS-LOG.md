@@ -5,6 +5,30 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Added generated maintainer context-packet metadata to the surface inventory.
+- Extended `scripts/generate_surface_inventory.py` so
+  `agent_surfaces.maintainer_context_packet` records the shared loop-contract
+  files, their roles, and path-existence checks.
+- Regenerated `docs/surface-inventory.json` and
+  `src/recon_tool/data/surface-inventory.json` so the MCP
+  `recon://surface-inventory` resource exposes the same packet.
+- Updated README, MCP docs, docs index, maintainer-loop runbook, roadmap,
+  changelog, current-state analysis, and local loop skills to keep the packet
+  patch-level and non-contractual.
+- Focused validation:
+  `uv run python -m pytest tests/test_surface_inventory.py tests/test_schema_resource.py tests/test_maintainer_loop_runbook.py tests/test_markdown_links.py -q`
+  passed with 20 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check scripts/generate_surface_inventory.py tests/test_surface_inventory.py tests/test_schema_resource.py tests/test_maintainer_loop_runbook.py`
+  and
+  `uv run python -m pyright scripts/generate_surface_inventory.py tests/test_surface_inventory.py tests/test_schema_resource.py tests/test_maintainer_loop_runbook.py`
+  passed.
+- Generated inventory check:
+  `uv run python scripts/generate_surface_inventory.py --check --check-cli-surface`
+  passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.52 percent. Tests: 3498 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Added a PLR size-rule ratchet to the local CI mirror.
 - Added `scripts/check_plr_ratchet.py`, which runs Ruff over `PLR0911`,
   `PLR0912`, `PLR0913`, and `PLR0915`, parses the statistics output, and fails

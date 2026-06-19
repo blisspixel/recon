@@ -40,6 +40,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - If MCP clients need the generated inventory but may not have repository-file
   access, expose the packaged snapshot as a local resource and keep it
   byte-identical to the docs copy with tests.
+- If maintainer loops depend on a context packet, put the packet in generated
+  discovery metadata with path-existence checks. Keep it non-contractual until
+  a concrete external consumer needs compatibility guarantees.
 - For MCP precise-output-schema work, use `TypedDict` return annotations first
   on simple no-network or session-local tools and pin the advertised `$defs`
   through `mcp.list_tools()` before expanding to higher-blast-radius domain

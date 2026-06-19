@@ -38,6 +38,16 @@ _AGENT_CLIENT_CONFIGS: tuple[tuple[str, str, str], ...] = (
     ("vscode", "agents/vscode/mcp.json", "template"),
     ("windsurf", "agents/windsurf/mcp_config.json", "template"),
 )
+_MAINTAINER_CONTEXT_PACKET: tuple[tuple[str, str], ...] = (
+    ("README.md", "product_scope_and_usage"),
+    ("AGENTS.md", "portable_agent_guidance"),
+    ("docs/agentic-balance.md", "rules_vs_agentic_boundary"),
+    ("docs/roadmap.md", "current_priority_order"),
+    ("docs/maintainer-validation.md", "validation_loop_boundary"),
+    ("validation/README.md", "local_validation_workspace"),
+    ("PROGRESS-LOG.md", "local_loop_history"),
+    ("SKILLS.md", "local_loop_learnings"),
+)
 _CLAUDE_PLUGIN_MANIFEST = _ROOT / "agents" / "claude-code" / ".claude-plugin" / "plugin.json"
 _ITERATIVE_MCP_TOOLS = {
     "chain_lookup",
@@ -394,6 +404,24 @@ def _mcp_approval_inventory(mcp_inventory: Mapping[str, object]) -> dict[str, ob
     }
 
 
+def _maintainer_context_packet_inventory() -> dict[str, object]:
+    files: list[dict[str, object]] = []
+    for relative_path, role in _MAINTAINER_CONTEXT_PACKET:
+        path = _ROOT / relative_path
+        files.append(
+            {
+                "path": _repo_path(path),
+                "role": role,
+                "exists": path.exists(),
+            }
+        )
+    return {
+        "source": "docs/maintainer-loop-runbook.md shared loop contract",
+        "stability": "non_contractual_maintainer_loop_context",
+        "files": files,
+    }
+
+
 def _agent_surfaces_inventory(mcp_inventory: Mapping[str, object]) -> dict[str, object]:
     return {
         "stability": "non_contractual_generated_inventory",
@@ -401,6 +429,7 @@ def _agent_surfaces_inventory(mcp_inventory: Mapping[str, object]) -> dict[str, 
         "client_configs": _client_config_inventory(),
         "claude_code_plugin": _claude_plugin_inventory(),
         "mcp_approval": _mcp_approval_inventory(mcp_inventory),
+        "maintainer_context_packet": _maintainer_context_packet_inventory(),
     }
 
 

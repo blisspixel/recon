@@ -272,10 +272,16 @@ and JSON-schema surfaces:
 - Claude Code skill frontmatter;
 - committed client MCP config templates;
 - Claude Code plugin manifest metadata;
-- live MCP read-only versus stateful approval sets.
+- live MCP read-only versus stateful approval sets;
+- the maintainer-loop context packet, with file roles and path-existence
+  checks for `README.md`, `AGENTS.md`, `docs/agentic-balance.md`,
+  `docs/roadmap.md`, `docs/maintainer-validation.md`, `validation/README.md`,
+  `PROGRESS-LOG.md`, and `SKILLS.md`.
 
 The generator derives approval semantics from MCP annotations, so a new stateful
-tool or annotation change must update both the generated inventory and its tests.
+tool or annotation change must update both the generated inventory and its
+tests. The context-packet entry is likewise generated discovery context, not a
+stable API contract.
 
 ## CLI Surface Reference
 
