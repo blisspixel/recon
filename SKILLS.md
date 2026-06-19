@@ -46,6 +46,10 @@ operating rules for future cycles and must not override `AGENTS.md`,
   routing, exit-code handling, and unknown-field tolerance. Keep examples backed
   by tests that parse snippets and compare against the schema or runtime
   classifier.
+- For fingerprint metadata enrichment, change references, descriptions, and
+  advisory audit heuristics only when they make provenance or scope clearer.
+  Do not change detection patterns or confidence in the same pass unless the
+  corpus evidence supports it.
 - Track external spend explicitly. Default spend is 0 USD.
 - Before closing a cycle, run the narrow relevant gate. Before claiming repo
   readiness, run `uv run python scripts/check.py`.

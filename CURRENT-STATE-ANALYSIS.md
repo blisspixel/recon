@@ -244,6 +244,17 @@ shape while preserving the fictional Northwind fields used by the SIEM examples.
 `tests/test_automation_examples.py` parses the committed snippets and checks them
 against the schema and runtime batch-record classifier.
 
+## Verification Fingerprint Metadata
+
+The verification-token catalog remains behavior-stable, but five high-confidence
+entries now carry official public references: Monday.com, Zoom, Formstack, Coda,
+and Virtru. Their regexes, confidence levels, and categories did not change.
+
+The advisory metadata-richness audit now recognizes the catalog's
+`account-binding`, `program-binding`, and `tenant-binding` wording as scope
+narrowing. That aligns the audit with the wording already used to keep
+verification-token signals hedged.
+
 ## Scorecard Posture
 
 The public Scorecard API result checked on 2026-06-19 reported score 6.1 for
