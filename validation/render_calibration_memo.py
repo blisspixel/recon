@@ -115,7 +115,7 @@ def validate_public_payload(label: str, payload: Mapping[str, object], *, small_
         raise ValueError(f"{label} payload is not publishable:\n{rendered}")
 
 
-def _load_payload(path: Path, label: str, *, small_cell_threshold: int) -> dict[str, object]:
+def load_public_payload(path: Path, label: str, *, small_cell_threshold: int) -> dict[str, object]:
     try:
         loaded = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
@@ -157,35 +157,42 @@ def _calibration_row(name: str, summary: Mapping[str, object]) -> str:
     )
 
 
+def _strata_lines(title: str, block: Mapping[str, object], label: str) -> list[str]:
+    pooled = _as_mapping(block.get("pooled"))
+    lines = [
+        f"### {label}",
+        "",
+        "| Block | n | Log score | Brier | ECE | Agreement | Base rate |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+        _calibration_row("Pooled", pooled),
+        "",
+        "| Stratum | n | ECE | Agreement | Base rate |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    for name, summary_raw in sorted(_as_mapping(block.get("strata")).items()):
+        summary = _as_mapping(summary_raw)
+        if summary.get("suppressed") is True:
+            lines.append(f"| {name} | {_fmt(summary.get('n'))} | suppressed | suppressed | suppressed |")
+        else:
+            lines.append(
+                f"| {name} | {_fmt(summary.get('n'))} | {_fmt(summary.get('ece'))} | "
+                f"{_fmt(summary.get('agreement_rate'))} | {_fmt(summary.get('base_rate_enforcing'))} |"
+            )
+    lines.append("")
+    if title:
+        return [f"## {title}", "", *lines]
+    return lines
+
+
 def _render_calibration_block(title: str, payload: Mapping[str, object]) -> list[str]:
     lines = [f"## {title}", ""]
+    if "strata" in payload and "pooled" in payload:
+        return _strata_lines(title, payload, "Pooled and per-stratum")
     mode = payload.get("mode")
     if mode == "stratified":
         for block_name, label in (("full", "Full posterior"), ("held_out", "Held-out residual")):
             block = _as_mapping(payload.get(block_name))
-            pooled = _as_mapping(block.get("pooled"))
-            lines.extend(
-                [
-                    f"### {label}",
-                    "",
-                    "| Block | n | Log score | Brier | ECE | Agreement | Base rate |",
-                    "|---|---:|---:|---:|---:|---:|---:|",
-                    _calibration_row("Pooled", pooled),
-                    "",
-                    "| Stratum | n | ECE | Agreement | Base rate |",
-                    "|---|---:|---:|---:|---:|",
-                ]
-            )
-            for name, summary_raw in sorted(_as_mapping(block.get("strata")).items()):
-                summary = _as_mapping(summary_raw)
-                if summary.get("suppressed") is True:
-                    lines.append(f"| {name} | {_fmt(summary.get('n'))} | suppressed | suppressed | suppressed |")
-                else:
-                    lines.append(
-                        f"| {name} | {_fmt(summary.get('n'))} | {_fmt(summary.get('ece'))} | "
-                        f"{_fmt(summary.get('agreement_rate'))} | {_fmt(summary.get('base_rate_enforcing'))} |"
-                    )
-            lines.append("")
+            lines.extend(_strata_lines("", block, label))
         return lines
     lines.extend(
         [
@@ -335,17 +342,17 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         reference = (
-            _load_payload(args.reference, "reference", small_cell_threshold=args.small_cell_threshold)
+            load_public_payload(args.reference, "reference", small_cell_threshold=args.small_cell_threshold)
             if args.reference is not None
             else None
         )
         tenancy = (
-            _load_payload(args.tenancy, "tenancy", small_cell_threshold=args.small_cell_threshold)
+            load_public_payload(args.tenancy, "tenancy", small_cell_threshold=args.small_cell_threshold)
             if args.tenancy is not None
             else None
         )
         conformal = (
-            _load_payload(args.conformal, "conformal", small_cell_threshold=args.small_cell_threshold)
+            load_public_payload(args.conformal, "conformal", small_cell_threshold=args.small_cell_threshold)
             if args.conformal is not None
             else None
         )

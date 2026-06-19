@@ -205,12 +205,13 @@ What remains is dependency-ordered work with no calendar estimates:
 
 1. **Calibration corpus runs** (maintainer-local, aggregate-only, patch-level).
    The harnesses are built and unit-tested, and
-   `validation/render_calibration_memo.py` now provides the publication
-   boundary: run the gitignored corpus to aggregate JSON, render a checked memo,
-   review it, and commit only aggregate metrics. The run order is held-out
-   residual calibration, tenancy corroboration, per-vertical stratification
-   (`--stratify-dir`), conformal coverage, and the C3 CT-enabled full-corpus
-   pass. The committed memo must follow
+   `validation/run_calibration_bundle.py` now runs the gitignored corpus to
+   aggregate JSON and feeds `validation/render_calibration_memo.py`, the
+   publication boundary. The next operator action is to run that local bundle,
+   review `memo.md`, and commit only aggregate metrics. The run order is
+   held-out residual calibration, tenancy corroboration, per-vertical
+   stratification (`--stratify-dir`), conformal coverage, and the C3 CT-enabled
+   full-corpus pass. The committed memo must follow
    [data-handling-policy.md](data-handling-policy.md): no apexes, no
    organization names, no tenant IDs, no per-domain output, and no published
    stratum below 10 domains. *Design:* [statistical-assurance.md](statistical-assurance.md),
