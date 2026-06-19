@@ -2370,9 +2370,11 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   consumer-facing / niche-SaaS targets would tell us whether the
   network's prior assumptions transfer; ECE on that subset is
   the metric.
-- **Machine-readable CLI surface inventory for downstream skill
-  and agent authors.** Two small additions captured here from
-  feedback on the v1.9.6 release:
+- **CLI surface inventory for downstream skill and agent authors.** Status:
+  `docs/surface-inventory.json` now carries the machine-readable local CLI, MCP,
+  JSON-schema, and agent-integration map, and `docs/cli-surface.md` now carries
+  the generated human-readable command and flag reference. `scripts/check.py`
+  drift-checks both files. Remaining release-process polish:
   1. A "Tool surface changes" one-liner per release in the
      CHANGELOG, focused on the user-visible CLI surface (new
      subcommands, new flags). Lets skill maintainers do a
@@ -2380,13 +2382,10 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
      `recon --help` output. The current CHANGELOG mixes
      surface changes into the narrative; a single-line
      callout per release would be more scannable.
-  2. A `docs/cli-surface.md` (or `recon --help-extended`)
-     canonical reference: every flag and subcommand with a
-     one-line description, suitable for copy-paste into
-     skill files or AI agent prompts. Today the info is
-     split across README excerpts, `recon --help`, and
-     `docs/mcp.md`. A consolidated reference removes that
-     scatter.
+  2. Done 2026-06-19: `docs/cli-surface.md` is generated from
+     the live Typer command tree and lists every flag and
+     subcommand in one place, suitable for skill files or AI
+     agent prompts.
 
   Explicitly out of scope for this entry: Claude-skill-
   specific or agent-behavior guidance in the repo. That
@@ -2426,6 +2425,7 @@ are picked up alongside the build plan above.
   is observable, not a verdict").
 - Add a small aggregate-only validation memo from a local harness run, with no
   real apexes, tenant IDs, or per-domain output.
+
 ## Opportunistic Refactoring
 
 The god-file decomposition track is complete. `formatter.py` remains the only

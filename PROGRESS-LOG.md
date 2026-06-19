@@ -78,4 +78,26 @@ planning artifact and does not replace `CHANGELOG.md`.
   `uv run python scripts/check_traceability.py` passed.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.18 percent. Tests: 3376 passed, 6 skipped, 4 deselected.
+- Started the fifth cycle from the roadmap's downstream skill and agent-author
+  surface-reference item.
+- Added generated `docs/cli-surface.md`, derived from the live Typer command
+  tree with command anchors, child command lists, and parameter tables.
+- Extended `scripts/generate_surface_inventory.py` with `--write-cli-surface`
+  and `--check-cli-surface`, keeping the Markdown reference generated rather
+  than manually maintained.
+- Added `scripts/check.py` coverage for the CLI surface reference through a new
+  `cli-surface-doc` stage.
+- Updated README, docs index, roadmap, and changelog so the generated CLI
+  reference is discoverable and the roadmap marks that part of the surface
+  inventory work done.
+- Added `tests/test_surface_inventory.py` coverage for CLI surface freshness,
+  expected command content, ASCII output, and target-free output.
+- Focused validation:
+  `uv run python -m pytest tests/test_surface_inventory.py -q` passed with 9
+  tests.
+- Focused lint and generated-file checks passed:
+  `uv run python -m ruff check scripts/generate_surface_inventory.py tests/test_surface_inventory.py scripts/check.py`
+  and `uv run python scripts/generate_surface_inventory.py --check --check-cli-surface`.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.14 percent. Tests: 3380 passed, 5 skipped, 4 deselected.
 - External spend: 0 USD.

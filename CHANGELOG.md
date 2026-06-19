@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/surface-inventory.json` manifest derived from the CLI command tree, MCP
   tool registry, and JSON schema, plus a local and CI check that fails when it
   drifts.
+- **Generated CLI surface reference.** Added a drift-checked
+  `docs/cli-surface.md` generated from the live Typer command tree so skill and
+  agent authors can sync command and flag usage without copying README snippets.
 - **Workflow action pinning.** Pinned every GitHub Actions dependency to a full
   commit SHA, replaced the actionlint download-and-run step with a pinned action,
   removed installer-side pipx bootstrapping, and added a local / CI gate that

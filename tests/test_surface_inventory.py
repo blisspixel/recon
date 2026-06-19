@@ -34,6 +34,23 @@ def test_surface_inventory_file_is_current() -> None:
     assert (ROOT / "docs" / "surface-inventory.json").read_text(encoding="utf-8") == rendered
 
 
+def test_cli_surface_markdown_file_is_current() -> None:
+    rendered = cast(str, GENERATOR.render_cli_surface_markdown())
+
+    assert (ROOT / "docs" / "cli-surface.md").read_text(encoding="utf-8") == rendered
+
+
+def test_cli_surface_markdown_has_expected_commands() -> None:
+    rendered = cast(str, GENERATOR.render_cli_surface_markdown())
+
+    assert rendered.startswith("# CLI Surface\n")
+    assert '<a id="recon-lookup"></a>' in rendered
+    assert "## `recon lookup`" in rendered
+    assert "`--fusion`, `--no-fusion`" in rendered
+    assert "## `recon mcp install`" in rendered
+    assert "Summary: Install the recon MCP server config into a client's config file." in rendered
+
+
 def test_surface_inventory_has_expected_cli_surface() -> None:
     commands = {tuple(command["path"]): command for command in _inventory()["cli"]["commands"]}
 
@@ -116,6 +133,17 @@ def test_surface_inventory_is_ascii_and_target_free() -> None:
     parsed = json.loads(rendered)
 
     assert parsed["private_data_policy"].startswith("Contains no target-domain output")
+    assert "\u2014" not in rendered
+    assert "\u2013" not in rendered
+    assert "\u2192" not in rendered
+    assert not re.search(r"\b[0-9a-f]{8}-[0-9a-f-]{27,36}\b", rendered.lower())
+    assert not re.search(r"\b[a-z0-9-]+\.onmicrosoft\.com\b", rendered.lower())
+
+
+def test_cli_surface_markdown_is_ascii_and_target_free() -> None:
+    rendered = cast(str, GENERATOR.render_cli_surface_markdown())
+
+    assert rendered.isascii()
     assert "\u2014" not in rendered
     assert "\u2013" not in rendered
     assert "\u2192" not in rendered

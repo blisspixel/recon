@@ -300,12 +300,13 @@ The CLI also returns stable exit codes (`0` success, `1` general error,
 outcome without parsing output. Full contract:
 [`docs/schema.md`](docs/schema.md#exit-codes).
 
-Maintainers and agent authors who need a current map of the local CLI, MCP, and
-JSON-schema surfaces can read
-[`docs/surface-inventory.json`](docs/surface-inventory.json). It is generated
-from the runtime command tree, MCP tool registry, and JSON schema by
-`scripts/generate_surface_inventory.py`, and `scripts/check.py` enforces that it
-stays current. It is a derived drift guard, not a stable runtime API contract.
+Maintainers and agent authors who need a current command and flag reference can
+read [`docs/cli-surface.md`](docs/cli-surface.md). Downstream tooling that needs
+the local CLI, MCP, JSON-schema, and agent-integration map can read
+[`docs/surface-inventory.json`](docs/surface-inventory.json). Both are generated
+by `scripts/generate_surface_inventory.py`, and `scripts/check.py` enforces that
+they stay current. They are derived drift guards, not stable runtime API
+contracts.
 
 ## Limitations
 

@@ -116,6 +116,7 @@ The public tree already contains substantial assurance:
 - validation hygiene guard;
 - workflow pinning guard;
 - generated surface inventory drift check;
+- generated CLI surface reference drift check;
 - no active experimental labels;
 - file-size ratchet;
 - mutation gate and interval coverage work;
@@ -125,7 +126,7 @@ The public tree already contains substantial assurance:
 Current local verification in this session:
 
 - `uv run python scripts/check.py` passed.
-- Coverage was 86.18 percent, above the 82 percent configured gate.
+- Coverage was 86.14 percent, above the 82 percent configured gate.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -136,8 +137,8 @@ The highest-priority active work is:
    corpus, render aggregate-only memos, and commit only disclosure-safe metrics.
 2. Use the fingerprint and motif triage loop only as a reviewed proposal path
    backed by existing scan and gap outputs.
-3. Decide whether `docs/surface-inventory.json` remains a derived drift guard or
-   becomes a stable surface only when a concrete consumer needs that contract.
+3. Keep `docs/surface-inventory.json` and `docs/cli-surface.md` as derived
+   drift guards unless a concrete consumer needs a stable contract.
 4. Treat the arXiv write-up as packaging and communication, off the critical
    path.
 
@@ -208,6 +209,14 @@ and JSON-schema surfaces:
 
 The generator derives approval semantics from MCP annotations, so a new stateful
 tool or annotation change must update both the generated inventory and its tests.
+
+## CLI Surface Reference
+
+`docs/cli-surface.md` is now a generated, non-contractual command and flag
+reference. It is derived from the same live Typer command tree as
+`docs/surface-inventory.json`, checked by `scripts/check.py`, and intended for
+maintainers, skill authors, and agent prompts that need current CLI usage without
+copying README snippets.
 
 ## Bayesian Calibration Data
 

@@ -17,6 +17,7 @@ import typer
 
 _ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_OUTPUT = _ROOT / "docs" / "surface-inventory.json"
+_DEFAULT_CLI_SURFACE_OUTPUT = _ROOT / "docs" / "cli-surface.md"
 _SCHEMA_PATH = _ROOT / "docs" / "recon-schema.json"
 _AGENT_GUIDANCE_FILES: tuple[tuple[str, str], ...] = (
     ("AGENTS.md", "portable_agent_guidance"),
@@ -414,15 +415,137 @@ def render_inventory_json() -> str:
     return json.dumps(build_inventory(), indent=2, sort_keys=True) + "\n"
 
 
-def _check_inventory(path: Path, rendered: str) -> int:
+def _markdown_cell(value: object) -> str:
+    text = _normalize_text(str(value))
+    return text.replace("|", "\\|")
+
+
+def _markdown_code(value: object) -> str:
+    text = _markdown_cell(value)
+    escaped = text.replace("`", "\\`")
+    return f"`{escaped}`"
+
+
+def _command_sort_key(command: Mapping[str, object]) -> tuple[int, str]:
+    path = command.get("path", [])
+    path_length = len(path) if isinstance(path, Sequence) and not isinstance(path, str | bytes | bytearray) else 0
+    return path_length, str(command.get("usage", ""))
+
+
+def _command_anchor(command: Mapping[str, object]) -> str:
+    usage = str(command.get("usage", "recon"))
+    return re.sub(r"[^a-z0-9]+", "-", usage.lower()).strip("-")
+
+
+def _format_default(parameter: Mapping[str, object]) -> str:
+    if "default" not in parameter:
+        return ""
+    default = parameter["default"]
+    if isinstance(default, bool):
+        return "true" if default else "false"
+    if isinstance(default, str):
+        return default
+    return json.dumps(default, sort_keys=True)
+
+
+def _tokens_markdown(parameter: Mapping[str, object]) -> str:
+    tokens = parameter.get("tokens", [])
+    if not isinstance(tokens, Sequence) or isinstance(tokens, str | bytes | bytearray):
+        return ""
+    return ", ".join(_markdown_code(token) for token in tokens)
+
+
+def _parameter_table(parameters: object) -> list[str]:
+    if not isinstance(parameters, Sequence) or isinstance(parameters, str | bytes | bytearray) or not parameters:
+        return ["No parameters."]
+
+    lines = [
+        "| Name | Kind | Tokens | Required | Type | Default | Choices |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for parameter in parameters:
+        if not isinstance(parameter, Mapping):
+            continue
+        choices = parameter.get("choices", [])
+        if isinstance(choices, Sequence) and not isinstance(choices, str | bytes | bytearray):
+            choices_text = ", ".join(_markdown_code(choice) for choice in choices)
+        else:
+            choices_text = ""
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    _markdown_code(parameter.get("name", "")),
+                    _markdown_cell(parameter.get("kind", "")),
+                    _tokens_markdown(parameter),
+                    "yes" if parameter.get("required") else "no",
+                    _markdown_cell(parameter.get("type", "")),
+                    _markdown_cell(_format_default(parameter)),
+                    choices_text,
+                ]
+            )
+            + " |"
+        )
+    return lines
+
+
+def render_cli_surface_markdown() -> str:
+    cli = _cli_inventory()
+    raw_commands = cli.get("commands", [])
+    commands = (
+        [command for command in raw_commands if isinstance(command, Mapping)]
+        if isinstance(raw_commands, Sequence)
+        else []
+    )
+    commands = sorted(commands, key=_command_sort_key)
+
+    lines = [
+        "# CLI Surface",
+        "",
+        "Generated from the live Typer command tree by `scripts/generate_surface_inventory.py`.",
+        "Do not edit by hand.",
+        "",
+        "This is a derived maintainer and agent-author reference, not a stable runtime API contract.",
+        "",
+        "## Command Index",
+        "",
+    ]
+    for command in commands:
+        usage = str(command.get("usage", ""))
+        lines.append(f"- [{_markdown_code(usage)}](#{_command_anchor(command)})")
+
+    for command in commands:
+        usage = str(command.get("usage", ""))
+        summary = _summary(str(command.get("summary", "")))
+        children = command.get("children", [])
+        lines.extend(
+            [
+                "",
+                f'<a id="{_command_anchor(command)}"></a>',
+                f"## {_markdown_code(usage)}",
+                "",
+                f"Kind: {_markdown_cell(command.get('kind', ''))}",
+            ]
+        )
+        if summary:
+            lines.append(f"Summary: {_markdown_cell(summary)}")
+        if isinstance(children, Sequence) and not isinstance(children, str | bytes | bytearray) and children:
+            child_text = ", ".join(_markdown_code(child) for child in children)
+            lines.append(f"Children: {child_text}")
+        lines.extend(["", *_parameter_table(command.get("parameters", []))])
+
+    return "\n".join(lines) + "\n"
+
+
+def _check_rendered(path: Path, rendered: str, label: str, write_flag: str) -> int:
     if not path.exists():
-        print(f"surface inventory is missing: {path}", file=sys.stderr)
-        print("run: uv run python scripts/generate_surface_inventory.py --write", file=sys.stderr)
+        print(f"{label} is missing: {path}", file=sys.stderr)
+        print(f"run: uv run python scripts/generate_surface_inventory.py {write_flag}", file=sys.stderr)
         return 1
     current = path.read_text(encoding="utf-8")
     if current != rendered:
-        print(f"surface inventory is out of date: {path}", file=sys.stderr)
-        print("run: uv run python scripts/generate_surface_inventory.py --write", file=sys.stderr)
+        print(f"{label} is out of date: {path}", file=sys.stderr)
+        print(f"run: uv run python scripts/generate_surface_inventory.py {write_flag}", file=sys.stderr)
         return 1
     return 0
 
@@ -430,21 +553,42 @@ def _check_inventory(path: Path, rendered: str) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate the derived recon surface inventory.")
     parser.add_argument("--output", type=Path, default=_DEFAULT_OUTPUT, help="Inventory path.")
+    parser.add_argument(
+        "--cli-surface-output", type=Path, default=_DEFAULT_CLI_SURFACE_OUTPUT, help="CLI surface path."
+    )
     parser.add_argument("--write", action="store_true", help="Write the inventory file.")
     parser.add_argument("--check", action="store_true", help="Fail if the inventory file is stale.")
+    parser.add_argument("--write-cli-surface", action="store_true", help="Write the CLI surface reference.")
+    parser.add_argument("--check-cli-surface", action="store_true", help="Fail if the CLI surface reference is stale.")
     args = parser.parse_args(argv)
 
     rendered = render_inventory_json()
+    rendered_cli_surface = render_cli_surface_markdown()
     output = args.output
     if not output.is_absolute():
         output = _ROOT / output
+    cli_surface_output = args.cli_surface_output
+    if not cli_surface_output.is_absolute():
+        cli_surface_output = _ROOT / cli_surface_output
 
+    status = 0
     if args.check:
-        return _check_inventory(output, rendered)
+        status |= _check_rendered(output, rendered, "surface inventory", "--write")
+    if args.check_cli_surface:
+        status |= _check_rendered(
+            cli_surface_output,
+            rendered_cli_surface,
+            "CLI surface reference",
+            "--write-cli-surface",
+        )
     if args.write:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(rendered, encoding="utf-8")
-        return 0
+    if args.write_cli_surface:
+        cli_surface_output.parent.mkdir(parents=True, exist_ok=True)
+        cli_surface_output.write_text(rendered_cli_surface, encoding="utf-8")
+    if args.check or args.check_cli_surface or args.write or args.write_cli_surface:
+        return status
     print(rendered, end="")
     return 0
 
