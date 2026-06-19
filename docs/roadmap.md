@@ -1008,8 +1008,11 @@ now advertises `PosteriorBlockResult`, `PosteriorNodeSummary`, and
 with nested evidence and posture record definitions.
 `discover_fingerprint_candidates` now advertises `FingerprintCandidate` plus
 nested `FingerprintCandidateSample`. `analyze_posture` now advertises its list,
-profiled, explained, and profiled-explained result variants. The remaining
-full-lookup re-evaluation shape stays intentionally incremental.
+profiled, explained, and profiled-explained result variants.
+`reevaluate_domain` now advertises its full cache-only lookup record as
+`LookupResult`, with nested definitions for the formatter payload. The precise
+TypedDict schema pass is complete for data-returning MCP tools; narrative tools
+remain text by design.
 The design record that drove it, kept for rationale:
 
 A mid-2026 research pass (cited best-practices report) plus a code investigation

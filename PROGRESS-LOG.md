@@ -5,6 +5,28 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Extended precise MCP output schemas to `reevaluate_domain`.
+- Added the nested `LookupResult` `TypedDict` family for the cached-domain
+  re-evaluation object returned by `format_tenant_dict`.
+- Kept the runtime payload compatible while adding `evidence: []` on the MCP
+  re-evaluation path when the cached lookup has no evidence, so every advertised
+  required key is present.
+- Regenerated `docs/surface-inventory.json` so the derived inventory records the
+  full lookup result schema for `reevaluate_domain`.
+- Focused validation:
+  `uv run python -m pytest tests/test_mcp_structured_output.py tests/test_server_agentic.py -q`
+  passed with 39 tests.
+- Focused lint and typing:
+  `uv run python -m ruff check src/recon_tool/server_ephemeral.py tests/test_mcp_structured_output.py tests/test_server_agentic.py`
+  and
+  `uv run python -m pyright src/recon_tool/server_ephemeral.py tests/test_mcp_structured_output.py tests/test_server_agentic.py`
+  passed.
+- Surface inventory and file-size checks:
+  `uv run python scripts/generate_surface_inventory.py --check` and
+  `uv run python scripts/check_file_size.py` passed.
+- Final full local gate with `uv run python scripts/check.py`: pass.
+  Coverage: 86.49 percent. Tests: 3425 passed, 5 skipped, 4 deselected.
+- External spend: 0 USD.
 - Extended precise MCP output schemas to `analyze_posture`.
 - Added typed observation and explanation envelopes for the bare list,
   profiled, explained, and profiled-explained response variants.

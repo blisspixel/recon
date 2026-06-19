@@ -400,6 +400,9 @@ class TestReevaluateDomain:
         result = await reevaluate_domain("contoso.com")
         # A tenant-info dict (raises ToolError on failure, never an error payload)
         assert result.get("display_name") == "Contoso Ltd"
+        assert result["evidence"] == []
+        assert result["record_type"] == "lookup"
+        assert result["schema_version"] == "2.0"
 
     @pytest.mark.asyncio
     async def test_reevaluate_updates_cached_info(self, fresh_server_cache: None) -> None:
