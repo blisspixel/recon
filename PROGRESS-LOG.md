@@ -27,6 +27,15 @@ planning artifact and does not replace `CHANGELOG.md`.
   and `uv run pip-audit`.
 - Final full local gate with `uv run python scripts/check.py`: pass.
   Coverage: 86.49 percent. Tests: 3507 passed, 5 skipped, 4 deselected.
+- Pushed commit `776c477` to `main`.
+- Remote verification after the push: CI, Scorecard supply-chain security,
+  secrets scan, and both dependency graph updates completed successfully.
+- `uv run python scripts/release_readiness.py --remote` passed against
+  `HEAD`.
+- The public Scorecard API reported score 6.6 for the dependency batch, with
+  Pinned-Dependencies, Vulnerabilities, and Fuzzing at 10.
+- GitHub Dependabot reported no open alerts, and the superseded Dependabot PRs
+  were no longer open after the default branch update.
 - External spend: 0 USD.
 - Closed the moderate Dependabot alert for GHSA-4xgf-cpjx-pc3j after GitHub
   reported it on the default branch.

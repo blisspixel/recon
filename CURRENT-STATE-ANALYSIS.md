@@ -408,8 +408,8 @@ harness-health artifact, not a headline calibration result.
 
 ## Scorecard Posture
 
-The public Scorecard API result checked on 2026-06-19 reported score 6.6 for
-`github.com/blisspixel/recon` at commit `32a7ad025978d64721251bcfe915a8384e5eaec9`.
+The public Scorecard API result checked after the dependency batch on
+2026-06-19 reported score 6.6 for `github.com/blisspixel/recon`.
 The repo already scores 10 on dependency updates, security policy, dangerous
 workflows, token permissions, SAST, binary artifacts, vulnerabilities,
 packaging, fuzzing, Pinned-Dependencies, and license.
