@@ -80,6 +80,10 @@ The repository also runs supply-chain posture checks outside the release flow:
 - Workflow actions are pinned to full commit SHAs, with the readable version kept
   in a trailing comment. `scripts/check_workflow_pins.py` gates this locally and
   in CI.
+- Generated security and surface artifacts used by CI are checked locally and in
+  the CI validation job, including ClusterFuzzLite requirements, schema source
+  tracing, surface inventory, CLI surface docs, file-size ratchets, and PLR
+  ratchets.
 - Checkout steps set `persist-credentials: false`, so the workflow token is not
   left in the local Git config after source checkout.
 - Every workflow job has an explicit timeout so CI and release automation fail

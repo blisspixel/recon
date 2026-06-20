@@ -26,10 +26,10 @@ dashes, and pictographic symbols.
 
 This exists because local checks that were *narrower* than CI (pyright on
 `recon_tool/` only) let test-file type errors reach a red CI twice. Parity is the
-fix, encoded once. The pre-commit hooks mirror the same scopes. Derived
-security artifacts that CI consumes, including the ClusterFuzzLite
-hash-pinned runtime requirements export, are checked here so dependency updates
-cannot leave stale generated inputs behind.
+fix, encoded once. The pre-commit hooks and the CI validation job mirror the
+same fast guard family. Derived security artifacts that CI consumes, including
+the ClusterFuzzLite hash-pinned runtime requirements export, are checked here
+and remotely so dependency updates cannot leave stale generated inputs behind.
 
 ## 2. Architecture and organization
 

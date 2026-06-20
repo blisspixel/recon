@@ -218,11 +218,26 @@ jobs:
         # comments kept beside the pins for maintainability.
         run: uv run python scripts/check_workflow_pins.py
 
+      - name: Enforce ClusterFuzzLite requirements export
+        # The PR fuzzing build installs only hash-pinned runtime requirements.
+        # Keep the committed export in lockstep with uv.lock.
+        run: uv run python scripts/check_clusterfuzzlite_requirements.py
+
+      - name: Enforce schema source map
+        # Every top-level JSON Schema field must trace to a model field or an
+        # explicit formatter, envelope, batch, or explain-mode source.
+        run: uv run python scripts/check_schema_sources.py
+
       - name: Enforce generated surface inventory
         # The surface inventory is derived from the CLI, MCP registry, and JSON
         # schema. Keep it current so docs and agent guidance do not drift from
         # the runtime surface.
         run: uv run python scripts/generate_surface_inventory.py --check
+
+      - name: Enforce generated CLI surface reference
+        # The Markdown CLI reference is generated from the live Typer command
+        # tree and must stay in sync with the generated inventory.
+        run: uv run python scripts/generate_surface_inventory.py --check-cli-surface
 
       - name: Enforce zero EXPERIMENTAL labels (v1.9.11+)
         # v2.0 quality bar: no active EXPERIMENTAL label on any
@@ -239,6 +254,11 @@ jobs:
         # guard are baselined as ceilings that may only shrink (see
         # scripts/check_file_size.py and the decomposition track in roadmap.md).
         run: uv run python scripts/check_file_size.py
+
+      - name: Enforce PLR size-rule ratchet
+        # Ruff's PLR0911, PLR0912, PLR0913, and PLR0915 rules block new
+        # function-size debt while the existing debt is paid down deliberately.
+        run: uv run python scripts/check_plr_ratchet.py
 
   hostile-input-fuzz:
     # Dedicated gate for the adversarial / oversized / malformed parser tests and

@@ -167,6 +167,24 @@ def test_workflow_actions_are_pinned_with_readable_version_comments() -> None:
             assert comment, line
 
 
+def test_ci_workflow_runs_fast_local_core_guards() -> None:
+    workflow = _load_yaml(".github/workflows/ci.yml")
+    validate_job = workflow["jobs"]["validate-fingerprints"]
+    commands = "\n".join(str(step.get("run", "")) for step in validate_job["steps"])
+
+    for command in (
+        "uv run python scripts/check_workflow_pins.py",
+        "uv run python scripts/check_clusterfuzzlite_requirements.py",
+        "uv run python scripts/check_schema_sources.py",
+        "uv run python scripts/generate_surface_inventory.py --check",
+        "uv run python scripts/generate_surface_inventory.py --check-cli-surface",
+        "uv run python scripts/check_no_experimental_labels.py",
+        "uv run python scripts/check_file_size.py",
+        "uv run python scripts/check_plr_ratchet.py",
+    ):
+        assert command in commands
+
+
 def test_dependabot_is_configured_low_noise_for_scorecard_checks() -> None:
     config = _load_yaml(".github/dependabot.yml")
     updates = config["updates"]

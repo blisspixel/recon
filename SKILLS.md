@@ -146,6 +146,8 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - Track external spend explicitly. Default spend is 0 USD.
 - Before closing a cycle, run the narrow relevant gate. Before claiming repo
   readiness, run `uv run python scripts/check.py`.
+- When adding a fast core stage to `scripts/check.py`, mirror it in the CI
+  validation job and pin the command in `tests/test_scorecard_posture.py`.
 - Before pushing a local commit stack, run release readiness so every
   `origin/main..HEAD` commit message is checked for attribution markers, em
   dashes, and pictographic symbols, not only the latest commit.

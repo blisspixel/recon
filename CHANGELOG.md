@@ -84,6 +84,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `scripts/check_clusterfuzzlite_requirements.py` and wired it into
   `scripts/check.py` so `.clusterfuzzlite/requirements.txt` must match the
   frozen runtime export from `uv.lock`.
+- **Fast guard CI parity.** The CI validation job now runs the same fast
+  generated-artifact and ratchet guards as `scripts/check.py`: ClusterFuzzLite
+  requirements, schema sources, surface inventory, CLI surface docs,
+  experimental-label hygiene, file-size ratchet, and PLR ratchet.
 - **Advisory diff coverage.** Added `scripts/diff_coverage.py`, a local
   maintainer signal that reports changed executable Python line coverage from
   Coverage.py JSON and a unified diff without gating documentation-only changes.
