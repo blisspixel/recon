@@ -170,8 +170,10 @@ def test_workflow_actions_are_pinned_with_readable_version_comments() -> None:
 def test_ci_workflow_runs_fast_local_core_guards() -> None:
     workflow = _load_yaml(".github/workflows/ci.yml")
     validate_job = workflow["jobs"]["validate-fingerprints"]
+    checkout_step = validate_job["steps"][0]
     commands = "\n".join(str(step.get("run", "")) for step in validate_job["steps"])
 
+    assert checkout_step["with"]["fetch-depth"] == 2
     for command in (
         "uv run python scripts/check_workflow_pins.py",
         "uv run python scripts/check_text_hygiene.py --range HEAD^..HEAD",
