@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.9] - 2026-06-20
+
 ### Tool Surface Changes
 
 - No runtime CLI command or flag changes; the generated `docs/cli-surface.md`

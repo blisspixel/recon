@@ -12,14 +12,14 @@ This file is forward-looking. Shipped work belongs in
 > agentic. That doc is the standing decision guide and the catalog of
 > brittle-rule smells; keep it current as the boundary moves.
 
-> **Status (2026-06):** v2.2.8 is the current release (shipped 2026-06-17 to
+> **Status (2026-06):** v2.2.9 is the current release (shipped 2026-06-20 to
 > PyPI). The v2.2 line delivered the evidence-semantics diagnostics (per-node
 > entropy reduction, exact leave-one-unit-out counterfactuals, graph partition
 > stability), the MCP tool-output contract revision (navigable
 > `structuredContent` + per-tool `outputSchema` + `isError` across the eighteen
 > data tools, aligned to MCP 2025-11-25), the 2026 CLI-ergonomics pass, and OSC 8
 > hyperlinks. The v2.0 schema lock, the v2.1 cohort summary
-> (`recon batch --summary`), and the v2.1.x through v2.2.8 hardening, security,
+> (`recon batch --summary`), and the v2.1.x through v2.2.9 hardening, security,
 > and assurance work have all shipped; per-release detail is in
 > [CHANGELOG.md](../CHANGELOG.md) and upgrade notes in
 > [migration-v2.md](migration-v2.md).
@@ -149,7 +149,7 @@ rules are in [release-process.md](release-process.md#version-numbering).
   revision (navigable `structuredContent` + per-tool `outputSchema` + `isError`
   across the data tools; see [mcp.md](mcp.md)). The 2026 CLI-ergonomics pass and
   OSC 8 hyperlinks rode along.
-- **2.2.1 through 2.2.8 (shipped through 2026-06-17).** Patch-level UX,
+- **2.2.1 through 2.2.9 (shipped through 2026-06-20).** Patch-level UX,
   maintainability, docs, and assurance hardening: input is normalized to the
   registrable apex via the Public Suffix List with an `--exact` opt-out,
   `recon update` is surfaced in the docs, the god-file decomposition track is
