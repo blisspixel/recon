@@ -430,6 +430,10 @@ uses a committed hash-pinned runtime requirements export and loads the
 checked-out source through `PYTHONPATH`, leaving only one pip install command
 for Scorecard to inspect without broadening the fuzzer surface. The follow-up
 Scorecard API result reports Pinned-Dependencies at 10.
+`scripts/check_clusterfuzzlite_requirements.py` now verifies the committed
+ClusterFuzzLite requirements file against a fresh frozen runtime export from
+`uv.lock`, so future dependency updates cannot leave that Scorecard-sensitive
+artifact stale.
 
 The current dependency-currency batch updates the MCP runtime package to 1.28.0
 and the Public Suffix List package to 1.0.2.20260615, plus the dev toolchain

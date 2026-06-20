@@ -72,7 +72,9 @@ The repository also runs supply-chain posture checks outside the release flow:
 - ClusterFuzzLite runs a PR-scoped Atheris fuzzer over recon's local parser,
   normalization, cache deserialization, and formatter-serialization boundaries.
   The workflow is read-only, SHA-pinned, and bounded to 180 seconds of fuzzing
-  per run.
+  per run. Its runtime dependency file is a hash-pinned export from `uv.lock`,
+  and `scripts/check_clusterfuzzlite_requirements.py` gates that export against
+  stale dependency data.
 - Dependabot checks `uv` and GitHub Actions dependencies on a low-noise monthly
   schedule.
 - Workflow actions are pinned to full commit SHAs, with the readable version kept

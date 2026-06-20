@@ -26,7 +26,10 @@ dashes, and pictographic symbols.
 
 This exists because local checks that were *narrower* than CI (pyright on
 `recon_tool/` only) let test-file type errors reach a red CI twice. Parity is the
-fix, encoded once. The pre-commit hooks mirror the same scopes.
+fix, encoded once. The pre-commit hooks mirror the same scopes. Derived
+security artifacts that CI consumes, including the ClusterFuzzLite
+hash-pinned runtime requirements export, are checked here so dependency updates
+cannot leave stale generated inputs behind.
 
 ## 2. Architecture and organization
 
@@ -154,6 +157,10 @@ assistant's lack of time-sense:
   on top of current `main`, regenerate any derived requirement exports, run the
   failing gate with the new toolchain, then keep the smallest compatibility fix
   in the same change set.
+- **Derived requirements exports are checked.** The ClusterFuzzLite runtime
+  requirements file must match `uv export --frozen --no-dev --no-emit-project`
+  from the committed lockfile; `scripts/check_clusterfuzzlite_requirements.py`
+  gates that in the local CI mirror.
 - **The parity gate and pinned tool versions** keep the local and CI toolchains
   identical; `scripts/release_readiness.py` catches release and docs drift before
   remote CI is the first signal.
@@ -167,7 +174,7 @@ What we already do well, and the named open items, with no pretending.
 | Single toolchain (ruff lint+format), strict pyright, `py.typed` | In place | |
 | Branch coverage gate + mutation + Hypothesis + ClusterFuzzLite + golden + differential | In place | Among the strongest parts |
 | Security + supply chain (pip-audit, ruff-S, CodeQL, SBOM, build provenance, Trusted Publishing, PEP 740) | In place | Scorecard now detects SAST, dependency-update tooling, and least-privilege workflow tokens; ClusterFuzzLite is wired for the next public scan |
-| Dependency + standards currency (Dependabot uv/actions) | In place | Monthly, grouped, low-noise updates; pip build commands use hash-pinned requirements and source-path loading where Scorecard can inspect them |
+| Dependency + standards currency (Dependabot uv/actions) | In place | Monthly, grouped, low-noise updates; pip build commands use hash-pinned requirements and source-path loading where Scorecard can inspect them; the ClusterFuzzLite export is drift-checked from `uv.lock` |
 | CI/local parity (`scripts/check.py`), release readiness, file-size ratchet | In place | Closes the CI-red and docs-drift root causes |
 | ADRs for load-bearing decisions | In place initially | Extend as decisions are made |
 | Noun-verb CLI consistency, `--plain`/`--json`, stdout/stderr discipline | In place | |

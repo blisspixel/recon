@@ -173,8 +173,10 @@ rules are in [release-process.md](release-process.md#version-numbering).
   MCP dependency path has likewise been updated to `pydantic-settings` 2.14.2
   for GHSA-4xgf-cpjx-pc3j. The ClusterFuzzLite build now also uses hash-pinned
   runtime requirements plus source-path loading, closing the remaining local
-  Pinned-Dependencies warning from the Scorecard scan. The current lockfile
-  also folds in the grouped dependency-currency update: `mcp` 1.28.0,
+  Pinned-Dependencies warning from the Scorecard scan, and the local CI mirror
+  now checks that `.clusterfuzzlite/requirements.txt` still matches the frozen
+  runtime export from `uv.lock`. The current lockfile also folds in the grouped
+  dependency-currency update: `mcp` 1.28.0,
   `publicsuffixlist` 1.0.2.20260615, and the latest dev toolchain patch line,
   with a Pyright 1.1.410 socket-address type fix in the HTTP SSRF guard. The
   remaining order is private-corpus

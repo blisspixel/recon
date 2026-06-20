@@ -46,6 +46,7 @@ behavior. The full threat-by-threat version is assurance-case Promise 2.
 | CT entry / SAN / page floods | `recon_tool/sources/cert_providers.py::_MAX_CRTSH_ENTRIES` and siblings | `test_hostile_input_bounds::TestCrtshEntryBounds`, `test_hostile_input_bounds::TestCtGroupingBounds` |
 | Every HTTP identity source x failure mode degrades to a clean result | per-source guards; clean `SourceResult` on every failure | `test_hostile_input_bounds::TestSourceFaultMatrix` |
 | PR-scoped coverage-guided parser fuzzing | `.github/workflows/clusterfuzzlite.yml`, `.clusterfuzzlite/project.yaml`, `fuzz/recon_input_fuzzer.py` | `tests/test_clusterfuzzlite_integration.py` |
+| Hash-pinned ClusterFuzzLite runtime requirements stay synced to `uv.lock` | `.clusterfuzzlite/requirements.txt`, `scripts/check_clusterfuzzlite_requirements.py` | `tests/test_clusterfuzzlite_requirements_check.py` |
 
 ## The output contract
 

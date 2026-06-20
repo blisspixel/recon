@@ -81,6 +81,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
   installation from local project installation: use a hash-pinned requirements
   file with `--require-hashes`, then load local source through `PYTHONPATH` when
   a package install is not necessary.
+- After changing dependencies, keep `.clusterfuzzlite/requirements.txt` synced
+  from `uv.lock` and rely on `scripts/check_clusterfuzzlite_requirements.py` to
+  catch drift before push.
 - For Scorecard-recognized fuzzing, use it only when it adds a real parser or
   serializer boundary harness. Keep ClusterFuzzLite read-only, SHA-pinned,
   runtime-bounded, and PR-scoped until crash triage volume justifies batch runs.

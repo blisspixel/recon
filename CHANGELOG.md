@@ -80,6 +80,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ClusterFuzzLite hash-pinned install.** Split the fuzz-build bootstrap into
   hash-pinned runtime requirements and `PYTHONPATH` source loading, so the
   Scorecard Pinned-Dependencies check no longer sees unpinned pip resolution.
+- **ClusterFuzzLite requirements drift guard.** Added
+  `scripts/check_clusterfuzzlite_requirements.py` and wired it into
+  `scripts/check.py` so `.clusterfuzzlite/requirements.txt` must match the
+  frozen runtime export from `uv.lock`.
 - **Advisory diff coverage.** Added `scripts/diff_coverage.py`, a local
   maintainer signal that reports changed executable Python line coverage from
   Coverage.py JSON and a unified diff without gating documentation-only changes.
