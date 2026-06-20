@@ -23,6 +23,8 @@ and the catalog/label/file-size checks. Green here means green in CI. Use
 Before pushing a local stack, `uv run python scripts/release_readiness.py` also
 checks every `origin/main..HEAD` commit message for attribution markers, em
 dashes, and pictographic symbols.
+`scripts/check_text_hygiene.py` checks added diff lines for the same text
+family, so the rule is enforced on content changes as well as commit messages.
 
 This exists because local checks that were *narrower* than CI (pyright on
 `recon_tool/` only) let test-file type errors reach a red CI twice. Parity is the
@@ -161,6 +163,8 @@ assistant's lack of time-sense:
   requirements file must match `uv export --frozen --no-dev --no-emit-project`
   from the committed lockfile; `scripts/check_clusterfuzzlite_requirements.py`
   gates that in the local CI mirror.
+- **Added-line text hygiene is mechanical.** New diff lines are checked for
+  attribution markers, em dashes, and pictographic symbols locally and in CI.
 - **The parity gate and pinned tool versions** keep the local and CI toolchains
   identical; `scripts/release_readiness.py` catches release and docs drift before
   remote CI is the first signal.

@@ -174,6 +174,7 @@ def test_ci_workflow_runs_fast_local_core_guards() -> None:
 
     for command in (
         "uv run python scripts/check_workflow_pins.py",
+        "uv run python scripts/check_text_hygiene.py --range HEAD^..HEAD",
         "uv run python scripts/check_clusterfuzzlite_requirements.py",
         "uv run python scripts/check_schema_sources.py",
         "uv run python scripts/generate_surface_inventory.py --check",

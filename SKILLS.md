@@ -148,6 +148,8 @@ operating rules for future cycles and must not override `AGENTS.md`,
   readiness, run `uv run python scripts/check.py`.
 - When adding a fast core stage to `scripts/check.py`, mirror it in the CI
   validation job and pin the command in `tests/test_scorecard_posture.py`.
+- Use `scripts/check_text_hygiene.py` rather than manual searching when checking
+  new content for attribution markers, em dashes, and pictographic symbols.
 - Before pushing a local commit stack, run release readiness so every
   `origin/main..HEAD` commit message is checked for attribution markers, em
   dashes, and pictographic symbols, not only the latest commit.

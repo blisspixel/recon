@@ -175,8 +175,10 @@ rules are in [release-process.md](release-process.md#version-numbering).
   runtime requirements plus source-path loading, closing the remaining local
   Pinned-Dependencies warning from the Scorecard scan, and the local CI mirror
   and CI validation job now check that `.clusterfuzzlite/requirements.txt` still
-  matches the frozen runtime export from `uv.lock`. The current lockfile also
-  folds in the grouped dependency-currency update: `mcp` 1.28.0,
+  matches the frozen runtime export from `uv.lock`. Added-line text hygiene is
+  now likewise checked locally and in CI for attribution markers, em dashes, and
+  pictographic symbols. The current lockfile also folds in the grouped
+  dependency-currency update: `mcp` 1.28.0,
   `publicsuffixlist` 1.0.2.20260615, and the latest dev toolchain patch line,
   with a Pyright 1.1.410 socket-address type fix in the HTTP SSRF guard. The
   remaining order is private-corpus

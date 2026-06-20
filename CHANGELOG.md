@@ -88,6 +88,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   generated-artifact and ratchet guards as `scripts/check.py`: ClusterFuzzLite
   requirements, schema sources, surface inventory, CLI surface docs,
   experimental-label hygiene, file-size ratchet, and PLR ratchet.
+- **Added-line text hygiene guard.** Added `scripts/check_text_hygiene.py` to
+  reject new diff lines containing attribution markers, em dashes, or
+  pictographic symbols, and wired it into the local fast gate and CI validation
+  job.
 - **Advisory diff coverage.** Added `scripts/diff_coverage.py`, a local
   maintainer signal that reports changed executable Python line coverage from
   Coverage.py JSON and a unified diff without gating documentation-only changes.

@@ -5,6 +5,20 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-19
 
+- Added `scripts/check_text_hygiene.py` to scan added diff lines for
+  attribution markers, em dashes, and pictographic symbols without requiring a
+  cleanup of historical prose.
+- Wired `text-hygiene` into `scripts/check.py` and into the CI validation job
+  using the explicit `HEAD^..HEAD` range.
+- Added `tests/test_text_hygiene.py` for unified-diff parsing, runtime-built
+  forbidden marker detection, and location rendering.
+- Focused text-hygiene validation passed:
+  `uv run python scripts/check_text_hygiene.py`,
+  `uv run python -m pytest tests/test_text_hygiene.py tests/test_scorecard_posture.py tests/test_markdown_links.py -q`,
+  `uv run python -m ruff check scripts/check_text_hygiene.py tests/test_text_hygiene.py tests/test_scorecard_posture.py scripts/check.py`,
+  and
+  `uv run python -m pyright scripts/check_text_hygiene.py tests/test_text_hygiene.py tests/test_scorecard_posture.py scripts/check.py`.
+- Fast local gate with `uv run python scripts/check.py --fast`: pass.
 - Added `scripts/check_clusterfuzzlite_requirements.py` to compare the committed
   ClusterFuzzLite hash-pinned runtime requirements file with a fresh frozen
   export from `uv.lock`.

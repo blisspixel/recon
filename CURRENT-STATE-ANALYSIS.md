@@ -438,6 +438,10 @@ The CI validation job now also runs the fast generated-artifact and ratchet
 guards from the local mirror: ClusterFuzzLite requirements, schema source map,
 surface inventory, CLI surface docs, no-experimental-labels, file-size ratchet,
 and PLR ratchet.
+`scripts/check_text_hygiene.py` now scans added lines in staged, unstaged, local
+ahead-of-origin, or explicit CI commit-range diffs for attribution markers, em
+dashes, and pictographic symbols. This keeps the house style rule mechanical
+without rewriting historical prose.
 
 The current dependency-currency batch updates the MCP runtime package to 1.28.0
 and the Public Suffix List package to 1.0.2.20260615, plus the dev toolchain
