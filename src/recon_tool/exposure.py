@@ -24,10 +24,9 @@ from recon_tool.constants import (
     SVC_BIMI,
     SVC_DKIM,
     SVC_DKIM_EXCHANGE,
-    SVC_DMARC,
-    SVC_MTA_STS,
     SVC_SPF_SOFTFAIL,
     SVC_SPF_STRICT,
+    email_security_score,
 )
 from recon_tool.exposure_models import (
     ConsistencyObservation,
@@ -194,9 +193,8 @@ def _build_evidence_refs(info: TenantInfo, slugs: frozenset[str] | set[str]) -> 
 
 
 def _compute_email_security_score(info: TenantInfo) -> int:
-    """Compute email security score (0–5) matching existing insights.py logic."""
-    score_services = {SVC_DMARC, SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI}
-    return min(sum(1 for svc in info.services if svc in score_services), 5)
+    """Email-security score (0-5); see ``constants.email_security_score`` for the definition."""
+    return email_security_score(info.services, info.dmarc_policy)
 
 
 # ── Internal posture computation ───────────────────────────────────────

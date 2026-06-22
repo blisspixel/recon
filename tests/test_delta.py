@@ -162,6 +162,24 @@ class TestComputeDelta:
         delta = compute_delta(prev, info)
         assert "Signal Two" in delta.added_signals
 
+    def test_signal_extraction_with_humanized_values(self):
+        # Real signal insights render their matched products humanized (spaces,
+        # qualifiers), e.g. "Multi-Cloud: Amazon Web Services, Google Cloud".
+        # These must still be recognized as signals by name, not dropped because
+        # the value is no longer a bare slug list.
+        info = _make_info(insights=("Multi-Cloud: Amazon Web Services, Google Cloud",))
+        prev = _make_previous(insights=[])
+        delta = compute_delta(prev, info)
+        assert "Multi-Cloud" in delta.added_signals
+
+    def test_prose_insight_not_treated_as_signal(self):
+        # A non-signal insight whose value happens to contain commas must not be
+        # mistaken for a signal (its prefix is not a known signal name).
+        info = _make_info(insights=("Email security 4/5: DMARC reject, DKIM, SPF strict, BIMI",))
+        prev = _make_previous(insights=[])
+        delta = compute_delta(prev, info)
+        assert not delta.added_signals
+
     def test_ordering_independent(self):
         """Services in different order should not show as changes."""
         info = _make_info(services=("B", "A", "C"))

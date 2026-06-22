@@ -621,7 +621,8 @@ def delta(
     """
     from recon_tool.cache import cache_get, cache_put, tenant_info_to_dict
     from recon_tool.delta import compute_delta
-    from recon_tool.formatter import format_delta_json, render_delta_panel, render_error
+    from recon_tool.formatter import format_delta_json, render_delta_panel, render_error, render_warning
+    from recon_tool.models import ReconLookupError
     from recon_tool.resolver import resolve_tenant
     from recon_tool.validator import validate_domain
 
@@ -646,6 +647,9 @@ def delta(
     async def _run() -> None:
         try:
             info, _results = await resolve_tenant(validated, timeout=timeout)
+        except ReconLookupError as exc:
+            render_warning(validated, exc)
+            raise typer.Exit(code=EXIT_NO_DATA) from None
         except Exception as exc:
             render_error(_fmt_exc(exc))
             raise typer.Exit(code=EXIT_INTERNAL) from exc

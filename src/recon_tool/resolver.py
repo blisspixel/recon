@@ -303,7 +303,7 @@ async def _enrich_from_related(
         # has_mx_records to False (spurious "no email infrastructure") and
         # silenced the score / SPF / issuance signals on enriched-then-cached
         # results.
-        email_security_score=compute_email_security_score(extra_services),
+        email_security_score=compute_email_security_score(extra_services, info.dmarc_policy),
         spf_include_count=extract_spf_include_count(extra_services),
         issuance_velocity=(info.cert_summary.issuance_velocity if info.cert_summary else None),
         dmarc_pct=info.dmarc_pct,

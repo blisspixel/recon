@@ -9,6 +9,8 @@ the DKIM selectors we check (selector1/selector2._domainkey) are
 Exchange-specific. Generic DKIM detection would need different selectors.
 """
 
+from collections.abc import Iterable
+
 # M365 CNAME-detected services
 SVC_EXCHANGE_AUTODISCOVER = "Exchange Autodiscover"
 SVC_MICROSOFT_TEAMS = "Microsoft Teams"
@@ -25,3 +27,25 @@ SVC_SPF_SOFTFAIL = "SPF: softfail (~all)"
 SVC_DMARC = "DMARC"
 SVC_BIMI = "BIMI"
 SVC_MTA_STS = "MTA-STS"
+
+
+def email_security_score(services: Iterable[str], dmarc_policy: str | None) -> int:
+    """Canonical email-security score (0-5), the single definition every surface uses.
+
+    Five independent controls each count once: an *enforcing* DMARC policy
+    (``reject``/``quarantine`` — a ``p=none`` record does not count), any DKIM
+    (Exchange Online or a generic selector, credited once even when both are
+    observed), strict SPF (``-all``), MTA-STS, and BIMI.
+
+    The JSON ``email_security_score`` field, ``--exposure``, posture statements,
+    the MCP signal context, and ``delta`` all route through this function so the
+    number never diverges between views.
+    """
+    present = set(services)
+    return (
+        (1 if dmarc_policy in ("reject", "quarantine") else 0)
+        + (1 if SVC_DKIM in present or SVC_DKIM_EXCHANGE in present else 0)
+        + (1 if SVC_SPF_STRICT in present else 0)
+        + (1 if SVC_MTA_STS in present else 0)
+        + (1 if SVC_BIMI in present else 0)
+    )

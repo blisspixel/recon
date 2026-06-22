@@ -213,6 +213,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
     Includes explanations for insights, signals, confidence, and conflicts.
     """
     from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
+    from recon_tool.constants import email_security_score
     from recon_tool.explanation import (
         explain_confidence,
         explain_insights,
@@ -229,19 +230,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
         detected_slugs=frozenset(info.slugs),
         dmarc_policy=info.dmarc_policy,
         auth_type=info.auth_type,
-        email_security_score=sum(
-            1
-            for svc in info.services
-            if svc
-            in {
-                "DMARC",
-                "DKIM (Exchange Online)",
-                "DKIM",
-                "SPF: strict (-all)",
-                "MTA-STS",
-                "BIMI",
-            }
-        ),
+        email_security_score=email_security_score(info.services, info.dmarc_policy),
     )
     signal_matches = evaluate_signals(context)
     signals = load_signals()

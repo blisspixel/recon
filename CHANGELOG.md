@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Email-security score is now one definition shared by every surface.** The
+  score (0-5) was computed in six places that diverged from the canonical
+  exporter: they counted both DKIM service labels separately (a domain with
+  Exchange Online and a generic DKIM selector scored DKIM twice) and credited
+  raw `DMARC` presence instead of an enforcing policy. So `--exposure`, posture
+  statements, and the MCP signal context could disagree with the top-level
+  `email_security_score` JSON field for the same domain. All paths now route
+  through a single `email_security_score` helper: DKIM counts once, DMARC counts
+  only when the published policy is `reject`/`quarantine`. This extends the
+  v2.2.10 delta fix to the remaining surfaces.
+- **DMARC `rua` report-size suffix no longer pollutes the vendor domain.** An
+  RFC 7489 `!<size>` suffix (e.g. `rua=mailto:reports@vendor.com!10m`) was folded
+  into the parsed domain (`vendor.com!10m`); the address capture now stops at the
+  `!` delimiter.
+- **`recon delta` exit code on no data.** When a fresh resolve returned nothing,
+  `delta` exited `4` (internal error) instead of `3` (no data), violating the
+  exit-code contract every other command follows.
+- **`delta` signal diffing recognizes humanized signal names.** Signal insights
+  now render their matched products humanized (e.g. `Multi-Cloud: Amazon Web
+  Services`), which the slug-shaped heuristic dropped, so real signal additions
+  and removals went unreported. Signals are now identified by name.
+- **`www.<tld>` registrable domains are no longer rejected.** Blindly stripping
+  `www.` turned the real domain `www.com` into a bare TLD that failed validation;
+  the strip now only fires when the remainder is still a valid domain.
+- **Bare `host:port` input normalizes like the URL form.** `contoso.com:8443`
+  was rejected on the stray colon while `https://contoso.com:8443` succeeded; the
+  bare-host path now strips a trailing port too.
+- **Atomic CT cache writes.** `ct_cache_put` now writes via a temp file and
+  `os.replace`, matching the main cache: a concurrent reader can no longer see a
+  half-written file and a pre-planted symlink target is not followed.
+- **Deterministic SPF include-count parse.** The "SPF complexity: N" lookup now
+  iterates in sorted order so a result never depends on set iteration order.
 - **Homebrew formula freshness.** The bundled formula now points at the
   published `recon-tool` 2.2.10 sdist and checksum.
 

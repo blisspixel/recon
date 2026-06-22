@@ -95,6 +95,12 @@ class TestValidateDomain:
     def test_strip_scheme_with_port(self):
         assert validate_domain("https://www.contoso.com:443/some/path") == "contoso.com"
 
+    def test_strip_bare_port(self):
+        # A bare host with a port normalizes the same way the scheme form does
+        # (urlsplit strips the port there); the colon must not fail the format check.
+        assert validate_domain("contoso.com:8443") == "contoso.com"
+        assert validate_domain("mail.contoso.com:443/login", apex=False) == "mail.contoso.com"
+
     def test_strip_bare_query(self):
         assert validate_domain("contoso.com?utm=1") == "contoso.com"
 
@@ -114,6 +120,13 @@ class TestValidateDomain:
 
     def test_strip_www_case_insensitive(self):
         assert validate_domain("WWW.Contoso.COM") == "contoso.com"
+
+    def test_www_registrable_label_not_clobbered(self):
+        # ``www.com`` is itself a registrable domain — stripping ``www.`` would
+        # leave a bare TLD that fails the format check. The strip only fires when
+        # the remainder is still a valid domain.
+        assert validate_domain("www.com") == "www.com"
+        assert validate_domain("www.com", apex=False) == "www.com"
 
     # --- Empty / whitespace rejection ---
 

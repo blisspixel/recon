@@ -375,26 +375,9 @@ def compute_email_security_score(info: TenantInfo) -> int:
     value surfaced as the top-level ``email_security_score`` JSON/CSV field, so
     ``delta`` reuses it to compare like-with-like against a prior export.
     """
-    from recon_tool.constants import (
-        SVC_BIMI,
-        SVC_DKIM,
-        SVC_DKIM_EXCHANGE,
-        SVC_MTA_STS,
-        SVC_SPF_STRICT,
-    )
+    from recon_tool.constants import email_security_score
 
-    score = 0
-    if info.dmarc_policy in ("reject", "quarantine"):
-        score += 1
-    if SVC_DKIM_EXCHANGE in info.services or SVC_DKIM in info.services:
-        score += 1
-    if SVC_SPF_STRICT in info.services:
-        score += 1
-    if SVC_MTA_STS in info.services:
-        score += 1
-    if SVC_BIMI in info.services:
-        score += 1
-    return score
+    return email_security_score(info.services, info.dmarc_policy)
 
 
 _CSV_FORMULA_PREFIXES = frozenset(("=", "+", "-", "@", "\t", "\r", "\n"))

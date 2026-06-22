@@ -19,14 +19,7 @@ from typing import Any
 
 import yaml
 
-from recon_tool.constants import (
-    SVC_BIMI,
-    SVC_DKIM,
-    SVC_DKIM_EXCHANGE,
-    SVC_DMARC,
-    SVC_MTA_STS,
-    SVC_SPF_STRICT,
-)
+from recon_tool.constants import email_security_score
 from recon_tool.models import Observation, TenantInfo
 
 logger = logging.getLogger("recon")
@@ -281,15 +274,9 @@ def _compute_metadata_value(field: str, info: TenantInfo) -> str | int | None:
     if field == "auth_type":
         return info.auth_type
     if field == "email_security_score":
-        # Count presence of DMARC, DKIM, SPF strict, MTA-STS, BIMI (0-5)
-        score = sum(
-            1
-            for svc in info.services
-            if svc in {SVC_DMARC, SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI}
-        )
-        return min(score, 5)
+        return email_security_score(info.services, info.dmarc_policy)
     if field == "spf_include_count":
-        for svc in info.services:
+        for svc in sorted(info.services):
             if svc.startswith("SPF complexity:"):
                 try:
                     return int(svc.split(":")[1].strip().split()[0])

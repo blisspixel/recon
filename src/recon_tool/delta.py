@@ -43,19 +43,29 @@ def load_previous(path: Path) -> dict[str, Any]:
 
 
 def _extract_signal_names(insights: list[str] | tuple[str, ...]) -> set[str]:
-    """Extract signal names from insight strings.
+    """Extract fired-signal names from rendered insight strings.
 
-    Signal insights follow the format "SignalName: slug1, slug2".
-    Non-signal insights (from generate_insights) don't contain ": " with
-    comma-separated slugs, so this heuristic works for the current format.
+    A signal insight renders as ``"{signal name}: {matched products}"`` or, when
+    the signal fires with no matched slugs, as the bare ``"{signal name}"``. The
+    matched-products list is humanized (``"Google Workspace"``, with spaces and
+    qualifiers), so it can no longer be told apart from prose by character set.
+    The reliable discriminator is the prefix itself: match it against the known
+    signal names. The legacy comma-separated-slug check is kept as a fallback so
+    older JSON exports whose insight values were still raw slugs keep diffing.
     """
+    from recon_tool.signals import load_signals
+
+    known_signal_names = {sig.name for sig in load_signals()}
     names: set[str] = set()
     for insight in insights:
+        name = insight.partition(": ")[0] if ": " in insight else insight
+        if name in known_signal_names:
+            names.add(name)
+            continue
         if ": " in insight:
-            name, _, rest = insight.partition(": ")
-            # Signal matches have comma-separated lowercase slugs
-            parts = [p.strip() for p in rest.split(",")]
-            if all(p.replace("-", "").replace("_", "").isalnum() for p in parts if p):
+            rest = insight.partition(": ")[2]
+            parts = [p.strip() for p in rest.split(",") if p.strip()]
+            if parts and all(p.replace("-", "").replace("_", "").isalnum() for p in parts):
                 names.add(name)
     return names
 

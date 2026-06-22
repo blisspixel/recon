@@ -499,6 +499,7 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
 
     info, _results = resolved
 
+    from recon_tool.constants import email_security_score
     from recon_tool.models import SignalContext
     from recon_tool.signals import evaluate_signals, load_signals
 
@@ -506,19 +507,7 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
         detected_slugs=frozenset(info.slugs),
         dmarc_policy=info.dmarc_policy,
         auth_type=info.auth_type,
-        email_security_score=sum(
-            1
-            for svc in info.services
-            if svc
-            in {
-                "DMARC",
-                "DKIM (Exchange Online)",
-                "DKIM",
-                "SPF: strict (-all)",
-                "MTA-STS",
-                "BIMI",
-            }
-        ),
+        email_security_score=email_security_score(info.services, info.dmarc_policy),
     )
     signal_matches = evaluate_signals(context)
     all_signals = load_signals()

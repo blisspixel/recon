@@ -6,14 +6,7 @@ import contextlib
 from typing import Any, NamedTuple
 
 from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
-from recon_tool.constants import (
-    SVC_BIMI,
-    SVC_DKIM,
-    SVC_DKIM_EXCHANGE,
-    SVC_DMARC,
-    SVC_MTA_STS,
-    SVC_SPF_STRICT,
-)
+from recon_tool.constants import email_security_score
 from recon_tool.insights import generate_insights
 from recon_tool.lexical import lexical_observations
 from recon_tool.models import (
@@ -671,15 +664,19 @@ def _aggregate_detections(results: list[SourceResult]) -> tuple[set[str], set[st
     return services, slugs, related
 
 
-def compute_email_security_score(services: set[str]) -> int:
-    """Count presence of DMARC, any DKIM, SPF strict, MTA-STS, BIMI (0-5)."""
-    score_services = {SVC_DMARC, SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI}
-    return min(sum(1 for svc in services if svc in score_services), 5)
+def compute_email_security_score(services: set[str], dmarc_policy: str | None) -> int:
+    """Email-security score (0-5); see ``constants.email_security_score`` for the definition."""
+    return email_security_score(services, dmarc_policy)
 
 
 def extract_spf_include_count(services: set[str]) -> int | None:
-    """Parse the include count out of an "SPF complexity: N includes" service string."""
-    for svc in services:
+    """Parse the include count out of an "SPF complexity: N includes" service string.
+
+    Iterates in sorted order so that if two differing complexity strings ever
+    coexist in the merged set the result is deterministic rather than dependent
+    on set iteration order (the determinism gate relies on this).
+    """
+    for svc in sorted(services):
         if svc.startswith("SPF complexity:"):
             with contextlib.suppress(ValueError, IndexError):
                 return int(svc.split(":")[1].strip().split()[0])
@@ -854,7 +851,7 @@ def merge_results(
     domain_count = len(all_domains)
     tenant_domains = tuple(sorted(all_domains))
 
-    email_security_score = compute_email_security_score(all_services)
+    email_security_score = compute_email_security_score(all_services, dmarc_policy)
     spf_include_count = extract_spf_include_count(all_services)
 
     cert_summary: CertSummary | None = _first_non_none(results, "cert_summary")

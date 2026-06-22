@@ -449,7 +449,10 @@ async def _fetch_mta_sts_policy(domain: str) -> str | None:
 # second and later addresses are not dropped. Scoping to the ``rua=`` tag keeps
 # ``ruf=`` (forensic) addresses out.
 _RUA_TAG_RE = re.compile(r"rua\s*=\s*([^;]+)", re.IGNORECASE)
-_RUA_MAILTO_RE = re.compile(r"mailto:([^,;\s]+)", re.IGNORECASE)
+# Stop the address capture at ``!``: RFC 7489 §6.3 allows an optional ``!<size>``
+# report-size suffix (e.g. ``mailto:a@x.com!10m``), and a literal ``!`` inside the
+# address itself is percent-encoded, so an unescaped ``!`` always delimits the size.
+_RUA_MAILTO_RE = re.compile(r"mailto:([^,;\s!]+)", re.IGNORECASE)
 
 
 def extract_dmarc_rua(ctx: dns_base.DetectionCtx, dmarc_record: str) -> None:

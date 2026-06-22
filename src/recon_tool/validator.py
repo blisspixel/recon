@@ -147,6 +147,11 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
     else:
         # Bare host input may still include a copied query, fragment, or path.
         domain = re.split(r"[/?#]", stripped, maxsplit=1)[0]
+        # ...and a trailing :port, which urlsplit() already strips on the
+        # scheme branch. Strip it here too so ``example.com:8443`` normalizes
+        # the same way ``https://example.com:8443`` does instead of failing the
+        # format check on the stray colon.
+        domain = re.sub(r":\d+$", "", domain)
 
     # Normalize to lowercase
     domain = domain.lower()
@@ -155,8 +160,11 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
     # is never the domain you want for tenant/DNS lookups. The zone apex
     # (example.com) is where TXT verification records and MX records live. This
     # is independent of apex reduction: even --exact (apex=False) drops www.,
-    # because a literal www host is never a meaningful analysis target.
-    if domain.startswith("www."):
+    # because a literal www host is never a meaningful analysis target. Only
+    # strip when the remainder is still a valid domain, so a registrable label
+    # of ``www`` (e.g. the real domain ``www.com``) is not clobbered to a bare
+    # TLD that then fails the format check.
+    if domain.startswith("www.") and _DOMAIN_RE.match(domain[4:]):
         domain = domain[4:]
 
     # Internationalized domain names: convert a raw-Unicode IDN (for

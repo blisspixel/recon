@@ -174,6 +174,17 @@ class TestDmarcRuaExtraction:
         assert "agari" in ctx.slugs
         assert "dmarcian" in ctx.slugs
 
+    def test_rua_size_suffix_stripped_from_domain(self) -> None:
+        """An RFC 7489 ``!<size>`` report-size suffix is not folded into the domain."""
+        ctx = _DetectionCtx()
+        _extract_dmarc_rua(ctx, "v=DMARC1; p=reject; rua=mailto:reports@agari.com!10m")
+        assert "agari" in ctx.slugs
+        rua_evidence = [e for e in ctx.evidence if e.source_type == "DMARC_RUA"]
+        assert rua_evidence
+        # The captured address (and recorded evidence) stop at the ``!`` delimiter.
+        assert all("!" not in e.raw_value for e in rua_evidence)
+        assert "agari.com!10m" not in {e.raw_value for e in rua_evidence}
+
     def test_ruf_addresses_not_treated_as_rua(self) -> None:
         """Forensic ruf= addresses are not scanned as rua= vendor reports."""
         ctx = _DetectionCtx()

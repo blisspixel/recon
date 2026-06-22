@@ -508,6 +508,7 @@ async def explain_signal(
 
     info, _results = resolved
 
+    from recon_tool.constants import email_security_score
     from recon_tool.models import SignalContext
     from recon_tool.signals import evaluate_signals
 
@@ -515,19 +516,7 @@ async def explain_signal(
         detected_slugs=frozenset(info.slugs),
         dmarc_policy=info.dmarc_policy,
         auth_type=info.auth_type,
-        email_security_score=sum(
-            1
-            for svc in info.services
-            if svc
-            in {
-                "DMARC",
-                "DKIM (Exchange Online)",
-                "DKIM",
-                "SPF: strict (-all)",
-                "MTA-STS",
-                "BIMI",
-            }
-        ),
+        email_security_score=email_security_score(info.services, info.dmarc_policy),
     )
     signal_matches = evaluate_signals(context)
     fired = any(m.name == signal_name for m in signal_matches)

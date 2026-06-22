@@ -12,8 +12,11 @@ full TenantInfo round-trip.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
+import os
+import tempfile
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -147,9 +150,22 @@ def ct_cache_put(
     try:
         d = ct_cache_dir()
         d.mkdir(parents=True, exist_ok=True)
+        d = d.resolve()
         path = _safe_path(domain)
         data = _entry_to_dict(subdomains, cert_summary, provider_used)
-        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        # Atomic write, matching cache.py: a concurrent ct_cache_get must never
+        # read a half-written file, and a predictable "<domain>.json" target must
+        # not be followed if it is a pre-planted symlink. mkstemp gives a random
+        # O_EXCL name inside the validated dir, then os.replace swaps it in.
+        fd, tmp_name = tempfile.mkstemp(dir=str(d), prefix=f"{path.stem}.", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(json.dumps(data, indent=2))
+            os.replace(tmp_name, path)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                os.unlink(tmp_name)
+            raise
         logger.debug("CT cache written for %s (%d subdomains)", domain, len(subdomains))
     except (OSError, TypeError, ValueError, json.JSONDecodeError):
         logger.debug("CT cache write failed for %s", domain, exc_info=True)
