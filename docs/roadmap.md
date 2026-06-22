@@ -12,8 +12,10 @@ This file is forward-looking. Shipped work belongs in
 > agentic. That doc is the standing decision guide and the catalog of
 > brittle-rule smells; keep it current as the boundary moves.
 
-> **Status (2026-06):** v2.2.9 is the current release (shipped 2026-06-20 to
-> PyPI). The v2.2 line delivered the evidence-semantics diagnostics (per-node
+> **Status (2026-06):** v2.2.10 is the current release (the Apache 2.0
+> relicense plus the DMARC rua comma-parsing and delta email-security-score
+> fixes; shipped 2026-06-21 to PyPI). v2.2.9 (2026-06-20) was the prior
+> release. The v2.2 line delivered the evidence-semantics diagnostics (per-node
 > entropy reduction, exact leave-one-unit-out counterfactuals, graph partition
 > stability), the MCP tool-output contract revision (navigable
 > `structuredContent` + per-tool `outputSchema` + `isError` across the eighteen
