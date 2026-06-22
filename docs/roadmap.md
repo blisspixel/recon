@@ -47,10 +47,12 @@ Full detail and sequencing live in
 > agentic. That doc is the standing decision guide and the catalog of
 > brittle-rule smells; keep it current as the boundary moves.
 
-> **Status (2026-06):** v2.2.10 is the current release (the Apache 2.0
-> relicense plus the DMARC rua comma-parsing and delta email-security-score
-> fixes; shipped 2026-06-21 to PyPI). v2.2.9 (2026-06-20) was the prior
-> release. The v2.2 line delivered the evidence-semantics diagnostics (per-node
+> **Status (2026-06):** v2.2.11 is the current release (unifying the
+> email-security score on one scorer across every surface, plus DMARC rua
+> report-size, delta exit-code, delta signal-diffing, validator, CT-cache, and
+> SPF-parse determinism fixes; shipped 2026-06-22 to PyPI). v2.2.10 (2026-06-21)
+> was the prior release (the Apache 2.0 relicense plus the DMARC rua
+> comma-parsing and delta email-security-score fixes). The v2.2 line delivered the evidence-semantics diagnostics (per-node
 > entropy reduction, exact leave-one-unit-out counterfactuals, graph partition
 > stability), the MCP tool-output contract revision (navigable
 > `structuredContent` + per-tool `outputSchema` + `isError` across the eighteen
