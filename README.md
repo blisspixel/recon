@@ -1,8 +1,3 @@
-License: Apache 2.0  
-Author: Nick Seal (nick@pueo.io)  
-Free to use, build on, fork, and share patterns.  
-For commercial or enterprise use, contact nick@pueo.io
-
 # recon
 
 [![CI](https://github.com/blisspixel/recon/actions/workflows/ci.yml/badge.svg)](https://github.com/blisspixel/recon/actions/workflows/ci.yml)
@@ -73,47 +68,6 @@ recon does not replace commercial EASM platforms, active scanners, or continuous
 recon also does not score or rank organizations, enrich domains with firmographics, or maintain an industry intelligence database. It reports what the public channel reveals, with provenance, and leaves business interpretation to the operator.
 
 recon ships as a Python wheel on PyPI and runs locally: a CLI, an importable library, and a stdio MCP server. It is not a hosted service. There is no remote MCP transport, container image, daemon, or scheduled-monitoring mode, and adding one is out of scope by design (see the [roadmap](docs/roadmap.md#intentionally-out-of-scope)). If you need scheduling or shared access, that belongs to whatever runs recon, not to recon itself.
-
-## How recon works
-
-recon reads the public channel: DNS records (MX, CNAME, SPF, DMARC,
-TXT), certificate-transparency SAN sets, and the unauthenticated
-identity-discovery endpoints Microsoft and Google publish for tenant
-resolution. No credentials, no port scanning, no login attempts. By
-default the only request the queried domain's own servers see is the
-standard MTA-STS policy fetch; two direct-probe enrichments (the Google
-CSE discovery endpoint at `cse.<domain>` and the BIMI VMC certificate
-fetch) are opt-in behind `--direct-probes` and stay off unless you ask
-for them. BIMI presence is still read from DNS either way.
-
-It then runs those observables through a small Bayesian network and
-reports each high-level claim (M365 tenant, federated identity,
-email-policy enforcement, CDN fronting, and so on) as an 80% confidence
-interval, not a yes/no verdict. The interval is the load-bearing field:
-on hardened or heavily-proxied targets it **widens** rather than
-collapsing on a fake-confident point estimate, because absent evidence
-is treated as no evidence, not as evidence of absence. The intervals
-are evidence-responsive (they track how much the public channel
-constrains each claim); they are not yet empirically calibrated against
-ground truth, which no passive tool can observe. The structural motifs
-recon surfaces (a CDN in front of an identity provider, an email
-gateway in front of M365, a secondary Google Workspace alongside
-primary M365) are the ones single-source detection often misses.
-
-> **For the formal model:** the adversarial missing-data treatment
-> (MNAR, with the absent-evidence rule grounded in m-graphs and Manski
-> partial identification), the calibration principles the credible
-> interval satisfies, and the failure-mode catalog across five hardening
-> postures live in [docs/correlation.md](docs/correlation.md).
-
-The fingerprint catalog is shaped by passive-DNS observation of real
-corpora. The built-in catalog ships with the package; operators can
-extend it for their own environment by dropping additions into
-`~/.recon/fingerprints.yaml` (additive only, cannot override
-built-ins). Anything broadly useful can be contributed upstream via
-the workflow in [CONTRIBUTING.md](CONTRIBUTING.md). The maintainer
-runs the same scan-triage loop against a private corpus before each
-release; the catalog grows from observed gaps, not invented entries.
 
 ## Install
 
@@ -242,6 +196,47 @@ recon --show-completion                        # print the completion script (ba
 After `--install-completion`, start a new shell for it to take effect.
 
 See [docs/README.md](docs/README.md) for the organized documentation index.
+
+## How recon works
+
+recon reads the public channel: DNS records (MX, CNAME, SPF, DMARC,
+TXT), certificate-transparency SAN sets, and the unauthenticated
+identity-discovery endpoints Microsoft and Google publish for tenant
+resolution. No credentials, no port scanning, no login attempts. By
+default the only request the queried domain's own servers see is the
+standard MTA-STS policy fetch; two direct-probe enrichments (the Google
+CSE discovery endpoint at `cse.<domain>` and the BIMI VMC certificate
+fetch) are opt-in behind `--direct-probes` and stay off unless you ask
+for them. BIMI presence is still read from DNS either way.
+
+It then runs those observables through a small Bayesian network and
+reports each high-level claim (M365 tenant, federated identity,
+email-policy enforcement, CDN fronting, and so on) as an 80% confidence
+interval, not a yes/no verdict. The interval is the load-bearing field:
+on hardened or heavily-proxied targets it **widens** rather than
+collapsing on a fake-confident point estimate, because absent evidence
+is treated as no evidence, not as evidence of absence. The intervals
+are evidence-responsive (they track how much the public channel
+constrains each claim); they are not yet empirically calibrated against
+ground truth, which no passive tool can observe. The structural motifs
+recon surfaces (a CDN in front of an identity provider, an email
+gateway in front of M365, a secondary Google Workspace alongside
+primary M365) are the ones single-source detection often misses.
+
+> **For the formal model:** the adversarial missing-data treatment
+> (MNAR, with the absent-evidence rule grounded in m-graphs and Manski
+> partial identification), the calibration principles the credible
+> interval satisfies, and the failure-mode catalog across five hardening
+> postures live in [docs/correlation.md](docs/correlation.md).
+
+The fingerprint catalog is shaped by passive-DNS observation of real
+corpora. The built-in catalog ships with the package; operators can
+extend it for their own environment by dropping additions into
+`~/.recon/fingerprints.yaml` (additive only, cannot override
+built-ins). Anything broadly useful can be contributed upstream via
+the workflow in [CONTRIBUTING.md](CONTRIBUTING.md). The maintainer
+runs the same scan-triage loop against a private corpus before each
+release; the catalog grows from observed gaps, not invented entries.
 
 ## MCP server
 

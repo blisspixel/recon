@@ -4,6 +4,41 @@ This file is forward-looking. Shipped work belongs in
 [CHANGELOG.md](../CHANGELOG.md); release mechanics belong in
 [release-process.md](release-process.md).
 
+## What's next (short version)
+
+recon is in a deepen-not-expand phase: the engine, schema, and assurance track
+are all locked and shipped, so there is no headline feature in flight. The
+remaining work makes what exists more trustworthy rather than larger, which is
+why the version number now climbs slowly and deliberately. The committed
+post-2.0 assurance track is **complete**; what is left is operator-paced or
+standing, in dependency order:
+
+1. **Run the calibration corpus passes** (maintainer-local, aggregate-only,
+   patch-level). *Why:* the harnesses are built and unit-tested but not yet run
+   against the private corpus. Running them is what would upgrade the
+   load-bearing 80% intervals from *evidence-responsive* to *empirically
+   covered* and close the one tier-4 calibration gap. No code is blocked on
+   this; it is collection, not construction.
+2. **Fingerprint and motif triage loop** (maintainer-local, optional, reviewed).
+   *Why:* keeps the catalog growing from observed gaps, not invented entries.
+   Stays patch-level unless it adds a stable surface; catalog changes still get
+   human review.
+3. **Surface-inventory promotion decision.** *Why:* `surface-inventory.json` is
+   already generated and drift-gated as discovery context. It only graduates to
+   a 2.3 *stable surface* if a concrete consumer needs machine-readable fields
+   beyond best-effort local discovery; until then it stays patch-level.
+4. **arXiv write-up** (aspirational, off the critical path). *Why:* packages the
+   existing rigor for an outside reader within the no-real-data publication rule.
+
+Anything that would force a minor bump (2.3) waits for a coherent new *stable
+surface*; a major bump (3.0) is reserved for an unavoidable breaking change that
+does not currently exist. The permanently out-of-scope boundary (active
+scanning, paid APIs, credentialed access, hosted service, remote MCP) is not
+version-gated; see [Intentionally Out Of Scope](#intentionally-out-of-scope).
+Full detail and sequencing live in
+[Build order for the remaining work](#build-order-for-the-remaining-work) and
+[Version milestones and build order](#version-milestones-and-build-order) below.
+
 > **Before adding a rule or an agentic behavior, read
 > [agentic-balance.md](agentic-balance.md).** recon's observe-infer-report core
 > is rules-based by invariant; agent judgment belongs outside it (the MCP
