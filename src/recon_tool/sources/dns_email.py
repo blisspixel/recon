@@ -443,13 +443,19 @@ async def _fetch_mta_sts_policy(domain: str) -> str | None:
     return None
 
 
-_RUA_MAILTO_RE = re.compile(r"rua\s*=\s*mailto:([^;,\s]+)", re.IGNORECASE)
+# The rua tag value is a comma-separated list of DMARC URIs (RFC 7489 §6.3),
+# e.g. ``rua=mailto:a@x.com,mailto:b@y.com``. Capture the whole tag value (up to
+# the next tag separator), then pull each mailto address out of it, so the
+# second and later addresses are not dropped. Scoping to the ``rua=`` tag keeps
+# ``ruf=`` (forensic) addresses out.
+_RUA_TAG_RE = re.compile(r"rua\s*=\s*([^;]+)", re.IGNORECASE)
+_RUA_MAILTO_RE = re.compile(r"mailto:([^,;\s]+)", re.IGNORECASE)
 
 
 def extract_dmarc_rua(ctx: dns_base.DetectionCtx, dmarc_record: str) -> None:
     """Extract rua=mailto: addresses and match vendor domains against fingerprints."""
 
-    matches = _RUA_MAILTO_RE.findall(dmarc_record)
+    matches = [addr for value in _RUA_TAG_RE.findall(dmarc_record) for addr in _RUA_MAILTO_RE.findall(value)]
     # Sort longest-first so the most specific pattern wins per rua address
     # (consistent with MX / NS / CAA / cname_target , see
     # filter_shadowed_matches).

@@ -7,8 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **License is now Apache 2.0.** recon moves from MIT to the Apache License 2.0
+  (Author: Nick Seal, nick@pueo.io). Package metadata, the README, and the
+  citation, plugin, Homebrew, and third-party-notice files are updated to match.
+
 ### Fixed
 
+- **DMARC `rua` comma-separated addresses are no longer dropped.**
+  `extract_dmarc_rua` now reads every address inside a comma-separated `rua=`
+  tag (a valid RFC 7489 form), not just the first, so vendor fingerprints on the
+  second and later report addresses are detected. Forensic `ruf=` addresses stay
+  excluded.
+- **Delta email-security-score consistency.** `recon delta` recomputed the live
+  email-security score with a service-presence formula while the exported
+  `email_security_score` field uses the policy-based formula, so a `p=none`
+  DMARC domain reported a phantom score change against its own snapshot. Both
+  paths now share the one exporter scorer.
 - **Homebrew formula freshness.** The bundled formula now points at the
   published `recon-tool` 2.2.9 sdist and checksum.
 

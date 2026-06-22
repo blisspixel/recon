@@ -12,14 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from recon_tool.constants import (
-    SVC_BIMI,
-    SVC_DKIM,
-    SVC_DKIM_EXCHANGE,
-    SVC_DMARC,
-    SVC_MTA_STS,
-    SVC_SPF_STRICT,
-)
+from recon_tool.formatter_serialize import compute_email_security_score
 from recon_tool.models import DeltaReport, TenantInfo
 
 logger = logging.getLogger("recon")
@@ -65,12 +58,6 @@ def _extract_signal_names(insights: list[str] | tuple[str, ...]) -> set[str]:
             if all(p.replace("-", "").replace("_", "").isalnum() for p in parts if p):
                 names.add(name)
     return names
-
-
-def _compute_email_security_score(services: tuple[str, ...] | list[str]) -> int:
-    """Compute email security score (0-5) from service list."""
-    score_services = {SVC_DMARC, SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI}
-    return min(sum(1 for svc in services if svc in score_services), 5)
 
 
 def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaReport:
@@ -128,7 +115,7 @@ def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaRe
     # Email security score comparison
     changed_email_security_score: tuple[int | None, int | None] | None = None
     prev_score = previous_json.get("email_security_score")
-    curr_score = _compute_email_security_score(current.services)
+    curr_score = compute_email_security_score(current)
     if prev_score is not None and prev_score != curr_score:
         changed_email_security_score = (prev_score, curr_score)
 

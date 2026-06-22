@@ -154,14 +154,32 @@ class TestDmarcRuaExtraction:
     def test_multiple_rua_entries(self) -> None:
         """Multiple rua=mailto: entries (semicolon-separated tags) → all domains extracted."""
         ctx = _DetectionCtx()
-        # DMARC records can have multiple rua= tags or comma-separated mailto: URIs.
-        # The regex captures each rua=mailto: occurrence independently.
         _extract_dmarc_rua(
             ctx,
             "v=DMARC1; p=reject; rua=mailto:d@agari.com; rua=mailto:r@dmarcian.com",
         )
         assert "agari" in ctx.slugs
         assert "dmarcian" in ctx.slugs
+
+    def test_comma_separated_rua_addresses(self) -> None:
+        """One rua= tag with comma-separated mailto: URIs (RFC 7489 §6.3) → all extracted."""
+        ctx = _DetectionCtx()
+        # The second and later addresses share the single rua= tag; both vendors
+        # must still be detected (regression: the prefix-anchored regex only saw
+        # the first address).
+        _extract_dmarc_rua(
+            ctx,
+            "v=DMARC1; p=reject; rua=mailto:d@agari.com,mailto:r@dmarcian.com",
+        )
+        assert "agari" in ctx.slugs
+        assert "dmarcian" in ctx.slugs
+
+    def test_ruf_addresses_not_treated_as_rua(self) -> None:
+        """Forensic ruf= addresses are not scanned as rua= vendor reports."""
+        ctx = _DetectionCtx()
+        _extract_dmarc_rua(ctx, "v=DMARC1; p=reject; ruf=mailto:forensic@dmarcian.com")
+        assert "dmarcian" not in ctx.slugs
+        assert len(ctx.evidence) == 0
 
     def test_rua_without_at_skipped(self) -> None:
         """rua=mailto:noemail → skipped (no @ sign)."""

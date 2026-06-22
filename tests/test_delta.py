@@ -5,7 +5,9 @@ from pathlib import Path
 
 import pytest
 
+from recon_tool.constants import SVC_DMARC, SVC_SPF_STRICT
 from recon_tool.delta import compute_delta, load_previous
+from recon_tool.formatter_serialize import format_tenant_dict
 from recon_tool.models import ConfidenceLevel, DeltaReport, TenantInfo
 
 
@@ -117,6 +119,28 @@ class TestComputeDelta:
         prev = _make_previous(confidence="high")
         delta = compute_delta(prev, info)
         assert delta.changed_confidence == ("high", "low")
+
+    def test_no_phantom_email_score_change_for_p_none_dmarc(self):
+        """Re-running an unchanged p=none DMARC domain shows no score delta.
+
+        Regression: delta scored DMARC by service presence (counting any DMARC
+        record) while the exported ``email_security_score`` scores DMARC only
+        when the policy is enforcing. A p=none domain therefore reported a
+        spurious email-security-score change against its own prior export.
+        The previous snapshot here is built by the real exporter so the two
+        code paths must agree.
+        """
+        info = _make_info(dmarc_policy="none", services=(SVC_DMARC, SVC_SPF_STRICT))
+        prev = format_tenant_dict(info)
+        delta = compute_delta(prev, info)
+        assert delta.changed_email_security_score is None
+
+    def test_email_score_change_reported_when_policy_strengthens(self):
+        """An enforcing DMARC policy raises the score and the delta reports it."""
+        prev_info = _make_info(dmarc_policy="none", services=(SVC_DMARC, SVC_SPF_STRICT))
+        curr_info = _make_info(dmarc_policy="reject", services=(SVC_DMARC, SVC_SPF_STRICT))
+        delta = compute_delta(format_tenant_dict(prev_info), curr_info)
+        assert delta.changed_email_security_score == (1, 2)
 
     def test_changed_domain_count(self):
         info = _make_info(domain_count=10)

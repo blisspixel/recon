@@ -134,7 +134,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         ],
         # Surface email_security_score at the top level of --json
         # (previously only available inside the insights string).
-        "email_security_score": _compute_email_security_score(info),
+        "email_security_score": compute_email_security_score(info),
         # Sovereignty + lexical fields
         "cloud_instance": info.cloud_instance,
         "tenant_region_sub_scope": info.tenant_region_sub_scope,
@@ -367,8 +367,14 @@ CSV_COLUMNS: tuple[str, ...] = (
 )
 
 
-def _compute_email_security_score(info: TenantInfo) -> int:
-    """Compute email security score (0-5) from services, matching insights.py logic."""
+def compute_email_security_score(info: TenantInfo) -> int:
+    """Compute email security score (0-5) from services, matching insights.py logic.
+
+    DMARC is credited only when the published policy is enforcing
+    (``reject``/``quarantine``); a ``p=none`` record does not count. This is the
+    value surfaced as the top-level ``email_security_score`` JSON/CSV field, so
+    ``delta`` reuses it to compare like-with-like against a prior export.
+    """
     from recon_tool.constants import (
         SVC_BIMI,
         SVC_DKIM,
@@ -435,7 +441,7 @@ def format_tenant_csv_row(info: TenantInfo) -> dict[str, str]:
         "tenant_id": _csv_safe(info.tenant_id or ""),
         "auth_type": _csv_safe(info.auth_type or ""),
         "confidence": info.confidence.value,
-        "email_security_score": str(_compute_email_security_score(info)),
+        "email_security_score": str(compute_email_security_score(info)),
         "service_count": str(len(info.services)),
         "dmarc_policy": _csv_safe(info.dmarc_policy or ""),
         "mta_sts_mode": _csv_safe(info.mta_sts_mode or ""),
