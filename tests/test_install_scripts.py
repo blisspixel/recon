@@ -21,8 +21,12 @@ def test_installers_do_not_bootstrap_pipx_with_unpinned_pip() -> None:
     assert "sort -V" not in script
     assert "pip install" not in script
     assert "pip install" not in powershell
-    assert "Error: need uv or pipx" in script
-    assert "Error: need uv or pipx" in powershell
+    # The only auto-bootstrap path is the official uv installer over HTTPS, never
+    # an unpinned pip; the terminal branch still errors out with manual steps.
+    assert "https://astral.sh/uv/install.sh" in script
+    assert "https://astral.sh/uv/install.ps1" in powershell
+    assert "Error: uv bootstrap did not put 'uv' on PATH" in script
+    assert "Error: uv bootstrap did not put 'uv' on PATH" in powershell
 
 
 def test_unix_installer_shell_syntax() -> None:
