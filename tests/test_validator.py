@@ -122,7 +122,7 @@ class TestValidateDomain:
         assert validate_domain("WWW.Contoso.COM") == "contoso.com"
 
     def test_www_registrable_label_not_clobbered(self):
-        # ``www.com`` is itself a registrable domain — stripping ``www.`` would
+        # ``www.com`` is itself a registrable domain; stripping ``www.`` would
         # leave a bare TLD that fails the format check. The strip only fires when
         # the remainder is still a valid domain.
         assert validate_domain("www.com") == "www.com"

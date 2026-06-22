@@ -33,7 +33,7 @@ def email_security_score(services: Iterable[str], dmarc_policy: str | None) -> i
     """Canonical email-security score (0-5), the single definition every surface uses.
 
     Five independent controls each count once: an *enforcing* DMARC policy
-    (``reject``/``quarantine`` — a ``p=none`` record does not count), any DKIM
+    (``reject``/``quarantine``; a ``p=none`` record does not count), any DKIM
     (Exchange Online or a generic selector, credited once even when both are
     observed), strict SPF (``-all``), MTA-STS, and BIMI.
 
