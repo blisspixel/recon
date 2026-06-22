@@ -1,6 +1,6 @@
 # Third-party notices
 
-recon (`recon-tool`) is licensed under the MIT License (see [LICENSE](LICENSE)).
+recon (`recon-tool`) is licensed under the Apache License 2.0 (see [LICENSE](LICENSE)).
 It depends on third-party open-source packages, each under its own license.
 
 The **authoritative, complete, machine-readable inventory** of every runtime
@@ -23,7 +23,7 @@ The following runtime dependency is licensed under the MPL-2.0:
 
 MPL-2.0 is a file-level (weak) copyleft license. recon consumes this package
 **unmodified** as an installed dependency and includes none of its source in
-recon's own files, so the MPL-2.0 terms do not extend to recon's MIT-licensed
+recon's own files, so the MPL-2.0 terms do not extend to recon's own
 code. If you redistribute recon together with this dependency, the MPL-2.0
 source-availability obligation is satisfied by the upstream source link above
 (and by the package's own sdist on PyPI). Should recon ever modify and

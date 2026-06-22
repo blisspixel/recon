@@ -5,7 +5,7 @@ class Recon < Formula
   homepage "https://github.com/blisspixel/recon"
   url "https://files.pythonhosted.org/packages/6e/81/dc5dbcbd516cd3b1ee25af5a68b5128ba6e50fcd00ed2d2541eced412caf/recon_tool-2.2.9.tar.gz"
   sha256 "a20b871827c63bdcb9e93f5afe96866adedd5653c5b60e031577307f15a79c29"
-  license "MIT"
+  license "Apache-2.0"
 
   depends_on "python@3.12"
 
