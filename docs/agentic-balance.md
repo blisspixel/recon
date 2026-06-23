@@ -139,6 +139,41 @@ outputs, or in the operator's external automation system.
 If any answer is wrong, the design is not ready, regardless of whether it is a
 rule or an agentic behavior.
 
+## External validation (2026)
+
+The boundary above predates the 2026 agentic-security guidance that now states
+it as consensus. That convergence is worth recording: it shows recon's choices
+are the standard ones, not idiosyncratic.
+
+The central principle in the current literature is that security must be enforced
+by deterministic controls outside the model's reasoning loop, never by the
+model's own reasoning or prompt-level instructions. AWS states it directly:
+enforce security through "deterministic, infrastructure-level controls external
+to the agent's reasoning loop, not through the agent's own reasoning, internal
+guardrails, or prompt-based instructions," because "LLMs are probabilistic
+reasoning engines, not security enforcement mechanisms"
+([AWS, four security principles for agentic AI systems](https://aws.amazon.com/blogs/security/four-security-principles-for-agentic-ai-systems/)).
+Prompt injection remains the top-ranked LLM risk in the OWASP catalog, and the
+underlying problem, that a model reads instructions and data on one channel, is
+still unsolved in the general case.
+
+The mapping onto this document is one-to-one:
+
+- The deterministic control outside the reasoning loop is what this doc calls the
+  rules-based observe-infer-report core. No model output can move a posterior, a
+  fingerprint match, or an exit code.
+- The unsolved data-vs-instructions problem is what the data-not-instructions
+  rule contains, by refusing to let recon emit anything an agent could read as a
+  command and by assuming the consuming agent is adversarial
+  ([the agentic boundary](#the-agentic-boundary)).
+- "Autonomy earned through evaluation" is the agent-proposes, gate-and-human-
+  dispose rule: a proposal reaches the catalog or the CPTs only through a
+  deterministic gate and a human, never on the model's say-so.
+
+The practical consequence for recon is that the determinism of its own output is
+the load-bearing guarantee, not the consuming agent's good behavior. recon must
+stay correct even when the agent reading it has been fully compromised.
+
 ## Keeping this current
 
 This doc is the load-bearing reference for the rules-vs-agentic call, so it is
