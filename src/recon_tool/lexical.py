@@ -184,15 +184,19 @@ def _label_matches_region(label: str) -> str | None:
     """Return the matching region keyword, or None."""
     lower = label.lower()
     for region in REGION_PREFIXES:
-        if region in lower:
-            # Require at least one character boundary (dot, dash) so
-            # "europe" doesn't match "eu-west-1".
-            idx = lower.find(region)
-            left_ok = idx == 0 or lower[idx - 1] in _SEPARATORS
-            end = idx + len(region)
+        # Require a character boundary (separator, start, or end) on both sides
+        # so "europe" does not match inside "eu-west-1". Scan every occurrence,
+        # not just the first: a label like "house1-use1" has a non-boundary
+        # first "use1" (inside "house1") and a valid trailing one. This mirrors
+        # the all-occurrences fix in _label_matches_env above.
+        start = lower.find(region)
+        while start >= 0:
+            end = start + len(region)
+            left_ok = start == 0 or lower[start - 1] in _SEPARATORS
             right_ok = end == len(lower) or lower[end] in _SEPARATORS
             if left_ok and right_ok:
                 return region
+            start = lower.find(region, start + 1)
     return None
 
 

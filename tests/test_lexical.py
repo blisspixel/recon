@@ -84,6 +84,13 @@ class TestRegionClassification:
         out = classify_subdomains(["europe.contoso.com"], "contoso.com")
         assert out["region"] == []
 
+    def test_region_after_substring_collision(self):
+        # "house1-use1": the region code "use1" also appears inside "house1"
+        # without a boundary. The matcher must scan past that first occurrence
+        # to the valid trailing "-use1" rather than stop at the first hit.
+        out = classify_subdomains(["house1-use1.contoso.com"], "contoso.com")
+        assert any("use1" in r for r in out["region"])
+
 
 class TestShardClassification:
     def test_t_dash_digits(self):

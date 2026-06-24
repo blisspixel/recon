@@ -73,6 +73,19 @@ class TestExplainInsightsReachableBranches:
         # Either auth or license classification is acceptable
         assert any(keyword in records[0].fired_rules[0] for keyword in ("auth_insights", "license_insights"))
 
+    def test_pki_insight_reaches_pki_rule(self) -> None:
+        # "PKI: ..." contains ": " but is a dedicated insight rule, not a
+        # signal-generated insight; it must classify as _pki_insights, not be
+        # misrouted to the generic "Signal: PKI" branch.
+        records = _call("PKI: Let's Encrypt, DigiCert", slugs=("letsencrypt",))
+        assert records[0].fired_rules
+        assert "_pki_insights" in records[0].fired_rules[0]
+
+    def test_infrastructure_insight_reaches_infra_rule(self) -> None:
+        records = _call("Infrastructure: Cloudflare, AWS")
+        assert records[0].fired_rules
+        assert "_infrastructure_insights" in records[0].fired_rules[0]
+
     def test_license_m365_standalone(self) -> None:
         """An insight without 'federated' and without a colon reaches the
         license branch directly."""

@@ -369,7 +369,9 @@ def _classify_insight(
     confidence_parts: list[str] = []
 
     # Signal-generated insights have the pattern "SignalName: matched1, matched2".
-    if ": " in insight and not lower.startswith(("email security", "dmarc", "no dmarc", "no dkim")):
+    if ": " in insight and not lower.startswith(
+        ("email security", "dmarc", "no dmarc", "no dkim", "pki:", "infrastructure:")
+    ):
         parts = insight.split(": ", 1)
         matched_str = parts[1] if len(parts) > 1 else ""
         for slug in (s.strip() for s in matched_str.split(",") if s.strip()):

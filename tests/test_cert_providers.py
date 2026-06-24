@@ -235,6 +235,14 @@ class TestFilterSubdomains:
         assert "app.other.com" not in result
         assert "notexample.com" not in result
 
+    def test_suffix_match_is_not_high_signal(self):
+        # "webapp" ends with the high-signal prefix "app" but is not itself a
+        # high-signal prefix, so it must not be ordered ahead of an
+        # alphabetically earlier plain subdomain. Regression: the sort key used
+        # endswith, which matched prefixes as suffixes.
+        result = filter_subdomains(["webapp.example.com", "aaa.example.com"], "example.com")
+        assert result.index("aaa.example.com") < result.index("webapp.example.com")
+
     def test_excludes_domain_itself(self):
         raw = ["example.com", "sub.example.com"]
         result = filter_subdomains(raw, "example.com")

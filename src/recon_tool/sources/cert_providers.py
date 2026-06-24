@@ -331,7 +331,7 @@ def filter_subdomains(
     def _sort_key(name: str) -> tuple[int, int, str]:
         """Sort: high-signal prefixes first, then by depth (shallow first), then alpha."""
         prefix = name.split(f".{domain_lower}")[0]
-        is_high = 0 if any(prefix.startswith(p) or prefix.endswith(p) for p in HIGH_SIGNAL_PREFIXES) else 1
+        is_high = 0 if any(prefix == p or prefix.startswith((p + ".", p + "-")) for p in HIGH_SIGNAL_PREFIXES) else 1
         depth = prefix.count(".")
         return (is_high, depth, name)
 
