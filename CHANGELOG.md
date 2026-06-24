@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Tool Surface Changes
+
+- No runtime CLI command or flag changes.
+
+### Fixed
+
+- **DMARC policy with whitespace around `=` is now parsed.** A spec-legal
+  `p = reject` (RFC 7489 / 6376 tag syntax permits whitespace around `=`) was
+  dropped, silently understating the email-security posture. The parser now
+  splits each tag on its first `=` and strips both sides.
+- **Trailing-dot FQDNs are accepted.** An absolute FQDN like `contoso.com.` was
+  rejected as malformed; it now normalizes to the apex the same way the scheme,
+  `www.`, and port paste-artifacts already do.
+- **The retry transport no longer returns a closed response when the cumulative
+  sleep cap trips.** Under repeated `429`/`503` with a `Retry-After` that reached
+  the cap, the intermediate response was closed and then returned, so a caller
+  reading its body got `StreamClosed` instead of the status. The response handed
+  back on the cap path now stays readable.
+- **`infrastructure_clusters` dominant issuer is deterministic.** The tie-break
+  followed certificate arrival order (unstable across requests), so a two-issuer
+  count tie could change the emitted `dominant_issuer` between runs. Ties now
+  break by count, then lexicographically.
+- **Geo-Distribution region matching no longer misses a valid region after a
+  coincidental substring.** A label like `house1-use1` (where the region code
+  `use1` also appears inside `house1`) lost its valid trailing match; the matcher
+  now scans every occurrence, matching the sibling environment matcher.
+- **Certificate-transparency subdomain ordering no longer over-ranks suffix
+  coincidences.** The high-signal sort matched prefixes as suffixes (so `webapp`
+  ranked high because it ends in `app`), skewing which subdomains survived the
+  cap. It now uses the boundary-aware predicate already used during enrichment.
+- **`--explain` provenance labels PKI and infrastructure insights correctly.**
+  Any `Label: value` insight was routed to the generic signal classifier,
+  leaving the dedicated `pki:` and `infrastructure:` rules unreachable.
+
 ## [2.2.11] - 2026-06-22
 
 ### Tool Surface Changes

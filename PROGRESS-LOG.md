@@ -3,6 +3,48 @@
 This file records maintainer-loop work performed in this checkout. It is a local
 planning artifact and does not replace `CHANGELOG.md`.
 
+## 2026-06-23 to 2026-06-24
+
+Session: roadmap research, calibration corpus run, two bug-hunt rounds, QoL
+refine, docs currency. All commits are local (unpushed) pending maintainer
+review. Local gate (`scripts/check.py`) green throughout; external spend 0 USD.
+
+- Mapped `docs/agentic-balance.md` to the 2026 deterministic-control security
+  consensus (OWASP / AWS four-principles). Commit 42d384b.
+- Added `validation/progress.py` (`gather_with_progress`), a throttled stderr
+  heartbeat for the multi-hour resolve sweeps, wired into the reference and
+  tenancy calibration harnesses (conformal reuses reference). Counts only; no
+  domain crosses the boundary. Unit-tested. Commit eed11c3.
+- Added Gotchas sections to the recon and recon-fingerprint-triage skills per the
+  Anthropic skill-authoring guidance. Commit d253fe4.
+- Ran the full calibration bundle against the private corpus (5,241 domains, 22
+  verticals) at concurrency 2, one harness at a time, each checkpointed and
+  disclosure-verified. Aggregates committed at
+  `validation/2026-06-23-full-corpus-calibration.md`. Commit a9cbfbb. Result:
+  email-policy full posterior ECE 0.076 (DMARC-anchored), held-out residual
+  disconfirmed (ECE 0.373), M365 tenancy corroboration ECE 0.048 / agreement
+  0.889, conformal coverage 0.999 at a 0.90 target. Does not upgrade the 80%
+  credible intervals to frequentist coverage.
+- Revised the email-policy calibration claim from "tier 4 residual" to the honest
+  full-corpus reading across statistical-assurance, roadmap, assurance-case,
+  related-work, and the paper drafts. Commit 826a517.
+- Bug-hunt round 1: fixed three boundary-unaware substring matches (lexical
+  region matcher, CT subdomain sort endswith, insight classifier), each with a
+  regression test. Commit 5d19c6f.
+- Bug-hunt round 2: fixed the retry transport returning a closed response on the
+  sleep-cap path, the `infra_graph` `dominant_issuer` nondeterminism (a
+  byte-identical-output violation), and DMARC whitespace-around-equals parsing,
+  each with a test. Commit d12b739.
+- QoL refine: accept trailing-dot FQDNs in the validator; corrected two stale
+  comments (`ct_cache` TTL, `discovery` brand-stem example). Commit 48de23b.
+- Reported but not auto-fixed (maintainer decision): `profiles` `signal_boost` is
+  inert (signal-name keys vs rendered statements); the cert early-stop heuristic;
+  SPF include-count overwrite on dual-SPF records; the `google_identity`
+  federated-redirect substring smell.
+- Docs currency: CHANGELOG Unreleased populated with the seven user-facing fixes;
+  this log and CURRENT-STATE-ANALYSIS updated; README input-forgiving line notes
+  trailing-dot.
+
 ## 2026-06-19
 
 - Added `scripts/check_text_hygiene.py` to scan added diff lines for

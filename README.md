@@ -184,7 +184,7 @@ recon mcp                                      # start MCP server (stdio)
 
 Built-in profiles: `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`. Custom profiles live in `~/.recon/profiles/*.yaml`.
 
-**Input is forgiving.** Paste a full browser URL, a `www.` host, or any sub-host: recon strips the scheme and path and reduces the target to its registrable apex, where the tenant, MX, and DMARC records live. It uses the Public Suffix List, so multi-label TLDs like `acme.co.uk` reduce correctly. Pass `--exact` when you specifically want DNS facts for the literal host you typed.
+**Input is forgiving.** Paste a full browser URL, a `www.` host, a trailing-dot FQDN, or any sub-host: recon strips the scheme, path, and root-label dot and reduces the target to its registrable apex, where the tenant, MX, and DMARC records live. It uses the Public Suffix List, so multi-label TLDs like `acme.co.uk` reduce correctly. Pass `--exact` when you specifically want DNS facts for the literal host you typed.
 
 **Shell completion.** recon ships tab-completion for the command tree and flags (via Typer). Install it for your current shell, or print the script to wire it up yourself:
 

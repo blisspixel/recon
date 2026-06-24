@@ -209,8 +209,14 @@ Current local verification in this session:
 
 The highest-priority active work is:
 
-1. Run the maintainer-local calibration bundle against the gitignored private
-   corpus, render aggregate-only memos, and commit only disclosure-safe metrics.
+1. Calibration corpus runs: DONE (2026-06). The maintainer-local bundle ran
+   against the private corpus at concurrency 2 (reference with held-out residual,
+   tenancy corroboration, per-vertical stratification, conformal). Aggregates are
+   in `validation/2026-06-23-full-corpus-calibration.md`; the honest reading
+   (email-policy node strongly calibrated but DMARC-anchored with the clean
+   residual disconfirmed; M365 tenancy corroborated) is folded into
+   `validation/reference-calibration.md` and `docs/statistical-assurance.md`. The
+   remaining optional pass is C3 (CT-enabled full corpus).
 2. Use the fingerprint and motif triage loop only as a reviewed proposal path
    backed by existing scan and gap outputs.
 3. Keep `docs/surface-inventory.json` and `docs/cli-surface.md` as derived
@@ -218,9 +224,10 @@ The highest-priority active work is:
 4. Treat the arXiv write-up as packaging and communication, off the critical
    path.
 
-This checkout does not currently contain `validation/corpus-private/`, so item 1
-cannot be completed end to end here without maintainer-local data. Work in this
-environment should therefore support that queue rather than bypass it.
+The private corpus is maintainer-local (gitignored here, accessed from a separate
+local copy for the run). Per the data-handling policy, only disclosure-safe
+aggregates are committed; no apexes, organization names, tenant IDs, or per-domain
+output leave the maintainer machine.
 
 ## Highest-Leverage Public-Tree Work
 
