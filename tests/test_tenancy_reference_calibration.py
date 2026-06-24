@@ -232,7 +232,7 @@ class TestJsonMain:
     def _patch_collect(self, monkeypatch) -> None:
         records = self._records()
 
-        async def _fake_collect(domains, *, timeout, skip_ct, concurrency):
+        async def _fake_collect(domains, *, timeout, skip_ct, concurrency, label="resolving"):
             return records, TenancyCounts(resolved=len(records))
 
         monkeypatch.setattr(tenancy, "collect", _fake_collect)
@@ -265,7 +265,7 @@ class TestJsonMain:
             for i in range(12)
         ]
 
-        async def _fake_collect(domains, *, timeout, skip_ct, concurrency):
+        async def _fake_collect(domains, *, timeout, skip_ct, concurrency, label="resolving"):
             return records, TenancyCounts(resolved=len(records))
 
         monkeypatch.setattr(tenancy, "collect", _fake_collect)

@@ -90,6 +90,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from validation.progress import gather_with_progress  # noqa: E402
 from validation.synthetic_calibration import (  # noqa: E402
     _brier,
     _expected_calibration_error,
@@ -307,10 +308,12 @@ async def _collect_one(
     )
 
 
-async def collect(domains: list[str], *, timeout: float, skip_ct: bool, concurrency: int) -> list[CalibrationPair]:
+async def collect(
+    domains: list[str], *, timeout: float, skip_ct: bool, concurrency: int, label: str = "resolving"
+) -> list[CalibrationPair]:
     sem = asyncio.Semaphore(concurrency)
     tasks = [_collect_one(d, timeout=timeout, skip_ct=skip_ct, sem=sem) for d in domains]
-    results = await asyncio.gather(*tasks)
+    results = await gather_with_progress(tasks, label=label)
     return [r for r in results if r is not None]
 
 
@@ -405,7 +408,9 @@ def _run_stratified(
         print(f"Calibrating per stratum over {len(files)} lists (aggregates only, no apex printed)...")
     strata_pairs: dict[str, list[CalibrationPair]] = {}
     for f in files:
-        pairs = asyncio.run(collect(_read_domains(f), timeout=timeout, skip_ct=True, concurrency=concurrency))
+        pairs = asyncio.run(
+            collect(_read_domains(f), timeout=timeout, skip_ct=True, concurrency=concurrency, label=f.stem)
+        )
         strata_pairs[f.stem] = pairs
     full_result = stratified_summary(
         {name: [p.full for p in pairs] for name, pairs in strata_pairs.items()}, min_cell=min_cell, bins=bins

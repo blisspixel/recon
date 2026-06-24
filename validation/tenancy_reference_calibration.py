@@ -91,6 +91,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from validation.progress import gather_with_progress  # noqa: E402
 from validation.reference_calibration import (  # noqa: E402
     CalibrationRecord,
     calibration_summary,
@@ -308,11 +309,11 @@ async def _collect_one(
 
 
 async def collect(
-    domains: list[str], *, timeout: float, skip_ct: bool, concurrency: int
+    domains: list[str], *, timeout: float, skip_ct: bool, concurrency: int, label: str = "resolving"
 ) -> tuple[list[TenancyRecord], TenancyCounts]:
     sem = asyncio.Semaphore(concurrency)
     tasks = [_collect_one(d, timeout=timeout, skip_ct=skip_ct, sem=sem) for d in domains]
-    raw = await asyncio.gather(*tasks)
+    raw = await gather_with_progress(tasks, label=label)
     records = [r for r in raw if r is not None]
     counts = TenancyCounts(
         resolved=len(records),
@@ -463,7 +464,7 @@ def _run_stratified(
     gws_all: list[float] = []
     for f in files:
         records, _counts = asyncio.run(
-            collect(_read_domains(f), timeout=timeout, skip_ct=True, concurrency=concurrency)
+            collect(_read_domains(f), timeout=timeout, skip_ct=True, concurrency=concurrency, label=f.stem)
         )
         strata[f.stem] = m365_calibration_records(records, full_pipeline=False)
         gws_all.extend(gws_attested_posteriors(records))

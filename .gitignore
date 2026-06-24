@@ -77,6 +77,9 @@ docs/accuracy.md
 # logic is unit-tested.
 !/validation/reference_calibration.py
 !/validation/reference-calibration.md
+# Shared resolve-sweep progress helper: a throttled stderr heartbeat for the
+# network harnesses (counts only, no target data). Pure async logic, unit-tested.
+!/validation/progress.py
 # Conformal-coverage harness: distribution-free split-conformal coverage on the
 # labelable nodes (pure logic plus a maintainer-local orchestration that prints
 # aggregates only). No target data; the pure logic is unit-tested.

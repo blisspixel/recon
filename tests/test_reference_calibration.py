@@ -212,7 +212,7 @@ class TestJsonMain:
         domains_file = tmp_path / "domains.txt"
         domains_file.write_text("contoso.com\nfabrikam.com\n", encoding="utf-8")
 
-        async def _fake_collect(domains, *, timeout, skip_ct, concurrency):
+        async def _fake_collect(domains, *, timeout, skip_ct, concurrency, label="resolving"):
             return self._pairs(20)
 
         monkeypatch.setattr(refcal, "collect", _fake_collect)
@@ -232,7 +232,7 @@ class TestJsonMain:
         domains_file = tmp_path / "domains.txt"
         domains_file.write_text("contoso.com\n", encoding="utf-8")
 
-        async def _fake_collect(domains, *, timeout, skip_ct, concurrency):
+        async def _fake_collect(domains, *, timeout, skip_ct, concurrency, label="resolving"):
             return []
 
         monkeypatch.setattr(refcal, "collect", _fake_collect)
@@ -245,7 +245,7 @@ class TestJsonMain:
         (tmp_path / "alpha.txt").write_text("contoso.com\n", encoding="utf-8")
         (tmp_path / "beta.txt").write_text("fabrikam.com\n", encoding="utf-8")
 
-        async def _fake_collect(domains, *, timeout, skip_ct, concurrency):
+        async def _fake_collect(domains, *, timeout, skip_ct, concurrency, label="resolving"):
             return self._pairs(12)
 
         monkeypatch.setattr(refcal, "collect", _fake_collect)
