@@ -109,6 +109,10 @@ docs/accuracy.md
 !/validation/2026-06-19-paper-reproduction-smoke.md
 !/validation/2026-06-19-crowdstrike-match-mode.md
 !/validation/2026-06-19-supabase-cname-target.md
+# Full-corpus calibration run (2026-06-23): aggregate-only memo rendered through
+# the disclosure-checked renderer. No apexes, org names, tenant IDs, or per-domain
+# rows; strata below 10 domains suppressed.
+!/validation/2026-06-23-full-corpus-calibration.md
 !/validation/2026-06-19-msedge-triad-motif.md
 # v2.1a: aggregate-state methodology example. Fully synthetic (fictional
 # brands, fabricated numbers); the reference reducer, generator, and synthetic

@@ -117,7 +117,7 @@ removes the DMARC bindings and scores the residual against the DMARC label is
 what would make the whole posterior tier 4. None of this generalizes to the
 hideable nodes, where no external reference exists.
 
-## The held-out residual (harness shipped; run pending)
+## The held-out residual (run complete, 2026-06-23)
 
 The clean construction the section above asks for now ships in the same
 harness: every run computes, beside the full posterior, a *held-out residual*
@@ -143,19 +143,41 @@ Two things to expect from the run, so the numbers are read honestly:
   (unit-tested), so no leakage path from label to predictor remains inside
   the inference.
 
-A maintainer-local run over the corpus fills in this section's numbers; the
-output's second block ("Held-out residual") is the one to copy here,
-aggregates only.
+### Result (full-corpus run, 2026-06-23)
+
+A maintainer-local run over the gitignored 5,241-domain corpus landed 2026-06-23
+(concurrency 2; aggregates in
+[2026-06-23-full-corpus-calibration.md](2026-06-23-full-corpus-calibration.md),
+per-domain pairings local). Pooled over n=2,905 domains with a published DMARC
+policy:
+
+- Full posterior: ECE 0.076, Brier 0.008, log-score 0.077, agreement 1.0;
+  empirical enforcing-rate matches the bin in every populated reliability bin;
+  stable across all 22 verticals (per-stratum ECE 0.065 to 0.098).
+- Held-out residual (DMARC masked): ECE 0.373, Brier 0.245, log-score 0.682,
+  agreement 0.189; per-stratum residual ECE 0.26 to 0.50.
+
+Read honestly, the residual is not only weak (it rarely crosses 0.5, so its
+agreement sits near the all-negative rate) but also *poorly calibrated* in the
+interior bins it populates. The strict-SPF + MTA-STS channel alone therefore does
+not independently predict enforcement; the node's strong full-posterior
+calibration is DMARC-anchored. The clean predictor/label-disjoint construction
+does not yield a clean tier-4 result for the residual, it disconfirms one. That
+is the modest, truthful reading, and it is more useful than the hoped-for clean
+number would have been.
 
 ## Status
 
-The harness, its unit tests, the full-posterior result above, and the
-held-out residual mode all ship. The statistical-assurance dossier records
-`email_security_policy_enforcing` as tier 4 for the strict-SPF + MTA-STS
-residual and an agreement check for the DMARC-driven bulk, not tier 4 for
-the whole posterior; the held-out residual *run* (the numbers for the
-section above) is what would make the residual claim clean, and it is the
-remaining step, together with the optional per-vertical stratification
-(does the calibration hold across industries), for which the `by-vertical/`
-corpus lists are the input (`--stratify-dir` now reports full and held-out
-blocks per stratum).
+The harness, its unit tests, the full-posterior result, the held-out residual
+mode, and the full-corpus run (2026-06-23, per-vertical stratification included)
+all ship. The run revises the residual claim *downward*, honestly: the
+strict-SPF + MTA-STS residual is shown weak and poorly calibrated, so it is not a
+clean tier-4 result. The defensible node-level claims from this run are (a) a
+strong but DMARC-anchored full-posterior calibration for
+`email_security_policy_enforcing` (ECE 0.076, stable across 22 verticals), and
+(b) a strong, channel-split M365 tenancy corroboration (DNS-only posterior vs
+provider attestation, ECE 0.048, agreement 0.889, n=3,309;
+[tenancy_reference_calibration.py](tenancy_reference_calibration.py)). The
+statistical-assurance dossier's prior "tier 4 for the strict-SPF + MTA-STS
+residual" line should be revised to match this disconfirmation; that edit is a
+maintainer-reviewed follow-up, not made here.
