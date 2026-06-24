@@ -189,6 +189,11 @@ stage. It tracks current `PLR0911`, `PLR0912`, `PLR0913`, and `PLR0915` counts
 as ceilings, blocking new function-size debt while allowing the existing debt to
 be reduced deliberately.
 
+The file-size ratchet also tightened after the 2026-06-24 full gate reported
+earned shrinkage: `exposure.py` is now capped at 981 lines and `merger.py` at
+955 lines. `formatter.py` remains deliberately large and capped at its existing
+2164-line ceiling.
+
 ## Validation State
 
 The public tree already contains substantial assurance:

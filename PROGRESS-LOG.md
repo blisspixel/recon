@@ -63,6 +63,10 @@ review. Local gate (`scripts/check.py`) green throughout; external spend 0 USD.
 - Full local gate passed with `uv run python scripts/check.py`: 3550 passed, 5
   skipped, 4 deselected, total coverage 86.57 percent. All gate stages passed.
   External spend remained 0 USD.
+- Followed up on the full-gate file-size nudge by running
+  `uv run python scripts/check_file_size.py --update`. The guard only lowered
+  ceilings: `exposure.py` 983 to 981 and `merger.py` 958 to 955. Local
+  `check_file_size.py` and text hygiene passed afterward.
 
 ## 2026-06-19
 

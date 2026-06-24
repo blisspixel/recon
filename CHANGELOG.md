@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - No runtime CLI command or flag changes.
 
+### Changed
+
+- **The file-size ratchet tightened for two already-shrunk modules.**
+  `scripts/check_file_size.py` now locks `exposure.py` at 981 lines and
+  `merger.py` at 955 lines, preserving the shrinkage reported by the full local
+  gate.
+
 ### Fixed
 
 - **MCP setup guidance now matches the safe installer fallback.** `recon doctor
