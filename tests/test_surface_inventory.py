@@ -156,6 +156,22 @@ def test_surface_inventory_has_agent_surfaces() -> None:
     assert packet_files["docs/agentic-balance.md"]["role"] == "rules_vs_agentic_boundary"
 
 
+def test_agent_guidance_uses_current_schema_contract() -> None:
+    guidance_paths = [
+        ROOT / "AGENTS.md",
+        ROOT / "agents" / "claude-code" / "skills" / "recon" / "SKILL.md",
+    ]
+
+    for path in guidance_paths:
+        text = path.read_text(encoding="utf-8")
+        assert "stable v2.0 contract" in text
+        assert "v1.0 contract" not in text
+
+    skill_path = ROOT / "agents" / "claude-code" / "skills" / "recon" / "SKILL.md"
+    schema_link = skill_path.parent / "../../../../docs/recon-schema.json"
+    assert schema_link.resolve().exists()
+
+
 def test_surface_inventory_is_ascii_and_target_free() -> None:
     rendered = cast(str, GENERATOR.render_inventory_json())
     parsed = json.loads(rendered)

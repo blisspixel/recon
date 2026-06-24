@@ -61,10 +61,10 @@ Two fixes — both apply equally to every shipped `mcp.json`:
    ```json
    { "command": "/Users/you/.local/bin/recon", "args": ["mcp"] }
    ```
-2. **Use the Python module form.** Works for any Python that has `recon-tool` installed:
-   ```json
-   { "command": "/usr/local/bin/python3", "args": ["-m", "recon_tool.server"] }
-   ```
+2. **Rerun the installer from the right Python.** If `recon` is not on PATH,
+   `recon mcp install --client=<name> --force` writes a sys.path-stripping
+   Python fallback. Prefer that over hand-writing `python -m recon_tool.server`
+   in workspace configs.
 
 Run `recon doctor --mcp` in your shell to confirm recon is reachable; it prints copy-pasteable JSON snippets for several supported clients. For a live JSON-RPC handshake check (does the server actually respond?), run `recon mcp doctor`.
 

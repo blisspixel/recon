@@ -44,6 +44,25 @@ review. Local gate (`scripts/check.py`) green throughout; external spend 0 USD.
 - Docs currency: CHANGELOG Unreleased populated with the seven user-facing fixes;
   this log and CURRENT-STATE-ANALYSIS updated; README input-forgiving line notes
   trailing-dot.
+- 2026-06-24 external best-practices refresh: checked current MCP, OWASP
+  agent-skill, OWASP agent-security, GitHub attestation, and SLSA guidance.
+  The actionable local gap was not a new runtime feature, but stale MCP
+  launch guidance around hand-written `python -m recon_tool.server`.
+- Aligned `recon doctor --mcp` with the installer so the copy-paste config uses
+  the sys.path-stripping Python fallback when `recon` is off PATH.
+- Added `recon doctor --client` warning coverage for unisolated Python module
+  launch blocks in client configs.
+- Updated MCP and per-agent setup docs to prefer `recon mcp install` or an
+  absolute `recon` script path, and fixed the Claude Code skill's schema
+  wording and relative link to the stable v2.0 contract.
+- Focused validation passed:
+  `uv run python -m pytest tests/test_doctor.py tests/test_doctor_client.py tests/test_mcp_path_isolation.py tests/test_surface_inventory.py -q`
+  with 53 passed, 2 skipped;
+  `uv run python -m ruff check ...` passed; and
+  `python scripts/check_text_hygiene.py` passed.
+- Full local gate passed with `uv run python scripts/check.py`: 3550 passed, 5
+  skipped, 4 deselected, total coverage 86.57 percent. All gate stages passed.
+  External spend remained 0 USD.
 
 ## 2026-06-19
 

@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **MCP setup guidance now matches the safe installer fallback.** `recon doctor
+  --mcp` emits the same sys.path-stripping Python fallback that `recon mcp
+  install` writes when `recon` is not on PATH, and `recon doctor --client`
+  warns on hand-written `python -m recon_tool.server` launch blocks in client
+  configs. The agent setup docs now prefer the installer or an absolute `recon`
+  script path, and the Claude Code skill points at the stable v2.0 JSON
+  contract with a valid schema link.
 - **DMARC policy with whitespace around `=` is now parsed.** A spec-legal
   `p = reject` (RFC 7489 / 6376 tag syntax permits whitespace around `=`) was
   dropped, silently understating the email-security posture. The parser now

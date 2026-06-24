@@ -224,8 +224,12 @@ rules are in [release-process.md](release-process.md#version-numbering).
   pictographic symbols. The current lockfile also folds in the grouped
   dependency-currency update: `mcp` 1.28.0,
   `publicsuffixlist` 1.0.2.20260615, and the latest dev toolchain patch line,
-  with a Pyright 1.1.410 socket-address type fix in the HTTP SSRF guard. The
-  remaining order is private-corpus
+  with a Pyright 1.1.410 socket-address type fix in the HTTP SSRF guard. Current
+  `main` also aligns MCP setup guidance and diagnostics with the installer
+  fallback: `doctor --mcp` emits the same sys.path-stripping Python launcher
+  that `recon mcp install` writes when `recon` is not on PATH, and
+  `doctor --client` warns on hand-written `python -m recon_tool.server` client
+  configs. The remaining order is private-corpus
   calibration runs, aggregate-only validation memos, optional reviewed
   maintainer loops around those deterministic gates, and the decision whether
   the derived inventory ever becomes a stable surface. These are

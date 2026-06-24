@@ -153,3 +153,10 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - Before pushing a local commit stack, run release readiness so every
   `origin/main..HEAD` commit message is checked for attribution markers, em
   dashes, and pictographic symbols, not only the latest commit.
+- For MCP client launch guidance, keep docs aligned with `mcp_install`.
+  Prefer `recon mcp install` or an absolute `recon` script path. Treat
+  hand-written `python -m recon_tool.server` in workspace configs as a
+  trusted-cwd fallback, because Python imports through cwd before recon can
+  run its server-side guard.
+- If `doctor --mcp` prints a copy-paste config, build it from the installer
+  block rather than duplicating launch JSON by hand.

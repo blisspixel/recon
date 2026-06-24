@@ -38,7 +38,7 @@ The install merges into existing `mcpServers` without touching siblings; `--forc
 | Project | `.cursor/mcp.json` |
 | Global | `~/.cursor/mcp.json` |
 
-**macOS PATH gotcha.** Cursor is a GUI Electron app and does not inherit your shell's PATH. If `command: "recon"` fails to launch the server, replace it with the absolute path (`which recon` in your shell) or the Python module form (`{ "command": "/usr/local/bin/python3", "args": ["-m", "recon_tool.server"] }`). The install command auto-detects this case and falls back to the Python module form when `recon` isn't on PATH at install time.
+**macOS PATH gotcha.** Cursor is a GUI Electron app and does not inherit your shell's PATH. If `command: "recon"` fails to launch the server, rerun `recon mcp install --client=cursor --force` from the Python environment where recon is installed, or replace it with the absolute `recon` script path from `which recon`. The install command writes a sys.path-stripping Python fallback when `recon` is not on PATH at install time; prefer that over hand-writing `python -m recon_tool.server` in a workspace config.
 
 ## 3. Wire the agent guidance
 

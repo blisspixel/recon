@@ -117,7 +117,7 @@ recon "<domain>" --full --json
 In this mode, **do not dump the JSON inline.** Output is typically 3–10 KB depending on org size and consumes context for no benefit. Instead:
 
 1. Capture stdout from the Bash call. Use your file-write tool to save it to `recon-<validated-domain>.json` in the current working directory (or a path the user specifies). Never substitute the unvalidated domain into a shell redirect.
-2. Reply with a 3-line headline only (field names per [`docs/recon-schema.json`](../../../docs/recon-schema.json) v1.0 contract):
+2. Reply with a 3-line headline only (field names per the stable v2.0 contract in [`docs/recon-schema.json`](../../../../docs/recon-schema.json)):
    > **{display_name}** — {provider}, confidence {confidence}.
    > {N services detected, {ct_subdomain_count} CT subdomains, email security {email_security_score}/5}.
    > Full JSON saved to `recon-{domain}.json`. Ready for the next ask.

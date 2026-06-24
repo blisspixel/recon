@@ -165,7 +165,8 @@ def _command_checks(block: dict[str, object]) -> list[ClientCheck]:
                     "command",
                     "warn",
                     "bare 'recon' but recon is not on this machine's PATH. GUI clients often do not "
-                    "inherit your shell PATH; use an absolute path or the python -m recon_tool.server form.",
+                    "inherit your shell PATH; use an absolute path or rerun `recon mcp install` so the "
+                    "installer writes its sys.path-stripping Python fallback.",
                 )
             )
     else:
@@ -201,6 +202,15 @@ def _command_checks(block: dict[str, object]) -> list[ClientCheck]:
     args = block.get("args")
     if isinstance(args, list) and args:
         checks.append(ClientCheck("args", "ok", json.dumps(args)))
+        if _uses_unisolated_python_module_launcher(command, args):
+            checks.append(
+                ClientCheck(
+                    "launcher isolation",
+                    "warn",
+                    "`python -m recon_tool.server` imports through cwd before recon can strip sys.path. "
+                    "Prefer `recon mcp install` or an absolute `recon` script path for untrusted workspaces.",
+                )
+            )
     else:
         checks.append(ClientCheck("args", "warn", 'missing or empty; expected something like ["mcp"]'))
 
@@ -214,6 +224,22 @@ def _command_checks(block: dict[str, object]) -> list[ClientCheck]:
             checks.append(ClientCheck("autoApprove", "info", "empty; every tool call needs manual approval"))
 
     return checks
+
+
+def _uses_unisolated_python_module_launcher(command: object, args: list[object]) -> bool:
+    """Return true for the hand-written Python module launch form.
+
+    The installer fallback uses ``python -c`` with a path-stripping
+    launcher. The ``python -m recon_tool.server`` form can still be
+    useful in a trusted shell, but client configs are often workspace
+    files, so the doctor surfaces it as a warning.
+    """
+    if not isinstance(command, str):
+        return False
+    basename = PureWindowsPath(command).name.lower()
+    if not basename.startswith("python"):
+        return False
+    return len(args) >= 2 and args[0] == "-m" and args[1] == "recon_tool.server"
 
 
 _CLAUDE_CODE_NOTES: tuple[str, ...] = (

@@ -29,7 +29,7 @@ recon mcp install --client=kiro --scope=workspace  # writes .kiro/settings/mcp.j
 recon mcp install --client=kiro --dry-run        # preview
 ```
 
-The install auto-detects whether `recon` is on PATH and falls back to `python -m recon_tool.server` when it's not (rare on Kiro, more common in sandboxed setups). Sibling MCP servers and any custom fields you've added to your recon block are preserved.
+The install auto-detects whether `recon` is on PATH and writes a sys.path-stripping Python fallback when it is not (rare on Kiro, more common in sandboxed setups). Sibling MCP servers and any custom fields you've added to your recon block are preserved.
 
 **Manual install:** drop [`mcp.json`](mcp.json) at one of:
 
@@ -38,7 +38,7 @@ The install auto-detects whether `recon` is on PATH and falls back to `python -m
 | Workspace | `.kiro/settings/mcp.json` |
 | Global | `~/.kiro/settings/mcp.json` |
 
-The shipped config sets `command: "recon"`. If `recon` is not on Kiro's launcher PATH, edit the file to use the absolute binary path or the Python module form — both alternatives are documented in [`../claude-code/README.md`](../claude-code/README.md#choosing-the-mcp-launch-command).
+The shipped config sets `command: "recon"`. If `recon` is not on Kiro's launcher PATH, rerun `recon mcp install --client=kiro --force` from the Python environment where recon is installed, or edit the file to use the absolute `recon` script path. The safer launcher tradeoff is documented in [`../claude-code/README.md`](../claude-code/README.md#choosing-the-mcp-launch-command).
 
 ## 3. Wire the agent guidance
 

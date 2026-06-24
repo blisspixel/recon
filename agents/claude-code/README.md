@@ -92,20 +92,22 @@ If the tools do not appear after install, the cause is almost always that Claude
 
 The shipped file uses the wrapped `{ "mcpServers": { "recon": { ... } } }` form. That is the correct schema for a plugin-bundled `.mcp.json`, the same shape a project-root `.mcp.json` and `~/.claude.json` use ([Claude Code MCP docs](https://code.claude.com/docs/en/mcp)). If you have seen flat, unwrapped entries elsewhere, those are most likely the client's enabled-servers list rather than a plugin config.
 
-The shipped `.mcp.json` uses `command: "recon"`, which works for anyone who pip-installed `recon-tool` globally. If `recon` is not on the launcher's PATH (rare for Claude Code, more common for sandboxed environments), pick one of these alternatives by editing your local copy of `.mcp.json`:
+The shipped `.mcp.json` uses `command: "recon"`, which works for anyone who pip-installed `recon-tool` globally. If `recon` is not on the launcher's PATH (rare for Claude Code, more common for sandboxed environments), prefer one of these paths:
+
+1. Rerun `recon mcp install --client=claude-code --force` from the Python environment where recon is installed. If `recon` is still not on PATH, the installer writes a sys.path-stripping Python fallback.
+2. Edit your local copy of `.mcp.json` to use the absolute path to the installed `recon` script.
 
 ```jsonc
-// (a) Python module form — works when recon_tool is installed in the python on PATH.
 {
   "mcpServers": {
     "recon": {
-      "command": "python",
-      "args": ["-m", "recon_tool.server"]
+      "command": "/absolute/path/to/recon",
+      "args": ["mcp"]
     }
   }
 }
 
-// (b) uvx form — no pre-install needed; uv fetches recon-tool from PyPI.
+// uvx form, no pre-install needed; uv fetches recon-tool from PyPI.
 //     Note the --from flag: the package is recon-tool, the script is recon.
 {
   "mcpServers": {
@@ -117,7 +119,7 @@ The shipped `.mcp.json` uses `command: "recon"`, which works for anyone who pip-
 }
 ```
 
-Use the absolute path to your Python or `uvx` binary if neither is on PATH for the launcher.
+Use the absolute path to your `recon` or `uvx` binary if neither is on PATH for the launcher. Avoid hand-writing `python -m recon_tool.server` in plugin or workspace configs unless the working directory is trusted; Python imports through cwd before recon can run its server-side guard, so the installer uses a `-c` launcher that strips cwd-equivalent entries from `sys.path` first.
 
 ## Approval policy
 

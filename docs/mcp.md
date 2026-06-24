@@ -49,8 +49,11 @@ pip install recon-tool
    }
    ```
 
-   > Alternative: use `"command": "python", "args": ["-m", "recon_tool.server"]`
-   > if `recon` is not on your PATH.
+   > If `recon` is not on your PATH, prefer `recon mcp install` or an
+   > absolute path to the `recon` script. The installer writes a
+   > sys.path-stripping Python fallback when needed; avoid hand-writing
+   > `python -m recon_tool.server` in workspace configs unless the
+   > working directory is trusted.
 
 3. Ask your AI tool something like: "Run a recon lookup on
 northwindtraders.com and summarize the security posture."
@@ -358,18 +361,20 @@ One format note: VS Code's `.vscode/mcp.json` maps server names under a top-leve
 
 ### PATH gotcha for GUI clients
 
-GUI MCP clients (Claude Desktop, Windsurf, Cursor, VS Code) typically don't inherit your shell's PATH. If a client can't find `recon`, replace `"command": "recon"` with the absolute path (run `which recon` / `where recon` to find it), or use the Python module form:
+GUI MCP clients (Claude Desktop, Windsurf, Cursor, VS Code) typically don't inherit your shell's PATH. If a client can't find `recon`, first run `recon mcp install --client=<name> --force` from the Python environment where recon is installed. The installer writes an absolute `recon` path when it can find one, or a sys.path-stripping Python fallback when it cannot. If you edit by hand, prefer the absolute path to the `recon` script (run `which recon` / `where recon` to find it):
 
 ```json
 {
   "mcpServers": {
     "recon": {
-      "command": "/absolute/path/to/python",
-      "args": ["-m", "recon_tool.server"]
+      "command": "/absolute/path/to/recon",
+      "args": ["mcp"]
     }
   }
 }
 ```
+
+The shorter `python -m recon_tool.server` form is acceptable only from a trusted working directory. Python imports through cwd before recon can run its server-side guard, which is why the installer uses the `-c` launcher instead.
 
 ### Verify your setup
 

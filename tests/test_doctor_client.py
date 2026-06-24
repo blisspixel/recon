@@ -129,6 +129,9 @@ class TestCheckClient:
         # load in a client that resolves a different PATH.
         assert report.ok
         assert _statuses(report)["command"] == "warn"
+        command = next(c for c in report.checks if c.name == "command")
+        assert "sys.path-stripping Python fallback" in command.detail
+        assert "python -m recon_tool.server form" not in command.detail
 
     def test_missing_command_fails(self, home: Path) -> None:
         _write(home / ".claude.json", {"mcpServers": {"recon": {"args": ["mcp"]}}})
@@ -136,13 +139,28 @@ class TestCheckClient:
         assert not report.ok
         assert _statuses(report)["command"] == "fail"
 
-    def test_python_module_command_ok(self, home: Path, recon_off_path: None) -> None:
+    def test_python_module_command_warns_about_launcher_isolation(self, home: Path, recon_off_path: None) -> None:
         _write(
             home / ".claude.json",
             {"mcpServers": {"recon": {"command": "python", "args": ["-m", "recon_tool.server"]}}},
         )
         report = check_client("claude-code", platform_name="linux")
         assert _statuses(report)["command"] == "ok"
+        isolation = next(c for c in report.checks if c.name == "launcher isolation")
+        assert isolation.status == "warn"
+        assert "sys.path" in isolation.detail
+        assert "recon mcp install" in isolation.detail
+
+    def test_installer_fallback_command_has_no_launcher_isolation_warning(
+        self, home: Path, recon_off_path: None
+    ) -> None:
+        _write(
+            home / ".claude.json",
+            {"mcpServers": {"recon": {"command": "python", "args": ["-c", "import sys; print('safe')"]}}},
+        )
+        report = check_client("claude-code", platform_name="linux")
+        assert _statuses(report)["command"] == "ok"
+        assert "launcher isolation" not in _statuses(report)
 
     def test_autoapprove_populated_is_info(self, home: Path, recon_on_path: None) -> None:
         _write(

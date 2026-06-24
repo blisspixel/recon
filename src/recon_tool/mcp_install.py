@@ -21,12 +21,13 @@ Design notes:
 - Per-OS user paths only where the client has a documented user-level
   config. Workspace-scoped clients (VS Code) only support
   `--scope workspace`.
-- The block we write matches the canonical example in README.md:
+- The preferred block matches the canonical example in README.md:
   `{"command": "recon", "args": ["mcp"], "autoApprove": []}`. If
-  `recon` isn't on PATH at install time we fall back to
-  `{"command": "<sys.executable>", "args": ["-m", "recon_tool.server"]}`
-  so GUI clients (Claude Desktop, Windsurf) that don't inherit the
-  shell PATH still work.
+  `recon` is not on PATH at install time, we persist a Python
+  `-c` launcher that strips cwd-equivalent entries from `sys.path`
+  before importing `recon_tool`, so GUI clients that do not inherit
+  shell PATH still work without exposing the `python -m` cwd-shadow
+  attack pattern.
 """
 
 from __future__ import annotations

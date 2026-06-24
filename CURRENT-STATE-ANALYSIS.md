@@ -66,15 +66,14 @@ The current active line is v2.2.x. The roadmap says the next work is
 dependency-ordered, not date-driven.
 
 Current maintainer-loop deltas from 2026-06-19 include generated surface
-  inventory checks, the `recon://surface-inventory` local discovery resource,
-  PR-scoped ClusterFuzzLite parser-boundary fuzzing, public paper-number
-  reproduction tooling, shared
-  validation-runner path-containment hardening, calibration corpus-shape
-  preflight, the optional maintainer-loop runbook, nested schema drift
-  hardening, advisory diff coverage, local-stack commit hygiene, the PLR
-  size-rule ratchet, cache edge coverage,
-  high-value-target baseline expectations, and a first production
-  `match_mode: all` fingerprint for CrowdStrike TXT evidence. The public
+inventory checks, the `recon://surface-inventory` local discovery resource,
+PR-scoped ClusterFuzzLite parser-boundary fuzzing, public paper-number
+reproduction tooling, shared validation-runner path-containment hardening,
+calibration corpus-shape preflight, the optional maintainer-loop runbook,
+nested schema drift hardening, advisory diff coverage, local-stack commit
+hygiene, the PLR size-rule ratchet, cache edge coverage, high-value-target
+baseline expectations, and a first production `match_mode: all` fingerprint for
+CrowdStrike TXT evidence. The public
 catalog-growth queue also now includes a Supabase CNAME target sourced from the
 official custom-domain docs, with the generic ACME TXT challenge deliberately
 kept out of scope. The motif queue now includes a complete Microsoft internal
@@ -85,6 +84,17 @@ signal explanation tool, the simple ephemeral-fingerprint session tools, the
 graph data tools, the compact agent-facing posture helpers, and the posterior
 readout, exposure report tools, discovery candidate list, posture analysis
 variants, and cached-domain re-evaluation lookup record.
+
+The 2026-06-24 external best-practice refresh checked current MCP security and
+tool-output guidance, OWASP agent and skill guidance, SLSA provenance levels,
+and GitHub artifact-attestation guidance. No new runtime surface is warranted:
+the local stdio MCP shape, deterministic core, data-not-instructions boundary,
+manual approval posture, structured tool output, and signed-release track remain
+aligned. The actionable public-tree gap was stale MCP launch guidance that still
+made hand-written `python -m recon_tool.server` configs look normal. The
+installer already emits a sys.path-stripping Python fallback when `recon` is not
+on PATH; `doctor --mcp`, `doctor --client`, `docs/mcp.md`, agent setup docs, and
+the Claude Code skill now describe and test that safer path.
 
 ## Hard Constraints
 
@@ -201,8 +211,11 @@ The public tree already contains substantial assurance:
 Current local verification in this session:
 
 - `uv run python scripts/check.py` passed.
-- Coverage was 86.49 percent, above the 82 percent configured gate.
-- Tests: 3507 passed, 5 skipped, 4 deselected.
+- Coverage was 86.57 percent, above the 82 percent configured gate.
+- Tests: 3550 passed, 5 skipped, 4 deselected.
+- Focused MCP launch-guidance validation passed:
+  `uv run python -m pytest tests/test_doctor.py tests/test_doctor_client.py tests/test_mcp_path_isolation.py tests/test_surface_inventory.py -q`
+  with 53 passed and 2 skipped.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -262,6 +275,28 @@ One disclosure-boundary hardening also shipped in the public tree:
 
 - `validation/render_calibration_memo.py` rejects target-looking domain names in
   aggregate JSON keys and memo titles, not only JSON values.
+
+## MCP Launch Guidance Alignment
+
+The current MCP security posture is local-first and stdio-first. Local MCP
+servers are executable code, so operator guidance should make the launched
+command explicit and should avoid workspace-dependent import behavior when a
+safer generated config is available. The installer path is now the source of
+truth:
+
+- `recon mcp install` prefers the `recon mcp` command when the script is on
+  PATH.
+- If the script is not on PATH, it writes a Python `-c` launcher that strips
+  cwd-equivalent entries from `sys.path` before importing `recon_tool`.
+- `recon doctor --mcp` emits that same generated fallback instead of a stale
+  `python -m recon_tool.server` block.
+- `recon doctor --client` warns when a client config uses the unisolated module
+  launcher directly.
+- Agent setup docs and the Claude Code skill now match the stable v2.0 schema
+  contract and the installer behavior.
+
+This is patch-level hardening. It does not change the runtime protocol,
+fingerprint catalog, inference model, JSON shape, or MCP tool set.
 
 ## Reproducibility Entry Point
 

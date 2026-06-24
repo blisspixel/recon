@@ -8,6 +8,7 @@ facade. Imports the shared cli helpers / formatter; never imports cli.py.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import Any, Literal, TypeAlias
@@ -138,17 +139,20 @@ def doctor_mcp() -> None:
     except Exception as exc:
         checks.append(("Tools enumerated", False, f"{exc}"))
 
-    # 5. recon executable on PATH (important for GUI clients)
+    # 5. recon executable on PATH (important for short GUI-client configs)
     recon_path = shutil.which("recon")
     if recon_path:
         checks.append(("recon on PATH", True, recon_path))
     else:
-        checks.append(("recon on PATH", False, "not found — GUI clients will fail"))
+        checks.append(("recon on PATH", True, f"not found; generated config will use {sys.executable} fallback"))
 
     _render_mcp_checks(checks)
 
-    # Emit copy-pasteable config
-    cmd = recon_path if recon_path else "recon"
+    # Emit copy-pasteable config. Keep this in sync with the installer
+    # rather than hand-writing a stale launch block.
+    from recon_tool.mcp_install import build_recon_block, warn_if_fallback
+
+    recon_block = build_recon_block()
     console.print()
     console.print(
         "  [yellow]Security note:[/yellow] `recon mcp` runs with the privileges of\n"
@@ -163,25 +167,18 @@ def doctor_mcp() -> None:
     console.print("  [dim]# VS Code + Copilot: <project>/.vscode/mcp.json[/dim]")
     console.print("  [dim]# Windsurf: ~/.codeium/windsurf/mcp_config.json[/dim]")
     console.print()
-    snippet = (
-        "  {\n"
-        '    "mcpServers": {\n'
-        '      "recon": {\n'
-        f'        "command": "{cmd}",\n'
-        '        "args": ["mcp"],\n'
-        '        "autoApprove": []\n'
-        "      }\n"
-        "    }\n"
-        "  }"
-    )
-    console.print(snippet)
+    snippet = json.dumps({"mcpServers": {"recon": recon_block}}, indent=2)
+    for line in snippet.splitlines():
+        console.print(f"  {line}")
     console.print()
-    if not recon_path:
+
+    fallback_warning = warn_if_fallback()
+    if fallback_warning is not None:
         console.print(
             "  [yellow]Tip:[/yellow] GUI clients (Claude Desktop, Windsurf) often don't\n"
-            "  inherit your shell PATH. If the client can't find `recon`, replace\n"
-            "  the command above with the absolute path printed by `which recon`\n"
-            f"  (or `python -m recon_tool.server` via `{sys.executable}`)."
+            "  inherit your shell PATH. The config above uses recon's safe\n"
+            "  sys.path-stripping Python fallback. For a shorter config, add\n"
+            "  `recon` to PATH and rerun `recon doctor --mcp`."
         )
         console.print()
 

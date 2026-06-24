@@ -28,7 +28,7 @@ recon mcp install --client=windsurf             # writes the per-OS config path
 recon mcp install --client=windsurf --dry-run   # preview without writing
 ```
 
-The install auto-resolves the per-OS path (macOS/Linux: `~/.codeium/windsurf/mcp_config.json`, Windows: `%USERPROFILE%\.codeium\windsurf\mcp_config.json`) and falls back to `python -m recon_tool.server` if `recon` isn't on PATH at install time — which neatly sidesteps the macOS GUI PATH issue below.
+The install auto-resolves the per-OS path (macOS/Linux: `~/.codeium/windsurf/mcp_config.json`, Windows: `%USERPROFILE%\.codeium\windsurf\mcp_config.json`) and writes a sys.path-stripping Python fallback if `recon` is not on PATH at install time, which sidesteps the macOS GUI PATH issue below.
 
 **Manual install:** drop [`mcp_config.json`](mcp_config.json) at:
 
@@ -37,7 +37,7 @@ The install auto-resolves the per-OS path (macOS/Linux: `~/.codeium/windsurf/mcp
 | macOS / Linux | `~/.codeium/windsurf/mcp_config.json` |
 | Windows | `%USERPROFILE%\.codeium\windsurf\mcp_config.json` |
 
-**macOS PATH gotcha.** Windsurf is a GUI Electron app and does not inherit your shell's PATH. If `command: "recon"` fails to launch the server, replace it with the absolute path (`which recon` in your shell) or the Python module form (`{ "command": "/usr/local/bin/python3", "args": ["-m", "recon_tool.server"] }`).
+**macOS PATH gotcha.** Windsurf is a GUI Electron app and does not inherit your shell's PATH. If `command: "recon"` fails to launch the server, rerun `recon mcp install --client=windsurf --force` from the Python environment where recon is installed, or replace it with the absolute `recon` script path from `which recon`. Prefer the installer fallback over hand-writing `python -m recon_tool.server` in the client config.
 
 ## 3. Wire the agent guidance
 

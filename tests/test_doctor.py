@@ -93,6 +93,21 @@ class TestDoctorCommandHappyPath:
         # When the contract holds, the row reports the count of locked fields.
         assert f"{len(REQUIRED_TOP_LEVEL_FIELDS)} locked top-level fields present" in result.output
 
+    def test_doctor_mcp_emits_safe_fallback_when_recon_is_off_path(self, monkeypatch) -> None:
+        def _no_recon_on_path(_name: str) -> str | None:
+            return None
+
+        monkeypatch.setattr("shutil.which", _no_recon_on_path)
+
+        result = runner.invoke(app, ["doctor", "--mcp"])
+
+        assert result.exit_code == 0
+        assert '"args": [' in result.output
+        assert '"-c",' in result.output
+        assert '"PYTHONSAFEPATH": "1"' in result.output
+        assert "python -m recon_tool.server" not in result.output
+        assert "sys.path-stripping Python fallback" in result.output
+
 
 class TestDoctorCommandFailures:
     """When various probes fail, doctor reports them and continues."""

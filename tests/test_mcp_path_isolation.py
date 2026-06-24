@@ -173,6 +173,31 @@ class TestMcpInstallPersistsSafeEnv:
 
         assert warn_if_fallback() is None
 
+    def test_operator_docs_name_safe_installer_fallback(self):
+        docs = [
+            Path("docs/mcp.md"),
+            Path("agents/README.md"),
+            Path("agents/cursor/README.md"),
+            Path("agents/kiro/README.md"),
+            Path("agents/windsurf/README.md"),
+            Path("agents/vscode/README.md"),
+            Path("agents/claude-code/README.md"),
+        ]
+
+        for path in docs:
+            text = path.read_text(encoding="utf-8")
+            assert "sys.path-stripping" in text, f"{path} should mention the safe installer fallback"
+
+        stale_phrases = (
+            "falls back to `python -m recon_tool.server`",
+            "falls back to the Python module form",
+            "or the Python module form",
+        )
+        for path in docs:
+            text = path.read_text(encoding="utf-8")
+            for phrase in stale_phrases:
+                assert phrase not in text, f"{path} still recommends stale fallback wording"
+
 
 # ── Layer 3: server-side runtime guard ─────────────────────────────
 
