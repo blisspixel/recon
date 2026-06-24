@@ -1,7 +1,7 @@
 """Per-domain CT subdomain cache.
 
 Stores CT provider results as JSON files in {Config_Dir}/ct-cache/.
-One file per domain, seven-day default TTL, lazy eviction via mtime.
+One file per domain, 30-day default TTL, lazy eviction via mtime.
 All I/O wrapped in try/except — never raises to caller.
 
 Separate from the main TenantInfo cache (cache.py): the CT cache stores

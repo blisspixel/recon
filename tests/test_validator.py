@@ -40,6 +40,13 @@ class TestValidateDomain:
         # sub-host (see test_subdomain_exact_preserves_host).
         assert validate_domain("www.contoso.com", apex=False) == "contoso.com"
 
+    def test_trailing_dot_fqdn_normalized(self):
+        # An absolute FQDN with a trailing root-label dot is a common paste
+        # form; it normalizes like the apex without the dot.
+        assert validate_domain("contoso.com.") == "contoso.com"
+        assert validate_domain("mail.contoso.com.") == "contoso.com"
+        assert validate_domain("https://contoso.com./path") == "contoso.com"
+
     def test_public_suffix_input_falls_back_to_host(self):
         # A bare public suffix has no registrable part above it; rather than
         # returning None, to_apex falls back to the validated host so the
@@ -159,10 +166,6 @@ class TestValidateDomain:
     def test_consecutive_dots_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
             validate_domain("contoso..com")
-
-    def test_trailing_dot_raises(self):
-        with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain("contoso.com.")
 
     def test_leading_dot_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):

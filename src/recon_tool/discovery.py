@@ -47,7 +47,7 @@ def is_intra_org(apex: str, terminal: str) -> bool:
 
 
 # Second-level public suffixes that aren't a brand label. Skipped when
-# extracting the apex's brand stem so ``contoso.co.uk`` → "bbc" and
+# extracting the apex's brand stem so ``contoso.co.uk`` → "contoso" and
 # ``contoso.co.jp`` → "contoso" instead of "co".
 _SECOND_LEVEL_PUBLIC: frozenset[str] = frozenset(
     {"co", "com", "ac", "org", "net", "gov", "edu", "ne", "or", "go", "mil", "biz"}

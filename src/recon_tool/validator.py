@@ -156,6 +156,12 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
     # Normalize to lowercase
     domain = domain.lower()
 
+    # Strip a trailing root-label dot. An absolute FQDN like "example.com." is a
+    # common paste form; dropping the dot normalizes it the same way the scheme,
+    # www, and port artifacts above are handled, instead of failing the format
+    # check on the stray dot. An all-dots string reduces to "" and still fails.
+    domain = domain.rstrip(".")
+
     # Strip www. prefix — people paste URLs from browsers, and www.example.com
     # is never the domain you want for tenant/DNS lookups. The zone apex
     # (example.com) is where TXT verification records and MX records live. This
