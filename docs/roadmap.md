@@ -13,12 +13,16 @@ why the version number now climbs slowly and deliberately. The committed
 post-2.0 assurance track is **complete**; what is left is operator-paced or
 standing, in dependency order:
 
-1. **Run the calibration corpus passes** (maintainer-local, aggregate-only,
-   patch-level). *Why:* the harnesses are built and unit-tested but not yet run
-   against the private corpus. Running them is what would upgrade the
-   load-bearing 80% intervals from *evidence-responsive* to *empirically
-   covered* and close the one tier-4 calibration gap. No code is blocked on
-   this; it is collection, not construction.
+1. **Calibration corpus passes** (maintainer-local, aggregate-only,
+   patch-level). *Done (2026-06):* the core runs landed against the private
+   corpus (aggregates in
+   `validation/2026-06-23-full-corpus-calibration.md`), calibrating the
+   email-policy and M365-tenancy nodes against authoritative external labels:
+   strong but DMARC-anchored for the policy node, the clean DMARC-disjoint
+   residual *disconfirmed* (ECE 0.373), and a strong channel-split tenancy
+   corroboration (ECE 0.048). They do not upgrade the 80% intervals to
+   frequentist coverage; that stays a separate, unclaimed property. The optional
+   C3 CT-enabled full-corpus pass remains.
 2. **Fingerprint and motif triage loop** (maintainer-local, optional, reviewed).
    *Why:* keeps the catalog growing from observed gaps, not invented entries.
    Stays patch-level unless it adds a stable surface; catalog changes still get
@@ -96,7 +100,8 @@ Full detail and sequencing live in
 > one formal result, that hiding evidence can only move a claim toward its
 > all-absent baseline, never to a confident false positive by hiding); the
 > CAL3/CAL4 reference-calibration run landed (`email_security_policy_enforcing`
-> at tier 4 for the strict-SPF + MTA-STS residual only); and the data-handling
+> full-posterior calibration strong but DMARC-anchored, the clean residual
+> disconfirmed by the 2026-06 full-corpus run); and the data-handling
 > policy and statistical-assurance dossier docs shipped. The calibration
 > harness set is now complete: the conformal-coverage complement
 > (`validation/conformal_coverage.py`), the leave-one-unit-out inference
@@ -272,11 +277,14 @@ What remains is dependency-ordered work with no calendar estimates:
    publication boundary. The bundle now performs a no-network corpus preflight
    first: the consolidated corpus must meet `--min-cell`, at least one
    per-stratum file must meet `--min-cell`, and dry runs report eligible versus
-   suppressed strata before any live resolution starts. The next operator
-   action is to run that local bundle, review `memo.md`, and commit only
-   aggregate metrics. The run order is held-out residual calibration, tenancy
-   corroboration, per-vertical stratification (`--stratify-dir`), conformal
-   coverage, and the C3 CT-enabled full-corpus pass. The committed memo must
+   suppressed strata before any live resolution starts. *Done 2026-06:* the
+   reference (with held-out residual), tenancy corroboration, per-vertical
+   stratification (`--stratify-dir`), and conformal harnesses ran against the
+   corpus at concurrency 2; the aggregate memo is committed at
+   `validation/2026-06-23-full-corpus-calibration.md`, with the honest reading
+   folded into `validation/reference-calibration.md` and
+   [statistical-assurance.md](statistical-assurance.md). The one remaining
+   calibration pass is the C3 CT-enabled full-corpus run. The committed memo must
    follow
    [data-handling-policy.md](data-handling-policy.md): no apexes, no
    organization names, no tenant IDs, no per-domain output, and no published
@@ -618,9 +626,9 @@ residual); CAL11 shipped as the 2.2 `partition_stability` field (Louvain
 seed-sweep consensus as mean pairwise ARI); and CAL9's harness half shipped
 (`calibration_summary` now leads with the proper log-score beside Brier/ECE —
 the reliability-diagram-and-sparse-cohort memo discipline applies at the next
-corpus run). Remaining open: CAL6 (the stratified corpus *run*; the
-`--stratify-dir` modes exist on both calibration harnesses) and the
-measurement half of CAL12 (the elicitation ledger is now written —
+corpus run). CAL6 (the stratified corpus run) landed 2026-06 across all 22
+verticals (`validation/2026-06-23-full-corpus-calibration.md`). Remaining open:
+the measurement half of CAL12 (the elicitation ledger is now written —
 `bayesian-cpt-discipline.md`, "The priors ledger" — with the unrecorded
 corpus rates marked as the open cells the next full-corpus pass fills).
 
