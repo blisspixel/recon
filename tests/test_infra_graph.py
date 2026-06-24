@@ -89,6 +89,20 @@ class TestLouvainPartition:
         report = build_infrastructure_clusters(entries)
         assert report.clusters[0].dominant_issuer == "LE"
 
+    def test_dominant_issuer_tie_break_is_deterministic(self):
+        # Two certs over the same SAN pair from different issuers tie on the
+        # cluster's issuer count. The winner must be content-determined, not
+        # dependent on (unstable) cert arrival order.
+        entries = [
+            _entry(["a.example.com", "b.example.com"], issuer="IssuerX"),
+            _entry(["a.example.com", "b.example.com"], issuer="IssuerY"),
+        ]
+        fwd = build_infrastructure_clusters(entries)
+        rev = build_infrastructure_clusters(list(reversed(entries)))
+        assert fwd.clusters
+        assert rev.clusters
+        assert fwd.clusters[0].dominant_issuer == rev.clusters[0].dominant_issuer == "IssuerX"
+
     def test_shared_cert_count_aggregates(self):
         entries = [
             _entry(["a.example.com", "b.example.com"], "LE"),

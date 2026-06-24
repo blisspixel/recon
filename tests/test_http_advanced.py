@@ -171,6 +171,32 @@ class TestRetryTransport:
         assert call_count == MAX_RETRIES + 1
 
     @pytest.mark.asyncio
+    async def test_cumulative_cap_returns_readable_response(self, monkeypatch):
+        # When the cumulative-sleep cap is reached, the response handed back must
+        # not be the one whose stream was closed, so the caller can still read its
+        # body. Force the cap to trip on the first attempt (no real sleep).
+        monkeypatch.setattr("recon_tool.http._MAX_TOTAL_RETRY_SLEEP", 0.0)
+        closed: list[int] = []
+
+        class MockTransport(httpx.AsyncHTTPTransport):
+            async def handle_async_request(self, request):
+                resp = httpx.Response(429, request=request, headers={"Retry-After": "1"})
+                real_aclose = resp.aclose
+
+                async def _spy():
+                    closed.append(id(resp))
+                    await real_aclose()
+
+                monkeypatch.setattr(resp, "aclose", _spy)
+                return resp
+
+        transport = _RetryTransport(wrapped=MockTransport())
+        request = httpx.Request("GET", "http://example.com")
+        result = await transport.handle_async_request(request)
+        assert result.status_code == 429
+        assert id(result) not in closed
+
+    @pytest.mark.asyncio
     async def test_retries_on_503(self):
         """Should retry on 503."""
         call_count = 0

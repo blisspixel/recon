@@ -332,7 +332,11 @@ def _dominant_issuer_for_members(
             issuer_counter.update(issuers)
     if not issuer_counter:
         return None, edge_count_in_cluster
-    issuer, _ = issuer_counter.most_common(1)[0]
+    # Deterministic tie-break (highest count, then lexicographic). Cert arrival
+    # order is unstable across requests (see the module docstring), so
+    # most_common's insertion-order tie-break would leak nondeterminism into the
+    # emitted dominant_issuer.
+    issuer = min(issuer_counter, key=lambda s: (-issuer_counter[s], s))
     return issuer, edge_count_in_cluster
 
 

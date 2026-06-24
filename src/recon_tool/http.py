@@ -288,14 +288,10 @@ class _RetryTransport(httpx.AsyncHTTPTransport):
                 return response
             last_response = response
             if attempt < MAX_RETRIES:
-                # Close the intermediate response stream before retrying
-                # to avoid resource leaks. The final response (after exhausting
-                # retries) is returned to the caller unclosed.
-                await response.aclose()
-            if attempt < MAX_RETRIES:
                 # Respect Retry-After header if present, otherwise exponential backoff.
                 # Retry-After can be seconds (numeric) or HTTP-date (string).
                 # We only parse numeric values; date-format falls through to backoff.
+                # Headers are buffered, so reading them before any aclose() is safe.
                 retry_after = response.headers.get("Retry-After")
                 if retry_after:
                     try:
@@ -307,13 +303,17 @@ class _RetryTransport(httpx.AsyncHTTPTransport):
                 # Bound cumulative sleeping so repeated 429s on an
                 # attacker-influenced endpoint cannot stack toward the
                 # aggregate resolve budget. Once the total cap is reached,
-                # stop retrying and return the last response.
+                # stop retrying and return this response with its body still
+                # readable: do not close the response we are about to return.
                 delay = min(delay, max(0.0, _MAX_TOTAL_RETRY_SLEEP - total_slept))
                 if delay <= 0.0:
                     break
+                # A retry will follow, so close this intermediate response's
+                # stream to avoid a resource leak before fetching the next one.
+                await response.aclose()
                 total_slept += delay
                 logger.debug(
-                    "HTTP %d from %s — retrying in %.1fs (attempt %d/%d)",
+                    "HTTP %d from %s, retrying in %.1fs (attempt %d/%d)",
                     response.status_code,
                     request.url.host,
                     delay,

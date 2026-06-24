@@ -503,11 +503,18 @@ def _apply_dmarc(ctx: dns_base.DetectionCtx, dmarc_results: list[str], domain: s
             continue
         ctx.services.add(SVC_DMARC)
         for part in txt.split(";"):
-            cleaned = part.strip().lower()
-            if cleaned.startswith("p="):
-                ctx.dmarc_policy = cleaned[2:].strip()
-            elif cleaned.startswith("pct="):
-                _apply_dmarc_pct(ctx, cleaned[4:].strip(), domain)
+            # Tag syntax permits whitespace around "=" (RFC 7489 / 6376 tag-spec),
+            # so parse on the first "=" and strip both sides rather than matching a
+            # "p=" prefix, which would miss a spec-legal "p = reject".
+            key, sep, value = part.partition("=")
+            if not sep:
+                continue
+            key = key.strip().lower()
+            value = value.strip()
+            if key == "p":
+                ctx.dmarc_policy = value.lower()
+            elif key == "pct":
+                _apply_dmarc_pct(ctx, value, domain)
         extract_dmarc_rua(ctx, txt)
 
 
