@@ -256,6 +256,20 @@ If the user wants to test a hypothesis about a custom or internal SaaS — "does
 
 Ephemeral fingerprints live only in the current MCP session and are quota-bounded.
 
+## Gotchas
+
+The sharp edges that have actually bitten this workflow. Skim before a session;
+the detail for each lives in the section above.
+
+- **`recon delta` on a never-seen domain is an empty diff, not "no changes."** No prior snapshot means nothing to compare; say so rather than implying change was ruled out.
+- **A sub-host is analyzed as its apex unless you pass `--exact`.** `mail.acme.com` returns facts for `acme.com`; the `queried_domain` field tells you what was actually analyzed. Reporting apex tenancy as the sub-host's is wrong.
+- **`--full --json` is 3-10 KB; never dump it inline.** Save it to a file and reply with the 3-line headline. Inline JSON burns context for no benefit.
+- **Do not test MCP connectivity by calling a tool.** Read your own tool list for `mcp__recon__*`; a speculative call to "check" is a wasted, confusing round-trip.
+- **`--exposure` / `assess_exposure` does no new network I/O.** It scores already-collected data. Do not imply a fresh scan produced the 0-100 number.
+- **Low confidence means sparse DNS, not a suspicious org.** Sparse output is the passive-collection ceiling, not a finding. Do not manufacture confidence or insinuation.
+- **Do not guess a profile from a thin hint.** A wrong posture lens skews emphasis; omit `--profile` when the target type is unclear.
+- **Serve cache honestly.** Check `resolved_at` / `cached_at`; if the user wants current data and the entry is old, offer to re-resolve rather than passing stale data as fresh.
+
 ## Hard rules
 
 - recon is **passive**. Never claim it confirmed an active service, a running version, or an exploitable vulnerability. It infers from public records.

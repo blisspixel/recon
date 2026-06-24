@@ -213,6 +213,19 @@ Your response:
 - Apex-side fingerprints. This skill only writes `cname_target` rules. TXT,
   MX, SPF, etc. are out of scope — use the broader contributor flow for those.
 
+## Gotchas
+
+The traps that produce a bad fingerprint. Each is a real failure mode, not a
+theoretical one.
+
+- **Over-broad `cname_target` patterns fire on the whole zone.** `amazonaws.com` matches everything in AWS; use `elb.amazonaws.com`, `awsapprunner.com`. The pattern is a case-insensitive substring against every CNAME hop.
+- **Multi-tenant SaaS: drop the customer prefix.** `myshopify.com`, not `<store>.myshopify.com`, or the rule only ever matches that one customer.
+- **A same slug must reuse the canonical display name.** The validator rejects same-slug-different-name; grep `recon_tool/data/fingerprints/*.yaml` for the existing name before extending a slug.
+- **A new slug with no `_CATEGORY_BY_SLUG` mapping defaults to "Business Apps."** Often wrong for CDN or cloud slugs; propose the formatter mapping alongside the YAML.
+- **Never ship a guess on an "unclear" candidate.** Flag it with the chain and ask. Tightening a pattern after release is harder than getting it right once.
+- **Intra-org GSLB / load-balancer chains are not fingerprints.** A chain that stays inside the org's own brand zone is infrastructure noise; skip it and say so.
+- **count=1 is a see-once, not a fingerprint.** The bar is "would another user ever hit this pattern?" Niche one-offs fail it.
+
 ## Relationship to the base `recon` skill
 
 | Goal | Use |
