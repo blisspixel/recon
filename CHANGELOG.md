@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **The README license section is simpler.** It now points directly to Apache
-  2.0 and the LICENSE file without a separate enterprise-contact sentence.
+  2.0 and the LICENSE file without a separate enterprise-contact sentence, and
+  release readiness now fails if that wording returns.
 - **The file-size ratchet tightened for two already-shrunk modules.**
   `scripts/check_file_size.py` now locks `exposure.py` at 981 lines and
   `merger.py` at 955 lines, preserving the shrinkage reported by the full local

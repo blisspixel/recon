@@ -96,6 +96,15 @@ installer already emits a sys.path-stripping Python fallback when `recon` is not
 on PATH; `doctor --mcp`, `doctor --client`, `docs/mcp.md`, agent setup docs, and
 the Claude Code skill now describe and test that safer path.
 
+The 2026-06-25 refresh rechecked PyPI PEP 740 attestations, OpenSSF Scorecard,
+SLSA build requirements, and MCP local-server security guidance. The current
+best reading is still deepen-not-expand: keep local and remote gates exact,
+keep provenance and attestation checks fail-closed, and keep MCP command launch
+behavior explicit. The cleanup from the remote-main push also simplified the
+README license section to Apache 2.0 plus the LICENSE link only; release
+readiness now guards that wording so the removed enterprise-contact sentence
+does not drift back in.
+
 ## Hard Constraints
 
 Every proposed change must stay inside this box:
@@ -221,6 +230,11 @@ Current local verification in this session:
 - Focused MCP launch-guidance validation passed:
   `uv run python -m pytest tests/test_doctor.py tests/test_doctor_client.py tests/test_mcp_path_isolation.py tests/test_surface_inventory.py -q`
   with 53 passed and 2 skipped.
+- Remote `main` verification for commit `6f71303` passed: CI, Secrets scan, and
+  Scorecard supply-chain security all completed successfully.
+- Full local gate for the README license-readiness guard passed:
+  `uv run python scripts/check.py` with 3552 passed, 5 skipped, 4 deselected,
+  and 86.57% total coverage.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue

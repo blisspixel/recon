@@ -96,6 +96,31 @@ def test_coverage_gate_rejects_stale_src_layout_target(tmp_path: Path) -> None:
     assert "stale --cov=recon_tool" in check.detail
 
 
+def test_readme_usage_rejects_enterprise_contact_line(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path)
+    readme = (tmp_path / "README.md").read_text(encoding="utf-8")
+    retired_contact = "nick" + "@pueo.io"
+    readme += f"\nFor commercial or enterprise use, contact Nick Seal ({retired_contact}).\n"
+    _write_file(tmp_path, "README.md", readme)
+
+    check = release_readiness._check_readme_usage(tmp_path)
+
+    assert check.status == "fail"
+    assert "enterprise use, contact" in check.detail
+    assert "Apache 2.0 only" in check.action
+
+
+def test_readme_usage_accepts_plain_apache_license(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path)
+    readme = (tmp_path / "README.md").read_text(encoding="utf-8")
+    readme += "\nApache 2.0. Free to use, build on, fork, and share. See LICENSE for the full terms.\n"
+    _write_file(tmp_path, "README.md", readme)
+
+    check = release_readiness._check_readme_usage(tmp_path)
+
+    assert check.status == "pass"
+
+
 def test_private_tracked_files_fail() -> None:
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         assert cmd == ["git", "ls-files"]

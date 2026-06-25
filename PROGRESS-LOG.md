@@ -70,6 +70,13 @@ review. Local gate (`scripts/check.py`) green throughout; external spend 0 USD.
 - Simplified the README license section by removing the separate enterprise
   contact sentence. Fast local gate, explicit text hygiene over
   `origin/main..HEAD`, and release readiness passed before commit.
+- Pushed the 13-commit stack to `origin/main` at `6f71303`. Remote CI, Secrets
+  scan, and Scorecard supply-chain security passed. `uv run python
+  scripts/release_readiness.py --remote` passed against the pushed HEAD.
+- Started the next loop from clean remote-main state. Added a release-readiness
+  guard so README cannot regain the removed enterprise-contact license wording.
+  Full local gate passed with 3552 tests, 5 skipped, 4 deselected, and 86.57%
+  total coverage before commit.
 
 ## 2026-06-19
 

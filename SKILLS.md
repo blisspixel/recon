@@ -160,3 +160,6 @@ operating rules for future cycles and must not override `AGENTS.md`,
   run its server-side guard.
 - If `doctor --mcp` prints a copy-paste config, build it from the installer
   block rather than duplicating launch JSON by hand.
+- When a user removes public-facing positioning or contact wording from README,
+  add a deterministic release-readiness or docs test if the wording is likely to
+  drift back.

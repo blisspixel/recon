@@ -38,6 +38,13 @@ _EXPECTED_COVERAGE_TARGET = "--cov=src/recon_tool"
 _STALE_COVERAGE_TARGET = "--cov=recon_tool"
 _COVERAGE_FLOOR = "--cov-fail-under=82"
 _REQUIRED_REMOTE_WORKFLOWS = ("CI", "Secrets scan", "Scorecard supply-chain security")
+_README_FORBIDDEN_FRAGMENTS = (
+    "enterprise use, contact",
+    "commercial or\nenterprise use",
+    "commercial or enterprise use",
+    "contact Nick Seal",
+    "nick" + "@pueo.io",
+)
 _ATTRIBUTION_MARKERS = (
     "co-authored-by:",
     "generated-by:",
@@ -223,6 +230,10 @@ def _check_readme_usage(root: Path) -> CheckResult:
     missing = [anchor for anchor in anchors if anchor not in text]
     if missing:
         return _result("README usage", "fail", "missing anchors: " + ", ".join(missing))
+    forbidden = [fragment for fragment in _README_FORBIDDEN_FRAGMENTS if fragment in text]
+    if forbidden:
+        detail = "forbidden README wording: " + ", ".join(forbidden)
+        return _result("README usage", "fail", detail, "keep the license section Apache 2.0 only")
     return _result("README usage", "pass", "core usage, MCP install, and house rules are documented")
 
 
