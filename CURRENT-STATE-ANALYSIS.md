@@ -115,8 +115,9 @@ the current public catalog and committed only aggregate conclusions. A
 sample-aware triage fix now checks candidate sample terminals and chain hops
 against existing `cname_target` patterns, reducing false candidate work when a
 three-label suffix bucket hides a more specific already-covered endpoint. The
-same pass promoted one public-source-backed surface, UltraDNS Web Forwarding via
-`crs.ultradns.net`, and left the remaining private aggregate candidates
+same pass promoted public-source-backed surfaces for UltraDNS Web Forwarding via
+`crs.ultradns.net` and Squarespace managed subdomains via
+`ext-sq.squarespace.com`, leaving the remaining private aggregate candidates
 unshipped pending stronger public vendor references or clearer non-target-owned
 signal.
 
@@ -454,6 +455,15 @@ The catalog now includes a high-confidence UltraDNS `cname_target` rule for
 documentation. The rule is intentionally scoped to an UltraDNS-managed redirect
 record. It does not infer destination hosting, account control, or broader DNS
 authority unless other evidence such as NS records independently supports that.
+
+## Squarespace Managed Subdomain Fingerprint
+
+The catalog now includes a high-confidence Squarespace `cname_target` rule for
+`ext-sq.squarespace.com`, sourced from Squarespace support documentation for
+manually adding a subdomain to a Squarespace site. The existing
+`ext-cust.squarespace.com` rule remains the third-party custom-domain path; this
+new rule covers the Squarespace-managed subdomain target observed in aggregate
+gap triage. It does not infer plan tier or account relationship.
 
 ## Microsoft Internal Chain Motif
 

@@ -140,6 +140,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
   `_acme-challenge` TXT flow, fingerprint the vendor-specific CNAME and leave
   the ACME TXT out of the catalog unless the TXT value itself carries
   vendor-specific structure.
+- When public docs show an alternate endpoint for a provider that already has a
+  slug, extend the existing slug instead of creating a second provider identity.
+  Keep the description specific to the endpoint's documented setup path.
 - When triaging bucketed CNAME gaps, check sample terminals and chain hops
   against existing patterns before treating a suffix bucket as uncovered. The
   three-label bucket can hide the service-specific label that an existing

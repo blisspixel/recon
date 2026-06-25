@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UltraDNS Web Forwarding surface attribution.** The surface catalog now
   recognizes `crs.ultradns.net` as UltraDNS Web Forwarding redirect evidence,
   scoped to infrastructure-tier routing rather than destination hosting.
+- **Squarespace managed-subdomain surface attribution.** The surface catalog now
+  recognizes `ext-sq.squarespace.com` as a Squarespace-hosted subdomain target,
+  complementing the existing `ext-cust.squarespace.com` custom-domain rule.
 
 ### Changed
 

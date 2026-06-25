@@ -28,9 +28,10 @@ standing, in dependency order:
    Stays patch-level unless it adds a stable surface; catalog changes still get
    human review. The 2026-06-25 pass tightened candidate filtering so sample
    terminals and chain hops are checked against existing patterns, then promoted
-   one public-source-backed surface: UltraDNS Web Forwarding via
-   `crs.ultradns.net`. The remaining private aggregate candidates are held for
-   later review because they are target-owned, generic platform internals,
+   public-source-backed surfaces for UltraDNS Web Forwarding via
+   `crs.ultradns.net` and Squarespace managed subdomains via
+   `ext-sq.squarespace.com`. The remaining private aggregate candidates are held
+   for later review because they are target-owned, generic platform internals,
    unclear, deprecated, or not yet backed by stable public vendor docs.
 3. **Surface-inventory promotion decision.** *Why:* `surface-inventory.json` is
    already generated and drift-gated as discovery context. It only graduates to

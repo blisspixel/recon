@@ -79,6 +79,19 @@ def test_ultradns_web_forwarding_cname_target_loads_and_classifies() -> None:
     assert infrastructure.slug == "ultradns"
 
 
+def test_squarespace_managed_subdomain_cname_target_loads_and_classifies() -> None:
+    """Squarespace-managed subdomain CNAMEs attribute to Squarespace."""
+    rules = get_cname_target_rules()
+    terminal = "ext-sq.squarespace.com"
+
+    assert any(r.slug == "squarespace" and r.pattern == terminal for r in rules)
+    application, infrastructure = _classify_chain(["blog.contoso.com", terminal], rules)
+
+    assert application is not None
+    assert application.slug == "squarespace"
+    assert infrastructure is None
+
+
 # ── Chain classification ───────────────────────────────────────────────
 
 

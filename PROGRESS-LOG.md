@@ -15,10 +15,11 @@ gaps, with aggregate-only disclosure. External spend 0 USD.
   checks sample terminals and CNAME chain hops, not only the three-label suffix
   bucket. This dropped one already-covered false candidate in the aggregate
   re-filter before any catalog change.
-- Promoted one public-source-backed surface from the reviewed candidates:
+- Promoted two public-source-backed surfaces from the reviewed candidates:
   UltraDNS Web Forwarding via `crs.ultradns.net`, scoped as infrastructure-tier
-  redirect evidence only.
-- Held the remaining 19 aggregate candidates for later review because they are
+  redirect evidence only, and Squarespace managed subdomains via
+  `ext-sq.squarespace.com`, scoped as application-tier hosted-site evidence.
+- Held the remaining 18 aggregate candidates for later review because they are
   target-owned, generic platform internals, unclear, deprecated, or missing a
   stable public vendor reference.
 - Focused validation passed:
@@ -26,8 +27,15 @@ gaps, with aggregate-only disclosure. External spend 0 USD.
   with 26 passed; `uv run python -m ruff check ...` passed;
   `uv run python scripts/validate_fingerprint.py src/recon_tool/data/fingerprints --quiet`
   validated 843 entries; validation hygiene and text hygiene passed.
-- Full local gate passed with `uv run python scripts/check.py`: 3,565 passed, 5
-  skipped, 4 deselected, total coverage 86.53 percent. All gate stages passed.
+- Additional Squarespace focused validation passed:
+  `uv run python -m pytest tests/test_surface_attribution.py -q` with 24 passed;
+  `uv run python -m ruff check src/recon_tool/data/fingerprints tests/test_surface_attribution.py`
+  passed; `uv run python scripts/validate_fingerprint.py src/recon_tool/data/fingerprints --quiet`
+  validated 843 entries; the aggregate re-filter ended at 19 existing-pattern
+  drops and 18 survivors.
+- Full local gate passed after both catalog additions with
+  `uv run python scripts/check.py`: 3,565 passed, 6 skipped, 4 deselected, total
+  coverage 86.56 percent. All gate stages passed.
 
 ## 2026-06-23 to 2026-06-24
 

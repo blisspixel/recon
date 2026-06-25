@@ -1256,6 +1256,15 @@ fingerprints:
       the org's website is hosted by Squarespace on a branded
       domain. Does not by itself distinguish Squarespace Personal,
       Business, or Commerce tiers; the chain is identical.
+  - type: cname_target
+    pattern: ext-sq.squarespace.com
+    reference: https://support.squarespace.com/hc/en-us/articles/205812058-Creating-a-subdomain-for-your-Squarespace-site
+    tier: application
+    description: >-
+      Squarespace-managed subdomain CNAME for manually adding a
+      subdomain to a Squarespace site. Indicates the branded
+      subdomain points to Squarespace-hosted site content, not a
+      specific plan tier or account relationship.
 
 - name: HubSpot
   slug: hubspot
