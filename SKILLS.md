@@ -140,6 +140,10 @@ operating rules for future cycles and must not override `AGENTS.md`,
   `_acme-challenge` TXT flow, fingerprint the vendor-specific CNAME and leave
   the ACME TXT out of the catalog unless the TXT value itself carries
   vendor-specific structure.
+- When triaging bucketed CNAME gaps, check sample terminals and chain hops
+  against existing patterns before treating a suffix bucket as uncovered. The
+  three-label bucket can hide the service-specific label that an existing
+  fingerprint already matches.
 - For motif catalog growth, prefer complete ordered-chain motifs only when they
   add information beyond existing pairwise motifs. Record the before/after
   firing delta on fictional or aggregate-safe chain inputs.

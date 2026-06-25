@@ -11,10 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - No runtime CLI command or flag changes.
 
+### Added
+
+- **UltraDNS Web Forwarding surface attribution.** The surface catalog now
+  recognizes `crs.ultradns.net` as UltraDNS Web Forwarding redirect evidence,
+  scoped to infrastructure-tier routing rather than destination hosting.
+
 ### Changed
 
 - **Homebrew formula freshness.** The bundled formula now points at the
   published `recon-tool` 2.2.12 sdist and sha256 from PyPI.
+- **Fingerprint triage noise is lower.** `validation/triage_candidates.py` now
+  checks sample terminals and CNAME chain hops against existing `cname_target`
+  patterns, so bucketed suffixes do not keep already-covered endpoints as
+  candidates.
 
 ## [2.2.12] - 2026-06-25
 

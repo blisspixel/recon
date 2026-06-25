@@ -66,6 +66,19 @@ def test_supabase_cname_target_loads_and_classifies() -> None:
     assert infrastructure is None
 
 
+def test_ultradns_web_forwarding_cname_target_loads_and_classifies() -> None:
+    """UltraDNS web-forwarding CNAMEs attribute to infrastructure only."""
+    rules = get_cname_target_rules()
+    terminal = "crs.ultradns.net"
+
+    assert any(r.slug == "ultradns" and r.pattern == terminal for r in rules)
+    application, infrastructure = _classify_chain(["go.contoso.com", terminal], rules)
+
+    assert application is None
+    assert infrastructure is not None
+    assert infrastructure.slug == "ultradns"
+
+
 # ── Chain classification ───────────────────────────────────────────────
 
 

@@ -110,6 +110,16 @@ to PyPI, exported attestations, and created the GitHub release. PyPI JSON now
 reports `recon-tool` 2.2.12 with `Apache-2.0`; the Homebrew formula has been
 refreshed from that published sdist.
 
+The 2026-06-25 fingerprint-triage pass re-filtered an old private gap run with
+the current public catalog and committed only aggregate conclusions. A
+sample-aware triage fix now checks candidate sample terminals and chain hops
+against existing `cname_target` patterns, reducing false candidate work when a
+three-label suffix bucket hides a more specific already-covered endpoint. The
+same pass promoted one public-source-backed surface, UltraDNS Web Forwarding via
+`crs.ultradns.net`, and left the remaining private aggregate candidates
+unshipped pending stronger public vendor references or clearer non-target-owned
+signal.
+
 ## Hard Constraints
 
 Every proposed change must stay inside this box:
@@ -436,6 +446,14 @@ The same docs also describe `_acme-challenge` TXT validation, but that value is
 generic ACME evidence rather than a Supabase-specific token. The catalog keeps it
 out of scope unless a future vendor flow publishes a stable vendor-specific TXT
 shape.
+
+## UltraDNS Web Forwarding Fingerprint
+
+The catalog now includes a high-confidence UltraDNS `cname_target` rule for
+`crs.ultradns.net`, sourced from UltraDNS public support and Web Forwarding
+documentation. The rule is intentionally scoped to an UltraDNS-managed redirect
+record. It does not infer destination hosting, account control, or broader DNS
+authority unless other evidence such as NS records independently supports that.
 
 ## Microsoft Internal Chain Motif
 

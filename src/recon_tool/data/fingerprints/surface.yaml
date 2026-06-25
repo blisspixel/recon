@@ -2453,6 +2453,22 @@ fingerprints:
       images). Indicates the domain proxies Squarespace-
       hosted media through a branded subdomain.
 
+- name: UltraDNS (Neustar)
+  slug: ultradns
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: crs.ultradns.net
+    reference: https://dns.ultraproducts.support/hc/en-us/articles/4409648155547-Why-do-I-have-records-that-point-to-crs-ultradns-net-204-74-99-100-or-204-74-99-200
+    tier: infrastructure
+    description: >-
+      Subdomain CNAMEs into crs.ultradns.net, the UltraDNS
+      Web Forwarding endpoint for redirect records. Indicates
+      the subdomain is configured as an UltraDNS-managed web
+      forward, not that the destination site is hosted by
+      UltraDNS.
+
 # ── Infrastructure tier ─────────────────────────────────────────────────
 
 - name: Fastly

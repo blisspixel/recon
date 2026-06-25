@@ -3,6 +3,32 @@
 This file records maintainer-loop work performed in this checkout. It is a local
 planning artifact and does not replace `CHANGELOG.md`.
 
+## 2026-06-25
+
+Session: fingerprint and motif triage loop from maintainer-local private corpus
+gaps, with aggregate-only disclosure. External spend 0 USD.
+
+- Re-filtered an old private gap run with the current public catalog:
+  1,335 unclassified suffix buckets and 1,723 observations. No target names,
+  domains, rows, or per-domain facts were copied into the repo.
+- Tightened `validation/triage_candidates.py` so existing-pattern filtering
+  checks sample terminals and CNAME chain hops, not only the three-label suffix
+  bucket. This dropped one already-covered false candidate in the aggregate
+  re-filter before any catalog change.
+- Promoted one public-source-backed surface from the reviewed candidates:
+  UltraDNS Web Forwarding via `crs.ultradns.net`, scoped as infrastructure-tier
+  redirect evidence only.
+- Held the remaining 19 aggregate candidates for later review because they are
+  target-owned, generic platform internals, unclear, deprecated, or missing a
+  stable public vendor reference.
+- Focused validation passed:
+  `uv run python -m pytest tests/test_triage_candidates.py tests/test_surface_attribution.py -q`
+  with 26 passed; `uv run python -m ruff check ...` passed;
+  `uv run python scripts/validate_fingerprint.py src/recon_tool/data/fingerprints --quiet`
+  validated 843 entries; validation hygiene and text hygiene passed.
+- Full local gate passed with `uv run python scripts/check.py`: 3,565 passed, 5
+  skipped, 4 deselected, total coverage 86.53 percent. All gate stages passed.
+
 ## 2026-06-23 to 2026-06-24
 
 Session: roadmap research, calibration corpus run, two bug-hunt rounds, QoL

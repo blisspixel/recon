@@ -69,14 +69,39 @@ def load_existing_patterns(fingerprints_dir: Path) -> set[str]:
     return patterns
 
 
-def is_already_covered(suffix: str, patterns: set[str]) -> bool:
-    """True when an existing fingerprint pattern matches the suffix.
+def _has_matching_pattern(value: str, patterns: set[str]) -> bool:
+    """True when an existing fingerprint pattern matches ``value``."""
+    v = value.lower()
+    return any(p in v for p in patterns)
 
-    Substring-match the suffix against every pattern; if any pattern is a
-    substring of the suffix, the suffix is already classified.
+
+def is_already_covered(suffix: str, patterns: set[str]) -> bool:
+    """True when an existing fingerprint pattern matches the bucket suffix."""
+    return _has_matching_pattern(suffix, patterns)
+
+
+def _candidate_values(suffix: str, samples: list[dict[str, Any]]) -> list[str]:
+    """Return suffix, terminals, and chain hops that may carry a known pattern."""
+    values = [suffix]
+    for sample in samples:
+        terminal = sample.get("terminal")
+        if isinstance(terminal, str) and terminal:
+            values.append(terminal)
+        chain = sample.get("chain")
+        if isinstance(chain, list):
+            values.extend(str(hop) for hop in chain if hop)
+    return values
+
+
+def entry_is_already_covered(suffix: str, samples: list[dict[str, Any]], patterns: set[str]) -> bool:
+    """True when the suffix or any sample hostname already matches a pattern.
+
+    ``find_gaps`` buckets terminals by their rightmost three labels. That can
+    hide the specific label an existing fingerprint needs, for example an AWS
+    ELB terminal bucketed as ``us-gov-east-1.amazonaws.com`` while the actual
+    covered terminal contains ``elb.us-gov-east-1.amazonaws.com``.
     """
-    s = suffix.lower()
-    return any(p in s for p in patterns)
+    return any(_has_matching_pattern(value, patterns) for value in _candidate_values(suffix, samples))
 
 
 def looks_intra_org(suffix: str, samples: list[dict[str, Any]]) -> bool:
@@ -125,7 +150,7 @@ def triage(
         samples = samples_raw if isinstance(samples_raw, list) else []
         if count < min_count:
             continue
-        if is_already_covered(suffix, existing_patterns):
+        if entry_is_already_covered(suffix, samples, existing_patterns):
             continue
         if drop_intra_org and looks_intra_org(suffix, samples):
             continue
@@ -175,7 +200,12 @@ def main() -> None:
     )
     payload = json.dumps(survivors, indent=2)
 
-    covered_drops = sum(1 for g in gaps_data if is_already_covered(str(g.get("suffix", "")), existing))
+    covered_drops = 0
+    for entry in gaps_data:
+        samples_raw = entry.get("samples") if isinstance(entry, dict) else None
+        samples = samples_raw if isinstance(samples_raw, list) else []
+        if isinstance(entry, dict) and entry_is_already_covered(str(entry.get("suffix", "")), samples, existing):
+            covered_drops += 1
     summary = f"input: {len(gaps_data)} gaps, existing-patterns dropped: {covered_drops}, survivors: {len(survivors)}"
 
     if args.output is None:
