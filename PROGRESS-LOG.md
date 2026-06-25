@@ -85,6 +85,14 @@ review. Local gate (`scripts/check.py`) green throughout; external spend 0 USD.
 - Folded the useful parts of the user-provided agentic development guide into
   the maintainer-loop docs: explicit action boundaries, resume keys, trace
   records, and maintainer approval for externally visible side effects.
+- Released 2.2.12 from clean `main`. The release script ran ruff, pyright, and
+  pytest with branch coverage before creating commit `66eb605` and tag
+  `v2.2.12`, then pushed both to GitHub.
+- Remote `main` checks passed for commit `66eb605`: CI, Secrets scan, and
+  Scorecard supply-chain security. The tag release workflow also passed,
+  including build, SBOM, attestations, PyPI publish, and GitHub release.
+- Verified PyPI JSON reports `recon-tool` 2.2.12 with `Apache-2.0`, then
+  refreshed the Homebrew formula from the published sdist.
 
 ## 2026-06-19
 

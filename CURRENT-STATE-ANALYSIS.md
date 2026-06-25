@@ -105,6 +105,11 @@ README license section to Apache 2.0 plus the LICENSE link only; release
 readiness now guards that wording so the removed enterprise-contact sentence
 does not drift back in.
 
+The 2.2.12 release shipped on 2026-06-25. The release workflow passed, published
+to PyPI, exported attestations, and created the GitHub release. PyPI JSON now
+reports `recon-tool` 2.2.12 with `Apache-2.0`; the Homebrew formula has been
+refreshed from that published sdist.
+
 ## Hard Constraints
 
 Every proposed change must stay inside this box:
