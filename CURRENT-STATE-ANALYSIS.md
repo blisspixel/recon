@@ -304,6 +304,12 @@ One disclosure-boundary hardening also shipped in the public tree:
   accepts only `validation/runs-private/`, `validation/live_runs/`, or
   `validation/local/` inside the checkout. Outside-repo operator-local paths
   stay allowed.
+- The user-provided agentic development guide was useful as a maintainer-loop
+  checklist, not as a product-surface expansion. The adopted pieces are now in
+  `docs/agentic-balance.md` and `docs/maintainer-loop-runbook.md`: explicit
+  action boundaries, resume keys for idempotent retries, trace records instead
+  of raw model reasoning, and maintainer approval before externally visible
+  release, distribution, schema, CPT, or catalog side effects.
 
 ## MCP Launch Guidance Alignment
 

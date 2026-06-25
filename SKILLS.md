@@ -166,3 +166,6 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For validation runners that write private corpus outputs, reject public
   in-repo output roots in code rather than relying only on documentation or
   `.gitignore`.
+- Agentic-loop guidance is useful only when it becomes a bounded maintainer
+  control: action boundaries, resume keys, trace records, deterministic gates,
+  and explicit human approval for externally visible side effects.

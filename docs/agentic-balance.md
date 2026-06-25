@@ -88,6 +88,13 @@ these rules:
 - **Manual approval by default at the MCP surface.** Read-only tools and stateful
   tools are split; do not auto-approve stateful ones. See the autoApprove
   guidance in [mcp.md](mcp.md).
+- **Side effects are named and bounded before they run.** A maintainer loop must
+  separate planning from execution, record the command or run stamp that makes a
+  step idempotent on resume, and stop for maintainer approval before release,
+  distribution, schema, CPT, or catalog changes become externally visible.
+- **Trace outcomes, not hidden reasoning.** Loop state may record commands,
+  inputs by path, outputs by path, elapsed time, spend, gates, and unresolved
+  assumptions. It must not persist raw model reasoning or target data.
 
 Agentic foot-guns to refuse, by symmetry with the brittle-rule list: letting
 recon emit anything an agent could read as a command; trusting an external
@@ -118,10 +125,11 @@ maintainers and operators who want them, not part of recon's runtime contract.
 
 The common constraints are strict: no target data in committed output, no
 persistent aggregate scan database, no autonomous catalog/CPT/schema mutation,
-no hosted service inside recon, no user requirement to use AI, and no
-agent-written inference logic. If a loop needs to keep state, that state belongs
-in git, in committed baselines, in gitignored maintainer-local validation
-outputs, or in the operator's external automation system.
+no hosted service inside recon, no user requirement to use AI, no agent-written
+inference logic, and no ambiguous side effects. If a loop needs to keep state,
+that state belongs in git, in committed baselines, in gitignored
+maintainer-local validation outputs, or in the operator's external automation
+system, with an idempotency key or run stamp for any step that may be retried.
 
 ## A checklist before you add a rule or an agentic behavior
 

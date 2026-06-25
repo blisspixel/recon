@@ -39,6 +39,18 @@ def test_runbook_requires_spend_tracking_and_local_state() -> None:
     assert "validation/local/maintainer-loop-state.json" in text
     assert "Default spend is 0 USD" in text
     assert "The loop stops before the cap is exceeded" in text
+    assert "not raw model reasoning" in text
+
+
+def test_runbook_requires_side_effect_boundaries_and_resume_keys() -> None:
+    text = _text()
+    normalized = " ".join(text.split())
+
+    assert "Action boundary" in text
+    assert "Resume key" in text
+    assert "externally visible" in normalized
+    assert "checks this key before repeating a write" in normalized
+    assert "Release, distribution, schema, CPT, and catalog changes require maintainer approval" in normalized
 
 
 def test_runbook_private_calibration_uses_preflight_and_hygiene_gate() -> None:

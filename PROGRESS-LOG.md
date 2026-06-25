@@ -82,6 +82,9 @@ review. Local gate (`scripts/check.py`) green throughout; external spend 0 USD.
   gitignored private validation workspaces before writing artifacts.
   Full local gate passed with 3557 tests, 6 skipped, 4 deselected, and 86.57%
   total coverage before commit.
+- Folded the useful parts of the user-provided agentic development guide into
+  the maintainer-loop docs: explicit action boundaries, resume keys, trace
+  records, and maintainer approval for externally visible side effects.
 
 ## 2026-06-19
 

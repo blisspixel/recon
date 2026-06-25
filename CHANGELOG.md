@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - No runtime CLI command or flag changes.
 
+## [2.2.12] - 2026-06-25
+
+### Tool Surface Changes
+
+- No runtime CLI command or flag changes.
+
 ### Changed
 
 - **The README license section is simpler.** It now points directly to Apache
@@ -20,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `validation/run_calibration_bundle.py` and `validation/scan.py` reject
   in-repository output roots outside the gitignored private validation
   workspaces, while still allowing operator-local paths outside the checkout.
+- **Maintainer-loop guidance now names side-effect and resume boundaries.**
+  `docs/agentic-balance.md` and `docs/maintainer-loop-runbook.md` now require
+  explicit action boundaries, resume keys, trace records, and maintainer
+  approval before externally visible release, distribution, schema, CPT, or
+  catalog changes.
 - **The file-size ratchet tightened for two already-shrunk modules.**
   `scripts/check_file_size.py` now locks `exposure.py` at 981 lines and
   `merger.py` at 955 lines, preserving the shrinkage reported by the full local
