@@ -36,6 +36,17 @@ gaps, with aggregate-only disclosure. External spend 0 USD.
 - Full local gate passed after both catalog additions with
   `uv run python scripts/check.py`: 3,565 passed, 6 skipped, 4 deselected, total
   coverage 86.56 percent. All gate stages passed.
+- Local-only follow-up after the user paused GitHub uploads: added
+  `scripts/check_schema_sources.py --json`, which emits the top-level schema
+  source map, intentional `TenantInfo` omissions, and issue lists for generator
+  prep. Focused validation passed:
+  `uv run python -m pytest tests/test_schema_sources.py -q` with 8 passed,
+  `uv run python -m ruff check scripts/check_schema_sources.py tests/test_schema_sources.py`,
+  `uv run python -m pyright scripts/check_schema_sources.py tests/test_schema_sources.py`,
+  and `uv run python scripts/check_schema_sources.py --json`.
+  Full local gate passed with `uv run python scripts/check.py`: 3,568 passed, 6
+  skipped, 4 deselected, total coverage 86.57 percent. No GitHub upload was
+  performed.
 
 ## 2026-06-23 to 2026-06-24
 

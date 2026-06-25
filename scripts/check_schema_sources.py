@@ -53,6 +53,34 @@ class SchemaSourceAudit:
         )
 
 
+def schema_source_map(schema_properties: Iterable[str], tenant_fields: Iterable[str]) -> dict[str, str]:
+    """Return the declared source for every top-level schema property."""
+    tenant_set = frozenset(tenant_fields)
+    mapping: dict[str, str] = {}
+    for prop in sorted(schema_properties):
+        if prop in tenant_set:
+            mapping[prop] = f"TenantInfo.{prop}"
+        else:
+            mapping[prop] = SPECIAL_SCHEMA_SOURCES.get(prop, "<untraced>")
+    return mapping
+
+
+def audit_report(audit: SchemaSourceAudit, source_map: Mapping[str, str]) -> dict[str, object]:
+    """Return a stable JSON-friendly schema-source audit report."""
+    return {
+        "ok": audit.ok,
+        "schema_property_count": audit.schema_property_count,
+        "tenant_field_count": audit.tenant_field_count,
+        "schema_sources": dict(sorted(source_map.items())),
+        "intentional_tenantinfo_omissions": dict(sorted(INTENTIONAL_TENANTINFO_OMISSIONS.items())),
+        "issues": {
+            "untraced_schema_properties": list(audit.untraced_schema_properties),
+            "stale_special_sources": list(audit.stale_special_sources),
+            "unrepresented_tenant_fields": list(audit.unrepresented_tenant_fields),
+        },
+    }
+
+
 def load_schema_properties(path: Path = _SCHEMA_PATH) -> frozenset[str]:
     schema = json.loads(path.read_text(encoding="utf-8"))
     properties = schema.get("properties", {})
@@ -92,9 +120,16 @@ def main(argv: list[str] | None = None) -> int:
         description="Check that top-level docs/recon-schema.json fields have declared implementation sources."
     )
     parser.add_argument("--schema", type=Path, default=_SCHEMA_PATH, help="Schema file to inspect.")
+    parser.add_argument("--json", action="store_true", help="Emit the schema source map as JSON.")
     args = parser.parse_args(argv)
 
-    audit = audit_schema_sources(load_schema_properties(args.schema), tenant_info_fields())
+    schema_properties = load_schema_properties(args.schema)
+    tenant_fields = tenant_info_fields()
+    audit = audit_schema_sources(schema_properties, tenant_fields)
+    source_map = schema_source_map(schema_properties, tenant_fields)
+    if args.json:
+        print(json.dumps(audit_report(audit, source_map), indent=2, sort_keys=True))
+        return 0 if audit.ok else 1
     if not audit.ok:
         _print_problem("untraced schema properties", audit.untraced_schema_properties)
         _print_problem("stale special schema sources", audit.stale_special_sources)

@@ -2402,8 +2402,9 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   recurring failure mode. The current guard covers top-level formatter output,
   required-field symmetry, internal `$defs` references, model-backed nested
   `$defs` field names, and a top-level source map from schema properties to
-  `TenantInfo` fields or explicit formatter/mode sources. The remaining step is
-  a `scripts/generate_schema.py` that derives the schema from the `TenantInfo`
+  `TenantInfo` fields or explicit formatter/mode sources. The source-map guard
+  can also emit JSON for local review. The remaining step is a
+  `scripts/generate_schema.py` that derives the schema from the `TenantInfo`
   dataclass plus field metadata, then runs in CI to verify the generated schema
   matches the committed one.
   Stays inside the pure-Python floor (the generator runs over Python typing

@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checks sample terminals and CNAME chain hops against existing `cname_target`
   patterns, so bucketed suffixes do not keep already-covered endpoints as
   candidates.
+- **Schema-source audits are easier to inspect.** `scripts/check_schema_sources.py`
+  now has a `--json` mode that emits the top-level schema source map, intentional
+  `TenantInfo` omissions, and issue lists for generator prep.
 
 ## [2.2.12] - 2026-06-25
 

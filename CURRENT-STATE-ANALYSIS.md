@@ -183,7 +183,9 @@ traces each `docs/recon-schema.json` property to a `TenantInfo` dataclass field
 or an explicit formatter, static-envelope, batch-mode, or explain-mode source,
 and it fails if a new `TenantInfo` field is left unrepresented without an
 intentional omission. The full schema generator remains open, but the source
-map now makes the generator inputs reviewable.
+map now makes the generator inputs reviewable. The checker also has a JSON
+report mode for local review of the source map, intentional omissions, and issue
+lists before the full generator exists.
 
 `docs/stability.md` now summarizes the current schema counts from
 `docs/recon-schema.json`: 56 top-level properties and 47 required fields for a

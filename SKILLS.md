@@ -60,6 +60,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For schema-generator prep, add a source map before code generation. Every
   top-level schema property should trace to a model field, formatter-derived
   value, static envelope field, or mode-specific extension.
+- When a drift guard is a stepping stone toward generation, add a JSON report
+  mode so maintainers can inspect the guard's source map and intentional
+  omissions without parsing prose output.
 - When docs summarize machine-readable contracts or live registries with counts
   or tables, add a test that reads the source artifact or registry and verifies
   the prose count or membership.
