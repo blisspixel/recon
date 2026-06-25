@@ -63,6 +63,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - When a drift guard is a stepping stone toward generation, add a JSON report
   mode so maintainers can inspect the guard's source map and intentional
   omissions without parsing prose output.
+- When aggregating observations across multiple DNS records of the same type,
+  preserve monotonic state such as maxima and sets instead of overwriting with
+  whichever record was returned last.
 - When docs summarize machine-readable contracts or live registries with counts
   or tables, add a test that reads the source artifact or registry and verifies
   the prose count or membership.

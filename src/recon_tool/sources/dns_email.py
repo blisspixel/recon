@@ -77,7 +77,7 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
                 ctx.site_verification_tokens.add(token)
 
         if txt_lower.startswith("v=spf1"):
-            ctx.spf_include_count = txt_lower.count("include:")
+            ctx.spf_include_count = max(ctx.spf_include_count, txt_lower.count("include:"))
             # SPF patterns use substring matching on the include: values.
             # This is intentional - SPF includes are domain names, and we
             # match on the authoritative portion (e.g. "spf.protection.outlook.com").

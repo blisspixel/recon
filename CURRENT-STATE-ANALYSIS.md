@@ -555,6 +555,11 @@ ahead-of-origin, or explicit CI commit-range diffs for attribution markers, em
 dashes, and pictographic symbols. This keeps the house style rule mechanical
 without rewriting historical prose.
 
+A local-only 2026-06-25 bug-hunt pass fixed SPF complexity aggregation for
+malformed domains with multiple SPF TXT records: recon now reports the largest
+observed include count instead of overwriting the accumulator with the last SPF
+record returned by DNS.
+
 The current dependency-currency batch updates the MCP runtime package to 1.28.0
 and the Public Suffix List package to 1.0.2.20260615, plus the dev toolchain
 entries for Hypothesis, pytest, pytest-asyncio, Ruff, Pyright, pre-commit, and

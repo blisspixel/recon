@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now has a `--json` mode that emits the top-level schema source map, intentional
   `TenantInfo` omissions, and issue lists for generator prep.
 
+### Fixed
+
+- **SPF complexity survives multiple SPF TXT records.** Malformed domains with
+  more than one SPF record now report complexity from the largest observed
+  include count instead of whichever SPF record DNS returned last.
+
 ## [2.2.12] - 2026-06-25
 
 ### Tool Surface Changes

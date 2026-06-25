@@ -47,6 +47,13 @@ gaps, with aggregate-only disclosure. External spend 0 USD.
   Full local gate passed with `uv run python scripts/check.py`: 3,568 passed, 6
   skipped, 4 deselected, total coverage 86.57 percent. No GitHub upload was
   performed.
+- Local-only bug hunt after the user kept GitHub uploads paused: fixed SPF
+  complexity aggregation so malformed domains with multiple SPF TXT records keep
+  the largest observed `include:` count instead of the last returned record's
+  count. Added a regression in `TestSPFAnalysis`. Focused SPF validation passed
+  with 5 passed. Full local gate passed with `uv run python scripts/check.py`:
+  3,570 passed, 5 skipped, 4 deselected, total coverage 86.57 percent. No
+  GitHub upload was performed. External spend remains 0 USD.
 
 ## 2026-06-23 to 2026-06-24
 

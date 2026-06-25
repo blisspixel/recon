@@ -307,6 +307,23 @@ class TestSPFAnalysis:
         assert len(complexity_svcs) == 1
         assert "large" not in complexity_svcs[0]
 
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_spf_complexity_uses_highest_count_across_multiple_records(self, mock_resolve):
+        complex_includes = " ".join(f"include:svc{i}.example.com" for i in range(5))
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [
+                    f"v=spf1 {complex_includes} ~all",
+                    "v=spf1 include:short.example.com ~all",
+                ],
+                "example.com/MX": [],
+            }
+        )
+        result = await DNSSource().lookup("example.com")
+        complexity_svcs = [s for s in result.detected_services if "SPF complexity" in s]
+        assert complexity_svcs == ["SPF complexity: 5 includes"]
+
 
 class TestMsoidCNAME:
     @pytest.mark.asyncio
