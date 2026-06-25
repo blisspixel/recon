@@ -389,6 +389,7 @@ Disposition for recon:
 | Goal-driven agent loops | Yes, for release readiness, CI triage, private-corpus calibration orchestration, and fingerprint proposal drafts | Use them only when the task repeats, success is verified by an automated gate, cost is bounded, and the loop can read logs and run the same local tools a maintainer would. It does not silently mutate CPTs, fingerprints, schema, releases, or distribution artifacts. |
 | Manager/worker or subagent loops | Yes, for read-heavy review: docs drift, test-log triage, schema checks, and catalog candidate review | Parallel agents summarize evidence back to one reviewed decision. Avoid parallel write-heavy code edits. |
 | Self-critique/eval loops | Yes, when the verifier is deterministic or separately reviewable: `scripts/check.py`, schema drift tests, coverage, mutation gate, no-real-data review, aggregate-only validation memos | The agent may critique output; deterministic gates decide whether the repo is clean. Human review decides semantic changes. |
+| Security-rule selection | Yes, for maintainer-loop planning and review | Keep a short always-on checklist for every code pass (secrets, untrusted input, shell/file boundaries, private-data handling, supply chain, and MCP side effects), then add changed-area checks based on the touched subsystem. The checklist informs review and tests; it does not become runtime behavior or a new dependency. |
 | Persistent memory | Limited | Use committed docs, validation baselines, and git history. Do not add a persistent aggregate scan database or target-memory store. |
 | OKF-style knowledge bundles | Maybe, as an agent-readable packaging pattern for recon's own runbooks, invariants, schemas, and surface inventory | Do not export target findings as OKF. Do not duplicate docs into a second source of truth unless a generator and drift gate make it derived. |
 | Scheduled hosted operation | No, inside recon | Scheduling belongs to Codex, Claude Code, GitHub Actions, cron, or the operator's environment. recon stays a local CLI/library/MCP server. |
@@ -397,7 +398,11 @@ The near-term implementation is therefore not "make recon agentic." It is:
 publish optional maintainer/developer runbooks in the repo for the people who
 want them, give those loops explicit stop conditions and gates, and keep the
 installed user path exactly what it is today: local CLI, library, JSON, and MCP
-surfaces that require no AI assistant.
+surfaces that require no AI assistant. For security work, the practical shape is
+an explicit review plan: start with the always-on checklist, select subsystem
+checks only for the files actually touched, then prove the result with the
+smallest deterministic gate that covers the changed boundary before running the
+full local gate.
 
 The minimum viable maintainer-loop contract now lives in
 [maintainer-loop-runbook.md](maintainer-loop-runbook.md): one context packet, one

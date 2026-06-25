@@ -54,6 +54,10 @@ gaps, with aggregate-only disclosure. External spend 0 USD.
   with 5 passed. Full local gate passed with `uv run python scripts/check.py`:
   3,570 passed, 5 skipped, 4 deselected, total coverage 86.57 percent. No
   GitHub upload was performed. External spend remains 0 USD.
+- Local-only roadmap note: captured the useful security-review concept as a
+  recon-native maintainer-loop discipline: an always-on security checklist plus
+  changed-area checks selected by touched subsystem. No external project,
+  vendor, or framework reference was added.
 
 ## 2026-06-23 to 2026-06-24
 
