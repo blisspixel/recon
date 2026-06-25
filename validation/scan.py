@@ -37,9 +37,27 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+_PRIVATE_SCAN_OUTPUT_ROOTS = (
+    REPO_ROOT / "validation" / "runs-private",
+    REPO_ROOT / "validation" / "live_runs",
+    REPO_ROOT / "validation" / "local",
+)
+
 
 def _utc_stamp() -> str:
     return datetime.now(UTC).strftime("%Y%m%d-%H%M%SZ")
+
+
+def _validate_scan_output_root(output_root: Path) -> Path:
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    from validation.run_path_safety import validate_private_output_root
+
+    return validate_private_output_root(
+        output_root,
+        repo_root=REPO_ROOT,
+        allowed_roots=_PRIVATE_SCAN_OUTPUT_ROOTS,
+    )
 
 
 def _count_corpus(corpus: Path) -> int:
@@ -363,6 +381,11 @@ def _maybe_run_diff(
 
 def main() -> None:
     args = _build_parser().parse_args()
+    try:
+        args.output_root = _validate_scan_output_root(args.output_root)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
 
     corpus = args.corpus
     # --ct-retry-from synthesizes a filtered corpus from the prior run, listing

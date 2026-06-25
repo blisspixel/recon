@@ -61,3 +61,12 @@ def test_ndjson_mode_still_works(scan, tmp_path: Path) -> None:
     (tmp_path / "results.ndjson").write_text("\n".join(lines) + "\n", encoding="utf-8")
     scan._write_ct_budget_summary(tmp_path / "results.ndjson", tmp_path)
     assert _counts(tmp_path) == {"cache_hit": 2, "rate_limited": 1}
+
+
+def test_scan_output_root_allows_outside_repo(scan, tmp_path: Path) -> None:
+    assert scan._validate_scan_output_root(tmp_path) == tmp_path.resolve(strict=False)
+
+
+def test_scan_output_root_rejects_public_repo_path(scan) -> None:
+    with pytest.raises(ValueError, match="validation/runs-private"):
+        scan._validate_scan_output_root(scan.REPO_ROOT / "docs" / "scan-output")

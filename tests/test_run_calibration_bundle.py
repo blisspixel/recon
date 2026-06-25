@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from validation.run_calibration_bundle import preflight_corpus_inputs, run_bundle
+from validation.run_calibration_bundle import REPO_ROOT, preflight_corpus_inputs, run_bundle
 
 
 def _summary(n: int) -> dict[str, object]:
@@ -257,3 +257,17 @@ def test_run_bundle_resolves_safe_stamp_under_output_root(tmp_path) -> None:
     )
 
     assert outputs.run_dir == (output_root / "safe-run_20260619.1").resolve(strict=False)
+
+
+def test_run_bundle_rejects_public_in_repo_output_root(tmp_path: Path) -> None:
+    stratify_dir, consolidated = _write_private_inputs(tmp_path)
+
+    with pytest.raises(ValueError, match="validation/runs-private"):
+        run_bundle(
+            stratify_dir=stratify_dir,
+            consolidated=consolidated,
+            output_root=REPO_ROOT / "docs" / "calibration-output",
+            label="",
+            stamp="safe-run_20260619.1",
+            dry_run=True,
+        )

@@ -235,6 +235,9 @@ Current local verification in this session:
 - Full local gate for the README license-readiness guard passed:
   `uv run python scripts/check.py` with 3552 passed, 5 skipped, 4 deselected,
   and 86.57% total coverage.
+- Full local gate for the private validation output-root guard passed:
+  `uv run python scripts/check.py` with 3557 passed, 6 skipped, 4 deselected,
+  and 86.57% total coverage.
 - Paid or cloud spend: 0 USD.
 
 ## Active Roadmap Queue
@@ -294,6 +297,13 @@ One disclosure-boundary hardening also shipped in the public tree:
 
 - `validation/render_calibration_memo.py` rejects target-looking domain names in
   aggregate JSON keys and memo titles, not only JSON values.
+- Maintainer-local validation output roots now fail closed when they point
+  inside the repository but outside the gitignored private validation
+  workspaces. `validation/run_calibration_bundle.py` is restricted to
+  `validation/runs-private/` for in-repo outputs, and `validation/scan.py`
+  accepts only `validation/runs-private/`, `validation/live_runs/`, or
+  `validation/local/` inside the checkout. Outside-repo operator-local paths
+  stay allowed.
 
 ## MCP Launch Guidance Alignment
 

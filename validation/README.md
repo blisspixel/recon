@@ -148,6 +148,10 @@ For large monthly cadence, keep `--no-ct` on unless CT coverage is the point and
 use modest concurrency. Real-company corpora live entirely under
 `validation/corpus-private/` and never leave your machine; only generic patterns
 surfaced for triage become candidate PRs.
+If `--output-root` is inside this checkout, it must resolve under one of the
+gitignored private validation workspaces: `validation/runs-private/`,
+`validation/live_runs/`, or `validation/local/`. Operator-local paths outside
+the checkout are allowed.
 
 ## Assurance and calibration harnesses
 
@@ -215,7 +219,9 @@ By default the runner expects:
 Use `--dry-run` to print the exact module invocations without network calls.
 If you pass `--stamp`, it must be a single safe path segment: letters, digits,
 dots, underscores, and hyphens only. The runner resolves the final run directory
-under `--output-root` before writing artifacts.
+under `--output-root` before writing artifacts. If `--output-root` is inside
+this checkout, it must resolve under `validation/runs-private/`; operator-local
+paths outside the checkout are allowed.
 Before any network harness starts, the runner preflights the private corpus
 inputs locally: the consolidated corpus must meet `--min-cell`, at least one
 stratum file under `by-vertical/` must meet `--min-cell`, and dry runs print the

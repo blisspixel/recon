@@ -163,3 +163,6 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - When a user removes public-facing positioning or contact wording from README,
   add a deterministic release-readiness or docs test if the wording is likely to
   drift back.
+- For validation runners that write private corpus outputs, reject public
+  in-repo output roots in code rather than relying only on documentation or
+  `.gitignore`.

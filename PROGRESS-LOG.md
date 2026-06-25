@@ -77,6 +77,11 @@ review. Local gate (`scripts/check.py`) green throughout; external spend 0 USD.
   guard so README cannot regain the removed enterprise-contact license wording.
   Full local gate passed with 3552 tests, 5 skipped, 4 deselected, and 86.57%
   total coverage before commit.
+- Added a shared private-output-root guard for maintainer validation runs.
+  Calibration bundles and scan runs now reject in-repo output roots outside the
+  gitignored private validation workspaces before writing artifacts.
+  Full local gate passed with 3557 tests, 6 skipped, 4 deselected, and 86.57%
+  total coverage before commit.
 
 ## 2026-06-19
 

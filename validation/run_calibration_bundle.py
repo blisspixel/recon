@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from validation.render_calibration_memo import load_public_payload, render_memo
-from validation.run_path_safety import contained_child, validate_run_stamp
+from validation.run_path_safety import contained_child, validate_private_output_root, validate_run_stamp
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VALIDATION_ROOT = REPO_ROOT / "validation"
@@ -186,6 +186,11 @@ def run_bundle(
     runner: CommandRunner = _default_runner,
 ) -> BundleOutputs:
     """Run all calibration harnesses and render the aggregate memo."""
+    output_root = validate_private_output_root(
+        output_root,
+        repo_root=REPO_ROOT,
+        allowed_roots=(VALIDATION_ROOT / "runs-private",),
+    )
     preflight = preflight_corpus_inputs(
         stratify_dir=stratify_dir,
         consolidated=consolidated,

@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The README license section is simpler.** It now points directly to Apache
   2.0 and the LICENSE file without a separate enterprise-contact sentence, and
   release readiness now fails if that wording returns.
+- **Private validation run outputs now fail closed inside the repo.**
+  `validation/run_calibration_bundle.py` and `validation/scan.py` reject
+  in-repository output roots outside the gitignored private validation
+  workspaces, while still allowing operator-local paths outside the checkout.
 - **The file-size ratchet tightened for two already-shrunk modules.**
   `scripts/check_file_size.py` now locks `exposure.py` at 981 lines and
   `merger.py` at 955 lines, preserving the shrinkage reported by the full local
