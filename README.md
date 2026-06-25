@@ -366,8 +366,7 @@ boundaries). Full guide: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Apache 2.0. Free to use, build on, fork, and share. For commercial or
-enterprise use, contact Nick Seal (nick@pueo.io). See [LICENSE](LICENSE) for
+Apache 2.0. Free to use, build on, fork, and share. See [LICENSE](LICENSE) for
 the full terms.
 
 This tool queries only public DNS records and unauthenticated endpoints. See [docs/legal.md](docs/legal.md) for full disclaimer.

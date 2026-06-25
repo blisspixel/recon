@@ -67,6 +67,9 @@ review. Local gate (`scripts/check.py`) green throughout; external spend 0 USD.
   `uv run python scripts/check_file_size.py --update`. The guard only lowered
   ceilings: `exposure.py` 983 to 981 and `merger.py` 958 to 955. Local
   `check_file_size.py` and text hygiene passed afterward.
+- Simplified the README license section by removing the separate enterprise
+  contact sentence. Fast local gate, explicit text hygiene over
+  `origin/main..HEAD`, and release readiness passed before commit.
 
 ## 2026-06-19
 
