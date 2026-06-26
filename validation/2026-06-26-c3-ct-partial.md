@@ -74,19 +74,42 @@ This retry confirms the hardened continuation path works, including private
 retry-corpus placement and partial finalization. It does not close C3: the run
 mostly measured continued CT breaker pressure and produced no triage candidates.
 
+## Retry Session B
+
+After tightening CT attempt-outcome accounting, a short bounded retry was run
+against the degraded records from Retry Session A. This run tested whether mixed
+provider states are reported as live pacing failures instead of collapsing into
+the `breaker_open` bucket.
+
+- Retry corpus size: 106 domains.
+- Valid streamed retry records: 34.
+- Completion state: partial, controlled `--max-runtime` stop.
+- External spend: 0 USD.
+- Private artifacts: `validation/runs-private/20260626-171647Z/` and the
+  synthesized retry input under `validation/runs-private/_inputs/` (gitignored).
+
+| Outcome | Count |
+|---|---:|
+| `live_success` | 1 |
+| `live_rate_limited` | 33 |
+
+This session confirms the corrected accounting shape: the retry was limited by
+live provider pacing, not by all-provider breaker stops. It also added one more
+domain with usable CT data. It still does not close C3.
+
 ## Combined Session Summary
 
-The two partial sessions were combined with
+The three partial sessions were combined with
 `validation/summarize_ct_sessions.py`, which deduplicates by domain internally
 and emits aggregate counts only.
 
-- Sessions summarized: 2.
-- Valid records across sessions: 2,802.
-- Records with a domain field: 2,769.
+- Sessions summarized: 3.
+- Valid records across sessions: 2,836.
+- Records with a domain field: 2,803.
 - Unique domains observed across sessions: 2,647.
-- Domains with CT data (`cache_hit` or `live_success` as best outcome): 38.
-- CT-data coverage ratio across observed domains: 0.014356.
-- Domains still degraded or unresolved for CT: 2,609.
+- Domains with CT data (`cache_hit` or `live_success` as best outcome): 39.
+- CT-data coverage ratio across observed domains: 0.014734.
+- Domains still degraded or unresolved for CT: 2,608.
 - Private aggregate summary:
   `validation/runs-private/c3-ct-session-summary-20260626.json` (gitignored).
 
@@ -95,10 +118,10 @@ Best outcome by unique domain:
 | Outcome | Domains |
 |---|---:|
 | `cache_hit` | 28 |
-| `live_success` | 10 |
-| `live_rate_limited` | 24 |
+| `live_success` | 11 |
+| `live_rate_limited` | 55 |
 | `cache_miss` | 1 |
-| `breaker_open` | 2,584 |
+| `breaker_open` | 2,552 |
 
 This is the correct C3 accounting layer for further partial sessions: track
 unique-domain CT coverage across sessions, not raw record counts alone.

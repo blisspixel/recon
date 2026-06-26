@@ -53,6 +53,21 @@ findings, or unsuppressed small strata.
 
 ## Current Alignment Snapshot
 
+Cycle 9 scope: CT attempt-outcome accounting and bounded C3 telemetry check.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | Mixed CT provider failures now prefer live attempted failure labels over a separate breaker label; focused tests cover rate-limit, other-failure, and all-breaker cases. |
+| Security and supply chain | 5/5 | No dependency, credential, paid API, or new network surface; the validation run stayed under ignored private roots and published only aggregate counts. |
+| Performance | 5/5 | The change is constant-time tally selection and does not add retries, providers, concurrency, or parsing work. |
+| Readability | 5/5 | The enum semantics are documented in the model, schema descriptions, and operational contract without adding a new field. |
+| Maintainability | 5/5 | Keeps the existing best-effort enum and focused test coverage instead of expanding the runtime contract. |
+| Sustainability and invariants | 5/5 | Preserves passive, zero-spend C3 validation and avoids overclaiming the third partial session as C3 closure. |
+
+External spend: 0 USD.
+
 Cycle 8 scope: C3 CT partial-session aggregate accounting.
 
 Maker-checker score:

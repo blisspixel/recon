@@ -24,9 +24,12 @@ The next work is dependency-ordered:
      [validation/2026-06-26-c3-ct-partial.md](../validation/2026-06-26-c3-ct-partial.md).
      A bounded retry against degraded CT records added 109 valid retry records,
      confirmed the private retry-input path, and produced no triage candidates.
-     Combined aggregate accounting currently shows 2,647 unique observed domains
-     and 38 domains with usable CT data. These sessions confirm the
-     multi-session, limiter-bound shape. They do not close C3.
+     A second short retry tested CT attempt-outcome accounting, added 34 valid
+     records, and confirmed live provider pacing is now separated from
+     all-provider breaker stops. Combined aggregate accounting currently shows
+     2,647 unique observed domains and 39 domains with usable CT data. These
+     sessions confirm the multi-session, limiter-bound shape. They do not close
+     C3.
    - Acceptance: publish only aggregate counts and disclosure-reviewed memos.
      No apexes, organization names, tenant IDs, or per-domain rows leave the
      maintainer machine.

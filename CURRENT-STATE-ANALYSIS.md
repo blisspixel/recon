@@ -120,12 +120,15 @@ records out of 5,241, with CT mostly blocked by the local breaker. This does not
 complete C3 and does not change the Bayesian calibration claims; it confirms the
 multi-session shape. A short bounded retry against degraded CT records produced
 109 valid retry records and one fresh live CT success; it also confirmed that
-retry inputs now stay under the ignored private output root. C3 remains open
-until enough CT coverage accumulates for aggregate certificate and graph-surface
-review. A combined aggregate summary across the two current sessions now shows
-2,802 valid records, 2,647 unique observed domains, 38 domains with usable CT
-data, and 2,609 domains still degraded or unresolved for CT. The summary JSON is
-private and aggregate-only.
+retry inputs now stay under the ignored private output root. A second short
+bounded retry produced 34 valid records, one more live CT success, and confirmed
+that mixed provider failures are now accounted as live provider pacing rather
+than all-provider breaker stops. C3 remains open until enough CT coverage
+accumulates for aggregate certificate and graph-surface review. A combined
+aggregate summary across the three current sessions now shows 2,836 valid
+records, 2,647 unique observed domains, 39 domains with usable CT data, and
+2,608 domains still degraded or unresolved for CT. The summary JSON is private
+and aggregate-only.
 
 The maintainer tooling now supports the correct operational shape:
 

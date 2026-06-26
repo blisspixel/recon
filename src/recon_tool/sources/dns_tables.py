@@ -179,13 +179,19 @@ def classify_ct_failure(exc: Exception) -> str:
 
 
 def ct_failure_outcome(failures: dict[str, int]) -> str:
-    """Pick the most precise outcome label from the failure tallies."""
-    if failures["breaker"] > 0:
-        return "breaker_open"
+    """Pick the most precise outcome label from the failure tallies.
+
+    Live-attempt failures carry more operational signal than a separate
+    provider's already-open breaker. Reserve ``breaker_open`` for the case
+    where every failed provider was stopped by its local breaker before any
+    useful live attempt happened.
+    """
     if failures["rate_limit"] > 0:
         return "live_rate_limited"
     if failures["other"] > 0:
         return "live_other_failure"
+    if failures["breaker"] > 0:
+        return "breaker_open"
     return "cache_miss"
 
 

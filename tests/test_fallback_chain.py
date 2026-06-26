@@ -14,6 +14,7 @@ import pytest
 
 from recon_tool.models import CertSummary
 from recon_tool.sources.dns import _detect_cert_intel, _DetectionCtx
+from recon_tool.sources.dns_tables import ct_failure_outcome
 
 
 @pytest.mark.usefixtures("_enable_crtsh")
@@ -306,3 +307,16 @@ class TestFallbackChain:
         assert ctx.ct_subdomain_count == 0
         assert ctx.cert_summary is None
         assert "crt.sh" in ctx.degraded_sources
+
+
+class TestCTFailureOutcome:
+    """Outcome labels keep mixed-provider CT failures actionable."""
+
+    def test_rate_limit_beats_separate_breaker(self):
+        assert ct_failure_outcome({"breaker": 1, "rate_limit": 1, "other": 0}) == "live_rate_limited"
+
+    def test_live_error_beats_separate_breaker(self):
+        assert ct_failure_outcome({"breaker": 1, "rate_limit": 0, "other": 1}) == "live_other_failure"
+
+    def test_breaker_open_requires_only_breakers(self):
+        assert ct_failure_outcome({"breaker": 2, "rate_limit": 0, "other": 0}) == "breaker_open"

@@ -132,6 +132,10 @@ operating rules for future cycles and must not override `AGENTS.md`,
   interpreting progress. It may dedupe by private keys internally, but its
   output must contain counts, rates, run basenames, and coverage only, with tests
   proving target strings do not appear in rendered JSON.
+- For multi-provider telemetry, reserve no-attempt labels such as
+  `breaker_open` for all-provider local stops. If any provider made or attempted
+  a live path and failed differently, surface that lower-cardinality live cause
+  first so retry planning is based on the actionable constraint.
 - For diff coverage, keep it advisory unless the team explicitly chooses a gate.
   Changed-line coverage should ignore doc-only diffs, use local Coverage.py
   JSON, and avoid adding a dependency or service.

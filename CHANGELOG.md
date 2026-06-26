@@ -50,6 +50,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   combines partial private CT sessions into aggregate-only JSON with raw outcome
   counts, best outcome by unique domain, and CT data coverage, without emitting
   domains, tenant IDs, organization names, or per-domain rows.
+- **CT attempt-outcome accounting is more precise.** `breaker_open` is now
+  reserved for failed CT attempts where every failed provider was stopped by an
+  open local breaker. Mixed provider failures now surface the live attempted
+  failure cause, such as `live_rate_limited` or `live_other_failure`, while
+  keeping the existing best-effort enum.
 
 ## [2.2.14] - 2026-06-26
 

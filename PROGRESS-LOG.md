@@ -265,6 +265,36 @@ Session: loop cycle 8, C3 CT session aggregation. External spend 0 USD.
   stages passed.
 - External spend: 0 USD.
 
+Session: loop cycle 9, CT attempt-outcome accounting. External spend 0 USD.
+
+- Selected CT outcome accounting because the C3 aggregate was dominated by
+  breaker labels, while the current limiter state showed a more specific mixed
+  provider condition: crt.sh breaker history plus CertSpotter live pacing.
+- Latest best-practice refresh for this task: keep retries bounded by local
+  limiter state, fail fast under provider stress, and use low-cardinality error
+  labels that distinguish retryable live pacing from no-attempt breaker stops.
+- Updated `ct_failure_outcome` so `breaker_open` is reserved for failed CT
+  attempts where every failed provider was stopped by an open local breaker.
+  Mixed provider failures now surface the live attempted failure cause, such as
+  `live_rate_limited` or `live_other_failure`, while keeping the existing
+  best-effort enum.
+- Updated the model comments, packaged schema description, docs schema
+  description, and operational contract to match the refined semantics.
+- Added focused regression coverage for mixed breaker plus rate-limit, mixed
+  breaker plus live error, and all-breaker outcomes.
+- Ran a bounded maintainer-local retry against the degraded records from Retry
+  Session A. The retry corpus had 106 domains; the 90-second session finalized
+  34 valid records, with 1 live CT success and 33 live-rate-limited outcomes.
+  The run produced zero `breaker_open` records, confirming the corrected
+  accounting shape. Private artifacts remain ignored under
+  `validation/runs-private/`.
+- Rebuilt the private aggregate C3 summary across three sessions. Current
+  aggregate state: 2,836 valid records, 2,803 records with domain fields, 2,647
+  unique observed domains, 39 domains with usable CT data, 2,608 domains still
+  degraded or unresolved for CT, and CT-data coverage ratio 0.014734.
+- Updated the public C3 memo, roadmap current state, changelog, current-state
+  analysis, quality rubric, operational contract, and `SKILLS.md`.
+
 Session: private corpus setup, profile-engine correctness fix, CI parity fix,
 and the 2.2.13 patch release. External spend 0 USD.
 

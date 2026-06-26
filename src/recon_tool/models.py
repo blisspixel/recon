@@ -681,15 +681,15 @@ class TenantInfo:
     #                         result, no live provider was called.
     #   live_success       -- a live provider returned data, which was
     #                         used and also written to the cache.
-    #   live_rate_limited  -- both live providers raised RateLimited
-    #                         (HTTP 429 or local breaker / max-wait),
-    #                         and no cache fallback was available.
-    #   breaker_open       -- one or both providers had an open circuit
-    #                         breaker before any HTTP call was attempted.
-    #   live_other_failure -- both live providers raised a non-429 error
-    #                         (timeout, 5xx, JSON parse failure) and no
-    #                         cache fallback was available.
-    #   cache_miss         -- both providers returned empty-but-not-error
+    #   live_rate_limited  -- at least one provider hit HTTP 429 or local
+    #                         pacing / max-wait limits, no live provider or
+    #                         cache fallback returned data.
+    #   breaker_open       -- every failed provider was stopped by an open
+    #                         local breaker before a useful live attempt.
+    #   live_other_failure -- at least one provider raised a non-429 error
+    #                         (timeout, 5xx, JSON parse failure), no live
+    #                         provider or cache fallback returned data.
+    #   cache_miss         -- providers returned empty-but-not-error
     #                         (soft failure) and no cache entry existed.
     #   skipped            -- the caller explicitly set ``--no-ct`` so no
     #                         CT enumeration was attempted.

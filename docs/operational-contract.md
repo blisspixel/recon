@@ -74,7 +74,9 @@ A script can branch on the outcome without parsing output (full contract in
   the live providers; on live failure the cache is the final fallback, annotated
   with `ct_attempt_outcome` (`cache_hit`, `live_success`, `cache_miss`,
   `live_rate_limited`, `live_other_failure`, `breaker_open`). A mid-pagination
-  429 returns partial CT data rather than an error.
+  429 returns partial CT data rather than an error. When providers fail in
+  different ways, live attempted failures are labeled ahead of a separate open
+  breaker so `breaker_open` means every failed provider was stopped locally.
 - **Sparse is flagged, not hidden.** A thin result carries `sparse=true` in the
   JSON; the credible interval widens rather than collapsing on a fake-confident
   point estimate (see [correlation.md](correlation.md)).
