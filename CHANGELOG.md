@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **C3 CT validation plan.** `docs/c3-ct-validation-plan.md` now records the
+  current researched next step for the CT-enabled C3 track: provider-health
+  check, bounded Retry Session D, aggregate summary rebuild, public-source
+  candidate triage, and a closure rule that does not require impossible full CT
+  coverage through public search endpoints.
 - **Schema generator drift gate.** `scripts/generate_schema.py --check` now
   verifies both published JSON Schema copies against code-owned required-field
   metadata and explicit conditional-field metadata, and CI enforces it.
@@ -35,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/how-it-works.md`, the docs index is reorganized by reader task, and the
   roadmap is now a concise current-plan and invariant document instead of a
   shipped-history archive.
+- **C3 planning docs clarified.** The README, docs index, roadmap,
+  maintainer-validation notes, validation workspace guide, limitations,
+  how-it-works overview, weak-areas guide, paper outline, and historical v2.0
+  runbook now point to the active C3 CT plan instead of spreading the next-step
+  details across unrelated pages.
 - **Markdown house-style cleanup.** Tracked Markdown docs, examples, agent
   guidance, and validation memos now avoid em dashes, en dashes, pictographs,
   and literal AI-attribution phrases.

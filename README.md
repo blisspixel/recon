@@ -199,7 +199,17 @@ before committing any validation artifact.
 - [docs/README.md](docs/README.md): complete docs index.
 - [docs/roadmap.md](docs/roadmap.md): current plan, invariants, and scope
   boundaries.
+- [docs/c3-ct-validation-plan.md](docs/c3-ct-validation-plan.md): current
+  maintainer plan for the CT-enabled C3 validation track.
 - [CHANGELOG.md](CHANGELOG.md): shipped changes.
+
+## Current Maintainer Focus
+
+The next work is not a runtime expansion. It is to finish the CT-enabled C3
+validation track as bounded, private, aggregate-only sessions, then close or
+continue based on whether the next retry produces new CT data or a
+public-source-backed fingerprint candidate. The detailed plan lives in
+[docs/c3-ct-validation-plan.md](docs/c3-ct-validation-plan.md).
 
 ## Development
 

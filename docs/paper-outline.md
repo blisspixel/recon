@@ -9,6 +9,10 @@ shipped live in the [roadmap](roadmap.md) research write-up section.
 
 The prose expansion of this outline (full section drafts, with corpus-gated
 empirical cells marked pending) lives in [paper-draft.md](paper-draft.md).
+Current CT-enabled corpus work is tracked in
+[c3-ct-validation-plan.md](c3-ct-validation-plan.md). Any paper update must use
+only its aggregate-safe public memos and synthetic or public reproduction
+harnesses, never private target rows.
 
 ## Thesis
 

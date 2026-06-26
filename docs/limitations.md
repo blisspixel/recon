@@ -167,6 +167,10 @@ Times recon has been wrong in empirically verified ways:
   fallback, but it rate-limits aggressively on larger domains. recon handles
   429 responses by returning partial data (documented in degraded-sources
   note) rather than crashing.
+- **CT search is not complete inventory.** Public CT search APIs are indexed
+  views over append-only logs and can be rate-limited, stale, partial, or
+  missing an entry that another monitor sees. Treat CT evidence as passive
+  certificate telemetry, not as an authoritative asset list.
 - **DKIM selector blind spots.** recon probes common selectors such as `s1`,
   `s2`, `dkim`, `mail`, `k1`, `k2`, and `default`. Services using
   non-standard or per-account selectors (for example some Mailchimp, SendGrid,

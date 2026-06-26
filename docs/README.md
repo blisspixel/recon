@@ -29,6 +29,7 @@ The docs are organized by reader need:
 | Consume JSON safely in scripts | [automation-examples.md](automation-examples.md) |
 | Upgrade from v1.x to v2.0 | [migration-v2.md](migration-v2.md) |
 | Run maintainer validation safely | [maintainer-validation.md](maintainer-validation.md) |
+| Execute the current C3 CT validation plan | [c3-ct-validation-plan.md](c3-ct-validation-plan.md) |
 | Use the maintainer loop contract | [maintainer-loop-runbook.md](maintainer-loop-runbook.md) |
 | Cut and verify a release | [release-process.md](release-process.md) |
 

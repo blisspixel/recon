@@ -155,6 +155,13 @@ The maintainer tooling now supports the correct operational shape:
 - `--finalize-existing` and `--ct-retry-from` are now mutually exclusive because
   no-network recovery and retry synthesis produce different scan metadata.
 
+The active next-step plan is now explicit in `docs/c3-ct-validation-plan.md`:
+check provider health first, run Retry Session D only against the degraded tail
+from Retry Session C if a provider is not breaker-gated, rebuild the aggregate
+summary, triage any candidate through public vendor documentation and negative
+tests, then close C3 if the next bounded retry produces no new CT data or
+public-source-backed candidate.
+
 ## Profile signal_boost Correctness Fix (2.2.13)
 
 The profile engine's `signal_boost` and `exclude_signals` were inert since they

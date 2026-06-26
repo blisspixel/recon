@@ -217,6 +217,10 @@ The summary reports raw outcome counts, best outcome by unique domain, and CT
 data coverage. It emits run directory basenames and counts only. It does not
 write domains, tenant IDs, organization names, or per-domain rows.
 
+The current C3 sequence is tracked in
+[docs/c3-ct-validation-plan.md](../docs/c3-ct-validation-plan.md). Use that plan
+for the active retry order, closure decision, and documentation update list.
+
 ## Assurance and calibration harnesses
 
 The statistical-assurance side of this directory (the dossier that reads

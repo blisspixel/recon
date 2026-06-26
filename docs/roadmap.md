@@ -33,9 +33,15 @@ The next work is dependency-ordered:
      sessions confirm the multi-session, limiter-bound shape. The retry tooling
      now revalidates synthesized retry-domain inputs and rejects retry synthesis
      combined with no-network finalization. These sessions do not close C3.
+   - Current plan: follow
+     [c3-ct-validation-plan.md](c3-ct-validation-plan.md). The next atomic task
+     is a provider-health check, then Retry Session D against the degraded tail
+     from Retry Session C only if at least one CT provider is not breaker-gated.
    - Acceptance: publish only aggregate counts and disclosure-reviewed memos.
      No apexes, organization names, tenant IDs, or per-domain rows leave the
-     maintainer machine.
+     maintainer machine. Close C3 as a documented partial CT pass when the next
+     bounded retry produces no new CT data or public-source-backed candidate, or
+     when provider cooldown still leaves the track rate-limited.
 
 2. **Run fingerprint and motif triage only as a reviewed proposal path.**
    - Why next: catalog growth should come from observed public DNS or stable

@@ -128,6 +128,11 @@ degrade to a miss. CT providers are best-effort and can be stale,
 rate-limited, or unavailable. A degraded source is named in output rather than
 hidden.
 
+For maintainer corpus work, CT-enabled validation is deliberately multi-session
+and aggregate-only. The active plan is
+[c3-ct-validation-plan.md](c3-ct-validation-plan.md); end users do not need it
+for normal lookups.
+
 Partial results are valid when at least one source returned clean evidence.
 The result reports `partial`, `degraded_sources`, and CT attempt metadata so an
 operator can decide whether to retry.

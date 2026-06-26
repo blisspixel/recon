@@ -51,6 +51,11 @@ public vendor docs or repeated validation evidence, add negative tests, and keep
 the wording hedged. Do not turn a bare unknown terminus into a broad service
 claim.
 
+Maintainer-local corpus candidates follow the stricter active plan in
+[c3-ct-validation-plan.md](c3-ct-validation-plan.md): private rows stay private,
+public docs or aggregate-safe evidence justify any promoted rule, and every new
+suffix rule gets a lookalike negative test.
+
 ## Wildcard-heavy DNS zones
 
 Symptoms: many guessed prefixes resolve, but the services list stays thin or

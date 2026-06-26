@@ -7,38 +7,6 @@ repository history.
 
 ## 2026-06-26
 
-Session: loop cycle 8, C3 CT session aggregation. External spend 0 USD.
-
-- Selected aggregate session accounting because C3 is now explicitly
-  multi-session and raw partial-record counts are not enough to know whether CT
-  coverage is actually improving.
-- Latest best-practice refresh for this task: resumable data-collection
-  workflows need idempotent aggregation, provenance metadata, bounded retry
-  accounting, and disclosure-safe summaries rather than row-level publication.
-- Added `validation/summarize_ct_sessions.py`, an aggregate-only private-run
-  summarizer. It accepts private run directories with `results.ndjson` or legacy
-  `results.json`, streams partial NDJSON, skips malformed streamed tails,
-  computes raw CT outcome counts, computes best CT outcome by unique domain, and
-  validates that in-repo inputs and outputs stay under private validation roots.
-- Added regression coverage for cross-session dedupe, best-outcome selection,
-  malformed partial tails, legacy JSON-array input, private path rejection, and
-  absence of target strings in rendered summary JSON.
-- Ran the summarizer over the two current C3 private sessions. Aggregate result:
-  2 sessions, 2,802 valid records, 2,769 records with domain fields, 2,647
-  unique observed domains, 38 domains with usable CT data, 2,609 domains still
-  degraded or unresolved for CT, and CT-data coverage ratio 0.014356. Private
-  summary written to ignored `validation/runs-private/c3-ct-session-summary-20260626.json`.
-- Updated the public C3 memo, validation runbook, roadmap current state,
-  changelog, current-state analysis, quality rubric, and `SKILLS.md`.
-- Focused validation passed:
-  `uv run python -m pytest tests/test_ct_session_summary.py tests/test_markdown_links.py tests/test_release_readiness.py -q`
-  with 19 passed. Focused ruff, text hygiene, validation hygiene, and diff
-  checks passed.
-- Final full local gate passed with `uv run python scripts/check.py`: 3,610
-  passed, 5 skipped, 4 deselected, total coverage 86.61 percent. All gate
-  stages passed.
-- External spend: 0 USD.
-
 Session: loop cycle 9, CT attempt-outcome accounting. External spend 0 USD.
 
 - Selected CT outcome accounting because the C3 aggregate was dominated by
@@ -168,4 +136,30 @@ External spend 0 USD.
   and `scripts/validate_fingerprint.py` passed with 844 entries.
 - Final full local gate passed with `uv run python scripts/check.py`: 3,630
   passed, 6 skipped, 4 deselected, total coverage 86.70 percent. All gate
+  stages passed.
+
+Session: loop cycle 13, documentation refresh and C3 next-plan clarification.
+External spend 0 USD.
+
+- Reviewed README, roadmap, docs index, validation runbooks, data-handling
+  policy, operational contract, weak-areas guidance, and the validation scan
+  and CT session summarizer code.
+- Researched the current CT and documentation constraints from primary sources:
+  RFC 9162, Let's Encrypt CT log documentation, the C2SP Static CT API, SSLMate
+  Certificate Search API limits, NIST SP 800-188, Diataxis, Keep a Changelog,
+  and Semantic Versioning.
+- Added `docs/c3-ct-validation-plan.md` as the active plan for the next work:
+  provider-health check, bounded Retry Session D, aggregate summary rebuild,
+  public-source candidate triage, and a closure decision that treats public CT
+  search limits as a real ceiling instead of waiting for full CT coverage.
+- Updated README, docs index, roadmap, validation README, historical v2.0
+  corpus runbook, maintainer-validation notes, limitations, how-it-works,
+  weak-areas guidance, paper outline, changelog, current-state analysis,
+  quality rubric, and `SKILLS.md` to point at the active C3 plan.
+- Focused documentation validation passed:
+  `uv run pytest tests/test_markdown_links.py tests/test_release_readiness.py -q`
+  with 15 passed. Text hygiene, validation hygiene, generated surface
+  inventory, generated CLI surface doc, and diff whitespace checks passed.
+- Final full local gate passed with `uv run python scripts/check.py`: 3,631
+  passed, 5 skipped, 4 deselected, total coverage 86.69 percent. All gate
   stages passed.

@@ -53,6 +53,21 @@ findings, or unsuppressed small strata.
 
 ## Current Alignment Snapshot
 
+Cycle 13 scope: documentation refresh and researched C3 CT next-step plan.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | The new plan matches existing `validation/scan.py` and `validation/summarize_ct_sessions.py` behavior: private roots, NDJSON partial runs, CT retry synthesis, aggregate summaries, and closure rules. |
+| Security and supply chain | 5/5 | The plan keeps C3 zero-spend, public-source-backed, aggregate-only, and private-row-free; no dependency, API key, paid provider, or active probe is introduced. |
+| Performance | 5/5 | Retry Session D is bounded to the degraded tail with concurrency 1, timeout 60 seconds, and a 300-second runtime cap instead of re-running the full corpus. |
+| Readability | 5/5 | README stays user-facing, the roadmap states priority, the new plan owns command-level detail, and validation docs link to the operational sequence. |
+| Maintainability | 5/5 | The documentation follows the existing reader-task split and points stale v2.0 corpus guidance to the active plan without rewriting historical record. |
+| Sustainability and invariants | 5/5 | The plan explicitly rejects paid CT APIs, direct Static CT monitor work, persistent aggregate databases, and stable surface expansion for this track. |
+
+External spend: 0 USD.
+
 Cycle 12 scope: bounded C3 Retry Session C and public-source-backed Descope
 CNAME-target promotion.
 

@@ -92,6 +92,11 @@ maintainer's machine:
 Only the aggregate metrics (counts, calibration numbers, drift deltas) reach the
 repo; the apexes and per-domain output never do.
 
+The active CT-enabled C3 sequence is broken out in
+[c3-ct-validation-plan.md](c3-ct-validation-plan.md). That document owns the
+current retry order and closure rule; this page owns the enduring Tier 3
+discipline.
+
 ## What the agent does with the result
 
 The agent runs Tier 0 (`drift_check --json`), the Tier 1 harnesses, and, on the

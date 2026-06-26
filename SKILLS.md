@@ -174,6 +174,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - Promote a private CNAME-target candidate only when a public vendor document
   names the target or stable product endpoint. Add both the exact documented
   target patterns and negative boundary tests before updating public memos.
+- When roadmap work needs command-level operational detail, keep the README as
+  orientation, put priority and exit criteria in the roadmap, and put the
+  executable sequence in a dedicated plan or runbook linked from validation docs.
 - For motif catalog growth, prefer complete ordered-chain motifs only when they
   add information beyond existing pairwise motifs. Record the before/after
   firing delta on fictional or aggregate-safe chain inputs.
