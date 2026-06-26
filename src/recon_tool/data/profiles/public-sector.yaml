@@ -11,17 +11,15 @@ category_boost:
   infrastructure: 1.4
   consistency: 1.3
   saas_footprint: 0.8
+# signal_boost / exclude_signals keys are posture observation rule
+# names (the `name` field in data/posture.yaml).
 signal_boost:
-  "DMARC Governance Investment": 1.8
-  "Multi-Layer Security Tooling": 1.5
-  "Zero Trust Pattern Observed": 1.6
-  "Security Gap — Gateway Without DMARC Enforcement": 1.9
-  "Enterprise Security Stack": 1.5
+  strong_email_security: 1.8
+  gateway_without_dmarc_enforcement: 1.9
+  security_tooling_detected: 1.5
+  federated_identity: 1.5
 exclude_signals:
-  - "Startup Tool Mix"
-  - "Product-Led Growth"
-  - "Sales-Led Growth"
-  - "High GTM Maturity"
+  - consumer_saas_sprawl
 prepend_note: |
   Public-sector profile applied. Sovereignty (cloud instance,
   region sub-scope), email authentication, and identity federation

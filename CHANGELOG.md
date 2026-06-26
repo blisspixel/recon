@@ -34,6 +34,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Profile `signal_boost` and `exclude_signals` now reweight observations.**
+  These keys were matched against the rendered statement text and the built-in
+  profiles keyed them by signal display names, so they never fired against the
+  posture observations `--profile` actually reweights. Observations now carry
+  their originating posture rule name, the profile engine matches `signal_boost`
+  and `exclude_signals` against it (`exclude_signals` keeps the statement
+  substring path for back-compat), and the built-in profiles reference real
+  `data/posture.yaml` rule names. A new test asserts every built-in profile key
+  names a real posture rule so stranded config cannot ship again. `--profile`
+  salience and ordering shift where a boosted rule fires.
 - **SPF complexity survives multiple SPF TXT records.** Malformed domains with
   more than one SPF record now report complexity from the largest observed
   include count instead of whichever SPF record DNS returned last.

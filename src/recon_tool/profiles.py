@@ -21,13 +21,13 @@ Schema
           identity: 1.3
           infrastructure: 0.8
         signal_boost:
-          "DMARC Governance Investment": 2.0
-          "Enterprise Security Stack": 1.5
+          strong_email_security: 2.0   # keyed by the posture rule name
+          security_tooling_detected: 1.5  # (data/posture.yaml `name`)
         focus_categories:
           - email        # only observations in these categories are
                          # retained (empty/missing = all categories)
         exclude_signals:
-          - "Startup Tool Mix"
+          - consumer_saas_sprawl  # posture rule name, or a statement substring
         prepend_note: |
           This report uses the fintech profile — email and identity
           signals are weighted higher than infrastructure.
@@ -108,10 +108,17 @@ class Profile:
                 return mult
         return 1.0
 
-    def boost_for_signal(self, name: str) -> float:
-        """Return the multiplier for this signal name, defaulting to 1.0."""
+    def boost_for_signal(self, source_name: str) -> float:
+        """Return the multiplier for this observation's rule name, defaulting to 1.0.
+
+        ``signal_boost`` keys are posture observation rule names (the
+        ``name`` field of an entry in ``data/posture.yaml``), matched
+        exactly against ``Observation.source_name``. An observation with
+        an empty ``source_name`` (not derived from a posture rule) matches
+        no key, since rule names are always non-empty.
+        """
         for sig, mult in self.signal_boost:
-            if sig == name:
+            if sig == source_name:
                 return mult
         return 1.0
 
@@ -390,14 +397,18 @@ def apply_profile(
 
     Steps, in order:
         1. If profile is None, return observations unchanged.
-        2. Exclude observations whose statement matches any
-           ``exclude_signals`` entry (exact substring match).
+        2. Exclude an observation when an ``exclude_signals`` entry
+           equals its ``source_name`` (the originating posture rule) or
+           appears as a substring of its statement. The substring path
+           preserves the historical statement-text behaviour for
+           custom profiles.
         3. When ``focus_categories`` is non-empty, filter to
            observations whose category is in that list (uncategorized
            observations are retained — filtering errs toward visibility).
         4. Multiply each observation's base score by the product of
-           its category_boost and signal_boost multipliers. Re-map
-           the boosted score to a salience level.
+           its category_boost (keyed by category) and signal_boost
+           (keyed by the originating posture rule name) multipliers.
+           Re-map the boosted score to a salience level.
         5. Re-sort by boosted score (descending), then by original
            index for stability.
 
@@ -409,10 +420,10 @@ def apply_profile(
 
     from dataclasses import replace
 
-    # Step 2: exclusion by statement substring
+    # Step 2: exclusion by source rule name or statement substring
     filtered: list[Observation] = []
     for obs in observations:
-        if any(excl in obs.statement for excl in profile.exclude_signals):
+        if any(excl == obs.source_name or excl in obs.statement for excl in profile.exclude_signals):
             continue
         filtered.append(obs)
 
@@ -430,7 +441,7 @@ def apply_profile(
     for idx, obs in enumerate(filtered):
         base = _score(obs)
         cat_mult = profile.boost_for_category(obs.category)
-        sig_mult = profile.boost_for_signal(obs.statement)
+        sig_mult = profile.boost_for_signal(obs.source_name)
         score = base * cat_mult * sig_mult
         new_salience = _salience_for_score(score)
         reweighted = replace(obs, salience=new_salience) if new_salience != obs.salience else obs

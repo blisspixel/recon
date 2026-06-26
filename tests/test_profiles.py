@@ -16,12 +16,13 @@ from recon_tool.profiles import (
 )
 
 
-def _obs(category: str, salience: str, statement: str) -> Observation:
+def _obs(category: str, salience: str, statement: str, source_name: str = "") -> Observation:
     return Observation(
         category=category,
         salience=salience,
         statement=statement,
         related_slugs=(),
+        source_name=source_name,
     )
 
 
@@ -71,6 +72,29 @@ class TestBuiltinProfiles:
 
     def test_unknown_profile_returns_none(self):
         assert load_profile("nonexistent-profile") is None
+
+    def test_builtin_boost_and_exclude_keys_are_real_posture_rules(self):
+        """Every built-in profile's signal_boost / exclude_signals key must name a
+        real posture rule (data/posture.yaml). Profiles reweight posture
+        observations by their originating rule name, so a key that matches no
+        rule is inert config and must not ship. This guards against the historic
+        drift where profiles referenced signal display names that apply_profile
+        never sees.
+        """
+        from recon_tool.posture import load_posture_rules
+
+        rule_names = {rule.name for rule in load_posture_rules()}
+        assert rule_names, "expected built-in posture rules to load"
+
+        offenders: list[str] = []
+        for profile in list_profiles():
+            for key, _ in profile.signal_boost:
+                if key not in rule_names:
+                    offenders.append(f"{profile.name}.signal_boost[{key!r}]")
+            for key in profile.exclude_signals:
+                if key not in rule_names:
+                    offenders.append(f"{profile.name}.exclude_signals[{key!r}]")
+        assert not offenders, "profile keys do not name a posture rule: " + ", ".join(offenders)
 
 
 # ── Custom profile loading ──────────────────────────────────────────────
@@ -167,11 +191,28 @@ class TestApplyProfile:
     def test_signal_boost_elevates_salience(self):
         profile = Profile(
             name="sig",
-            signal_boost=(("X", 3.0),),
+            signal_boost=(("strong_email_security", 3.0),),
         )
-        obs = (_obs("other", "low", "X"),)
+        obs = (_obs("other", "low", "boosted", source_name="strong_email_security"),)
         out = apply_profile(obs, profile)
         assert out[0].salience == "high"
+
+    def test_signal_boost_keys_on_source_name_not_statement(self):
+        """The boost matches the rule name, not the rendered statement."""
+        profile = Profile(name="sig", signal_boost=(("strong_email_security", 3.0),))
+        # Statement equals the key but source_name does not — no boost.
+        obs = (_obs("other", "low", "strong_email_security", source_name="other_rule"),)
+        out = apply_profile(obs, profile)
+        assert out[0].salience == "low"
+
+    def test_exclude_signals_removes_by_source_name(self):
+        profile = Profile(name="exc", exclude_signals=("consumer_saas_sprawl",))
+        obs = (
+            _obs("saas_footprint", "medium", "Consumer SaaS observed", source_name="consumer_saas_sprawl"),
+            _obs("email", "medium", "Other", source_name="strong_email_security"),
+        )
+        out = apply_profile(obs, profile)
+        assert {o.statement for o in out} == {"Other"}
 
     def test_focus_categories_filters(self):
         profile = Profile(

@@ -152,6 +152,7 @@ class Observation:
     salience: str  # high, medium, low
     statement: str
     related_slugs: tuple[str, ...]
+    source_name: str = ""  # originating posture rule name (data/posture.yaml); "" when not rule-derived
 
 
 @dataclass(frozen=True)

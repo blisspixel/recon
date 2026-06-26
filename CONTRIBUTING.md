@@ -468,13 +468,17 @@ category_boost:
   email: 1.5          # email security matters more for retail
   saas_footprint: 1.2
 signal_boost:
-  "DMARC Governance Investment": 1.5
+  strong_email_security: 1.5   # keyed by the posture rule name (data/posture.yaml)
 focus_categories: [email, identity, consistency]
 ```
 
 Profiles are **additive only**: they cannot introduce new observations,
 only reweight existing ones, and they cannot create false confidence (caps
-at "high" salience).
+at "high" salience). `category_boost` keys are observation categories;
+`signal_boost` and `exclude_signals` keys are posture observation rule names
+(the `name` field of an entry in `recon_tool/data/posture.yaml`), matched
+against the rule that produced each observation. `exclude_signals` also
+removes an observation when an entry appears as a substring of its statement.
 
 ---
 

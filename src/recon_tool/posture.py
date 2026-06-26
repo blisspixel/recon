@@ -388,6 +388,7 @@ def analyze_posture(info: TenantInfo) -> tuple[Observation, ...]:
                 salience=rule.salience,
                 statement=statement,
                 related_slugs=tuple(matched_slugs),
+                source_name=rule.name,
             )
         )
 

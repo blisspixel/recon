@@ -11,17 +11,18 @@ category_boost:
   certificate: 1.2
   infrastructure: 0.9
   saas_footprint: 0.8
+# signal_boost / exclude_signals keys are posture observation rule
+# names (the `name` field in data/posture.yaml), matched against the
+# rule that produced each observation.
 signal_boost:
-  "DMARC Governance Investment": 2.0
-  "Enterprise Security Stack": 1.5
-  "Zero Trust Pattern Observed": 1.6
-  "Software Supply Chain Maturity": 1.4
-  "Incomplete Identity Migration": 1.4
-  "Security Gap — Gateway Without DMARC Enforcement": 1.8
-  "Active Email Sending with Minimal Security": 1.8
+  strong_email_security: 2.0
+  gateway_without_dmarc_enforcement: 1.8
+  weak_email_security: 1.8
+  security_tooling_detected: 1.5
+  supply_chain_security_detected: 1.4
 exclude_signals:
-  - "Startup Tool Mix"
-  - "File Collaboration Sprawl"
+  - file_sharing_sprawl
+  - consumer_saas_sprawl
 prepend_note: |
   Fintech profile applied. Email authentication, identity federation,
   and supply-chain controls are weighted higher than infrastructure
