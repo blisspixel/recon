@@ -57,12 +57,16 @@ Full detail and sequencing live in
 > agentic. That doc is the standing decision guide and the catalog of
 > brittle-rule smells; keep it current as the boundary moves.
 
-> **Status (2026-06):** v2.2.12 is the current release (safe MCP launch
-> guidance, README license wording cleanup, private validation-output root
-> guards, maintainer-loop side-effect and resume boundaries, and the v2.2.11
-> scorer, DMARC rua report-size, delta exit-code, delta signal-diffing,
-> validator, CT-cache, and SPF-parse determinism fixes; shipped 2026-06-25 to
-> PyPI). v2.2.11 (2026-06-22) was the prior release. The v2.2 line delivered the evidence-semantics diagnostics (per-node
+> **Status (2026-06):** v2.2.13 is the current release (the profile
+> `signal_boost` / `exclude_signals` fix so `--profile` reweighting fires
+> against posture observations instead of inert signal-name keys, the SPF
+> multi-record include-count fix, the schema source-map `--json` audit, and the
+> Windows text-hygiene local/CI parity fix; shipped 2026-06-26 to PyPI). v2.2.12
+> (2026-06-25) was the prior release (safe MCP launch guidance, README license
+> wording cleanup, private validation-output root guards, maintainer-loop
+> side-effect and resume boundaries, and the v2.2.11 scorer, DMARC rua
+> report-size, delta exit-code, delta signal-diffing, validator, CT-cache, and
+> SPF-parse determinism fixes). The v2.2 line delivered the evidence-semantics diagnostics (per-node
 > entropy reduction, exact leave-one-unit-out counterfactuals, graph partition
 > stability), the MCP tool-output contract revision (navigable
 > `structuredContent` + per-tool `outputSchema` + `isError` across the eighteen

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.13] - 2026-06-26
+
 ### Tool Surface Changes
 
 - No runtime CLI command or flag changes.
@@ -47,6 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SPF complexity survives multiple SPF TXT records.** Malformed domains with
   more than one SPF record now report complexity from the largest observed
   include count instead of whichever SPF record DNS returned last.
+- **Local text-hygiene check matches CI on Windows.** `scripts/check_text_hygiene.py`
+  read git diff output in the platform locale, so on Windows (cp1252) an em dash
+  decoded to other code points and went undetected while CI (UTF-8) flagged it.
+  It now decodes git output as UTF-8 explicitly, with a regression test over the
+  previously-untested git-diff path. Maintainer tooling only; no runtime change.
 
 ## [2.2.12] - 2026-06-25
 
