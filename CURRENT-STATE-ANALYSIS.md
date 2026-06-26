@@ -206,13 +206,15 @@ validate a URL. The repo-local consequence is narrow: `urlparse()` is used only
 to extract the hostname, and `host_has_suffix()` plus negative tests enforce the
 security boundary.
 
-The remaining candidates (the GWS DKIM `google.com` fallback and the
-`outlook.com` / SRV-based `lync.com` / `teams.microsoft.com` checks in
-`sources/dns_infra.py`) were validated against the same corpus evidence and
-showed zero non-suffix matches (`outlook.com` 303/303, `google.com` 757/757 clean
-suffixes; the SRV patterns had no evidence occurrence). They are left unchanged
-per the mirror-not-fitter discipline: detection is tightened only on a
-demonstrated false positive, which only `onmicrosoft.com` showed.
+A follow-up bug-hunt and security-review round closed the remaining safe
+boundary cases in this class: Microsoft 365 CNAME probes, Teams SRV/CNAME
+probes, Intune, Office ProPlus, Google Workspace module CNAMEs, and Google
+Workspace DKIM CNAME delegation now match parsed target hosts by exact or
+dotted hostname suffix. SRV records are parsed by their final target field, and
+an unavailable target (`.`) is ignored instead of counted as an active service.
+The same round hardened CT failure classification so direct or wrapped local
+max-wait limiter failures are counted as rate-limit outcomes, while unrelated
+non-429 HTTP errors mentioning a numeric domain are not.
 
 ## Quality Rubric
 

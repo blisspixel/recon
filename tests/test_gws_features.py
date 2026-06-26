@@ -126,6 +126,20 @@ class TestDetectGwsCnames:
         gws_services = [s for s in (result.detected_services or ()) if "Google Workspace:" in s]
         assert len(gws_services) == 0
 
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_gws_lookalike_cname_ignored(self, mock_resolve):
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "mail.example.com/CNAME": ["ghs.googlehosted.com.example.net"],
+            }
+        )
+        result = await DNSSource().lookup("example.com")
+        gws_services = [s for s in (result.detected_services or ()) if "Google Workspace:" in s]
+        assert len(gws_services) == 0
+
 
 class TestSiteVerificationTokenExtraction:
     @pytest.mark.asyncio

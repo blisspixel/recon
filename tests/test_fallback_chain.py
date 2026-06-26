@@ -10,11 +10,20 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from recon_tool.models import CertSummary
+from recon_tool.rate_limit import RateLimited
 from recon_tool.sources.dns import _detect_cert_intel, _DetectionCtx
-from recon_tool.sources.dns_tables import ct_failure_outcome
+from recon_tool.sources.dns_tables import classify_ct_failure, ct_failure_outcome
+
+
+def _raise_wrapped_rate_limited(message: str) -> None:
+    try:
+        raise RateLimited(message)
+    except RateLimited as cause:
+        raise httpx.HTTPError("crt.sh local pacing failed") from cause
 
 
 @pytest.mark.usefixtures("_enable_crtsh")
@@ -311,6 +320,28 @@ class TestFallbackChain:
 
 class TestCTFailureOutcome:
     """Outcome labels keep mixed-provider CT failures actionable."""
+
+    def test_max_wait_rate_limited_exception_is_rate_limit(self):
+        exc = RateLimited("crt.sh: next slot in 999s exceeds max wait 120s")
+        assert classify_ct_failure(exc) == "rate_limit"
+
+    def test_wrapped_max_wait_rate_limited_exception_is_rate_limit(self):
+        with pytest.raises(httpx.HTTPError) as err:
+            _raise_wrapped_rate_limited("crt.sh: next slot in 999s exceeds max wait 120s")
+
+        assert classify_ct_failure(err.value) == "rate_limit"
+
+    def test_http_429_status_is_rate_limit(self):
+        request = httpx.Request("GET", "https://example.com/")
+        response = httpx.Response(429, request=request)
+        exc = httpx.HTTPStatusError("provider throttled", request=request, response=response)
+        assert classify_ct_failure(exc) == "rate_limit"
+
+    def test_numeric_domain_in_other_http_error_is_not_rate_limit(self):
+        request = httpx.Request("GET", "https://example.com/")
+        response = httpx.Response(500, request=request)
+        exc = httpx.HTTPStatusError("crt.sh returned HTTP 500 for 429.com", request=request, response=response)
+        assert classify_ct_failure(exc) == "other"
 
     def test_rate_limit_beats_separate_breaker(self):
         assert ct_failure_outcome({"breaker": 1, "rate_limit": 1, "other": 0}) == "live_rate_limited"

@@ -13,6 +13,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from recon_tool.rate_limit import RateLimited
+
 logger = logging.getLogger("recon")
 
 
@@ -170,10 +172,17 @@ def classify_ct_failure(exc: Exception) -> str:
     RateLimited from the adaptive limiter wraps either a local breaker-open
     decline or a max-wait-exceeded decline; both surface as "rate-limited".
     """
+    current: BaseException | None = exc
+    saw_rate_limited = False
+    while current is not None:
+        saw_rate_limited = saw_rate_limited or isinstance(current, RateLimited)
+        current = current.__cause__ or (None if current.__suppress_context__ else current.__context__)
+
     err_str = str(exc).lower()
     if "circuit breaker open" in err_str:
         return "breaker"
-    if "rate-limited" in err_str or "429" in err_str:
+    status_code = getattr(getattr(exc, "response", None), "status_code", None)
+    if saw_rate_limited or status_code == 429 or "rate-limited" in err_str or "rate limited" in err_str:
         return "rate_limit"
     return "other"
 

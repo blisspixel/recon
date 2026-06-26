@@ -342,6 +342,19 @@ class TestMsoidCNAME:
         assert "Office ProPlus (msoid)" in result.detected_services
         assert result.m365_detected is True
 
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_msoid_lookalike_cname_ignored(self, mock_resolve):
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "msoid.example.com/CNAME": ["clientconfig.microsoftonline.com.example.net"],
+            }
+        )
+        result = await DNSSource().lookup("example.com")
+        assert "Office ProPlus (msoid)" not in result.detected_services
+
 
 class TestSRVDetection:
     @pytest.mark.asyncio
@@ -358,6 +371,33 @@ class TestSRVDetection:
         result = await DNSSource().lookup("example.com")
         assert "Microsoft Teams" in result.detected_services
         assert result.m365_detected is True
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_teams_srv_interior_label_ignored(self, mock_resolve):
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "_sipfederationtls._tcp.example.com/SRV": ["100 1 5061 sipfed.online.lync.com.example.net"],
+            }
+        )
+        result = await DNSSource().lookup("example.com")
+        assert "Microsoft Teams" not in result.detected_services
+        assert result.m365_detected is False
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_srv_unavailable_target_is_ignored(self, mock_resolve):
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "_xmpp-server._tcp.example.com/SRV": ["0 0 0 ."],
+            }
+        )
+        result = await DNSSource().lookup("example.com")
+        assert "XMPP (Jabber)" not in result.detected_services
 
 
 class TestSubdomainTxtDetection:
@@ -721,3 +761,34 @@ class TestExchangeDkimSuffixMatch:
         dns_email._apply_exchange_dkim(ctx, (["x._domainkey.onmicrosoft.com.example.com"], []))
         assert ctx.m365 is False
         assert ctx.related_domains == set()
+
+
+class TestGoogleDkimSuffixMatch:
+    """Google Workspace DKIM CNAME attribution matches the vendor host by suffix."""
+
+    def test_real_google_cname_attributes_google_workspace(self):
+        ctx = dns_source._DetectionCtx()
+        dns_email._apply_google_dkim(ctx, [], ["google._domainkey.google.com"])
+
+        assert "DKIM (Google Workspace)" in ctx.services
+        assert "google-workspace" in ctx.slugs
+
+    def test_trailing_dot_google_cname_attributes_google_workspace(self):
+        ctx = dns_source._DetectionCtx()
+        dns_email._apply_google_dkim(ctx, [], ["google._domainkey.google.com."])
+
+        assert "DKIM (Google Workspace)" in ctx.services
+
+    def test_google_lookalike_cname_does_not_attribute_google_workspace(self):
+        ctx = dns_source._DetectionCtx()
+        dns_email._apply_google_dkim(ctx, [], ["selector._domainkey.evilgoogle.com"])
+
+        assert "DKIM (Google Workspace)" not in ctx.services
+        assert "google-workspace" not in ctx.slugs
+
+    def test_interior_google_label_cname_does_not_attribute_google_workspace(self):
+        ctx = dns_source._DetectionCtx()
+        dns_email._apply_google_dkim(ctx, [], ["selector._domainkey.google.com.example.com"])
+
+        assert "DKIM (Google Workspace)" not in ctx.services
+        assert "google-workspace" not in ctx.slugs

@@ -136,6 +136,10 @@ operating rules for future cycles and must not override `AGENTS.md`,
   `breaker_open` for all-provider local stops. If any provider made or attempted
   a live path and failed differently, surface that lower-cardinality live cause
   first so retry planning is based on the actionable constraint.
+- For DNS target attribution, parse the target host before matching. CNAME-like
+  records can use the whole value; SRV records use the final target field. Then
+  match vendor hosts by exact or dotted suffix via `host_has_suffix`, never by
+  raw substring.
 - For diff coverage, keep it advisory unless the team explicitly chooses a gate.
   Changed-line coverage should ignore doc-only diffs, use local Coverage.py
   JSON, and avoid adding a dependency or service.

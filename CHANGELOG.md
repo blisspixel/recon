@@ -55,6 +55,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   open local breaker. Mixed provider failures now surface the live attempted
   failure cause, such as `live_rate_limited` or `live_other_failure`, while
   keeping the existing best-effort enum.
+- **DNS target attribution is more boundary-aware.** Microsoft 365, Microsoft
+  Teams, Intune, Office ProPlus, Google Workspace module CNAMEs, and Google
+  Workspace DKIM CNAMEs now match vendor targets by hostname suffix instead of
+  raw substring. SRV matching parses the target host from the final SRV field
+  and ignores explicit unavailable targets (`.`).
+- **CT failure classification is less brittle.** Local max-wait `RateLimited`
+  exceptions now classify as rate-limit outcomes even when wrapped, and
+  non-429 HTTP errors that merely mention a numeric domain such as `429.com` no
+  longer classify as rate limits.
 
 ## [2.2.14] - 2026-06-26
 

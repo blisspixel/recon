@@ -53,6 +53,22 @@ findings, or unsuppressed small strata.
 
 ## Current Alignment Snapshot
 
+Cycle 10 scope: bug-hunt and security-review round over CT failure telemetry,
+DNS target attribution, SRV parsing, and local security gates.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | Fixed direct and wrapped local `RateLimited` classification, avoided numeric-domain false rate-limit labels, tightened M365/GWS DNS target matches by suffix, parsed SRV targets, and ignored unavailable SRV targets with focused regressions. |
+| Security and supply chain | 5/5 | Review covered path containment, cache writes, HTTP/SSRF fetches, batch bounds, DNS/CT source strings, workflow pins, validation hygiene, text hygiene, ClusterFuzzLite drift, and `pip-audit` with no known vulnerabilities. |
+| Performance | 5/5 | Changes are constant-time string parsing and suffix checks; no added network calls, retries, providers, dependencies, or corpus fanout. |
+| Readability | 5/5 | Added one small `_dns_target_host` helper and direct boundary tests; existing `host_has_suffix` stays the shared primitive. |
+| Maintainability | 5/5 | The fixes remove duplicated raw substring logic without expanding stable CLI, MCP, JSON, or validation surfaces. |
+| Sustainability and invariants | 5/5 | Passive DNS behavior is tightened only toward fewer false attributions; no credentials, paid APIs, active probes, or private data are introduced. |
+
+External spend: 0 USD.
+
 Cycle 9 scope: CT attempt-outcome accounting and bounded C3 telemetry check.
 
 Maker-checker score:

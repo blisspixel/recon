@@ -36,6 +36,7 @@ from recon_tool.sources.dns_tables import (
     ct_failure_outcome,
     is_public_dns_name,
 )
+from recon_tool.validator import host_has_suffix
 
 if TYPE_CHECKING:
     from recon_tool.ct_cache import CTCacheEntry
@@ -53,6 +54,15 @@ _MAX_SUBDOMAIN_TXT_MATCH_LEN = 4096
 # Bounds backtracking amplification when a custom / injected cname pattern is
 # matched against an attacker-controlled CNAME target. 255 leaves a small margin.
 _MAX_CNAME_MATCH_LEN = 255
+
+
+def _dns_target_host(record: str) -> str:
+    """Return the hostname from a DNS target-like record.
+
+    CNAME records are just the host. SRV records include priority, weight,
+    port, and target; the target is the final field.
+    """
+    return record.strip().split()[-1].lower().rstrip(".") if record.strip() else ""
 
 
 async def detect_m365_cnames(ctx: dns_base.DetectionCtx, domain: str) -> None:
@@ -90,7 +100,8 @@ async def detect_m365_cnames(ctx: dns_base.DetectionCtx, domain: str) -> None:
 
     for cname in autodiscover_results:
         cl = cname.lower()
-        if "outlook.com" in cl:
+        host = _dns_target_host(cname)
+        if host_has_suffix(host, "outlook.com"):
             ctx.add(SVC_EXCHANGE_AUTODISCOVER, "microsoft365")
             ctx.m365 = True
         elif cl and not cl.endswith(domain.lower()):
@@ -111,24 +122,28 @@ async def detect_m365_cnames(ctx: dns_base.DetectionCtx, domain: str) -> None:
 
     for cname_list in (lyncdiscover_results, sip_results):
         for cname in cname_list:
-            cl = cname.lower()
-            if "lync.com" in cl or "teams.microsoft.com" in cl:
+            host = _dns_target_host(cname)
+            if host_has_suffix(host, "lync.com") or host_has_suffix(host, "teams.microsoft.com"):
                 ctx.add(SVC_MICROSOFT_TEAMS, "microsoft365")
                 ctx.m365 = True
 
     for srv in srv_results:
-        if "lync.com" in srv.lower() or "teams.microsoft.com" in srv.lower():
+        host = _dns_target_host(srv)
+        if host_has_suffix(host, "lync.com") or host_has_suffix(host, "teams.microsoft.com"):
             ctx.add(SVC_MICROSOFT_TEAMS, "microsoft365")
             ctx.m365 = True
 
     for cname in enterprise_results:
-        cl = cname.lower()
-        if "manage.microsoft.com" in cl or "enterpriseregistration.windows.net" in cl:
+        host = _dns_target_host(cname)
+        if host_has_suffix(host, "manage.microsoft.com") or host_has_suffix(
+            host, "enterpriseregistration.windows.net"
+        ):
             ctx.add(SVC_INTUNE_MDM, "microsoft365")
             ctx.m365 = True
 
     for cname in msoid_results:
-        if "microsoftonline.com" in cname.lower():
+        host = _dns_target_host(cname)
+        if host_has_suffix(host, "microsoftonline.com"):
             ctx.add(SVC_OFFICE_PROPLUS, "microsoft365")
             ctx.m365 = True
 
@@ -152,7 +167,8 @@ async def detect_gws_cnames(ctx: dns_base.DetectionCtx, domain: str) -> None:
     active_modules: list[str] = []
     for prefix, cname_results in zip(_GWS_MODULE_PREFIXES, results, strict=True):
         for cname in cname_results:
-            if _GWS_CNAME_TARGET in cname.lower():
+            host = _dns_target_host(cname)
+            if host_has_suffix(host, _GWS_CNAME_TARGET):
                 module_name = prefix.capitalize()
                 ctx.add(
                     f"Google Workspace: {module_name}",
@@ -417,9 +433,10 @@ async def detect_srv(ctx: dns_base.DetectionCtx, domain: str) -> None:
     for (_, hint, svc_name, slug), srv_records in zip(_SRV_CHECKS, results, strict=True):
         for record in srv_records:
             # SRV records with target "." mean "service not available" - skip
-            if record.strip().rstrip(".") == "":
+            target = _dns_target_host(record)
+            if not target:
                 continue
-            if hint is None or hint in record.lower():
+            if hint is None or host_has_suffix(target, hint):
                 ctx.add(svc_name, slug if slug else None)
                 break
 

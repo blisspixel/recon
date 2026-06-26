@@ -305,7 +305,8 @@ def _apply_google_dkim(ctx: dns_base.DetectionCtx, txt_results: list[str], cname
             ctx.add("DKIM (Google Workspace)", "google-workspace", source_type="DKIM", raw_value=record)
             return
     for cname in cname_results:
-        if "google.com" in cname.lower():
+        host = cname.lower().rstrip(".")
+        if host_has_suffix(host, "google.com"):
             ctx.services.add(SVC_DKIM)
             ctx.add("DKIM (Google Workspace)", "google-workspace", source_type="DKIM", raw_value=cname)
             return
