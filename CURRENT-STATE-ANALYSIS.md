@@ -92,6 +92,39 @@ regression test that builds a temp git repo with an em-dash line and asserts the
 checker flags it through the previously-untested git-diff path. Maintainer
 tooling only; no runtime change.
 
+## Boundary-Unaware Substring Hardening (post-2.2.13)
+
+A sweep for the boundary-unaware-substring bug class (a vendor host matched as a
+raw substring of a URL or DNS value rather than by hostname suffix) found two
+safe-to-fix instances and several core-detection candidates that need their own
+validation:
+
+- `_extract_idp_name` in `sources/google.py` and `sources/google_identity.py`
+  now parses the URL hostname and matches IdP vendors by exact host or dotted
+  suffix, so a lookalike host or a vendor name in a path or query no longer
+  matches. Display-name only.
+- `_apply_exchange_dkim` in `sources/dns_email.py` now matches `onmicrosoft.com`
+  and `protection.outlook.com` by hostname suffix. Validated against existing
+  maintainer-local corpus evidence (aggregate-only): the substring form produced
+  2 non-suffix false-positive shapes out of 825 hostname-shaped evidence values.
+  Suffix matching keeps every true positive. Memo:
+  `validation/2026-06-26-onmicrosoft-suffix-match.md`.
+
+The remaining candidates (the GWS DKIM `google.com` fallback and the SRV-based
+`lync.com` / `teams.microsoft.com` checks in `sources/dns_infra.py`) are core
+classification logic and are deferred until each has its own corpus validation;
+SRV values carry a priority/weight/port prefix, so a correct suffix test must
+parse the target first.
+
+## Quality Rubric
+
+`QUALITY-RUBRIC.md` is the maker-checker scorecard for this checkout: six
+categories (correctness, security/supply chain, performance, readability,
+maintainability, sustainability/invariants), each scored 1 to 5, all required at
+5 to ship. It references `docs/engineering-practices.md` as the canonical
+standard rather than duplicating it, and names `uv run python scripts/check.py`
+as the gate that proves most of the rubric.
+
 Current maintainer-loop deltas from 2026-06-19 include generated surface
 inventory checks, the `recon://surface-inventory` local discovery resource,
 PR-scoped ClusterFuzzLite parser-boundary fuzzing, public paper-number

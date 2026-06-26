@@ -77,6 +77,15 @@ Full detail and sequencing live in
 > [CHANGELOG.md](../CHANGELOG.md) and upgrade notes in
 > [migration-v2.md](migration-v2.md).
 >
+> **Unreleased on `main` (toward the next patch):** a boundary-unaware-substring
+> hardening pass. The profile `signal_boost` / `exclude_signals` reweighting now
+> fires (it was inert), IdP-name extraction matches vendor hosts by hostname
+> suffix, and Exchange Online DKIM attribution matches `onmicrosoft.com` /
+> `protection.outlook.com` by suffix (validated aggregate-only against the
+> corpus, memo `validation/2026-06-26-onmicrosoft-suffix-match.md`). The GWS DKIM
+> `google.com` fallback and the SRV-based Microsoft checks in `sources/dns_infra.py`
+> are deferred until each has its own corpus validation.
+>
 > **Post-2.0 assurance track, in priority order:** the first three are done.
 > Differential verification of the inference core shipped in v2.1.7; the 2026-06
 > fault-injection sweep closed four confirmed ingestion-boundary gaps (v2.1.8 made
