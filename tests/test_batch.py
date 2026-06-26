@@ -138,6 +138,17 @@ class TestBatchCommand:
         assert result.exit_code == 0
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_timeout_passed_to_resolver(self, mock_resolve, tmp_path):
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("contoso.com\n")
+
+        result = runner.invoke(app, ["batch", str(domain_file), "--json", "--timeout", "7"])
+
+        assert result.exit_code == 0
+        assert mock_resolve.await_args.kwargs["timeout"] == 7.0
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_batch_fusion_json_preserves_conflict_provenance(self, mock_resolve, tmp_path):
         conflicts = MergeConflicts(
             auth_type=(

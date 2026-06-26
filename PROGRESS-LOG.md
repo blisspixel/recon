@@ -129,6 +129,43 @@ USD.
   stages passed.
 - External spend: 0 USD.
 
+Session: loop cycle 5, CT partial-session recovery. External spend 0 USD.
+
+- Selected the C3 CT corpus pass because it is the next maintainer-local
+  roadmap item. The first attempt showed the true constraint: CT corpus work is
+  partial and multi-session, and an outer timeout can strand useful streamed
+  NDJSON without summary artifacts.
+- Added `recon batch --timeout` / `-t` and passed it through to
+  `resolve_tenant`, matching the existing `lookup` and `discover` timeout
+  controls.
+- Hardened `validation/scan.py` for bounded CT sessions: `--max-runtime`
+  finalizes streamed NDJSON as a partial run, `--finalize-existing` recovers an
+  interrupted run directory without network, metadata records completion state
+  and valid record counts, and partial scans skip noisy diffs.
+- Fixed the controlled timeout path to terminate the batch process tree on
+  Windows, preventing a Python launcher from leaving a child interpreter running
+  after the wrapper exits.
+- Recovered the stranded partial CT run as aggregate-only artifacts: 2,693 valid
+  records out of 5,241, 825 gap buckets, 21 candidates after triage. The public
+  aggregate memo is `validation/2026-06-26-c3-ct-partial.md`; private per-domain
+  artifacts stay under ignored `validation/runs-private/`.
+- Added regressions for batch timeout plumbing, scan command construction,
+  partial timeout finalization, valid-record counting with malformed trailing
+  NDJSON, and partial metadata.
+- Updated generated CLI/surface inventory docs and the packaged MCP resource for
+  the new batch timeout option.
+- Focused validation passed:
+  `uv run python -m pytest tests/test_batch.py tests/test_scan_ct_summary.py -q`
+  with 20 passed; focused ruff, pyright, text hygiene, and surface-inventory
+  checks passed.
+- Fast local gate passed with `uv run python scripts/check.py --fast`.
+- Final full local gate passed with `uv run python scripts/check.py`: 3,601
+  passed, 6 skipped, 4 deselected, total coverage 86.63 percent. All gate
+  stages passed.
+- Cycle health: 5/5 | Simplicity: 5/5 | Est. spend: $0 | New skill distilled:
+  none
+- External spend: 0 USD.
+
 Session: private corpus setup, profile-engine correctness fix, CI parity fix,
 and the 2.2.13 patch release. External spend 0 USD.
 

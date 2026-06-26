@@ -522,6 +522,7 @@ async def _batch_process_one(
     *,
     semaphore: asyncio.Semaphore,
     batch_infos: dict[str, Any],
+    timeout: float,
     skip_ct: bool,
     fusion: bool,
     json_output: bool,
@@ -560,7 +561,7 @@ async def _batch_process_one(
             # endpoints (Microsoft, DNS). The semaphore caps concurrency, but
             # without a delay all N domains fire at once.
             await asyncio.sleep(0.1)
-            info, _results = await resolve_tenant(validated, skip_ct=skip_ct)
+            info, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
             if fusion:
                 info = _batch_apply_fusion(info)
             batch_infos[info.queried_domain] = info
@@ -602,6 +603,7 @@ async def batch(
     json_output: bool,
     markdown: bool,
     concurrency: int,
+    timeout: float,
     csv_output: bool = False,
     *,
     include_unclassified: bool = False,
@@ -662,6 +664,7 @@ async def batch(
             domain,
             semaphore=semaphore,
             batch_infos=batch_infos,
+            timeout=timeout,
             skip_ct=skip_ct,
             fusion=fusion,
             json_output=json_output,

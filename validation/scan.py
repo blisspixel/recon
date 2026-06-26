@@ -29,11 +29,12 @@ import argparse
 import contextlib
 import json
 import os
+import signal
 import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -42,6 +43,32 @@ _PRIVATE_SCAN_OUTPUT_ROOTS = (
     REPO_ROOT / "validation" / "live_runs",
     REPO_ROOT / "validation" / "local",
 )
+
+
+class BatchRunResult(NamedTuple):
+    results_path: Path
+    completed: bool
+    timed_out: bool
+
+
+class FinalizeContext(NamedTuple):
+    results_path: Path
+    run_dir: Path
+    stamp: str
+    output_root: Path
+    compare_to: Path | None
+    no_compare: bool
+    ct: bool
+    label: str
+    corpus: Path
+    domain_count: int
+    concurrency: int
+    timeout: float
+    max_runtime: float | None
+    min_count: int
+    batch_completed: bool
+    batch_timed_out: bool
+    started_utc: str
 
 
 def _utc_stamp() -> str:
@@ -60,6 +87,19 @@ def _validate_scan_output_root(output_root: Path) -> Path:
     )
 
 
+def _validate_private_run_dir(run_dir: Path) -> Path:
+    resolved = run_dir.resolve(strict=False)
+    try:
+        resolved.relative_to(REPO_ROOT)
+    except ValueError:
+        return resolved
+    allowed = tuple(root.resolve(strict=False) for root in _PRIVATE_SCAN_OUTPUT_ROOTS)
+    if any(resolved == root or resolved.is_relative_to(root) for root in allowed):
+        return resolved
+    allowed_text = ", ".join(str(root.relative_to(REPO_ROOT)) for root in _PRIVATE_SCAN_OUTPUT_ROOTS)
+    raise ValueError(f"run directory inside this checkout must be under one of: {allowed_text}")
+
+
 def _count_corpus(corpus: Path) -> int:
     if not corpus.exists():
         return 0
@@ -68,6 +108,37 @@ def _count_corpus(corpus: Path) -> int:
         for line in corpus.read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.strip().startswith("#")
     )
+
+
+def _count_result_records(results_path: Path) -> int:
+    if not results_path.exists():
+        return 0
+    if results_path.suffix == ".ndjson":
+        total = 0
+        with contextlib.suppress(OSError), results_path.open(encoding="utf-8") as fh:
+            for raw in fh:
+                line = raw.strip()
+                if not line:
+                    continue
+                with contextlib.suppress(ValueError):
+                    if isinstance(json.loads(line), dict):
+                        total += 1
+        return total
+    with contextlib.suppress(OSError, ValueError):
+        parsed = json.loads(results_path.read_text(encoding="utf-8"))
+        if isinstance(parsed, list):
+            return sum(1 for item in parsed if isinstance(item, dict))
+        if isinstance(parsed, dict):
+            return 1
+    return 0
+
+
+def _find_results_path(run_dir: Path) -> Path | None:
+    for name in ("results.ndjson", "results.json"):
+        candidate = run_dir / name
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def _write_ct_budget_summary(results_path: Path, run_dir: Path) -> None:
@@ -156,6 +227,27 @@ def _run_step(cmd: list[str], description: str) -> None:
         raise SystemExit(2)
 
 
+def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
+    if proc.poll() is not None:
+        return
+    if os.name == "nt":
+        taskkill = Path(os.environ.get("SYSTEMROOT", r"C:\Windows")) / "System32" / "taskkill.exe"
+        subprocess.run(  # noqa: S603 - fixed Windows process-tree terminator argv
+            [str(taskkill), "/PID", str(proc.pid), "/T", "/F"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return
+    with contextlib.suppress(ProcessLookupError):
+        os.killpg(proc.pid, signal.SIGTERM)
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(proc.pid, signal.SIGKILL)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run the full discovery scan: corpus to results to gaps to candidates to diff."
@@ -185,6 +277,30 @@ def _build_parser() -> argparse.ArgumentParser:
         type=int,
         default=4,
         help="Batch concurrency (default 4 with --no-ct keeps DNS load polite).",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=120.0,
+        help="Per-domain resolve timeout seconds passed to recon batch.",
+    )
+    parser.add_argument(
+        "--max-runtime",
+        type=float,
+        default=None,
+        help=(
+            "Optional wall-clock seconds for the batch subprocess. When reached, "
+            "the streamed NDJSON records are finalized as a partial scan."
+        ),
+    )
+    parser.add_argument(
+        "--finalize-existing",
+        type=Path,
+        default=None,
+        help=(
+            "No network: finalize an existing run directory that already contains "
+            "results.ndjson or results.json. Useful after an interrupted partial CT session."
+        ),
     )
     parser.add_argument(
         "--ct",
@@ -283,16 +399,21 @@ def _synthesize_ct_retry_corpus(retry_from: Path, output_root: Path) -> Path:
 
 
 def _run_batch(
-    corpus: Path, run_dir: Path, *, concurrency: int, ct: bool, json_array: bool, domain_count: int
-) -> Path:
+    corpus: Path,
+    run_dir: Path,
+    *,
+    args: argparse.Namespace,
+    domain_count: int,
+) -> BatchRunResult:
     """Run the recon batch resolve, streaming output into the run directory.
 
     Default is NDJSON streaming (one line per domain, flushed as completed) so
     very large corpora stay memory-bounded and produce visible progress;
     ``--json-array`` opts back into the legacy single-array output. Returns the
-    results path; exits with code 2 if the batch subprocess fails.
+    results path plus completion status; exits with code 2 if the batch
+    subprocess fails for anything other than an explicit ``--max-runtime`` stop.
     """
-    output_mode = "--json" if json_array else "--ndjson"
+    output_mode = "--json" if args.json_array else "--ndjson"
     batch_cmd = [
         sys.executable,
         "-m",
@@ -302,31 +423,49 @@ def _run_batch(
         output_mode,
         "--include-unclassified",
         "--concurrency",
-        str(concurrency),
+        str(args.concurrency),
+        "--timeout",
+        str(args.timeout),
     ]
-    if not ct:
+    if not args.ct:
         batch_cmd.append("--no-ct")
 
-    ct_str = "on" if ct else "off"
-    fmt_str = "json-array" if json_array else "ndjson"
+    ct_str = "on" if args.ct else "off"
+    fmt_str = "json-array" if args.json_array else "ndjson"
     print(
-        f"  resolving {domain_count} domains (concurrency={concurrency}, ct={ct_str}, format={fmt_str}) ...",
+        f"  resolving {domain_count} domains "
+        f"(concurrency={args.concurrency}, timeout={args.timeout:g}s, ct={ct_str}, format={fmt_str}) ...",
         flush=True,
     )
-    results_path = run_dir / ("results.json" if json_array else "results.ndjson")
+    results_path = run_dir / ("results.json" if args.json_array else "results.ndjson")
     with results_path.open("w", encoding="utf-8") as out:
-        result = subprocess.run(  # noqa: S603 — arg list constructed locally
+        popen_kwargs: dict[str, Any] = {}
+        if os.name != "nt":
+            popen_kwargs["start_new_session"] = True
+        proc = subprocess.Popen(  # noqa: S603 - arg list constructed locally
             batch_cmd,
             stdout=out,
             stderr=subprocess.PIPE,
             text=True,
             cwd=str(REPO_ROOT),
-            check=False,
+            **popen_kwargs,
         )
-    if result.returncode != 0:
-        print(f"    FAILED: {result.stderr.strip()}", file=sys.stderr)
+        try:
+            _, stderr_text = proc.communicate(timeout=args.max_runtime)
+        except subprocess.TimeoutExpired:
+            _terminate_process_tree(proc)
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                proc.communicate(timeout=5)
+            runtime_text = f"{args.max_runtime:g}" if args.max_runtime is not None else "unknown"
+            print(
+                f"    partial: max runtime {runtime_text}s reached; finalizing streamed records",
+                flush=True,
+            )
+            return BatchRunResult(results_path=results_path, completed=False, timed_out=True)
+    if proc.returncode != 0:
+        print(f"    FAILED: {stderr_text.strip()}", file=sys.stderr)
         raise SystemExit(2)
-    return results_path
+    return BatchRunResult(results_path=results_path, completed=True, timed_out=False)
 
 
 def _maybe_run_diff(
@@ -379,13 +518,117 @@ def _maybe_run_diff(
     return diff_path, compare_target
 
 
+def _finalize_scan(ctx: FinalizeContext) -> None:
+    if ctx.ct:
+        _write_ct_budget_summary(ctx.results_path, ctx.run_dir)
+
+    _run_step(
+        [
+            sys.executable,
+            "validation/find_gaps.py",
+            "--input",
+            str(ctx.results_path),
+            "--output",
+            str(ctx.run_dir / "gaps.json"),
+            "--samples",
+            "10",
+        ],
+        "find_gaps",
+    )
+
+    _run_step(
+        [
+            sys.executable,
+            "validation/triage_candidates.py",
+            "--gaps",
+            str(ctx.run_dir / "gaps.json"),
+            "--fingerprints",
+            "src/recon_tool/data/fingerprints/",
+            "--output",
+            str(ctx.run_dir / "candidates.json"),
+            "--min-count",
+            str(ctx.min_count),
+        ],
+        "triage_candidates",
+    )
+
+    skip_diff = ctx.no_compare or not ctx.batch_completed
+    if not ctx.batch_completed and not ctx.no_compare:
+        print("  skipping diff: partial scan; compare only after a complete run")
+    diff_path, compare_target = _maybe_run_diff(
+        ctx.results_path,
+        ctx.run_dir,
+        ctx.stamp,
+        output_root=ctx.output_root,
+        compare_to=ctx.compare_to,
+        no_compare=skip_diff,
+    )
+
+    gaps_count = 0
+    candidates_count = 0
+    with contextlib.suppress(OSError, json.JSONDecodeError):
+        gaps_count = len(json.loads((ctx.run_dir / "gaps.json").read_text(encoding="utf-8")))
+    with contextlib.suppress(OSError, json.JSONDecodeError):
+        candidates_count = len(json.loads((ctx.run_dir / "candidates.json").read_text(encoding="utf-8")))
+
+    completed_records = _count_result_records(ctx.results_path)
+    meta: dict[str, Any] = {
+        "scan_stamp": ctx.stamp,
+        "scan_started_utc": ctx.started_utc,
+        "scan_finalized_utc": datetime.now(UTC).isoformat(),
+        "label": ctx.label,
+        "corpus_path": str(ctx.corpus),
+        "domain_count": ctx.domain_count,
+        "results_records": completed_records,
+        "batch_completed": ctx.batch_completed,
+        "batch_timed_out": ctx.batch_timed_out,
+        "batch_timeout_seconds": ctx.timeout,
+        "batch_max_runtime_seconds": ctx.max_runtime,
+        "concurrency": ctx.concurrency,
+        "ct_enabled": bool(ctx.ct),
+        "gaps_total": gaps_count,
+        "candidates_after_triage": candidates_count,
+        "compared_to": str(compare_target) if compare_target else None,
+        "diff_path": str(diff_path) if diff_path else None,
+    }
+    (ctx.run_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+    completion = "complete" if ctx.batch_completed else "partial"
+    print()
+    print(
+        f"Scan {completion}: {completed_records}/{ctx.domain_count} records, "
+        f"{gaps_count} gaps, {candidates_count} candidates after triage"
+    )
+    print(f"  results:    {ctx.results_path}")
+    print(f"  gaps:       {ctx.run_dir / 'gaps.json'}")
+    print(f"  candidates: {ctx.run_dir / 'candidates.json'}")
+    if diff_path:
+        print(f"  diff:       {diff_path}")
+    print(f"  meta:       {ctx.run_dir / 'meta.json'}")
+    if candidates_count > 0:
+        print()
+        print("Next: hand candidates.json to the /recon-fingerprint-triage skill,")
+        print("or open it in your editor and triage by hand.")
+
+
 def main() -> None:
     args = _build_parser().parse_args()
     try:
         args.output_root = _validate_scan_output_root(args.output_root)
+        if args.finalize_existing is not None:
+            args.finalize_existing = _validate_private_run_dir(args.finalize_existing)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         raise SystemExit(2) from exc
+    if args.timeout <= 0:
+        print("error: --timeout must be greater than 0", file=sys.stderr)
+        raise SystemExit(2)
+    if args.max_runtime is not None and args.max_runtime <= 0:
+        print("error: --max-runtime must be greater than 0", file=sys.stderr)
+        raise SystemExit(2)
+    if args.max_runtime is not None and args.json_array:
+        print("error: --max-runtime requires streaming NDJSON; remove --json-array", file=sys.stderr)
+        raise SystemExit(2)
 
     corpus = args.corpus
     # --ct-retry-from synthesizes a filtered corpus from the prior run, listing
@@ -399,107 +642,77 @@ def main() -> None:
         print(f"error: corpus file not found: {corpus}", file=sys.stderr)
         raise SystemExit(2)
 
+    started_utc = datetime.now(UTC).isoformat()
+    domain_count = _count_corpus(corpus)
+    if args.finalize_existing is not None:
+        run_dir = args.finalize_existing
+        results_path = _find_results_path(run_dir)
+        if results_path is None:
+            print(f"error: no results.ndjson or results.json in {run_dir}", file=sys.stderr)
+            raise SystemExit(2)
+        completed_records = _count_result_records(results_path)
+        batch_completed = domain_count > 0 and completed_records >= domain_count
+        print(f"Finalizing existing scan {run_dir.name}: {completed_records}/{domain_count} records")
+        _finalize_scan(
+            FinalizeContext(
+                results_path=results_path,
+                run_dir=run_dir,
+                stamp=run_dir.name,
+                output_root=args.output_root,
+                compare_to=args.compare_to,
+                no_compare=args.no_compare,
+                ct=args.ct,
+                label=args.label,
+                corpus=corpus,
+                domain_count=domain_count,
+                concurrency=args.concurrency,
+                timeout=args.timeout,
+                max_runtime=args.max_runtime,
+                min_count=args.min_count,
+                batch_completed=batch_completed,
+                batch_timed_out=False,
+                started_utc=started_utc,
+            )
+        )
+        return
+
     args.output_root.mkdir(parents=True, exist_ok=True)
     stamp = _utc_stamp()
     run_dir = args.output_root / stamp
     run_dir.mkdir(parents=True, exist_ok=False)
 
-    domain_count = _count_corpus(corpus)
-    print(f"Scan {stamp} — {domain_count} domains, corpus={corpus}")
+    print(f"Scan {stamp} - {domain_count} domains, corpus={corpus}")
     print(f"Run directory: {run_dir}")
 
     # Step 1: batch resolve.
-    results_path = _run_batch(
+    batch_result = _run_batch(
         corpus,
         run_dir,
-        concurrency=args.concurrency,
-        ct=args.ct,
-        json_array=args.json_array,
+        args=args,
         domain_count=domain_count,
     )
 
-    # Step 1.5: write ct_budget_summary.json (CT runs only). Aggregates the
-    # per-domain ct_attempt_outcome counts and the persisted limiter state.
-    if args.ct:
-        _write_ct_budget_summary(results_path, run_dir)
-
-    # Step 2: gap analysis
-    _run_step(
-        [
-            sys.executable,
-            "validation/find_gaps.py",
-            "--input",
-            str(results_path),
-            "--output",
-            str(run_dir / "gaps.json"),
-            "--samples",
-            "10",
-        ],
-        "find_gaps",
+    _finalize_scan(
+        FinalizeContext(
+            results_path=batch_result.results_path,
+            run_dir=run_dir,
+            stamp=stamp,
+            output_root=args.output_root,
+            compare_to=args.compare_to,
+            no_compare=args.no_compare,
+            ct=args.ct,
+            label=args.label,
+            corpus=corpus,
+            domain_count=domain_count,
+            concurrency=args.concurrency,
+            timeout=args.timeout,
+            max_runtime=args.max_runtime,
+            min_count=args.min_count,
+            batch_completed=batch_result.completed,
+            batch_timed_out=batch_result.timed_out,
+            started_utc=started_utc,
+        )
     )
-
-    # Step 3: triage filter
-    _run_step(
-        [
-            sys.executable,
-            "validation/triage_candidates.py",
-            "--gaps",
-            str(run_dir / "gaps.json"),
-            "--fingerprints",
-            "src/recon_tool/data/fingerprints/",
-            "--output",
-            str(run_dir / "candidates.json"),
-            "--min-count",
-            str(args.min_count),
-        ],
-        "triage_candidates",
-    )
-
-    # Step 4: diff against prior (optional)
-    diff_path, compare_target = _maybe_run_diff(
-        results_path,
-        run_dir,
-        stamp,
-        output_root=args.output_root,
-        compare_to=args.compare_to,
-        no_compare=args.no_compare,
-    )
-
-    # Step 5: meta.json
-    gaps_count = 0
-    candidates_count = 0
-    with contextlib.suppress(OSError, json.JSONDecodeError):
-        gaps_count = len(json.loads((run_dir / "gaps.json").read_text(encoding="utf-8")))
-    with contextlib.suppress(OSError, json.JSONDecodeError):
-        candidates_count = len(json.loads((run_dir / "candidates.json").read_text(encoding="utf-8")))
-
-    meta: dict[str, Any] = {
-        "scan_stamp": stamp,
-        "scan_started_utc": datetime.now(UTC).isoformat(),
-        "label": args.label,
-        "corpus_path": str(corpus),
-        "domain_count": domain_count,
-        "concurrency": args.concurrency,
-        "ct_enabled": bool(args.ct),
-        "gaps_total": gaps_count,
-        "candidates_after_triage": candidates_count,
-        "compared_to": str(compare_target) if compare_target else None,
-        "diff_path": str(diff_path) if diff_path else None,
-    }
-    (run_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
-
-    print()
-    print(f"Scan complete: {gaps_count} gaps, {candidates_count} candidates after triage")
-    print(f"  results:    {results_path}")
-    print(f"  gaps:       {run_dir / 'gaps.json'}")
-    print(f"  candidates: {run_dir / 'candidates.json'}")
-    if diff_path:
-        print(f"  diff:       {diff_path}")
-    print(f"  meta:       {run_dir / 'meta.json'}")
-    if candidates_count > 0:
-        print()
-        print("Next: hand candidates.json to the /recon-fingerprint-triage skill,")
-        print("or open it in your editor and triage by hand.")
 
 
 if __name__ == "__main__":

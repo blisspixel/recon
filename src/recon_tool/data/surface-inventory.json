@@ -710,6 +710,19 @@
             "type": "integer"
           },
           {
+            "default": 120.0,
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "timeout",
+            "required": false,
+            "tokens": [
+              "--timeout",
+              "-t"
+            ],
+            "type": "float"
+          },
+          {
             "default": false,
             "is_flag": true,
             "kind": "option",

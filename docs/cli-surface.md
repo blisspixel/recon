@@ -60,6 +60,7 @@ Summary: Look up multiple domains from a file.
 | `markdown` | option | `--md` | no | boolean | false |  |
 | `csv_output` | option | `--csv` | no | boolean | false |  |
 | `concurrency` | option | `--concurrency`, `-c` | no | integer | 5 |  |
+| `timeout` | option | `--timeout`, `-t` | no | float | 120.0 |  |
 | `include_unclassified` | option | `--include-unclassified` | no | boolean | false |  |
 | `no_ct` | option | `--no-ct` | no | boolean | false |  |
 | `ndjson` | option | `--ndjson` | no | boolean | false |  |

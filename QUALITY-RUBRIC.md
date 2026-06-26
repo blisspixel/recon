@@ -53,6 +53,24 @@ findings, or unsuppressed small strata.
 
 ## Current Alignment Snapshot
 
+Cycle 5 scope: C3 CT partial-session recovery, batch timeout plumbing, and
+maintainer-local scan finalization.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | `recon batch --timeout` is passed to `resolve_tenant`; `scan.py` finalizes completed, partial, and recovered NDJSON runs; malformed trailing partial lines are ignored in record counts. |
+| Security and supply chain | 5/5 | No dependency, credential, paid API, or new active probe; private corpus artifacts remain gitignored and the public memo is aggregate-only. |
+| Performance | 5/5 | Large-result counters stream NDJSON; controlled `--max-runtime` avoids unbounded corpus sessions; process-tree termination prevents orphaned batch work. |
+| Readability | 5/5 | Scan orchestration is split into explicit batch, finalization, counting, and recovery helpers with direct CLI flags. |
+| Maintainability | 5/5 | Shared finalizer removes duplicated post-batch logic and tests cover timeout wiring, partial recovery, malformed tails, and generated surface drift. |
+| Sustainability and invariants | 5/5 | Keeps C3 as a maintainer-local, partial, aggregate-only validation track and does not overclaim CT coverage as Bayesian calibration. |
+
+Cycle health: 5/5 | Simplicity: 5/5 | Est. spend: $0 | New skill distilled: none
+
+External spend: 0 USD.
+
 Cycle 1 scope: boundary-aware hostname matching in Google identity routing,
 plus a shared suffix helper used by Google CSE IdP naming, Google identity IdP
 naming, and Exchange Online DKIM attribution.

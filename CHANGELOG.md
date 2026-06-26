@@ -15,11 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Surface-inventory promotion decision.** ADR-0007 keeps
   `docs/surface-inventory.json` and `recon://surface-inventory` as generated
   discovery context, with a concrete-consumer gate before any 2.3 stable subset.
+- **Batch timeout control.** `recon batch` now accepts `--timeout` / `-t`,
+  matching `lookup` and `discover`, so corpus operators can bound each domain's
+  resolve pipeline without changing the default 120-second behavior.
 
 ### Changed
 
 - **Homebrew formula freshness.** The bundled formula now points at the
   published `recon-tool` 2.2.14 sdist and sha256 from PyPI.
+- **CT corpus sessions are recoverable partial runs.** `validation/scan.py` now
+  passes the batch timeout through, supports `--max-runtime` for controlled
+  partial NDJSON sessions, supports no-network `--finalize-existing` recovery of
+  interrupted run directories, skips noisy diffs for partial scans, records
+  valid streamed record counts in `meta.json`, and terminates the batch process
+  tree on controlled timeout. The first recovered C3 partial aggregate is
+  documented in `validation/2026-06-26-c3-ct-partial.md`.
 
 ## [2.2.14] - 2026-06-26
 

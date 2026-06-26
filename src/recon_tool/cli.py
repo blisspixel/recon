@@ -377,6 +377,12 @@ def batch(
         "-c",
         help="Max concurrent lookups (1-20)",
     ),
+    timeout: float = typer.Option(
+        120.0,
+        "--timeout",
+        "-t",
+        help="Max seconds for each domain's full resolve pipeline.",
+    ),
     include_unclassified: bool = typer.Option(
         False,
         "--include-unclassified",
@@ -444,6 +450,7 @@ def batch(
             json_output,
             markdown,
             concurrency,
+            timeout,
             csv_output=csv_output,
             include_unclassified=include_unclassified,
             skip_ct=no_ct,

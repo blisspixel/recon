@@ -88,6 +88,27 @@ surface is not machinery, it is a concrete external consumer that needs a
 minimal, versioned subset with compatibility promises. Until then, the inventory
 remains patch-level and non-contractual.
 
+## C3 CT Partial Session Recovery
+
+The first CT-enabled C3 corpus session on 2026-06-26 produced a useful partial
+NDJSON stream before an outer process timeout stopped the wrapper. The recovered
+aggregate is documented in `validation/2026-06-26-c3-ct-partial.md`: 2,693 valid
+records out of 5,241, with CT mostly blocked by the local breaker. This does not
+complete C3 and does not change the Bayesian calibration claims; it confirms the
+roadmap's multi-session CT framing.
+
+The maintainer tooling now supports the correct operational shape:
+
+- `recon batch --timeout` bounds each domain in batch mode.
+- `validation/scan.py --max-runtime` stops a session deliberately and finalizes
+  parseable NDJSON records.
+- `validation/scan.py --finalize-existing` recovers aggregate artifacts from an
+  already-streamed run directory without network calls.
+- Partial metadata records valid parseable records, timeout settings, and
+  completion state, and partial scans skip noisy diffs.
+- Controlled timeouts terminate the batch process tree on Windows so a launcher
+  process cannot leave a child interpreter writing after the wrapper exits.
+
 ## Profile signal_boost Correctness Fix (2.2.13)
 
 The profile engine's `signal_boost` and `exclude_signals` were inert since they

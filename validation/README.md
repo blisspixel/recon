@@ -153,6 +153,36 @@ gitignored private validation workspaces: `validation/runs-private/`,
 `validation/live_runs/`, or `validation/local/`. Operator-local paths outside
 the checkout are allowed.
 
+CT-enabled corpus sessions are intentionally partial and multi-session. Use
+streaming NDJSON plus a wall-clock cap so a session finalizes aggregate artifacts
+instead of being killed by the terminal or CI wrapper:
+
+```bash
+python validation/scan.py \
+    --corpus validation/corpus-private/consolidated.txt \
+    --label c3-ct-session-1 \
+    --ct \
+    --concurrency 2 \
+    --timeout 60 \
+    --max-runtime 7200 \
+    --no-compare
+```
+
+If a process was interrupted after `results.ndjson` already streamed records,
+recover the aggregate artifacts without touching the network:
+
+```bash
+python validation/scan.py \
+    --corpus validation/corpus-private/consolidated.txt \
+    --finalize-existing validation/runs-private/<UTC-stamp> \
+    --ct \
+    --no-compare
+```
+
+Partial runs write `meta.json` with `batch_completed`, `batch_timed_out`,
+`results_records`, and the timeout settings. Diffing is skipped for partial
+runs because comparing a partial session against a complete prior run is noisy.
+
 ## Assurance and calibration harnesses
 
 The statistical-assurance side of this directory (the dossier that reads

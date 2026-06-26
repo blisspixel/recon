@@ -22,7 +22,10 @@ standing, in dependency order:
    residual *disconfirmed* (ECE 0.373), and a strong channel-split tenancy
    corroboration (ECE 0.048). They do not upgrade the 80% intervals to
    frequentist coverage; that stays a separate, unclaimed property. The optional
-   C3 CT-enabled full-corpus pass remains.
+   C3 CT-enabled full-corpus pass remains. A first recovered partial CT session
+   is recorded in
+   `validation/2026-06-26-c3-ct-partial.md`; it confirms the existing
+   multi-session / limiter-bound framing rather than closing C3.
 2. **Fingerprint and motif triage loop** (maintainer-local, optional, reviewed).
    *Why:* keeps the catalog growing from observed gaps, not invented entries.
    Stays patch-level unless it adds a stable surface; catalog changes still get
