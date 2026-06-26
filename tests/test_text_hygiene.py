@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -77,3 +79,30 @@ def test_audit_added_lines_allows_clean_text() -> None:
     lines = [CHECKER.AddedLine("staged", "README.md", 2, "Plain project documentation.")]
 
     assert CHECKER.audit_added_lines(lines) == []
+
+
+def test_collect_added_lines_decodes_utf8_em_dash(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Git diff output must be decoded as UTF-8, not the platform locale, so an
+    em dash (U+2014) in an added line is caught on Windows the same as in CI.
+    Without the explicit encoding the local check silently misses it.
+    """
+    import subprocess
+
+    def _git(*args: str) -> None:
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)  # noqa: S603, S607
+
+    _git("init", "-q")
+    _git("config", "user.email", "test@example.com")
+    _git("config", "user.name", "test")
+    note = tmp_path / "note.txt"
+    note.write_text("clean line\n", encoding="utf-8")
+    _git("add", ".")
+    _git("commit", "-qm", "init")
+    em_dash = chr(0x2014)
+    note.write_text(f"clean line\nadded {em_dash} dash\n", encoding="utf-8")
+    _git("add", ".")
+
+    monkeypatch.setattr(CHECKER, "ROOT", tmp_path)
+    violations = CHECKER.audit_added_lines(CHECKER.collect_added_lines([]))
+
+    assert any(v.marker == "em dash" for v in violations)

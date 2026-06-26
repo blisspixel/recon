@@ -200,7 +200,7 @@ class TestApplyProfile:
     def test_signal_boost_keys_on_source_name_not_statement(self):
         """The boost matches the rule name, not the rendered statement."""
         profile = Profile(name="sig", signal_boost=(("strong_email_security", 3.0),))
-        # Statement equals the key but source_name does not — no boost.
+        # Statement equals the key but source_name does not, so no boost.
         obs = (_obs("other", "low", "strong_email_security", source_name="other_rule"),)
         out = apply_profile(obs, profile)
         assert out[0].salience == "low"

@@ -114,10 +114,16 @@ def audit_added_lines(lines: Iterable[AddedLine]) -> list[TextHygieneViolation]:
 
 
 def _run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
+    # Decode git's UTF-8 diff output as UTF-8 explicitly. Without this, text
+    # mode falls back to the platform locale (cp1252 on Windows), which mangles
+    # an em dash (U+2014) into other code points so the local check misses what
+    # CI (UTF-8 locale) catches.
     return subprocess.run(  # noqa: S603 - fixed git argv.
         ["git", *args],  # noqa: S607 - maintainer git executable resolved from PATH.
         cwd=ROOT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         check=False,
     )
