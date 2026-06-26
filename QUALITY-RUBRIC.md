@@ -53,6 +53,21 @@ findings, or unsuppressed small strata.
 
 ## Current Alignment Snapshot
 
+Cycle 8 scope: C3 CT partial-session aggregate accounting.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | New summarizer handles multiple private run directories, partial NDJSON, legacy JSON arrays, duplicate domains, and malformed streamed tails with focused tests. |
+| Security and supply chain | 5/5 | Input and output paths inside the repo must stay under private validation roots; tests assert rendered aggregate JSON does not contain target strings. |
+| Performance | 5/5 | NDJSON is streamed line by line and progress is deduped in memory by domain only for maintainer-local aggregate accounting. |
+| Readability | 5/5 | The tool has one explicit purpose: raw outcome counts, best outcome by unique domain, and CT data coverage across sessions. |
+| Maintainability | 5/5 | Adds a small validation tool and a focused test file without changing runtime CLI, MCP, JSON, or package surfaces. |
+| Sustainability and invariants | 5/5 | Keeps C3 aggregate-only, zero-spend, and passive; the public memo reports counts and coverage only, not rows or identifiers. |
+
+External spend: 0 USD.
+
 Cycle 7 scope: C3 CT retry hardening, private retry-corpus placement, and a
 bounded maintainer-local retry session.
 

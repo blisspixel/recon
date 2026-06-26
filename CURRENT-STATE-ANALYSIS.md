@@ -122,7 +122,10 @@ multi-session shape. A short bounded retry against degraded CT records produced
 109 valid retry records and one fresh live CT success; it also confirmed that
 retry inputs now stay under the ignored private output root. C3 remains open
 until enough CT coverage accumulates for aggregate certificate and graph-surface
-review.
+review. A combined aggregate summary across the two current sessions now shows
+2,802 valid records, 2,647 unique observed domains, 38 domains with usable CT
+data, and 2,609 domains still degraded or unresolved for CT. The summary JSON is
+private and aggregate-only.
 
 The maintainer tooling now supports the correct operational shape:
 
@@ -133,6 +136,9 @@ The maintainer tooling now supports the correct operational shape:
   already-streamed run directory without network calls.
 - `validation/scan.py --ct-retry-from` builds a private retry corpus from prior
   CT-degraded records without re-running already-successful domains.
+- `validation/summarize_ct_sessions.py` combines partial sessions into
+  aggregate-only JSON so C3 progress is measured by unique-domain CT coverage,
+  not raw retry records alone.
 - Partial metadata records valid parseable records, timeout settings, and
   completion state, and partial scans skip noisy diffs.
 - Controlled timeouts terminate the batch process tree on Windows so a launcher

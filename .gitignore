@@ -45,6 +45,7 @@ docs/accuracy.md
 !/validation/diff_runs.py
 !/validation/triage_candidates.py
 !/validation/scan.py
+!/validation/summarize_ct_sessions.py
 !/validation/corpus-example.txt
 !/validation/README.md
 # v1.9: publicly-reproducible calibration scripts. Both operate

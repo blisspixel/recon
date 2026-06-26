@@ -203,6 +203,20 @@ ignored validation workspace. `--ct-retry-from` accepts a run directory,
 `results.ndjson`, or legacy `results.json`; malformed streamed tails are skipped
 and repeated domains are retried once.
 
+To understand progress across partial sessions without exposing target rows,
+summarize private runs into aggregate JSON:
+
+```bash
+python validation/summarize_ct_sessions.py \
+    validation/runs-private/<session-a> \
+    validation/runs-private/<session-b> \
+    --output validation/runs-private/c3-ct-session-summary.json
+```
+
+The summary reports raw outcome counts, best outcome by unique domain, and CT
+data coverage. It emits run directory basenames and counts only. It does not
+write domains, tenant IDs, organization names, or per-domain rows.
+
 ## Assurance and calibration harnesses
 
 The statistical-assurance side of this directory (the dossier that reads

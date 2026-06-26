@@ -128,6 +128,10 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - For committed validation memos, record only aggregate counts, rates, intervals,
   and harness status. Keep local manifests and per-step stdout under ignored
   scratch paths, and pin the memo with validation-hygiene tests.
+- For multi-session private validation, add an aggregate-only summarizer before
+  interpreting progress. It may dedupe by private keys internally, but its
+  output must contain counts, rates, run basenames, and coverage only, with tests
+  proving target strings do not appear in rendered JSON.
 - For diff coverage, keep it advisory unless the team explicitly chooses a gate.
   Changed-line coverage should ignore doc-only diffs, use local Coverage.py
   JSON, and avoid adding a dependency or service.

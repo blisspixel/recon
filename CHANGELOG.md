@@ -46,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   domains; and writes synthesized retry inputs under the validated private
   output root instead of a public validation path. The first bounded retry
   aggregate is appended to `validation/2026-06-26-c3-ct-partial.md`.
+- **C3 CT session aggregation.** `validation/summarize_ct_sessions.py` now
+  combines partial private CT sessions into aggregate-only JSON with raw outcome
+  counts, best outcome by unique domain, and CT data coverage, without emitting
+  domains, tenant IDs, organization names, or per-domain rows.
 
 ## [2.2.14] - 2026-06-26
 

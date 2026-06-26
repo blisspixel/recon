@@ -73,3 +73,32 @@ degraded CT records from the first partial session.
 This retry confirms the hardened continuation path works, including private
 retry-corpus placement and partial finalization. It does not close C3: the run
 mostly measured continued CT breaker pressure and produced no triage candidates.
+
+## Combined Session Summary
+
+The two partial sessions were combined with
+`validation/summarize_ct_sessions.py`, which deduplicates by domain internally
+and emits aggregate counts only.
+
+- Sessions summarized: 2.
+- Valid records across sessions: 2,802.
+- Records with a domain field: 2,769.
+- Unique domains observed across sessions: 2,647.
+- Domains with CT data (`cache_hit` or `live_success` as best outcome): 38.
+- CT-data coverage ratio across observed domains: 0.014356.
+- Domains still degraded or unresolved for CT: 2,609.
+- Private aggregate summary:
+  `validation/runs-private/c3-ct-session-summary-20260626.json` (gitignored).
+
+Best outcome by unique domain:
+
+| Outcome | Domains |
+|---|---:|
+| `cache_hit` | 28 |
+| `live_success` | 10 |
+| `live_rate_limited` | 24 |
+| `cache_miss` | 1 |
+| `breaker_open` | 2,584 |
+
+This is the correct C3 accounting layer for further partial sessions: track
+unique-domain CT coverage across sessions, not raw record counts alone.
