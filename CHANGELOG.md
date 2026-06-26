@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Schema generator drift gate.** `scripts/generate_schema.py --check` now
+  verifies both published JSON Schema copies against code-owned required-field
+  metadata and explicit conditional-field metadata, and CI enforces it.
+
 ### Changed
 
 - **Homebrew formula freshness.** The bundled formula now points at the

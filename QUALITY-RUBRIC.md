@@ -70,6 +70,22 @@ Maker-checker score:
 
 External spend: 0 USD.
 
+Cycle 3 scope: schema generator drift gate for the top-level JSON contract and
+both published schema copies.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | Generator checks required fields, conditional fields, source-map traceability, both schema copies, missing fragments, and stale required fields. |
+| Security and supply chain | 5/5 | Pure local script, no network, no dependency, no credential, no runtime behavior change. |
+| Performance | 5/5 | Runs in milliseconds inside existing validation jobs and does not affect lookup hot paths. |
+| Readability | 5/5 | Small script with one code-owned field list for conditional properties and direct error messages. |
+| Maintainability | 5/5 | Uses the existing runtime required-field mirror and schema-source audit rather than duplicating those checks. |
+| Sustainability and invariants | 5/5 | Deepens schema trust without expanding the passive collection surface or changing the v2.0 contract. |
+
+External spend: 0 USD.
+
 Cycle 2 scope: 2.2.14 patch release, remote publication verification, and
 Homebrew formula refresh from the published PyPI sdist.
 

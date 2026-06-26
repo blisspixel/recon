@@ -234,6 +234,11 @@ jobs:
         # explicit formatter, envelope, batch, or explain-mode source.
         run: uv run python scripts/check_schema_sources.py
 
+      - name: Enforce generated schema
+        # The published schema copies are generated from the runtime required
+        # field mirror plus the explicit conditional-field metadata.
+        run: uv run python scripts/generate_schema.py --check
+
       - name: Enforce generated surface inventory
         # The surface inventory is derived from the CLI, MCP registry, and JSON
         # schema. Keep it current so docs and agent guidance do not drift from

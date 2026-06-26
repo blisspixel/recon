@@ -67,6 +67,18 @@ boundary-aware hostname matching for Google identity routing and IdP display
 names, plus Exchange Online DKIM attribution by hostname suffix). The roadmap
 says the next work is dependency-ordered, not date-driven.
 
+## Schema Generator Drift Gate
+
+The schema-generation backlog is now closed for the top-level JSON contract.
+`scripts/generate_schema.py --check` derives the generated property set from
+`recon_tool.schema_contract.REQUIRED_TOP_LEVEL_FIELDS` plus explicit
+conditional-field metadata, verifies every property against the existing
+`TenantInfo` source-map audit, and checks both published schema copies. The
+generator deliberately preserves the existing human-written descriptions,
+constraints, compact formatting, and nested `$defs`; the current best-practice
+reading is to keep JSON Schema as a declarative contract with reviewed
+annotations while making the code-owned field set mechanically checked.
+
 ## Profile signal_boost Correctness Fix (2.2.13)
 
 The profile engine's `signal_boost` and `exclude_signals` were inert since they

@@ -58,6 +58,40 @@ Session: loop cycle 2, 2.2.14 patch release preparation. External spend 0 USD.
   intoto provenance assets.
 - PyPI JSON reports `recon-tool` 2.2.14 with `>=3.11`, and the bundled
   Homebrew formula now pins the 2.2.14 sdist and sha256 from PyPI.
+- Pushed follow-up commit `963e408` for the Homebrew formula refresh and
+  release-state docs. Remote CI, Secrets scan, Scorecard supply-chain security,
+  and `uv run python scripts/release_readiness.py --remote` passed for that
+  HEAD.
+- External spend: 0 USD.
+
+Session: loop cycle 3, schema generator drift gate. External spend 0 USD.
+
+- Selected the schema-generation backlog because it is the highest-leverage
+  non-private roadmap item: it converts a known manual schema drift mode into a
+  deterministic local and CI gate without adding runtime surface area.
+- Latest best-practice refresh for this task: keep JSON Schema as the explicit
+  declarative contract, keep annotations reviewed by humans, and generate or
+  verify code-owned field sets mechanically. This matches the JSON Schema
+  dialect model and Python's dataclass/typing introspection direction while
+  avoiding a new schema framework dependency.
+- Added `scripts/generate_schema.py --check`. It derives top-level fields from
+  `REQUIRED_TOP_LEVEL_FIELDS` plus explicit conditional-field metadata, verifies
+  every field through the schema-source audit, and checks both `docs/` and
+  packaged schema copies semantically so existing compact formatting does not
+  churn.
+- Wired the generator into `scripts/check.py` and the CI validation job after
+  `check_schema_sources.py`.
+- Added `tests/test_generate_schema.py` coverage for committed-copy equivalence,
+  code-owned field metadata, stale required fields, missing property fragments,
+  and semantic rather than text-only checking.
+- Focused validation:
+  `uv run python -m pytest tests/test_generate_schema.py tests/test_schema_sources.py tests/test_json_schema_file.py tests/test_schema_resource.py -q`
+  passed with 42 tests.
+- Fast local gate passed with `uv run python scripts/check.py --fast`, including
+  the new `schema-generator` stage.
+- Final full local gate passed with `uv run python scripts/check.py`: 3,594
+  passed, 6 skipped, 4 deselected, total coverage 86.61 percent. All gate
+  stages passed.
 - External spend: 0 USD.
 
 Session: private corpus setup, profile-engine correctness fix, CI parity fix,

@@ -2424,20 +2424,13 @@ a post-v2.0 v2.x.y patch when there's a falsifiable defensive case):*
   the source of truth; the HTML is the rollup).
 
 - **Generate `docs/recon-schema.json` from code rather than
-  maintaining it manually.** The schema currently lives as a
-  hand-maintained JSON file; drift between code and schema is a
-  recurring failure mode. The current guard covers top-level formatter output,
-  required-field symmetry, internal `$defs` references, model-backed nested
-  `$defs` field names, and a top-level source map from schema properties to
-  `TenantInfo` fields or explicit formatter/mode sources. The source-map guard
-  can also emit JSON for local review. The remaining step is a
-  `scripts/generate_schema.py` that derives the schema from the `TenantInfo`
-  dataclass plus field metadata, then runs in CI to verify the generated schema
-  matches the committed one.
-  Stays inside the pure-Python floor (the generator runs over Python typing
-  introspection, no JSON-Schema framework required). Pairs with the v2.0
-  schema-stability test that fails any committed schema change without a major
-  version bump.
+  maintaining it manually.** Done 2026-06-26 for the top-level schema contract:
+  `scripts/generate_schema.py --check` rebuilds the contract from the runtime
+  required-field mirror plus explicit conditional-field metadata, verifies the
+  top-level source map against `TenantInfo`, preserves the existing human-written
+  descriptions and `$defs`, and checks both published schema copies in local
+  gates and CI. This closes the recurring required-field and copy-drift failure
+  mode without introducing a JSON-Schema framework dependency.
 
 **Pre-existing backlog:**
 
