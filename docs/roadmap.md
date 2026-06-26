@@ -82,9 +82,11 @@ Full detail and sequencing live in
 > fires (it was inert), IdP-name extraction matches vendor hosts by hostname
 > suffix, and Exchange Online DKIM attribution matches `onmicrosoft.com` /
 > `protection.outlook.com` by suffix (validated aggregate-only against the
-> corpus, memo `validation/2026-06-26-onmicrosoft-suffix-match.md`). The GWS DKIM
-> `google.com` fallback and the SRV-based Microsoft checks in `sources/dns_infra.py`
-> are deferred until each has its own corpus validation.
+> corpus, memo `validation/2026-06-26-onmicrosoft-suffix-match.md`). The other
+> vendor-host substring checks (`outlook.com`, `google.com`, and the SRV-based
+> Microsoft patterns) were validated against the same corpus evidence, showed
+> zero non-suffix matches, and are left unchanged per the mirror-not-fitter
+> discipline.
 >
 > **Post-2.0 assurance track, in priority order:** the first three are done.
 > Differential verification of the inference core shipped in v2.1.7; the 2026-06

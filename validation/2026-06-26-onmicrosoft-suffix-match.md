@@ -26,9 +26,13 @@ counts leave the maintainer machine.
 - `onmicrosoft.com`: 825 hostname-shaped evidence values contained it; 823 were
   clean dotted suffixes and 2 were non-suffix substring matches (the
   false-positive shape). Rate 2/825, about 0.24 percent.
-- No other M365 or GWS vendor pattern produced a hostname-shaped evidence value
-  in this output, so the substring-versus-suffix split could not be measured for
-  them from this dataset.
+- A second pass over every evidence value (parsing SRV-style `priority weight
+  port target` records to their target host) measured the other vendor patterns:
+  `outlook.com` appeared 303 times, all clean suffixes; `google.com` appeared 757
+  times, all clean suffixes; and `lync.com`, `teams.microsoft.com`,
+  `manage.microsoft.com`, `enterpriseregistration.windows.net`, and
+  `microsoftonline.com` had no evidence occurrence to measure. No pattern other
+  than `onmicrosoft.com` produced a non-suffix match.
 
 ## Fix
 
@@ -40,11 +44,16 @@ genuine Exchange Online DKIM CNAME always carries the vendor host as its suffix.
 Regression tests cover the real tenant CNAME, a trailing-dot variant, and the
 lookalike false-positive shape (`tests/test_dns_subdetectors.py`).
 
-## Residual
+## Decision on the other patterns
 
-The remaining substring matches against DNS values
-(`google.com` in the GWS DKIM CNAME fallback, and the SRV-based `lync.com` /
-`teams.microsoft.com` checks in `sources/dns_infra.py`) are not changed here.
-The available scan output did not carry hostname-shaped evidence for them, and
-SRV values can carry a priority/weight/port prefix, so a correct suffix test
-must parse the SRV target first. Each wants its own validation before tightening.
+The remaining substring matches against DNS values (`outlook.com` and
+`manage.microsoft.com` / `enterpriseregistration.windows.net` / `microsoftonline.com`
+in `sources/dns_infra.py`, the SRV-based `lync.com` / `teams.microsoft.com`
+checks, and the `google.com` GWS DKIM CNAME fallback in `sources/dns_email.py`)
+are left unchanged. The validation above found zero non-suffix matches for them
+on this corpus, so converting them to suffix matching would change no behaviour
+on observed data while adding risk to core classification logic (the SRV target
+parse in particular). Per the project's mirror-not-fitter discipline, detection
+is tightened only on a demonstrated false positive, which only `onmicrosoft.com`
+showed. If a future corpus pass surfaces a non-suffix match for any of these,
+the same suffix-matching fix applies.

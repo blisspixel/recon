@@ -110,11 +110,13 @@ validation:
   Suffix matching keeps every true positive. Memo:
   `validation/2026-06-26-onmicrosoft-suffix-match.md`.
 
-The remaining candidates (the GWS DKIM `google.com` fallback and the SRV-based
-`lync.com` / `teams.microsoft.com` checks in `sources/dns_infra.py`) are core
-classification logic and are deferred until each has its own corpus validation;
-SRV values carry a priority/weight/port prefix, so a correct suffix test must
-parse the target first.
+The remaining candidates (the GWS DKIM `google.com` fallback and the
+`outlook.com` / SRV-based `lync.com` / `teams.microsoft.com` checks in
+`sources/dns_infra.py`) were validated against the same corpus evidence and
+showed zero non-suffix matches (`outlook.com` 303/303, `google.com` 757/757 clean
+suffixes; the SRV patterns had no evidence occurrence). They are left unchanged
+per the mirror-not-fitter discipline: detection is tightened only on a
+demonstrated false positive, which only `onmicrosoft.com` showed.
 
 ## Quality Rubric
 
