@@ -15,6 +15,7 @@ from recon_tool.sources import dns as dns_source
 from recon_tool.sources import dns_email
 from recon_tool.sources.dns import DNSSource
 from recon_tool.sources.dns_tables import parse_rdata as _parse_rdata
+from recon_tool.validator import host_has_suffix
 
 
 def _mock_safe_resolve_factory(records_by_query: dict[str, list[str]]):
@@ -699,10 +700,10 @@ class TestExchangeDkimSuffixMatch:
     """
 
     def test_host_has_suffix_helper(self):
-        assert dns_email._host_has_suffix("contoso.onmicrosoft.com", "onmicrosoft.com")
-        assert dns_email._host_has_suffix("onmicrosoft.com", "onmicrosoft.com")
-        assert not dns_email._host_has_suffix("x.onmicrosoft.com.example.com", "onmicrosoft.com")
-        assert not dns_email._host_has_suffix("notonmicrosoft.com", "onmicrosoft.com")
+        assert host_has_suffix("contoso.onmicrosoft.com", "onmicrosoft.com")
+        assert host_has_suffix("onmicrosoft.com", "onmicrosoft.com")
+        assert not host_has_suffix("x.onmicrosoft.com.example.com", "onmicrosoft.com")
+        assert not host_has_suffix("notonmicrosoft.com", "onmicrosoft.com")
 
     def test_real_tenant_cname_attributes_m365(self):
         ctx = dns_source._DetectionCtx()

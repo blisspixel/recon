@@ -27,6 +27,7 @@ import httpx
 
 from recon_tool.http import http_client
 from recon_tool.models import EvidenceRecord, SourceResult
+from recon_tool.validator import host_has_suffix
 
 logger = logging.getLogger("recon")
 
@@ -187,17 +188,14 @@ def _extract_idp_name(discovery_uri: str) -> str:
     except ValueError:
         host = ""
 
-    def _host_matches(domain: str) -> bool:
-        return host == domain or host.endswith(f".{domain}")
-
-    if _host_matches("okta.com"):
+    if host_has_suffix(host, "okta.com"):
         return "Okta"
-    if _host_matches("pingidentity.com") or _host_matches("pingone.com"):
+    if host_has_suffix(host, "pingidentity.com") or host_has_suffix(host, "pingone.com"):
         return "Ping Identity"
-    if _host_matches("microsoftonline.com") or _host_matches("microsoft.com"):
+    if host_has_suffix(host, "microsoftonline.com") or host_has_suffix(host, "microsoft.com"):
         return "Microsoft Entra"
-    if _host_matches("accounts.google.com"):
+    if host_has_suffix(host, "accounts.google.com"):
         return "Google"
-    if _host_matches("auth0.com"):
+    if host_has_suffix(host, "auth0.com"):
         return "Auth0"
     return host or discovery_uri

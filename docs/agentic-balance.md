@@ -53,7 +53,7 @@ matches one, generalize it before merging.
 
 | Brittle-rule smell | Principled fix | Precedent |
 |---|---|---|
-| Substring match where structure matters (`"-all" in spf`, `pattern in hostname`) | Token-aware or label-aware match | spf `-all` substring to token match (v2.1.6); `cname_target` substring overmatch (v2.1.4); label-aware chain match so `vendor.com.attacker.tld` no longer matches `vendor.com` (`dns_tables.classify_chain`) |
+| Substring match where structure matters (`"-all" in spf`, `pattern in hostname`, vendor host inside a URL) | Token-aware, label-aware, or parsed-host match | spf `-all` substring to token match (v2.1.6); `cname_target` substring overmatch (v2.1.4); label-aware chain match so `vendor.com.attacker.tld` no longer matches `vendor.com` (`dns_tables.classify_chain`); Google identity redirect routing checks the parsed URL host |
 | Hard-coded vendor string in code | A catalog entry in `fingerprints.yaml` / `signals.yaml`, additive and vendor-doc-sourced | The whole fingerprint catalog exists so detection grows by data, not code |
 | Treating absence of a signal as proof of absence | Absence is no evidence by default (MNAR, `LR = 1`); only public-declaration signals disconfirm on absence | The MNAR absence rule in [correlation.md](correlation.md); the declarative-missingness model and `group_absence` for the email-policy node (CAL14) |
 | A confident yes/no verdict on sparse evidence | Emit the claim as a credible interval that widens on sparse input; set `sparse=true` | The credible interval is the load-bearing field by design; the Bayesian layer exists to discipline claims, not decorate them |

@@ -8,6 +8,7 @@ import deal
 
 __all__ = [
     "UUID_RE",
+    "host_has_suffix",
     "is_safe_dns_name",
     "strip_control_chars",
     "validate_domain",
@@ -24,6 +25,19 @@ _SAFE_DNS_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-._*")
 def is_safe_dns_name(name: str) -> bool:
     """True when *name* contains only DNS-safe characters (case-insensitive)."""
     return bool(name) and all(c in _SAFE_DNS_CHARS for c in name.lower())
+
+
+def host_has_suffix(host: str, suffix: str) -> bool:
+    """True when *host* equals *suffix* or is below it in the DNS tree.
+
+    This is the boundary-aware replacement for checks like
+    ``"vendor.com" in host``. A value such as ``vendor.com.example.net`` must not
+    match ``vendor.com`` because the vendor name is an interior label, not the
+    hostname suffix.
+    """
+    normalized_host = host.lower().rstrip(".")
+    normalized_suffix = suffix.lower().rstrip(".")
+    return normalized_host == normalized_suffix or normalized_host.endswith(f".{normalized_suffix}")
 
 
 # Max length for a sanitized free-text display field (certificate issuer

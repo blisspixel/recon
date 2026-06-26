@@ -99,6 +99,19 @@ class TestIsFederatedRedirect:
     def test_adfs_indicator(self):
         assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/adfs/ls") is True
 
+    def test_google_lookalike_host_is_federated(self):
+        assert GoogleIdentitySource._is_federated_redirect("https://evilgoogle.com/accounts/servicelogin") is True
+        assert GoogleIdentitySource._is_federated_redirect("https://google.com.example.net/accounts") is True
+
+    def test_google_string_in_path_or_query_does_not_define_host(self):
+        assert (
+            GoogleIdentitySource._is_federated_redirect("https://idp.example.net/login?next=accounts.google.com")
+            is True
+        )
+
+    def test_sso_indicator_in_query_on_google_host_still_counts(self):
+        assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/signin?continue=saml") is True
+
 
 # ── _classify_response unit tests ──────────────────────────────────────
 

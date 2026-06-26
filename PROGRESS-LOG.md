@@ -5,6 +5,33 @@ planning artifact and does not replace `CHANGELOG.md`.
 
 ## 2026-06-26
 
+Session: loop cycle 1, boundary-aware Google identity routing. External spend 0
+USD.
+
+- Startup context refreshed from `README.md`, `docs/roadmap.md`,
+  `docs/engineering-practices.md`, `QUALITY-RUBRIC.md`,
+  `docs/agentic-balance.md`, `docs/maintainer-loop-runbook.md`,
+  `docs/release-process.md`, `docs/data-handling-policy.md`,
+  `docs/assurance-case.md`, and `validation/README.md`.
+- Latest best-practice check for this specific task reaffirmed the local
+  direction: parse URLs into components first, then make security decisions on
+  an explicit hostname boundary. This matches OWASP destination-validation
+  guidance and Python's own warning that `urllib.parse` does not validate URLs.
+- Added shared `validator.host_has_suffix()` so exact-host or dotted-suffix
+  checks live in one tested helper instead of copied detector-local predicates.
+- Updated Google CSE IdP naming, Google identity IdP naming, Google identity
+  federated-redirect routing, and Exchange Online DKIM attribution to use the
+  shared helper where a host boundary matters.
+- Added regressions for Google lookalike hosts, `google.com` strings in path or
+  query values, case and trailing-dot suffix matching, and the existing Exchange
+  Online DKIM false-positive shape.
+- Focused validation passed:
+  `uv run python -m pytest tests/test_google_identity.py tests/test_gws_features.py tests/test_dns_subdetectors.py tests/test_validator.py -q`
+  with 230 passed.
+- Final full local gate passed with `uv run python scripts/check.py`: 3,588
+  passed, 6 skipped, 4 deselected, total coverage 86.61 percent. All gate
+  stages passed.
+
 Session: private corpus setup, profile-engine correctness fix, CI parity fix,
 and the 2.2.13 patch release. External spend 0 USD.
 

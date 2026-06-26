@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Microsoft 365 tenant. The match now requires the vendor host to be the
   record's suffix, validated against maintainer-local corpus evidence
   (aggregate-only memo in `validation/2026-06-26-onmicrosoft-suffix-match.md`).
+- **Google identity routing checks the redirect host boundary.** The federated
+  Google Workspace redirect classifier now parses the final URL and checks the
+  hostname against `google.com` by exact host or dotted suffix. A lookalike host
+  such as `evilgoogle.com`, or a `google.com` string in a path or query, no
+  longer affects the Google-vs-third-party routing decision.
 
 ## [2.2.13] - 2026-06-26
 

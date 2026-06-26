@@ -50,3 +50,22 @@ No AI attribution, no em dashes, no emojis, no time estimates in the roadmap.
 Track external spend explicitly; default 0 USD, lifetime cap 5 USD. Public
 artifacts never carry real apexes, organization names, tenant IDs, per-domain
 findings, or unsuppressed small strata.
+
+## Current Alignment Snapshot
+
+Cycle 1 scope: boundary-aware hostname matching in Google identity routing,
+plus a shared suffix helper used by Google CSE IdP naming, Google identity IdP
+naming, and Exchange Online DKIM attribution.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | Focused positive and negative tests cover exact suffix, dotted suffix, lookalike hosts, and path/query-only vendor strings. |
+| Security and supply chain | 5/5 | Uses parsed URL host plus explicit suffix boundary; adds no dependency, credential, API, or active probe. |
+| Performance | 5/5 | Constant-time string normalization and suffix checks on existing hot paths; no extra network or repeated catalog work. |
+| Readability | 5/5 | One small helper with direct tests; detector code reads in terms of the domain concept it needs. |
+| Maintainability | 5/5 | Removes duplicated local suffix predicates instead of adding another one; no surface or schema churn. |
+| Sustainability and invariants | 5/5 | Patch-level hardening inside the passive deterministic core, aligned with the deepen-not-expand roadmap phase. |
+
+External spend: 0 USD.

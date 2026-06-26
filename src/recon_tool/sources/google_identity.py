@@ -24,6 +24,7 @@ import httpx
 from recon_tool.http import http_client
 from recon_tool.models import EvidenceRecord, SourceResult
 from recon_tool.retry import retry_on_transient
+from recon_tool.validator import host_has_suffix
 
 logger = logging.getLogger("recon")
 
@@ -63,7 +64,7 @@ def _extract_idp_name(url: str) -> str:
     except ValueError:
         host = ""
     for pattern, name in _IDP_PATTERNS:
-        if host == pattern or host.endswith(f".{pattern}"):
+        if host_has_suffix(host, pattern):
             return name
     return host or url
 
@@ -177,10 +178,18 @@ class GoogleIdentitySource:
     @staticmethod
     def _is_federated_redirect(final_url: str) -> bool:
         """Check if the final URL is a third-party IdP (not Google)."""
-        # If we ended up on a non-Google domain, it's federated
-        if "accounts.google.com" not in final_url and "google.com" not in final_url:
+        try:
+            parsed = urlparse(final_url)
+        except ValueError:
             return True
-        # Some federated setups redirect through Google first then to the IdP
-        # Check for SAML/SSO redirect indicators in the URL
+
+        host = (parsed.hostname or "").lower()
+        if not host_has_suffix(host, "google.com"):
+            return True
+
+        # Some federated setups end on a Google-hosted SAML/SSO handoff URL
+        # before the external IdP takes over. Only inspect path and query after
+        # the host boundary is confirmed to be Google-owned.
+        handoff_text = f"{parsed.path}?{parsed.query}".lower()
         sso_indicators = ("saml", "sso", "adfs", "okta", "pingone", "auth0")
-        return any(indicator in final_url for indicator in sso_indicators)
+        return any(indicator in handoff_text for indicator in sso_indicators)

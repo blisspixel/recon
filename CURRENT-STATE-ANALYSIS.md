@@ -103,12 +103,29 @@ validation:
   now parses the URL hostname and matches IdP vendors by exact host or dotted
   suffix, so a lookalike host or a vendor name in a path or query no longer
   matches. Display-name only.
+- `GoogleIdentitySource._is_federated_redirect` now parses the final URL and
+  checks the hostname against `google.com` by exact host or dotted suffix before
+  reading SAML/SSO handoff indicators. A lookalike host such as
+  `evilgoogle.com`, or a `google.com` string in a path or query, no longer
+  changes the Google-vs-third-party routing decision.
 - `_apply_exchange_dkim` in `sources/dns_email.py` now matches `onmicrosoft.com`
   and `protection.outlook.com` by hostname suffix. Validated against existing
   maintainer-local corpus evidence (aggregate-only): the substring form produced
   2 non-suffix false-positive shapes out of 825 hostname-shaped evidence values.
   Suffix matching keeps every true positive. Memo:
   `validation/2026-06-26-onmicrosoft-suffix-match.md`.
+
+The shared `validator.host_has_suffix()` helper now owns the exact-host or
+dotted-suffix predicate used by these fixes. That keeps hostname-boundary logic
+in one tested place and avoids growing parallel local helpers in detector code.
+
+2026 best-practice refresh for this task: hostname decisions should be made on a
+parsed authority component, then checked against an explicit allowlist or
+suffix boundary. This matches OWASP SSRF guidance around strict destination
+validation and Python's `urllib.parse` warning that URL parsing does not itself
+validate a URL. The repo-local consequence is narrow: `urlparse()` is used only
+to extract the hostname, and `host_has_suffix()` plus negative tests enforce the
+security boundary.
 
 The remaining candidates (the GWS DKIM `google.com` fallback and the
 `outlook.com` / SRV-based `lync.com` / `teams.microsoft.com` checks in

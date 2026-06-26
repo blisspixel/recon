@@ -2,7 +2,19 @@
 
 import pytest
 
-from recon_tool.validator import is_safe_dns_name, strip_control_chars, validate_domain
+from recon_tool.validator import host_has_suffix, is_safe_dns_name, strip_control_chars, validate_domain
+
+
+class TestHostHasSuffix:
+    def test_exact_and_dotted_suffix_match(self):
+        assert host_has_suffix("okta.com", "okta.com")
+        assert host_has_suffix("login.okta.com", "okta.com")
+        assert host_has_suffix("LOGIN.OKTA.COM.", "okta.com")
+
+    def test_interior_label_and_lookalike_do_not_match(self):
+        assert not host_has_suffix("okta.com.example.net", "okta.com")
+        assert not host_has_suffix("notokta.com", "okta.com")
+        assert not host_has_suffix("", "okta.com")
 
 
 class TestValidateDomain:

@@ -80,9 +80,11 @@ Full detail and sequencing live in
 > **Unreleased on `main` (toward the next patch):** a boundary-unaware-substring
 > hardening pass. The profile `signal_boost` / `exclude_signals` reweighting now
 > fires (it was inert), IdP-name extraction matches vendor hosts by hostname
-> suffix, and Exchange Online DKIM attribution matches `onmicrosoft.com` /
-> `protection.outlook.com` by suffix (validated aggregate-only against the
-> corpus, memo `validation/2026-06-26-onmicrosoft-suffix-match.md`). The other
+> suffix, Google identity redirect routing parses the final URL host before
+> deciding whether the flow left Google, and Exchange Online DKIM attribution
+> matches `onmicrosoft.com` / `protection.outlook.com` by suffix (validated
+> aggregate-only against the corpus, memo
+> `validation/2026-06-26-onmicrosoft-suffix-match.md`). The other
 > vendor-host substring checks (`outlook.com`, `google.com`, and the SRV-based
 > Microsoft patterns) were validated against the same corpus evidence, showed
 > zero non-suffix matches, and are left unchanged per the mirror-not-fitter
