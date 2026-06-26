@@ -398,6 +398,32 @@ fingerprints:
       (Organizations, custom databases); those are configured
       inside the Auth0 tenant and not visible from the chain.
 
+- name: Descope
+  slug: descope
+  category: Identity
+  confidence: high
+  product_family: Descope
+  parent_vendor: Descope
+  detections:
+  - type: cname_target
+    pattern: cname.descope.com
+    reference: https://docs.descope.com/how-to-deploy-to-production/custom-domain
+    tier: application
+    description: >-
+      Descope custom-domain CNAME target for hosted authentication
+      pages on US projects. Indicates the org delegates at least
+      one branded auth subdomain to Descope for customer identity
+      flows. Hosting-binding signal only; it does not identify
+      enabled auth methods or tenant policy.
+  - type: cname_target
+    pattern: cname.euc1.descope.com
+    reference: https://docs.descope.com/how-to-deploy-to-production/custom-domain
+    tier: application
+    description: >-
+      Descope custom-domain CNAME target for hosted authentication
+      pages on EU projects. Same identity-flow binding semantics as
+      the US target, with regional Descope hosting.
+
 - name: Okta
   slug: okta
   category: Identity

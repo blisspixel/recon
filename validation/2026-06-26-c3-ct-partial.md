@@ -97,19 +97,47 @@ This session confirms the corrected accounting shape: the retry was limited by
 live provider pacing, not by all-provider breaker stops. It also added one more
 domain with usable CT data. It still does not close C3.
 
+## Retry Session C
+
+After the retry-corpus synthesis hardening, a small bounded retry was run
+against the degraded records from Retry Session B. The goal was to test whether
+the latest private retry input path still produces complete, aggregate-safe
+artifacts and whether any additional CT data becomes available after limiter
+cooldown.
+
+- Retry corpus size: 33 domains.
+- Valid streamed retry records: 33.
+- Completion state: complete for this retry corpus.
+- External spend: 0 USD.
+- Private artifacts: `validation/runs-private/20260626-191156Z/` and the
+  synthesized retry input under `validation/runs-private/_inputs/` (gitignored).
+
+| Outcome | Count |
+|---|---:|
+| `live_success` | 1 |
+| `live_rate_limited` | 32 |
+
+This session added one more domain with usable CT data and produced one private
+triage candidate. The candidate was promoted only after public-source review:
+Descope's custom-domain documentation identifies `cname.descope.com` and
+`CNAME.euc1.descope.com` as CNAME targets, so the public catalog now has a
+conservative Descope `cname_target` rule. No private domain rows are published.
+The slug is explicitly mapped to the Identity panel category and the exposure
+identity-provider view so it cannot fall through to generic Business Apps.
+
 ## Combined Session Summary
 
-The three partial sessions were combined with
+The four partial sessions were combined with
 `validation/summarize_ct_sessions.py`, which deduplicates by domain internally
 and emits aggregate counts only.
 
-- Sessions summarized: 3.
-- Valid records across sessions: 2,836.
-- Records with a domain field: 2,803.
+- Sessions summarized: 4.
+- Valid records across sessions: 2,869.
+- Records with a domain field: 2,836.
 - Unique domains observed across sessions: 2,647.
-- Domains with CT data (`cache_hit` or `live_success` as best outcome): 39.
-- CT-data coverage ratio across observed domains: 0.014734.
-- Domains still degraded or unresolved for CT: 2,608.
+- Domains with CT data (`cache_hit` or `live_success` as best outcome): 40.
+- CT-data coverage ratio across observed domains: 0.015111.
+- Domains still degraded or unresolved for CT: 2,607.
 - Private aggregate summary:
   `validation/runs-private/c3-ct-session-summary-20260626.json` (gitignored).
 
@@ -118,8 +146,8 @@ Best outcome by unique domain:
 | Outcome | Domains |
 |---|---:|
 | `cache_hit` | 28 |
-| `live_success` | 11 |
-| `live_rate_limited` | 55 |
+| `live_success` | 12 |
+| `live_rate_limited` | 54 |
 | `cache_miss` | 1 |
 | `breaker_open` | 2,552 |
 

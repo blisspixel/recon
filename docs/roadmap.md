@@ -26,8 +26,10 @@ The next work is dependency-ordered:
      confirmed the private retry-input path, and produced no triage candidates.
      A second short retry tested CT attempt-outcome accounting, added 34 valid
      records, and confirmed live provider pacing is now separated from
-     all-provider breaker stops. Combined aggregate accounting currently shows
-     2,647 unique observed domains and 39 domains with usable CT data. These
+     all-provider breaker stops. A third retry completed 33 degraded records,
+     added one more live CT success, and surfaced one public-source-backed
+     Descope CNAME-target rule. Combined aggregate accounting currently shows
+     2,647 unique observed domains and 40 domains with usable CT data. These
      sessions confirm the multi-session, limiter-bound shape. The retry tooling
      now revalidates synthesized retry-domain inputs and rejects retry synthesis
      combined with no-network finalization. These sessions do not close C3.
@@ -39,9 +41,9 @@ The next work is dependency-ordered:
    - Why next: catalog growth should come from observed public DNS or stable
      vendor documentation, not invented patterns.
    - Current state: the June 2026 pass promoted public-source-backed UltraDNS
-     Web Forwarding and Squarespace managed-subdomain surface rules. Remaining
-     private aggregate candidates are held until they have clear public support
-     and negative tests.
+     Web Forwarding, Squarespace managed-subdomain, and Descope custom-domain
+     surface rules. Remaining private aggregate candidates are held until they
+     have clear public support and negative tests.
    - Acceptance: every promoted rule has scoped language, a public reference or
      aggregate validation basis, regression tests, and conservative sparse-result
      wording.

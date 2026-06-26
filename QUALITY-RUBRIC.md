@@ -53,6 +53,22 @@ findings, or unsuppressed small strata.
 
 ## Current Alignment Snapshot
 
+Cycle 12 scope: bounded C3 Retry Session C and public-source-backed Descope
+CNAME-target promotion.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | Retry Session C completed the 33-domain degraded retry corpus, added one live CT success, and the new Descope `cname_target` rule covers both documented US and EU custom-domain targets plus the Identity panel taxonomy and exposure posture path. |
+| Security and supply chain | 5/5 | Private candidate rows stayed under ignored run paths; the promoted rule relies on public Descope documentation and label-boundary classifier tests, with no dependency, credential, paid API, or active probe added. |
+| Performance | 5/5 | The live retry used concurrency 1 and completed in a bounded session; the catalog addition is two static suffix rules with no new network calls. |
+| Readability | 5/5 | Descope is placed in the existing Identity CNAME-target section with scoped hosting-binding language and direct public references. |
+| Maintainability | 5/5 | Focused tests pin rule loading, US/EU classification, lookalike rejection, slug-category mapping, and identity-posture output; generated fingerprint validation passed with 844 entries. |
+| Sustainability and invariants | 5/5 | C3 remains aggregate-only and passive; the public memo publishes counts and public vendor targets only, not private apexes or per-domain rows. |
+
+External spend: 0 USD.
+
 Cycle 11 scope: C3 retry input security review and validation-tool option
 coherence.
 

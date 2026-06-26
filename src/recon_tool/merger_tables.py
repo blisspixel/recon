@@ -139,6 +139,7 @@ SLUG_HUMAN_NAMES: dict[str, str] = {
     "fastly": "Fastly",
     "onelogin": "OneLogin",
     "auth0": "Auth0",
+    "descope": "Descope",
     "openai": "OpenAI",
     "anthropic": "Anthropic",
     "mistral": "Mistral",

@@ -7,40 +7,6 @@ repository history.
 
 ## 2026-06-26
 
-Session: loop cycle 7, C3 CT retry hardening and bounded retry. External spend
-0 USD.
-
-- Ran the cycle-7 maintenance sub-goal against the C3 scan path: reviewed
-  private artifact boundaries, retry/resume behavior, malformed streamed-tail
-  handling, and validation hygiene before continuing the live CT track.
-- Latest best-practice refresh for this task: keep long-running public-data
-  workflows resumable and checkpointed, keep retries bounded by limiter state,
-  and keep synthesized private inputs under explicitly private workspaces.
-- Hardened `validation/scan.py --ct-retry-from`: prior run directories,
-  `results.ndjson`, and legacy `results.json` are accepted; malformed streamed
-  tails are skipped through a shared result-record iterator; retry domains are
-  deduplicated; and synthesized retry corpora are written under the validated
-  private output root.
-- Added regression coverage for private retry-input path validation, private
-  output placement, deduplication, malformed partial tails, and legacy JSON-array
-  retry input.
-- Ran a bounded maintainer-local C3 retry against degraded CT records from the
-  first partial session. The retry corpus had 2,610 domains; the five-minute
-  session finalized 109 valid retry records, with 1 live CT success, 1 rate
-  limit, 105 breaker-open outcomes, 2 not-attempted outcomes, and 0 triage
-  candidates. Private artifacts remain ignored under `validation/runs-private/`.
-- Updated the aggregate public C3 memo, validation runbook, roadmap current
-  state, changelog, current-state analysis, and quality rubric.
-- Focused validation passed:
-  `uv run python -m pytest tests/test_scan_ct_summary.py tests/test_maintainer_loop_runbook.py tests/test_agentic_balance_docs.py -q`
-  with 20 passed. Focused ruff, text hygiene, validation hygiene, and
-  `git check-ignore` checks passed.
-- Fast local gate passed with `uv run python scripts/check.py --fast`.
-- Final full local gate passed with `uv run python scripts/check.py`: 3,606
-  passed, 5 skipped, 4 deselected, total coverage 86.63 percent. All gate
-  stages passed.
-- External spend: 0 USD.
-
 Session: loop cycle 8, C3 CT session aggregation. External spend 0 USD.
 
 - Selected aggregate session accounting because C3 is now explicitly
@@ -164,4 +130,42 @@ Session: loop cycle 11, C3 retry input security review. External spend 0 USD.
   passed. Focused ruff, pyright, text hygiene, and validation hygiene passed.
 - Final full local gate passed with `uv run python scripts/check.py`: 3,627
   passed, 5 skipped, 4 deselected, total coverage 86.69 percent. All gate
+  stages passed.
+
+Session: loop cycle 12, C3 Retry Session C and Descope surface promotion.
+External spend 0 USD.
+
+- Selected the top roadmap item again: continue C3 as bounded, aggregate-only
+  CT sessions while reviewing private candidates only through public-source
+  proposal rules.
+- Checked persisted CT limiter snapshots, then ran a bounded retry against the
+  33 CT-degraded records from Retry Session B:
+  `uv run python validation/scan.py --corpus validation/corpus-private/consolidated.txt
+  --ct-retry-from validation/runs-private/20260626-171647Z --ct
+  --concurrency 1 --timeout 60 --max-runtime 240 --no-compare --label
+  c3-ct-retry-c`.
+- Retry Session C completed 33/33 records with 1 `live_success` and 32
+  `live_rate_limited` outcomes. It produced one private triage candidate.
+- Rebuilt the private aggregate summary across four sessions. Current aggregate
+  state: 2,869 valid records, 2,836 records with domain fields, 2,647 unique
+  observed domains, 40 domains with usable CT data, 2,607 domains still degraded
+  or unresolved for CT, and CT-data coverage ratio 0.015111.
+- Promoted a conservative Descope `cname_target` rule only after checking
+  public Descope custom-domain documentation. Added both documented US and EU
+  targets and negative boundary coverage for lookalike suffixes.
+- Fixed the integration bug caught by the full local gate: the new `descope`
+  slug now maps to the Identity panel category, participates in identity
+  posture as Descope, and has regression coverage for both decisions.
+- Ran the cycle-12 distill into `SKILLS.md`: private CNAME-target candidates
+  require public vendor documentation plus negative boundary tests before public
+  memo updates.
+- Focused validation passed:
+  `uv run pytest tests/test_surface_attribution.py tests/test_fingerprints.py
+  tests/test_scan_ct_summary.py tests/test_ct_session_summary.py
+  tests/test_markdown_links.py -q` with 90 passed,
+  `uv run pytest tests/test_slug_category_invariant.py
+  tests/test_surface_attribution.py tests/test_exposure.py -q` with 66 passed,
+  and `scripts/validate_fingerprint.py` passed with 844 entries.
+- Final full local gate passed with `uv run python scripts/check.py`: 3,630
+  passed, 6 skipped, 4 deselected, total coverage 86.70 percent. All gate
   stages passed.

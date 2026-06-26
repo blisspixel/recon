@@ -124,11 +124,14 @@ retry inputs now stay under the ignored private output root. A second short
 bounded retry produced 34 valid records, one more live CT success, and confirmed
 that mixed provider failures are now accounted as live provider pacing rather
 than all-provider breaker stops. C3 remains open until enough CT coverage
-accumulates for aggregate certificate and graph-surface review. A combined
-aggregate summary across the three current sessions now shows 2,836 valid
-records, 2,647 unique observed domains, 39 domains with usable CT data, and
-2,608 domains still degraded or unresolved for CT. The summary JSON is private
-and aggregate-only.
+accumulates for aggregate certificate and graph-surface review. A third short
+retry completed the 33 degraded records from Retry Session B, added one live CT
+success, and produced one private triage candidate. The candidate was promoted
+only after public-source review against Descope custom-domain documentation and
+with boundary tests. A combined aggregate summary across the four current
+sessions now shows 2,869 valid records, 2,647 unique observed domains, 40
+domains with usable CT data, and 2,607 domains still degraded or unresolved for
+CT. The summary JSON is private and aggregate-only.
 
 The maintainer tooling now supports the correct operational shape:
 

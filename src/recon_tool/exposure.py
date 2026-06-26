@@ -119,6 +119,7 @@ _SECURITY_TOOL_SLUGS: frozenset[str] = frozenset(
         "netskope",
         "okta",
         "auth0",
+        "descope",
         "duo",
         "1password",
         "cyberark",
@@ -156,13 +157,12 @@ _CONSUMER_SAAS_SLUGS: frozenset[str] = frozenset(
 _IDP_SLUGS: dict[str, str] = {
     "okta": "Okta",
     "auth0": "Auth0",
+    "descope": "Descope",
     "duo": "Duo",
     "1password": "1Password",
     "cyberark": "CyberArk",
     "onelogin": "OneLogin",
 }
-
-
 
 # ── Helper functions ───────────────────────────────────────────────────
 

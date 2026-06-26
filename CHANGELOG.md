@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Schema generator drift gate.** `scripts/generate_schema.py --check` now
   verifies both published JSON Schema copies against code-owned required-field
   metadata and explicit conditional-field metadata, and CI enforces it.
+- **Descope CNAME-target fingerprint.** The surface-attribution catalog now
+  recognizes Descope custom-domain CNAME targets (`cname.descope.com` and
+  `cname.euc1.descope.com`) as identity-surface bindings, backed by Descope's
+  public custom-domain documentation and boundary tests.
+- **Descope identity taxonomy.** The `descope` slug now maps to the Identity
+  panel category and the exposure identity-provider view instead of falling
+  through to the generic Business Apps fallback.
 - **Surface-inventory promotion decision.** ADR-0007 keeps
   `docs/surface-inventory.json` and `recon://surface-inventory` as generated
   discovery context, with a concrete-consumer gate before any 2.3 stable subset.
@@ -52,6 +59,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   combines partial private CT sessions into aggregate-only JSON with raw outcome
   counts, best outcome by unique domain, and CT data coverage, without emitting
   domains, tenant IDs, organization names, or per-domain rows.
+- **C3 Retry Session C.** A bounded retry completed the 33 CT-degraded records
+  from Retry Session B, added one live CT success, and raised combined CT-data
+  coverage to 40 domains out of 2,647 unique observed domains.
 - **C3 scan options reject incoherent retry recovery.** `validation/scan.py` now
   rejects `--finalize-existing` combined with `--ct-retry-from`, keeping
   no-network recovery separate from synthesized CT retry runs.

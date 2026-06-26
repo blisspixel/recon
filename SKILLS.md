@@ -171,6 +171,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
   against existing patterns before treating a suffix bucket as uncovered. The
   three-label bucket can hide the service-specific label that an existing
   fingerprint already matches.
+- Promote a private CNAME-target candidate only when a public vendor document
+  names the target or stable product endpoint. Add both the exact documented
+  target patterns and negative boundary tests before updating public memos.
 - For motif catalog growth, prefer complete ordered-chain motifs only when they
   add information beyond existing pairwise motifs. Record the before/after
   firing delta on fictional or aggregate-safe chain inputs.

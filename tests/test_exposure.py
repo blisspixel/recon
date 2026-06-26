@@ -42,6 +42,7 @@ _KNOWN_SLUGS = (
     "mimecast",
     "okta",
     "duo",
+    "descope",
     "cloudflare",
     "aws-route53",
     "azure-dns",
@@ -760,6 +761,10 @@ class TestScoreObservability:
     def test_two_security_tools_drop_the_floor_by_ten(self) -> None:
         result = assess_exposure_from_info(self._info(slugs=("crowdstrike", "okta")))
         assert result.unconfirmable_absent_points == 20
+
+    def test_descope_counts_as_identity_provider(self) -> None:
+        result = assess_exposure_from_info(self._info(slugs=("descope",)))
+        assert result.identity_posture.identity_provider == "Descope"
 
     def test_floor_never_pushes_ceiling_past_100(self) -> None:
         result = assess_exposure_from_info(self._info())

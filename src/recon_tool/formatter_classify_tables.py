@@ -94,6 +94,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "okta": "Identity",
     "entra-app-proxy": "Identity",
     "auth0": "Identity",
+    "descope": "Identity",
     "onelogin": "Identity",
     # Additional identity providers
     "jumpcloud": "Identity",

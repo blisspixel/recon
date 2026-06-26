@@ -27,6 +27,7 @@ from recon_tool.fingerprints import (
     inject_ephemeral,
     reload_fingerprints,
 )
+from recon_tool.formatter_classify import category_for_slug
 from recon_tool.models import SurfaceAttribution, UnclassifiedCnameChain
 from recon_tool.sources import dns as dns_source
 from recon_tool.sources.dns import DNSSource, _classify_chain
@@ -89,6 +90,40 @@ def test_squarespace_managed_subdomain_cname_target_loads_and_classifies() -> No
 
     assert application is not None
     assert application.slug == "squarespace"
+    assert infrastructure is None
+
+
+def test_descope_cname_target_loads_and_classifies() -> None:
+    """Descope custom-domain CNAMEs attribute to Descope."""
+    rules = get_cname_target_rules()
+    us_terminal = "cname.descope.com"
+    eu_terminal = "CNAME.euc1.descope.com".lower()
+
+    assert any(r.slug == "descope" and r.pattern == us_terminal for r in rules)
+    assert any(r.slug == "descope" and r.pattern == eu_terminal for r in rules)
+
+    application, infrastructure = _classify_chain(["auth.contoso.com", us_terminal], rules)
+    assert application is not None
+    assert application.slug == "descope"
+    assert infrastructure is None
+
+    application, infrastructure = _classify_chain(["login.contoso.com", eu_terminal], rules)
+    assert application is not None
+    assert application.slug == "descope"
+    assert infrastructure is None
+
+
+def test_descope_cname_target_maps_to_identity_panel_category() -> None:
+    """Descope is an auth surface, not a generic business app."""
+    assert category_for_slug("descope") == "Identity"
+
+
+def test_descope_cname_target_rejects_lookalike_suffix() -> None:
+    """Dotted cname_target patterns require a DNS-label suffix boundary."""
+    rules = get_cname_target_rules()
+    application, infrastructure = _classify_chain(["cname.descope.com.example.net"], rules)
+
+    assert application is None
     assert infrastructure is None
 
 

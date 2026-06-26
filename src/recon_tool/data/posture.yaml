@@ -108,7 +108,7 @@ observations:
     category: identity
     salience: medium
     condition:
-      slugs_any: [okta, auth0, onelogin, duo, ping-identity, cyberark]
+      slugs_any: [okta, auth0, descope, onelogin, duo, ping-identity, cyberark]
       slugs_min: 1
     template: "Identity provider detected ({matched_slugs})"
 
