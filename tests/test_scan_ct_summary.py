@@ -136,6 +136,42 @@ def test_ct_retry_corpus_accepts_legacy_json_array(scan, tmp_path: Path) -> None
     assert retry_corpus.read_text(encoding="utf-8").splitlines() == ["contoso.com"]
 
 
+def test_ct_retry_corpus_validates_synthesized_domains(scan, tmp_path: Path) -> None:
+    output_root = tmp_path / "runs-private"
+    prior = output_root / "prior"
+    prior.mkdir(parents=True)
+    (prior / "results.ndjson").write_text(
+        "\n".join(
+            [
+                json.dumps({"queried_domain": "contoso.com", "ct_attempt_outcome": "live_rate_limited"}),
+                json.dumps({"queried_domain": "contoso.com\nexample.net", "ct_attempt_outcome": "cache_miss"}),
+                json.dumps({"queried_domain": "mail.fabrikam.com", "ct_attempt_outcome": "breaker_open"}),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    retry_corpus = scan._synthesize_ct_retry_corpus(prior, output_root)
+
+    assert retry_corpus.read_text(encoding="utf-8").splitlines() == [
+        "contoso.com",
+        "fabrikam.com",
+    ]
+
+
+def test_cli_options_reject_finalize_with_ct_retry(scan) -> None:
+    args = argparse.Namespace(
+        finalize_existing=Path("run"),
+        ct_retry_from=Path("prior"),
+        timeout=10.0,
+        max_runtime=None,
+        json_array=False,
+    )
+
+    with pytest.raises(ValueError, match="finalize-existing"):
+        scan._validate_cli_options(args)
+
+
 def test_run_batch_passes_timeout_to_recon_batch(scan, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     corpus = tmp_path / "domains.txt"
     corpus.write_text("contoso.com\n", encoding="utf-8")

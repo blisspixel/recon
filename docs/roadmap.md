@@ -28,8 +28,9 @@ The next work is dependency-ordered:
      records, and confirmed live provider pacing is now separated from
      all-provider breaker stops. Combined aggregate accounting currently shows
      2,647 unique observed domains and 39 domains with usable CT data. These
-     sessions confirm the multi-session, limiter-bound shape. They do not close
-     C3.
+     sessions confirm the multi-session, limiter-bound shape. The retry tooling
+     now revalidates synthesized retry-domain inputs and rejects retry synthesis
+     combined with no-network finalization. These sessions do not close C3.
    - Acceptance: publish only aggregate counts and disclosure-reviewed memos.
      No apexes, organization names, tenant IDs, or per-domain rows leave the
      maintainer machine.

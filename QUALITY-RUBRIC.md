@@ -53,6 +53,22 @@ findings, or unsuppressed small strata.
 
 ## Current Alignment Snapshot
 
+Cycle 11 scope: C3 retry input security review and validation-tool option
+coherence.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | `--ct-retry-from` now revalidates each prior `queried_domain` before writing the retry corpus, normalizes retry subdomains to the apex the batch command will analyze, and rejects `--finalize-existing` combined with retry synthesis. |
+| Security and supply chain | 5/5 | The fix closes a private-artifact injection edge where malformed prior JSON could create extra retry-corpus lines; no dependency, credential, paid API, or active probe was added. |
+| Performance | 5/5 | Validation is linear over already-selected degraded records and adds no extra CT calls or scan fanout. |
+| Readability | 5/5 | Option coherence lives in one small helper, and retry-domain validation uses the existing canonical `validate_domain` boundary. |
+| Maintainability | 5/5 | Focused tests cover newline-bearing prior records, subdomain normalization, and the rejected option pair without expanding runtime CLI, MCP, or JSON surfaces. |
+| Sustainability and invariants | 5/5 | Keeps C3 aggregate-only, maintainer-local, passive, and zero-spend while strengthening private corpus hygiene. |
+
+External spend: 0 USD.
+
 Cycle 10 scope: bug-hunt and security-review round over CT failure telemetry,
 DNS target attribution, SRV parsing, and local security gates.
 

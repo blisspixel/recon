@@ -359,6 +359,18 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _validate_cli_options(args: argparse.Namespace) -> None:
+    """Reject option combinations that cannot produce coherent scan metadata."""
+    if args.finalize_existing is not None and args.ct_retry_from is not None:
+        raise ValueError("--finalize-existing cannot be combined with --ct-retry-from")
+    if args.timeout <= 0:
+        raise ValueError("--timeout must be greater than 0")
+    if args.max_runtime is not None and args.max_runtime <= 0:
+        raise ValueError("--max-runtime must be greater than 0")
+    if args.max_runtime is not None and args.json_array:
+        raise ValueError("--max-runtime requires streaming NDJSON; remove --json-array")
+
+
 def _synthesize_ct_retry_corpus(retry_from: Path, output_root: Path) -> Path:
     """Build a filtered corpus of only the CT-degraded domains from a prior run.
 
@@ -389,12 +401,18 @@ def _synthesize_ct_retry_corpus(retry_from: Path, output_root: Path) -> Path:
     }
     degraded_domains: list[str] = []
     seen_domains: set[str] = set()
+    from recon_tool.validator import validate_domain
+
     for rec in _iter_result_records(prior):
         outcome = rec.get("ct_attempt_outcome")
         dom = rec.get("queried_domain")
-        if outcome in degraded_outcomes and isinstance(dom, str) and dom and dom not in seen_domains:
-            degraded_domains.append(dom)
-            seen_domains.add(dom)
+        if outcome not in degraded_outcomes or not isinstance(dom, str) or not dom:
+            continue
+        with contextlib.suppress(ValueError):
+            validated = validate_domain(dom)
+            if validated not in seen_domains:
+                degraded_domains.append(validated)
+                seen_domains.add(validated)
     if not degraded_domains:
         print("--ct-retry-from: no degraded records in prior run; nothing to retry")
         raise SystemExit(0)
@@ -631,18 +649,10 @@ def main() -> None:
             args.finalize_existing = _validate_private_run_dir(args.finalize_existing)
         if args.ct_retry_from is not None:
             args.ct_retry_from = _validate_private_scan_input_path(args.ct_retry_from)
+        _validate_cli_options(args)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         raise SystemExit(2) from exc
-    if args.timeout <= 0:
-        print("error: --timeout must be greater than 0", file=sys.stderr)
-        raise SystemExit(2)
-    if args.max_runtime is not None and args.max_runtime <= 0:
-        print("error: --max-runtime must be greater than 0", file=sys.stderr)
-        raise SystemExit(2)
-    if args.max_runtime is not None and args.json_array:
-        print("error: --max-runtime requires streaming NDJSON; remove --json-array", file=sys.stderr)
-        raise SystemExit(2)
 
     corpus = args.corpus
     # --ct-retry-from synthesizes a filtered corpus from the prior run, listing

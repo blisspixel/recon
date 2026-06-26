@@ -7,39 +7,6 @@ repository history.
 
 ## 2026-06-26
 
-Session: loop cycle 6, live documentation refresh. External spend 0 USD.
-
-- Selected the docs refresh after user review feedback that the README needed a
-  deep dive, clarification, and detail moved into the docs set.
-- Used current documentation-architecture guidance: keep the README as a front
-  door, split task guidance from reference and explanation, keep changelog
-  entries human-readable, and preserve SemVer/status anchors.
-- Rewrote `README.md` from 373 lines to 224 lines, keeping install, first
-  lookup, common commands, JSON/MCP pointers, limitations, docs map, and
-  development gates.
-- Added `docs/getting-started.md` for install, update, uninstall, PATH notes,
-  input normalization, output modes, batch, delta, MCP setup, and completion.
-- Added `docs/how-it-works.md` for the plain-language source-to-slug-to-signal
-  model, graph structure, Bayesian posteriors, provenance, caching, and
-  non-inferences.
-- Reorganized `docs/README.md` by reader need: orientation, how-to guides,
-  reference, explanation and assurance, research, and contributing.
-- Replaced the 2,771-line `docs/roadmap.md` with a 178-line current-plan and
-  invariant document, preserving live anchors such as `#invariants`,
-  `#intentionally-out-of-scope`, `#success-metrics-post-10`,
-  `#backlog-after-v20`, and
-  `#implementation-discipline-for-new-correlation-work`.
-- Normalized tracked Markdown documentation, examples, agent guidance, and
-  validation memos so they contain no em dashes, en dashes, pictographs, or
-  literal AI-attribution phrases outside ignored private validation paths.
-- Focused validation passed: text hygiene, markdown links, release-readiness
-  README anchors, surface-inventory policy, automation docs, and generated
-  surface checks.
-- Final full local gate passed with `uv run python scripts/check.py`: 3,601
-  passed, 6 skipped, 4 deselected, total coverage 86.61 percent. All gate
-  stages passed.
-- External spend: 0 USD.
-
 Session: loop cycle 7, C3 CT retry hardening and bounded retry. External spend
 0 USD.
 
@@ -173,3 +140,28 @@ USD.
   stages passed.
 - Cycle health: 5/5 | Simplicity: 5/5 | Est. spend: $0 | New skill distilled:
   DNS target suffix parsing
+
+Session: loop cycle 11, C3 retry input security review. External spend 0 USD.
+
+- Selected the C3 validation tooling because it is the top open roadmap item
+  and the retry/finalize path handles private corpus artifacts.
+- Reviewed `validation/scan.py`, `validation/summarize_ct_sessions.py`,
+  `validation/run_path_safety.py`, and the batch input boundary for path
+  containment, subprocess argument construction, partial NDJSON handling, and
+  synthesized retry-corpus safety.
+- Fixed `validation/scan.py --ct-retry-from` so prior `queried_domain` values
+  are revalidated before they are written into a synthesized private retry
+  corpus. Malformed, control-bearing, or newline-bearing values are skipped
+  instead of becoming extra corpus lines.
+- Rejected `--finalize-existing` combined with `--ct-retry-from`, because
+  finalization is a no-network recovery mode and retry synthesis is a new
+  network run plan.
+- Added a reusable `SKILLS.md` rule for revalidating machine-output fields
+  before turning them into line-oriented private validation corpora.
+- Focused validation passed:
+  `uv run pytest tests/test_scan_ct_summary.py tests/test_ct_session_summary.py
+  tests/test_run_path_safety.py tests/test_markdown_links.py -q` with 37
+  passed. Focused ruff, pyright, text hygiene, and validation hygiene passed.
+- Final full local gate passed with `uv run python scripts/check.py`: 3,627
+  passed, 5 skipped, 4 deselected, total coverage 86.69 percent. All gate
+  stages passed.

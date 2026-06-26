@@ -44,12 +44,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   --ct-retry-from` now accepts prior run directories, `results.ndjson`, or
   legacy `results.json`; skips malformed streamed tails; deduplicates retry
   domains; and writes synthesized retry inputs under the validated private
-  output root instead of a public validation path. The first bounded retry
-  aggregate is appended to `validation/2026-06-26-c3-ct-partial.md`.
+  output root instead of a public validation path. Synthesized retry domains are
+  revalidated before writing so malformed prior records cannot inject extra
+  corpus lines. The first bounded retry aggregate is appended to
+  `validation/2026-06-26-c3-ct-partial.md`.
 - **C3 CT session aggregation.** `validation/summarize_ct_sessions.py` now
   combines partial private CT sessions into aggregate-only JSON with raw outcome
   counts, best outcome by unique domain, and CT data coverage, without emitting
   domains, tenant IDs, organization names, or per-domain rows.
+- **C3 scan options reject incoherent retry recovery.** `validation/scan.py` now
+  rejects `--finalize-existing` combined with `--ct-retry-from`, keeping
+  no-network recovery separate from synthesized CT retry runs.
 - **CT attempt-outcome accounting is more precise.** `breaker_open` is now
   reserved for failed CT attempts where every failed provider was stopped by an
   open local breaker. Mixed provider failures now surface the live attempted

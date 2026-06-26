@@ -132,6 +132,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
   interpreting progress. It may dedupe by private keys internally, but its
   output must contain counts, rates, run basenames, and coverage only, with tests
   proving target strings do not appear in rendered JSON.
+- When synthesizing a private validation corpus from prior machine output,
+  revalidate every record field with the same public input validator that the
+  runtime command uses before writing it as a line-oriented input file.
 - For multi-provider telemetry, reserve no-attempt labels such as
   `breaker_open` for all-provider local stops. If any provider made or attempted
   a live path and failed differently, surface that lower-cardinality live cause

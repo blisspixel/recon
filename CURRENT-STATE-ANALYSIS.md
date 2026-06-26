@@ -138,7 +138,10 @@ The maintainer tooling now supports the correct operational shape:
 - `validation/scan.py --finalize-existing` recovers aggregate artifacts from an
   already-streamed run directory without network calls.
 - `validation/scan.py --ct-retry-from` builds a private retry corpus from prior
-  CT-degraded records without re-running already-successful domains.
+  CT-degraded records without re-running already-successful domains. Prior
+  `queried_domain` values are revalidated before writing the synthesized retry
+  corpus, so malformed or newline-bearing prior records cannot inject extra
+  corpus lines.
 - `validation/summarize_ct_sessions.py` combines partial sessions into
   aggregate-only JSON so C3 progress is measured by unique-domain CT coverage,
   not raw retry records alone.
@@ -146,6 +149,8 @@ The maintainer tooling now supports the correct operational shape:
   completion state, and partial scans skip noisy diffs.
 - Controlled timeouts terminate the batch process tree on Windows so a launcher
   process cannot leave a child interpreter writing after the wrapper exits.
+- `--finalize-existing` and `--ct-retry-from` are now mutually exclusive because
+  no-network recovery and retry synthesis produce different scan metadata.
 
 ## Profile signal_boost Correctness Fix (2.2.13)
 
