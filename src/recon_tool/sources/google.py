@@ -182,20 +182,22 @@ def _extract_idp_name(discovery_uri: str) -> str:
         https://accounts.google.com/... → Google
         https://login.microsoftonline.com/... → Microsoft Entra
     """
-    uri_lower = discovery_uri.lower()
-    if "okta.com" in uri_lower:
-        return "Okta"
-    if "pingidentity.com" in uri_lower or "pingone.com" in uri_lower:
-        return "Ping Identity"
-    if "microsoftonline.com" in uri_lower or "microsoft.com" in uri_lower:
-        return "Microsoft Entra"
-    if "accounts.google.com" in uri_lower:
-        return "Google"
-    if "auth0.com" in uri_lower:
-        return "Auth0"
-    # Fall back to the hostname
     try:
-        parsed = urlparse(discovery_uri)
-        return parsed.hostname or discovery_uri
-    except Exception:
-        return discovery_uri
+        host = (urlparse(discovery_uri).hostname or "").lower()
+    except ValueError:
+        host = ""
+
+    def _host_matches(domain: str) -> bool:
+        return host == domain or host.endswith(f".{domain}")
+
+    if _host_matches("okta.com"):
+        return "Okta"
+    if _host_matches("pingidentity.com") or _host_matches("pingone.com"):
+        return "Ping Identity"
+    if _host_matches("microsoftonline.com") or _host_matches("microsoft.com"):
+        return "Microsoft Entra"
+    if _host_matches("accounts.google.com"):
+        return "Google"
+    if _host_matches("auth0.com"):
+        return "Auth0"
+    return host or discovery_uri

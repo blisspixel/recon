@@ -60,6 +60,19 @@ class TestExtractIdpName:
     def test_unparseable_returns_raw(self):
         assert _extract_idp_name("not-a-url") == "not-a-url"
 
+    def test_lookalike_host_does_not_match(self):
+        # A vendor name as a non-suffix part of the hostname must not match.
+        assert _extract_idp_name("https://notokta.com/login") == "notokta.com"
+        assert _extract_idp_name("https://oktatest.example/sso") == "oktatest.example"
+
+    def test_pattern_only_in_path_or_query_does_not_match(self):
+        # The IdP is the redirect host, not a string anywhere in the URL.
+        assert _extract_idp_name("https://accounts.google.com/o/saml2?continue=https://x.okta.com") == "Google"
+        assert _extract_idp_name("https://sso.acme.net/auth?idp=okta.com") == "sso.acme.net"
+
+    def test_bare_vendor_host_matches(self):
+        assert _extract_idp_name("https://okta.com/") == "Okta"
+
 
 # ── _is_federated_redirect unit tests ───────────────────────────────────
 

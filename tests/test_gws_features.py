@@ -31,9 +31,22 @@ from recon_tool.models import (
     TenantInfo,
 )
 from recon_tool.sources.dns import DNSSource
-from recon_tool.sources.google import GoogleSource, parse_cse_config
+from recon_tool.sources.google import GoogleSource, _extract_idp_name, parse_cse_config
 
 # ── Helpers ─────────────────────────────────────────────────────────────
+
+
+class TestCseIdpNameMatching:
+    """The CSE IdP-name helper matches by hostname suffix, not raw substring."""
+
+    def test_known_idp_subdomain_matches(self):
+        assert _extract_idp_name("https://login.okta.com/oauth2/discovery") == "Okta"
+
+    def test_lookalike_host_does_not_match(self):
+        assert _extract_idp_name("https://notokta.com/.well-known/openid") == "notokta.com"
+
+    def test_pattern_only_in_path_does_not_match(self):
+        assert _extract_idp_name("https://kacls.acme.net/discovery?ref=okta.com") == "kacls.acme.net"
 
 
 def _mock_safe_resolve_factory(records_by_query: dict[str, list[str]]):

@@ -52,19 +52,20 @@ _IDP_PATTERNS: tuple[tuple[str, str], ...] = (
 def _extract_idp_name(url: str) -> str:
     """Extract a human-readable IdP name from a URL.
 
-    Checks against known IdP domain patterns. Falls back to the hostname
-    portion of the URL if no pattern matches.
+    Matches the URL hostname against known IdP domains by suffix, so an
+    unrelated host such as ``notokta.com`` does not match ``okta.com`` and a
+    pattern that appears only in the path or query does not match either.
+    Falls back to the hostname (or the raw input when there is none) if no
+    pattern matches.
     """
-    url_lower = url.lower()
-    for pattern, name in _IDP_PATTERNS:
-        if pattern in url_lower:
-            return name
-    # Fallback: extract hostname
     try:
-        parsed = urlparse(url)
-        return parsed.hostname or url
-    except Exception:
-        return url
+        host = (urlparse(url).hostname or "").lower()
+    except ValueError:
+        host = ""
+    for pattern, name in _IDP_PATTERNS:
+        if host == pattern or host.endswith(f".{pattern}"):
+            return name
+    return host or url
 
 
 class GoogleIdentitySource:
