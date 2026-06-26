@@ -81,7 +81,8 @@ Full detail and sequencing live in
 > [migration-v2.md](migration-v2.md).
 >
 > **Unreleased on `main` (toward the next patch):** no committed user-facing
-> runtime changes after v2.2.14.
+> runtime changes after v2.2.14; the bundled Homebrew formula pins the
+> published 2.2.14 sdist and sha256.
 >
 > **Boundary-unaware-substring hardening shipped in v2.2.14:** IdP-name
 > extraction matches vendor hosts by hostname suffix, Google identity redirect

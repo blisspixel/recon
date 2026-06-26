@@ -47,6 +47,18 @@ Session: loop cycle 2, 2.2.14 patch release preparation. External spend 0 USD.
   `[2.2.14] - 2026-06-26`, updated the roadmap current-release status, and
   updated `CURRENT-STATE-ANALYSIS.md` to treat the boundary-unaware substring
   hardening as v2.2.14.
+- Fast release-prep validation passed: text hygiene, validation hygiene, and
+  `uv run python scripts/release_readiness.py --allow-dirty`.
+- Committed release notes as `8ccc1da`, then ran `scripts/release.py` for
+  2.2.14. The release gate passed locally, bumped `pyproject.toml`,
+  `src/recon_tool/__init__.py`, and `uv.lock`, committed `54920a8`, tagged
+  `v2.2.14`, and pushed `main` plus the tag.
+- Remote CI, Release, Secrets scan, and Scorecard supply-chain security passed
+  for `54920a8`. The GitHub release is published with wheel, sdist, SBOM, and
+  intoto provenance assets.
+- PyPI JSON reports `recon-tool` 2.2.14 with `>=3.11`, and the bundled
+  Homebrew formula now pins the 2.2.14 sdist and sha256 from PyPI.
+- External spend: 0 USD.
 
 Session: private corpus setup, profile-engine correctness fix, CI parity fix,
 and the 2.2.13 patch release. External spend 0 USD.

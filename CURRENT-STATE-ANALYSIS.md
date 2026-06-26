@@ -183,9 +183,9 @@ README license section to Apache 2.0 plus the LICENSE link only; release
 readiness now guards that wording so the removed enterprise-contact sentence
 does not drift back in.
 
-The 2.2.12 release shipped on 2026-06-25. The release workflow passed, published
+The 2.2.14 release shipped on 2026-06-26. The release workflow passed, published
 to PyPI, exported attestations, and created the GitHub release. PyPI JSON now
-reports `recon-tool` 2.2.12 with `Apache-2.0`; the Homebrew formula has been
+reports `recon-tool` 2.2.14 with `>=3.11`; the Homebrew formula has been
 refreshed from that published sdist.
 
 The 2026-06-25 fingerprint-triage pass re-filtered an old private gap run with

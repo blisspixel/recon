@@ -69,3 +69,19 @@ Maker-checker score:
 | Sustainability and invariants | 5/5 | Patch-level hardening inside the passive deterministic core, aligned with the deepen-not-expand roadmap phase. |
 
 External spend: 0 USD.
+
+Cycle 2 scope: 2.2.14 patch release, remote publication verification, and
+Homebrew formula refresh from the published PyPI sdist.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | Release notes moved only shipped fixes into 2.2.14, package metadata is consistent, PyPI reports 2.2.14, and the formula pins the matching sdist digest. |
+| Security and supply chain | 5/5 | Release workflow produced wheel, sdist, SBOM, and intoto provenance assets; no credentials or paid services were introduced. |
+| Performance | 5/5 | Release-only changes do not affect runtime hot paths. |
+| Readability | 5/5 | Changelog, roadmap, and formula updates are direct and version-specific. |
+| Maintainability | 5/5 | The release used the existing scripted path and preserved the one-line formula bump model. |
+| Sustainability and invariants | 5/5 | Patch release ships correctness hardening inside the passive deterministic core with no new stable surface. |
+
+External spend: 0 USD.

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Homebrew formula freshness.** The bundled formula now points at the
+  published `recon-tool` 2.2.14 sdist and sha256 from PyPI.
+
 ## [2.2.14] - 2026-06-26
 
 ### Tool Surface Changes
