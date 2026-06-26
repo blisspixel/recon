@@ -182,3 +182,20 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - Agentic-loop guidance is useful only when it becomes a bounded maintainer
   control: action boundaries, resume keys, trace records, deterministic gates,
   and explicit human approval for externally visible side effects.
+- When a config field reweights or filters by name, the matched object must
+  actually carry that name. The profile `signal_boost` / `exclude_signals` keys
+  were matched against rendered statement text and keyed by signal display names,
+  so they never fired against the posture observations `apply_profile` reweights.
+  Carry the source rule name on the object, match on it, and add a guard test
+  that every built-in key names a real rule so stranded config cannot ship.
+- When a subprocess gate parses tool output for forbidden characters, force the
+  decode encoding (`encoding="utf-8"`) rather than relying on the platform
+  locale. Text mode defaulted to cp1252 on Windows, so an em dash from git diff
+  decoded away and the local check passed while CI (UTF-8) failed. Local/CI
+  parity requires deterministic decoding, and the git-invoking path needs its own
+  test, not just pure-logic coverage of the parser.
+- Provide private corpus material by copying input lists only (consolidated plus
+  strata) into the gitignored `validation/corpus-private/`, never the multi-MB
+  run outputs. Verify with empty `git status` there and `git check-ignore` before
+  any further work. Re-scanning the same corpus is a regression mirror, not new
+  signal; new catalog growth needs genuinely new or diverse domains.

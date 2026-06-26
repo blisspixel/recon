@@ -3,8 +3,8 @@ class Recon < Formula
 
   desc "Passive domain-intelligence CLI and MCP server (DNS, email security, signals)"
   homepage "https://github.com/blisspixel/recon"
-  url "https://files.pythonhosted.org/packages/5e/76/9b9b8cf02a20c477b496cd74704418f55ba04e0ae80d6415c97097f70bf0/recon_tool-2.2.12.tar.gz"
-  sha256 "f789cd9eb19735fb48fbfd4a7fa81d278331fa0481346852e6868364db3adc94"
+  url "https://files.pythonhosted.org/packages/17/63/1cd4d7fce5b3462856771c29d2befed695453761cfbb0ec88ab6de2c53e2/recon_tool-2.2.13.tar.gz"
+  sha256 "403e2836e631228afa09ad76427b9584b71f520131386005962e102bbc1a91bb"
   license "Apache-2.0"
 
   depends_on "python@3.12"

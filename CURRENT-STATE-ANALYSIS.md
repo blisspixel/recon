@@ -62,8 +62,35 @@ The project is past the expansion and lock phases:
   contract revision, CLI ergonomics, surface inventory generation, file-size
   ratchets, and public assurance proving-test closure.
 
-The current active line is v2.2.x. The roadmap says the next work is
+The current active line is v2.2.x; v2.2.13 is the current release (2026-06-26:
+the profile `signal_boost` / `exclude_signals` correctness fix, the SPF
+multi-record include-count fix, the schema source-map `--json` audit, and the
+Windows text-hygiene local/CI parity fix). The roadmap says the next work is
 dependency-ordered, not date-driven.
+
+## Profile signal_boost Correctness Fix (2.2.13)
+
+The profile engine's `signal_boost` and `exclude_signals` were inert since they
+shipped: the keys were matched against rendered statement text, and the six
+built-in profiles keyed them by `signals.yaml` display names, while
+`apply_profile` only ever reweights `posture.yaml` observations. `Observation`
+now carries `source_name` (its originating posture rule), `apply_profile` matches
+the boost and exclude keys against it (`exclude_signals` keeps the statement
+substring fallback for custom profiles), and the built-in profiles were remapped
+to the posture rule names that are the direct equivalents of their old signal
+keys. `tests/test_profiles.py` now guards that every built-in profile key names a
+real posture rule, so stranded config cannot ship again. This shifts `--profile`
+salience and ordering where a boosted rule fires; the JSON schema, profile YAML
+field set, and CLI surface are unchanged.
+
+## Text-Hygiene Local/CI Parity Fix (2.2.13)
+
+`scripts/check_text_hygiene.py` ran git in text mode without an explicit
+encoding, so on Windows it decoded git's UTF-8 diff output as cp1252 and missed
+an em dash that CI (UTF-8) caught. `_run_git` now decodes as UTF-8, with a
+regression test that builds a temp git repo with an em-dash line and asserts the
+checker flags it through the previously-untested git-diff path. Maintainer
+tooling only; no runtime change.
 
 Current maintainer-loop deltas from 2026-06-19 include generated surface
 inventory checks, the `recon://surface-inventory` local discovery resource,

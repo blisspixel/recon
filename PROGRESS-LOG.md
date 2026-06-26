@@ -3,6 +3,46 @@
 This file records maintainer-loop work performed in this checkout. It is a local
 planning artifact and does not replace `CHANGELOG.md`.
 
+## 2026-06-26
+
+Session: private corpus setup, profile-engine correctness fix, CI parity fix,
+and the 2.2.13 patch release. External spend 0 USD.
+
+- Set up the maintainer-local private corpus from the OneDrive copy into the
+  gitignored `validation/corpus-private/`: `consolidated.txt` (5,241 domains),
+  `by-vertical/` (22), `by-region/` (12), input lists only, no stale run outputs.
+  Verified `git status` is empty there and `git check-ignore` confirms every path
+  is ignored. No company data crosses into the repo.
+- Corpus strategy note (maintainer decision): repeat full-corpus calibration on
+  the same 5,241 list is diminishing returns ("mirrors, not fitters"); the other
+  local lists are subsets of `consolidated.txt`, and the only genuinely new pass
+  (C3 CT-enabled) is partial/multi-session and feeds graph/cert surfaces, not the
+  nine core nodes. Kept the corpus as a regression mirror rather than re-scanning.
+- Fixed the profile `signal_boost` / `exclude_signals` engine: the keys matched
+  the rendered statement text and the built-in profiles keyed them by
+  `signals.yaml` display names, so they never fired against the posture
+  observations `apply_profile` reweights. `Observation` now carries
+  `source_name` (the originating `posture.yaml` rule), `apply_profile` matches
+  on it (`exclude_signals` keeps the statement-substring fallback for custom
+  profiles), and the six built-in profiles were remapped from signal display
+  names to the posture rule names that are their direct equivalents. Added a
+  deterministic guard test asserting every built-in profile key names a real
+  posture rule. Focused tests passed (37); full gate green.
+- Bug-hunt parity fix: CI flagged an em dash in an added test comment that the
+  local `check_text_hygiene.py` missed. Root cause was a Windows locale bug:
+  `_run_git` read git's UTF-8 diff output in cp1252, so U+2014 decoded to other
+  code points. Forced UTF-8 decoding and added a regression test over the
+  previously-untested git-diff path. Confirmed the fixed checker flags the same
+  em dash CI did via `--range HEAD^..HEAD`.
+- Pushed the four-commit stack plus the parity fix to `origin/main`; CI reached
+  `completed/success` (the previously-failing `validate-fingerprints` /
+  text-hygiene step now green, full cross-platform matrix green).
+- Released 2.2.13: bumped `pyproject.toml`, `__init__.py`, and `uv.lock`, moved
+  CHANGELOG `Unreleased` to `[2.2.13] - 2026-06-26`, and updated the roadmap
+  status header. Full gate and `release_readiness --allow-dirty` passed (Homebrew
+  WARN expected pre-publish). Committed `v2.2.13: release`, tagged `v2.2.13`, and
+  pushed both. Watched the Release workflow to confirm PyPI publish.
+
 ## 2026-06-25
 
 Session: fingerprint and motif triage loop from maintainer-local private corpus
