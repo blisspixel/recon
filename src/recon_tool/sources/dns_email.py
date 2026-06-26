@@ -276,15 +276,26 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
         )
 
 
+def _host_has_suffix(host: str, domain: str) -> bool:
+    """True when ``host`` equals ``domain`` or is a subdomain of it.
+
+    Used instead of a raw substring test so a DKIM CNAME like
+    ``x.onmicrosoft.com.example.com`` is not misread as an Exchange Online
+    tenant: the vendor host must be the record's suffix, not a label inside it.
+    """
+    return host == domain or host.endswith(f".{domain}")
+
+
 def _apply_exchange_dkim(ctx: dns_base.DetectionCtx, selector_groups: tuple[list[str], list[str]]) -> None:
     """Attribute Exchange Online DKIM and capture the onmicrosoft.com tenant domain."""
     for selector_results in selector_groups:
         for cname in selector_results:
             cl = cname.lower()
-            if "protection.outlook.com" in cl or "onmicrosoft.com" in cl:
+            host = cl.rstrip(".")
+            if _host_has_suffix(host, "protection.outlook.com") or _host_has_suffix(host, "onmicrosoft.com"):
                 ctx.add(SVC_DKIM_EXCHANGE, "microsoft365", source_type="DKIM", raw_value=cname)
                 ctx.m365 = True
-                if "onmicrosoft.com" in cl:
+                if _host_has_suffix(host, "onmicrosoft.com"):
                     parts = cl.split("._domainkey.")
                     if len(parts) == 2 and parts[1].endswith("onmicrosoft.com") and "." in parts[1]:
                         ctx.related_domains.add(parts[1])

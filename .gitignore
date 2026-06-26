@@ -114,6 +114,9 @@ docs/accuracy.md
 # rows; strata below 10 domains suppressed.
 !/validation/2026-06-23-full-corpus-calibration.md
 !/validation/2026-06-19-msedge-triad-motif.md
+# Exchange Online DKIM suffix-match validation (2026-06-26): aggregate counts
+# only, no apexes/org names/tenant IDs/per-domain rows.
+!/validation/2026-06-26-onmicrosoft-suffix-match.md
 # v2.1a: aggregate-state methodology example. Fully synthetic (fictional
 # brands, fabricated numbers); the reference reducer, generator, and synthetic
 # cohort are public. Real cohorts stay local. The reducer run-output is a

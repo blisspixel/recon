@@ -41,7 +41,25 @@ and the 2.2.13 patch release. External spend 0 USD.
   CHANGELOG `Unreleased` to `[2.2.13] - 2026-06-26`, and updated the roadmap
   status header. Full gate and `release_readiness --allow-dirty` passed (Homebrew
   WARN expected pre-publish). Committed `v2.2.13: release`, tagged `v2.2.13`, and
-  pushed both. Watched the Release workflow to confirm PyPI publish.
+  pushed both. The Release workflow (test, sbom, build, attest, publish-pypi,
+  attestations, github-release) passed; PyPI reports 2.2.13 Apache-2.0, the
+  GitHub release carries wheel/sdist/SBOM/intoto, and the Homebrew formula was
+  refreshed and committed. `release_readiness --remote` passed all checks.
+- Post-release, continued the loop. Fixed `_extract_idp_name` in `google.py` and
+  `google_identity.py` to match IdP vendor hosts by hostname suffix instead of
+  raw URL substring, with positive and negative tests. Commit `c935c98`, CI
+  `completed/success`.
+- Swept for the same boundary-unaware-substring bug class. The remaining hits
+  are core M365/GWS classification logic, so per CONTRIBUTING they need corpus
+  validation before any change. With the maintainer's go-ahead, validated the
+  Exchange Online DKIM substring match against existing maintainer-local scan
+  output (no new network): `onmicrosoft.com` produced 2 non-suffix false-positive
+  shapes out of 825 hostname-shaped evidence values (about 0.24 percent).
+  Tightened `_apply_exchange_dkim` to suffix matching (no true-positive loss),
+  added regression tests, and committed the aggregate-only memo at
+  `validation/2026-06-26-onmicrosoft-suffix-match.md`. Left the GWS DKIM
+  `google.com` fallback and the SRV-based Microsoft patterns for their own
+  validation (SRV values carry a priority/weight/port prefix).
 
 ## 2026-06-25
 

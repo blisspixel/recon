@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **IdP names match by hostname suffix, not raw substring.** The OIDC/CSE
+  (`google.py`) and federated-redirect (`google_identity.py`) IdP-name helpers
+  matched vendor domains as substrings of the whole URL, so a lookalike host
+  such as `notokta.com` or a vendor name in a path or query matched. Both now
+  parse the URL hostname and match by exact host or dotted suffix. Display-name
+  only; no schema or classification change.
+- **Exchange Online DKIM attribution matches by hostname suffix.** A DKIM CNAME
+  with `onmicrosoft.com` or `protection.outlook.com` as an internal label (for
+  example `x._domainkey.onmicrosoft.com.example.com`) is no longer misread as a
+  Microsoft 365 tenant. The match now requires the vendor host to be the
+  record's suffix, validated against maintainer-local corpus evidence
+  (aggregate-only memo in `validation/2026-06-26-onmicrosoft-suffix-match.md`).
+
 ## [2.2.13] - 2026-06-26
 
 ### Tool Surface Changes

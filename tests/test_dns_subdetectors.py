@@ -12,6 +12,7 @@ from unittest.mock import patch
 import pytest
 
 from recon_tool.sources import dns as dns_source
+from recon_tool.sources import dns_email
 from recon_tool.sources.dns import DNSSource
 from recon_tool.sources.dns_tables import parse_rdata as _parse_rdata
 
@@ -688,3 +689,34 @@ class TestHostingPtrDetection:
         assert "aws-ec2" in ctx.slugs
         assert ctx.evidence
         assert ctx.evidence[0].raw_value.startswith("3.5.140.1 -> ec2-3-5-140-1")
+
+
+class TestExchangeDkimSuffixMatch:
+    """Exchange Online DKIM attribution matches the vendor host by suffix.
+
+    A raw substring test misread a DKIM CNAME like
+    ``x._domainkey.onmicrosoft.com.example.com`` as an Exchange Online tenant.
+    """
+
+    def test_host_has_suffix_helper(self):
+        assert dns_email._host_has_suffix("contoso.onmicrosoft.com", "onmicrosoft.com")
+        assert dns_email._host_has_suffix("onmicrosoft.com", "onmicrosoft.com")
+        assert not dns_email._host_has_suffix("x.onmicrosoft.com.example.com", "onmicrosoft.com")
+        assert not dns_email._host_has_suffix("notonmicrosoft.com", "onmicrosoft.com")
+
+    def test_real_tenant_cname_attributes_m365(self):
+        ctx = dns_source._DetectionCtx()
+        dns_email._apply_exchange_dkim(ctx, (["selector1._domainkey.contoso.onmicrosoft.com"], []))
+        assert ctx.m365 is True
+        assert "contoso.onmicrosoft.com" in ctx.related_domains
+
+    def test_trailing_dot_tenant_cname_attributes_m365(self):
+        ctx = dns_source._DetectionCtx()
+        dns_email._apply_exchange_dkim(ctx, (["selector1._domainkey.contoso.onmicrosoft.com."], []))
+        assert ctx.m365 is True
+
+    def test_lookalike_cname_does_not_attribute_m365(self):
+        ctx = dns_source._DetectionCtx()
+        dns_email._apply_exchange_dkim(ctx, (["x._domainkey.onmicrosoft.com.example.com"], []))
+        assert ctx.m365 is False
+        assert ctx.related_domains == set()
