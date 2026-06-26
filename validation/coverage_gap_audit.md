@@ -1,4 +1,4 @@
-# Coverage gap audit — v1.9.9
+# Coverage gap audit  -  v1.9.9
 
 **Total coverage:** 84% (10624 lines tracked, 1648 uncovered).
 
@@ -36,7 +36,7 @@ is actually running as an MCP server with a connected client:
 doctor` and `recon mcp install` smoke tests, plus by the v1.9.2
 agentic UX harness. End-to-end tests against a spawned MCP subprocess
 exist in `tests/test_mcp_path_isolation.py` and
-`tests/test_server.py` — those touch the entry-point but not every
+`tests/test_server.py`  -  those touch the entry-point but not every
 internal handler.
 
 **Risk assessment:** the uncovered server.py paths are mostly error

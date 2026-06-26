@@ -1,6 +1,6 @@
-# recon — Windsurf install
+# recon - Windsurf install
 
-Two pieces wire recon into [Windsurf](https://codeium.com/windsurf): the MCP server (so Windsurf can call recon) and the agent guidance (so Windsurf knows *when* to use it). Windsurf does not auto-load skill files — guidance lives in `.windsurfrules`.
+Two pieces wire recon into [Windsurf](https://codeium.com/windsurf): the MCP server (so Windsurf can call recon) and the agent guidance (so Windsurf knows *when* to use it). Windsurf does not auto-load skill files - guidance lives in `.windsurfrules`.
 
 ## What's inside
 
@@ -17,7 +17,7 @@ pip install recon-tool
 recon doctor --mcp
 ```
 
-Other forms (`uv tool install`, `uvx`) work too — see [`docs/mcp.md`](../../docs/mcp.md#cli-install-options).
+Other forms (`uv tool install`, `uvx`) work too - see [`docs/mcp.md`](../../docs/mcp.md#cli-install-options).
 
 ## 2. Wire the MCP server
 
@@ -41,15 +41,15 @@ The install auto-resolves the per-OS path (macOS/Linux: `~/.codeium/windsurf/mcp
 
 ## 3. Wire the agent guidance
 
-Windsurf reads [`.windsurfrules`](https://docs.codeium.com/windsurf/memories) at the project root — plain markdown, merged with global rules, no skill auto-loading.
+Windsurf reads [`.windsurfrules`](https://docs.codeium.com/windsurf/memories) at the project root - plain markdown, merged with global rules, no skill auto-loading.
 
 The canonical recon guidance lives in [`AGENTS.md`](../../AGENTS.md). Two ways to use it:
 
 ```markdown
-# .windsurfrules — option A (reference)
+# .windsurfrules - option A (reference)
 See @AGENTS.md for recon usage guidance.
 
-# .windsurfrules — option B (inline)
+# .windsurfrules - option B (inline)
 # Paste the body of AGENTS.md directly.
 ```
 

@@ -42,7 +42,7 @@ python scripts/update_homebrew_formula.py          # rewrite url + sha256 to lat
 python scripts/update_homebrew_formula.py --check   # verify it's current (gate)
 ```
 
-Dependencies are deliberately not enumerated as `resource` stanzas — the
+Dependencies are deliberately not enumerated as `resource` stanzas  -  the
 formula installs them from PyPI at `brew install` time. That keeps maintenance
 to the single `url`/`sha256` bump above instead of dozens of pinned resources
 that drift every release. (A personal tap permits this network install;

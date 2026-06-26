@@ -7,7 +7,7 @@
 
 recon's `--json` / MCP output is consumed by scripts and LLM agents. Without a
 stable contract, every internal refactor risks silently breaking consumers, and
-agents can't rely on field shapes. The pre-2.0 schema-hardening (SH1–SH9) was
+agents can't rely on field shapes. The pre-2.0 schema-hardening (SH1-SH9) was
 done specifically so the shape could be frozen without foreseeable need for a
 breaking change.
 
@@ -25,7 +25,7 @@ checked.
 - Consumers and agents can depend on the output; additive evolution is safe.
 - Genuinely contract-changing improvements (e.g. migrating MCP tools to
   `structuredContent`/`outputSchema`, or a default pagination envelope) are
-  deliberately deferred to a version-noted pass rather than slipped in — even
+  deliberately deferred to a version-noted pass rather than slipped in - even
   when individually attractive.
 - A new top-level field touches a fixed set of serialization sites (cache, JSON,
   MCP, both schema copies, schema.md); that fan-out is the cost of the guarantee.

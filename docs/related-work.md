@@ -76,8 +76,8 @@ any node that has an external reference. That is the email-policy node
 (the DMARC record is its own reference, per the existing reference
 calibration) and the M365 tenancy node (Microsoft's identity endpoints
 are an authoritative two-class attestation; the Google channel turned out
-one-sided on source review — federated redirects only, no managed
-detection, no authoritative negative — so `google_workspace_tenant`
+one-sided on source review - federated redirects only, no managed
+detection, no authoritative negative - so `google_workspace_tenant`
 carries a recall check, not a label, see correlation.md 4.3). For the
 labelable nodes recon can report a conformal prediction
 set beside the Bayesian credible interval: two guarantees of different

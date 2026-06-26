@@ -13,7 +13,7 @@ production surface, and an agent reading recon JSON is a first-class
 consumer. v1.9.2 is the bridge milestone that validates whether the
 v1.9 fusion fields (`posterior_observations`, `slug_confidences`,
 credible intervals, `sparse=true` flags) are actually load-bearing for
-that audience — i.e. whether agents read them, cite them, and let them
+that audience  -  i.e. whether agents read them, cite them, and let them
 change a conclusion.
 
 The harness drives three persona prompts (security analyst,
@@ -70,10 +70,10 @@ are falsifiable.
 ## Running it
 
 ```bash
-# Default — Anthropic Sonnet 4.6, ~$0.36 per full run
+# Default  -  Anthropic Sonnet 4.6, ~$0.36 per full run
 python -m validation.agentic_ux.run
 
-# Cheaper / faster — Haiku 4.5, ~$0.10 per run (lower fidelity)
+# Cheaper / faster  -  Haiku 4.5, ~$0.10 per run (lower fidelity)
 python -m validation.agentic_ux.run --model claude-haiku-4-5
 
 # OpenAI

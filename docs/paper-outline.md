@@ -15,8 +15,8 @@ empirical cells marked pending) lives in [paper-draft.md](paper-draft.md).
 When a classifier's ground truth is structurally unobservable and the
 subject can choose what to reveal, calibration-against-truth is the wrong
 bar for the claims whose signals an operator can hide (of recon's nine
-nodes, two carry a two-class external reference — the declarative policy
-node and the provider-attested M365 tenancy node — one carries only a
+nodes, two carry a two-class external reference - the declarative policy
+node and the provider-attested M365 tenancy node - one carries only a
 one-sided attestation, the Google channel being behavioral with no
 authoritative negative, and the remaining six have none; the engine applies
 the MNAR absence rule to eight, the ninth being the declarative policy
@@ -141,15 +141,15 @@ Security teams increasingly need to know what an organization's external
 footprint reveals before an attacker reads the same channel: which identity
 provider a domain delegates to, whether its mail policy is enforced, what
 fronts its origin. External attack-surface tools answer these questions
-from public signals — DNS records, certificate-transparency logs,
-unauthenticated provider endpoints — and they answer confidently. The
+from public signals - DNS records, certificate-transparency logs,
+unauthenticated provider endpoints - and they answer confidently. The
 confidence is the problem. The ground truth behind these claims is not
 observable from outside, and the subject of the measurement controls most
 of the evidence: a hardened organization publishes less, a careless one
 publishes more, and a tool that reads "no signal" as "no technology" is
 confidently wrong about exactly the targets that matter most.
 
-The standard remedy — calibrate the classifier against labeled truth — is
+The standard remedy - calibrate the classifier against labeled truth - is
 structurally unavailable here. There is no label set for "what this
 organization actually runs"; the operator can delete most of the
 indicators a passive observer relies on; and the deletion is not random,
@@ -164,8 +164,8 @@ it. Every conclusion is reachable through an evidence DAG of re-queryable
 public observations; high-level claims are computed by a nine-node
 Bayesian network small enough to audit by hand and verified exhaustively
 against its full joint; and absent evidence on hideable claims
-contributes a likelihood ratio of one — absence of evidence is treated as
-no evidence, never as evidence of absence — so the reported 80% credible
+contributes a likelihood ratio of one - absence of evidence is treated as
+no evidence, never as evidence of absence - so the reported 80% credible
 interval widens on hardened targets instead of collapsing to a false
 verdict. In one sentence: this paper contributes a validation
 architecture for inference whose ground truth is structurally
@@ -173,9 +173,9 @@ unobservable and partly adversarial, worked end-to-end in a real tool.
 
 The architecture stands on one seam, stated early because it bounds
 everything else: evidence *removal* versus evidence *addition*. We prove
-a suppression-monotonicity property — holding other evidence fixed,
+a suppression-monotonicity property - holding other evidence fixed,
 hiding any observed indicator can only move a claim toward its all-absent
-baseline, never to a confident false positive — and we machine-check it
+baseline, never to a confident false positive - and we machine-check it
 over every per-node evidence subset. The guarantee does not extend to
 addition: a fully passive operator who publishes one truthful decoy
 record can plant a confident false positive, and no passive tool can
@@ -185,9 +185,9 @@ passive/active measurement line, because the cheap attack is itself
 passive.
 
 Validation then proceeds by tier, with the tier decided by whether an
-external reference the operator cannot suppress exists. Where one does —
-the DMARC record is its own definition of an enforcing mail policy;
-Microsoft's identity endpoints attest tenancy in both directions — we
+external reference the operator cannot suppress exists. Where one does, as with
+the DMARC record defining an enforcing mail policy or
+Microsoft's identity endpoints attesting tenancy in both directions, we
 calibrate against it, including a held-out construction that masks the
 label-defining evidence out of the predictor, and we add a
 distribution-free conformal coverage statement with its exchangeability
@@ -197,8 +197,8 @@ costs: in a synthetic ablation against the model's own generative
 process, the adversarial-missingness stance pays a quantified Brier
 penalty on hideable claims under benign missingness (a hard detector
 that reads absence wins pooled scores by roughly 0.05 to 0.10), while
-the one claim whose absence is genuinely informative — the declarative
-mail-policy node, where the model does condition on absence — wins
+the one claim whose absence is genuinely informative - the declarative
+mail-policy node, where the model does condition on absence - wins
 outright. The price of refusing to read absence is real, bounded, and
 paid deliberately; we believe reporting it is more useful than hiding
 it.
@@ -212,9 +212,9 @@ Concretely, this paper contributes:
   rule, grounded in m-graphs and partial identification) with a proved
   and machine-checked suppression-monotonicity guarantee, and an explicit
   statement of its limit at evidence addition (Section 4);
-- a node-tiered validation architecture — reference calibration and
+- a node-tiered validation architecture - reference calibration and
   conformal coverage where a self-defining label exists, structural
-  principle-compliance everywhere else — with the boundary between tiers
+  principle-compliance everywhere else - with the boundary between tiers
   derived from who controls the evidence (Section 5);
 - an evaluation that includes the cost of the design, not only its
   benefit: layer ablations quantifying the MNAR price under benign worlds
@@ -259,9 +259,9 @@ than its caveat.
    near-tautological consistency check, synthetic versus real). Include the
    measured price of honesty from the ablation
    (`validation/layer-ablation.md`): under benign missingness the hideable
-   nodes pay a quantified ~0.05–0.10 Brier for the MNAR stance a hard
-   detector does not pay, while the declarative node — where absence is
-   honestly informative — wins outright; the trade the theory argues for,
+   nodes pay a quantified ~0.05-0.10 Brier for the MNAR stance a hard
+   detector does not pay, while the declarative node - where absence is
+   honestly informative - wins outright; the trade the theory argues for,
    demonstrated with numbers. Pairs with the CAL7 observation that one
    strong binding nearly ties full fusion on simple roots: the machinery
    earns its keep exactly where the model has structure (DAG nodes,
@@ -311,8 +311,8 @@ correlation.md section 4.3.
 | Interval coverage (synthetic) | the 80% interval absorbs the elicitation imprecision under the CAL8 band | `validation/interval_coverage.py`; shipped |
 | Likelihood sensitivity (CAL8) | the posteriors and agreement are stable under a plus-or-minus-20-percent likelihood perturbation | `validation/likelihood_sensitivity.py`; shipped |
 | Information recovered (CAL10) | the per-domain entropy-reduction distribution across postures, as the operational reading of what the channel still leaks after hardening | per-node surfacing shipped (2.2 diagnostics: `entropy_reduction_nats` on every posterior); the posture-stratified distribution is a corpus-run readout; first full-corpus pass measured median ~0.85 nats |
-| Layer ablations | what the graph layer and the Bayesian layer add over single-source slug matching | `validation/layer_ablation.py`; shipped and run (synthetic, reproducible): in the fired regime the posterior beats the deterministic baseline on every node and the DAG-only node is unreachable by matching; pooled, the hideable roots pay a quantified ~0.05–0.10 Brier MNAR price while the declarative node wins outright (the CAL14 asymmetry demonstrated); Louvain holds ARI 1.0 across a bridging-noise grid where connected components collapse to 0 — numbers in `validation/layer-ablation.md` |
-| Posture stratification | aggregate behavior across hardening postures, as distributions not exemplars | `validation/posture_distributions.py` (entropy reduction bucketed by edge-proxied/direct × evidence tier; interval width vs n_eff for the CAL7 figure); harness shipped, maintainer run pending; framing in correlation.md 4.10–4.11 |
+| Layer ablations | what the graph layer and the Bayesian layer add over single-source slug matching | `validation/layer_ablation.py`; shipped and run (synthetic, reproducible): in the fired regime the posterior beats the deterministic baseline on every node and the DAG-only node is unreachable by matching; pooled, the hideable roots pay a quantified ~0.05-0.10 Brier MNAR price while the declarative node wins outright (the CAL14 asymmetry demonstrated); Louvain holds ARI 1.0 across a bridging-noise grid where connected components collapse to 0 - numbers in `validation/layer-ablation.md` |
+| Posture stratification | aggregate behavior across hardening postures, as distributions not exemplars | `validation/posture_distributions.py` (entropy reduction bucketed by edge-proxied/direct × evidence tier; interval width vs n_eff for the CAL7 figure); harness shipped, maintainer run pending; framing in correlation.md 4.10-4.11 |
 | Differential verification | variable elimination matches a full-joint reference on every enumerable configuration | `validation/differential_verification.py`; shipped |
 | Per-vertical stratification | the calibration holds across industries | the by-vertical corpus lists; run 2026-06 (22 verticals, full-posterior ECE 0.065 to 0.098 per stratum) |
 
@@ -348,8 +348,8 @@ drafted here as a candidate. recon is increasingly *consumed by LLM agents*
 the right design rather than a concession. An agent is a confident summarizer:
 given a point estimate it will state a verdict, and given a wide interval it
 will round it away unless the surface forbids it. The honest contract recon
-already makes — a low or sparse posterior means "we cannot tell from the
-public channel", not "not present" (the MNAR rule) — is exactly the property a
+already makes - a low or sparse posterior means "we cannot tell from the
+public channel", not "not present" (the MNAR rule) - is exactly the property a
 downstream agent cannot reconstruct for itself, because the missingness
 structure lives in recon, not in the agent's context. So recon's value in an
 agent stack is as a *grounding/verifier primitive*: it supplies the calibrated
@@ -371,7 +371,7 @@ Evidence not yet in hand, in roughly the order the roadmap sequences it:
   and per-vertical stratification (`validation/reference_calibration.py`),
   the tenancy corroboration (`validation/tenancy_reference_calibration.py`,
   M365 two-class; GWS one-sided by the channel's nature), and the conformal
-  coverage pass (`validation/conformal_coverage.py`) — every harness now
+  coverage pass (`validation/conformal_coverage.py`) - every harness now
   exists, so this is collection, not construction (the layer ablations are
   already run and committed, being fully synthetic:
   `validation/layer-ablation.md`);

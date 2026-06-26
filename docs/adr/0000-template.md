@@ -6,7 +6,7 @@
 ## Context
 
 The forces at play: what problem, what constraints, what alternatives existed.
-State the situation neutrally — enough that a reader who wasn't here understands
+State the situation neutrally - enough that a reader who wasn't here understands
 why a decision was needed.
 
 ## Decision

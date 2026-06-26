@@ -1,7 +1,7 @@
 # Architecture Decision Records
 
-Each ADR captures one architecturally significant, hard-to-reverse decision —
-its context, the decision, and its consequences — so the *why* outlives anyone's
+Each ADR captures one architecturally significant, hard-to-reverse decision:
+its context, the decision, and its consequences, so the *why* outlives anyone's
 memory (and an AI assistant can read the rationale instead of re-deriving or
 violating it). Format is Nygard's five sections; see
 [`0000-template.md`](0000-template.md).
@@ -9,7 +9,7 @@ violating it). Format is Nygard's five sections; see
 Rules:
 
 - **One decision per record**, numbered `NNNN-kebab-title.md`.
-- **Accepted ADRs are immutable.** Don't edit a decision after acceptance —
+- **Accepted ADRs are immutable.** Don't edit a decision after acceptance;
   supersede it with a new ADR and mark the old one `Superseded by ADR-NNNN`.
 - **Only for significant / hard-to-reverse decisions** (invariants, contracts,
   cross-cutting design). Routine choices don't need one.

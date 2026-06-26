@@ -33,7 +33,7 @@ The file is keyed by *topic* rather than vendor-specific ID so the record
 stays portable across audit tools, and it includes file:line receipts
 plus closure commit SHAs for verification. If a scanner reports a
 finding listed there as open, the closure status documented in that file
-is authoritative — the scanner is likely lagging the repo.
+is authoritative  -  the scanner is likely lagging the repo.
 
 ## Scope
 

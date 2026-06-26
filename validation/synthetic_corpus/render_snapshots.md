@@ -46,7 +46,7 @@ High-signal related domains
   arcdirectconnect.adfs.contoso.com, auditnrt.protection.sovnext.contoso.com,
   authdal.protection.sovnext.contoso.com,
   authgls.protection.sovnext.contoso.com, autodiscover.contoso.com
-  (32 total — 24 more, use --full to see all)
+  (32 total  -  24 more, use --full to see all)
 
 Insights
   Cloud-managed identity indicators (Entra ID native)

@@ -1,4 +1,4 @@
-# recon — Claude Code plugin
+# recon - Claude Code plugin
 
 This directory packages recon as a [Claude Code plugin](https://docs.claude.com/en/docs/claude-code/plugins): one install wires up the MCP server and ships a skill that teaches Claude *when* and *how* to use recon.
 
@@ -8,7 +8,7 @@ This directory packages recon as a [Claude Code plugin](https://docs.claude.com/
 agents/claude-code/
 ├── .claude-plugin/plugin.json   # plugin manifest
 ├── .mcp.json                    # MCP server registration (recon mcp)
-├── skills/recon/SKILL.md        # skill — recon's voice, workflow patterns, hedging rules
+├── skills/recon/SKILL.md        # skill - recon's voice, workflow patterns, hedging rules
 └── README.md                    # this file
 ```
 
@@ -23,7 +23,7 @@ The earlier framing of "the MCP server adds `assess_exposure` / `find_hardening_
 
 ## Install
 
-The plugin wires up Claude Code (skill + MCP launch config). It does **not** install the recon Python package — that step is still the user's responsibility, just like any other MCP server.
+The plugin wires up Claude Code (skill + MCP launch config). It does **not** install the recon Python package - that step is still the user's responsibility, just like any other MCP server.
 
 ### 1. Install the recon CLI
 
@@ -71,11 +71,11 @@ The plugin loads for that session without going through a marketplace.
 /plugin install recon@<marketplace-name>
 ```
 
-A marketplace is itself just a repo containing a `.claude-plugin/marketplace.json` index that points at one or more plugins. The official marketplace is at [claude.com/plugins](https://claude.com/plugins); you can also publish your own. See the [plugin marketplaces docs](https://code.claude.com/docs/en/plugin-marketplaces.md) for the current schema and submission flow — both are still evolving.
+A marketplace is itself just a repo containing a `.claude-plugin/marketplace.json` index that points at one or more plugins. The official marketplace is at [claude.com/plugins](https://claude.com/plugins); you can also publish your own. See the [plugin marketplaces docs](https://code.claude.com/docs/en/plugin-marketplaces.md) for the current schema and submission flow - both are still evolving.
 
 ### 3. Try it
 
-After install, run `recon mcp doctor` for a live JSON-RPC handshake check — spawns the server and confirms a real MCP client can talk to it.
+After install, run `recon mcp doctor` for a live JSON-RPC handshake check - spawns the server and confirms a real MCP client can talk to it.
 
 
 In a Claude Code session:

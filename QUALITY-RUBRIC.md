@@ -53,6 +53,22 @@ findings, or unsuppressed small strata.
 
 ## Current Alignment Snapshot
 
+Cycle 6 scope: live documentation refresh for the README, docs index, roadmap,
+getting-started guide, and plain-language model overview.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | README readiness anchors, roadmap version status, ADR-0007 references, markdown links, automation docs, and generated surface checks passed. |
+| Security and supply chain | 5/5 | Docs only; no dependency, credential, paid API, active probe, or runtime behavior change. |
+| Performance | 5/5 | Documentation changes do not affect lookup, batch, MCP, or validation hot paths. |
+| Readability | 5/5 | README is a concise front door; install and model detail moved to focused docs; roadmap now states current work and invariants directly. |
+| Maintainability | 5/5 | Removes roadmap bloat and README duplication while preserving required anchors and links to canonical references. |
+| Sustainability and invariants | 5/5 | Keeps deepen-not-expand framing, no-real-data policy, passive boundary, and surface-inventory non-contract decision visible. |
+
+External spend: 0 USD.
+
 Cycle 5 scope: C3 CT partial-session recovery, batch timeout plumbing, and
 maintainer-local scan finalization.
 

@@ -1,6 +1,6 @@
-# recon — VS Code (with GitHub Copilot) install
+# recon - VS Code (with GitHub Copilot) install
 
-Two pieces wire recon into [VS Code](https://code.visualstudio.com/) when paired with GitHub Copilot: the MCP server (so Copilot can call recon) and the agent guidance (so Copilot knows *when* to use it). Copilot reads `.github/copilot-instructions.md` — that loads always, not on-demand.
+Two pieces wire recon into [VS Code](https://code.visualstudio.com/) when paired with GitHub Copilot: the MCP server (so Copilot can call recon) and the agent guidance (so Copilot knows *when* to use it). Copilot reads `.github/copilot-instructions.md` - that loads always, not on-demand.
 
 ## What's inside
 
@@ -17,7 +17,7 @@ pip install recon-tool
 recon doctor --mcp
 ```
 
-Other forms (`uv tool install`, `uvx`) work too — see [`docs/mcp.md`](../../docs/mcp.md#cli-install-options).
+Other forms (`uv tool install`, `uvx`) work too - see [`docs/mcp.md`](../../docs/mcp.md#cli-install-options).
 
 ## 2. Wire the MCP server
 
@@ -28,7 +28,7 @@ recon mcp install --client=vscode             # writes .vscode/mcp.json in cwd
 recon mcp install --client=vscode --dry-run   # preview without writing
 ```
 
-VS Code's MCP config is workspace-scoped only — there is no user-level config. Run the install from your project root.
+VS Code's MCP config is workspace-scoped only - there is no user-level config. Run the install from your project root.
 
 **Manual install:** drop [`mcp.json`](mcp.json) at:
 
@@ -43,14 +43,14 @@ VS Code's MCP config is workspace-scoped only — there is no user-level config.
 GitHub Copilot reads [`.github/copilot-instructions.md`](https://docs.github.com/en/copilot/customizing-copilot/about-customizing-github-copilot-chat-responses#about-repository-custom-instructions-for-github-copilot-chat) at the repo root. The canonical recon guidance lives in [`AGENTS.md`](../../AGENTS.md). Two ways to use it:
 
 ```markdown
-<!-- .github/copilot-instructions.md — option A (reference) -->
+<!-- .github/copilot-instructions.md - option A (reference) -->
 See [`AGENTS.md`](../AGENTS.md) for recon usage guidance.
 
 <!-- option B (inline) -->
 <!-- Paste the body of AGENTS.md directly. -->
 ```
 
-Copilot loads instructions for every chat turn — keep the file focused.
+Copilot loads instructions for every chat turn - keep the file focused.
 
 ## Verifying the install
 

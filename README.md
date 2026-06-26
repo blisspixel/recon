@@ -6,368 +6,219 @@
 [![License](https://img.shields.io/pypi/l/recon-tool.svg?cacheSeconds=300)](LICENSE)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/blisspixel/recon/badge)](https://scorecard.dev/viewer/?uri=github.com/blisspixel/recon)
 
-Passive domain intelligence from public sources. Queries DNS records, Microsoft/Google identity endpoints, and certificate transparency logs to build a picture of an organization's technology stack: no credentials, no API keys, no active scanning.
+Passive domain intelligence from public sources. recon reads public DNS,
+certificate transparency, and unauthenticated Microsoft and Google identity
+discovery endpoints to report what an organization appears to publish about its
+identity stack, email posture, SaaS footprint, and related domains.
 
-Drop in a domain, get an evidence-backed read on its identity stack, email posture, and cloud footprint in seconds, with the uncertainty widened when the public channel is sparse.
+It uses no credentials, no API keys, no paid feeds, and no active scanning. It
+is a local Python CLI, importable library, JSON producer, and stdio MCP server.
+It is not a hosted service, scheduler, vulnerability scanner, company research
+tool, or firmographic database.
 
-> **Defensive use only.** recon is designed for legitimate security posture assessment, IT architecture review, vendor due diligence, and defensive hardening. It performs zero active scanning and zero credentialed access. See [docs/legal.md](docs/legal.md) for the full intended-use policy.
+> **Defensive use only.** Use recon for legitimate posture review, IT
+> architecture review, vendor diligence, and defensive hardening. See
+> [docs/legal.md](docs/legal.md) for the intended-use policy.
+
+## Quick Start
+
+Install or update with the platform script:
+
+**Windows (PowerShell):**
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
+```
+
+**macOS or Linux:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
+```
+
+Open a new terminal and verify the install:
+
+```bash
+recon doctor
+```
+
+Run a lookup:
 
 ```bash
 recon contoso.com
 ```
 
-```
+Example output shape:
+
+```text
 Contoso Ltd
 contoso.com
-──────────────────────────────────────────────────────────────────────────────
-  Provider     Microsoft 365 (primary) via Proofpoint gateway + Google Workspace (secondary)
-  Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
-  Auth         Federated (Entra ID + Google Workspace)
-  Confidence   ●●● High (4 sources)
+
+Provider     Microsoft 365 via Proofpoint gateway
+Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890
+Auth         Federated
+Confidence   High (4 sources)
 
 Services
-  Email          Microsoft 365, Google Workspace, Proofpoint, DMARC, DKIM,
-                 SPF: strict (-all), BIMI
-  Identity       Okta, Google Workspace (managed identity)
-  Cloud          Cloudflare (CDN), AWS Route 53 (DNS)
-  Security       Wiz, CAA: 3 issuers restricted
-  Collaboration  Slack, Atlassian (Jira/Confluence)
-
-High-signal related domains
-  api.contoso.com, login.contoso.com, portal.contoso.com, sso.contoso.com,
-  admin.contoso.com, status.contoso.com, support.contoso.com
-  (57 total, 50 more, use --full to see all)
+  Email       Microsoft 365, Proofpoint, DMARC, DKIM, SPF strict
+  Identity    Okta, Entra ID
+  Cloud       Cloudflare, AWS Route 53
 
 Insights
-  Federated identity indicators observed (likely Okta, enterprise SSO)
+  Federated identity indicators observed
   Email security 4/5: DMARC reject, DKIM, SPF strict, BIMI
   Email gateway: Proofpoint in front of Exchange
-  Dual provider: Google + Microsoft coexistence
 ```
 
-> Examples use [Microsoft's fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam). Tenant IDs, services, and domains are fabricated. No real company is depicted.
+Examples use [Microsoft's fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges).
+Tenant IDs, services, and domains in examples are fabricated. No real company is
+depicted.
 
-Works for Microsoft 365, Google Workspace, or any provider. It can also run as an optional [MCP server](docs/mcp.md); the default `pip install recon-tool` includes MCP support, but normal CLI and JSON use do not require AI.
+For detailed install, update, uninstall, and first-run workflows, read
+[docs/getting-started.md](docs/getting-started.md).
 
-**Jump to:** [Install](#install) · [Usage](#usage) · [How it works](#how-recon-works) · [MCP server](#mcp-server) · [Automation and JSON](#automation-and-json) · [Limitations](#limitations) · [Docs index](docs/README.md)
+## What recon Is Good For
 
-## Why recon?
-
-| If you need... | Use recon for... | Reach for something heavier when... |
+| Need | Use recon for | Use something else when |
 |---|---|---|
-| Fast external stack context | Passive DNS, identity-endpoint, CT, SaaS, and posture indicators with no credentials | You need authenticated tenant inventory or asset-management truth |
+| Fast external stack context | Passive DNS, identity-endpoint, CT, SaaS, and posture indicators | You need authenticated tenant inventory or asset-management truth |
 | Defensive review or vendor diligence | Hedged observations and evidence traces you can verify | You need vulnerability scanning, exploit checks, or host-level facts |
-| Automation-friendly output | Stable `--json`, batch mode, delta mode, and local MCP tools | You need dashboards, scheduled monitoring, or report generation |
+| Automation-friendly output | Stable JSON, batch mode, delta mode, and local MCP tools | You need dashboards, scheduling, or report generation built in |
 
-## recon in practice
+recon reports observations, not verdicts. A missing DMARC record is a missing
+record. A Microsoft 365 tenant indicator is an observed indicator. The operator
+decides what those facts mean in context.
 
-recon is a zero-credential first pass for external technology-stack and posture visibility. Run it before a vendor diligence call, a partner integration, an M&A review, or a hardening audit. Output is hedged, traceable, and shaped for downstream automation.
-
-recon does not replace commercial EASM platforms, active scanners, or continuous monitoring. It is the upstream signal that feeds those tools, with full provenance so you can verify any conclusion before you act on it.
-
-recon also does not score or rank organizations, enrich domains with firmographics, or maintain an industry intelligence database. It reports what the public channel reveals, with provenance, and leaves business interpretation to the operator.
-
-recon ships as a Python wheel on PyPI and runs locally: a CLI, an importable library, and a stdio MCP server. It is not a hosted service. There is no remote MCP transport, container image, daemon, or scheduled-monitoring mode, and adding one is out of scope by design (see the [roadmap](docs/roadmap.md#intentionally-out-of-scope)). If you need scheduling or shared access, that belongs to whatever runs recon, not to recon itself.
-
-## Install
-
-**One-line install and update**
-
-The same command installs recon or upgrades an existing install to the latest
-version, so re-running it later is how you update. It prefers
-[`uv`](https://docs.astral.sh/uv/) (fast, manages its own Python), falls back to
-`pipx`, and asks you to install one of those tools first if neither is present.
-
-**Windows (PowerShell):**
-```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
-```
-
-**macOS / Linux:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
-```
-
-After the installer finishes, open a **new** terminal and run `recon doctor`.
-
-**Update:** run `recon update`. It detects how recon was installed
-(pipx / uv / pip / Homebrew) and runs the matching upgrade; `recon update --check`
-only reports whether a newer release exists. (Equivalently, re-run the install
-one-liner above, or upgrade directly with `uv tool upgrade recon-tool` /
-`pipx upgrade recon-tool` / `pip install -U recon-tool`.)
-**Uninstall:** `uv tool uninstall recon-tool` (or `pipx uninstall recon-tool`).
-
-**Homebrew (macOS / Linux):** `brew install blisspixel/tap/recon` once the tap is
-published; see [packaging/homebrew](packaging/homebrew/README.md). (Windows uses
-the PowerShell one-liner above, since a Python package is a poor fit for Scoop/winget.)
-
----
-
-**recon works on Windows, macOS, and Linux.**
-
-It is a pure-Python CLI (plus optional MCP server). No compilation or external services required.
-
-**Requirements:** Python 3.11 or newer.
-
-### Recommended way (virtual environment or pipx)
-
-This is the most reliable method on all platforms and prevents common PATH problems.
-
-```bash
-# 1. Create a virtual environment
-python -m venv .venv          # some systems: python3 -m venv .venv
-
-# 2. Activate the environment
-#   Windows (PowerShell):   .\.venv\Scripts\Activate.ps1
-#   macOS / Linux:          source .venv/bin/activate
-
-# 3. Install (includes MCP support)
-pip install -U recon-tool
-
-# 4. Verify everything works
-recon doctor
-```
-
-**Even simpler alternative: pipx** (excellent for command-line tools):
-
-```bash
-pipx install recon-tool
-recon doctor
-```
-
-pipx creates an isolated environment for you and ensures the `recon` command is always on PATH.
-
-### Fast one-liner (bare pip install)
-
-```bash
-pip install recon-tool
-recon doctor
-```
-
-**If the `recon` command is not found after install (common on Windows):**
-- You are probably using a system-wide Python install without admin rights. The scripts went into your user Scripts folder, which may not be in PATH.
-- Best fix: use the **Recommended** venv or pipx method above.
-- Quick workaround: add `%APPDATA%\Python\Python312\Scripts` (adjust for your Python version) to your user PATH and restart the terminal.
-
-### From a git checkout (editable / development install)
-
-```bash
-git clone https://github.com/blisspixel/recon.git
-cd recon
-pip install -e .          # or: uv sync  (see CONTRIBUTING.md for full dev setup)
-```
-
-Upgrade later with the usual `pip install -U recon-tool`.
-
-## Usage
+## Common Commands
 
 ```bash
 recon contoso.com                              # default panel
-recon https://www.contoso.com/path             # URLs, www., and paths normalize to the apex (contoso.com)
-recon mail.contoso.com                          # sub-hosts also reduce to the registrable apex
-recon mail.contoso.com --exact                  # ...unless you want DNS facts for that exact host
-recon contoso.com --explain                    # full reasoning + provenance DAG
-recon contoso.com --full                       # everything (services + domains + posture)
-recon contoso.com --profile fintech            # apply a posture lens
-recon contoso.com --confidence-mode strict     # drop hedging on dense-evidence targets (current)
-recon contoso.com --direct-probes              # opt in to direct CSE / BIMI-VMC probes (off by default)
-recon contoso.com --json                       # structured JSON for piping
-recon batch domains.txt --json                 # batch (cross-domain token clustering)
-cat domains.txt | recon batch - --json         # batch reading domains from stdin
-recon batch domains.txt --json --include-ecosystem  # add v1.8 ecosystem hypergraph
-recon batch domains.txt --summary              # one aggregate-only cohort summary (panel)
-recon batch domains.txt --summary --json       # the same, as JSON for downstream tooling
-recon contoso.com --chain --depth 2            # follow related-domain breadcrumbs
-recon delta contoso.com                        # diff against last cached snapshot
-recon mcp                                      # start MCP server (stdio)
+recon https://www.contoso.com/path             # normalize URL to apex
+recon mail.contoso.com                         # reduce sub-host to apex
+recon mail.contoso.com --exact                 # keep that literal host
+recon contoso.com --explain                    # reasoning and provenance
+recon contoso.com --full                       # services, domains, posture
+recon contoso.com --json                       # structured lookup record
+recon batch domains.txt --json                 # batch JSON array
+recon batch domains.txt --ndjson               # one record per line
+recon batch domains.txt --summary              # aggregate-only cohort summary
+recon delta contoso.com                        # diff against cached snapshot
+recon mcp install --client=cursor              # wire MCP into a client
+recon mcp doctor                               # live MCP handshake check
 ```
 
-Built-in profiles: `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`. Custom profiles live in `~/.recon/profiles/*.yaml`.
+Built-in posture profiles: `fintech`, `healthcare`, `saas-b2b`,
+`high-value-target`, `public-sector`, and `higher-ed`. Custom profiles live in
+`~/.recon/profiles/*.yaml`.
 
-**Input is forgiving.** Paste a full browser URL, a `www.` host, a trailing-dot FQDN, or any sub-host: recon strips the scheme, path, and root-label dot and reduces the target to its registrable apex, where the tenant, MX, and DMARC records live. It uses the Public Suffix List, so multi-label TLDs like `acme.co.uk` reduce correctly. Pass `--exact` when you specifically want DNS facts for the literal host you typed.
+Generated command and flag reference:
+[docs/cli-surface.md](docs/cli-surface.md).
 
-**Shell completion.** recon ships tab-completion for the command tree and flags (via Typer). Install it for your current shell, or print the script to wire it up yourself:
+## How recon Works
+
+recon reads:
+
+- DNS records: MX, TXT, SPF, DMARC, DKIM, BIMI, CNAME, NS, SRV, and CAA.
+- Certificate transparency: SAN names, issuers, issuance timing, and bounded
+  related-domain hints.
+- Identity discovery: unauthenticated Microsoft and Google endpoints.
+
+By default, the only request the queried domain's own servers see is the
+standards-based MTA-STS policy fetch at `mta-sts.<domain>`. Google CSE and BIMI
+VMC direct probes are opt-in behind `--direct-probes`.
+
+The engine then maps observables to fingerprint slugs, derived signals, graph
+motifs, and optional Bayesian posteriors. Sparse public evidence stays sparse:
+the result widens uncertainty or lowers confidence instead of inventing a clean
+answer.
+
+Long-form explanation: [docs/how-it-works.md](docs/how-it-works.md).
+Formal model: [docs/correlation.md](docs/correlation.md).
+
+## JSON and Automation
+
+`recon <domain> --json` emits a stable single-domain lookup object. Batch and
+delta modes emit different shapes, so route by mode or by `record_type`.
 
 ```bash
-recon --install-completion                     # add completion to your shell config
-recon --show-completion                        # print the completion script (bash/zsh/fish/powershell)
+recon contoso.com --json
+recon batch domains.txt --json
+recon batch domains.txt --ndjson
+recon delta contoso.com --json
 ```
 
-After `--install-completion`, start a new shell for it to take effect.
+Read these before building an integration:
 
-See [docs/README.md](docs/README.md) for the organized documentation index.
+- [docs/schema.md](docs/schema.md): stable JSON contract.
+- [docs/recon-schema.json](docs/recon-schema.json): machine-readable schema.
+- [docs/automation-examples.md](docs/automation-examples.md): parser examples.
+- [docs/operational-contract.md](docs/operational-contract.md): timeouts,
+  bounds, exit codes, cache, and partial-result semantics.
 
-## How recon works
+`docs/surface-inventory.json`, `docs/cli-surface.md`, and
+`recon://surface-inventory` are generated discovery context and drift guards,
+not stable runtime API contracts. ADR-0007 records the promotion gate for any
+future stable subset.
 
-recon reads the public channel: DNS records (MX, CNAME, SPF, DMARC,
-TXT), certificate-transparency SAN sets, and the unauthenticated
-identity-discovery endpoints Microsoft and Google publish for tenant
-resolution. No credentials, no port scanning, no login attempts. By
-default the only request the queried domain's own servers see is the
-standard MTA-STS policy fetch; two direct-probe enrichments (the Google
-CSE discovery endpoint at `cse.<domain>` and the BIMI VMC certificate
-fetch) are opt-in behind `--direct-probes` and stay off unless you ask
-for them. BIMI presence is still read from DNS either way.
+## MCP Server
 
-It then runs those observables through a small Bayesian network and
-reports each high-level claim (M365 tenant, federated identity,
-email-policy enforcement, CDN fronting, and so on) as an 80% confidence
-interval, not a yes/no verdict. The interval is the load-bearing field:
-on hardened or heavily-proxied targets it **widens** rather than
-collapsing on a fake-confident point estimate, because absent evidence
-is treated as no evidence, not as evidence of absence. The intervals
-are evidence-responsive (they track how much the public channel
-constrains each claim); they are not yet empirically calibrated against
-ground truth, which no passive tool can observe. The structural motifs
-recon surfaces (a CDN in front of an identity provider, an email
-gateway in front of M365, a secondary Google Workspace alongside
-primary M365) are the ones single-source detection often misses.
-
-> **For the formal model:** the adversarial missing-data treatment
-> (MNAR, with the absent-evidence rule grounded in m-graphs and Manski
-> partial identification), the calibration principles the credible
-> interval satisfies, and the failure-mode catalog across five hardening
-> postures live in [docs/correlation.md](docs/correlation.md).
-
-The fingerprint catalog is shaped by passive-DNS observation of real
-corpora. The built-in catalog ships with the package; operators can
-extend it for their own environment by dropping additions into
-`~/.recon/fingerprints.yaml` (additive only, cannot override
-built-ins). Anything broadly useful can be contributed upstream via
-the workflow in [CONTRIBUTING.md](CONTRIBUTING.md). The maintainer
-runs the same scan-triage loop against a private corpus before each
-release; the catalog grows from observed gaps, not invented entries.
-
-## MCP server
-
-recon runs as an MCP server for Claude, Cursor, VS Code, ChatGPT, or any MCP client. The Model Context Protocol lets AI agents call tools like recon directly from your chat.
-
-The data tools return navigable structured content with a per-tool output schema (aligned to the current MCP spec), so an agent consumes the fields directly instead of re-parsing text, and a failed lookup comes back flagged as an error the model can recover from rather than a success-shaped payload. See [docs/mcp.md](docs/mcp.md#tool-output-structured-content-and-errors).
-
-**One-shot install.** Let recon write the right config block for you:
+The default install includes a local stdio MCP server for MCP-compatible tools.
+Start with manual approvals and an empty `autoApprove` list. Treat connected
+agents as untrusted input.
 
 ```bash
-recon mcp install --client=claude-desktop   # or claude-code, cursor, vscode, windsurf, kiro
-recon mcp doctor                            # spawn the server and verify the JSON-RPC handshake
+recon mcp install --client=claude-desktop
+recon mcp install --client=cursor --dry-run
+recon mcp doctor
 ```
 
-The install command is idempotent and merge-safe: sibling MCP servers, hand-curated `autoApprove` lists, custom `env` vars, and any other keys you've added to the recon block all survive a `--force` rerun. Use `--dry-run` first to preview the plan.
-
-**Manual install.** If you'd rather edit by hand, add this to your client's MCP config:
-
-```json
-{
-  "mcpServers": {
-    "recon": {
-      "command": "recon",
-      "args": ["mcp"],
-      "autoApprove": []
-    }
-  }
-}
-```
-
-The default install already includes the MCP server. Keep approvals manual until you've decided which tools, if any, you want to trust automatically. recon's MCP tools are split into read-only and stateful sets (the three ephemeral-fingerprint / reload tools are stateful); see the [autoApprove guidance](docs/mcp.md#read-only-vs-stateful-autoapprove-guidance) for which is which.
-
-Then ask your AI: *"Run a recon lookup on contoso.com and tell me what's running."*
-
-See [docs/mcp.md](docs/mcp.md) for the full tool list, advanced agentic workflows, and per-client config locations.
-
-Installed but the tools don't appear? Run `recon doctor --client=<name>` to confirm the config carries the recon stanza, then see the [troubleshooting checklist](docs/mcp.md#when-doctor-passes-but-the-tools-dont-load). The usual fix is a full application restart, since a new chat does not re-spawn MCP servers.
-
-**Claude Code, Kiro, Windsurf, Cursor, VS Code:** per-agent install scaffolds live under [`agents/`](agents/), one folder per client with its MCP config and guidance template. Claude Code users get a full plugin (MCP + skill in one install) at [`agents/claude-code/`](agents/claude-code/). The skill drives the CLI for the one-shot analyses (lookup, `--exposure` score, `--gaps`, `--fusion` posteriors); the MCP server adds the stateful, iterative workflows (what-if hardening loops, ephemeral fingerprints, live two-domain compare). That folder's README has the breakdown. The portable [`AGENTS.md`](AGENTS.md) at the repo root is auto-detected by Kiro and other agents.md-aware tools.
-
-**Quickest install for AI clients with file-write tools.** Paste this prompt to your AI:
-
-> Fetch `https://raw.githubusercontent.com/blisspixel/recon/main/agents/claude-code/skills/recon/SKILL.md` and save it to my Claude Code skills directory (`~/.claude/skills/recon/SKILL.md`), or to `~/.kiro/skills/recon/SKILL.md` if I'm using Kiro. Then `pip install recon-tool` (use a venv or pipx if `recon` is not found afterward) and run `recon doctor` to verify.
-
-The SKILL.md follows the open [agentskills.io](https://agentskills.io) standard, so the same file works in Claude Code and Kiro.
-
-## Automation and JSON
-
-recon is built for piping, and the output shape depends on the command:
-`recon <domain> --json` emits a single result object; `recon batch ... --json`
-emits a wrapped array (`--ndjson` gives one object per line); `recon delta`
-emits a DeltaReport. Validate any shape against
-[`docs/recon-schema.json`](docs/recon-schema.json)
-([raw URL](https://raw.githubusercontent.com/blisspixel/recon/main/docs/recon-schema.json));
-the v2.0 stability contract and every field live in
-[`docs/schema.md`](docs/schema.md), and drift between schema and emitter is
-caught by `tests/test_json_schema_file.py`.
-
-The CLI also returns stable exit codes (`0` success, `1` general error,
-`2` validation, `3` no data, `4` internal) so a script can branch on the
-outcome without parsing output. Full contract:
-[`docs/schema.md`](docs/schema.md#exit-codes).
-
-Maintainers and agent authors who need a current command and flag reference can
-read [`docs/cli-surface.md`](docs/cli-surface.md). Downstream tooling that needs
-the local CLI, MCP, JSON-schema, agent-integration, and maintainer-context map
-can read
-[`docs/surface-inventory.json`](docs/surface-inventory.json) or the local
-`recon://surface-inventory` MCP resource. Both generated artifacts are produced
-by `scripts/generate_surface_inventory.py`, and `scripts/check.py` enforces that
-they stay current. They are derived drift guards and discovery context, not
-stable runtime API contracts. The promotion gate for making any subset stable is
-captured in [`ADR-0007`](docs/adr/0007-surface-inventory-discovery-context.md).
+The installer writes the right per-client config shape and preserves sibling
+MCP servers. Full setup, tool list, read-only versus stateful guidance, and
+troubleshooting live in [docs/mcp.md](docs/mcp.md). Per-client scaffolds live in
+[agents/](agents/).
 
 ## Limitations
 
-The short version is below; [docs/limitations.md](docs/limitations.md) has the
-full inventory, including known noise patterns and a guide to when to reach for
-a different tool.
+The public channel has a ceiling:
 
-- **Coverage depends on public DNS.** Organizations behind heavy proxies, with minimal DNS records, or that don't publish SaaS verification tokens will return sparse results. This is fundamental to passive-only collection. When sources transiently fail, the CLI tells you which one and why so you can retry or accept the partial answer.
-- **Internal workloads are structurally invisible.** Server-side API consumption (an org running internal Google Cloud ML, internal AWS data pipelines, internal Snowflake warehouses without public verification tokens, and so on) leaves no trace in public DNS, CT logs, or unauthenticated identity-discovery endpoints. recon cannot tell you what runs internally; it can only tell you what the org publishes externally. The CLI panel calls this out explicitly: the "Cloud" line surfaces what is observable, and on sparse-but-multi-domain apexes a one-line "Passive-DNS ceiling" footer notes that internal workloads and SaaS without DNS verification do not appear in public DNS records. A "Multi-cloud" indicator collapses sibling slugs (Route 53 + CloudFront = one AWS) when the public footprint touches more than one cloud vendor.
-- **Heuristic, not ground truth.** The fingerprint database and signal rules are rule-based and solo-maintained. Confident-looking output can still be wrong. The credible interval is the load-bearing field, not the point estimate: by construction, sparse evidence on hardened targets produces a wide interval rather than a confident-looking point estimate, and the `sparse=true` flag in the JSON output is the operator-facing signal that the layer has hit the passive-observation ceiling. Every detection in the catalog carries a description and a vendor doc URL, so a finding can be re-verified against the vendor's own documentation before action. Treat results as indicators for investigation, not as definitive assessments. Don't make business decisions based solely on this output. See [docs/correlation.md](docs/correlation.md) for the calibration principles the interval satisfies and the failure-mode catalog across hardening postures.
+- Internal-only workloads are invisible.
+- SaaS products without DNS verification records may not appear.
+- Email gateways can hide the downstream mailbox provider.
+- CT logs can be stale, partial, rate-limited, or absent.
+- Fingerprints are rule-based indicators, not proof of active use.
 
-## Assurance
+Read [docs/limitations.md](docs/limitations.md) before using recon output for a
+high-stakes decision. Read [docs/data-handling-policy.md](docs/data-handling-policy.md)
+before committing any validation artifact.
 
-recon treats trust as the product, so the engine and the release pipeline carry
-more than a passing test suite. The full picture, each claim mapped to the
-mechanism and the test that keeps it, is in
-[docs/assurance-case.md](docs/assurance-case.md); the highlights:
+## Documentation
 
-- **Reproducible, byte-identical builds**, CI-gated (`SOURCE_DATE_EPOCH`), shipped
-  with sigstore / PEP 740 publish attestations, GitHub build provenance, and a
-  CycloneDX SBOM on every release ([docs/supply-chain.md](docs/supply-chain.md)).
-- **Supply-chain posture checks**, including read-only workflow token defaults,
-  pinned workflow actions, CodeQL, Dependabot for uv and GitHub Actions,
-  ClusterFuzzLite PR fuzzing for parser boundaries, secret scanning, and
-  OpenSSF Scorecard publication.
-- **Differential verification** of the Bayesian inference core (exact enumeration
-  cross-checked against variable elimination over the full evidence sweep) plus a
-  **mutation-testing gate** with a kill-score floor
-  ([validation/mutation-gate.md](validation/mutation-gate.md)).
-- **A traceability matrix** resolving every invariant to its enforcing test in CI
-  ([docs/traceability-matrix.md](docs/traceability-matrix.md)), and a
-  **statistical-assurance dossier** that places each claim at an honest evidence
-  tier ([docs/statistical-assurance.md](docs/statistical-assurance.md)).
-- **Validation hygiene checks** that keep private corpus paths, per-domain JSON
-  dumps, and target-domain fields out of committed validation artifacts, plus
-  a private-corpus preflight and aggregate memo renderer that reject undersized
-  inputs and strata before live runs or publication
-  ([docs/data-handling-policy.md](docs/data-handling-policy.md)).
+- [docs/getting-started.md](docs/getting-started.md): install, update,
+  uninstall, and first commands.
+- [docs/how-it-works.md](docs/how-it-works.md): readable model overview.
+- [docs/README.md](docs/README.md): complete docs index.
+- [docs/roadmap.md](docs/roadmap.md): current plan, invariants, and scope
+  boundaries.
+- [CHANGELOG.md](CHANGELOG.md): shipped changes.
 
 ## Development
 
 ```bash
-uv sync                                           # install the dev group
-pre-commit install                                # activate pre-commit hooks
+uv sync
+pre-commit install
 uv run python scripts/release_readiness.py --allow-dirty
-uv run python scripts/check.py                    # full local CI gate
-uv run python scripts/release_readiness.py        # strict pre-push readiness
+uv run python scripts/check.py
 ```
 
-**Contributing, including AI coding agents (read this):** match the surrounding
-code, and run `uv run python scripts/check.py` before pushing (it mirrors CI). House
-rules: no AI attribution in commits or PRs, no em-dashes or emojis anywhere, no
-AI slop (no comments that narrate the code, no defensive checks inside validated
-boundaries). Full guide: [CONTRIBUTING.md](CONTRIBUTING.md).
+`python scripts/check.py` is the local CI mirror. It runs lint, type checks,
+coverage-gated tests, generated-artifact checks, validation hygiene, and
+ratchets. Do not push on `--fast` alone.
+
+House rules: no AI attribution, no em-dashes or emojis, no real-company data in
+public examples or validation artifacts, no dead code, and no placeholders.
+Contributor details: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
 Apache 2.0. Free to use, build on, fork, and share. See [LICENSE](LICENSE) for
 the full terms.
-
-This tool queries only public DNS records and unauthenticated endpoints. See [docs/legal.md](docs/legal.md) for full disclaimer.

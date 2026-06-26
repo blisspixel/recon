@@ -125,7 +125,7 @@ mitigations are mechanical and non-negotiable:
   serialization boundaries; **golden/snapshot tests** for rendered output
   (reviewed on diff, never blind-updated, redacted for determinism).
 - **Differential verification** of the inference core against an independent
-  full-joint reference. Honest-evaluation discipline (CAL1–CAL14): consistency
+  full-joint reference. Honest-evaluation discipline (CAL1-CAL14): consistency
   vs calibration named precisely, never overclaimed.
 
 ## 6. Security and supply chain

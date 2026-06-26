@@ -8,7 +8,7 @@ fields stay under a `recon.*` namespace.
 
 The example uses the shared input at
 `examples/sample-output.json` (Northwind Traders, a Microsoft
-fictional brand — see `examples/README.md`).
+fictional brand  -  see `examples/README.md`).
 
 ## Ingestion mechanics
 
@@ -58,7 +58,7 @@ under `recon.*` to avoid colliding with future ECS additions.
 | `confidence` | `recon.confidence` | Source field for `event.severity` derivation |
 | `auth_type` | `recon.auth_type` | `Federated` vs `Managed` |
 | `dmarc_policy` | `recon.email.dmarc_policy` | DMARC drift tracking |
-| `email_security_score` | `recon.email.security_score` | 0–5 composite |
+| `email_security_score` | `recon.email.security_score` | 0-5 composite |
 | `services` | `recon.services` | Shadow-IT alerting |
 | `slugs` | `recon.slugs` | Keyword field for aggregations |
 | `cloud_instance` | `recon.cloud_instance` | Sovereignty drift |
@@ -68,14 +68,14 @@ under `recon.*` to avoid colliding with future ECS additions.
 
 | recon JSON path | Elastic field | Use case |
 |---|---|---|
-| `posterior_observations` | `recon.fusion.posteriors` | Object array — Bayesian per-claim |
+| `posterior_observations` | `recon.fusion.posteriors` | Object array  -  Bayesian per-claim |
 | `posterior_observations[].sparse` | `recon.fusion.posteriors[].sparse` | Boolean keyword for "passive ceiling hit" |
-| `evidence_conflicts` | `recon.fusion.conflicts` | Object array — cross-source disagreements |
+| `evidence_conflicts` | `recon.fusion.conflicts` | Object array  -  cross-source disagreements |
 
 ## Severity mapping
 
 The ingest pipeline derives `event.severity` (ECS-standard integer
-0–7) from recon's `confidence`:
+0-7) from recon's `confidence`:
 
 | recon `confidence` | `event.severity` | ECS label |
 |---|---|---|
@@ -114,16 +114,16 @@ by `host.domain` and order by `@timestamp` descending.
 
 ### Federation discovery
 
-Tracking changes to `recon.auth_type` per `host.domain` — same
+Tracking changes to `recon.auth_type` per `host.domain`  -  same
 shape as the DMARC drift alert.
 
 ## Files in this directory
 
-- `ingest-pipeline.json` — Elasticsearch ingest pipeline definition.
+- `ingest-pipeline.json`  -  Elasticsearch ingest pipeline definition.
   PUT this to `_ingest/pipeline/recon-lookup` to activate.
-- `index-template.json` — index template pinning field types for the
+- `index-template.json`  -  index template pinning field types for the
   `recon-lookup-*` indices.
-- `expected-elastic-document.json` — the document Elasticsearch
+- `expected-elastic-document.json`  -  the document Elasticsearch
   indexes after the pipeline runs against the shared
   `examples/sample-output.json` input. The CI test verifies this
   shape.

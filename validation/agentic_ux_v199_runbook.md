@@ -65,7 +65,7 @@ fix the loader contract first.
 When budget allows, expand to:
 
 ```bash
-# All three personas, both fixtures, both modes — full v1.9.2
+# All three personas, both fixtures, both modes  -  full v1.9.2
 # methodology re-run on v1.9.9 panels.
 python -m validation.agentic_ux.run \
     --provider anthropic \
@@ -73,7 +73,7 @@ python -m validation.agentic_ux.run \
     --output validation/v1.9.9-agentic-ux-full.md
 ```
 
-Rough cost envelope: ~$0.50–$1.00 per run on Sonnet 4.6.
+Rough cost envelope: ~$0.50-$1.00 per run on Sonnet 4.6.
 
 ## Why this is not run automatically
 
@@ -90,8 +90,8 @@ Rough cost envelope: ~$0.50–$1.00 per run on Sonnet 4.6.
 
 ## Related artifacts
 
-- `validation/agentic_ux/README.md` — full harness documentation.
-- `validation/synthetic_corpus/render_snapshots.md` — actual panel
+- `validation/agentic_ux/README.md`  -  full harness documentation.
+- `validation/synthetic_corpus/render_snapshots.md`  -  actual panel
   text for all 21 fixtures so the maintainer can preview what each
   agent will see.
-- `validation/v1.9.2-agentic-ux.md` — the v1.9.2 baseline report.
+- `validation/v1.9.2-agentic-ux.md`  -  the v1.9.2 baseline report.

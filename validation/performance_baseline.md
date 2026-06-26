@@ -22,7 +22,7 @@ file=io.StringIO())`. Methodology in
 | 1000 | 9.2 ms | 5000 ms | 543× |
 
 The test budgets are far above the measured baselines. This is
-deliberate — the tests catch order-of-magnitude regressions, not
+deliberate  -  the tests catch order-of-magnitude regressions, not
 micro-perf shifts. A regression that pushed the 1000-slug time to
 50 ms would still pass the test (50 ms < 5000 ms budget) but would
 show up as a 5× slowdown in this baseline doc.
@@ -35,7 +35,7 @@ show up as a 5× slowdown in this baseline doc.
 | 100× slowdown (9 ms → 0.9 s) | No (still under 5 s budget) |
 | 1000× slowdown (9 ms → 9 s) | Yes |
 | Any change that takes 1000-slug rendering above 5 s | Yes |
-| Sub-quadratic scaling violation (test_*_scaling_is_subquadratic) | Yes — independent property check |
+| Sub-quadratic scaling violation (test_*_scaling_is_subquadratic) | Yes  -  independent property check |
 
 ## What this baseline does not cover
 
@@ -61,7 +61,7 @@ show up as a 5× slowdown in this baseline doc.
    aggregator's render path.
 
 Items 1-3 are post-v2.0 backlog. The current performance test
-discipline is "no order-of-magnitude regressions" — sufficient for
+discipline is "no order-of-magnitude regressions"  -  sufficient for
 the panel's interactive use case, insufficient for a high-throughput
 batch use case that a future caller might want.
 

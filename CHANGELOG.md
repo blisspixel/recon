@@ -21,6 +21,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Documentation front door refresh.** The README is now a shorter product
+  front door with install, common commands, JSON/MCP pointers, limitations, and
+  development gates. Detailed install workflow moved to
+  `docs/getting-started.md`, the plain-language model overview moved to
+  `docs/how-it-works.md`, the docs index is reorganized by reader task, and the
+  roadmap is now a concise current-plan and invariant document instead of a
+  shipped-history archive.
+- **Markdown house-style cleanup.** Tracked Markdown docs, examples, agent
+  guidance, and validation memos now avoid em dashes, en dashes, pictographs,
+  and literal AI-attribution phrases.
 - **Homebrew formula freshness.** The bundled formula now points at the
   published `recon-tool` 2.2.14 sdist and sha256 from PyPI.
 - **CT corpus sessions are recoverable partial runs.** `validation/scan.py` now
@@ -566,9 +576,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   serializers (the json-dict / json / plain / CSV layer, including the shared
   `format_tenant_dict`) to `formatter_serialize.py`. `cli.py` is down from 3941
   to ~2830: all four Typer sub-apps moved to sibling modules under a pattern
-  where the sub-app defines and exports its `Typer` and `cli.py` registers it —
+  where the sub-app defines and exports its `Typer` and `cli.py` registers it  -
   `cache` → `cli_cache.py`, `mcp` → `cli_mcp.py`, `signals` → `cli_signals.py`,
-  `fingerprints` → `cli_fingerprints.py` — with the one cross-module helper
+  `fingerprints` → `cli_fingerprints.py`  -  with the one cross-module helper
   (`_fmt_exc`) lifted to `cli_shared.py` first to avoid a cycle. The two modules
   just over the cap are now under it: `exposure.py` (1130 → 983) split its frozen
   result-type family (`EmailPosture` / `ExposureAssessment` / `GapReport` /
@@ -596,7 +606,7 @@ entropy reduction, exact leave-one-unit-out counterfactuals, graph partition
 stability) and the MCP tool-output contract revision below. The CLI `--json`
 v2.0 schema is unchanged.
 
-### Changed — MCP tool output contract (aligned to MCP 2025-11-25)
+### Changed  -  MCP tool output contract (aligned to MCP 2025-11-25)
 
 The MCP data tools now return structured results instead of JSON strings, so a
 client gets navigable `structuredContent` with a generated per-tool
@@ -617,13 +627,13 @@ contract (the locked v2.0 schema in `docs/recon-schema.json`) is a separate
 surface and is unchanged. Full contract in [docs/mcp.md](docs/mcp.md). Pinned by
 `tests/test_mcp_structured_output.py`.
 
-### Added — CLI ergonomics & robustness (best-practices pass, tier 1)
+### Added  -  CLI ergonomics & robustness (best-practices pass, tier 1)
 
 Graded against the 2026 CLI-first rubric (clig.dev, 12-factor CLI), this closes
 the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
 
 - **stdout/stderr discipline.** Errors, warnings, and progress spinners now go
-  to a dedicated stderr `Console` (`get_err_console()`), never stdout — so a
+  to a dedicated stderr `Console` (`get_err_console()`), never stdout  -  so a
   consumer piping `recon … --json` gets only the data stream, never an error
   line or spinner mixed in. `render_error`/`render_warning`, the three
   `console.status` spinners, and the batch `[n/total]` counter were moved;
@@ -643,7 +653,7 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   data unprompted.
 - **`--plain` linear output (tier 2, accessibility).** `recon <domain> --plain`
   emits the lookup as greppable, screen-reader-friendly `key: value` lines with
-  no color or box-drawing — the accessibility/scripting complement to the
+  no color or box-drawing  -  the accessibility/scripting complement to the
   default Rich panel. Built from the same dict as `--json`, so it carries every
   field; mutually exclusive with `--json`/`--md`. Untrusted values are
   control-char stripped like the other sinks. Covered by
@@ -653,7 +663,7 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   fingerprints can cap the response; omitting them returns the full list, so the
   result shape is backward-compatible. (The `structuredContent` / `outputSchema`
   / `isError` half of the agent-protocol polish shipped in this release; see
-  "Changed — MCP tool output contract" above. A default pagination *envelope* on
+  "Changed  -  MCP tool output contract" above. A default pagination *envelope* on
   the list tools remains deferred.)
 - **OSC 8 terminal hyperlinks.** Vendor-doc reference URLs in `fingerprints show`,
   the crash-log file path, and the issues URL in the crash handler are now
@@ -661,8 +671,8 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   `link` style), with a plain-URL fallback when piped or unsupported.
 - **XDG Base Directory support (tier 2).** A new `recon_tool.paths` module
   centralizes config/cache/state resolution. Behavior is unchanged for existing
-  setups — `RECON_CONFIG_DIR` (the test/CI seam) still maps every category under
-  one directory, and an existing `~/.recon/` keeps being used so no data moves —
+  setups  -  `RECON_CONFIG_DIR` (the test/CI seam) still maps every category under
+  one directory, and an existing `~/.recon/` keeps being used so no data moves  -
   but a *fresh* install now uses `$XDG_CONFIG_HOME/recon`, `$XDG_CACHE_HOME/recon`,
   and `$XDG_STATE_HOME/recon` (defaults `~/.config`, `~/.cache`,
   `~/.local/state`) instead of littering `~/.recon`. The spec's
@@ -680,17 +690,17 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   returning `CalibrationPair` (full + held-out) instead of bare
   `CalibrationRecord`; `conformal_coverage.main` still read `.posterior`
   directly and crashed at runtime. The unit tests missed it because the
-  network orchestration was untested — a live public-list run surfaced it. It
+  network orchestration was untested  -  a live public-list run surfaced it. It
   now reads `.full` (conformal is a statement about the deployed predictor),
   and a monkeypatched `main()` contract test
   (`tests/test_conformal_coverage.py::TestCollectorContract`) pins the
   cross-harness shape so it can't drift silently again.
 
-### Added — agent-facing uncertainty legibility
+### Added  -  agent-facing uncertainty legibility
 
 - **Exposure score legible as a lower bound, not a grade.** `assess_exposure`
-  computes its 0–100 `posture_score` from observed-present controls only, so a
-  low score can mean "hardened but quiet" rather than "weak" — the same
+  computes its 0-100 `posture_score` from observed-present controls only, so a
+  low score can mean "hardened but quiet" rather than "weak"  -  the same
   robot-librarian flatten-the-uncertainty risk the posterior surface had. The
   output now carries an `observability` block (`score_is_lower_bound`,
   `unconfirmable_absent_points`, `score_ceiling`, and a `note`) that quantifies
@@ -700,7 +710,7 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   routing). Declarative-record absence (DMARC/MTA-STS/TLS-RPT/CAA) is genuine
   and excluded. `find_hardening_gaps` tags each gap with `absence_confirmable`:
   true for a confirmed public-records fact, false when the gap rests on *not
-  observing* a hideable control and so may be a false positive — grounded in
+  observing* a hideable control and so may be a false positive  -  grounded in
   the same declarative-vs-hideable (CAL14) distinction the Bayesian layer uses.
   The MCP server instructions gain a "Reading the exposure score" section, the
   tool docstrings and the human panel carry the lower-bound framing, and
@@ -722,26 +732,26 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   signal is not evidence of absence (the adversarial missing-data rule), so a
   low/sparse posterior reads as "we cannot tell", not "not present". An LLM
   consumer is a confident summarizer that will flatten a wide interval into a
-  verdict unless the surface forbids it — the same robot-librarian failure the
+  verdict unless the surface forbids it  -  the same robot-librarian failure the
   data-not-instructions marking guards against, applied to the inference output.
 - **`sparse_count` on the `get_posteriors` payload.** A tool-level uncertainty
   summary (how many nodes resolved only to the passive-observation ceiling)
   beside `evidence_count` / `conflict_count`, so a linear JSON consumer sees the
-  unresolved count before any point estimate — the guidance enforced at the tool
+  unresolved count before any point estimate  -  the guidance enforced at the tool
   level, not only in prose. The `get_posteriors` docstring and `docs/mcp.md`
   carry the same reading guidance; `tests/test_posterior_reading_guidance.py`
   pins the instruction section and the `sparse_count`/per-node-`sparse`
   agreement against silent regression. (An audit prompted by the 2026 "robot
   librarian" agent-design framing found recon's other two agent-facing
-  guardrails — the data-not-instructions demarcation and the `readOnlyHint`
-  autoApprove split — already shipped and test-enforced; this closed the one
+  guardrails  -  the data-not-instructions demarcation and the `readOnlyHint`
+  autoApprove split  -  already shipped and test-enforced; this closed the one
   remaining gap, the inference surface leading with the point estimate.)
 
-### Added — evidence-semantics diagnostics (the 2.2 surface)
+### Added  -  evidence-semantics diagnostics (the 2.2 surface)
 
 - **Per-node `entropy_reduction_nats`.** Every `posterior_observations` entry
   (JSON, MCP `get_posteriors`, cache) now carries its share of the recovered
-  information — H(prior marginal) − H(posterior), signed — the per-node
+  information  -  H(prior marginal) − H(posterior), signed  -  the per-node
   breakdown of the existing result-level CAL10 total.
 - **`unit_counterfactuals`: exact leave-one-unit-out influence.** For every
   evidence unit informative for a node (fired units, plus informative
@@ -766,7 +776,7 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   seed, so output stays deterministic.
 - All three are schema-additive: `docs/recon-schema.json` (and the bundled
   copy served by the MCP schema-discovery resource) gains `NodeEvidence`
-  (closing a pre-existing gap — `evidence_ranked` was emitted but never in
+  (closing a pre-existing gap  -  `evidence_ranked` was emitted but never in
   the schema file) and `NodeUnitCounterfactual` definitions plus the new
   properties; `docs/schema.md` documents each with its stability marker. The
   cache round-trips the new fields in both directions (pre-2.2 entries load
@@ -775,12 +785,12 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
 ### Added
 
 - **Leave-one-unit-out inference: `infer(..., masked_units=...)`.** The engine
-  (and `infer_from_tenant_info`) accepts evidence units — a correlation-group
-  name (`m365_indicators`, `dmarc_policy`) or an ungrouped binding's name — to
+  (and `infer_from_tenant_info`) accepts evidence units  -  a correlation-group
+  name (`m365_indicators`, `dmarc_policy`) or an ungrouped binding's name  -  to
   treat as *structurally unobserved*: no firing contribution, no
   informative-absence contribution on declarative nodes, no n_eff contribution.
   On hideable nodes masking equals the unit not firing (the MNAR LR=1 rule);
-  on the declarative policy node the two differ, which is the point — masking
+  on the declarative policy node the two differ, which is the point  -  masking
   is "unobserved", not "observed to be absent". Default empty; behaviour is
   unchanged (pinned by an equivalence property in
   `tests/test_bayesian_masked_units.py`: masking a unit reproduces, exactly,
@@ -802,7 +812,7 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   richly-instrumented grouped nodes is a number, not just catalogued.
   Pure classification/aggregation unit-tested
   (`tests/test_posture_distributions.py`); the run is maintainer-local,
-  aggregates only. Completes the paper's evaluation inventory — every row
+  aggregates only. Completes the paper's evaluation inventory  -  every row
   now maps to a built harness.
 - **Layer ablations, shipped and run (the paper's ablation experiment).**
   `validation/layer_ablation.py` measures, on fully synthetic data
@@ -824,7 +834,7 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   `validation/reference_calibration.py` now computes, beside the full
   posterior, a held-out residual posterior with the `dmarc_policy` unit
   masked, so the predictor sees only the strict-SPF + MTA-STS channel and the
-  DMARC record serves purely as the label — predictor and label disjoint by
+  DMARC record serves purely as the label  -  predictor and label disjoint by
   construction (the overlap caveat the shipped tier-4 claim carries). Both
   single and `--stratify-dir` modes print full and held-out blocks; the
   residual's invariance to the DMARC signal and its hand-computed values are
@@ -838,14 +848,14 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   `m365_tenant` posterior against Microsoft's own identity-endpoint
   attestation, with predictor and label split by *observation channel*:
   the predictor is inference over the DNS channel alone (the `dns_records`
-  source re-merged by itself — masking cannot decircularize this node, its
+  source re-merged by itself  -  masking cannot decircularize this node, its
   whole direct evidence is one group), and the label is the endpoint answer
   (tenant ID / Managed / Federated positive; OIDC HTTP 400 or NameSpaceType
   Unknown negative; channel disagreement lands in a counted conflict
   bucket, never a guess). The full-pipeline posterior is reported only as a
   CAL1-style consistency number. Google Workspace is reported one-sided
   (recall on attested-federated tenants) because recon's passive Google
-  channel never attests managed tenancy and has no authoritative negative —
+  channel never attests managed tenancy and has no authoritative negative  -
   a calibration there would restate the channel, not test it. Pure logic
   unit-tested (`tests/test_tenancy_reference_calibration.py`, including the
   channel-split exclusion and the no-footprint-stays-near-prior property);
@@ -860,7 +870,7 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   per-stratum + pooled structure. The orchestration is covered by a
   monkeypatched-collector `main()` integration test on each harness
   (`TestJsonMain`), guarding the untested-network-path regression class that
-  the conformal collector bug came from — the machine-readable path the
+  the conformal collector bug came from  -  the machine-readable path the
   multi-list comparison depends on is tested, not just the pure functions.
 
 - **Multi-list public calibration cross-check, two independent lists agree.**
@@ -871,11 +881,11 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   telecom/travel). The harnesses reproduce across the two independent samples:
   email-policy ECE 0.061 vs 0.069 (base rate 0.876 vs 0.878, both at agreement
   1.000, both populating the empirical-zero `p=none` class); M365 DNS-only
-  corroboration ECE 0.082 vs 0.105 (the same low-DNS-visibility 0.2–0.3
+  corroboration ECE 0.082 vs 0.105 (the same low-DNS-visibility 0.2-0.3
   reliability bin on both); conformal coverage 0.986 and 1.000 (both ≥ 0.90);
   posture entropy reduction p50 1.967 vs 1.932 with the sparse tier the
   hardening signal on both. Agreement across disjoint lists is the evidence
-  the harnesses measure a property of the method, not one sample's bias — the
+  the harnesses measure a property of the method, not one sample's bias  -  the
   reproducibility column the paper rests on, beside the private-corpus tier.
   Aggregates only; the lists live outside the repo and are never committed.
 
@@ -883,7 +893,7 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   `docs/bayesian-cpt-discipline.md` gains "The priors ledger": every root
   prior with its grounding status (corpus-grounded / hand-set /
   hand-set-with-known-gap), the observed 2026-06 corpus rate where one was
-  recorded, and the elicitation reasoning — including why the documented
+  recorded, and the elicitation reasoning  -  including why the documented
   m365 (0.30 vs ~60% corpus) and aws (0.40 vs ~28% observable) gaps are
   deliberate (enterprise-skewed corpus vs arbitrary-domain stance;
   passive under-detection), with `~/.recon/priors.yaml` as the
@@ -893,7 +903,7 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
 - **CAL9: the proper scoring rule leads the calibration output.**
   `calibration_summary` (shared by the reference- and tenancy-calibration
   harnesses) now computes and prints `log_score`, the mean negative
-  log-likelihood, beside Brier and ECE — the proper scoring rule CAL9 asks
+  log-likelihood, beside Brier and ECE  -  the proper scoring rule CAL9 asks
   the memos to lead with. Clamped at 1e-6 so a confidently-wrong record
   costs ~13.8 nats instead of returning infinity (reported behaviour, not
   hidden); hand-pinned in `tests/test_reference_calibration.py`.
@@ -928,7 +938,7 @@ the highest-value ergonomics gaps. None touches the locked v2.0 JSON schema.
   Microsoft's endpoints are a two-class registry answer (presence *and* the
   documented tenant-not-found negative), while recon's passive Google channel is
   provider-*behavioral* and one-sided (it attests only an observed federated-IdP
-  redirect, never managed tenancy, no authoritative negative — managed-Workspace
+  redirect, never managed tenancy, no authoritative negative  -  managed-Workspace
   response heuristics were removed as a false-positive source). So
   `m365_tenant` is reference-calibratable with both label classes;
   `google_workspace_tenant` is not, and the dossier ledger now splits the two
@@ -4603,7 +4613,7 @@ This is the v1.9.11 step of the v1.9.4 → v2.0 linear sequence in
   sections promised in the roadmap quality bar: Defense ↔
   correlation mapping table, prior-art comparison, and
   dependency-floor manifesto. Each is anchored against the
-  existing formal model in §4–§4.8 rather than restating it.
+  existing formal model in §4-§4.8 rather than restating it.
 - **`recon doctor` schema-stability indicator.** Doctor's
   header now prints "(pre-v2.0 schema)" on v1.9.x builds and
   "(v2.0 stable schema)" on v2.0+ builds, so operators see the
@@ -7385,7 +7395,7 @@ formal model and citations in
   calibration (Beta moment-matching; Wilson approximation),
   identifiability discussion, relationship to the existing Beta
   layer, validation strategy with publicly-reproducible numbers.
-  §3 expanded to a three-layer comparison table. §4.1–4.7 trimmed
+  §3 expanded to a three-layer comparison table. §4.1-4.7 trimmed
   of repetitive boilerplate. Citations added throughout (Pearl 1988,
   Russell & Norvig, Blondel et al. 2008, Traag et al. 2019,
   Naeini et al. 2015, Jeffrey 1965, Walley 1991, etc.).
@@ -7632,7 +7642,7 @@ formal framing.
 
 ## [1.7.0] - 2026-05-03
 
-**Hardened-target signal recovery.** The first of the v1.7–v1.9 build plan
+**Hardened-target signal recovery.** The first of the v1.7-v1.9 build plan
 in [`docs/roadmap.md`](docs/roadmap.md). This release squeezes more usable
 defensive intelligence out of CT logs and resolution chains we already
 collect - every new field is a post-processing layer on existing passive
@@ -8022,7 +8032,7 @@ artifact have been smoothed in `agents/claude-code/skills/recon/SKILL.md` and
   chain rather than dumping it.
 - Full-mode headline template cites `docs/recon-schema.json` v1.0 so
   future skill editors know where the field-name contract lives.
-- Output-size guidance is concrete ("3–10 KB depending on org size")
+- Output-size guidance is concrete ("3-10 KB depending on org size")
   instead of "several KB".
 
 ## [1.4.7] - 2026-04-29
@@ -9654,7 +9664,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   block (Provider, Tenant, Auth, Cloud, Confidence), then a
   hierarchical Services section broken into seven display
   categories (Email, Identity, Cloud, Security, AI, Collaboration,
-  Other), then a compact 1–2 line High-Signal Related Domains
+  Other), then a compact 1-2 line High-Signal Related Domains
   section, then curated Insights, and - only when sources are
   actually degraded - a subtle yellow Note line. `--full`,
   `--verbose`, `--explain`, and `--domains` add additional
@@ -9687,7 +9697,7 @@ within the passive / zero-creds / zero-additional-network invariants.
 - **Compact related-domains block**. Picks up to 8 high-signal
   subdomains (prefixes `login.`, `sso.`, `auth.`, `idp.`, `api.`,
   `admin.`, `portal.`, `dashboard.`, `support.`, `status.`,
-  `app.`, `cdn.`) and displays them as a wrapped 1–2 line comma
+  `app.`, `cdn.`) and displays them as a wrapped 1-2 line comma
   list with a `(N total - M more, use --full to see all)`
   footer. The old panel's 10-entry vertical list is replaced
   entirely - it was the single biggest consumer of vertical
@@ -9854,7 +9864,7 @@ within the passive / zero-creds / zero-additional-network invariants.
 
 This release is a reliability and honesty pass driven by real-world batch
 runs across 15 diverse enterprise domains. v0.9.1 was catastrophically
-unreliable on CT-heavy targets (27–93% batch failure rate depending on
+unreliable on CT-heavy targets (27-93% batch failure rate depending on
 upstream CT provider state). v0.9.2 raises that to 100% on the same
 corpus while surfacing per-source failure reasons so users can see
 exactly what went wrong when a lookup is incomplete.
@@ -9873,7 +9883,7 @@ exactly what went wrong when a lookup is incomplete.
 
 - **Catastrophic batch timeout rate on CT-heavy domains.** The 60-second
   aggregate resolver timeout cancelled the entire pipeline when crt.sh
-  and CertSpotter both exhausted retries, producing 27–93% failure rates
+  and CertSpotter both exhausted retries, producing 27-93% failure rates
   on enterprise targets depending on upstream CT state. Raised default
   `RESOLVE_TIMEOUT` to 120 seconds and made it configurable via the
   `--timeout` CLI flag.
@@ -10107,7 +10117,7 @@ changing the core architecture.
   bottom degraded-sources note. Both now wrap cleanly with manual
   column-aware indent.
 - **Windows cp1252 Unicode crash** - the panel uses `●` confidence
-  dots, `→` arrows, `—` em-dashes, and box-drawing glyphs that
+  dots, `→` arrows, ` - ` em-dashes, and box-drawing glyphs that
   cp1252 cannot encode. On Windows terminals with the default
   codepage this crashed with `UnicodeEncodeError`. The console
   initializer now reconfigures stdout/stderr to UTF-8 with
@@ -10145,7 +10155,7 @@ changing the core architecture.
   value column.
 - **B3: panel color hierarchy for insights** - neutral insights
   render in dim so they read as a scannable secondary column below
-  the services list. `Label: value`–shaped insights get a bold-dim
+  the services list. `Label: value`-shaped insights get a bold-dim
   label with the value in normal-dim. Warnings and hedged insights
   punch through in terracotta; transitions in amber.
 - **12 new synthetic regression tests** in `tests/test_hardened_corpus.py`
@@ -10273,7 +10283,7 @@ changing the core architecture.
 - `--explain` CLI flag - shows why each insight and signal was produced, including matched evidence, fired rules, confidence derivation, and weakening conditions. Works with `--json` (adds `explanations` key), `--md` (adds Explanations section), and `--chain` (per-domain explanations).
 - Explanation module (`recon_tool/explanation.py`) - generates `ExplanationRecord` frozen dataclasses with provenance chains for signals, insights, confidence, and posture observations.
 - Enhanced YAML signal engine: `contradicts` key (negation logic - suppress signal when specific slugs are present), `requires_signals` key (meta-signals that fire when other named signals are active), `explain` field (curated human-written explanation text per signal/posture rule).
-- Enhanced YAML fingerprint engine: `match_mode: all` (AND logic - require all detections to match), detection `weight` (0.0–1.0 evidence strength per detection rule).
+- Enhanced YAML fingerprint engine: `match_mode: all` (AND logic - require all detections to match), detection `weight` (0.0-1.0 evidence strength per detection rule).
 - Two-pass signal evaluation: non-meta signals first, then meta-signals against first-pass results. Cycle prevention at load time.
 - Weighted `compute_detection_scores()` - incorporates detection weights into per-slug confidence scoring.
 - Conflict-aware merge - `MergeConflicts` frozen dataclass on `TenantInfo` tracks disagreements between sources. Surfaced in `--json` (`conflicts` key) and Rich panel (dim annotations with `--explain`).
@@ -10341,7 +10351,7 @@ changing the core architecture.
 
 ### Added
 
-- `assess_exposure` MCP tool - structured security posture summary with email/identity/infrastructure sections, hardening control inventory, and 0–100 posture score based on publicly observable controls. For defensive security posture assessment only.
+- `assess_exposure` MCP tool - structured security posture summary with email/identity/infrastructure sections, hardening control inventory, and 0-100 posture score based on publicly observable controls. For defensive security posture assessment only.
 - `find_hardening_gaps` MCP tool - identifies missing or weak security configurations with categorized gaps (email, identity, infrastructure, consistency), severity levels, and "Consider ..." recommendations. For defensive security posture assessment only.
 - `compare_postures` MCP tool - side-by-side comparison of two domains' security postures with metrics, control differences, and relative assessment. For defensive security posture assessment only.
 - `--exposure` CLI flag - runs exposure assessment from the terminal.
@@ -10471,7 +10481,7 @@ changing the core architecture.
 - `CLAUDE.md` for project context.
 - `CHANGELOG.md`, `CONTRIBUTING.md`.
 - `examples/` folder with sample JSON output and batch file (all fictional data).
-- GitHub Actions CI workflow (Python 3.10–3.13, lint, type check, tests).
+- GitHub Actions CI workflow (Python 3.10-3.13, lint, type check, tests).
 
 ### Changed
 
@@ -10496,12 +10506,12 @@ changing the core architecture.
 - Three concurrent data sources: OIDC Discovery, GetUserRealm + Autodiscover, DNS records.
 - 143 SaaS/service fingerprints in `data/fingerprints.yaml` across 14 categories.
 - Signal intelligence engine with 3-layer evaluation (single-category, cross-category composites, consistency checks).
-- Email security scoring (0–5) based on DMARC, DKIM, SPF strict, MTA-STS, BIMI.
+- Email security scoring (0-5) based on DMARC, DKIM, SPF strict, MTA-STS, BIMI.
 - Related domain auto-enrichment from CNAME breadcrumbs.
 - Custom fingerprint support via `~/.recon/fingerprints.yaml`.
 - Rich terminal output with bordered panels, colored signals, and provider detection.
 - Output formats: default panel, `--json`, `--md`, `--services`, `--full`, `--sources`.
-- Batch mode with configurable concurrency (1–20) and ordered output.
+- Batch mode with configurable concurrency (1-20) and ordered output.
 - Input normalization (URLs, schemes, www prefix, paths, whitespace).
 - SSRF protection in HTTP transport.
 - Retry with exponential backoff on 429/503 responses.

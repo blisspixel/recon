@@ -3,7 +3,7 @@
 Ingest recon `--json` output into Splunk, extract structured fields,
 and surface defensive findings as alerts. The example uses the shared
 input at `examples/sample-output.json` (Northwind Traders, a
-Microsoft fictional brand — see `examples/README.md`).
+Microsoft fictional brand  -  see `examples/README.md`).
 
 ## Ingestion mechanics
 
@@ -17,14 +17,14 @@ Recommended flow:
    alerts.
 
 No custom Python or modular input is required. recon's `--ndjson`
-emits one JSON document per line — a shape Splunk's `INDEXED_EXTRACTIONS=json`
+emits one JSON document per line  -  a shape Splunk's `INDEXED_EXTRACTIONS=json`
 ingests natively.
 
 ## Field mapping
 
 Splunk's default JSON ingestion auto-extracts every top-level
 recon field into a Splunk event field of the same name. The
-following are the mappings most defenders need to know — the
+following are the mappings most defenders need to know  -  the
 columns name a recon JSON path, the Splunk field it lands in,
 and the use case that field supports.
 
@@ -36,10 +36,10 @@ and the use case that field supports.
 | `display_name` | `display_name` | Human-readable tenant label in dashboards |
 | `provider` | `provider` | Filter to M365 vs Google Workspace vs other |
 | `confidence` | `confidence` | Drives severity mapping (see below) |
-| `auth_type` | `auth_type` | `Federated` vs `Managed` — federation discovery |
+| `auth_type` | `auth_type` | `Federated` vs `Managed`  -  federation discovery |
 | `dmarc_policy` | `dmarc_policy` | Track DMARC enforcement drift (`reject` → `quarantine` regressions) |
-| `email_security_score` | `email_security_score` | 0–5 composite score for trend dashboards |
-| `services` | `services{}` (mv field) | Shadow-IT alerting — fire on new entries |
+| `email_security_score` | `email_security_score` | 0-5 composite score for trend dashboards |
+| `services` | `services{}` (mv field) | Shadow-IT alerting  -  fire on new entries |
 | `slugs` | `slugs{}` (mv field) | Machine-readable counterpart of `services` |
 | `cloud_instance` | `cloud_instance` | Sovereignty drift (`microsoftonline.com` vs `.us`) |
 | `insights` | `insights{}` (mv field) | Pre-computed defensive narrative |
@@ -69,7 +69,7 @@ This mapping is deliberately **inverted from intuition**: a *high*
 recon confidence means we observed strong public-signal evidence,
 which is a *low*-severity alert because the operator's defensive
 posture is well-characterized. A *low* confidence on a hardened
-target is the higher-severity signal — it tells the operator their
+target is the higher-severity signal  -  it tells the operator their
 hardening is working, and unusual new shadow-IT entries appearing
 under low confidence deserve more scrutiny.
 
@@ -101,7 +101,7 @@ index=recon sourcetype=recon:lookup
 > baseline slug containing regex metacharacters such as `.*`
 > would match any `current_slug` and silently suppress the alert.
 > `in()` inside `mvfilter()` compares literal values element by
-> element — no regex semantics — and is the right primitive for
+> element  -  no regex semantics  -  and is the right primitive for
 > set-membership tests against arbitrary identifier strings.
 
 ### DMARC drift
@@ -132,11 +132,11 @@ index=recon sourcetype=recon:lookup
 
 ## Files in this directory
 
-- `props.conf` — Splunk sourcetype definition. Drop into
+- `props.conf`  -  Splunk sourcetype definition. Drop into
   `$SPLUNK_HOME/etc/system/local/` (or `apps/<your-app>/local/`).
-- `savedsearches.conf` — three example saved searches matching the
+- `savedsearches.conf`  -  three example saved searches matching the
   use cases above. Adjust schedules and `actions` to taste.
-- `expected-splunk-event.json` — what a Splunk event looks like
+- `expected-splunk-event.json`  -  what a Splunk event looks like
   after `props.conf` extraction, given the
   `examples/sample-output.json` input. This is the contract the CI
   test verifies.

@@ -1,6 +1,6 @@
 # Agent integrations
 
-Per-agent install scaffolds for AI clients. Each subfolder is self-contained — pick the one that matches your agent and follow that folder's README.
+Per-agent install scaffolds for AI clients. Each subfolder is self-contained - pick the one that matches your agent and follow that folder's README.
 
 ## Quickest path: `recon mcp install`
 
@@ -13,9 +13,9 @@ recon mcp install --client=cursor --dry-run            # preview the plan
 recon mcp install --client=kiro --scope=workspace      # project-local instead of user-global
 ```
 
-The install is idempotent and merge-safe — sibling MCP servers and any extra fields you've added to the recon block (custom `env`, `autoApprove` entries, `disabled` flags) all survive a `--force` rerun. Writes are atomic, so a failure mid-write never leaves you with a truncated config.
+The install is idempotent and merge-safe - sibling MCP servers and any extra fields you've added to the recon block (custom `env`, `autoApprove` entries, `disabled` flags) all survive a `--force` rerun. Writes are atomic, so a failure mid-write never leaves you with a truncated config.
 
-That handles **piece 1** of the setup (the MCP server). Per-client folders below still cover **piece 2** (the agent guidance — when and how the client should reach for recon) and per-client gotchas.
+That handles **piece 1** of the setup (the MCP server). Per-client folders below still cover **piece 2** (the agent guidance - when and how the client should reach for recon) and per-client gotchas.
 
 ## Folders
 
@@ -33,8 +33,8 @@ For Claude Desktop and other clients without a folder here, `recon mcp install -
 
 Every supported agent has the same two things to wire:
 
-1. **The MCP server** — so the AI can call recon. JSON snippet, dropped at the client's MCP config path.
-2. **The agent guidance** — so the AI knows *when* to reach for recon and *how* to talk about its output. Different clients support this differently:
+1. **The MCP server** - so the AI can call recon. JSON snippet, dropped at the client's MCP config path.
+2. **The agent guidance** - so the AI knows *when* to reach for recon and *how* to talk about its output. Different clients support this differently:
 
 | Client | Guidance format | Loads when |
 |---|---|---|
@@ -46,8 +46,8 @@ Every supported agent has the same two things to wire:
 
 The guidance content itself is the same in every case. We maintain it in two mirrored files:
 
-- [`agents/claude-code/skills/recon/SKILL.md`](claude-code/skills/recon/SKILL.md) — the body, with skill-format frontmatter for Claude Code and Kiro auto-loading.
-- [`AGENTS.md`](../AGENTS.md) at the repo root — the same body, no frontmatter, for tools that don't have a skill format. Auto-detected by Kiro and other agents.md-aware clients.
+- [`agents/claude-code/skills/recon/SKILL.md`](claude-code/skills/recon/SKILL.md) - the body, with skill-format frontmatter for Claude Code and Kiro auto-loading.
+- [`AGENTS.md`](../AGENTS.md) at the repo root - the same body, no frontmatter, for tools that don't have a skill format. Auto-detected by Kiro and other agents.md-aware clients.
 
 If you contribute changes to one, mirror them into the other.
 
@@ -55,7 +55,7 @@ If you contribute changes to one, mirror them into the other.
 
 Cursor, Windsurf, VS Code, and Claude Desktop are GUI Electron apps. On macOS they do not inherit your shell's PATH, so `command: "recon"` will fail to launch the MCP server even when `recon` works fine in your terminal.
 
-Two fixes — both apply equally to every shipped `mcp.json`:
+Two fixes - both apply equally to every shipped `mcp.json`:
 
 1. **Use the absolute path to recon.** Run `which recon` in your shell and substitute the full path:
    ```json
@@ -80,7 +80,7 @@ If the client reports the recon MCP server is connected and tools enumerate, you
 
 - Is `recon-tool` installed in the same Python environment the client launches?
 - Does `recon doctor --mcp` succeed in your shell? (Static-shape check.)
-- Does `recon mcp doctor` succeed? (Live JSON-RPC handshake — catches subprocess-level failures the static check can't see.)
+- Does `recon mcp doctor` succeed? (Live JSON-RPC handshake - catches subprocess-level failures the static check can't see.)
 - Are you hitting the macOS GUI PATH issue above?
 
 For deeper troubleshooting, the full MCP reference lives in [`docs/mcp.md`](../docs/mcp.md).

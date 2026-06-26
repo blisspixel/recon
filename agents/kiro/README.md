@@ -1,6 +1,6 @@
-# recon — Kiro install
+# recon - Kiro install
 
-Two pieces wire recon into [Kiro](https://kiro.dev/): the MCP server (so Kiro can call recon) and the agent guidance (so Kiro knows *when* to use it). Kiro auto-loads agent skills using the [agentskills.io](https://agentskills.io) standard — the same `SKILL.md` format Claude Code uses — so the same skill body works in both places.
+Two pieces wire recon into [Kiro](https://kiro.dev/): the MCP server (so Kiro can call recon) and the agent guidance (so Kiro knows *when* to use it). Kiro auto-loads agent skills using the [agentskills.io](https://agentskills.io) standard - the same `SKILL.md` format Claude Code uses - so the same skill body works in both places.
 
 ## What's inside
 
@@ -17,7 +17,7 @@ pip install recon-tool
 recon doctor --mcp
 ```
 
-Other forms (`uv tool install`, `uvx`) work too — see [`docs/mcp.md`](../../docs/mcp.md#cli-install-options).
+Other forms (`uv tool install`, `uvx`) work too - see [`docs/mcp.md`](../../docs/mcp.md#cli-install-options).
 
 ## 2. Wire the MCP server
 
@@ -42,7 +42,7 @@ The shipped config sets `command: "recon"`. If `recon` is not on Kiro's launcher
 
 ## 3. Wire the agent guidance
 
-**Recommended path — Kiro Skills.** Kiro auto-loads `SKILL.md` files based on the description frontmatter. Copy the canonical skill body in:
+**Recommended path - Kiro Skills.** Kiro auto-loads `SKILL.md` files based on the description frontmatter. Copy the canonical skill body in:
 
 ```bash
 # Workspace scope
@@ -54,9 +54,9 @@ mkdir -p ~/.kiro/skills/recon
 cp ../claude-code/skills/recon/SKILL.md ~/.kiro/skills/recon/SKILL.md
 ```
 
-Skills load on-demand when the description matches the user's intent — lower context overhead than steering files.
+Skills load on-demand when the description matches the user's intent - lower context overhead than steering files.
 
-**Alternative — steering files.** If you'd rather load guidance always (not on-demand), drop [`AGENTS.md`](../../AGENTS.md) at your workspace root. Kiro auto-detects it. This is heavier than skills for general-purpose workspaces but fine when recon is the main tool.
+**Alternative - steering files.** If you'd rather load guidance always (not on-demand), drop [`AGENTS.md`](../../AGENTS.md) at your workspace root. Kiro auto-detects it. This is heavier than skills for general-purpose workspaces but fine when recon is the main tool.
 
 ## Verifying the install
 

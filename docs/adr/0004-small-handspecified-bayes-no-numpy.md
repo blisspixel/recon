@@ -15,7 +15,7 @@ dependency for a problem that doesn't need it.
 ## Decision
 
 We will use a **small, hand-specified discrete Bayesian network** (nine binary
-nodes) with **exact variable-elimination inference in pure Python — no numpy,
+nodes) with **exact variable-elimination inference in pure Python - no numpy,
 scipy, or ML**. CPT values are directionally-accurate, corpus-grounded estimates
 documented in a priors ledger, with the credible interval carrying the residual
 uncertainty; they are not learned and not precise to many decimals.

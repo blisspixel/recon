@@ -1,4 +1,4 @@
-# v1.9.9 — trigger threshold sensitivity analysis
+# v1.9.9  -  trigger threshold sensitivity analysis
 
 **Corpus:** 19 fixtures from `validation/synthetic_corpus/results.json`.
 

@@ -15,7 +15,7 @@ This file records the license obligations that warrant a human-readable notice.
 
 The following runtime dependency is licensed under the MPL-2.0:
 
-- **publicsuffixlist** — Public Suffix List lookup, used to reduce a lookup
+- **publicsuffixlist**  -  Public Suffix List lookup, used to reduce a lookup
   target to its registrable apex (eTLD+1).
   - Author: ko-zu (`causeless@gmail.com`)
   - Source: https://github.com/ko-zu/psl
@@ -28,7 +28,7 @@ code. If you redistribute recon together with this dependency, the MPL-2.0
 source-availability obligation is satisfied by the upstream source link above
 (and by the package's own sdist on PyPI). Should recon ever modify and
 redistribute MPL-2.0-covered files directly, those modified files would need to
-remain under MPL-2.0 — recon does not currently do this.
+remain under MPL-2.0  -  recon does not currently do this.
 
 ## Other dependencies
 

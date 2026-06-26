@@ -1,4 +1,4 @@
-# v1.9.9 — distinct invariant audit and remediation plan
+# v1.9.9  -  distinct invariant audit and remediation plan
 
 The v1.9.9 ship report quotes "167 new tests across 20 files." A
 rigorous review correctly notes that test count is not test
@@ -120,7 +120,7 @@ matter), each invariant is counted separately.
 |---|---|
 | Zero cloud vendors → rollup never fires | `test_catalog_driven_corpus.py::TestMultiCloudInvariantsOnCatalogInputs` |
 | Two+ distinct vendors → rollup always fires | same |
-| Catalog-categorized inputs that miss the order tuple do not crash render | (caught a real bug — `Data & Analytics` was missing from `_SERVICE_CATEGORIES_ORDER`; fixed) |
+| Catalog-categorized inputs that miss the order tuple do not crash render | (caught a real bug  -  `Data & Analytics` was missing from `_SERVICE_CATEGORIES_ORDER`; fixed) |
 
 ## Total distinct invariants: 51
 
@@ -152,7 +152,7 @@ shape or documents the divergence.
 
 **Status:** hand-rolled mutation library covers six named
 mutations; cosmic-ray pilot was attempted but interrupted.
-**Remediation milestone:** v2.0 schema lock — full cosmic-ray sweep
+**Remediation milestone:** v2.0 schema lock  -  full cosmic-ray sweep
 on formatter.py (and ideally bayesian.py) via a Linux CI workflow
 (config authored at sweep time, not committed in advance). Document
 surviving mutants and either kill them with new tests or explicitly
@@ -202,7 +202,7 @@ distribution shift
 **Status:** v1.9.9 wordlist additions widen the slug-collection
 surface, which changes the evidence distribution flowing into the
 network. The calibration was last validated at v1.9.6.
-**Remediation milestone:** v1.9.10 — re-run the v1.9.5 stability
+**Remediation milestone:** v1.9.10  -  re-run the v1.9.5 stability
 checks with the v1.9.9 wordlist additions in place. Document
 whether per-node firing counts shift, whether the corpus exposure
 threshold (criterion (c)) for `okta_idp` improves, and whether

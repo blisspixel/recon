@@ -4,75 +4,89 @@ Project docs live here. Repository-root files stay at the root only when
 tooling expects them there: `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
 `SECURITY.md`, and `LICENSE`.
 
-## Start Here
+The docs are organized by reader need:
 
-First read: what recon is, why it works this way, and what it promises.
+- Start with orientation when you are new.
+- Use how-to guides when you have a task.
+- Use reference pages when you need a contract.
+- Use explanation pages when you need the model, rationale, or assurance story.
+
+## Start Here
 
 | Need | Read |
 |---|---|
-| Product scope and next work | [roadmap.md](roadmap.md) |
-| When to use a rule vs agent judgment (read before adding either) | [agentic-balance.md](agentic-balance.md) |
-| Why correlation works the way it does | [correlation.md](correlation.md) |
-| Known passive-collection limits | [limitations.md](limitations.md) |
-| Sparse or thin-looking results | [weak-areas.md](weak-areas.md) |
-| CLI/API stability guarantees | [stability.md](stability.md) |
-| Release checklist and tag flow | [release-process.md](release-process.md) |
+| First overview | [../README.md](../README.md) |
+| Install, update, uninstall, and first commands | [getting-started.md](getting-started.md) |
+| Current plan and project boundaries | [roadmap.md](roadmap.md) |
+| What recon can and cannot see | [limitations.md](limitations.md) |
+| Rules versus agent judgment | [agentic-balance.md](agentic-balance.md) |
 
-## Using recon
+## How-To Guides
 
-Operating recon day to day: output formats, the MCP server, cohorts, upgrades.
-
-| Topic | Read |
+| Task | Read |
 |---|---|
-| MCP server setup and tool list | [mcp.md](mcp.md) |
-| JSON output contract | [schema.md](schema.md) |
-| Automation parser examples for JSON modes | [automation-examples.md](automation-examples.md) |
+| Wire recon into an MCP client | [mcp.md](mcp.md) |
+| Consume JSON safely in scripts | [automation-examples.md](automation-examples.md) |
+| Upgrade from v1.x to v2.0 | [migration-v2.md](migration-v2.md) |
+| Run maintainer validation safely | [maintainer-validation.md](maintainer-validation.md) |
+| Use the maintainer loop contract | [maintainer-loop-runbook.md](maintainer-loop-runbook.md) |
+| Cut and verify a release | [release-process.md](release-process.md) |
+
+## Reference
+
+| Contract | Read |
+|---|---|
+| JSON output schema | [schema.md](schema.md) |
+| Machine-readable JSON Schema | [recon-schema.json](recon-schema.json) |
 | Generated CLI command and flag reference | [cli-surface.md](cli-surface.md) |
-| Derived CLI/MCP/schema and maintainer context-packet inventory | [surface-inventory.json](surface-inventory.json) |
-| Cohort summaries across many domains | [aggregate-state.md](aggregate-state.md) |
-| Upgrading from v1.x to v2.0 | [migration-v2.md](migration-v2.md) |
+| Generated CLI, MCP, schema, and maintainer context inventory | [surface-inventory.json](surface-inventory.json) |
+| Runtime timeouts, caps, cache, and exit codes | [operational-contract.md](operational-contract.md) |
+| Stable surfaces and SemVer policy | [stability.md](stability.md) |
+| Fingerprint schema | [fingerprints.md](fingerprints.md) |
+| Signal schema | [signals.md](signals.md) |
+| Cohort-summary output | [aggregate-state.md](aggregate-state.md) |
+
+`cli-surface.md`, `surface-inventory.json`, and
+`recon://surface-inventory` are generated discovery context, not stable runtime
+contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
+
+## Explanation and Assurance
+
+| Topic | Read |
+|---|---|
+| Plain-language model overview | [how-it-works.md](how-it-works.md) |
+| Formal correlation and Bayesian model | [correlation.md](correlation.md) |
+| Known weak areas and conservative wording | [weak-areas.md](weak-areas.md) |
+| Security threat model | [security.md](security.md) |
+| Audit-ready claim to mechanism to test map | [assurance-case.md](assurance-case.md) |
+| Traceability matrix | [traceability-matrix.md](traceability-matrix.md) |
+| Statistical-assurance dossier | [statistical-assurance.md](statistical-assurance.md) |
+| Supply-chain and release integrity | [supply-chain.md](supply-chain.md) |
+| Data-handling policy | [data-handling-policy.md](data-handling-policy.md) |
+| Legal and query-exposure notes | [legal.md](legal.md) |
 | Performance expectations | [performance.md](performance.md) |
-| Intended-use and query exposure | [legal.md](legal.md) |
 
-## Trust and assurance
-
-For anyone evaluating recon as a primitive to build on.
+## Research
 
 | Topic | Read |
 |---|---|
-| Engineering threat model | [security.md](security.md) |
-| Auditable claim → mechanism → test → residual | [assurance-case.md](assurance-case.md) |
-| Runtime contract (timeouts, caps, exit codes, determinism) | [operational-contract.md](operational-contract.md) |
-| Release integrity (reproducible, signed, attested builds) | [supply-chain.md](supply-chain.md) |
-| Keeping the model honest over time (maintainer loop + drift gate) | [maintainer-validation.md](maintainer-validation.md) |
-| Optional maintainer loop contracts and gates | [maintainer-loop-runbook.md](maintainer-loop-runbook.md) |
-| Requirements-and-invariants map, machine-checked in CI | [traceability-matrix.md](traceability-matrix.md) |
-| What may and may not enter the public repo (data-handling policy) | [data-handling-policy.md](data-handling-policy.md) |
-| What each number is backed by (observed / consistency / evidence-responsive / coverage) | [statistical-assurance.md](statistical-assurance.md) |
+| Related work and positioning | [related-work.md](related-work.md) |
+| Paper outline | [paper-outline.md](paper-outline.md) |
+| Paper draft | [paper-draft.md](paper-draft.md) |
+| Bayesian CPT discipline | [bayesian-cpt-discipline.md](bayesian-cpt-discipline.md) |
+| ADR index | [adr/README.md](adr/README.md) |
 
-## Research and theory
-
-The aspirational write-up and where recon sits in the literature.
+## Contributing
 
 | Topic | Read |
 |---|---|
-| Why correlation works the way it does (the formal model) | [correlation.md](correlation.md) |
-| Calibration without observable ground truth (literature positioning) | [related-work.md](related-work.md) |
-| The paper skeleton and experiment inventory | [paper-outline.md](paper-outline.md) |
-| The paper draft (prose expansion of the outline) | [paper-draft.md](paper-draft.md) |
-
-## Extending recon
-
-For contributors: the fingerprint catalog, derived signals, and the workflow.
-
-| Topic | Read |
-|---|---|
-| Fingerprint schema and testing | [fingerprints.md](fingerprints.md) |
-| Derived signal rules | [signals.md](signals.md) |
 | Contribution workflow | [../CONTRIBUTING.md](../CONTRIBUTING.md) |
+| Engineering practices | [engineering-practices.md](engineering-practices.md) |
 | Local validation workspace | [../validation/README.md](../validation/README.md) |
+| Agent integration scaffolds | [../agents/README.md](../agents/README.md) |
 
 ## What Not To Put Here
 
-Live validation corpora, real-company result JSON, and generated summaries stay
-under `validation/` as ignored local artifacts. Do not move them into `docs/`.
+Live validation corpora, real-company result JSON, and generated private-run
+summaries stay under gitignored validation workspaces. Do not move them into
+`docs/`.

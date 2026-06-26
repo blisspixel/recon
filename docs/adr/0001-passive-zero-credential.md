@@ -7,16 +7,16 @@
 
 recon answers "what does a domain's public surface reveal" for defensive review.
 It could go deeper with active probing (port scans, login attempts) or
-credentialed/paid data sources — but those change what the tool *is*: they cross
+credentialed/paid data sources - but those change what the tool *is*: they cross
 into intrusive territory, require trust and secrets, and make results
 unreproducible by an outside reader. The product is trust, and for a security
 tool aimed at defenders the collection method is part of the trust claim.
 
 ## Decision
 
-We will collect **only** from passive, public, unauthenticated channels — DNS,
+We will collect **only** from passive, public, unauthenticated channels - DNS,
 certificate-transparency logs, and providers' own unauthenticated identity
-endpoints — with **zero credentials**, **no active scanning**, and **no paid
+endpoints - with **zero credentials**, **no active scanning**, and **no paid
 APIs or bundled intelligence databases**. The tool is a reducer over what the
 public channel reveals, not an intelligence store.
 

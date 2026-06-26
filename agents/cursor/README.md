@@ -1,6 +1,6 @@
-# recon — Cursor install
+# recon - Cursor install
 
-Two pieces wire recon into [Cursor](https://cursor.com/): the MCP server (so Cursor can call recon) and the agent guidance (so Cursor knows *when* to use it). Cursor reads `.cursor/rules/*.md` files with frontmatter — those drive when the rule applies.
+Two pieces wire recon into [Cursor](https://cursor.com/): the MCP server (so Cursor can call recon) and the agent guidance (so Cursor knows *when* to use it). Cursor reads `.cursor/rules/*.md` files with frontmatter - those drive when the rule applies.
 
 ## What's inside
 
@@ -17,7 +17,7 @@ pip install recon-tool
 recon doctor --mcp
 ```
 
-Other forms (`uv tool install`, `uvx`) work too — see [`docs/mcp.md`](../../docs/mcp.md#cli-install-options).
+Other forms (`uv tool install`, `uvx`) work too - see [`docs/mcp.md`](../../docs/mcp.md#cli-install-options).
 
 ## 2. Wire the MCP server
 
@@ -42,11 +42,11 @@ The install merges into existing `mcpServers` without touching siblings; `--forc
 
 ## 3. Wire the agent guidance
 
-Cursor reads [`.cursor/rules/*.md`](https://docs.cursor.com/context/rules) at the project root. The canonical recon guidance lives in [`AGENTS.md`](../../AGENTS.md) — drop its content into a rule file with the appropriate frontmatter:
+Cursor reads [`.cursor/rules/*.md`](https://docs.cursor.com/context/rules) at the project root. The canonical recon guidance lives in [`AGENTS.md`](../../AGENTS.md) - drop its content into a rule file with the appropriate frontmatter:
 
 ```markdown
 ---
-description: Passive domain intelligence — Microsoft 365 / Google Workspace tenant identification, email security configuration (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting from DNS, certificate-transparency findings, related-domain discovery. Use when a domain name appears alongside phrases like "what does <company> use", "tenant", "DMARC", "email security posture", "SaaS stack", "fingerprint", "passive recon", or "vendor diligence".
+description: Passive domain intelligence - Microsoft 365 / Google Workspace tenant identification, email security configuration (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting from DNS, certificate-transparency findings, related-domain discovery. Use when a domain name appears alongside phrases like "what does <company> use", "tenant", "DMARC", "email security posture", "SaaS stack", "fingerprint", "passive recon", or "vendor diligence".
 globs:
 alwaysApply: false
 ---
@@ -54,7 +54,7 @@ alwaysApply: false
 <!-- Paste the body of AGENTS.md below this line. -->
 ```
 
-Save as `.cursor/rules/recon.md`. Cursor surfaces it on-demand when the description matches the user's intent — lighter than `alwaysApply: true`.
+Save as `.cursor/rules/recon.md`. Cursor surfaces it on-demand when the description matches the user's intent - lighter than `alwaysApply: true`.
 
 ## Verifying the install
 

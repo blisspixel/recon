@@ -9,7 +9,7 @@ allowed-tools: Bash(recon:*), Read, Edit, Write
 
 The companion skill to `recon`. The base `recon` skill gives you what an apex
 *has*; this skill gives you the long tail of what an apex's *subdomains* point
-at — and proposes catalog additions when those CNAME chains hit something
+at - and proposes catalog additions when those CNAME chains hit something
 recon doesn't yet recognize.
 
 ## When to use this
@@ -27,7 +27,7 @@ If they just want to look up a domain (not extend the catalog), use the base
 
 ## Inputs you accept
 
-The skill works at three different scales — pick whichever the user asks for:
+The skill works at three different scales - pick whichever the user asks for:
 
 **A. Single domain (incidental discovery during normal use):**
 ```
@@ -48,7 +48,7 @@ contains pre-bucketed `{suffix, count, samples}` entries.
 Triage candidates.json
 ```
 Same shape as (B), but pre-filtered: already-fingerprinted patterns dropped,
-intra-org chains dropped, low-count noise dropped. The cleanest input —
+intra-org chains dropped, low-count noise dropped. This is the cleanest input:
 every entry is worth your judgment.
 
 ## Triage rubric
@@ -56,28 +56,28 @@ every entry is worth your judgment.
 For each candidate (single chain or suffix bucket), classify into one of
 five outcomes:
 
-1. **Real third-party SaaS** — a recognizable product (Auth0, HubSpot, Sentry,
+1. **Real third-party SaaS** - a recognizable product (Auth0, HubSpot, Sentry,
    etc.). The terminal hostname or its zone identifies the vendor. **Action:**
    propose a `cname_target` fingerprint stanza (see schema below).
 
-2. **Generic infrastructure / CDN / cloud** — Akamai, Fastly, CloudFront, or
+2. **Generic infrastructure / CDN / cloud** - Akamai, Fastly, CloudFront, or
    similar. **Action:** if the pattern isn't already in `surface.yaml`,
    propose an entry with `tier: infrastructure`. Otherwise note "already
    covered" and skip.
 
-3. **Intra-org self-reference** — the chain stays inside the organization's
+3. **Intra-org self-reference** - the chain stays inside the organization's
    own brand zone (different TLD or sibling brand). Common for big enterprises
    (e.g. ``contoso.com → gslb-contoso.com``, ``contoso.co.uk → eglb.contoso.co.uk``).
    **Action:** drop. Don't fingerprint internal CDN patterns. Note this in
    your triage summary so the user knows it was intentionally skipped.
 
-4. **Niche or one-off** — count is 1 across the corpus, hostname looks
+4. **Niche or one-off** - count is 1 across the corpus, hostname looks
    bespoke (e.g., a single customer's vanity vendor relationship).
    **Action:** record as a "see-once" candidate but do NOT propose a
    fingerprint. The threshold for inclusion is "would another user ever hit
-   this pattern?" — niche one-offs fail that test.
+   this pattern?" - niche one-offs fail that test.
 
-5. **Unclear** — can't tell from the hostname alone whether it's SaaS or
+5. **Unclear** - can't tell from the hostname alone whether it's SaaS or
    private. **Action:** flag for the user with the chain and a question. Do
    NOT guess and propose a fingerprint without confirmation.
 
@@ -107,7 +107,7 @@ Critical rules for the pattern:
   case-insensitive substring match against every CNAME hop, so an
   over-broad pattern will fire on anything in that zone.
 - **Prefer the service-specific subzone.** `customer.io` and `bnc.lt` (Branch)
-  are good — the whole domain is owned by the SaaS. For multi-tenant SaaS
+  are good - the whole domain is owned by the SaaS. For multi-tenant SaaS
   zones, drop the customer prefix: `myshopify.com` is correct (every Shopify
   store is `<store>.myshopify.com`); `gymshark.myshopify.com` would be wrong.
 - **Tier classification.** Application = the SaaS or product (Auth0, Shopify,
@@ -146,12 +146,12 @@ Business Apps).
 
 Produce a single response in this shape:
 
-1. **Summary** — one line per candidate with its triage verdict.
-2. **Proposed surface.yaml additions** — full YAML stanzas, one per fingerprint.
-3. **Proposed formatter category mappings** — Python dict entries.
-4. **Skipped** — list of candidates dropped with the reason (intra-org,
+1. **Summary** - one line per candidate with its triage verdict.
+2. **Proposed surface.yaml additions** - full YAML stanzas, one per fingerprint.
+3. **Proposed formatter category mappings** - Python dict entries.
+4. **Skipped** - list of candidates dropped with the reason (intra-org,
    niche one-off, already covered, unclear).
-5. **Verification command** — the exact `recon <domain>` invocation the user
+5. **Verification command** - the exact `recon <domain>` invocation the user
    should run to confirm the new fingerprint fires correctly.
 
 Keep the response action-ready. The user should be able to apply your YAML
@@ -176,9 +176,9 @@ You read the file. Suppose it contains:
 Your response:
 
 > **Summary**
-> - `stspg-customer.com` (16x): real SaaS — Atlassian Statuspage hosted endpoint. Propose extending the existing `statuspage` slug.
-> - `rootly.com` (1x): real SaaS but one-off in this corpus — flag for revisit, do not fingerprint yet.
-> - `gslb.example.com` (8x): intra-org self-reference (same brand) — skip.
+> - `stspg-customer.com` (16x): real SaaS - Atlassian Statuspage hosted endpoint. Propose extending the existing `statuspage` slug.
+> - `rootly.com` (1x): real SaaS but one-off in this corpus - flag for revisit, do not fingerprint yet.
+> - `gslb.example.com` (8x): intra-org self-reference (same brand) - skip.
 >
 > **Proposed surface.yaml additions:**
 > ```yaml
@@ -193,11 +193,11 @@ Your response:
 >     description: Atlassian Statuspage customer CNAME endpoint
 > ```
 >
-> **Proposed formatter category mapping:** none — `statuspage` already maps to Collaboration.
+> **Proposed formatter category mapping:** none - `statuspage` already maps to Collaboration.
 >
 > **Skipped:**
-> - `rootly.com` — niche, count 1
-> - `gslb.example.com` — intra-org
+> - `rootly.com` - niche, count 1
+> - `gslb.example.com` - intra-org
 >
 > **Verification:** `recon cache clear --all && recon <one-of-the-status-page-domains> --full` should now show the subdomain in the External surface section attributed to "Statuspage (Atlassian)".
 
@@ -211,7 +211,7 @@ Your response:
   the service. Pattern-tightening is harder than pattern-expanding once
   shipped.
 - Apex-side fingerprints. This skill only writes `cname_target` rules. TXT,
-  MX, SPF, etc. are out of scope — use the broader contributor flow for those.
+  MX, SPF, etc. are out of scope - use the broader contributor flow for those.
 
 ## Gotchas
 

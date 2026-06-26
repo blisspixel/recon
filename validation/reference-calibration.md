@@ -130,7 +130,7 @@ informative-absence rule read the domain as *disconfirmed* ("no DMARC
 published"), contaminating the residual with the very record the label is
 made from. The mask suppresses both directions, so the residual predictor
 sees only the strict-SPF and MTA-STS channel and the DMARC record serves
-purely as the label — predictor and label disjoint by construction.
+purely as the label  -  predictor and label disjoint by construction.
 
 Two things to expect from the run, so the numbers are read honestly:
 

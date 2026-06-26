@@ -67,6 +67,29 @@ boundary-aware hostname matching for Google identity routing and IdP display
 names, plus Exchange Online DKIM attribution by hostname suffix). The roadmap
 says the next work is dependency-ordered, not date-driven.
 
+## Documentation Refresh
+
+The live documentation now separates first-run orientation from durable
+reference material:
+
+- `README.md` is the concise front door: product scope, install, first command,
+  common CLI shapes, JSON and MCP pointers, limitations, docs map, and
+  development gates.
+- `docs/getting-started.md` owns install, update, uninstall, PATH notes, input
+  normalization, output modes, batch, delta, MCP setup, and shell completion.
+- `docs/how-it-works.md` owns the plain-language explanation of sources,
+  normalization, slugs, signals, graph structure, Bayesian posteriors,
+  provenance, caching, and non-inferences.
+- `docs/README.md` is reorganized by reader need: start here, how-to guides,
+  reference, explanation and assurance, research, and contributing.
+- `docs/roadmap.md` is now a current-plan and invariant document, with shipped
+  history delegated to `CHANGELOG.md` and `docs/roadmap-history.md`.
+
+The refresh follows the current documentation-architecture pattern of keeping
+orientation, how-to, reference, and explanation separate. It also keeps
+changelog and version policy aligned with Keep a Changelog and Semantic
+Versioning. No runtime behavior changed.
+
 ## Schema Generator Drift Gate
 
 The schema-generation backlog is now closed for the top-level JSON contract.

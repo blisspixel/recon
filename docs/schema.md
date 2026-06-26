@@ -474,13 +474,13 @@ array when fusion runs (empty array otherwise).
 
 One evidence unit's exact leave-one-out influence on the node's posterior:
 the engine re-runs exact inference with the unit masked as *structurally
-unobserved* (not "observed to be absent" — the distinction matters on the
+unobserved* (not "observed to be absent" - the distinction matters on the
 declarative policy node) and reports the counterfactual. The mask is global
 across the DAG, so `posterior_without` reflects everything else still
 observed, including support flowing from other nodes' evidence through the
 CPTs. This is an evidence counterfactual over the model, never a causal
 claim about the world, and the deltas are individually exact but **not
-additive** — units interact through the DAG.
+additive** - units interact through the DAG.
 
 | Field | Type | Description |
 |---|---|---|
