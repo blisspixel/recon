@@ -308,7 +308,8 @@ can read
 `recon://surface-inventory` MCP resource. Both generated artifacts are produced
 by `scripts/generate_surface_inventory.py`, and `scripts/check.py` enforces that
 they stay current. They are derived drift guards and discovery context, not
-stable runtime API contracts.
+stable runtime API contracts. The promotion gate for making any subset stable is
+captured in [`ADR-0007`](docs/adr/0007-surface-inventory-discovery-context.md).
 
 ## Limitations
 

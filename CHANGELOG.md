@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Schema generator drift gate.** `scripts/generate_schema.py --check` now
   verifies both published JSON Schema copies against code-owned required-field
   metadata and explicit conditional-field metadata, and CI enforces it.
+- **Surface-inventory promotion decision.** ADR-0007 keeps
+  `docs/surface-inventory.json` and `recon://surface-inventory` as generated
+  discovery context, with a concrete-consumer gate before any 2.3 stable subset.
 
 ### Changed
 

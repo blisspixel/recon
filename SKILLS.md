@@ -63,6 +63,9 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - When a drift guard is a stepping stone toward generation, add a JSON report
   mode so maintainers can inspect the guard's source map and intentional
   omissions without parsing prose output.
+- For generated JSON artifacts with established hand-edited formatting, make
+  `--check` compare parsed objects and require an explicit `--write` for file
+  rewrites. This gives a real drift gate without formatting churn.
 - When aggregating observations across multiple DNS records of the same type,
   preserve monotonic state such as maxima and sets instead of overwriting with
   whichever record was returned last.

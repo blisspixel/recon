@@ -33,10 +33,11 @@ standing, in dependency order:
    `ext-sq.squarespace.com`. The remaining private aggregate candidates are held
    for later review because they are target-owned, generic platform internals,
    unclear, deprecated, or not yet backed by stable public vendor docs.
-3. **Surface-inventory promotion decision.** *Why:* `surface-inventory.json` is
-   already generated and drift-gated as discovery context. It only graduates to
-   a 2.3 *stable surface* if a concrete consumer needs machine-readable fields
-   beyond best-effort local discovery; until then it stays patch-level.
+3. **Surface-inventory promotion decision.** *Done 2026-06-26:* ADR-0007 keeps
+   `surface-inventory.json` and `recon://surface-inventory` as generated
+   discovery context, not a stable runtime API contract. It only graduates to a
+   2.3 stable subset if a concrete external consumer needs compatibility
+   guarantees beyond best-effort local discovery.
 4. **arXiv write-up** (aspirational, off the critical path). *Why:* packages the
    existing rigor for an outside reader within the no-real-data publication rule.
 
@@ -334,9 +335,10 @@ What remains is dependency-ordered work with no calendar estimates:
    packet, and CI checks it for drift. `recon://surface-inventory` now exposes
    the same generated snapshot as a local no-network MCP resource for agents
    that cannot read repository files.
-   Keep it patch-level while it remains derived discovery context. Promote it to
-   a 2.3 contract only if a concrete consumer needs stable machine-readable
-   fields beyond best-effort local discovery.
+   Done 2026-06-26: ADR-0007 keeps it patch-level while it remains derived
+   discovery context. Promote only the smallest useful subset to a 2.3 contract
+   if a concrete external consumer needs stable machine-readable fields beyond
+   best-effort local discovery.
 4. **The arXiv write-up** (packaging; aspirational, off the critical path).
    Assemble the existing rigor for an outside reader, plus the few additional
    experiments already designed into the harnesses above, within the no-real-data

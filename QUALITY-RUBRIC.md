@@ -70,6 +70,21 @@ Maker-checker score:
 
 External spend: 0 USD.
 
+Cycle 4 scope: surface-inventory promotion decision and cycle-4 skill distill.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | ADR-0007 records the decision, roadmap and docs link it, and tests pin the accepted status plus promotion gate. |
+| Security and supply chain | 5/5 | No runtime behavior, dependency, credential, or network surface change. |
+| Performance | 5/5 | Documentation and tests only; generated resource runtime path is unchanged. |
+| Readability | 5/5 | Decision separates discovery context from stable contracts and names the promotion preconditions directly. |
+| Maintainability | 5/5 | The decision prevents accidental 2.3 compatibility obligations until a consumer proves the smallest stable subset. |
+| Sustainability and invariants | 5/5 | Keeps recon in deepen-not-expand mode and preserves stable contracts only where they already exist. |
+
+External spend: 0 USD.
+
 Cycle 3 scope: schema generator drift gate for the top-level JSON contract and
 both published schema copies.
 

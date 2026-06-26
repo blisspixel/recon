@@ -92,6 +92,41 @@ Session: loop cycle 3, schema generator drift gate. External spend 0 USD.
 - Final full local gate passed with `uv run python scripts/check.py`: 3,594
   passed, 6 skipped, 4 deselected, total coverage 86.61 percent. All gate
   stages passed.
+- Pushed commit `2c88e2d` to `origin/main`. Remote CI, Secrets scan, Scorecard
+  supply-chain security, and `uv run python scripts/release_readiness.py --remote`
+  passed for that HEAD.
+- External spend: 0 USD.
+
+Session: loop cycle 4, surface-inventory promotion decision. External spend 0
+USD.
+
+- Ran the required cycle-4 distill into `SKILLS.md`: generated JSON artifacts
+  with established formatting should use semantic `--check` gates and explicit
+  `--write` rewrites to avoid formatting churn.
+- Selected the surface-inventory promotion decision because it is the next
+  public roadmap item after the schema-generator gate, while the remaining C3
+  calibration and fingerprint triage work are maintainer-local or optional.
+- Latest best-practice refresh for this task: current MCP and API-description
+  practice favors machine-readable discovery, schemas, annotations, and local
+  resources, but a generated description becomes a stable contract only with a
+  named compatibility policy, versioned subset, and concrete consumer.
+- Added ADR-0007, keeping `docs/surface-inventory.json` and
+  `recon://surface-inventory` as generated, packaged, no-network discovery
+  context rather than a v2.3 stable runtime API contract.
+- Updated README, MCP docs, ADR index, and roadmap so the promotion gate is easy
+  to find.
+- Added `tests/test_surface_inventory_policy.py` to pin the accepted decision,
+  the concrete-consumer promotion gate, and ADR links.
+- Focused validation:
+  `uv run python -m pytest tests/test_surface_inventory_policy.py tests/test_surface_inventory.py tests/test_markdown_links.py tests/test_mcp_tool_annotations.py -q`
+  passed with 16 tests.
+- Focused lint and hygiene passed:
+  `uv run python -m ruff check tests/test_surface_inventory_policy.py` and
+  `python scripts/check_text_hygiene.py`.
+- Fast local gate passed with `uv run python scripts/check.py --fast`.
+- Final full local gate passed with `uv run python scripts/check.py`: 3,597
+  passed, 5 skipped, 4 deselected, total coverage 86.61 percent. All gate
+  stages passed.
 - External spend: 0 USD.
 
 Session: private corpus setup, profile-engine correctness fix, CI parity fix,

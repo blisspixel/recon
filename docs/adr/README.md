@@ -26,3 +26,4 @@ deeper rationale for several lives in [correlation.md](../correlation.md),
 | [0004](0004-small-handspecified-bayes-no-numpy.md) | A small hand-specified Bayesian network; no numpy/ML |
 | [0005](0005-flat-package-layout.md) | Keep flat package layout (not src-layout), superseded by ADR-0006 |
 | [0006](0006-src-package-layout.md) | Adopt src package layout |
+| [0007](0007-surface-inventory-discovery-context.md) | Keep surface inventory as discovery context |

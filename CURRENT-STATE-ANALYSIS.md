@@ -79,6 +79,15 @@ constraints, compact formatting, and nested `$defs`; the current best-practice
 reading is to keep JSON Schema as a declarative contract with reviewed
 annotations while making the code-owned field set mechanically checked.
 
+## Surface Inventory Promotion Decision
+
+ADR-0007 keeps `docs/surface-inventory.json` and `recon://surface-inventory` as
+generated discovery context, not a stable runtime API contract. The code already
+packages the resource and gates drift; the missing ingredient for a 2.3 stable
+surface is not machinery, it is a concrete external consumer that needs a
+minimal, versioned subset with compatibility promises. Until then, the inventory
+remains patch-level and non-contractual.
+
 ## Profile signal_boost Correctness Fix (2.2.13)
 
 The profile engine's `signal_boost` and `exclude_signals` were inert since they
