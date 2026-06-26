@@ -33,9 +33,10 @@ from rich.console import Console  # noqa: E402
 
 from recon_tool.cache import tenant_info_from_dict  # noqa: E402
 from recon_tool.formatter import render_tenant_panel  # noqa: E402
+from recon_tool.models import TenantInfo  # noqa: E402
 
 
-def _render(info) -> str:
+def _render(info: TenantInfo) -> str:
     console = Console(no_color=True, record=True, width=120, file=io.StringIO())
     rendered = render_tenant_panel(info)
     console.print(rendered)

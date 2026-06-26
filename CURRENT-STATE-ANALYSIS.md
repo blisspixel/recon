@@ -123,15 +123,28 @@ multi-session shape. A short bounded retry against degraded CT records produced
 retry inputs now stay under the ignored private output root. A second short
 bounded retry produced 34 valid records, one more live CT success, and confirmed
 that mixed provider failures are now accounted as live provider pacing rather
-than all-provider breaker stops. C3 remains open until enough CT coverage
-accumulates for aggregate certificate and graph-surface review. A third short
-retry completed the 33 degraded records from Retry Session B, added one live CT
-success, and produced one private triage candidate. The candidate was promoted
-only after public-source review against Descope custom-domain documentation and
-with boundary tests. A combined aggregate summary across the four current
-sessions now shows 2,869 valid records, 2,647 unique observed domains, 40
-domains with usable CT data, and 2,607 domains still degraded or unresolved for
-CT. The summary JSON is private and aggregate-only.
+than all-provider breaker stops. A third short retry completed the 33 degraded
+records from Retry Session B, added one live CT success, and produced one
+private triage candidate. The candidate was promoted only after public-source
+review against Descope custom-domain documentation and with boundary tests.
+
+The final retry sequence added Sessions D, E, and F. Session D completed 32
+degraded records, added one live CT success, and produced no candidates. Session
+E completed 31 degraded records, added one live CT success, and produced one
+candidate. That candidate was promoted only after public-source review against
+Infobip email domain setup documentation: the existing `infobip` slug now
+matches the `email-messaging.com` CNAME target family, rejects lookalike
+suffixes, and maps to the Email panel category. Session F was the final bounded
+post-promotion check: it finalized 15 records before the runtime cap, added two
+live CT successes, and produced zero candidates.
+
+The combined aggregate summary across seven sessions now shows 2,947 valid
+records, 2,647 unique observed domains, 44 domains with usable CT data, and
+2,603 domains still degraded or unresolved for CT. The summary JSON is private
+and aggregate-only. This closes the live C3 retry loop as a documented partial
+CT pass: the CT path, retry accounting, provider limits, candidate triage, and
+publication controls are proven without pretending public free CT search can
+produce complete corpus coverage.
 
 The maintainer tooling now supports the correct operational shape:
 
@@ -156,11 +169,9 @@ The maintainer tooling now supports the correct operational shape:
   no-network recovery and retry synthesis produce different scan metadata.
 
 The active next-step plan is now explicit in `docs/c3-ct-validation-plan.md`:
-check provider health first, run Retry Session D only against the degraded tail
-from Retry Session C if a provider is not breaker-gated, rebuild the aggregate
-summary, triage any candidate through public vendor documentation and negative
-tests, then close C3 if the next bounded retry produces no new CT data or
-public-source-backed candidate.
+ship the C3 closure package after the Infobip promotion, public aggregate memo,
+hygiene checks, security review, and full local gate. Do not run Session G by
+default.
 
 ## Profile signal_boost Correctness Fix (2.2.13)
 
@@ -417,9 +428,11 @@ The public tree already contains substantial assurance:
 
 Current local verification in this session:
 
-- `uv run python scripts/check.py` passed.
-- Coverage was 86.57 percent, above the 82 percent configured gate.
-- Tests: 3550 passed, 5 skipped, 4 deselected.
+- Full local gate for the C3 closure and Infobip promotion passed:
+  `uv run python scripts/check.py` with 3,634 passed, 5 skipped, 4 deselected,
+  and 86.70 percent total coverage.
+- Broad validation-script type check passed after the bug-hunt cleanup:
+  `uv run pyright src tests scripts validation`.
 - Focused MCP launch-guidance validation passed:
   `uv run python -m pytest tests/test_doctor.py tests/test_doctor_client.py tests/test_mcp_path_isolation.py tests/test_surface_inventory.py -q`
   with 53 passed and 2 skipped.
@@ -443,13 +456,16 @@ The highest-priority active work is:
    in `validation/2026-06-23-full-corpus-calibration.md`; the honest reading
    (email-policy node strongly calibrated but DMARC-anchored with the clean
    residual disconfirmed; M365 tenancy corroborated) is folded into
-   `validation/reference-calibration.md` and `docs/statistical-assurance.md`. The
-   remaining optional pass is C3 (CT-enabled full corpus).
-2. Use the fingerprint and motif triage loop only as a reviewed proposal path
+   `validation/reference-calibration.md` and `docs/statistical-assurance.md`.
+   The CT-enabled C3 pass is now closed as a documented partial track, not a
+   full-coverage CT collection claim.
+2. Finish release-hardening for the C3 closure package: Infobip catalog tests,
+   docs hygiene, validation hygiene, security review, and the full local gate.
+3. Use the fingerprint and motif triage loop only as a reviewed proposal path
    backed by existing scan and gap outputs.
-3. Keep `docs/surface-inventory.json` and `docs/cli-surface.md` as derived
+4. Keep `docs/surface-inventory.json` and `docs/cli-surface.md` as derived
    drift guards unless a concrete consumer needs a stable contract.
-4. Treat the arXiv write-up as packaging and communication, off the critical
+5. Treat the arXiv write-up as packaging and communication, off the critical
    path.
 
 The private corpus is maintainer-local (gitignored here, accessed from a separate
@@ -459,14 +475,16 @@ output leave the maintainer machine.
 
 ## Highest-Leverage Public-Tree Work
 
-Given the absent private corpus, the best aligned public-tree work is to improve
-the maintainer-local loop around the calibration bundle without changing runtime
-behavior. That means:
+Given the current C3 closure state, the best aligned public-tree work is to ship
+the aggregate memo and public-source-backed catalog refinement without widening
+runtime behavior. That means:
 
-- keep the private-corpus run as the source of truth;
-- add only docs, runbooks, validation helpers, or tests that make the next
-  private run easier and safer;
-- avoid promoting new product surfaces until a concrete consumer exists;
+- keep the private CT runs as the source of truth and commit only aggregate
+  counts;
+- add only tests and docs needed to verify the promoted Infobip rule and C3
+  closure rationale;
+- avoid more live CT retries unless a new concrete consumer or provider path
+  changes the value calculation;
 - avoid feature work that enlarges the user-facing surface before the active
   validation queue is closed.
 

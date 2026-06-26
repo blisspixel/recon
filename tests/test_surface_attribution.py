@@ -127,6 +127,33 @@ def test_descope_cname_target_rejects_lookalike_suffix() -> None:
     assert infrastructure is None
 
 
+def test_infobip_email_messaging_target_loads_and_classifies() -> None:
+    """Infobip regional email-tracking CNAMEs attribute to Infobip."""
+    rules = get_cname_target_rules()
+    terminal = "emailtracking-us2.email-messaging.com"
+
+    assert any(r.slug == "infobip" and r.pattern == "email-messaging.com" for r in rules)
+    application, infrastructure = _classify_chain(["track.contoso.com", terminal], rules)
+
+    assert application is not None
+    assert application.slug == "infobip"
+    assert infrastructure is None
+
+
+def test_infobip_email_messaging_maps_to_email_panel_category() -> None:
+    """Infobip is an email and messaging surface, not a generic business app."""
+    assert category_for_slug("infobip") == "Email"
+
+
+def test_infobip_email_messaging_rejects_lookalike_suffix() -> None:
+    """Dotted cname_target patterns require a DNS-label suffix boundary."""
+    rules = get_cname_target_rules()
+    application, infrastructure = _classify_chain(["email-messaging.com.example.net"], rules)
+
+    assert application is None
+    assert infrastructure is None
+
+
 # ── Chain classification ───────────────────────────────────────────────
 
 

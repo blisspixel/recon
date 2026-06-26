@@ -101,18 +101,20 @@ def _parse_categories(source_path: Path) -> dict[str, str]:
     return mapping
 
 
-def _per_node_aggregate(records: list[dict]) -> dict[str, dict[str, float]]:
+def _empty_node_buckets() -> dict[str, list[float]]:
+    return {
+        "posteriors": [],
+        "sparse": [],
+        "high_conf": [],
+    }
+
+
+def _per_node_aggregate(records: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
     """Per-node aggregate: count, sparse_pct, high_conf_pct, mean_posterior.
 
     A high-confidence posterior is posterior >= 0.85 AND sparse=False.
     """
-    per_node: dict[str, dict[str, list]] = defaultdict(
-        lambda: {
-            "posteriors": [],
-            "sparse": [],
-            "high_conf": [],
-        }
-    )
+    per_node: defaultdict[str, dict[str, list[float]]] = defaultdict(_empty_node_buckets)
     for d in records:
         for p in d.get("posterior_observations", []) or []:
             name = p["name"]
@@ -196,7 +198,7 @@ def _format_survival_table(
 
 
 def _format_category_table(
-    records: list[dict],
+    records: list[dict[str, Any]],
     categories: dict[str, str],
 ) -> str:
     """Per-category x per-node sparse rate for the hardened corpus.
@@ -204,7 +206,7 @@ def _format_category_table(
     Surfaces which hardening patterns produce which behavior.
     Categories with < 5 valid records get a (small N) annotation.
     """
-    by_category: dict[str, list[dict]] = defaultdict(list)
+    by_category: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
     for d in records:
         apex = (d.get("queried_domain") or "").lower()
         cat = categories.get(apex)

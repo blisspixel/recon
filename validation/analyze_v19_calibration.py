@@ -34,6 +34,7 @@ import statistics
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
+from typing import Any
 
 # Mapping from Bayesian network nodes to the deterministic-pipeline
 # slugs / signals that *should* be present when the posterior fires
@@ -86,7 +87,7 @@ def main() -> int:  # noqa: C901  # report-assembly script; sectioned by comment
         print(f"input not found: {args.input}", file=sys.stderr)
         return 2
 
-    domains: list[dict] = []
+    domains: list[dict[str, Any]] = []
     with args.input.open(encoding="utf-8") as f:
         for raw_line in f:
             line = raw_line.strip()

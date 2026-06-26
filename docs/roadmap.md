@@ -19,37 +19,37 @@ The next work is dependency-ordered:
    - Why next: the main calibration bundle already ran in June 2026, but C3
      exercises CT, graph, and certificate surfaces that the core DMARC and
      tenancy passes do not fully stress.
-   - Current state: the first recovered partial CT session produced 2,693 valid
-     records out of 5,241 and is documented in
+   - Current state: the private C3 track now has seven bounded sessions
+     documented in
      [validation/2026-06-26-c3-ct-partial.md](../validation/2026-06-26-c3-ct-partial.md).
-     A bounded retry against degraded CT records added 109 valid retry records,
-     confirmed the private retry-input path, and produced no triage candidates.
-     A second short retry tested CT attempt-outcome accounting, added 34 valid
-     records, and confirmed live provider pacing is now separated from
-     all-provider breaker stops. A third retry completed 33 degraded records,
-     added one more live CT success, and surfaced one public-source-backed
-     Descope CNAME-target rule. Combined aggregate accounting currently shows
-     2,647 unique observed domains and 40 domains with usable CT data. These
-     sessions confirm the multi-session, limiter-bound shape. The retry tooling
-     now revalidates synthesized retry-domain inputs and rejects retry synthesis
-     combined with no-network finalization. These sessions do not close C3.
-   - Current plan: follow
-     [c3-ct-validation-plan.md](c3-ct-validation-plan.md). The next atomic task
-     is a provider-health check, then Retry Session D against the degraded tail
-     from Retry Session C only if at least one CT provider is not breaker-gated.
+     The aggregate summary covers 2,947 valid records, 2,647 unique observed
+     domains, 44 domains with usable CT data, and 2,603 domains still degraded
+     or unresolved for CT. Retry Sessions D through F added four live CT
+     successes. Session E surfaced a public-source-backed Infobip
+     email-tracking CNAME target, which extends the existing `infobip` slug and
+     fixes its panel category to Email. Session F produced no new candidates
+     and again showed the public-provider ceiling: crt.sh remained breaker-gated
+     while CertSpotter paced a small number of live successes under local
+     cooldown.
+   - Current plan: close the live C3 retry loop as a documented partial CT pass
+     after the Infobip promotion, hygiene checks, security review, and full
+     local gate. Do not run more live public CT retries unless a new concrete
+     consumer, provider path, or disclosure-safe validation question changes
+     the value calculation.
    - Acceptance: publish only aggregate counts and disclosure-reviewed memos.
      No apexes, organization names, tenant IDs, or per-domain rows leave the
-     maintainer machine. Close C3 as a documented partial CT pass when the next
-     bounded retry produces no new CT data or public-source-backed candidate, or
-     when provider cooldown still leaves the track rate-limited.
+     maintainer machine. C3 closure means the CT path, retry accounting,
+     provider limits, candidate triage, and publication controls are proven; it
+     does not mean complete CT coverage.
 
 2. **Run fingerprint and motif triage only as a reviewed proposal path.**
    - Why next: catalog growth should come from observed public DNS or stable
      vendor documentation, not invented patterns.
    - Current state: the June 2026 pass promoted public-source-backed UltraDNS
-     Web Forwarding, Squarespace managed-subdomain, and Descope custom-domain
-     surface rules. Remaining private aggregate candidates are held until they
-     have clear public support and negative tests.
+     Web Forwarding, Squarespace managed-subdomain, Descope custom-domain, and
+     Infobip email-tracking surface rules. Remaining private aggregate
+     candidates are held until they have clear public support and negative
+     tests.
    - Acceptance: every promoted rule has scoped language, a public reference or
      aggregate validation basis, regression tests, and conservative sparse-result
      wording.

@@ -91,6 +91,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from recon_tool.models import SourceResult  # noqa: E402
 from validation.progress import gather_with_progress  # noqa: E402
 from validation.reference_calibration import (  # noqa: E402
     CalibrationRecord,
@@ -158,7 +159,7 @@ def gws_attested_federated(google_auth_type: str | None) -> bool:
 
 
 def dns_only_tenancy_posteriors(
-    results: list[object],
+    results: list[SourceResult],
     queried_domain: str,
     priors_override: dict[str, float] | None = None,
 ) -> tuple[float, float] | None:

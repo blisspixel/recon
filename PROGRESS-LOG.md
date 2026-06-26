@@ -7,36 +7,6 @@ repository history.
 
 ## 2026-06-26
 
-Session: loop cycle 9, CT attempt-outcome accounting. External spend 0 USD.
-
-- Selected CT outcome accounting because the C3 aggregate was dominated by
-  breaker labels, while the current limiter state showed a more specific mixed
-  provider condition: crt.sh breaker history plus CertSpotter live pacing.
-- Latest best-practice refresh for this task: keep retries bounded by local
-  limiter state, fail fast under provider stress, and use low-cardinality error
-  labels that distinguish retryable live pacing from no-attempt breaker stops.
-- Updated `ct_failure_outcome` so `breaker_open` is reserved for failed CT
-  attempts where every failed provider was stopped by an open local breaker.
-  Mixed provider failures now surface the live attempted failure cause, such as
-  `live_rate_limited` or `live_other_failure`, while keeping the existing
-  best-effort enum.
-- Updated the model comments, packaged schema description, docs schema
-  description, and operational contract to match the refined semantics.
-- Added focused regression coverage for mixed breaker plus rate-limit, mixed
-  breaker plus live error, and all-breaker outcomes.
-- Ran a bounded maintainer-local retry against the degraded records from Retry
-  Session A. The retry corpus had 106 domains; the 90-second session finalized
-  34 valid records, with 1 live CT success and 33 live-rate-limited outcomes.
-  The run produced zero `breaker_open` records, confirming the corrected
-  accounting shape. Private artifacts remain ignored under
-  `validation/runs-private/`.
-- Rebuilt the private aggregate C3 summary across three sessions. Current
-  aggregate state: 2,836 valid records, 2,803 records with domain fields, 2,647
-  unique observed domains, 39 domains with usable CT data, 2,608 domains still
-  degraded or unresolved for CT, and CT-data coverage ratio 0.014734.
-- Updated the public C3 memo, roadmap current state, changelog, current-state
-  analysis, quality rubric, operational contract, and `SKILLS.md`.
-
 Session: loop cycle 10, bug-hunt and security-review round. External spend 0
 USD.
 
@@ -162,4 +132,38 @@ External spend 0 USD.
   inventory, generated CLI surface doc, and diff whitespace checks passed.
 - Final full local gate passed with `uv run python scripts/check.py`: 3,631
   passed, 5 skipped, 4 deselected, total coverage 86.69 percent. All gate
+  stages passed.
+
+Session: loop cycle 14, C3 live retry closure and Infobip surface promotion.
+External spend 0 USD.
+
+- Re-opened the private aggregate summary and Session E candidate state. The
+  six-session aggregate showed 2,932 valid records, 2,647 unique observed
+  domains, 42 domains with usable CT data, and one candidate under the
+  `email-messaging.com` host family.
+- Researched the candidate against public Infobip email domain setup
+  documentation and extended the existing `infobip` slug with a narrow
+  `email-messaging.com` `cname_target` rule instead of creating a duplicate
+  provider identity.
+- Fixed the related taxonomy drift: `infobip` now maps to the Email panel
+  category rather than the generic Business Apps fallback.
+- Added focused tests for Infobip rule loading, regional tracking-host
+  classification, lookalike suffix rejection, and Email panel categorization.
+  Fingerprint validation passed with 844 entries.
+- Ran final bounded Retry Session F against Session E's degraded tail. It
+  finalized 15 of 28 records before the runtime cap, added 2 live CT successes,
+  and produced zero candidates.
+- Rebuilt the seven-session private aggregate summary. Current aggregate state:
+  2,947 valid records, 2,909 records with domain fields, 2,647 unique observed
+  domains, 44 domains with usable CT data, 2,603 domains still degraded or
+  unresolved for CT, and CT-data coverage ratio 0.016623.
+- Updated README, roadmap, C3 plan, validation memo, changelog, current-state
+  analysis, and quality rubric to close C3 as a documented partial CT validation
+  track after gates pass.
+- Bug-hunt cleanup from the broad Pyright pass fixed legacy validation helper
+  typing: JSON record aliases, synthetic fixture cache-version handling,
+  TenantInfo snapshot rendering annotations, and DNS-only tenancy source-result
+  typing.
+- Final full local gate passed with `uv run python scripts/check.py`: 3,634
+  passed, 5 skipped, 4 deselected, total coverage 86.70 percent. All gate
   stages passed.

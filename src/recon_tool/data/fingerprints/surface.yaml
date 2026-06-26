@@ -4737,6 +4737,15 @@ fingerprints:
       Tracking / messaging CNAME into Infobip (`*.infobip.com`), a
       cloud-communications (CPaaS) provider. Indicates the org sends
       messaging / email through Infobip. Hosting-binding signal only.
+  - type: cname_target
+    pattern: email-messaging.com
+    reference: https://www.infobip.com/docs/email/get-started-with-email/set-up-your-domain
+    tier: application
+    description: >-
+      Email tracking or messaging CNAME into Infobip
+      (`*.email-messaging.com`), including regional tracking hosts. Indicates
+      the org routes email tracking or CPaaS messaging surface through
+      Infobip. Hosting-binding signal only.
 - name: Ad Legend
   slug: adlegend
   category: Marketing

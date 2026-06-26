@@ -125,19 +125,89 @@ conservative Descope `cname_target` rule. No private domain rows are published.
 The slug is explicitly mapped to the Identity panel category and the exposure
 identity-provider view so it cannot fall through to generic Business Apps.
 
+## Retry Session D
+
+After provider-health review, a bounded retry was run against the degraded
+records from Retry Session C.
+
+- Retry corpus size: 32 domains.
+- Valid streamed retry records: 32.
+- Completion state: complete for this retry corpus.
+- External spend: 0 USD.
+- Private artifacts: `validation/runs-private/20260626-203537Z/` and the
+  synthesized retry input under `validation/runs-private/_inputs/` (gitignored).
+
+| Outcome | Count |
+|---|---:|
+| `live_success` | 1 |
+| `live_rate_limited` | 31 |
+
+This session added one more domain with usable CT data and produced no triage
+candidates. Because it still recovered new CT data, one more bounded retry was
+justified under the C3 decision rule.
+
+## Retry Session E
+
+After cooldown, a bounded retry was run against the degraded records from Retry
+Session D.
+
+- Retry corpus size: 31 domains.
+- Valid streamed retry records: 31.
+- Completion state: complete for this retry corpus.
+- External spend: 0 USD.
+- Private artifacts: `validation/runs-private/20260626-204152Z/` and the
+  synthesized retry input under `validation/runs-private/_inputs/` (gitignored).
+
+| Outcome | Count |
+|---|---:|
+| `live_success` | 1 |
+| `live_rate_limited` | 28 |
+| `not_attempted` | 2 |
+
+This session added one more domain with usable CT data and produced one private
+triage candidate. The candidate was promoted only after public-source review:
+Infobip's email domain setup documentation names the `email-messaging.com`
+tracking and sending host family, so the existing `infobip` slug now has a
+conservative `email-messaging.com` `cname_target` rule. The slug is explicitly
+mapped to the Email panel category and has a negative lookalike-suffix test. No
+private domain rows are published.
+
+## Retry Session F
+
+After the Infobip promotion, one final bounded retry was run against the
+degraded records from Retry Session E to check whether the remaining tail still
+contained public-source-backed catalog candidates.
+
+- Retry corpus size: 28 domains.
+- Valid streamed retry records: 15.
+- Completion state: partial, controlled `--max-runtime` stop.
+- External spend: 0 USD.
+- Private artifacts: `validation/runs-private/20260626-205126Z/` and the
+  synthesized retry input under `validation/runs-private/_inputs/` (gitignored).
+
+| Outcome | Count |
+|---|---:|
+| `live_success` | 2 |
+| `live_rate_limited` | 10 |
+| `not_attempted` | 3 |
+
+This session added two more domains with usable CT data and produced zero
+triage candidates. The live retry loop should stop here: continuing would mostly
+measure the same public-provider ceiling while adding little catalog signal.
+
 ## Combined Session Summary
 
-The four partial sessions were combined with
+The seven partial sessions were combined with
 `validation/summarize_ct_sessions.py`, which deduplicates by domain internally
 and emits aggregate counts only.
 
-- Sessions summarized: 4.
-- Valid records across sessions: 2,869.
-- Records with a domain field: 2,836.
+- Sessions summarized: 7.
+- Valid records across sessions: 2,947.
+- Records with a domain field: 2,909.
 - Unique domains observed across sessions: 2,647.
-- Domains with CT data (`cache_hit` or `live_success` as best outcome): 40.
-- CT-data coverage ratio across observed domains: 0.015111.
-- Domains still degraded or unresolved for CT: 2,607.
+- Domains with CT data (`cache_hit` or `live_success` as best outcome): 44.
+- CT-data coverage ratio across observed domains: 0.016623.
+- Domains still degraded or unresolved for CT: 2,603.
 - Private aggregate summary:
   `validation/runs-private/c3-ct-session-summary-20260626.json` (gitignored).
 
@@ -146,10 +216,18 @@ Best outcome by unique domain:
 | Outcome | Domains |
 |---|---:|
 | `cache_hit` | 28 |
-| `live_success` | 12 |
-| `live_rate_limited` | 54 |
+| `live_success` | 16 |
+| `live_rate_limited` | 50 |
 | `cache_miss` | 1 |
 | `breaker_open` | 2,552 |
 
 This is the correct C3 accounting layer for further partial sessions: track
 unique-domain CT coverage across sessions, not raw record counts alone.
+
+## Closure Read
+
+C3 should close as a partial CT validation track after the public-tree gate
+passes. The track exercised CT retry behavior, cache fallback, attempt-outcome
+accounting, aggregate summarization, candidate triage, and disclosure controls.
+It did not and should not try to force full CT coverage through free public
+search endpoints.

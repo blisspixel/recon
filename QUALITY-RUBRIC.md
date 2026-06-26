@@ -53,6 +53,22 @@ findings, or unsuppressed small strata.
 
 ## Current Alignment Snapshot
 
+Cycle 14 scope: C3 live retry closure and Infobip email-tracking surface
+promotion.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | Retry Sessions D through F are reflected in the aggregate memo with seven-session counts, and the Infobip `email-messaging.com` rule classifies the observed regional tracking host while rejecting lookalike suffixes. |
+| Security and supply chain | 5/5 | Private target rows and candidate samples stayed under ignored validation roots; the promoted rule is backed by public Infobip documentation and adds no dependency, credential, API key, paid provider, or active probe. |
+| Performance | 5/5 | The live retry loop stayed bounded to degraded tails with concurrency 1 and runtime caps; the catalog change is one static suffix rule and one category lookup entry. |
+| Readability | 5/5 | README, roadmap, the C3 plan, and the validation memo now separate orientation, priority, executable closure logic, and aggregate evidence. |
+| Maintainability | 5/5 | The Infobip change extends the existing slug instead of creating a duplicate provider identity, focused tests pin rule loading, classification, boundary rejection, and panel taxonomy, and the broad Pyright pass now covers the validation helpers cleanly. |
+| Sustainability and invariants | 5/5 | C3 closes as a partial CT validation track, not a complete CT coverage claim; spend remains 0 USD and public artifacts contain aggregate counts only. |
+
+External spend: 0 USD.
+
 Cycle 13 scope: documentation refresh and researched C3 CT next-step plan.
 
 Maker-checker score:

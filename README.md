@@ -205,11 +205,13 @@ before committing any validation artifact.
 
 ## Current Maintainer Focus
 
-The next work is not a runtime expansion. It is to finish the CT-enabled C3
-validation track as bounded, private, aggregate-only sessions, then close or
-continue based on whether the next retry produces new CT data or a
-public-source-backed fingerprint candidate. The detailed plan lives in
-[docs/c3-ct-validation-plan.md](docs/c3-ct-validation-plan.md).
+The next work is not a runtime expansion. The CT-enabled C3 validation track is
+in closure: seven bounded, private, aggregate-only sessions exercised the CT
+path, raised usable CT coverage from 38 to 44 domains across the observed set,
+and promoted only one new public-source-backed catalog refinement from the
+latest retry sequence. The remaining work is release-grade review of that
+closure package, not more live public CT retries. The detailed rationale lives
+in [docs/c3-ct-validation-plan.md](docs/c3-ct-validation-plan.md).
 
 ## Development
 

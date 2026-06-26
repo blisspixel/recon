@@ -166,7 +166,6 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "avature",
         "crownpeak",
         "freshservice",
-        "infobip",
         "mashery",
         "oracle-service-cloud",
         # v1.9.23 TXT batch (generated): new-vendor verification slugs.

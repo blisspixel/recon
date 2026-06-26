@@ -78,6 +78,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "sparkpost": "Email",
     "brevo": "Email",
     "mailchimp": "Email",
+    "infobip": "Email",
     "aws-ses": "Email",
     "autospf": "Email",
     "ondmarc": "Email",

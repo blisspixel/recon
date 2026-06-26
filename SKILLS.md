@@ -167,6 +167,10 @@ operating rules for future cycles and must not override `AGENTS.md`,
 - When public docs show an alternate endpoint for a provider that already has a
   slug, extend the existing slug instead of creating a second provider identity.
   Keep the description specific to the endpoint's documented setup path.
+- When a bounded validation retry still produces small incremental data but no
+  new public-source-backed candidates, stop the live loop once the provider
+  ceiling is documented. Close with aggregate evidence rather than measuring the
+  same limiter state indefinitely.
 - When triaging bucketed CNAME gaps, check sample terminals and chain hops
   against existing patterns before treating a suffix bucket as uncovered. The
   three-label bucket can hide the service-specific label that an existing

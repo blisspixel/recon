@@ -38,31 +38,44 @@ Reviewed on 2026-06-26:
 - [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   [Semantic Versioning](https://semver.org/): C3 updates belong under
   `Unreleased`; patch-line work must avoid new stable runtime surfaces.
+- [Infobip domain setup documentation](https://www.infobip.com/docs/email/get-started-with-email/set-up-your-domain):
+  vendor-published email DNS setup names the `email-messaging.com` tracking
+  and sending host family. That supports extending the existing `infobip`
+  surface rule narrowly instead of creating a second provider identity.
 
 ## Current State
 
-The C3 CT track has four private sessions documented in
+The C3 CT track has seven private sessions documented in
 [../validation/2026-06-26-c3-ct-partial.md](../validation/2026-06-26-c3-ct-partial.md).
 
 Aggregate state:
 
-- Sessions summarized: 4.
-- Valid records across sessions: 2,869.
-- Records with a domain field: 2,836.
+- Sessions summarized: 7.
+- Valid records across sessions: 2,947.
+- Records with a domain field: 2,909.
 - Unique domains observed across sessions: 2,647.
-- Domains with CT data: 40.
-- CT-data coverage ratio: 0.015111.
-- Domains still degraded or unresolved for CT: 2,607.
+- Domains with CT data: 44.
+- CT-data coverage ratio: 0.016623.
+- Domains still degraded or unresolved for CT: 2,603.
 - External spend: 0 USD.
 
 What changed in the latest cycle:
 
-- Retry Session C completed the 33 degraded records from Retry Session B.
-- One more domain obtained usable CT data.
-- One private candidate was promoted only after public-source review and tests:
-  Descope custom-domain CNAME targets.
-- The `descope` slug now maps to the Identity panel category and exposure
-  identity-provider view.
+- Retry Session D completed the 32 degraded records from Retry Session C, added
+  one live CT success, and produced no candidates.
+- Retry Session E completed the next 31-record retry corpus, added one live CT
+  success, and produced one candidate: an Infobip regional email-tracking CNAME
+  target under `email-messaging.com`.
+- The candidate was promoted only after public-source review against Infobip's
+  email domain setup documentation. The existing `infobip` slug now has a
+  second narrow `cname_target` rule for `email-messaging.com`, a lookalike
+  negative test, and an explicit Email panel-category mapping.
+- Retry Session F ran as the final bounded post-promotion check against the
+  degraded tail from Session E. It finalized 15 records before the runtime cap,
+  added two live CT successes, and produced zero candidates.
+- Provider health remains the limiting factor: crt.sh is breaker-gated or
+  intermittently returning HTTP 503, while CertSpotter can recover only a small
+  number of free unauthenticated results between local cooldown windows.
 
 ## Why This Is Next
 
@@ -100,117 +113,43 @@ The current implementation sets the execution shape:
 These constraints are correct. Do not bypass them with shell redirects, public
 run roots, ad hoc JSON edits, or row-level summaries.
 
-## Execution Plan
+## Closure Plan
 
-### 1. Provider Health Check
+C3 should close as a documented partial CT pass after the public-tree gate for
+the Infobip promotion and updated aggregate memo passes.
 
-Before any new CT network run:
+The reason to close now is not that CT coverage is complete. It is not. The
+reason is that the track has met the validation objective that justified live
+public CT work:
 
-```bash
-recon doctor
-python validation/summarize_ct_sessions.py \
-  validation/runs-private/20260626-114954Z \
-  validation/runs-private/20260626-155208Z \
-  validation/runs-private/20260626-171647Z \
-  validation/runs-private/20260626-191156Z \
-  --output validation/runs-private/c3-ct-session-summary-20260626.json
-```
+- CT collection, cache fallback, degraded-source reporting, and retry synthesis
+  were exercised across seven sessions.
+- The aggregate summary now tracks unique-domain CT coverage across partial
+  sessions instead of raw retry counts.
+- Provider limits are explicit: free public search paths provide small,
+  cooldown-bound increments and crt.sh can remain unavailable or breaker-gated.
+- Candidate promotion discipline was exercised twice in the full C3 track:
+  Descope from Session C and Infobip from Session E. Both changes have public
+  vendor references, narrow suffix rules, negative boundary tests, and taxonomy
+  checks.
+- Session F, the post-promotion check, produced no new candidates. Continuing
+  live retries would spend operator time mainly measuring the same public
+  provider ceiling.
 
-Also inspect the local limiter snapshots under the operator config directory:
+Final public-tree work before closure:
 
-```text
-<recon config>/rate-limit-state/
-```
+1. Update the aggregate C3 memo and roadmap with Sessions D, E, and F.
+2. Keep raw run outputs, retry inputs, candidate samples, and target rows under
+   ignored private validation paths only.
+3. Run the focused fingerprint and taxonomy tests.
+4. Run text hygiene, validation hygiene, release-readiness checks, and the full
+   local gate.
+5. Commit and push only after the gate passes.
 
-Proceed only if at least one CT provider is not in a long breaker window. If
-every provider is still gated, do not run another live scan. Update the memo with
-a no-network provider-health note and wait for cooldown.
-
-### 2. Retry Session D
-
-If provider health permits, retry only the degraded tail from Retry Session C:
-
-```bash
-python validation/scan.py \
-  --corpus validation/corpus-private/consolidated.txt \
-  --ct-retry-from validation/runs-private/20260626-191156Z \
-  --ct \
-  --concurrency 1 \
-  --timeout 60 \
-  --max-runtime 300 \
-  --no-compare \
-  --label c3-ct-retry-d
-```
-
-Why this exact shape:
-
-- `--ct-retry-from` keeps the run focused on the 32-record degraded tail instead
-  of re-querying successful records.
-- `--concurrency 1` respects free public provider limits.
-- `--timeout 60` gives slow CT lookups enough room without consuming the whole
-  operator session.
-- `--max-runtime 300` is enough for the current tail and keeps failure bounded.
-- `--no-compare` avoids noisy diffs between partial and complete scans.
-
-If the retry corpus grows unexpectedly, stop and inspect why before proceeding.
-
-### 3. Rebuild Aggregate Summary
-
-After Session D, rebuild the private aggregate summary across all C3 sessions:
-
-```bash
-python validation/summarize_ct_sessions.py \
-  validation/runs-private/20260626-114954Z \
-  validation/runs-private/20260626-155208Z \
-  validation/runs-private/20260626-171647Z \
-  validation/runs-private/20260626-191156Z \
-  validation/runs-private/<session-d> \
-  --output validation/runs-private/c3-ct-session-summary-20260626.json
-```
-
-Then update only aggregate public docs:
-
-- `validation/2026-06-26-c3-ct-partial.md`
-- `docs/roadmap.md`
-- `CURRENT-STATE-ANALYSIS.md`
-- `CHANGELOG.md`
-- `QUALITY-RUBRIC.md`
-- `PROGRESS-LOG.md`
-
-Do not publish target rows, example domains from the private corpus, tenant IDs,
-or raw candidate rows.
-
-### 4. Candidate Triage
-
-For any candidate from Session D:
-
-1. Confirm the observed target with public vendor documentation or repeated
-   aggregate-safe evidence.
-2. Add the narrowest `cname_target` or TXT rule that matches the documented
-   product endpoint.
-3. Add a negative boundary test for lookalike suffixes.
-4. Add category and display-name taxonomy updates if the slug is not generic
-   Business Apps.
-5. Run `scripts/validate_fingerprint.py` and the relevant focused tests.
-
-Reject candidates that have no public support, are intra-organization routing,
-or would require broad suffix matching.
-
-### 5. Closure Decision
-
-After Session D, C3 should either close as a documented partial CT pass or name
-one additional bounded retry. Use this decision rule:
-
-- Close C3 if Session D produces zero new CT-data domains and no
-  public-source-backed candidates.
-- Close C3 if providers remain rate-limited after cooldown and the aggregate
-  memo already documents the limiter ceiling.
-- Continue for one more bounded retry only if Session D produces new CT data or
-  a candidate that materially improves catalog coverage.
-
-Closure does not mean "100 percent CT coverage." It means recon has exercised
-the CT path, documented provider limits, published aggregate-safe evidence, and
-resolved all promoted candidates through tests and public references.
+Do not run Session G by default. A future live C3 retry requires a new concrete
+reason: a different free public provider path, a named consumer needing another
+aggregate metric, or a disclosure-safe validation question that cannot be
+answered from the seven-session summary.
 
 ## Out Of Scope For This Track
 

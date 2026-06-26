@@ -10,10 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **C3 CT validation plan.** `docs/c3-ct-validation-plan.md` now records the
-  current researched next step for the CT-enabled C3 track: provider-health
-  check, bounded Retry Session D, aggregate summary rebuild, public-source
-  candidate triage, and a closure rule that does not require impossible full CT
-  coverage through public search endpoints.
+  researched closure plan for the CT-enabled C3 track: seven-session aggregate
+  state, public-provider limits, Infobip candidate disposition, and the rule
+  that future live retries require a new concrete validation reason.
 - **Schema generator drift gate.** `scripts/generate_schema.py --check` now
   verifies both published JSON Schema copies against code-owned required-field
   metadata and explicit conditional-field metadata, and CI enforces it.
@@ -24,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Descope identity taxonomy.** The `descope` slug now maps to the Identity
   panel category and the exposure identity-provider view instead of falling
   through to the generic Business Apps fallback.
+- **Infobip email-tracking surface attribution.** The surface catalog now
+  recognizes Infobip's documented `email-messaging.com` tracking and sending
+  host family as an `infobip` CNAME-target signal, with a lookalike boundary
+  test.
 - **Surface-inventory promotion decision.** ADR-0007 keeps
   `docs/surface-inventory.json` and `recon://surface-inventory` as generated
   discovery context, with a concrete-consumer gate before any 2.3 stable subset.
@@ -72,6 +75,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **C3 Retry Session C.** A bounded retry completed the 33 CT-degraded records
   from Retry Session B, added one live CT success, and raised combined CT-data
   coverage to 40 domains out of 2,647 unique observed domains.
+- **C3 live retry loop closed.** Retry Sessions D through F added four more
+  live CT successes, raised aggregate CT-data coverage to 44 domains out of
+  2,647 unique observed domains, promoted the public-source-backed Infobip
+  email-tracking rule, and produced no new candidates in the final retry. The
+  public memo now closes C3 as a bounded partial CT validation track rather than
+  a full-coverage CT collection effort.
+- **Infobip panel taxonomy.** The `infobip` slug now maps to the Email panel
+  category instead of falling through to generic Business Apps.
 - **C3 scan options reject incoherent retry recovery.** `validation/scan.py` now
   rejects `--finalize-existing` combined with `--ct-retry-from`, keeping
   no-network recovery separate from synthesized CT retry runs.
@@ -89,6 +100,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exceptions now classify as rate-limit outcomes even when wrapped, and
   non-429 HTTP errors that merely mention a numeric domain such as `429.com` no
   longer classify as rate limits.
+
+### Fixed
+
+- **Validation helper typing is clean under the broad Pyright pass.** Legacy
+  validation analyzers and synthetic-corpus helpers now use typed JSON record
+  aliases, avoid importing a private cache constant, type rendered TenantInfo
+  snapshots, and pass DNS-only tenancy calibration results as `SourceResult`
+  instances.
 
 ## [2.2.14] - 2026-06-26
 

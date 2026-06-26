@@ -39,16 +39,15 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from recon_tool.cache import _CACHE_VERSION  # noqa: E402
-
 OUTPUT_DIR = Path(__file__).resolve().parent / "fixtures"
+FIXTURE_CACHE_VERSION = 1
 
 
 def _base_tenant(**fields: Any) -> dict[str, Any]:
     """Default TenantInfo dict. Required fields are stubbed; overrides
     fill in the realistic shape."""
     base = {
-        "cache_version": _CACHE_VERSION,
+        "cache_version": FIXTURE_CACHE_VERSION,
         "tenant_id": "synthetic",
         "display_name": "Contoso, Ltd",
         "default_domain": "contoso.com",
