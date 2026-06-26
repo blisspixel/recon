@@ -57,12 +57,15 @@ Full detail and sequencing live in
 > agentic. That doc is the standing decision guide and the catalog of
 > brittle-rule smells; keep it current as the boundary moves.
 
-> **Status (2026-06):** v2.2.13 is the current release (the profile
-> `signal_boost` / `exclude_signals` fix so `--profile` reweighting fires
-> against posture observations instead of inert signal-name keys, the SPF
-> multi-record include-count fix, the schema source-map `--json` audit, and the
-> Windows text-hygiene local/CI parity fix; shipped 2026-06-26 to PyPI). v2.2.12
-> (2026-06-25) was the prior release (safe MCP launch guidance, README license
+> **Status (2026-06):** v2.2.14 is the current release (boundary-aware hostname
+> matching for Google identity routing and IdP display names, plus Exchange
+> Online DKIM attribution by hostname suffix; shipped 2026-06-26 to PyPI).
+> v2.2.13 was the prior release (the profile `signal_boost` /
+> `exclude_signals` fix so `--profile` reweighting fires against posture
+> observations instead of inert signal-name keys, the SPF multi-record
+> include-count fix, the schema source-map `--json` audit, and the Windows
+> text-hygiene local/CI parity fix; shipped 2026-06-26 to PyPI). v2.2.12
+> (2026-06-25) was the release before that (safe MCP launch guidance, README license
 > wording cleanup, private validation-output root guards, maintainer-loop
 > side-effect and resume boundaries, and the v2.2.11 scorer, DMARC rua
 > report-size, delta exit-code, delta signal-diffing, validator, CT-cache, and
@@ -77,14 +80,15 @@ Full detail and sequencing live in
 > [CHANGELOG.md](../CHANGELOG.md) and upgrade notes in
 > [migration-v2.md](migration-v2.md).
 >
-> **Unreleased on `main` (toward the next patch):** a boundary-unaware-substring
-> hardening pass. The profile `signal_boost` / `exclude_signals` reweighting now
-> fires (it was inert), IdP-name extraction matches vendor hosts by hostname
-> suffix, Google identity redirect routing parses the final URL host before
-> deciding whether the flow left Google, and Exchange Online DKIM attribution
-> matches `onmicrosoft.com` / `protection.outlook.com` by suffix (validated
-> aggregate-only against the corpus, memo
-> `validation/2026-06-26-onmicrosoft-suffix-match.md`). The other
+> **Unreleased on `main` (toward the next patch):** no committed user-facing
+> runtime changes after v2.2.14.
+>
+> **Boundary-unaware-substring hardening shipped in v2.2.14:** IdP-name
+> extraction matches vendor hosts by hostname suffix, Google identity redirect
+> routing parses the final URL host before deciding whether the flow left
+> Google, and Exchange Online DKIM attribution matches `onmicrosoft.com` /
+> `protection.outlook.com` by suffix (validated aggregate-only against the
+> corpus, memo `validation/2026-06-26-onmicrosoft-suffix-match.md`). The other
 > vendor-host substring checks (`outlook.com`, `google.com`, and the SRV-based
 > Microsoft patterns) were validated against the same corpus evidence, showed
 > zero non-suffix matches, and are left unchanged per the mirror-not-fitter

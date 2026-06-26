@@ -31,6 +31,22 @@ USD.
 - Final full local gate passed with `uv run python scripts/check.py`: 3,588
   passed, 6 skipped, 4 deselected, total coverage 86.61 percent. All gate
   stages passed.
+- Pushed commit `2d52f1c` to `origin/main`. Remote CI, Secrets scan, and
+  Scorecard supply-chain security completed successfully. `uv run python
+  scripts/release_readiness.py --remote` passed for the pushed HEAD.
+
+Session: loop cycle 2, 2.2.14 patch release preparation. External spend 0 USD.
+
+- Selected release as the next atomic task because the boundary-aware
+  host-matching fixes are already committed, locally gated, and remote-CI green.
+  Shipping them as a patch release gets the correctness hardening to users
+  without adding a new stable surface.
+- Generated the tool-surface summary against `v2.2.13`; there are no runtime
+  CLI command or flag changes.
+- Moved the current `Unreleased` fixes into `CHANGELOG.md` section
+  `[2.2.14] - 2026-06-26`, updated the roadmap current-release status, and
+  updated `CURRENT-STATE-ANALYSIS.md` to treat the boundary-unaware substring
+  hardening as v2.2.14.
 
 Session: private corpus setup, profile-engine correctness fix, CI parity fix,
 and the 2.2.13 patch release. External spend 0 USD.

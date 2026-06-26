@@ -62,11 +62,10 @@ The project is past the expansion and lock phases:
   contract revision, CLI ergonomics, surface inventory generation, file-size
   ratchets, and public assurance proving-test closure.
 
-The current active line is v2.2.x; v2.2.13 is the current release (2026-06-26:
-the profile `signal_boost` / `exclude_signals` correctness fix, the SPF
-multi-record include-count fix, the schema source-map `--json` audit, and the
-Windows text-hygiene local/CI parity fix). The roadmap says the next work is
-dependency-ordered, not date-driven.
+The current active line is v2.2.x; v2.2.14 is the current release (2026-06-26:
+boundary-aware hostname matching for Google identity routing and IdP display
+names, plus Exchange Online DKIM attribution by hostname suffix). The roadmap
+says the next work is dependency-ordered, not date-driven.
 
 ## Profile signal_boost Correctness Fix (2.2.13)
 
@@ -92,7 +91,7 @@ regression test that builds a temp git repo with an em-dash line and asserts the
 checker flags it through the previously-untested git-diff path. Maintainer
 tooling only; no runtime change.
 
-## Boundary-Unaware Substring Hardening (post-2.2.13)
+## Boundary-Unaware Substring Hardening (v2.2.14)
 
 A sweep for the boundary-unaware-substring bug class (a vendor host matched as a
 raw substring of a URL or DNS value rather than by hostname suffix) found two

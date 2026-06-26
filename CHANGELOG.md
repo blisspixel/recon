@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.14] - 2026-06-26
+
+### Tool Surface Changes
+
+- No runtime CLI command or flag changes.
+
 ### Fixed
 
 - **IdP names match by hostname suffix, not raw substring.** The OIDC/CSE
