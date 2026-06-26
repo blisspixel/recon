@@ -8,11 +8,11 @@ you want to track catalog drift over time:
     python validation/scan.py --corpus validation/corpus-private/consolidated.txt
 
 A run directory is created at ``validation/runs-private/<UTC-stamp>/`` with:
-  * ``results.json`` — raw recon batch output (one entry per domain)
-  * ``gaps.json``    — bucketed unclassified terminals
-  * ``candidates.json`` — pre-filtered triage list (intra-org / covered dropped)
-  * ``meta.json``    — scan metadata (timestamp, corpus path, counts, ...)
-  * ``diff.json``    — only when --compare-to is provided; per-domain deltas
+  * ``results.json`` - raw recon batch output (one entry per domain)
+  * ``gaps.json``    - bucketed unclassified terminals
+  * ``candidates.json`` - pre-filtered triage list (intra-org / covered dropped)
+  * ``meta.json``    - scan metadata (timestamp, corpus path, counts, ...)
+  * ``diff.json``    - only when --compare-to is provided; per-domain deltas
 
 The ``meta.json`` shape lets ``recon`` (or any tool) answer "when was this
 scanned, what was found?" without re-running. Subsequent scans use
@@ -32,6 +32,7 @@ import os
 import signal
 import subprocess
 import sys
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -100,6 +101,19 @@ def _validate_private_run_dir(run_dir: Path) -> Path:
     raise ValueError(f"run directory inside this checkout must be under one of: {allowed_text}")
 
 
+def _validate_private_scan_input_path(path: Path) -> Path:
+    resolved = path.resolve(strict=False)
+    try:
+        resolved.relative_to(REPO_ROOT)
+    except ValueError:
+        return resolved
+    allowed = tuple(root.resolve(strict=False) for root in _PRIVATE_SCAN_OUTPUT_ROOTS)
+    if any(resolved == root or resolved.is_relative_to(root) for root in allowed):
+        return resolved
+    allowed_text = ", ".join(str(root.relative_to(REPO_ROOT)) for root in _PRIVATE_SCAN_OUTPUT_ROOTS)
+    raise ValueError(f"private validation input inside this checkout must be under one of: {allowed_text}")
+
+
 def _count_corpus(corpus: Path) -> int:
     if not corpus.exists():
         return 0
@@ -111,26 +125,37 @@ def _count_corpus(corpus: Path) -> int:
 
 
 def _count_result_records(results_path: Path) -> int:
+    return sum(1 for _ in _iter_result_records(results_path))
+
+
+def _iter_result_records(results_path: Path) -> Iterator[dict[str, Any]]:
+    """Yield result records from NDJSON or JSON-array output.
+
+    NDJSON can have a malformed final line after an external interrupt; skip
+    malformed lines so partial-run finalization and CT retry synthesis keep the
+    valid streamed prefix.
+    """
     if not results_path.exists():
-        return 0
+        return
     if results_path.suffix == ".ndjson":
-        total = 0
         with contextlib.suppress(OSError), results_path.open(encoding="utf-8") as fh:
             for raw in fh:
                 line = raw.strip()
                 if not line:
                     continue
                 with contextlib.suppress(ValueError):
-                    if isinstance(json.loads(line), dict):
-                        total += 1
-        return total
+                    parsed = json.loads(line)
+                    if isinstance(parsed, dict):
+                        yield parsed
+        return
     with contextlib.suppress(OSError, ValueError):
-        parsed = json.loads(results_path.read_text(encoding="utf-8"))
-        if isinstance(parsed, list):
-            return sum(1 for item in parsed if isinstance(item, dict))
-        if isinstance(parsed, dict):
-            return 1
-    return 0
+        parsed_json = json.loads(results_path.read_text(encoding="utf-8"))
+        if isinstance(parsed_json, list):
+            for item in parsed_json:
+                if isinstance(item, dict):
+                    yield item
+        elif isinstance(parsed_json, dict):
+            yield parsed_json
 
 
 def _find_results_path(run_dir: Path) -> Path | None:
@@ -158,30 +183,14 @@ def _write_ct_budget_summary(results_path: Path, run_dir: Path) -> None:
     outcome_counts: dict[str, int] = {}
     total = 0
 
-    def _tally(rec: object) -> None:
+    def _tally(rec: dict[str, Any]) -> None:
         nonlocal total
-        if isinstance(rec, dict):
-            total += 1
-            outcome = rec.get("ct_attempt_outcome") or "not_attempted"
-            outcome_counts[str(outcome)] = outcome_counts.get(str(outcome), 0) + 1
+        total += 1
+        outcome = rec.get("ct_attempt_outcome") or "not_attempted"
+        outcome_counts[str(outcome)] = outcome_counts.get(str(outcome), 0) + 1
 
-    # NDJSON (the default, used for large corpora) is streamed line-by-line so a
-    # huge results file stays memory-bounded; the opt-in --json-array form is a
-    # single document (results.json) and is parsed whole.
-    if results_path.suffix == ".ndjson":
-        with contextlib.suppress(OSError), results_path.open(encoding="utf-8") as fh:
-            for raw in fh:
-                line = raw.strip()
-                if not line:
-                    continue
-                with contextlib.suppress(ValueError):
-                    _tally(json.loads(line))
-    else:
-        with contextlib.suppress(OSError, ValueError):
-            parsed = json.loads(results_path.read_text(encoding="utf-8"))
-            if isinstance(parsed, list):
-                for rec in parsed:
-                    _tally(rec)
+    for rec in _iter_result_records(results_path):
+        _tally(rec)
 
     # Pick up the persisted rate-limiter snapshots written by the
     # batch subprocess. The state files live in the operator's recon
@@ -209,7 +218,7 @@ def _write_ct_budget_summary(results_path: Path, run_dir: Path) -> None:
     br_n = outcome_counts.get("breaker_open", 0)
     cmiss_n = outcome_counts.get("cache_miss", 0)
     print(
-        f"  ct_budget_summary: {total} records — "
+        f"  ct_budget_summary: {total} records - "
         f"cache_hit={cache_n} live_success={live_n} "
         f"rate_limited={rl_n} breaker_open={br_n} cache_miss={cmiss_n}",
         flush=True,
@@ -364,9 +373,13 @@ def _synthesize_ct_retry_corpus(retry_from: Path, output_root: Path) -> Path:
         raise SystemExit(2)
     prior = retry_from
     if prior.is_dir():
-        prior = prior / "results.ndjson"
+        prior_results = _find_results_path(prior)
+        if prior_results is None:
+            print(f"error: no results.ndjson or results.json in {retry_from}", file=sys.stderr)
+            raise SystemExit(2)
+        prior = prior_results
     if not prior.exists():
-        print(f"error: results.ndjson not found in {retry_from}", file=sys.stderr)
+        print(f"error: results file not found in {retry_from}", file=sys.stderr)
         raise SystemExit(2)
     degraded_outcomes = {
         "live_rate_limited",
@@ -375,20 +388,19 @@ def _synthesize_ct_retry_corpus(retry_from: Path, output_root: Path) -> Path:
         "cache_miss",
     }
     degraded_domains: list[str] = []
-    with prior.open(encoding="utf-8") as fh:
-        for line in fh:
-            if not line.strip():
-                continue
-            rec = json.loads(line)
-            outcome = rec.get("ct_attempt_outcome")
-            if outcome in degraded_outcomes:
-                dom = rec.get("queried_domain")
-                if dom:
-                    degraded_domains.append(dom)
+    seen_domains: set[str] = set()
+    for rec in _iter_result_records(prior):
+        outcome = rec.get("ct_attempt_outcome")
+        dom = rec.get("queried_domain")
+        if outcome in degraded_outcomes and isinstance(dom, str) and dom and dom not in seen_domains:
+            degraded_domains.append(dom)
+            seen_domains.add(dom)
     if not degraded_domains:
         print("--ct-retry-from: no degraded records in prior run; nothing to retry")
         raise SystemExit(0)
-    synth = output_root.parent / f"_ct-retry-{datetime.now(UTC).strftime('%Y%m%d-%H%M%SZ')}.txt"
+    retry_inputs_dir = output_root / "_inputs"
+    retry_inputs_dir.mkdir(parents=True, exist_ok=True)
+    synth = retry_inputs_dir / f"ct-retry-{datetime.now(UTC).strftime('%Y%m%d-%H%M%SZ')}.txt"
     synth.parent.mkdir(parents=True, exist_ok=True)
     synth.write_text("\n".join(degraded_domains) + "\n", encoding="utf-8")
     print(
@@ -617,6 +629,8 @@ def main() -> None:
         args.output_root = _validate_scan_output_root(args.output_root)
         if args.finalize_existing is not None:
             args.finalize_existing = _validate_private_run_dir(args.finalize_existing)
+        if args.ct_retry_from is not None:
+            args.ct_retry_from = _validate_private_scan_input_path(args.ct_retry_from)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         raise SystemExit(2) from exc

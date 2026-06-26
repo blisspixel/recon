@@ -50,3 +50,26 @@ Follow-up code now supports:
 Continue C3 as bounded partial sessions, preferably after CT limiter cooldown,
 and treat `ct_budget_summary.json` plus `meta.json` as the session health record.
 Do not compare partial sessions against complete prior scans.
+
+## Retry Session A
+
+After hardening `--ct-retry-from`, a short bounded retry was run against the
+degraded CT records from the first partial session.
+
+- Retry corpus size: 2,610 domains.
+- Valid streamed retry records: 109.
+- Completion state: partial, controlled `--max-runtime` stop.
+- External spend: 0 USD.
+- Private artifacts: `validation/runs-private/20260626-155208Z/` and the
+  synthesized retry input under `validation/runs-private/_inputs/` (gitignored).
+
+| Outcome | Count |
+|---|---:|
+| `live_success` | 1 |
+| `live_rate_limited` | 1 |
+| `breaker_open` | 105 |
+| `not_attempted` | 2 |
+
+This retry confirms the hardened continuation path works, including private
+retry-corpus placement and partial finalization. It does not close C3: the run
+mostly measured continued CT breaker pressure and produced no triage candidates.

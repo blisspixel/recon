@@ -53,6 +53,22 @@ findings, or unsuppressed small strata.
 
 ## Current Alignment Snapshot
 
+Cycle 7 scope: C3 CT retry hardening, private retry-corpus placement, and a
+bounded maintainer-local retry session.
+
+Maker-checker score:
+
+| Category | Score | Evidence |
+|---|---:|---|
+| Correctness | 5/5 | `--ct-retry-from` now accepts run directories, NDJSON, and legacy JSON arrays; skips malformed tails; deduplicates domains; and has focused tests for each path. |
+| Security and supply chain | 5/5 | Private retry inputs are written under the validated private output root; public-path retry input inside the repo is rejected; validation hygiene and `git check-ignore` confirmed no private artifacts are tracked. |
+| Performance | 5/5 | Result parsing remains streaming for NDJSON; retry sessions process only degraded CT records instead of re-running already-successful domains. |
+| Readability | 5/5 | Shared result-record iteration removes duplicated JSON parsing and keeps the CT retry flow explicit. |
+| Maintainability | 5/5 | Adds targeted tests around the failure modes observed in C3 without changing runtime CLI, JSON, or MCP surfaces. |
+| Sustainability and invariants | 5/5 | Maintains passive, zero-spend, aggregate-only C3 validation and does not overclaim CT breaker-limited retry results as calibration closure. |
+
+External spend: 0 USD.
+
 Cycle 6 scope: live documentation refresh for the README, docs index, roadmap,
 getting-started guide, and plain-language model overview.
 

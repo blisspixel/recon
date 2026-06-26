@@ -80,6 +80,62 @@ def test_scan_output_root_rejects_public_repo_path(scan) -> None:
         scan._validate_scan_output_root(scan.REPO_ROOT / "docs" / "scan-output")
 
 
+def test_private_scan_input_rejects_public_repo_path(scan) -> None:
+    with pytest.raises(ValueError, match="runs-private"):
+        scan._validate_private_scan_input_path(scan.REPO_ROOT / "validation" / "public-results.ndjson")
+
+
+def test_private_scan_input_allows_private_repo_path(scan) -> None:
+    path = scan.REPO_ROOT / "validation" / "runs-private" / "stamp" / "results.ndjson"
+    assert scan._validate_private_scan_input_path(path) == path.resolve(strict=False)
+
+
+def test_ct_retry_corpus_writes_under_output_root_and_deduplicates(scan, tmp_path: Path) -> None:
+    output_root = tmp_path / "runs-private"
+    prior = output_root / "prior"
+    prior.mkdir(parents=True)
+    (prior / "results.ndjson").write_text(
+        "\n".join(
+            [
+                json.dumps({"queried_domain": "contoso.com", "ct_attempt_outcome": "live_rate_limited"}),
+                json.dumps({"queried_domain": "fabrikam.com", "ct_attempt_outcome": "breaker_open"}),
+                json.dumps({"queried_domain": "contoso.com", "ct_attempt_outcome": "cache_miss"}),
+                json.dumps({"queried_domain": "northwindtraders.com", "ct_attempt_outcome": "live_success"}),
+                '{"queried_domain":',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    retry_corpus = scan._synthesize_ct_retry_corpus(prior, output_root)
+
+    assert retry_corpus.parent == output_root / "_inputs"
+    assert retry_corpus.read_text(encoding="utf-8").splitlines() == [
+        "contoso.com",
+        "fabrikam.com",
+    ]
+
+
+def test_ct_retry_corpus_accepts_legacy_json_array(scan, tmp_path: Path) -> None:
+    output_root = tmp_path / "runs-private"
+    prior = output_root / "prior"
+    prior.mkdir(parents=True)
+    (prior / "results.json").write_text(
+        json.dumps(
+            [
+                {"queried_domain": "contoso.com", "ct_attempt_outcome": "live_other_failure"},
+                {"queried_domain": "fabrikam.com", "ct_attempt_outcome": "cache_hit"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    retry_corpus = scan._synthesize_ct_retry_corpus(prior, output_root)
+
+    assert retry_corpus.parent == output_root / "_inputs"
+    assert retry_corpus.read_text(encoding="utf-8").splitlines() == ["contoso.com"]
+
+
 def test_run_batch_passes_timeout_to_recon_batch(scan, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     corpus = tmp_path / "domains.txt"
     corpus.write_text("contoso.com\n", encoding="utf-8")

@@ -22,7 +22,10 @@ The next work is dependency-ordered:
    - Current state: the first recovered partial CT session produced 2,693 valid
      records out of 5,241 and is documented in
      [validation/2026-06-26-c3-ct-partial.md](../validation/2026-06-26-c3-ct-partial.md).
-     It confirms the multi-session, limiter-bound shape. It does not close C3.
+     A bounded retry against degraded CT records added 109 valid retry records,
+     confirmed the private retry-input path, and produced no triage candidates.
+     These sessions confirm the multi-session, limiter-bound shape. They do not
+     close C3.
    - Acceptance: publish only aggregate counts and disclosure-reviewed memos.
      No apexes, organization names, tenant IDs, or per-domain rows leave the
      maintainer machine.

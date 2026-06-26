@@ -183,6 +183,26 @@ Partial runs write `meta.json` with `batch_completed`, `batch_timed_out`,
 `results_records`, and the timeout settings. Diffing is skipped for partial
 runs because comparing a partial session against a complete prior run is noisy.
 
+After the public CT limiter cools down, retry only the domains whose CT attempt
+was degraded in a prior session:
+
+```bash
+python validation/scan.py \
+    --corpus validation/corpus-private/consolidated.txt \
+    --ct-retry-from validation/runs-private/<UTC-stamp> \
+    --label c3-ct-retry-1 \
+    --concurrency 2 \
+    --timeout 60 \
+    --max-runtime 7200 \
+    --no-compare
+```
+
+The synthesized retry corpus is written under
+`validation/runs-private/_inputs/` by default, keeping private apexes inside the
+ignored validation workspace. `--ct-retry-from` accepts a run directory,
+`results.ndjson`, or legacy `results.json`; malformed streamed tails are skipped
+and repeated domains are retried once.
+
 ## Assurance and calibration harnesses
 
 The statistical-assurance side of this directory (the dossier that reads

@@ -118,7 +118,11 @@ NDJSON stream before an outer process timeout stopped the wrapper. The recovered
 aggregate is documented in `validation/2026-06-26-c3-ct-partial.md`: 2,693 valid
 records out of 5,241, with CT mostly blocked by the local breaker. This does not
 complete C3 and does not change the Bayesian calibration claims; it confirms the
-roadmap's multi-session CT framing.
+multi-session shape. A short bounded retry against degraded CT records produced
+109 valid retry records and one fresh live CT success; it also confirmed that
+retry inputs now stay under the ignored private output root. C3 remains open
+until enough CT coverage accumulates for aggregate certificate and graph-surface
+review.
 
 The maintainer tooling now supports the correct operational shape:
 
@@ -127,6 +131,8 @@ The maintainer tooling now supports the correct operational shape:
   parseable NDJSON records.
 - `validation/scan.py --finalize-existing` recovers aggregate artifacts from an
   already-streamed run directory without network calls.
+- `validation/scan.py --ct-retry-from` builds a private retry corpus from prior
+  CT-degraded records without re-running already-successful domains.
 - Partial metadata records valid parseable records, timeout settings, and
   completion state, and partial scans skip noisy diffs.
 - Controlled timeouts terminate the batch process tree on Windows so a launcher

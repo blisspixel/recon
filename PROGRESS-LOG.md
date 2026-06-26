@@ -199,6 +199,40 @@ Session: loop cycle 6, live documentation refresh. External spend 0 USD.
   stages passed.
 - External spend: 0 USD.
 
+Session: loop cycle 7, C3 CT retry hardening and bounded retry. External spend
+0 USD.
+
+- Ran the cycle-7 maintenance sub-goal against the C3 scan path: reviewed
+  private artifact boundaries, retry/resume behavior, malformed streamed-tail
+  handling, and validation hygiene before continuing the live CT track.
+- Latest best-practice refresh for this task: keep long-running public-data
+  workflows resumable and checkpointed, keep retries bounded by limiter state,
+  and keep synthesized private inputs under explicitly private workspaces.
+- Hardened `validation/scan.py --ct-retry-from`: prior run directories,
+  `results.ndjson`, and legacy `results.json` are accepted; malformed streamed
+  tails are skipped through a shared result-record iterator; retry domains are
+  deduplicated; and synthesized retry corpora are written under the validated
+  private output root.
+- Added regression coverage for private retry-input path validation, private
+  output placement, deduplication, malformed partial tails, and legacy JSON-array
+  retry input.
+- Ran a bounded maintainer-local C3 retry against degraded CT records from the
+  first partial session. The retry corpus had 2,610 domains; the five-minute
+  session finalized 109 valid retry records, with 1 live CT success, 1 rate
+  limit, 105 breaker-open outcomes, 2 not-attempted outcomes, and 0 triage
+  candidates. Private artifacts remain ignored under `validation/runs-private/`.
+- Updated the aggregate public C3 memo, validation runbook, roadmap current
+  state, changelog, current-state analysis, and quality rubric.
+- Focused validation passed:
+  `uv run python -m pytest tests/test_scan_ct_summary.py tests/test_maintainer_loop_runbook.py tests/test_agentic_balance_docs.py -q`
+  with 20 passed. Focused ruff, text hygiene, validation hygiene, and
+  `git check-ignore` checks passed.
+- Fast local gate passed with `uv run python scripts/check.py --fast`.
+- Final full local gate passed with `uv run python scripts/check.py`: 3,606
+  passed, 5 skipped, 4 deselected, total coverage 86.63 percent. All gate
+  stages passed.
+- External spend: 0 USD.
+
 Session: private corpus setup, profile-engine correctness fix, CI parity fix,
 and the 2.2.13 patch release. External spend 0 USD.
 

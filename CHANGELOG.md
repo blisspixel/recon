@@ -40,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   valid streamed record counts in `meta.json`, and terminates the batch process
   tree on controlled timeout. The first recovered C3 partial aggregate is
   documented in `validation/2026-06-26-c3-ct-partial.md`.
+- **C3 CT retry path is private and resumable.** `validation/scan.py
+  --ct-retry-from` now accepts prior run directories, `results.ndjson`, or
+  legacy `results.json`; skips malformed streamed tails; deduplicates retry
+  domains; and writes synthesized retry inputs under the validated private
+  output root instead of a public validation path. The first bounded retry
+  aggregate is appended to `validation/2026-06-26-c3-ct-partial.md`.
 
 ## [2.2.14] - 2026-06-26
 
