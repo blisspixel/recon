@@ -69,8 +69,10 @@ The next work is dependency-ordered:
    - Current state: this is the active next work. The plan lives in
      [external-writeup-plan.md](external-writeup-plan.md). The paper outline and
      draft exist, the public reproduction bundle exists, the initial claim map
-     lives in [paper-claim-map.md](paper-claim-map.md), C3 is closed as
-     aggregate-only evidence, and release readiness now guards citation metadata.
+     lives in [paper-claim-map.md](paper-claim-map.md), the public reviewer
+     command path lives in [artifact-review.md](artifact-review.md), C3 is closed
+     as aggregate-only evidence, and release readiness now guards citation
+     metadata.
    - Acceptance: cite only public or synthetic artifacts and aggregate-only
      validation memos. Do not claim frequentist coverage for the 80 percent
      intervals, and do not add runtime behavior while packaging the artifact.

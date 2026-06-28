@@ -64,6 +64,9 @@ requirements:
 - `python -m validation.reproduce_paper_numbers` is the public no-private-data
   reproduction entry point. The smoke profile gives a quick orchestrator check;
   the paper profile runs the public synthetic and proof bundle.
+- [artifact-review.md](artifact-review.md) is the reviewer-facing command path
+  for the public artifact, including what can and cannot be reproduced outside
+  the private corpus.
 - The 2026-06-26 smoke check with stamp `publication-plan-smoke-20260626`
   passed all five public steps and reported `Private corpora read: no`.
 - `CITATION.cff` is the citation metadata source and release readiness now
@@ -116,14 +119,16 @@ Reasoning:
 3. **Public artifact smoke.** Run
    `python -m validation.reproduce_paper_numbers --profile smoke --stamp publication-plan-smoke-20260626`
    and keep outputs under ignored `validation/local/`.
-4. **Claim map.** Keep [paper-claim-map.md](paper-claim-map.md) current as each
+4. **Artifact guide.** Keep [artifact-review.md](artifact-review.md) current with
+   the exact public reviewer commands and their claim boundaries.
+5. **Claim map.** Keep [paper-claim-map.md](paper-claim-map.md) current as each
    paper claim moves between code invariant, unit or property test, public
    reproduction harness, public validation memo, aggregate-only private memo, or
    requires-more-evidence status.
-5. **Draft tightening.** Update `docs/paper-outline.md` and
+6. **Draft tightening.** Update `docs/paper-outline.md` and
    `docs/paper-draft.md` only where the claim map proves the text. Mark
    unresolved empirical cells as pending rather than smoothing over them.
-6. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
+7. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
    remote release readiness after push.
 
 ## Acceptance Criteria
@@ -133,6 +138,8 @@ Reasoning:
 - README and roadmap identify external write-up readiness as the active next
   work and link here.
 - The docs index exposes this plan under Research.
+- The artifact review guide gives exact public commands and separates public
+  result validation from private aggregate evidence.
 - The public reproduction smoke profile completes from the current checkout.
 - The claim map links every Section 6 empirical row to a support tier and source.
 - No committed artifact contains private target identifiers or raw private
