@@ -219,7 +219,8 @@ before committing any validation artifact.
 recon is feature-complete for the current roadmap: the CLI, JSON schema, MCP
 server, validation guards, and release path are in place. Current work is
 hardening and small refinements: clearer docs, stronger validation evidence,
-current citation metadata, and careful pressure tests of the correlation model.
+current citation metadata, OpenSSF posture, and careful pressure tests of the
+correlation model.
 The paper package is now focused on publication boundaries: the
 [public label snapshot decision](docs/public-label-snapshot-decision.md) keeps
 public-list numbers as robustness checks rather than population rates,

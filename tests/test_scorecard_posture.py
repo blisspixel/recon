@@ -207,6 +207,15 @@ def test_dependency_update_automation_is_configured_low_noise_for_scorecard_chec
         ]
 
 
+def test_codeowners_routes_repository_changes_to_maintainer() -> None:
+    codeowners = (_ROOT / ".github" / "CODEOWNERS").read_text(encoding="utf-8").splitlines()
+
+    assert codeowners == [
+        "# Review routing for repository changes.",
+        "* @blisspixel",
+    ]
+
+
 def test_supply_chain_docs_track_scorecard_gap_decisions() -> None:
     text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
 
@@ -216,7 +225,30 @@ def test_supply_chain_docs_track_scorecard_gap_decisions() -> None:
         "full-SHA GitHub Action pins",
         "dependency security updates",
         "active repository ruleset",
+        "`.github/CODEOWNERS` routes all repository paths to the maintainer account",
         "Code-Review is low until normal work flows through reviewed pull requests",
         "OpenSSF Best Practices Badge",
+        "openssf-posture.md",
+    ):
+        assert required in text
+
+
+def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
+    text = " ".join((_ROOT / "docs" / "openssf-posture.md").read_text(encoding="utf-8").split())
+
+    for required in (
+        "Score: `7.5`",
+        "OpenSSF Best Practices Badge is claimed",
+        "must not be added as a placeholder",
+        "Branch-Protection",
+        "Code-Review",
+        "CI-Tests",
+        "Maintained",
+        "CII-Best-Practices",
+        "Contributors",
+        "Do not manufacture review history",
+        "bestpractices.dev",
+        "github.com/ossf/scorecard",
+        "about-code-owners",
     ):
         assert required in text

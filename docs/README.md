@@ -63,6 +63,7 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | Traceability matrix | [traceability-matrix.md](traceability-matrix.md) |
 | Statistical-assurance dossier | [statistical-assurance.md](statistical-assurance.md) |
 | Supply-chain and release integrity | [supply-chain.md](supply-chain.md) |
+| OpenSSF Scorecard and Best Practices posture | [openssf-posture.md](openssf-posture.md) |
 | Data-handling policy | [data-handling-policy.md](data-handling-policy.md) |
 | Legal and query-exposure notes | [legal.md](legal.md) |
 | Performance expectations | [performance.md](performance.md) |

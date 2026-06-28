@@ -26,10 +26,10 @@ The next work is dependency-ordered:
      place. The maintainer is continuing theory and correlation work, but new
      evidence should refine the existing recon system conservatively rather
      than create features by default.
-   - Current plan: keep docs readable for casual users, keep dependencies and
-     supply-chain checks current, keep the public reproduction path passing,
-     and make small correctness or clarity refinements when validation runs
-     expose them.
+   - Current plan: keep docs readable for casual users, keep dependencies,
+     supply-chain checks, and OpenSSF posture current, keep the public
+     reproduction path passing, and make small correctness or clarity
+     refinements when validation runs expose them.
    - Acceptance: every refinement preserves the project invariants, keeps
      examples fictional or synthetic, and publishes only public, synthetic, or
      aggregate-only evidence. Feedback on gaps, wording, and false positives is

@@ -95,6 +95,8 @@ The repository also runs supply-chain posture checks outside the release flow:
 - Every workflow job has an explicit timeout so CI and release automation fail
   closed instead of hanging indefinitely.
 - Secret scanning and push protection are enabled for the repository.
+- `.github/CODEOWNERS` routes all repository paths to the maintainer account so
+  external pull requests have a clear review owner.
 
 The 2026-06-28 Scorecard review found one code-owned gap and several
 repository-process gaps. The code-owned gap was an unpinned installer
@@ -116,7 +118,8 @@ The remaining Scorecard limits are intentional or process-bound:
   Creating fake review history would be worse than the score.
 - Maintained is low while the repository is younger than Scorecard's age window.
 - CII-Best-Practices is low until the OpenSSF Best Practices Badge questionnaire
-  is completed and linked.
+  is completed and linked. The readiness map lives in
+  [openssf-posture.md](openssf-posture.md).
 - Contributors is low until outside contributors from distinct organizations
   participate naturally.
 
