@@ -28,9 +28,9 @@ import pytest
 from recon_tool.bayesian import (
     _factor_is_probabilities,
     _factor_is_strictly_positive,
-    _interval_is_ordered,
     _marginal_in_unit_range,
 )
+from recon_tool.bayesian_interval import interval_is_ordered as _interval_is_ordered
 from recon_tool.fingerprints import Detection, _no_shadowed_pairs_survive
 from recon_tool.specificity import SpecificityVerdict, _verdict_match_count_valid
 from recon_tool.validator import _has_no_control_chars, _is_normalized_domain

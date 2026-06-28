@@ -75,7 +75,7 @@ found real test gaps on its first honest run.
 
 | Cluster | Survivors | Response |
 |---|---|---|
-| `_credible_interval` / `_erfinv` (the interval arithmetic) | 83 | `tests/test_bayesian_unit_math.py`: hand-computed interval values per branch, erfinv anchors and symmetry |
+| `credible_interval` / `beta_ppf` / `_erfinv` (the interval arithmetic) | 83 | `tests/test_bayesian_unit_math.py`: hand-computed interval values, exact Beta anchors, and boundary fallback coverage |
 | `_declarative_evidence_count` (CAL14 n_eff) | 53 | hand-computed counting cases (fired, informative absence, uninformative absence, group handling) |
 | `_rank_evidence` / `_contributing_evidence` | ~45 | hand-computed LLRs, influence shares, tie-breaks, group reduction |
 | parsers / loaders (`_parse_*`, `load_network`, `load_priors_override`) | ~95 | `tests/test_bayesian_validation_rounds.py` + `tests/test_bayesian_topology.py` added to the kill-set; loader edge cases in the unit file |

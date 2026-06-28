@@ -58,6 +58,7 @@ from itertools import product
 
 import deal
 
+from recon_tool.bayesian_interval import credible_interval
 from recon_tool.bayesian_loader import apply_priors_override as _apply_priors_override
 from recon_tool.bayesian_loader import load_network, load_priors_override
 from recon_tool.bayesian_models import (  # re-exported: stable import path after the split
@@ -88,12 +89,6 @@ __all__ = [
     "load_priors_override",
     "signals_from_tenant_info",
 ]
-
-# Width of the credible interval. 80% chosen over the more common 95%
-# because the math here is heuristic on top of exact inference and a
-# tighter band over-promises calibration we haven't validated. Fixed at
-# module level so downstream consumers can document the contract.
-_CREDIBLE_INTERVAL_WIDTH = 0.80
 
 # Default effective-sample-size settings. load_network() reads the same values
 # from bayesian_network.yaml's top-level calibration block; these constants
@@ -155,12 +150,6 @@ def _factor_is_strictly_positive(factor: Factor | None) -> bool:
 def _marginal_in_unit_range(dist: dict[str, float]) -> bool:
     """Each marginal probability is in ``[0, 1]``."""
     return all(0.0 <= v <= 1.0 for v in dist.values())
-
-
-def _interval_is_ordered(interval: tuple[float, float]) -> bool:
-    """Credible interval is ordered and within ``[0, 1]``."""
-    low, high = interval
-    return 0.0 <= low <= high <= 1.0
 
 
 @deal.post(_factor_is_probabilities)  # pyright: ignore[reportUntypedFunctionDecorator]
@@ -471,55 +460,6 @@ def _evidence_for_domain(
     return fired
 
 
-@deal.post(_interval_is_ordered)  # pyright: ignore[reportUntypedFunctionDecorator]
-def _credible_interval(
-    posterior: float,
-    n_eff: float,
-    width: float = _CREDIBLE_INTERVAL_WIDTH,
-) -> tuple[float, float]:
-    """Compute the central credible interval treating ``posterior`` as the
-    mean of a Beta(α, β) with effective sample size ``n_eff``.
-
-    Uses a normal approximation (Wald-style) to avoid pulling in
-    scipy. The approximation is rough near the probability boundary:
-    measured against exact Beta quantiles over our n_eff range (4 to
-    ~14) it deviates by up to ~0.06 as ``posterior`` approaches 0 or 1
-    (the [0, 1] clip and the Wald form's known degradation there) and
-    up to ~0.05 in the interior. Treat the bound as approximate, not
-    exact; swapping in the exact Beta central quantile is a tracked
-    follow-up. The deviation magnitude is pinned by
-    ``tests/test_bayesian_inference.py::TestCredibleIntervalVsBeta``.
-    """
-    if n_eff <= 0:
-        return (0.0, 1.0)
-    # z for a (1+width)/2 quantile of standard normal.
-    # 0.80 -> z=1.28; 0.95 -> z=1.96.
-    if abs(width - 0.80) < 1e-6:
-        z = 1.2816
-    elif abs(width - 0.95) < 1e-6:
-        z = 1.96
-    else:
-        # General approximation; close enough for any reasonable width.
-        z = math.sqrt(2.0) * _erfinv(width)
-    p = max(min(posterior, 1.0 - 1e-9), 1e-9)
-    se = math.sqrt(p * (1.0 - p) / n_eff)
-    low = max(0.0, p - z * se)
-    high = min(1.0, p + z * se)
-    return (low, high)
-
-
-def _erfinv(y: float) -> float:
-    """Inverse error function via Winitzki's elementary approximation.
-
-    Accurate to ~5e-3 over (-0.99, 0.99); good enough for credible-
-    interval widths in practice.
-    """
-    a = 0.147
-    ln = math.log(1.0 - y * y)
-    first = 2.0 / (math.pi * a) + ln / 2.0
-    return math.copysign(math.sqrt(math.sqrt(first * first - ln / a) - first), y)
-
-
 def _network_calibration(network: BayesianNetwork) -> CalibrationSettings:
     return network.calibration
 
@@ -709,7 +649,7 @@ def infer(
             + n_eff_count * calibration.evidence_n_eff_contrib
             - conflict_field_count * calibration.conflict_n_eff_penalty,
         )
-        low, high = _credible_interval(post, n_eff)
+        low, high = credible_interval(post, n_eff)
 
         # Entropy reduction relative to prior. Prior comes from the
         # marginal under no evidence — recompute against an

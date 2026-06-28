@@ -392,13 +392,13 @@ from a public zone, stratified by a hardening proxy, is required before any rate
 transfers beyond this population. Current validation summaries also report an
 equal-mass, mean-confidence ECE with deterministic bootstrap CI so future reruns
 can separate estimator choice from model behavior; the June memo numbers above
-remain the legacy fixed-width ECE until rerun. (2) The credible interval is a Wald
-approximation to the moment-matching Beta, not the exact quantile; it deviates by
-up to ~0.06 near the probability boundary (Section 3), exactly the regime most
-posteriors occupy, so interval-derived numbers carry that slack until the exact
-Beta replacement lands. (3) The conformal over-coverage with decisive set size is
-expected on a bimodal, exchangeable cohort and says nothing about hardened
-targets.
+remain the legacy fixed-width ECE until rerun. (2) The credible interval now uses
+exact Beta quantiles for unimodal moment-matched cases and keeps the validated
+mean-centered fallback for boundary-skewed cases, because equal-tailed Beta
+intervals can exclude their own posterior near 0 or 1. The fallback is a
+deliberate coverage-preserving contract, not an untracked approximation. (3) The
+conformal over-coverage with decisive set size is expected on a bimodal,
+exchangeable cohort and says nothing about hardened targets.
 
 **The cost of honesty, with numbers.** The layer ablation runs over 20,000
 synthetic worlds drawn from the model's own generative process and is fully
@@ -538,8 +538,9 @@ priority order:
 - Keep the posture-stratified and per-vertical claim-map rows synchronized with
   the disclosure-reviewed public-list and full-corpus memos before final
   submission.
-- Engine follow-up: swap the Wald interval for the exact Beta central quantile
-  (Section 3), then re-run the coverage and calibration cells.
+- Engine follow-up: re-run the coverage and calibration cells after the hybrid
+  credible-interval change, then decide whether the paper numbers need a refreshed
+  aggregate memo.
 - An adversarial planting/stripping test set that measures the threat model
   directly rather than asserting it.
 - Figures: architecture diagram, the nine-node DAG, reliability diagrams with the

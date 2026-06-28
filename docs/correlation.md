@@ -1311,31 +1311,28 @@ that fired for this node, $n_{\mathrm{conf}}$ is the cross-source
 conflict count from §3.4, and $(c_{\mathrm{ev}}, c_{\mathrm{conf}}) =
 (1.0, 1.5)$ are the per-record contribution and per-conflict penalty.
 
-The 80% credible interval is then the central 80% quantile of
-$\mathrm{Beta}(\alpha_{\mathrm{eff}}, \beta_{\mathrm{eff}})$. We
-approximate with a normal-approximation (Wald) interval
+The 80% credible interval starts from the central 80% quantile of
+$\mathrm{Beta}(\alpha_{\mathrm{eff}}, \beta_{\mathrm{eff}})$. When both
+shape parameters are at least one, recon computes that quantile directly
+with a local incomplete-beta inversion, without adding scipy. When either
+shape parameter falls below one, the equal-tailed Beta interval can exclude
+its own mean in the boundary-skewed regime where most recon posteriors
+live. In that case recon keeps the validated mean-centered interval
 
 $$\hat{p} \pm z_{0.90} \cdot \sqrt{\frac{\hat{p}(1-\hat{p})}{n_{\mathrm{eff}}}}, \qquad z_{0.90} \approx 1.282,$$
 
-clipped to $[0, 1]$. This Wald form is a rough approximation, not a
-tight one: measured against the exact Beta quantile (scipy-free, in the
-test cited below) it deviates by up to $\approx 0.06$ as $\hat{p}$
-approaches 0 or 1, where the $[0,1]$ clip bites and the Wald interval is
-known to degrade (Brown, Cai & DasGupta 2001), and by up to
-$\approx 0.05$ in the interior, across the $n_{\mathrm{eff}}$ range we
-operate in. That is comparable to the model's own calibration error, so
-the interval bound is approximate, not exact, and the headline regime
-(posteriors near 0 or 1 with small $n_{\mathrm{eff}}$) is exactly where
-the approximation is worst. Replacing the Wald band with the exact Beta
-central quantile (an incomplete-beta inversion, no new dependency) is a
-tracked follow-up; the deviation magnitude is pinned by
-`tests/test_bayesian_inference.py::TestCredibleIntervalVsBeta`.
+clipped to $[0, 1]$. This hybrid is intentional: the exact path removes
+interior approximation error, while the fallback preserves the operational
+contract that the interval contains the reported posterior and continues to
+pass the CAL8 perturbation-coverage gate. The quantile math is pinned by
+`tests/test_bayesian_inference.py::TestCredibleIntervalVsBeta`; the
+mean-containment and coverage behavior is pinned by
+`tests/test_interval_coverage.py`.
 
 **What the 80% interval is, and what it is not.** It is intended as the
-central-80% quantile of the moment-matching $\mathrm{Beta}$
-$(\alpha_{\mathrm{eff}}, \beta_{\mathrm{eff}})$ constructed on top of the
-exact posterior, computed in practice via the Wald approximation above
-(with the deviation just stated). It is *not* a
+central-80% quantile of the moment-matching $\mathrm{Beta}$ in the
+unimodal case, and as a mean-centered interval in boundary-skewed cases
+where the central quantile would exclude the posterior. It is *not* a
 frequentist coverage interval against the underlying generative
 process, because there is no underlying generative process we have
 access to (the latent claim is unobserved by design and there is
@@ -1371,9 +1368,8 @@ can verify by construction that recon's interval meets both:
 1. **Data-related principle: uncertainty is non-increasing as
    evidence grows.** With more bindings firing for a node,
    $n_{\mathrm{ev}}$ increases, $n_{\mathrm{eff}}$ increases, and
-   the normal approximation $\hat{p} \pm z_{0.90}
-   \sqrt{\hat{p}(1 - \hat{p}) / n_{\mathrm{eff}}}$ produces a
-   strictly narrower interval. The conflict-penalty term
+   the interval construction produces a strictly narrower interval for
+   the same posterior and shape regime. The conflict-penalty term
    $n_{\mathrm{conf}} \cdot c_{\mathrm{conf}}$ is the only
    construct that can widen the interval, and only because
    conflict counts as anti-evidence; it does not violate the
@@ -2043,7 +2039,7 @@ Predicted Bayesian behaviour:
   likelihood discussion).
 - **Credible intervals widen automatically.** With `n_eff` dampened,
   $1/\sqrt{n_{\text{eff}}}$ grows; the 80% credible interval in
-  `_credible_interval` widens as designed (§4.4).
+  `credible_interval` widens as designed (§4.4).
 - **No node fires high-confidence.** Even if a specific evidence
   binding nominally matches one of the rotating CNAME targets, the
   conflict-dampened `n_eff` prevents the posterior interval from

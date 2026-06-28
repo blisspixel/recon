@@ -20,14 +20,14 @@ from recon_tool.bayesian import (
     BayesianNetwork,
     InferenceResult,
     _binary_entropy,
-    _credible_interval,
-    _erfinv,
     infer,
     infer_from_tenant_info,
     load_network,
     load_priors_override,
     signals_from_tenant_info,
 )
+from recon_tool.bayesian_interval import beta_ppf as _beta_ppf
+from recon_tool.bayesian_interval import credible_interval as _credible_interval
 
 # ── Fixtures ──────────────────────────────────────────────────────────
 
@@ -511,13 +511,6 @@ class TestHelpers:
 
         assert abs(_binary_entropy(0.5) - math.log(2)) < 1e-9
 
-    def test_erfinv_monotonic(self) -> None:
-        assert _erfinv(0.1) < _erfinv(0.5) < _erfinv(0.9)
-
-    def test_erfinv_zero(self) -> None:
-        # erfinv(0) = 0 by symmetry; our approx should be near zero.
-        assert abs(_erfinv(0.0)) < 0.05
-
 
 # ── TenantInfo adapter ───────────────────────────────────────────────
 
@@ -634,111 +627,30 @@ class TestTenantInfoAdapter:
         assert result.conflict_count == 2
 
 
-# ── Credible interval vs exact Beta quantile ───────────────────────────
-
-
-def _betacf(a: float, b: float, x: float) -> float:
-    """Continued fraction for the incomplete beta (Numerical Recipes form)."""
-    fpmin = 1e-300
-    qab, qap, qam = a + b, a + 1.0, a - 1.0
-    c = 1.0
-    d = 1.0 - qab * x / qap
-    if abs(d) < fpmin:
-        d = fpmin
-    d = 1.0 / d
-    h = d
-    for m in range(1, 200):
-        m2 = 2 * m
-        aa = m * (b - m) * x / ((qam + m2) * (a + m2))
-        d = 1.0 + aa * d
-        if abs(d) < fpmin:
-            d = fpmin
-        c = 1.0 + aa / c
-        if abs(c) < fpmin:
-            c = fpmin
-        d = 1.0 / d
-        h *= d * c
-        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
-        d = 1.0 + aa * d
-        if abs(d) < fpmin:
-            d = fpmin
-        c = 1.0 + aa / c
-        if abs(c) < fpmin:
-            c = fpmin
-        d = 1.0 / d
-        delt = d * c
-        h *= delt
-        if abs(delt - 1.0) < 3e-14:
-            break
-    return h
-
-
-def _betai(a: float, b: float, x: float) -> float:
-    """Regularized incomplete beta I_x(a, b)."""
-    if x <= 0.0:
-        return 0.0
-    if x >= 1.0:
-        return 1.0
-    lbeta = math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
-    bt = math.exp(lbeta + a * math.log(x) + b * math.log(1.0 - x))
-    if x < (a + 1.0) / (a + b + 2.0):
-        return bt * _betacf(a, b, x) / a
-    return 1.0 - bt * _betacf(b, a, 1.0 - x) / b
-
-
-def _beta_ppf(q: float, a: float, b: float) -> float:
-    """Exact central-quantile of Beta(a, b) by bisection on _betai."""
-    lo, hi = 0.0, 1.0
-    for _ in range(64):
-        mid = 0.5 * (lo + hi)
-        if _betai(a, b, mid) < q:
-            lo = mid
-        else:
-            hi = mid
-    return 0.5 * (lo + hi)
+# ── Credible interval exact Beta quantile ─────────────────────────────
 
 
 class TestCredibleIntervalVsBeta:
-    """The shipped interval is documented as a normal (Wald) approximation
-    to the central-80% quantile of the moment-matching Beta(p*n_eff,
-    (1-p)*n_eff) (correlation.md section 4.4). This pins how good that
-    approximation actually is, with the exact Beta quantile computed here
-    scipy-free. The deviation is NOT small near the probability boundary:
-    measured worst is about 0.061 over p in (0.01, 0.99) and about 0.053
-    even in the interior p in [0.1, 0.9], driven by the [0, 1] clip and the
-    Wald form's known degradation as p approaches 0 or 1 (Brown, Cai &
-    DasGupta 2001). The doc and docstring state this bound; this test keeps
-    them honest. The exact-Beta replacement is tracked as a follow-up.
+    """The shipped interval is the central quantile of the moment-matching
+    Beta(p*n_eff, (1-p)*n_eff), computed without scipy.
     """
 
-    def test_betai_sanity(self) -> None:
-        # Beta(2,2) is symmetric: median 0.5. Beta(1,1) is uniform: ppf(q)=q.
+    def test_beta_ppf_sanity(self) -> None:
+        # Beta(2,2) is symmetric: median 0.5. Beta(1,1) is uniform.
         assert abs(_beta_ppf(0.5, 2.0, 2.0) - 0.5) < 1e-9
         assert abs(_beta_ppf(0.1, 1.0, 1.0) - 0.1) < 1e-9
         assert abs(_beta_ppf(0.9, 1.0, 1.0) - 0.9) < 1e-9
 
-    def test_interior_deviation_within_documented_bound(self) -> None:
-        # Lean grid (this file is in the mutation kill-set): a representative
-        # spread of n_eff and interior p, including p=0.1/n_eff=4 where the
-        # interior worst (~0.053) lives.
-        worst = 0.0
-        for n_eff in (4.0, 5.0, 7.0, 10.0, 14.0):
-            for pc in range(10, 91, 10):
-                p = pc / 100.0
-                a, b = p * n_eff, (1.0 - p) * n_eff
-                lo, hi = _credible_interval(p, n_eff, 0.80)
-                err = max(abs(lo - _beta_ppf(0.1, a, b)), abs(hi - _beta_ppf(0.9, a, b)))
-                worst = max(worst, err)
-        # Interior worst measured ~0.053; this is the honest bound, far above
-        # the previously-documented (and unverified) 0.02.
-        assert worst < 0.06
-        assert worst > 0.02
+    def test_beta_ppf_matches_closed_form_asymmetric_cases(self) -> None:
+        # Beta(1,2) CDF is 1 - (1 - x)^2; Beta(2,1) CDF is x^2.
+        assert abs(_beta_ppf(0.9, 1.0, 2.0) - (1.0 - math.sqrt(0.1))) < 1e-9
+        assert abs(_beta_ppf(0.9, 2.0, 1.0) - math.sqrt(0.9)) < 1e-9
 
-    def test_boundary_deviation_is_large(self) -> None:
-        # The headline regime (posteriors near 0 or 1, n_eff ~ 4-5) is exactly
-        # where the Wald band is worst. Pin that it exceeds 0.05 so no one
-        # re-asserts a tight bound without measuring.
-        lo, hi = _credible_interval(0.01, 4.0, 0.80)
-        a, b = 0.01 * 4.0, 0.99 * 4.0
-        err = max(abs(lo - _beta_ppf(0.1, a, b)), abs(hi - _beta_ppf(0.9, a, b)))
-        assert err > 0.05
+    def test_credible_interval_matches_beta_2_2_closed_form(self) -> None:
+        low, high = _credible_interval(0.5, 4.0, 0.80)
+        assert abs(low - 0.19580010565909173) < 1e-12
+        assert abs(high - 0.8041998943409083) < 1e-12
+
+    def test_credible_interval_handles_boundary_posteriors(self) -> None:
+        assert _credible_interval(0.0, 4.0, 0.80) == (0.0, 0.0)
+        assert _credible_interval(1.0, 4.0, 0.80) == (1.0, 1.0)

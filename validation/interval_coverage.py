@@ -6,7 +6,7 @@ assurance track calls for a coverage check on it, framed as honestly as
 CAL1 requires. This harness provides that check without claiming
 ground-truth calibration, which no passive tool can observe (CAL13).
 
-What the interval claims. ``_credible_interval`` widens with low
+What the interval claims. ``credible_interval`` widens with low
 ``n_eff``: the width exists to absorb the acknowledged imprecision of
 the hand-elicited CPT likelihoods (directionally-accurate,
 corpus-grounded estimates, not values precise to many decimals; see

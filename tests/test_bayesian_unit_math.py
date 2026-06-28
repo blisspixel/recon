@@ -2,8 +2,8 @@
 
 The 2026-06 mutation baseline (validation/mutation-gate.md) showed the
 surviving mutants clustering in helpers the behavior suites exercise
-only indirectly: the credible-interval arithmetic and its inverse-erf
-approximation, the CAL14 declarative evidence counting, the evidence
+only indirectly: the credible-interval arithmetic, the CAL14 declarative
+evidence counting, the evidence
 influence ranking, the correlation-group reduction, the priors-override
 loader, and the TenantInfo adapters. Each test here pins one of those
 helpers to values computed by hand (or to a documented approximation
@@ -25,13 +25,10 @@ from recon_tool.bayesian import (
     CalibrationSettings,
     _conflict_provenance,
     _contributing_evidence,
-    _credible_interval,
     _declarative_evidence_count,
-    _erfinv,
     _Evidence,
     _factor_is_probabilities,
     _factor_is_strictly_positive,
-    _interval_is_ordered,
     _marginal_in_unit_range,
     _Node,
     _rank_evidence,
@@ -41,6 +38,8 @@ from recon_tool.bayesian import (
     load_priors_override,
     signals_from_tenant_info,
 )
+from recon_tool.bayesian_interval import credible_interval as _credible_interval
+from recon_tool.bayesian_interval import interval_is_ordered as _interval_is_ordered
 
 
 def _ev(name: str, lp: float, la: float, group: str | None = None, kind: str = "slug") -> _Evidence:
@@ -59,57 +58,37 @@ _RICH_SIGNALS = ["dmarc_reject", "spf_strict", "federated_sso_hub"]
 
 class TestCredibleInterval:
     def test_default_width_hand_computed(self) -> None:
-        # p=0.5, n_eff=4: se = sqrt(0.25/4) = 0.25; z = 1.2816 for the
-        # 80% branch, so the half-width is 0.3204 by hand.
+        # p=0.5, n_eff=4 gives Beta(2,2). Its CDF is 3x^2 - 2x^3.
         low, high = _credible_interval(0.5, 4.0, 0.80)
-        assert abs(low - (0.5 - 1.2816 * 0.25)) < 1e-9
-        assert abs(high - (0.5 + 1.2816 * 0.25)) < 1e-9
+        assert abs(low - 0.19580010565909173) < 1e-12
+        assert abs(high - 0.8041998943409083) < 1e-12
 
     def test_95_branch_hand_computed(self) -> None:
-        # Same se; z = 1.96 exactly on the 0.95 branch: half-width 0.49.
+        # Same Beta(2,2) closed form at the 0.025 and 0.975 quantiles.
         low, high = _credible_interval(0.5, 4.0, 0.95)
-        assert abs(low - 0.01) < 1e-9
-        assert abs(high - 0.99) < 1e-9
+        assert abs(low - 0.09429932405024608) < 1e-12
+        assert abs(high - 0.9057006759497541) < 1e-12
 
     def test_width_narrows_with_n_eff(self) -> None:
-        # n_eff=16 halves the standard error versus n_eff=4.
         low4, high4 = _credible_interval(0.5, 4.0, 0.80)
         low16, high16 = _credible_interval(0.5, 16.0, 0.80)
-        assert abs((high16 - low16) - (high4 - low4) / 2) < 1e-9
+        assert (high16 - low16) < (high4 - low4)
 
-    def test_general_width_uses_erfinv(self) -> None:
-        # width=0.5 takes the general branch: z = sqrt(2) * erfinv(0.5).
-        # True erfinv(0.5) = 0.4769363; the Winitzki approximation is
-        # within ~5e-4 here, so the half-width is 0.16864 +/- 5e-4.
+    def test_general_width_uses_exact_quantile(self) -> None:
+        # Central 50 percent for Beta(2,2), CDF closed form.
         low, high = _credible_interval(0.5, 4.0, 0.5)
-        assert abs((high - low) / 2 - 0.16864) < 5e-4
+        assert abs(low - 0.3263518223330697) < 1e-12
+        assert abs(high - 0.6736481776669303) < 1e-12
 
     def test_clamps_to_unit_interval(self) -> None:
         low, high = _credible_interval(0.02, 4.0, 0.80)
         assert low == 0.0
         assert abs(high - (0.02 + 1.2816 * math.sqrt(0.02 * 0.98 / 4.0))) < 1e-9
-        assert _credible_interval(0.98, 4.0, 0.80)[1] == 1.0
+        assert 1.0 - _credible_interval(0.98, 4.0, 0.80)[1] < 1e-12
 
     def test_nonpositive_n_eff_is_vacuous(self) -> None:
         assert _credible_interval(0.7, 0.0) == (0.0, 1.0)
         assert _credible_interval(0.7, -1.0) == (0.0, 1.0)
-
-
-class TestErfinv:
-    def test_anchor_values(self) -> None:
-        # True values: erfinv(0.8) = 0.9061938, erfinv(0.5) = 0.4769363.
-        # Winitzki's approximation is documented to ~5e-3; measured error
-        # at these anchors is ~1e-4, so 2e-3 leaves slack without letting
-        # a sign or operator mutation through.
-        assert abs(_erfinv(0.8) - 0.9061938) < 2e-3
-        assert abs(_erfinv(0.5) - 0.4769363) < 2e-3
-
-    def test_odd_symmetry_and_zero(self) -> None:
-        assert _erfinv(-0.8) == -_erfinv(0.8)
-        assert _erfinv(0.0) == 0.0
-
-    def test_monotonic(self) -> None:
-        assert 0.0 < _erfinv(0.2) < _erfinv(0.5) < _erfinv(0.9)
 
 
 # ── CAL14 declarative evidence counting ────────────────────────────────
@@ -401,9 +380,9 @@ class TestOutputRounding:
         assert m365.interval_low == 0.8898
         # entropy_reduction_nats raw 0.49971224...: a per-node entropy field.
         assert m365.entropy_reduction_nats == 0.4997
-        # interval_high is clamped to 1.0 on m365 (no fractional decimal to
-        # pin); take a node whose upper bound stays inside the unit range.
-        assert post["google_workspace_tenant"].interval_high == 0.5643
+        # interval_high is clamped to 1.0 on m365; take an interior node whose
+        # exact Beta upper bound stays inside the unit range.
+        assert post["google_workspace_tenant"].interval_high == 0.5715
 
     def test_total_entropy_reduction_rounds_to_four_decimals(self) -> None:
         # The InferenceResult-level total. raw 0.99850...: a 3-decimal
