@@ -158,6 +158,8 @@ def test_workflow_actions_are_pinned_with_readable_version_comments() -> None:
     )
 
     assert "uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4" in workflow_text
+    assert "uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4" in workflow_text
+    assert "github/codeql-action/upload-sarif@dd903d2e4f5405488e5ef1422510ee31c8b32357" not in workflow_text
     assert "uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6" in workflow_text
     for line in workflow_text.splitlines():
         stripped = line.strip()
@@ -203,3 +205,18 @@ def test_dependabot_is_configured_low_noise_for_scorecard_checks() -> None:
                 "update-types": ["version-update:semver-major"],
             }
         ]
+
+
+def test_supply_chain_docs_track_scorecard_gap_decisions() -> None:
+    text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
+
+    for required in (
+        "refuses to execute remote tool installers",
+        "CodeQL Action v4",
+        "full-SHA GitHub Action pins",
+        "Dependabot security updates",
+        "active repository ruleset",
+        "Code-Review is low until normal work flows through reviewed pull requests",
+        "OpenSSF Best Practices Badge",
+    ):
+        assert required in text

@@ -29,9 +29,14 @@ REQUIRED_BOUNDARIES: tuple[tuple[str, str], ...] = (
     ("outline", "corroboration rather than calibration"),
     ("outline", "robustness checks rather than population rates"),
     ("claim-map", "not ground-truth frequentist coverage"),
+    ("claim-map", "robustness checks rather than population rates"),
     ("claim-map", "Do not state attacker prevalence, exploitability, or real-world false-positive rate"),
     ("artifact-review", "Private-corpus rows are aggregate evidence"),
+    ("artifact-review", "robustness checks rather than population rates"),
     ("external-plan", "adversarial-perturbation-paper-20260628"),
+    ("external-plan", "public-list numbers as robustness checks rather than population rates"),
+    ("roadmap", "Public-list numbers remain robustness checks rather than"),
+    ("data-policy", "Public-list checks may serve as robustness checks"),
 )
 
 LATEST_PUBLIC_PROOF_MEMO = "2026-06-28-adversarial-perturbation-paper.md"
@@ -48,6 +53,8 @@ def collect_issues(root: Path = ROOT) -> list[str]:
         "claim-map": _read(root, "docs/paper-claim-map.md"),
         "artifact-review": _read(root, "docs/artifact-review.md"),
         "external-plan": _read(root, "docs/external-writeup-plan.md"),
+        "roadmap": _read(root, "docs/roadmap.md"),
+        "data-policy": _read(root, "docs/data-handling-policy.md"),
     }
     issues: list[str] = []
 

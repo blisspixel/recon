@@ -18,9 +18,14 @@ def test_artifact_review_guide_is_linked_from_research_docs() -> None:
 
 def test_public_label_snapshot_decision_is_linked_from_research_docs() -> None:
     for path in (
+        ROOT / "README.md",
         ROOT / "docs" / "README.md",
+        ROOT / "docs" / "artifact-review.md",
+        ROOT / "docs" / "data-handling-policy.md",
         ROOT / "docs" / "external-writeup-plan.md",
         ROOT / "docs" / "paper-draft.md",
+        ROOT / "docs" / "paper-claim-map.md",
+        ROOT / "docs" / "roadmap.md",
     ):
         assert "public-label-snapshot-decision.md" in path.read_text(encoding="utf-8")
 
@@ -79,3 +84,19 @@ def test_public_label_snapshot_decision_defers_real_apex_snapshot() -> None:
         "not as\npopulation rates",
     ):
         assert required in text
+
+
+def test_public_sampling_boundary_is_consistent_across_docs() -> None:
+    docs = {
+        "README.md": (ROOT / "README.md").read_text(encoding="utf-8"),
+        "docs/roadmap.md": (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8"),
+        "docs/external-writeup-plan.md": (ROOT / "docs" / "external-writeup-plan.md").read_text(encoding="utf-8"),
+        "docs/artifact-review.md": (ROOT / "docs" / "artifact-review.md").read_text(encoding="utf-8"),
+        "docs/data-handling-policy.md": (ROOT / "docs" / "data-handling-policy.md").read_text(encoding="utf-8"),
+        "docs/paper-claim-map.md": (ROOT / "docs" / "paper-claim-map.md").read_text(encoding="utf-8"),
+    }
+
+    for path, text in docs.items():
+        normalized = " ".join(text.split())
+        assert "robustness checks" in normalized, path
+        assert "population rates" in normalized, path

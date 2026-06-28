@@ -73,10 +73,10 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 |---|---|
 | Related work and positioning | [related-work.md](related-work.md) |
 | Artifact review guide | [artifact-review.md](artifact-review.md) |
-| External write-up readiness plan | [external-writeup-plan.md](external-writeup-plan.md) |
+| External write-up readiness plan and active blockers | [external-writeup-plan.md](external-writeup-plan.md) |
 | Paper claim map | [paper-claim-map.md](paper-claim-map.md) |
 | Paper figure package | [paper-figures.md](paper-figures.md) |
-| Public label snapshot decision | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) |
+| Public label snapshot and public-list sampling decision | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) |
 | Paper outline | [paper-outline.md](paper-outline.md) |
 | Paper draft | [paper-draft.md](paper-draft.md) |
 | Bayesian CPT discipline | [bayesian-cpt-discipline.md](bayesian-cpt-discipline.md) |

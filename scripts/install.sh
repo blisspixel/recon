@@ -7,8 +7,8 @@
 # Uninstall:
 #   uv tool uninstall recon-tool   # or: pipx uninstall recon-tool
 #
-# Prefers uv (fast, manages its own Python); falls back to pipx; bootstraps uv
-# automatically if neither is present. Idempotent: a second run upgrades.
+# Prefers uv (fast, manages its own Python); falls back to pipx. Idempotent: a
+# second run upgrades.
 
 set -euo pipefail
 
@@ -29,16 +29,17 @@ install_or_upgrade_pipx() {
     pipx upgrade "$PACKAGE" 2>/dev/null || pipx install "$PACKAGE"
 }
 
-bootstrap_uv() {
-    echo "==> Neither uv nor pipx found. Bootstrapping uv ..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    # uv installs to ~/.local/bin (or ~/.cargo/bin on older installs); make it
-    # resolvable in this session so we don't need a new shell.
-    export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+fail_missing_tool() {
+    echo "Error: install uv or pipx first, then re-run this installer." >&2
+    echo "Recommended:" >&2
+    echo "  https://docs.astral.sh/uv/getting-started/installation/" >&2
+    echo "Alternative:" >&2
+    echo "  https://pipx.pypa.io/stable/installation/" >&2
+    exit 1
 }
 
 if ! have uv && ! have pipx; then
-    bootstrap_uv
+    fail_missing_tool
 fi
 
 if have uv; then
@@ -46,10 +47,7 @@ if have uv; then
 elif have pipx; then
     install_or_upgrade_pipx
 else
-    echo "Error: uv bootstrap did not put 'uv' on PATH. Install uv manually:" >&2
-    echo "  curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
-    echo "then open a new terminal and re-run this installer." >&2
-    exit 1
+    fail_missing_tool
 fi
 
 INSTALLED_VERSION=$("$CLI" --version 2>/dev/null || echo "")

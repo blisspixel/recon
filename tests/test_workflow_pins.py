@@ -76,3 +76,31 @@ jobs:
     errors = cast(list[str], CHECKER._check_workflow(workflow))
 
     assert any("version comment" in error for error in errors)
+
+
+def test_installer_rejects_download_then_run_shell_pattern(tmp_path: Path) -> None:
+    installer = tmp_path / "install.sh"
+    installer.write_text("curl -LsSf https://example.test/install.sh | sh\n", encoding="utf-8")
+
+    original = CHECKER.INSTALLERS
+    CHECKER.INSTALLERS = (installer,)
+    try:
+        errors = cast(list[str], CHECKER._check_installers())
+    finally:
+        CHECKER.INSTALLERS = original
+
+    assert any("remote installers" in error for error in errors)
+
+
+def test_installer_rejects_download_then_run_powershell_pattern(tmp_path: Path) -> None:
+    installer = tmp_path / "install.ps1"
+    installer.write_text('Invoke-Expression (Invoke-RestMethod "https://example.test/install.ps1")\n', encoding="utf-8")
+
+    original = CHECKER.INSTALLERS
+    CHECKER.INSTALLERS = (installer,)
+    try:
+        errors = cast(list[str], CHECKER._check_installers())
+    finally:
+        CHECKER.INSTALLERS = original
+
+    assert any("remote installers" in error for error in errors)

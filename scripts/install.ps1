@@ -6,8 +6,8 @@
 # Uninstall:
 #   uv tool uninstall recon-tool   # or: pipx uninstall recon-tool
 #
-# Prefers uv (fast, manages its own Python); falls back to pipx; bootstraps uv
-# automatically if neither is present. Idempotent: a second run upgrades.
+# Prefers uv (fast, manages its own Python); falls back to pipx. Idempotent: a
+# second run upgrades.
 
 $ErrorActionPreference = "Stop"
 
@@ -76,34 +76,20 @@ function Install-OrUpgrade-Pipx {
     }
 }
 
-# Pull any PATH changes a just-run installer made (uv writes to the *User* PATH
-# and to ~\.local\bin) into this session so a freshly bootstrapped uv resolves
-# without a new terminal.
-function Sync-Path {
-    $user = [Environment]::GetEnvironmentVariable("PATH", "User")
-    $machine = [Environment]::GetEnvironmentVariable("PATH", "Machine")
-    $localBin = Join-Path $env:USERPROFILE ".local\bin"
-    $env:PATH = (@($localBin, $user, $machine, $env:PATH) | Where-Object { $_ }) -join ";"
-}
-
-function Install-Uv {
-    Write-Host "==> Neither uv nor pipx found. Bootstrapping uv ..." -ForegroundColor Green
-    $prev = $ErrorActionPreference
-    $ErrorActionPreference = "Continue"
-    try {
-        Invoke-Expression (Invoke-RestMethod "https://astral.sh/uv/install.ps1")
-    }
-    finally {
-        $ErrorActionPreference = $prev
-    }
-    Sync-Path
+function Write-MissingToolHelp {
+    Write-Host "Error: install uv or pipx first, then re-run this installer." -ForegroundColor Red
+    Write-Host "Recommended:"
+    Write-Host "  https://docs.astral.sh/uv/getting-started/installation/"
+    Write-Host "Alternative:"
+    Write-Host "  https://pipx.pypa.io/stable/installation/"
+    exit 1
 }
 
 Write-Host "==> recon installer (CLI: $Cli)" -ForegroundColor Cyan
 Write-Host ""
 
 if (-not (Test-Have "uv") -and -not (Test-Have "pipx")) {
-    Install-Uv
+    Write-MissingToolHelp
 }
 
 if (Test-Have "uv") {
@@ -113,10 +99,7 @@ elseif (Test-Have "pipx") {
     Install-OrUpgrade-Pipx
 }
 else {
-    Write-Host "Error: uv bootstrap did not put 'uv' on PATH. Install uv manually:" -ForegroundColor Red
-    Write-Host '  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"'
-    Write-Host "then open a NEW terminal and re-run this installer."
-    exit 1
+    Write-MissingToolHelp
 }
 
 Write-Host ""

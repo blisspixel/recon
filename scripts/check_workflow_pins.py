@@ -13,6 +13,10 @@ INSTALLERS = (ROOT / "scripts" / "install.sh", ROOT / "scripts" / "install.ps1")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 USES_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*(?P<ref>[^#\s]+)(?:\s+#\s*(?P<comment>\S.*))?$")
 DOWNLOAD_THEN_RUN_RE = re.compile(r"(bash\s+<\(\s*curl|curl\b.*\|\s*(?:bash|sh)|wget\b.*\|\s*(?:bash|sh))")
+POWERSHELL_DOWNLOAD_THEN_RUN_RE = re.compile(
+    r"((?:irm|iwr|Invoke-RestMethod|Invoke-WebRequest)\b.*\|\s*(?:iex|Invoke-Expression)|"
+    r"Invoke-Expression\s*\(\s*(?:irm|iwr|Invoke-RestMethod|Invoke-WebRequest)\b)"
+)
 
 
 def _workflow_files() -> list[Path]:
@@ -53,8 +57,12 @@ def _check_installers() -> list[str]:
     for installer in INSTALLERS:
         for lineno, line in enumerate(installer.read_text(encoding="utf-8").splitlines(), start=1):
             stripped = line.lstrip()
-            if re.search(r"\bpip\s+install\b", line) and not stripped.startswith(("#", "#>")):
+            if stripped.startswith(("#", "#>")):
+                continue
+            if re.search(r"\bpip\s+install\b", line):
                 errors.append(f"{_repo_path(installer)}:{lineno}: installer must not bootstrap unpinned pip packages")
+            if DOWNLOAD_THEN_RUN_RE.search(line) or POWERSHELL_DOWNLOAD_THEN_RUN_RE.search(line):
+                errors.append(f"{_repo_path(installer)}:{lineno}: installer must not execute remote installers")
     return errors
 
 

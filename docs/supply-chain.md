@@ -80,6 +80,10 @@ The repository also runs supply-chain posture checks outside the release flow:
 - Workflow actions are pinned to full commit SHAs, with the readable version kept
   in a trailing comment. `scripts/check_workflow_pins.py` gates this locally and
   in CI.
+- Installer scripts do not bootstrap package managers by executing remote shell
+  or PowerShell installers. Users install `uv` or `pipx` through their preferred
+  trusted channel, then recon's installer installs or upgrades only
+  `recon-tool`.
 - Generated security and surface artifacts used by CI are checked locally and in
   the CI validation job, including ClusterFuzzLite requirements, schema source
   tracing, surface inventory, CLI surface docs, file-size ratchets, and PLR
@@ -92,13 +96,29 @@ The repository also runs supply-chain posture checks outside the release flow:
   closed instead of hanging indefinitely.
 - Secret scanning and push protection are enabled for the repository.
 
-Scorecard currently credits SAST, dependency-update tooling, least-privilege
-workflow tokens, pinned workflow dependencies, packaging, the security policy,
-vulnerability posture, and local ClusterFuzzLite configuration once the public
-scan sees this commit. Its signed-release check looks at recent GitHub Release
-assets, so future releases now attach the exported
-`recon-tool-<version>.intoto.jsonl` provenance bundle alongside the wheel, sdist,
-and SBOM.
+The 2026-06-28 Scorecard review found one code-owned gap and several
+repository-process gaps. The code-owned gap was an unpinned installer
+download-and-run path; the installer now refuses to execute remote tool
+installers. The Scorecard SARIF upload step also uses CodeQL Action v4 to avoid
+the scheduled v3 deprecation. Live repository settings now enforce full-SHA
+GitHub Action pins, enable Dependabot security updates, and protect `main` with
+an active repository ruleset that requires the CI matrix, gitleaks, and
+Scorecard checks, blocks deletion and non-fast-forward updates, and requires
+linear history.
+
+The remaining Scorecard limits are intentional or process-bound:
+
+- Branch-Protection is not maximal because repository administrators can bypass
+  the ruleset and PRs are not mandatory. That keeps the current clean-main
+  single-maintainer workflow usable. A future multi-maintainer process can
+  remove the bypass and require PRs.
+- Code-Review is low until normal work flows through reviewed pull requests.
+  Creating fake review history would be worse than the score.
+- Maintained is low while the repository is younger than Scorecard's age window.
+- CII-Best-Practices is low until the OpenSSF Best Practices Badge questionnaire
+  is completed and linked.
+- Contributors is low until outside contributors from distinct organizations
+  participate naturally.
 
 ## Deferred, with reasons
 

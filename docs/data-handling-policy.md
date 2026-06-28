@@ -131,6 +131,13 @@ and synthetic reproductions are publishable. The same rule that keeps
 the repository clean keeps the published results honest about what can
 and cannot be shown.
 
+Public-list checks may serve as robustness checks across re-queryable lists, but
+they are not population rates, benchmark prevalence, or a substitute for a
+reviewed public release model. A frozen real-apex label snapshot remains
+deferred under
+[public-label-snapshot-decision.md](public-label-snapshot-decision.md) unless a
+separate data-handling and architecture review approves it.
+
 ## If real data lands anyway
 
 Treat it as an incident, not an embarrassment to hide. Because history

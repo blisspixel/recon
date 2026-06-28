@@ -71,7 +71,8 @@ requirements:
   package and its regeneration command.
 - [public-label-snapshot-decision.md](public-label-snapshot-decision.md)
   records why a frozen real-apex label snapshot is deferred under the current
-  data-handling policy.
+  data-handling policy and closes the public-list sampling path for this
+  submission as a robustness check rather than a population-rate claim.
 - The 2026-06-26 smoke check with stamp `publication-plan-smoke-20260626`
   passed all five public steps and reported `Private corpora read: no`.
 - The 2026-06-28 smoke check with stamp `hybrid-interval-smoke-20260628`
@@ -94,6 +95,10 @@ requirements:
 - Private corpus calibration remains maintainer-local. Public artifacts may
   include aggregate counts, rates, intervals, and suppressed-cell statements
   only.
+- The remaining submission blockers are the M365 independent-instrument
+  decision and the final claim audit. If no passive independent instrument is
+  identified, the M365 result stays named as corroboration rather than
+  calibration.
 
 ## What Is Next And Why
 
@@ -114,6 +119,10 @@ Reasoning:
 4. The assurance, validation, release, citation, and public-reproduction pieces
    are now strong enough to package for outside review. That work improves trust
    without widening the passive collection surface.
+5. The public-list sampling question is closed for this submission by keeping
+   public-list numbers as robustness checks rather than population rates. A
+   future population-rate claim would require a new data-handling and
+   architecture review.
 
 ## Codebase Constraints
 
@@ -153,8 +162,10 @@ Reasoning:
 8. **Figure package.** Keep [paper-figures.md](paper-figures.md) and
    `docs/assets/paper/*.svg` generated from committed aggregate-safe sources
    through `scripts/generate_paper_figures.py --check`.
-9. **Snapshot decision.** Keep the public label snapshot deferred unless a
-   separate data-handling and architecture review approves a new release model.
+9. **Snapshot and sampling decision.** Keep the public label snapshot deferred,
+   and keep public-list numbers as robustness checks rather than population
+   rates, unless a separate data-handling and architecture review approves a
+   new release model.
 10. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
    remote release readiness after push.
 
@@ -177,5 +188,9 @@ Reasoning:
   result rows.
 - The paper package links the public label snapshot decision and does not
   promise a frozen real-apex list.
+- Public-list numbers are framed as robustness checks rather than population
+  rates.
+- M365 tenancy evidence is framed as corroboration unless a passive independent
+  instrument without the shared tenant-provisioning cause is found.
 - No runtime surface changes.
 - Local gate passes, with coverage above the configured floor.

@@ -11,8 +11,17 @@ The short product overview is in [README.md](../README.md).
 
 ## Install or Update
 
-The installer prefers `uv`, falls back to `pipx`, and asks you to install one of
-those tools if neither is present. Running the same command later updates recon.
+Install with `uv` or `pipx`:
+
+```bash
+uv tool install recon-tool
+# or
+pipx install recon-tool
+```
+
+The platform installer prefers `uv`, falls back to `pipx`, and asks you to
+install one of those tools if neither is present. It does not execute a remote
+tool installer on your behalf. Running the same command later updates recon.
 
 **Windows (PowerShell):**
 

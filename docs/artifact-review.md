@@ -15,6 +15,8 @@ Python package built from that source. It includes:
 - aggregate-only validation memos under `validation/*.md`;
 - the aggregate-safe paper figure package in [paper-figures.md](paper-figures.md)
   and `assets/paper/*.svg`;
+- the public label snapshot and public-list sampling decision in
+  [public-label-snapshot-decision.md](public-label-snapshot-decision.md);
 - citation metadata in [../CITATION.cff](../CITATION.cff);
 - supply-chain and release-integrity notes in [supply-chain.md](supply-chain.md).
 
@@ -55,6 +57,7 @@ The latest maintainer full proof check is recorded in
 | Interval perturbation coverage | `validation.interval_coverage --json` through the reproduction bundle | The 80 percent interval absorbs the CAL8 likelihood band inside the model. This is not ground-truth coverage. |
 | Likelihood sensitivity | `validation.likelihood_sensitivity` through the reproduction bundle | Posterior decisions are stable under the configured +/-20 percent likelihood perturbation. |
 | Layer contribution | `validation.layer_ablation` through the reproduction bundle | Synthetic graph and Bayesian layer effects reproduce without target data. |
+| Public-list sampling boundary | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) plus `scripts/check_paper_claims.py` | Public-list numbers are robustness checks rather than population rates or benchmark prevalence. |
 | Paper figures | `scripts/generate_paper_figures.py --check` | SVG figures are deterministic renderings of committed topology and aggregate memos, not hand-edited screenshots. |
 | Runtime and docs integrity | `scripts/check.py` | Generated schema, surface inventory, CLI surface docs, text hygiene, validation hygiene, and tests agree with source. |
 
@@ -73,6 +76,10 @@ These are maintainer-reproducible aggregate results. Reviewers can inspect the
 memo, disclosure controls, and harness code, but they cannot regenerate the
 private rows from the public repository. The [paper claim map](paper-claim-map.md)
 records this distinction claim by claim.
+
+Public-list cross-checks are public and re-queryable, but the project does not
+publish a frozen real-apex label snapshot for this submission. Treat those
+numbers as robustness checks rather than population rates.
 
 ## Disclosure Controls
 

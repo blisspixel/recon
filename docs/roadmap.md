@@ -80,10 +80,16 @@ The next work is dependency-ordered:
      draft exist, the public reproduction bundle exists, the initial claim map
      lives in [paper-claim-map.md](paper-claim-map.md), the public reviewer
      command path lives in [artifact-review.md](artifact-review.md), the
-     certificate-transparency validation cohort is closed as aggregate-only
-     evidence, and release readiness now guards citation metadata.
+     [public label snapshot decision](public-label-snapshot-decision.md) closes
+     public-list sampling as a robustness check rather than a population-rate
+     path, the certificate-transparency validation cohort is closed as
+     aggregate-only evidence, and release readiness now guards citation
+     metadata.
    - Acceptance: cite only public or synthetic artifacts and aggregate-only
-     validation memos. Do not claim frequentist coverage for the 80 percent
+     validation memos. Public-list numbers remain robustness checks rather than
+     population rates. M365 tenancy evidence stays named as corroboration unless
+     a passive independent instrument without the shared tenant-provisioning
+     cause is identified. Do not claim frequentist coverage for the 80 percent
      intervals, and do not add runtime behavior while packaging the artifact.
 
 ## Version Milestones

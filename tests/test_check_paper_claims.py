@@ -16,6 +16,8 @@ def _copy_paper_docs(dst: Path) -> None:
         "paper-claim-map.md",
         "artifact-review.md",
         "external-writeup-plan.md",
+        "roadmap.md",
+        "data-handling-policy.md",
     ):
         shutil.copyfile(ROOT / "docs" / name, dst / "docs" / name)
 

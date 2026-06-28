@@ -22,7 +22,16 @@ tool, or firmographic database.
 
 ## Quick Start
 
-Install or update with the platform script:
+Install with `uv` or `pipx`:
+
+```bash
+uv tool install recon-tool
+# or
+pipx install recon-tool
+```
+
+If `uv` or `pipx` is already installed, the platform script can install or
+update recon:
 
 **Windows (PowerShell):**
 
@@ -202,7 +211,7 @@ before committing any validation artifact.
 - [docs/external-writeup-plan.md](docs/external-writeup-plan.md): active
   maintainer plan for external write-up readiness.
 - [docs/c3-ct-validation-plan.md](docs/c3-ct-validation-plan.md): closed
-  maintainer plan for the certificate-transparency validation track.
+  certificate-transparency validation plan.
 - [CHANGELOG.md](CHANGELOG.md): shipped changes.
 
 ## Roadmap Focus
@@ -211,10 +220,15 @@ recon is feature-complete for the current roadmap: the CLI, JSON schema, MCP
 server, validation guards, and release path are in place. Current work is
 hardening and small refinements: clearer docs, stronger validation evidence,
 current citation metadata, and careful pressure tests of the correlation model.
-As validation runs teach us more, the system may get conservative refinements,
-but new runtime features stay behind roadmap review and the project invariants.
-Feedback on gaps, wording, and false positives is welcome. The detailed plan
-lives in [docs/external-writeup-plan.md](docs/external-writeup-plan.md).
+The paper package is now focused on publication boundaries: the
+[public label snapshot decision](docs/public-label-snapshot-decision.md) keeps
+public-list numbers as robustness checks rather than population rates,
+private-corpus rows stay aggregate-only, and M365 tenancy evidence stays named
+as corroboration unless a cleaner independent instrument appears. As validation
+runs teach us more, the system may get conservative refinements, but new runtime
+features stay behind roadmap review and the project invariants. Feedback on
+gaps, wording, and false positives is welcome. The detailed plan lives in
+[docs/external-writeup-plan.md](docs/external-writeup-plan.md).
 
 ## Development
 
