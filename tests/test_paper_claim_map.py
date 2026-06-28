@@ -45,6 +45,8 @@ def test_claim_map_names_load_bearing_paper_claims() -> None:
         "M365 tenancy",
         "Split conformal coverage",
         "Entropy reduction",
+        "2026-06-23-full-corpus-calibration.md",
+        "public-list-calibration.md",
         "Public artifacts exclude target identifiers",
     ):
         assert claim in text

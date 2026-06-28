@@ -347,8 +347,8 @@ published (Section 9), only the aggregates here.
 | Tenancy, M365 | DNS-only predictor vs the identity-endpoint label: ECE 0.045, Brier 0.087, agreement 0.879 (n=5,182). Caveat: the two channels share the tenant-provisioning common cause, so this controls shared measurement error, not confounding; the base rate is 0.75, so agreement is only modestly above always-present. | run 2026-06-15 |
 | Tenancy, Google Workspace | one-sided recall 0.545 (n=22); no authoritative negative on the Google channel. | run 2026-06-15 |
 | Conformal coverage | mean coverage 0.999 vs 0.90 target, set size ~1.0 (decisive), n=4,283, 20 splits. Over-covers on this exchangeable cohort; not claimed for hardened (non-exchangeable) targets. | run 2026-06-15 |
-| Information recovered, posture stratification | per-domain entropy reduction (n=5,241): overall median 1.483 nats (p25 0.975, p75 1.907). The hardening signal is the sparse-evidence tier (direct/sparse median 0.490), not the edge-proxied flag (a detected CDN adds information). CAL7 width diagnostic: grouped nodes are not narrower than ungrouped at matched n_eff (0.555 vs 0.468 at n_eff<=4), consistent with the co-firing correction preventing over-confidence where it is applied. | run 2026-06-15 |
-| Per-vertical stratification (31 industries, min cell 10) | the pattern is uniform: full-posterior consistency ECE ~0.05-0.10 (pooled 0.072, agreement 1.0), held-out residual ECE ~0.21-0.53 (pooled 0.411, agreement 0.156). The negative finding generalizes across every vertical; base rates 0.67-1.0 (banking, cybersecurity at 1.0) confirm the cohort skew. | run 2026-06-15 |
+| Information recovered, posture stratification | public-list cross-check across about 575 public, re-queryable domains in 22 disjoint sectors: overall median entropy reduction 1.967 / 1.932 / 1.846 nats across Lists A/B/C; the sparse tier is the genuine hardening signal (`direct / sparse` medians 0.999 / 0.742 / 0.721), not the edge-proxied flag. CAL7 width diagnostic reproduces across all three lists: grouped nodes are not narrower than ungrouped at matched n_eff near the ceiling. | `validation/public-list-calibration.md` |
+| Per-vertical stratification (22 private-corpus verticals, min cell 10) | the pattern is uniform in the disclosure-reviewed aggregate memo: full-posterior consistency ECE 0.065-0.098 per populated vertical (pooled 0.076, agreement 1.0), held-out residual ECE 0.258-0.498 (pooled 0.373, agreement 0.189). The negative finding is not a single-sector artifact, but the population remains curated and high-base-rate. | `validation/2026-06-23-full-corpus-calibration.md` |
 
 **The headline result is a negative one, reported as such.** The one construction
 that makes predictor and label disjoint, the held-out residual on the only node
@@ -363,10 +363,10 @@ is confounded by a shared upstream and flattered by a 0.75 base rate. The honest
 summary: recon currently has no node with a clean, independent, passing
 calibration result, and the experiment built to produce one instead falsifies it.
 That is a finding, not a gap to paper over. The per-vertical stratification rules
-out a single-sector artifact: the residual fails uniformly across all 31
-industries (pooled held-out ECE 0.411, agreement 0.156), while the full-posterior
-consistency is equally uniform (pooled ECE 0.072), which is exactly what a
-definitional-agreement check looks like when read honestly.
+out a single-sector artifact: the residual is weak across all 22 disclosed
+private-corpus verticals (pooled held-out ECE 0.373, agreement 0.189), while the
+full-posterior consistency is equally uniform (pooled ECE 0.076), which is
+exactly what a definitional-agreement check looks like when read honestly.
 
 **Threats this evaluation does not control.** (1) The cohort is ~5,200 curated,
 tech-forward firms (about 80 percent DMARC-enforcing, 75 percent M365), which
@@ -514,9 +514,9 @@ the conformal coverage pass. Still open, in priority order:
   bias and the result-reproducibility gap in Sections 6 and 9).
 - Re-do the M365 calibration against an instrument with no mail-routing path to
   the endpoint label, to remove the shared-upstream confound.
-- Claim-map the posture-stratified aggregates and per-vertical cells in Section
-  6 in [paper-claim-map.md](paper-claim-map.md) to disclosure-reviewed public or
-  aggregate-only memos before final submission.
+- Keep the posture-stratified and per-vertical claim-map rows synchronized with
+  the disclosure-reviewed public-list and full-corpus memos before final
+  submission.
 - Engine follow-up: swap the Wald interval for the exact Beta central quantile
   (Section 3), then re-run the coverage and calibration cells.
 - A debiased ECE estimator (in-bin mean confidence, equal-mass bins, bootstrap CI)
