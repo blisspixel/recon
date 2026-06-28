@@ -72,6 +72,9 @@ requirements:
   data-handling policy.
 - The 2026-06-26 smoke check with stamp `publication-plan-smoke-20260626`
   passed all five public steps and reported `Private corpora read: no`.
+- The 2026-06-28 smoke check with stamp `hybrid-interval-smoke-20260628`
+  passed all five public steps after the hybrid credible-interval change and
+  reported `Private corpora read: no`.
 - `CITATION.cff` is the citation metadata source and release readiness now
   checks it against `pyproject.toml` and the current `CHANGELOG.md` release
   section.
@@ -124,7 +127,7 @@ Reasoning:
 2. **Orientation refresh.** Point README, roadmap, docs index, validation docs,
    paper outline, current-state analysis, and the maintainer logs at this plan.
 3. **Public artifact smoke.** Run
-   `python -m validation.reproduce_paper_numbers --profile smoke --stamp publication-plan-smoke-20260626`
+   `python -m validation.reproduce_paper_numbers --profile smoke --stamp hybrid-interval-smoke-20260628`
    and keep outputs under ignored `validation/local/`.
 4. **Artifact guide.** Keep [artifact-review.md](artifact-review.md) current with
    the exact public reviewer commands and their claim boundaries.
