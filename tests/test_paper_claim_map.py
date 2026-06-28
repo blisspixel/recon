@@ -48,7 +48,7 @@ def test_claim_map_names_load_bearing_paper_claims() -> None:
         "Split conformal coverage",
         "ECE estimator uncertainty",
         "Entropy reduction",
-        "2026-06-23-full-corpus-calibration.md",
+        "2026-06-28-full-corpus-calibration-refresh.md",
         "public-list-calibration.md",
         "Public artifacts exclude target identifiers",
     ):
@@ -65,16 +65,24 @@ def test_paper_draft_uses_current_disclosure_reviewed_calibration_numbers() -> N
         "ECE 0.339",
         "ECE 0.045",
         "agreement 0.221",
-    ):
-        assert stale not in text
-
-    for current in (
         "validation/2026-06-23-full-corpus-calibration.md",
         "ECE 0.373",
         "ECE 0.048",
         "n=2,905",
         "n=3,309",
         "one-sided recall 0.58",
+    ):
+        assert stale not in text
+
+    for current in (
+        "validation/2026-06-28-full-corpus-calibration-refresh.md",
+        "fixed-bin ECE 0.3747",
+        "equal-mass ECE 0.3263",
+        "fixed-bin ECE 0.0471",
+        "equal-mass ECE 0.0440",
+        "n=2,906",
+        "n=3,296",
+        "one-sided recall 0.3636",
     ):
         assert current in text
 

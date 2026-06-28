@@ -33,12 +33,14 @@ false positive. Our headline empirical finding is a negative one, from the one
 construction that makes a predictor disjoint from its label: with the defining
 DMARC record masked out of the public-declaration mail-policy node, the
 multi-signal posterior does not recover enforcing policy from the
-non-suppressible residual (ECE 0.373, agreement 0.189 over 2,905 domains). The
+non-suppressible residual (fixed-bin ECE 0.3747, equal-mass ECE 0.3263,
+agreement 0.1896 over 2,906 domains). The
 full-posterior agreement with the DMARC record is near-perfect, but we label it
 consistency, not calibration, because the record is also the node's dominant
 input. The provider-attested tenancy node admits a channel-split check (a
-DNS-only predictor against the identity-endpoint label, ECE 0.048 over 3,309
-domains) that we report with its shared-common-cause caveat, plus a
+DNS-only predictor against the identity-endpoint label, fixed-bin ECE 0.0471 and
+equal-mass ECE 0.0440 over 3,296 domains) that we report with its
+shared-common-cause caveat, plus a
 distribution-free conformal coverage statement on the labelable nodes with its
 exchangeability boundary made explicit.
 Every hideable node carries only the structural guarantees, and we say so. We
@@ -308,7 +310,7 @@ controls the evidence.
 | Node class | Example nodes | Reference label | Guarantees available |
 |---|---|---|---|
 | Provider-attested | m365_tenant, google_workspace_tenant | the provider's own identity endpoint (authoritative) | calibration and, as a complement, conformal coverage; plus the structural guarantees |
-| Public-declaration | email_security_policy_enforcing | the DMARC record (its own definition of enforcing) | full-posterior calibration strong but DMARC-anchored (ECE 0.076; DMARC is also the input, so the bulk is a definitional agreement check), the clean DMARC-disjoint residual disconfirmed (ECE 0.373); conformal coverage measured (0.999 at a 0.90 target); plus the structural guarantees |
+| Public-declaration | email_security_policy_enforcing | the DMARC record (its own definition of enforcing) | full-posterior calibration strong but DMARC-anchored (fixed-bin ECE 0.0761, equal-mass ECE 0.0651; DMARC is also the input, so the bulk is a definitional agreement check), the clean DMARC-disjoint residual disconfirmed (fixed-bin ECE 0.3747, equal-mass ECE 0.3263); conformal coverage measured (0.9992 at a 0.90 target); plus the structural guarantees |
 | Hideable | okta_idp, federated_identity, cdn_fronting, aws_hosting, email_gateway_present | none (absence may be genuine or adversarial) | structural guarantees only: suppression-monotonicity and interval widening (evidence-responsive) |
 
 The structural guarantees (Proposition 1 and interval-widening) are
@@ -343,30 +345,33 @@ published (Section 9), only the aggregates here.
 | Interval coverage (synthetic) | the 80% interval absorbs elicitation imprecision under the +/-20% likelihood band | shipped (`validation/interval_coverage.py`) |
 | Likelihood sensitivity | posteriors and agreement stable under a +/-20% likelihood perturbation | shipped (`validation/likelihood_sensitivity.py`) |
 | Layer ablations (synthetic) | the MNAR price and the fusion gain (below) | shipped and run (`validation/layer-ablation.md`) |
-| Held-out residual (the headline) | DMARC unit masked, predictor and label disjoint: ECE 0.373, Brier 0.245, agreement 0.189 (n=2,905). The residual (strict SPF plus MTA-STS) does NOT recover enforcing policy once the defining record is removed. A real, falsifiable negative result. | `validation/2026-06-23-full-corpus-calibration.md` |
-| DMARC full posterior | agreement 1.000, ECE 0.076, Brier 0.008 (n=2,905). Labeled CONSISTENCY, not calibration: the DMARC record is the node's dominant input, so this is a definitional-agreement check. | `validation/2026-06-23-full-corpus-calibration.md` |
-| Tenancy, M365 | DNS-only predictor vs the identity-endpoint label: ECE 0.048, Brier 0.079, agreement 0.889 (n=3,309). Caveat: the two channels share the tenant-provisioning common cause, so this controls shared measurement error, not confounding; the base rate is 0.791, so agreement is only modestly above always-present. | `validation/2026-06-23-full-corpus-calibration.md` |
-| Tenancy, Google Workspace | one-sided recall 0.58 (n=12), Wilson80 [0.40, 0.74]; no authoritative negative on the Google channel. | `validation/2026-06-23-full-corpus-calibration.md` |
-| Conformal coverage | mean coverage 0.999 vs 0.90 target, set size near 1.0, n=4,290, 20 splits. Over-covers on this exchangeable cohort; not claimed for hardened (non-exchangeable) targets. | `validation/2026-06-23-full-corpus-calibration.md` |
+| Held-out residual (the headline) | DMARC unit masked, predictor and label disjoint: fixed-bin ECE 0.3747, equal-mass ECE 0.3263 (CI80 [0.3177, 0.3349]), Brier 0.2448, agreement 0.1896 (n=2,906). The residual (strict SPF plus MTA-STS) does NOT recover enforcing policy once the defining record is removed. A real, falsifiable negative result. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
+| DMARC full posterior | agreement 1.000, fixed-bin ECE 0.0761, equal-mass ECE 0.0651 (CI80 [0.0639, 0.0668]), Brier 0.0077 (n=2,906). Labeled CONSISTENCY, not calibration: the DMARC record is the node's dominant input, so this is a definitional-agreement check. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
+| Tenancy, M365 | DNS-only predictor vs the identity-endpoint label: fixed-bin ECE 0.0471, equal-mass ECE 0.0440 (CI80 [0.0402, 0.0506]), Brier 0.0796, agreement 0.8890 (n=3,296). Caveat: the two channels share the tenant-provisioning common cause, so this controls shared measurement error, not confounding; the base rate is 0.7897, so agreement is only modestly above always-present. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
+| Tenancy, Google Workspace | one-sided recall 0.3636 (n=11), Wilson80 [0.2071, 0.5556]; no authoritative negative on the Google channel. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
+| Conformal coverage | mean coverage 0.9992 vs 0.90 target, mean set size 0.9992, n=4,290, 20 splits. Over-covers on this exchangeable cohort; not claimed for hardened (non-exchangeable) targets. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
 | Information recovered, posture stratification | public-list cross-check across about 575 public, re-queryable domains in 22 disjoint sectors: overall median entropy reduction 1.967 / 1.932 / 1.846 nats across Lists A/B/C; the sparse tier is the genuine hardening signal (`direct / sparse` medians 0.999 / 0.742 / 0.721), not the edge-proxied flag. CAL7 width diagnostic reproduces across all three lists: grouped nodes are not narrower than ungrouped at matched n_eff near the ceiling. | `validation/public-list-calibration.md` |
-| Per-vertical stratification (22 private-corpus verticals, min cell 10) | the pattern is uniform in the disclosure-reviewed aggregate memo: full-posterior consistency ECE 0.065-0.098 per populated vertical (pooled 0.076, agreement 1.0), held-out residual ECE 0.258-0.498 (pooled 0.373, agreement 0.189). The negative finding is not a single-sector artifact, but the population remains curated and high-base-rate. | `validation/2026-06-23-full-corpus-calibration.md` |
+| Per-vertical stratification (22 private-corpus verticals, min cell 10) | the pattern is uniform in the disclosure-reviewed aggregate memo: full-posterior fixed-bin ECE 0.065-0.098 per populated vertical (pooled 0.0761, equal-mass 0.0651, agreement 1.0), held-out residual fixed-bin ECE 0.258-0.498 (pooled 0.3747, equal-mass 0.3263, agreement 0.1896). The negative finding is not a single-sector artifact, but the population remains curated and high-base-rate. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
 
 **The headline result is a negative one, reported as such.** The one construction
 that makes predictor and label disjoint, the held-out residual on the only node
 with an external non-suppressible reference, shows the multi-signal posterior
 cannot recover enforcing mail policy from the residual signals once the defining
-DMARC record is masked (ECE 0.373, agreement 0.189, below the cohort's 0.834
+DMARC record is masked (fixed-bin ECE 0.3747, agreement 0.1896, below the
+cohort's 0.8352
 always-enforcing baseline). We foreground this rather than the near-perfect
 full-posterior agreement, because the latter scores the node against its own
 dominant input and is a consistency check, not calibration. The tenancy
-channel-split (ECE 0.048) is the strongest genuinely-disjoint signal, and even it
-is confounded by a shared upstream and flattered by a 0.791 base rate. The honest
+channel-split (fixed-bin ECE 0.0471, equal-mass ECE 0.0440) is the strongest
+genuinely-disjoint signal, and even it is confounded by a shared upstream and
+flattered by a 0.7897 base rate. The honest
 summary: recon currently has no node with a clean, independent, passing
 calibration result, and the experiment built to produce one instead falsifies it.
 That is a finding, not a gap to paper over. The per-vertical stratification rules
 out a single-sector artifact: the residual is weak across all 22 disclosed
-private-corpus verticals (pooled held-out ECE 0.373, agreement 0.189), while the
-full-posterior consistency is equally uniform (pooled ECE 0.076), which is
+private-corpus verticals (pooled held-out fixed-bin ECE 0.3747, equal-mass ECE
+0.3263, agreement 0.1896), while the full-posterior consistency is equally
+uniform (pooled fixed-bin ECE 0.0761, equal-mass ECE 0.0651), which is
 exactly what a definitional-agreement check looks like when read honestly.
 
 The collapse is also explainable from the remaining signal strengths. Once the
@@ -377,7 +382,7 @@ percent present for enforcing domains, about 1 percent for non-enforcing), so
 MTA-STS absence is almost neutral. Strict SPF is more common but still weak
 (about 53 percent present for enforcing domains, about 27 percent for
 non-enforcing), so it supports enforcement without defining it. In a curated
-cohort whose enforcing base rate is already 0.834, those two residual signals
+cohort whose enforcing base rate is already 0.8352, those two residual signals
 cannot recover the label after the label-defining DMARC record is removed. This
 is a diagnostic reading of the committed likelihoods and aggregate memo, not a
 causal proof about all domains.
@@ -491,8 +496,9 @@ The reviewer-facing command sequence and result boundaries are in
 
 We separate two reproducibility claims that are easy to conflate. Build
 reproducibility (the signed, bit-identical artifact) is real and complete. Result
-reproducibility is not: the corpus aggregates above (for example the M365 ECE of
-0.048) cannot be regenerated by an outsider, because the domain list is gitignored
+reproducibility is not: the corpus aggregates above (for example the M365
+fixed-bin ECE of 0.0471) cannot be regenerated by an outsider, because the
+domain list is gitignored
 by invariant and DNS/CT state drifts daily, and the synthetic harnesses reproduce
 the method and the relative-layer results but not the public-cohort numbers.
 [public-label-snapshot-decision.md](public-label-snapshot-decision.md) defers a
@@ -520,11 +526,11 @@ passive observer can and cannot promise.
 
 ## Open items before submission
 
-Done (run 2026-06-23, aggregates in Section 6): the held-out residual, the DMARC
-full-posterior consistency check, the M365 and Google tenancy calibrations, and
-the conformal coverage pass. Done in the harness after that run: equal-mass,
-mean-confidence ECE with deterministic bootstrap CI for future calibration
-reruns. Done in this draft pass: the residual collapse is now diagnosed from
+Done (refreshed 2026-06-28, aggregates in Section 6): the held-out residual, the
+DMARC full-posterior consistency check, the M365 and Google tenancy calibrations,
+the conformal coverage pass, and equal-mass mean-confidence ECE with
+deterministic bootstrap CI. Done in this draft pass: the residual collapse is now
+diagnosed from
 the remaining signal strengths, with MTA-STS rarity and strict SPF weakness
 called out as the mechanism visible in the committed model data. Still open, in
 priority order:

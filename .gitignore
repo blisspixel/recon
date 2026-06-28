@@ -117,6 +117,7 @@ docs/accuracy.md
 # the disclosure-checked renderer. No apexes, org names, tenant IDs, or per-domain
 # rows; strata below 10 domains suppressed.
 !/validation/2026-06-23-full-corpus-calibration.md
+!/validation/2026-06-28-full-corpus-calibration-refresh.md
 !/validation/2026-06-19-msedge-triad-motif.md
 # Exchange Online DKIM suffix-match validation (2026-06-26): aggregate counts
 # only, no apexes/org names/tenant IDs/per-domain rows.

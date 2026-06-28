@@ -81,10 +81,9 @@ requirements:
 - `CITATION.cff` is the citation metadata source and release readiness now
   checks it against `pyproject.toml` and the current `CHANGELOG.md` release
   section.
-- Reference and tenancy calibration summaries now carry both the legacy
-  fixed-width ECE and an equal-mass, mean-confidence ECE with deterministic
-  bootstrap CI. Older memo numbers remain legacy until the underlying corpus
-  runs are rerun.
+- The 2026-06-28 private aggregate calibration refresh now reports both legacy
+  fixed-bin ECE and equal-mass, mean-confidence ECE with deterministic bootstrap
+  CI in the committed aggregate memo.
 - Private corpus calibration remains maintainer-local. Public artifacts may
   include aggregate counts, rates, intervals, and suppressed-cell statements
   only.

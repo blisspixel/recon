@@ -166,7 +166,7 @@ def _render_checked_memo(
         conformal=conformal,
         small_cell_threshold=min_cell,
     )
-    memo_md.write_text(f"{memo}\n", encoding="utf-8")
+    memo_md.write_text(f"{memo.rstrip()}\n", encoding="utf-8")
 
 
 def run_bundle(

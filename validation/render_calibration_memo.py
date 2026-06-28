@@ -159,12 +159,25 @@ def _fmt(value: object, *, digits: int = 4) -> str:
     return str(value)
 
 
+CALIBRATION_TABLE_HEADER = (
+    "| Block | n | Log score | Brier | ECE fixed-bin | ECE equal-mass | "
+    "ECE equal-mass CI80 | Agreement | Base rate |"
+)
+CALIBRATION_TABLE_RULE = "|---|---:|---:|---:|---:|---:|---|---:|---:|"
+STRATUM_TABLE_HEADER = (
+    "| Stratum | n | ECE fixed-bin | ECE equal-mass | ECE equal-mass CI80 | "
+    "Agreement | Base rate |"
+)
+STRATUM_TABLE_RULE = "|---|---:|---:|---:|---|---:|---:|"
+
+
 def _calibration_row(name: str, summary: Mapping[str, object]) -> str:
     if summary.get("n") in (None, 0):
-        return f"| {name} | 0 | | | | | |"
+        return f"| {name} | 0 | | | | | | | |"
     return (
         f"| {name} | {_fmt(summary.get('n'))} | {_fmt(summary.get('log_score'))} | "
         f"{_fmt(summary.get('brier'))} | {_fmt(summary.get('ece'))} | "
+        f"{_fmt(summary.get('ece_equal_mass'))} | {_fmt(summary.get('ece_equal_mass_ci80'))} | "
         f"{_fmt(summary.get('agreement_rate'))} | {_fmt(summary.get('base_rate_enforcing'))} |"
     )
 
@@ -174,20 +187,24 @@ def _strata_lines(title: str, block: Mapping[str, object], label: str) -> list[s
     lines = [
         f"### {label}",
         "",
-        "| Block | n | Log score | Brier | ECE | Agreement | Base rate |",
-        "|---|---:|---:|---:|---:|---:|---:|",
+        CALIBRATION_TABLE_HEADER,
+        CALIBRATION_TABLE_RULE,
         _calibration_row("Pooled", pooled),
         "",
-        "| Stratum | n | ECE | Agreement | Base rate |",
-        "|---|---:|---:|---:|---:|",
+        STRATUM_TABLE_HEADER,
+        STRATUM_TABLE_RULE,
     ]
     for name, summary_raw in sorted(_as_mapping(block.get("strata")).items()):
         summary = _as_mapping(summary_raw)
         if summary.get("suppressed") is True:
-            lines.append(f"| {name} | {_fmt(summary.get('n'))} | suppressed | suppressed | suppressed |")
+            lines.append(
+                f"| {name} | {_fmt(summary.get('n'))} | suppressed | suppressed | suppressed | "
+                "suppressed | suppressed |"
+            )
         else:
             lines.append(
                 f"| {name} | {_fmt(summary.get('n'))} | {_fmt(summary.get('ece'))} | "
+                f"{_fmt(summary.get('ece_equal_mass'))} | {_fmt(summary.get('ece_equal_mass_ci80'))} | "
                 f"{_fmt(summary.get('agreement_rate'))} | {_fmt(summary.get('base_rate_enforcing'))} |"
             )
     lines.append("")
@@ -208,8 +225,8 @@ def _render_calibration_block(title: str, payload: Mapping[str, object]) -> list
         return lines
     lines.extend(
         [
-            "| Block | n | Log score | Brier | ECE | Agreement | Base rate |",
-            "|---|---:|---:|---:|---:|---:|---:|",
+            CALIBRATION_TABLE_HEADER,
+            CALIBRATION_TABLE_RULE,
             _calibration_row("Full posterior", _as_mapping(payload.get("full"))),
             _calibration_row("Held-out residual", _as_mapping(payload.get("held_out"))),
             "",
@@ -247,8 +264,8 @@ def _render_tenancy_block(payload: Mapping[str, object]) -> list[str]:
     else:
         lines.extend(
             [
-                "| Block | n | Log score | Brier | ECE | Agreement | Base rate |",
-                "|---|---:|---:|---:|---:|---:|---:|",
+                CALIBRATION_TABLE_HEADER,
+                CALIBRATION_TABLE_RULE,
                 _calibration_row("M365 DNS-only", _as_mapping(payload.get("m365_dns_only"))),
                 _calibration_row("M365 full pipeline", _as_mapping(payload.get("m365_full"))),
                 "",
@@ -310,6 +327,7 @@ def render_memo(
         "- This memo is generated from aggregate JSON only.",
         "- No apexes, subdomains, organization names, tenant IDs, or per-domain rows are included.",
         f"- Strata below {small_cell_threshold} domains are suppressed or rejected before rendering.",
+        "- ECE columns report both legacy fixed-bin ECE and equal-mass mean-confidence ECE when available.",
         "",
     ]
     if reference is not None:
@@ -384,7 +402,7 @@ def main(argv: list[str] | None = None) -> int:
         print(memo)
     else:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(f"{memo}\n", encoding="utf-8")
+        args.output.write_text(f"{memo.rstrip()}\n", encoding="utf-8")
     return 0
 
 

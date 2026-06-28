@@ -97,19 +97,21 @@ exactly where the top of that spectrum reaches:
   Managed/Federated namespace attests presence; the documented tenant-not-found
   response attests absence), which the operator does not control and cannot
   suppress without actually leaving the tenant. For the
-  policy node the calibration has run at full corpus (n=2,905 with a published
-  DMARC policy, 2026-06): the full posterior is strongly calibrated against the
-  DMARC record (ECE 0.076, stable across all 22 verticals, the miss in the
-  conservative under-confident direction), but the held-out DMARC-disjoint
-  residual is weak and poorly calibrated (ECE 0.373). The honest reading is a
-  strong but DMARC-anchored full-posterior calibration plus an agreement check for
-  the DMARC-driven bulk; the strict-SPF + MTA-STS residual is not a clean tier-4
-  result, the disjoint construction disconfirms it
+  policy node the calibration has run at full corpus (n=2,906 with a published
+  DMARC policy, 2026-06 refresh): the full posterior is strongly calibrated
+  against the DMARC record (fixed-bin ECE 0.0761, equal-mass ECE 0.0651, stable
+  across all 22 verticals, the miss in the conservative under-confident
+  direction), but the held-out DMARC-disjoint residual is weak and poorly
+  calibrated (fixed-bin ECE 0.3747, equal-mass ECE 0.3263). The honest reading
+  is a strong but DMARC-anchored full-posterior calibration plus an agreement
+  check for the DMARC-driven bulk; the strict-SPF + MTA-STS residual is not a
+  clean tier-4 result, the disjoint construction disconfirms it
   (`validation/reference-calibration.md`,
-  `validation/2026-06-23-full-corpus-calibration.md`). For `m365_tenant` the
-  channel-split corroboration run also landed (n=3,309, the DNS-driven posterior
-  against the provider endpoint attestation): ECE 0.048, agreement 0.889, a
-  reached result rather than merely reachable
+  `validation/2026-06-28-full-corpus-calibration-refresh.md`). For
+  `m365_tenant` the channel-split corroboration run also landed (n=3,296, the
+  DNS-driven posterior against the provider endpoint attestation): fixed-bin ECE
+  0.0471, equal-mass ECE 0.0440, agreement 0.889, a reached result rather than
+  merely reachable
   (`validation/tenancy_reference_calibration.py`). The
   Google channel is one-sided (it attests only observed federated routing,
   never managed tenancy, and has no authoritative negative; correlation.md
@@ -137,12 +139,12 @@ exactly where the top of that spectrum reaches:
 | Claim / node | Highest tier today | What backs it | Where it stops |
 |---|---|---|---|
 | Fired slugs and signals (the evidence layer) | Observed | The underlying DNS / CT / identity query, re-runnable | Heuristic catalogue; a rule can mis-fire, so each carries a vendor-doc reference |
-| `m365_tenant` | Evidence-responsive | Tiers 1 to 3; two-class provider attestation exists (tenant ID / namespace, and the documented not-found response), and the channel-split corroboration harness ships (`validation/tenancy_reference_calibration.py`) | The channel-split run landed 2026-06 (ECE 0.048, agreement 0.889, n=3,309), a reached corroboration result against provider attestation |
+| `m365_tenant` | Evidence-responsive | Tiers 1 to 3; two-class provider attestation exists (tenant ID / namespace, and the documented not-found response), and the channel-split corroboration harness ships (`validation/tenancy_reference_calibration.py`) | The channel-split refresh landed 2026-06-28 (fixed-bin ECE 0.0471, equal-mass ECE 0.0440, agreement 0.889, n=3,296), a reached corroboration result against provider attestation |
 | `google_workspace_tenant` | Evidence-responsive | Tiers 1 to 3; the provider channel attests only observed federated routing (one-sided, no authoritative negative, no managed detection) | Tier 4 unreachable on this channel: a one-sided recall check on attested positives is reported, never a calibration |
 | `okta_idp`, `federated_identity` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: federation indicators are hideable |
 | `email_gateway_present`, `cdn_fronting`, `aws_hosting` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: all hideable infrastructure |
 | `email_security_modern_provider` | Consistency | Pure propagation from parents (no own evidence), so it inherits its parents' tier | Not an independent measurement |
-| `email_security_policy_enforcing` | Full-posterior calibration (strong, DMARC-anchored); the clean residual disconfirmed | Calibrated against the DMARC record on real domains (full posterior ECE 0.076, n=2,905, stable across 22 verticals, miss conservative). DMARC is also the node's dominant input, so the full-posterior agreement is largely definitional; the full-corpus held-out run shows the DMARC-disjoint residual is weak and poorly calibrated (ECE 0.373), so it is not a clean tier-4 result. See `validation/reference-calibration.md` and `validation/2026-06-23-full-corpus-calibration.md` | The result is for a domain *declaring* an enforcing policy, not enforcing it, and the declaration is forgeable at zero cost (correlation.md 4.11, Pattern I) |
+| `email_security_policy_enforcing` | Full-posterior calibration (strong, DMARC-anchored); the clean residual disconfirmed | Calibrated against the DMARC record on real domains (full posterior fixed-bin ECE 0.0761, equal-mass ECE 0.0651, n=2,906, stable across 22 verticals, miss conservative). DMARC is also the node's dominant input, so the full-posterior agreement is largely definitional; the full-corpus held-out run shows the DMARC-disjoint residual is weak and poorly calibrated (fixed-bin ECE 0.3747, equal-mass ECE 0.3263), so it is not a clean tier-4 result. See `validation/reference-calibration.md` and `validation/2026-06-28-full-corpus-calibration-refresh.md` | The result is for a domain *declaring* an enforcing policy, not enforcing it, and the declaration is forgeable at zero cost (correlation.md 4.11, Pattern I) |
 | The 80% credible interval (all nodes) | Evidence-responsive | Differential verification plus perturbation coverage (v2.1.15) | Frequentist ground-truth coverage (tier 4) only where a public reference exists |
 | Cohort-summary prevalences (PV1) | Observed plus evidence-responsive | Observability-adjusted rates over the caller's set, with denominators | Ecological-fallacy discipline; never a population claim |
 
@@ -171,21 +173,22 @@ is possible: `email_security_policy_enforcing` against the DMARC record and
 `m365_tenant` against the provider endpoints (aggregates only, no apexes
 committed, per [data-handling-policy.md](data-handling-policy.md); detail in
 `validation/reference-calibration.md` and
-`validation/2026-06-23-full-corpus-calibration.md`). For the policy node the full
-posterior is strongly calibrated (ECE 0.076, n=2,905, stable across 22 verticals),
-but because DMARC is also its dominant input that agreement is largely
-definitional; the held-out DMARC-disjoint residual, the construction that would
-make the residual a clean tier-4 result, instead runs weak and poorly calibrated
-(ECE 0.373), so it disconfirms the clean claim rather than establishing it. What
-remains is bounded and honest:
+`validation/2026-06-28-full-corpus-calibration-refresh.md`). For the policy node
+the full posterior is strongly calibrated (fixed-bin ECE 0.0761, equal-mass ECE
+0.0651, n=2,906, stable across 22 verticals), but because DMARC is also its
+dominant input that agreement is largely definitional; the held-out
+DMARC-disjoint residual, the construction that would make the residual a clean
+tier-4 result, instead runs weak and poorly calibrated (fixed-bin ECE 0.3747,
+equal-mass ECE 0.3263), so it disconfirms the clean claim rather than
+establishing it. What remains is bounded and honest:
 
 - The `m365_tenant` claim is corroborated against Microsoft's own identity
-  endpoints with both label classes; the channel-split run landed (ECE 0.048,
-  agreement 0.889, n=3,309 over the DNS-driven posterior against the endpoint
-  attestation), a reached result. `google_workspace_tenant` gets only the
-  one-sided recall check the Google channel supports (n=12 attested positives,
-  recall 0.58); a calibration there would need a two-class attestor recon's
-  passive channel does not have.
+  endpoints with both label classes; the channel-split refresh landed
+  (fixed-bin ECE 0.0471, equal-mass ECE 0.0440, agreement 0.889, n=3,296 over
+  the DNS-driven posterior against the endpoint attestation), a reached result.
+  `google_workspace_tenant` gets only the one-sided recall check the Google
+  channel supports (n=11 attested positives, recall 0.3636); a calibration there
+  would need a two-class attestor recon's passive channel does not have.
 - The hideable-infrastructure nodes have no external reference by the nature of
   the adversarial-missingness setting, so they stay at tier 3 by design, not by
   omission. The dossier reports them that way rather than implying coverage it

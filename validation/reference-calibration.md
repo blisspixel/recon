@@ -117,7 +117,7 @@ removes the DMARC bindings and scores the residual against the DMARC label is
 what would make the whole posterior tier 4. None of this generalizes to the
 hideable nodes, where no external reference exists.
 
-## The held-out residual (run complete, 2026-06-23)
+## The held-out residual (refresh complete, 2026-06-28)
 
 The clean construction the section above asks for now ships in the same
 harness: every run computes, beside the full posterior, a *held-out residual*
@@ -143,19 +143,21 @@ Two things to expect from the run, so the numbers are read honestly:
   (unit-tested), so no leakage path from label to predictor remains inside
   the inference.
 
-### Result (full-corpus run, 2026-06-23)
+### Result (full-corpus refresh, 2026-06-28)
 
-A maintainer-local run over the gitignored 5,241-domain corpus landed 2026-06-23
+A maintainer-local run over the gitignored 5,241-domain corpus landed 2026-06-28
 (concurrency 2; aggregates in
-[2026-06-23-full-corpus-calibration.md](2026-06-23-full-corpus-calibration.md),
-per-domain pairings local). Pooled over n=2,905 domains with a published DMARC
+[2026-06-28-full-corpus-calibration-refresh.md](2026-06-28-full-corpus-calibration-refresh.md),
+per-domain pairings local). Pooled over n=2,906 domains with a published DMARC
 policy:
 
-- Full posterior: ECE 0.076, Brier 0.008, log-score 0.077, agreement 1.0;
-  empirical enforcing-rate matches the bin in every populated reliability bin;
-  stable across all 22 verticals (per-stratum ECE 0.065 to 0.098).
-- Held-out residual (DMARC masked): ECE 0.373, Brier 0.245, log-score 0.682,
-  agreement 0.189; per-stratum residual ECE 0.26 to 0.50.
+- Full posterior: fixed-bin ECE 0.0761, equal-mass ECE 0.0651 with CI80
+  [0.0639, 0.0668], Brier 0.0077, log-score 0.0769, agreement 1.0; empirical
+  enforcing-rate matches the bin in every populated reliability bin; stable
+  across all 22 verticals (per-stratum fixed-bin ECE 0.065 to 0.098).
+- Held-out residual (DMARC masked): fixed-bin ECE 0.3747, equal-mass ECE 0.3263
+  with CI80 [0.3177, 0.3349], Brier 0.2448, log-score 0.6809, agreement 0.1896;
+  per-stratum residual fixed-bin ECE 0.26 to 0.50.
 
 Read honestly, the residual is not only weak (it rarely crosses 0.5, so its
 agreement sits near the all-negative rate) but also *poorly calibrated* in the
@@ -169,14 +171,16 @@ number would have been.
 ## Status
 
 The harness, its unit tests, the full-posterior result, the held-out residual
-mode, and the full-corpus run (2026-06-23, per-vertical stratification included)
+mode, and the full-corpus refresh (2026-06-28, per-vertical stratification included)
 all ship. The run revises the residual claim *downward*, honestly: the
 strict-SPF + MTA-STS residual is shown weak and poorly calibrated, so it is not a
 clean tier-4 result. The defensible node-level claims from this run are (a) a
 strong but DMARC-anchored full-posterior calibration for
-`email_security_policy_enforcing` (ECE 0.076, stable across 22 verticals), and
+`email_security_policy_enforcing` (fixed-bin ECE 0.0761, equal-mass ECE 0.0651,
+stable across 22 verticals), and
 (b) a strong, channel-split M365 tenancy corroboration (DNS-only posterior vs
-provider attestation, ECE 0.048, agreement 0.889, n=3,309;
+provider attestation, fixed-bin ECE 0.0471, equal-mass ECE 0.0440, agreement
+0.889, n=3,296;
 [tenancy_reference_calibration.py](tenancy_reference_calibration.py)). The
 statistical-assurance dossier's prior "tier 4 for the strict-SPF + MTA-STS
 residual" line should be revised to match this disconfirmation; that edit is a

@@ -16,6 +16,8 @@ def _summary(n: int) -> dict[str, object]:
         "brier": 0.12,
         "log_score": 0.31,
         "ece": 0.05,
+        "ece_equal_mass": 0.04,
+        "ece_equal_mass_ci80": [0.03, 0.06],
         "agreement_rate": 0.86,
     }
 

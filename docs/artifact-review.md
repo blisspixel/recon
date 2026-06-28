@@ -60,7 +60,7 @@ Some paper rows use real-domain corpora that cannot be committed under the
 data-handling policy:
 
 - DMARC full-posterior consistency and held-out residual aggregates in
-  [../validation/2026-06-23-full-corpus-calibration.md](../validation/2026-06-23-full-corpus-calibration.md).
+  [../validation/2026-06-28-full-corpus-calibration-refresh.md](../validation/2026-06-28-full-corpus-calibration-refresh.md).
 - M365 DNS-only provider corroboration aggregates in the same memo.
 - Aggregate-only C3 CT closure in
   [../validation/2026-06-26-c3-ct-partial.md](../validation/2026-06-26-c3-ct-partial.md).

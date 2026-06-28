@@ -175,7 +175,7 @@ it, and that tracks the hideability spectrum in correlation.md.
 | Node class | Example nodes | Reference label | Guarantees available |
 |---|---|---|---|
 | Provider-attested | m365_tenant, google_workspace_tenant | the provider's own identity endpoint (authoritative) | calibration (CAL3/CAL4) and, as a candidate, conformal coverage; plus the structural guarantees |
-| Public-declaration | email_security_policy_enforcing | the DMARC record (its own definition of enforcing) | full-posterior calibration strong but DMARC-anchored (ECE 0.076; DMARC is also the input, so the bulk is a definitional agreement check), the clean DMARC-disjoint residual disconfirmed (ECE 0.373); conformal coverage measured (0.999 at a 0.90 target); plus the structural guarantees |
+| Public-declaration | email_security_policy_enforcing | the DMARC record (its own definition of enforcing) | full-posterior calibration strong but DMARC-anchored (fixed-bin ECE 0.0761, equal-mass ECE 0.0651; DMARC is also the input, so the bulk is a definitional agreement check), the clean DMARC-disjoint residual disconfirmed (fixed-bin ECE 0.3747, equal-mass ECE 0.3263); conformal coverage measured (0.9992 at a 0.90 target); plus the structural guarantees |
 | Hideable | okta_idp, federated_identity, cdn_fronting, aws_hosting, email_gateway_present | none (absence may be genuine or adversarial) | structural guarantees only: suppression-monotonicity and interval widening (evidence-responsive, CAL13) |
 
 The paper's claim is not that recon calibrates everything. It is that the

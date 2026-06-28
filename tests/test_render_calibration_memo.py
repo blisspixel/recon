@@ -16,6 +16,8 @@ REFERENCE_SINGLE = {
         "brier": 0.08,
         "log_score": 0.24,
         "ece": 0.04,
+        "ece_equal_mass": 0.03,
+        "ece_equal_mass_ci80": [0.02, 0.05],
         "agreement_rate": 0.9,
     },
     "held_out": {
@@ -24,6 +26,8 @@ REFERENCE_SINGLE = {
         "brier": 0.23,
         "log_score": 0.67,
         "ece": 0.18,
+        "ece_equal_mass": 0.16,
+        "ece_equal_mass_ci80": [0.14, 0.19],
         "agreement_rate": 0.57,
     },
 }
@@ -46,6 +50,8 @@ TENANCY_SINGLE = {
         "brier": 0.2,
         "log_score": 0.55,
         "ece": 0.12,
+        "ece_equal_mass": 0.11,
+        "ece_equal_mass_ci80": [0.08, 0.14],
         "agreement_rate": 0.7,
     },
     "m365_full": {
@@ -54,6 +60,8 @@ TENANCY_SINGLE = {
         "brier": 0.03,
         "log_score": 0.11,
         "ece": 0.02,
+        "ece_equal_mass": 0.02,
+        "ece_equal_mass_ci80": [0.01, 0.03],
         "agreement_rate": 0.97,
     },
     "gws_one_sided": {
@@ -90,6 +98,8 @@ TENANCY_STRATIFIED = {
             "brier": 0.2,
             "log_score": 0.55,
             "ece": 0.12,
+            "ece_equal_mass": 0.11,
+            "ece_equal_mass_ci80": [0.08, 0.14],
             "agreement_rate": 0.7,
         },
         "strata": {
@@ -99,6 +109,8 @@ TENANCY_STRATIFIED = {
                 "brier": 0.2,
                 "log_score": 0.55,
                 "ece": 0.12,
+                "ece_equal_mass": 0.11,
+                "ece_equal_mass_ci80": [0.08, 0.14],
                 "agreement_rate": 0.7,
             },
             "security": {
@@ -107,6 +119,8 @@ TENANCY_STRATIFIED = {
                 "brier": 0.18,
                 "log_score": 0.49,
                 "ece": 0.09,
+                "ece_equal_mass": 0.08,
+                "ece_equal_mass_ci80": [0.06, 0.1],
                 "agreement_rate": 0.8,
             },
         },
@@ -133,6 +147,8 @@ def test_render_memo_includes_aggregate_sections_only() -> None:
     assert "Tenancy Provider Corroboration" in memo
     assert "Conformal Coverage" in memo
     assert "30" in memo
+    assert "ECE equal-mass" in memo
+    assert "| Full posterior | 30 | 0.24 | 0.08 | 0.04 | 0.03 | 0.02, 0.05 | 0.9 | 0.6 |" in memo
     assert "apexes" in memo.lower()
     assert "tenant IDs" in memo
     assert "contoso" not in memo.lower()
@@ -147,7 +163,7 @@ def test_render_memo_handles_stratified_tenancy_payload() -> None:
 
     assert "M365 DNS-only Stratified Corroboration" in memo
     assert "Pooled and per-stratum" in memo
-    assert "| saas | 10 | 0.12 | 0.7 | 0.6 |" in memo
+    assert "| saas | 10 | 0.12 | 0.11 | 0.08, 0.14 | 0.7 | 0.6 |" in memo
     assert "Full posterior" not in memo
 
 
