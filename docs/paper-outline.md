@@ -377,17 +377,16 @@ pinned by `tests/test_posterior_reading_guidance.py`.)
 
 ## Open items before this is submittable
 
-The gating work is no longer harness construction or default runtime expansion.
-The remaining work is to make the draft externally reviewable:
+The gating work is no longer harness construction, figure construction, or
+default runtime expansion. The remaining work is to make the draft externally
+reviewable:
 
-- keep the claim map synchronized from each empirical sentence to a code
-  invariant, unit or property test, public reproduction harness, public
-  validation memo, or aggregate-only private memo in
-  [paper-claim-map.md](paper-claim-map.md);
-- keep every aggregate number in `paper-draft.md` Section 6 reconciled with
-  disclosure-reviewed memos before strengthening the prose;
-- mark unresolved empirical cells as pending instead of smoothing over them;
-- use the committed figure package during the final writing pass.
+| Blocking open item | Minimum closure |
+|---|---|
+| Stratified public probability-sampling protocol | Either approve a new data-release model through a separate review, or keep public-list numbers framed as robustness checks rather than population rates. |
+| M365 independent-instrument check | Identify a passive instrument without the shared tenant-provisioning common cause, or keep the result named corroboration rather than calibration. |
+| Adversarial planting and stripping harness | Add a synthetic or controlled-domain harness for posterior movement under evidence removal and addition, or keep planting as a threat-model boundary without empirical rates. |
+| Final claim audit | Re-run claim-map tests, figure drift check, public proof smoke, full public proof, local gate, and release readiness from the final draft commit. |
 
 ## Decisions still open
 

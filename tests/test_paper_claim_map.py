@@ -105,3 +105,28 @@ def test_paper_draft_diagnoses_dmarc_residual_collapse_without_overclaiming() ->
         "src/recon_tool/data/bayesian_network.yaml",
     ):
         assert required in text
+
+
+def test_paper_open_items_are_actionable_submission_blockers() -> None:
+    draft = PAPER_DRAFT.read_text(encoding="utf-8")
+    outline = (ROOT / "docs" / "paper-outline.md").read_text(encoding="utf-8")
+    combined = "\n".join((draft, outline))
+
+    for required in (
+        "Blocking open item",
+        "Minimum closure",
+        "Stratified public probability-sampling protocol",
+        "M365 independent-instrument check",
+        "Adversarial planting and stripping harness",
+        "Final claim audit",
+        "figure drift check",
+        "full public proof",
+    ):
+        assert required in combined
+
+    for vague in (
+        "mark unresolved empirical cells as pending",
+        "use the committed figure package during the final writing pass",
+        "Keep the posture-stratified and per-vertical claim-map rows synchronized",
+    ):
+        assert vague not in combined

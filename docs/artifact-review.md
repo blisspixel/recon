@@ -13,6 +13,8 @@ Python package built from that source. It includes:
 - the stable JSON schema in [recon-schema.json](recon-schema.json);
 - public proof and synthetic validation harnesses under `validation/`;
 - aggregate-only validation memos under `validation/*.md`;
+- the aggregate-safe paper figure package in [paper-figures.md](paper-figures.md)
+  and `assets/paper/*.svg`;
 - citation metadata in [../CITATION.cff](../CITATION.cff);
 - supply-chain and release-integrity notes in [supply-chain.md](supply-chain.md).
 
@@ -28,6 +30,7 @@ Run from the repository root after installing the development environment:
 | Install dependencies | `uv sync` | Development environment resolves from `uv.lock`. |
 | Quick public proof smoke | `uv run python -m validation.reproduce_paper_numbers --profile smoke --stamp artifact-review-smoke` | Writes a manifest and summary under `validation/local/paper-numbers/artifact-review-smoke/`; reports no private corpora and no default network requirement. |
 | Full public proof bundle | `uv run python -m validation.reproduce_paper_numbers --profile paper --stamp artifact-review-paper` | Runs suppression monotonicity, differential verification, interval coverage, likelihood sensitivity, and layer ablation. |
+| Paper figure drift check | `uv run python scripts/generate_paper_figures.py --check` | Verifies the committed SVG figures match the deterministic aggregate-safe generator. |
 | Local CI mirror | `uv run python scripts/check.py` | Ruff, pyright, coverage-gated tests, generated-artifact checks, hygiene checks, and ratchets pass. |
 | Release readiness | `uv run python scripts/release_readiness.py` | Version, citation metadata, lockfile, roadmap, Homebrew formula, private-data hygiene, and commit hygiene pass for the local checkout. |
 
@@ -52,6 +55,7 @@ The latest maintainer full proof check is recorded in
 | Interval perturbation coverage | `validation.interval_coverage --json` through the reproduction bundle | The 80 percent interval absorbs the CAL8 likelihood band inside the model. This is not ground-truth coverage. |
 | Likelihood sensitivity | `validation.likelihood_sensitivity` through the reproduction bundle | Posterior decisions are stable under the configured +/-20 percent likelihood perturbation. |
 | Layer contribution | `validation.layer_ablation` through the reproduction bundle | Synthetic graph and Bayesian layer effects reproduce without target data. |
+| Paper figures | `scripts/generate_paper_figures.py --check` | SVG figures are deterministic renderings of committed topology and aggregate memos, not hand-edited screenshots. |
 | Runtime and docs integrity | `scripts/check.py` | Generated schema, surface inventory, CLI surface docs, text hygiene, validation hygiene, and tests agree with source. |
 
 ## What Is Not Publicly Reproducible

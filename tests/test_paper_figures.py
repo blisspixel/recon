@@ -42,6 +42,7 @@ def test_paper_figure_package_is_linked_from_research_docs() -> None:
     for path in (
         ROOT / "docs" / "README.md",
         ROOT / "docs" / "external-writeup-plan.md",
+        ROOT / "docs" / "artifact-review.md",
         ROOT / "docs" / "paper-outline.md",
         ROOT / "docs" / "paper-draft.md",
     ):

@@ -32,6 +32,7 @@ def test_artifact_review_guide_names_required_public_commands() -> None:
         "uv sync",
         "validation.reproduce_paper_numbers --profile smoke",
         "validation.reproduce_paper_numbers --profile paper",
+        "scripts/generate_paper_figures.py --check",
         "uv run python scripts/check.py",
         "uv run python scripts/release_readiness.py",
     ):
@@ -45,6 +46,14 @@ def test_artifact_review_guide_separates_private_and_public_results() -> None:
     assert "Private-corpus rows are aggregate evidence" in text
     assert "scripts/check_validation_hygiene.py" in text
     assert "paper-claim-map.md" in text
+
+
+def test_artifact_review_guide_names_figure_package() -> None:
+    text = GUIDE.read_text(encoding="utf-8")
+
+    assert "paper-figures.md" in text
+    assert "assets/paper/*.svg" in text
+    assert "deterministic aggregate-safe generator" in text
 
 
 def test_public_label_snapshot_decision_defers_real_apex_snapshot() -> None:

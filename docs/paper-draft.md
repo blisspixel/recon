@@ -541,16 +541,13 @@ the remaining signal strengths, with MTA-STS rarity and strict SPF weakness
 called out as the mechanism visible in the committed model data. Done in the
 figure pass: [paper-figures.md](paper-figures.md) and `docs/assets/paper/*.svg`
 provide deterministic, aggregate-safe assets for the architecture, DAG,
-reliability, and interval-width figures. Still open, in priority order:
+reliability, and interval-width figures.
 
-- Replace the curated cohort with a stratified public probability-sampling
-  protocol. A frozen real-apex label snapshot is deferred by
-  [public-label-snapshot-decision.md](public-label-snapshot-decision.md) unless a
-  later data-handling and architecture review approves a new release model.
-- Re-do the M365 calibration against an instrument with no mail-routing path to
-  the endpoint label, to remove the shared-upstream confound.
-- Keep the posture-stratified and per-vertical claim-map rows synchronized with
-  the disclosure-reviewed public-list and full-corpus memos before final
-  submission.
-- An adversarial planting/stripping test set that measures the threat model
-  directly rather than asserting it.
+The remaining blockers are concrete and bounded:
+
+| Blocking open item | Why it matters | Minimum closure before submission |
+|---|---|---|
+| Stratified public probability-sampling protocol | The current public lists are reproducible but still convenience samples, and the private cohort is curated and high-base-rate. | Either approve a data-handling review for a new public release model, or keep the draft explicit that public-list numbers are robustness checks and private-corpus rows are maintainer-reproducible aggregates only. |
+| M365 independent-instrument check | The DNS-only predictor and endpoint label are channel-split, but they still share tenant provisioning as a common cause. | Identify a passive instrument with no mail-routing path to the endpoint label, or keep the result named corroboration rather than calibration. |
+| Adversarial planting and stripping harness | Proposition 1 measures evidence removal, while the paper also discusses planted evidence as the limit case. | Add a synthetic or controlled-domain harness that measures posterior movement under stripping and planting, or keep the planting discussion as a threat-model boundary without empirical rates. |
+| Final claim audit | Any new experiment or wording can move a claim between support tiers. | Re-run claim-map tests, figure drift check, public proof smoke, full public proof, local gate, and release readiness from the final draft commit. |
