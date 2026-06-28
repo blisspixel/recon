@@ -87,10 +87,11 @@ requirements:
   `Private corpora read: no`. The aggregate-only memo is
   [2026-06-28-adversarial-perturbation-paper.md](../validation/2026-06-28-adversarial-perturbation-paper.md).
 - The 2026-06-28 final claim audit smoke check with stamp
-  `final-claim-audit-smoke-20260628` passed all five public steps and reported
+  `discussion-claim-audit-smoke-20260628` passed all five public steps after
+  the discussion and conclusion claim-tier tightening and reported
   `Private corpora read: no`.
 - The 2026-06-28 final claim audit full public proof check with stamp
-  `final-claim-audit-paper-rerun-20260628` passed all five public steps and
+  `discussion-claim-audit-paper-20260628` passed all five public steps and
   reported `Private corpora read: no`. The aggregate-only memo is
   [2026-06-28-final-claim-audit.md](../validation/2026-06-28-final-claim-audit.md).
 - `CITATION.cff` is the citation metadata source and release readiness now
@@ -109,6 +110,10 @@ requirements:
 - The final claim audit is complete for the current draft package. Any future
   experiment, paper wording, package, or claim-map change must rerun the final
   claim audit before submission packaging.
+- The discussion and conclusion now reflect the June 28 aggregate refresh
+  without promoting it beyond the claim map: no clean independent calibration
+  result, DMARC residual negative, M365 corroboration only, and Google Workspace
+  one-sided recall only.
 
 ## What Is Next And Why
 
@@ -156,11 +161,11 @@ Reasoning:
    paper outline, current-state analysis, and the maintainer logs at this plan.
 3. **Public artifact smoke.** Keep the smoke profile current. The current
    final audit run used
-   `python -m validation.reproduce_paper_numbers --profile smoke --stamp final-claim-audit-smoke-20260628`
+   `python -m validation.reproduce_paper_numbers --profile smoke --stamp discussion-claim-audit-smoke-20260628`
    and kept outputs under ignored `validation/local/`.
 4. **Full public proof.** Keep the paper profile current. The current final
    audit run used
-   `python -m validation.reproduce_paper_numbers --profile paper --stamp final-claim-audit-paper-rerun-20260628`
+   `python -m validation.reproduce_paper_numbers --profile paper --stamp discussion-claim-audit-paper-20260628`
    before treating the public proof bundle as current for submission.
 5. **Artifact guide.** Keep [artifact-review.md](artifact-review.md) current with
    the exact public reviewer commands and their claim boundaries.

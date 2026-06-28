@@ -108,6 +108,33 @@ def test_paper_draft_diagnoses_dmarc_residual_collapse_without_overclaiming() ->
         assert required in text
 
 
+def test_paper_discussion_and_conclusion_preserve_final_evidence_tiers() -> None:
+    text = " ".join(
+        (
+            PAPER_DRAFT.read_text(encoding="utf-8"),
+            CLAIM_MAP.read_text(encoding="utf-8"),
+            (ROOT / "docs" / "external-writeup-plan.md").read_text(encoding="utf-8"),
+        )
+    ).replace("\n", " ")
+
+    for required in (
+        "no clean independent calibration result",
+        "DMARC-held-out residual is the clean",
+        "disjoint-predictor attempt and it fails",
+        "channel-split corroboration",
+        "Google Workspace remains one-sided recall",
+        "not a broadly calibrated truth oracle",
+        "do not claim broad calibration",
+    ):
+        assert required in text
+
+    for forbidden in (
+        "recon is a broadly calibrated classifier",
+        "has a clean independent calibration result today",
+    ):
+        assert forbidden not in text
+
+
 def test_paper_submission_state_records_final_claim_audit_closure() -> None:
     draft = PAPER_DRAFT.read_text(encoding="utf-8")
     outline = (ROOT / "docs" / "paper-outline.md").read_text(encoding="utf-8")
