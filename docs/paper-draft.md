@@ -538,9 +538,8 @@ priority order:
 - Keep the posture-stratified and per-vertical claim-map rows synchronized with
   the disclosure-reviewed public-list and full-corpus memos before final
   submission.
-- Engine follow-up: re-run the coverage and calibration cells after the hybrid
-  credible-interval change, then decide whether the paper numbers need a refreshed
-  aggregate memo.
+- Engine follow-up: decide whether private-corpus calibration rows need
+  refreshed aggregate memos after the hybrid credible-interval change.
 - An adversarial planting/stripping test set that measures the threat model
   directly rather than asserting it.
 - Figures: architecture diagram, the nine-node DAG, reliability diagrams with the

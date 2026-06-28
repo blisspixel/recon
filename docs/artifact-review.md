@@ -42,6 +42,9 @@ That changes only terminal handling. It does not skip any gate.
 
 ## What The Public Bundle Validates
 
+The latest maintainer full proof check is recorded in
+[../validation/2026-06-28-hybrid-interval-paper.md](../validation/2026-06-28-hybrid-interval-paper.md).
+
 | Claim family | Public command or gate | Reviewer interpretation |
 |---|---|---|
 | Inference arithmetic | `validation.differential_verification` through the reproduction bundle | Variable elimination matches an independent full-joint reference over enumerable shipped configurations. |

@@ -319,11 +319,11 @@ correlation.md section 4.3.
 | Conformal coverage on labelable nodes | a distribution-free finite-sample coverage statement beside the Bayesian interval, with the exchangeability boundary stated and demonstrated (a deliberately non-exchangeable split shows the guarantee failing where claimed to fail) | `validation/conformal_coverage.py`; run 2026-06: 0.999 mean coverage at a 0.90 target (n=4,290, 20 splits) |
 | ECE estimator uncertainty | future calibration summaries report equal-mass, mean-confidence ECE with deterministic bootstrap CI beside the legacy fixed-width ECE, so estimator choice is visible and older memo numbers are not silently upgraded | `validation/calibration_estimators.py`; `tests/test_calibration_estimators.py`; shipped for future reruns |
 | Interval coverage (synthetic) | the 80% interval absorbs the elicitation imprecision under the CAL8 band | `validation/interval_coverage.py`; shipped |
-| Likelihood sensitivity (CAL8) | the posteriors and agreement are stable under a plus-or-minus-20-percent likelihood perturbation | `validation/likelihood_sensitivity.py`; shipped |
+| Likelihood sensitivity (CAL8) | the posteriors and agreement are stable under a plus-or-minus-20-percent likelihood perturbation | `validation/likelihood_sensitivity.py`; shipped; full public proof run 2026-06-28 |
 | Information recovered (CAL10) | the per-domain entropy-reduction distribution across postures, as the operational reading of what the channel still leaks after hardening | per-node surfacing shipped (2.2 diagnostics: `entropy_reduction_nats` on every posterior); public-list aggregate cross-check in `validation/public-list-calibration.md`; mapped in `paper-claim-map.md` |
-| Layer ablations | what the graph layer and the Bayesian layer add over single-source slug matching | `validation/layer_ablation.py`; shipped and run (synthetic, reproducible): in the fired regime the posterior beats the deterministic baseline on every node and the DAG-only node is unreachable by matching; pooled, the hideable roots pay a quantified ~0.05-0.10 Brier MNAR price while the declarative node wins outright (the CAL14 asymmetry demonstrated); Louvain holds ARI 1.0 across a bridging-noise grid where connected components collapse to 0 - numbers in `validation/layer-ablation.md` |
+| Layer ablations | what the graph layer and the Bayesian layer add over single-source slug matching | `validation/layer_ablation.py`; shipped and run (synthetic, reproducible): in the fired regime the posterior beats the deterministic baseline on every node and the DAG-only node is unreachable by matching; pooled, the hideable roots pay a quantified ~0.05-0.10 Brier MNAR price while the declarative node wins outright (the CAL14 asymmetry demonstrated); Louvain holds ARI 1.0 across a bridging-noise grid where connected components collapse to 0 - numbers in `validation/layer-ablation.md`; full public proof run 2026-06-28 |
 | Posture stratification | aggregate behavior across hardening postures, as distributions not exemplars | `validation/posture_distributions.py` (entropy reduction bucketed by edge-proxied/direct x evidence tier; interval width vs n_eff for the CAL7 figure); aggregate numbers are in `paper-draft.md` Section 6 and need claim-map and disclosure review before submission; framing in correlation.md 4.10-4.11 |
-| Differential verification | variable elimination matches a full-joint reference on every enumerable configuration | `validation/differential_verification.py`; shipped |
+| Differential verification | variable elimination matches a full-joint reference on every enumerable configuration | `validation/differential_verification.py`; shipped; full public proof run 2026-06-28 |
 | Per-vertical stratification | full-posterior consistency and held-out residual failure are stratified across the disclosed private-corpus verticals | `validation/2026-06-23-full-corpus-calibration.md`; run 2026-06 (22 verticals, full-posterior ECE 0.065 to 0.098 per populated stratum; held-out residual ECE 0.258 to 0.498) |
 
 One-command public reproduction:
@@ -378,9 +378,9 @@ pinned by `tests/test_posterior_reading_guidance.py`.)
 The gating work is no longer harness construction or default runtime expansion.
 The remaining work is to make the draft externally reviewable:
 
-- build the claim map from each empirical sentence to a code invariant, unit or
-  property test, public reproduction harness, public validation memo, or
-  aggregate-only private memo, then keep it current in
+- keep the claim map synchronized from each empirical sentence to a code
+  invariant, unit or property test, public reproduction harness, public
+  validation memo, or aggregate-only private memo in
   [paper-claim-map.md](paper-claim-map.md);
 - keep every aggregate number in `paper-draft.md` Section 6 reconciled with
   disclosure-reviewed memos before strengthening the prose;

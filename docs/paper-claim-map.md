@@ -54,10 +54,10 @@ security guidance:
 |---|---|---|---|
 | recon is passive by default and zero credential | Invariant | [traceability-matrix.md](traceability-matrix.md), [legal.md](legal.md), `tests/test_passive_default.py`, `tests/test_server_instructions.py` | State as default behavior, naming the standard MTA-STS fetch and opt-in direct probes. |
 | recon preserves provenance for conclusions | Invariant | [how-it-works.md](how-it-works.md), [schema.md](schema.md), `tests/test_explanation_engine.py`, `tests/test_explain_dag_top3.py` | State that conclusions are traceable through evidence and explanation surfaces, not that evidence proves operational truth. |
-| Exact inference matches a full-joint reference | Public proof harness | `validation/differential_verification.py`, `tests/test_bayesian_differential.py`, `python -m validation.reproduce_paper_numbers` | State as inference-engine correctness over enumerable shipped configurations. |
+| Exact inference matches a full-joint reference | Public proof harness plus public validation memo | `validation/differential_verification.py`, `tests/test_bayesian_differential.py`, `python -m validation.reproduce_paper_numbers`, [2026-06-28-hybrid-interval-paper.md](../validation/2026-06-28-hybrid-interval-paper.md) | State as inference-engine correctness over enumerable shipped configurations. |
 | Suppression monotonicity holds for evidence removal | Public proof harness | `validation/adversarial_properties.py`, `tests/test_adversarial_properties.py`, [correlation.md](correlation.md) section 4.3 | State robust to evidence removal. Also state not robust to evidence addition or planted indicators. |
-| The 80 percent interval absorbs the CAL8 likelihood band | Public proof harness | `validation/interval_coverage.py`, `tests/test_interval_coverage.py`, [interval-coverage.md](../validation/interval-coverage.md) | State as model-internal perturbation coverage, not ground-truth frequentist coverage. |
-| Posteriors are stable under +/-20 percent likelihood perturbation | Public proof harness | `validation/likelihood_sensitivity.py`, `tests/test_calibration_metrics.py`, [cal8-likelihood-sensitivity.md](../validation/cal8-likelihood-sensitivity.md) | State as sensitivity to elicited likelihoods, not evidence of real-world calibration. |
+| The 80 percent interval absorbs the CAL8 likelihood band | Public proof harness plus public validation memo | `validation/interval_coverage.py`, `tests/test_interval_coverage.py`, [interval-coverage.md](../validation/interval-coverage.md), [2026-06-28-hybrid-interval-paper.md](../validation/2026-06-28-hybrid-interval-paper.md) | State as model-internal perturbation coverage, not ground-truth frequentist coverage. |
+| Posteriors are stable under +/-20 percent likelihood perturbation | Public proof harness plus public validation memo | `validation/likelihood_sensitivity.py`, `tests/test_calibration_metrics.py`, [cal8-likelihood-sensitivity.md](../validation/cal8-likelihood-sensitivity.md), [2026-06-28-hybrid-interval-paper.md](../validation/2026-06-28-hybrid-interval-paper.md) | State as sensitivity to elicited likelihoods, not evidence of real-world calibration. |
 | The Bayesian and graph layers add value over simple matching | Public validation memo | `validation/layer_ablation.py`, `tests/test_layer_ablation.py`, [layer-ablation.md](../validation/layer-ablation.md) | State as synthetic layer contribution and MNAR price under the model's own generated worlds. |
 | DMARC full posterior agrees strongly with the DMARC record | Aggregate-only private memo | `validation/reference_calibration.py`, [reference-calibration.md](../validation/reference-calibration.md), [2026-06-23-full-corpus-calibration.md](../validation/2026-06-23-full-corpus-calibration.md) | State as DMARC-anchored consistency, not clean calibration. |
 | DMARC-held-out residual fails as an independent predictor | Aggregate-only private memo | `validation/reference_calibration.py`, [public-list-calibration.md](../validation/public-list-calibration.md), [statistical-assurance.md](statistical-assurance.md) | State as a negative result and keep the residual explanation prominent. |
@@ -80,9 +80,12 @@ Before the external write-up can leave draft status:
    memo, not only a draft paragraph.
 3. Claims marked as requiring further evidence must be removed or caveated in
    the submission draft.
-4. The public proof bundle must pass:
+4. The public smoke bundle must pass:
    `python -m validation.reproduce_paper_numbers --profile smoke`.
-5. The local gate must pass:
+5. The full public proof bundle must pass before submission packaging cites the
+   synthetic and model-internal proof rows:
+   `python -m validation.reproduce_paper_numbers --profile paper`.
+6. The local gate must pass:
    `uv run python scripts/check.py`.
-6. Release readiness must pass:
+7. Release readiness must pass:
    `uv run python scripts/release_readiness.py --allow-dirty`.

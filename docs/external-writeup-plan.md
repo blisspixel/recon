@@ -75,6 +75,9 @@ requirements:
 - The 2026-06-28 smoke check with stamp `hybrid-interval-smoke-20260628`
   passed all five public steps after the hybrid credible-interval change and
   reported `Private corpora read: no`.
+- The 2026-06-28 full public proof check with stamp
+  `hybrid-interval-paper-20260628` passed all five public steps after the hybrid
+  credible-interval change and reported `Private corpora read: no`.
 - `CITATION.cff` is the citation metadata source and release readiness now
   checks it against `pyproject.toml` and the current `CHANGELOG.md` release
   section.
@@ -129,18 +132,21 @@ Reasoning:
 3. **Public artifact smoke.** Run
    `python -m validation.reproduce_paper_numbers --profile smoke --stamp hybrid-interval-smoke-20260628`
    and keep outputs under ignored `validation/local/`.
-4. **Artifact guide.** Keep [artifact-review.md](artifact-review.md) current with
+4. **Full public proof.** Run
+   `python -m validation.reproduce_paper_numbers --profile paper --stamp hybrid-interval-paper-20260628`
+   before treating the public proof bundle as current for submission.
+5. **Artifact guide.** Keep [artifact-review.md](artifact-review.md) current with
    the exact public reviewer commands and their claim boundaries.
-5. **Claim map.** Keep [paper-claim-map.md](paper-claim-map.md) current as each
+6. **Claim map.** Keep [paper-claim-map.md](paper-claim-map.md) current as each
    paper claim moves between code invariant, unit or property test, public
    reproduction harness, public validation memo, aggregate-only private memo, or
    requires-more-evidence status.
-6. **Draft tightening.** Update `docs/paper-outline.md` and
+7. **Draft tightening.** Update `docs/paper-outline.md` and
    `docs/paper-draft.md` only where the claim map proves the text. Mark
    unresolved empirical cells as pending rather than smoothing over them.
-7. **Snapshot decision.** Keep the public label snapshot deferred unless a
+8. **Snapshot decision.** Keep the public label snapshot deferred unless a
    separate data-handling and architecture review approves a new release model.
-8. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
+9. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
    remote release readiness after push.
 
 ## Acceptance Criteria
@@ -153,6 +159,8 @@ Reasoning:
 - The artifact review guide gives exact public commands and separates public
   result validation from private aggregate evidence.
 - The public reproduction smoke profile completes from the current checkout.
+- The full public proof profile completes from the current checkout before
+  submission packaging cites the synthetic and model-internal proof rows.
 - The claim map links every Section 6 empirical row to a support tier and source.
 - No committed artifact contains private target identifiers or raw private
   result rows.

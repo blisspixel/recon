@@ -110,6 +110,7 @@ docs/accuracy.md
 !/validation/reproduce_paper_numbers.py
 !/validation/2026-06-19-paper-reproduction-smoke.md
 !/validation/2026-06-28-hybrid-interval-smoke.md
+!/validation/2026-06-28-hybrid-interval-paper.md
 !/validation/2026-06-19-crowdstrike-match-mode.md
 !/validation/2026-06-19-supabase-cname-target.md
 # Full-corpus calibration run (2026-06-23): aggregate-only memo rendered through
