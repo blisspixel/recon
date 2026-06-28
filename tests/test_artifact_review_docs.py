@@ -16,6 +16,15 @@ def test_artifact_review_guide_is_linked_from_research_docs() -> None:
         assert "artifact-review.md" in path.read_text(encoding="utf-8")
 
 
+def test_public_label_snapshot_decision_is_linked_from_research_docs() -> None:
+    for path in (
+        ROOT / "docs" / "README.md",
+        ROOT / "docs" / "external-writeup-plan.md",
+        ROOT / "docs" / "paper-draft.md",
+    ):
+        assert "public-label-snapshot-decision.md" in path.read_text(encoding="utf-8")
+
+
 def test_artifact_review_guide_names_required_public_commands() -> None:
     text = GUIDE.read_text(encoding="utf-8")
 
@@ -36,3 +45,15 @@ def test_artifact_review_guide_separates_private_and_public_results() -> None:
     assert "Private-corpus rows are aggregate evidence" in text
     assert "scripts/check_validation_hygiene.py" in text
     assert "paper-claim-map.md" in text
+
+
+def test_public_label_snapshot_decision_defers_real_apex_snapshot() -> None:
+    text = (ROOT / "docs" / "public-label-snapshot-decision.md").read_text(encoding="utf-8")
+
+    for required in (
+        "Do not publish a frozen real-apex",
+        "real target list",
+        "current data-handling policy",
+        "architecture review",
+    ):
+        assert required in text

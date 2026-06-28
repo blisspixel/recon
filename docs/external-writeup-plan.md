@@ -67,6 +67,9 @@ requirements:
 - [artifact-review.md](artifact-review.md) is the reviewer-facing command path
   for the public artifact, including what can and cannot be reproduced outside
   the private corpus.
+- [public-label-snapshot-decision.md](public-label-snapshot-decision.md)
+  records why a frozen real-apex label snapshot is deferred under the current
+  data-handling policy.
 - The 2026-06-26 smoke check with stamp `publication-plan-smoke-20260626`
   passed all five public steps and reported `Private corpora read: no`.
 - `CITATION.cff` is the citation metadata source and release readiness now
@@ -132,7 +135,9 @@ Reasoning:
 6. **Draft tightening.** Update `docs/paper-outline.md` and
    `docs/paper-draft.md` only where the claim map proves the text. Mark
    unresolved empirical cells as pending rather than smoothing over them.
-7. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
+7. **Snapshot decision.** Keep the public label snapshot deferred unless a
+   separate data-handling and architecture review approves a new release model.
+8. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
    remote release readiness after push.
 
 ## Acceptance Criteria
@@ -148,5 +153,7 @@ Reasoning:
 - The claim map links every Section 6 empirical row to a support tier and source.
 - No committed artifact contains private target identifiers or raw private
   result rows.
+- The paper package links the public label snapshot decision and does not
+  promise a frozen real-apex list.
 - No runtime surface changes.
 - Local gate passes, with coverage above the configured floor.
