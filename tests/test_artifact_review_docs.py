@@ -58,6 +58,15 @@ def test_artifact_review_guide_names_figure_package() -> None:
     assert "deterministic aggregate-safe generator" in text
 
 
+def test_external_writeup_plan_names_latest_full_proof() -> None:
+    text = (ROOT / "docs" / "external-writeup-plan.md").read_text(encoding="utf-8")
+
+    assert "adversarial-perturbation-paper-20260628" in text
+    assert "2026-06-28-adversarial-perturbation-paper.md" in (
+        ROOT / "docs" / "artifact-review.md"
+    ).read_text(encoding="utf-8")
+
+
 def test_public_label_snapshot_decision_defers_real_apex_snapshot() -> None:
     text = (ROOT / "docs" / "public-label-snapshot-decision.md").read_text(encoding="utf-8")
 

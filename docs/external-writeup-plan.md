@@ -54,10 +54,10 @@ requirements:
 
 ## Current State
 
-- C3 is closed as a bounded, maintainer-local, aggregate-only partial CT
-  validation track. It proved the CT path, retry accounting, provider ceiling,
-  candidate triage, and publication controls; it did not prove complete CT
-  coverage.
+- The certificate-transparency validation cohort is closed as a bounded,
+  maintainer-local, aggregate-only track. It proved the path, retry accounting,
+  provider ceiling, candidate triage, and publication controls; it did not
+  prove complete certificate-transparency coverage.
 - `docs/paper-outline.md` and `docs/paper-draft.md` exist, and the initial claim
   map now lives in [paper-claim-map.md](paper-claim-map.md). Draft claims stay
   limited to the support tier recorded there.
@@ -80,6 +80,11 @@ requirements:
 - The 2026-06-28 full public proof check with stamp
   `hybrid-interval-paper-20260628` passed all five public steps after the hybrid
   credible-interval change and reported `Private corpora read: no`.
+- The 2026-06-28 full public proof check with stamp
+  `adversarial-perturbation-paper-20260628` passed all five public steps after
+  the adversarial add/remove perturbation harness change and reported
+  `Private corpora read: no`. The aggregate-only memo is
+  [2026-06-28-adversarial-perturbation-paper.md](../validation/2026-06-28-adversarial-perturbation-paper.md).
 - `CITATION.cff` is the citation metadata source and release readiness now
   checks it against `pyproject.toml` and the current `CHANGELOG.md` release
   section.
@@ -134,7 +139,7 @@ Reasoning:
    `python -m validation.reproduce_paper_numbers --profile smoke --stamp hybrid-interval-smoke-20260628`
    and keep outputs under ignored `validation/local/`.
 4. **Full public proof.** Run
-   `python -m validation.reproduce_paper_numbers --profile paper --stamp hybrid-interval-paper-20260628`
+   `python -m validation.reproduce_paper_numbers --profile paper --stamp adversarial-perturbation-paper-20260628`
    before treating the public proof bundle as current for submission.
 5. **Artifact guide.** Keep [artifact-review.md](artifact-review.md) current with
    the exact public reviewer commands and their claim boundaries.
