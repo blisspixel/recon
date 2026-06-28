@@ -75,6 +75,7 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | Artifact review guide | [artifact-review.md](artifact-review.md) |
 | External write-up readiness plan | [external-writeup-plan.md](external-writeup-plan.md) |
 | Paper claim map | [paper-claim-map.md](paper-claim-map.md) |
+| Paper figure package | [paper-figures.md](paper-figures.md) |
 | Public label snapshot decision | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) |
 | Paper outline | [paper-outline.md](paper-outline.md) |
 | Paper draft | [paper-draft.md](paper-draft.md) |

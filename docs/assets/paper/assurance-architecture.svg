@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="650" viewBox="0 0 1080 650" role="img" aria-labelledby="title desc">
+  <title id="title">Assurance architecture</title>
+  <desc id="desc">Aggregate-safe paper figure generated from committed recon artifacts.</desc>
+  <rect x="0" y="0" width="1080" height="650" rx="8" fill="#ffffff" stroke="#ffffff" stroke-width="1.2" />
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#4b5563" />
+    </marker>
+  </defs>
+  <text x="40" y="45" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827" text-anchor="start">Figure 1. Assurance architecture and evidence tiers</text>
+  <rect x="40" y="90" width="210" height="125" rx="8" fill="#f8fafc" stroke="#2563eb" stroke-width="1.2" />
+  <text x="58" y="122" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#2563eb" text-anchor="start">Public observations</text>
+  <text x="58" y="152" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#4b5563" text-anchor="start">DNS, CT, identity endpoints</text>
+  <text x="58" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#4b5563" text-anchor="start">No credentials or active scan</text>
+  <line x1="254" y1="152" x2="300" y2="152" stroke="#4b5563" stroke-width="2.2" marker-end="url(#arrow)" />
+  <rect x="300" y="90" width="210" height="125" rx="8" fill="#f8fafc" stroke="#0891b2" stroke-width="1.2" />
+  <text x="318" y="122" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0891b2" text-anchor="start">Evidence DAG</text>
+  <text x="318" y="152" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#4b5563" text-anchor="start">Records to slugs to rules</text>
+  <text x="318" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#4b5563" text-anchor="start">Every conclusion traceable</text>
+  <line x1="514" y1="152" x2="560" y2="152" stroke="#4b5563" stroke-width="2.2" marker-end="url(#arrow)" />
+  <rect x="560" y="90" width="210" height="125" rx="8" fill="#f8fafc" stroke="#7c3aed" stroke-width="1.2" />
+  <text x="578" y="122" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#7c3aed" text-anchor="start">Nine-node inference</text>
+  <text x="578" y="152" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#4b5563" text-anchor="start">Exact variable elimination</text>
+  <text x="578" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#4b5563" text-anchor="start">Intervals widen on sparse evidence</text>
+  <line x1="774" y1="152" x2="820" y2="152" stroke="#4b5563" stroke-width="2.2" marker-end="url(#arrow)" />
+  <rect x="820" y="90" width="210" height="125" rx="8" fill="#f8fafc" stroke="#059669" stroke-width="1.2" />
+  <text x="838" y="122" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#059669" text-anchor="start">Hedged output</text>
+  <text x="838" y="152" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#4b5563" text-anchor="start">Observation, not verdict</text>
+  <text x="838" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#4b5563" text-anchor="start">Sparse means cannot tell</text>
+  <text x="40" y="280" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="19" font-weight="700" fill="#111827" text-anchor="start">Validation tiering by who controls the evidence</text>
+  <rect x="60" y="315" width="900" height="52" rx="8" fill="#ffffff" stroke="#2563eb" stroke-width="1.2" />
+  <text x="82" y="348" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#2563eb" text-anchor="start">Provider attested</text>
+  <text x="300" y="348" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="400" fill="#111827" text-anchor="start">M365 channel split, GWS one-sided</text>
+  <rect x="60" y="393" width="900" height="52" rx="8" fill="#ffffff" stroke="#059669" stroke-width="1.2" />
+  <text x="82" y="426" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#059669" text-anchor="start">Public declaration</text>
+  <text x="300" y="426" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="400" fill="#111827" text-anchor="start">DMARC policy consistency plus residual negative</text>
+  <rect x="60" y="471" width="900" height="52" rx="8" fill="#ffffff" stroke="#d97706" stroke-width="1.2" />
+  <text x="82" y="504" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#d97706" text-anchor="start">Hideable</text>
+  <text x="300" y="504" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="400" fill="#111827" text-anchor="start">Structural guarantees only</text>
+  <text x="60" y="585" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" fill="#4b5563" text-anchor="start">Publication boundary: public and synthetic proof rows are reproducible by reviewers.</text>
+  <text x="60" y="605" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" fill="#4b5563" text-anchor="start">Private-corpus rows are committed only as aggregate memos with small-cell suppression.</text>
+</svg>

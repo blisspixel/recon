@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1010" height="600" viewBox="0 0 1010 600" role="img" aria-labelledby="title desc">
+  <title id="title">Bayesian DAG</title>
+  <desc id="desc">Aggregate-safe paper figure generated from committed recon artifacts.</desc>
+  <rect x="0" y="0" width="1010" height="600" rx="8" fill="#ffffff" stroke="#ffffff" stroke-width="1.2" />
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#4b5563" />
+    </marker>
+  </defs>
+  <text x="40" y="45" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827" text-anchor="start">Figure 2. Nine-node Bayesian network</text>
+  <line x1="170" y1="142" x2="290" y2="249" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow)" />
+  <line x1="410" y1="142" x2="290" y2="249" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow)" />
+  <line x1="290" y1="287" x2="290" y2="404" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow)" />
+  <line x1="170" y1="142" x2="530" y2="304" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow)" />
+  <line x1="410" y1="142" x2="530" y2="304" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow)" />
+  <line x1="650" y1="142" x2="530" y2="304" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow)" />
+  <rect x="90" y="110" width="170" height="64" rx="8" fill="#f8fafc" stroke="#2563eb" stroke-width="1.2" />
+  <text x="175" y="148" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#2563eb" text-anchor="middle">M365 tenant</text>
+  <rect x="330" y="110" width="170" height="64" rx="8" fill="#f8fafc" stroke="#2563eb" stroke-width="1.2" />
+  <text x="415" y="148" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#2563eb" text-anchor="middle">Google Workspace</text>
+  <rect x="210" y="255" width="170" height="64" rx="8" fill="#f8fafc" stroke="#d97706" stroke-width="1.2" />
+  <text x="295" y="293" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#d97706" text-anchor="middle">Federated identity</text>
+  <rect x="210" y="410" width="170" height="64" rx="8" fill="#f8fafc" stroke="#d97706" stroke-width="1.2" />
+  <text x="295" y="448" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#d97706" text-anchor="middle">Okta IdP</text>
+  <rect x="570" y="110" width="170" height="64" rx="8" fill="#f8fafc" stroke="#d97706" stroke-width="1.2" />
+  <text x="655" y="148" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#d97706" text-anchor="middle">Email gateway</text>
+  <rect x="450" y="310" width="170" height="64" rx="8" fill="#f8fafc" stroke="#7c3aed" stroke-width="1.2" />
+  <text x="535" y="348" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#7c3aed" text-anchor="middle">Modern mail provider</text>
+  <rect x="780" y="110" width="170" height="64" rx="8" fill="#f8fafc" stroke="#059669" stroke-width="1.2" />
+  <text x="865" y="148" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#059669" text-anchor="middle">Enforcing mail policy</text>
+  <rect x="800" y="300" width="170" height="64" rx="8" fill="#f8fafc" stroke="#d97706" stroke-width="1.2" />
+  <text x="885" y="338" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#d97706" text-anchor="middle">CDN fronting</text>
+  <rect x="800" y="455" width="170" height="64" rx="8" fill="#f8fafc" stroke="#d97706" stroke-width="1.2" />
+  <text x="885" y="493" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#d97706" text-anchor="middle">AWS hosting</text>
+  <rect x="70" y="545" width="20" height="20" rx="8" fill="#2563eb" stroke="#2563eb" stroke-width="1.2" />
+  <text x="100" y="562" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#4b5563" text-anchor="start">Provider attested</text>
+  <rect x="315" y="545" width="20" height="20" rx="8" fill="#059669" stroke="#059669" stroke-width="1.2" />
+  <text x="345" y="562" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#4b5563" text-anchor="start">Public declaration</text>
+  <rect x="560" y="545" width="20" height="20" rx="8" fill="#d97706" stroke="#d97706" stroke-width="1.2" />
+  <text x="590" y="562" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#4b5563" text-anchor="start">Hideable or operator controlled</text>
+  <rect x="805" y="545" width="20" height="20" rx="8" fill="#7c3aed" stroke="#7c3aed" stroke-width="1.2" />
+  <text x="835" y="562" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#4b5563" text-anchor="start">Derived provider claim</text>
+</svg>

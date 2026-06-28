@@ -12,8 +12,9 @@ empirical cells constrained by the claim map) lives in
 [paper-draft.md](paper-draft.md).
 The external write-up readiness sequence lives in
 [external-writeup-plan.md](external-writeup-plan.md), and the current claim map
-lives in [paper-claim-map.md](paper-claim-map.md). The CT-enabled C3 corpus work
-is closed as a bounded aggregate-only partial pass in
+lives in [paper-claim-map.md](paper-claim-map.md). The figure package lives in
+[paper-figures.md](paper-figures.md). The CT-enabled C3 corpus work is closed as
+a bounded aggregate-only partial pass in
 [c3-ct-validation-plan.md](c3-ct-validation-plan.md). Any paper update must use
 only aggregate-safe public memos and synthetic or public reproduction harnesses,
 never private target rows.
@@ -322,7 +323,7 @@ correlation.md section 4.3.
 | Likelihood sensitivity (CAL8) | the posteriors and agreement are stable under a plus-or-minus-20-percent likelihood perturbation | `validation/likelihood_sensitivity.py`; shipped; full public proof run 2026-06-28 |
 | Information recovered (CAL10) | the per-domain entropy-reduction distribution across postures, as the operational reading of what the channel still leaks after hardening | per-node surfacing shipped (2.2 diagnostics: `entropy_reduction_nats` on every posterior); public-list aggregate cross-check in `validation/public-list-calibration.md`; mapped in `paper-claim-map.md` |
 | Layer ablations | what the graph layer and the Bayesian layer add over single-source slug matching | `validation/layer_ablation.py`; shipped and run (synthetic, reproducible): in the fired regime the posterior beats the deterministic baseline on every node and the DAG-only node is unreachable by matching; pooled, the hideable roots pay a quantified ~0.05-0.10 Brier MNAR price while the declarative node wins outright (the CAL14 asymmetry demonstrated); Louvain holds ARI 1.0 across a bridging-noise grid where connected components collapse to 0 - numbers in `validation/layer-ablation.md`; full public proof run 2026-06-28 |
-| Posture stratification | aggregate behavior across hardening postures, as distributions not exemplars | `validation/posture_distributions.py` (entropy reduction bucketed by edge-proxied/direct x evidence tier; interval width vs n_eff for the CAL7 figure); aggregate numbers are in `paper-draft.md` Section 6 and need claim-map and disclosure review before submission; framing in correlation.md 4.10-4.11 |
+| Posture stratification | aggregate behavior across hardening postures, as distributions not exemplars | `validation/posture_distributions.py` (entropy reduction bucketed by edge-proxied/direct x evidence tier; interval width vs n_eff for the CAL7 figure); aggregate numbers are in `paper-draft.md` Section 6, mapped in [paper-claim-map.md](paper-claim-map.md), and rendered in [paper-figures.md](paper-figures.md); framing in correlation.md 4.10-4.11 |
 | Differential verification | variable elimination matches a full-joint reference on every enumerable configuration | `validation/differential_verification.py`; shipped; full public proof run 2026-06-28 |
 | Per-vertical stratification | full-posterior consistency and held-out residual failure are stratified across the disclosed private-corpus verticals | `validation/2026-06-28-full-corpus-calibration-refresh.md`; refreshed 2026-06-28 (22 verticals, full-posterior fixed-bin ECE 0.065 to 0.098 per populated stratum; held-out residual fixed-bin ECE 0.258 to 0.498) |
 
@@ -331,10 +332,11 @@ One-command public reproduction:
 do not need private corpora. Use `--profile smoke` for a quick orchestration
 check; the default `paper` profile runs the full local bundle.
 
-Figures: an architecture diagram, the nine-node network as a clean DAG,
-reliability diagrams with the posterior histogram, and an
-interval-width-versus-evidence-count plot that surfaces the documented
-correlated-binding over-confidence (CAL7). Color-blind-safe palettes.
+Figures: [paper-figures.md](paper-figures.md) now defines deterministic SVG
+assets for the assurance architecture, nine-node DAG, public-list reliability
+bins with posterior histograms, and the CAL7 interval-width-versus-evidence plot.
+The package regenerates through `scripts/generate_paper_figures.py --check` and
+uses color-blind-safe palettes.
 
 ## The data-publication constraint as a design feature
 
@@ -385,7 +387,7 @@ The remaining work is to make the draft externally reviewable:
 - keep every aggregate number in `paper-draft.md` Section 6 reconciled with
   disclosure-reviewed memos before strengthening the prose;
 - mark unresolved empirical cells as pending instead of smoothing over them;
-- finish the figures and writing pass only after the claim map proves the text.
+- use the committed figure package during the final writing pass.
 
 ## Decisions still open
 

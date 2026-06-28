@@ -7,7 +7,8 @@ gitignored corpus must stay limited to disclosure-safe aggregate wording in
 [paper-claim-map.md](paper-claim-map.md); every other claim is grounded in a
 committed harness or memo cited inline. Literature positioning is in
 [related-work.md](related-work.md); the statistical assurance dossier is in
-[statistical-assurance.md](statistical-assurance.md).
+[statistical-assurance.md](statistical-assurance.md). Submission figures and
+their regeneration command are in [paper-figures.md](paper-figures.md).
 
 Primary category cs.CR; secondary stat.ML (inference framing) or cs.SE
 (artifact). Independent submission, no affiliation.
@@ -353,6 +354,11 @@ published (Section 9), only the aggregates here.
 | Information recovered, posture stratification | public-list cross-check across about 575 public, re-queryable domains in 22 disjoint sectors: overall median entropy reduction 1.967 / 1.932 / 1.846 nats across Lists A/B/C; the sparse tier is the genuine hardening signal (`direct / sparse` medians 0.999 / 0.742 / 0.721), not the edge-proxied flag. CAL7 width diagnostic reproduces across all three lists: grouped nodes are not narrower than ungrouped at matched n_eff near the ceiling. | `validation/public-list-calibration.md` |
 | Per-vertical stratification (22 private-corpus verticals, min cell 10) | the pattern is uniform in the disclosure-reviewed aggregate memo: full-posterior fixed-bin ECE 0.065-0.098 per populated vertical (pooled 0.0761, equal-mass 0.0651, agreement 1.0), held-out residual fixed-bin ECE 0.258-0.498 (pooled 0.3747, equal-mass 0.3263, agreement 0.1896). The negative finding is not a single-sector artifact, but the population remains curated and high-base-rate. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
 
+The figure package in [paper-figures.md](paper-figures.md) renders this section's
+submission figures from committed aggregate-safe sources: the assurance
+architecture, nine-node DAG, public-list reliability bins, and CAL7 interval
+width diagnostic.
+
 **The headline result is a negative one, reported as such.** The one construction
 that makes predictor and label disjoint, the held-out residual on the only node
 with an external non-suppressible reference, shows the multi-signal posterior
@@ -532,8 +538,10 @@ the conformal coverage pass, and equal-mass mean-confidence ECE with
 deterministic bootstrap CI. Done in this draft pass: the residual collapse is now
 diagnosed from
 the remaining signal strengths, with MTA-STS rarity and strict SPF weakness
-called out as the mechanism visible in the committed model data. Still open, in
-priority order:
+called out as the mechanism visible in the committed model data. Done in the
+figure pass: [paper-figures.md](paper-figures.md) and `docs/assets/paper/*.svg`
+provide deterministic, aggregate-safe assets for the architecture, DAG,
+reliability, and interval-width figures. Still open, in priority order:
 
 - Replace the curated cohort with a stratified public probability-sampling
   protocol. A frozen real-apex label snapshot is deferred by
@@ -544,10 +552,5 @@ priority order:
 - Keep the posture-stratified and per-vertical claim-map rows synchronized with
   the disclosure-reviewed public-list and full-corpus memos before final
   submission.
-- Engine follow-up: decide whether private-corpus calibration rows need
-  refreshed aggregate memos after the hybrid credible-interval change.
 - An adversarial planting/stripping test set that measures the threat model
   directly rather than asserting it.
-- Figures: architecture diagram, the nine-node DAG, reliability diagrams with the
-  posterior histogram, and the interval-width-versus-evidence-count plot for CAL7
-  (color-blind-safe palettes).

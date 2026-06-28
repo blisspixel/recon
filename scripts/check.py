@@ -55,6 +55,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "schema-generator", [_PY, "scripts/generate_schema.py", "--check"]),
     (_CORE, "surface-inventory", [_PY, "scripts/generate_surface_inventory.py", "--check"]),
     (_CORE, "cli-surface-doc", [_PY, "scripts/generate_surface_inventory.py", "--check-cli-surface"]),
+    (_CORE, "paper-figures", [_PY, "scripts/generate_paper_figures.py", "--check"]),
     (_CORE, "no-experimental-labels", [_PY, "scripts/check_no_experimental_labels.py"]),
     (_CORE, "file-size-ratchet", [_PY, "scripts/check_file_size.py"]),
     (_CORE, "plr-ratchet", [_PY, "scripts/check_plr_ratchet.py"]),

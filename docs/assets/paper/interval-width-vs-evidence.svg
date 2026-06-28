@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1060" height="590" viewBox="0 0 1060 590" role="img" aria-labelledby="title desc">
+  <title id="title">Interval width vs effective evidence</title>
+  <desc id="desc">Aggregate-safe paper figure generated from committed recon artifacts.</desc>
+  <rect x="0" y="0" width="1060" height="590" rx="8" fill="#ffffff" stroke="#ffffff" stroke-width="1.2" />
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#4b5563" />
+    </marker>
+  </defs>
+  <text x="40" y="45" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#111827" text-anchor="start">Figure 4. Interval width falls as effective evidence rises</text>
+  <line x1="95.0" y1="475.0" x2="745.0" y2="475.0" stroke="#d1d5db" stroke-width="1" stroke-linecap="round" />
+  <text x="79.0" y="480.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#4b5563" text-anchor="end">0.00</text>
+  <line x1="95.0" y1="380.0" x2="745.0" y2="380.0" stroke="#d1d5db" stroke-width="1" stroke-linecap="round" />
+  <text x="79.0" y="385.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#4b5563" text-anchor="end">0.15</text>
+  <line x1="95.0" y1="285.0" x2="745.0" y2="285.0" stroke="#d1d5db" stroke-width="1" stroke-linecap="round" />
+  <text x="79.0" y="290.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#4b5563" text-anchor="end">0.30</text>
+  <line x1="95.0" y1="190.0" x2="745.0" y2="190.0" stroke="#d1d5db" stroke-width="1" stroke-linecap="round" />
+  <text x="79.0" y="195.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#4b5563" text-anchor="end">0.45</text>
+  <line x1="95.0" y1="95.0" x2="745.0" y2="95.0" stroke="#d1d5db" stroke-width="1" stroke-linecap="round" />
+  <text x="79.0" y="100.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#4b5563" text-anchor="end">0.60</text>
+  <line x1="95.0" y1="475.0" x2="745.0" y2="475.0" stroke="#111827" stroke-width="1.8" stroke-linecap="round" />
+  <line x1="95.0" y1="95.0" x2="95.0" y2="475.0" stroke="#111827" stroke-width="1.8" stroke-linecap="round" />
+  <line x1="185.0" y1="125.4" x2="415.0" y2="352.77" stroke="#2563eb" stroke-width="2.8" stroke-linecap="round" />
+  <line x1="415.0" y1="352.77" x2="645.0" y2="443.33" stroke="#2563eb" stroke-width="2.8" stroke-linecap="round" />
+  <line x1="185.0" y1="188.73" x2="415.0" y2="364.17" stroke="#d97706" stroke-width="2.8" stroke-linecap="round" />
+  <circle cx="185.0" cy="125.4" r="9" fill="#2563eb" stroke="#ffffff" stroke-width="2" />
+  <text x="185.0" y="109.4" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#2563eb" text-anchor="middle">0.552</text>
+  <circle cx="415.0" cy="352.77" r="9" fill="#2563eb" stroke="#ffffff" stroke-width="2" />
+  <text x="415.0" y="336.77" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#2563eb" text-anchor="middle">0.193</text>
+  <circle cx="645.0" cy="443.33" r="9" fill="#2563eb" stroke="#ffffff" stroke-width="2" />
+  <text x="645.0" y="427.33" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#2563eb" text-anchor="middle">0.050</text>
+  <circle cx="185.0" cy="188.73" r="9" fill="#d97706" stroke="#ffffff" stroke-width="2" />
+  <text x="185.0" y="216.73" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#d97706" text-anchor="middle">0.452</text>
+  <circle cx="415.0" cy="364.17" r="9" fill="#d97706" stroke="#ffffff" stroke-width="2" />
+  <text x="415.0" y="392.17" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#d97706" text-anchor="middle">0.175</text>
+  <text x="185.0" y="507.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" fill="#111827" text-anchor="middle">ceiling</text>
+  <text x="415.0" y="507.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" fill="#111827" text-anchor="middle">5-6</text>
+  <text x="645.0" y="507.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" fill="#111827" text-anchor="middle">7-9</text>
+  <text x="420.0" y="537.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" fill="#111827" text-anchor="middle">Effective evidence bucket</text>
+  <text x="28" y="285.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" fill="#111827" text-anchor="middle">Mean 80% interval width</text>
+  <rect x="805" y="145" width="22" height="22" rx="8" fill="#2563eb" stroke="#2563eb" stroke-width="1.2" />
+  <text x="840" y="162" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" fill="#111827" text-anchor="start">Grouped nodes</text>
+  <rect x="805" y="180" width="22" height="22" rx="8" fill="#d97706" stroke="#d97706" stroke-width="1.2" />
+  <text x="840" y="197" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" fill="#111827" text-anchor="start">Ungrouped nodes</text>
+  <text x="805" y="245" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" fill="#4b5563" text-anchor="start">Values are means across public Lists A, B, and C.</text>
+  <text x="805" y="269" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" fill="#4b5563" text-anchor="start">Grouped nodes stay wider at matched low evidence.</text>
+  <text x="805" y="293" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" fill="#4b5563" text-anchor="start">The 7-9 ungrouped bucket is empty in the public lists.</text>
+</svg>

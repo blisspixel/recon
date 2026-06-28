@@ -67,6 +67,8 @@ requirements:
 - [artifact-review.md](artifact-review.md) is the reviewer-facing command path
   for the public artifact, including what can and cannot be reproduced outside
   the private corpus.
+- [paper-figures.md](paper-figures.md) defines the aggregate-safe SVG figure
+  package and its regeneration command.
 - [public-label-snapshot-decision.md](public-label-snapshot-decision.md)
   records why a frozen real-apex label snapshot is deferred under the current
   data-handling policy.
@@ -143,9 +145,12 @@ Reasoning:
 7. **Draft tightening.** Update `docs/paper-outline.md` and
    `docs/paper-draft.md` only where the claim map proves the text. Mark
    unresolved empirical cells as pending rather than smoothing over them.
-8. **Snapshot decision.** Keep the public label snapshot deferred unless a
+8. **Figure package.** Keep [paper-figures.md](paper-figures.md) and
+   `docs/assets/paper/*.svg` generated from committed aggregate-safe sources
+   through `scripts/generate_paper_figures.py --check`.
+9. **Snapshot decision.** Keep the public label snapshot deferred unless a
    separate data-handling and architecture review approves a new release model.
-9. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
+10. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
    remote release readiness after push.
 
 ## Acceptance Criteria
@@ -161,6 +166,8 @@ Reasoning:
 - The full public proof profile completes from the current checkout before
   submission packaging cites the synthetic and model-internal proof rows.
 - The claim map links every Section 6 empirical row to a support tier and source.
+- The figure package regenerates deterministically and contains only
+  aggregate-safe source data.
 - No committed artifact contains private target identifiers or raw private
   result rows.
 - The paper package links the public label snapshot decision and does not
