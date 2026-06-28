@@ -43,6 +43,7 @@ def test_claim_map_names_load_bearing_paper_claims() -> None:
         "Suppression monotonicity",
         "Exact inference",
         "DMARC-held-out residual",
+        "residual collapse",
         "M365 tenancy",
         "Split conformal coverage",
         "ECE estimator uncertainty",
@@ -76,3 +77,23 @@ def test_paper_draft_uses_current_disclosure_reviewed_calibration_numbers() -> N
         "one-sided recall 0.58",
     ):
         assert current in text
+
+
+def test_paper_draft_diagnoses_dmarc_residual_collapse_without_overclaiming() -> None:
+    text = "\n".join(
+        (
+            PAPER_DRAFT.read_text(encoding="utf-8"),
+            CLAIM_MAP.read_text(encoding="utf-8"),
+            (ROOT / "docs" / "paper-outline.md").read_text(encoding="utf-8"),
+        )
+    )
+
+    for required in (
+        "MTA-STS",
+        "strict SPF",
+        "too rare",
+        "too weak",
+        "causal proof",
+        "src/recon_tool/data/bayesian_network.yaml",
+    ):
+        assert required in text

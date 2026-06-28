@@ -369,6 +369,19 @@ private-corpus verticals (pooled held-out ECE 0.373, agreement 0.189), while the
 full-posterior consistency is equally uniform (pooled ECE 0.076), which is
 exactly what a definitional-agreement check looks like when read honestly.
 
+The collapse is also explainable from the remaining signal strengths. Once the
+DMARC policy group is masked, the residual has only strict SPF and MTA-STS
+enforce to speak for the policy node. The committed model data records the June
+2026 regrounding that made MTA-STS rare even among enforcing domains (about 6
+percent present for enforcing domains, about 1 percent for non-enforcing), so
+MTA-STS absence is almost neutral. Strict SPF is more common but still weak
+(about 53 percent present for enforcing domains, about 27 percent for
+non-enforcing), so it supports enforcement without defining it. In a curated
+cohort whose enforcing base rate is already 0.834, those two residual signals
+cannot recover the label after the label-defining DMARC record is removed. This
+is a diagnostic reading of the committed likelihoods and aggregate memo, not a
+causal proof about all domains.
+
 **Threats this evaluation does not control.** (1) The cohort is ~5,200 curated,
 tech-forward firms (about 83 percent DMARC-enforcing, 79 percent M365), which
 over-represents well-instrumented, non-hardened targets, the easy regime the
@@ -511,12 +524,11 @@ Done (run 2026-06-23, aggregates in Section 6): the held-out residual, the DMARC
 full-posterior consistency check, the M365 and Google tenancy calibrations, and
 the conformal coverage pass. Done in the harness after that run: equal-mass,
 mean-confidence ECE with deterministic bootstrap CI for future calibration
-reruns. Still open, in priority order:
+reruns. Done in this draft pass: the residual collapse is now diagnosed from
+the remaining signal strengths, with MTA-STS rarity and strict SPF weakness
+called out as the mechanism visible in the committed model data. Still open, in
+priority order:
 
-- The scientific reframe the held-out result forces: this draft now leads with the
-  negative finding, but the next pass should diagnose WHY the residual collapses
-  (are strict SPF and MTA-STS too rare or confounded to predict enforcement?),
-  which is the actual contribution.
 - Replace the curated cohort with a stratified public probability sample and
   release a frozen, hash-pinned public-label snapshot (fixes both the selection
   bias and the result-reproducibility gap in Sections 6 and 9).
