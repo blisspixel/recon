@@ -40,8 +40,9 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
                 "recon mcp install --client=",
                 "Examples use [Microsoft's fictional company names]",
                 "python scripts/check.py",
-                "no AI attribution",
-                "no em-dashes or emojis",
+                "Project hygiene: keep examples fictional or synthetic",
+                "keep validation artifacts",
+                "avoid dead code or placeholders",
             ]
         ),
     )

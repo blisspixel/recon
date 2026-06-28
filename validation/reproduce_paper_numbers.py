@@ -66,7 +66,7 @@ def _paper_steps() -> tuple[PaperStep, ...]:
     return (
         PaperStep(
             name="adversarial-properties",
-            description="Suppression-monotonicity proof obligations over the shipped network.",
+            description="Evidence-removal guarantee and add/remove perturbation measurement over the shipped network.",
             command=_module_cmd("validation.adversarial_properties"),
             artifact_name="adversarial-properties.txt",
         ),
@@ -101,7 +101,7 @@ def _smoke_steps() -> tuple[PaperStep, ...]:
     return (
         PaperStep(
             name="adversarial-properties",
-            description="Suppression-monotonicity proof obligations over the shipped network.",
+            description="Evidence-removal guarantee and add/remove perturbation measurement over the shipped network.",
             command=_module_cmd("validation.adversarial_properties"),
             artifact_name="adversarial-properties.txt",
         ),
@@ -196,8 +196,9 @@ def _write_summary(
             "## Interpretation",
             "",
             "This bundle regenerates the public, no-private-data evidence rows used by",
-            "the paper draft: suppression monotonicity, differential verification,",
-            "synthetic interval coverage, likelihood sensitivity, and layer ablations.",
+            "the paper draft: suppression monotonicity and planted-evidence",
+            "perturbation measurement, differential verification, synthetic interval",
+            "coverage, likelihood sensitivity, and layer ablations.",
             "The private-corpus calibration rows remain maintainer-local and are not",
             "reproduced by this command.",
             "",

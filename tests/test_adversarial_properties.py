@@ -18,6 +18,7 @@ from __future__ import annotations
 from recon_tool.bayesian import BayesianNetwork, _Evidence, _Node, load_network
 from validation.adversarial_properties import (
     disconfirming_absence_violations,
+    perturbation_summaries,
     positive_indicator_violations,
     suppression_violations,
 )
@@ -93,3 +94,14 @@ def test_disconfirming_absence_check_catches_a_confirming_group() -> None:
     violations = disconfirming_absence_violations(_confirming_absence_network())
     assert len(violations) == 1
     assert "group_absence" in violations[0]
+
+
+def test_perturbation_summary_measures_stripping_and_planting_boundary() -> None:
+    summaries = perturbation_summaries(load_network())
+
+    assert summaries
+    assert all(summary.paired_cases > 0 for summary in summaries)
+    assert all(summary.max_stripping_drop >= 0.0 for summary in summaries)
+    assert all(summary.max_planting_lift >= 0.0 for summary in summaries)
+    assert any(summary.threshold_crossings > 0 for summary in summaries)
+    assert any(summary.max_planted_posterior >= 0.8 for summary in summaries)

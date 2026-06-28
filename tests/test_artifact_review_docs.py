@@ -46,6 +46,8 @@ def test_artifact_review_guide_separates_private_and_public_results() -> None:
     assert "Private-corpus rows are aggregate evidence" in text
     assert "scripts/check_validation_hygiene.py" in text
     assert "paper-claim-map.md" in text
+    assert "Evidence-removal and planting boundary" in text
+    assert "planted evidence can raise posteriors" in text
 
 
 def test_artifact_review_guide_names_figure_package() -> None:

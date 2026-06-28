@@ -31,5 +31,4 @@ URL; see .github/PULL_REQUEST_TEMPLATE/fingerprint.md.
       Microsoft fictional brands (Contoso, Northwind, Fabrikam) or
       anonymized aggregates. Private corpus stays under
       `validation/runs-private/` and `validation/corpus-private/`.
-- [ ] **No `Co-Authored-By: Claude` trailers** in commit messages
-      unless explicitly requested for this work.
+- [ ] **No generated-author trailers** in commit messages.

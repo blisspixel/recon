@@ -60,6 +60,7 @@ Run:
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass
 from itertools import chain, combinations
 from pathlib import Path
 
@@ -71,6 +72,19 @@ from recon_tool.bayesian import BayesianNetwork, _Evidence, _Node, infer, load_n
 # Reported posteriors are rounded to four decimals, so a correct engine can
 # differ from an exact comparison by at most half a unit in the fourth place.
 _TOL = 6e-5
+
+
+@dataclass(frozen=True)
+class PerturbationSummary:
+    """Aggregate add/remove evidence movement for one node."""
+
+    node: str
+    contexts: int
+    paired_cases: int
+    max_stripping_drop: float
+    max_planting_lift: float
+    threshold_crossings: int
+    max_planted_posterior: float
 
 
 def _subsets(items: list[_Evidence]) -> list[tuple[_Evidence, ...]]:
@@ -212,16 +226,76 @@ def suppression_violations(network: BayesianNetwork, tol: float = _TOL) -> list[
     return out
 
 
+def perturbation_summaries(network: BayesianNetwork) -> list[PerturbationSummary]:
+    """Measure posterior movement under paired stripping and planting.
+
+    Each pair compares the same external context and the same fired set, once
+    without a binding and once with that binding. Reading the pair as removal
+    gives stripping movement. Reading it as addition gives planting movement.
+    This is synthetic and model-internal: it measures the threat-model boundary,
+    not attacker prevalence or real-domain exploitability.
+    """
+    rows: list[PerturbationSummary] = []
+    for node in network.nodes:
+        evidence = list(node.evidence)
+        if not evidence:
+            continue
+        contexts = _external_contexts(network, node)
+        paired_cases = 0
+        max_stripping_drop = 0.0
+        max_planting_lift = 0.0
+        max_planted_posterior = 0.0
+        threshold_crossings = 0
+        for ext_slugs, ext_signals in contexts:
+            post: dict[frozenset[str], float] = {}
+            for subset in _subsets(evidence):
+                post[frozenset(e.name for e in subset)] = node_presence_posterior(
+                    network, node, subset, ext_slugs, ext_signals
+                )
+            for subset in _subsets(evidence):
+                without = frozenset(e.name for e in subset)
+                for evidence_unit in evidence:
+                    if evidence_unit.name in without:
+                        continue
+                    with_unit = without | {evidence_unit.name}
+                    before = post[without]
+                    after = post[with_unit]
+                    lift = after - before
+                    paired_cases += 1
+                    if lift > max_planting_lift:
+                        max_planting_lift = lift
+                    if lift > max_stripping_drop:
+                        max_stripping_drop = lift
+                    if after > max_planted_posterior:
+                        max_planted_posterior = after
+                    if before < 0.5 <= after:
+                        threshold_crossings += 1
+        rows.append(
+            PerturbationSummary(
+                node=node.name,
+                contexts=len(contexts),
+                paired_cases=paired_cases,
+                max_stripping_drop=round(max_stripping_drop, 4),
+                max_planting_lift=round(max_planting_lift, 4),
+                threshold_crossings=threshold_crossings,
+                max_planted_posterior=round(max_planted_posterior, 4),
+            )
+        )
+    return rows
+
+
 def main() -> int:
     network = load_network()
     pos = positive_indicator_violations(network)
     absent = disconfirming_absence_violations(network)
     sup = suppression_violations(network)
+    perturbations = perturbation_summaries(network)
 
     print("Adversarial-property check over the shipped network")
     print(f"  positive-indicator hypothesis (alpha >= beta):  {len(pos)} violation(s)")
     print(f"  disconfirming-absence hypothesis (declarative): {len(absent)} violation(s)")
     print(f"  suppression monotonicity + bounds:              {len(sup)} violation(s)")
+    print(f"  add/remove perturbation summaries:              {len(perturbations)} node(s)")
     if pos:
         print("\nPositive-indicator violations:")
         for v in pos:
@@ -237,9 +311,19 @@ def main() -> int:
     if pos or absent or sup:
         print("\nFAIL: the suppression guarantee (correlation.md 4.3) does not hold as stated.")
         return 1
+    print("\nAdd/remove perturbation measurement:")
+    for row in perturbations:
+        print(
+            f"  {row.node}: contexts={row.contexts}, paired_cases={row.paired_cases}, "
+            f"max_stripping_drop={row.max_stripping_drop:.4f}, "
+            f"max_planting_lift={row.max_planting_lift:.4f}, "
+            f"threshold_crossings={row.threshold_crossings}, "
+            f"max_planted_posterior={row.max_planted_posterior:.4f}"
+        )
     print("\nOK: hiding any fired binding only moves a claim toward the all-absent floor;")
-    print("no false positive can be manufactured by suppression. The property holds on the")
-    print("engine.")
+    print("no false positive can be manufactured by suppression. Planting measurements")
+    print("show the opposite boundary: adding evidence can raise posteriors because a")
+    print("passive engine cannot distinguish a truthful decoy from an operational signal.")
     return 0
 
 

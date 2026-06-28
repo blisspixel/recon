@@ -497,10 +497,10 @@ removes an observation when an entry appears as a substring of its statement.
 
 Applies to humans and AI coding agents alike.
 
-- No AI attribution: never add AI co-author trailers, generated-by labels, or
-  assistant / vendor mentions to commits or PRs. The same applies to bot
-  authorship: re-author or close Dependabot PRs rather than merging under the
-  bot's name.
+- No generated-author markers: never add tool co-author trailers,
+  generated-by labels, or assistant or vendor authorship mentions to commits
+  or PRs. Re-author automated dependency changes before merging so commit
+  history stays under the maintainer account.
 - No em-dashes and no emojis, anywhere (this generalizes the catalog-description
   rule above). Use commas, colons, or parentheses.
 - Professional, idiomatic code that matches the surrounding file's style and

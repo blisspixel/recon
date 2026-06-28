@@ -41,6 +41,7 @@ def test_claim_map_names_load_bearing_paper_claims() -> None:
 
     for claim in (
         "Suppression monotonicity",
+        "Planted evidence",
         "Exact inference",
         "DMARC-held-out residual",
         "residual collapse",
@@ -117,7 +118,6 @@ def test_paper_open_items_are_actionable_submission_blockers() -> None:
         "Minimum closure",
         "Stratified public probability-sampling protocol",
         "M365 independent-instrument check",
-        "Adversarial planting and stripping harness",
         "Final claim audit",
         "figure drift check",
         "full public proof",
@@ -125,8 +125,16 @@ def test_paper_open_items_are_actionable_submission_blockers() -> None:
         assert required in combined
 
     for vague in (
+        "Adversarial planting and stripping harness",
         "mark unresolved empirical cells as pending",
         "use the committed figure package during the final writing pass",
         "Keep the posture-stratified and per-vertical claim-map rows synchronized",
     ):
         assert vague not in combined
+
+    for closed in (
+        "Adversarial add/remove perturbation",
+        "774 paired add/remove cases",
+        "planted-evidence movement",
+    ):
+        assert closed in combined

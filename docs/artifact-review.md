@@ -46,12 +46,12 @@ That changes only terminal handling. It does not skip any gate.
 ## What The Public Bundle Validates
 
 The latest maintainer full proof check is recorded in
-[../validation/2026-06-28-hybrid-interval-paper.md](../validation/2026-06-28-hybrid-interval-paper.md).
+[../validation/2026-06-28-adversarial-perturbation-paper.md](../validation/2026-06-28-adversarial-perturbation-paper.md).
 
 | Claim family | Public command or gate | Reviewer interpretation |
 |---|---|---|
 | Inference arithmetic | `validation.differential_verification` through the reproduction bundle | Variable elimination matches an independent full-joint reference over enumerable shipped configurations. |
-| Evidence-removal guarantee | `validation.adversarial_properties` through the reproduction bundle | Suppression monotonicity holds for evidence removal under the stated positive-indicator assumptions. |
+| Evidence-removal and planting boundary | `validation.adversarial_properties` through the reproduction bundle | Suppression monotonicity holds for evidence removal, and synthetic add/remove perturbation summaries show that planted evidence can raise posteriors across decision boundaries. |
 | Interval perturbation coverage | `validation.interval_coverage --json` through the reproduction bundle | The 80 percent interval absorbs the CAL8 likelihood band inside the model. This is not ground-truth coverage. |
 | Likelihood sensitivity | `validation.likelihood_sensitivity` through the reproduction bundle | Posterior decisions are stable under the configured +/-20 percent likelihood perturbation. |
 | Layer contribution | `validation.layer_ablation` through the reproduction bundle | Synthetic graph and Bayesian layer effects reproduce without target data. |

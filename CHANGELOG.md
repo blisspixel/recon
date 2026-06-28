@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Adversarial add/remove perturbation proof.** `validation.adversarial_properties`
+  now reports aggregate paired evidence-removal and planted-evidence movement
+  over the shipped Bayesian network, and the public reproduction bundle has an
+  aggregate-only memo for the full paper profile run.
+
+### Changed
+
+- **Reader-facing roadmap focus.** The README and roadmap now present the
+  current plan as hardening, small refinements, and humble external write-up
+  readiness instead of leading with internal validation-track labels.
+- **Dependency currency refresh.** `uv.lock` now resolves current compatible
+  package versions, and the MCP dependency is bounded to the stable v1 line
+  until the v2 line is production-ready for this project.
+
 ## [2.2.15] - 2026-06-28
 
 ### Tool Surface Changes

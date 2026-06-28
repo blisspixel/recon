@@ -47,6 +47,17 @@ MEMOS = (
             "not real-world validity claims",
         ),
     ),
+    PublicMemo(
+        path=ROOT / "validation" / "2026-06-28-adversarial-perturbation-paper.md",
+        profile="paper",
+        required_phrases=(
+            "full public proof run",
+            "planted evidence boundary",
+            "774 paired add/remove cases",
+            "synthetic model-internal perturbation",
+            "not real-world validity claims",
+        ),
+    ),
 )
 
 

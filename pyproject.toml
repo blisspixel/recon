@@ -30,7 +30,7 @@ dependencies = [
     "dnspython>=2.6",
     "pyyaml>=6.0",
     "defusedxml>=0.7",
-    "mcp>=1.0",
+    "mcp>=1.0,<2",
     "networkx>=3.0",
     # Public Suffix List for registrable-domain (apex) reduction, so a pasted
     # browser URL or sub-host (mail.acme.co.uk) is analyzed at the apex

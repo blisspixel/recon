@@ -35,9 +35,9 @@ It does not call the network by default and it is not part of the user-facing
 3. `uv.lock` freshness with `uv lock --check`.
 4. Coverage target parity across `scripts/check.py`, `scripts/release.py`,
    `.github/workflows/ci.yml`, and `.github/workflows/release.yml`.
-5. README usage anchors and maintainer house rules.
+5. README usage anchors and project hygiene.
 6. No tracked private corpus files or root per-domain JSON dumps.
-7. Latest commit message hygiene: no AI attribution markers and no em dash.
+7. Latest commit message hygiene: no generated-author markers and no em dash.
 
 During active edits, this is useful as a planning report:
 

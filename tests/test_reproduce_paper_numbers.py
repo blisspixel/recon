@@ -48,6 +48,7 @@ def test_smoke_profile_writes_manifest_summary_and_artifacts(tmp_path: Path) -> 
     assert "Paper Number Reproduction Run" in summary
     assert "Private corpora read: no" in summary
     assert "`adversarial-properties`" in summary
+    assert "planted-evidence" in summary
 
 
 def test_dry_run_prints_commands_without_creating_run_dir(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

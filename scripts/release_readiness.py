@@ -275,8 +275,9 @@ def _check_readme_usage(root: Path) -> CheckResult:
         "recon mcp install --client=",
         "Examples use [Microsoft's fictional company names]",
         "python scripts/check.py",
-        "no AI attribution",
-        "no em-dashes or emojis",
+        "Project hygiene: keep examples fictional or synthetic",
+        "keep validation artifacts",
+        "avoid dead code or placeholders",
     )
     missing = [anchor for anchor in anchors if anchor not in text]
     if missing:
@@ -285,7 +286,7 @@ def _check_readme_usage(root: Path) -> CheckResult:
     if forbidden:
         detail = "forbidden README wording: " + ", ".join(forbidden)
         return _result("README usage", "fail", detail, "keep the license section Apache 2.0 only")
-    return _result("README usage", "pass", "core usage, MCP install, and house rules are documented")
+    return _result("README usage", "pass", "core usage, MCP install, project hygiene, and validation boundaries")
 
 
 def _check_homebrew_formula(root: Path) -> CheckResult:
@@ -378,7 +379,7 @@ def _check_latest_commit_message(runner: Runner) -> CheckResult:
     return _result(
         "commit hygiene",
         "pass",
-        f"{scope} message(s) have no AI attribution markers, em dash, or pictograph",
+        f"{scope} message(s) have no generated-author markers, em dash, or pictograph",
     )
 
 

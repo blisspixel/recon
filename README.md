@@ -202,19 +202,19 @@ before committing any validation artifact.
 - [docs/external-writeup-plan.md](docs/external-writeup-plan.md): active
   maintainer plan for external write-up readiness.
 - [docs/c3-ct-validation-plan.md](docs/c3-ct-validation-plan.md): closed
-  maintainer plan for the CT-enabled C3 validation track.
+  maintainer plan for the certificate-transparency validation track.
 - [CHANGELOG.md](CHANGELOG.md): shipped changes.
 
-## Current Maintainer Focus
+## Roadmap Focus
 
-The next work is not a runtime expansion. The CT-enabled C3 validation track is
-closed as a bounded, private, aggregate-only partial CT pass, and fingerprint or
-motif growth has no active public-source-backed candidate. The current focus is
-external write-up readiness: keep citation metadata current, prove the public
-reproduction path, and map paper claims to public, synthetic, or aggregate-only
-evidence without adding commands, schema fields, network sources, or catalog
-rules. The detailed plan lives in
-[docs/external-writeup-plan.md](docs/external-writeup-plan.md).
+recon is feature-complete for the current roadmap: the CLI, JSON schema, MCP
+server, validation guards, and release path are in place. Current work is
+hardening and small refinements: clearer docs, stronger validation evidence,
+current citation metadata, and careful pressure tests of the correlation model.
+As validation runs teach us more, the system may get conservative refinements,
+but new runtime features stay behind roadmap review and the project invariants.
+Feedback on gaps, wording, and false positives is welcome. The detailed plan
+lives in [docs/external-writeup-plan.md](docs/external-writeup-plan.md).
 
 ## Development
 
@@ -229,8 +229,8 @@ uv run python scripts/check.py
 coverage-gated tests, generated-artifact checks, validation hygiene, and
 ratchets. Do not push on `--fast` alone.
 
-House rules: no AI attribution, no em-dashes or emojis, no real-company data in
-public examples or validation artifacts, no dead code, and no placeholders.
+Project hygiene: keep examples fictional or synthetic, keep validation artifacts
+aggregate-only, run `scripts/check.py`, and avoid dead code or placeholders.
 Contributor details: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License

@@ -343,6 +343,7 @@ published (Section 9), only the aggregates here.
 | Experiment | Result | Status |
 |---|---|---|
 | Differential verification | variable elimination matches a full-joint reference on every enumerable configuration | shipped (`validation/differential_verification.py`) |
+| Adversarial add/remove perturbation | the shipped network has zero suppression violations: removing fired evidence never raises the posterior above the fully observed value or outside the all-absent floor. The same paired perturbations show the limit case: adding evidence can move posteriors across the 0.5 decision boundary in synthetic contexts (8 reported nodes, 774 paired add/remove cases). This measures the model-internal boundary, not attacker prevalence. | `validation/adversarial_properties.py` |
 | Interval coverage (synthetic) | the 80% interval absorbs elicitation imprecision under the +/-20% likelihood band | shipped (`validation/interval_coverage.py`) |
 | Likelihood sensitivity | posteriors and agreement stable under a +/-20% likelihood perturbation | shipped (`validation/likelihood_sensitivity.py`) |
 | Layer ablations (synthetic) | the MNAR price and the fusion gain (below) | shipped and run (`validation/layer-ablation.md`) |
@@ -541,7 +542,9 @@ the remaining signal strengths, with MTA-STS rarity and strict SPF weakness
 called out as the mechanism visible in the committed model data. Done in the
 figure pass: [paper-figures.md](paper-figures.md) and `docs/assets/paper/*.svg`
 provide deterministic, aggregate-safe assets for the architecture, DAG,
-reliability, and interval-width figures.
+reliability, and interval-width figures. Done in the adversarial perturbation
+pass: `validation/adversarial_properties.py` now reports paired evidence-removal
+and planted-evidence movement over the shipped network.
 
 The remaining blockers are concrete and bounded:
 
@@ -549,5 +552,4 @@ The remaining blockers are concrete and bounded:
 |---|---|---|
 | Stratified public probability-sampling protocol | The current public lists are reproducible but still convenience samples, and the private cohort is curated and high-base-rate. | Either approve a data-handling review for a new public release model, or keep the draft explicit that public-list numbers are robustness checks and private-corpus rows are maintainer-reproducible aggregates only. |
 | M365 independent-instrument check | The DNS-only predictor and endpoint label are channel-split, but they still share tenant provisioning as a common cause. | Identify a passive instrument with no mail-routing path to the endpoint label, or keep the result named corroboration rather than calibration. |
-| Adversarial planting and stripping harness | Proposition 1 measures evidence removal, while the paper also discusses planted evidence as the limit case. | Add a synthetic or controlled-domain harness that measures posterior movement under stripping and planting, or keep the planting discussion as a threat-model boundary without empirical rates. |
 | Final claim audit | Any new experiment or wording can move a claim between support tiers. | Re-run claim-map tests, figure drift check, public proof smoke, full public proof, local gate, and release readiness from the final draft commit. |

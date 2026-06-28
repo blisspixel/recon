@@ -5,44 +5,53 @@ This file is the current plan and scope boundary. Shipped work belongs in
 [release-process.md](release-process.md). Historical release planning lives in
 [roadmap-history.md](roadmap-history.md).
 
-> **Status:** v2.2.15 is current. The project is in a deepen-not-expand phase:
-> the CLI, JSON schema, MCP server, assurance track, generated schema guard, and
-> generated surface inventory guard are shipped. Remaining work improves trust,
-> validation, and publication clarity without expanding the runtime surface.
+> **Status:** v2.2.15 is current. recon is feature-complete for the current
+> roadmap: the CLI, JSON schema, MCP server, validation guards, release path,
+> generated schema guard, and generated surface inventory guard are shipped.
+> Remaining work hardens the project, sharpens documentation, and improves
+> validation evidence without expanding the runtime surface.
 
 ## What Is Next
 
 The next work is dependency-ordered:
 
-1. **Treat the CT-enabled C3 corpus pass as closed unless a new concrete
-   validation question appears.**
-   - Why first: the main calibration bundle already ran in June 2026, and C3
-     was the remaining validation branch that stressed CT, graph, and
-     certificate surfaces beyond the core DMARC and tenancy passes.
-   - Current state: the private C3 track now has seven bounded sessions
+1. **Harden and refine the current system.**
+   - Why first: the roadmap is not waiting on a runtime expansion. The main
+     value now is making recon easier to review, harder to misuse, and more
+     explicit about what its passive observations can and cannot support.
+   - Current state: validation guards, public reproduction commands, citation
+     metadata checks, generated-artifact checks, and release readiness are in
+     place. The maintainer is continuing theory and correlation work, but new
+     evidence should refine the existing recon system conservatively rather
+     than create features by default.
+   - Current plan: keep docs readable for casual users, keep dependencies and
+     supply-chain checks current, keep the public reproduction path passing,
+     and make small correctness or clarity refinements when validation runs
+     expose them.
+   - Acceptance: every refinement preserves the project invariants, keeps
+     examples fictional or synthetic, and publishes only public, synthetic, or
+     aggregate-only evidence. Feedback on gaps, wording, and false positives is
+     welcome.
+
+2. **Treat the closed certificate-transparency validation cohort as context,
+   not active expansion.**
+   - Why next: the main calibration bundle already ran in June 2026, and the
+     remaining certificate-transparency validation branch was bounded to
+     aggregate, maintainer-local evidence.
+   - Current state: the private validation cohort has seven bounded sessions
      documented in
      [validation/2026-06-26-c3-ct-partial.md](../validation/2026-06-26-c3-ct-partial.md).
-     The aggregate summary covers 2,947 valid records, 2,647 unique observed
-     domains, 44 domains with usable CT data, and 2,603 domains still degraded
-     or unresolved for CT. Retry Sessions D through F added four live CT
-     successes. Session E surfaced a public-source-backed Infobip
-     email-tracking CNAME target, which extends the existing `infobip` slug and
-     fixes its panel category to Email. Session F produced no new candidates
-     and again showed the public-provider ceiling: crt.sh remained breaker-gated
-     while CertSpotter paced a small number of live successes under local
-     cooldown.
-   - Current plan: do not run more live public CT retries by default. Session F
-     closed the loop after the Infobip promotion, hygiene checks, security
-     review, full local gate, and remote readiness pass. Resume only if a new
-     concrete consumer, provider path, or disclosure-safe validation question
-     changes the value calculation.
+     The aggregate summary covers retry accounting, provider limits, candidate
+     triage, and publication controls. It does not claim complete
+     certificate-transparency coverage.
+   - Current plan: do not run more live public certificate-transparency retries
+     by default. Resume only if a new concrete consumer, provider path, or
+     disclosure-safe validation question changes the value calculation.
    - Acceptance: publish only aggregate counts and disclosure-reviewed memos.
      No apexes, organization names, tenant IDs, or per-domain rows leave the
-     maintainer machine. C3 closure means the CT path, retry accounting,
-     provider limits, candidate triage, and publication controls are proven; it
-     does not mean complete CT coverage.
+     maintainer machine.
 
-2. **Run fingerprint and motif triage only as a reviewed proposal path.**
+3. **Run fingerprint and motif triage only as a reviewed proposal path.**
    - Why next: catalog growth should come from observed public DNS or stable
      vendor documentation, not invented patterns.
    - Current state: the June 2026 pass promoted public-source-backed UltraDNS
@@ -53,7 +62,7 @@ The next work is dependency-ordered:
      aggregate validation basis, regression tests, and conservative sparse-result
      wording.
 
-3. **Keep generated discovery artifacts non-contractual unless a real consumer
+4. **Keep generated discovery artifacts non-contractual unless a real consumer
    needs a stable subset.**
    - Why next: agent and maintainer discovery context is useful, but a stable
      compatibility promise should exist only for a named consumer.
@@ -63,16 +72,16 @@ The next work is dependency-ordered:
    - Acceptance for promotion: a concrete external consumer, the smallest useful
      subset, a compatibility policy, contract tests, and migration notes.
 
-4. **Prepare the external write-up without changing runtime behavior.**
+5. **Prepare the external write-up without changing runtime behavior.**
    - Why next: the assurance, validation, and correlation work is now strong
      enough to package for outside review.
    - Current state: this is the active next work. The plan lives in
      [external-writeup-plan.md](external-writeup-plan.md). The paper outline and
      draft exist, the public reproduction bundle exists, the initial claim map
      lives in [paper-claim-map.md](paper-claim-map.md), the public reviewer
-     command path lives in [artifact-review.md](artifact-review.md), C3 is closed
-     as aggregate-only evidence, and release readiness now guards citation
-     metadata.
+     command path lives in [artifact-review.md](artifact-review.md), the
+     certificate-transparency validation cohort is closed as aggregate-only
+     evidence, and release readiness now guards citation metadata.
    - Acceptance: cite only public or synthetic artifacts and aggregate-only
      validation memos. Do not claim frequentist coverage for the 80 percent
      intervals, and do not add runtime behavior while packaging the artifact.
