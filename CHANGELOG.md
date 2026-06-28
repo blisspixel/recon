@@ -7,8 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.15] - 2026-06-28
+
+### Tool Surface Changes
+
+- Tool surface changes: added flags `--timeout` on `recon batch`, `-t` on
+  `recon batch`.
+
 ### Added
 
+- **Equal-mass ECE estimator.** Validation calibration summaries now report the
+  legacy fixed-width ECE beside an equal-mass, mean-confidence ECE with a
+  deterministic 80 percent bootstrap interval, so future calibration reruns can
+  separate estimator choice from model behavior without changing runtime
+  surfaces.
 - **External write-up readiness plan.** `docs/external-writeup-plan.md` now
   records the researched next step after C3 closure: citation metadata,
   public-reproduction smoke, claim-to-artifact mapping, and paper tightening
@@ -56,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   runbook now treat the C3 CT plan as closed and point current maintainer work
   at the external write-up plan.
 - **Citation metadata refreshed.** `CITATION.cff` now tracks the current
-  2.2.14 release version and 2026-06-26 release date.
+  2.2.15 release version and 2026-06-28 release date.
 - **Markdown house-style cleanup.** Tracked Markdown docs, examples, agent
   guidance, and validation memos now avoid em dashes, en dashes, pictographs,
   and literal AI-attribution phrases.

@@ -5,7 +5,7 @@ This file is the current plan and scope boundary. Shipped work belongs in
 [release-process.md](release-process.md). Historical release planning lives in
 [roadmap-history.md](roadmap-history.md).
 
-> **Status:** v2.2.14 is current. The project is in a deepen-not-expand phase:
+> **Status:** v2.2.15 is current. The project is in a deepen-not-expand phase:
 > the CLI, JSON schema, MCP server, assurance track, generated schema guard, and
 > generated surface inventory guard are shipped. Remaining work improves trust,
 > validation, and publication clarity without expanding the runtime surface.
