@@ -75,8 +75,8 @@ The repository also runs supply-chain posture checks outside the release flow:
   per run. Its runtime dependency file is a hash-pinned export from `uv.lock`,
   and `scripts/check_clusterfuzzlite_requirements.py` gates that export against
   stale dependency data.
-- Dependabot checks `uv` and GitHub Actions dependencies on a low-noise monthly
-  schedule.
+- Dependency update automation checks `uv` and GitHub Actions dependencies on a
+  low-noise monthly schedule.
 - Workflow actions are pinned to full commit SHAs, with the readable version kept
   in a trailing comment. `scripts/check_workflow_pins.py` gates this locally and
   in CI.
@@ -101,7 +101,7 @@ repository-process gaps. The code-owned gap was an unpinned installer
 download-and-run path; the installer now refuses to execute remote tool
 installers. The Scorecard SARIF upload step also uses CodeQL Action v4 to avoid
 the scheduled v3 deprecation. Live repository settings now enforce full-SHA
-GitHub Action pins, enable Dependabot security updates, and protect `main` with
+GitHub Action pins, enable dependency security updates, and protect `main` with
 an active repository ruleset that requires the CI matrix, gitleaks, and
 Scorecard checks, blocks deletion and non-fast-forward updates, and requires
 linear history.

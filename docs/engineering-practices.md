@@ -149,9 +149,9 @@ publishes via Trusted Publishing. Per-release, refresh the Homebrew formula
 Automation, not memory, keeps things fresh. It is the direct mitigation for an
 assistant's lack of time-sense:
 
-- **Dependabot** over the `uv` and `github-actions` ecosystems, monthly and
-  grouped with a low PR limit, so runtime dependencies and workflow actions do
-  not silently rot.
+- **Dependency update automation** over the `uv` and `github-actions`
+  ecosystems, monthly and grouped with a low PR limit, so runtime dependencies
+  and workflow actions do not silently rot.
 - **Security alerts interrupt normal roadmap work.** Inspect the advisory and
   dependency path, update the lock or constraint to the patched version, and run
   `pip-audit` before resuming feature or docs work.
@@ -178,7 +178,7 @@ What we already do well, and the named open items, with no pretending.
 | Single toolchain (ruff lint+format), strict pyright, `py.typed` | In place | |
 | Branch coverage gate + mutation + Hypothesis + ClusterFuzzLite + golden + differential | In place | Among the strongest parts |
 | Security + supply chain (pip-audit, ruff-S, CodeQL, SBOM, build provenance, Trusted Publishing, PEP 740) | In place | Scorecard now detects SAST, dependency-update tooling, and least-privilege workflow tokens; ClusterFuzzLite is wired for the next public scan |
-| Dependency + standards currency (Dependabot uv/actions) | In place | Monthly, grouped, low-noise updates; pip build commands use hash-pinned requirements and source-path loading where Scorecard can inspect them; the ClusterFuzzLite export is drift-checked from `uv.lock` |
+| Dependency + standards currency (dependency automation for uv/actions) | In place | Monthly, grouped, low-noise updates; pip build commands use hash-pinned requirements and source-path loading where Scorecard can inspect them; the ClusterFuzzLite export is drift-checked from `uv.lock` |
 | CI/local parity (`scripts/check.py`), release readiness, file-size ratchet | In place | Closes the CI-red and docs-drift root causes |
 | ADRs for load-bearing decisions | In place initially | Extend as decisions are made |
 | Noun-verb CLI consistency, `--plain`/`--json`, stdout/stderr discipline | In place | |

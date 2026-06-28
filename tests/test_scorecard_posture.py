@@ -190,7 +190,7 @@ def test_ci_workflow_runs_fast_local_core_guards() -> None:
         assert command in commands
 
 
-def test_dependabot_is_configured_low_noise_for_scorecard_checks() -> None:
+def test_dependency_update_automation_is_configured_low_noise_for_scorecard_checks() -> None:
     config = _load_yaml(".github/dependabot.yml")
     updates = config["updates"]
     ecosystems = {entry["package-ecosystem"]: entry for entry in updates}
@@ -214,7 +214,7 @@ def test_supply_chain_docs_track_scorecard_gap_decisions() -> None:
         "refuses to execute remote tool installers",
         "CodeQL Action v4",
         "full-SHA GitHub Action pins",
-        "Dependabot security updates",
+        "dependency security updates",
         "active repository ruleset",
         "Code-Review is low until normal work flows through reviewed pull requests",
         "OpenSSF Best Practices Badge",

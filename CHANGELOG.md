@@ -7,12 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.16] - 2026-06-28
+
+### Tool Surface Changes
+
+- Tool surface changes: no CLI command or flag changes.
+
 ### Added
 
 - **Adversarial add/remove perturbation proof.** `validation.adversarial_properties`
   now reports aggregate paired evidence-removal and planted-evidence movement
   over the shipped Bayesian network, and the public reproduction bundle has an
   aggregate-only memo for the full paper profile run.
+- **Paper claim audit gate.** `scripts/check_paper_claims.py` now runs in the
+  local CI mirror and keeps the paper draft, outline, claim map, artifact-review
+  guide, and external write-up plan aligned.
+- **Scorecard hardening tests.** Installer, workflow-pin, documentation, and
+  Scorecard-posture tests now pin the repository's supply-chain posture and
+  public-doc boundaries.
 
 ### Changed
 
@@ -22,6 +34,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependency currency refresh.** `uv.lock` now resolves current compatible
   package versions, and the MCP dependency is bounded to the stable v1 line
   until the v2 line is production-ready for this project.
+- **Public sampling boundary.** The public label snapshot decision now closes
+  the public probability-sampling path for this submission: public-list numbers
+  stay framed as robustness checks rather than population rates, benchmark
+  prevalence, or evidence that transfers to the private curated cohort.
+- **Documentation synchronization.** README, roadmap, docs index,
+  artifact-review guide, data-handling policy, paper claim map, external
+  write-up plan, and supply-chain docs now describe the same release focus,
+  publication boundaries, and Scorecard posture.
+- **Installer supply-chain posture.** The Unix and PowerShell installers no
+  longer execute remote package-manager bootstraps. Users install `uv` or
+  `pipx` through their trusted channel, then recon's installer installs or
+  upgrades only `recon-tool`.
+- **Scorecard workflow currency.** The Scorecard SARIF upload step now uses
+  CodeQL Action v4, and live repository settings require full-SHA GitHub Action
+  pins, dependency security updates, and an active `main` required-check
+  ruleset.
 
 ## [2.2.15] - 2026-06-28
 
@@ -412,7 +440,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Stability-doc surface counts.** Updated the JSON contract count summary in
   `docs/stability.md` and added a docs test that ties it to
   `docs/recon-schema.json` plus the live MCP tool registry and stability table.
-- **Dependabot security alert closure.** Updated the `uv.lock` entry for the
+- **Dependency security alert closure.** Updated the `uv.lock` entry for the
   dev-audit transitive dependency `msgpack` from 1.1.2 to 1.2.1, closing
   GHSA-6v7p-g79w-8964 while leaving runtime dependencies unchanged.
 - **Pydantic settings advisory closure.** Updated `pydantic-settings` from
@@ -512,9 +540,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   containment before writing local artifacts. Both validation runners share the
   same path-safety helper so the local artifact boundary cannot drift.
 - **Scorecard supply-chain posture.** Added explicit read-only workflow token
-  defaults, a low-noise Dependabot configuration, and scheduled CodeQL analysis
-  so Scorecard-detected token-permissions, dependency-update, and SAST posture
-  match the repository's intended security baseline. The structural tests now
+  defaults, low-noise dependency update configuration, and scheduled CodeQL
+  analysis so Scorecard-detected token-permissions, dependency-update, and SAST
+  posture match the repository's intended security baseline. The structural tests now
   require every workflow to default to read-only token permissions and every
   elevated job scope to match an explicit allowlist, and every checkout step
   disables persisted Git credentials. Every workflow job now also carries an
@@ -5645,7 +5673,7 @@ correctly move to det-silent + sparse. Total stability verdict count:
   preserved for fingerprint-only PRs via the `?template=` URL
   parameter). Carries the CPT-change-discipline non-blocking
   checkbox plus the fingerprint, no-real-company-data, and
-  no-Claude-trailer reviewer prompts. The checkbox is the
+  no-attribution-trailer reviewer prompts. The checkbox is the
   conversation starter, not a CI gate - reviewer judgement is the
   enforcement.
 - **`validation/v1.9.6-stability-update.md`** - short delta report
@@ -7320,7 +7348,7 @@ against other providers append to that record.
   apexes never get committed, per the no-real-company-data
   invariant in `validation/README.md`.
 - **`validation/v1.9.2-agentic-ux.md`** - the first canonical run
-  artifact (Anthropic Claude Sonnet 4.6). Subsequent runs append.
+  artifact for the agentic UX workflow. Subsequent runs append.
 
 ### Changed
 
@@ -8802,8 +8830,8 @@ aerospace, and retail) with zero errors and zero regressions.
 
 - **Python 3.13** added to the CI test matrix and the package
   classifiers. Supported runtimes are now 3.10 / 3.11 / 3.12 / 3.13.
-- **Dependabot** configured for GitHub Actions and Python dependencies
-  with weekly cadence and patch/minor grouping.
+- **Dependency update automation** configured for GitHub Actions and Python
+  dependencies with weekly cadence and patch/minor grouping.
 - **README badges** - CI status, PyPI version, supported Python
   versions, license.
 - **CI pyright scope now covers `tests/`** so type-annotation drift
