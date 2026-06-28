@@ -75,5 +75,7 @@ def test_public_label_snapshot_decision_defers_real_apex_snapshot() -> None:
         "real target list",
         "current data-handling policy",
         "architecture review",
+        "Public-list numbers are robustness checks",
+        "not as\npopulation rates",
     ):
         assert required in text

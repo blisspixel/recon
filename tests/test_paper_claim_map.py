@@ -116,7 +116,8 @@ def test_paper_open_items_are_actionable_submission_blockers() -> None:
     for required in (
         "Blocking open item",
         "Minimum closure",
-        "Stratified public probability-sampling protocol",
+        "public probability-sampling path is",
+        "Public-list numbers remain robustness checks",
         "M365 independent-instrument check",
         "Final claim audit",
         "figure drift check",
@@ -125,6 +126,7 @@ def test_paper_open_items_are_actionable_submission_blockers() -> None:
         assert required in combined
 
     for vague in (
+        "Stratified public probability-sampling protocol",
         "Adversarial planting and stripping harness",
         "mark unresolved empirical cells as pending",
         "use the committed figure package during the final writing pass",

@@ -382,9 +382,14 @@ The gating work is no longer harness construction, figure construction, or
 default runtime expansion. The remaining work is to make the draft externally
 reviewable:
 
+Resolved for this submission: the stratified public probability-sampling path is
+closed by [public-label-snapshot-decision.md](public-label-snapshot-decision.md).
+Public-list numbers remain robustness checks rather than population rates unless
+a future data-handling and architecture review approves a new public release
+model.
+
 | Blocking open item | Minimum closure |
 |---|---|
-| Stratified public probability-sampling protocol | Either approve a new data-release model through a separate review, or keep public-list numbers framed as robustness checks rather than population rates. |
 | M365 independent-instrument check | Identify a passive instrument without the shared tenant-provisioning common cause, or keep the result named corroboration rather than calibration. |
 | Final claim audit | Re-run claim-map tests, figure drift check, public proof smoke, full public proof, local gate, and release readiness from the final draft commit. |
 

@@ -512,7 +512,7 @@ the method and the relative-layer results but not the public-cohort numbers.
 frozen real-apex label snapshot under the current data-handling policy: a
 hash-pinned identifier list would improve benchmark reproducibility, but it
 would still publish a durable real-target corpus. Until a separate review changes
-that policy, the corpus numbers are maintainer-reproducible only.
+that policy, private-corpus rows are maintainer-reproducible aggregates only.
 
 ---
 
@@ -544,12 +544,15 @@ figure pass: [paper-figures.md](paper-figures.md) and `docs/assets/paper/*.svg`
 provide deterministic, aggregate-safe assets for the architecture, DAG,
 reliability, and interval-width figures. Done in the adversarial perturbation
 pass: `validation/adversarial_properties.py` now reports paired evidence-removal
-and planted-evidence movement over the shipped network.
+and planted-evidence movement over the shipped network. Done in the publication
+decision pass: [public-label-snapshot-decision.md](public-label-snapshot-decision.md)
+now closes the stratified public probability-sampling path for this submission
+by keeping public-list numbers as robustness checks rather than population
+rates.
 
 The remaining blockers are concrete and bounded:
 
 | Blocking open item | Why it matters | Minimum closure before submission |
 |---|---|---|
-| Stratified public probability-sampling protocol | The current public lists are reproducible but still convenience samples, and the private cohort is curated and high-base-rate. | Either approve a data-handling review for a new public release model, or keep the draft explicit that public-list numbers are robustness checks and private-corpus rows are maintainer-reproducible aggregates only. |
 | M365 independent-instrument check | The DNS-only predictor and endpoint label are channel-split, but they still share tenant provisioning as a common cause. | Identify a passive instrument with no mail-routing path to the endpoint label, or keep the result named corroboration rather than calibration. |
 | Final claim audit | Any new experiment or wording can move a claim between support tiers. | Re-run claim-map tests, figure drift check, public proof smoke, full public proof, local gate, and release readiness from the final draft commit. |

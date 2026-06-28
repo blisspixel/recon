@@ -49,6 +49,18 @@ recon's current aggregate-only validation posture.
 - Small-cell-suppressed strata and distribution summaries.
 - A capture protocol that lets another reviewer run their own local list.
 
+## Current Submission Closure
+
+This decision also closes the stratified public probability-sampling blocker for
+the current submission posture. The project is not publishing a new public
+real-domain release model for this paper package. Public-list numbers may stay
+in the draft only as robustness checks across re-queryable public lists, not as
+population rates, benchmark prevalence, or evidence that transfers to the
+private curated cohort.
+
+If a future submission needs population-rate claims, that is a new
+data-handling and architecture review, not a wording edit.
+
 ## What Would Change This Decision
 
 Publishing a real-domain label snapshot requires an explicit data-handling and
@@ -64,12 +76,17 @@ Allowed wording:
 > Private-corpus aggregate rows are maintainer-reproducible only because the
 > project does not publish real target lists.
 
+> Public-list numbers are robustness checks over re-queryable public lists, not
+> population rates.
+
 Disallowed wording:
 
 > A frozen public label snapshot will be released with the submission.
 
-The second statement conflicts with the current policy and should not appear in
-the paper package.
+> The public-list sample estimates population prevalence.
+
+The disallowed statements conflict with the current policy and should not appear
+in the paper package.
 
 ## References
 
