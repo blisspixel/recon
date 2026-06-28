@@ -85,6 +85,8 @@ class TestCalibrationSummary:
         assert s["n"] == 4
         assert s["base_rate_enforcing"] == 0.75
         assert s["agreement_rate"] == 1.0
+        assert "ece_equal_mass" in s
+        assert "ece_equal_mass_ci80" in s
 
     def test_disagreement_lowers_agreement_rate(self) -> None:
         # One miscalibrated domain: high posterior but the DMARC Reference says
@@ -103,6 +105,9 @@ class TestCalibrationSummary:
         s = calibration_summary(records)
         for row in s["reliability"]:  # type: ignore[attr-defined]
             assert set(row) == {"bin_low", "bin_high", "enforcing_rate", "count"}
+            assert all(isinstance(v, int | float) for v in row.values())
+        for row in s["reliability_equal_mass"]:  # type: ignore[attr-defined]
+            assert set(row) == {"bin_low", "bin_high", "mean_confidence", "enforcing_rate", "count"}
             assert all(isinstance(v, int | float) for v in row.values())
 
 

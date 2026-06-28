@@ -90,6 +90,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from validation.calibration_estimators import (  # noqa: E402
+    bootstrap_mean_confidence_ece,
+    equal_mass_reliability_bins,
+)
 from validation.progress import gather_with_progress  # noqa: E402
 from validation.synthetic_calibration import (  # noqa: E402
     _brier,
@@ -107,6 +111,7 @@ _NON_ENFORCING_POLICIES = frozenset({"none"})
 # The evidence unit masked for the held-out residual: the mutually-exclusive
 # DMARC policy-level group, which is also what defines the reference label.
 _DMARC_UNIT = "dmarc_policy"
+_ECE_BOOTSTRAP_SAMPLES = 400
 
 
 def held_out_policy_posterior(
@@ -232,6 +237,12 @@ def calibration_summary(records: list[CalibrationRecord], bins: int = 10) -> dic
     preds = [r.posterior for r in records]
     labels = [r.label for r in records]
     table = _reliability_table(preds, labels, bins=bins)
+    mean_bin_ece = bootstrap_mean_confidence_ece(
+        preds,
+        labels,
+        bins=bins,
+        samples=_ECE_BOOTSTRAP_SAMPLES,
+    )
     agree = sum(1 for r in records if (r.posterior >= 0.5) == bool(r.label))
     wlo, whi = wilson_interval(agree, n)
     return {
@@ -240,11 +251,23 @@ def calibration_summary(records: list[CalibrationRecord], bins: int = 10) -> dic
         "brier": round(_brier(preds, labels), 4),
         "log_score": round(mean_log_score(records), 4),
         "ece": round(_expected_calibration_error(table, n), 4),
+        "ece_equal_mass": round(mean_bin_ece.estimate, 4),
+        "ece_equal_mass_ci80": (round(mean_bin_ece.ci_low, 4), round(mean_bin_ece.ci_high, 4)),
         "agreement_rate": round(agree / n, 4),
         "agreement_wilson80": (round(wlo, 4), round(whi, 4)),
         "reliability": [
             {"bin_low": round(low, 2), "bin_high": round(high, 2), "enforcing_rate": round(freq, 4), "count": count}
             for (low, high, freq, count) in table
+        ],
+        "reliability_equal_mass": [
+            {
+                "bin_low": round(row.bin_low, 4),
+                "bin_high": round(row.bin_high, 4),
+                "mean_confidence": round(row.mean_confidence, 4),
+                "enforcing_rate": round(row.empirical_rate, 4),
+                "count": row.count,
+            }
+            for row in equal_mass_reliability_bins(preds, labels, bins=bins)
         ],
     }
 
@@ -331,7 +354,8 @@ def _print_summary(summary: dict[str, object], header: str) -> None:
     print(f"  base rate enforcing:   {summary['base_rate_enforcing']}")
     print(f"  log score (proper):    {summary['log_score']}")
     print(f"  Brier:                 {summary['brier']}")
-    print(f"  ECE:                   {summary['ece']}")
+    print(f"  ECE fixed-width:       {summary['ece']}")
+    print(f"  ECE equal-mass:        {summary['ece_equal_mass']}  CI80 {summary['ece_equal_mass_ci80']}")
     print(f"  agreement rate:        {summary['agreement_rate']}  Wilson80 {summary['agreement_wilson80']}")
     print("  reliability (posterior bin -> empirical enforcing rate):")
     for row in summary["reliability"]:  # type: ignore[attr-defined]

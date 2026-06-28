@@ -365,7 +365,8 @@ def _print_summary(summary: dict[str, object], header: str) -> None:
     print(f"  base rate tenant:      {summary['base_rate_enforcing']}")
     print(f"  log score (proper):    {summary['log_score']}")
     print(f"  Brier:                 {summary['brier']}")
-    print(f"  ECE:                   {summary['ece']}")
+    print(f"  ECE fixed-width:       {summary['ece']}")
+    print(f"  ECE equal-mass:        {summary['ece_equal_mass']}  CI80 {summary['ece_equal_mass_ci80']}")
     print(f"  agreement rate:        {summary['agreement_rate']}  Wilson80 {summary['agreement_wilson80']}")
     print("  reliability (posterior bin -> empirical tenant rate):")
     for row in summary["reliability"]:  # type: ignore[attr-defined]

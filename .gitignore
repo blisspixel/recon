@@ -76,6 +76,7 @@ docs/accuracy.md
 # maintainer-local network orchestration that prints aggregates only. The
 # committed files carry no target data (synthetic worked example only). The pure
 # logic is unit-tested.
+!/validation/calibration_estimators.py
 !/validation/reference_calibration.py
 !/validation/reference-calibration.md
 # Shared resolve-sweep progress helper: a throttled stderr heartbeat for the

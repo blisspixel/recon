@@ -375,7 +375,10 @@ adversarial-missingness design claims not to need; the hardened cell the thesis
 is about is nearly empty, and the reliability mid-range (0.4 to 0.7) is
 unpopulated, which partly explains the low ECE. A stratified probability sample
 from a public zone, stratified by a hardening proxy, is required before any rate
-transfers beyond this population. (2) The credible interval is a Wald
+transfers beyond this population. Current validation summaries also report an
+equal-mass, mean-confidence ECE with deterministic bootstrap CI so future reruns
+can separate estimator choice from model behavior; the June memo numbers above
+remain the legacy fixed-width ECE until rerun. (2) The credible interval is a Wald
 approximation to the moment-matching Beta, not the exact quantile; it deviates by
 up to ~0.06 near the probability boundary (Section 3), exactly the regime most
 posteriors occupy, so interval-derived numbers carry that slack until the exact
@@ -505,7 +508,9 @@ passive observer can and cannot promise.
 
 Done (run 2026-06-15, aggregates in Section 6): the held-out residual, the DMARC
 full-posterior consistency check, the M365 and Google tenancy calibrations, and
-the conformal coverage pass. Still open, in priority order:
+the conformal coverage pass. Done in the harness after that run: equal-mass,
+mean-confidence ECE with deterministic bootstrap CI for future calibration
+reruns. Still open, in priority order:
 
 - The scientific reframe the held-out result forces: this draft now leads with the
   negative finding, but the next pass should diagnose WHY the residual collapses
@@ -521,8 +526,6 @@ the conformal coverage pass. Still open, in priority order:
   submission.
 - Engine follow-up: swap the Wald interval for the exact Beta central quantile
   (Section 3), then re-run the coverage and calibration cells.
-- A debiased ECE estimator (in-bin mean confidence, equal-mass bins, bootstrap CI)
-  so the reported error separates estimator from model.
 - An adversarial planting/stripping test set that measures the threat model
   directly rather than asserting it.
 - Figures: architecture diagram, the nine-node DAG, reliability diagrams with the

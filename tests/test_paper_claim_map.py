@@ -44,6 +44,7 @@ def test_claim_map_names_load_bearing_paper_claims() -> None:
         "DMARC-held-out residual",
         "M365 tenancy",
         "Split conformal coverage",
+        "ECE estimator uncertainty",
         "Entropy reduction",
         "2026-06-23-full-corpus-calibration.md",
         "public-list-calibration.md",

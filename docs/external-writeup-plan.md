@@ -72,6 +72,10 @@ requirements:
 - `CITATION.cff` is the citation metadata source and release readiness now
   checks it against `pyproject.toml` and the current `CHANGELOG.md` release
   section.
+- Reference and tenancy calibration summaries now carry both the legacy
+  fixed-width ECE and an equal-mass, mean-confidence ECE with deterministic
+  bootstrap CI. Older memo numbers remain legacy until the underlying corpus
+  runs are rerun.
 - Private corpus calibration remains maintainer-local. Public artifacts may
   include aggregate counts, rates, intervals, and suppressed-cell statements
   only.
