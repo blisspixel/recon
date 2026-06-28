@@ -108,25 +108,26 @@ def test_paper_draft_diagnoses_dmarc_residual_collapse_without_overclaiming() ->
         assert required in text
 
 
-def test_paper_open_items_are_actionable_submission_blockers() -> None:
+def test_paper_submission_state_records_final_claim_audit_closure() -> None:
     draft = PAPER_DRAFT.read_text(encoding="utf-8")
     outline = (ROOT / "docs" / "paper-outline.md").read_text(encoding="utf-8")
     combined = "\n".join((draft, outline))
 
     for required in (
-        "Blocking open item",
-        "Minimum closure",
         "public probability-sampling path is",
         "Public-list numbers remain robustness checks",
         "M365 independent-instrument decision is closed",
         "m365-tenancy-decision.md",
-        "Final claim audit",
+        "Final claim audit is complete",
         "figure drift check",
         "full public proof",
+        "2026-06-28-final-claim-audit.md",
     ):
         assert required in combined
 
     for vague in (
+        "Blocking open item",
+        "Minimum closure",
         "Stratified public probability-sampling protocol",
         "Adversarial planting and stripping harness",
         "mark unresolved empirical cells as pending",

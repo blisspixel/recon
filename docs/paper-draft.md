@@ -559,8 +559,12 @@ The M365 independent-instrument decision is closed for this submission:
 [m365-tenancy-decision.md](m365-tenancy-decision.md) records why no passive
 candidate is independent enough to promote the result beyond corroboration.
 
-The remaining blocker is concrete and bounded:
+Final claim audit is complete for the current draft package. The public memo
+[2026-06-28-final-claim-audit.md](../validation/2026-06-28-final-claim-audit.md)
+records the passing claim-map audit, figure drift check, public proof smoke,
+full public proof, local gate, and release readiness checks.
 
-| Blocking open item | Why it matters | Minimum closure before submission |
-|---|---|---|
-| Final claim audit | Any new experiment or wording can move a claim between support tiers. | Re-run claim-map tests, figure drift check, public proof smoke, full public proof, local gate, and release readiness from the final draft commit. |
+Current technical artifact blockers: none for this draft package. Any future
+experiment, paper wording, package, or claim-map change can move a claim between
+support tiers, so it must rerun the final claim audit before submission
+packaging.

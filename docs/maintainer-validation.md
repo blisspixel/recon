@@ -71,8 +71,9 @@ A small, anonymized corroboration against independently-known public facts (the
 provider's own DMARC/SPF records, the M365/GWS identity endpoints). It needs only
 public web access plus recon, never the private corpus, and is reported as an
 external sanity check, not calibration (see
-[C3 framing in the roadmap](roadmap.md)). The committed artifact is aggregate:
-counts of corroborated vs contradicted detections, no apexes.
+[closed certificate-transparency framing in the roadmap](roadmap.md)). The
+committed artifact is aggregate: counts of corroborated vs contradicted
+detections, no apexes.
 
 ## Tier 3: corpus re-grounding + firing-rate drift (maintainer-local)
 
@@ -92,9 +93,9 @@ maintainer's machine:
 Only the aggregate metrics (counts, calibration numbers, drift deltas) reach the
 repo; the apexes and per-domain output never do.
 
-The active CT-enabled C3 sequence is broken out in
+The closed certificate-transparency validation sequence is broken out in
 [c3-ct-validation-plan.md](c3-ct-validation-plan.md). That document owns the
-current retry order and closure rule; this page owns the enduring Tier 3
+historical retry order and closure rule; this page owns the enduring Tier 3
 discipline.
 
 ## What the agent does with the result

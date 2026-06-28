@@ -1,8 +1,8 @@
 # Documentation
 
 Project docs live here. Repository-root files stay at the root only when
-tooling expects them there: `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
-`SECURITY.md`, and `LICENSE`.
+tooling or reader expectations make the root location useful: `README.md`,
+`ROADMAP.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `LICENSE`.
 
 The docs are organized by reader need:
 
@@ -29,7 +29,7 @@ The docs are organized by reader need:
 | Consume JSON safely in scripts | [automation-examples.md](automation-examples.md) |
 | Upgrade from v1.x to v2.0 | [migration-v2.md](migration-v2.md) |
 | Run maintainer validation safely | [maintainer-validation.md](maintainer-validation.md) |
-| Review the closed C3 CT validation plan | [c3-ct-validation-plan.md](c3-ct-validation-plan.md) |
+| Review the closed certificate-transparency validation plan | [c3-ct-validation-plan.md](c3-ct-validation-plan.md) |
 | Use the maintainer loop contract | [maintainer-loop-runbook.md](maintainer-loop-runbook.md) |
 | Cut and verify a release | [release-process.md](release-process.md) |
 
@@ -73,9 +73,10 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 |---|---|
 | Related work and positioning | [related-work.md](related-work.md) |
 | Artifact review guide | [artifact-review.md](artifact-review.md) |
-| External write-up readiness plan and active blockers | [external-writeup-plan.md](external-writeup-plan.md) |
+| External write-up readiness plan and gates | [external-writeup-plan.md](external-writeup-plan.md) |
 | Paper claim map | [paper-claim-map.md](paper-claim-map.md) |
 | Paper figure package | [paper-figures.md](paper-figures.md) |
+| Final public claim audit | [2026-06-28-final-claim-audit.md](../validation/2026-06-28-final-claim-audit.md) |
 | Public label snapshot and public-list sampling decision | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) |
 | M365 tenancy corroboration decision | [m365-tenancy-decision.md](m365-tenancy-decision.md) |
 | Paper outline | [paper-outline.md](paper-outline.md) |

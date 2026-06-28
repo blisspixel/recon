@@ -86,6 +86,13 @@ requirements:
   the adversarial add/remove perturbation harness change and reported
   `Private corpora read: no`. The aggregate-only memo is
   [2026-06-28-adversarial-perturbation-paper.md](../validation/2026-06-28-adversarial-perturbation-paper.md).
+- The 2026-06-28 final claim audit smoke check with stamp
+  `final-claim-audit-smoke-20260628` passed all five public steps and reported
+  `Private corpora read: no`.
+- The 2026-06-28 final claim audit full public proof check with stamp
+  `final-claim-audit-paper-rerun-20260628` passed all five public steps and
+  reported `Private corpora read: no`. The aggregate-only memo is
+  [2026-06-28-final-claim-audit.md](../validation/2026-06-28-final-claim-audit.md).
 - `CITATION.cff` is the citation metadata source and release readiness now
   checks it against `pyproject.toml` and the current `CHANGELOG.md` release
   section.
@@ -98,7 +105,10 @@ requirements:
 - The M365 independent-instrument decision is closed for this submission:
   [m365-tenancy-decision.md](m365-tenancy-decision.md) records why no passive
   instrument is independent enough to promote the result beyond channel-split
-  corroboration. The remaining submission blocker is the final claim audit.
+  corroboration.
+- The final claim audit is complete for the current draft package. Any future
+  experiment, paper wording, package, or claim-map change must rerun the final
+  claim audit before submission packaging.
 
 ## What Is Next And Why
 
@@ -107,9 +117,9 @@ behavior.
 
 Reasoning:
 
-1. The C3 CT retry loop is closed. More live retries would mostly measure public
-   CT provider pacing again unless a new provider path or validation question
-   appears.
+1. The certificate-transparency retry loop is closed. More live retries would
+   mostly measure public CT provider pacing again unless a new provider path or
+   validation question appears.
 2. Fingerprint and motif triage has no active public-source-backed candidate
    after Session F. Catalog growth should resume only when a candidate has
    stable public documentation or repeated aggregate evidence plus negative
@@ -144,11 +154,13 @@ Reasoning:
    and changelog release date through `scripts/release_readiness.py`.
 2. **Orientation refresh.** Point README, roadmap, docs index, validation docs,
    paper outline, current-state analysis, and the maintainer logs at this plan.
-3. **Public artifact smoke.** Run
-   `python -m validation.reproduce_paper_numbers --profile smoke --stamp hybrid-interval-smoke-20260628`
-   and keep outputs under ignored `validation/local/`.
-4. **Full public proof.** Run
-   `python -m validation.reproduce_paper_numbers --profile paper --stamp adversarial-perturbation-paper-20260628`
+3. **Public artifact smoke.** Keep the smoke profile current. The current
+   final audit run used
+   `python -m validation.reproduce_paper_numbers --profile smoke --stamp final-claim-audit-smoke-20260628`
+   and kept outputs under ignored `validation/local/`.
+4. **Full public proof.** Keep the paper profile current. The current final
+   audit run used
+   `python -m validation.reproduce_paper_numbers --profile paper --stamp final-claim-audit-paper-rerun-20260628`
    before treating the public proof bundle as current for submission.
 5. **Artifact guide.** Keep [artifact-review.md](artifact-review.md) current with
    the exact public reviewer commands and their claim boundaries.
@@ -170,7 +182,10 @@ Reasoning:
    linked from the paper package and keep the tenancy result named as
    corroboration unless a new architecture review approves a stronger
    instrument.
-11. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
+11. **Final claim audit.** Re-run claim-map tests, figure drift check, public
+   proof smoke, full public proof, the local gate, and release readiness after
+   any paper or package change that could move a claim boundary.
+12. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
    remote release readiness after push.
 
 ## Acceptance Criteria
@@ -185,6 +200,9 @@ Reasoning:
 - The public reproduction smoke profile completes from the current checkout.
 - The full public proof profile completes from the current checkout before
   submission packaging cites the synthetic and model-internal proof rows.
+- The final claim audit memo links the public smoke run, full public proof run,
+  claim-map audit, figure drift check, local gate, and release readiness for the
+  current draft package.
 - The claim map links every Section 6 empirical row to a support tier and source.
 - The figure package regenerates deterministically and contains only
   aggregate-safe source data.

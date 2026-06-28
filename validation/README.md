@@ -153,9 +153,9 @@ gitignored private validation workspaces: `validation/runs-private/`,
 `validation/live_runs/`, or `validation/local/`. Operator-local paths outside
 the checkout are allowed.
 
-CT-enabled corpus sessions are intentionally partial and multi-session. Use
-streaming NDJSON plus a wall-clock cap so a session finalizes aggregate artifacts
-instead of being killed by the terminal or CI wrapper:
+Certificate-transparency corpus sessions are intentionally partial and
+multi-session. Use streaming NDJSON plus a wall-clock cap so a session finalizes
+aggregate artifacts instead of being killed by the terminal or CI wrapper:
 
 ```bash
 python validation/scan.py \
@@ -217,7 +217,7 @@ The summary reports raw outcome counts, best outcome by unique domain, and CT
 data coverage. It emits run directory basenames and counts only. It does not
 write domains, tenant IDs, organization names, or per-domain rows.
 
-The 2026-06-26 C3 sequence is closed and documented in
+The 2026-06-26 certificate-transparency sequence is closed and documented in
 [docs/c3-ct-validation-plan.md](../docs/c3-ct-validation-plan.md) and
 `validation/2026-06-26-c3-ct-partial.md`. Do not use the old retry order as an
 active queue unless a new concrete provider path or disclosure-safe validation
@@ -321,6 +321,11 @@ ablations. It writes `summary.md`, `manifest.json`, and per-harness outputs unde
 `--profile smoke` to check the orchestrator quickly without waiting for full
 paper-sized sweeps. If you pass `--stamp`, it follows the same single safe
 path-segment rule as the calibration bundle runner.
+
+The current final public claim audit for the paper package is committed as
+`2026-06-28-final-claim-audit.md`. It records the passing smoke profile, full
+paper profile, claim-map audit, figure drift check, local gate, and release
+readiness checks without committing private corpora or local run artifacts.
 
 ## The fingerprint catalog audit
 

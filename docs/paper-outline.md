@@ -13,8 +13,8 @@ empirical cells constrained by the claim map) lives in
 The external write-up readiness sequence lives in
 [external-writeup-plan.md](external-writeup-plan.md), and the current claim map
 lives in [paper-claim-map.md](paper-claim-map.md). The figure package lives in
-[paper-figures.md](paper-figures.md). The CT-enabled C3 corpus work is closed as
-a bounded aggregate-only partial pass in
+[paper-figures.md](paper-figures.md). The certificate-transparency corpus work
+is closed as a bounded aggregate-only partial pass in
 [c3-ct-validation-plan.md](c3-ct-validation-plan.md). Any paper update must use
 only aggregate-safe public memos and synthetic or public reproduction harnesses,
 never private target rows.
@@ -394,9 +394,15 @@ by [m365-tenancy-decision.md](m365-tenancy-decision.md). No passive candidate is
 independent enough to promote the result beyond channel-split corroboration, so
 the paper keeps the result named as corroboration rather than calibration.
 
-| Blocking open item | Minimum closure |
-|---|---|
-| Final claim audit | Re-run claim-map tests, figure drift check, public proof smoke, full public proof, local gate, and release readiness from the final draft commit. |
+Final claim audit is complete for the current draft package. The public memo
+[2026-06-28-final-claim-audit.md](../validation/2026-06-28-final-claim-audit.md)
+records the passing claim-map audit, figure drift check, public proof smoke,
+full public proof, local gate, and release readiness checks.
+
+Current technical artifact blockers: none for this draft package. Any future
+experiment, paper wording, package, or claim-map change can move a claim between
+support tiers, so it must rerun the final claim audit before submission
+packaging.
 
 ## Decisions still open
 

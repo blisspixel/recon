@@ -48,7 +48,11 @@ That changes only terminal handling. It does not skip any gate.
 ## What The Public Bundle Validates
 
 The latest maintainer full proof check is recorded in
-[../validation/2026-06-28-adversarial-perturbation-paper.md](../validation/2026-06-28-adversarial-perturbation-paper.md).
+[../validation/2026-06-28-final-claim-audit.md](../validation/2026-06-28-final-claim-audit.md).
+That memo is the current final public claim audit for the draft package. It
+supersedes the earlier adversarial-perturbation proof memo only as the latest
+submission gate; the earlier memo remains the focused record for the
+add/remove perturbation harness.
 
 | Claim family | Public command or gate | Reviewer interpretation |
 |---|---|---|
@@ -71,7 +75,7 @@ data-handling policy:
 - M365 DNS-only provider corroboration aggregates in the same memo. The
   [M365 tenancy decision](m365-tenancy-decision.md) explains why this remains
   corroboration rather than independent calibration.
-- Aggregate-only C3 CT closure in
+- Aggregate-only certificate-transparency validation closure in
   [../validation/2026-06-26-c3-ct-partial.md](../validation/2026-06-26-c3-ct-partial.md).
 
 These are maintainer-reproducible aggregate results. Reviewers can inspect the

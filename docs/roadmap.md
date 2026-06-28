@@ -9,7 +9,9 @@ This file is the current plan and scope boundary. Shipped work belongs in
 > roadmap: the CLI, JSON schema, MCP server, validation guards, release path,
 > generated schema guard, and generated surface inventory guard are shipped.
 > Remaining work hardens the project, sharpens documentation, and improves
-> validation evidence without expanding the runtime surface.
+> validation evidence without expanding the runtime surface. The final public
+> claim audit for the current paper package is complete; future wording,
+> package, or validation changes rerun it.
 
 ## What Is Next
 
@@ -85,14 +87,17 @@ The next work is dependency-ordered:
      path, the certificate-transparency validation cohort is closed as
      aggregate-only evidence, the
      [M365 tenancy decision](m365-tenancy-decision.md) keeps that result named
-     as corroboration rather than calibration, and release readiness now guards
-     citation metadata.
+     as corroboration rather than calibration,
+     [2026-06-28-final-claim-audit.md](../validation/2026-06-28-final-claim-audit.md)
+     records the current final public claim audit, and release readiness now
+     guards citation metadata.
    - Acceptance: cite only public or synthetic artifacts and aggregate-only
-     validation memos. Public-list numbers remain robustness checks rather than
-     population rates. M365 tenancy evidence stays named as corroboration for
-     this submission because no passive independent instrument was adopted. Do
-     not claim frequentist coverage for the 80 percent intervals, and do not add
-     runtime behavior while packaging the artifact.
+   validation memos. Public-list numbers remain robustness checks rather than
+   population rates. M365 tenancy evidence stays named as corroboration for
+   this submission because no passive independent instrument was adopted. Do
+   not claim frequentist coverage for the 80 percent intervals. Rerun the
+   final claim audit after any draft, package, or claim-map change. Do not add
+   runtime behavior while packaging the artifact.
 
 ## Version Milestones
 

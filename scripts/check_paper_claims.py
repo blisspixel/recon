@@ -36,6 +36,7 @@ REQUIRED_BOUNDARIES: tuple[tuple[str, str], ...] = (
     ("artifact-review", "robustness checks rather than population rates"),
     ("artifact-review", "corroboration rather than independent calibration"),
     ("external-plan", "adversarial-perturbation-paper-20260628"),
+    ("external-plan", "final claim audit is complete"),
     ("external-plan", "public-list numbers as robustness checks rather than population rates"),
     ("external-plan", "M365 independent-instrument decision is closed"),
     ("roadmap", "Public-list numbers remain robustness checks rather than"),
@@ -44,7 +45,7 @@ REQUIRED_BOUNDARIES: tuple[tuple[str, str], ...] = (
     ("data-policy", "Public-list checks may serve as robustness checks"),
 )
 
-LATEST_PUBLIC_PROOF_MEMO = "2026-06-28-adversarial-perturbation-paper.md"
+LATEST_PUBLIC_PROOF_MEMO = "2026-06-28-final-claim-audit.md"
 
 FORBIDDEN_M365_WORDING: tuple[tuple[str, str], ...] = (
     ("draft", "M365 and Google tenancy calibrations"),
