@@ -3,9 +3,10 @@
 Working draft. This is the prose expansion of [paper-outline.md](paper-outline.md),
 assembled from the shipped design and validation docs. It is not a release gate
 and not on any version's critical path. Empirical cells that depend on the
-gitignored corpus are marked **[corpus-run pending]**; every other claim is
-grounded in a committed harness or memo cited inline. Literature positioning is
-in [related-work.md](related-work.md); the per-claim evidence ledger is in
+gitignored corpus must stay limited to disclosure-safe aggregate wording in
+[paper-claim-map.md](paper-claim-map.md); every other claim is grounded in a
+committed harness or memo cited inline. Literature positioning is in
+[related-work.md](related-work.md); the statistical assurance dossier is in
 [statistical-assurance.md](statistical-assurance.md).
 
 Primary category cs.CR; secondary stat.ML (inference framing) or cs.SE
@@ -513,8 +514,9 @@ the conformal coverage pass. Still open, in priority order:
   bias and the result-reproducibility gap in Sections 6 and 9).
 - Re-do the M365 calibration against an instrument with no mail-routing path to
   the endpoint label, to remove the shared-upstream confound.
-- The posture-stratified aggregates (`validation/posture_distributions.py`) and
-  per-vertical stratification (running / pending).
+- Claim-map the posture-stratified aggregates and per-vertical cells in Section
+  6 in [paper-claim-map.md](paper-claim-map.md) to disclosure-reviewed public or
+  aggregate-only memos before final submission.
 - Engine follow-up: swap the Wald interval for the exact Beta central quantile
   (Section 3), then re-run the coverage and calibration cells.
 - A debiased ECE estimator (in-bin mean confidence, equal-mass bins, bootstrap CI)

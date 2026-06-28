@@ -149,10 +149,15 @@ def test_surface_inventory_has_agent_surfaces() -> None:
         "docs/roadmap.md",
         "docs/maintainer-validation.md",
         "validation/README.md",
-        "PROGRESS-LOG.md",
-        "SKILLS.md",
+        "docs/.agent/PROGRESS-LOG.md",
+        "docs/.agent/SKILLS.md",
     ]
-    assert all(entry["exists"] is True for entry in packet_files.values())
+    required_packet_files = [entry for entry in packet_files.values() if not entry.get("optional_local")]
+    assert all(entry["exists"] is True for entry in required_packet_files)
+    assert packet_files["docs/.agent/PROGRESS-LOG.md"]["optional_local"] is True
+    assert packet_files["docs/.agent/PROGRESS-LOG.md"]["exists"] is False
+    assert packet_files["docs/.agent/SKILLS.md"]["optional_local"] is True
+    assert packet_files["docs/.agent/SKILLS.md"]["exists"] is False
     assert packet_files["docs/agentic-balance.md"]["role"] == "rules_vs_agentic_boundary"
 
 

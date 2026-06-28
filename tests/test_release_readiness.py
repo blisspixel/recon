@@ -46,6 +46,8 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
         ),
     )
     _write_file(root, "packaging/homebrew/recon.rb", f'url "https://example.test/recon_tool-{version}.tar.gz"\n')
+    _write_file(root, "CHANGELOG.md", f"# Changelog\n\n## [{version}] - 2026-06-26\n")
+    _write_file(root, "CITATION.cff", f'version: {version}\ndate-released: "2026-06-26"\n')
 
 
 def _happy_runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
@@ -119,6 +121,36 @@ def test_readme_usage_accepts_plain_apache_license(tmp_path: Path) -> None:
     check = release_readiness._check_readme_usage(tmp_path)
 
     assert check.status == "pass"
+
+
+def test_citation_metadata_accepts_current_release(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.14")
+
+    check = release_readiness._check_citation_metadata(tmp_path)
+
+    assert check.status == "pass"
+    assert "2.2.14" in check.detail
+
+
+def test_citation_metadata_rejects_stale_version(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.14")
+    _write_file(tmp_path, "CITATION.cff", 'version: 2.2.13\ndate-released: "2026-06-26"\n')
+
+    check = release_readiness._check_citation_metadata(tmp_path)
+
+    assert check.status == "fail"
+    assert "version=2.2.13" in check.detail
+
+
+def test_citation_metadata_rejects_stale_release_date(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.14")
+    _write_file(tmp_path, "CITATION.cff", 'version: 2.2.14\ndate-released: "2026-06-25"\n')
+
+    check = release_readiness._check_citation_metadata(tmp_path)
+
+    assert check.status == "fail"
+    assert "2026-06-25" in check.detail
+    assert "2026-06-26" in check.detail
 
 
 def test_private_tracked_files_fail() -> None:

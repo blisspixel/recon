@@ -199,19 +199,22 @@ before committing any validation artifact.
 - [docs/README.md](docs/README.md): complete docs index.
 - [docs/roadmap.md](docs/roadmap.md): current plan, invariants, and scope
   boundaries.
-- [docs/c3-ct-validation-plan.md](docs/c3-ct-validation-plan.md): current
+- [docs/external-writeup-plan.md](docs/external-writeup-plan.md): active
+  maintainer plan for external write-up readiness.
+- [docs/c3-ct-validation-plan.md](docs/c3-ct-validation-plan.md): closed
   maintainer plan for the CT-enabled C3 validation track.
 - [CHANGELOG.md](CHANGELOG.md): shipped changes.
 
 ## Current Maintainer Focus
 
 The next work is not a runtime expansion. The CT-enabled C3 validation track is
-in closure: seven bounded, private, aggregate-only sessions exercised the CT
-path, raised usable CT coverage from 38 to 44 domains across the observed set,
-and promoted only one new public-source-backed catalog refinement from the
-latest retry sequence. The remaining work is release-grade review of that
-closure package, not more live public CT retries. The detailed rationale lives
-in [docs/c3-ct-validation-plan.md](docs/c3-ct-validation-plan.md).
+closed as a bounded, private, aggregate-only partial CT pass, and fingerprint or
+motif growth has no active public-source-backed candidate. The current focus is
+external write-up readiness: keep citation metadata current, prove the public
+reproduction path, and map paper claims to public, synthetic, or aggregate-only
+evidence without adding commands, schema fields, network sources, or catalog
+rules. The detailed plan lives in
+[docs/external-writeup-plan.md](docs/external-writeup-plan.md).
 
 ## Development
 

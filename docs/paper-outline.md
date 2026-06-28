@@ -8,11 +8,15 @@ here survives between work sessions. The literature positioning lives in
 shipped live in the [roadmap](roadmap.md) research write-up section.
 
 The prose expansion of this outline (full section drafts, with corpus-gated
-empirical cells marked pending) lives in [paper-draft.md](paper-draft.md).
-Current CT-enabled corpus work is tracked in
+empirical cells constrained by the claim map) lives in
+[paper-draft.md](paper-draft.md).
+The external write-up readiness sequence lives in
+[external-writeup-plan.md](external-writeup-plan.md), and the current claim map
+lives in [paper-claim-map.md](paper-claim-map.md). The CT-enabled C3 corpus work
+is closed as a bounded aggregate-only partial pass in
 [c3-ct-validation-plan.md](c3-ct-validation-plan.md). Any paper update must use
-only its aggregate-safe public memos and synthetic or public reproduction
-harnesses, never private target rows.
+only aggregate-safe public memos and synthetic or public reproduction harnesses,
+never private target rows.
 
 ## Thesis
 
@@ -314,9 +318,9 @@ correlation.md section 4.3.
 | Conformal coverage on labelable nodes | a distribution-free finite-sample coverage statement beside the Bayesian interval, with the exchangeability boundary stated and demonstrated (a deliberately non-exchangeable split shows the guarantee failing where claimed to fail) | `validation/conformal_coverage.py`; run 2026-06: 0.999 mean coverage at a 0.90 target (n=4,290, 20 splits) |
 | Interval coverage (synthetic) | the 80% interval absorbs the elicitation imprecision under the CAL8 band | `validation/interval_coverage.py`; shipped |
 | Likelihood sensitivity (CAL8) | the posteriors and agreement are stable under a plus-or-minus-20-percent likelihood perturbation | `validation/likelihood_sensitivity.py`; shipped |
-| Information recovered (CAL10) | the per-domain entropy-reduction distribution across postures, as the operational reading of what the channel still leaks after hardening | per-node surfacing shipped (2.2 diagnostics: `entropy_reduction_nats` on every posterior); the posture-stratified distribution is a corpus-run readout; first full-corpus pass measured median ~0.85 nats |
+| Information recovered (CAL10) | the per-domain entropy-reduction distribution across postures, as the operational reading of what the channel still leaks after hardening | per-node surfacing shipped (2.2 diagnostics: `entropy_reduction_nats` on every posterior); private aggregate run reported in `paper-draft.md` Section 6; claim-map before external use |
 | Layer ablations | what the graph layer and the Bayesian layer add over single-source slug matching | `validation/layer_ablation.py`; shipped and run (synthetic, reproducible): in the fired regime the posterior beats the deterministic baseline on every node and the DAG-only node is unreachable by matching; pooled, the hideable roots pay a quantified ~0.05-0.10 Brier MNAR price while the declarative node wins outright (the CAL14 asymmetry demonstrated); Louvain holds ARI 1.0 across a bridging-noise grid where connected components collapse to 0 - numbers in `validation/layer-ablation.md` |
-| Posture stratification | aggregate behavior across hardening postures, as distributions not exemplars | `validation/posture_distributions.py` (entropy reduction bucketed by edge-proxied/direct × evidence tier; interval width vs n_eff for the CAL7 figure); harness shipped, maintainer run pending; framing in correlation.md 4.10-4.11 |
+| Posture stratification | aggregate behavior across hardening postures, as distributions not exemplars | `validation/posture_distributions.py` (entropy reduction bucketed by edge-proxied/direct x evidence tier; interval width vs n_eff for the CAL7 figure); aggregate numbers are in `paper-draft.md` Section 6 and need claim-map and disclosure review before submission; framing in correlation.md 4.10-4.11 |
 | Differential verification | variable elimination matches a full-joint reference on every enumerable configuration | `validation/differential_verification.py`; shipped |
 | Per-vertical stratification | the calibration holds across industries | the by-vertical corpus lists; run 2026-06 (22 verticals, full-posterior ECE 0.065 to 0.098 per stratum) |
 
@@ -369,19 +373,17 @@ pinned by `tests/test_posterior_reading_guidance.py`.)
 
 ## Open items before this is submittable
 
-Evidence not yet in hand, in roughly the order the roadmap sequences it:
+The gating work is no longer harness construction or default runtime expansion.
+The remaining work is to make the draft externally reviewable:
 
-- the maintainer-local runs of the shipped harnesses: the held-out residual
-  and per-vertical stratification (`validation/reference_calibration.py`),
-  the tenancy corroboration (`validation/tenancy_reference_calibration.py`,
-  M365 two-class; GWS one-sided by the channel's nature), and the conformal
-  coverage pass (`validation/conformal_coverage.py`) - every harness now
-  exists, so this is collection, not construction (the layer ablations are
-  already run and committed, being fully synthetic:
-  `validation/layer-ablation.md`);
-- the posture-stratified aggregates (`validation/posture_distributions.py`
-  exists; the run is collection, not construction);
-- the writing itself.
+- build the claim map from each empirical sentence to a code invariant, unit or
+  property test, public reproduction harness, public validation memo, or
+  aggregate-only private memo, then keep it current in
+  [paper-claim-map.md](paper-claim-map.md);
+- reconcile every private aggregate number in `paper-draft.md` Section 6 with
+  disclosure-reviewed memos before strengthening the prose;
+- mark unresolved empirical cells as pending instead of smoothing over them;
+- finish the figures and writing pass only after the claim map proves the text.
 
 ## Decisions still open
 

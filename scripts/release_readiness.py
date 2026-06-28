@@ -2,8 +2,9 @@
 """Check maintainer release readiness before relying on remote CI.
 
 Default mode is local only. It checks the repository state, version references,
-coverage gate wiring, lockfile freshness, docs anchors, private-corpus hygiene,
-Homebrew formula freshness, and local commit-message hygiene.
+coverage gate wiring, lockfile freshness, docs anchors, citation metadata,
+private-corpus hygiene, Homebrew formula freshness, and local commit-message
+hygiene.
 
 Use ``--remote`` after pushing when you want the same report to include GitHub
 Actions status for the current commit.
@@ -34,6 +35,11 @@ Runner = Callable[[list[str]], subprocess.CompletedProcess[str]]
 
 _INIT_VERSION_RE = re.compile(r'_FALLBACK_VERSION\s*=\s*"([^"]+)"')
 _FORMULA_VERSION_RE = re.compile(r"recon_tool-([0-9A-Za-z.-]+)\.tar\.gz")
+_CITATION_VERSION_RE = re.compile(r"^version:\s*\"?([^\"\s]+)\"?\s*$", re.MULTILINE)
+_CITATION_RELEASE_DATE_RE = re.compile(
+    r"^date-released:\s*\"?([0-9]{4}-[0-9]{2}-[0-9]{2})\"?\s*$",
+    re.MULTILINE,
+)
 _EXPECTED_COVERAGE_TARGET = "--cov=src/recon_tool"
 _STALE_COVERAGE_TARGET = "--cov=recon_tool"
 _COVERAGE_FLOOR = "--cov-fail-under=82"
@@ -110,6 +116,16 @@ def _read_init_version(root: Path) -> str:
     match = _INIT_VERSION_RE.search(_read_text(root, "src/recon_tool/__init__.py"))
     if match is None:
         msg = "src/recon_tool/__init__.py is missing _FALLBACK_VERSION"
+        raise ValueError(msg)
+    return match.group(1)
+
+
+def _read_changelog_release_date(root: Path, version: str) -> str:
+    text = _read_text(root, "CHANGELOG.md")
+    pattern = re.compile(rf"^## \[{re.escape(version)}\] - ([0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}})\s*$", re.MULTILINE)
+    match = pattern.search(text)
+    if match is None:
+        msg = f"CHANGELOG.md is missing a release section for {version}"
         raise ValueError(msg)
     return match.group(1)
 
@@ -211,6 +227,41 @@ def _check_roadmap_version(root: Path) -> CheckResult:
     if f"v{version}" not in header:
         return _result("roadmap version", "fail", f"v{version} missing from roadmap status block")
     return _result("roadmap version", "pass", f"docs/roadmap.md status mentions v{version}")
+
+
+def _check_citation_metadata(root: Path) -> CheckResult:
+    try:
+        version = _read_project_version(root)
+        expected_date = _read_changelog_release_date(root, version)
+        text = _read_text(root, "CITATION.cff")
+    except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
+        return _result("citation metadata", "fail", str(exc))
+
+    version_match = _CITATION_VERSION_RE.search(text)
+    if version_match is None:
+        return _result("citation metadata", "fail", "CITATION.cff is missing version")
+    citation_version = version_match.group(1)
+    if citation_version != version:
+        return _result(
+            "citation metadata",
+            "fail",
+            f"CITATION.cff version={citation_version}, project is {version}",
+            "update CITATION.cff before release readiness",
+        )
+
+    date_match = _CITATION_RELEASE_DATE_RE.search(text)
+    if date_match is None:
+        return _result("citation metadata", "fail", "CITATION.cff is missing date-released")
+    citation_date = date_match.group(1)
+    if citation_date != expected_date:
+        return _result(
+            "citation metadata",
+            "fail",
+            f"CITATION.cff date-released={citation_date}, changelog has {expected_date}",
+            "align CITATION.cff with the current CHANGELOG release section",
+        )
+
+    return _result("citation metadata", "pass", f"CITATION.cff matches {version} ({expected_date})")
 
 
 def _check_readme_usage(root: Path) -> CheckResult:
@@ -425,6 +476,7 @@ def collect_checks(
         _check_uv_lock(actual_runner),
         _check_coverage_targets(root),
         _check_roadmap_version(root),
+        _check_citation_metadata(root),
         _check_readme_usage(root),
         _check_homebrew_formula(root),
         _check_private_tracked_files(actual_runner, root),

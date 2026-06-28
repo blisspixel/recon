@@ -217,9 +217,12 @@ The summary reports raw outcome counts, best outcome by unique domain, and CT
 data coverage. It emits run directory basenames and counts only. It does not
 write domains, tenant IDs, organization names, or per-domain rows.
 
-The current C3 sequence is tracked in
-[docs/c3-ct-validation-plan.md](../docs/c3-ct-validation-plan.md). Use that plan
-for the active retry order, closure decision, and documentation update list.
+The 2026-06-26 C3 sequence is closed and documented in
+[docs/c3-ct-validation-plan.md](../docs/c3-ct-validation-plan.md) and
+`validation/2026-06-26-c3-ct-partial.md`. Do not use the old retry order as an
+active queue unless a new concrete provider path or disclosure-safe validation
+question changes the value calculation. Current publication packaging work is
+tracked in [docs/external-writeup-plan.md](../docs/external-writeup-plan.md).
 
 ## Assurance and calibration harnesses
 

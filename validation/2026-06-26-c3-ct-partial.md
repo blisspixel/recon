@@ -45,11 +45,14 @@ Follow-up code now supports:
   an external kill.
 - Process-tree termination for controlled `--max-runtime` stops on Windows.
 
-## Next C3 Step
+## C3 Closure Rule
 
-Continue C3 as bounded partial sessions, preferably after CT limiter cooldown,
-and treat `ct_budget_summary.json` plus `meta.json` as the session health record.
-Do not compare partial sessions against complete prior scans.
+This memo is now a closed-session record, not an active retry queue. The
+bounded-session pattern above remains the correct operational shape if a future
+provider path or disclosure-safe validation question reopens C3, and
+`ct_budget_summary.json` plus `meta.json` remain the session health record. Do
+not run more live public CT retries by default, and do not compare partial
+sessions against complete prior scans.
 
 ## Retry Session A
 

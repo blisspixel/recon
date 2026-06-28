@@ -1,8 +1,8 @@
 # C3 CT Validation Plan
 
-This is the current maintainer plan for finishing the CT-enabled C3 corpus
-track. It turns the roadmap item into an executable sequence without changing
-recon's runtime surface.
+Status: closed on 2026-06-26 after Session F, the Infobip promotion, local gate,
+and remote readiness. This document records the executed maintainer plan for the
+CT-enabled C3 corpus track without changing recon's runtime surface.
 
 The plan is intentionally bounded. CT is a public monitoring system and a useful
 source of certificate and subdomain evidence, but it is not a free bulk data
@@ -77,10 +77,10 @@ What changed in the latest cycle:
   intermittently returning HTTP 503, while CertSpotter can recover only a small
   number of free unauthenticated results between local cooldown windows.
 
-## Why This Is Next
+## Why This Was Next
 
-C3 remains the top roadmap item because it is the only current task that
-exercises all of these surfaces together:
+C3 was the top roadmap item because it was the only open validation task that
+exercised all of these surfaces together:
 
 - CT provider failure modes and cache fallback.
 - CT attempt-outcome accounting.
@@ -92,8 +92,8 @@ exercises all of these surfaces together:
 The no-CT calibration pass already covers the nine Bayesian nodes that are fed
 by DNS and identity endpoints. CT contributes mostly to certificate,
 infrastructure-cluster, lexical, and surface-attribution work. That is why C3 is
-valuable, and also why it must not block release forever waiting for perfect CT
-coverage.
+valuable, and also why it could not block release forever waiting for perfect
+CT coverage.
 
 ## Code Constraints
 
@@ -113,12 +113,11 @@ The current implementation sets the execution shape:
 These constraints are correct. Do not bypass them with shell redirects, public
 run roots, ad hoc JSON edits, or row-level summaries.
 
-## Closure Plan
+## Closure Decision
 
-C3 should close as a documented partial CT pass after the public-tree gate for
-the Infobip promotion and updated aggregate memo passes.
+C3 is closed as a documented partial CT pass.
 
-The reason to close now is not that CT coverage is complete. It is not. The
+The reason to close is not that CT coverage is complete. It is not. The
 reason is that the track has met the validation objective that justified live
 public CT work:
 
@@ -136,7 +135,7 @@ public CT work:
   live retries would spend operator time mainly measuring the same public
   provider ceiling.
 
-Final public-tree work before closure:
+Final public-tree work completed before closure:
 
 1. Update the aggregate C3 memo and roadmap with Sessions D, E, and F.
 2. Keep raw run outputs, retry inputs, candidate samples, and target rows under

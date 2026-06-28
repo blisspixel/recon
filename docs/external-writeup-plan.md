@@ -1,0 +1,141 @@
+# External Write-Up Plan
+
+Status: active maintainer plan. This is not a runtime contract and does not add
+CLI, MCP, JSON, fingerprint, or network behavior.
+
+## Research Refresh
+
+The current external-artifact standard points to a small set of concrete
+requirements:
+
+- ACM artifact review separates availability, functional evaluation, and result
+  validation; the project should inventory the artifact, make the runnable path
+  clear, and avoid implying validated results where only availability is proven
+  ([ACM Artifact Review and Badging](https://www.acm.org/publications/policies/artifact-review-and-badging-current)).
+- arXiv expects a topical, refereeable scientific contribution prepared to
+  accepted scholarly standards, with supplementary files handled explicitly
+  rather than hidden in the manuscript source bundle
+  ([arXiv submission guidelines](https://info.arxiv.org/help/submit/index.html),
+  [arXiv ancillary files](https://info.arxiv.org/help/ancillary_files.html)).
+- CFF and GitHub citation guidance make `CITATION.cff` the repository-root
+  citation metadata source for software. The metadata needs to track the
+  released version and release date because GitHub and archive integrations use
+  it to show citation suggestions
+  ([Citation File Format](https://citation-file-format.github.io/),
+  [GitHub citation files](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)).
+- GitHub and Zenodo guidance treat GitHub releases as the handoff point for
+  durable archival identifiers. Zenodo can mint a DOI per GitHub release for a
+  public repository, but this project should not add `.zenodo.json` until the
+  release metadata policy is intentional
+  ([GitHub referencing and citing content](https://docs.github.com/repositories/archiving-a-github-repository/referencing-and-citing-content),
+  [Zenodo CITATION.cff guidance](https://help.zenodo.org/docs/github/describe-software/citation-file/)).
+- FAIR guidance applies to software, workflows, and data products: artifacts
+  should be findable, accessible, interoperable, and reusable, with clear
+  provenance and reuse terms
+  ([GO FAIR principles](https://www.go-fair.org/fair-principles/)).
+- NIST SP 800-188 frames public data release as a disclosure-risk problem that
+  needs governance, documented controls, and a clear release model. For recon,
+  that means private corpus rows stay private and the paper can cite only
+  public, synthetic, or aggregate-safe artifacts
+  ([NIST SP 800-188](https://csrc.nist.gov/pubs/sp/800/188/final)).
+- SLSA, GitHub artifact attestations, PyPI attestations, and PEP 740 point to a
+  source-to-artifact provenance story rather than an informal "trust me"
+  release story. recon can document signed provenance and reproducible builds,
+  but should not claim a SLSA level beyond the implemented release controls
+  ([SLSA specification](https://slsa.dev/spec/),
+  [GitHub artifact attestations](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds),
+  [PyPI attestations](https://docs.pypi.org/attestations/),
+  [PEP 740](https://peps.python.org/pep-0740/)).
+- MCP security guidance treats tool descriptions, tool outputs, and connected
+  agents as trust boundaries. For recon's paper artifact, that means the MCP
+  story stays least-privilege, local-stdio, approval-aware, and clear that
+  source-derived content is data, not instructions
+  ([MCP security best practices](https://modelcontextprotocol.io/docs/tutorials/security/security_best_practices)).
+
+## Current State
+
+- C3 is closed as a bounded, maintainer-local, aggregate-only partial CT
+  validation track. It proved the CT path, retry accounting, provider ceiling,
+  candidate triage, and publication controls; it did not prove complete CT
+  coverage.
+- `docs/paper-outline.md` and `docs/paper-draft.md` exist, and the initial claim
+  map now lives in [paper-claim-map.md](paper-claim-map.md). Draft claims stay
+  limited to the support tier recorded there.
+- `python -m validation.reproduce_paper_numbers` is the public no-private-data
+  reproduction entry point. The smoke profile gives a quick orchestrator check;
+  the paper profile runs the public synthetic and proof bundle.
+- The 2026-06-26 smoke check with stamp `publication-plan-smoke-20260626`
+  passed all five public steps and reported `Private corpora read: no`.
+- `CITATION.cff` is the citation metadata source and release readiness now
+  checks it against `pyproject.toml` and the current `CHANGELOG.md` release
+  section.
+- Private corpus calibration remains maintainer-local. Public artifacts may
+  include aggregate counts, rates, intervals, and suppressed-cell statements
+  only.
+
+## What Is Next And Why
+
+The next highest-leverage work is external write-up readiness, not new runtime
+behavior.
+
+Reasoning:
+
+1. The C3 CT retry loop is closed. More live retries would mostly measure public
+   CT provider pacing again unless a new provider path or validation question
+   appears.
+2. Fingerprint and motif triage has no active public-source-backed candidate
+   after Session F. Catalog growth should resume only when a candidate has
+   stable public documentation or repeated aggregate evidence plus negative
+   tests.
+3. Surface inventory promotion is blocked by the roadmap's consumer gate. No
+   concrete external consumer currently needs a stable subset.
+4. The assurance, validation, release, citation, and public-reproduction pieces
+   are now strong enough to package for outside review. That work improves trust
+   without widening the passive collection surface.
+
+## Codebase Constraints
+
+- Do not add a command, MCP tool, schema field, fingerprint, motif, CPT change,
+  dependency, paid API, or new network source for the write-up package.
+- Keep public examples fictional or synthetic.
+- Keep private corpus identifiers out of committed docs and artifacts: no real
+  apexes, organization names, tenant IDs, per-domain rows, or unsuppressed small
+  strata.
+- Claims about the Bayesian intervals must distinguish reference calibration,
+  synthetic evidence-responsiveness, and structural guarantees. Do not claim
+  frequentist coverage for unlabeled nodes.
+- Use existing gates: `scripts/check.py`, validation hygiene, text hygiene,
+  markdown links, and release readiness.
+
+## Execution Plan
+
+1. **Metadata guard.** Keep `CITATION.cff` synchronized with the project version
+   and changelog release date through `scripts/release_readiness.py`.
+2. **Orientation refresh.** Point README, roadmap, docs index, validation docs,
+   paper outline, current-state analysis, and the maintainer logs at this plan.
+3. **Public artifact smoke.** Run
+   `python -m validation.reproduce_paper_numbers --profile smoke --stamp publication-plan-smoke-20260626`
+   and keep outputs under ignored `validation/local/`.
+4. **Claim map.** Keep [paper-claim-map.md](paper-claim-map.md) current as each
+   paper claim moves between code invariant, unit or property test, public
+   reproduction harness, public validation memo, aggregate-only private memo, or
+   requires-more-evidence status.
+5. **Draft tightening.** Update `docs/paper-outline.md` and
+   `docs/paper-draft.md` only where the claim map proves the text. Mark
+   unresolved empirical cells as pending rather than smoothing over them.
+6. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
+   remote release readiness after push.
+
+## Acceptance Criteria
+
+- `CITATION.cff` matches the current project version and changelog release date,
+  and release readiness fails if it drifts.
+- README and roadmap identify external write-up readiness as the active next
+  work and link here.
+- The docs index exposes this plan under Research.
+- The public reproduction smoke profile completes from the current checkout.
+- The claim map links every Section 6 empirical row to a support tier and source.
+- No committed artifact contains private target identifiers or raw private
+  result rows.
+- No runtime surface changes.
+- Local gate passes, with coverage above the configured floor.

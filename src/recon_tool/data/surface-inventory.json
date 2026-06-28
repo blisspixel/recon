@@ -163,13 +163,15 @@
           "role": "local_validation_workspace"
         },
         {
-          "exists": true,
-          "path": "PROGRESS-LOG.md",
+          "exists": false,
+          "optional_local": true,
+          "path": "docs/.agent/PROGRESS-LOG.md",
           "role": "local_loop_history"
         },
         {
-          "exists": true,
-          "path": "SKILLS.md",
+          "exists": false,
+          "optional_local": true,
+          "path": "docs/.agent/SKILLS.md",
           "role": "local_loop_learnings"
         }
       ],

@@ -31,7 +31,7 @@ It does not call the network by default and it is not part of the user-facing
 
 1. Branch, worktree, and upstream tracking state.
 2. Version consistency across `pyproject.toml`, `src/recon_tool/__init__.py`,
-   `docs/roadmap.md`, and the Homebrew formula.
+   `docs/roadmap.md`, `CITATION.cff`, and the Homebrew formula.
 3. `uv.lock` freshness with `uv lock --check`.
 4. Coverage target parity across `scripts/check.py`, `scripts/release.py`,
    `.github/workflows/ci.yml`, and `.github/workflows/release.yml`.
@@ -155,6 +155,7 @@ Before running `scripts/release.py`:
 
 - [ ] All planned changes for this version are merged to `main`.
 - [ ] `CHANGELOG.md` has a finalized `## [X.Y.Z] - YYYY-MM-DD` section.
+- [ ] `CITATION.cff` matches that version and release date.
 - [ ] `docs/roadmap.md` still describes the next work accurately and does not
       duplicate `CHANGELOG.md`.
 - [ ] `docs/stability.md` has been updated if any public surface changed.

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **External write-up readiness plan.** `docs/external-writeup-plan.md` now
+  records the researched next step after C3 closure: citation metadata,
+  public-reproduction smoke, claim-to-artifact mapping, and paper tightening
+  without runtime surface expansion.
+- **Citation metadata readiness gate.** `scripts/release_readiness.py` now
+  checks `CITATION.cff` against the current `pyproject.toml` version and the
+  matching `CHANGELOG.md` release date.
 - **C3 CT validation plan.** `docs/c3-ct-validation-plan.md` now records the
   researched closure plan for the CT-enabled C3 track: seven-session aggregate
   state, public-provider limits, Infobip candidate disposition, and the rule
@@ -46,8 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **C3 planning docs clarified.** The README, docs index, roadmap,
   maintainer-validation notes, validation workspace guide, limitations,
   how-it-works overview, weak-areas guide, paper outline, and historical v2.0
-  runbook now point to the active C3 CT plan instead of spreading the next-step
-  details across unrelated pages.
+  runbook now treat the C3 CT plan as closed and point current maintainer work
+  at the external write-up plan.
+- **Citation metadata refreshed.** `CITATION.cff` now tracks the current
+  2.2.14 release version and 2026-06-26 release date.
 - **Markdown house-style cleanup.** Tracked Markdown docs, examples, agent
   guidance, and validation memos now avoid em dashes, en dashes, pictographs,
   and literal AI-attribution phrases.

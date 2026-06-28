@@ -14,11 +14,11 @@ This file is the current plan and scope boundary. Shipped work belongs in
 
 The next work is dependency-ordered:
 
-1. **Finish the CT-enabled C3 corpus pass as a bounded, maintainer-local,
-   aggregate-only validation track.**
-   - Why next: the main calibration bundle already ran in June 2026, but C3
-     exercises CT, graph, and certificate surfaces that the core DMARC and
-     tenancy passes do not fully stress.
+1. **Treat the CT-enabled C3 corpus pass as closed unless a new concrete
+   validation question appears.**
+   - Why first: the main calibration bundle already ran in June 2026, and C3
+     was the remaining validation branch that stressed CT, graph, and
+     certificate surfaces beyond the core DMARC and tenancy passes.
    - Current state: the private C3 track now has seven bounded sessions
      documented in
      [validation/2026-06-26-c3-ct-partial.md](../validation/2026-06-26-c3-ct-partial.md).
@@ -31,11 +31,11 @@ The next work is dependency-ordered:
      and again showed the public-provider ceiling: crt.sh remained breaker-gated
      while CertSpotter paced a small number of live successes under local
      cooldown.
-   - Current plan: close the live C3 retry loop as a documented partial CT pass
-     after the Infobip promotion, hygiene checks, security review, and full
-     local gate. Do not run more live public CT retries unless a new concrete
-     consumer, provider path, or disclosure-safe validation question changes
-     the value calculation.
+   - Current plan: do not run more live public CT retries by default. Session F
+     closed the loop after the Infobip promotion, hygiene checks, security
+     review, full local gate, and remote readiness pass. Resume only if a new
+     concrete consumer, provider path, or disclosure-safe validation question
+     changes the value calculation.
    - Acceptance: publish only aggregate counts and disclosure-reviewed memos.
      No apexes, organization names, tenant IDs, or per-domain rows leave the
      maintainer machine. C3 closure means the CT path, retry accounting,
@@ -47,9 +47,8 @@ The next work is dependency-ordered:
      vendor documentation, not invented patterns.
    - Current state: the June 2026 pass promoted public-source-backed UltraDNS
      Web Forwarding, Squarespace managed-subdomain, Descope custom-domain, and
-     Infobip email-tracking surface rules. Remaining private aggregate
-     candidates are held until they have clear public support and negative
-     tests.
+     Infobip email-tracking surface rules. Session F produced no new candidate,
+     so there is no active public-source-backed catalog task.
    - Acceptance: every promoted rule has scoped language, a public reference or
      aggregate validation basis, regression tests, and conservative sparse-result
      wording.
@@ -67,11 +66,14 @@ The next work is dependency-ordered:
 4. **Prepare the external write-up without changing runtime behavior.**
    - Why next: the assurance, validation, and correlation work is now strong
      enough to package for outside review.
-   - Current state: the paper outline and draft exist, but they must respect the
-     no-real-data publication rule.
+   - Current state: this is the active next work. The plan lives in
+     [external-writeup-plan.md](external-writeup-plan.md). The paper outline and
+     draft exist, the public reproduction bundle exists, the initial claim map
+     lives in [paper-claim-map.md](paper-claim-map.md), C3 is closed as
+     aggregate-only evidence, and release readiness now guards citation metadata.
    - Acceptance: cite only public or synthetic artifacts and aggregate-only
      validation memos. Do not claim frequentist coverage for the 80 percent
-     intervals.
+     intervals, and do not add runtime behavior while packaging the artifact.
 
 ## Version Milestones
 

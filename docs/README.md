@@ -29,7 +29,7 @@ The docs are organized by reader need:
 | Consume JSON safely in scripts | [automation-examples.md](automation-examples.md) |
 | Upgrade from v1.x to v2.0 | [migration-v2.md](migration-v2.md) |
 | Run maintainer validation safely | [maintainer-validation.md](maintainer-validation.md) |
-| Execute the current C3 CT validation plan | [c3-ct-validation-plan.md](c3-ct-validation-plan.md) |
+| Review the closed C3 CT validation plan | [c3-ct-validation-plan.md](c3-ct-validation-plan.md) |
 | Use the maintainer loop contract | [maintainer-loop-runbook.md](maintainer-loop-runbook.md) |
 | Cut and verify a release | [release-process.md](release-process.md) |
 
@@ -72,6 +72,8 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | Topic | Read |
 |---|---|
 | Related work and positioning | [related-work.md](related-work.md) |
+| External write-up readiness plan | [external-writeup-plan.md](external-writeup-plan.md) |
+| Paper claim map | [paper-claim-map.md](paper-claim-map.md) |
 | Paper outline | [paper-outline.md](paper-outline.md) |
 | Paper draft | [paper-draft.md](paper-draft.md) |
 | Bayesian CPT discipline | [bayesian-cpt-discipline.md](bayesian-cpt-discipline.md) |
