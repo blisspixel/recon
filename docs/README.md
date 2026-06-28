@@ -77,6 +77,7 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | Paper claim map | [paper-claim-map.md](paper-claim-map.md) |
 | Paper figure package | [paper-figures.md](paper-figures.md) |
 | Public label snapshot and public-list sampling decision | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) |
+| M365 tenancy corroboration decision | [m365-tenancy-decision.md](m365-tenancy-decision.md) |
 | Paper outline | [paper-outline.md](paper-outline.md) |
 | Paper draft | [paper-draft.md](paper-draft.md) |
 | Bayesian CPT discipline | [bayesian-cpt-discipline.md](bayesian-cpt-discipline.md) |

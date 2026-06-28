@@ -224,10 +224,11 @@ The paper package is now focused on publication boundaries: the
 [public label snapshot decision](docs/public-label-snapshot-decision.md) keeps
 public-list numbers as robustness checks rather than population rates,
 private-corpus rows stay aggregate-only, and M365 tenancy evidence stays named
-as corroboration unless a cleaner independent instrument appears. As validation
-runs teach us more, the system may get conservative refinements, but new runtime
-features stay behind roadmap review and the project invariants. Feedback on
-gaps, wording, and false positives is welcome. The detailed plan lives in
+as corroboration under the
+[M365 tenancy decision](docs/m365-tenancy-decision.md). As validation runs teach
+us more, the system may get conservative refinements, but new runtime features
+stay behind roadmap review and the project invariants. Feedback on gaps,
+wording, and false positives is welcome. The detailed plan lives in
 [docs/external-writeup-plan.md](docs/external-writeup-plan.md).
 
 ## Development

@@ -1,8 +1,9 @@
 """Pin the tenancy-reference-calibration harness's pure logic.
 
-`validation/tenancy_reference_calibration.py` calibrates the M365 tenancy
+`validation/tenancy_reference_calibration.py` compares the M365 tenancy
 posterior (DNS channel only) against the provider's own identity-endpoint
-attestation, and reports a one-sided recall check for GWS. The network
+attestation as channel-split corroboration, and reports a one-sided recall check
+for GWS. The network
 orchestration is maintainer-local; the label derivation, the channel
 split, and the aggregation are pure functions pinned here with synthetic
 SourceResults (no network, no real apex — fictional brands only).

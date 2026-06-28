@@ -24,8 +24,9 @@ never private target rows.
 When a classifier's ground truth is structurally unobservable and the
 subject can choose what to reveal, calibration-against-truth is the wrong
 bar for the claims whose signals an operator can hide (of recon's nine
-nodes, two carry a two-class external reference - the declarative policy
-node and the provider-attested M365 tenancy node - one carries only a
+nodes, one carries a clean two-class external reference - the declarative
+policy node - the M365 tenancy node carries channel-split provider
+corroboration with a shared tenant-provisioning caveat, one carries only a
 one-sided attestation, the Google channel being behavioral with no
 authoritative negative, and the remaining six have none; the engine applies
 the MNAR absence rule to eight, the ninth being the declarative policy
@@ -317,7 +318,7 @@ correlation.md section 4.3.
 | Held-out residual calibration | recompute the policy posterior with the DMARC unit masked as structurally unobserved (`masked_units`, not "absent", since the declarative node would read deletion as disconfirmation) and calibrate the residual against the DMARC label, predictor and label disjoint; the 2026-06-28 refresh shows the residual weak and poorly calibrated (fixed-bin ECE 0.3747, equal-mass ECE 0.3263), so it disconfirms the clean tier-4 claim rather than establishing it | `validation/reference_calibration.py` (both modes print full + held-out blocks); refreshed 2026-06-28 |
 | Held-out residual diagnosis | after DMARC is masked, the remaining signal path is weak by construction: MTA-STS is rare even among enforcing domains, and strict SPF is only a supporting signal | `src/recon_tool/data/bayesian_network.yaml`; `validation/2026-06-28-full-corpus-calibration-refresh.md` |
 | Adversarial add/remove perturbation | evidence removal never raises confidence under the shipped network, while planted evidence can cross decision boundaries in synthetic paired perturbations | `validation/adversarial_properties.py`; public reproduction bundle |
-| Tenancy corroboration (provider endpoints) | the M365 tenancy posterior computed from the DNS channel alone, calibrated against Microsoft's own endpoint attestation (two-class label: tenant ID / namespace positive, documented not-found negative), predictor and label disjoint by observation channel; GWS reported one-sided (recall on attested-federated) because the Google channel has no authoritative negative | `validation/tenancy_reference_calibration.py`; refreshed 2026-06-28: fixed-bin ECE 0.0471, equal-mass ECE 0.0440, agreement 0.889, n=3,296; GWS recall 0.3636 (n=11) |
+| Tenancy corroboration (provider endpoints) | the M365 tenancy posterior computed from the DNS channel alone, compared with Microsoft's own endpoint attestation (two-class label: tenant ID / namespace positive, documented not-found negative), predictor and label split by observation channel but still sharing tenant provisioning as a common cause; GWS reported one-sided (recall on attested-federated) because the Google channel has no authoritative negative | `validation/tenancy_reference_calibration.py`; refreshed 2026-06-28: fixed-bin ECE 0.0471, equal-mass ECE 0.0440, agreement 0.889, n=3,296; GWS recall 0.3636 (n=11) |
 | Conformal coverage on labelable nodes | a distribution-free finite-sample coverage statement beside the Bayesian interval, with the exchangeability boundary stated and demonstrated (a deliberately non-exchangeable split shows the guarantee failing where claimed to fail) | `validation/conformal_coverage.py`; refreshed 2026-06-28: 0.9992 mean coverage at a 0.90 target (n=4,290, 20 splits) |
 | ECE estimator uncertainty | future calibration summaries report equal-mass, mean-confidence ECE with deterministic bootstrap CI beside the legacy fixed-width ECE, so estimator choice is visible and older memo numbers are not silently upgraded | `validation/calibration_estimators.py`; `tests/test_calibration_estimators.py`; shipped for future reruns |
 | Interval coverage (synthetic) | the 80% interval absorbs the elicitation imprecision under the CAL8 band | `validation/interval_coverage.py`; shipped |
@@ -388,9 +389,13 @@ Public-list numbers remain robustness checks rather than population rates unless
 a future data-handling and architecture review approves a new public release
 model.
 
+Resolved for this submission: the M365 independent-instrument decision is closed
+by [m365-tenancy-decision.md](m365-tenancy-decision.md). No passive candidate is
+independent enough to promote the result beyond channel-split corroboration, so
+the paper keeps the result named as corroboration rather than calibration.
+
 | Blocking open item | Minimum closure |
 |---|---|
-| M365 independent-instrument check | Identify a passive instrument without the shared tenant-provisioning common cause, or keep the result named corroboration rather than calibration. |
 | Final claim audit | Re-run claim-map tests, figure drift check, public proof smoke, full public proof, local gate, and release readiness from the final draft commit. |
 
 ## Decisions still open

@@ -68,7 +68,9 @@ data-handling policy:
 
 - DMARC full-posterior consistency and held-out residual aggregates in
   [../validation/2026-06-28-full-corpus-calibration-refresh.md](../validation/2026-06-28-full-corpus-calibration-refresh.md).
-- M365 DNS-only provider corroboration aggregates in the same memo.
+- M365 DNS-only provider corroboration aggregates in the same memo. The
+  [M365 tenancy decision](m365-tenancy-decision.md) explains why this remains
+  corroboration rather than independent calibration.
 - Aggregate-only C3 CT closure in
   [../validation/2026-06-26-c3-ct-partial.md](../validation/2026-06-26-c3-ct-partial.md).
 

@@ -38,10 +38,10 @@ non-suppressible residual (fixed-bin ECE 0.3747, equal-mass ECE 0.3263,
 agreement 0.1896 over 2,906 domains). The
 full-posterior agreement with the DMARC record is near-perfect, but we label it
 consistency, not calibration, because the record is also the node's dominant
-input. The provider-attested tenancy node admits a channel-split check (a
+input. The provider-attested tenancy node admits a channel-split corroboration check (a
 DNS-only predictor against the identity-endpoint label, fixed-bin ECE 0.0471 and
 equal-mass ECE 0.0440 over 3,296 domains) that we report with its
-shared-common-cause caveat, plus a
+shared tenant-provisioning caveat, plus a
 distribution-free conformal coverage statement on the labelable nodes with its
 exchangeability boundary made explicit.
 Every hideable node carries only the structural guarantees, and we say so. We
@@ -310,7 +310,7 @@ controls the evidence.
 
 | Node class | Example nodes | Reference label | Guarantees available |
 |---|---|---|---|
-| Provider-attested | m365_tenant, google_workspace_tenant | the provider's own identity endpoint (authoritative) | calibration and, as a complement, conformal coverage; plus the structural guarantees |
+| Provider-attested | m365_tenant, google_workspace_tenant | the provider's own identity endpoint (authoritative for its own registry) | M365 channel-split corroboration, Google one-sided recall, and conformal coverage only where the label construction is valid; plus the structural guarantees |
 | Public-declaration | email_security_policy_enforcing | the DMARC record (its own definition of enforcing) | full-posterior calibration strong but DMARC-anchored (fixed-bin ECE 0.0761, equal-mass ECE 0.0651; DMARC is also the input, so the bulk is a definitional agreement check), the clean DMARC-disjoint residual disconfirmed (fixed-bin ECE 0.3747, equal-mass ECE 0.3263); conformal coverage measured (0.9992 at a 0.90 target); plus the structural guarantees |
 | Hideable | okta_idp, federated_identity, cdn_fronting, aws_hosting, email_gateway_present | none (absence may be genuine or adversarial) | structural guarantees only: suppression-monotonicity and interval widening (evidence-responsive) |
 
@@ -349,7 +349,7 @@ published (Section 9), only the aggregates here.
 | Layer ablations (synthetic) | the MNAR price and the fusion gain (below) | shipped and run (`validation/layer-ablation.md`) |
 | Held-out residual (the headline) | DMARC unit masked, predictor and label disjoint: fixed-bin ECE 0.3747, equal-mass ECE 0.3263 (CI80 [0.3177, 0.3349]), Brier 0.2448, agreement 0.1896 (n=2,906). The residual (strict SPF plus MTA-STS) does NOT recover enforcing policy once the defining record is removed. A real, falsifiable negative result. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
 | DMARC full posterior | agreement 1.000, fixed-bin ECE 0.0761, equal-mass ECE 0.0651 (CI80 [0.0639, 0.0668]), Brier 0.0077 (n=2,906). Labeled CONSISTENCY, not calibration: the DMARC record is the node's dominant input, so this is a definitional-agreement check. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
-| Tenancy, M365 | DNS-only predictor vs the identity-endpoint label: fixed-bin ECE 0.0471, equal-mass ECE 0.0440 (CI80 [0.0402, 0.0506]), Brier 0.0796, agreement 0.8890 (n=3,296). Caveat: the two channels share the tenant-provisioning common cause, so this controls shared measurement error, not confounding; the base rate is 0.7897, so agreement is only modestly above always-present. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
+| Tenancy, M365 | DNS-only predictor vs the identity-endpoint label: fixed-bin ECE 0.0471, equal-mass ECE 0.0440 (CI80 [0.0402, 0.0506]), Brier 0.0796, agreement 0.8890 (n=3,296). This is channel-split corroboration, not independent calibration: the two channels share the tenant-provisioning common cause, so this controls shared measurement error, not confounding; the base rate is 0.7897, so agreement is only modestly above always-present. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
 | Tenancy, Google Workspace | one-sided recall 0.3636 (n=11), Wilson80 [0.2071, 0.5556]; no authoritative negative on the Google channel. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
 | Conformal coverage | mean coverage 0.9992 vs 0.90 target, mean set size 0.9992, n=4,290, 20 splits. Over-covers on this exchangeable cohort; not claimed for hardened (non-exchangeable) targets. | `validation/2026-06-28-full-corpus-calibration-refresh.md` |
 | Information recovered, posture stratification | public-list cross-check across about 575 public, re-queryable domains in 22 disjoint sectors: overall median entropy reduction 1.967 / 1.932 / 1.846 nats across Lists A/B/C; the sparse tier is the genuine hardening signal (`direct / sparse` medians 0.999 / 0.742 / 0.721), not the edge-proxied flag. CAL7 width diagnostic reproduces across all three lists: grouped nodes are not narrower than ungrouped at matched n_eff near the ceiling. | `validation/public-list-calibration.md` |
@@ -369,8 +369,8 @@ cohort's 0.8352
 always-enforcing baseline). We foreground this rather than the near-perfect
 full-posterior agreement, because the latter scores the node against its own
 dominant input and is a consistency check, not calibration. The tenancy
-channel-split (fixed-bin ECE 0.0471, equal-mass ECE 0.0440) is the strongest
-genuinely-disjoint signal, and even it is confounded by a shared upstream and
+channel-split (fixed-bin ECE 0.0471, equal-mass ECE 0.0440) is useful
+corroboration, but it is still confounded by shared tenant provisioning and
 flattered by a 0.7897 base rate. The honest
 summary: recon currently has no node with a clean, independent, passing
 calibration result, and the experiment built to produce one instead falsifies it.
@@ -379,7 +379,11 @@ out a single-sector artifact: the residual is weak across all 22 disclosed
 private-corpus verticals (pooled held-out fixed-bin ECE 0.3747, equal-mass ECE
 0.3263, agreement 0.1896), while the full-posterior consistency is equally
 uniform (pooled fixed-bin ECE 0.0761, equal-mass ECE 0.0651), which is
-exactly what a definitional-agreement check looks like when read honestly.
+exactly what a definitional-agreement check looks like when read honestly. The
+M365 tenancy decision is closed for this submission in
+[m365-tenancy-decision.md](m365-tenancy-decision.md): no passive candidate is
+independent enough to promote the DNS-only comparison beyond corroboration, so
+the paper keeps the stronger calibration claim unmade.
 
 The collapse is also explainable from the remaining signal strengths. Once the
 DMARC policy group is masked, the residual has only strict SPF and MTA-STS
@@ -534,7 +538,8 @@ passive observer can and cannot promise.
 ## Open items before submission
 
 Done (refreshed 2026-06-28, aggregates in Section 6): the held-out residual, the
-DMARC full-posterior consistency check, the M365 and Google tenancy calibrations,
+DMARC full-posterior consistency check, the M365 corroboration and Google
+one-sided tenancy check,
 the conformal coverage pass, and equal-mass mean-confidence ECE with
 deterministic bootstrap CI. Done in this draft pass: the residual collapse is now
 diagnosed from
@@ -550,9 +555,12 @@ now closes the stratified public probability-sampling path for this submission
 by keeping public-list numbers as robustness checks rather than population
 rates.
 
-The remaining blockers are concrete and bounded:
+The M365 independent-instrument decision is closed for this submission:
+[m365-tenancy-decision.md](m365-tenancy-decision.md) records why no passive
+candidate is independent enough to promote the result beyond corroboration.
+
+The remaining blocker is concrete and bounded:
 
 | Blocking open item | Why it matters | Minimum closure before submission |
 |---|---|---|
-| M365 independent-instrument check | The DNS-only predictor and endpoint label are channel-split, but they still share tenant provisioning as a common cause. | Identify a passive instrument with no mail-routing path to the endpoint label, or keep the result named corroboration rather than calibration. |
 | Final claim audit | Any new experiment or wording can move a claim between support tiers. | Re-run claim-map tests, figure drift check, public proof smoke, full public proof, local gate, and release readiness from the final draft commit. |

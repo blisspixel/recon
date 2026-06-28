@@ -30,6 +30,21 @@ def test_public_label_snapshot_decision_is_linked_from_research_docs() -> None:
         assert "public-label-snapshot-decision.md" in path.read_text(encoding="utf-8")
 
 
+def test_m365_tenancy_decision_is_linked_from_research_docs() -> None:
+    for path in (
+        ROOT / "README.md",
+        ROOT / "docs" / "README.md",
+        ROOT / "docs" / "artifact-review.md",
+        ROOT / "docs" / "external-writeup-plan.md",
+        ROOT / "docs" / "paper-draft.md",
+        ROOT / "docs" / "paper-claim-map.md",
+        ROOT / "docs" / "paper-outline.md",
+        ROOT / "docs" / "roadmap.md",
+        ROOT / "docs" / "statistical-assurance.md",
+    ):
+        assert "m365-tenancy-decision.md" in path.read_text(encoding="utf-8")
+
+
 def test_artifact_review_guide_names_required_public_commands() -> None:
     text = GUIDE.read_text(encoding="utf-8")
 

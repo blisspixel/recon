@@ -72,14 +72,17 @@ the interesting ones.
 
 What recon can take, on the nodes where a label exists: split conformal
 is adoptable as a complementary, distribution-free coverage statement for
-any node that has an external reference. That is the email-policy node
-(the DMARC record is its own reference, per the existing reference
-calibration) and the M365 tenancy node (Microsoft's identity endpoints
-are an authoritative two-class attestation; the Google channel turned out
-one-sided on source review - federated redirects only, no managed
-detection, no authoritative negative - so `google_workspace_tenant`
-carries a recall check, not a label, see correlation.md 4.3). For the
-labelable nodes recon can report a conformal prediction
+any node that has an external reference. That is cleanest for the email-policy
+node (the DMARC record is its own reference, per the existing reference
+calibration). The M365 tenancy node has Microsoft's identity endpoints as a
+two-class provider attestation, but the paper treats that result as
+channel-split corroboration rather than independent calibration because the
+DNS predictor and provider label still share tenant provisioning as a common
+cause ([m365-tenancy-decision.md](m365-tenancy-decision.md)). The Google channel
+turned out one-sided on source review - federated redirects only, no managed
+detection, no authoritative negative - so `google_workspace_tenant` carries a
+recall check, not a label, see correlation.md 4.3. For the labelable nodes recon
+can report a conformal prediction
 set beside the Bayesian credible interval: two guarantees of different
 kinds, one subjective-Bayesian and one frequentist-distribution-free,
 with an explicit note that the conformal guarantee is conditional on

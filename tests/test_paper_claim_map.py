@@ -118,7 +118,8 @@ def test_paper_open_items_are_actionable_submission_blockers() -> None:
         "Minimum closure",
         "public probability-sampling path is",
         "Public-list numbers remain robustness checks",
-        "M365 independent-instrument check",
+        "M365 independent-instrument decision is closed",
+        "m365-tenancy-decision.md",
         "Final claim audit",
         "figure drift check",
         "full public proof",
@@ -131,6 +132,8 @@ def test_paper_open_items_are_actionable_submission_blockers() -> None:
         "mark unresolved empirical cells as pending",
         "use the committed figure package during the final writing pass",
         "Keep the posture-stratified and per-vertical claim-map rows synchronized",
+        "| M365 independent-instrument check |",
+        "M365 and Google tenancy calibrations",
     ):
         assert vague not in combined
 

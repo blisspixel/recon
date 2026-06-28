@@ -95,10 +95,10 @@ requirements:
 - Private corpus calibration remains maintainer-local. Public artifacts may
   include aggregate counts, rates, intervals, and suppressed-cell statements
   only.
-- The remaining submission blockers are the M365 independent-instrument
-  decision and the final claim audit. If no passive independent instrument is
-  identified, the M365 result stays named as corroboration rather than
-  calibration.
+- The M365 independent-instrument decision is closed for this submission:
+  [m365-tenancy-decision.md](m365-tenancy-decision.md) records why no passive
+  instrument is independent enough to promote the result beyond channel-split
+  corroboration. The remaining submission blocker is the final claim audit.
 
 ## What Is Next And Why
 
@@ -166,7 +166,11 @@ Reasoning:
    and keep public-list numbers as robustness checks rather than population
    rates, unless a separate data-handling and architecture review approves a
    new release model.
-10. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
+10. **M365 decision.** Keep [m365-tenancy-decision.md](m365-tenancy-decision.md)
+   linked from the paper package and keep the tenancy result named as
+   corroboration unless a new architecture review approves a stronger
+   instrument.
+11. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
    remote release readiness after push.
 
 ## Acceptance Criteria
@@ -190,7 +194,8 @@ Reasoning:
   promise a frozen real-apex list.
 - Public-list numbers are framed as robustness checks rather than population
   rates.
-- M365 tenancy evidence is framed as corroboration unless a passive independent
-  instrument without the shared tenant-provisioning cause is found.
+- M365 tenancy evidence is framed as corroboration, and
+  [m365-tenancy-decision.md](m365-tenancy-decision.md) explains why no passive
+  independent instrument is adopted for this submission.
 - No runtime surface changes.
 - Local gate passes, with coverage above the configured floor.

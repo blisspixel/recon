@@ -31,31 +31,46 @@ REQUIRED_BOUNDARIES: tuple[tuple[str, str], ...] = (
     ("claim-map", "not ground-truth frequentist coverage"),
     ("claim-map", "robustness checks rather than population rates"),
     ("claim-map", "Do not state attacker prevalence, exploitability, or real-world false-positive rate"),
+    ("claim-map", "Do not state independent calibration"),
     ("artifact-review", "Private-corpus rows are aggregate evidence"),
     ("artifact-review", "robustness checks rather than population rates"),
+    ("artifact-review", "corroboration rather than independent calibration"),
     ("external-plan", "adversarial-perturbation-paper-20260628"),
     ("external-plan", "public-list numbers as robustness checks rather than population rates"),
+    ("external-plan", "M365 independent-instrument decision is closed"),
     ("roadmap", "Public-list numbers remain robustness checks rather than"),
+    ("m365-decision", "Do not promote the M365 tenancy result to an independent calibration claim"),
+    ("m365-decision", "No open-item table lists the M365 independent-instrument check"),
     ("data-policy", "Public-list checks may serve as robustness checks"),
 )
 
 LATEST_PUBLIC_PROOF_MEMO = "2026-06-28-adversarial-perturbation-paper.md"
+
+FORBIDDEN_M365_WORDING: tuple[tuple[str, str], ...] = (
+    ("draft", "M365 and Google tenancy calibrations"),
+    ("draft", "strongest genuinely-disjoint signal"),
+    ("outline", "calibrated against Microsoft's own endpoint attestation"),
+)
 
 
 def _read(root: Path, relative: str) -> str:
     return (root / relative).read_text(encoding="utf-8")
 
 
-def collect_issues(root: Path = ROOT) -> list[str]:
-    docs = {
+def _load_docs(root: Path) -> dict[str, str]:
+    return {
         "draft": _read(root, "docs/paper-draft.md"),
         "outline": _read(root, "docs/paper-outline.md"),
         "claim-map": _read(root, "docs/paper-claim-map.md"),
         "artifact-review": _read(root, "docs/artifact-review.md"),
         "external-plan": _read(root, "docs/external-writeup-plan.md"),
         "roadmap": _read(root, "docs/roadmap.md"),
+        "m365-decision": _read(root, "docs/m365-tenancy-decision.md"),
         "data-policy": _read(root, "docs/data-handling-policy.md"),
     }
+
+
+def _section_issues(docs: dict[str, str]) -> list[str]:
     issues: list[str] = []
 
     for row_label, claim_label in SECTION6_ROWS:
@@ -63,14 +78,32 @@ def collect_issues(root: Path = ROOT) -> list[str]:
             issues.append(f"missing paper evaluation row: {row_label}")
         if claim_label not in docs["claim-map"]:
             issues.append(f"missing claim-map support row: {claim_label}")
+    return issues
+
+
+def _boundary_issues(docs: dict[str, str]) -> list[str]:
+    issues: list[str] = []
 
     for doc_name, phrase in REQUIRED_BOUNDARIES:
         if phrase not in docs[doc_name]:
             issues.append(f"{doc_name} missing required boundary phrase: {phrase}")
 
+    for doc_name, phrase in FORBIDDEN_M365_WORDING:
+        if phrase in docs[doc_name]:
+            issues.append(f"{doc_name} contains forbidden M365 calibration wording: {phrase}")
+    return issues
+
+
+def _latest_proof_issues(docs: dict[str, str]) -> list[str]:
+    issues: list[str] = []
     for doc_name in ("claim-map", "artifact-review", "external-plan"):
         if LATEST_PUBLIC_PROOF_MEMO not in docs[doc_name]:
             issues.append(f"{doc_name} does not link latest public proof memo")
+    return issues
+
+
+def _submission_gate_issues(docs: dict[str, str]) -> list[str]:
+    issues: list[str] = []
 
     if (
         "Requires further evidence" in docs["claim-map"]
@@ -87,6 +120,20 @@ def collect_issues(root: Path = ROOT) -> list[str]:
     ):
         issues.append("draft names the M365 instrument blocker without the corroboration boundary")
 
+    for doc_name in ("draft", "outline"):
+        if "Blocking open item" in docs[doc_name] and "M365 independent-instrument check" in docs[doc_name]:
+            issues.append(f"{doc_name} still lists the M365 instrument decision as an open blocker")
+
+    return issues
+
+
+def collect_issues(root: Path = ROOT) -> list[str]:
+    docs = _load_docs(root)
+    issues: list[str] = []
+    issues.extend(_section_issues(docs))
+    issues.extend(_boundary_issues(docs))
+    issues.extend(_latest_proof_issues(docs))
+    issues.extend(_submission_gate_issues(docs))
     return issues
 
 

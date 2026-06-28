@@ -266,8 +266,8 @@ Reference-anchored / network (maintainer-local, aggregates only):
   `--stratify-dir` for per-vertical cells. Memo:
   `reference-calibration.md`.
 - `tenancy_reference_calibration.py`: the M365 tenancy posterior (DNS
-  channel only) against Microsoft's endpoint attestation; GWS reported
-  one-sided (the channel has no authoritative negative).
+  channel only) compared with Microsoft's endpoint attestation as corroboration;
+  GWS reported one-sided (the channel has no authoritative negative).
 - `conformal_coverage.py`: distribution-free split-conformal coverage on
   the labelable nodes, with a deliberate falsifiability split showing the
   exchangeability boundary.

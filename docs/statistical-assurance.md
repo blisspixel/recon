@@ -88,15 +88,18 @@ operator-controlled to provider-attested ([correlation.md](correlation.md)
 section 4.3, the operator/provider hideability spectrum), and tier 4 is reachable
 exactly where the top of that spectrum reaches:
 
-- **An external attestor exists (tier 4 reachable).** Two kinds. A *public
-  declaration*: the email policy's DMARC record is its own ground truth (an
-  enforcing `p=reject` is a fact anyone can read, not an inference; CAL14 made the
-  node `declarative`). And *provider attestation*: whether a domain is a
-  Microsoft 365 tenant is answered by Microsoft's own unauthenticated identity
-  endpoints, keyed on the domain, in both directions (a resolved tenant ID or
-  Managed/Federated namespace attests presence; the documented tenant-not-found
-  response attests absence), which the operator does not control and cannot
-  suppress without actually leaving the tenant. For the
+- **An external attestor exists (tier 4 reachable only when the reference is
+  independent enough for the claim).** Two kinds. A *public declaration*: the
+  email policy's DMARC record is its own ground truth (an enforcing `p=reject` is
+  a fact anyone can read, not an inference; CAL14 made the node `declarative`).
+  And *provider attestation*: whether a domain is a Microsoft 365 tenant is
+  answered by Microsoft's own unauthenticated identity endpoints, keyed on the
+  domain, in both directions (a resolved tenant ID or Managed/Federated namespace
+  attests presence; the documented tenant-not-found response attests absence).
+  That provider channel is useful, but it still shares tenant provisioning with
+  the DNS footprints used as the predictor, so
+  [m365-tenancy-decision.md](m365-tenancy-decision.md) keeps the result named
+  corroboration rather than independent calibration. For the
   policy node the calibration has run at full corpus (n=2,906 with a published
   DMARC policy, 2026-06 refresh): the full posterior is strongly calibrated
   against the DMARC record (fixed-bin ECE 0.0761, equal-mass ECE 0.0651, stable
@@ -110,8 +113,8 @@ exactly where the top of that spectrum reaches:
   `validation/2026-06-28-full-corpus-calibration-refresh.md`). For
   `m365_tenant` the channel-split corroboration run also landed (n=3,296, the
   DNS-driven posterior against the provider endpoint attestation): fixed-bin ECE
-  0.0471, equal-mass ECE 0.0440, agreement 0.889, a reached result rather than
-  merely reachable
+  0.0471, equal-mass ECE 0.0440, agreement 0.889, useful corroboration rather
+  than clean independent calibration
   (`validation/tenancy_reference_calibration.py`). The
   Google channel is one-sided (it attests only observed federated routing,
   never managed tenancy, and has no authoritative negative; correlation.md

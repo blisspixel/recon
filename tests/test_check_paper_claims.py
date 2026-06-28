@@ -17,6 +17,7 @@ def _copy_paper_docs(dst: Path) -> None:
         "artifact-review.md",
         "external-writeup-plan.md",
         "roadmap.md",
+        "m365-tenancy-decision.md",
         "data-handling-policy.md",
     ):
         shutil.copyfile(ROOT / "docs" / name, dst / "docs" / name)
@@ -49,3 +50,32 @@ def test_paper_claim_audit_rejects_missing_claim_map_row(tmp_path: Path) -> None
     issues = collect_issues(tmp_path)
 
     assert any("Planted evidence can move posteriors" in issue for issue in issues)
+
+
+def test_paper_claim_audit_rejects_m365_calibration_drift(tmp_path: Path) -> None:
+    _copy_paper_docs(tmp_path)
+    draft = tmp_path / "docs" / "paper-draft.md"
+    text = draft.read_text(encoding="utf-8").replace(
+        "M365 corroboration and Google\none-sided tenancy check",
+        "M365 and Google tenancy calibrations",
+    )
+    draft.write_text(text, encoding="utf-8")
+
+    issues = collect_issues(tmp_path)
+
+    assert any("forbidden M365 calibration wording" in issue for issue in issues)
+
+
+def test_paper_claim_audit_rejects_reopened_m365_blocker(tmp_path: Path) -> None:
+    _copy_paper_docs(tmp_path)
+    outline = tmp_path / "docs" / "paper-outline.md"
+    text = outline.read_text(encoding="utf-8").replace(
+        "| Final claim audit | Re-run claim-map tests",
+        "| M365 independent-instrument check | Identify a passive instrument |\n"
+        "| Final claim audit | Re-run claim-map tests",
+    )
+    outline.write_text(text, encoding="utf-8")
+
+    issues = collect_issues(tmp_path)
+
+    assert "outline still lists the M365 instrument decision as an open blocker" in issues
