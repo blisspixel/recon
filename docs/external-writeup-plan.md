@@ -67,6 +67,9 @@ requirements:
 - [artifact-review.md](artifact-review.md) is the reviewer-facing command path
   for the public artifact, including what can and cannot be reproduced outside
   the private corpus.
+- [strategic-gap-audit.md](strategic-gap-audit.md) records the current
+  step-back decision: real remaining gaps are process, archive, independent
+  replication, claim freeze, and data-governance gaps, not runtime expansion.
 - [paper-figures.md](paper-figures.md) defines the aggregate-safe SVG figure
   package and its regeneration command.
 - [public-label-snapshot-decision.md](public-label-snapshot-decision.md)
@@ -200,6 +203,10 @@ Reasoning:
    any paper or package change that could move a claim boundary.
 12. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
    remote release readiness after push.
+13. **Strategic gap audit.** Refresh
+   [strategic-gap-audit.md](strategic-gap-audit.md) when current best practices
+   or the project state change enough to reorder OpenSSF, artifact archive,
+   replication, release, or data-governance work.
 
 ## Acceptance Criteria
 

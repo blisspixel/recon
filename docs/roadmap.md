@@ -12,6 +12,7 @@ This file is the current plan and scope boundary. Shipped work belongs in
 > validation evidence without expanding the runtime surface. The final public
 > claim audit for the current paper package is complete; future wording,
 > package, or validation changes rerun it.
+> The current step-back audit is [strategic-gap-audit.md](strategic-gap-audit.md).
 
 ## What Is Next
 
@@ -29,7 +30,9 @@ The next work is dependency-ordered:
    - Current plan: keep docs readable for casual users, keep dependencies,
      supply-chain checks, and OpenSSF posture current, keep the public
      reproduction path passing, and make small correctness or clarity
-     refinements when validation runs expose them.
+     refinements when validation runs expose them. The current step-back audit
+     in [strategic-gap-audit.md](strategic-gap-audit.md) keeps process,
+     research, release, and data-governance gaps separated from runtime work.
    - Acceptance: every refinement preserves the project invariants, keeps
      examples fictional or synthetic, and publishes only public, synthetic, or
      aggregate-only evidence. Feedback on gaps, wording, and false positives is

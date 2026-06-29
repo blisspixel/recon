@@ -233,7 +233,8 @@ audit refresh for the current draft package is recorded in
 [validation/2026-06-29-final-claim-audit-refresh.md](validation/2026-06-29-final-claim-audit-refresh.md);
 future paper or package changes rerun that gate. Feedback on gaps, wording, and
 false positives is welcome. The detailed plan lives in
-[docs/external-writeup-plan.md](docs/external-writeup-plan.md).
+[docs/external-writeup-plan.md](docs/external-writeup-plan.md), with the
+current step-back audit in [docs/strategic-gap-audit.md](docs/strategic-gap-audit.md).
 
 ## Development
 
