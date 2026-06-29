@@ -18,10 +18,12 @@ Python package built from that source. It includes:
 - the public label snapshot and public-list sampling decision in
   [public-label-snapshot-decision.md](public-label-snapshot-decision.md);
 - citation metadata in [../CITATION.cff](../CITATION.cff);
-- supply-chain and release-integrity notes in [supply-chain.md](supply-chain.md).
+- supply-chain and release-integrity notes in [supply-chain.md](supply-chain.md);
+- archive policy boundaries in [archive-readiness.md](archive-readiness.md).
 
 The artifact does not include private corpora, per-domain outputs, real target
-lists, paid feeds, credentials, or hosted services.
+lists, paid feeds, credentials, hosted services, DOI claims, or archive metadata
+that has not been created yet.
 
 ## Reviewer Commands
 
@@ -123,3 +125,8 @@ Use these labels when writing the artifact appendix:
 - Results validated: only the public proof and synthetic rows qualify for an
   outside reviewer. Private-corpus rows are aggregate evidence, not externally
   reproduced results.
+
+Archive status is separate from those review labels. The current repository is
+archive-ready in the sense described by [archive-readiness.md](archive-readiness.md),
+but it does not claim a DOI or add `.zenodo.json` until a real archive path is
+chosen.

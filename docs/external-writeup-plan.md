@@ -67,6 +67,10 @@ requirements:
 - [artifact-review.md](artifact-review.md) is the reviewer-facing command path
   for the public artifact, including what can and cannot be reproduced outside
   the private corpus.
+- [archive-readiness.md](archive-readiness.md) records the archive and DOI stop
+  rules: keep `CITATION.cff` authoritative, do not add `.zenodo.json` before an
+  archive policy is chosen, and do not claim a DOI before an archived object
+  exists.
 - [strategic-gap-audit.md](strategic-gap-audit.md) records the current
   step-back decision: real remaining gaps are process, archive, independent
   replication, claim freeze, and data-governance gaps, not runtime expansion.
@@ -215,6 +219,10 @@ Reasoning:
    [strategic-gap-audit.md](strategic-gap-audit.md) when current best practices
    or the project state change enough to reorder OpenSSF, artifact archive,
    replication, release, or data-governance work.
+14. **Archive readiness.** Keep [archive-readiness.md](archive-readiness.md)
+   current until the frozen paper package chooses a real DOI path. Do not add
+   `.zenodo.json`, DOI metadata, or archive-badge language ahead of that
+   decision.
 
 ## Acceptance Criteria
 
@@ -236,6 +244,8 @@ Reasoning:
 - The claim map links every Section 6 empirical row to a support tier and source.
 - The figure package regenerates deterministically and contains only
   aggregate-safe source data.
+- The archive readiness checklist documents the DOI and `.zenodo.json` stop
+  rules and does not claim an archive that does not exist.
 - No committed artifact contains private target identifiers or raw private
   result rows.
 - The paper package links the public label snapshot decision and does not

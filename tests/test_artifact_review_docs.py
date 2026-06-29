@@ -83,6 +83,14 @@ def test_artifact_review_guide_names_figure_package() -> None:
     assert "deterministic aggregate-safe generator" in text
 
 
+def test_artifact_review_guide_names_archive_boundary() -> None:
+    text = GUIDE.read_text(encoding="utf-8")
+
+    assert "archive-readiness.md" in text
+    assert "does not claim a DOI" in text
+    assert ".zenodo.json" in text
+
+
 def test_external_writeup_plan_names_latest_full_proof() -> None:
     text = (ROOT / "docs" / "external-writeup-plan.md").read_text(encoding="utf-8")
 

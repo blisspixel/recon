@@ -32,7 +32,8 @@ The next work is dependency-ordered:
      reproduction path passing, and make small correctness or clarity
      refinements when validation runs expose them. The current step-back audit
      in [strategic-gap-audit.md](strategic-gap-audit.md) keeps process,
-     research, release, and data-governance gaps separated from runtime work.
+     research, release, archive, and data-governance gaps separated from
+     runtime work.
    - Acceptance: every refinement preserves the project invariants, keeps
      examples fictional or synthetic, and publishes only public, synthetic, or
      aggregate-only evidence. Feedback on gaps, wording, and false positives is
@@ -93,7 +94,8 @@ The next work is dependency-ordered:
      as corroboration rather than calibration,
      [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md)
      records the current final public claim audit refresh, and release
-     readiness now guards citation metadata.
+     readiness now guards citation metadata. The archive and DOI stop rules are
+     documented in [archive-readiness.md](archive-readiness.md).
    - Acceptance: cite only public or synthetic artifacts and aggregate-only
    validation memos. Public-list numbers remain robustness checks rather than
    population rates. M365 tenancy evidence stays named as corroboration for

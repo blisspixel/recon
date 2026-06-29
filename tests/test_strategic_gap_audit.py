@@ -41,6 +41,7 @@ def test_strategic_gap_audit_names_real_remaining_gaps_without_fake_progress() -
         "OpenSSF Best Practices Badge",
         "Reviewed PR signal",
         "Artifact archive and DOI",
+        "archive-readiness.md",
         "Independent public replication",
         "Pre-submission claim freeze",
         "remote release readiness now verifies Scorecard API freshness plus PyPI and GitHub provenance",
@@ -80,5 +81,8 @@ def test_strategic_gap_audit_cites_current_external_standards() -> None:
         "https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds",
         "https://docs.pypi.org/trusted-publishers/",
         "https://docs.pypi.org/attestations/",
+        "https://help.zenodo.org/docs/github/describe-software/citation-file/",
+        "https://help.zenodo.org/docs/github/describe-software/zenodo-json/",
+        "https://arxiv.org/abs/2605.06508",
     ):
         assert url in text
