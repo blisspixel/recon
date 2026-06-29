@@ -67,6 +67,10 @@ requirements:
 - [artifact-review.md](artifact-review.md) is the reviewer-facing command path
   for the public artifact, including what can and cannot be reproduced outside
   the private corpus.
+- [submission-freeze-checklist.md](submission-freeze-checklist.md) records the
+  final paper and artifact freeze gate, including local commands, stop rules,
+  remote release readiness, and the no-placeholder archive, badge, and
+  replication boundaries.
 - [archive-readiness.md](archive-readiness.md) records the archive and DOI stop
   rules: keep `CITATION.cff` authoritative, do not add `.zenodo.json` before an
   archive policy is chosen, and do not claim a DOI before an archived object
@@ -213,9 +217,11 @@ Reasoning:
    linked from the paper package and keep the tenancy result named as
    corroboration unless a new architecture review approves a stronger
    instrument.
-11. **Final claim audit.** Re-run claim-map tests, figure drift check, public
-   proof smoke, full public proof, the local gate, and release readiness after
-   any paper or package change that could move a claim boundary.
+11. **Submission freeze.** Use
+   [submission-freeze-checklist.md](submission-freeze-checklist.md) before any
+   external submission package. Re-run claim-map tests, figure drift check,
+   public proof smoke, full public proof, the local gate, and release readiness
+   after any paper or package change that could move a claim boundary.
 12. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
    `scripts/release_readiness.py --remote` after push or publication.
 13. **Strategic gap audit.** Refresh
@@ -248,6 +254,9 @@ Reasoning:
   current draft package.
 - The claim audit fails if any current-facing documentation surface drops the
   latest public proof memo pointer.
+- The submission freeze checklist links the latest public proof memo, names the
+  required local and remote gates, and does not claim a submission, DOI archive,
+  OpenSSF badge, or outside replication before the real external event exists.
 - The claim map links every Section 6 empirical row to a support tier and source.
 - The figure package regenerates deterministically and contains only
   aggregate-safe source data.

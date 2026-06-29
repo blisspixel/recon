@@ -76,6 +76,7 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | Related work and positioning | [related-work.md](related-work.md) |
 | Strategic gap audit | [strategic-gap-audit.md](strategic-gap-audit.md) |
 | Artifact review guide | [artifact-review.md](artifact-review.md) |
+| Submission freeze checklist | [submission-freeze-checklist.md](submission-freeze-checklist.md) |
 | Archive readiness checklist | [archive-readiness.md](archive-readiness.md) |
 | Outside public replication runbook | [replication-runbook.md](replication-runbook.md) |
 | External write-up readiness plan and gates | [external-writeup-plan.md](external-writeup-plan.md) |

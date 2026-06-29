@@ -19,6 +19,8 @@ Python package built from that source. It includes:
   [public-label-snapshot-decision.md](public-label-snapshot-decision.md);
 - citation metadata in [../CITATION.cff](../CITATION.cff);
 - supply-chain and release-integrity notes in [supply-chain.md](supply-chain.md);
+- final submission-freeze commands and stop rules in
+  [submission-freeze-checklist.md](submission-freeze-checklist.md);
 - archive policy boundaries in [archive-readiness.md](archive-readiness.md);
 - outside public-artifact replication instructions in
   [replication-runbook.md](replication-runbook.md).
@@ -137,3 +139,8 @@ Outside replication status is also separate. Use
 [replication-runbook.md](replication-runbook.md) to request a clean-machine
 public command rerun, and record only aggregate outcome notes unless a separate
 data-handling review approves a stronger release model.
+
+Before any external submission package, use
+[submission-freeze-checklist.md](submission-freeze-checklist.md) to rerun the
+claim audit, public proof bundle, figure drift check, local gate, and release
+readiness without adding placeholder archive, badge, or replication claims.

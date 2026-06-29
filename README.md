@@ -210,6 +210,8 @@ before committing any validation artifact.
   boundaries.
 - [docs/external-writeup-plan.md](docs/external-writeup-plan.md): active
   maintainer plan for external write-up readiness.
+- [docs/submission-freeze-checklist.md](docs/submission-freeze-checklist.md):
+  final paper and artifact freeze gate before any external submission package.
 - [docs/c3-ct-validation-plan.md](docs/c3-ct-validation-plan.md): closed
   certificate-transparency validation plan.
 - [CHANGELOG.md](CHANGELOG.md): shipped changes.
@@ -231,8 +233,9 @@ us more, the system may get conservative refinements, but new runtime features
 stay behind roadmap review and the project invariants. The final public claim
 audit refresh for the current draft package is recorded in
 [validation/2026-06-29-scorecard-gate-claim-audit.md](validation/2026-06-29-scorecard-gate-claim-audit.md);
-future paper or package changes rerun that gate. Feedback on gaps, wording, and
-false positives is welcome. The detailed plan lives in
+future paper or package changes rerun that gate through the
+[submission freeze checklist](docs/submission-freeze-checklist.md). Feedback on
+gaps, wording, and false positives is welcome. The detailed plan lives in
 [docs/external-writeup-plan.md](docs/external-writeup-plan.md), with the
 current step-back audit in [docs/strategic-gap-audit.md](docs/strategic-gap-audit.md).
 

@@ -7,6 +7,8 @@ CLI, JSON schema, MCP server, validation guards, generated-artifact guards, and
 release path are shipped. Current work is hardening, documentation clarity,
 validation evidence, and external write-up readiness. The current strategic
 gap audit is [docs/strategic-gap-audit.md](docs/strategic-gap-audit.md).
+The final submission gate is
+[docs/submission-freeze-checklist.md](docs/submission-freeze-checklist.md).
 
 The final public claim audit refresh for the current paper package is recorded
 in

@@ -327,6 +327,10 @@ as `2026-06-29-scorecard-gate-claim-audit.md`. It records the passing smoke
 profile, full paper profile, claim-map audit, release-readiness Scorecard API
 gate, figure drift check, local gate, and release readiness checks without
 committing private corpora or local run artifacts.
+Before external submission packaging, follow
+[docs/submission-freeze-checklist.md](../docs/submission-freeze-checklist.md)
+to rerun the public proof commands and release gates while preserving the same
+private-data and claim-boundary rules.
 
 ## The fingerprint catalog audit
 

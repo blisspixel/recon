@@ -94,8 +94,10 @@ The next work is dependency-ordered:
      as corroboration rather than calibration,
      [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md)
      records the current final public claim audit refresh, and release
-     readiness now guards citation metadata. The archive and DOI stop rules are
-     documented in [archive-readiness.md](archive-readiness.md), and the
+     readiness now guards citation metadata. The final submission gate is
+     documented in [submission-freeze-checklist.md](submission-freeze-checklist.md).
+     The archive and DOI stop rules are documented in
+     [archive-readiness.md](archive-readiness.md), and the
      outside public-artifact rerun path is documented in
      [replication-runbook.md](replication-runbook.md).
    - Acceptance: cite only public or synthetic artifacts and aggregate-only

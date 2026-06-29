@@ -19,6 +19,7 @@ def _copy_paper_docs(dst: Path) -> None:
         "paper-outline.md",
         "paper-claim-map.md",
         "artifact-review.md",
+        "submission-freeze-checklist.md",
         "archive-readiness.md",
         "replication-runbook.md",
         "external-writeup-plan.md",
