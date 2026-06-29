@@ -43,6 +43,7 @@ def test_strategic_gap_audit_names_real_remaining_gaps_without_fake_progress() -
         "Artifact archive and DOI",
         "archive-readiness.md",
         "Independent public replication",
+        "replication-runbook.md",
         "Pre-submission claim freeze",
         "remote release readiness now verifies Scorecard API freshness plus PyPI and GitHub provenance",
         "Future dataset release model",

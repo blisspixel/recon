@@ -71,6 +71,9 @@ requirements:
   rules: keep `CITATION.cff` authoritative, do not add `.zenodo.json` before an
   archive policy is chosen, and do not claim a DOI before an archived object
   exists.
+- [replication-runbook.md](replication-runbook.md) records how to ask an
+  outside reviewer to rerun the public artifact without sending private data or
+  claiming private-corpus result validation.
 - [strategic-gap-audit.md](strategic-gap-audit.md) records the current
   step-back decision: real remaining gaps are process, archive, independent
   replication, claim freeze, and data-governance gaps, not runtime expansion.
@@ -223,6 +226,10 @@ Reasoning:
    current until the frozen paper package chooses a real DOI path. Do not add
    `.zenodo.json`, DOI metadata, or archive-badge language ahead of that
    decision.
+15. **Outside public replication.** Use
+   [replication-runbook.md](replication-runbook.md) for a clean-machine rerun
+   request. Record only aggregate command outcomes unless a separate
+   data-handling and architecture review approves more.
 
 ## Acceptance Criteria
 
@@ -246,6 +253,9 @@ Reasoning:
   aggregate-safe source data.
 - The archive readiness checklist documents the DOI and `.zenodo.json` stop
   rules and does not claim an archive that does not exist.
+- The public replication runbook documents clean-machine reviewer commands and
+  safe aggregate outcome notes without claiming outside validation before it
+  happens.
 - No committed artifact contains private target identifiers or raw private
   result rows.
 - The paper package links the public label snapshot decision and does not

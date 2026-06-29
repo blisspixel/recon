@@ -19,7 +19,9 @@ Python package built from that source. It includes:
   [public-label-snapshot-decision.md](public-label-snapshot-decision.md);
 - citation metadata in [../CITATION.cff](../CITATION.cff);
 - supply-chain and release-integrity notes in [supply-chain.md](supply-chain.md);
-- archive policy boundaries in [archive-readiness.md](archive-readiness.md).
+- archive policy boundaries in [archive-readiness.md](archive-readiness.md);
+- outside public-artifact replication instructions in
+  [replication-runbook.md](replication-runbook.md).
 
 The artifact does not include private corpora, per-domain outputs, real target
 lists, paid feeds, credentials, hosted services, DOI claims, or archive metadata
@@ -130,3 +132,8 @@ Archive status is separate from those review labels. The current repository is
 archive-ready in the sense described by [archive-readiness.md](archive-readiness.md),
 but it does not claim a DOI or add `.zenodo.json` until a real archive path is
 chosen.
+
+Outside replication status is also separate. Use
+[replication-runbook.md](replication-runbook.md) to request a clean-machine
+public command rerun, and record only aggregate outcome notes unless a separate
+data-handling review approves a stronger release model.

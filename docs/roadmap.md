@@ -95,7 +95,9 @@ The next work is dependency-ordered:
      [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md)
      records the current final public claim audit refresh, and release
      readiness now guards citation metadata. The archive and DOI stop rules are
-     documented in [archive-readiness.md](archive-readiness.md).
+     documented in [archive-readiness.md](archive-readiness.md), and the
+     outside public-artifact rerun path is documented in
+     [replication-runbook.md](replication-runbook.md).
    - Acceptance: cite only public or synthetic artifacts and aggregate-only
    validation memos. Public-list numbers remain robustness checks rather than
    population rates. M365 tenancy evidence stays named as corroboration for

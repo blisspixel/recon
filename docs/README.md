@@ -76,6 +76,7 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | Strategic gap audit | [strategic-gap-audit.md](strategic-gap-audit.md) |
 | Artifact review guide | [artifact-review.md](artifact-review.md) |
 | Archive readiness checklist | [archive-readiness.md](archive-readiness.md) |
+| Outside public replication runbook | [replication-runbook.md](replication-runbook.md) |
 | External write-up readiness plan and gates | [external-writeup-plan.md](external-writeup-plan.md) |
 | Paper claim map | [paper-claim-map.md](paper-claim-map.md) |
 | Paper figure package | [paper-figures.md](paper-figures.md) |

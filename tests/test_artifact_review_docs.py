@@ -91,6 +91,14 @@ def test_artifact_review_guide_names_archive_boundary() -> None:
     assert ".zenodo.json" in text
 
 
+def test_artifact_review_guide_names_replication_boundary() -> None:
+    text = GUIDE.read_text(encoding="utf-8")
+
+    assert "replication-runbook.md" in text
+    assert "Outside replication status is also separate" in text
+    assert "aggregate outcome notes" in text
+
+
 def test_external_writeup_plan_names_latest_full_proof() -> None:
     text = (ROOT / "docs" / "external-writeup-plan.md").read_text(encoding="utf-8")
 
