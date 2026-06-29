@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Secrets-scan workflow contract.** Scorecard posture tests now pin the
   gitleaks workflow to full-history checkout, read-only permissions, and
   explicit finding-fail behavior.
+- **Placeholder-marker hygiene.** Source hygiene now rejects common unfinished
+  code markers in runtime, maintainer, validation, and test Python.
 
 ## [2.2.17] - 2026-06-29
 
