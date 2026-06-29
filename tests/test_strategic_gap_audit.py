@@ -80,7 +80,7 @@ def test_strategic_gap_audit_cites_current_external_standards() -> None:
         "https://github.com/ossf/scorecard/blob/main/docs/checks.md",
         "https://www.bestpractices.dev/en/criteria/0",
         "https://slsa.dev/spec/v1.2/",
-        "https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds",
+        "https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations",
         "https://docs.pypi.org/trusted-publishers/",
         "https://docs.pypi.org/attestations/",
         "https://help.zenodo.org/docs/github/describe-software/citation-file/",

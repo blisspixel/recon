@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **MCP security guidance currency.** External write-up control docs now pair
   the MCP security best-practices guidance with the current 2025-11-25
   authorization specification.
+- **Artifact-attestation guidance currency.** External write-up and freeze
+  docs now cite GitHub's current artifact-attestation how-to path.
 
 ## [2.2.17] - 2026-06-29
 

@@ -20,7 +20,7 @@ The freeze gate follows the project-facing parts of these current references:
   <https://www.bestpractices.dev/en/criteria/0>
 - SLSA, GitHub artifact attestations, and PyPI attestations:
   <https://slsa.dev/spec/v1.2/>,
-  <https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds>,
+  <https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations>,
   and <https://docs.pypi.org/attestations/>
 - Zenodo GitHub release metadata guidance:
   <https://help.zenodo.org/docs/github/describe-software/citation-file/> and

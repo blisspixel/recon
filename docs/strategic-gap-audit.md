@@ -29,7 +29,7 @@ before adding surface area.
 - SLSA v1.2 specification:
   <https://slsa.dev/spec/v1.2/>
 - GitHub artifact attestations:
-  <https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds>
+  <https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations>
 - PyPI Trusted Publishing and attestations:
   <https://docs.pypi.org/trusted-publishers/> and
   <https://docs.pypi.org/attestations/>

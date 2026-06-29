@@ -43,7 +43,7 @@ requirements:
   release story. recon can document signed provenance and reproducible builds,
   but should not claim a SLSA level beyond the implemented release controls
   ([SLSA specification](https://slsa.dev/spec/),
-  [GitHub artifact attestations](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds),
+  [GitHub artifact attestations](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations),
   [PyPI attestations](https://docs.pypi.org/attestations/),
   [PEP 740](https://peps.python.org/pep-0740/)).
 - MCP security guidance treats tool descriptions, tool outputs, and connected
