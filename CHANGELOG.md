@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DMARC standards currency.** Comments, validation notes, and DMARC tests now
   reference the current RFC 9989 protocol specification and RFC 9990 aggregate
   reporting split instead of the obsolete RFC 7489 citation.
+- **MCP security guidance currency.** External write-up control docs now pair
+  the MCP security best-practices guidance with the current 2025-11-25
+  authorization specification.
 
 ## [2.2.17] - 2026-06-29
 

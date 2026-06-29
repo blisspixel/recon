@@ -50,7 +50,8 @@ requirements:
   agents as trust boundaries. For recon's paper artifact, that means the MCP
   story stays least-privilege, local-stdio, approval-aware, and clear that
   source-derived content is data, not instructions
-  ([MCP security best practices](https://modelcontextprotocol.io/docs/tutorials/security/security_best_practices)).
+  ([MCP security best practices](https://modelcontextprotocol.io/docs/tutorials/security/security_best_practices),
+  [MCP authorization specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)).
 
 ## Current State
 
