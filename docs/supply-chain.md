@@ -18,7 +18,7 @@ which produces and publishes:
 |---|---|---|
 | **Trusted publishing** | PyPI publishes via GitHub OIDC, no long-lived API token (`pypa/gh-action-pypi-publish`) | The PyPI project page shows the publishing workflow as a trusted publisher |
 | **Build-provenance attestation** | GitHub-native, OIDC-signed (`actions/attest-build-provenance`), linking the wheel and sdist to the workflow run. The signed bundles are also exported to the GitHub Release as `recon-tool-<version>.intoto.jsonl` for offline and Scorecard-compatible inspection | `gh attestation verify <file> --repo blisspixel/recon`; offline consumers can download the `.intoto.jsonl` release asset |
-| **PyPI attestations (PEP 740)** | sigstore-signed attestations generated at publish time (`attestations: true`) and stored on PyPI | Modern installers verify automatically; the attestation is visible on the release's PyPI files |
+| **PyPI attestations (PEP 740)** | sigstore-signed attestations generated at publish time (`attestations: true`) and stored on PyPI | Fetch the file's PyPI provenance and verify it with `pypi-attestations verify pypi --repository https://github.com/blisspixel/recon <wheel-url>` |
 | **Reproducible builds** | `SOURCE_DATE_EPOCH` pinned to the tagged commit's timestamp, so the wheel and sdist are byte-identical to a rebuild from the same source | See the recipe below |
 | **CycloneDX SBOM** | Generated from the hash-pinned runtime lock (`pip-audit --format=cyclonedx-json`) and attached to the GitHub Release | Download `recon-tool-<version>.cdx.json` from the release assets |
 
@@ -48,6 +48,24 @@ sha256sum /tmp/verify/recon_tool-<version>.tar.gz
 
 The hashes match the published wheel and sdist. (Build into a directory outside
 the checkout, as above, so the build output is not itself swept into the sdist.)
+
+## PyPI attestation verification
+
+PyPI exposes attestations through the simple index and Integrity API as
+file-level provenance objects. For a consumer-side check, install the
+`pypi-attestations` CLI, get the released wheel's direct PyPI file URL, and run:
+
+```bash
+pypi-attestations verify pypi \
+  --repository https://github.com/blisspixel/recon \
+  <wheel-url>
+```
+
+That command downloads the wheel and provenance JSON from PyPI, checks that the
+Trusted Publisher identity matches the repository argument, and cryptographically
+verifies the wheel against the included attestations. Do not treat PyPI
+attestations as installer-level enforcement unless the installer being used
+documents that behavior.
 
 ## Supply-chain isolation contract
 

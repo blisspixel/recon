@@ -266,3 +266,17 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
         "remaining Scorecard limits are intentional or process-bound",
     ):
         assert required in text
+
+
+def test_supply_chain_docs_do_not_overclaim_pypi_attestation_consumption() -> None:
+    text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
+
+    for required in (
+        "PyPI exposes attestations through the simple index and Integrity API",
+        "pypi-attestations verify pypi",
+        "Trusted Publisher identity matches the repository argument",
+        "Do not treat PyPI attestations as installer-level enforcement",
+    ):
+        assert required in text
+
+    assert "Modern installers verify automatically" not in text
