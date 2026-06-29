@@ -10,17 +10,23 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def _copy_paper_docs(dst: Path) -> None:
     (dst / "docs").mkdir(parents=True)
+    (dst / "validation").mkdir(parents=True)
+    for name in ("README.md", "ROADMAP.md"):
+        shutil.copyfile(ROOT / name, dst / name)
     for name in (
+        "README.md",
         "paper-draft.md",
         "paper-outline.md",
         "paper-claim-map.md",
         "artifact-review.md",
         "external-writeup-plan.md",
         "roadmap.md",
+        "strategic-gap-audit.md",
         "m365-tenancy-decision.md",
         "data-handling-policy.md",
     ):
         shutil.copyfile(ROOT / "docs" / name, dst / "docs" / name)
+    shutil.copyfile(ROOT / "validation" / "README.md", dst / "validation" / "README.md")
 
 
 def test_paper_claim_audit_passes_current_docs() -> None:
@@ -36,6 +42,17 @@ def test_paper_claim_audit_rejects_missing_latest_public_proof(tmp_path: Path) -
     issues = collect_issues(tmp_path)
 
     assert "external-plan does not link latest public proof memo" in issues
+
+
+def test_paper_claim_audit_rejects_root_docs_without_latest_public_proof(tmp_path: Path) -> None:
+    _copy_paper_docs(tmp_path)
+    readme = tmp_path / "README.md"
+    text = readme.read_text(encoding="utf-8").replace("2026-06-29-scorecard-gate-claim-audit.md", "")
+    readme.write_text(text, encoding="utf-8")
+
+    issues = collect_issues(tmp_path)
+
+    assert "readme-root does not link latest public proof memo" in issues
 
 
 def test_paper_claim_audit_rejects_missing_claim_map_row(tmp_path: Path) -> None:

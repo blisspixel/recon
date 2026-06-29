@@ -231,6 +231,8 @@ Reasoning:
 - The final claim audit memo links the public smoke run, full public proof run,
   claim-map audit, figure drift check, local gate, and release readiness for the
   current draft package.
+- The claim audit fails if any current-facing documentation surface drops the
+  latest public proof memo pointer.
 - The claim map links every Section 6 empirical row to a support tier and source.
 - The figure package regenerates deterministically and contains only
   aggregate-safe source data.

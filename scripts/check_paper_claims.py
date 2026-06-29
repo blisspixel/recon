@@ -47,6 +47,36 @@ REQUIRED_BOUNDARIES: tuple[tuple[str, str], ...] = (
 
 LATEST_PUBLIC_PROOF_MEMO = "2026-06-29-scorecard-gate-claim-audit.md"
 
+DOC_PATHS: dict[str, str] = {
+    "readme-root": "README.md",
+    "roadmap-root": "ROADMAP.md",
+    "docs-index": "docs/README.md",
+    "draft": "docs/paper-draft.md",
+    "outline": "docs/paper-outline.md",
+    "claim-map": "docs/paper-claim-map.md",
+    "artifact-review": "docs/artifact-review.md",
+    "external-plan": "docs/external-writeup-plan.md",
+    "roadmap": "docs/roadmap.md",
+    "m365-decision": "docs/m365-tenancy-decision.md",
+    "data-policy": "docs/data-handling-policy.md",
+    "strategic-gap": "docs/strategic-gap-audit.md",
+    "validation-readme": "validation/README.md",
+}
+
+LATEST_PROOF_DOC_NAMES: tuple[str, ...] = (
+    "readme-root",
+    "roadmap-root",
+    "docs-index",
+    "roadmap",
+    "draft",
+    "outline",
+    "claim-map",
+    "artifact-review",
+    "external-plan",
+    "strategic-gap",
+    "validation-readme",
+)
+
 FORBIDDEN_M365_WORDING: tuple[tuple[str, str], ...] = (
     ("draft", "M365 and Google tenancy calibrations"),
     ("draft", "strongest genuinely-disjoint signal"),
@@ -59,16 +89,7 @@ def _read(root: Path, relative: str) -> str:
 
 
 def _load_docs(root: Path) -> dict[str, str]:
-    return {
-        "draft": _read(root, "docs/paper-draft.md"),
-        "outline": _read(root, "docs/paper-outline.md"),
-        "claim-map": _read(root, "docs/paper-claim-map.md"),
-        "artifact-review": _read(root, "docs/artifact-review.md"),
-        "external-plan": _read(root, "docs/external-writeup-plan.md"),
-        "roadmap": _read(root, "docs/roadmap.md"),
-        "m365-decision": _read(root, "docs/m365-tenancy-decision.md"),
-        "data-policy": _read(root, "docs/data-handling-policy.md"),
-    }
+    return {doc_name: _read(root, relative) for doc_name, relative in DOC_PATHS.items()}
 
 
 def _section_issues(docs: dict[str, str]) -> list[str]:
@@ -97,7 +118,7 @@ def _boundary_issues(docs: dict[str, str]) -> list[str]:
 
 def _latest_proof_issues(docs: dict[str, str]) -> list[str]:
     issues: list[str] = []
-    for doc_name in ("claim-map", "artifact-review", "external-plan"):
+    for doc_name in LATEST_PROOF_DOC_NAMES:
         if LATEST_PUBLIC_PROOF_MEMO not in docs[doc_name]:
             issues.append(f"{doc_name} does not link latest public proof memo")
     return issues
@@ -149,7 +170,7 @@ def main(argv: list[str] | None = None) -> int:
         for issue in issues:
             print(f"  - {issue}")
         return 1
-    print("OK: paper draft, outline, claim map, reviewer guide, and write-up plan are aligned.")
+    print("OK: paper draft, outline, claim map, reviewer guide, write-up plan, and proof pointers are aligned.")
     return 0
 
 
