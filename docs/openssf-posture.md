@@ -15,7 +15,9 @@ while the Best Practices Badge is an account-backed project questionnaire.
 The public API is authoritative for the exact commit behind the badge. Docs-only
 commits can move `main` after a snapshot is written, so this file records the
 reviewed posture and the live API URL rather than treating a commit hash as a
-durable status promise.
+durable status promise. Remote release readiness queries that API for `HEAD`,
+requires the current score floor, and fails if any code-owned control regresses
+below `10`.
 
 The code-owned controls are green: dangerous workflow patterns, dependency
 update automation, token permissions, pinned dependencies, binary artifacts,

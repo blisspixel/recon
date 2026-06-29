@@ -33,10 +33,11 @@ therefore uses these boundaries for the write-up package:
   and cite the artifact without private maintainer context.
 - Published artifact integrity: after `main` and the current version are public,
   `scripts/release_readiness.py --remote` checks that required GitHub Actions
-  runs passed and that PyPI plus the GitHub Release expose the expected wheel,
-  sdist, SBOM, and attestation export. It also verifies PyPI and GitHub
-  provenance for the release wheel and sdist. This is release-state evidence,
-  not empirical result validation.
+  runs passed, the public Scorecard API reports the exact `HEAD` and the
+  expected code-owned controls, and PyPI plus the GitHub Release expose the
+  expected wheel, sdist, SBOM, and attestation export. It also verifies PyPI
+  and GitHub provenance for the release wheel and sdist. This is release-state
+  evidence, not empirical result validation.
 
 The latest public proof gate for the current draft package is
 [2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md).

@@ -111,9 +111,10 @@ The repository also runs supply-chain posture checks outside the release flow:
 - Remote release readiness checks PyPI's latest `recon-tool` version and the
   GitHub Release asset set for the current version, so wheel, sdist, SBOM, and
   attestation drift is caught after publication rather than verified by hand.
-  It also verifies the PyPI wheel and sdist with
-  `pypi-attestations verify pypi`, then downloads the GitHub Release wheel and
-  sdist and runs `gh attestation verify` against both artifacts.
+  It also verifies public Scorecard API freshness for `HEAD`, checks that
+  code-owned Scorecard controls remain green, verifies the PyPI wheel and
+  sdist with `pypi-attestations verify pypi`, then downloads the GitHub Release
+  wheel and sdist and runs `gh attestation verify` against both artifacts.
 - Checkout steps set `persist-credentials: false`, so the workflow token is not
   left in the local Git config after source checkout.
 - Every workflow job has an explicit timeout so CI and release automation fail

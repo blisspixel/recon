@@ -243,6 +243,8 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
         "Score: `7.5`",
         "current `main` after the PyPI provenance gate",
         "live API URL",
+        "Remote release readiness queries that API for `HEAD`",
+        "current score floor",
         "OpenSSF Best Practices Badge is claimed",
         "must not be added as a placeholder",
         "Branch-Protection",
@@ -267,6 +269,8 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
         "code-owned controls green",
         "June 28 review found one code-owned gap",
         "remaining Scorecard limits are intentional or process-bound",
+        "public Scorecard API freshness for `HEAD`",
+        "code-owned Scorecard controls remain green",
         "verifies the PyPI wheel and sdist",
         "runs `gh attestation verify` against both artifacts",
     ):

@@ -34,6 +34,7 @@ def test_claim_map_covers_required_evidence_tiers_and_gates() -> None:
         "scripts/release_readiness.py --allow-dirty",
         "scripts/release_readiness.py --remote",
         "release-state evidence",
+        "public Scorecard API reports the exact `HEAD`",
         "verifies PyPI and GitHub provenance",
         "PyPI and GitHub provenance verification for the published wheel and sdist",
     ):

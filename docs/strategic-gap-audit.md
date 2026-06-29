@@ -42,10 +42,12 @@ before adding surface area.
 - `v2.2.17` is current on GitHub Releases and PyPI.
 - Local release readiness passes for the current main branch.
 - Remote release readiness passes for current `HEAD` and verifies required
-  GitHub Actions checks, PyPI wheel and sdist publication, and GitHub Release
-  wheel, sdist, SBOM, and attestation export assets for `v2.2.17`; it also
-  verifies PyPI and GitHub provenance for the release wheel and sdist.
-- CI, secrets scan, and Scorecard workflows pass on current main.
+  GitHub Actions checks, public Scorecard API freshness and code-owned control
+  scores, PyPI wheel and sdist publication, and GitHub Release wheel, sdist,
+  SBOM, and attestation export assets for `v2.2.17`; it also verifies PyPI and
+  GitHub provenance for the release wheel and sdist.
+- CI, secrets scan, Scorecard workflows, and the public Scorecard API pass on
+  current main.
 - Public proof and final claim-audit refresh are recorded in
   [2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md).
 - `scripts/check_validation_hygiene.py` and release readiness confirm private
@@ -75,7 +77,7 @@ These are not active gaps for the current roadmap:
 | Artifact archive and DOI | External papers are easier to cite and review when the exact artifact is archived. | GitHub release, PyPI release, citation metadata, SBOM, provenance, and reproducible build recipe exist. | Once the paper package freezes, choose a DOI path such as Zenodo or the venue supplement, then add metadata deliberately. | Do not add `.zenodo.json` or DOI language before the archive policy is chosen. |
 | Independent public replication | ACM-style result validation is stronger when someone outside the maintainer path reruns the artifact. | Public smoke and paper profiles are runnable and recorded by the maintainer. | Ask an outside reviewer to run the public commands on a clean machine and record only aggregate outcome notes. | Do not represent private-corpus rows as externally reproduced. |
 | Pre-submission claim freeze | The paper is now the highest-risk source of accidental overclaiming. | Draft, outline, claim map, artifact guide, and final audit are synchronized. | Before submission, rerun the final claim audit and freeze wording against the claim map. | No new empirical language without an explicit support tier. |
-| Consumer provenance recipe | Supply-chain controls are strong, but consumers need a short verification path. | [supply-chain.md](supply-chain.md) documents attestations, SBOM, and reproducible builds; remote release readiness now verifies PyPI and GitHub provenance. | Keep the recipe current at each meaningful release. | Do not claim a SLSA level beyond implemented controls. |
+| Consumer provenance recipe | Supply-chain controls are strong, but consumers need a short verification path. | [supply-chain.md](supply-chain.md) documents attestations, SBOM, and reproducible builds; remote release readiness now verifies Scorecard API freshness plus PyPI and GitHub provenance. | Keep the recipe current at each meaningful release. | Do not claim a SLSA level beyond implemented controls. |
 | Future dataset release model | A public real-apex label set would change the disclosure risk model. | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) defers this for the current submission. | Reopen only with a separate data-handling and architecture review. | Do not commit apex lists, organization names, tenant IDs, per-domain rows, or unsuppressed small strata. |
 
 ## Priority Order

@@ -75,6 +75,7 @@ def test_collect_checks_passes_local_happy_path(tmp_path: Path) -> None:
     assert not release_readiness._has_failure(checks)
     statuses = {check.name: check.status for check in checks}
     assert statuses["remote CI"] == "skip"
+    assert statuses["Scorecard API"] == "skip"
     assert statuses["coverage gates"] == "pass"
     assert statuses["commit hygiene"] == "pass"
 
@@ -273,6 +274,60 @@ def test_remote_workflows_fail_when_pending_or_missing() -> None:
 
     assert "Secrets scan#2: in_progress" in problems
     assert "Scorecard supply-chain security: missing" in problems
+
+
+def _scorecard_payload(sha: str, score: float = 7.5, **check_overrides: int) -> dict[str, object]:
+    checks = [
+        {"name": name, "score": check_overrides.get(name, 10)}
+        for name in release_readiness._REQUIRED_SCORECARD_TENS
+    ]
+    return {"repo": {"commit": sha}, "score": score, "checks": checks}
+
+
+def test_scorecard_api_passes_current_commit_and_code_owned_tens() -> None:
+    sha = "a" * 40
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd == ["git", "rev-parse", "HEAD"]:
+            return _cp(cmd, stdout=f"{sha}\n")
+        if cmd[1] == "-c":
+            assert f"github.com/blisspixel/recon?commit={sha}" in cmd[2]
+            return _cp(cmd, stdout=json.dumps(_scorecard_payload(sha)))
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_scorecard_api(runner)
+
+    assert check.status == "pass"
+    assert sha[:7] in check.detail
+
+
+def test_scorecard_api_fails_on_stale_commit() -> None:
+    sha = "a" * 40
+
+    problem = release_readiness._scorecard_problem(_scorecard_payload("b" * 40), sha)
+
+    assert problem is not None
+    assert "expected" in problem
+
+
+def test_scorecard_api_fails_on_low_score() -> None:
+    sha = "a" * 40
+
+    problem = release_readiness._scorecard_problem(_scorecard_payload(sha, score=7.4), sha)
+
+    assert problem is not None
+    assert "below 7.5" in problem
+
+
+def test_scorecard_api_fails_on_regressed_code_owned_check() -> None:
+    sha = "a" * 40
+
+    problem = release_readiness._scorecard_problem(_scorecard_payload(sha, **{"Pinned-Dependencies": 9}), sha)
+
+    assert problem is not None
+    assert "Pinned-Dependencies=9" in problem
 
 
 def test_pypi_release_passes_when_latest_has_wheel_and_sdist(tmp_path: Path) -> None:

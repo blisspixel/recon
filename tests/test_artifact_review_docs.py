@@ -71,6 +71,7 @@ def test_artifact_review_guide_separates_private_and_public_results() -> None:
     assert "planted evidence can raise posteriors" in text
     assert "Published artifact integrity" in text
     assert "release state, not empirical paper results" in text
+    assert "public Scorecard API state matches `HEAD`" in text
     assert "PyPI plus GitHub provenance verify" in text
 
 

@@ -8,8 +8,8 @@ hygiene.
 
 Use ``--remote`` after pushing when you want the same report to include GitHub
 Actions status for the current commit, PyPI publication state, PyPI provenance
-verification, GitHub Release asset completeness, and GitHub build-provenance
-verification for the current version.
+verification, GitHub Release asset completeness, GitHub build-provenance
+verification for the current version, and public Scorecard API freshness.
 """
 
 from __future__ import annotations
@@ -47,6 +47,21 @@ _EXPECTED_COVERAGE_TARGET = "--cov=src/recon_tool"
 _STALE_COVERAGE_TARGET = "--cov=recon_tool"
 _COVERAGE_FLOOR = "--cov-fail-under=82"
 _REQUIRED_REMOTE_WORKFLOWS = ("CI", "Secrets scan", "Scorecard supply-chain security")
+_MIN_SCORECARD_SCORE = 7.5
+_REQUIRED_SCORECARD_TENS = (
+    "Binary-Artifacts",
+    "Dangerous-Workflow",
+    "Dependency-Update-Tool",
+    "Fuzzing",
+    "License",
+    "Packaging",
+    "Pinned-Dependencies",
+    "SAST",
+    "Security-Policy",
+    "Signed-Releases",
+    "Token-Permissions",
+    "Vulnerabilities",
+)
 _PYPI_PACKAGE = "recon-tool"
 _PYPI_RELEASE_URL = f"https://pypi.org/pypi/{_PYPI_PACKAGE}/json"
 _PYPI_ATTESTATION_REPOSITORY = "https://github.com/blisspixel/recon"
@@ -415,6 +430,69 @@ def _check_remote_workflows(runner: Runner) -> CheckResult:
     return _result("remote CI", "pass", "required workflows completed successfully for HEAD")
 
 
+def _check_scorecard_api(runner: Runner) -> CheckResult:
+    repo_result = _read_github_repo(runner, "Scorecard API")
+    if isinstance(repo_result, CheckResult):
+        return repo_result
+    sha_result = runner(["git", "rev-parse", "HEAD"])
+    if sha_result.returncode != 0:
+        return _result("Scorecard API", "fail", sha_result.stderr.strip() or "could not read HEAD")
+    sha = sha_result.stdout.strip()
+    payload_result = _load_scorecard_payload(runner, repo_result, sha)
+    if isinstance(payload_result, CheckResult):
+        return payload_result
+    problem = _scorecard_problem(payload_result, sha)
+    if problem is not None:
+        return _result("Scorecard API", "fail", problem, "wait for Scorecard API refresh or inspect the Scorecard run")
+    return _result("Scorecard API", "pass", f"scorecard reports {sha[:7]} at score >= {_MIN_SCORECARD_SCORE}")
+
+
+def _load_scorecard_payload(runner: Runner, repo: str, sha: str) -> dict[str, object] | CheckResult:
+    url = f"https://api.securityscorecards.dev/projects/github.com/{repo}?commit={sha}"
+    script = (
+        "import json, urllib.request; "
+        f"data=json.load(urllib.request.urlopen({url!r}, timeout=30)); "
+        "print(json.dumps(data))"
+    )
+    result = runner([sys.executable, "-c", script])
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip() or "could not query Scorecard API"
+        return _result("Scorecard API", "fail", detail)
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        return _result("Scorecard API", "fail", f"could not parse Scorecard JSON: {exc}")
+    if not isinstance(payload, dict):
+        return _result("Scorecard API", "fail", "Scorecard JSON was not an object")
+    return payload
+
+
+def _scorecard_problem(payload: dict[str, object], sha: str) -> str | None:
+    repo = payload.get("repo")
+    reported_commit = repo.get("commit") if isinstance(repo, dict) else None
+    if reported_commit != sha:
+        return f"Scorecard commit is {reported_commit!r}, expected {sha}"
+    score = payload.get("score")
+    if not isinstance(score, int | float):
+        return "Scorecard score is missing or not numeric"
+    if score < _MIN_SCORECARD_SCORE:
+        return f"Scorecard score is {score}, below {_MIN_SCORECARD_SCORE}"
+    checks = payload.get("checks")
+    if not isinstance(checks, list):
+        return "Scorecard checks were not a list"
+    scores: dict[str, object] = {}
+    for check in checks:
+        if isinstance(check, dict) and isinstance(check.get("name"), str):
+            scores[check["name"]] = check.get("score")
+    missing = [name for name in _REQUIRED_SCORECARD_TENS if name not in scores]
+    if missing:
+        return "missing Scorecard check(s): " + ", ".join(missing)
+    weak = [f"{name}={scores[name]!r}" for name in _REQUIRED_SCORECARD_TENS if scores[name] != 10]
+    if weak:
+        return "code-owned Scorecard check(s) regressed: " + ", ".join(weak)
+    return None
+
+
 def _read_github_repo(runner: Runner, check_name: str) -> str | CheckResult:
     origin = runner(["git", "remote", "get-url", "origin"])
     if origin.returncode != 0:
@@ -727,12 +805,14 @@ def collect_checks(
     ]
     if remote:
         checks.append(_check_remote_workflows(actual_runner))
+        checks.append(_check_scorecard_api(actual_runner))
         checks.append(_check_pypi_release(root, actual_runner))
         checks.append(_check_pypi_attestations(root, actual_runner))
         checks.append(_check_github_release(root, actual_runner))
         checks.append(_check_github_attestations(root, actual_runner))
     else:
         checks.append(_result("remote CI", "skip", "not requested; pass --remote after pushing main"))
+        checks.append(_result("Scorecard API", "skip", "not requested; pass --remote after pushing main"))
         checks.append(_result("PyPI release", "skip", "not requested; pass --remote after release publication"))
         checks.append(_result("PyPI attestations", "skip", "not requested; pass --remote after release publication"))
         checks.append(_result("GitHub release", "skip", "not requested; pass --remote after release publication"))

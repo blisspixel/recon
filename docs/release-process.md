@@ -52,11 +52,12 @@ uv run python scripts/release_readiness.py
 ```
 
 After pushing `main`, add the optional remote check. In remote mode the gate
-verifies required GitHub Actions checks for `HEAD`, PyPI's latest
-`recon-tool` release, and the GitHub Release assets for the current version
-(wheel, sdist, SBOM, and attestation export). It also verifies the PyPI wheel
-and sdist with `pypi-attestations verify pypi`, then downloads the GitHub
-Release wheel and sdist and runs `gh attestation verify` against both files:
+verifies required GitHub Actions checks for `HEAD`, public Scorecard API
+freshness and code-owned control scores, PyPI's latest `recon-tool` release,
+and the GitHub Release assets for the current version (wheel, sdist, SBOM, and
+attestation export). It also verifies the PyPI wheel and sdist with
+`pypi-attestations verify pypi`, then downloads the GitHub Release wheel and
+sdist and runs `gh attestation verify` against both files:
 
 ```bash
 uv run python scripts/release_readiness.py --remote
@@ -179,9 +180,9 @@ formula so `brew install` tracks the new version, then copy it to the tap repo:
 - [ ] Confirm the GitHub Release assets include wheel, sdist, SBOM, and
       `recon-tool-<version>.intoto.jsonl`.
 - [ ] Run `uv run python scripts/release_readiness.py --remote` after the
-      formula refresh so CI, PyPI files, PyPI provenance, GitHub Release assets,
-      GitHub provenance attestations, citation metadata, and formula metadata
-      are checked together.
+      formula refresh so CI, public Scorecard API freshness, PyPI files, PyPI
+      provenance, GitHub Release assets, GitHub provenance attestations,
+      citation metadata, and formula metadata are checked together.
 
 The `pipx` / `uv` / `pip` install paths need no per-release action. They
 resolve the latest from PyPI automatically.

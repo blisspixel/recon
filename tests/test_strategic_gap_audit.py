@@ -43,7 +43,7 @@ def test_strategic_gap_audit_names_real_remaining_gaps_without_fake_progress() -
         "Artifact archive and DOI",
         "Independent public replication",
         "Pre-submission claim freeze",
-        "remote release readiness now verifies PyPI and GitHub provenance",
+        "remote release readiness now verifies Scorecard API freshness plus PyPI and GitHub provenance",
         "Future dataset release model",
         "Do not add a placeholder badge",
         "Do not manufacture review history or contributor diversity",
@@ -57,6 +57,8 @@ def test_strategic_gap_audit_preserves_private_data_and_release_boundaries() -> 
     for required in (
         "No private corpus, real target list, per-domain result rows, or tenant IDs are tracked",
         "Remote release readiness passes for current `HEAD`",
+        "public Scorecard API freshness and code-owned control scores",
+        "public Scorecard API pass on current main",
         "GitHub Release wheel, sdist, SBOM, and attestation export assets",
         "verifies PyPI and GitHub provenance for the release wheel and sdist",
         "Documentation and proof-memo refreshes do not require a new package release",
