@@ -7,7 +7,8 @@ private-corpus hygiene, Homebrew formula freshness, and local commit-message
 hygiene.
 
 Use ``--remote`` after pushing when you want the same report to include GitHub
-Actions status for the current commit.
+Actions status for the current commit, PyPI publication state, and GitHub
+Release asset completeness for the current version.
 """
 
 from __future__ import annotations
@@ -44,6 +45,8 @@ _EXPECTED_COVERAGE_TARGET = "--cov=src/recon_tool"
 _STALE_COVERAGE_TARGET = "--cov=recon_tool"
 _COVERAGE_FLOOR = "--cov-fail-under=82"
 _REQUIRED_REMOTE_WORKFLOWS = ("CI", "Secrets scan", "Scorecard supply-chain security")
+_PYPI_PACKAGE = "recon-tool"
+_PYPI_RELEASE_URL = f"https://pypi.org/pypi/{_PYPI_PACKAGE}/json"
 _README_FORBIDDEN_FRAGMENTS = (
     "enterprise use, contact",
     "commercial or\nenterprise use",
@@ -395,16 +398,34 @@ def _repo_name_from_origin(url: str) -> str | None:
 
 
 def _check_remote_workflows(runner: Runner) -> CheckResult:
+    repo_result = _read_github_repo(runner, "remote CI")
+    if isinstance(repo_result, CheckResult):
+        return repo_result
+    repo = repo_result
+    records_result = _load_remote_workflow_records(runner, repo)
+    if isinstance(records_result, CheckResult):
+        return records_result
+    latest_by_workflow = _latest_remote_workflows(records_result)
+    problems = _remote_workflow_problems(latest_by_workflow)
+    if problems:
+        return _result("remote CI", "fail", "; ".join(problems), "wait for GitHub checks or inspect the failing run")
+    return _result("remote CI", "pass", "required workflows completed successfully for HEAD")
+
+
+def _read_github_repo(runner: Runner, check_name: str) -> str | CheckResult:
     origin = runner(["git", "remote", "get-url", "origin"])
     if origin.returncode != 0:
-        return _result("remote CI", "fail", origin.stderr.strip() or "could not read origin URL")
+        return _result(check_name, "fail", origin.stderr.strip() or "could not read origin URL")
     repo = _repo_name_from_origin(origin.stdout)
     if repo is None:
-        return _result("remote CI", "fail", f"unsupported GitHub origin URL: {origin.stdout.strip()}")
+        return _result(check_name, "fail", f"unsupported GitHub origin URL: {origin.stdout.strip()}")
+    return repo
+
+
+def _load_remote_workflow_records(runner: Runner, repo: str) -> list[object] | CheckResult:
     sha_result = runner(["git", "rev-parse", "HEAD"])
     if sha_result.returncode != 0:
         return _result("remote CI", "fail", sha_result.stderr.strip() or "could not read HEAD")
-    sha = sha_result.stdout.strip()
     runs = runner(
         [
             "gh",
@@ -413,7 +434,7 @@ def _check_remote_workflows(runner: Runner) -> CheckResult:
             "--repo",
             repo,
             "--commit",
-            sha,
+            sha_result.stdout.strip(),
             "--limit",
             "30",
             "--json",
@@ -428,6 +449,10 @@ def _check_remote_workflows(runner: Runner) -> CheckResult:
         return _result("remote CI", "fail", f"could not parse gh JSON: {exc}")
     if not isinstance(records, list):
         return _result("remote CI", "fail", "gh JSON was not a list")
+    return records
+
+
+def _latest_remote_workflows(records: list[object]) -> dict[str, dict[str, object]]:
     latest_by_workflow: dict[str, dict[str, object]] = {}
     for record in records:
         if not isinstance(record, dict):
@@ -435,10 +460,7 @@ def _check_remote_workflows(runner: Runner) -> CheckResult:
         workflow = record.get("workflowName") or record.get("name")
         if isinstance(workflow, str) and workflow not in latest_by_workflow:
             latest_by_workflow[workflow] = record
-    problems = _remote_workflow_problems(latest_by_workflow)
-    if problems:
-        return _result("remote CI", "fail", "; ".join(problems), "wait for GitHub checks or inspect the failing run")
-    return _result("remote CI", "pass", "required workflows completed successfully for HEAD")
+    return latest_by_workflow
 
 
 def _remote_workflow_problems(latest_by_workflow: dict[str, dict[str, object]]) -> list[str]:
@@ -458,6 +480,110 @@ def _remote_workflow_problems(latest_by_workflow: dict[str, dict[str, object]]) 
         if conclusion != "success":
             problems.append(f"{label}: {conclusion}")
     return problems
+
+
+def _check_pypi_release(root: Path, runner: Runner) -> CheckResult:
+    try:
+        version = _read_project_version(root)
+    except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
+        return _result("PyPI release", "fail", str(exc))
+
+    script = (
+        "import json, urllib.request; "
+        f"data=json.load(urllib.request.urlopen({_PYPI_RELEASE_URL!r}, timeout=30)); "
+        "print(json.dumps({'version': data['info']['version'], "
+        "'files': [f.get('filename') for f in data.get('releases', {}).get(data['info']['version'], [])]}))"
+    )
+    result = runner([sys.executable, "-c", script])
+    if result.returncode != 0:
+        return _result("PyPI release", "fail", (result.stderr or result.stdout).strip() or "could not query PyPI")
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        return _result("PyPI release", "fail", f"could not parse PyPI JSON: {exc}")
+    latest = payload.get("version") if isinstance(payload, dict) else None
+    if latest != version:
+        return _result("PyPI release", "fail", f"PyPI latest is {latest!r}, project is {version}")
+    files = (
+        set(payload.get("files", []))
+        if isinstance(payload, dict) and isinstance(payload.get("files"), list)
+        else set()
+    )
+    expected = {f"recon_tool-{version}-py3-none-any.whl", f"recon_tool-{version}.tar.gz"}
+    missing = sorted(expected - {name for name in files if isinstance(name, str)})
+    if missing:
+        return _result("PyPI release", "fail", "missing file(s): " + ", ".join(missing))
+    return _result("PyPI release", "pass", f"PyPI reports {_PYPI_PACKAGE} {version} with wheel and sdist")
+
+
+def _check_github_release(root: Path, runner: Runner) -> CheckResult:
+    try:
+        version = _read_project_version(root)
+    except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
+        return _result("GitHub release", "fail", str(exc))
+    repo_result = _read_github_repo(runner, "GitHub release")
+    if isinstance(repo_result, CheckResult):
+        return repo_result
+    repo = repo_result
+    payload_result = _load_github_release_payload(runner, repo, version)
+    if isinstance(payload_result, CheckResult):
+        return payload_result
+    problem = _github_release_problem(payload_result, version)
+    if problem:
+        return _result("GitHub release", "fail", problem)
+    return _result("GitHub release", "pass", f"v{version} is published with wheel, sdist, SBOM, and attestation")
+
+
+def _load_github_release_payload(runner: Runner, repo: str, version: str) -> dict[str, object] | CheckResult:
+    result = runner(
+        [
+            "gh",
+            "release",
+            "view",
+            f"v{version}",
+            "--repo",
+            repo,
+            "--json",
+            "tagName,isDraft,isPrerelease,assets",
+        ]
+    )
+    if result.returncode != 0:
+        return _result("GitHub release", "fail", (result.stderr or result.stdout).strip() or "gh release view failed")
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        return _result("GitHub release", "fail", f"could not parse gh JSON: {exc}")
+    if not isinstance(payload, dict):
+        return _result("GitHub release", "fail", "gh JSON was not an object")
+    return payload
+
+
+def _github_release_problem(payload: dict[str, object], version: str) -> str | None:
+    tag = payload.get("tagName")
+    if tag != f"v{version}":
+        return f"release tag is {tag!r}, expected v{version}"
+    if payload.get("isDraft") is True:
+        return f"v{version} is still a draft"
+    if payload.get("isPrerelease") is True:
+        return f"v{version} is marked prerelease"
+    assets = payload.get("assets")
+    if not isinstance(assets, list):
+        return "release assets were not a list"
+    asset_names = {
+        asset.get("name")
+        for asset in assets
+        if isinstance(asset, dict) and isinstance(asset.get("name"), str)
+    }
+    expected_assets = {
+        f"recon_tool-{version}-py3-none-any.whl",
+        f"recon_tool-{version}.tar.gz",
+        f"recon-tool-{version}.cdx.json",
+        f"recon-tool-{version}.intoto.jsonl",
+    }
+    missing = sorted(expected_assets - asset_names)
+    if missing:
+        return "missing asset(s): " + ", ".join(missing)
+    return None
 
 
 def collect_checks(
@@ -485,8 +611,12 @@ def collect_checks(
     ]
     if remote:
         checks.append(_check_remote_workflows(actual_runner))
+        checks.append(_check_pypi_release(root, actual_runner))
+        checks.append(_check_github_release(root, actual_runner))
     else:
         checks.append(_result("remote CI", "skip", "not requested; pass --remote after pushing main"))
+        checks.append(_result("PyPI release", "skip", "not requested; pass --remote after release publication"))
+        checks.append(_result("GitHub release", "skip", "not requested; pass --remote after release publication"))
     return checks
 
 

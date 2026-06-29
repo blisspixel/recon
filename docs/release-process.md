@@ -51,7 +51,10 @@ Before tagging or pushing a release, run it strictly:
 uv run python scripts/release_readiness.py
 ```
 
-After pushing `main`, add the optional remote check:
+After pushing `main`, add the optional remote check. In remote mode the gate
+verifies required GitHub Actions checks for `HEAD`, PyPI's latest
+`recon-tool` release, and the GitHub Release assets for the current version
+(wheel, sdist, SBOM, and attestation export):
 
 ```bash
 uv run python scripts/release_readiness.py --remote
@@ -173,6 +176,9 @@ formula so `brew install` tracks the new version, then copy it to the tap repo:
       `python scripts/update_homebrew_formula.py --check`.
 - [ ] Confirm the GitHub Release assets include wheel, sdist, SBOM, and
       `recon-tool-<version>.intoto.jsonl`.
+- [ ] Run `uv run python scripts/release_readiness.py --remote` after the
+      formula refresh so CI, PyPI, GitHub Release assets, citation metadata,
+      and formula metadata are checked together.
 
 The `pipx` / `uv` / `pip` install paths need no per-release action. They
 resolve the latest from PyPI automatically.

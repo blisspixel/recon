@@ -90,6 +90,9 @@ The repository also runs supply-chain posture checks outside the release flow:
   ratchets.
 - Added-line text hygiene is checked locally and in CI so generated or manual
   changes cannot add attribution markers, em dashes, or pictographic symbols.
+- Remote release readiness checks PyPI's latest `recon-tool` version and the
+  GitHub Release asset set for the current version, so wheel, sdist, SBOM, and
+  attestation drift is caught after publication rather than verified by hand.
 - Checkout steps set `persist-credentials: false`, so the workflow token is not
   left in the local Git config after source checkout.
 - Every workflow job has an explicit timeout so CI and release automation fail

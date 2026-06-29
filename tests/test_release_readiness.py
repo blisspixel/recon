@@ -275,6 +275,100 @@ def test_remote_workflows_fail_when_pending_or_missing() -> None:
     assert "Scorecard supply-chain security: missing" in problems
 
 
+def test_pypi_release_passes_when_latest_has_wheel_and_sdist(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        assert cmd[1] == "-c"
+        return _cp(
+            cmd,
+            stdout=json.dumps(
+                {
+                    "version": "2.2.17",
+                    "files": ["recon_tool-2.2.17-py3-none-any.whl", "recon_tool-2.2.17.tar.gz"],
+                }
+            ),
+        )
+
+    check = release_readiness._check_pypi_release(tmp_path, runner)
+
+    assert check.status == "pass"
+    assert "2.2.17" in check.detail
+
+
+def test_pypi_release_rejects_stale_latest(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        assert cmd[1] == "-c"
+        return _cp(cmd, stdout=json.dumps({"version": "2.2.16", "files": []}))
+
+    check = release_readiness._check_pypi_release(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "2.2.16" in check.detail
+
+
+def test_pypi_release_requires_wheel_and_sdist(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        assert cmd[1] == "-c"
+        return _cp(cmd, stdout=json.dumps({"version": "2.2.17", "files": ["recon_tool-2.2.17.tar.gz"]}))
+
+    check = release_readiness._check_pypi_release(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "recon_tool-2.2.17-py3-none-any.whl" in check.detail
+
+
+def test_github_release_passes_when_assets_are_complete(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    assets = [
+        {"name": "recon-tool-2.2.17.cdx.json"},
+        {"name": "recon-tool-2.2.17.intoto.jsonl"},
+        {"name": "recon_tool-2.2.17-py3-none-any.whl"},
+        {"name": "recon_tool-2.2.17.tar.gz"},
+    ]
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _cp(
+                cmd,
+                stdout=json.dumps(
+                    {"tagName": "v2.2.17", "isDraft": False, "isPrerelease": False, "assets": assets}
+                ),
+            )
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_github_release(tmp_path, runner)
+
+    assert check.status == "pass"
+    assert "v2.2.17" in check.detail
+
+
+def test_github_release_requires_all_release_assets(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _cp(
+                cmd,
+                stdout=json.dumps({"tagName": "v2.2.17", "isDraft": False, "isPrerelease": False, "assets": []}),
+            )
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_github_release(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "recon-tool-2.2.17.cdx.json" in check.detail
+    assert "recon_tool-2.2.17.tar.gz" in check.detail
+
+
 def test_json_renderer_reports_overall_failure(tmp_path: Path) -> None:
     _write_minimal_root(tmp_path)
     checks = [
