@@ -144,8 +144,9 @@ The remaining Scorecard limits are intentional or process-bound:
   Creating fake review history would be worse than the score.
 - Maintained is low while the repository is younger than Scorecard's age window.
 - CII-Best-Practices is low until the OpenSSF Best Practices Badge questionnaire
-  is completed and linked. The readiness map lives in
-  [openssf-posture.md](openssf-posture.md).
+  is completed and linked. The questionnaire evidence worksheet lives in
+  [openssf-badge-readiness.md](openssf-badge-readiness.md), and the current
+  posture summary lives in [openssf-posture.md](openssf-posture.md).
 - Contributors is low until outside contributors from distinct organizations
   participate naturally.
 

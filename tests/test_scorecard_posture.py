@@ -228,6 +228,7 @@ def test_supply_chain_docs_track_scorecard_gap_decisions() -> None:
         "`.github/CODEOWNERS` routes all repository paths to the maintainer account",
         "Code-Review is low until normal work flows through reviewed pull requests",
         "OpenSSF Best Practices Badge",
+        "openssf-badge-readiness.md",
         "openssf-posture.md",
         "pypi-attestations verify pypi",
         "gh attestation verify",
@@ -246,6 +247,7 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
         "Remote release readiness queries that API for `HEAD`",
         "current score floor",
         "OpenSSF Best Practices Badge is claimed",
+        "openssf-badge-readiness.md",
         "must not be added as a placeholder",
         "Branch-Protection",
         "Code-Review",
@@ -289,3 +291,55 @@ def test_supply_chain_docs_do_not_overclaim_pypi_attestation_consumption() -> No
         assert required in text
 
     assert "Modern installers verify automatically" not in text
+
+
+def test_openssf_badge_readiness_is_linked_from_current_docs() -> None:
+    for path in (
+        _ROOT / "docs" / "README.md",
+        _ROOT / "docs" / "openssf-posture.md",
+        _ROOT / "docs" / "supply-chain.md",
+        _ROOT / "docs" / "strategic-gap-audit.md",
+    ):
+        assert "openssf-badge-readiness.md" in path.read_text(encoding="utf-8"), path
+
+
+def test_openssf_badge_readiness_prepares_questionnaire_without_claiming_badge() -> None:
+    text = " ".join((_ROOT / "docs" / "openssf-badge-readiness.md").read_text(encoding="utf-8").split())
+
+    for required in (
+        "questionnaire-preparation worksheet",
+        "does not claim an OpenSSF Best Practices Badge",
+        "does not add a badge URL",
+        "Complete the real `bestpractices.dev` questionnaire",
+        "Passing-Level Evidence Map",
+        "Basics",
+        "Change control",
+        "Reporting",
+        "Quality",
+        "Security",
+        "Analysis",
+        "No badge link until the real badge project exists",
+        "No placeholder URL",
+    ):
+        assert required in text
+
+
+def test_openssf_badge_readiness_blocks_fake_process_progress() -> None:
+    text = " ".join((_ROOT / "docs" / "openssf-badge-readiness.md").read_text(encoding="utf-8").split())
+
+    for required in (
+        "Do not claim a mandatory reviewed-PR process",
+        "Do not imply organization diversity",
+        "No claim that a badge is \"in progress\"",
+        "No artificial contributors or manufactured review history",
+        "no recurring third-party audit is claimed",
+        "no LTS branch is promised",
+    ):
+        assert required in text
+
+    for forbidden in (
+        "https://bestpractices.dev/projects/",
+        "badge.svg",
+        "passing badge",
+    ):
+        assert forbidden not in text

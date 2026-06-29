@@ -39,6 +39,7 @@ def test_strategic_gap_audit_names_real_remaining_gaps_without_fake_progress() -
 
     for required in (
         "OpenSSF Best Practices Badge",
+        "openssf-badge-readiness.md",
         "Reviewed PR signal",
         "Artifact archive and DOI",
         "archive-readiness.md",
