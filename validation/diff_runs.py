@@ -23,6 +23,7 @@ import glob
 import json
 import sys
 from collections import Counter
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -49,12 +50,10 @@ def _iter_json_payloads(path: Path) -> list[dict[str, Any]]:
             return []
         return [d for d in data if isinstance(d, dict)] if isinstance(data, list) else []
     if stripped[0] == "{":
-        try:
+        with suppress(json.JSONDecodeError):
             data = json.loads(text)
             if isinstance(data, dict):
                 return [data]
-        except json.JSONDecodeError:
-            pass
     out: list[dict[str, Any]] = []
     for line_num, raw in enumerate(text.splitlines(), start=1):
         line = raw.strip()

@@ -100,11 +100,18 @@ def _addr_is_blocked(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> boo
 
 def _is_blocked_ip(addr_str: str) -> bool:
     """Check if an IP address string is private, internal, or special-use."""
-    try:
-        addr = ipaddress.ip_address(addr_str)
-        return _addr_is_blocked(addr)
-    except ValueError:
+    addr = _parse_ip_address(addr_str)
+    if addr is None:
         return False
+    return _addr_is_blocked(addr)
+
+
+def _parse_ip_address(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    """Return a parsed IP literal, or None when *host* is a hostname."""
+    try:
+        return ipaddress.ip_address(host)
+    except ValueError:
+        return None
 
 
 async def _is_private_ip_async(host: str) -> bool:
@@ -118,11 +125,9 @@ async def _is_private_ip_async(host: str) -> bool:
     Returns True if the host should be blocked.
     """
     # Layer 1: literal IP check (fast path, no I/O)
-    try:
-        addr = ipaddress.ip_address(host)
+    addr = _parse_ip_address(host)
+    if addr is not None:
         return _addr_is_blocked(addr)
-    except ValueError:
-        pass  # Not an IP literal — fall through to DNS resolution
 
     # Layer 2: resolve hostname in thread pool and check all returned IPs
     if not host:
@@ -142,7 +147,7 @@ async def _is_private_ip_async(host: str) -> bool:
     except (socket.gaierror, OSError):
         # DNS resolution failed — allow the request through so httpx
         # can produce a proper connection error downstream.
-        pass
+        return False
     return False
 
 
@@ -156,11 +161,9 @@ def _is_private_ip(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
     can't drift apart.
     """
     # Layer 1: literal IP check (fast path)
-    try:
-        addr = ipaddress.ip_address(host)
+    addr = _parse_ip_address(host)
+    if addr is not None:
         return _addr_is_blocked(addr)
-    except ValueError:
-        pass
 
     # Layer 2: resolve hostname and check all returned IPs
     if not host:
@@ -177,7 +180,7 @@ def _is_private_ip(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
                 )
                 return True
     except (socket.gaierror, OSError):
-        pass
+        return False
     return False
 
 

@@ -27,6 +27,7 @@ import glob
 import json
 import sys
 from collections import defaultdict
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -81,12 +82,10 @@ def _iter_json_payloads(path: Path) -> list[dict[str, Any]]:
     if stripped[0] == "{":
         # Could be a single JSON object (one domain) OR NDJSON (one per line).
         # Try whole-file parse first; fall back to line-by-line.
-        try:
+        with suppress(json.JSONDecodeError):
             data = json.loads(text)
             if isinstance(data, dict):
                 return [data]
-        except json.JSONDecodeError:
-            pass
     out: list[dict[str, Any]] = []
     for line_num, raw in enumerate(text.splitlines(), start=1):
         line = raw.strip()

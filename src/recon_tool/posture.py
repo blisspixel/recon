@@ -281,7 +281,7 @@ def _compute_metadata_value(field: str, info: TenantInfo) -> str | int | None:
                 try:
                     return int(svc.split(":")[1].strip().split()[0])
                 except (ValueError, IndexError):
-                    pass
+                    continue
         return None
     if field == "issuance_velocity":
         if info.cert_summary is not None:

@@ -221,14 +221,16 @@ def aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
         # wide signal).
         try:
             rendered = _render_to_string(info)
-            if "Multi-cloud" in rendered:
-                multi_cloud_rendered += 1
-                s["multi_cloud_rendered"] += 1
-            if "Passive-DNS ceiling" in rendered:
-                ceiling_rendered += 1
-                s["ceiling_rendered"] += 1
-        except Exception:  # noqa: S110 — per-fixture anomaly, see comment above.
-            pass
+        except Exception:
+            rendered_markers = (False, False)
+        else:
+            rendered_markers = ("Multi-cloud" in rendered, "Passive-DNS ceiling" in rendered)
+        if rendered_markers[0]:
+            multi_cloud_rendered += 1
+            s["multi_cloud_rendered"] += 1
+        if rendered_markers[1]:
+            ceiling_rendered += 1
+            s["ceiling_rendered"] += 1
 
         subdomain_counts.append(len(info.related_domains))
 

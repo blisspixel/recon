@@ -168,7 +168,7 @@ class GoogleSource:
                 httpx.HTTPError,
                 ValueError,
             ):
-                pass
+                return None
             except Exception as exc:
                 logger.debug("CSE probe failed for %s: %s", domain, exc)
         return None
