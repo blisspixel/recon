@@ -105,6 +105,8 @@ Before the external write-up can leave draft status:
 8. After `main` and the current version are published, remote release readiness
    must pass:
    `uv run python scripts/release_readiness.py --remote`.
+   This includes PyPI and GitHub provenance verification for the published
+   wheel and sdist.
 9. The public-list sampling boundary must stay linked to
    [public-label-snapshot-decision.md](public-label-snapshot-decision.md):
    public-list numbers are robustness checks rather than population rates.

@@ -43,6 +43,7 @@ def test_strategic_gap_audit_names_real_remaining_gaps_without_fake_progress() -
         "Artifact archive and DOI",
         "Independent public replication",
         "Pre-submission claim freeze",
+        "remote release readiness now verifies PyPI and GitHub provenance",
         "Future dataset release model",
         "Do not add a placeholder badge",
         "Do not manufacture review history or contributor diversity",
@@ -60,6 +61,7 @@ def test_strategic_gap_audit_preserves_private_data_and_release_boundaries() -> 
         "verifies PyPI and GitHub provenance for the release wheel and sdist",
         "Documentation and proof-memo refreshes do not require a new package release",
         "Release when package behavior, public package metadata, or release artifacts change",
+        "release state and provenance aligned",
         "Do not commit apex lists, organization names, tenant IDs, per-domain rows, or unsuppressed small strata",
     ):
         assert required in text

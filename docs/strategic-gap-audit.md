@@ -75,13 +75,13 @@ These are not active gaps for the current roadmap:
 | Artifact archive and DOI | External papers are easier to cite and review when the exact artifact is archived. | GitHub release, PyPI release, citation metadata, SBOM, provenance, and reproducible build recipe exist. | Once the paper package freezes, choose a DOI path such as Zenodo or the venue supplement, then add metadata deliberately. | Do not add `.zenodo.json` or DOI language before the archive policy is chosen. |
 | Independent public replication | ACM-style result validation is stronger when someone outside the maintainer path reruns the artifact. | Public smoke and paper profiles are runnable and recorded by the maintainer. | Ask an outside reviewer to run the public commands on a clean machine and record only aggregate outcome notes. | Do not represent private-corpus rows as externally reproduced. |
 | Pre-submission claim freeze | The paper is now the highest-risk source of accidental overclaiming. | Draft, outline, claim map, artifact guide, and final audit are synchronized. | Before submission, rerun the final claim audit and freeze wording against the claim map. | No new empirical language without an explicit support tier. |
-| Consumer provenance recipe | Supply-chain controls are strong, but consumers need a short verification path. | [supply-chain.md](supply-chain.md) already documents attestations, SBOM, and reproducible builds. | Keep the recipe current at each meaningful release. | Do not claim a SLSA level beyond implemented controls. |
+| Consumer provenance recipe | Supply-chain controls are strong, but consumers need a short verification path. | [supply-chain.md](supply-chain.md) documents attestations, SBOM, and reproducible builds; remote release readiness now verifies PyPI and GitHub provenance. | Keep the recipe current at each meaningful release. | Do not claim a SLSA level beyond implemented controls. |
 | Future dataset release model | A public real-apex label set would change the disclosure risk model. | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) defers this for the current submission. | Reopen only with a separate data-handling and architecture review. | Do not commit apex lists, organization names, tenant IDs, per-domain rows, or unsuppressed small strata. |
 
 ## Priority Order
 
 1. Keep main clean, CI green, release readiness passing, and PyPI and GitHub
-   release state aligned.
+   release state and provenance aligned.
 2. Run a final paper claim freeze before any external submission package.
 3. Complete the OpenSSF Best Practices Badge questionnaire if a visible
    Scorecard lift is worth the process work.

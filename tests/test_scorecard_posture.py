@@ -241,6 +241,7 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
     for required in (
         "2026-06-29",
         "Score: `7.5`",
+        "current `main` after the PyPI provenance gate",
         "live API URL",
         "OpenSSF Best Practices Badge is claimed",
         "must not be added as a placeholder",
