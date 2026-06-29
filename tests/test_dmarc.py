@@ -162,7 +162,7 @@ class TestDmarcRuaExtraction:
         assert "dmarcian" in ctx.slugs
 
     def test_comma_separated_rua_addresses(self) -> None:
-        """One rua= tag with comma-separated mailto: URIs (RFC 7489 §6.3) → all extracted."""
+        """One rua= tag with comma-separated mailto URIs per RFC 9990 is fully extracted."""
         ctx = _DetectionCtx()
         # The second and later addresses share the single rua= tag; both vendors
         # must still be detected (regression: the prefix-anchored regex only saw
@@ -175,7 +175,7 @@ class TestDmarcRuaExtraction:
         assert "dmarcian" in ctx.slugs
 
     def test_rua_size_suffix_stripped_from_domain(self) -> None:
-        """An RFC 7489 ``!<size>`` report-size suffix is not folded into the domain."""
+        """An RFC 9990 ``!<size>`` report-size suffix is not folded into the domain."""
         ctx = _DetectionCtx()
         _extract_dmarc_rua(ctx, "v=DMARC1; p=reject; rua=mailto:reports@agari.com!10m")
         assert "agari" in ctx.slugs
@@ -533,7 +533,7 @@ class TestProperty4DmarcRuaExtraction:
     @settings(max_examples=100)
     def test_multi_rua_all_extracted(self, domains: list[str]) -> None:
         """For multi-rua records (semicolon-separated rua= tags), all domains extracted."""
-        # Each rua= tag is a separate DMARC tag, semicolon-separated per RFC 7489
+        # Each rua= tag is a separate DMARC tag, semicolon-separated per RFC 9989.
         rua_tags = "; ".join(f"rua=mailto:reports@{d}" for d in domains)
         dmarc_record = f"v=DMARC1; p=reject; {rua_tags}"
         ctx = _DetectionCtx()

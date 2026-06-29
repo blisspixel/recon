@@ -13,7 +13,7 @@ where this sits in the four-tier picture.
 `email_security_policy_enforcing` infers a probability that a domain's
 email-authentication policy is enforcing. The authoritative definition
 of "enforcing" is a public declaration anyone can read: a DMARC policy
-of `reject` or `quarantine` (RFC 7489). So the DMARC record is its own
+of `reject` or `quarantine` (RFC 9989). So the DMARC record is its own
 ground-truth reference, and the harness pairs, per domain, recon's policy
 posterior with the binary reference label, then reports aggregate
 calibration: Brier, ECE, a reliability table (posterior bin to empirical

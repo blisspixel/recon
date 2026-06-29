@@ -8,7 +8,7 @@ is the exception. ``email_security_policy_enforcing`` infers a
 probability that a domain's email-authentication policy is enforcing,
 and the authoritative definition of "enforcing" is a public declaration
 anyone can read: a DMARC policy of ``reject`` or ``quarantine`` (RFC
-7489). The published DMARC record is its own ground truth, so it is a
+9989). The published DMARC record is its own ground truth, so it is a
 known-truth reference the posterior can be calibrated against, not merely
 a self-consistency check.
 
@@ -102,7 +102,7 @@ from validation.synthetic_calibration import (  # noqa: E402
 )
 
 # The node this harness calibrates and the policy levels that count as the
-# authoritative "enforcing" ground truth (RFC 7489: reject and quarantine
+# authoritative "enforcing" ground truth (RFC 9989: reject and quarantine
 # are enforcing; none is not).
 _POLICY_NODE = "email_security_policy_enforcing"
 _ENFORCING_POLICIES = frozenset({"reject", "quarantine"})

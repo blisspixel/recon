@@ -445,15 +445,17 @@ async def _fetch_mta_sts_policy(domain: str) -> str | None:
     return None
 
 
-# The rua tag value is a comma-separated list of DMARC URIs (RFC 7489 §6.3),
+# The rua tag value is a comma-separated list of DMARC aggregate report URIs,
+# as specified by RFC 9990,
 # e.g. ``rua=mailto:a@x.com,mailto:b@y.com``. Capture the whole tag value (up to
 # the next tag separator), then pull each mailto address out of it, so the
 # second and later addresses are not dropped. Scoping to the ``rua=`` tag keeps
 # ``ruf=`` (forensic) addresses out.
 _RUA_TAG_RE = re.compile(r"rua\s*=\s*([^;]+)", re.IGNORECASE)
-# Stop the address capture at ``!``: RFC 7489 §6.3 allows an optional ``!<size>``
-# report-size suffix (e.g. ``mailto:a@x.com!10m``), and a literal ``!`` inside the
-# address itself is percent-encoded, so an unescaped ``!`` always delimits the size.
+# Stop the address capture at ``!``: RFC 9990 preserves the optional
+# ``!<size>`` report-size suffix (e.g. ``mailto:a@x.com!10m``), and a literal
+# ``!`` inside the address itself is percent-encoded, so an unescaped ``!``
+# always delimits the size.
 _RUA_MAILTO_RE = re.compile(r"mailto:([^,;\s!]+)", re.IGNORECASE)
 
 
@@ -505,7 +507,7 @@ def _apply_dmarc(ctx: dns_base.DetectionCtx, dmarc_results: list[str], domain: s
             continue
         ctx.services.add(SVC_DMARC)
         for part in txt.split(";"):
-            # Tag syntax permits whitespace around "=" (RFC 7489 / 6376 tag-spec),
+            # Tag syntax permits whitespace around "=" (RFC 9989 / 6376 tag-spec),
             # so parse on the first "=" and strip both sides rather than matching a
             # "p=" prefix, which would miss a spec-legal "p = reject".
             key, sep, value = part.partition("=")

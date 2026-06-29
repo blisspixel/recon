@@ -31,6 +31,9 @@ tests/validation/fixtures/
 docs/accuracy.md
 .ci-audit-requirements.txt
 
+# Agent working files
+.agent/
+
 # Local validation sweeps. Real company names and per-domain JSON output
 # live here during accuracy work; never committed. Fictional-example
 # discipline requires anything committed to use Contoso / Northwind /

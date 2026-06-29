@@ -36,6 +36,10 @@ before adding surface area.
 - arXiv submission and ancillary-file guidance:
   <https://info.arxiv.org/help/submit/index.html> and
   <https://info.arxiv.org/help/ancillary_files.html>
+- Current DMARC protocol and reporting split:
+  <https://www.rfc-editor.org/rfc/rfc9989.html>,
+  <https://www.rfc-editor.org/rfc/rfc9990.html>, and
+  <https://www.rfc-editor.org/rfc/rfc9991.html>
 - GitHub and Zenodo archive metadata guidance:
   <https://docs.github.com/repositories/archiving-a-github-repository/referencing-and-citing-content>,
   <https://help.zenodo.org/docs/github/describe-software/citation-file/>,
@@ -61,6 +65,9 @@ before adding surface area.
 - GitHub contributor history and current contributors are maintainer-only.
 - Top-level dependencies are current under the locked resolver state, with MCP
   intentionally bounded to the stable v1 line until a reviewed v2 migration.
+- Public DMARC references in comments, tests, and validation notes use the
+  current RFC 9989 protocol specification and RFC 9990 aggregate-reporting
+  split rather than the prior obsolete citation.
 
 ## What Is Not Missing
 

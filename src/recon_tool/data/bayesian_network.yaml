@@ -246,7 +246,7 @@ nodes:
     # hideable infrastructure, which keeps the LR=1 absence rule). Semantic
     # ruling (definition A): "enforcing" means an observable DMARC
     # reject/quarantine policy; strict SPF alone is hygiene, not enforcement
-    # (RFC 7489 makes DMARC the policy/alignment layer over SPF/DKIM). The DMARC
+    # (RFC 9989 makes DMARC the policy/alignment layer over SPF/DKIM). The DMARC
     # policy level is mutually exclusive (reject XOR quarantine XOR none), so the
     # two DMARC bindings share a `dmarc_policy` group whose whole-absence
     # likelihood is given explicitly rather than as a complement-product.

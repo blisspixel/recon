@@ -229,7 +229,7 @@ class TestDMARCPolicyExtraction:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_dmarc_whitespace_around_equals(self, mock_resolve):
-        # Tag syntax allows whitespace around "=" (RFC 7489 / 6376), so
+        # Tag syntax allows whitespace around "=" (RFC 9989 / 6376), so
         # "p = reject" must be read as an enforcing policy, not dropped.
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
