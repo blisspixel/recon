@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Agent working-directory hygiene.** Maintainer-loop and generated
   surface-inventory guidance now point agent scratch records at the root
   `.agent/` directory.
+- **Repository hygiene guard.** Tests now lock the root `.agent/` and `logs/`
+  ignore contract and reject tracked root-package shadow paths.
 
 ## [2.2.17] - 2026-06-29
 

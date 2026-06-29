@@ -55,6 +55,11 @@ and remotely so dependency updates cannot leave stale generated inputs behind.
   `src/recon_tool/`; the public import name remains `recon_tool`. This keeps
   tests honest about installed-package behavior and avoids repo-root import
   shadowing. ADR-0006 supersedes the previous flat-layout decision.
+- **Local working artifacts stay out of tracked surfaces.** Agent state lives
+  under the gitignored root `.agent/` directory, logs live under gitignored
+  `logs/`, and validation run outputs live under gitignored validation-local
+  paths. Do not park agent scratch records in `docs/`, and do not recreate a
+  repo-root `recon_tool/` package shadow.
 - **Significant or hard-to-reverse decisions get an ADR** (`docs/adr/`), one
   decision per record, immutable once accepted. The invariants, the MNAR absence
   rule, the schema lock, and the no-numpy choice are recorded there so the
