@@ -31,6 +31,11 @@ therefore uses these boundaries for the write-up package:
 - Reusability: CLI, JSON schema, MCP docs, operational contract, data-handling
   policy, and supply-chain docs must be enough for a reviewer to run, inspect,
   and cite the artifact without private maintainer context.
+- Published artifact integrity: after `main` and the current version are public,
+  `scripts/release_readiness.py --remote` checks that required GitHub Actions
+  runs passed and that PyPI plus the GitHub Release expose the expected wheel,
+  sdist, SBOM, and attestation export. This is release-state evidence, not
+  empirical result validation.
 
 The latest public proof gate for the current draft package is
 [2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md).
@@ -75,7 +80,7 @@ security guidance:
 | Entropy reduction and posture stratification summarize what the public channel still leaks | Public validation memo | `validation/posture_distributions.py`, `tests/test_posture_distributions.py`, [public-list-calibration.md](../validation/public-list-calibration.md), [public-label-snapshot-decision.md](public-label-snapshot-decision.md) | State as a public-list cross-check across about 575 public domains and 22 disjoint sectors. Keep the sparse-tier hardening interpretation. Treat public-list numbers as robustness checks rather than population rates, benchmark prevalence, or private-corpus population transfer. |
 | Per-vertical residual failure generalizes across the curated cohort | Aggregate-only private memo | [2026-06-28-full-corpus-calibration-refresh.md](../validation/2026-06-28-full-corpus-calibration-refresh.md), [statistical-assurance.md](statistical-assurance.md) | State across the 22 disclosed private-corpus verticals only. Do not generalize beyond that curated population. |
 | The discussion and conclusion do not claim broad calibration | Aggregate-only private memo plus public claim audit | [2026-06-28-full-corpus-calibration-refresh.md](../validation/2026-06-28-full-corpus-calibration-refresh.md), [m365-tenancy-decision.md](m365-tenancy-decision.md), [2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md) | State that recon has no clean independent calibration result today; the DMARC residual is a negative result, M365 is corroboration, and Google Workspace is one-sided recall. |
-| The public artifact is signed, provenance-linked, and reproducible as a build | Invariant | [supply-chain.md](supply-chain.md), `tests/test_release_workflow_contract.py`, `tests/test_scorecard_posture.py` | State build reproducibility and release provenance. Do not claim independently reproduced empirical results. |
+| The public artifact is signed, provenance-linked, and reproducible as a build | Invariant | [supply-chain.md](supply-chain.md), `scripts/release_readiness.py --remote`, `tests/test_release_workflow_contract.py`, `tests/test_scorecard_posture.py` | State build reproducibility and release provenance. Do not claim independently reproduced empirical results. |
 | Public artifacts exclude target identifiers and private rows | Invariant | [data-handling-policy.md](data-handling-policy.md), `scripts/check_validation_hygiene.py`, `tests/test_validation_hygiene.py`, `tests/test_public_validation_memo.py` | State the disclosure control and its mechanical gates. Keep semantic review as a separate requirement. |
 
 ## Submission Gate
@@ -96,9 +101,12 @@ Before the external write-up can leave draft status:
    `uv run python scripts/check.py`.
 7. Release readiness must pass:
    `uv run python scripts/release_readiness.py --allow-dirty`.
-8. The public-list sampling boundary must stay linked to
+8. After `main` and the current version are published, remote release readiness
+   must pass:
+   `uv run python scripts/release_readiness.py --remote`.
+9. The public-list sampling boundary must stay linked to
    [public-label-snapshot-decision.md](public-label-snapshot-decision.md):
    public-list numbers are robustness checks rather than population rates.
-9. The current final claim audit refresh is recorded in
+10. The current final claim audit refresh is recorded in
    [2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md).
    Rerun it after any experiment, wording, package, or claim-map change.

@@ -35,6 +35,7 @@ Run from the repository root after installing the development environment:
 | Paper figure drift check | `uv run python scripts/generate_paper_figures.py --check` | Verifies the committed SVG figures match the deterministic aggregate-safe generator. |
 | Local CI mirror | `uv run python scripts/check.py` | Ruff, pyright, coverage-gated tests, generated-artifact checks, hygiene checks, and ratchets pass. |
 | Release readiness | `uv run python scripts/release_readiness.py` | Version, citation metadata, lockfile, roadmap, Homebrew formula, private-data hygiene, and commit hygiene pass for the local checkout. |
+| Published release verification | `uv run python scripts/release_readiness.py --remote` | After `main` and the current version are published, required GitHub Actions checks, PyPI wheel and sdist, and GitHub Release wheel, sdist, SBOM, and attestation export match the current version. |
 
 If a Windows terminal closes stdout during the long coverage run, redirect the
 wrapper output to `logs/check-full.log`. `logs/` is ignored:
@@ -64,6 +65,7 @@ earlier memos remain focused historical records for their respective checks.
 | Public-list sampling boundary | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) plus `scripts/check_paper_claims.py` | Public-list numbers are robustness checks rather than population rates or benchmark prevalence. |
 | Paper figures | `scripts/generate_paper_figures.py --check` | SVG figures are deterministic renderings of committed topology and aggregate memos, not hand-edited screenshots. |
 | Runtime and docs integrity | `scripts/check.py` | Generated schema, surface inventory, CLI surface docs, text hygiene, validation hygiene, and tests agree with source. |
+| Published artifact integrity | `scripts/release_readiness.py --remote` | The public package and GitHub Release are aligned with the current version after publication. This validates release state, not empirical paper results. |
 
 ## What Is Not Publicly Reproducible
 

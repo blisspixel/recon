@@ -32,6 +32,8 @@ def test_claim_map_covers_required_evidence_tiers_and_gates() -> None:
         "validation.reproduce_paper_numbers",
         "scripts/check.py",
         "scripts/release_readiness.py --allow-dirty",
+        "scripts/release_readiness.py --remote",
+        "release-state evidence",
     ):
         assert required in text
 

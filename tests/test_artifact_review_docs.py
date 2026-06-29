@@ -55,6 +55,7 @@ def test_artifact_review_guide_names_required_public_commands() -> None:
         "scripts/generate_paper_figures.py --check",
         "uv run python scripts/check.py",
         "uv run python scripts/release_readiness.py",
+        "uv run python scripts/release_readiness.py --remote",
     ):
         assert command in text
 
@@ -68,6 +69,8 @@ def test_artifact_review_guide_separates_private_and_public_results() -> None:
     assert "paper-claim-map.md" in text
     assert "Evidence-removal and planting boundary" in text
     assert "planted evidence can raise posteriors" in text
+    assert "Published artifact integrity" in text
+    assert "release state, not empirical paper results" in text
 
 
 def test_artifact_review_guide_names_figure_package() -> None:

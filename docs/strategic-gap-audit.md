@@ -40,7 +40,10 @@ before adding surface area.
 ## Current Evidence
 
 - `v2.2.17` is current on GitHub Releases and PyPI.
-- Local and remote release readiness pass for the current main branch.
+- Local release readiness passes for the current main branch.
+- Remote release readiness passes for current `HEAD` and verifies required
+  GitHub Actions checks, PyPI wheel and sdist publication, and GitHub Release
+  wheel, sdist, SBOM, and attestation export assets for `v2.2.17`.
 - CI, secrets scan, and Scorecard workflows pass on current main.
 - Public proof and final claim-audit refresh are recorded in
   [2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md).
