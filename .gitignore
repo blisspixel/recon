@@ -317,7 +317,6 @@ secrets.yml
 # Logs
 *.log
 logs/
-docs/.agent/
 
 # Kiro
 .kiro/

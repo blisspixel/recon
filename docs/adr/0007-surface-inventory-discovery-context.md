@@ -21,11 +21,11 @@ also the current JSON Schema dialect for validation and documentation.
 
 That does not make every generated description a stable product contract. The
 surface inventory intentionally aggregates stable surfaces and non-contractual
-maintainer context: `docs/.agent/PROGRESS-LOG.md`, `docs/.agent/SKILLS.md`, agent guidance, local
-client-config templates, and derived approval guidance. Freezing that whole
-aggregate as a v2.3 contract would make internal maintainer context harder to
-improve and would force compatibility obligations before an external consumer
-has a real need.
+maintainer context: `.agent/PROGRESS-LOG.md`, `.agent/SKILLS.md`, agent
+guidance, local client-config templates, and derived approval guidance. Freezing
+that whole aggregate as a v2.3 contract would make internal maintainer context
+harder to improve and would force compatibility obligations before an external
+consumer has a real need.
 
 ## Decision
 

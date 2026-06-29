@@ -45,8 +45,8 @@ _MAINTAINER_CONTEXT_PACKET: tuple[tuple[str, str, bool], ...] = (
     ("docs/roadmap.md", "current_priority_order", False),
     ("docs/maintainer-validation.md", "validation_loop_boundary", False),
     ("validation/README.md", "local_validation_workspace", False),
-    ("docs/.agent/PROGRESS-LOG.md", "local_loop_history", True),
-    ("docs/.agent/SKILLS.md", "local_loop_learnings", True),
+    (".agent/PROGRESS-LOG.md", "local_loop_history", True),
+    (".agent/SKILLS.md", "local_loop_learnings", True),
 )
 _CLAUDE_PLUGIN_MANIFEST = _ROOT / "agents" / "claude-code" / ".claude-plugin" / "plugin.json"
 _ITERATIVE_MCP_TOOLS = {

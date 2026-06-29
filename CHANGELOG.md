@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   authorization specification.
 - **Artifact-attestation guidance currency.** External write-up and freeze
   docs now cite GitHub's current artifact-attestation how-to path.
+- **Agent working-directory hygiene.** Maintainer-loop and generated
+  surface-inventory guidance now point agent scratch records at the root
+  `.agent/` directory.
 
 ## [2.2.17] - 2026-06-29
 

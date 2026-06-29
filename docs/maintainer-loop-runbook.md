@@ -24,7 +24,7 @@ Every loop uses the same six records:
 
 1. **Context packet:** `README.md`, `AGENTS.md`, `docs/agentic-balance.md`,
    `docs/roadmap.md`, `docs/maintainer-validation.md`, `validation/README.md`,
-   `docs/.agent/PROGRESS-LOG.md`, and `docs/.agent/SKILLS.md`.
+   `.agent/PROGRESS-LOG.md`, and `.agent/SKILLS.md`.
 2. **State file:** an ignored JSON file under `validation/local/`, such as
    `validation/local/maintainer-loop-state.json`, recording the latest command,
    outcome, commit, elapsed time, spend, touched files, and any unresolved
@@ -46,7 +46,7 @@ corpus paths outside the ignored local workspace.
 The same context packet is exposed under `agent_surfaces.maintainer_context_packet`
 in the generated `docs/surface-inventory.json` and `recon://surface-inventory`
 resource. That entry is generated discovery context, not a stable API contract.
-The ignored `docs/.agent/` records are marked as optional local context in that
+The ignored `.agent/` records are marked as optional local context in that
 generated inventory so a clean checkout does not depend on private loop state.
 
 ## CI Failure Triage Loop
