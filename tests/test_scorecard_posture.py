@@ -237,7 +237,9 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
     text = " ".join((_ROOT / "docs" / "openssf-posture.md").read_text(encoding="utf-8").split())
 
     for required in (
+        "2026-06-29",
         "Score: `7.5`",
+        "live API URL",
         "OpenSSF Best Practices Badge is claimed",
         "must not be added as a placeholder",
         "Branch-Protection",
@@ -250,5 +252,17 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
         "bestpractices.dev",
         "github.com/ossf/scorecard",
         "about-code-owners",
+    ):
+        assert required in text
+
+
+def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
+    text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
+
+    for required in (
+        "2026-06-29 Scorecard recheck reports score `7.5`",
+        "code-owned controls green",
+        "June 28 review found one code-owned gap",
+        "remaining Scorecard limits are intentional or process-bound",
     ):
         assert required in text

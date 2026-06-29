@@ -6,11 +6,16 @@ while the Best Practices Badge is an account-backed project questionnaire.
 
 ## Current Snapshot
 
-- Date checked: 2026-06-28.
-- Scorecard commit checked: `5b8494f4c8608e63a84b30cdbc242e05608e2be1`.
+- Date checked: 2026-06-29.
+- Live API state at check time: current `main` after the strategic gap audit.
 - Scorecard version: `v5.3.0`.
 - Score: `7.5`.
 - Public source: `https://api.securityscorecards.dev/projects/github.com/blisspixel/recon`.
+
+The public API is authoritative for the exact commit behind the badge. Docs-only
+commits can move `main` after a snapshot is written, so this file records the
+reviewed posture and the live API URL rather than treating a commit hash as a
+durable status promise.
 
 The code-owned controls are green: dangerous workflow patterns, dependency
 update automation, token permissions, pinned dependencies, binary artifacts,
