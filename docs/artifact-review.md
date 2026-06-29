@@ -48,11 +48,11 @@ That changes only terminal handling. It does not skip any gate.
 ## What The Public Bundle Validates
 
 The latest maintainer full proof check is recorded in
-[../validation/2026-06-28-final-claim-audit.md](../validation/2026-06-28-final-claim-audit.md).
-That memo is the current final public claim audit for the draft package. It
-supersedes the earlier adversarial-perturbation proof memo only as the latest
-submission gate; the earlier memo remains the focused record for the
-add/remove perturbation harness.
+[../validation/2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md).
+That memo is the current final public claim audit refresh for the draft package.
+It supersedes the June 28 final claim audit and the earlier
+adversarial-perturbation proof memo only as the latest submission gate; those
+earlier memos remain focused historical records for their respective checks.
 
 | Claim family | Public command or gate | Reviewer interpretation |
 |---|---|---|

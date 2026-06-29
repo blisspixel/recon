@@ -229,8 +229,8 @@ as corroboration under the
 [M365 tenancy decision](docs/m365-tenancy-decision.md). As validation runs teach
 us more, the system may get conservative refinements, but new runtime features
 stay behind roadmap review and the project invariants. The final public claim
-audit for the current draft package is recorded in
-[validation/2026-06-28-final-claim-audit.md](validation/2026-06-28-final-claim-audit.md);
+audit refresh for the current draft package is recorded in
+[validation/2026-06-29-final-claim-audit-refresh.md](validation/2026-06-29-final-claim-audit-refresh.md);
 future paper or package changes rerun that gate. Feedback on gaps, wording, and
 false positives is welcome. The detailed plan lives in
 [docs/external-writeup-plan.md](docs/external-writeup-plan.md).

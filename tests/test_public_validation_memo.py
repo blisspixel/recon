@@ -69,6 +69,18 @@ MEMOS = (
             "not real-world validity claims",
         ),
     ),
+    PublicMemo(
+        path=ROOT / "validation" / "2026-06-29-final-claim-audit-refresh.md",
+        profile="paper",
+        required_phrases=(
+            "final claim audit refresh",
+            "full public proof run",
+            "metric-lineage wording check",
+            "model-internal perturbation coverage",
+            "not ground-truth frequentist coverage",
+            "not real-world validity claims",
+        ),
+    ),
 )
 
 

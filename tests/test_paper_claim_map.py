@@ -88,6 +88,33 @@ def test_paper_draft_uses_current_disclosure_reviewed_calibration_numbers() -> N
         assert current in text
 
 
+def test_metric_lineage_wording_matches_june_28_refresh() -> None:
+    combined = " ".join(
+        (
+            PAPER_DRAFT.read_text(encoding="utf-8"),
+            CLAIM_MAP.read_text(encoding="utf-8"),
+            (ROOT / "docs" / "paper-outline.md").read_text(encoding="utf-8"),
+        )
+    ).replace("\n", " ")
+
+    for required in (
+        "The June 28 refresh reports fixed-bin ECE and",
+        "equal-mass, mean-confidence ECE with deterministic bootstrap CI side by side",
+        "estimator choice is visible in the current cited rows",
+        "Older memos keep their dated estimator labels",
+        "2026-06-28-full-corpus-calibration-refresh.md",
+    ):
+        assert required in combined
+
+    for stale in (
+        "remain the legacy fixed-width ECE until rerun",
+        "future calibration summaries report equal-mass",
+        "shipped for future reruns",
+        "Do not revise older memo numbers until the corpus runs are rerun",
+    ):
+        assert stale not in combined
+
+
 def test_paper_draft_diagnoses_dmarc_residual_collapse_without_overclaiming() -> None:
     text = "\n".join(
         (
@@ -148,7 +175,7 @@ def test_paper_submission_state_records_final_claim_audit_closure() -> None:
         "Final claim audit is complete",
         "figure drift check",
         "full public proof",
-        "2026-06-28-final-claim-audit.md",
+        "2026-06-29-final-claim-audit-refresh.md",
     ):
         assert required in combined
 

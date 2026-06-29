@@ -322,10 +322,11 @@ ablations. It writes `summary.md`, `manifest.json`, and per-harness outputs unde
 paper-sized sweeps. If you pass `--stamp`, it follows the same single safe
 path-segment rule as the calibration bundle runner.
 
-The current final public claim audit for the paper package is committed as
-`2026-06-28-final-claim-audit.md`. It records the passing smoke profile, full
-paper profile, claim-map audit, figure drift check, local gate, and release
-readiness checks without committing private corpora or local run artifacts.
+The current final public claim audit refresh for the paper package is committed
+as `2026-06-29-final-claim-audit-refresh.md`. It records the passing smoke
+profile, full paper profile, claim-map audit, metric-lineage wording check,
+figure drift check, local gate, and release readiness checks without committing
+private corpora or local run artifacts.
 
 ## The fingerprint catalog audit
 

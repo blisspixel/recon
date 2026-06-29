@@ -405,13 +405,13 @@ adversarial-missingness design claims not to need; the hardened cell the thesis
 is about is nearly empty, and the reliability mid-range (0.4 to 0.7) is
 unpopulated, which partly explains the low ECE. A stratified probability sample
 from a public zone, stratified by a hardening proxy, is required before any rate
-transfers beyond this population. Current validation summaries also report an
-equal-mass, mean-confidence ECE with deterministic bootstrap CI so future reruns
-can separate estimator choice from model behavior; the June memo numbers above
-remain the legacy fixed-width ECE until rerun. (2) The credible interval now uses
-exact Beta quantiles for unimodal moment-matched cases and keeps the validated
-mean-centered fallback for boundary-skewed cases, because equal-tailed Beta
-intervals can exclude their own posterior near 0 or 1. The fallback is a
+transfers beyond this population. The June 28 refresh reports fixed-bin ECE and
+equal-mass, mean-confidence ECE with deterministic bootstrap CI side by side, so
+estimator choice is visible in the current cited rows. Older memos keep their
+dated estimator labels and are not silently reinterpreted. (2) The credible
+interval now uses exact Beta quantiles for unimodal moment-matched cases and
+keeps the validated mean-centered fallback for boundary-skewed cases, because
+equal-tailed Beta intervals can exclude their own posterior near 0 or 1. The fallback is a
 deliberate coverage-preserving contract, not an untracked approximation. (3) The
 conformal over-coverage with decisive set size is expected on a bimodal,
 exchangeable cohort and says nothing about hardened targets.
@@ -573,8 +573,9 @@ The M365 independent-instrument decision is closed for this submission:
 [m365-tenancy-decision.md](m365-tenancy-decision.md) records why no passive
 candidate is independent enough to promote the result beyond corroboration.
 
-Final claim audit is complete for the current draft package. The public memo
-[2026-06-28-final-claim-audit.md](../validation/2026-06-28-final-claim-audit.md)
+Final claim audit is complete and refreshed for the current draft package. The
+public memo
+[2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md)
 records the passing claim-map audit, figure drift check, public proof smoke,
 full public proof, local gate, and release readiness checks.
 

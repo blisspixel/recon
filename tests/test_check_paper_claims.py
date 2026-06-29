@@ -30,7 +30,7 @@ def test_paper_claim_audit_passes_current_docs() -> None:
 def test_paper_claim_audit_rejects_missing_latest_public_proof(tmp_path: Path) -> None:
     _copy_paper_docs(tmp_path)
     plan = tmp_path / "docs" / "external-writeup-plan.md"
-    text = plan.read_text(encoding="utf-8").replace("2026-06-28-final-claim-audit.md", "")
+    text = plan.read_text(encoding="utf-8").replace("2026-06-29-final-claim-audit-refresh.md", "")
     plan.write_text(text, encoding="utf-8")
 
     issues = collect_issues(tmp_path)

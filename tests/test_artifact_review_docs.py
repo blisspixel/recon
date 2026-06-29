@@ -81,8 +81,8 @@ def test_artifact_review_guide_names_figure_package() -> None:
 def test_external_writeup_plan_names_latest_full_proof() -> None:
     text = (ROOT / "docs" / "external-writeup-plan.md").read_text(encoding="utf-8")
 
-    assert "discussion-claim-audit-paper-20260628" in text
-    assert "2026-06-28-final-claim-audit.md" in (
+    assert "metric-lineage-claim-audit-paper-20260629" in text
+    assert "2026-06-29-final-claim-audit-refresh.md" in (
         ROOT / "docs" / "artifact-review.md"
     ).read_text(encoding="utf-8")
     assert "adversarial-perturbation-paper-20260628" in text

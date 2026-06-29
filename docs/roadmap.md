@@ -88,9 +88,9 @@ The next work is dependency-ordered:
      aggregate-only evidence, the
      [M365 tenancy decision](m365-tenancy-decision.md) keeps that result named
      as corroboration rather than calibration,
-     [2026-06-28-final-claim-audit.md](../validation/2026-06-28-final-claim-audit.md)
-     records the current final public claim audit, and release readiness now
-     guards citation metadata.
+     [2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md)
+     records the current final public claim audit refresh, and release
+     readiness now guards citation metadata.
    - Acceptance: cite only public or synthetic artifacts and aggregate-only
    validation memos. Public-list numbers remain robustness checks rather than
    population rates. M365 tenancy evidence stays named as corroboration for

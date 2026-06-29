@@ -320,7 +320,7 @@ correlation.md section 4.3.
 | Adversarial add/remove perturbation | evidence removal never raises confidence under the shipped network, while planted evidence can cross decision boundaries in synthetic paired perturbations | `validation/adversarial_properties.py`; public reproduction bundle |
 | Tenancy corroboration (provider endpoints) | the M365 tenancy posterior computed from the DNS channel alone, compared with Microsoft's own endpoint attestation (two-class label: tenant ID / namespace positive, documented not-found negative), predictor and label split by observation channel but still sharing tenant provisioning as a common cause; GWS reported one-sided (recall on attested-federated) because the Google channel has no authoritative negative | `validation/tenancy_reference_calibration.py`; refreshed 2026-06-28: fixed-bin ECE 0.0471, equal-mass ECE 0.0440, agreement 0.889, n=3,296; GWS recall 0.3636 (n=11) |
 | Conformal coverage on labelable nodes | a distribution-free finite-sample coverage statement beside the Bayesian interval, with the exchangeability boundary stated and demonstrated (a deliberately non-exchangeable split shows the guarantee failing where claimed to fail) | `validation/conformal_coverage.py`; refreshed 2026-06-28: 0.9992 mean coverage at a 0.90 target (n=4,290, 20 splits) |
-| ECE estimator uncertainty | future calibration summaries report equal-mass, mean-confidence ECE with deterministic bootstrap CI beside the legacy fixed-width ECE, so estimator choice is visible and older memo numbers are not silently upgraded | `validation/calibration_estimators.py`; `tests/test_calibration_estimators.py`; shipped for future reruns |
+| ECE estimator uncertainty | the 2026-06-28 calibration refresh reports fixed-bin ECE and equal-mass, mean-confidence ECE with deterministic bootstrap CI side by side, so estimator choice is visible; older memo numbers are not silently upgraded | `validation/calibration_estimators.py`; `tests/test_calibration_estimators.py`; `validation/2026-06-28-full-corpus-calibration-refresh.md` |
 | Interval coverage (synthetic) | the 80% interval absorbs the elicitation imprecision under the CAL8 band | `validation/interval_coverage.py`; shipped |
 | Likelihood sensitivity (CAL8) | the posteriors and agreement are stable under a plus-or-minus-20-percent likelihood perturbation | `validation/likelihood_sensitivity.py`; shipped; full public proof run 2026-06-28 |
 | Information recovered (CAL10) | the per-domain entropy-reduction distribution across postures, as the operational reading of what the channel still leaks after hardening | per-node surfacing shipped (2.2 diagnostics: `entropy_reduction_nats` on every posterior); public-list aggregate cross-check in `validation/public-list-calibration.md`; mapped in `paper-claim-map.md` |
@@ -394,8 +394,9 @@ by [m365-tenancy-decision.md](m365-tenancy-decision.md). No passive candidate is
 independent enough to promote the result beyond channel-split corroboration, so
 the paper keeps the result named as corroboration rather than calibration.
 
-Final claim audit is complete for the current draft package. The public memo
-[2026-06-28-final-claim-audit.md](../validation/2026-06-28-final-claim-audit.md)
+Final claim audit is complete and refreshed for the current draft package. The
+public memo
+[2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md)
 records the passing claim-map audit, figure drift check, public proof smoke,
 full public proof, local gate, and release readiness checks.
 
