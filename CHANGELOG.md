@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pass-statement hygiene.** The source-hygiene test now covers tests as well
   as runtime and maintainer Python, and the remaining test-only pass statements
   were replaced with explicit no-op control flow.
+- **Secrets-scan workflow contract.** Scorecard posture tests now pin the
+  gitleaks workflow to full-history checkout, read-only permissions, and
+  explicit finding-fail behavior.
 
 ## [2.2.17] - 2026-06-29
 

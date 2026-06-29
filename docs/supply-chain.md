@@ -119,7 +119,9 @@ The repository also runs supply-chain posture checks outside the release flow:
   left in the local Git config after source checkout.
 - Every workflow job has an explicit timeout so CI and release automation fail
   closed instead of hanging indefinitely.
-- Secret scanning and push protection are enabled for the repository.
+- Secret scanning and push protection are enabled for the repository. The
+  gitleaks workflow runs on pull requests, pushes to `main`, and a weekly
+  full-history schedule with read-only repository permissions.
 - `.github/CODEOWNERS` routes all repository paths to the maintainer account so
   external pull requests have a clear review owner.
 

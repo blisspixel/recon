@@ -152,6 +152,27 @@ def test_codeql_workflow_is_scheduled_and_least_privilege() -> None:
     assert "github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e" in step_text
 
 
+def test_secrets_scan_workflow_is_full_history_and_read_only() -> None:
+    workflow = _load_yaml(".github/workflows/secrets-scan.yml")
+    triggers = _workflow_on(workflow)
+    job = workflow["jobs"]["gitleaks"]
+    steps = job["steps"]
+    checkout = steps[0]
+    gitleaks_step = steps[1]
+    workflow_text = (_ROOT / ".github" / "workflows" / "secrets-scan.yml").read_text(encoding="utf-8")
+    expected_secret_ref = "${{ secrets." + "GITHUB_TOKEN" + " }}"
+
+    assert {"pull_request", "push", "schedule"} <= set(triggers)
+    assert workflow["permissions"] == _READ_ONLY_PERMISSIONS
+    assert job["timeout-minutes"] == 15
+    assert checkout["with"]["persist-credentials"] is False
+    assert checkout["with"]["fetch-depth"] == 0
+    assert "gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3" in workflow_text
+    assert gitleaks_step["env"]["GITHUB_TOKEN"] == expected_secret_ref
+    assert gitleaks_step["env"]["GITLEAKS_ENABLE_UPLOAD_ARTIFACT"] == "true"
+    assert gitleaks_step["env"]["GITLEAKS_ENABLE_SUMMARY"] == "true"
+
+
 def test_workflow_actions_are_pinned_with_readable_version_comments() -> None:
     workflow_text = "\n".join(
         path.read_text(encoding="utf-8") for path in sorted((_ROOT / ".github" / "workflows").glob("*.yml"))
