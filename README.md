@@ -234,8 +234,10 @@ stay behind roadmap review and the project invariants. The final public claim
 audit refresh for the current draft package is recorded in
 [validation/2026-06-29-scorecard-gate-claim-audit.md](validation/2026-06-29-scorecard-gate-claim-audit.md);
 future paper or package changes rerun that gate through the
-[submission freeze checklist](docs/submission-freeze-checklist.md). Feedback on
-gaps, wording, and false positives is welcome. The detailed plan lives in
+[submission freeze checklist](docs/submission-freeze-checklist.md). The latest
+local submission-freeze public proof record is
+[validation/2026-06-29-submission-freeze-local-proof.md](validation/2026-06-29-submission-freeze-local-proof.md).
+Feedback on gaps, wording, and false positives is welcome. The detailed plan lives in
 [docs/external-writeup-plan.md](docs/external-writeup-plan.md), with the
 current step-back audit in [docs/strategic-gap-audit.md](docs/strategic-gap-audit.md).
 

@@ -182,6 +182,7 @@ def test_paper_submission_state_records_final_claim_audit_closure() -> None:
         "figure drift check",
         "full public proof",
         "2026-06-29-scorecard-gate-claim-audit.md",
+        "2026-06-29-submission-freeze-local-proof.md",
     ):
         assert required in combined
 

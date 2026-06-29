@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   code markers in runtime, maintainer, validation, and test Python.
 - **Submission-freeze local proof.** Added a public proof memo for the current
   local submission-freeze smoke and full reproduction runs.
+- **Proof-pointer currency.** Claim-audit guards and research docs now point to
+  the latest local submission-freeze public proof memo while preserving the
+  final claim-audit refresh boundary.
 
 ## [2.2.17] - 2026-06-29
 

@@ -95,7 +95,9 @@ The next work is dependency-ordered:
      [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md)
      records the current final public claim audit refresh, and release
      readiness now guards citation metadata. The final submission gate is
-     documented in [submission-freeze-checklist.md](submission-freeze-checklist.md).
+     documented in [submission-freeze-checklist.md](submission-freeze-checklist.md),
+     and the latest local submission-freeze public proof record is
+     [2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md).
      The archive and DOI stop rules are documented in
      [archive-readiness.md](archive-readiness.md), and the
      outside public-artifact rerun path is documented in

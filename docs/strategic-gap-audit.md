@@ -58,7 +58,9 @@ before adding surface area.
   GitHub provenance for the release wheel and sdist.
 - CI, secrets scan, Scorecard workflows, and the public Scorecard API pass on
   current main.
-- Public proof and final claim-audit refresh are recorded in
+- Public proof is recorded in
+  [2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md),
+  and the final claim-audit refresh is recorded in
   [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md).
 - `scripts/check_validation_hygiene.py` and release readiness confirm private
   validation run directories are not tracked.

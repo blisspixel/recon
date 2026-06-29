@@ -124,6 +124,13 @@ requirements:
   stamp `scorecard-gate-claim-audit-paper-20260629` passed all five public
   steps and reported `Private corpora read: no`. The aggregate-only memo is
   [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md).
+- The 2026-06-29 submission-freeze local public proof smoke check with stamp
+  `submission-freeze-smoke-20260629-cycle9` passed all five public steps and
+  reported `Private corpora read: no`.
+- The 2026-06-29 submission-freeze local public proof check with stamp
+  `submission-freeze-paper-20260629-cycle9b` passed all five public steps and
+  reported `Private corpora read: no`. The aggregate-only memo is
+  [2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md).
 - `CITATION.cff` is the citation metadata source and release readiness now
   checks it against `pyproject.toml` and the current `CHANGELOG.md` release
   section.
@@ -191,12 +198,12 @@ Reasoning:
 2. **Orientation refresh.** Point README, roadmap, docs index, validation docs,
    paper outline, current-state analysis, and the maintainer logs at this plan.
 3. **Public artifact smoke.** Keep the smoke profile current. The current
-   final audit run used
-   `python -m validation.reproduce_paper_numbers --profile smoke --stamp scorecard-gate-claim-audit-smoke-20260629`
+   local submission-freeze proof run used
+   `python -m validation.reproduce_paper_numbers --profile smoke --stamp submission-freeze-smoke-20260629-cycle9`
    and kept outputs under ignored `validation/local/`.
-4. **Full public proof.** Keep the paper profile current. The current final
-   audit run used
-   `python -m validation.reproduce_paper_numbers --profile paper --stamp scorecard-gate-claim-audit-paper-20260629`
+4. **Full public proof.** Keep the paper profile current. The current local
+   submission-freeze proof run used
+   `python -m validation.reproduce_paper_numbers --profile paper --stamp submission-freeze-paper-20260629-cycle9b`
    before treating the public proof bundle as current for submission.
 5. **Artifact guide.** Keep [artifact-review.md](artifact-review.md) current with
    the exact public reviewer commands and their claim boundaries.

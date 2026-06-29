@@ -578,6 +578,8 @@ public memo
 [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md)
 records the passing claim-map audit, figure drift check, public proof smoke,
 full public proof, local gate, and release readiness checks.
+The latest local submission-freeze public proof record is
+[2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md).
 
 Current technical artifact blockers: none for this draft package. Any future
 experiment, paper wording, package, or claim-map change can move a claim between

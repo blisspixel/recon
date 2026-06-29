@@ -14,4 +14,6 @@ The final public claim audit refresh for the current paper package is recorded
 in
 [validation/2026-06-29-scorecard-gate-claim-audit.md](validation/2026-06-29-scorecard-gate-claim-audit.md).
 Future wording, package, or validation changes rerun that gate before
-submission or release packaging.
+submission or release packaging. The latest local submission-freeze public proof
+record is
+[validation/2026-06-29-submission-freeze-local-proof.md](validation/2026-06-29-submission-freeze-local-proof.md).
