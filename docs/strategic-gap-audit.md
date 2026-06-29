@@ -44,7 +44,7 @@ before adding surface area.
 - Remote release readiness passes for current `HEAD` and verifies required
   GitHub Actions checks, PyPI wheel and sdist publication, and GitHub Release
   wheel, sdist, SBOM, and attestation export assets for `v2.2.17`; it also
-  verifies GitHub provenance for the release wheel and sdist.
+  verifies PyPI and GitHub provenance for the release wheel and sdist.
 - CI, secrets scan, and Scorecard workflows pass on current main.
 - Public proof and final claim-audit refresh are recorded in
   [2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md).

@@ -322,6 +322,102 @@ def test_pypi_release_requires_wheel_and_sdist(tmp_path: Path) -> None:
     assert "recon_tool-2.2.17-py3-none-any.whl" in check.detail
 
 
+def test_pypi_attestations_verify_wheel_and_sdist(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    verified_urls: list[str] = []
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd[1] == "-c":
+            return _cp(
+                cmd,
+                stdout=json.dumps(
+                    {
+                        "version": "2.2.17",
+                        "files": [
+                            {
+                                "filename": "recon_tool-2.2.17-py3-none-any.whl",
+                                "url": "https://files.pythonhosted.org/recon_tool-2.2.17-py3-none-any.whl",
+                            },
+                            {
+                                "filename": "recon_tool-2.2.17.tar.gz",
+                                "url": "https://files.pythonhosted.org/recon_tool-2.2.17.tar.gz",
+                            },
+                        ],
+                    }
+                ),
+            )
+        if cmd[:4] == ["uvx", "--from", "pypi-attestations", "pypi-attestations"]:
+            assert cmd[4:8] == ["verify", "pypi", "--repository", "https://github.com/blisspixel/recon"]
+            verified_urls.append(cmd[8])
+            return _cp(cmd, stdout="OK\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_pypi_attestations(tmp_path, runner)
+
+    assert check.status == "pass"
+    assert verified_urls == [
+        "https://files.pythonhosted.org/recon_tool-2.2.17-py3-none-any.whl",
+        "https://files.pythonhosted.org/recon_tool-2.2.17.tar.gz",
+    ]
+
+
+def test_pypi_attestations_fail_when_verification_fails(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd[1] == "-c":
+            return _cp(
+                cmd,
+                stdout=json.dumps(
+                    {
+                        "version": "2.2.17",
+                        "files": [
+                            {
+                                "filename": "recon_tool-2.2.17-py3-none-any.whl",
+                                "url": "https://files.pythonhosted.org/recon_tool-2.2.17-py3-none-any.whl",
+                            },
+                            {
+                                "filename": "recon_tool-2.2.17.tar.gz",
+                                "url": "https://files.pythonhosted.org/recon_tool-2.2.17.tar.gz",
+                            },
+                        ],
+                    }
+                ),
+            )
+        if cmd[:4] == ["uvx", "--from", "pypi-attestations", "pypi-attestations"]:
+            return _cp(cmd, returncode=1, stderr="verification failed\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_pypi_attestations(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "verification failed" in check.detail
+
+
+def test_pypi_attestations_fail_without_file_url(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        assert cmd[1] == "-c"
+        return _cp(
+            cmd,
+            stdout=json.dumps(
+                {
+                    "version": "2.2.17",
+                    "files": [
+                        {"filename": "recon_tool-2.2.17-py3-none-any.whl"},
+                        {"filename": "recon_tool-2.2.17.tar.gz"},
+                    ],
+                }
+            ),
+        )
+
+    check = release_readiness._check_pypi_attestations(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "missing PyPI file URL" in check.detail
+
+
 def test_github_release_passes_when_assets_are_complete(tmp_path: Path) -> None:
     _write_minimal_root(tmp_path, version="2.2.17")
     assets = [

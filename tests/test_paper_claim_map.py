@@ -21,7 +21,7 @@ def test_paper_claim_map_is_linked_from_research_docs() -> None:
 
 
 def test_claim_map_covers_required_evidence_tiers_and_gates() -> None:
-    text = CLAIM_MAP.read_text(encoding="utf-8")
+    text = " ".join(CLAIM_MAP.read_text(encoding="utf-8").split())
 
     for required in (
         "Invariant",
@@ -34,7 +34,7 @@ def test_claim_map_covers_required_evidence_tiers_and_gates() -> None:
         "scripts/release_readiness.py --allow-dirty",
         "scripts/release_readiness.py --remote",
         "release-state evidence",
-        "verifies GitHub provenance",
+        "verifies PyPI and GitHub provenance",
     ):
         assert required in text
 

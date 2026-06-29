@@ -229,6 +229,7 @@ def test_supply_chain_docs_track_scorecard_gap_decisions() -> None:
         "Code-Review is low until normal work flows through reviewed pull requests",
         "OpenSSF Best Practices Badge",
         "openssf-posture.md",
+        "pypi-attestations verify pypi",
         "gh attestation verify",
     ):
         assert required in text
@@ -265,6 +266,7 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
         "code-owned controls green",
         "June 28 review found one code-owned gap",
         "remaining Scorecard limits are intentional or process-bound",
+        "verifies the PyPI wheel and sdist",
         "runs `gh attestation verify` against both artifacts",
     ):
         assert required in text

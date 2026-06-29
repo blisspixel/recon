@@ -57,7 +57,7 @@ def test_strategic_gap_audit_preserves_private_data_and_release_boundaries() -> 
         "No private corpus, real target list, per-domain result rows, or tenant IDs are tracked",
         "Remote release readiness passes for current `HEAD`",
         "GitHub Release wheel, sdist, SBOM, and attestation export assets",
-        "verifies GitHub provenance for the release wheel and sdist",
+        "verifies PyPI and GitHub provenance for the release wheel and sdist",
         "Documentation and proof-memo refreshes do not require a new package release",
         "Release when package behavior, public package metadata, or release artifacts change",
         "Do not commit apex lists, organization names, tenant IDs, per-domain rows, or unsuppressed small strata",

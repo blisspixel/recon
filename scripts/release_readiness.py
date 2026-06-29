@@ -7,9 +7,9 @@ private-corpus hygiene, Homebrew formula freshness, and local commit-message
 hygiene.
 
 Use ``--remote`` after pushing when you want the same report to include GitHub
-Actions status for the current commit, PyPI publication state, and GitHub
-Release asset completeness, and GitHub build-provenance verification for the
-current version.
+Actions status for the current commit, PyPI publication state, PyPI provenance
+verification, GitHub Release asset completeness, and GitHub build-provenance
+verification for the current version.
 """
 
 from __future__ import annotations
@@ -49,6 +49,7 @@ _COVERAGE_FLOOR = "--cov-fail-under=82"
 _REQUIRED_REMOTE_WORKFLOWS = ("CI", "Secrets scan", "Scorecard supply-chain security")
 _PYPI_PACKAGE = "recon-tool"
 _PYPI_RELEASE_URL = f"https://pypi.org/pypi/{_PYPI_PACKAGE}/json"
+_PYPI_ATTESTATION_REPOSITORY = "https://github.com/blisspixel/recon"
 _README_FORBIDDEN_FRAGMENTS = (
     "enterprise use, contact",
     "commercial or\nenterprise use",
@@ -490,11 +491,26 @@ def _check_pypi_release(root: Path, runner: Runner) -> CheckResult:
     except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
         return _result("PyPI release", "fail", str(exc))
 
+    payload = _load_pypi_release_payload(runner)
+    if isinstance(payload, CheckResult):
+        return payload
+    latest = payload.get("version")
+    if latest != version:
+        return _result("PyPI release", "fail", f"PyPI latest is {latest!r}, project is {version}")
+    expected = _expected_distribution_names(version)
+    missing = sorted(set(expected) - _pypi_file_names(payload))
+    if missing:
+        return _result("PyPI release", "fail", "missing file(s): " + ", ".join(missing))
+    return _result("PyPI release", "pass", f"PyPI reports {_PYPI_PACKAGE} {version} with wheel and sdist")
+
+
+def _load_pypi_release_payload(runner: Runner) -> dict[str, object] | CheckResult:
     script = (
         "import json, urllib.request; "
         f"data=json.load(urllib.request.urlopen({_PYPI_RELEASE_URL!r}, timeout=30)); "
         "print(json.dumps({'version': data['info']['version'], "
-        "'files': [f.get('filename') for f in data.get('releases', {}).get(data['info']['version'], [])]}))"
+        "'files': [{'filename': f.get('filename'), 'url': f.get('url')} "
+        "for f in data.get('releases', {}).get(data['info']['version'], [])]}))"
     )
     result = runner([sys.executable, "-c", script])
     if result.returncode != 0:
@@ -503,19 +519,77 @@ def _check_pypi_release(root: Path, runner: Runner) -> CheckResult:
         payload = json.loads(result.stdout)
     except json.JSONDecodeError as exc:
         return _result("PyPI release", "fail", f"could not parse PyPI JSON: {exc}")
-    latest = payload.get("version") if isinstance(payload, dict) else None
+    if not isinstance(payload, dict):
+        return _result("PyPI release", "fail", "PyPI JSON was not an object")
+    return payload
+
+
+def _expected_distribution_names(version: str) -> tuple[str, str]:
+    return (f"recon_tool-{version}-py3-none-any.whl", f"recon_tool-{version}.tar.gz")
+
+
+def _pypi_file_names(payload: dict[str, object]) -> set[str]:
+    files = payload.get("files")
+    if not isinstance(files, list):
+        return set()
+    names: set[str] = set()
+    for file in files:
+        if isinstance(file, str):
+            names.add(file)
+        elif isinstance(file, dict) and isinstance(file.get("filename"), str):
+            names.add(file["filename"])
+    return names
+
+
+def _pypi_file_urls(payload: dict[str, object]) -> dict[str, str]:
+    files = payload.get("files")
+    if not isinstance(files, list):
+        return {}
+    urls: dict[str, str] = {}
+    for file in files:
+        if (
+            isinstance(file, dict)
+            and isinstance(file.get("filename"), str)
+            and isinstance(file.get("url"), str)
+        ):
+            urls[file["filename"]] = file["url"]
+    return urls
+
+
+def _check_pypi_attestations(root: Path, runner: Runner) -> CheckResult:
+    try:
+        version = _read_project_version(root)
+    except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
+        return _result("PyPI attestations", "fail", str(exc))
+    payload = _load_pypi_release_payload(runner)
+    if isinstance(payload, CheckResult):
+        return _result("PyPI attestations", payload.status, payload.detail, payload.action)
+    latest = payload.get("version")
     if latest != version:
-        return _result("PyPI release", "fail", f"PyPI latest is {latest!r}, project is {version}")
-    files = (
-        set(payload.get("files", []))
-        if isinstance(payload, dict) and isinstance(payload.get("files"), list)
-        else set()
-    )
-    expected = {f"recon_tool-{version}-py3-none-any.whl", f"recon_tool-{version}.tar.gz"}
-    missing = sorted(expected - {name for name in files if isinstance(name, str)})
-    if missing:
-        return _result("PyPI release", "fail", "missing file(s): " + ", ".join(missing))
-    return _result("PyPI release", "pass", f"PyPI reports {_PYPI_PACKAGE} {version} with wheel and sdist")
+        return _result("PyPI attestations", "fail", f"PyPI latest is {latest!r}, project is {version}")
+    urls = _pypi_file_urls(payload)
+    expected = _expected_distribution_names(version)
+    for subject in expected:
+        url = urls.get(subject)
+        if url is None:
+            return _result("PyPI attestations", "fail", f"missing PyPI file URL for {subject}")
+        verify = runner(
+            [
+                "uvx",
+                "--from",
+                "pypi-attestations",
+                "pypi-attestations",
+                "verify",
+                "pypi",
+                "--repository",
+                _PYPI_ATTESTATION_REPOSITORY,
+                url,
+            ]
+        )
+        if verify.returncode != 0:
+            detail = (verify.stderr or verify.stdout).strip() or f"PyPI attestation verification failed for {subject}"
+            return _result("PyPI attestations", "fail", detail)
+    return _result("PyPI attestations", "pass", f"PyPI provenance verifies wheel and sdist for {version}")
 
 
 def _check_github_release(root: Path, runner: Runner) -> CheckResult:
@@ -654,11 +728,13 @@ def collect_checks(
     if remote:
         checks.append(_check_remote_workflows(actual_runner))
         checks.append(_check_pypi_release(root, actual_runner))
+        checks.append(_check_pypi_attestations(root, actual_runner))
         checks.append(_check_github_release(root, actual_runner))
         checks.append(_check_github_attestations(root, actual_runner))
     else:
         checks.append(_result("remote CI", "skip", "not requested; pass --remote after pushing main"))
         checks.append(_result("PyPI release", "skip", "not requested; pass --remote after release publication"))
+        checks.append(_result("PyPI attestations", "skip", "not requested; pass --remote after release publication"))
         checks.append(_result("GitHub release", "skip", "not requested; pass --remote after release publication"))
         checks.append(_result("GitHub attestations", "skip", "not requested; pass --remote after release publication"))
     return checks
