@@ -8,7 +8,8 @@ hygiene.
 
 Use ``--remote`` after pushing when you want the same report to include GitHub
 Actions status for the current commit, PyPI publication state, and GitHub
-Release asset completeness for the current version.
+Release asset completeness, and GitHub build-provenance verification for the
+current version.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 import tomllib
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
@@ -534,6 +536,46 @@ def _check_github_release(root: Path, runner: Runner) -> CheckResult:
     return _result("GitHub release", "pass", f"v{version} is published with wheel, sdist, SBOM, and attestation")
 
 
+def _check_github_attestations(root: Path, runner: Runner) -> CheckResult:
+    try:
+        version = _read_project_version(root)
+    except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
+        return _result("GitHub attestations", "fail", str(exc))
+    repo_result = _read_github_repo(runner, "GitHub attestations")
+    if isinstance(repo_result, CheckResult):
+        return repo_result
+    repo = repo_result
+    subjects = (f"recon_tool-{version}-py3-none-any.whl", f"recon_tool-{version}.tar.gz")
+    with tempfile.TemporaryDirectory(prefix="recon-attestation-") as temp_dir:
+        directory = Path(temp_dir)
+        for subject in subjects:
+            download = runner(
+                [
+                    "gh",
+                    "release",
+                    "download",
+                    f"v{version}",
+                    "--repo",
+                    repo,
+                    "--pattern",
+                    subject,
+                    "--dir",
+                    str(directory),
+                ]
+            )
+            if download.returncode != 0:
+                detail = (download.stderr or download.stdout).strip() or f"could not download {subject}"
+                return _result("GitHub attestations", "fail", detail)
+            artifact = directory / subject
+            if not artifact.is_file():
+                return _result("GitHub attestations", "fail", f"release download did not produce {subject}")
+            verify = runner(["gh", "attestation", "verify", str(artifact), "--repo", repo])
+            if verify.returncode != 0:
+                detail = (verify.stderr or verify.stdout).strip() or f"attestation verification failed for {subject}"
+                return _result("GitHub attestations", "fail", detail)
+    return _result("GitHub attestations", "pass", f"GitHub provenance verifies wheel and sdist for v{version}")
+
+
 def _load_github_release_payload(runner: Runner, repo: str, version: str) -> dict[str, object] | CheckResult:
     result = runner(
         [
@@ -613,10 +655,12 @@ def collect_checks(
         checks.append(_check_remote_workflows(actual_runner))
         checks.append(_check_pypi_release(root, actual_runner))
         checks.append(_check_github_release(root, actual_runner))
+        checks.append(_check_github_attestations(root, actual_runner))
     else:
         checks.append(_result("remote CI", "skip", "not requested; pass --remote after pushing main"))
         checks.append(_result("PyPI release", "skip", "not requested; pass --remote after release publication"))
         checks.append(_result("GitHub release", "skip", "not requested; pass --remote after release publication"))
+        checks.append(_result("GitHub attestations", "skip", "not requested; pass --remote after release publication"))
     return checks
 
 

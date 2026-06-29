@@ -369,6 +369,66 @@ def test_github_release_requires_all_release_assets(tmp_path: Path) -> None:
     assert "recon_tool-2.2.17.tar.gz" in check.detail
 
 
+def test_github_attestations_verify_wheel_and_sdist(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    verified: list[str] = []
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd[:3] == ["gh", "release", "download"]:
+            directory = Path(cmd[cmd.index("--dir") + 1])
+            subject = cmd[cmd.index("--pattern") + 1]
+            (directory / subject).write_text("artifact", encoding="utf-8")
+            return _cp(cmd)
+        if cmd[:3] == ["gh", "attestation", "verify"]:
+            verified.append(Path(cmd[3]).name)
+            return _cp(cmd, stdout="Verified signature\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_github_attestations(tmp_path, runner)
+
+    assert check.status == "pass"
+    assert verified == ["recon_tool-2.2.17-py3-none-any.whl", "recon_tool-2.2.17.tar.gz"]
+
+
+def test_github_attestations_fail_when_verification_fails(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd[:3] == ["gh", "release", "download"]:
+            directory = Path(cmd[cmd.index("--dir") + 1])
+            subject = cmd[cmd.index("--pattern") + 1]
+            (directory / subject).write_text("artifact", encoding="utf-8")
+            return _cp(cmd)
+        if cmd[:3] == ["gh", "attestation", "verify"]:
+            return _cp(cmd, returncode=1, stderr="no matching attestations found\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_github_attestations(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "no matching attestations found" in check.detail
+
+
+def test_github_attestations_fail_when_download_missing_artifact(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd[:3] == ["gh", "release", "download"]:
+            return _cp(cmd)
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_github_attestations(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "release download did not produce" in check.detail
+
+
 def test_json_renderer_reports_overall_failure(tmp_path: Path) -> None:
     _write_minimal_root(tmp_path)
     checks = [
