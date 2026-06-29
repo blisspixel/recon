@@ -65,6 +65,11 @@ class _FakeStream(httpx.AsyncByteStream):
         return None
 
 
+async def _consume_stream(stream: httpx.AsyncByteStream) -> None:
+    async for _chunk in stream:
+        continue
+
+
 # ── 1. HTTP decompression bomb ───────────────────────────────────────────
 
 
@@ -73,8 +78,7 @@ class TestDecompressionBombGuard:
     async def test_refusing_stream_raises_on_read(self) -> None:
         stream = _RefusingStream("gzip")
         with pytest.raises(httpx.ReadError):
-            async for _chunk in stream:
-                pass
+            await _consume_stream(stream)
 
     @pytest.mark.asyncio
     async def test_transport_refuses_compressed_response(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -100,8 +104,7 @@ class TestDecompressionBombGuard:
         resp = await _SSRFSafeTransport().handle_async_request(httpx.Request("GET", "https://cse.contoso.com/x"))
         assert isinstance(resp.stream, _RefusingStream)
         with pytest.raises(httpx.ReadError):
-            async for _chunk in resp.stream:  # type: ignore[union-attr]
-                pass
+            await _consume_stream(resp.stream)  # type: ignore[arg-type]
 
     @pytest.mark.asyncio
     async def test_transport_caps_identity_response(self, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -323,7 +323,7 @@ class TestTTYStartupGuard:
         from recon_tool import server
 
         class _StubStdin:
-            pass  # no isatty attribute at all
+            __slots__ = ()
 
         monkeypatch.setattr("sys.stdin", _StubStdin())
 

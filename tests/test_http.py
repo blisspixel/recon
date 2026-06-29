@@ -78,7 +78,7 @@ class TestHttpClientLifecycle:
     @pytest.mark.asyncio
     async def test_new_client_closed_on_exit(self):
         async with http_client() as client:
-            pass
+            assert client.is_closed is False
         # After exiting context, client should be closed
         assert client.is_closed
 
@@ -95,6 +95,11 @@ class _FakeStream(httpx.AsyncByteStream):
         return None
 
 
+async def _consume_stream(stream: httpx.AsyncByteStream) -> None:
+    async for _chunk in stream:
+        continue
+
+
 class TestResponseBodyCap:
     """_MaxBytesStream aborts an oversized response body during the read, so
     a hostile or decompression-bomb endpoint cannot force recon to buffer
@@ -104,8 +109,7 @@ class TestResponseBodyCap:
     async def test_aborts_oversized_body(self):
         wrapped = _MaxBytesStream(_FakeStream([b"x" * 4096] * 4), max_bytes=8192)
         with pytest.raises(httpx.ReadError):
-            async for _chunk in wrapped:
-                pass
+            await _consume_stream(wrapped)
 
     @pytest.mark.asyncio
     async def test_allows_body_within_cap(self):

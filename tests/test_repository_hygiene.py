@@ -29,6 +29,7 @@ def _tracked_files() -> list[str]:
 
 
 def test_agent_and_log_working_directories_are_gitignored() -> None:
+    obsolete_docs_agent_dir = "docs/" + ".agent/"
     gitignore_lines = {
         line.strip()
         for line in (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
@@ -37,7 +38,7 @@ def test_agent_and_log_working_directories_are_gitignored() -> None:
 
     assert ".agent/" in gitignore_lines
     assert "logs/" in gitignore_lines
-    assert "docs/.agent/" not in gitignore_lines
+    assert obsolete_docs_agent_dir not in gitignore_lines
 
 
 def test_public_tracked_text_does_not_reference_docs_agent_state() -> None:

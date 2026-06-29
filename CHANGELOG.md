@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.agent/` directory.
 - **Repository hygiene guard.** Tests now lock the root `.agent/` and `logs/`
   ignore contract and reject tracked root-package shadow paths.
+- **Pass-statement hygiene.** The source-hygiene test now covers tests as well
+  as runtime and maintainer Python, and the remaining test-only pass statements
+  were replaced with explicit no-op control flow.
 
 ## [2.2.17] - 2026-06-29
 

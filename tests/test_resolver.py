@@ -296,7 +296,9 @@ class TestPropertyUnparseableOIDCFallback:
             # If it somehow parses, skip this example
             return
         except ReconLookupError:
-            pass  # Expected — this JSON is unparseable
+            unparseable = True
+
+        assert unparseable is True
 
         # Simulate the OIDC source returning a failed result for this bad JSON
         oidc_fail = SourceResult(

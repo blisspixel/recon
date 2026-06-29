@@ -14,6 +14,8 @@ Covers:
 
 from __future__ import annotations
 
+import pytest
+
 from recon_tool.lexical import (
     MIN_MATCHES,
     LexicalObservation,
@@ -224,9 +226,5 @@ class TestLexicalObservationDataclass:
             match_count=2,
             sample_labels=("a", "b"),
         )
-        try:
+        with pytest.raises(AttributeError):
             obs.category = "Z"  # pyright: ignore[reportAttributeAccessIssue]
-        except AttributeError:
-            pass
-        else:
-            raise AssertionError("LexicalObservation should be frozen")

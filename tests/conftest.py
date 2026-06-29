@@ -132,7 +132,7 @@ def _mock_crtsh():
     """
 
     async def _noop_cert_intel(ctx, domain):
-        pass
+        return None
 
     with patch("recon_tool.sources.dns._detect_cert_intel", _noop_cert_intel):
         yield

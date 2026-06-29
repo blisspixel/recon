@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCANNED_DIRS = (
     ROOT / "src" / "recon_tool",
     ROOT / "scripts",
+    ROOT / "tests",
     ROOT / "validation",
 )
 
@@ -18,7 +19,7 @@ def _python_files() -> list[Path]:
     return sorted(paths)
 
 
-def test_runtime_and_maintainer_python_have_no_pass_statements() -> None:
+def test_runtime_tests_and_maintainer_python_have_no_pass_statements() -> None:
     offenders: list[str] = []
     for path in _python_files():
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))

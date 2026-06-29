@@ -13,6 +13,8 @@ Covers the pure clustering API in recon_tool.clustering:
 
 from __future__ import annotations
 
+import pytest
+
 from recon_tool.clustering import (
     ClusterEntry,
     _normalize,
@@ -188,12 +190,8 @@ class TestComputeSharedTokens:
 class TestClusterEntry:
     def test_frozen(self):
         e = ClusterEntry(token="t", peer="p")  # noqa: S106
-        try:
+        with pytest.raises(AttributeError):
             e.token = "x"  # pyright: ignore[reportAttributeAccessIssue]  # noqa: S105
-        except AttributeError:
-            pass
-        else:
-            raise AssertionError("ClusterEntry should be frozen")
 
     def test_fields(self):
         e = ClusterEntry(token="google-site-verification=abc", peer="fabrikam.com")  # noqa: S106
