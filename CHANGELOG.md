@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   explicit finding-fail behavior.
 - **Placeholder-marker hygiene.** Source hygiene now rejects common unfinished
   code markers in runtime, maintainer, validation, and test Python.
+- **Submission-freeze local proof.** Added a public proof memo for the current
+  local submission-freeze smoke and full reproduction runs.
 
 ## [2.2.17] - 2026-06-29
 

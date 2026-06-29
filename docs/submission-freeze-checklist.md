@@ -107,6 +107,11 @@ mark the claim-map row as `Requires further evidence`.
 
 ## Freeze Record
 
+The latest local public proof record for this checklist is
+[../validation/2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md).
+It is local proof evidence only; it is not an external submission, DOI archive,
+OpenSSF badge, reviewed-PR, or outside-replication claim.
+
 The freeze record should name:
 
 - the exact commit SHA;
