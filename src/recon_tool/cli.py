@@ -290,7 +290,7 @@ def lookup(
         help=(
             "Include unclassified CNAME chains in --json output. Surfaces "
             "candidates for new fingerprints. Feeds the discovery loop in "
-            "validation/ and the /recon-fingerprint-triage Claude skill."
+            "validation/ and the /recon-fingerprint-triage skill."
         ),
     ),
     no_ct: bool = typer.Option(
@@ -481,7 +481,7 @@ def discover(
     min_count: int = typer.Option(
         1,
         "--min-count",
-        help="Drop suffixes seen fewer than N times. Default 1 — single domain runs, every distinct chain matters.",
+        help="Drop suffixes seen fewer than N times. Default 1: single domain runs, every distinct chain matters.",
     ),
 ) -> None:
     """
@@ -489,8 +489,8 @@ def discover(
 
     Bundles ``recon <domain> --json --include-unclassified`` with the
     bucket / intra-org / already-covered filters. Output is the same shape
-    consumed by the ``/recon-fingerprint-triage`` Claude Code skill, ready
-    for human or LLM judgment.
+    consumed by the ``/recon-fingerprint-triage`` skill, ready for human or
+    LLM judgment.
     """
     asyncio.run(
         _discover(

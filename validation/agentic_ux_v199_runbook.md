@@ -17,25 +17,25 @@ The default harness runs 3 personas × 2 fixtures × 2 fusion modes
 covering the v1.9.9 surfaces, run a focused subset:
 
 ```bash
+# Set AGENTIC_UX_PROVIDER and AGENTIC_UX_MODEL to a currently available
+# low-cost instruction-following model before running.
 # One persona (analyst) × multi-cloud-firing fixture × fusion-on
-# Anthropic Claude Haiku 4.5 is the cheapest current model that
-# remains useful for instruction-following at this scale.
 python -m validation.agentic_ux.run \
-    --provider anthropic \
-    --model claude-haiku-4-5-20251001 \
+    --provider "$AGENTIC_UX_PROVIDER" \
+    --model "$AGENTIC_UX_MODEL" \
     --personas analyst \
     --fixtures contoso-dense \
     --max-tokens 1024 \
     --output validation/v1.9.9-agentic-ux-update.md
 ```
 
-Rough cost envelope (Haiku 4.5 input ~$1/M tokens, output ~$5/M):
+Rough cost envelope at a low-cost instruction-following tier:
 - 1 persona × 1 fixture × 2 modes = 2 sessions
 - ~3K input tokens + ~1K output tokens per session
 - Total ~6K input + 2K output = ~$0.016 per run
 
-Compared to the full default matrix (~$0.10 per run on Haiku, more
-on Sonnet/Opus), the focused subset is ~6× cheaper.
+Compared to the full default matrix, the focused subset is materially
+cheaper and easier to review.
 
 ## What to look for in the output
 
@@ -68,12 +68,13 @@ When budget allows, expand to:
 # All three personas, both fixtures, both modes  -  full v1.9.2
 # methodology re-run on v1.9.9 panels.
 python -m validation.agentic_ux.run \
-    --provider anthropic \
-    --model claude-sonnet-4-6 \
+    --provider "$AGENTIC_UX_PROVIDER" \
+    --model "$AGENTIC_UX_MODEL" \
     --output validation/v1.9.9-agentic-ux-full.md
 ```
 
-Rough cost envelope: ~$0.50-$1.00 per run on Sonnet 4.6.
+Rough cost envelope: confirm against the selected provider's current
+public price sheet before running.
 
 ## Why this is not run automatically
 

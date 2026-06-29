@@ -651,8 +651,8 @@ async def discover_fingerprint_candidates(
 
     Use after a regular ``lookup_tenant`` call when you notice unclassified
     subdomains in the result, or proactively on any domain where you want
-    to grow the catalogue. Pair with the ``/recon-fingerprint-triage``
-    Claude Code skill (or apply the same triage rubric inline) to turn the
+    to grow the catalogue. Pair with the ``/recon-fingerprint-triage`` skill
+    (or apply the same triage rubric inline) to turn the
     output into YAML stanzas for ``recon_tool/data/fingerprints/surface.yaml``.
 
     Args:

@@ -39,7 +39,7 @@ before adding surface area.
 
 ## Current Evidence
 
-- `v2.2.16` is current on GitHub Releases and PyPI.
+- `v2.2.17` is current on GitHub Releases and PyPI.
 - Local and remote release readiness pass for the current main branch.
 - CI, secrets scan, and Scorecard workflows pass on current main.
 - Public proof and final claim-audit refresh are recorded in

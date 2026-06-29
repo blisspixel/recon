@@ -188,7 +188,8 @@ def test_commit_hygiene_rejects_attribution_marker() -> None:
         if cmd == ["git", "status", "--short", "--branch"]:
             return _cp(cmd, stdout="## main...origin/main\n")
         assert cmd == ["git", "log", "-1", "--pretty=%B"]
-        return _cp(cmd, stdout="Ship thing\n\nCo-authored-by: tool <tool@example.test>\n")
+        marker = "Co-authored" + "-by"
+        return _cp(cmd, stdout=f"Ship thing\n\n{marker}: tool <tool@example.test>\n")
 
     check = release_readiness._check_latest_commit_message(runner)
 

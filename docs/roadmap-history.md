@@ -1232,8 +1232,8 @@ since v1.7) already does the hard work: resolves the domain,
 captures unclassified CNAME chains, applies intra-org / already-
 covered filters via `recon_tool/discovery.py::find_candidates`,
 and returns a ranked candidate list. The
-`/recon-fingerprint-triage` Claude Code skill is already designed
-to turn that list into YAML stanzas for `surface.yaml`.
+`/recon-fingerprint-triage` skill is already designed to turn that list into
+YAML stanzas for `surface.yaml`.
 
 What's missing is *the loop*: a reproducible runner that uses
 the existing MCP composition (`lookup_tenant` →

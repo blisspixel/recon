@@ -2,21 +2,21 @@
 
 The fingerprint-discovery loop is split:
 
-  1. Programmatic — this script. Drops noise that doesn't need human or LLM
+  1. Programmatic: this script. Drops noise that doesn't need human or LLM
      judgment: chains already covered by an existing pattern, intra-org
      hostnames the apex obviously owns, low-count one-offs that aren't
      worth a fingerprint, and a tunable ``--min-count`` floor.
 
-  2. Human or LLM — the survivors. Each is a real candidate for a new
+  2. Human or LLM: the survivors. Each is a real candidate for a new
      ``cname_target`` fingerprint or an extension of an existing one. The
-     ``/recon-fingerprint-triage`` Claude skill consumes the output of this
-     script directly.
+     ``/recon-fingerprint-triage`` skill consumes the output of this script
+     directly.
 
 Inputs:
   * ``gaps.json`` produced by ``find_gaps.py``
   * The fingerprint catalogue directory (default ``recon_tool/data/fingerprints/``)
 
-Output: ``candidates.json`` — same shape as ``gaps.json`` but only the entries
+Output: ``candidates.json`` has the same shape as ``gaps.json`` but only the entries
 worth surfacing for triage.
 
 Usage:
@@ -114,7 +114,7 @@ def looks_intra_org(suffix: str, samples: list[dict[str, Any]]) -> bool:
     """
     if not samples:
         return False
-    # Reconstruct the apex from a sample subdomain — same approximation as
+    # Reconstruct the apex from a sample subdomain with the same approximation as
     # before, but with TLD-aware brand-label extraction.
     sample = samples[0]
     sub = str(sample.get("subdomain", "")).lower()

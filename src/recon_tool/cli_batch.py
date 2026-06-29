@@ -87,7 +87,7 @@ async def discover(
     classifier captured, applies the intra-org and already-covered filters,
     and emits the candidate list in the same shape as the corpus-scale
     ``triage_candidates.py``. Output is consumable by the
-    ``/recon-fingerprint-triage`` Claude Code skill.
+    ``/recon-fingerprint-triage`` skill.
     """
     import json as json_mod
 

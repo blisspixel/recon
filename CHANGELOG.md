@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.17] - 2026-06-29
+
+### Tool Surface Changes
+
+- Tool surface changes: no CLI command or flag changes.
+
+### Changed
+
+- **Package-visible wording cleanup.** CLI help, JSON Schema descriptions,
+  validation docs, and release-readiness fixtures now use neutral
+  `/recon-fingerprint-triage` wording without naming a specific assistant
+  client where the client is not part of the behavior.
+- **Agentic UX runbook portability.** The v1.9.9 agentic-UX runbook now points
+  maintainers at configured provider and model environment variables instead of
+  pinning stale model-specific cost guidance.
+
 ## [2.2.16] - 2026-06-28
 
 ### Tool Surface Changes
