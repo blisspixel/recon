@@ -35,6 +35,7 @@ def test_claim_map_covers_required_evidence_tiers_and_gates() -> None:
         "scripts/release_readiness.py --remote",
         "release-state evidence",
         "public Scorecard API reports the exact `HEAD`",
+        "public Scorecard API freshness plus PyPI and GitHub provenance",
         "verifies PyPI and GitHub provenance",
         "PyPI and GitHub provenance verification for the published wheel and sdist",
     ):
@@ -180,7 +181,7 @@ def test_paper_submission_state_records_final_claim_audit_closure() -> None:
         "Final claim audit is complete",
         "figure drift check",
         "full public proof",
-        "2026-06-29-final-claim-audit-refresh.md",
+        "2026-06-29-scorecard-gate-claim-audit.md",
     ):
         assert required in combined
 

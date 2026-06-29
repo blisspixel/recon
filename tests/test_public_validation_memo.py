@@ -81,6 +81,18 @@ MEMOS = (
             "not real-world validity claims",
         ),
     ),
+    PublicMemo(
+        path=ROOT / "validation" / "2026-06-29-scorecard-gate-claim-audit.md",
+        profile="paper",
+        required_phrases=(
+            "Scorecard gate final claim audit",
+            "full public proof run",
+            "public Scorecard API freshness check",
+            "model-internal perturbation coverage",
+            "not ground-truth frequentist coverage",
+            "not real-world validity claims",
+        ),
+    ),
 )
 
 

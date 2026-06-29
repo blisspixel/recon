@@ -49,7 +49,7 @@ before adding surface area.
 - CI, secrets scan, Scorecard workflows, and the public Scorecard API pass on
   current main.
 - Public proof and final claim-audit refresh are recorded in
-  [2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md).
+  [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md).
 - `scripts/check_validation_hygiene.py` and release readiness confirm private
   validation run directories are not tracked.
 - GitHub contributor history and current contributors are maintainer-only.

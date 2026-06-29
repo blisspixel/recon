@@ -78,7 +78,7 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | External write-up readiness plan and gates | [external-writeup-plan.md](external-writeup-plan.md) |
 | Paper claim map | [paper-claim-map.md](paper-claim-map.md) |
 | Paper figure package | [paper-figures.md](paper-figures.md) |
-| Final public claim audit refresh | [2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md) |
+| Final public claim audit refresh | [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md) |
 | Public label snapshot and public-list sampling decision | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) |
 | M365 tenancy corroboration decision | [m365-tenancy-decision.md](m365-tenancy-decision.md) |
 | Paper outline | [paper-outline.md](paper-outline.md) |

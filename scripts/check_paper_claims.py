@@ -45,7 +45,7 @@ REQUIRED_BOUNDARIES: tuple[tuple[str, str], ...] = (
     ("data-policy", "Public-list checks may serve as robustness checks"),
 )
 
-LATEST_PUBLIC_PROOF_MEMO = "2026-06-29-final-claim-audit-refresh.md"
+LATEST_PUBLIC_PROOF_MEMO = "2026-06-29-scorecard-gate-claim-audit.md"
 
 FORBIDDEN_M365_WORDING: tuple[tuple[str, str], ...] = (
     ("draft", "M365 and Google tenancy calibrations"),

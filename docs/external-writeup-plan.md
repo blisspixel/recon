@@ -104,6 +104,14 @@ requirements:
   `metric-lineage-claim-audit-paper-20260629` passed all five public steps and
   reported `Private corpora read: no`. The aggregate-only memo is
   [2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md).
+- The 2026-06-29 Scorecard gate final claim audit smoke check with stamp
+  `scorecard-gate-claim-audit-smoke-20260629` passed all five public steps after
+  the release-readiness Scorecard API gate and package-readiness wording
+  refresh.
+- The 2026-06-29 Scorecard gate final claim audit full public proof check with
+  stamp `scorecard-gate-claim-audit-paper-20260629` passed all five public
+  steps and reported `Private corpora read: no`. The aggregate-only memo is
+  [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md).
 - `CITATION.cff` is the citation metadata source and release readiness now
   checks it against `pyproject.toml` and the current `CHANGELOG.md` release
   section.
@@ -118,9 +126,9 @@ requirements:
   instrument is independent enough to promote the result beyond channel-split
   corroboration.
 - The final claim audit is complete and refreshed for the current draft package
-  after the metric-lineage wording update. Any future experiment, paper wording,
-  package, or claim-map change must rerun the final claim audit before
-  submission packaging.
+  after the Scorecard API release-readiness gate and package-readiness wording
+  update. Any future experiment, paper wording, package, or claim-map change
+  must rerun the final claim audit before submission packaging.
 - The discussion and conclusion now reflect the June 28 aggregate refresh
   without promoting it beyond the claim map: no clean independent calibration
   result, DMARC residual negative, M365 corroboration only, and Google Workspace
@@ -172,11 +180,11 @@ Reasoning:
    paper outline, current-state analysis, and the maintainer logs at this plan.
 3. **Public artifact smoke.** Keep the smoke profile current. The current
    final audit run used
-   `python -m validation.reproduce_paper_numbers --profile smoke --stamp metric-lineage-claim-audit-smoke-20260629`
+   `python -m validation.reproduce_paper_numbers --profile smoke --stamp scorecard-gate-claim-audit-smoke-20260629`
    and kept outputs under ignored `validation/local/`.
 4. **Full public proof.** Keep the paper profile current. The current final
    audit run used
-   `python -m validation.reproduce_paper_numbers --profile paper --stamp metric-lineage-claim-audit-paper-20260629`
+   `python -m validation.reproduce_paper_numbers --profile paper --stamp scorecard-gate-claim-audit-paper-20260629`
    before treating the public proof bundle as current for submission.
 5. **Artifact guide.** Keep [artifact-review.md](artifact-review.md) current with
    the exact public reviewer commands and their claim boundaries.

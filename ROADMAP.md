@@ -10,6 +10,6 @@ gap audit is [docs/strategic-gap-audit.md](docs/strategic-gap-audit.md).
 
 The final public claim audit refresh for the current paper package is recorded
 in
-[validation/2026-06-29-final-claim-audit-refresh.md](validation/2026-06-29-final-claim-audit-refresh.md).
+[validation/2026-06-29-scorecard-gate-claim-audit.md](validation/2026-06-29-scorecard-gate-claim-audit.md).
 Future wording, package, or validation changes rerun that gate before
 submission or release packaging.

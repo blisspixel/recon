@@ -91,7 +91,7 @@ The next work is dependency-ordered:
      aggregate-only evidence, the
      [M365 tenancy decision](m365-tenancy-decision.md) keeps that result named
      as corroboration rather than calibration,
-     [2026-06-29-final-claim-audit-refresh.md](../validation/2026-06-29-final-claim-audit-refresh.md)
+     [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md)
      records the current final public claim audit refresh, and release
      readiness now guards citation metadata.
    - Acceptance: cite only public or synthetic artifacts and aggregate-only
