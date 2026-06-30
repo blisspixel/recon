@@ -41,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Submission-freeze proof refresh.** The local public proof memo and
   external write-up plan now cite the current smoke and full proof runs from
   the cost-surface-guarded checkout.
+- **File-size ratchet.** The formatter module ceiling is tightened to its
+  current size so future growth remains visible in the local and CI gates.
 
 ## [2.2.18] - 2026-06-30
 
