@@ -85,6 +85,8 @@ def test_strategic_gap_audit_preserves_private_data_and_release_boundaries() -> 
 def test_strategic_gap_audit_cites_current_external_standards() -> None:
     text = _read(AUDIT)
 
+    assert "Checked: 2026-06-30." in text
+
     for url in (
         "https://www.acm.org/publications/policies/artifact-review-and-badging-current",
         "https://github.com/ossf/scorecard/blob/main/docs/checks.md",

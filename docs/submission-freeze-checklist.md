@@ -4,7 +4,7 @@ Status: pre-submission gate. This checklist makes the paper and artifact freeze
 repeatable. It is not a claim that an external submission, DOI archive, OpenSSF
 Best Practices Badge project, or outside replication pass already exists.
 
-Checked: 2026-06-29.
+Checked: 2026-06-30.
 
 ## External Boundaries
 

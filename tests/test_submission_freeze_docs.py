@@ -65,6 +65,8 @@ def test_submission_freeze_checklist_preserves_claim_boundaries() -> None:
 def test_submission_freeze_checklist_cites_current_external_guidance() -> None:
     text = _read(FREEZE)
 
+    assert "Checked: 2026-06-30." in text
+
     for url in (
         "https://www.acm.org/publications/policies/artifact-review-and-badging-current",
         "https://info.arxiv.org/help/submit/index.html",

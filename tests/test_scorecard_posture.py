@@ -284,9 +284,11 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
     text = " ".join((_ROOT / "docs" / "openssf-posture.md").read_text(encoding="utf-8").split())
 
     for required in (
-        "2026-06-29",
+        "2026-06-30",
         "Score: `7.5`",
-        "current `main` after the PyPI provenance gate",
+        "current pushed `main`",
+        "ed231ef5443c6943d5d00811f409513cb3736d2b",
+        "submission-freeze proof refresh",
         "live API URL",
         "Remote release readiness queries that API for `HEAD`",
         "current score floor",
@@ -311,7 +313,7 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
     text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
 
     for required in (
-        "2026-06-29 Scorecard recheck reports score `7.5`",
+        "2026-06-30 Scorecard recheck reports score `7.5` for `ed231ef`",
         "code-owned controls green",
         "June 28 review found one code-owned gap",
         "remaining Scorecard limits are intentional or process-bound",

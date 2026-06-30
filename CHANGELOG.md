@@ -40,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   final claim-audit refresh boundary.
 - **OpenSSF badge readiness.** Added questionnaire answer discipline so badge
   evidence stays public, source-backed, and separate from Scorecard signals.
+- **OpenSSF posture refresh.** Updated Scorecard posture docs from the
+  2026-06-30 public API recheck for the pushed submission-freeze proof refresh
+  commit.
 - **Archive metadata stop rules.** Archive readiness now treats `.zenodo.json`,
   preferred citations, and DOI metadata as release-policy changes backed by
   explicit tests.

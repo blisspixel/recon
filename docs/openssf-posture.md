@@ -6,8 +6,10 @@ while the Best Practices Badge is an account-backed project questionnaire.
 
 ## Current Snapshot
 
-- Date checked: 2026-06-29.
-- Live API state at check time: current `main` after the PyPI provenance gate.
+- Date checked: 2026-06-30.
+- Live API state at check time: current pushed `main`
+  (`ed231ef5443c6943d5d00811f409513cb3736d2b`) after the
+  submission-freeze proof refresh.
 - Scorecard version: `v5.3.0`.
 - Score: `7.5`.
 - Public source: `https://api.securityscorecards.dev/projects/github.com/blisspixel/recon`.
