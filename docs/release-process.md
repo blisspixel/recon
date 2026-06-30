@@ -31,11 +31,12 @@ It does not call the network by default and it is not part of the user-facing
 
 1. Branch, worktree, and upstream tracking state.
 2. Version consistency across `pyproject.toml`, `src/recon_tool/__init__.py`,
-   `docs/roadmap.md`, `CITATION.cff`, and the Homebrew formula.
+   `docs/roadmap.md`, `CITATION.cff`, the supply-chain consumer verification
+   recipe, and the Homebrew formula.
 3. `uv.lock` freshness with `uv lock --check`.
 4. Coverage target parity across `scripts/check.py`, `scripts/release.py`,
    `.github/workflows/ci.yml`, and `.github/workflows/release.yml`.
-5. README usage anchors and project hygiene.
+5. README usage anchors, supply-chain recipe anchors, and project hygiene.
 6. No tracked private corpus files or root per-domain JSON dumps.
 7. Latest commit message hygiene: no generated-author markers and no em dash.
 
@@ -168,6 +169,8 @@ Before running `scripts/release.py`:
 - [ ] `docs/schema.md` has been updated if any top-level JSON field changed.
 - [ ] `CHANGELOG.md` includes the generated `### Tool Surface Changes` line.
 - [ ] README examples and docs references still match the shipped CLI behavior.
+- [ ] `docs/supply-chain.md` keeps the consumer verification quick path on the
+      current version and release asset names.
 
 After the tag is published and the PyPI release exists, refresh the Homebrew
 formula so `brew install` tracks the new version, then copy it to the tap repo:

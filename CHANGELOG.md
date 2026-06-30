@@ -55,6 +55,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Supply-chain recipe freshness.** Release readiness now fails if the
   consumer provenance recipe drifts from the current package version or omits
   required verification anchors.
+- **Release documentation parity.** Release, artifact-review, and agentic-loop
+  docs now name the supply-chain recipe freshness check in the local readiness
+  gate.
 
 ## [2.2.17] - 2026-06-29
 
