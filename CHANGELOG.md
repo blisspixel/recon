@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fingerprint catalog refinement.** Surface attribution now recognizes
   Marketo tracking-link CNAME targets and OCI WAF / WAAS CNAME targets found
   during local passive fingerprint-mining rounds.
+- **Fingerprint catalog refinement.** Surface attribution now recognizes
+  Transcend consent-sync CNAME aliases and Queue-it waiting-room CNAME targets
+  found during local passive fingerprint-mining rounds.
 
 ## [2.2.18] - 2026-06-30
 

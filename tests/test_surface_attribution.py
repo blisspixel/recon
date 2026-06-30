@@ -114,6 +114,38 @@ def test_oci_waf_cname_target_loads_and_classifies_without_generic_oraclecloud_n
     assert generic_infra is None
 
 
+def test_transcend_sync_cname_target_loads_and_classifies() -> None:
+    """Transcend sync custom-domain aliases attribute to Transcend."""
+    rules = get_cname_target_rules()
+    terminal = "www.sync-transcend-cdn.com"
+
+    assert any(r.slug == "transcend" and r.pattern == "sync-transcend-cdn.com" for r in rules)
+    application, infrastructure = _classify_chain(["consent-sync.contoso.com", terminal], rules)
+    lookalike_app, lookalike_infra = _classify_chain(["sync-transcend-cdn.com.example.net"], rules)
+
+    assert application is not None
+    assert application.slug == "transcend"
+    assert infrastructure is None
+    assert lookalike_app is None
+    assert lookalike_infra is None
+
+
+def test_queue_it_waiting_room_cname_target_loads_and_classifies() -> None:
+    """Queue-it waiting-room CNAMEs attribute to Queue-it."""
+    rules = get_cname_target_rules()
+    terminal = "ticketmaster.queue-it.net"
+
+    assert any(r.slug == "queue-it" and r.pattern == "queue-it.net" for r in rules)
+    application, infrastructure = _classify_chain(["queue.contoso.com", terminal], rules)
+    lookalike_app, lookalike_infra = _classify_chain(["ticketmaster.queue-it.net.example.net"], rules)
+
+    assert application is not None
+    assert application.slug == "queue-it"
+    assert infrastructure is None
+    assert lookalike_app is None
+    assert lookalike_infra is None
+
+
 def test_squarespace_managed_subdomain_cname_target_loads_and_classifies() -> None:
     """Squarespace-managed subdomain CNAMEs attribute to Squarespace."""
     rules = get_cname_target_rules()
@@ -177,6 +209,11 @@ def test_infobip_email_messaging_target_loads_and_classifies() -> None:
 def test_infobip_email_messaging_maps_to_email_panel_category() -> None:
     """Infobip is an email and messaging surface, not a generic business app."""
     assert category_for_slug("infobip") == "Email"
+
+
+def test_queue_it_maps_to_security_panel_category() -> None:
+    """Queue-it is a traffic-control surface, not a generic business app."""
+    assert category_for_slug("queue-it") == "Security"
 
 
 def test_infobip_email_messaging_rejects_lookalike_suffix() -> None:

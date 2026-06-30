@@ -282,6 +282,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "intercom": "Collaboration",
     "submittable": "Collaboration",
     "pagerduty": "Security",
+    "queue-it": "Security",
     "statuspage": "Collaboration",
     "betteruptime": "Collaboration",
     "bitly": "Business Apps",

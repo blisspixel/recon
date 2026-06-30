@@ -373,13 +373,22 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: transcend-cdn.com
-    reference: https://transcend.io
+    reference: https://docs.transcend.io/docs/articles/consent-management/reference/custom-domain-alias
     tier: application
     description: >-
       Custom subdomain CNAMEd to a Transcend asset / consent endpoint.
       Suggests the org uses Transcend for data-privacy / consent
       management (GDPR / CCPA) on a branded domain. Hosting-binding
       signal only.
+  - type: cname_target
+    pattern: sync-transcend-cdn.com
+    reference: https://docs.transcend.io/docs/articles/consent-management/reference/custom-domain-alias
+    tier: application
+    description: >-
+      Custom sync endpoint CNAMEd to Transcend's documented
+      sync-transcend-cdn.com alias for consent synchronization.
+      Same privacy / consent-management signal as the Transcend
+      module endpoint, scoped to client-side sync traffic.
 
 - name: Auth0 (Okta)
   slug: auth0
@@ -837,6 +846,22 @@ fingerprints:
       page through Better Stack. Does not prove the org's
       incident-response process runs through Better Stack; the
       status page can be a passive presence.
+
+- name: Queue-it
+  slug: queue-it
+  category: Security
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: queue-it.net
+    reference: https://queue-it.com/cookie-statement-user/
+    tier: application
+    description: >-
+      Waiting-room CNAME target under Queue-it's queue-it.net
+      service domain. Indicates the subdomain routes end users
+      through Queue-it's virtual waiting-room flow. Hosting-binding
+      signal only; it does not identify protected paths, queue
+      configuration, or event volume.
 
 - name: Unbounce
   slug: unbounce
