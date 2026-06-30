@@ -36,6 +36,11 @@ def test_archive_readiness_preserves_no_premature_archive_policy() -> None:
         "Do not add `.zenodo.json` yet",
         "Do not add DOI language yet",
         "Use `CITATION.cff` as the public citation metadata source",
+        "Metadata Decision Discipline",
+        "Archive metadata changes are release-policy changes",
+        "Do not add root archive metadata files in preparatory commits",
+        "Do not add a `preferred-citation` block",
+        "After a real archive exists",
         "a policy choice, not a harmless metadata addition",
         "No `.zenodo.json` until an archive policy is chosen",
         "No DOI field or badge claim until the archived object exists",
@@ -75,7 +80,9 @@ def test_archive_readiness_cites_current_archive_sources() -> None:
 
 def test_no_archive_metadata_is_claimed_before_policy_choice() -> None:
     assert not (ROOT / ".zenodo.json").exists()
+    assert not (ROOT / "zenodo.json").exists()
 
     active_citation = "\n".join(_active_citation_lines()).lower()
     assert "doi:" not in active_citation
     assert "identifiers:" not in active_citation
+    assert "preferred-citation:" not in active_citation

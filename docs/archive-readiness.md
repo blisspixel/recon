@@ -35,6 +35,19 @@ choice, not a harmless metadata addition.
 Do not add DOI language yet. A DOI should point at a real archived object for a
 frozen artifact, not at an intended future deposit.
 
+## Metadata Decision Discipline
+
+Archive metadata changes are release-policy changes, not documentation polish:
+
+- Keep `CITATION.cff` authoritative until the archive path is chosen.
+- Do not add root archive metadata files in preparatory commits.
+- Add `.zenodo.json` only in the same reviewed change that records why Zenodo
+  needs fields `CITATION.cff` cannot express.
+- Do not add a `preferred-citation` block with an arXiv identifier, DOI, or
+  venue citation until the paper object exists.
+- After a real archive exists, update citation metadata and rerun release
+  readiness against the frozen commit.
+
 ## Archive Candidate
 
 The archive candidate is a frozen GitHub release that already has:
