@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **MCP subdomain surface summary.** `lookup_tenant` text output now includes
   the same compact provider-count summary used by the default panel, so agents
   see multiple attributed subdomain surfaces without switching to JSON.
+- **Subdomain surface documentation.** The architecture and MCP docs now
+  clarify which output modes show compact provider counts, per-subdomain
+  details, structured `surface_attributions`, and unclassified-chain hints.
 
 ## [2.2.18] - 2026-06-30
 

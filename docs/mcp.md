@@ -167,6 +167,11 @@ conflicts. The CLI `--json` v2.0 schema is a separate locked contract.
 The narrative tools render prose or DOT and intentionally return text:
 `lookup_tenant` (its `format` selects `text` / `json` / `markdown`),
 `explain_dag` (Rich tree or Graphviz DOT), `chain_lookup`, and `reload_data`.
+For `lookup_tenant`, `format="text"` is a compact agent-readable summary and
+now includes a `Subdomain surface:` provider-count line when CNAME-chain
+attributions exist. `format="json"` is the detailed machine path: it carries the
+full `surface_attributions` array, while `reevaluate_domain` exposes the same
+cache-only lookup record with a typed `LookupResult` output schema.
 
 Errors are reported the spec-correct way: an invalid argument, an unresolvable or
 uncached domain, a rate-limit, or an internal failure comes back as a tool result

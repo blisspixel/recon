@@ -44,6 +44,33 @@ mail.acme.co.uk --exact         -> mail.acme.co.uk
 This matches where the high-signal records usually live: MX, SPF, DMARC,
 tenant-domain bindings, and CT parent scope.
 
+## Subdomains and External Surface
+
+After apex collection, recon enriches a bounded set of public subdomains from
+certificate transparency and common high-signal prefixes. This is still passive
+DNS work: recon resolves DNS records and CNAME chains, but it does not open web
+pages, scan ports, authenticate, or enumerate target services.
+
+Subdomain evidence answers a different question from apex evidence. Apex MX,
+TXT, SPF, DMARC, and tenant discovery describe the domain-level posture.
+Subdomain CNAME chains describe where visible public hostnames appear to point.
+For that reason, recon keeps the per-subdomain result in
+`surface_attributions` instead of folding every subdomain provider into the
+apex service list.
+
+Output detail depends on the surface:
+
+- The default panel and MCP `lookup_tenant(format="text")` show a compact
+  provider-count summary such as `Subdomain surface: Azure App Service (33)`.
+- `--full` and `--domains` show the per-subdomain `External surface` section.
+- `--json` and MCP JSON-shaped lookup records include the full
+  `surface_attributions` array.
+- Unmatched CNAME chains are shown as `Unclassified surface` hints in the panel
+  and can be emitted for discovery with `--include-unclassified`.
+
+An attribution is an observation about a public CNAME chain, not proof that the
+service is active, reachable, or owned by the queried organization.
+
 ## Evidence to Slugs
 
 A fingerprint slug is a stable identifier for one observed pattern. Examples:
