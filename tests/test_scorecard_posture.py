@@ -286,8 +286,7 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
     for required in (
         "2026-06-30",
         "Score: `7.5`",
-        "current pushed `main`",
-        "ed231ef5443c6943d5d00811f409513cb3736d2b",
+        "public API rechecked after the submission-freeze proof refresh",
         "submission-freeze proof refresh",
         "live API URL",
         "Remote release readiness queries that API for `HEAD`",
@@ -313,7 +312,7 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
     text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
 
     for required in (
-        "2026-06-30 Scorecard recheck reports score `7.5` for `ed231ef`",
+        "2026-06-30 Scorecard recheck reports score `7.5`",
         "code-owned controls green",
         "June 28 review found one code-owned gap",
         "remaining Scorecard limits are intentional or process-bound",
@@ -323,6 +322,15 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
         "runs `gh attestation verify` against both artifacts",
     ):
         assert required in text
+
+
+def test_openssf_docs_do_not_turn_live_api_state_into_commit_promise() -> None:
+    openssf = (_ROOT / "docs" / "openssf-posture.md").read_text(encoding="utf-8")
+    supply_chain = (_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8")
+    scorecard_text = "\n".join((openssf, supply_chain))
+
+    assert "durable status promise" in openssf
+    assert re.search(r"\b[0-9a-f]{7,40}\b", scorecard_text) is None
 
 
 def test_supply_chain_docs_provide_consumer_verification_recipe() -> None:

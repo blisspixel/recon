@@ -178,9 +178,9 @@ The repository also runs supply-chain posture checks outside the release flow:
 - `.github/CODEOWNERS` routes all repository paths to the maintainer account so
   external pull requests have a clear review owner.
 
-The 2026-06-30 Scorecard recheck reports score `7.5` for `ed231ef` with the
-code-owned controls green. The June 28 review found one code-owned gap and
-several repository-process gaps. The code-owned gap was an unpinned installer
+The 2026-06-30 Scorecard recheck reports score `7.5` with the code-owned
+controls green. The June 28 review found one code-owned gap and several
+repository-process gaps. The code-owned gap was an unpinned installer
 download-and-run path; the installer now refuses to execute remote tool
 installers. The Scorecard SARIF upload step also uses CodeQL Action v4 to avoid
 the scheduled v3 deprecation. Live repository settings now enforce full-SHA
