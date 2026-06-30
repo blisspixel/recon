@@ -28,6 +28,27 @@ def _tracked_files() -> list[str]:
     return [line.strip().replace("\\", "/") for line in result.stdout.splitlines() if line.strip()]
 
 
+def _git_ignores(relative_path: str) -> bool:
+    result = subprocess.run(  # noqa: S603 - fixed developer-tool argv with test-controlled probes
+        ["git", "check-ignore", "--quiet", "--", relative_path],  # noqa: S607 - fixed developer-tool argv
+        cwd=ROOT,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def _non_root_agent_dirs() -> list[str]:
+    skipped = {".agent", ".git", ".hypothesis", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".venv"}
+    offenders: list[str] = []
+    for child in ROOT.iterdir():
+        if not child.is_dir() or child.name in skipped:
+            continue
+        for path in child.rglob(".agent"):
+            if path.is_dir():
+                offenders.append(path.relative_to(ROOT).as_posix())
+    return sorted(offenders)
+
+
 def test_agent_and_log_working_directories_are_gitignored() -> None:
     obsolete_docs_agent_dir = "docs/" + ".agent/"
     gitignore_lines = {
@@ -36,9 +57,24 @@ def test_agent_and_log_working_directories_are_gitignored() -> None:
         if line.strip() and not line.lstrip().startswith("#")
     }
 
-    assert ".agent/" in gitignore_lines
-    assert "logs/" in gitignore_lines
+    assert "/.agent/" in gitignore_lines
+    assert "/logs/" in gitignore_lines
+    assert ".agent/" not in gitignore_lines
+    assert "logs/" not in gitignore_lines
     assert obsolete_docs_agent_dir not in gitignore_lines
+
+
+def test_agent_and_log_ignore_rules_are_root_anchored() -> None:
+    nested_agent_probe = "docs/" + ".agent/probe.md"
+
+    assert _git_ignores(".agent/probe.md")
+    assert _git_ignores("logs/probe.txt")
+    assert not _git_ignores(nested_agent_probe)
+    assert not _git_ignores("docs/logs/probe.txt")
+
+
+def test_no_nested_agent_working_directories_exist() -> None:
+    assert _non_root_agent_dirs() == []
 
 
 def test_public_tracked_text_does_not_reference_docs_agent_state() -> None:

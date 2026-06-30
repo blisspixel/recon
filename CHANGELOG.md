@@ -64,6 +64,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Remote evidence refresh.** Strategic gap docs now record that the pushed
   hardening stack has current remote CI, Scorecard, PyPI, GitHub Release, and
   provenance checks passing.
+- **Root-anchored scratch hygiene.** The `.agent/` and `logs/` ignore rules are
+  now root-anchored, tests verify nested scratch directories are not silently
+  ignored, and the stale local documentation-nested agent workspace copy was
+  removed.
 
 ## [2.2.17] - 2026-06-29
 

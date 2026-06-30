@@ -57,9 +57,11 @@ and remotely so dependency updates cannot leave stale generated inputs behind.
   shadowing. ADR-0006 supersedes the previous flat-layout decision.
 - **Local working artifacts stay out of tracked surfaces.** Agent state lives
   under the gitignored root `.agent/` directory, logs live under gitignored
-  `logs/`, and validation run outputs live under gitignored validation-local
-  paths. Do not park agent scratch records in `docs/`, and do not recreate a
-  repo-root `recon_tool/` package shadow.
+  root `logs/`, and validation run outputs live under gitignored
+  validation-local paths. The ignore rules are root-anchored so a stray
+  documentation-nested agent directory or nested `logs/` directory is visible
+  instead of silently accepted. Do not park agent scratch records in `docs/`,
+  and do not recreate a repo-root `recon_tool/` package shadow.
 - **Significant or hard-to-reverse decisions get an ADR** (`docs/adr/`), one
   decision per record, immutable once accepted. The invariants, the MNAR absence
   rule, the schema lock, and the no-numpy choice are recorded there so the

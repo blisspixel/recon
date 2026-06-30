@@ -32,7 +32,7 @@ docs/accuracy.md
 .ci-audit-requirements.txt
 
 # Agent working files
-.agent/
+/.agent/
 
 # Local validation sweeps. Real company names and per-domain JSON output
 # live here during accuracy work; never committed. Fictional-example
@@ -317,7 +317,7 @@ secrets.yml
 
 # Logs
 *.log
-logs/
+/logs/
 
 # Kiro
 .kiro/
