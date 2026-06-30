@@ -323,6 +323,26 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
         assert required in text
 
 
+def test_supply_chain_docs_provide_consumer_verification_recipe() -> None:
+    text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
+
+    for required in (
+        "Consumer verification quick path",
+        "gh release download",
+        "--pattern \"recon_tool-${VERSION}-py3-none-any.whl\"",
+        "--pattern \"recon_tool-${VERSION}.tar.gz\"",
+        "--pattern \"recon-tool-${VERSION}.cdx.json\"",
+        "--pattern \"recon-tool-${VERSION}.intoto.jsonl\"",
+        "gh attestation verify",
+        "https://pypi.org/pypi/recon-tool/json",
+        "while IFS= read -r file_url",
+        "uvx --from pypi-attestations pypi-attestations verify pypi",
+        "source-to-artifact provenance and integrity",
+        "not a claim that recon has reached a named SLSA level",
+    ):
+        assert required in text
+
+
 def test_supply_chain_docs_do_not_overclaim_pypi_attestation_consumption() -> None:
     text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
 
@@ -331,6 +351,7 @@ def test_supply_chain_docs_do_not_overclaim_pypi_attestation_consumption() -> No
         "pypi-attestations verify pypi",
         "Trusted Publisher identity matches the repository argument",
         "Do not treat PyPI attestations as installer-level enforcement",
+        "not a claim that installers enforce PyPI attestations automatically",
     ):
         assert required in text
 

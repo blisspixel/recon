@@ -49,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Remote-readiness wording.** Strategic gap docs now distinguish the
   published remote baseline from local commits that still need push and remote
   readiness reruns.
+- **Consumer provenance recipe.** Supply-chain docs now include a short
+  consumer verification path for GitHub release assets, exported attestations,
+  SBOM assets, and PyPI-hosted provenance.
 
 ## [2.2.17] - 2026-06-29
 

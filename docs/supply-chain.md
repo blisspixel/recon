@@ -22,6 +22,59 @@ which produces and publishes:
 | **Reproducible builds** | `SOURCE_DATE_EPOCH` pinned to the tagged commit's timestamp, so the wheel and sdist are byte-identical to a rebuild from the same source | See the recipe below |
 | **CycloneDX SBOM** | Generated from the hash-pinned runtime lock (`pip-audit --format=cyclonedx-json`) and attached to the GitHub Release | Download `recon-tool-<version>.cdx.json` from the release assets |
 
+## Consumer verification quick path
+
+For a published version, consumers can check the release from both distribution
+channels without trusting this repository's local state:
+
+```bash
+VERSION=2.2.17
+VERIFY_DIR="$(mktemp -d)"
+
+gh release download "v${VERSION}" \
+  --repo blisspixel/recon \
+  --pattern "recon_tool-${VERSION}-py3-none-any.whl" \
+  --pattern "recon_tool-${VERSION}.tar.gz" \
+  --pattern "recon-tool-${VERSION}.cdx.json" \
+  --pattern "recon-tool-${VERSION}.intoto.jsonl" \
+  --dir "${VERIFY_DIR}"
+
+gh attestation verify \
+  "${VERIFY_DIR}/recon_tool-${VERSION}-py3-none-any.whl" \
+  --repo blisspixel/recon
+gh attestation verify \
+  "${VERIFY_DIR}/recon_tool-${VERSION}.tar.gz" \
+  --repo blisspixel/recon
+```
+
+To verify the PyPI-hosted provenance, use the direct file URLs from the PyPI
+JSON API, then verify both the wheel and sdist:
+
+```bash
+python - <<'PY' | while IFS= read -r file_url; do
+    uvx --from pypi-attestations pypi-attestations verify pypi \
+      --repository https://github.com/blisspixel/recon \
+      "${file_url}"
+  done
+import json
+import urllib.request
+
+version = "2.2.17"
+with urllib.request.urlopen("https://pypi.org/pypi/recon-tool/json", timeout=30) as response:
+    payload = json.load(response)
+for file_record in payload["releases"][version]:
+    if file_record["filename"] in {
+        f"recon_tool-{version}-py3-none-any.whl",
+        f"recon_tool-{version}.tar.gz",
+    }:
+        print(file_record["url"])
+PY
+```
+
+This path checks source-to-artifact provenance and integrity. It is not a claim
+that installers enforce PyPI attestations automatically, and it is not a claim
+that recon has reached a named SLSA level beyond the controls listed here.
+
 ## Reproducible builds
 
 The build is bit-for-bit reproducible: the same source plus the same
