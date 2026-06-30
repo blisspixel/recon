@@ -5,7 +5,7 @@ This file is the current plan and scope boundary. Shipped work belongs in
 [release-process.md](release-process.md). Historical release planning lives in
 [roadmap-history.md](roadmap-history.md).
 
-> **Status:** v2.2.17 is current. recon is feature-complete for the current
+> **Status:** v2.2.18 is current. recon is feature-complete for the current
 > roadmap: the CLI, JSON schema, MCP server, validation guards, release path,
 > generated schema guard, and generated surface inventory guard are shipped.
 > Remaining work hardens the project, sharpens documentation, and improves

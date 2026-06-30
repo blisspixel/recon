@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.18] - 2026-06-30
+
+### Tool Surface Changes
+
+- Tool surface changes: no CLI command or flag changes.
+
 ### Changed
 
 - **DMARC standards currency.** Comments, validation notes, and DMARC tests now
