@@ -50,14 +50,17 @@ before adding surface area.
 ## Current Evidence
 
 - `v2.2.17` is current on GitHub Releases and PyPI.
-- Local release readiness passes for the current main branch.
-- Remote release readiness passes for current `HEAD` and verifies required
-  GitHub Actions checks, public Scorecard API freshness and code-owned control
-  scores, PyPI wheel and sdist publication, and GitHub Release wheel, sdist,
-  SBOM, and attestation export assets for `v2.2.17`; it also verifies PyPI and
-  GitHub provenance for the release wheel and sdist.
-- CI, secrets scan, Scorecard workflows, and the public Scorecard API pass on
-  current main.
+- Local release readiness passes for the current local main branch.
+- The last published remote release-readiness pass covered the pushed
+  `v2.2.17` baseline and verified required GitHub Actions checks, public
+  Scorecard API freshness and code-owned control scores, PyPI wheel and sdist
+  publication, and GitHub Release wheel, sdist, SBOM, and attestation export
+  assets; it also verified PyPI and GitHub provenance for the release wheel and
+  sdist.
+- Current local hardening commits are ahead of the pushed branch. After pushing
+  them, rerun `uv run python scripts/release_readiness.py --remote` before
+  claiming CI, secrets scan, Scorecard workflows, or public Scorecard API
+  freshness for the new `HEAD`.
 - Public proof is recorded in
   [2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md),
   and the final claim-audit refresh is recorded in

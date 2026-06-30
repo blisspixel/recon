@@ -59,11 +59,12 @@ def test_strategic_gap_audit_preserves_private_data_and_release_boundaries() -> 
 
     for required in (
         "No private corpus, real target list, per-domain result rows, or tenant IDs are tracked",
-        "Remote release readiness passes for current `HEAD`",
+        "The last published remote release-readiness pass covered the pushed",
         "public Scorecard API freshness and code-owned control scores",
-        "public Scorecard API pass on current main",
+        "Current local hardening commits are ahead of the pushed branch",
+        "rerun `uv run python scripts/release_readiness.py --remote`",
         "GitHub Release wheel, sdist, SBOM, and attestation export assets",
-        "verifies PyPI and GitHub provenance for the release wheel and sdist",
+        "verified PyPI and GitHub provenance for the release wheel and sdist",
         "Documentation and proof-memo refreshes do not require a new package release",
         "Release when package behavior, public package metadata, or release artifacts change",
         "release state and provenance aligned",

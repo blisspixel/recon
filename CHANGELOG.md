@@ -46,6 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Scorecard publication guard.** Maintenance checks now lock the Scorecard
   workflow to public result publishing, SARIF export, and bounded artifact
   retention.
+- **Remote-readiness wording.** Strategic gap docs now distinguish the
+  published remote baseline from local commits that still need push and remote
+  readiness reruns.
 
 ## [2.2.17] - 2026-06-29
 
