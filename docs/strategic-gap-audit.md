@@ -113,3 +113,8 @@ The next work remains hardening and external write-up readiness. Runtime
 expansion, catalog growth, stable-surface promotion, and public real-data
 release are all blocked until a concrete consumer, support tier, or architecture
 review changes the value calculation.
+
+Public status surfaces should continue to name absent external events as gaps.
+Do not add Zenodo archive badges, DOI links, OpenSSF Best Practices project
+links, reviewed-PR completion language, contributor-diversity claims, or outside
+replication completion language until the corresponding event actually exists.

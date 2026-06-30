@@ -45,6 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   state.
 - **Scorecard snapshot churn guard.** OpenSSF posture docs now avoid turning a
   live Scorecard API check into a durable commit-hash promise.
+- **External status claim guard.** Public status surfaces now have a regression
+  check against placeholder DOI, archive, OpenSSF badge, contributor-diversity,
+  and outside-replication completion claims.
 - **Archive metadata stop rules.** Archive readiness now treats `.zenodo.json`,
   preferred citations, and DOI metadata as release-policy changes backed by
   explicit tests.
