@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fingerprint discovery tooling.** Candidate triage now mirrors runtime
   DNS-label-aware `cname_target` matching so future mining rounds do not hide
   service-specific CNAME variants behind broader substring matches.
+- **MCP subdomain surface summary.** `lookup_tenant` text output now includes
+  the same compact provider-count summary used by the default panel, so agents
+  see multiple attributed subdomain surfaces without switching to JSON.
 
 ## [2.2.18] - 2026-06-30
 

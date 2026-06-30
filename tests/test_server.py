@@ -14,6 +14,7 @@ from recon_tool.models import (
     ConfidenceLevel,
     ReconLookupError,
     SourceResult,
+    SurfaceAttribution,
     TenantInfo,
 )
 from recon_tool.server import _cache_clear, _print_mcp_banner, _rate_limit, lookup_tenant
@@ -82,6 +83,60 @@ class TestLookupText:
         mock_resolve.return_value = (info, SAMPLE_RESULTS[:1])
         result = await lookup_tenant("contoso.com")
         assert "Region:" not in result
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_text_includes_compact_subdomain_surface_summary(self, mock_resolve: AsyncMock) -> None:
+        attributions = (
+            *(
+                SurfaceAttribution(
+                    subdomain=f"app{i}.contoso.com",
+                    primary_slug="azure-app-service",
+                    primary_name="Azure App Service",
+                    primary_tier="infrastructure",
+                )
+                for i in range(33)
+            ),
+            *(
+                SurfaceAttribution(
+                    subdomain=f"proxy{i}.contoso.com",
+                    primary_slug="microsoft-entra-application-proxy",
+                    primary_name="Microsoft Entra Application Proxy",
+                    primary_tier="application",
+                )
+                for i in range(12)
+            ),
+            SurfaceAttribution(
+                subdomain="shop.contoso.com",
+                primary_slug="shopify",
+                primary_name="Shopify",
+                primary_tier="application",
+            ),
+        )
+        info = TenantInfo(
+            tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            display_name="Contoso Ltd",
+            default_domain="contoso.onmicrosoft.com",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.HIGH,
+            sources=("dns_records",),
+            services=("Exchange Online",),
+            surface_attributions=attributions,
+        )
+        mock_resolve.return_value = (info, SAMPLE_RESULTS[:1])
+
+        result = await lookup_tenant("contoso.com")
+
+        assert "Subdomain surface: Azure App Service (33)" in result
+        assert "Microsoft Entra Application Proxy (12)" in result
+        assert "Shopify (1)" in result
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_text_omits_empty_subdomain_surface_summary(self, mock_resolve: AsyncMock) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        result = await lookup_tenant("contoso.com")
+        assert "Subdomain surface:" not in result
 
 
 class TestLookupJson:

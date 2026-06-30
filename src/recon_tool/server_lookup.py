@@ -23,6 +23,7 @@ from recon_tool.formatter import (
     format_tenant_json,
     format_tenant_markdown,
 )
+from recon_tool.formatter_layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
 from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
 from recon_tool.server_app import mcp
 from recon_tool.server_runtime import (
@@ -38,6 +39,8 @@ logger = logging.getLogger("recon")
 
 
 _VALID_FORMATS = frozenset({"text", "json", "markdown"})
+_TEXT_WIDTH = 88
+_SUBDOMAIN_SURFACE_LABEL = "Subdomain surface"
 
 
 def _lookup_tenant_gws_lines(info: TenantInfo) -> list[str]:
@@ -55,6 +58,21 @@ def _lookup_tenant_gws_lines(info: TenantInfo) -> list[str]:
     gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
     if gws_modules:
         lines.append(f"GWS Modules: {', '.join(gws_modules)}")
+    return lines
+
+
+def _lookup_tenant_surface_lines(info: TenantInfo) -> list[str]:
+    """Compact text summary of attributed subdomain hosting surfaces."""
+    summary_items = subdomain_surface_summary_items(info.surface_attributions)
+    if not summary_items:
+        return []
+    width = _TEXT_WIDTH - len(_SUBDOMAIN_SURFACE_LABEL) - 2
+    wrapped = compact_subdomain_summary_lines(summary_items, width=width)
+    if not wrapped:
+        return []
+    lines = [f"{_SUBDOMAIN_SURFACE_LABEL}: {wrapped[0]}"]
+    continuation_indent = " " * (len(_SUBDOMAIN_SURFACE_LABEL) + 2)
+    lines.extend(f"{continuation_indent}{line}" for line in wrapped[1:])
     return lines
 
 
@@ -81,6 +99,7 @@ def _lookup_tenant_text(info: TenantInfo) -> str:
         lines.append(f"Domains in tenant: {info.domain_count}")
     if info.related_domains:
         lines.append(f"Related domains: {', '.join(info.related_domains)}")
+    lines.extend(_lookup_tenant_surface_lines(info))
     lines.extend(_lookup_tenant_gws_lines(info))
     if info.degraded_sources:
         lines.append(f"Degraded sources: {', '.join(info.degraded_sources)}")

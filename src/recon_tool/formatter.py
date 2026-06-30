@@ -50,7 +50,7 @@ from recon_tool.formatter_exposure import (  # re-exported: stable import path a
     render_exposure_panel,
     render_gaps_panel,
 )
-from recon_tool.formatter_layout import compact_subdomain_summary_lines
+from recon_tool.formatter_layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
 from recon_tool.formatter_markdown import (
     format_explanations_markdown,
     format_tenant_markdown,
@@ -912,19 +912,9 @@ def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: b
     """
     if not (info.surface_attributions and not show_domains):
         return
-    name_counts: dict[str, int] = {}
-    for sa in info.surface_attributions:
-        name = sa.primary_name
-        if not sa.primary_slug or not name:
-            name = sa.infra_name
-            if not sa.infra_slug or not name:
-                continue
-        name_counts[name] = name_counts.get(name, 0) + 1
-    if not name_counts:
+    surface_summary = subdomain_surface_summary_items(info.surface_attributions)
+    if not surface_summary:
         return
-    # Sort by count descending, then name ascending for diff-stable ties.
-    ranked = sorted(name_counts.items(), key=lambda p: (-p[1], p[0]))
-    surface_summary = [f"{name} ({count})" for name, count in ranked]
     budget = _PANEL_WIDTH - (2 + max_width)
     lines = compact_subdomain_summary_lines(surface_summary, budget)
     svc_block.append("  ")
