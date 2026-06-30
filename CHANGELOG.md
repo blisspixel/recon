@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   runtime code, wheel packaging, project dependencies, and workflows do not
   introduce paid-provider SDKs, model API keys, image API calls, or
   validation-only paid harness invocations.
+- **Submission-freeze proof refresh.** The local public proof memo and
+  external write-up plan now cite the current smoke and full proof runs from
+  the cost-surface-guarded checkout.
 
 ## [2.2.18] - 2026-06-30
 

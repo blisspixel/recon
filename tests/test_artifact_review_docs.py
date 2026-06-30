@@ -102,7 +102,7 @@ def test_artifact_review_guide_names_replication_boundary() -> None:
 def test_external_writeup_plan_names_latest_full_proof() -> None:
     text = (ROOT / "docs" / "external-writeup-plan.md").read_text(encoding="utf-8")
 
-    assert "submission-freeze-paper-20260629-cycle9b" in text
+    assert "submission-freeze-paper-20260630-cycle42" in text
     assert "2026-06-30-submission-freeze-local-proof.md" in (
         ROOT / "docs" / "artifact-review.md"
     ).read_text(encoding="utf-8")

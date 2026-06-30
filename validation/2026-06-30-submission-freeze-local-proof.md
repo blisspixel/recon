@@ -2,14 +2,14 @@
 
 Harnesses:
 
-`python -m validation.reproduce_paper_numbers --profile smoke --stamp submission-freeze-smoke-20260630-cycle26`
+`python -m validation.reproduce_paper_numbers --profile smoke --stamp submission-freeze-smoke-20260630-cycle42`
 
-`python -m validation.reproduce_paper_numbers --profile paper --stamp submission-freeze-paper-20260630-cycle26`
+`python -m validation.reproduce_paper_numbers --profile paper --stamp submission-freeze-paper-20260630-cycle42`
 
-Generated at: `2026-06-30T04:53:53.856061+00:00`
+Generated at: `2026-06-30T19:49:26.424403+00:00`
 
 Harness commit under test:
-`83aca280d7314d24497646c8a6bb22b3ff1f2b49`
+`ca0d90087237a1526209ab9ad161eb832cd96fd4`
 
 Private corpora read: no.
 
@@ -34,21 +34,21 @@ External spend: 0 USD.
 
 | Step | Status | Seconds | Public claim covered |
 |---|---:|---:|---|
-| `adversarial-properties` | pass | 12.73 | Evidence-removal guarantee and planted evidence boundary over the shipped network |
-| `differential-verification` | pass | 1.06 | Variable elimination against the full-joint reference |
-| `interval-coverage` | pass | 0.50 | Synthetic interval-coverage harness health |
-| `likelihood-sensitivity` | pass | 2.63 | Likelihood perturbation harness health |
-| `layer-ablation` | pass | 1.18 | Synthetic Bayesian and graph-layer ablation harness health |
+| `adversarial-properties` | pass | 18.12 | Evidence-removal guarantee and planted evidence boundary over the shipped network |
+| `differential-verification` | pass | 1.36 | Variable elimination against the full-joint reference |
+| `interval-coverage` | pass | 0.97 | Synthetic interval-coverage harness health |
+| `likelihood-sensitivity` | pass | 5.18 | Likelihood perturbation harness health |
+| `layer-ablation` | pass | 2.73 | Synthetic Bayesian and graph-layer ablation harness health |
 
 ## Full Public Proof Results
 
 | Step | Status | Seconds | Public claim covered |
 |---|---:|---:|---|
-| `adversarial-properties` | pass | 13.08 | Evidence-removal guarantee and planted evidence boundary over the shipped network |
-| `differential-verification` | pass | 47.32 | Variable elimination against the full-joint reference |
-| `interval-coverage` | pass | 156.28 | Paper-sized synthetic interval-coverage sweep under the CAL8 likelihood band |
-| `likelihood-sensitivity` | pass | 958.72 | Paper-sized likelihood perturbation sweep over 4,000 synthetic domains |
-| `layer-ablation` | pass | 385.90 | Paper-sized synthetic Bayesian and graph-layer ablations |
+| `adversarial-properties` | pass | 17.56 | Evidence-removal guarantee and planted evidence boundary over the shipped network |
+| `differential-verification` | pass | 62.86 | Variable elimination against the full-joint reference |
+| `interval-coverage` | pass | 165.40 | Paper-sized synthetic interval-coverage sweep under the CAL8 likelihood band |
+| `likelihood-sensitivity` | pass | 995.52 | Paper-sized likelihood perturbation sweep over 4,000 synthetic domains |
+| `layer-ablation` | pass | 373.28 | Paper-sized synthetic Bayesian and graph-layer ablations |
 
 ## Ancillary Local Gates
 
@@ -58,7 +58,8 @@ External spend: 0 USD.
 | Figure drift | pass |
 | Validation hygiene | pass |
 | Text hygiene | pass |
-| Local CI mirror | pass, 3738 passed, 5 skipped, 4 deselected, 86.61 percent coverage |
+| Cost-surface guard | pass |
+| Local CI mirror | pass, 3810 passed, 5 skipped, 4 deselected, 89.28 percent coverage |
 | Local release readiness | pass |
 
 ## Interpretation
