@@ -61,7 +61,9 @@ and remotely so dependency updates cannot leave stale generated inputs behind.
   validation-local paths. The ignore rules are root-anchored so a stray
   documentation-nested agent directory or nested `logs/` directory is visible
   instead of silently accepted. Do not park agent scratch records in `docs/`,
-  and do not recreate a repo-root `recon_tool/` package shadow.
+  and do not recreate a repo-root `recon_tool/` package shadow. Common local
+  tool artifacts such as `.coverage`, `.pytest_cache/`, `.ruff_cache/`,
+  `.hypothesis/`, `.venv/`, and `.claude/` stay ignored and untracked.
 - **Significant or hard-to-reverse decisions get an ADR** (`docs/adr/`), one
   decision per record, immutable once accepted. The invariants, the MNAR absence
   rule, the schema lock, and the no-numpy choice are recorded there so the

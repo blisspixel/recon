@@ -15,6 +15,14 @@ PUBLIC_TEXT_SUFFIXES = {
     ".yaml",
     ".yml",
 }
+LOCAL_TOOL_ARTIFACT_PROBES = {
+    ".coverage": ".coverage",
+    ".hypothesis": ".hypothesis/probe",
+    ".pytest_cache": ".pytest_cache/probe",
+    ".ruff_cache": ".ruff_cache/probe",
+    ".venv": ".venv/probe",
+    ".claude": ".claude/probe",
+}
 
 
 def _tracked_files() -> list[str]:
@@ -75,6 +83,19 @@ def test_agent_and_log_ignore_rules_are_root_anchored() -> None:
 
 def test_no_nested_agent_working_directories_exist() -> None:
     assert _non_root_agent_dirs() == []
+
+
+def test_local_tool_artifact_roots_are_gitignored_and_untracked() -> None:
+    tracked = set(_tracked_files())
+
+    for root_name, probe in LOCAL_TOOL_ARTIFACT_PROBES.items():
+        tracked_under_root = [
+            path
+            for path in tracked
+            if path == root_name or path.startswith(f"{root_name}/")
+        ]
+        assert _git_ignores(probe), root_name
+        assert tracked_under_root == []
 
 
 def test_public_tracked_text_does_not_reference_docs_agent_state() -> None:

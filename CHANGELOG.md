@@ -79,6 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now root-anchored, tests verify nested scratch directories are not silently
   ignored, and the stale local documentation-nested agent workspace copy was
   removed.
+- **Local tool artifact hygiene.** Repository hygiene tests now verify common
+  local cache and environment artifacts stay ignored and untracked.
 - **OpenSSF questionnaire manual queue.** Badge readiness docs now separate
   repository-file evidence from live process facts such as issue response
   history, vulnerability response history, maintainer attestations, and
