@@ -49,6 +49,23 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
     _write_file(root, "packaging/homebrew/recon.rb", f'url "https://example.test/recon_tool-{version}.tar.gz"\n')
     _write_file(root, "CHANGELOG.md", f"# Changelog\n\n## [{version}] - 2026-06-26\n")
     _write_file(root, "CITATION.cff", f'version: {version}\ndate-released: "2026-06-26"\n')
+    _write_file(
+        root,
+        "docs/supply-chain.md",
+        "\n".join(
+            [
+                "Consumer verification quick path",
+                f"VERSION={version}",
+                '--pattern "recon_tool-${VERSION}-py3-none-any.whl"',
+                '--pattern "recon_tool-${VERSION}.tar.gz"',
+                '--pattern "recon-tool-${VERSION}.cdx.json"',
+                '--pattern "recon-tool-${VERSION}.intoto.jsonl"',
+                "gh attestation verify",
+                "https://pypi.org/pypi/recon-tool/json",
+                "pypi-attestations verify pypi",
+            ]
+        ),
+    )
 
 
 def _happy_runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
@@ -123,6 +140,27 @@ def test_readme_usage_accepts_plain_apache_license(tmp_path: Path) -> None:
     check = release_readiness._check_readme_usage(tmp_path)
 
     assert check.status == "pass"
+
+
+def test_supply_chain_recipe_version_accepts_current_release(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    check = release_readiness._check_supply_chain_recipe_version(tmp_path)
+
+    assert check.status == "pass"
+    assert "2.2.17" in check.detail
+
+
+def test_supply_chain_recipe_version_rejects_stale_version(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    supply_chain = (tmp_path / "docs" / "supply-chain.md").read_text(encoding="utf-8")
+    _write_file(tmp_path, "docs/supply-chain.md", supply_chain.replace("VERSION=2.2.17", "VERSION=2.2.16"))
+
+    check = release_readiness._check_supply_chain_recipe_version(tmp_path)
+
+    assert check.status == "fail"
+    assert "VERSION=2.2.17" in check.detail
+    assert "consumer verification recipe" in check.action
 
 
 def test_citation_metadata_accepts_current_release(tmp_path: Path) -> None:

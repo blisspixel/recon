@@ -52,6 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Consumer provenance recipe.** Supply-chain docs now include a short
   consumer verification path for GitHub release assets, exported attestations,
   SBOM assets, and PyPI-hosted provenance.
+- **Supply-chain recipe freshness.** Release readiness now fails if the
+  consumer provenance recipe drifts from the current package version or omits
+  required verification anchors.
 
 ## [2.2.17] - 2026-06-29
 

@@ -3,8 +3,8 @@
 
 Default mode is local only. It checks the repository state, version references,
 coverage gate wiring, lockfile freshness, docs anchors, citation metadata,
-private-corpus hygiene, Homebrew formula freshness, and local commit-message
-hygiene.
+private-corpus hygiene, supply-chain verification recipe freshness, Homebrew
+formula freshness, and local commit-message hygiene.
 
 Use ``--remote`` after pushing when you want the same report to include GitHub
 Actions status for the current commit, PyPI publication state, PyPI provenance
@@ -308,6 +308,35 @@ def _check_readme_usage(root: Path) -> CheckResult:
         detail = "forbidden README wording: " + ", ".join(forbidden)
         return _result("README usage", "fail", detail, "keep the license section Apache 2.0 only")
     return _result("README usage", "pass", "core usage, MCP install, project hygiene, and validation boundaries")
+
+
+def _check_supply_chain_recipe_version(root: Path) -> CheckResult:
+    try:
+        version = _read_project_version(root)
+        text = _read_text(root, "docs/supply-chain.md")
+    except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
+        return _result("supply-chain recipe", "fail", str(exc))
+
+    required = (
+        f"VERSION={version}",
+        "Consumer verification quick path",
+        '--pattern "recon_tool-${VERSION}-py3-none-any.whl"',
+        '--pattern "recon_tool-${VERSION}.tar.gz"',
+        '--pattern "recon-tool-${VERSION}.cdx.json"',
+        '--pattern "recon-tool-${VERSION}.intoto.jsonl"',
+        "gh attestation verify",
+        "https://pypi.org/pypi/recon-tool/json",
+        "pypi-attestations verify pypi",
+    )
+    missing = [anchor for anchor in required if anchor not in text]
+    if missing:
+        return _result(
+            "supply-chain recipe",
+            "fail",
+            "missing anchors: " + ", ".join(missing),
+            "refresh docs/supply-chain.md consumer verification recipe",
+        )
+    return _result("supply-chain recipe", "pass", f"consumer verification recipe pins {version}")
 
 
 def _check_homebrew_formula(root: Path) -> CheckResult:
@@ -799,6 +828,7 @@ def collect_checks(
         _check_roadmap_version(root),
         _check_citation_metadata(root),
         _check_readme_usage(root),
+        _check_supply_chain_recipe_version(root),
         _check_homebrew_formula(root),
         _check_private_tracked_files(actual_runner, root),
         _check_latest_commit_message(actual_runner),
