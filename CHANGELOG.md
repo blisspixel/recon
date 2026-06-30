@@ -89,6 +89,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Signals CLI coverage.** Focused CLI tests now cover signal list, search,
   and show behavior, including JSON output, validation exits, no-match paths,
   and Rich text rendering under terminal wrapping.
+- **Fingerprint validator coverage.** Focused validator tests now cover shape
+  errors, YAML parse failures, empty directories, duplicate-slug semantics,
+  specificity failures, skip-specificity behavior, bare-list input, and the
+  script entrypoint.
 - **OpenSSF questionnaire manual queue.** Badge readiness docs now separate
   repository-file evidence from live process facts such as issue response
   history, vulnerability response history, maintainer attestations, and
