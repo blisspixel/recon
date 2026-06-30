@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Source hygiene guard.** Source hygiene now rejects placeholder-style
+  incomplete-code phrasing such as reserved-for-future assignments, and the
+  formatter insight curator no longer carries unused parameters for speculative
+  tuning.
+
 ## [2.2.18] - 2026-06-30
 
 ### Tool Surface Changes

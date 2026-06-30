@@ -24,6 +24,14 @@ FORBIDDEN_PLACEHOLDER_MARKERS = tuple(
 FORBIDDEN_PLACEHOLDER_PATTERNS = {
     marker: re.compile(rf"\b{re.escape(marker)}\b") for marker in FORBIDDEN_PLACEHOLDER_MARKERS
 }
+FORBIDDEN_INCOMPLETE_CODE_PHRASES = tuple(
+    "".join(parts)
+    for parts in (
+        ("reserved", " for ", "future"),
+        ("future", " tuning"),
+        ("unused", " for ", "now"),
+    )
+)
 
 
 def _python_files() -> list[Path]:
@@ -53,5 +61,17 @@ def test_runtime_tests_and_maintainer_python_have_no_placeholder_markers() -> No
             for marker, pattern in FORBIDDEN_PLACEHOLDER_PATTERNS.items():
                 if pattern.search(line):
                     offenders.append(f"{rel}:{lineno}: {marker}")
+
+    assert offenders == []
+
+
+def test_runtime_tests_and_maintainer_python_have_no_incomplete_code_phrasing() -> None:
+    offenders: list[str] = []
+    for path in _python_files():
+        rel = path.relative_to(ROOT).as_posix()
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            for phrase in FORBIDDEN_INCOMPLETE_CODE_PHRASES:
+                if phrase in line:
+                    offenders.append(f"{rel}:{lineno}: {phrase}")
 
     assert offenders == []

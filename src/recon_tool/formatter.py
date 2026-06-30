@@ -1279,7 +1279,7 @@ def _render_insights(info: TenantInfo, verbose: bool, confidence_mode: str) -> T
     """
     if not info.insights:
         return None
-    curated: list[str] = _curate_insights(info.insights, info.services, info.slugs)
+    curated: list[str] = _curate_insights(info.insights)
     from recon_tool.strict_mode import apply_strict_mode, should_apply_strict
 
     if should_apply_strict(info, confidence_mode):
@@ -1451,11 +1451,7 @@ def _render_explain_conflicts(info: TenantInfo, explain: bool, verbose: bool) ->
     return conf_block
 
 
-def _curate_insights(
-    insights: tuple[str, ...],
-    services: tuple[str, ...],
-    slugs: tuple[str, ...],
-) -> list[str]:
+def _curate_insights(insights: tuple[str, ...]) -> list[str]:
     """Filter and deduplicate insights for the default panel.
 
     Two kinds of cleanup:
@@ -1488,7 +1484,6 @@ def _curate_insights(
     signals ("Edge Layering" vs "Zero Trust Pattern Observed") never collapse
     into each other.
     """
-    _ = services, slugs  # reserved for future tuning
     drop_prefixes = (
         "Security stack:",
         "Infrastructure:",
