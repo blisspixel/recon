@@ -85,7 +85,7 @@ The archive candidate is a frozen GitHub release that already has:
 - Apache-2.0 license;
 - public reviewer commands in [artifact-review.md](artifact-review.md);
 - public proof memo in
-  [2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md);
+  [2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md);
 - current final claim audit refresh in
   [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md);
 - aggregate-safe paper figures in [paper-figures.md](paper-figures.md);

@@ -328,7 +328,7 @@ profile, full paper profile, claim-map audit, release-readiness Scorecard API
 gate, figure drift check, local gate, and release readiness checks without
 committing private corpora or local run artifacts.
 The latest local submission-freeze public proof record is committed as
-`2026-06-29-submission-freeze-local-proof.md`.
+`2026-06-30-submission-freeze-local-proof.md`.
 Before external submission packaging, follow
 [docs/submission-freeze-checklist.md](../docs/submission-freeze-checklist.md)
 to rerun the public proof commands and release gates while preserving the same

@@ -38,7 +38,7 @@ def test_submission_freeze_checklist_names_required_gates() -> None:
         "uv run python scripts/release_readiness.py --allow-dirty",
         "uv run python scripts/release_readiness.py --remote",
         "2026-06-29-scorecard-gate-claim-audit.md",
-        "2026-06-29-submission-freeze-local-proof.md",
+        "2026-06-30-submission-freeze-local-proof.md",
     ):
         assert required in text
 

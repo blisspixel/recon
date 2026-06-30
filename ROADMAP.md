@@ -16,4 +16,4 @@ in
 Future wording, package, or validation changes rerun that gate before
 submission or release packaging. The latest local submission-freeze public proof
 record is
-[validation/2026-06-29-submission-freeze-local-proof.md](validation/2026-06-29-submission-freeze-local-proof.md).
+[validation/2026-06-30-submission-freeze-local-proof.md](validation/2026-06-30-submission-freeze-local-proof.md).

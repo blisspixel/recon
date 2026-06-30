@@ -45,7 +45,7 @@ REQUIRED_BOUNDARIES: tuple[tuple[str, str], ...] = (
     ("data-policy", "Public-list checks may serve as robustness checks"),
 )
 
-LATEST_PUBLIC_PROOF_MEMO = "2026-06-29-submission-freeze-local-proof.md"
+LATEST_PUBLIC_PROOF_MEMO = "2026-06-30-submission-freeze-local-proof.md"
 
 DOC_PATHS: dict[str, str] = {
     "readme-root": "README.md",

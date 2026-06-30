@@ -103,7 +103,7 @@ def test_external_writeup_plan_names_latest_full_proof() -> None:
     text = (ROOT / "docs" / "external-writeup-plan.md").read_text(encoding="utf-8")
 
     assert "submission-freeze-paper-20260629-cycle9b" in text
-    assert "2026-06-29-submission-freeze-local-proof.md" in (
+    assert "2026-06-30-submission-freeze-local-proof.md" in (
         ROOT / "docs" / "artifact-review.md"
     ).read_text(encoding="utf-8")
     assert "2026-06-29-scorecard-gate-claim-audit.md" in text

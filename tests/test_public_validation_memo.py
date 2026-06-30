@@ -94,7 +94,7 @@ MEMOS = (
         ),
     ),
     PublicMemo(
-        path=ROOT / "validation" / "2026-06-29-submission-freeze-local-proof.md",
+        path=ROOT / "validation" / "2026-06-30-submission-freeze-local-proof.md",
         profile="paper",
         required_phrases=(
             "submission freeze local proof",

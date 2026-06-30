@@ -97,7 +97,7 @@ The next work is dependency-ordered:
      readiness now guards citation metadata. The final submission gate is
      documented in [submission-freeze-checklist.md](submission-freeze-checklist.md),
      and the latest local submission-freeze public proof record is
-     [2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md).
+     [2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md).
      The archive and DOI stop rules are documented in
      [archive-readiness.md](archive-readiness.md), and the
      outside public-artifact rerun path is documented in

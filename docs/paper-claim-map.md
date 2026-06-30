@@ -40,7 +40,7 @@ therefore uses these boundaries for the write-up package:
   evidence, not empirical result validation.
 
 The latest public proof gate for the current draft package is
-[2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md).
+[2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md).
 The current final claim audit refresh remains
 [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md).
 Together they record the passing smoke run, full public proof run, claim-map

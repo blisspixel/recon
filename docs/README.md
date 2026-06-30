@@ -83,7 +83,7 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | Paper claim map | [paper-claim-map.md](paper-claim-map.md) |
 | Paper figure package | [paper-figures.md](paper-figures.md) |
 | Final public claim audit refresh | [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md) |
-| Submission-freeze local public proof | [2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md) |
+| Submission-freeze local public proof | [2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md) |
 | Public label snapshot and public-list sampling decision | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) |
 | M365 tenancy corroboration decision | [m365-tenancy-decision.md](m365-tenancy-decision.md) |
 | Paper outline | [paper-outline.md](paper-outline.md) |

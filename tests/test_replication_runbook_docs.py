@@ -96,7 +96,7 @@ def test_replication_runbook_cites_current_artifact_sources() -> None:
     for required in (
         "https://www.acm.org/publications/policies/artifact-review-and-badging-current",
         "artifact-review.md",
-        "2026-06-29-submission-freeze-local-proof.md",
+        "2026-06-30-submission-freeze-local-proof.md",
         "2026-06-29-scorecard-gate-claim-audit.md",
         "archive-readiness.md",
         "https://arxiv.org/abs/2605.06508",

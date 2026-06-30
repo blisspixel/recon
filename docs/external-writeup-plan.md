@@ -130,7 +130,7 @@ requirements:
 - The 2026-06-29 submission-freeze local public proof check with stamp
   `submission-freeze-paper-20260629-cycle9b` passed all five public steps and
   reported `Private corpora read: no`. The aggregate-only memo is
-  [2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md).
+  [2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md).
 - `CITATION.cff` is the citation metadata source and release readiness now
   checks it against `pyproject.toml` and the current `CHANGELOG.md` release
   section.

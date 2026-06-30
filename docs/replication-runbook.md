@@ -12,7 +12,7 @@ network behavior.
 - Artifact review guide for this repository:
   [artifact-review.md](artifact-review.md)
 - Current public proof memo:
-  [2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md)
+  [2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md)
 - Current final claim audit refresh:
   [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md)
 - Archive readiness and DOI stop rules:

@@ -55,7 +55,7 @@ That changes only terminal handling. It does not skip any gate.
 ## What The Public Bundle Validates
 
 The latest maintainer full proof check is recorded in
-[../validation/2026-06-29-submission-freeze-local-proof.md](../validation/2026-06-29-submission-freeze-local-proof.md).
+[../validation/2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md).
 The current final public claim audit refresh for the draft package remains
 [../validation/2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md).
 That claim-audit memo records the last paper-package claim audit refresh.
