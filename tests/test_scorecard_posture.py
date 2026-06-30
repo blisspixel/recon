@@ -121,6 +121,29 @@ def test_scorecard_workflow_uses_explicit_least_privilege_permissions() -> None:
     assert job["permissions"] == _ALLOWED_ELEVATED_JOB_PERMISSIONS[".github/workflows/scorecard.yml"]["analysis"]
 
 
+def test_scorecard_workflow_publishes_sarif_and_public_results() -> None:
+    workflow = _load_yaml(".github/workflows/scorecard.yml")
+    triggers = _workflow_on(workflow)
+    steps = workflow["jobs"]["analysis"]["steps"]
+    analysis_step = steps[1]
+    artifact_step = steps[2]
+    sarif_step = steps[3]
+
+    assert {"branch_protection_rule", "schedule", "push"} <= set(triggers)
+    assert triggers["push"] == {"branches": ["main"]}
+    assert analysis_step["with"] == {
+        "results_file": "results.sarif",
+        "results_format": "sarif",
+        "publish_results": True,
+    }
+    assert artifact_step["with"] == {
+        "name": "SARIF file",
+        "path": "results.sarif",
+        "retention-days": 5,
+    }
+    assert sarif_step["with"] == {"sarif_file": "results.sarif"}
+
+
 def test_release_workflow_exports_scorecard_recognized_provenance() -> None:
     workflow = _load_yaml(".github/workflows/release.yml")
     jobs = workflow["jobs"]

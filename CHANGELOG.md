@@ -43,6 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Replication outcome discipline.** The public replication runbook now
   constrains future outside-replication notes to aggregate command outcomes and
   reviewed environment details.
+- **Scorecard publication guard.** Maintenance checks now lock the Scorecard
+  workflow to public result publishing, SARIF export, and bounded artifact
+  retention.
 
 ## [2.2.17] - 2026-06-29
 
