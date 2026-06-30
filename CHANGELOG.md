@@ -61,6 +61,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PyPI recipe version guard.** The supply-chain freshness check now covers the
   Python snippet that reads PyPI file URLs, not only the shell release asset
   variable.
+- **Remote evidence refresh.** Strategic gap docs now record that the pushed
+  hardening stack has current remote CI, Scorecard, PyPI, GitHub Release, and
+  provenance checks passing.
 
 ## [2.2.17] - 2026-06-29
 
