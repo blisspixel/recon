@@ -43,6 +43,25 @@ questionnaire itself.
 | Security | CodeQL, secret scanning, workflow pinning, least-privilege tokens, dependency updates, `pip-audit`, SBOM, Trusted Publishing, PyPI attestations, GitHub build provenance, and remote release readiness. | Ready to answer from supply-chain docs and workflow files. |
 | Analysis | Static typing, static lint, release-readiness checks, validation hygiene, text hygiene, schema drift checks, and artifact guards. | Ready to answer with commands and CI jobs. |
 
+## Questionnaire Answer Discipline
+
+The badge criteria are evidence-driven. Many criteria ask for a public
+URL or explicit justification. Use this discipline before submitting answers:
+
+- Answer `Met` only when the answer can cite committed project evidence or a
+  live public repository setting.
+- Answer `N/A` only when the criterion itself permits N/A and the justification
+  is accurate for recon's passive local-tool scope.
+- Treat OpenSSF Scorecard as an automated signal, not as a substitute for a
+  Best Practices questionnaire answer.
+- Do not answer from maintainer memory, private repository settings, local run
+  artifacts, or planned future work.
+- For every non-trivial answer, record the evidence URL, the exact claim it
+  supports, and any boundary that prevents stronger wording.
+- If an answer would require a mandatory reviewed-PR process, contributor
+  diversity, a third-party audit, a badge URL, or a long-term-support promise
+  that does not exist, leave the answer weaker and document the gap.
+
 ## Answers That Need Care
 
 Some answers must stay precise:

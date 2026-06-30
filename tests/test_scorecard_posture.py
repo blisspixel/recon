@@ -339,6 +339,12 @@ def test_openssf_badge_readiness_prepares_questionnaire_without_claiming_badge()
         "Quality",
         "Security",
         "Analysis",
+        "Questionnaire Answer Discipline",
+        "Answer `Met` only when the answer can cite committed project evidence",
+        "Answer `N/A` only when the criterion itself permits N/A",
+        "Treat OpenSSF Scorecard as an automated signal, not as a substitute",
+        "Do not answer from maintainer memory",
+        "record the evidence URL",
         "No badge link until the real badge project exists",
         "No placeholder URL",
     ):
