@@ -7,6 +7,7 @@ commands; the shared exception formatter comes from cli_shared.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 import typer
@@ -18,6 +19,14 @@ from recon_tool.formatter import get_console, get_err_console
 from recon_tool.validator import strip_control_chars
 
 fingerprints_app = typer.Typer(help="Inspect the built-in fingerprint catalog.")
+
+
+def _find_example_corpus_path() -> Path | None:
+    for root in (Path.cwd(), *Path(__file__).resolve().parents):
+        candidate = root / "tests" / "fixtures" / "corpus-example.txt"
+        if candidate.exists():
+            return candidate
+    return None
 
 
 @fingerprints_app.command("list")
@@ -474,10 +483,10 @@ def fingerprints_test(
         from recon_tool.paths import config_dir as _config_dir
 
         user_corpus = _config_dir() / "corpus.txt"
-        example = _Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "corpus-example.txt"
+        example = _find_example_corpus_path()
         if user_corpus.exists():
             corpus_path = user_corpus
-        elif example.exists():
+        elif example is not None:
             corpus_path = example
             using_example_corpus = True
         else:
