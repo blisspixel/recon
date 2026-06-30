@@ -81,6 +81,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   removed.
 - **Local tool artifact hygiene.** Repository hygiene tests now verify common
   local cache and environment artifacts stay ignored and untracked.
+- **Fingerprint CLI coverage and JSON hygiene.** The `fingerprints test --json`
+  command now emits machine-readable JSON without a human banner, its default
+  example corpus lookup points at the repository fixture during contributor
+  runs, and focused CLI tests cover list, search, show, new, test, and check
+  paths.
 - **OpenSSF questionnaire manual queue.** Badge readiness docs now separate
   repository-file evidence from live process facts such as issue response
   history, vulnerability response history, maintainer attestations, and

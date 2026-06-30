@@ -474,7 +474,7 @@ def fingerprints_test(
         from recon_tool.paths import config_dir as _config_dir
 
         user_corpus = _config_dir() / "corpus.txt"
-        example = _Path(__file__).parent.parent / "tests" / "fixtures" / "corpus-example.txt"
+        example = _Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "corpus-example.txt"
         if user_corpus.exists():
             corpus_path = user_corpus
         elif example.exists():
@@ -518,6 +518,12 @@ def fingerprints_test(
                 out.append((domain, False, f"error: {_fmt_exc(exc)}"))
         return out
 
+    if json_output:
+        results = asyncio.run(_resolve_all())
+        payload = [{"domain": d, "matched": m, "detail": detail} for d, m, detail in results]
+        typer.echo(json.dumps(payload, indent=2))
+        return
+
     console = get_console()
     console.print()
     console.print(f"  [bold]Testing {slug!r} against {len(domains)} domain{'s' if len(domains) != 1 else ''}[/bold]")
@@ -529,11 +535,6 @@ def fingerprints_test(
     console.print()
     with get_err_console().status(f"Resolving {len(domains)} domains..."):
         results = asyncio.run(_resolve_all())
-
-    if json_output:
-        payload = [{"domain": d, "matched": m, "detail": detail} for d, m, detail in results]
-        typer.echo(json.dumps(payload, indent=2))
-        return
 
     hits = [(d, detail) for d, m, detail in results if m]
     misses = [d for d, m, _ in results if not m]
