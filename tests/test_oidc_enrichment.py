@@ -139,6 +139,14 @@ class TestSovereigntyInsights:
         out = _insights(cloud_instance="fabrikam.b2clogin.com")
         assert any("b2c" in i.lower() for i in out)
 
+    def test_b2c_lookalike_does_not_emit_b2c_insight(self):
+        out = _insights(cloud_instance="fabrikam.b2clogin.com.example.com")
+        assert not any("azure ad b2c" in i.lower() for i in out)
+
+    def test_gov_cloud_lookalike_does_not_emit_gcc_insight(self):
+        out = _insights(cloud_instance="login.microsoftonline.us.example.com")
+        assert not any("government" in i.lower() or "gcc" in i.lower() for i in out)
+
     def test_no_instance_no_insight(self):
         out = _insights()
         assert not any("government" in i.lower() or "china" in i.lower() or "b2c" in i.lower() for i in out)

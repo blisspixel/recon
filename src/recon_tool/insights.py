@@ -17,6 +17,7 @@ from recon_tool.constants import (
     SVC_OFFICE_PROPLUS,
     SVC_SPF_STRICT,
 )
+from recon_tool.validator import host_has_suffix
 
 __all__ = [
     "InsightContext",
@@ -626,7 +627,7 @@ def _sovereignty_insights(ctx: InsightContext) -> list[str]:
 
     results: list[str] = []
 
-    if "microsoftonline.us" in ci or "graph.microsoft.us" in mh:
+    if host_has_suffix(ci, "microsoftonline.us") or host_has_suffix(mh, "graph.microsoft.us"):
         if sub and sub.upper() in ("DOD", "GCCH"):
             results.append(
                 f"Likely US Government GCC High / DoD tenant (observed cloud_instance={ci or 'microsoftonline.us'}, "
@@ -637,13 +638,13 @@ def _sovereignty_insights(ctx: InsightContext) -> list[str]:
                 f"Likely US Government Community Cloud (GCC) tenant "
                 f"(observed cloud_instance={ci or 'microsoftonline.us'})"
             )
-    elif "partner.microsoftonline.cn" in ci or "microsoftgraphchina.cn" in mh:
+    elif host_has_suffix(ci, "partner.microsoftonline.cn") or host_has_suffix(mh, "microsoftgraphchina.cn"):
         results.append(
             f"Likely Azure China 21Vianet tenant (observed cloud_instance={ci or 'partner.microsoftonline.cn'})"
         )
-    elif "b2clogin.com" in ci or ci.endswith("b2clogin.com"):
+    elif host_has_suffix(ci, "b2clogin.com"):
         results.append(f"Azure AD B2C tenant (observed cloud_instance={ci})")
-    elif ci and "microsoftonline.com" not in ci:
+    elif ci and not host_has_suffix(ci, "microsoftonline.com"):
         # Non-commercial cloud_instance we don't specifically recognize —
         # surface it verbatim so users can investigate.
         results.append(f"Non-commercial Microsoft cloud instance observed: {ci}")

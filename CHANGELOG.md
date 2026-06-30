@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Subdomain surface documentation.** The architecture and MCP docs now
   clarify which output modes show compact provider counts, per-subdomain
   details, structured `surface_attributions`, and unclassified-chain hints.
+- **Host-suffix security hardening.** Exchange DKIM tenant extraction and
+  Microsoft cloud-instance insights now use DNS-label-aware suffix matching
+  instead of raw string suffix or substring checks.
 
 ## [2.2.18] - 2026-06-30
 

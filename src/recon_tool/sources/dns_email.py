@@ -286,8 +286,8 @@ def _apply_exchange_dkim(ctx: dns_base.DetectionCtx, selector_groups: tuple[list
                 ctx.add(SVC_DKIM_EXCHANGE, "microsoft365", source_type="DKIM", raw_value=cname)
                 ctx.m365 = True
                 if host_has_suffix(host, "onmicrosoft.com"):
-                    parts = cl.split("._domainkey.")
-                    if len(parts) == 2 and parts[1].endswith("onmicrosoft.com") and "." in parts[1]:
+                    parts = host.split("._domainkey.")
+                    if len(parts) == 2 and host_has_suffix(parts[1], "onmicrosoft.com") and "." in parts[1]:
                         ctx.related_domains.add(parts[1])
                 break
 
