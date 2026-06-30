@@ -87,6 +87,22 @@ Do not record:
 - unsuppressed small strata;
 - reviewer credentials, tokens, or local paths containing personal information.
 
+## Outcome Record Discipline
+
+A replication note is a narrow command-outcome record:
+
+- Record failures as useful environment feedback, not as reviewer fault.
+- Include the exact commit or release tag, OS family, Python version, command
+  statuses, and public proof step statuses.
+- Keep raw logs local unless they have been reviewed for personal paths,
+  credentials, and private target identifiers.
+- Do not include screenshots, machine-local absolute paths, terminal profiles,
+  shell history, or package-cache paths in a public memo.
+- Do not upgrade the wording from "public commands ran" to "results validated"
+  unless the reviewer actually reran the row being described.
+- Keep outside public-artifact replication separate from archive, DOI, badge,
+  and private-corpus validation status.
+
 ## Interpretation
 
 Use conservative language:

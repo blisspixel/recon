@@ -44,6 +44,11 @@ def test_replication_runbook_preserves_private_data_boundary() -> None:
     for required in (
         "not a request to validate private-corpus rows",
         "private-corpus rows remain aggregate evidence",
+        "Outcome Record Discipline",
+        "Record failures as useful environment feedback",
+        "Keep raw logs local unless they have been reviewed",
+        "Do not include screenshots",
+        "machine-local absolute paths",
         "Do not send private corpora",
         "Do not ask a reviewer to query real organizations",
         "per-domain outputs",
