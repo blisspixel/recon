@@ -44,6 +44,7 @@ def test_strategic_gap_audit_names_real_remaining_gaps_without_fake_progress() -
         "Reviewed PR signal",
         "Artifact archive and DOI",
         "archive-readiness.md",
+        "archive path decision packet",
         "Independent public replication",
         "handoff packet",
         "replication-runbook.md",

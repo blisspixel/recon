@@ -75,6 +75,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Replication handoff packet.** The public replication runbook now defines
   the exact outside-reviewer request fields, environment notes, outcome notes,
   and redaction boundaries for a clean-machine public-artifact rerun.
+- **Archive path decision packet.** Archive readiness now defines the fields
+  required before adding DOI language or Zenodo metadata, including the frozen
+  release object, metadata authority, proof state, and data boundary.
 
 ## [2.2.17] - 2026-06-29
 

@@ -48,6 +48,30 @@ Archive metadata changes are release-policy changes, not documentation polish:
 - After a real archive exists, update citation metadata and rerun release
   readiness against the frozen commit.
 
+## Archive Path Decision Packet
+
+Before adding archive metadata or DOI language, write down the decision in the
+reviewed change. The packet must contain:
+
+| Field | Required content |
+|---|---|
+| Frozen object | Exact commit SHA, release tag, and package version being archived. |
+| Archive path | Zenodo GitHub integration, venue supplement, or another reviewed repository. |
+| Metadata authority | Whether `CITATION.cff` remains sufficient or `.zenodo.json` is needed for Zenodo-specific fields. |
+| Zenodo-specific need | If `.zenodo.json` is proposed, name the required field such as `grants`, `communities`, `access_right`, `related_identifiers`, or contributor roles. |
+| DOI status | No DOI, pending DOI, or real DOI. Only the real DOI state may be cited in public docs. |
+| Paper relation | Whether the archive is standalone software, a venue supplement, or a supplement to a real paper object. |
+| Public proof state | Claim audit, public proof profile stamps, local gate, remote readiness, and outside-replication status. |
+| Data boundary | Confirmation that no private corpora, real target lists, tenant IDs, per-domain rows, or unsuppressed small strata are included. |
+
+Default to `CITATION.cff` plus the GitHub release unless the archive path needs
+metadata that `CITATION.cff` cannot express. Zenodo's current guidance says
+`.zenodo.json` overrides `CITATION.cff` for GitHub release archiving and is only
+needed for Zenodo-specific metadata such as grants, communities, access rights,
+related identifiers, or contributor roles. GitHub's current guidance ties
+Zenodo DOIs to public repositories and GitHub releases, so a DOI decision must
+name the actual release object rather than a future intended deposit.
+
 ## Archive Candidate
 
 The archive candidate is a frozen GitHub release that already has:

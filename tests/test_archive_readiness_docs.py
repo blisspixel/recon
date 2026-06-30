@@ -48,6 +48,26 @@ def test_archive_readiness_preserves_no_premature_archive_policy() -> None:
         assert required in text
 
 
+def test_archive_readiness_defines_archive_path_decision_packet() -> None:
+    text = " ".join(_read(ARCHIVE).split())
+
+    for required in (
+        "Archive Path Decision Packet",
+        "Exact commit SHA, release tag, and package version",
+        "Zenodo GitHub integration, venue supplement, or another reviewed repository",
+        "Whether `CITATION.cff` remains sufficient or `.zenodo.json` is needed",
+        "`grants`, `communities`, `access_right`, `related_identifiers`, or contributor roles",
+        "Only the real DOI state may be cited in public docs",
+        "Claim audit, public proof profile stamps, local gate, remote readiness",
+        "outside-replication status",
+        "no private corpora, real target lists, tenant IDs, per-domain rows",
+        "Default to `CITATION.cff` plus the GitHub release",
+        "`.zenodo.json` overrides `CITATION.cff`",
+        "name the actual release object rather than a future intended deposit",
+    ):
+        assert required in text
+
+
 def test_archive_readiness_names_freeze_and_security_review_gates() -> None:
     text = " ".join(_read(ARCHIVE).split())
 
