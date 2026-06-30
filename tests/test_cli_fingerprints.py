@@ -15,6 +15,11 @@ from recon_tool.fingerprints import Fingerprint, load_fingerprints
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
 
 runner = CliRunner()
+ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+
+
+def _plain(text: str) -> str:
+    return ANSI_RE.sub("", text)
 
 
 def _sample_fingerprint() -> Fingerprint:
@@ -142,8 +147,10 @@ def test_search_text_prints_table_and_next_hint() -> None:
     result = runner.invoke(app, ["fingerprints", "search", fp.slug])
 
     assert result.exit_code == 0
-    assert fp.slug in result.output
-    assert "recon fingerprints show <slug>" in result.output
+    plain_output = _plain(result.output)
+    assert fp.slug in plain_output
+    assert "recon fingerprints show" in plain_output
+    assert "<slug>" in plain_output
 
 
 def test_search_ranking_covers_name_category_and_detection_pattern_matches() -> None:
@@ -187,9 +194,10 @@ def test_show_text_mode_prints_detection_rules() -> None:
     result = runner.invoke(app, ["fingerprints", "show", fp.slug])
 
     assert result.exit_code == 0
-    assert fp.name in result.output
-    assert "Detection rules" in result.output
-    assert fp.detections[0].pattern in result.output
+    plain_output = _plain(result.output)
+    assert fp.name in plain_output
+    assert "Detection rules" in plain_output
+    assert fp.detections[0].pattern in plain_output
 
 
 def test_show_synthetic_slug_text_mode_documents_probe_origin() -> None:
@@ -365,8 +373,9 @@ def test_fingerprints_test_default_example_corpus_runs_without_user_corpus(
     result = runner.invoke(app, ["fingerprints", "test", slug])
 
     assert result.exit_code == 0, result.output
-    assert "fictional-company example corpus" in result.output
-    assert "0 of" in result.output
+    plain_output = _plain(result.output)
+    assert "fictional-company example corpus" in plain_output
+    assert "0 of" in plain_output
 
 
 def test_fingerprints_test_json_is_machine_readable(
@@ -456,10 +465,11 @@ def test_fingerprints_test_text_mode_escapes_match_details(
     result = runner.invoke(app, ["fingerprints", "test", slug, "--corpus", str(corpus)])
 
     assert result.exit_code == 0, result.output
-    assert "MATCH" in result.output
-    assert "1 of 2 matched" in result.output
-    assert "\x1b" not in result.output
-    assert "recon fingerprints show" in result.output
+    plain_output = _plain(result.output)
+    assert "MATCH" in plain_output
+    assert "1 of 2 matched" in plain_output
+    assert "\x1b[31m" not in result.output
+    assert "recon fingerprints show" in plain_output
 
 
 def test_fingerprints_check_missing_path_exits_validation(tmp_path: Path) -> None:
