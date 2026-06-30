@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fingerprint catalog refinement.** Surface attribution now recognizes
   Transcend consent-sync CNAME aliases and Queue-it waiting-room CNAME targets
   found during local passive fingerprint-mining rounds.
+- **Fingerprint discovery tooling.** Candidate triage now mirrors runtime
+  DNS-label-aware `cname_target` matching so future mining rounds do not hide
+  service-specific CNAME variants behind broader substring matches.
 
 ## [2.2.18] - 2026-06-30
 

@@ -37,6 +37,8 @@ from typing import Any
 
 import yaml
 
+from recon_tool.discovery import looks_intra_org_brand, pattern_matches_hostname
+
 
 def load_existing_patterns(fingerprints_dir: Path) -> set[str]:
     """Return the set of every ``cname_target`` pattern across all YAMLs.
@@ -71,8 +73,7 @@ def load_existing_patterns(fingerprints_dir: Path) -> set[str]:
 
 def _has_matching_pattern(value: str, patterns: set[str]) -> bool:
     """True when an existing fingerprint pattern matches ``value``."""
-    v = value.lower()
-    return any(p in v for p in patterns)
+    return any(pattern_matches_hostname(value, pattern) for pattern in patterns)
 
 
 def is_already_covered(suffix: str, patterns: set[str]) -> bool:
@@ -123,8 +124,6 @@ def looks_intra_org(suffix: str, samples: list[dict[str, Any]]) -> bool:
     # labels; for foo.example.com it's the rightmost two. Use the brand-label
     # extractor to drive the decision: pick whichever right-anchored slice
     # produces a non-empty brand label.
-    from recon_tool.discovery import looks_intra_org_brand
-
     for n in (3, 2):
         if len(parts) >= n:
             apex_candidate = ".".join(parts[-n:])

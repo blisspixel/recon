@@ -10,8 +10,8 @@ Three steps:
 1. Bucket unclassified terminals by zone-suffix (rightmost ~3 labels).
 2. Drop chains that look intra-organizational (terminal in the apex's brand
    zone). Best-effort; the LLM step handles brand siblings.
-3. Drop terminals already covered by an existing fingerprint pattern
-   (substring match against the bundled catalog).
+3. Drop terminals already covered by an existing fingerprint pattern, using
+   the same hostname matching semantics as the runtime CNAME classifier.
 
 The result is a list of ``{suffix, count, samples}`` records, each one a
 real candidate worth proposing as a new ``cname_target`` fingerprint or an
@@ -160,8 +160,21 @@ def load_existing_patterns(fingerprints_dir: Path) -> set[str]:
 
 def already_covered(suffix: str, patterns: set[str]) -> bool:
     """True when an existing ``cname_target`` pattern matches the suffix."""
-    s = suffix.lower()
-    return any(p in s for p in patterns)
+    return any(pattern_matches_hostname(suffix, pattern) for pattern in patterns)
+
+
+def pattern_matches_hostname(value: str, pattern: str) -> bool:
+    """Mirror runtime CNAME-target hostname matching for candidate filters.
+
+    Dotted patterns are service domains and must match the exact hostname or a
+    proper DNS-label suffix. Dotless patterns are fragments such as ``mkto-``
+    and intentionally keep substring semantics.
+    """
+    hostname = value.lower().strip().rstrip(".")
+    pat = pattern.lower().strip().lstrip(".").rstrip(".")
+    if not hostname or not pat:
+        return False
+    return (hostname == pat or hostname.endswith("." + pat)) if "." in pat else pat in hostname
 
 
 def find_candidates(

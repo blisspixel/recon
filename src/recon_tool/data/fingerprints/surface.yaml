@@ -19,10 +19,11 @@
 #                    application tier matched the chain. Examples: Fastly,
 #                    CloudFront, Cloudflare, Akamai.
 #
-# Patterns are substrings, case-insensitive. Be specific — a generic
-# `amazonaws.com` would mis-attribute every AWS-hosted subdomain. Prefer the
-# zone- or service-specific suffix (`elb.amazonaws.com`,
-# `awsglobalaccelerator.com`).
+# Dotted patterns match exact hostnames or proper DNS-label suffixes,
+# case-insensitive. Dotless fragments keep substring semantics for service-
+# specific markers such as `mkto-`. Be specific: a generic `amazonaws.com`
+# would mis-attribute every AWS-hosted subdomain. Prefer the zone- or
+# service-specific suffix (`elb.amazonaws.com`, `awsglobalaccelerator.com`).
 
 fingerprints:
 
