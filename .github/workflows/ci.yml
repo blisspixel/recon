@@ -219,6 +219,13 @@ jobs:
         # comments kept beside the pins for maintainability.
         run: uv run python scripts/check_workflow_pins.py
 
+      - name: Enforce zero paid API cost surface
+        # The packaged runtime and GitHub automation must not grow paid-provider
+        # SDKs, model API keys, image API calls, or validation-only paid harness
+        # invocations. Optional maintainer validation harnesses stay outside the
+        # wheel and outside workflows.
+        run: uv run python scripts/check_cost_surface.py
+
       - name: Enforce added-line text hygiene
         # New diff lines must not add attribution markers, em dashes, or
         # pictographic symbols. Historical prose is not part of this check.

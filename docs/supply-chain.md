@@ -159,6 +159,9 @@ The repository also runs supply-chain posture checks outside the release flow:
   the CI validation job, including ClusterFuzzLite requirements, schema source
   tracing, surface inventory, CLI surface docs, file-size ratchets, and PLR
   ratchets.
+- The cost-surface guard checks the packaged runtime, wheel package scope,
+  project dependencies, and GitHub workflows for paid-provider SDKs, model API
+  keys, image API calls, and validation-only paid harness invocations.
 - Added-line text hygiene is checked locally and in CI so generated or manual
   changes cannot add attribution markers, em dashes, or pictographic symbols.
 - Remote release readiness checks PyPI's latest `recon-tool` version and the

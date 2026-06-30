@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Host-suffix security hardening.** Exchange DKIM tenant extraction and
   Microsoft cloud-instance insights now use DNS-label-aware suffix matching
   instead of raw string suffix or substring checks.
+- **Cost-surface guard.** The local gate and CI now enforce that packaged
+  runtime code, wheel packaging, project dependencies, and workflows do not
+  introduce paid-provider SDKs, model API keys, image API calls, or
+  validation-only paid harness invocations.
 
 ## [2.2.18] - 2026-06-30
 
