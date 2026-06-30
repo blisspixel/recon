@@ -749,13 +749,13 @@ class TestExchangeDkimSuffixMatch:
         ctx = dns_source._DetectionCtx()
         dns_email._apply_exchange_dkim(ctx, (["selector1._domainkey.contoso.onmicrosoft.com"], []))
         assert ctx.m365 is True
-        assert "contoso.onmicrosoft.com" in ctx.related_domains
+        assert ctx.related_domains == {"contoso.onmicrosoft.com"}
 
     def test_trailing_dot_tenant_cname_attributes_m365(self):
         ctx = dns_source._DetectionCtx()
         dns_email._apply_exchange_dkim(ctx, (["selector1._domainkey.contoso.onmicrosoft.com."], []))
         assert ctx.m365 is True
-        assert "contoso.onmicrosoft.com" in ctx.related_domains
+        assert ctx.related_domains == {"contoso.onmicrosoft.com"}
 
     def test_lookalike_cname_does_not_attribute_m365(self):
         ctx = dns_source._DetectionCtx()
