@@ -38,6 +38,24 @@ def test_replication_runbook_names_public_commands_and_preconditions() -> None:
         assert required in text
 
 
+def test_replication_runbook_defines_reviewer_handoff_packet() -> None:
+    text = " ".join(_read(RUNBOOK).split())
+
+    for required in (
+        "Reviewer Handoff Packet",
+        "Repository URL plus exact commit SHA or release tag",
+        "Public-artifact functional replication only",
+        "No private corpus, target list, real-domain row, or credential",
+        "OS family, shell family, Python version",
+        "final local gate test count, skipped count, and coverage percentage",
+        "Keep raw logs local until personal paths",
+        "Raw logs, screenshots, and machine-local paths are not requested by default",
+        "stop and report the first blocking environment error",
+        "a locally patched run is a different experiment",
+    ):
+        assert required in text
+
+
 def test_replication_runbook_preserves_private_data_boundary() -> None:
     text = " ".join(_read(RUNBOOK).split())
 

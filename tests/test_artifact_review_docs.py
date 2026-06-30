@@ -92,7 +92,7 @@ def test_artifact_review_guide_names_archive_boundary() -> None:
 
 
 def test_artifact_review_guide_names_replication_boundary() -> None:
-    text = GUIDE.read_text(encoding="utf-8")
+    text = " ".join(GUIDE.read_text(encoding="utf-8").split())
 
     assert "replication-runbook.md" in text
     assert "Outside replication status is also separate" in text

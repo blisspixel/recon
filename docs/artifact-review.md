@@ -139,8 +139,8 @@ chosen.
 
 Outside replication status is also separate. Use
 [replication-runbook.md](replication-runbook.md) to request a clean-machine
-public command rerun, and record only aggregate outcome notes unless a separate
-data-handling review approves a stronger release model.
+public command rerun with the handoff packet, and record only aggregate outcome
+notes unless a separate data-handling review approves a stronger release model.
 
 Before any external submission package, use
 [submission-freeze-checklist.md](submission-freeze-checklist.md) to rerun the

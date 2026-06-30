@@ -48,6 +48,24 @@ Before sending this runbook to a reviewer:
 6. The reviewer receives only a commit, release tag, or repository URL, not a
    private corpus or target list.
 
+## Reviewer Handoff Packet
+
+Send a short, bounded request. The packet should contain only these fields:
+
+| Field | Content |
+|---|---|
+| Artifact pointer | Repository URL plus exact commit SHA or release tag. |
+| Scope | Public-artifact functional replication only. No private corpus, target list, real-domain row, or credential is part of the request. |
+| Commands | The six commands in [Reviewer Commands](#reviewer-commands), run from a fresh clone. |
+| Environment note | OS family, shell family, Python version, and whether `uv sync` resolved from `uv.lock`. |
+| Outcome note | Pass or fail for each command, final local gate test count, skipped count, and coverage percentage. |
+| Redaction check | Keep raw logs local until personal paths, credentials, terminal profiles, package-cache paths, and private target identifiers are reviewed out. |
+| Return channel | Aggregate outcome note only. Raw logs, screenshots, and machine-local paths are not requested by default. |
+
+Ask the reviewer to stop and report the first blocking environment error rather
+than editing project files or relaxing gates. A clean failure report is useful
+replication evidence; a locally patched run is a different experiment.
+
 ## Reviewer Commands
 
 Run these from a fresh clone of the target commit:

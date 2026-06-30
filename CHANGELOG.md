@@ -72,6 +72,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   repository-file evidence from live process facts such as issue response
   history, vulnerability response history, maintainer attestations, and
   cryptography applicability.
+- **Replication handoff packet.** The public replication runbook now defines
+  the exact outside-reviewer request fields, environment notes, outcome notes,
+  and redaction boundaries for a clean-machine public-artifact rerun.
 
 ## [2.2.17] - 2026-06-29
 
