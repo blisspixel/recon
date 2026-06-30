@@ -80,6 +80,40 @@ def test_ultradns_web_forwarding_cname_target_loads_and_classifies() -> None:
     assert infrastructure.slug == "ultradns"
 
 
+def test_marketo_tracking_link_cname_target_loads_and_classifies() -> None:
+    """Marketo tracking-link hosts attribute to the Marketo application."""
+    rules = get_cname_target_rules()
+    terminal = "mkto-ab390043.com"
+
+    assert any(r.slug == "marketo" and r.pattern == "mkto-" for r in rules)
+    application, infrastructure = _classify_chain(["go.contoso.com", terminal], rules)
+
+    assert application is not None
+    assert application.slug == "marketo"
+    assert infrastructure is None
+
+
+def test_oci_waf_cname_target_loads_and_classifies_without_generic_oraclecloud_net() -> None:
+    """OCI WAF service hosts attribute to OCI without making all
+    oraclecloud.net names infrastructure matches."""
+    rules = get_cname_target_rules()
+    waf_terminal = "redirect.waf.oci.oraclecloud.net"
+    waas_terminal = "tenant.o.waas.oci.oraclecloud.net"
+
+    waf_app, waf_infra = _classify_chain(["kb.contoso.com", waf_terminal], rules)
+    waas_app, waas_infra = _classify_chain(["app.contoso.com", waas_terminal], rules)
+    generic_app, generic_infra = _classify_chain(["ns1.p68.dns.oraclecloud.net"], rules)
+
+    assert waf_app is None
+    assert waf_infra is not None
+    assert waf_infra.slug == "oracle-cloud"
+    assert waas_app is None
+    assert waas_infra is not None
+    assert waas_infra.slug == "oracle-cloud"
+    assert generic_app is None
+    assert generic_infra is None
+
+
 def test_squarespace_managed_subdomain_cname_target_loads_and_classifies() -> None:
     """Squarespace-managed subdomain CNAMEs attribute to Squarespace."""
     rules = get_cname_target_rules()

@@ -649,6 +649,14 @@ fingerprints:
       Subdomain CNAMEs into mktossl.com (Marketo's SSL-
       enabled landing-page endpoint). Indicates HTTPS-served
       Marketo landing pages under a branded subdomain.
+  - type: cname_target
+    pattern: mkto-
+    reference: https://experienceleague.adobe.com/en/docs/marketo/using/getting-started/initial-setup/configure-protocols-for-marketo
+    tier: application
+    description: >-
+      Subdomain CNAMEs into Marketo tracking-link hosts such as
+      ``mkto-[...]`` domains. Indicates branded marketing links
+      or landing-page flows served through Adobe Marketo.
 
 - name: Eloqua (Oracle)
   slug: eloqua
@@ -3521,6 +3529,16 @@ fingerprints:
     tier: infrastructure
     description: OCI customer-facing endpoint (generic); compute / load-balancer / object-storage subdomains CNAME to ``*.oraclecloud.com`` regional / service hosts.
     reference: https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingDNS.htm
+  - type: cname_target
+    pattern: waf.oci.oraclecloud.net
+    tier: infrastructure
+    description: OCI Web Application Firewall / edge redirect endpoint; protected or redirected custom hostnames can CNAME into ``redirect.waf.oci.oraclecloud.net`` or related OCI WAF service hosts.
+    reference: https://docs.oracle.com/en-us/iaas/Content/WAF/Concepts/gettingstarted.htm
+  - type: cname_target
+    pattern: waas.oci.oraclecloud.net
+    tier: infrastructure
+    description: OCI Web Application Firewall legacy WAAS endpoint; customer-facing protected hostnames can CNAME into ``*.o.waas.oci.oraclecloud.net`` service hosts.
+    reference: https://docs.oracle.com/en-us/iaas/Content/WAF/Concepts/gettingstarted.htm
 
 - name: Oracle Fusion Cloud
   slug: oracle-fusion
