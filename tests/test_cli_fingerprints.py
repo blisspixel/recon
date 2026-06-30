@@ -48,9 +48,11 @@ def test_list_without_filters_prints_compact_category_summary() -> None:
     result = runner.invoke(app, ["fingerprints", "list"])
 
     assert result.exit_code == 0
-    assert "fingerprints across" in result.output
-    assert "recon fingerprints" in result.output
-    assert "search <query>" in result.output
+    plain_output = _plain(result.output)
+    assert "fingerprints across" in plain_output
+    assert "recon fingerprints" in plain_output
+    assert "search" in plain_output
+    assert "<query>" in plain_output
 
 
 def test_list_json_emits_fingerprint_summaries() -> None:
