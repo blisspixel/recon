@@ -29,6 +29,7 @@ from recon_tool.models import (
     CertSummary,
     ConfidenceLevel,
     SourceResult,
+    SurfaceAttribution,
     TenantInfo,
 )
 
@@ -319,6 +320,58 @@ class TestRenderTenantPanelEdgeCases:
         out = _strip(buf.getvalue())
         assert "sub14.contoso.com" in out
         assert "and " not in out or "more" not in out.split("sub14.contoso.com")[1]
+
+    def test_subdomain_summary_uses_aligned_lines_before_overflow(self) -> None:
+        """Long provider names should not hide every other provider behind
+        a single opaque overflow count in the default panel."""
+        _, buf = _make_console()
+        attributions = (
+            *(
+                SurfaceAttribution(
+                    subdomain=f"azure{i}.contoso.com",
+                    primary_slug="azure-app-service",
+                    primary_name="Azure App Service",
+                    primary_tier="infrastructure",
+                )
+                for i in range(33)
+            ),
+            *(
+                SurfaceAttribution(
+                    subdomain=f"proxy{i}.contoso.com",
+                    primary_slug="microsoft-entra-application-proxy",
+                    primary_name="Microsoft Entra Application Proxy",
+                    primary_tier="application",
+                )
+                for i in range(12)
+            ),
+            *(
+                SurfaceAttribution(
+                    subdomain=f"front{i}.contoso.com",
+                    primary_slug="azure-front-door",
+                    primary_name="Azure Front Door",
+                    primary_tier="infrastructure",
+                )
+                for i in range(9)
+            ),
+            SurfaceAttribution(
+                subdomain="shop.contoso.com",
+                primary_slug="shopify",
+                primary_name="Shopify",
+                primary_tier="application",
+            ),
+        )
+        info = _minimal_info(
+            services=("DMARC",),
+            surface_attributions=attributions,
+        )
+
+        get_console().print(render_tenant_panel(info))
+        out = _strip(buf.getvalue())
+
+        assert "Subdomain      Azure App Service (33)" in out
+        assert "Microsoft Entra Application Proxy (12)" in out
+        assert "Azure Front Door (9)" in out
+        assert "Shopify (1)" in out
 
     def test_m365_panel_with_tenant_id(self) -> None:
         _, buf = _make_console()

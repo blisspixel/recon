@@ -50,6 +50,7 @@ from recon_tool.formatter_exposure import (  # re-exported: stable import path a
     render_exposure_panel,
     render_gaps_panel,
 )
+from recon_tool.formatter_layout import compact_subdomain_summary_lines
 from recon_tool.formatter_markdown import (
     format_explanations_markdown,
     format_tenant_markdown,
@@ -924,24 +925,16 @@ def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: b
     # Sort by count descending, then name ascending for diff-stable ties.
     ranked = sorted(name_counts.items(), key=lambda p: (-p[1], p[0]))
     surface_summary = [f"{name} ({count})" for name, count in ranked]
-    budget = _PANEL_WIDTH - (2 + max_width) - 2
-    joined = ", ".join(surface_summary)
-    if len(joined) > budget:
-        # Pack as many as fit, reserving room for "+N more".
-        kept: list[str] = []
-        running = 0
-        for s in surface_summary:
-            gap = 2 if kept else 0
-            if running + gap + len(s) > budget - 12:
-                break
-            kept.append(s)
-            running += gap + len(s)
-        remaining = len(surface_summary) - len(kept)
-        joined = ", ".join(kept) + f", +{remaining} more" if remaining > 0 else ", ".join(kept)
+    budget = _PANEL_WIDTH - (2 + max_width)
+    lines = compact_subdomain_summary_lines(surface_summary, budget)
     svc_block.append("  ")
     svc_block.append("Subdomain".ljust(max_width), style="dim")
-    svc_block.append(joined)
-    svc_block.append("\n")
+    for index, line in enumerate(lines):
+        if index:
+            svc_block.append(" " * (2 + max_width))
+        svc_block.append(line)
+        svc_block.append("\n")
+
 
 
 def _render_services(info: TenantInfo, verbose: bool, show_domains: bool) -> tuple[Text | None, int]:

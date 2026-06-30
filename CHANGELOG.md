@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   incomplete-code phrasing such as reserved-for-future assignments, and the
   formatter insight curator no longer carries unused parameters for speculative
   tuning.
+- **Compact subdomain surface summary.** The default panel's `Subdomain` row
+  now uses aligned wrapped rows so a large provider count does not hide other
+  detected surface providers behind a single overflow marker.
 
 ## [2.2.18] - 2026-06-30
 
