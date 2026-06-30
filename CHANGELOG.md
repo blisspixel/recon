@@ -86,6 +86,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   example corpus lookup points at the repository fixture during contributor
   runs, and focused CLI tests cover list, search, show, new, test, and check
   paths.
+- **Signals CLI coverage.** Focused CLI tests now cover signal list, search,
+  and show behavior, including JSON output, validation exits, no-match paths,
+  and Rich text rendering under terminal wrapping.
 - **OpenSSF questionnaire manual queue.** Badge readiness docs now separate
   repository-file evidence from live process facts such as issue response
   history, vulnerability response history, maintainer attestations, and
