@@ -399,6 +399,15 @@ def test_openssf_badge_readiness_blocks_fake_process_progress() -> None:
     text = " ".join((_ROOT / "docs" / "openssf-badge-readiness.md").read_text(encoding="utf-8").split())
 
     for required in (
+        "Manual Answer Queue",
+        "live process facts",
+        "Repository, package, documentation, issue, and download URLs use HTTPS",
+        "public issue tracker state at submission time",
+        "real report records",
+        "secure design knowledge",
+        "maintainer attestation",
+        "does not implement cryptographic primitives",
+        "not a public claim that answers were submitted",
         "Do not claim a mandatory reviewed-PR process",
         "Do not imply organization diversity",
         "No claim that a badge is \"in progress\"",
