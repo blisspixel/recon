@@ -56,6 +56,7 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
             [
                 "Consumer verification quick path",
                 f"VERSION={version}",
+                f'version = "{version}"',
                 '--pattern "recon_tool-${VERSION}-py3-none-any.whl"',
                 '--pattern "recon_tool-${VERSION}.tar.gz"',
                 '--pattern "recon-tool-${VERSION}.cdx.json"',
@@ -161,6 +162,17 @@ def test_supply_chain_recipe_version_rejects_stale_version(tmp_path: Path) -> No
     assert check.status == "fail"
     assert "VERSION=2.2.17" in check.detail
     assert "consumer verification recipe" in check.action
+
+
+def test_supply_chain_recipe_version_rejects_stale_pypi_lookup_version(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    supply_chain = (tmp_path / "docs" / "supply-chain.md").read_text(encoding="utf-8")
+    _write_file(tmp_path, "docs/supply-chain.md", supply_chain.replace('version = "2.2.17"', 'version = "2.2.16"'))
+
+    check = release_readiness._check_supply_chain_recipe_version(tmp_path)
+
+    assert check.status == "fail"
+    assert 'version = "2.2.17"' in check.detail
 
 
 def test_citation_metadata_accepts_current_release(tmp_path: Path) -> None:

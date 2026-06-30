@@ -319,6 +319,7 @@ def _check_supply_chain_recipe_version(root: Path) -> CheckResult:
 
     required = (
         f"VERSION={version}",
+        f'version = "{version}"',
         "Consumer verification quick path",
         '--pattern "recon_tool-${VERSION}-py3-none-any.whl"',
         '--pattern "recon_tool-${VERSION}.tar.gz"',

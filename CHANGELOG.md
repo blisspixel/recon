@@ -58,6 +58,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Release documentation parity.** Release, artifact-review, and agentic-loop
   docs now name the supply-chain recipe freshness check in the local readiness
   gate.
+- **PyPI recipe version guard.** The supply-chain freshness check now covers the
+  Python snippet that reads PyPI file URLs, not only the shell release asset
+  variable.
 
 ## [2.2.17] - 2026-06-29
 
