@@ -332,7 +332,7 @@ async def get_fingerprints(
 
     Args:
         category: Optional category filter (case-insensitive partial match).
-        limit: Optional page size. With ~840 fingerprints loaded, an agent that
+        limit: Optional page size. With 800+ fingerprints loaded, an agent that
             only needs a slice can cap the response; omit (default) for the full
             list, which keeps the result shape backward-compatible.
         offset: Starting index for the page (default 0). Ignored without limit.
