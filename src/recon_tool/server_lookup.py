@@ -189,15 +189,14 @@ async def lookup_tenant(
                     error=exc.message,
                 )
                 return f"No information found for {domain}"
-            except Exception:
+            except Exception as exc:
                 rate_limit_release(validated)
-                elapsed = time.monotonic() - start_time
                 logger.exception(
                     "Unexpected error looking up %s (request_id=%s)",
                     domain,
                     request_id,
                 )
-                return f"Error looking up {domain}: an internal error occurred"
+                return server_app.internal_lookup_error(domain, request_id, exc)
 
             cache_set(validated, info, results)
 

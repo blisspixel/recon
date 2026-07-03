@@ -11,6 +11,7 @@ never imports server.py or the tool groups.
 from __future__ import annotations
 
 import logging
+import uuid
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
@@ -170,6 +171,18 @@ answer to traceability questions.
 mcp = FastMCP("recon-tool", instructions=SERVER_INSTRUCTIONS)
 
 
+def internal_lookup_error(domain: str, request_id: str, exc: BaseException) -> str:
+    """Client-facing message for an unexpected resolve failure.
+
+    Carries the request_id (so the caller can point an operator at the server log
+    line that holds the full traceback) and the exception class name (a safe,
+    high-signal hint), without exposing the exception message, which may include
+    internal detail. Turns an undebuggable "an internal error occurred" into
+    something a consumer can actually act on.
+    """
+    return f"Error looking up {domain} (request_id={request_id}): an internal error occurred [{type(exc).__name__}]"
+
+
 async def resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]] | str:
     """Resolve a domain, using cache if available. Returns error string on failure."""
     try:
@@ -194,10 +207,11 @@ async def resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]]
     except ReconLookupError:
         rate_limit_release(validated)
         return f"No information found for {domain}"
-    except Exception:
+    except Exception as exc:
         rate_limit_release(validated)
-        logger.exception("Unexpected error looking up %s", domain)
-        return f"Error looking up {domain}: an internal error occurred"
+        request_id = uuid.uuid4().hex[:12]
+        logger.exception("Unexpected error looking up %s (request_id=%s)", domain, request_id)
+        return internal_lookup_error(domain, request_id, exc)
 
     cache_set(validated, info, results)
     return info, list(results)
@@ -238,7 +252,7 @@ async def resolve_single_for_tool(domain: str, request_id: str) -> TenantInfo:
     except Exception as exc:
         rate_limit_release(validated)
         logger.exception("Unexpected error looking up %s (request_id=%s)", domain, request_id)
-        raise ToolError(f"Error looking up {domain}: an internal error occurred") from exc
+        raise ToolError(internal_lookup_error(domain, request_id, exc)) from exc
 
     cache_set(validated, info, results)
     return info

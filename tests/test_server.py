@@ -202,6 +202,12 @@ class TestErrors:
         result = await lookup_tenant("example.com")
         assert "Error looking up example.com" in result
         assert "internal error" in result
+        # The early-pipeline error is debuggable from the client: it carries a
+        # request_id to correlate with the server log line (which holds the full
+        # traceback) and the exception class, without leaking the message text.
+        assert "request_id=" in result
+        assert "RuntimeError" in result
+        assert "timeout" not in result
 
     @pytest.mark.asyncio
     async def test_concurrent_miss_only_one_lookup_reaches_upstream(self) -> None:
