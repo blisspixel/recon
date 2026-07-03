@@ -18,6 +18,7 @@ from rich.markup import escape
 
 from recon_tool.cli_shared import fmt_exc as _fmt_exc
 from recon_tool.exit_codes import (
+    EXIT_ERROR,
     EXIT_NO_DATA,
     EXIT_VALIDATION,
 )
@@ -109,7 +110,7 @@ def doctor_mcp() -> None:
         checks.append(("MCP package", False, f"not installed: {exc}"))
         checks.append(("Install hint", False, "pip install -U recon-tool"))
         _render_mcp_checks(checks)
-        return
+        raise typer.Exit(code=EXIT_ERROR) from exc
 
     # 2. Server module imports cleanly
     try:
@@ -119,7 +120,7 @@ def doctor_mcp() -> None:
     except Exception as exc:
         checks.append(("Server module", False, f"import failed: {exc}"))
         _render_mcp_checks(checks)
-        return
+        raise typer.Exit(code=EXIT_ERROR) from exc
 
     # 3. FastMCP has instructions
     instructions = getattr(server_mcp, "instructions", None)
@@ -129,6 +130,7 @@ def doctor_mcp() -> None:
         checks.append(("Server Instructions", False, "missing — agents may misuse tools"))
 
     # 4. Enumerate tools (via the internal tool manager)
+    tools_ok = True
     try:
         tool_mgr = server_mcp._tool_manager  # pyright: ignore[reportPrivateUsage]
         tools = list(tool_mgr.list_tools())
@@ -136,8 +138,10 @@ def doctor_mcp() -> None:
             checks.append(("Tools enumerated", True, f"{len(tools)} tools registered"))
         else:
             checks.append(("Tools enumerated", False, "no tools registered"))
+            tools_ok = False
     except Exception as exc:
         checks.append(("Tools enumerated", False, f"{exc}"))
+        tools_ok = False
 
     # 5. recon executable on PATH (important for short GUI-client configs)
     recon_path = shutil.which("recon")
@@ -181,6 +185,9 @@ def doctor_mcp() -> None:
             "  `recon` to PATH and rerun `recon doctor --mcp`."
         )
         console.print()
+
+    if not tools_ok:
+        raise typer.Exit(code=EXIT_ERROR)
 
 
 def _render_mcp_checks(checks: list[tuple[str, bool, str]]) -> None:
@@ -468,8 +475,12 @@ def _doctor_custom_signals_check() -> DoctorCheck:
         return ("Custom signals", "fail", _fmt_exc(exc))
 
 
-def _doctor_render(console: Any, checks: list[DoctorCheck]) -> None:
-    """Print each check row and the closing summary line."""
+def _doctor_render(console: Any, checks: list[DoctorCheck]) -> bool:
+    """Print each check row and the closing summary line.
+
+    Returns True when any check failed, so the caller can set a non-zero
+    process exit code for scriptable health gating.
+    """
     has_failures = False
     has_warnings = False
     for name, status, detail in checks:
@@ -489,6 +500,7 @@ def _doctor_render(console: Any, checks: list[DoctorCheck]) -> None:
     else:
         console.print("  [green]All checks passed.[/green]")
     console.print()
+    return has_failures
 
 
 async def doctor() -> None:
@@ -497,6 +509,11 @@ async def doctor() -> None:
     The check order is load-bearing: ``tests/test_doctor.py`` drives the
     httpx mock with a positional side-effect list, so identity probes must
     run before the crt.sh probe.
+
+    Exit code is 0 when every check passes or only optional enrichment is
+    degraded (warnings), and 1 when any core check fails, so a CI or
+    monitoring job can gate on ``recon doctor`` instead of always reading
+    success.
     """
     console = get_console()
     _doctor_print_header(console)
@@ -512,4 +529,5 @@ async def doctor() -> None:
     checks.append(_doctor_schema_fields_check())
     checks.append(_doctor_custom_signals_check())
 
-    _doctor_render(console, checks)
+    if _doctor_render(console, checks):
+        raise typer.Exit(code=EXIT_ERROR)

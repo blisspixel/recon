@@ -167,6 +167,33 @@ class TestDoctorCommandFailures:
         assert "Some checks failed" not in result.output
 
 
+class TestDoctorExitCode:
+    """The exit code gates scriptable and CI health checks: 0 when every check
+    passes or only optional enrichment is degraded, 1 when a core check fails.
+    """
+
+    def test_doctor_exits_zero_when_all_checks_pass(self, patched_doctor_environment) -> None:
+        result = runner.invoke(app, ["doctor"])
+
+        assert result.exit_code == 0
+        assert "All checks passed." in result.output
+
+    def test_doctor_exits_one_when_a_core_check_fails(self, fake_httpx_client) -> None:
+        """A DNS resolution failure is a core failure, so the process exits 1
+        even though every network probe returned 200."""
+        import dns.resolver
+
+        with (
+            patch("httpx.AsyncClient", return_value=fake_httpx_client),
+            patch("dns.resolver.resolve", side_effect=dns.resolver.NXDOMAIN()),
+        ):
+            result = runner.invoke(app, ["doctor"])
+
+        assert result.exit_code == 1
+        assert "FAIL  DNS resolution" in result.output
+        assert "Some checks failed. Lookups may be incomplete." in result.output
+
+
 class TestDoctorFixSubcommand:
     """`recon doctor --fix` scaffolds template config files."""
 

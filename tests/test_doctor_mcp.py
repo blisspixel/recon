@@ -6,6 +6,8 @@ import pytest
 
 pytest.importorskip("mcp")
 
+from unittest.mock import patch
+
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
@@ -41,3 +43,33 @@ class TestDoctorMcp:
         # These appear in regular --doctor but not in --mcp
         assert "OIDC discovery" not in result.output
         assert "crt.sh" not in result.output
+
+    def test_doctor_mcp_exits_one_when_mcp_missing(self) -> None:
+        """A missing MCP package cannot produce a working setup, so --mcp exits 1
+        instead of always reading success."""
+        import importlib
+
+        real_import = importlib.import_module
+
+        def fake_import(name, *args, **kwargs):
+            if name == "mcp" or name.startswith("mcp."):
+                raise ImportError("No module named 'mcp'")
+            return real_import(name, *args, **kwargs)
+
+        with patch("importlib.import_module", side_effect=fake_import):
+            result = runner.invoke(app, ["doctor", "--mcp"])
+
+        assert result.exit_code == 1
+        assert "MCP package" in result.output
+        assert "not installed" in result.output
+
+    def test_doctor_mcp_exits_one_when_no_tools_registered(self) -> None:
+        """A server that loads but registers no tools is broken, so --mcp exits 1
+        while still printing the checks."""
+        from recon_tool.server import mcp as server_mcp
+
+        with patch.object(server_mcp._tool_manager, "list_tools", return_value=[]):
+            result = runner.invoke(app, ["doctor", "--mcp"])
+
+        assert result.exit_code == 1
+        assert "no tools registered" in result.output

@@ -57,6 +57,13 @@ A script can branch on the outcome without parsing output (full contract in
 | 3 | `EXIT_NO_DATA` | Target resolved but no information available |
 | 4 | `EXIT_INTERNAL` | recon classified its own caught network/pipeline failure |
 
+The `recon doctor` health check follows the same convention: it exits 0 when
+every check passes or only optional enrichment (for example crt.sh) is degraded,
+and exits 1 when a core check fails, so a CI or monitoring job can gate on
+environment health instead of always reading success. `recon doctor --mcp`
+follows the same rule for MCP setup: it exits 1 when the server cannot be
+validated (package missing, server import failure, or no tools registered).
+
 ## Cache and partial-result semantics
 
 - **Disk caches never raise to the caller.** Any read failure (missing, stale,

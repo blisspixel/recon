@@ -98,7 +98,9 @@ class TestDoctorFailures:
         mock_http_cls.return_value = mock_client
 
         result = runner.invoke(app, ["doctor"])
-        assert result.exit_code == 0
+        # A failed core check (DNS here) now sets a non-zero exit so a script
+        # can gate on `recon doctor`; the FAIL row is still rendered.
+        assert result.exit_code == 1
         assert "FAIL" in result.output
 
 
