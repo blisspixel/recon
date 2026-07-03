@@ -14,6 +14,7 @@ from recon_tool.fingerprint_audit import (
     audit_multi_detection_fingerprints,
     format_fingerprint_audit_dict,
     render_fingerprint_audit_markdown,
+    summarize_fingerprint_freshness,
 )
 from recon_tool.fingerprints import load_fingerprints
 
@@ -22,9 +23,21 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Audit multi-detection fingerprints for match-mode decisions.")
     parser.add_argument("--json-output", type=Path, default=None, help="Optional path for JSON audit output.")
     parser.add_argument("--markdown-output", type=Path, default=None, help="Optional path for Markdown audit output.")
+    parser.add_argument(
+        "--freshness",
+        action="store_true",
+        help="Print catalog freshness metrics (verified-date coverage and stale count) instead of the audit.",
+    )
     args = parser.parse_args()
 
     fingerprints = load_fingerprints()
+
+    if args.freshness:
+        from datetime import date
+
+        print(json.dumps(summarize_fingerprint_freshness(fingerprints, today=date.today().isoformat()), indent=2))
+        return
+
     entries = audit_multi_detection_fingerprints(fingerprints)
     json_payload = json.dumps(format_fingerprint_audit_dict(entries, fingerprints), indent=2)
     markdown = render_fingerprint_audit_markdown(entries, fingerprints)

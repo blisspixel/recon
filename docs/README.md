@@ -44,6 +44,7 @@ The docs are organized by reader need:
 | Runtime timeouts, caps, cache, and exit codes | [operational-contract.md](operational-contract.md) |
 | Stable surfaces and SemVer policy | [stability.md](stability.md) |
 | Fingerprint schema | [fingerprints.md](fingerprints.md) |
+| Catalog growth and quality strategy | [catalog-strategy.md](catalog-strategy.md) |
 | Signal schema | [signals.md](signals.md) |
 | Cohort-summary output | [aggregate-state.md](aggregate-state.md) |
 

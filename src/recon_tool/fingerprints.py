@@ -198,6 +198,9 @@ class DetectionRule:
     # as supplementary evidence. For other detection types this field is
     # ignored.
     tier: str = "application"
+    # Optional YYYY-MM-DD date the pattern was last verified. Advisory: it drives
+    # the freshness auditor and does not affect matching. Empty means undated.
+    verified: str = ""
 
 
 @dataclass(frozen=True)
@@ -329,6 +332,19 @@ def _parse_cname_target_tier(det: dict[str, Any], name: str, source: str) -> str
     return "application"
 
 
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _parse_verified(value: Any, name: str, source: str) -> str:
+    """Validate the optional ``verified`` date (YYYY-MM-DD); drop a typo with a warning."""
+    if value in (None, ""):
+        return ""
+    if isinstance(value, str) and _ISO_DATE_RE.match(value):
+        return value
+    logger.warning("Ignoring invalid 'verified' date %r for fingerprint %r in %s", value, name, source)
+    return ""
+
+
 def _parse_detection_rule(det: Any, name: str, source: str) -> DetectionRule | None:
     """Validate one detection entry and return a DetectionRule, or None to skip."""
     if not isinstance(det, dict):
@@ -366,6 +382,7 @@ def _parse_detection_rule(det: Any, name: str, source: str) -> DetectionRule | N
         reference=det.get("reference", ""),
         weight=weight,
         tier=tier,
+        verified=_parse_verified(det.get("verified"), name, source),
     )
 
 

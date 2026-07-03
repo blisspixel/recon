@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import asdict, dataclass
+from datetime import date
 from typing import Literal, cast
 
 from recon_tool.fingerprints import DetectionRule, Fingerprint, load_fingerprints
@@ -24,6 +25,7 @@ __all__ = [
     "format_fingerprint_audit_dict",
     "render_fingerprint_audit_markdown",
     "summarize_fingerprint_catalog",
+    "summarize_fingerprint_freshness",
 ]
 
 _VERIFICATION_WORDS = (
@@ -77,6 +79,46 @@ def summarize_fingerprint_catalog(
         "detections_with_description": sum(1 for rule in detections if rule.description),
         "detections_with_reference": sum(1 for rule in detections if rule.reference),
         "weighted_detections": sum(1 for rule in detections if rule.weight != 1.0),
+    }
+
+
+def _verified_age_days(verified: str, today: str) -> int | None:
+    """Whole days between a ``verified`` date and ``today`` (both YYYY-MM-DD),
+    or ``None`` when either fails to parse as a real calendar date."""
+    try:
+        return (date.fromisoformat(today) - date.fromisoformat(verified)).days
+    except ValueError:
+        return None
+
+
+def summarize_fingerprint_freshness(
+    fingerprints: tuple[Fingerprint, ...] | None = None,
+    *,
+    today: str,
+    stale_after_days: int = 365,
+) -> dict[str, object]:
+    """No-network freshness metrics for the catalog.
+
+    ``today`` is passed in (YYYY-MM-DD) so the summary is deterministic and
+    testable. A detection is *dated* when it carries a ``verified`` date and
+    *stale* when that date is older than ``stale_after_days``.
+    """
+    fps = fingerprints if fingerprints is not None else load_fingerprints()
+    detections = [rule for fp in fps for rule in fp.detections]
+    dated = [rule for rule in detections if rule.verified]
+    stale = sum(
+        1
+        for rule in dated
+        if (age := _verified_age_days(rule.verified, today)) is not None and age > stale_after_days
+    )
+    total = len(detections)
+    return {
+        "total_detections": total,
+        "dated_detections": len(dated),
+        "undated_detections": total - len(dated),
+        "stale_detections": stale,
+        "stale_after_days": stale_after_days,
+        "coverage_pct": round(100 * len(dated) / total, 1) if total else 0.0,
     }
 
 

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Fingerprint freshness tracking.** Detection rules now accept an optional
+  `verified` date (`YYYY-MM-DD`), and `python -m validation.audit_fingerprints
+  --freshness` reports verified-date coverage and stale-rule counts. The date is
+  advisory and does not affect matching. The catalog growth and quality plan is
+  documented in [docs/catalog-strategy.md](docs/catalog-strategy.md).
+
 ## [2.2.19] - 2026-07-03
 
 ### Tool Surface Changes
