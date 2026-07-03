@@ -425,6 +425,20 @@ class TestUnitCounterfactuals:
         assert order == ["dmarc_policy", "spf_strict"]
 
 
+class TestCalibrationLoaderValidation:
+    """The calibration block is user-editable, so its parser must reject
+    malformed inputs instead of silently coercing them."""
+
+    def test_bool_calibration_value_is_rejected(self) -> None:
+        # bool is an int subclass, so ``calibration: {min_n_eff: true}`` would
+        # otherwise be read as 1.0. It must raise instead of corrupting the
+        # interval math.
+        from recon_tool.bayesian_loader import _parse_calibration
+
+        with pytest.raises(ValueError, match="min_n_eff"):
+            _parse_calibration({"min_n_eff": True})
+
+
 # ── TenantInfo adapters ────────────────────────────────────────────────
 
 
