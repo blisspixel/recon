@@ -93,6 +93,54 @@ def test_marketo_tracking_link_cname_target_loads_and_classifies() -> None:
     assert infrastructure is None
 
 
+def test_marketo_mktoapps_cname_target_loads_and_classifies() -> None:
+    """Marketo landing-page/microsite backend (mktoapps.com) attributes to Marketo."""
+    rules = get_cname_target_rules()
+    terminal = "live.mktoapps.com"
+
+    assert any(r.slug == "marketo" and r.pattern == "mktoapps.com" for r in rules)
+    application, infrastructure = _classify_chain(["blog.contoso.com", terminal], rules)
+    lookalike_app, lookalike_infra = _classify_chain(["live.mktoapps.com.example.net"], rules)
+
+    assert application is not None
+    assert application.slug == "marketo"
+    assert infrastructure is None
+    # The dotted pattern requires a DNS-label suffix boundary, so a lookalike
+    # that merely embeds the string does not match.
+    assert lookalike_app is None
+    assert lookalike_infra is None
+
+
+def test_edgecast_zetacdn_cname_target_loads_and_classifies() -> None:
+    """Edgecast/Edgio second CDN domain (zetacdn.net) attributes to Edgecast."""
+    rules = get_cname_target_rules()
+    terminal = "wpc.0001.zetacdn.net"
+
+    assert any(r.slug == "edgecast" and r.pattern == "zetacdn.net" for r in rules)
+    application, infrastructure = _classify_chain(["cdn.contoso.com", terminal], rules)
+    attribution = application or infrastructure
+
+    assert attribution is not None
+    assert attribution.slug == "edgecast"
+
+
+def test_dotless_cname_target_pattern_requires_label_boundary() -> None:
+    """A dot-less fragment pattern (Marketo's ``mkto-``) must match only at a
+    label or hyphen boundary, so a mid-label lookalike cannot spoof it."""
+    rules = get_cname_target_rules()
+    assert any(r.slug == "marketo" and r.pattern == "mkto-" for r in rules)
+
+    # Legitimate Marketo tracking host (fragment at the start of a label) matches.
+    good_app, _ = _classify_chain(["go.contoso.com", "mkto-ab390043.com"], rules)
+    assert good_app is not None
+    assert good_app.slug == "marketo"
+
+    # A host that merely embeds "mkto-" mid-label must not attribute to Marketo.
+    spoof_app, spoof_infra = _classify_chain(["promkto-analytics.attacker.net"], rules)
+    assert not (spoof_app is not None and spoof_app.slug == "marketo")
+    assert not (spoof_infra is not None and spoof_infra.slug == "marketo")
+
+
 def test_oci_waf_cname_target_loads_and_classifies_without_generic_oraclecloud_net() -> None:
     """OCI WAF service hosts attribute to OCI without making all
     oraclecloud.net names infrastructure matches."""

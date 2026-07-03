@@ -667,6 +667,16 @@ fingerprints:
       Subdomain CNAMEs into Marketo tracking-link hosts such as
       ``mkto-[...]`` domains. Indicates branded marketing links
       or landing-page flows served through Adobe Marketo.
+  - type: cname_target
+    pattern: mktoapps.com
+    reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
+    tier: application
+    description: >-
+      Subdomain CNAMEs into mktoapps.com (an Adobe Marketo Engage
+      landing-page and microsite hosting backend, e.g.
+      ``live.mktoapps.com``). Indicates Marketo-served pages under a
+      branded subdomain; presence does not by itself confirm the
+      Marketo tenant identity.
 
 - name: Eloqua (Oracle)
   slug: eloqua
@@ -4837,6 +4847,13 @@ fingerprints:
       Edgecast (Verizon Media, now Edgio) CDN CNAME target
       (`edgecastcdn.net`). Indicates the subdomain is fronted by
       Edgecast's edge network.
+  - type: cname_target
+    pattern: zetacdn.net
+    description: >-
+      Edgecast (Verizon Digital Media, now Edgio) CDN CNAME target
+      (`zetacdn.net`, e.g. `wpc.<account>.zetacdn.net`). The same edge
+      network as `edgecastcdn.net` under a second infrastructure
+      domain; indicates the subdomain is fronted by Edgecast/Edgio.
 - name: Adestra
   slug: adestra
   category: Email

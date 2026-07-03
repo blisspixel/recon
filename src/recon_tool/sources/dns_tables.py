@@ -11,6 +11,7 @@ original (underscore) spelling and are re-exported from ``dns.py`` so the
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from recon_tool.rate_limit import RateLimited
@@ -226,10 +227,16 @@ def classify_chain(
             # domain or be a proper subdomain, so an attacker-controlled target like
             # ``manageengine.com.attacker.tld`` no longer matches ``manageengine.com``.
             # A leading-dot pattern (``.desk.com``) is the same suffix idiom; a
-            # dot-less fragment (``s3-website``) is a mid-hostname infra marker and
-            # keeps substring semantics.
+            # dot-less fragment (``s3-website``) is a mid-hostname infra marker
+            # matched at a label or hyphen boundary (not a bare substring).
             pat = rule.pattern.lstrip(".")
-            matched = (hop == pat or hop.endswith("." + pat)) if "." in pat else (pat in hop)
+            if "." in pat:
+                matched = hop == pat or hop.endswith("." + pat)
+            else:
+                # Require a label/hyphen boundary before the fragment so a
+                # mid-label substring (e.g. "promkto-analytics" for "mkto-")
+                # cannot spoof the match.
+                matched = re.search(rf"(?:^|[.-]){re.escape(pat)}", hop) is not None
             if matched:
                 if rule.tier == "application" and application is None:
                     application = rule
