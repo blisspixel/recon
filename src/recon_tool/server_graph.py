@@ -9,6 +9,7 @@ reverse.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 import uuid
@@ -140,14 +141,17 @@ async def chain_lookup(domain: str, depth: int = 1) -> str:
         from recon_tool.formatter import format_chain_json
 
         report = await chain_resolve(validated, depth=depth)
-    except Exception:
+    except asyncio.CancelledError:
+        rate_limit_release(validated)
+        raise
+    except Exception as exc:
         rate_limit_release(validated)
         logger.exception(
             "Unexpected error in chain lookup for %s (request_id=%s)",
             domain,
             request_id,
         )
-        return f"Error looking up {domain}: an internal error occurred"
+        return server_app.internal_lookup_error(domain, request_id, exc)
 
     elapsed = time.monotonic() - start_time
     log_structured(

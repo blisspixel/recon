@@ -9,6 +9,7 @@ reverse.
 
 from __future__ import annotations
 
+import asyncio
 import json as json_mod
 import logging
 import time
@@ -189,6 +190,9 @@ async def lookup_tenant(
                     error=exc.message,
                 )
                 return f"No information found for {domain}"
+            except asyncio.CancelledError:
+                rate_limit_release(validated)
+                raise
             except Exception as exc:
                 rate_limit_release(validated)
                 logger.exception(

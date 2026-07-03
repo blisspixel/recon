@@ -9,6 +9,7 @@ reverse.
 
 from __future__ import annotations
 
+import asyncio
 import json as json_mod
 import logging
 import time
@@ -716,6 +717,9 @@ async def discover_fingerprint_candidates(
             except ReconLookupError as exc:
                 rate_limit_release(validated)
                 raise ToolError(str(exc)) from exc
+            except asyncio.CancelledError:
+                rate_limit_release(validated)
+                raise
             except Exception as exc:
                 rate_limit_release(validated)
                 logger.exception(
@@ -723,7 +727,9 @@ async def discover_fingerprint_candidates(
                     domain,
                     request_id,
                 )
-                raise ToolError(f"Error mining {domain}: an internal error occurred") from exc
+                raise ToolError(
+                    server_app.internal_lookup_error(domain, request_id, exc, action="mining")
+                ) from exc
 
             cache_set(validated, info, list(results))
 
@@ -913,14 +919,17 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
             except ReconLookupError as exc:
                 rate_limit_release(validated)
                 return f"Error: {exc}"
-            except Exception:
+            except asyncio.CancelledError:
+                rate_limit_release(validated)
+                raise
+            except Exception as exc:
                 rate_limit_release(validated)
                 logger.exception(
                     "Unexpected error in explain_dag for %s (request_id=%s)",
                     domain,
                     request_id,
                 )
-                return f"Error rendering DAG for {domain}: an internal error occurred"
+                return server_app.internal_lookup_error(domain, request_id, exc, action="rendering DAG for")
             cache_set(validated, info, list(results))
 
     network = load_network()

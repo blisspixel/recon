@@ -10,6 +10,7 @@ never imports server.py or the tool groups.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 
@@ -171,7 +172,7 @@ answer to traceability questions.
 mcp = FastMCP("recon-tool", instructions=SERVER_INSTRUCTIONS)
 
 
-def internal_lookup_error(domain: str, request_id: str, exc: BaseException) -> str:
+def internal_lookup_error(domain: str, request_id: str, exc: BaseException, action: str = "looking up") -> str:
     """Client-facing message for an unexpected resolve failure.
 
     Carries the request_id (so the caller can point an operator at the server log
@@ -180,7 +181,7 @@ def internal_lookup_error(domain: str, request_id: str, exc: BaseException) -> s
     internal detail. Turns an undebuggable "an internal error occurred" into
     something a consumer can actually act on.
     """
-    return f"Error looking up {domain} (request_id={request_id}): an internal error occurred [{type(exc).__name__}]"
+    return f"Error {action} {domain} (request_id={request_id}): an internal error occurred [{type(exc).__name__}]"
 
 
 async def resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]] | str:
@@ -207,6 +208,12 @@ async def resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]]
     except ReconLookupError:
         rate_limit_release(validated)
         return f"No information found for {domain}"
+    except asyncio.CancelledError:
+        # A cancelled resolve (client cancellation, shutdown, timeout) must free
+        # the per-domain slot it acquired, or an immediate retry sees a spurious
+        # rate limit. Never swallow the cancellation itself.
+        rate_limit_release(validated)
+        raise
     except Exception as exc:
         rate_limit_release(validated)
         request_id = uuid.uuid4().hex[:12]
@@ -249,6 +256,9 @@ async def resolve_single_for_tool(domain: str, request_id: str) -> TenantInfo:
     except ReconLookupError as exc:
         rate_limit_release(validated)
         raise ToolError(f"No information found for {domain}") from exc
+    except asyncio.CancelledError:
+        rate_limit_release(validated)
+        raise
     except Exception as exc:
         rate_limit_release(validated)
         logger.exception("Unexpected error looking up %s (request_id=%s)", domain, request_id)

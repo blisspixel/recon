@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **MCP lookup errors are now debuggable, and a cancelled resolve no longer
+  rate-limits the retry.** When a resolve failed unexpectedly, the MCP tools
+  returned a generic "an internal error occurred" with no request_id and no
+  error class. They now include the request_id (to correlate with the server log
+  that holds the full traceback) and the exception class name, without leaking
+  the message text. Separately, a cancelled resolve (client cancellation,
+  shutdown, or timeout) now releases the per-domain rate-limit slot it acquired
+  instead of leaking it, so an immediate retry is not spuriously rate-limited.
+
 ## [2.2.19] - 2026-07-03
 
 ### Tool Surface Changes

@@ -210,6 +210,21 @@ class TestErrors:
         assert "timeout" not in result
 
     @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_cancelled_resolve_releases_rate_limit_slot(self, mock_resolve: AsyncMock) -> None:
+        """A cancelled resolve frees the per-domain rate-limit slot it acquired
+        and re-raises the cancellation, so an immediate retry is not spuriously
+        rate-limited and the cancellation is never swallowed."""
+        from recon_tool.server_runtime import rate_limit_release, rate_limit_try_acquire
+
+        mock_resolve.side_effect = asyncio.CancelledError()
+        with pytest.raises(asyncio.CancelledError):
+            await lookup_tenant("example.com")
+        # The slot the tool acquired was released, so a fresh acquire succeeds.
+        assert rate_limit_try_acquire("example.com") is True
+        rate_limit_release("example.com")
+
+    @pytest.mark.asyncio
     async def test_concurrent_miss_only_one_lookup_reaches_upstream(self) -> None:
         started = asyncio.Event()
         release = asyncio.Event()
