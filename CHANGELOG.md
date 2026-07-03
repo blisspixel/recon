@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.19] - 2026-07-03
+
+### Tool Surface Changes
+
+No CLI command or flag changes.
+
 ### Changed
 
 - **Source hygiene guard.** Source hygiene now rejects placeholder-style
