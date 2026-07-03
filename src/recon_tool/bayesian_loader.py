@@ -68,7 +68,7 @@ def _parse_calibration(raw: Any) -> CalibrationSettings:
 
     def _positive_number(key: str, default: float) -> float:
         value = raw.get(key, default)
-        if not isinstance(value, int | float):
+        if isinstance(value, bool) or not isinstance(value, int | float):
             raise ValueError(f"bayesian_network.calibration.{key}: expected positive number")
         value = float(value)
         if not math.isfinite(value) or value <= 0.0:
@@ -332,8 +332,15 @@ def apply_priors_override(network: BayesianNetwork, override: dict[str, float]) 
         return network
     new_nodes: list[Node] = []
     for n in network.nodes:
-        if n.name in override and not n.parents:
-            new_nodes.append(replace(n, prior=override[n.name]))
+        val = override.get(n.name)
+        # Only root priors are overridable, and only within the open interval
+        # (0, 1). The direct-argument path (infer(priors_override=...)) reaches
+        # here without the file loader's range check, and a prior of 0/1 or an
+        # out-of-range value would build a degenerate or invalid factor.
+        if val is not None and not n.parents and 0.0 < val < 1.0:
+            new_nodes.append(replace(n, prior=val))
         else:
+            if val is not None and not n.parents:
+                logger.warning("priors override for %s ignored: %s outside (0, 1)", n.name, val)
             new_nodes.append(n)
     return BayesianNetwork(version=network.version, nodes=tuple(new_nodes), calibration=network.calibration)

@@ -358,17 +358,18 @@ class TestBugHuntRound2:
         assert len(restored.merge_conflicts.tenant_id) == 2
         assert restored.merge_conflicts.tenant_id[0].value == "aaaaaaaa-aaaa"
 
-    def test_spf_strict_requires_all_as_token(self):
-        # "-all" must be a standalone SPF mechanism, not a substring: a record
-        # like "include:foo-all.com ~all" is soft-fail and must NOT set spf_strict.
+    def test_spf_strict_only_from_strict_service_marker(self):
+        # spf_strict fires only when the merged service set carries the strict
+        # (-all) marker recorded by the DNS producer. A soft-fail (~all) domain,
+        # for which the producer never records SVC_SPF_STRICT, must not yield it.
+        # (The fusion layer no longer re-parses SPF text; it trusts the single
+        # service marker used across the tool, so a substring like "foo-all" in
+        # an include can no longer leak into the enforcement signal here.)
         from types import SimpleNamespace
 
         from recon_tool.bayesian import signals_from_tenant_info
+        from recon_tool.constants import SVC_SPF_STRICT
 
-        def sigs(spf: str) -> set[str]:
-            info = SimpleNamespace(evidence=(SimpleNamespace(source_type="SPF", raw_value=spf),))
-            return signals_from_tenant_info(info)
-
-        assert "spf_strict" not in sigs("v=spf1 include:foo-all.com ~all")
-        assert "spf_strict" in sigs("v=spf1 -all")
-        assert "spf_strict" in sigs("v=spf1 include:_spf.example.com -all")
+        assert "spf_strict" not in signals_from_tenant_info(SimpleNamespace(services=("SPF: softfail (~all)",)))
+        assert "spf_strict" not in signals_from_tenant_info(SimpleNamespace(services=()))
+        assert "spf_strict" in signals_from_tenant_info(SimpleNamespace(services=(SVC_SPF_STRICT,)))

@@ -25,13 +25,13 @@
       },
       "email_gateway_present": {
         "prior": 0.18,
-        "all_present": 0.9999,
-        "all_present_interval_width": 0.0036
+        "all_present": 0.9081,
+        "all_present_interval_width": 0.2575
       },
       "email_security_modern_provider": {
         "prior": 0.5563,
-        "all_present": 0.9872,
-        "all_present_interval_width": 0.0849
+        "all_present": 0.9853,
+        "all_present_interval_width": 0.0919
       },
       "email_security_policy_enforcing": {
         "prior": 0.0554,
@@ -45,8 +45,8 @@
       },
       "aws_hosting": {
         "prior": 0.4,
-        "all_present": 0.9998,
-        "all_present_interval_width": 0.0077
+        "all_present": 0.9467,
+        "all_present_interval_width": 0.1819
       }
     }
   }

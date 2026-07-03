@@ -4,9 +4,9 @@
 want to understand *why* and *how* recon extracts structural signal from
 strictly public observables. Casual users should rely on the
 [README](../README.md) and `--explain` output. This is the
-technical reference for the correlation engine, current as of v1.9.95
-and tracking the upcoming v2.0 schema lock; it is maintained
-alongside the code rather than frozen.
+technical reference for the correlation engine. The v2.0 schema lock
+has shipped and the Bayesian layer is stable; this reference is current
+as of v2.2.x and is maintained alongside the code rather than frozen.
 
 ## 1. Overview
 
@@ -1212,7 +1212,18 @@ correlated tests are not independent confirmations. The grouping is committed
 as data on each node, so the dependence structure stays auditable rather than
 learned. Implemented in `recon_tool/bayesian.py`; ungrouped bindings keep the
 independent-product behaviour, so the correction is a strict refinement on the
-nodes that declare groups.
+nodes that declare groups. As shipped, the grouped nodes are `m365_tenant`
+(`m365_indicators`), `google_workspace_tenant` (`gws_indicators`), `aws_hosting`
+(`aws_indicators`, over the `aws`, `aws-cloudfront`, and `aws-route53` facets of
+one "runs on AWS" fact), `email_gateway_present` (`gateway_vendors`, over the
+near-mutually-exclusive gateway products), and the mutually-exclusive DMARC pair
+on `email_security_policy_enforcing` (`dmarc_policy`). Before `aws_hosting` and
+`email_gateway_present` were grouped, a target exposing all three AWS facets was
+pinned to about 0.9998 with a near-zero interval; grouping pulls that to about
+0.947 with a correctly wider band, matching the M365 treatment. `cdn_fronting`
+is deliberately left ungrouped: two distinct CDN edges are separable
+confirmations of the single "a CDN fronts this" claim, not one fact observed
+twice.
 
 #### Node-dependent missingness: MNAR is not universal
 
@@ -1459,7 +1470,7 @@ would over-promise coverage we cannot verify against ground truth.
 The choice is documented as a fixed module-level constant so
 downstream consumers can rely on it.
 
-We acknowledge two open issues in this construction:
+We acknowledge three open issues in this construction:
 
 1. **The interval is honest about sparsity, not about model
    misspecification.** A wrong CPT produces a tight interval around
@@ -1476,7 +1487,21 @@ We acknowledge two open issues in this construction:
    penalty already produces the qualitative behavior the operator
    needs ("conflicts → wider report").
 
-Both limitations are documented in `recon_tool/bayesian.py` so a
+3. **The conflict penalty saturates at the passive-observation floor.**
+   Because `min_n_eff` (4) is both the interval floor and the `sparse`
+   threshold, the conflict term can only push `n_eff` down to 4, never
+   below. Once conflicts overwhelm the fired evidence the interval
+   saturates at the mass-4 Beta width (the `n_eff = 4` row in the
+   sparse-vs-dense figure below, about [0.18, 0.82] at the midpoint)
+   rather than continuing toward maximal ignorance. This is conservative
+   for the sparse regime it was tuned on, but it means an adversarial
+   posture that manufactures many cross-source conflicts (Pattern G,
+   §4.11) drives the report to "we are unsure", not to "we cannot tell".
+   Separating the confidence floor from a conflict-driven ignorance mass
+   would let heavy conflict widen without bound; the explicit-ignorance-mass
+   backlog item (the IDM path above) is the natural home for it.
+
+These limitations are documented in `recon_tool/bayesian.py` so a
 future contributor sees them next to the code.
 
 #### Quantitative sensitivity to CPT misspecification

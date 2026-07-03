@@ -28,6 +28,7 @@ from recon_tool.bayesian import (
 )
 from recon_tool.bayesian_interval import beta_ppf as _beta_ppf
 from recon_tool.bayesian_interval import credible_interval as _credible_interval
+from recon_tool.constants import SVC_SPF_STRICT
 
 # ── Fixtures ──────────────────────────────────────────────────────────
 
@@ -303,6 +304,22 @@ class TestPriorsOverride:
         overridden_m365 = next(p for p in overridden.posteriors if p.name == "m365_tenant")
         assert overridden_m365.posterior > baseline_m365.posterior + 0.4
 
+    def test_out_of_range_override_is_ignored(self, shipped_network: BayesianNetwork) -> None:
+        # The direct-argument path (infer(priors_override=...)) reaches
+        # apply_priors_override without the file loader's range check, so it must
+        # reject a 0/1 or out-of-range prior itself and keep the committed prior
+        # rather than build a degenerate or invalid factor.
+        baseline = next(
+            p for p in infer(shipped_network, [], [], priors_override={}).posteriors if p.name == "m365_tenant"
+        )
+        for bad in (1.5, 0.0, 1.0, -0.2):
+            m = next(
+                p
+                for p in infer(shipped_network, [], [], priors_override={"m365_tenant": bad}).posteriors
+                if p.name == "m365_tenant"
+            )
+            assert m.posterior == baseline.posterior
+
 
 # ── Variable elimination correctness ─────────────────────────────────
 
@@ -497,6 +514,45 @@ class TestCredibleIntervals:
         assert (high - low) > (high80 - low80)
 
 
+# ── Correlation-group correction on the shipped network ──────────────
+
+
+class TestEvidenceGroupingShippedNetwork:
+    """Regression guard for the §4.3 over-counting correction as shipped.
+
+    aws_hosting and email_gateway_present declare correlation groups, so
+    co-firing redundant indicators contribute one effective likelihood ratio
+    (the strongest member), not the over-counted independent product. See
+    docs/correlation.md §4.3 and the group comments in bayesian_network.yaml.
+    """
+
+    def test_aws_facets_group_to_strongest_member(self, shipped_network: BayesianNetwork) -> None:
+        # aws-cloudfront has the strongest LLR (log(0.80/0.03), about 3.28), so
+        # firing all three AWS facets must match firing that one alone: they are
+        # one observation of "runs on AWS", not three independent confirmations.
+        strongest = infer(shipped_network, ["aws-cloudfront"], [], priors_override={})
+        all_three = infer(shipped_network, ["aws", "aws-cloudfront", "aws-route53"], [], priors_override={})
+        s = next(p for p in strongest.posteriors if p.name == "aws_hosting")
+        a = next(p for p in all_three.posteriors if p.name == "aws_hosting")
+        assert abs(a.posterior - s.posterior) < 1e-9
+        # One effective unit, so n_eff = min_n_eff (4) + 1 = 5, not 4 + 3 = 7.
+        assert a.n_eff == 5.0
+        # The un-grouped independent product would slam this to about 0.9998;
+        # grouping keeps it honest (well under 0.96) with a wider interval.
+        assert a.posterior < 0.96
+        assert (a.interval_high - a.interval_low) == pytest.approx(s.interval_high - s.interval_low)
+
+    def test_gateway_vendors_group_to_strongest_member(self, shipped_network: BayesianNetwork) -> None:
+        # proofpoint's LLR (log(0.90/0.02), about 3.81) dominates barracuda's, so
+        # a co-fire equals proofpoint alone: one "gateway present" claim, not two.
+        one = infer(shipped_network, ["proofpoint"], [], priors_override={})
+        two = infer(shipped_network, ["proofpoint", "barracuda"], [], priors_override={})
+        o = next(p for p in one.posteriors if p.name == "email_gateway_present")
+        t = next(p for p in two.posteriors if p.name == "email_gateway_present")
+        assert abs(t.posterior - o.posterior) < 1e-9
+        assert t.n_eff == 5.0
+
+
 # ── Helpers ──────────────────────────────────────────────────────────
 
 
@@ -544,6 +600,7 @@ class _FakeTenantInfo:
         dmarc_policy: str | None = None,
         mta_sts_mode: str | None = None,
         merge_conflicts: _FakeMergeConflicts | None = None,
+        services: tuple[str, ...] = (),
     ) -> None:
         self.slugs = slugs
         self.evidence = evidence
@@ -552,6 +609,7 @@ class _FakeTenantInfo:
         self.dmarc_policy = dmarc_policy
         self.mta_sts_mode = mta_sts_mode
         self.merge_conflicts = merge_conflicts
+        self.services = services
 
 
 class TestTenantInfoAdapter:
@@ -584,15 +642,15 @@ class TestTenantInfoAdapter:
         assert "dkim_present" in signals_from_tenant_info(info)
 
     def test_signals_from_strict_spf(self) -> None:
-        info = _FakeTenantInfo(
-            evidence=(_FakeEvidence("SPF", "v=spf1 include:_spf.example.com -all"),),
-        )
+        # Strict SPF is carried on the merged service set (SVC_SPF_STRICT), not
+        # as an SPF-typed evidence record, so the signal is derived from there.
+        info = _FakeTenantInfo(services=(SVC_SPF_STRICT,))
         assert "spf_strict" in signals_from_tenant_info(info)
 
     def test_no_signals_from_soft_spf(self) -> None:
-        info = _FakeTenantInfo(
-            evidence=(_FakeEvidence("SPF", "v=spf1 include:_spf.example.com ~all"),),
-        )
+        # A soft (~all) SPF domain has a non-strict SPF service marker but not
+        # SVC_SPF_STRICT, so spf_strict must not fire.
+        info = _FakeTenantInfo(services=("SPF: softfail (~all)",))
         assert "spf_strict" not in signals_from_tenant_info(info)
 
     def test_signals_empty_on_bare_info(self) -> None:

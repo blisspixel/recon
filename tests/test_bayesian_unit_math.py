@@ -40,6 +40,7 @@ from recon_tool.bayesian import (
 )
 from recon_tool.bayesian_interval import credible_interval as _credible_interval
 from recon_tool.bayesian_interval import interval_is_ordered as _interval_is_ordered
+from recon_tool.constants import SVC_SPF_STRICT
 
 
 def _ev(name: str, lp: float, la: float, group: str | None = None, kind: str = "slug") -> _Evidence:
@@ -433,10 +434,8 @@ class TestSignalsFromTenantInfo:
             auth_type="Federated",
             dmarc_policy="reject",
             mta_sts_mode="enforce",
-            evidence=(
-                SimpleNamespace(source_type="DKIM", raw_value="v=DKIM1"),
-                SimpleNamespace(source_type="SPF", raw_value="v=spf1 include:x.example -all"),
-            ),
+            services=(SVC_SPF_STRICT,),
+            evidence=(SimpleNamespace(source_type="DKIM", raw_value="v=DKIM1"),),
         )
         assert signals_from_tenant_info(info) == {
             "federated_sso_hub",
@@ -450,15 +449,36 @@ class TestSignalsFromTenantInfo:
         info = SimpleNamespace(google_auth_type="Federated", dmarc_policy="quarantine")
         assert signals_from_tenant_info(info) == {"federated_sso_hub", "dmarc_quarantine"}
 
-    def test_spf_strict_requires_standalone_token(self) -> None:
-        info = SimpleNamespace(
-            evidence=(SimpleNamespace(source_type="SPF", raw_value="v=spf1 include:foo-all.example ~all"),)
-        )
-        assert signals_from_tenant_info(info) == set()
+    def test_dmarc_reject_full_pct_enforces(self) -> None:
+        assert "dmarc_reject" in signals_from_tenant_info(SimpleNamespace(dmarc_policy="reject", dmarc_pct=100))
+        # pct absent means full coverage (RFC 9989 records carry no pct tag).
+        assert "dmarc_reject" in signals_from_tenant_info(SimpleNamespace(dmarc_policy="reject"))
 
-    def test_spf_value_matching_is_case_insensitive(self) -> None:
-        info = SimpleNamespace(evidence=(SimpleNamespace(source_type="SPF", raw_value="V=SPF1 -ALL"),))
-        assert signals_from_tenant_info(info) == {"spf_strict"}
+    def test_dmarc_reject_zero_pct_is_monitoring_only(self) -> None:
+        # p=reject; pct=0 applies the policy to 0% of mail: monitoring, not
+        # enforcement, so neither enforcement signal fires.
+        sigs = signals_from_tenant_info(SimpleNamespace(dmarc_policy="reject", dmarc_pct=0))
+        assert "dmarc_reject" not in sigs
+        assert "dmarc_quarantine" not in sigs
+
+    def test_dmarc_partial_pct_steps_down_one_level(self) -> None:
+        # p=reject at partial coverage steps down to quarantine-level; a
+        # quarantine at partial coverage steps down to none (no signal).
+        reject_partial = signals_from_tenant_info(SimpleNamespace(dmarc_policy="reject", dmarc_pct=50))
+        assert "dmarc_reject" not in reject_partial
+        assert "dmarc_quarantine" in reject_partial
+        quarantine_partial = signals_from_tenant_info(SimpleNamespace(dmarc_policy="quarantine", dmarc_pct=50))
+        assert "dmarc_quarantine" not in quarantine_partial
+        assert "dmarc_reject" not in quarantine_partial
+
+    def test_spf_strict_from_service_marker_only(self) -> None:
+        # spf_strict is derived from the strict (-all) marker on the merged
+        # service set, not from an SPF-typed evidence record. A soft SPF domain
+        # (no strict marker) yields nothing; the strict marker yields the signal.
+        # The -all detection itself lives in the DNS producer that records the
+        # marker, keeping the fusion layer consistent with the rest of the tool.
+        assert signals_from_tenant_info(SimpleNamespace(services=("SPF: softfail (~all)",))) == set()
+        assert signals_from_tenant_info(SimpleNamespace(services=(SVC_SPF_STRICT,))) == {"spf_strict"}
 
     def test_empty_info_yields_nothing(self) -> None:
         assert signals_from_tenant_info(SimpleNamespace()) == set()

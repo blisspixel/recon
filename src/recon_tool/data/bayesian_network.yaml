@@ -175,13 +175,22 @@ nodes:
   - name: email_gateway_present
     description: "Third-party email security gateway in front of MX."
     prior: 0.18
+    # The gateway vendors are near-mutually-exclusive (an org fronts MX with one
+    # gateway), so a co-firing pair is redundant confirmation of the single
+    # "a gateway is present" claim, not two independent signals. The shared
+    # `group` reduces any co-fire to its strongest member rather than multiplying
+    # distinct-vendor detections into over-confidence, matching the
+    # m365_indicators / gws_indicators treatment. See docs/correlation.md §4.3.
     evidence:
       - slug: proofpoint
         likelihood: [0.90, 0.02]
+        group: gateway_vendors
       - slug: mimecast
         likelihood: [0.90, 0.02]
+        group: gateway_vendors
       - slug: barracuda
         likelihood: [0.85, 0.02]
+        group: gateway_vendors
 
   # v1.9.3: replaced email_security_strong with two separate nodes
   # below. The v1.9.0 node parameterized its CPT over modern-mail-
@@ -293,10 +302,19 @@ nodes:
   - name: aws_hosting
     description: "AWS-hosted infrastructure observed in chains or fingerprints."
     prior: 0.40
+    # These three slugs are facets of one underlying fact (the org runs on AWS):
+    # a general-AWS fingerprint, CloudFront, and Route 53 co-fire for an AWS shop
+    # and are not conditionally independent readings. The shared `group` makes
+    # them contribute a single effective likelihood ratio (the strongest member)
+    # rather than the over-counted product, matching the m365_indicators /
+    # gws_indicators treatment. See docs/correlation.md §4.3.
     evidence:
       - slug: aws
         likelihood: [0.85, 0.05]
+        group: aws_indicators
       - slug: aws-cloudfront
         likelihood: [0.80, 0.03]
+        group: aws_indicators
       - slug: aws-route53
         likelihood: [0.70, 0.05]
+        group: aws_indicators

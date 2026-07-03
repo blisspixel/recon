@@ -72,6 +72,7 @@ from recon_tool.bayesian_models import (  # re-exported: stable import path afte
 )
 from recon_tool.bayesian_models import Evidence as _Evidence
 from recon_tool.bayesian_models import Node as _Node
+from recon_tool.constants import SVC_SPF_STRICT
 
 logger = logging.getLogger(__name__)
 
@@ -755,6 +756,29 @@ def _rank_evidence(fired: Iterable[_Evidence]) -> tuple[EvidenceContribution, ..
 # ── TenantInfo adapter ────────────────────────────────────────────────
 
 
+def _effective_dmarc_enforcement(policy: str | None, pct: int | None) -> str | None:
+    """Effective DMARC enforcement after applying the rollout-coverage tag.
+
+    A policy applied to only part of the mail stream is not full enforcement:
+    an RFC 7489 ``pct=0`` record is monitoring-only (effective ``none``), and a
+    partial rollout (``0 < pct < 100``) steps the policy down one level
+    (``reject`` to ``quarantine`` to ``none``), matching how a receiver treats
+    the un-covered fraction. ``pct`` absent (``None``) means full coverage: the
+    tag was removed in RFC 9989, whose records are full-coverage by default.
+    Returns the effective policy string, or ``None`` for no recognizable policy.
+    """
+    levels = ("none", "quarantine", "reject")
+    if policy not in levels:
+        return None
+    idx = levels.index(policy)
+    if pct is not None:
+        if pct <= 0:
+            idx = 0
+        elif pct < 100:
+            idx = max(0, idx - 1)
+    return levels[idx]
+
+
 def signals_from_tenant_info(info: object) -> set[str]:
     """Derive the set of "signal" names that fired for this domain.
 
@@ -764,8 +788,9 @@ def signals_from_tenant_info(info: object) -> set[str]:
 
       * ``federated_sso_hub`` — ``auth_type == "Federated"`` (or
         ``google_auth_type == "Federated"`` for GWS-primary tenants).
-      * ``dmarc_reject`` / ``dmarc_quarantine`` — derived from
-        ``dmarc_policy``.
+      * ``dmarc_reject`` / ``dmarc_quarantine``: the effective DMARC policy
+        (``dmarc_policy`` downgraded when a ``pct`` rollout tag shows partial or
+        zero coverage), so a monitoring-only record is not scored as enforcing.
       * ``mta_sts_enforce`` — derived from ``mta_sts_mode``.
       * ``dkim_present`` — true when any DKIM evidence record exists.
       * ``spf_strict`` — true when an SPF strict (``-all``) policy is
@@ -780,10 +805,12 @@ def signals_from_tenant_info(info: object) -> set[str]:
     if auth_type == "Federated" or google_auth_type == "Federated":
         out.add("federated_sso_hub")
 
-    dmarc_policy = getattr(info, "dmarc_policy", None)
-    if dmarc_policy == "reject":
+    effective_dmarc = _effective_dmarc_enforcement(
+        getattr(info, "dmarc_policy", None), getattr(info, "dmarc_pct", None)
+    )
+    if effective_dmarc == "reject":
         out.add("dmarc_reject")
-    elif dmarc_policy == "quarantine":
+    elif effective_dmarc == "quarantine":
         out.add("dmarc_quarantine")
 
     mta_sts_mode = getattr(info, "mta_sts_mode", None)
@@ -793,13 +820,16 @@ def signals_from_tenant_info(info: object) -> set[str]:
     evidence = getattr(info, "evidence", ()) or ()
     for ev in evidence:
         source_type = getattr(ev, "source_type", "")
-        raw_value = str(getattr(ev, "raw_value", "") or "").lower()
         if source_type == "DKIM":
             out.add("dkim_present")
-        # Match -all only as a standalone SPF mechanism token, not as a substring
-        # (the substring form fired on records like "include:foo-all.com ~all").
-        if source_type == "SPF" and "-all" in raw_value.split():
-            out.add("spf_strict")
+
+    # Strict SPF (-all) is recorded on the merged service set, not as an
+    # SPF-typed evidence record (no DNS producer emits one), so derive the
+    # signal from services. A prior version read a source_type "SPF" evidence
+    # record that the pipeline never creates, so spf_strict never fired.
+    services = getattr(info, "services", ()) or ()
+    if SVC_SPF_STRICT in services:
+        out.add("spf_strict")
 
     return out
 

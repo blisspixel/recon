@@ -34,6 +34,28 @@ The next work is dependency-ordered:
      in [strategic-gap-audit.md](strategic-gap-audit.md) keeps process,
      research, release, archive, and data-governance gaps separated from
      runtime work.
+   - Current near-term refinements (all passive, within-invariant, no runtime
+     expansion):
+     1. RFC 9989 (DMARCbis) alignment. Effective-enforcement gating on the
+        DMARC `pct=` coverage tag has shipped: a monitoring-only `pct=0` or a
+        partial rollout no longer counts as full enforcement in the
+        `email_security_policy_enforcing` signal, and the `pct=` tag that RFC
+        9989 removes stays parsed for RFC 7489 backward compatibility.
+        Remaining: parse the new `np=` (non-existent subdomain policy) and `t=`
+        (testing) tags and step a `t=y` testing-mode policy down one level as
+        well.
+        OPEN DECISION (owner to resolve on or after 2026-07-02): whether
+        `dmarc_testing` and `dmarc_np` are exposed as stable `--json` and MCP
+        output fields, committing to backward compatibility, or kept internal
+        to the signal layer. Exposing them is a stable JSON-schema addition, so
+        it is a 2.3 minor-release decision under the
+        [ADR-0003](adr/0003-v2-schema-lock.md) schema lock, handled with the
+        full schema-lock discipline (schema regen, `schema.md`, schema tests,
+        drift and CPT-discipline notes), not an ad hoc edit.
+     2. Provider and protocol drift early warning. The live-endpoint
+        integration suite is deselected in CI, so an upstream provider change
+        could silently drop a detection with no gate failure; a scheduled
+        integration run or a small golden acceptance set would surface it.
    - Acceptance: every refinement preserves the project invariants, keeps
      examples fictional or synthetic, and publishes only public, synthetic, or
      aggregate-only evidence. Feedback on gaps, wording, and false positives is
@@ -62,8 +84,13 @@ The next work is dependency-ordered:
      vendor documentation, not invented patterns.
    - Current state: the June 2026 pass promoted public-source-backed UltraDNS
      Web Forwarding, Squarespace managed-subdomain, Descope custom-domain, and
-     Infobip email-tracking surface rules. Session F produced no new candidate,
-     so there is no active public-source-backed catalog task.
+     Infobip email-tracking surface rules. A 2026-07 corpus gap pass added the
+     Marketo `mktoapps.com` landing-page backend and the Edgecast/Edgio
+     `zetacdn.net` CDN domain (both additional infrastructure for vendors
+     already in the catalog, public-source-backed and regression-tested). It
+     also surfaced further candidates (Shopify edge, iCIMS, Outbrain,
+     Brandwatch, Uptime.com, ngrok, Blockscout, Fortinet) that stay pending
+     public-documentation verification before promotion.
    - Acceptance: every promoted rule has scoped language, a public reference or
      aggregate validation basis, regression tests, and conservative sparse-result
      wording.
