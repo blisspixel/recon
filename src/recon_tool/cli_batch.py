@@ -445,7 +445,14 @@ def _batch_render_results(
         typer.echo(format_batch_csv(csv_rows), nl=False)
     elif markdown:
         for r in results:
-            if r is not None:
+            if r is None:
+                continue
+            # A resolve error is carried as an internal sentinel-prefixed string
+            # (see error_prefix). Surface it on stderr like the default branch
+            # instead of echoing the NUL sentinel into the markdown stdout.
+            if isinstance(r, str) and r.startswith(error_prefix):
+                render_error(r[len(error_prefix) :])
+            else:
                 typer.echo(r)
                 typer.echo("---\n")
     else:
@@ -642,7 +649,9 @@ async def batch(
         summary=summary,
     )
 
-    domain_list = _batch_load_domains(file, console, announce_dupes=not json_output and not markdown and not csv_output)
+    domain_list = _batch_load_domains(
+        file, console, announce_dupes=not json_output and not markdown and not csv_output and not ndjson
+    )
 
     semaphore = asyncio.Semaphore(concurrency)
 

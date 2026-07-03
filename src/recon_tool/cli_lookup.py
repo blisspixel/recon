@@ -808,6 +808,12 @@ async def _lookup_standard(
             show_posture=show_posture,
             confidence_mode=confidence_mode,
         )
+    except typer.Exit:
+        # Deliberate control-flow exits (an unknown --profile or a bad
+        # --explain-dag-format raise typer.Exit(EXIT_VALIDATION) from inside the
+        # try). typer.Exit subclasses Exception, so without this it would be
+        # caught below, reclassified to EXIT_INTERNAL, and print a bare "Exit".
+        raise
     except ReconLookupError as exc:
         render_warning(domain, exc)
         raise typer.Exit(code=EXIT_NO_DATA) from None

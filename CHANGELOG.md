@@ -56,6 +56,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`recon <domain> --profile <unknown>` now exits 2, not 4.** An unknown
+  profile (or an invalid `--explain-dag-format`) is a validation error, but the
+  deliberate exit was caught by the lookup command's generic handler,
+  reclassified to the internal-error code, and printed as a bare `Exit` line.
+- **`recon batch --ndjson` no longer prints a human notice to stdout.** A
+  duplicate input domain emitted a "N duplicate(s) removed" line into the ndjson
+  stream, breaking line-by-line JSON parsers. The notice is now suppressed for
+  ndjson as it already was for `--json`, `--md`, and `--csv`.
+- **`recon batch --md` no longer leaks an internal error sentinel.** A resolve
+  failure in markdown mode echoed a NUL byte and an internal `ERR:` marker into
+  stdout. The error is now surfaced on stderr like the default panel, keeping the
+  markdown output clean.
 - **`recon doctor` now signals check failures through its exit code.** A failed
   core check (identity endpoint, DNS, catalog load, or schema field) exits 1,
   while an all-pass run or an optional-enrichment-only degradation (for example
