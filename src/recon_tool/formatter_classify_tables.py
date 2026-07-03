@@ -824,6 +824,8 @@ CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         # Developer / prototyping platforms — not production cloud
         "replit",
         "glitch",
+        # Ingress tunnel / developer preview platform, not general cloud
+        "ngrok",
         # Package / artifact registry — distribution, not general cloud
         "cloudsmith",
         # DNS / registrar providers from the NS signal mine. DNS

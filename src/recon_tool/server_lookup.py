@@ -14,6 +14,7 @@ import json as json_mod
 import logging
 import time
 import uuid
+from collections.abc import Sequence
 
 from mcp.types import ToolAnnotations
 
@@ -215,17 +216,26 @@ async def lookup_tenant(
         elapsed_s=round(elapsed, 2),
     )
 
-    # JSON format
+    return _format_lookup_tenant(info, results, output_format, explain)
+
+
+def _format_lookup_tenant(
+    info: TenantInfo,
+    results: Sequence[SourceResult],
+    output_format: str,
+    explain: bool,
+) -> str:
+    """Render a resolved tenant in the requested output format.
+
+    Split out of ``lookup_tenant`` so the tool body stays under the branch
+    budget; the format dispatch lives here where it can grow independently.
+    """
     if output_format == "json":
         if explain:
             return _lookup_tenant_json_with_explain(info, list(results))
         return format_tenant_json(info)
-
-    # Markdown format
     if output_format == "markdown":
         return format_tenant_markdown(info)
-
-    # Default text format
     return _lookup_tenant_text(info)
 
 
