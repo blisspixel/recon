@@ -30,6 +30,12 @@ uv tool install recon-tool
 pipx install recon-tool
 ```
 
+Or, on macOS or Linux, install with [Homebrew](https://brew.sh):
+
+```bash
+brew install blisspixel/tap/recon
+```
+
 If `uv` or `pipx` is already installed, the platform script can install or
 update recon:
 
