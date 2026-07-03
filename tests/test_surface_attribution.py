@@ -111,6 +111,26 @@ def test_marketo_mktoapps_cname_target_loads_and_classifies() -> None:
     assert lookalike_infra is None
 
 
+def test_uptimecom_cname_target_classifies_as_application() -> None:
+    """A status-page CNAME to cname.uptime.com attributes to Uptime.com."""
+    rules = get_cname_target_rules()
+    assert any(r.slug == "uptimecom" and r.pattern == "cname.uptime.com" for r in rules)
+    application, infrastructure = _classify_chain(["status.contoso.com", "cname.uptime.com"], rules)
+    assert application is not None
+    assert application.slug == "uptimecom"
+    assert infrastructure is None
+
+
+def test_ngrok_cname_target_classifies_as_infrastructure() -> None:
+    """A subdomain CNAME to an ngrok custom-domain edge attributes to ngrok."""
+    rules = get_cname_target_rules()
+    assert any(r.slug == "ngrok" and r.pattern == "ngrok-cname.com" for r in rules)
+    application, infrastructure = _classify_chain(["app.contoso.com", "abc123.def456.ngrok-cname.com"], rules)
+    assert application is None
+    assert infrastructure is not None
+    assert infrastructure.slug == "ngrok"
+
+
 def test_edgecast_zetacdn_cname_target_loads_and_classifies() -> None:
     """Edgecast/Edgio second CDN domain (zetacdn.net) attributes to Edgecast."""
     rules = get_cname_target_rules()

@@ -1186,6 +1186,36 @@ fingerprints:
       indicate paid-tier adoption; free-tier status pages produce
       the same chain.
 
+- name: Uptime.com
+  slug: uptimecom
+  category: Productivity & Collaboration
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: cname.uptime.com
+    reference: https://support.uptime.com/hc/en-us/articles/360016256820-Setup-Instructions-for-your-Uptime-com-Status-Page
+    tier: application
+    description: >-
+      Uptime.com hosted status-page custom-domain CNAME (points at
+      `cname.uptime.com`). Indicates the org publishes a public status
+      page through Uptime.com. Distinct from UptimeRobot; does not by
+      itself indicate the monitoring plan tier.
+
+- name: ngrok
+  slug: ngrok
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: ngrok-cname.com
+    reference: https://ngrok.com/docs/universal-gateway/custom-domains
+    tier: infrastructure
+    description: >-
+      Subdomain CNAME terminating at an ngrok custom-domain edge
+      (`*.ngrok-cname.com`). Indicates the org fronts a service through
+      an ngrok ingress endpoint. Does not by itself reveal the upstream
+      service or whether the tunnel is currently active.
+
 - name: bl.ink
   slug: blink
   category: Marketing
