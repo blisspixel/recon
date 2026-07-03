@@ -7,7 +7,8 @@ native-package-manager option for macOS / Linux; Windows users use the
 
 ## Install (users)
 
-Once the maintainer has published the tap (see below):
+The tap is published at
+[`blisspixel/homebrew-tap`](https://github.com/blisspixel/homebrew-tap):
 
 ```bash
 brew install blisspixel/tap/recon
@@ -21,15 +22,13 @@ brew install --formula ./packaging/homebrew/recon.rb
 
 Update with `brew upgrade recon`; uninstall with `brew uninstall recon`.
 
-## Publishing the tap (maintainer)
+## The tap repository (maintainer)
 
-Homebrew taps live in a separate repo named `homebrew-<tap>` (e.g.
-`blisspixel/homebrew-tap`). One-time setup:
-
-1. Create the repo `blisspixel/homebrew-tap` with a `Formula/` directory.
-2. Copy `packaging/homebrew/recon.rb` to `Formula/recon.rb` there and push.
-
-Users can then `brew install blisspixel/tap/recon`.
+The formula is published to the separate tap repo
+[`blisspixel/homebrew-tap`](https://github.com/blisspixel/homebrew-tap)
+as `Formula/recon.rb`. That published copy is what lets users run
+`brew install blisspixel/tap/recon`. Each release, refresh the formula
+here and mirror it to the tap (see below).
 
 ## Keeping it current (per release)
 

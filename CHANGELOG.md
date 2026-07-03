@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Homebrew tap published.** The formula is now available at
+  [`blisspixel/homebrew-tap`](https://github.com/blisspixel/homebrew-tap),
+  so `brew install blisspixel/tap/recon` works without a manual checkout.
+- **Accurate fingerprint count in MCP tool descriptions.** The `lookup_tenant`
+  and fingerprint-listing tool docstrings now report "800+ fingerprints"
+  instead of a stale "185+", matching the current catalog.
+
 ## [2.3.0] - 2026-07-03
 
 ### Tool Surface Changes
