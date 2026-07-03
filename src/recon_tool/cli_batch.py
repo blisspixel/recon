@@ -130,8 +130,15 @@ async def discover(
         typer.echo(payload)
     else:
         out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(payload, encoding="utf-8")
+        try:
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(payload, encoding="utf-8")
+        except OSError as exc:
+            # A bad --output path (a directory, read-only, or missing
+            # permission) is a user error, not a recon bug: report it cleanly
+            # instead of letting it reach the crash handler.
+            render_error(f"Cannot write output file {out}: {exc}")
+            raise typer.Exit(code=EXIT_VALIDATION) from None
         typer.echo(f"wrote {out} ({len(candidates)} candidates)", err=True)
 
 
@@ -195,6 +202,12 @@ def _batch_load_domains(file: str, console: Any, *, announce_dupes: bool) -> lis
                 domain_list = read_batch_domains(f)
     except _BatchInputError as exc:
         render_error(str(exc))
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+    except UnicodeDecodeError as exc:
+        # A non-UTF-8 file (or stdin) raises UnicodeDecodeError, a ValueError
+        # that is not an OSError, so it would otherwise escape to the crash
+        # handler and read as an internal bug rather than bad input.
+        render_error(f"Cannot decode input as UTF-8: {exc}")
         raise typer.Exit(code=EXIT_VALIDATION) from None
     except OSError as exc:
         render_error(f"Cannot read file: {exc}")

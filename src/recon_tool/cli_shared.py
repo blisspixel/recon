@@ -68,6 +68,11 @@ def lookup_validate(
         # silently ignore --plain and fall back to the colored panel.
         render_error("--plain cannot be combined with --chain/--compare/--exposure/--gaps")
         raise typer.Exit(code=EXIT_VALIDATION) from None
+    if markdown and (chain_mode or compare_file or show_exposure or show_gaps):
+        # Same reason as --plain above: these modes render their own output and
+        # do not honor --md, so reject it rather than silently drop the flag.
+        render_error("--md cannot be combined with --chain/--compare/--exposure/--gaps")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
     if chain_depth > 1 and not chain_mode:
         render_error("--depth requires --chain")
         raise typer.Exit(code=EXIT_VALIDATION) from None

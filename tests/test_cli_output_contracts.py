@@ -74,3 +74,26 @@ class TestBatchMachineOutputClean:
         result = runner.invoke(app, ["batch", str(domain_file), "--md"])
         assert "\x00" not in result.output
         assert "ERR:" not in result.output
+
+
+class TestBadInputIsCleanError:
+    """Foreseeable user mistakes must produce a clean error and exit code, not
+    the last-resort 'please report a bug' crash handler."""
+
+    def test_non_utf8_batch_input_exits_2(self, tmp_path) -> None:
+        bad = tmp_path / "domains.txt"
+        bad.write_bytes("contoso.com\n".encode("utf-16"))
+        result = runner.invoke(app, ["batch", str(bad)])
+        assert result.exit_code == 2
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_discover_output_to_directory_exits_2(self, mock_resolve, tmp_path) -> None:
+        mock_resolve.return_value = (_INFO, [])
+        result = runner.invoke(app, ["discover", "contoso.com", "--output", str(tmp_path)])
+        assert result.exit_code == 2
+
+    def test_md_with_exposure_is_rejected(self) -> None:
+        # --exposure renders its own output and does not honor --md, so the flag
+        # is rejected rather than silently dropped.
+        result = runner.invoke(app, ["contoso.com", "--exposure", "--md"])
+        assert result.exit_code == 2

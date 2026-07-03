@@ -56,6 +56,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Bad `recon batch` input and `recon discover --output` errors now report
+  cleanly instead of crashing.** A non-UTF-8 batch file (or stdin) raised an
+  uncaught decode error that read as an internal bug; it is now rejected with
+  exit 2. Writing `recon discover --output` to a directory or an unwritable path
+  is likewise reported cleanly with exit 2 rather than reaching the
+  "please report a bug" handler.
+- **`--md` is now rejected with `--exposure`, `--gaps`, `--chain`, and
+  `--compare` instead of being silently dropped**, matching how `--plain` is
+  already handled for those modes.
 - **`recon <domain> --profile <unknown>` now exits 2, not 4.** An unknown
   profile (or an invalid `--explain-dag-format`) is a validation error, but the
   deliberate exit was caught by the lookup command's generic handler,
