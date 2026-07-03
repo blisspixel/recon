@@ -302,6 +302,8 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "readme": "Collaboration",
     "swoogo": "Business Apps",
     "uptimerobot": "Collaboration",
+    "uptimecom": "Collaboration",
+    "ngrok": "Cloud",
     "blink": "Business Apps",
     "godaddy-email": "Email",
     "cloud-gov": "Cloud",

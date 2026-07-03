@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Fingerprint catalog: Uptime.com and ngrok.** Surface attribution now
+  recognizes Uptime.com hosted status pages (CNAME to `cname.uptime.com`) and
+  ngrok custom-domain edges (`*.ngrok-cname.com`), both backed by vendor
+  documentation and covered by regression tests.
 - **Fingerprint freshness tracking.** Detection rules now accept an optional
   `verified` date (`YYYY-MM-DD`), and `python -m validation.audit_fingerprints
   --freshness` reports verified-date coverage and stale-rule counts. The date is
