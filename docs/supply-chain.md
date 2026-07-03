@@ -28,7 +28,7 @@ For a published version, consumers can check the release from both distribution
 channels without trusting this repository's local state:
 
 ```bash
-VERSION=2.2.19
+VERSION=2.3.0
 VERIFY_DIR="$(mktemp -d)"
 
 gh release download "v${VERSION}" \
@@ -59,7 +59,7 @@ python - <<'PY' | while IFS= read -r file_url; do
 import json
 import urllib.request
 
-version = "2.2.19"
+version = "2.3.0"
 with urllib.request.urlopen("https://pypi.org/pypi/recon-tool/json", timeout=30) as response:
     payload = json.load(response)
 for file_record in payload["releases"][version]:

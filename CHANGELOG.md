@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-07-03
+
+### Tool Surface Changes
+
+No CLI command or flag changes.
+
 ### Added
 
 - **Fingerprint catalog: Uptime.com and ngrok.** Surface attribution now
