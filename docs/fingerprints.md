@@ -54,12 +54,17 @@ detections:
     description: Vendor domain-ownership verification token
     reference: https://vendor.example/docs/domain-verification
     weight: 0.8
+    verified: 2026-07-03
 ```
 
 Use `description` for the observable meaning of the record, not a maturity or
 risk judgment. Add `reference` when the vendor has public verification docs.
 Use non-default `weight` sparingly, when a detection is useful but weaker than
-the rest of the fingerprint.
+the rest of the fingerprint. Set `verified` (`YYYY-MM-DD`) to the date the
+pattern was last confirmed against a public source or corpus observation. It is
+advisory, does not affect matching, and drives the freshness auditor
+(`python -m validation.audit_fingerprints --freshness`). See
+[catalog-strategy.md](catalog-strategy.md).
 
 Metadata feeds `recon fingerprints show`, MCP catalog resources, explanation
 output, and validation reports. Improving descriptions and references is a
