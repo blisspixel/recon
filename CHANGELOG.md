@@ -25,6 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fingerprint discovery tooling.** Candidate triage now mirrors runtime
   DNS-label-aware `cname_target` matching so future mining rounds do not hide
   service-specific CNAME variants behind broader substring matches.
+- **Bayesian evidence grouping.** The correlation-group over-counting
+  correction now covers the `aws_hosting` and `email_gateway_present` nodes, so
+  a target exposing several redundant AWS facets (or gateway vendors) no longer
+  receives an over-confident posterior with a too-tight credible interval. This
+  matches the existing Microsoft 365 and Google Workspace grouping.
+- **Fingerprint catalog refinement.** Surface attribution now recognizes the
+  Marketo `mktoapps.com` landing-page backend and the Edgecast/Edgio
+  `zetacdn.net` CDN domain, both found in a 2026-07 passive fingerprint-mining
+  round and added to their existing vendor entries with public references and
+  regression tests.
 - **MCP subdomain surface summary.** `lookup_tenant` text output now includes
   the same compact provider-count summary used by the default panel, so agents
   see multiple attributed subdomain surfaces without switching to JSON.
@@ -43,6 +53,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the cost-surface-guarded checkout.
 - **File-size ratchet.** The formatter module ceiling is tightened to its
   current size so future growth remains visible in the local and CI gates.
+
+### Fixed
+
+- **`recon doctor` now signals check failures through its exit code.** A failed
+  core check (identity endpoint, DNS, catalog load, or schema field) exits 1,
+  while an all-pass run or an optional-enrichment-only degradation (for example
+  a crt.sh outage) exits 0, so a CI or monitoring job can gate on `recon doctor`
+  instead of always reading success. The rendered summary is unchanged.
+  `recon doctor --mcp` likewise exits 1 when the MCP server cannot be validated
+  (package missing, server import failure, or no tools registered) and 0 when the
+  setup is healthy, so an MCP install script can gate on it too.
+- **Strict-SPF signal now reaches the fusion layer.** The
+  `email_security_policy_enforcing` node's `spf_strict` evidence is derived from
+  the merged service set where strict SPF (`-all`) is actually recorded, instead
+  of an SPF-typed evidence record that the DNS pipeline never produced. The
+  signal previously could not fire in production.
+- **Dot-less CNAME fingerprint spoofing.** Dot-less `cname_target` fragments
+  (such as Marketo's `mkto-`) now match only at a DNS-label or hyphen boundary,
+  so a host that merely embeds the fragment mid-label (for example
+  `promkto-analytics.attacker.net`) is no longer mis-attributed to the vendor.
+- **Prior-override validation on the argument path.** A prior supplied directly
+  to `infer(priors_override=...)` is now range-checked like a file-supplied one,
+  so a value of 0, 1, or outside `(0, 1)` is ignored rather than building a
+  degenerate or invalid inference factor. A boolean calibration value is also
+  rejected instead of being silently coerced.
+- **DMARC partial rollout scored as full enforcement.** The
+  `email_security_policy_enforcing` fusion signal now applies the DMARC `pct=`
+  coverage tag: a monitoring-only `pct=0` record no longer counts as full
+  `reject`, and a partial rollout (`0 < pct < 100`) steps the policy down one
+  level, so a phased-rollout domain is not overstated as fully enforcing.
 
 ## [2.2.18] - 2026-06-30
 
