@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.1] - 2026-07-04
+
+### Tool Surface Changes
+
+No CLI command or flag changes.
+
 ### Changed
 
 - **Homebrew tap published.** The formula is now available at
