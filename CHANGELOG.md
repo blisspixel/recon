@@ -16,6 +16,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and fingerprint-listing tool docstrings now report "800+ fingerprints"
   instead of a stale "185+", matching the current catalog.
 
+### Fixed
+
+- **`discover_fingerprint_candidates` no longer poisons the shared cache.** A
+  `skip_ct=True` mine resolved without certificate-transparency data but wrote
+  that CT-degraded result into the shared per-domain cache, so a following
+  `lookup_tenant`, `export_graph`, or `get_infrastructure_clusters` on the same
+  domain could return confidently-wrong "no cert data" for the cache TTL window.
+  A `skip_ct` result is now used locally without being shared.
+- **`reevaluate_domain` errors no longer leak raw exception text.** A merge
+  failure now returns the request_id and exception class name (and logs the
+  traceback server-side), matching the other MCP tools, instead of embedding
+  `str(exc)` in the client-facing message.
+- **A cached re-merge no longer extends data freshness.** `cache_refresh_info`
+  (used by `reevaluate_domain` and ephemeral-fingerprint clears) kept the
+  re-merged result but reset the entry's fetch timestamp, so repeated re-merges
+  could serve DNS data older than the intended TTL window. The original
+  timestamp is now preserved.
+
 ## [2.3.0] - 2026-07-03
 
 ### Tool Surface Changes

@@ -31,8 +31,10 @@ from recon_tool.models import (
 )
 from recon_tool.server import (
     _cache_clear,  # pyright: ignore[reportPrivateUsage]
+    _cache_get,  # pyright: ignore[reportPrivateUsage]
     _rate_limit,  # pyright: ignore[reportPrivateUsage]
     analyze_posture,
+    discover_fingerprint_candidates,
     explain_signal,
     get_fingerprints,
     get_signals,
@@ -425,3 +427,31 @@ class TestAnalyzePostureExplain:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         data = await analyze_posture("contoso.com")
         assert isinstance(data, list)
+
+
+# ── discover_fingerprint_candidates cache safety ─────────────────────────
+
+
+class TestDiscoverCacheSafety:
+    """discover_fingerprint_candidates must not write a CT-degraded
+    (skip_ct=True) result into the shared cache, where lookup_tenant, graph,
+    and infrastructure tools would read it back as confidently-wrong data.
+    """
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_skip_ct_result_does_not_poison_shared_cache(self, mock_resolve: AsyncMock) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        assert _cache_get("contoso.com") is None
+        await discover_fingerprint_candidates("contoso.com", skip_ct=True)
+        assert _cache_get("contoso.com") is None
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_full_result_still_populates_shared_cache(self, mock_resolve: AsyncMock) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        assert _cache_get("contoso.com") is None
+        await discover_fingerprint_candidates("contoso.com", skip_ct=False)
+        cached = _cache_get("contoso.com")
+        assert cached is not None
+        assert cached[0].queried_domain == "contoso.com"

@@ -731,7 +731,14 @@ async def discover_fingerprint_candidates(
                     server_app.internal_lookup_error(domain, request_id, exc, action="mining")
                 ) from exc
 
-            cache_set(validated, info, list(results))
+            # Only populate the shared cache with a full (skip_ct=False)
+            # resolution. A skip_ct result is CT-degraded (no cert_summary,
+            # infrastructure clusters, or CT-derived subdomains); writing it
+            # under the shared domain key would poison lookup_tenant, graph,
+            # and infrastructure reads for the TTL window. discover still uses
+            # the fresh result below; it simply does not share a degraded one.
+            if not skip_ct:
+                cache_set(validated, info, list(results))
 
     unclassified = [{"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains]
     fingerprints_dir = Path(__file__).resolve().parent / "data" / "fingerprints"
