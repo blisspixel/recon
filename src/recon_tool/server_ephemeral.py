@@ -9,6 +9,8 @@ reverse.
 
 from __future__ import annotations
 
+import logging
+import uuid
 from typing import Literal, cast
 
 from mcp.server.fastmcp.exceptions import ToolError
@@ -16,9 +18,11 @@ from mcp.types import ToolAnnotations
 from typing_extensions import TypedDict
 
 from recon_tool.formatter import format_tenant_dict
-from recon_tool.server_app import mcp
+from recon_tool.server_app import internal_lookup_error, mcp
 from recon_tool.server_runtime import cache, cache_get, cache_refresh_info, remerge_cached_infos
 from recon_tool.validator import validate_domain
+
+logger = logging.getLogger("recon")
 
 
 class EphemeralInjectionResult(TypedDict):
@@ -427,7 +431,15 @@ async def reevaluate_domain(domain: str) -> LookupResult:
     try:
         new_info = merge_results(list(results), validated)
     except Exception as exc:
-        raise ToolError(f"Re-evaluation failed: {exc}") from exc
+        request_id = uuid.uuid4().hex[:12]
+        logger.exception(
+            "Re-evaluation merge failed for %s (request_id=%s)",
+            domain,
+            request_id,
+        )
+        raise ToolError(
+            internal_lookup_error(domain, request_id, exc, action="re-evaluating")
+        ) from exc
 
     cache_refresh_info(validated, new_info, results)
     payload = format_tenant_dict(new_info)

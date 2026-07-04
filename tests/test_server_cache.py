@@ -12,6 +12,7 @@ from recon_tool.server import (
     _cache,
     _cache_clear,
     _cache_get,
+    _cache_refresh_info,
     _cache_set,
     _rate_limit,
     _rate_limit_check,
@@ -72,6 +73,23 @@ class TestBoundedCache:
         _cache_set("new.com", _make_info("new.com"), [])
         assert len(_cache) <= CACHE_MAX_SIZE
         assert _cache_get("new.com") is not None
+
+    def test_refresh_info_preserves_original_timestamp(self):
+        """cache_refresh_info updates the merged info but keeps the original
+        fetch timestamp: a re-merge does no network I/O, so it must not extend
+        data freshness past the TTL window."""
+        info1 = _make_info("test.com")
+        _cache_set("test.com", info1, [])
+        # Age the entry to a known older timestamp.
+        old_ts, i, r = _cache["test.com"]
+        aged_ts = old_ts - 60.0
+        _cache["test.com"] = (aged_ts, i, r)
+        # Re-merge with a fresh info object (as reevaluate_domain does).
+        info2 = _make_info("test.com")
+        _cache_refresh_info("test.com", info2, ())
+        new_ts, new_info, _ = _cache["test.com"]
+        assert new_ts == aged_ts
+        assert new_info is info2
 
 
 class TestBoundedRateLimiter:
