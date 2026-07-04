@@ -2,9 +2,12 @@ name: Scorecard supply-chain security
 
 # OpenSSF Scorecard: an automated, auditable read on the repo's supply-chain
 # posture (pinned deps, branch protection, signed/attested releases, SAST,
-# token permissions). Runs weekly and on push to main, and publishes the result
-# so the README badge and https://scorecard.dev/ stay current.
+# token permissions). Runs weekly, on push to main, and on manual dispatch, and
+# publishes the result so the README badge and https://scorecard.dev/ stay current.
+# Manual dispatch lets the score refresh right after a release-time CodeQL run,
+# instead of waiting for the weekly schedule.
 on:
+  workflow_dispatch:
   branch_protection_rule:
   schedule:
     - cron: "20 7 * * 1"
