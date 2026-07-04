@@ -16,8 +16,8 @@ authors:
 repository-code: "https://github.com/blisspixel/recon"
 url: "https://github.com/blisspixel/recon"
 license: Apache-2.0
-version: 2.3.0
-date-released: "2026-07-03"
+version: 2.3.1
+date-released: "2026-07-04"
 keywords:
   - passive reconnaissance
   - external attack surface management
