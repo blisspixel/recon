@@ -67,7 +67,12 @@ class _ServerRuntimeState:
         info: TenantInfo,
         results: tuple[SourceResult, ...],
     ) -> None:
-        self.cache[domain] = (time.monotonic(), info, results)
+        # Preserve the original fetch timestamp: a re-merge does no network
+        # I/O (the raw results are unchanged), so the TTL must keep bounding
+        # data freshness rather than resetting it to now.
+        existing = self.cache.get(domain)
+        ts = existing[0] if existing is not None else time.monotonic()
+        self.cache[domain] = (ts, info, results)
 
     def remerge_cached_infos(self) -> None:
         from recon_tool.merger import merge_results
