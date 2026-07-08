@@ -21,7 +21,7 @@ from rich.text import Text
 from recon_tool.exposure import (
     PostureComparison,
 )
-from recon_tool.formatter_classify import (
+from recon_tool.formatter.classify import (
     CATEGORY_BY_SLUG,
     CLOUD_SLUG_QUALIFIERS,
     CLOUD_VENDOR_BY_SLUG,
@@ -42,7 +42,7 @@ from recon_tool.formatter_classify import (
     is_m365_service,
     slug_to_relationship_metadata,
 )
-from recon_tool.formatter_exposure import (  # re-exported: stable import path after the split
+from recon_tool.formatter.exposure import (  # re-exported: stable import path after the split
     format_exposure_dict,
     format_exposure_json,
     format_gaps_dict,
@@ -50,13 +50,13 @@ from recon_tool.formatter_exposure import (  # re-exported: stable import path a
     render_exposure_panel,
     render_gaps_panel,
 )
-from recon_tool.formatter_layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
-from recon_tool.formatter_markdown import (
+from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
+from recon_tool.formatter.markdown import (
     format_explanations_markdown,
     format_tenant_markdown,
     markdown_escape,
 )
-from recon_tool.formatter_serialize import (
+from recon_tool.formatter.serialize import (
     CSV_COLUMNS,
     format_batch_csv,
     format_tenant_csv_row,

@@ -12,10 +12,15 @@ from __future__ import annotations
 
 import logging
 
-from recon_tool import server_app, server_ephemeral, server_graph, server_introspection, server_lookup, server_posture
-from recon_tool import server_runtime as _server_runtime
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_VALIDATION
-from recon_tool.server_app import mcp
+from recon_tool.server import app as server_app
+from recon_tool.server import ephemeral as server_ephemeral
+from recon_tool.server import graph as server_graph
+from recon_tool.server import introspection as server_introspection
+from recon_tool.server import lookup as server_lookup
+from recon_tool.server import posture as server_posture
+from recon_tool.server import runtime as _server_runtime
+from recon_tool.server.app import mcp
 from recon_tool.validator import strip_control_chars
 
 logger = logging.getLogger("recon")

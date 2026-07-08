@@ -20,12 +20,14 @@ from typing import TYPE_CHECKING
 import typer
 from rich.markup import escape
 
-from recon_tool import cli_batch, cli_doctor, cli_lookup
-from recon_tool.cli_cache import cache_app
-from recon_tool.cli_fingerprints import fingerprints_app
-from recon_tool.cli_mcp import mcp_app
-from recon_tool.cli_shared import fmt_exc as _fmt_exc
-from recon_tool.cli_signals import signals_app
+from recon_tool.cli import batch as cli_batch
+from recon_tool.cli import doctor as cli_doctor
+from recon_tool.cli import lookup as cli_lookup
+from recon_tool.cli.cache import cache_app
+from recon_tool.cli.fingerprints import fingerprints_app
+from recon_tool.cli.mcp import mcp_app
+from recon_tool.cli.shared import fmt_exc as _fmt_exc
+from recon_tool.cli.signals import signals_app
 from recon_tool.formatter import get_console, get_err_console
 
 # Command-implementation re-export facade (see cli_lookup / cli_batch / cli_doctor).
