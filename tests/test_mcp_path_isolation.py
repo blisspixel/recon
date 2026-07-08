@@ -60,7 +60,7 @@ class TestMcpDoctorSpawnsSafely:
     safeguards. If a future refactor drops either, the test fails."""
 
     def test_mcp_doctor_source_sets_pythonsafepath_env(self):
-        src = Path("src/recon_tool/mcp_doctor.py").read_text(encoding="utf-8")
+        src = Path("src/recon_tool/mcp_client/doctor.py").read_text(encoding="utf-8")
         assert "PYTHONSAFEPATH" in src, (
             "mcp_doctor.py must reference PYTHONSAFEPATH on the subprocess env to disable cwd-prepend on Python 3.11+."
         )
@@ -70,7 +70,7 @@ class TestMcpDoctorSpawnsSafely:
         )
 
     def test_mcp_doctor_source_passes_cwd_to_subprocess(self):
-        src = Path("src/recon_tool/mcp_doctor.py").read_text(encoding="utf-8")
+        src = Path("src/recon_tool/mcp_client/doctor.py").read_text(encoding="utf-8")
         # The fix uses StdioServerParameters(..., cwd=safe_cwd) where
         # safe_cwd comes from tempfile.TemporaryDirectory.
         assert "cwd=safe_cwd" in src, (
