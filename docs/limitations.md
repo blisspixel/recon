@@ -218,7 +218,7 @@ Best practices:
   investigation leads, not conclusions.
 - `--explain` shows the full evidence chain per signal. Use it when a
   specific claim matters.
-- `--confidence-mode strict` only drops hedging when ≥3 sources corroborate
+- `--confidence-mode strict` or `--strict` only drops hedging when ≥3 sources corroborate
   AND confidence is High. Sparse-data output stays hedged by design.
 - If you spot a false positive, open an issue with the domain and the
   incorrect detection. Fingerprint PRs are welcome, see

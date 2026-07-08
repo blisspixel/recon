@@ -559,6 +559,18 @@
             "type": "text"
           },
           {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "strict",
+            "required": false,
+            "tokens": [
+              "--strict"
+            ],
+            "type": "boolean"
+          },
+          {
             "default": true,
             "is_flag": true,
             "kind": "option",
