@@ -104,6 +104,8 @@ def test_public_tracked_text_does_not_reference_docs_agent_state() -> None:
 
     for relative in _tracked_files():
         path = ROOT / relative
+        if not path.exists():
+            continue
         if path.suffix.lower() not in PUBLIC_TEXT_SUFFIXES:
             continue
         try:
