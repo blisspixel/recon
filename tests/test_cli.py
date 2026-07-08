@@ -56,6 +56,7 @@ class TestHelp:
         assert "--json" in plain
         assert "--md" in plain
         assert "--full" in plain
+        assert "--strict" in plain
 
     def test_version_flag(self) -> None:
         from recon_tool.cli import version_callback
@@ -150,6 +151,23 @@ class TestLookupSubcommand:
         result = runner.invoke(app, ["lookup", "contoso.com", "--sources"])
         assert result.exit_code == 0
         assert "Source Details" in result.output
+
+    def test_strict_alias_sets_confidence_mode(self, monkeypatch) -> None:
+        seen = {}
+
+        async def fake_lookup(*_args, **kwargs) -> None:
+            seen["confidence_mode"] = kwargs["confidence_mode"]
+
+        monkeypatch.setattr("recon_tool.cli._lookup", fake_lookup)
+        result = runner.invoke(app, ["lookup", "contoso.com", "--strict"])
+        assert result.exit_code == 0
+        assert seen["confidence_mode"] == "strict"
+
+    def test_confidence_mode_rejects_typo(self) -> None:
+        result = runner.invoke(app, ["lookup", "contoso.com", "--confidence-mode", "scrict"])
+        assert result.exit_code == 2
+        assert "hedged" in result.output
+        assert "strict" in result.output
 
 
 class TestErrors:
