@@ -2,7 +2,7 @@
 
 The canonical roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 
-Current status: recon v2.3.2 is feature-complete for the current roadmap. The
+Current status: recon v2.3.3 is feature-complete for the current roadmap. The
 CLI, JSON schema, MCP server, validation guards, generated-artifact guards, and
 release path are shipped. Current work is hardening, documentation clarity,
 validation evidence, interface package-locality hardening, and external write-up
