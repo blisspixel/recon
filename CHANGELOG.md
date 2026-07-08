@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Remote release-readiness Scorecard floor.** The remote gate now treats
+  Scorecard SAST `7` as the documented floor for scheduled/manual CodeQL, while
+  keeping the other code-owned Scorecard controls pinned at `10`.
+
 ## [2.3.2] - 2026-07-08
 
 ### Tool Surface Changes

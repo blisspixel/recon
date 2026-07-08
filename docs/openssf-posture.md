@@ -17,13 +17,16 @@ The public API is authoritative for the exact commit behind the badge. Docs-only
 commits can move `main` after a snapshot is written, so this file records the
 reviewed posture and the live API URL rather than treating a commit hash as a
 durable status promise. Remote release readiness queries that API for `HEAD`,
-requires the current score floor, and fails if any code-owned control regresses
-below `10`.
+requires the current score floor, and fails if any code-owned control except the
+scheduled/manual SAST check regresses below `10`. SAST must stay at `7` or
+better while CodeQL remains scheduled and manually dispatched rather than run on
+every push.
 
-The code-owned controls are green: dangerous workflow patterns, dependency
-update automation, token permissions, pinned dependencies, binary artifacts,
-security policy, SAST, known vulnerabilities, packaging, fuzzing, signed
-releases, and license all score `10`.
+The non-SAST code-owned controls are green: dangerous workflow patterns,
+dependency update automation, token permissions, pinned dependencies, binary
+artifacts, security policy, known vulnerabilities, packaging, fuzzing, signed
+releases, and license all score `10`. Scorecard reports SAST as detected at
+`7`, which matches the deliberate scheduled/manual CodeQL policy.
 
 The remaining low or unknown checks are process-bound:
 

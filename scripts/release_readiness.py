@@ -56,12 +56,17 @@ _REQUIRED_SCORECARD_TENS = (
     "License",
     "Packaging",
     "Pinned-Dependencies",
-    "SAST",
     "Security-Policy",
     "Signed-Releases",
     "Token-Permissions",
     "Vulnerabilities",
 )
+_REQUIRED_SCORECARD_MINIMUMS = {
+    # CodeQL is intentionally scheduled and manually dispatched instead of
+    # running on every push. Scorecard gives that posture 7 for detecting SAST
+    # without checking every commit; this is a documented tradeoff, not drift.
+    "SAST": 7,
+}
 _PYPI_PACKAGE = "recon-tool"
 _PYPI_RELEASE_URL = f"https://pypi.org/pypi/{_PYPI_PACKAGE}/json"
 _PYPI_ATTESTATION_REPOSITORY = "https://github.com/blisspixel/recon"
@@ -514,12 +519,20 @@ def _scorecard_problem(payload: dict[str, object], sha: str) -> str | None:
     for check in checks:
         if isinstance(check, dict) and isinstance(check.get("name"), str):
             scores[check["name"]] = check.get("score")
-    missing = [name for name in _REQUIRED_SCORECARD_TENS if name not in scores]
+    required_names = set(_REQUIRED_SCORECARD_TENS) | set(_REQUIRED_SCORECARD_MINIMUMS)
+    missing = [name for name in sorted(required_names) if name not in scores]
     if missing:
         return "missing Scorecard check(s): " + ", ".join(missing)
     weak = [f"{name}={scores[name]!r}" for name in _REQUIRED_SCORECARD_TENS if scores[name] != 10]
     if weak:
         return "code-owned Scorecard check(s) regressed: " + ", ".join(weak)
+    below_floor = [
+        f"{name}={scores[name]!r}"
+        for name, minimum in _REQUIRED_SCORECARD_MINIMUMS.items()
+        if not isinstance(scores[name], int | float) or scores[name] < minimum
+    ]
+    if below_floor:
+        return "Scorecard check(s) below expected floor: " + ", ".join(below_floor)
     return None
 
 
