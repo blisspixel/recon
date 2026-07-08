@@ -5,8 +5,12 @@ The canonical roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 Current status: recon v2.3.2 is feature-complete for the current roadmap. The
 CLI, JSON schema, MCP server, validation guards, generated-artifact guards, and
 release path are shipped. Current work is hardening, documentation clarity,
-validation evidence, and external write-up readiness. The current strategic
-gap audit is [docs/strategic-gap-audit.md](docs/strategic-gap-audit.md).
+validation evidence, interface package-locality hardening, and external write-up
+readiness. The detailed interface-locality record is in
+[docs/roadmap.md](docs/roadmap.md), with the architecture decision in
+[docs/adr/0008-interface-package-locality.md](docs/adr/0008-interface-package-locality.md).
+The current strategic gap audit is
+[docs/strategic-gap-audit.md](docs/strategic-gap-audit.md).
 The final submission gate is
 [docs/submission-freeze-checklist.md](docs/submission-freeze-checklist.md).
 

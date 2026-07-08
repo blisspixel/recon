@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from recon_tool.formatter_serialize import compute_email_security_score
+from recon_tool.email_security import compute_email_security_score
 from recon_tool.models import DeltaReport, TenantInfo
 
 logger = logging.getLogger("recon")

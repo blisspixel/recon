@@ -55,6 +55,12 @@ and remotely so dependency updates cannot leave stale generated inputs behind.
   `src/recon_tool/`; the public import name remains `recon_tool`. This keeps
   tests honest about installed-package behavior and avoids repo-root import
   shadowing. ADR-0006 supersedes the previous flat-layout decision.
+- **Interface package locality.** CLI, formatter, MCP server, and MCP client
+  implementation live under `recon_tool.cli`, `recon_tool.formatter`,
+  `recon_tool.server`, and `recon_tool.mcp_client`. Historical top-level
+  `cli_*`, `formatter_*`, `server_*`, `mcp_*`, and `client_doctor` imports are
+  compatibility shims only, bounded by `scripts/check_interface_layout.py`.
+  ADR-0008 records the decision and compatibility policy.
 - **Local working artifacts stay out of tracked surfaces.** Agent state lives
   under the gitignored root `.agent/` directory, logs live under gitignored
   root `logs/`, and validation run outputs live under gitignored
@@ -191,7 +197,7 @@ What we already do well, and the named open items, with no pretending.
 | CI/local parity (`scripts/check.py`), release readiness, file-size ratchet | In place | Closes the CI-red and docs-drift root causes |
 | ADRs for load-bearing decisions | In place initially | Extend as decisions are made |
 | Noun-verb CLI consistency, `--plain`/`--json`, stdout/stderr discipline | In place | |
-| **God-file decomposition** (formatter/cli/exposure/merger/dns/bayesian/server) | In place | Every module under the 1000-line cap except formatter's cohesive panel core (~2160, kept whole by design) |
+| **God-file decomposition + interface locality** (formatter/cli/exposure/merger/dns/bayesian/server) | In place | Interface implementation lives under local packages; top-level prefix modules are bounded compatibility shims; every module is under the 1000-line cap except formatter's cohesive panel core (~2160, baselined) |
 | **`PLR09xx` function-size rules** (statements/branches/args/returns) | Ratcheted | `scripts/check_plr_ratchet.py` blocks new debt while existing violations are paid down |
 | **Schema generation path** | In place | `scripts/generate_schema.py --check`, `scripts/check_schema_sources.py`, and nested `$defs` tests block untraced schema drift across both published schema copies |
 | **Per-PR diff coverage** | Advisory | `scripts/diff_coverage.py` reports changed-line coverage from local Coverage.py JSON without making doc-only changes painful |

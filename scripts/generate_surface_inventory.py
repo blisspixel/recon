@@ -258,7 +258,7 @@ def _cli_inventory() -> dict[str, object]:
 
 async def _mcp_inventory_async() -> dict[str, object]:
     import_module("recon_tool.server")
-    from recon_tool.server_app import mcp
+    from recon_tool.server.app import mcp
 
     tools = await mcp.list_tools()
     resources = await mcp.list_resources()

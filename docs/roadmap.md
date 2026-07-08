@@ -29,11 +29,11 @@ The next work is dependency-ordered:
      than create features by default.
    - Current plan: keep docs readable for casual users, keep dependencies,
      supply-chain checks, and OpenSSF posture current, keep the public
-     reproduction path passing, and make small correctness or clarity
-     refinements when validation runs expose them. The current step-back audit
-     in [strategic-gap-audit.md](strategic-gap-audit.md) keeps process,
-     research, release, archive, and data-governance gaps separated from
-     runtime work.
+     reproduction path passing, improve interface-layer locality, and make
+     small correctness or clarity refinements when validation runs expose them.
+     The current step-back audit in
+     [strategic-gap-audit.md](strategic-gap-audit.md) keeps process, research,
+     release, archive, and data-governance gaps separated from runtime work.
    - Current near-term refinements (all passive, within-invariant, no runtime
      expansion):
      1. RFC 9989 (DMARCbis) alignment. Effective-enforcement gating on the
@@ -56,6 +56,22 @@ The next work is dependency-ordered:
         integration suite is deselected in CI, so an upstream provider change
         could silently drop a detection with no gate failure; a scheduled
         integration run or a small golden acceptance set would surface it.
+     3. Interface package-locality hardening. recon's core domain boundaries
+        are healthy: source collectors, resolver, merger, fingerprint catalog,
+        signals, Bayesian inference, posture analysis, and validation harnesses
+        each have coherent reasons to change. ADR-0008 moved the
+        user-interface implementation behind local packages:
+        `recon_tool.cli`, `recon_tool.formatter`, `recon_tool.server`, and
+        `recon_tool.mcp_client`. Historical top-level prefix modules now remain
+        only as bounded compatibility shims. `scripts/check_interface_layout.py`
+        guards against new top-level `cli_*`, `formatter_*`, `server_*`,
+        `mcp_*`, or `client_doctor` implementation files.
+
+        Compatibility discipline stays active: preserve `recon_tool.cli`,
+        `recon_tool.formatter`, and `recon_tool.server` as public import
+        surfaces; keep stable CLI, MCP, and JSON behavior unchanged; do not mix
+        this work with `models.py` or schema refactors. The completed migration
+        record below remains as an audit checklist for future locality work.
    - Acceptance: every refinement preserves the project invariants, keeps
      examples fictional or synthetic, and publishes only public, synthetic, or
      aggregate-only evidence. Feedback on gaps, wording, and false positives is
@@ -136,6 +152,242 @@ The next work is dependency-ordered:
    not claim frequentist coverage for the 80 percent intervals. Rerun the
    final claim audit after any draft, package, or claim-map change. Do not add
    runtime behavior while packaging the artifact.
+
+## Interface Package-Locality Migration Record
+
+This hardening refactor reduces cognitive load in the interface layers while
+preserving the stable CLI, MCP, JSON, and import surfaces. ADR-0008 records the
+decision. The architecture guard is `scripts/check_interface_layout.py`.
+
+### Baseline
+
+The source layout already has strong domain boundaries in the resolver,
+sources, fingerprint catalog, signals, Bayesian inference, posture analysis,
+validation harnesses, cache, and data files. The weaker locality is at the
+top-level package namespace:
+
+- CLI implementation: 9 top-level modules, about 4.2k lines.
+- Formatter implementation: 7 top-level modules, about 4.7k lines.
+- MCP and client support implementation: 11 top-level modules, about 5.0k
+  lines.
+- `formatter.py`, `cli.py`, and `server.py` are public import surfaces as well
+  as implementation entry points, so they have a wide test and consumer blast
+  radius.
+- No import cycles are known in the current interface-layer graph. The package
+  migration must preserve that property.
+
+The observed problem was not the number of files by itself. The problem was
+that the earlier god-file decomposition left conceptually related
+implementation modules as flat prefix-based siblings (`cli_*`, `formatter_*`,
+`server_*`, `mcp_*`) instead of local packages with clear public surfaces.
+
+### Non-Goals
+
+- No stable CLI behavior change.
+- No stable MCP tool, resource, prompt, or JSON-RPC behavior change.
+- No stable JSON schema change.
+- No inference, scoring, fingerprint, signal, source, cache, or model redesign.
+- No `models.py` package split in this pass. Its import blast radius is too
+  high to combine with interface package movement.
+- No new dependency and no generated runtime code.
+- No attempt to lower line counts by merging unrelated modules or by creating
+  tiny files for every helper.
+
+### Current Package Map
+
+Formatter:
+
+```text
+recon_tool/formatter/
+  __init__.py          public re-export surface
+  panel.py             Rich panel rendering and console helpers
+  serialize.py         JSON, plain text, CSV, and dict serializers
+  markdown.py          markdown report rendering
+  exposure.py          exposure and gap rendering
+  classify.py          service classification logic
+  classify_tables.py   classification tables
+  layout.py            wrapping and compact-layout helpers
+```
+
+MCP server:
+
+```text
+recon_tool/server/
+  __init__.py          public MCP facade and compatibility exports
+  app.py               shared FastMCP app and resolve-or-cache seam
+  runtime.py           in-process cache, rate limiter, structured logging
+  lookup.py            lookup tool
+  posture.py           posture, exposure, gaps, compare, hypothesis, simulate
+  graph.py             chain lookup and graph tools
+  introspection.py     resources, catalog tools, reload, diagnostics
+  ephemeral.py         ephemeral fingerprint session tools
+```
+
+CLI:
+
+```text
+recon_tool/cli/
+  __init__.py          Typer app, command registration, run entry point
+  lookup.py            lookup and discover command implementation
+  batch.py             batch command implementation and emitters
+  doctor.py            doctor commands
+  cache.py             cache sub-app
+  fingerprints.py      fingerprint sub-app
+  signals.py           signal sub-app
+  mcp.py               CLI wrapper for MCP start, install, and doctor
+  shared.py            shared command validation and error helpers
+```
+
+MCP client support may move separately:
+
+```text
+recon_tool/mcp_client/
+  install.py           client config installer
+  doctor.py            end-to-end MCP self-check
+  client_doctor.py     client-side config validation
+```
+
+### Phase 0: Decision And Safety Rails
+
+Status: complete.
+
+1. ADR-0008 records package locality and names the compatibility surfaces:
+   `recon_tool.cli`, `recon_tool.formatter`, and `recon_tool.server`.
+2. The command, schema, and MCP surface are guarded by:
+   `uv run python scripts/generate_cli_surface.py --check`,
+   `uv run python scripts/generate_schema.py --check`, and the existing surface
+   inventory guard through `uv run python scripts/check.py`.
+3. The local code graph should be refreshed after package-locality work.
+4. The migration handled Python's file-versus-package conflict:
+   each public module that becomes a package must be moved atomically from
+   `name.py` to `name/__init__.py`.
+5. Old sibling modules remain as bounded compatibility shims where tests or
+   documented imports prove consumers use the old sibling path.
+
+Exit criteria: ADR accepted, graph refreshed, current gates green, and the
+exact first package move selected.
+
+### Phase 1: Formatter Package
+
+Why first: `recon_tool.formatter` is the widest interface-layer dependency and
+still contains the largest cohesive panel-rendering core.
+
+Status: complete.
+
+Planned steps:
+
+1. `formatter.py` moved to `formatter/panel.py`; `formatter/__init__.py` is the
+   public facade.
+2. `formatter_serialize.py`, `formatter_markdown.py`,
+   `formatter_exposure.py`, `formatter_classify.py`,
+   `formatter_classify_tables.py`, and `formatter_layout.py` moved under the
+   package.
+3. Public imports from `recon_tool.formatter` are preserved, including
+   historical aliases used by tests and validation scripts.
+4. Serialization remains importable without panel callers importing old
+   top-level implementation modules.
+5. Email-security score calculation moved to core domain helper
+   `email_security.py` and remains re-exported through formatter serialization.
+6. Old formatter sibling paths are bounded compatibility shims.
+
+Exit criteria: rendered golden tests unchanged, JSON serialization unchanged,
+public formatter imports preserved, no new import cycle, file-size ratchet not
+weakened, full local gate passes.
+
+### Phase 2: MCP Server Package
+
+Why second: the MCP tool groups already map cleanly to runtime submodules, and
+`server.py` is mostly a registration and compatibility facade.
+
+Status: complete.
+
+Planned steps:
+
+1. `server.py` moved to `server/__init__.py`.
+2. `server_app.py`, `server_runtime.py`, `server_lookup.py`,
+   `server_posture.py`, `server_graph.py`, `server_introspection.py`, and
+   `server_ephemeral.py` moved under the package.
+3. All imports served by `recon_tool.server` are preserved, including
+   tool functions and test-visible runtime seams.
+4. MCP client installer and doctor code moved to `recon_tool.mcp_client`, not
+   the server runtime package.
+5. `python -m recon_tool.server` is preserved through `server/__main__.py`.
+6. Old server sibling paths are bounded compatibility shims.
+
+Exit criteria: MCP unit and integration tests pass, `recon mcp doctor` path
+still resolves, tool and resource inventory unchanged except source-location
+metadata, no import cycle, full local gate passes.
+
+### Phase 3: CLI Package
+
+Why third: the CLI has broad command-surface tests and Typer registration order
+matters, but its desired package shape is straightforward.
+
+Status: complete.
+
+Planned steps:
+
+1. `cli.py` moved to `cli/__init__.py`.
+2. `cli_lookup.py`, `cli_batch.py`, `cli_doctor.py`, `cli_cache.py`,
+   `cli_fingerprints.py`, `cli_signals.py`, `cli_mcp.py`, and `cli_shared.py`
+   moved under the package.
+3. The console script target `recon_tool.cli:run` is preserved.
+4. Historical imports used by tests and validation scripts are preserved,
+   including
+   `app`, `run`, exit codes, command helper re-exports, and command callback
+   helpers.
+5. Command registration stays explicit in one place so a maintainer can see the
+   CLI shape without opening every command implementation file.
+6. Old CLI sibling paths are bounded compatibility shims.
+
+Exit criteria: CLI surface unchanged, help output and generated command docs
+unchanged except source-location metadata if applicable, stdout and stderr
+discipline preserved, no import cycle, full local gate passes.
+
+### Phase 4: Ratchets And Cleanup
+
+Status: complete for the initial migration.
+
+1. `scripts/check_interface_layout.py` rejects new top-level implementation modules
+   matching `cli_*`, `formatter_*`, `server_*`, or `mcp_*`.
+2. Compatibility shims are allowed only when they are explicitly listed,
+   small, and import-only.
+3. The file-size ratchet follows the moved formatter panel baseline without
+   raising the historical ceiling.
+4. Docs that describe source paths, including engineering practices and
+   any generated surface inventory references.
+5. Remove temporary shims only after a compatibility policy says it is safe, or
+   keep them permanently if the import path is treated as stable.
+
+Exit criteria: architecture guard in CI, file-size baseline tightened, docs
+match the new package layout, code graph refreshed, and full local gate passes.
+
+### Review Checklist For Each Phase
+
+- Does the change preserve `recon_tool.cli`, `recon_tool.formatter`, or
+  `recon_tool.server` public imports?
+- Does it reduce top-level namespace noise without hiding the feature flow?
+- Does it move only one architectural layer?
+- Does it avoid mixing behavior edits with file moves?
+- Does it keep source-derived output, stdout and stderr behavior, and generated
+  artifacts stable?
+- Does the diff show old and new callables are equivalent through tests or
+  import assertions?
+- Does the code graph show no new cycles and no unexpected new high-blast
+  dependency?
+
+### Stop Conditions
+
+Pause the migration and reassess if any phase:
+
+- Changes generated CLI, MCP, or schema surfaces beyond source-location
+  metadata.
+- Requires weakening lint, type, coverage, mutation, schema, or generated
+  artifact gates.
+- Introduces an import cycle.
+- Forces a `models.py` or schema redesign.
+- Makes formatter serialization depend more heavily on Rich panel rendering.
+- Makes MCP server startup write protocol-breaking bytes to stdout.
 
 ## Version Milestones
 
