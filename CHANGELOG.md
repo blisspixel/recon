@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.3] - 2026-07-08
+
+### Tool Surface Changes
+
+No CLI command or flag changes.
+
 ### Changed
 
 - **Interface package locality.** CLI, formatter, MCP server, and MCP client
