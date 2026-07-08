@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.2] - 2026-07-08
+
+### Tool Surface Changes
+
+No CLI command or flag changes.
+
+### Changed
+
+- **Release metadata refreshed.** Citation metadata, supply-chain verification
+  snippets, and roadmap status now point at v2.3.2 for the CI posture hotfix
+  package.
+
+### Fixed
+
+- **CodeQL CI trigger alignment.** The CodeQL workflow is back to scheduled and
+  manual runs, matching the Scorecard posture guard that keeps normal push CI
+  focused on the main lint, test, audit, secrets, and Scorecard checks.
+
 ## [2.3.1] - 2026-07-04
 
 ### Tool Surface Changes
