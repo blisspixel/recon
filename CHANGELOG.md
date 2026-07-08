@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Interface package locality.** CLI, formatter, MCP server, and MCP client
+  implementation now live under package-local modules, with historical
+  top-level imports retained as compatibility shims and guarded by the local
+  interface-layout check.
+
 ### Fixed
 
 - **Remote release-readiness Scorecard floor.** The remote gate now treats
