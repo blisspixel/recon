@@ -145,6 +145,14 @@ def _debug_callback(value: bool) -> None:
         logger.setLevel(logging.DEBUG)
 
 
+def _confidence_mode_callback(value: str) -> str:
+    """Normalize and validate lookup output confidence language mode."""
+    normalized = value.strip().lower()
+    if normalized not in {"hedged", "strict"}:
+        raise typer.BadParameter("must be 'hedged' or 'strict'")
+    return normalized
+
+
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
@@ -257,8 +265,10 @@ def lookup(
     confidence_mode: str = typer.Option(
         "hedged",
         "--confidence-mode",
+        callback=_confidence_mode_callback,
         help=("Language style: 'hedged' (default) or 'strict' (drops hedging qualifiers on dense-evidence targets)"),
     ),
+    strict: bool = typer.Option(False, "--strict", help="Shortcut for --confidence-mode strict."),
     fusion: bool = typer.Option(
         True,
         "--fusion/--no-fusion",
@@ -331,6 +341,7 @@ def lookup(
 
     [dim]recon contoso.com is the same as recon lookup contoso.com[/dim]
     """
+    effective_confidence_mode = "strict" if strict else confidence_mode
     asyncio.run(
         _lookup(
             domain,
@@ -353,7 +364,7 @@ def lookup(
             show_gaps=gaps,
             show_explain=explain,
             profile_name=profile,
-            confidence_mode=confidence_mode,
+            confidence_mode=effective_confidence_mode,
             fusion=fusion,
             explain_dag=explain_dag,
             explain_dag_format=explain_dag_format,

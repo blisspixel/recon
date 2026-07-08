@@ -154,6 +154,7 @@ Summary: Look up a domain. This is the default command.
 | `explain` | option | `--explain` | no | boolean | false |  |
 | `profile` | option | `--profile` | no | text |  |  |
 | `confidence_mode` | option | `--confidence-mode` | no | text | hedged |  |
+| `strict` | option | `--strict` | no | boolean | false |  |
 | `fusion` | option | `--fusion`, `--no-fusion` | no | boolean | true |  |
 | `explain_dag` | option | `--explain-dag` | no | boolean | false |  |
 | `explain_dag_format` | option | `--explain-dag-format` | no | text | text |  |
