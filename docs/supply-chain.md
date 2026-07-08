@@ -168,9 +168,10 @@ The repository also runs supply-chain posture checks outside the release flow:
   GitHub Release asset set for the current version, so wheel, sdist, SBOM, and
   attestation drift is caught after publication rather than verified by hand.
   It also verifies public Scorecard API freshness for `HEAD`, checks that
-  code-owned Scorecard controls remain green, verifies the PyPI wheel and
-  sdist with `pypi-attestations verify pypi`, then downloads the GitHub Release
-  wheel and sdist and runs `gh attestation verify` against both artifacts.
+  code-owned Scorecard controls remain green, checks the documented SAST floor,
+  verifies the PyPI wheel and sdist with `pypi-attestations verify pypi`, then
+  downloads the GitHub Release wheel and sdist and runs `gh attestation verify`
+  against both artifacts.
 - Checkout steps set `persist-credentials: false`, so the workflow token is not
   left in the local Git config after source checkout.
 - Every workflow job has an explicit timeout so CI and release automation fail
@@ -181,15 +182,16 @@ The repository also runs supply-chain posture checks outside the release flow:
 - `.github/CODEOWNERS` routes all repository paths to the maintainer account so
   external pull requests have a clear review owner.
 
-The 2026-06-30 Scorecard recheck reports score `7.5` with the code-owned
-controls green. The June 28 review found one code-owned gap and several
-repository-process gaps. The code-owned gap was an unpinned installer
-download-and-run path; the installer now refuses to execute remote tool
-installers. The Scorecard SARIF upload step also uses CodeQL Action v4 to avoid
-the scheduled v3 deprecation. Live repository settings now enforce full-SHA
-GitHub Action pins, enable dependency security updates, and protect `main` with
-an active repository ruleset that requires the CI matrix, gitleaks, and
-Scorecard checks, blocks deletion and non-fast-forward updates, and requires
+The 2026-06-30 Scorecard recheck reports score `7.5` with the non-SAST
+code-owned controls green. SAST reports `7` because CodeQL is scheduled and
+manually dispatched rather than run on every push. The June 28 review found one
+code-owned gap and several repository-process gaps. The code-owned gap was an
+unpinned installer download-and-run path; the installer now refuses to execute
+remote tool installers. The Scorecard SARIF upload step also uses CodeQL Action
+v4 to avoid the scheduled v3 deprecation. Live repository settings now enforce
+full-SHA GitHub Action pins, enable dependency security updates, and protect
+`main` with an active repository ruleset that requires the CI matrix, gitleaks,
+and Scorecard checks, blocks deletion and non-fast-forward updates, and requires
 linear history.
 
 The remaining Scorecard limits are intentional or process-bound:

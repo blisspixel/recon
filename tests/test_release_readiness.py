@@ -331,6 +331,10 @@ def _scorecard_payload(sha: str, score: float = 7.5, **check_overrides: int) -> 
         {"name": name, "score": check_overrides.get(name, 10)}
         for name in release_readiness._REQUIRED_SCORECARD_TENS
     ]
+    checks.extend(
+        {"name": name, "score": check_overrides.get(name, minimum)}
+        for name, minimum in release_readiness._REQUIRED_SCORECARD_MINIMUMS.items()
+    )
     return {"repo": {"commit": sha}, "score": score, "checks": checks}
 
 
@@ -378,6 +382,16 @@ def test_scorecard_api_fails_on_regressed_code_owned_check() -> None:
 
     assert problem is not None
     assert "Pinned-Dependencies=9" in problem
+
+
+def test_scorecard_api_fails_when_sast_drops_below_documented_floor() -> None:
+    sha = "a" * 40
+
+    problem = release_readiness._scorecard_problem(_scorecard_payload(sha, SAST=6), sha)
+
+    assert problem is not None
+    assert "SAST=6" in problem
+    assert "below expected floor" in problem
 
 
 def test_pypi_release_passes_when_latest_has_wheel_and_sdist(tmp_path: Path) -> None:
