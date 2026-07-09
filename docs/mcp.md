@@ -141,6 +141,12 @@ inference tools (`get_fingerprints`, `get_signals`, `explain_signal`,
 `cluster_verification_tokens`, `get_infrastructure_clusters`, `export_graph`,
 `get_posteriors`, and the ephemeral-fingerprint tools).
 
+Forward compatibility with the MCP 2026-07-28 release candidate is tracked in
+[mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md). recon remains a
+local stdio FastMCP server today; the plan is to update discovery, doctor,
+schema, and compact-output behavior when the Python MCP SDK exposes the final
+2026-07-28 protocol.
+
 The no-network catalog list tools started the precise-schema Phase 2:
 `get_fingerprints` advertises a `FingerprintSummary` item schema and
 `get_signals` advertises `SignalSummary` plus nested `SignalMetadataSummary`.
@@ -386,7 +392,7 @@ The shorter `python -m recon_tool.server` form is acceptable only from a trusted
 Three complementary checks. The first two validate the server; the third validates that the client was told about it.
 
 - **`recon doctor --mcp`**: *static* diagnostic. Confirms the MCP dependencies are installed, the server module loads, FastMCP introspection finds all tools, and `recon` is on your PATH. Also prints a copy-pasteable JSON snippet for every supported client.
-- **`recon mcp doctor`**: *live* end-to-end check. Spawns the recon MCP server through the running interpreter, opens a real `stdio_client` + `ClientSession`, runs an `initialize` + `tools/list` handshake the way a client would, and asserts the anchor tools (`lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `chain_lookup`) are registered. If the spawned server crashes during `initialize`, the trailing twelve lines of its stderr are spliced into the failure detail so you see the actual ImportError / traceback instead of an opaque `BrokenPipeError`. 30-second handshake timeout.
+- **`recon mcp doctor`**: *live* end-to-end check. Spawns the recon MCP server through the running interpreter, opens a real `stdio_client` + `ClientSession`, runs the discovery flow supported by the installed Python MCP SDK, and asserts the anchor tools (`lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `chain_lookup`) are registered. With the current SDK this is an `initialize` + `tools/list` handshake; the MCP 2026-07-28 readiness plan tracks the move to `server/discover` when the SDK exposes it. If the spawned server crashes during discovery, the trailing twelve lines of its stderr are spliced into the failure detail so you see the actual ImportError / traceback instead of an opaque `BrokenPipeError`. 30-second handshake timeout.
 - **`recon doctor --client=<name>`**: reads the config file the named client actually loads (`claude-code`, `claude-desktop`, `cursor`, `vscode`, `windsurf`, `kiro`) and reports whether an `mcpServers.recon` stanza is present and well-formed. This is the config-side complement to the two server checks: they confirm the server is healthy, this confirms the client was told where to find it. For Claude Code it also looks under the project-nested `projects[...].mcpServers.recon` shape that `claude mcp add` writes, and notes that a plugin install keeps its config inside the plugin rather than in `~/.claude.json`. Exits non-zero when no stanza is found, so it is usable in a setup script.
 
 The static check (`recon doctor --mcp`) is the right starting point. If it passes but a client still can't talk to the server, run `recon mcp doctor` to confirm the JSON-RPC loop itself is healthy, and `recon doctor --client=<name>` to confirm the client config carries the stanza.
