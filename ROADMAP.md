@@ -9,6 +9,12 @@ validation evidence, interface-layer debt reduction, and external write-up
 readiness. The detailed interface-locality and lookup-options record is in
 [docs/roadmap.md](docs/roadmap.md), with the architecture decision in
 [docs/adr/0008-interface-package-locality.md](docs/adr/0008-interface-package-locality.md).
+The current engineering refinement plan is
+[docs/engineering-refinement-plan.md](docs/engineering-refinement-plan.md).
+The MCP 2026-07-28 readiness plan is
+[docs/mcp-2026-07-28-readiness.md](docs/mcp-2026-07-28-readiness.md), with
+the architecture decision in
+[docs/adr/0009-mcp-2026-readiness.md](docs/adr/0009-mcp-2026-readiness.md).
 The current strategic gap audit is
 [docs/strategic-gap-audit.md](docs/strategic-gap-audit.md).
 The final submission gate is
