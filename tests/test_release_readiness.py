@@ -46,7 +46,6 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
             ]
         ),
     )
-    _write_file(root, "packaging/homebrew/recon.rb", f'url "https://example.test/recon_tool-{version}.tar.gz"\n')
     _write_file(root, "CHANGELOG.md", f"# Changelog\n\n## [{version}] - 2026-06-26\n")
     _write_file(root, "CITATION.cff", f'version: {version}\ndate-released: "2026-06-26"\n')
     _write_file(
@@ -96,6 +95,7 @@ def test_collect_checks_passes_local_happy_path(tmp_path: Path) -> None:
     assert statuses["Scorecard API"] == "skip"
     assert statuses["coverage gates"] == "pass"
     assert statuses["commit hygiene"] == "pass"
+    assert "Homebrew formula" not in statuses
 
 
 def test_version_consistency_fails_on_mismatch(tmp_path: Path) -> None:

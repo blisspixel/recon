@@ -31,8 +31,8 @@ It does not call the network by default and it is not part of the user-facing
 
 1. Branch, worktree, and upstream tracking state.
 2. Version consistency across `pyproject.toml`, `src/recon_tool/__init__.py`,
-   `docs/roadmap.md`, `CITATION.cff`, the supply-chain consumer verification
-   recipe, and the Homebrew formula.
+   `docs/roadmap.md`, `CITATION.cff`, and the supply-chain consumer
+   verification recipe.
 3. `uv.lock` freshness with `uv lock --check`.
 4. Coverage target parity across `scripts/check.py`, `scripts/release.py`,
    `.github/workflows/ci.yml`, and `.github/workflows/release.yml`.
@@ -172,20 +172,14 @@ Before running `scripts/release.py`:
 - [ ] `docs/supply-chain.md` keeps the consumer verification quick path on the
       current version and release asset names.
 
-After the tag is published and the PyPI release exists, refresh the Homebrew
-formula so `brew install` tracks the new version, then copy it to the tap repo:
+After the tag is published and the PyPI release exists:
 
-- [ ] `python scripts/update_homebrew_formula.py` (rewrites the sdist `url` +
-      `sha256` in `packaging/homebrew/recon.rb` from PyPI), commit the change.
-- [ ] Copy `packaging/homebrew/recon.rb` to `blisspixel/homebrew-tap`'s
-      `Formula/recon.rb` (see `packaging/homebrew/README.md`). Verify with
-      `python scripts/update_homebrew_formula.py --check`.
 - [ ] Confirm the GitHub Release assets include wheel, sdist, SBOM, and
       `recon-tool-<version>.intoto.jsonl`.
 - [ ] Run `uv run python scripts/release_readiness.py --remote` after the
-      formula refresh so CI, public Scorecard API freshness, PyPI files, PyPI
+      release so CI, public Scorecard API freshness, PyPI files, PyPI
       provenance, GitHub Release assets, GitHub provenance attestations,
-      citation metadata, and formula metadata are checked together.
+      and citation metadata are checked together.
 
 The `pipx` / `uv` / `pip` install paths need no per-release action. They
 resolve the latest from PyPI automatically.

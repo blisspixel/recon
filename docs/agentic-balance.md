@@ -117,7 +117,7 @@ maintainers and operators who want them, not part of recon's runtime contract.
 
 | Loop | Good use | Stop condition | Human gate |
 |---|---|---|---|
-| Release readiness | Check version references, README examples, schema copies, supply-chain recipe freshness, Homebrew formula freshness, no-real-data examples, `scripts/check.py`, and CI status | All gates pass, or the loop opens a reviewed issue/PR with failures grouped by source | Required before tagging, publishing, or changing release artifacts |
+| Release readiness | Check version references, README examples, schema copies, supply-chain recipe freshness, no-real-data examples, `scripts/check.py`, and CI status | All gates pass, or the loop opens a reviewed issue/PR with failures grouped by source | Required before tagging, publishing, or changing release artifacts |
 | CI failure repair | Read failing checks, inspect logs, patch code/tests/docs, rerun the narrow failing gate and then the broad check | Failing check passes, or a reproducible blocker is documented | Required before merge |
 | Calibration orchestration | Run existing validation harnesses over the private corpus and produce aggregate-only memos | Aggregate metrics are produced and checked for policy compliance, or the run fails with logs | Required before committing any memo or CPT change |
 | Fingerprint triage | Read local gap output, propose YAML, references, sparse-result wording, and regression tests | Proposed diff includes evidence and tests, or candidate is rejected | Required before catalog or motif changes |

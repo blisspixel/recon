@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.4] - 2026-07-09
+
+### Tool Surface Changes
+
+No CLI command or flag changes.
+
+### Changed
+
+- **Homebrew release surface retired.** The project no longer ships or checks a
+  Homebrew formula or maintainer tap workflow; supported package-manager paths
+  remain `uv tool`, `pipx`, and `pip`.
+
 ## [2.3.3] - 2026-07-08
 
 ### Tool Surface Changes

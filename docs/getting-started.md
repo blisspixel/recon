@@ -49,7 +49,7 @@ recon update --check
 ```
 
 `recon update` detects whether the package was installed with `uv`, `pipx`,
-`pip`, or Homebrew and runs the matching upgrade command.
+`pip`, or an editable checkout and runs the matching upgrade command when it can.
 
 Direct package-manager commands also work:
 

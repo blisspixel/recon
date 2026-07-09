@@ -1,10 +1,10 @@
 """Self-update support for the `recon update` command.
 
-recon can be installed several ways (pipx, uv tool, plain pip, Homebrew, an
-editable source checkout), and each upgrades differently. These pure helpers
-detect how the running copy was installed and produce the right upgrade command,
-plus a PyPI latest-version lookup so `recon update` can say whether an upgrade is
-even needed. The CLI command in cli.py wires them together and runs the upgrade.
+recon can be installed several ways (pipx, uv tool, plain pip, or an editable
+source checkout), and each upgrades differently. These pure helpers detect how
+the running copy was installed and produce the right upgrade command, plus a
+PyPI latest-version lookup so `recon update` can say whether an upgrade is even
+needed. The CLI command in cli.py wires them together and runs the upgrade.
 
 Network touches only pypi.org (the version check); the upgrade itself shells out
 to the detected tool. Everything here is defensive — a failed lookup or unknown
@@ -52,8 +52,8 @@ def _is_editable() -> bool:
 def detect_install_method() -> str:
     """Best-effort guess of how the running recon was installed.
 
-    Reads the interpreter prefix (pipx / uv / Homebrew live in distinctive
-    paths) and the package's direct_url.json (editable installs). Falls back to
+    Reads the interpreter prefix (pipx / uv live in distinctive paths) and the
+    package's direct_url.json (editable installs). Falls back to
     ``pip`` — the safe default, since ``pip install -U`` works for a plain venv
     or user install.
     """
@@ -85,7 +85,10 @@ def upgrade_command(method: str) -> list[str] | None:
 def manual_hint(method: str) -> str:
     """The command to tell the user to run when we won't self-upgrade."""
     if method == HOMEBREW:
-        return "brew upgrade recon"
+        return (
+            "Homebrew install is retired; reinstall with "
+            "`uv tool install recon-tool` or `pipx install recon-tool`"
+        )
     if method == EDITABLE:
         return "git pull  (editable install from a source checkout)"
     return "pip install -U recon-tool"
