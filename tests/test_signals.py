@@ -6,9 +6,19 @@ from recon_tool.models import SignalContext
 from recon_tool.signals import evaluate_signals, load_signals
 
 
-def _ctx(slugs: set[str], dmarc_policy: str | None = None) -> SignalContext:
+def _ctx(
+    slugs: set[str],
+    dmarc_policy: str | None = None,
+    dmarc_effective_policy: str | None = None,
+) -> SignalContext:
     """Helper to build a SignalContext from a slug set."""
-    return SignalContext(detected_slugs=frozenset(slugs), dmarc_policy=dmarc_policy)
+    if dmarc_effective_policy is None:
+        dmarc_effective_policy = dmarc_policy
+    return SignalContext(
+        detected_slugs=frozenset(slugs),
+        dmarc_policy=dmarc_policy,
+        dmarc_effective_policy=dmarc_effective_policy,
+    )
 
 
 class TestLoadSignals:
@@ -139,6 +149,12 @@ class TestEvaluateSignals:
         results = evaluate_signals(_ctx({"trendmicro"}, dmarc_policy="quarantine"))
         names = {r.name for r in results}
         assert "Security Gap — Gateway Without DMARC Enforcement" not in names
+
+    def test_gateway_with_effective_none_dmarc_fires(self):
+        """Gateway present + DMARC testing mode effective none = inconsistency."""
+        results = evaluate_signals(_ctx({"proofpoint"}, dmarc_policy="quarantine", dmarc_effective_policy="none"))
+        names = {r.name for r in results}
+        assert any("Gateway Without DMARC Enforcement" in name for name in names)
 
 
 class TestReloadFingerprints:

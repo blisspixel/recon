@@ -66,6 +66,26 @@ class TestEmailSecurityInsights:
         insights = _email_security_insights(ctx)
         assert any("not enforced" in i for i in insights)
 
+    def test_dmarc_effective_none_suppresses_gateway_dkim_inference(self):
+        ctx = _ctx(
+            slugs={"microsoft365"},
+            dmarc_policy="quarantine",
+            dmarc_effective_policy="none",
+            email_gateway="Proofpoint",
+        )
+        insights = _email_security_insights(ctx)
+        score_line = next(i for i in insights if i.startswith("Email security:"))
+        assert "DMARC quarantine" not in score_line
+        assert "DKIM (inferred" not in score_line
+        assert any("effective none" in i for i in insights)
+
+    def test_dmarc_effective_policy_used_in_score_line(self):
+        ctx = _ctx(dmarc_policy="reject", dmarc_effective_policy="quarantine")
+        insights = _email_security_insights(ctx)
+        score_line = next(i for i in insights if i.startswith("Email security:"))
+        assert "DMARC quarantine" in score_line
+        assert "DMARC reject" not in score_line
+
 
 class TestOrgSizeInsights:
     def test_large(self):

@@ -146,8 +146,10 @@ class DetectionCtx:
         "ct_provider_used",
         "ct_subdomain_count",
         "degraded_sources",
+        "dmarc_np",
         "dmarc_pct",
         "dmarc_policy",
+        "dmarc_testing",
         "evidence",
         "infrastructure_clusters",
         "m365",
@@ -171,6 +173,8 @@ class DetectionCtx:
         # from the active_probes kwarg.
         self.active_probes: bool = False
         self.dmarc_policy: str | None = None
+        self.dmarc_testing: bool = False
+        self.dmarc_np: str | None = None
         self.spf_include_count: int = 0
         self._m365_slugs: frozenset[str] = _get_m365_slugs()
         self.related_domains: set[str] = set()

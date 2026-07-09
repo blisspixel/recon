@@ -517,7 +517,13 @@ async def explain_signal(
         detected_slugs=frozenset(info.slugs),
         dmarc_policy=info.dmarc_policy,
         auth_type=info.auth_type,
-        email_security_score=email_security_score(info.services, info.dmarc_policy),
+        email_security_score=email_security_score(
+            info.services,
+            info.dmarc_policy,
+            info.dmarc_pct,
+            info.dmarc_testing,
+        ),
+        dmarc_pct=info.dmarc_pct,
     )
     signal_matches = evaluate_signals(context)
     fired = any(m.name == signal_name for m in signal_matches)
@@ -727,9 +733,7 @@ async def discover_fingerprint_candidates(
                     domain,
                     request_id,
                 )
-                raise ToolError(
-                    server_app.internal_lookup_error(domain, request_id, exc, action="mining")
-                ) from exc
+                raise ToolError(server_app.internal_lookup_error(domain, request_id, exc, action="mining")) from exc
 
             # Only populate the shared cache with a full (skip_ct=False)
             # resolution. A skip_ct result is CT-degraded (no cert_summary,

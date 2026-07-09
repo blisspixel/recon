@@ -16,6 +16,7 @@ from recon_tool.constants import (
     SVC_MTA_STS,
     SVC_OFFICE_PROPLUS,
     SVC_SPF_STRICT,
+    effective_dmarc_policy,
 )
 from recon_tool.validator import host_has_suffix
 
@@ -33,6 +34,7 @@ class InsightContext:
     slugs: frozenset[str]
     auth_type: str | None
     dmarc_policy: str | None
+    dmarc_effective_policy: str | None
     domain_count: int
     google_auth_type: str | None = None
     google_idp_name: str | None = None
@@ -66,6 +68,7 @@ class InsightContext:
         auth_type: str | None,
         dmarc_policy: str | None,
         domain_count: int,
+        dmarc_effective_policy: str | None = None,
         google_auth_type: str | None = None,
         google_idp_name: str | None = None,
         cloud_instance: str | None = None,
@@ -82,6 +85,9 @@ class InsightContext:
             slugs=frozenset(slugs),
             auth_type=auth_type,
             dmarc_policy=dmarc_policy,
+            dmarc_effective_policy=(
+                dmarc_effective_policy if dmarc_effective_policy is not None else effective_dmarc_policy(dmarc_policy)
+            ),
             domain_count=domain_count,
             google_auth_type=google_auth_type,
             google_idp_name=google_idp_name,
@@ -265,13 +271,20 @@ def _email_score_parts(ctx: InsightContext) -> tuple[list[str], bool, bool]:
     has_bimi = SVC_BIMI in ctx.services
     has_mta_sts = SVC_MTA_STS in ctx.services
     has_spf_strict = SVC_SPF_STRICT in ctx.services
+    enforcing_policy = ctx.dmarc_effective_policy
     dkim_inferred_via_gateway = (
-        not has_dkim and ctx.email_gateway is not None and ctx.dmarc_policy in ("quarantine", "reject")
+        not has_dkim
+        and ctx.email_gateway is not None
+        and enforcing_policy
+        in (
+            "quarantine",
+            "reject",
+        )
     )
 
     score_parts: list[str] = []
-    if ctx.dmarc_policy in ("reject", "quarantine"):
-        score_parts.append(f"DMARC {ctx.dmarc_policy}")
+    if enforcing_policy in ("reject", "quarantine"):
+        score_parts.append(f"DMARC {enforcing_policy}")
     if has_dkim:
         score_parts.append("DKIM")
     elif dkim_inferred_via_gateway:
@@ -290,18 +303,20 @@ def _non_scoring_email_summary(ctx: InsightContext) -> str:
     (DMARC monitoring, soft/neutral SPF) rather than implying absence, which
     would misread a monitoring-mode deployment as nothing at all."""
     observed_non_scoring: list[str] = []
-    if ctx.dmarc_policy == "none":
+    if ctx.dmarc_policy is not None and ctx.dmarc_effective_policy == "none":
         observed_non_scoring.append("DMARC monitoring only")
     if any(s.startswith("SPF:") for s in ctx.services) and SVC_SPF_STRICT not in ctx.services:
         observed_non_scoring.append("SPF soft/neutral")
     if observed_non_scoring:
-        return ", ".join(observed_non_scoring) + " — no strict controls"
+        return ", ".join(observed_non_scoring) + " - no strict controls"
     return "no strict controls observed"
 
 
 def _email_security_insights(ctx: InsightContext) -> list[str]:
     if not _has_scoreable_email(ctx):
         if ctx.dmarc_policy:
+            if ctx.dmarc_effective_policy and ctx.dmarc_effective_policy != ctx.dmarc_policy:
+                return [f"DMARC: {ctx.dmarc_policy} (effective {ctx.dmarc_effective_policy})"]
             return [f"DMARC: {ctx.dmarc_policy}"]
         return []
 
@@ -316,8 +331,11 @@ def _email_security_insights(ctx: InsightContext) -> list[str]:
     insights: list[str] = [f"Email security: {parts_str}"]
 
     # Auxiliary notes name the consequence the score line only implies.
-    if ctx.dmarc_policy == "none":
-        insights.append("DMARC: none — monitoring mode, not enforced")
+    if ctx.dmarc_policy is not None and ctx.dmarc_effective_policy == "none":
+        if ctx.dmarc_policy == "none":
+            insights.append("DMARC: none - monitoring mode, not enforced")
+        else:
+            insights.append("DMARC: effective none after rollout or testing tags")
     elif ctx.dmarc_policy is None:
         insights.append("No DMARC record at apex")
     if not has_dkim and not dkim_inferred_via_gateway:
@@ -713,6 +731,7 @@ def generate_insights(
     likely_primary_email_provider: str | None = None,
     email_gateway: str | None = None,
     has_mx_records: bool = False,
+    dmarc_effective_policy: str | None = None,
 ) -> list[str]:
     """Derive intelligence signals from collected data.
 
@@ -725,6 +744,7 @@ def generate_insights(
         auth_type,
         dmarc_policy,
         domain_count,
+        dmarc_effective_policy=dmarc_effective_policy,
         google_auth_type=google_auth_type,
         google_idp_name=google_idp_name,
         cloud_instance=cloud_instance,
