@@ -499,22 +499,10 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
 
     info, _results = resolved
 
-    from recon_tool.constants import email_security_score
-    from recon_tool.models import SignalContext
+    from recon_tool.email_security import signal_context_from_tenant_info
     from recon_tool.signals import evaluate_signals, load_signals
 
-    context = SignalContext(
-        detected_slugs=frozenset(info.slugs),
-        dmarc_policy=info.dmarc_policy,
-        auth_type=info.auth_type,
-        email_security_score=email_security_score(
-            info.services,
-            info.dmarc_policy,
-            info.dmarc_pct,
-            info.dmarc_testing,
-        ),
-        dmarc_pct=info.dmarc_pct,
-    )
+    context = signal_context_from_tenant_info(info)
     signal_matches = evaluate_signals(context)
     all_signals = load_signals()
     fired_names = {m.name for m in signal_matches}
