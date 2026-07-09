@@ -104,6 +104,8 @@ class TestGetInfrastructureClusters:
         assert first["size"] == 2
         assert first["dominant_issuer"] == "LE"
         assert first["members"] == ["a.example.com", "b.example.com"]
+        assert first["members_omitted"] == 0
+        assert payload["member_limit_per_cluster"] == 0
 
     def test_skipped_envelope_when_no_report(self, stub_resolve):
         stub_resolve(_info_without_clusters())
@@ -111,6 +113,20 @@ class TestGetInfrastructureClusters:
         assert payload["algorithm"] == "skipped"
         assert payload["modularity"] == 0.0
         assert payload["clusters"] == []
+        assert payload["member_limit_per_cluster"] == 0
+
+    def test_member_limit_returns_omitted_counts(self, stub_resolve):
+        stub_resolve(_info_with_clusters())
+        payload = asyncio.run(server.get_infrastructure_clusters("example.com", member_limit_per_cluster=1))
+        assert payload["member_limit_per_cluster"] == 1
+        assert payload["clusters"][0]["members"] == ["a.example.com"]
+        assert payload["clusters"][0]["members_omitted"] == 1
+        assert "sorted cluster members" in payload["selection_rule"]
+
+    def test_negative_member_limit_rejected(self, stub_resolve):
+        stub_resolve(_info_with_clusters())
+        with pytest.raises(ToolError, match="member_limit_per_cluster"):
+            asyncio.run(server.get_infrastructure_clusters("example.com", member_limit_per_cluster=-1))
 
     def test_resolver_error_raises_tool_error(self, stub_resolve):
         stub_resolve("Domain validation failed")
@@ -133,6 +149,10 @@ class TestExportGraph:
             "y.example.com",
         ]
         assert payload["edges"][0]["shared_cert_count"] == 4
+        assert payload["node_limit"] == 0
+        assert payload["edge_limit"] == 0
+        assert payload["nodes_omitted"] == 0
+        assert payload["edges_omitted"] == 0
 
     def test_cluster_assignment_maps_members(self, stub_resolve):
         stub_resolve(_info_with_clusters())
@@ -156,7 +176,27 @@ class TestExportGraph:
         assert payload["nodes"] == []
         assert payload["edges"] == []
         assert payload["cluster_assignment"] == {}
+        assert payload["nodes_omitted"] == 0
+        assert payload["edges_omitted"] == 0
         assert "ownership" in payload["disclaimer"].lower()
+
+    def test_compact_limits_return_omitted_counts(self, stub_resolve):
+        stub_resolve(_info_with_clusters())
+        payload = asyncio.run(server.export_graph("example.com", node_limit=2, edge_limit=1))
+        assert payload["node_limit"] == 2
+        assert payload["edge_limit"] == 1
+        assert payload["nodes"] == ["a.example.com", "b.example.com"]
+        assert payload["edges"] == [{"source": "a.example.com", "target": "b.example.com", "shared_cert_count": 4}]
+        assert payload["cluster_assignment"] == {"a.example.com": 0, "b.example.com": 0}
+        assert payload["nodes_omitted"] == 2
+        assert payload["edges_omitted"] == 1
+        assert payload["cluster_assignment_omitted"] == 2
+        assert "weighted degree" in payload["selection_rule"]
+
+    def test_negative_graph_limit_rejected(self, stub_resolve):
+        stub_resolve(_info_with_clusters())
+        with pytest.raises(ToolError, match="node_limit"):
+            asyncio.run(server.export_graph("example.com", node_limit=-1))
 
     def test_resolver_error_raises_tool_error(self, stub_resolve):
         stub_resolve("Domain validation failed")
