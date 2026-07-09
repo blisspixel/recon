@@ -1919,6 +1919,14 @@
             "types": [
               "string"
             ]
+          },
+          {
+            "default": 0,
+            "name": "result_limit",
+            "required": false,
+            "types": [
+              "integer"
+            ]
           }
         ],
         "name": "chain_lookup",

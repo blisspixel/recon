@@ -10,15 +10,17 @@ registration and re-exports the tool functions for the test surface. Imports
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 import uuid
+from typing import Any, cast
 
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from typing_extensions import TypedDict
 
-from recon_tool.models import InfrastructureEdge
+from recon_tool.models import ChainReport, InfrastructureEdge
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
 from recon_tool.server.runtime import (
@@ -148,6 +150,23 @@ def _top_graph_nodes(
     return set(ranked[:limit])
 
 
+def _format_compact_chain_json(report: ChainReport, result_limit: int) -> str:
+    from recon_tool.formatter import format_chain_dict
+
+    payload = format_chain_dict(report)
+    domains = cast(list[dict[str, Any]], payload["domains"])
+    surfaced = domains[:result_limit]
+    payload["domains"] = surfaced
+    payload["result_limit"] = result_limit
+    payload["domains_omitted"] = len(domains) - len(surfaced)
+    payload["selection_rule"] = (
+        "raw BFS chain order when result_limit is zero; otherwise domains are truncated by chain depth "
+        "then discovery order"
+    )
+    payload["raw_request"] = "Call chain_lookup with result_limit=0 for the raw domain list."
+    return json.dumps(payload, indent=2)
+
+
 @mcp.tool(
     annotations=ToolAnnotations(
         readOnlyHint=True,
@@ -156,7 +175,7 @@ def _top_graph_nodes(
         openWorldHint=True,
     ),
 )
-async def chain_lookup(domain: str, depth: int = 1) -> str:
+async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> str:
     """Recursively resolve a domain and its related domains.
 
     Follows CNAME breadcrumbs and certificate transparency discoveries
@@ -165,6 +184,9 @@ async def chain_lookup(domain: str, depth: int = 1) -> str:
     Args:
         domain: Starting domain (e.g., "northwindtraders.com")
         depth: Maximum recursion depth (1-3, default 1)
+        result_limit: Optional compact-output cap. ``0`` returns the raw chain
+            JSON. A positive value returns the first N domains in BFS chain
+            order plus ``domains_omitted`` metadata.
 
     Returns:
         JSON object with total_domains, max_depth_reached, truncated flag,
@@ -175,6 +197,7 @@ async def chain_lookup(domain: str, depth: int = 1) -> str:
 
     # Clamp depth
     depth = max(1, min(depth, 3))
+    result_limit = _normalize_limit(result_limit, "result_limit")
 
     try:
         validated = validate_domain(domain)
@@ -226,7 +249,9 @@ async def chain_lookup(domain: str, depth: int = 1) -> str:
         elapsed_s=round(elapsed, 2),
     )
 
-    return format_chain_json(report)
+    if result_limit == 0:
+        return format_chain_json(report)
+    return _format_compact_chain_json(report, result_limit)
 
 
 @mcp.tool(
