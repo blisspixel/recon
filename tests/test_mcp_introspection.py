@@ -342,6 +342,24 @@ class TestSimulateHardening:
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_unrelated_fix_preserves_dmarc_testing_mode(self, mock_resolve: AsyncMock) -> None:
+        info = replace(
+            SAMPLE_INFO,
+            services=("DMARC",),
+            slugs=("dmarc",),
+            dmarc_policy="quarantine",
+            dmarc_testing=True,
+        )
+        mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
+
+        data = await simulate_hardening("contoso.com", ["BIMI"])
+
+        assert data["current_score"] == 0
+        assert data["simulated_score"] == 5
+        assert any("not effectively enforcing" in gap["observation"] for gap in data["remaining_gaps"])
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_score_delta_non_negative_for_fixes(self, mock_resolve: AsyncMock) -> None:
         """Applying hardening fixes should not decrease the posture score."""
         info_weak = replace(SAMPLE_INFO, dmarc_policy=None, mta_sts_mode=None)

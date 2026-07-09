@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Expanded the rotating CLI lookup status messages with more varied, still
+  professional wait-screen copy across DNS, certificate, identity, inference,
+  posture, and passive-observation phases.
+
+### Fixed
+
+- **RFC 9989 DMARC testing-mode alignment.** recon now parses DMARC `np=`
+  and `t=` tags internally, and `t=y` lowers the effective DMARC enforcement
+  level used by scoring and Bayesian signals without expanding stable JSON or
+  MCP output fields. The disk cache schema version was bumped so pre-change
+  cached records cannot preserve stale over-enforcing DMARC scores.
+
 ## [2.3.6] - 2026-07-09
 
 ### Tool Surface Changes

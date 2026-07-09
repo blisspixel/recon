@@ -10,6 +10,7 @@ Tests Properties 12-15 from the design document:
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 
+from recon_tool.constants import SVC_DMARC, email_security_score
 from recon_tool.merger import _PLACEHOLDER_DISPLAY_NAMES, compute_confidence, merge_results
 from recon_tool.models import ConfidenceLevel, SourceResult
 
@@ -138,6 +139,32 @@ class TestMergeFillsMissingFields:
         assert merged.tenant_id == uuid1
         assert merged.default_domain == default_dom
         assert merged.region == region
+
+
+class TestMergeKeepsDmarcTagsSourceBound:
+    def test_later_result_rollout_tags_do_not_modify_selected_policy(self):
+        primary = SourceResult(
+            source_name="primary_dns",
+            dmarc_policy="reject",
+            detected_services=(SVC_DMARC,),
+            detected_slugs=("dmarc",),
+            tenant_domains=("contoso.com",),
+        )
+        related = SourceResult(
+            source_name="related_dns",
+            dmarc_policy="quarantine",
+            dmarc_pct=0,
+            dmarc_testing=True,
+            detected_services=(SVC_DMARC,),
+            detected_slugs=("dmarc",),
+        )
+
+        merged = merge_results([primary, related], queried_domain="contoso.com")
+
+        assert merged.dmarc_policy == "reject"
+        assert merged.dmarc_pct is None
+        assert merged.dmarc_testing is False
+        assert email_security_score(merged.services, merged.dmarc_policy, merged.dmarc_pct, merged.dmarc_testing) == 1
 
 
 class TestConfidenceReflectsSourceAgreement:

@@ -16,6 +16,17 @@ import pytest
 from recon_tool.cli_lookup import _STATUS_MESSAGES, _run_with_rotating_status
 
 
+def test_status_messages_have_variety_and_polish() -> None:
+    assert len(_STATUS_MESSAGES) >= 40
+    assert len(set(_STATUS_MESSAGES)) == len(_STATUS_MESSAGES)
+    assert all(message.endswith("...") for message in _STATUS_MESSAGES)
+    assert not any("lol" in message.lower() or "!!!" in message for message in _STATUS_MESSAGES)
+    assert any("DNS" in message for message in _STATUS_MESSAGES)
+    assert any("certificate" in message.lower() for message in _STATUS_MESSAGES)
+    assert any("confidence" in message.lower() for message in _STATUS_MESSAGES)
+    assert any("passive" in message.lower() for message in _STATUS_MESSAGES)
+
+
 class _FakeStatus:
     def __init__(self) -> None:
         self.messages: list[str] = []

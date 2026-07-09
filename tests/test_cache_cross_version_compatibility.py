@@ -152,15 +152,15 @@ class TestCacheVersionConstantPinning:
     commit time. To intentionally bump, update both this constant
     and the synthesized fixtures above."""
 
-    _EXPECTED_CACHE_VERSION_AT_V199 = 1  # tracks the version constant as of v1.9.9 ship
+    _EXPECTED_CACHE_VERSION_AFTER_DMARC_TESTING = 2
 
     def test_cache_version_constant_matches_pinned_value(self):
         # The actual constant in cache.py may evolve. This test
         # exists to prevent silent bumps; if you intentionally
-        # changed _CACHE_VERSION, update _EXPECTED_CACHE_VERSION_AT_V199
+        # changed _CACHE_VERSION, update _EXPECTED_CACHE_VERSION_AFTER_DMARC_TESTING
         # and document the change in the CHANGELOG.
-        assert _CACHE_VERSION == self._EXPECTED_CACHE_VERSION_AT_V199, (
-            f"_CACHE_VERSION changed from {self._EXPECTED_CACHE_VERSION_AT_V199} to {_CACHE_VERSION}. "
-            f"If this was intentional: update _EXPECTED_CACHE_VERSION_AT_V199 above, document the bump "
+        assert _CACHE_VERSION == self._EXPECTED_CACHE_VERSION_AFTER_DMARC_TESTING, (
+            f"_CACHE_VERSION changed from {self._EXPECTED_CACHE_VERSION_AFTER_DMARC_TESTING} to {_CACHE_VERSION}. "
+            f"If this was intentional: update _EXPECTED_CACHE_VERSION_AFTER_DMARC_TESTING above, document the bump "
             f"in CHANGELOG.md, and ensure the v1.9.9 compat fixtures above reflect the new schema."
         )

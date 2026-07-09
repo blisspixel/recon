@@ -22,6 +22,8 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from recon_tool.fingerprints import get_dmarc_rua_patterns, load_fingerprints, reload_fingerprints
+from recon_tool.formatter.serialize import format_tenant_dict
+from recon_tool.merger import merge_results
 from recon_tool.models import ConfidenceLevel, SignalContext, TenantInfo
 from recon_tool.posture import analyze_posture, reload_posture
 from recon_tool.signals import evaluate_signals, load_signals, reload_signals
@@ -135,6 +137,121 @@ class TestDmarcPctParsing:
             result = await DNSSource().lookup("contoso.com")
         assert result.dmarc_pct is None
         assert any("out of range" in r.message for r in caplog.records)
+
+
+# ── RFC 9989: np= and t= parsing ─────────────────────────────────────
+
+
+class TestDmarcRfc9989Tags:
+    """Verify RFC 9989 ``np=`` and ``t=`` tags are parsed internally."""
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_np_and_testing_mode_parsed_from_dns_source(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
+        """``np=`` and ``t=y`` are kept on the internal DNS result."""
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; np=quarantine; t=y"]}
+        )
+        result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy == "reject"
+        assert result.dmarc_np == "quarantine"
+        assert result.dmarc_testing is True
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_invalid_np_and_t_are_ignored(self, mock_resolve, caplog: pytest.LogCaptureFixture) -> None:  # type: ignore[no-untyped-def]
+        """Invalid RFC 9989 tag values are logged and ignored."""
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; np=bogus; t=maybe"]}
+        )
+        with caplog.at_level(logging.WARNING, logger="recon"):
+            result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_np is None
+        assert result.dmarc_testing is False
+        assert any("DMARC np= value" in r.message for r in caplog.records)
+        assert any("DMARC t= value" in r.message for r in caplog.records)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_invalid_policy_discards_dmarc_record(self, mock_resolve, caplog: pytest.LogCaptureFixture) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=bogus; pct=50; np=reject; t=y"]}
+        )
+        with caplog.at_level(logging.WARNING, logger="recon"):
+            result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy is None
+        assert result.dmarc_pct is None
+        assert result.dmarc_np is None
+        assert result.dmarc_testing is False
+        assert any("DMARC p= value" in r.message for r in caplog.records)
+
+    @pytest.mark.parametrize(
+        "record",
+        [
+            "v=DMARC1; p=reject; p=none; pct=100; np=reject; t=y",
+            "v=DMARC1; p=reject; pct=100; pct=0; np=reject; t=y",
+            "v=DMARC1; p=reject; pct=100; np=reject; np=none; t=y",
+            "v=DMARC1; p=reject; pct=100; np=reject; t=n; t=y",
+        ],
+    )
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_duplicate_tags_discard_dmarc_record(
+        self,
+        mock_resolve,
+        caplog: pytest.LogCaptureFixture,
+        record: str,
+    ) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+        with caplog.at_level(logging.WARNING, logger="recon"):
+            result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy is None
+        assert result.dmarc_pct is None
+        assert result.dmarc_np is None
+        assert result.dmarc_testing is False
+        assert any("duplicate" in r.message for r in caplog.records)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_multiple_dmarc_records_discard_policy_metadata(
+        self, mock_resolve, caplog: pytest.LogCaptureFixture
+    ) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "_dmarc.contoso.com/TXT": [
+                    "v=DMARC1; p=reject; pct=100",
+                    "v=DMARC1; p=quarantine; t=y",
+                ]
+            }
+        )
+        with caplog.at_level(logging.WARNING, logger="recon"):
+            result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy is None
+        assert result.dmarc_pct is None
+        assert result.dmarc_testing is False
+        assert any("Multiple DMARC records" in r.message for r in caplog.records)
+
+    def test_internal_tags_do_not_expand_stable_json_output(self) -> None:
+        """The open schema decision keeps RFC 9989 tags out of stable JSON."""
+        info = _make_tenant_info(
+            dmarc_policy="reject",
+            dmarc_testing=True,
+        )
+        payload = format_tenant_dict(info)
+        assert "dmarc_np" not in payload
+        assert "dmarc_testing" not in payload
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_testing_mode_reaches_merged_tenant_info(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
+        """The merge layer preserves internal RFC 9989 tags for signal logic."""
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; np=reject; t=y"]}
+        )
+        result = await DNSSource().lookup("contoso.com")
+        info = merge_results([result], "contoso.com")
+        assert info.dmarc_policy == "reject"
+        assert info.dmarc_testing is True
 
 
 # ── 6.2: rua= extraction ─────────────────────────────────────────────

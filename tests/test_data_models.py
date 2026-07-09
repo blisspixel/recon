@@ -52,12 +52,14 @@ def _ctx(
     slugs: set[str],
     *,
     dmarc_policy: str | None = None,
+    dmarc_effective_policy: str | None = None,
     dmarc_pct: int | None = None,
     primary_email_provider: str | None = None,
 ) -> SignalContext:
     return SignalContext(
         detected_slugs=frozenset(slugs),
         dmarc_policy=dmarc_policy,
+        dmarc_effective_policy=dmarc_effective_policy,
         dmarc_pct=dmarc_pct,
         primary_email_provider=primary_email_provider,
     )
@@ -131,6 +133,10 @@ class TestSignalContextNewFields:
         ctx = SignalContext(detected_slugs=frozenset())
         assert ctx.dmarc_pct is None
 
+    def test_dmarc_effective_policy_defaults_to_none(self) -> None:
+        ctx = SignalContext(detected_slugs=frozenset())
+        assert ctx.dmarc_effective_policy is None
+
     def test_primary_email_provider_defaults_to_none(self) -> None:
         ctx = SignalContext(detected_slugs=frozenset())
         assert ctx.primary_email_provider is None
@@ -138,6 +144,10 @@ class TestSignalContextNewFields:
     def test_dmarc_pct_set_explicitly(self) -> None:
         ctx = SignalContext(detected_slugs=frozenset(), dmarc_pct=50)
         assert ctx.dmarc_pct == 50
+
+    def test_dmarc_effective_policy_set_explicitly(self) -> None:
+        ctx = SignalContext(detected_slugs=frozenset(), dmarc_effective_policy="none")
+        assert ctx.dmarc_effective_policy == "none"
 
     def test_primary_email_provider_set_explicitly(self) -> None:
         ctx = SignalContext(
@@ -152,6 +162,13 @@ class TestSignalContextNewFields:
 
         cond = MetadataCondition(field="dmarc_pct", operator="lte", value=99)
         ctx = _ctx(set(), dmarc_pct=50)
+        assert _evaluate_metadata_condition(cond, ctx) is True
+
+    def test_metadata_evaluator_accepts_dmarc_effective_policy(self) -> None:
+        from recon_tool.models import MetadataCondition
+
+        cond = MetadataCondition(field="dmarc_effective_policy", operator="eq", value="none")
+        ctx = _ctx(set(), dmarc_policy="quarantine", dmarc_effective_policy="none")
         assert _evaluate_metadata_condition(cond, ctx) is True
 
     def test_metadata_evaluator_accepts_primary_email_provider(self) -> None:
@@ -183,6 +200,11 @@ class TestSignalContextNewFields:
         from recon_tool.signals import _VALID_METADATA_FIELDS  # pyright: ignore[reportPrivateUsage]
 
         assert "dmarc_pct" in _VALID_METADATA_FIELDS
+
+    def test_dmarc_effective_policy_in_valid_metadata_fields(self) -> None:
+        from recon_tool.signals import _VALID_METADATA_FIELDS  # pyright: ignore[reportPrivateUsage]
+
+        assert "dmarc_effective_policy" in _VALID_METADATA_FIELDS
 
     def test_primary_email_provider_in_valid_metadata_fields(self) -> None:
         """primary_email_provider should be in _VALID_METADATA_FIELDS in signals.py."""

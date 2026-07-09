@@ -165,10 +165,10 @@ signals:
       any: [proofpoint, mimecast, barracuda, trendmicro, cisco-ironport, cisco-email, symantec, trellix]
     min_matches: 1
     metadata:
-      - field: dmarc_policy
+      - field: dmarc_effective_policy
         operator: neq
         value: reject
-      - field: dmarc_policy
+      - field: dmarc_effective_policy
         operator: neq
         value: quarantine
 

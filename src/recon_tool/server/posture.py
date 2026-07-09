@@ -507,7 +507,13 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
         detected_slugs=frozenset(info.slugs),
         dmarc_policy=info.dmarc_policy,
         auth_type=info.auth_type,
-        email_security_score=email_security_score(info.services, info.dmarc_policy),
+        email_security_score=email_security_score(
+            info.services,
+            info.dmarc_policy,
+            info.dmarc_pct,
+            info.dmarc_testing,
+        ),
+        dmarc_pct=info.dmarc_pct,
     )
     signal_matches = evaluate_signals(context)
     all_signals = load_signals()
@@ -601,6 +607,8 @@ class _SimState:
     services: set[str]
     slugs: set[str]
     dmarc: str | None
+    dmarc_pct: int | None
+    dmarc_testing: bool
     mta_sts: str | None
 
 
@@ -608,14 +616,20 @@ def _apply_dmarc_fix(fix: str, state: _SimState) -> str | None:
     """Apply a DMARC fix; return the applied message, or None when it is a no-op."""
     if "reject" in fix:
         state.dmarc = "reject"
+        state.dmarc_pct = None
+        state.dmarc_testing = False
         return "DMARC policy set to reject"
     if "quarantine" in fix:
         if state.dmarc != "reject":
             state.dmarc = "quarantine"
+            state.dmarc_pct = None
+            state.dmarc_testing = False
             return "DMARC policy set to quarantine"
         return None
     if state.dmarc is None or state.dmarc == "none":
         state.dmarc = "reject"
+        state.dmarc_pct = None
+        state.dmarc_testing = False
         return "DMARC policy set to reject"
     return None
 
@@ -672,6 +686,8 @@ def _simulate_fixes(fixes_lower: list[str], info: TenantInfo) -> tuple[list[str]
         services=set(info.services),
         slugs=set(info.slugs),
         dmarc=info.dmarc_policy,
+        dmarc_pct=info.dmarc_pct,
+        dmarc_testing=info.dmarc_testing,
         mta_sts=info.mta_sts_mode,
     )
     applied: list[str] = []
@@ -737,6 +753,8 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
         slugs=tuple(sorted(state.slugs)),
         auth_type=info.auth_type,
         dmarc_policy=state.dmarc,
+        dmarc_pct=state.dmarc_pct,
+        dmarc_testing=state.dmarc_testing,
         domain_count=info.domain_count,
         tenant_domains=info.tenant_domains,
         related_domains=info.related_domains,

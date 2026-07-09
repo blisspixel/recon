@@ -15,5 +15,9 @@ def compute_email_security_score(info: TenantInfo) -> int:
     """
     from recon_tool.constants import email_security_score
 
-    return email_security_score(info.services, info.dmarc_policy)
-
+    return email_security_score(
+        info.services,
+        info.dmarc_policy,
+        info.dmarc_pct,
+        info.dmarc_testing,
+    )

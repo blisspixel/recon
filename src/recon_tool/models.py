@@ -124,7 +124,7 @@ class CertSummary:
 class MetadataCondition:
     """A single metadata condition for signal evaluation."""
 
-    field: str  # dmarc_policy, auth_type, email_security_score, spf_include_count, issuance_velocity
+    field: str  # dmarc_policy, dmarc_effective_policy, auth_type, email_security_score, spf_include_count
     operator: str  # eq, neq, gte, lte
     value: str | int
 
@@ -135,6 +135,7 @@ class SignalContext:
 
     detected_slugs: frozenset[str]
     dmarc_policy: str | None = None
+    dmarc_effective_policy: str | None = None
     auth_type: str | None = None
     email_security_score: int | None = None
     spf_include_count: int | None = None
@@ -536,6 +537,8 @@ class SourceResult:
 
     # --- Intelligence Amplification ---
     dmarc_pct: int | None = None  # DMARC pct= value (0-100)
+    dmarc_testing: bool = False  # Internal RFC 9989 t=y signal; not stable JSON output.
+    dmarc_np: str | None = None  # Internal RFC 9989 np= policy; not stable JSON output.
     raw_dns_records: tuple[tuple[str, str], ...] = ()  # (record_type, value) pairs for reevaluation cache
 
     # --- CT provider attribution ---
@@ -651,6 +654,7 @@ class TenantInfo:
     primary_email_provider: str | None = None  # MX-detected provider name(s)
     email_gateway: str | None = None  # MX-detected gateway name
     dmarc_pct: int | None = None  # DMARC pct= value (0-100)
+    dmarc_testing: bool = False  # Internal RFC 9989 t=y signal; not stable JSON output.
     # Downstream provider inferred from non-MX evidence (DKIM, identity
     # endpoints, TXT tokens) when a gateway is present in MX but no
     # direct provider appears there. Hedged: "likely" in the name is

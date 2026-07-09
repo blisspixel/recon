@@ -286,10 +286,10 @@ async def _enrich_from_related(
     extra_services = {strip_control_chars(s) for s in extra_services}
 
     # Re-run insight generation with the enriched data to get updated signals
+    from recon_tool.constants import effective_dmarc_policy, email_security_score
     from recon_tool.merger import (
         build_insights_with_signals,
         compute_detection_scores,
-        compute_email_security_score,
         extract_spf_include_count,
     )
 
@@ -303,7 +303,12 @@ async def _enrich_from_related(
         # has_mx_records to False (spurious "no email infrastructure") and
         # silenced the score / SPF / issuance signals on enriched-then-cached
         # results.
-        email_security_score=compute_email_security_score(extra_services, info.dmarc_policy),
+        email_security_score=email_security_score(
+            extra_services,
+            info.dmarc_policy,
+            info.dmarc_pct,
+            info.dmarc_testing,
+        ),
         spf_include_count=extract_spf_include_count(extra_services),
         issuance_velocity=(info.cert_summary.issuance_velocity if info.cert_summary else None),
         dmarc_pct=info.dmarc_pct,
@@ -316,6 +321,7 @@ async def _enrich_from_related(
         cloud_instance=info.cloud_instance,
         tenant_region_sub_scope=info.tenant_region_sub_scope,
         msgraph_host=info.msgraph_host,
+        dmarc_effective_policy=effective_dmarc_policy(info.dmarc_policy, info.dmarc_pct, info.dmarc_testing),
     )
 
     # Build enriched TenantInfo — keep identity fields, update services/slugs/insights
