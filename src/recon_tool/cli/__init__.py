@@ -551,7 +551,7 @@ def update(
 ) -> None:
     """Check for and install the latest recon release.
 
-    Detects how recon was installed (pipx / uv / pip / Homebrew / editable) and
+    Detects how recon was installed (pipx / uv / pip / editable) and
     runs the matching upgrade, or prints the exact command when it can't safely
     self-upgrade. ``--check`` only reports. Status goes to stderr; the result
     line to stdout, so `recon update --check` is scriptable.

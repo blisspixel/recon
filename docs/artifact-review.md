@@ -40,7 +40,7 @@ Run from the repository root after installing the development environment:
 | Full public proof bundle | `uv run python -m validation.reproduce_paper_numbers --profile paper --stamp artifact-review-paper` | Runs suppression monotonicity, differential verification, interval coverage, likelihood sensitivity, and layer ablation. |
 | Paper figure drift check | `uv run python scripts/generate_paper_figures.py --check` | Verifies the committed SVG figures match the deterministic aggregate-safe generator. |
 | Local CI mirror | `uv run python scripts/check.py` | Ruff, pyright, coverage-gated tests, generated-artifact checks, hygiene checks, and ratchets pass. |
-| Release readiness | `uv run python scripts/release_readiness.py` | Version, citation metadata, lockfile, roadmap, supply-chain recipe freshness, Homebrew formula, private-data hygiene, and commit hygiene pass for the local checkout. |
+| Release readiness | `uv run python scripts/release_readiness.py` | Version, citation metadata, lockfile, roadmap, supply-chain recipe freshness, private-data hygiene, and commit hygiene pass for the local checkout. |
 | Published release verification | `uv run python scripts/release_readiness.py --remote` | After `main` and the current version are published, required GitHub Actions checks pass, public Scorecard API state matches `HEAD`, PyPI wheel and sdist, GitHub Release wheel, sdist, SBOM, and attestation export match the current version, and PyPI plus GitHub provenance verify for the release wheel and sdist. |
 
 If a Windows terminal closes stdout during the long coverage run, redirect the

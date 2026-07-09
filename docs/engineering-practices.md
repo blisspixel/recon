@@ -155,9 +155,8 @@ stripped at every source-derived sink.
 ## 7. Releases
 
 `scripts/release.py` enforces the pre-release checklist; the tagged build
-publishes via Trusted Publishing. Per-release, refresh the Homebrew formula
-(`scripts/update_homebrew_formula.py`); the `pipx`/`uv`/`pip` paths and
-`recon update` need no per-release action (they resolve PyPI's latest).
+publishes via Trusted Publishing. The `pipx`/`uv`/`pip` paths and
+`recon update` need no per-release action because they resolve PyPI's latest.
 
 ## 8. Keeping deps and standards current
 
