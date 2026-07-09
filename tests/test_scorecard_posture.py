@@ -175,6 +175,24 @@ def test_codeql_workflow_is_scheduled_and_least_privilege() -> None:
     assert "github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e" in step_text
 
 
+def test_provider_drift_workflow_runs_scheduled_live_integration_smoke() -> None:
+    workflow = _load_yaml(".github/workflows/provider-drift.yml")
+    triggers = _workflow_on(workflow)
+    job = workflow["jobs"]["live-integration"]
+    commands = "\n".join(str(step.get("run", "")) for step in job["steps"])
+
+    assert set(triggers) == {"schedule", "workflow_dispatch"}
+    assert workflow["permissions"] == _READ_ONLY_PERMISSIONS
+    assert job["timeout-minutes"] == 20
+    assert job["env"] == {"UV_PYTHON": "3.11"}
+    assert commands.count("uv run pytest") == 1
+    assert "uv run pytest tests/test_integration.py -m integration -q" in commands
+
+    cron = triggers["schedule"][0]["cron"]
+    minute = int(cron.split()[0])
+    assert minute not in {0, 30}
+
+
 def test_secrets_scan_workflow_is_full_history_and_read_only() -> None:
     workflow = _load_yaml(".github/workflows/secrets-scan.yml")
     triggers = _workflow_on(workflow)

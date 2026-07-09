@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Expanded the rotating CLI lookup status messages with more varied, still
   professional wait-screen copy across DNS, certificate, identity, inference,
   posture, and passive-observation phases.
+- Added a scheduled and manually runnable provider-drift workflow that runs the
+  passive live integration smoke suite against public reserved-domain fixtures,
+  giving upstream DNS, certificate transparency, and identity-endpoint changes a
+  visible non-default gate.
 
 ### Fixed
 
