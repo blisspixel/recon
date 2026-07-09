@@ -3,8 +3,8 @@
 
 Default mode is local only. It checks the repository state, version references,
 coverage gate wiring, lockfile freshness, docs anchors, citation metadata,
-private-corpus hygiene, supply-chain verification recipe freshness, Homebrew
-formula freshness, and local commit-message hygiene.
+private-corpus hygiene, supply-chain verification recipe freshness, and local
+commit-message hygiene.
 
 Use ``--remote`` after pushing when you want the same report to include GitHub
 Actions status for the current commit, PyPI publication state, PyPI provenance
@@ -37,7 +37,6 @@ Status = Literal["pass", "fail", "warn", "skip"]
 Runner = Callable[[list[str]], subprocess.CompletedProcess[str]]
 
 _INIT_VERSION_RE = re.compile(r'_FALLBACK_VERSION\s*=\s*"([^"]+)"')
-_FORMULA_VERSION_RE = re.compile(r"recon_tool-([0-9A-Za-z.-]+)\.tar\.gz")
 _CITATION_VERSION_RE = re.compile(r"^version:\s*\"?([^\"\s]+)\"?\s*$", re.MULTILINE)
 _CITATION_RELEASE_DATE_RE = re.compile(
     r"^date-released:\s*\"?([0-9]{4}-[0-9]{2}-[0-9]{2})\"?\s*$",
@@ -343,26 +342,6 @@ def _check_supply_chain_recipe_version(root: Path) -> CheckResult:
             "refresh docs/supply-chain.md consumer verification recipe",
         )
     return _result("supply-chain recipe", "pass", f"consumer verification recipe pins {version}")
-
-
-def _check_homebrew_formula(root: Path) -> CheckResult:
-    try:
-        version = _read_project_version(root)
-        formula = _read_text(root, "packaging/homebrew/recon.rb")
-    except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
-        return _result("Homebrew formula", "fail", str(exc))
-    match = _FORMULA_VERSION_RE.search(formula)
-    if match is None:
-        return _result("Homebrew formula", "fail", "formula does not pin a recon_tool sdist URL")
-    formula_version = match.group(1)
-    if formula_version != version:
-        return _result(
-            "Homebrew formula",
-            "warn",
-            f"formula pins {formula_version}, project is {version}",
-            "after PyPI publish, run scripts/update_homebrew_formula.py and update the tap",
-        )
-    return _result("Homebrew formula", "pass", f"formula pins {version}")
 
 
 def _check_private_tracked_files(runner: Runner, root: Path = ROOT) -> CheckResult:
@@ -843,7 +822,6 @@ def collect_checks(
         _check_citation_metadata(root),
         _check_readme_usage(root),
         _check_supply_chain_recipe_version(root),
-        _check_homebrew_formula(root),
         _check_private_tracked_files(actual_runner, root),
         _check_latest_commit_message(actual_runner),
     ]

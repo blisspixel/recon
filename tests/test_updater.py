@@ -45,7 +45,7 @@ class TestUpgradeCommand:
         assert updater.upgrade_command(updater.EDITABLE) is None
 
     def test_manual_hints(self) -> None:
-        assert "brew" in updater.manual_hint(updater.HOMEBREW)
+        assert "Homebrew install is retired" in updater.manual_hint(updater.HOMEBREW)
         assert "git" in updater.manual_hint(updater.EDITABLE)
         assert updater.manual_hint(updater.PIP) == "pip install -U recon-tool"
 
