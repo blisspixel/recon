@@ -60,8 +60,10 @@ touches a target's own HTTP infrastructure.
   pipeline data).
 - `test_hypothesis(domain, hypothesis)` — test a theory ("this org is
   mid-migration to Entra ID") against evidence. Returns likelihood + evidence.
-- `chain_lookup(domain, depth)` — recursively resolve related domains up to
-  depth 1–3. Good for portfolio / subsidiary surfacing.
+- `chain_lookup(domain, depth, result_limit=0)`: recursively resolve related
+  domains up to depth 1–3. Use a positive `result_limit` for compact agent
+  output; zero keeps the raw chain JSON. Good for portfolio / subsidiary
+  surfacing.
 - `cluster_verification_tokens(domains=[...])` — batch-scope clustering that
   surfaces hedged "possible relationship" signals from shared TXT tokens.
 

@@ -81,7 +81,7 @@ labels and graduate to stable in v2.0 per the disposition table in
 |---|---|
 | `lookup_tenant` | `domain`, `format` ("text"\|"json"\|"markdown"), `explain` (bool) |
 | `analyze_posture` | `domain`, `explain` (bool), `profile` (str, optional) |
-| `chain_lookup` | `domain`, `depth` (1-3, default 1) |
+| `chain_lookup` | `domain`, `depth` (1-3, default 1), `result_limit` (int, default 0) |
 | `discover_fingerprint_candidates` | `domain`, `skip_ct` (bool, default False), `keep_intra_org` (bool, default False), `min_count` (int, default 1) |
 | `reload_data` | (none) |
 | `assess_exposure` | `domain` |

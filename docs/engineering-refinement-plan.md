@@ -68,7 +68,8 @@ reduce actual payload size while preserving raw structured access.
 
 Target surfaces:
 
-- `chain_lookup`
+- `chain_lookup` (optional `result_limit` cap shipped; raw output remains the
+  default)
 - `export_graph` (optional `node_limit` and `edge_limit` caps shipped; raw
   output remains the default)
 - `get_infrastructure_clusters` (optional `member_limit_per_cluster` cap
