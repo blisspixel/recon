@@ -55,9 +55,13 @@ The next work is dependency-ordered:
         full schema-lock discipline (schema regen, `schema.md`, schema tests,
         drift and CPT-discipline notes), not an ad hoc edit.
      2. Provider and protocol drift early warning. The live-endpoint
-        integration suite is deselected in CI, so an upstream provider change
-        could silently drop a detection with no gate failure; a scheduled
-        integration run or a small golden acceptance set would surface it.
+        integration suite is deselected from ordinary CI because it uses real
+        public network endpoints, but upstream provider changes still need a
+        visible signal. A scheduled and manually runnable provider-drift
+        workflow now runs the passive live integration smoke suite against
+        public reserved-domain fixtures, while the gitignored
+        `tests/validation/fixtures/` path remains available for maintainer-local
+        golden acceptance sets that cannot be published.
      3. MCP 2026-07-28 readiness. The MCP release candidate published on
         2026-05-21 targets a final specification on 2026-07-28 and contains
         breaking protocol changes. recon's current MCP surface is local stdio
