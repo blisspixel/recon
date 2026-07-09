@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import typer
 
+from recon_tool.cli.options import LookupOptions
 from recon_tool.exit_codes import EXIT_VALIDATION
 
 
@@ -26,15 +27,7 @@ def fmt_exc(exc: BaseException) -> str:
 def lookup_validate(
     domain: str,
     *,
-    json_output: bool,
-    markdown: bool,
-    plain: bool = False,
-    chain_mode: bool,
-    compare_file: str | None,
-    show_exposure: bool,
-    show_gaps: bool,
-    chain_depth: int,
-    exact: bool = False,
+    options: LookupOptions,
 ) -> str:
     """Check the mutually-exclusive flag combinations and validate the domain.
 
@@ -50,31 +43,8 @@ def lookup_validate(
     from recon_tool.formatter import get_err_console, render_error
     from recon_tool.validator import validate_domain
 
-    if chain_mode and compare_file:
-        render_error("--chain and --compare are mutually exclusive")
-        raise typer.Exit(code=EXIT_VALIDATION) from None
-    if show_exposure and (chain_mode or compare_file):
-        render_error("--exposure and --chain/--compare are mutually exclusive")
-        raise typer.Exit(code=EXIT_VALIDATION) from None
-    if show_gaps and (chain_mode or compare_file):
-        render_error("--gaps and --chain/--compare are mutually exclusive")
-        raise typer.Exit(code=EXIT_VALIDATION) from None
-    if sum([json_output, markdown, plain]) > 1:
-        render_error("--json, --md, and --plain are mutually exclusive")
-        raise typer.Exit(code=EXIT_VALIDATION) from None
-    if plain and (chain_mode or compare_file or show_exposure or show_gaps):
-        # --plain only governs the standard lookup render; the chain / compare /
-        # exposure / gaps modes have their own output. Reject rather than
-        # silently ignore --plain and fall back to the colored panel.
-        render_error("--plain cannot be combined with --chain/--compare/--exposure/--gaps")
-        raise typer.Exit(code=EXIT_VALIDATION) from None
-    if markdown and (chain_mode or compare_file or show_exposure or show_gaps):
-        # Same reason as --plain above: these modes render their own output and
-        # do not honor --md, so reject it rather than silently drop the flag.
-        render_error("--md cannot be combined with --chain/--compare/--exposure/--gaps")
-        raise typer.Exit(code=EXIT_VALIDATION) from None
-    if chain_depth > 1 and not chain_mode:
-        render_error("--depth requires --chain")
+    if error := options.validation_error():
+        render_error(error)
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
     # Validate the literal host first (apex=False), then decide whether to
@@ -86,7 +56,7 @@ def lookup_validate(
         render_error(fmt_exc(exc))
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
-    if exact:
+    if options.exact:
         return literal
 
     from recon_tool.psl import to_apex

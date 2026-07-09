@@ -155,8 +155,8 @@ class TestLookupSubcommand:
     def test_strict_alias_sets_confidence_mode(self, monkeypatch) -> None:
         seen = {}
 
-        async def fake_lookup(*_args, **kwargs) -> None:
-            seen["confidence_mode"] = kwargs["confidence_mode"]
+        async def fake_lookup(_domain, options) -> None:
+            seen["confidence_mode"] = options.confidence_mode
 
         monkeypatch.setattr("recon_tool.cli._lookup", fake_lookup)
         result = runner.invoke(app, ["lookup", "contoso.com", "--strict"])
