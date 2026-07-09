@@ -169,7 +169,7 @@
       "items": {"type": "string"}
     },
     "email_security_score": {
-      "description": "Count of the 5 email controls present: DMARC reject/quarantine, DKIM selectors, SPF strict (-all), MTA-STS, BIMI.",
+      "description": "Count of the 5 email controls present: effectively enforcing DMARC, DKIM selectors, SPF strict (-all), MTA-STS, BIMI.",
       "type": "integer",
       "minimum": 0,
       "maximum": 5

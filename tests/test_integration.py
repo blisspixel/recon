@@ -16,7 +16,7 @@ from recon_tool.models import SourceResult, TenantInfo
 
 pytestmark = pytest.mark.integration
 
-_CT_HEALTHY_OUTCOMES = {"cache_hit", "live_success", "cache_miss"}
+_CT_HEALTHY_OUTCOMES = {"cache_hit", "live_success"}
 _EXPECTED_RESERVED_DNS_SERVICES = {"DMARC", "SPF: strict (-all)"}
 
 
