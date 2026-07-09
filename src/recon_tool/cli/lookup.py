@@ -14,6 +14,7 @@ from typing import Any
 
 import typer
 
+from recon_tool.cli.options import LookupOperationMode, LookupOptions
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.cli.shared import lookup_validate
 from recon_tool.exit_codes import (
@@ -220,13 +221,7 @@ async def _lookup_compare(
     console: Any,
     validated: str,
     domain: str,
-    compare_file: str,
-    *,
-    json_output: bool,
-    markdown: bool,
-    timeout: float,
-    skip_ct: bool,
-    active_probes: bool = False,
+    options: LookupOptions,
 ) -> None:
     """Resolve and diff against a saved snapshot (`--compare`)."""
     from pathlib import Path as _Path
@@ -234,6 +229,11 @@ async def _lookup_compare(
     from recon_tool.delta import compute_delta, load_previous
     from recon_tool.formatter import format_delta_json, render_delta_panel, render_error, render_warning
     from recon_tool.models import ReconLookupError
+
+    compare_file = options.compare_file
+    if compare_file is None:
+        render_error("--compare requires a snapshot path")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
 
     try:
         previous = load_previous(_Path(compare_file))
@@ -245,10 +245,10 @@ async def _lookup_compare(
         info, _results = await _resolve_with_spinner(
             console,
             validated,
-            timeout=timeout,
-            skip_ct=skip_ct,
-            quiet=json_output or markdown,
-            active_probes=active_probes,
+            timeout=options.timeout,
+            skip_ct=options.skip_ct,
+            quiet=options.quiet,
+            active_probes=options.active_probes,
         )
     except ReconLookupError as exc:
         render_warning(domain, exc)
@@ -258,7 +258,7 @@ async def _lookup_compare(
         raise typer.Exit(code=EXIT_INTERNAL) from None
 
     delta = compute_delta(previous, info)
-    if json_output:
+    if options.json_output:
         typer.echo(format_delta_json(delta))
     else:
         console.print(render_delta_panel(delta))
@@ -267,34 +267,38 @@ async def _lookup_compare(
 async def _lookup_chain(
     console: Any,
     validated: str,
-    *,
-    chain_depth: int,
-    skip_ct: bool,
-    active_probes: bool = False,
-    json_output: bool,
-    markdown: bool,
-    show_explain: bool,
+    options: LookupOptions,
 ) -> None:
     """Follow related-domain breadcrumbs (`--chain`)."""
     from recon_tool.chain import chain_resolve
     from recon_tool.formatter import format_chain_json, render_chain_panel, render_error
 
     try:
-        if not json_output and not markdown:
+        if not options.quiet:
             import random
 
             msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
             with get_err_console().status(msg):
-                report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct, active_probes=active_probes)
+                report = await chain_resolve(
+                    validated,
+                    depth=options.chain_depth,
+                    skip_ct=options.skip_ct,
+                    active_probes=options.active_probes,
+                )
         else:
-            report = await chain_resolve(validated, depth=chain_depth, skip_ct=skip_ct, active_probes=active_probes)
+            report = await chain_resolve(
+                validated,
+                depth=options.chain_depth,
+                skip_ct=options.skip_ct,
+                active_probes=options.active_probes,
+            )
     except Exception as exc:
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_INTERNAL) from None
 
-    if json_output:
+    if options.json_output:
         chain_dict = json.loads(format_chain_json(report))
-        if show_explain:
+        if options.show_explain:
             from recon_tool.formatter import format_explanations_list
 
             for i, domain_entry in enumerate(chain_dict.get("domains", [])):
@@ -309,7 +313,7 @@ async def _lookup_chain(
         typer.echo(json.dumps(chain_dict, indent=2))
     else:
         console.print(render_chain_panel(report))
-        if show_explain:
+        if options.show_explain:
             from recon_tool.formatter import render_explanations_panel
 
             for r in report.results:
@@ -322,14 +326,7 @@ async def _lookup_exposure(
     console: Any,
     validated: str,
     domain: str,
-    *,
-    no_cache: bool,
-    cache_ttl: int,
-    json_output: bool,
-    markdown: bool,
-    timeout: float,
-    skip_ct: bool,
-    active_probes: bool = False,
+    options: LookupOptions,
 ) -> None:
     """Resolve (cache-aware) and render the exposure score (`--exposure`)."""
     from recon_tool.exposure import assess_exposure_from_info
@@ -340,15 +337,15 @@ async def _lookup_exposure(
         info_exp = await _resolve_cached(
             console,
             validated,
-            no_cache=no_cache,
-            cache_ttl=cache_ttl,
-            timeout=timeout,
-            skip_ct=skip_ct,
-            quiet=json_output or markdown,
-            active_probes=active_probes,
+            no_cache=options.no_cache,
+            cache_ttl=options.cache_ttl,
+            timeout=options.timeout,
+            skip_ct=options.skip_ct,
+            quiet=options.quiet,
+            active_probes=options.active_probes,
         )
         assessment = assess_exposure_from_info(info_exp)
-        if json_output:
+        if options.json_output:
             typer.echo(format_exposure_json(assessment))
         else:
             console.print(render_exposure_panel(assessment))
@@ -364,14 +361,7 @@ async def _lookup_gaps(
     console: Any,
     validated: str,
     domain: str,
-    *,
-    no_cache: bool,
-    cache_ttl: int,
-    json_output: bool,
-    markdown: bool,
-    timeout: float,
-    skip_ct: bool,
-    active_probes: bool = False,
+    options: LookupOptions,
 ) -> None:
     """Resolve (cache-aware) and render the detection-gap report (`--gaps`)."""
     from recon_tool.exposure import find_gaps_from_info
@@ -382,15 +372,15 @@ async def _lookup_gaps(
         info_gaps = await _resolve_cached(
             console,
             validated,
-            no_cache=no_cache,
-            cache_ttl=cache_ttl,
-            timeout=timeout,
-            skip_ct=skip_ct,
-            quiet=json_output or markdown,
-            active_probes=active_probes,
+            no_cache=options.no_cache,
+            cache_ttl=options.cache_ttl,
+            timeout=options.timeout,
+            skip_ct=options.skip_ct,
+            quiet=options.quiet,
+            active_probes=options.active_probes,
         )
         report = find_gaps_from_info(info_gaps)
-        if json_output:
+        if options.json_output:
             typer.echo(format_gaps_json(report))
         else:
             console.print(render_gaps_panel(report))
@@ -463,24 +453,15 @@ def _lookup_apply_fusion(info: Any) -> Any:
 async def _lookup_resolve_standard(
     console: Any,
     validated: str,
-    *,
-    json_output: bool,
-    markdown: bool,
-    fusion: bool,
-    explain_dag: bool,
-    no_cache: bool,
-    cache_ttl: int,
-    timeout: float,
-    skip_ct: bool,
-    active_probes: bool = False,
+    options: LookupOptions,
 ) -> tuple[Any, list[Any]]:
     """Cache read, resolve on miss, apply fusion, write back. Returns (info, results)."""
     info: Any = None
     results: list[Any] = []
-    if not no_cache:
+    if not options.no_cache:
         from recon_tool.cache import cache_get
 
-        cached = cache_get(validated, ttl=cache_ttl)
+        cached = cache_get(validated, ttl=options.cache_ttl)
         if cached is not None:
             info = cached
 
@@ -489,13 +470,13 @@ async def _lookup_resolve_standard(
         info, results = await _resolve_with_spinner(
             console,
             validated,
-            timeout=timeout,
-            skip_ct=skip_ct,
-            quiet=json_output or markdown,
-            active_probes=active_probes,
+            timeout=options.timeout,
+            skip_ct=options.skip_ct,
+            quiet=options.quiet,
+            active_probes=options.active_probes,
         )
 
-    if fusion or explain_dag:
+    if options.fusion or options.explain_dag:
         info = _lookup_apply_fusion(info)
     else:
         # --no-fusion: a cache hit may carry fusion fields written by an earlier
@@ -507,7 +488,7 @@ async def _lookup_resolve_standard(
 
     # Cache hits don't write back: the entry hasn't changed except for fusion
     # output, which is recomputed on read anyway.
-    if cache_miss and not no_cache:
+    if cache_miss and not options.no_cache:
         from recon_tool.cache import cache_put
 
         cache_put(validated, info)
@@ -729,27 +710,7 @@ async def _lookup_standard(
     console: Any,
     validated: str,
     domain: str,
-    *,
-    json_output: bool,
-    markdown: bool,
-    plain: bool,
-    verbose: bool,
-    show_services: bool,
-    show_domains: bool,
-    show_sources: bool,
-    show_posture: bool,
-    profile_name: str | None,
-    confidence_mode: str,
-    fusion: bool,
-    explain_dag: bool,
-    explain_dag_format: str,
-    include_unclassified: bool,
-    show_explain: bool,
-    no_cache: bool,
-    cache_ttl: int,
-    timeout: float,
-    skip_ct: bool,
-    active_probes: bool = False,
+    options: LookupOptions,
 ) -> None:
     """The default lookup path: resolve, fuse, then emit DAG / JSON / Markdown / panel."""
     from recon_tool.formatter import render_error, render_verbose_sources, render_warning
@@ -759,40 +720,38 @@ async def _lookup_standard(
         info, results = await _lookup_resolve_standard(
             console,
             validated,
-            json_output=json_output,
-            markdown=markdown,
-            fusion=fusion,
-            explain_dag=explain_dag,
-            no_cache=no_cache,
-            cache_ttl=cache_ttl,
-            timeout=timeout,
-            skip_ct=skip_ct,
-            active_probes=active_probes,
+            options=options,
         )
 
-        if verbose:
+        if options.verbose:
             render_verbose_sources(results)
 
-        observations = _lookup_compute_observations(info, profile_name, show_posture)
+        observations = _lookup_compute_observations(info, options.profile_name, options.show_posture)
 
-        if explain_dag:
-            _lookup_emit_explain_dag(validated, info, explain_dag_format)
+        if options.explain_dag:
+            _lookup_emit_explain_dag(validated, info, options.explain_dag_format)
             return
-        if json_output:
+        if options.json_output:
             _lookup_emit_json(
                 info,
                 results,
                 observations,
-                show_posture=show_posture,
-                show_explain=show_explain,
-                include_unclassified=include_unclassified,
+                show_posture=options.show_posture,
+                show_explain=options.show_explain,
+                include_unclassified=options.include_unclassified,
             )
             return
-        if markdown:
-            _lookup_emit_markdown(info, results, observations, show_posture=show_posture, show_explain=show_explain)
+        if options.markdown:
+            _lookup_emit_markdown(
+                info,
+                results,
+                observations,
+                show_posture=options.show_posture,
+                show_explain=options.show_explain,
+            )
             return
-        if plain:
-            _lookup_emit_plain(info, include_unclassified=include_unclassified)
+        if options.plain:
+            _lookup_emit_plain(info, include_unclassified=options.include_unclassified)
             return
 
         _lookup_emit_panel(
@@ -800,13 +759,13 @@ async def _lookup_standard(
             info,
             results,
             observations,
-            show_services=show_services,
-            show_domains=show_domains,
-            verbose=verbose,
-            show_explain=show_explain,
-            show_sources=show_sources,
-            show_posture=show_posture,
-            confidence_mode=confidence_mode,
+            show_services=options.show_services,
+            show_domains=options.show_domains,
+            verbose=options.verbose,
+            show_explain=options.show_explain,
+            show_sources=options.show_sources,
+            show_posture=options.show_posture,
+            confidence_mode=options.confidence_mode,
         )
     except typer.Exit:
         # Deliberate control-flow exits (an unknown --profile or a bad
@@ -824,146 +783,32 @@ async def _lookup_standard(
 
 async def lookup(
     domain: str,
-    json_output: bool,
-    markdown: bool,
-    plain: bool,
-    verbose: bool,
-    show_services: bool,
-    show_domains: bool,
-    full: bool,
-    show_sources: bool,
-    timeout: float = 120.0,
-    show_posture: bool = False,
-    compare_file: str | None = None,
-    chain_mode: bool = False,
-    chain_depth: int = 1,
-    no_cache: bool = False,
-    cache_ttl: int = 86400,
-    show_exposure: bool = False,
-    show_gaps: bool = False,
-    show_explain: bool = False,
-    profile_name: str | None = None,
-    confidence_mode: str = "hedged",
-    fusion: bool = False,
-    explain_dag: bool = False,
-    explain_dag_format: str = "text",
-    include_unclassified: bool = False,
-    skip_ct: bool = False,
-    active_probes: bool = False,
-    exact: bool = False,
+    options: LookupOptions,
 ) -> None:
     """Async lookup implementation.
 
-    A thin dispatcher: normalize the output flags, validate the domain and the
-    mutually-exclusive flag combinations, then hand off to the mode helper for
-    compare / chain / exposure / gaps, or to the standard panel path.
+    A thin dispatcher: validate the domain and normalized option set, then hand
+    off to the mode helper for compare / chain / exposure / gaps, or to the
+    standard panel path.
     """
     console = get_console()
 
-    if full:
-        show_services = True
-        show_domains = True
-        verbose = True
-        show_posture = True
+    validated = lookup_validate(domain, options=options)
 
-    # ``--profile`` is a no-op unless posture output is shown. If the user
-    # specified a profile, they want the profile-filtered posture observations,
-    # so turn on posture automatically rather than silently dropping the flag.
-    if profile_name and not show_posture:
-        show_posture = True
-
-    validated = lookup_validate(
-        domain,
-        json_output=json_output,
-        markdown=markdown,
-        plain=plain,
-        chain_mode=chain_mode,
-        compare_file=compare_file,
-        show_exposure=show_exposure,
-        show_gaps=show_gaps,
-        chain_depth=chain_depth,
-        exact=exact,
-    )
-
-    if compare_file:
-        await _lookup_compare(
-            console,
-            validated,
-            domain,
-            compare_file,
-            json_output=json_output,
-            markdown=markdown,
-            timeout=timeout,
-            skip_ct=skip_ct,
-            active_probes=active_probes,
-        )
+    if options.operation_mode is LookupOperationMode.COMPARE:
+        await _lookup_compare(console, validated, domain, options)
         return
 
-    if chain_mode:
-        await _lookup_chain(
-            console,
-            validated,
-            chain_depth=chain_depth,
-            skip_ct=skip_ct,
-            active_probes=active_probes,
-            json_output=json_output,
-            markdown=markdown,
-            show_explain=show_explain,
-        )
+    if options.operation_mode is LookupOperationMode.CHAIN:
+        await _lookup_chain(console, validated, options)
         return
 
-    if show_exposure:
-        await _lookup_exposure(
-            console,
-            validated,
-            domain,
-            no_cache=no_cache,
-            cache_ttl=cache_ttl,
-            json_output=json_output,
-            markdown=markdown,
-            timeout=timeout,
-            skip_ct=skip_ct,
-            active_probes=active_probes,
-        )
+    if options.operation_mode is LookupOperationMode.EXPOSURE:
+        await _lookup_exposure(console, validated, domain, options)
         return
 
-    if show_gaps:
-        await _lookup_gaps(
-            console,
-            validated,
-            domain,
-            no_cache=no_cache,
-            cache_ttl=cache_ttl,
-            json_output=json_output,
-            markdown=markdown,
-            timeout=timeout,
-            skip_ct=skip_ct,
-            active_probes=active_probes,
-        )
+    if options.operation_mode is LookupOperationMode.GAPS:
+        await _lookup_gaps(console, validated, domain, options)
         return
 
-    await _lookup_standard(
-        console,
-        validated,
-        domain,
-        json_output=json_output,
-        markdown=markdown,
-        plain=plain,
-        verbose=verbose,
-        show_services=show_services,
-        show_domains=show_domains,
-        show_sources=show_sources,
-        show_posture=show_posture,
-        profile_name=profile_name,
-        confidence_mode=confidence_mode,
-        fusion=fusion,
-        explain_dag=explain_dag,
-        explain_dag_format=explain_dag_format,
-        include_unclassified=include_unclassified,
-        show_explain=show_explain,
-        no_cache=no_cache,
-        cache_ttl=cache_ttl,
-        timeout=timeout,
-        skip_ct=skip_ct,
-        active_probes=active_probes,
-    )
+    await _lookup_standard(console, validated, domain, options)
