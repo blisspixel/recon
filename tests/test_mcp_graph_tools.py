@@ -106,6 +106,7 @@ class TestGetInfrastructureClusters:
         assert first["members"] == ["a.example.com", "b.example.com"]
         assert first["members_omitted"] == 0
         assert payload["member_limit_per_cluster"] == 0
+        assert "member_limit_per_cluster=0" in payload["raw_request"]
 
     def test_skipped_envelope_when_no_report(self, stub_resolve):
         stub_resolve(_info_without_clusters())
@@ -122,6 +123,7 @@ class TestGetInfrastructureClusters:
         assert payload["clusters"][0]["members"] == ["a.example.com"]
         assert payload["clusters"][0]["members_omitted"] == 1
         assert "sorted cluster members" in payload["selection_rule"]
+        assert "member_limit_per_cluster=0" in payload["raw_request"]
 
     def test_negative_member_limit_rejected(self, stub_resolve):
         stub_resolve(_info_with_clusters())
@@ -153,6 +155,7 @@ class TestExportGraph:
         assert payload["edge_limit"] == 0
         assert payload["nodes_omitted"] == 0
         assert payload["edges_omitted"] == 0
+        assert "node_limit=0" in payload["raw_request"]
 
     def test_cluster_assignment_maps_members(self, stub_resolve):
         stub_resolve(_info_with_clusters())
@@ -192,6 +195,7 @@ class TestExportGraph:
         assert payload["edges_omitted"] == 1
         assert payload["cluster_assignment_omitted"] == 2
         assert "weighted degree" in payload["selection_rule"]
+        assert "edge_limit=0" in payload["raw_request"]
 
     def test_negative_graph_limit_rejected(self, stub_resolve):
         stub_resolve(_info_with_clusters())

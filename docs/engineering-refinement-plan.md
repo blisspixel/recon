@@ -73,7 +73,8 @@ Target surfaces:
   output remains the default)
 - `get_infrastructure_clusters` (optional `member_limit_per_cluster` cap
   shipped; raw output remains the default)
-- `cluster_verification_tokens`
+- `cluster_verification_tokens` (optional `peer_limit_per_domain` cap shipped;
+  raw output remains the default)
 - any future graph or batch MCP tool that can return large arrays
 
 Design rule:

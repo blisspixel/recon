@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `export_graph(node_limit=..., edge_limit=...)`. The default zero-cap path
   still returns the raw bounded graph payload, while compact calls report
   omitted counts and deterministic selection rules.
+- Added `cluster_verification_tokens(peer_limit_per_domain=...)` for compact
+  batch-correlation output with per-domain omitted counts and a raw-request
+  pointer.
 
 ### Fixed
 

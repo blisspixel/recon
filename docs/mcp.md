@@ -97,7 +97,7 @@ If you genuinely need to drive the JSON-RPC loop by hand (e.g. piping crafted re
 |------|----------------|-------------|------------|
 | `lookup_tenant` | Cache first; may resolve | Full domain intelligence: tenant details, email score, SaaS fingerprints, signals. When `explain=true`, the response includes a JSON-serialisable `explanation_dag` with `evidence → slug → rule → signal → insight` provenance alongside the flat explanations list. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
 | `analyze_posture` | Cache first; may resolve | Neutral posture observations across email, identity, infrastructure. Accepts an optional `profile` argument: one of `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`, or a custom name from `~/.recon/profiles/`. | `domain`, `explain`: bool, `profile`: str (optional) |
-| `cluster_verification_tokens` | Cache first; may resolve each domain | Cluster a list of domains by shared TXT site-verification tokens. Reveals hedged "possible relationship" signals from operator-scoped credential reuse. | `domains`: array of domain strings |
+| `cluster_verification_tokens` | Cache first; may resolve each domain | Cluster a list of domains by shared TXT site-verification tokens. Reveals hedged "possible relationship" signals from operator-scoped credential reuse. Optional peer caps report omitted counts for compact agent output. | `domains`: array of domain strings, `peer_limit_per_domain` (0 means raw) |
 | `assess_exposure` | Cache first; may resolve | Security posture score (0-100) with email, identity, infrastructure sections, using only the passive observables already collected (see [correlation.md](correlation.md) for the inference model). | `domain` |
 | `find_hardening_gaps` | Cache first; may resolve | Categorized hardening gaps with severity and "Consider" recommendations, using only the passive observables already collected (see [correlation.md](correlation.md) for the inference model). | `domain` |
 | `compare_postures` | Cache first; may resolve both domains | Side-by-side posture comparison of two domains | `domain_a`, `domain_b` |
@@ -141,10 +141,11 @@ inference tools (`get_fingerprints`, `get_signals`, `explain_signal`,
 `cluster_verification_tokens`, `get_infrastructure_clusters`, `export_graph`,
 `get_posteriors`, and the ephemeral-fingerprint tools).
 
-The graph tools preserve raw structured access by default. Passing
-`member_limit_per_cluster`, `node_limit`, or `edge_limit` asks for a compact
-payload; the response includes omitted counts and a deterministic
-`selection_rule` so an agent can decide whether to request the raw result.
+The graph and batch-correlation tools preserve raw structured access by default.
+Passing `peer_limit_per_domain`, `member_limit_per_cluster`, `node_limit`, or
+`edge_limit` asks for a compact payload; the response includes omitted counts,
+a deterministic `selection_rule`, and a `raw_request` pointer so an agent can
+decide whether to request the raw result.
 
 Forward compatibility with the MCP 2026-07-28 release candidate is tracked in
 [mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md). recon remains a

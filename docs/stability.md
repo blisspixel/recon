@@ -69,9 +69,10 @@ For the JSON output contract in full field-by-field detail, see
 
 ### MCP tools
 
-All 22 MCP tools are **stable**: names, parameter names, parameter types,
-and return-payload shapes will not change between patch or minor releases.
-New optional parameters may be added. The Bayesian-fusion tools
+All 22 MCP tools are **stable**: names, existing parameter names, existing
+parameter types, and existing return fields will not be removed or change type
+or meaning between patch or minor releases. New optional parameters and new
+additive return fields may be added. The Bayesian-fusion tools
 (`get_posteriors`, `explain_dag`) ship pre-v2.0 under experimental
 labels and graduate to stable in v2.0 per the disposition table in
 [`roadmap-history.md`](roadmap-history.md#v200--maturity).
@@ -95,9 +96,9 @@ labels and graduate to stable in v2.0 per the disposition table in
 | `list_ephemeral_fingerprints` | (none) |
 | `clear_ephemeral_fingerprints` | (none) |
 | `reevaluate_domain` | `domain` |
-| `cluster_verification_tokens` | `domains` (list[str]) |
-| `get_infrastructure_clusters` | `domain` |
-| `export_graph` | `domain` |
+| `cluster_verification_tokens` | `domains` (list[str]), `peer_limit_per_domain` (int, default 0) |
+| `get_infrastructure_clusters` | `domain`, `member_limit_per_cluster` (int, default 0) |
+| `export_graph` | `domain`, `node_limit` (int, default 0), `edge_limit` (int, default 0) |
 | `get_posteriors` | `domain` |
 | `explain_dag` | `domain`, `output_format` (str, default "text") |
 
