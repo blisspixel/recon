@@ -2,11 +2,11 @@
 
 The canonical roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 
-Current status: recon v2.3.5 is feature-complete for the current roadmap. The
+Current status: recon v2.3.6 is feature-complete for the current roadmap. The
 CLI, JSON schema, MCP server, validation guards, generated-artifact guards, and
 release path are shipped. Current work is hardening, documentation clarity,
-validation evidence, interface package-locality hardening, and external write-up
-readiness. The detailed interface-locality record is in
+validation evidence, interface-layer debt reduction, and external write-up
+readiness. The detailed interface-locality and lookup-options record is in
 [docs/roadmap.md](docs/roadmap.md), with the architecture decision in
 [docs/adr/0008-interface-package-locality.md](docs/adr/0008-interface-package-locality.md).
 The current strategic gap audit is
