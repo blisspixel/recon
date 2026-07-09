@@ -2185,6 +2185,22 @@
             "types": [
               "string"
             ]
+          },
+          {
+            "default": 0,
+            "name": "edge_limit",
+            "required": false,
+            "types": [
+              "integer"
+            ]
+          },
+          {
+            "default": 0,
+            "name": "node_limit",
+            "required": false,
+            "types": [
+              "integer"
+            ]
           }
         ],
         "name": "export_graph",
@@ -2193,22 +2209,34 @@
           "properties": [
             "algorithm",
             "cluster_assignment",
+            "cluster_assignment_omitted",
             "disclaimer",
             "domain",
             "edge_count",
+            "edge_limit",
             "edges",
+            "edges_omitted",
             "node_count",
-            "nodes"
+            "node_limit",
+            "nodes",
+            "nodes_omitted",
+            "selection_rule"
           ],
           "required": [
             "algorithm",
             "cluster_assignment",
+            "cluster_assignment_omitted",
             "disclaimer",
             "domain",
             "edge_count",
+            "edge_limit",
             "edges",
+            "edges_omitted",
             "node_count",
-            "nodes"
+            "node_limit",
+            "nodes",
+            "nodes_omitted",
+            "selection_rule"
           ],
           "type": "object"
         },
@@ -2312,6 +2340,14 @@
             "types": [
               "string"
             ]
+          },
+          {
+            "default": 0,
+            "name": "member_limit_per_cluster",
+            "required": false,
+            "types": [
+              "integer"
+            ]
           }
         ],
         "name": "get_infrastructure_clusters",
@@ -2322,9 +2358,11 @@
             "clusters",
             "domain",
             "edge_count",
+            "member_limit_per_cluster",
             "modularity",
             "node_count",
             "partition_stability",
+            "selection_rule",
             "stability_runs"
           ],
           "required": [
@@ -2332,9 +2370,11 @@
             "clusters",
             "domain",
             "edge_count",
+            "member_limit_per_cluster",
             "modularity",
             "node_count",
             "partition_stability",
+            "selection_rule",
             "stability_runs"
           ],
           "type": "object"

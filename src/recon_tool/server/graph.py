@@ -18,6 +18,7 @@ from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from typing_extensions import TypedDict
 
+from recon_tool.models import InfrastructureEdge
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
 from recon_tool.server.runtime import (
@@ -55,6 +56,7 @@ class InfrastructureClusterSummary(TypedDict):
     cluster_id: int
     size: int
     members: list[str]
+    members_omitted: int
     shared_cert_count: int
     dominant_issuer: str | None
 
@@ -67,6 +69,8 @@ class InfrastructureClusterEnvelope(TypedDict):
     stability_runs: int
     node_count: int
     edge_count: int
+    member_limit_per_cluster: int
+    selection_rule: str
     clusters: list[InfrastructureClusterSummary]
 
 
@@ -81,10 +85,48 @@ class GraphExportEnvelope(TypedDict):
     algorithm: str
     node_count: int
     edge_count: int
+    node_limit: int
+    edge_limit: int
+    nodes_omitted: int
+    edges_omitted: int
+    cluster_assignment_omitted: int
+    selection_rule: str
     nodes: list[str]
     edges: list[GraphEdgeSummary]
     cluster_assignment: dict[str, int]
     disclaimer: str
+
+
+def _normalize_limit(value: int, name: str) -> int:
+    """Validate an optional compact-output cap. Zero means full raw output."""
+    if value < 0:
+        raise ToolError(f"{name} must be zero or a positive integer")
+    return value
+
+
+def _surface_cluster_members(members: tuple[str, ...], limit: int) -> tuple[list[str], int]:
+    """Return deterministic cluster members and an omitted count."""
+    surfaced = list(members if limit == 0 else members[:limit])
+    return surfaced, len(members) - len(surfaced)
+
+
+def _top_graph_nodes(
+    edges: tuple[InfrastructureEdge, ...],
+    nodes: set[str],
+    limit: int,
+) -> set[str]:
+    """Select graph nodes by weighted degree, then hostname, for compact output."""
+    if limit == 0 or len(nodes) <= limit:
+        return set(nodes)
+    weighted_degree = dict.fromkeys(nodes, 0)
+    for edge in edges:
+        source = edge.source
+        target = edge.target
+        weight = edge.shared_cert_count
+        weighted_degree[source] = weighted_degree.get(source, 0) + weight
+        weighted_degree[target] = weighted_degree.get(target, 0) + weight
+    ranked = sorted(nodes, key=lambda node: (-weighted_degree.get(node, 0), node))
+    return set(ranked[:limit])
 
 
 @mcp.tool(
@@ -271,7 +313,7 @@ async def cluster_verification_tokens(domains: list[str]) -> VerificationTokenCl
         openWorldHint=True,
     ),
 )
-async def get_infrastructure_clusters(domain: str) -> InfrastructureClusterEnvelope:
+async def get_infrastructure_clusters(domain: str, member_limit_per_cluster: int = 0) -> InfrastructureClusterEnvelope:
     """Return the CT co-occurrence community-detection report for a domain.
 
     Surfaces the same ``infrastructure_clusters`` envelope that ships in
@@ -287,6 +329,10 @@ async def get_infrastructure_clusters(domain: str) -> InfrastructureClusterEnvel
     Args:
         domain: Domain to look up. Will use the existing TTL cache when
             available; otherwise resolves via the standard pipeline.
+        member_limit_per_cluster: Optional compact-output cap. ``0`` returns
+            every surfaced member from the already bounded raw report. A
+            positive value returns the first N sorted members from each cluster
+            plus ``members_omitted`` counts.
 
     Returns:
         JSON object matching the ``InfrastructureClusterReport`` schema
@@ -300,6 +346,7 @@ async def get_infrastructure_clusters(domain: str) -> InfrastructureClusterEnvel
         lower values flag partition degeneracy a single modularity score
         cannot see.
     """
+    member_limit_per_cluster = _normalize_limit(member_limit_per_cluster, "member_limit_per_cluster")
     resolved = await server_app.resolve_or_cache(domain)
     if isinstance(resolved, str):
         raise ToolError(resolved)
@@ -314,8 +361,23 @@ async def get_infrastructure_clusters(domain: str) -> InfrastructureClusterEnvel
             "stability_runs": 0,
             "node_count": 0,
             "edge_count": 0,
+            "member_limit_per_cluster": member_limit_per_cluster,
+            "selection_rule": "raw cluster members when limit is zero; otherwise sorted cluster members are truncated",
             "clusters": [],
         }
+    clusters: list[InfrastructureClusterSummary] = []
+    for cluster in ic.clusters:
+        members, omitted = _surface_cluster_members(cluster.members, member_limit_per_cluster)
+        clusters.append(
+            {
+                "cluster_id": cluster.cluster_id,
+                "size": cluster.size,
+                "members": members,
+                "members_omitted": omitted,
+                "shared_cert_count": cluster.shared_cert_count,
+                "dominant_issuer": cluster.dominant_issuer,
+            }
+        )
     return {
         "domain": info.queried_domain,
         "algorithm": ic.algorithm,
@@ -326,16 +388,9 @@ async def get_infrastructure_clusters(domain: str) -> InfrastructureClusterEnvel
         "stability_runs": ic.stability_runs,
         "node_count": ic.node_count,
         "edge_count": ic.edge_count,
-        "clusters": [
-            {
-                "cluster_id": c.cluster_id,
-                "size": c.size,
-                "members": list(c.members),
-                "shared_cert_count": c.shared_cert_count,
-                "dominant_issuer": c.dominant_issuer,
-            }
-            for c in ic.clusters
-        ],
+        "member_limit_per_cluster": member_limit_per_cluster,
+        "selection_rule": "raw cluster members when limit is zero; otherwise sorted cluster members are truncated",
+        "clusters": clusters,
     }
 
 
@@ -347,7 +402,7 @@ async def get_infrastructure_clusters(domain: str) -> InfrastructureClusterEnvel
         openWorldHint=True,
     ),
 )
-async def export_graph(domain: str) -> GraphExportEnvelope:
+async def export_graph(domain: str, node_limit: int = 0, edge_limit: int = 0) -> GraphExportEnvelope:
     """Return the raw CT co-occurrence graph (nodes + weighted edges).
 
     Companion to ``get_infrastructure_clusters``: surfaces the underlying
@@ -369,6 +424,11 @@ async def export_graph(domain: str) -> GraphExportEnvelope:
     Args:
         domain: Domain whose graph to export. Uses the TTL cache when
             available; otherwise resolves via the standard pipeline.
+        node_limit: Optional compact-output cap. ``0`` returns every bounded
+            node. A positive value selects top nodes by weighted degree
+            descending, then hostname.
+        edge_limit: Optional compact-output cap after node filtering. ``0``
+            returns every retained edge among surfaced nodes.
 
     Returns:
         JSON object with ``domain``, ``algorithm`` (mirroring the
@@ -377,6 +437,8 @@ async def export_graph(domain: str) -> GraphExportEnvelope:
         target, shared_cert_count} records), and ``cluster_assignment``
         (object mapping each surfaced node to its cluster_id).
     """
+    node_limit = _normalize_limit(node_limit, "node_limit")
+    edge_limit = _normalize_limit(edge_limit, "edge_limit")
     resolved = await server_app.resolve_or_cache(domain)
     if isinstance(resolved, str):
         raise ToolError(resolved)
@@ -388,6 +450,14 @@ async def export_graph(domain: str) -> GraphExportEnvelope:
             "algorithm": "skipped",
             "node_count": 0,
             "edge_count": 0,
+            "node_limit": node_limit,
+            "edge_limit": edge_limit,
+            "nodes_omitted": 0,
+            "edges_omitted": 0,
+            "cluster_assignment_omitted": 0,
+            "selection_rule": (
+                "raw bounded graph when limits are zero; compact nodes use weighted degree descending then hostname"
+            ),
             "nodes": [],
             "edges": [],
             "cluster_assignment": {},
@@ -403,13 +473,25 @@ async def export_graph(domain: str) -> GraphExportEnvelope:
     for edge in ic.edges:
         nodes_set.add(edge.source)
         nodes_set.add(edge.target)
-    nodes_sorted = sorted(nodes_set)
+    selected_nodes = _top_graph_nodes(ic.edges, nodes_set, node_limit)
+    nodes_sorted = sorted(selected_nodes)
+    filtered_edges = [edge for edge in ic.edges if edge.source in selected_nodes and edge.target in selected_nodes]
+    surfaced_edges = filtered_edges if edge_limit == 0 else filtered_edges[:edge_limit]
+    surfaced_assignment = {node: cluster_assignment[node] for node in nodes_sorted if node in cluster_assignment}
 
     return {
         "domain": info.queried_domain,
         "algorithm": ic.algorithm,
         "node_count": ic.node_count,
         "edge_count": ic.edge_count,
+        "node_limit": node_limit,
+        "edge_limit": edge_limit,
+        "nodes_omitted": len(nodes_set) - len(nodes_sorted),
+        "edges_omitted": len(ic.edges) - len(surfaced_edges),
+        "cluster_assignment_omitted": len(cluster_assignment) - len(surfaced_assignment),
+        "selection_rule": (
+            "raw bounded graph when limits are zero; compact nodes use weighted degree descending then hostname"
+        ),
         "nodes": nodes_sorted,
         "edges": [
             {
@@ -417,8 +499,8 @@ async def export_graph(domain: str) -> GraphExportEnvelope:
                 "target": e.target,
                 "shared_cert_count": e.shared_cert_count,
             }
-            for e in ic.edges
+            for e in surfaced_edges
         ],
-        "cluster_assignment": cluster_assignment,
+        "cluster_assignment": surfaced_assignment,
         "disclaimer": GRAPH_EXPORT_DISCLAIMER,
     }
