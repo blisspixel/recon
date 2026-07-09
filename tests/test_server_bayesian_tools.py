@@ -159,8 +159,56 @@ class TestClusterVerificationTokens:
         data = await cluster_verification_tokens(["contoso.com", "northwindtraders.com"])
         assert data["errors"] == []
         assert "disclaimer" in data
+        assert data["peer_limit_per_domain"] == 0
+        assert data["peers_omitted"] == {
+            "contoso.com": 0,
+            "northwindtraders.com": 0,
+        }
+        assert "peer_limit_per_domain=0" in data["raw_request"]
         # Both domains share the token, so each lists the other as a peer.
-        assert data["clusters"], "expected a non-empty cluster for the shared token"
+        assert data["clusters"] == {
+            "contoso.com": [
+                {
+                    "token": "google-site-verification=sharedtoken123",
+                    "peer": "northwindtraders.com",
+                }
+            ],
+            "northwindtraders.com": [
+                {
+                    "token": "google-site-verification=sharedtoken123",
+                    "peer": "contoso.com",
+                }
+            ],
+        }
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_peer_limit_returns_omitted_counts(self, mock_resolve: AsyncMock) -> None:
+        shared = ("MS=sharedtoken123",)
+        mock_resolve.side_effect = [
+            (_info("adatum.com", tokens=shared), SAMPLE_RESULTS),
+            (_info("contoso.com", tokens=shared), SAMPLE_RESULTS),
+            (_info("northwindtraders.com", tokens=shared), SAMPLE_RESULTS),
+        ]
+        data = await cluster_verification_tokens(
+            ["northwindtraders.com", "contoso.com", "adatum.com"],
+            peer_limit_per_domain=1,
+        )
+        assert data["peer_limit_per_domain"] == 1
+        assert set(data["clusters"]) == {"adatum.com", "contoso.com", "northwindtraders.com"}
+        assert all(len(peers) == 1 for peers in data["clusters"].values())
+        assert data["clusters"]["adatum.com"] == [{"token": "ms=sharedtoken123", "peer": "contoso.com"}]
+        assert data["peers_omitted"] == {
+            "adatum.com": 1,
+            "contoso.com": 1,
+            "northwindtraders.com": 1,
+        }
+        assert "token then peer" in data["selection_rule"]
+
+    @pytest.mark.asyncio
+    async def test_negative_peer_limit_rejected(self) -> None:
+        with pytest.raises(ToolError, match="peer_limit_per_domain"):
+            await cluster_verification_tokens(["contoso.com"], peer_limit_per_domain=-1)
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)

@@ -1973,6 +1973,14 @@
             "types": [
               "array"
             ]
+          },
+          {
+            "default": 0,
+            "name": "peer_limit_per_domain",
+            "required": false,
+            "types": [
+              "integer"
+            ]
           }
         ],
         "name": "cluster_verification_tokens",
@@ -1981,12 +1989,20 @@
           "properties": [
             "clusters",
             "disclaimer",
-            "errors"
+            "errors",
+            "peer_limit_per_domain",
+            "peers_omitted",
+            "raw_request",
+            "selection_rule"
           ],
           "required": [
             "clusters",
             "disclaimer",
-            "errors"
+            "errors",
+            "peer_limit_per_domain",
+            "peers_omitted",
+            "raw_request",
+            "selection_rule"
           ],
           "type": "object"
         },
@@ -2220,6 +2236,7 @@
             "node_limit",
             "nodes",
             "nodes_omitted",
+            "raw_request",
             "selection_rule"
           ],
           "required": [
@@ -2236,6 +2253,7 @@
             "node_limit",
             "nodes",
             "nodes_omitted",
+            "raw_request",
             "selection_rule"
           ],
           "type": "object"
@@ -2362,6 +2380,7 @@
             "modularity",
             "node_count",
             "partition_stability",
+            "raw_request",
             "selection_rule",
             "stability_runs"
           ],
@@ -2374,6 +2393,7 @@
             "modularity",
             "node_count",
             "partition_stability",
+            "raw_request",
             "selection_rule",
             "stability_runs"
           ],

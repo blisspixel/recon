@@ -49,6 +49,10 @@ class DomainToolError(TypedDict):
 class VerificationTokenClusterResult(TypedDict):
     clusters: dict[str, list[SharedVerificationPeer]]
     errors: list[DomainToolError]
+    peer_limit_per_domain: int
+    peers_omitted: dict[str, int]
+    selection_rule: str
+    raw_request: str
     disclaimer: str
 
 
@@ -71,6 +75,7 @@ class InfrastructureClusterEnvelope(TypedDict):
     edge_count: int
     member_limit_per_cluster: int
     selection_rule: str
+    raw_request: str
     clusters: list[InfrastructureClusterSummary]
 
 
@@ -91,10 +96,15 @@ class GraphExportEnvelope(TypedDict):
     edges_omitted: int
     cluster_assignment_omitted: int
     selection_rule: str
+    raw_request: str
     nodes: list[str]
     edges: list[GraphEdgeSummary]
     cluster_assignment: dict[str, int]
     disclaimer: str
+
+
+def _verification_peer(token: str, peer: str) -> SharedVerificationPeer:
+    return {"token": token, "peer": peer}
 
 
 def _normalize_limit(value: int, name: str) -> int:
@@ -108,6 +118,15 @@ def _surface_cluster_members(members: tuple[str, ...], limit: int) -> tuple[list
     """Return deterministic cluster members and an omitted count."""
     surfaced = list(members if limit == 0 else members[:limit])
     return surfaced, len(members) - len(surfaced)
+
+
+def _surface_verification_peers(
+    entries: tuple[SharedVerificationPeer, ...],
+    limit: int,
+) -> tuple[list[SharedVerificationPeer], int]:
+    """Return deterministic token peers and an omitted count."""
+    surfaced = list(entries if limit == 0 else entries[:limit])
+    return surfaced, len(entries) - len(surfaced)
 
 
 def _top_graph_nodes(
@@ -218,7 +237,10 @@ async def chain_lookup(domain: str, depth: int = 1) -> str:
         openWorldHint=True,
     ),
 )
-async def cluster_verification_tokens(domains: list[str]) -> VerificationTokenClusterResult:
+async def cluster_verification_tokens(
+    domains: list[str],
+    peer_limit_per_domain: int = 0,
+) -> VerificationTokenClusterResult:
     """Cluster a list of domains by shared site-verification tokens.
 
     For defensive OSINT and vendor due-diligence only.
@@ -244,6 +266,10 @@ async def cluster_verification_tokens(domains: list[str]) -> VerificationTokenCl
         domains: List of domain names to cluster. Must contain at
             least two distinct domains to be useful. Invalid domains
             are skipped with an error entry in the response.
+        peer_limit_per_domain: Optional compact-output cap. ``0`` returns
+            every observed peer entry. A positive value returns the first N
+            entries per domain after deterministic ``(token, peer)`` sorting,
+            plus ``peers_omitted`` counts.
 
     Returns:
         JSON object with ``clusters`` (a map from each domain to its
@@ -253,6 +279,7 @@ async def cluster_verification_tokens(domains: list[str]) -> VerificationTokenCl
     """
     from recon_tool.clustering import compute_shared_tokens
 
+    peer_limit_per_domain = _normalize_limit(peer_limit_per_domain, "peer_limit_per_domain")
     if not domains:
         raise ToolError("At least one domain is required")
 
@@ -288,12 +315,22 @@ async def cluster_verification_tokens(domains: list[str]) -> VerificationTokenCl
 
     # Serialize: domain → list of {token, peer}
     serialized: dict[str, list[SharedVerificationPeer]] = {}
-    for d, entries in clusters.items():
-        serialized[d] = [{"token": e.token, "peer": e.peer} for e in entries]
+    peers_omitted: dict[str, int] = {}
+    for d in sorted(clusters):
+        entries = tuple(_verification_peer(e.token, e.peer) for e in clusters[d])
+        surfaced, omitted = _surface_verification_peers(entries, peer_limit_per_domain)
+        serialized[d] = surfaced
+        peers_omitted[d] = omitted
 
     payload: VerificationTokenClusterResult = {
         "clusters": serialized,
         "errors": errors,
+        "peer_limit_per_domain": peer_limit_per_domain,
+        "peers_omitted": peers_omitted,
+        "selection_rule": (
+            "raw peer lists when peer_limit_per_domain is zero; otherwise entries are sorted by token then peer"
+        ),
+        "raw_request": "Call cluster_verification_tokens with peer_limit_per_domain=0 for raw peer lists.",
         "disclaimer": (
             "Shared verification tokens imply operator-scoped credential "
             "reuse across domains. This is consistent with shared "
@@ -363,6 +400,7 @@ async def get_infrastructure_clusters(domain: str, member_limit_per_cluster: int
             "edge_count": 0,
             "member_limit_per_cluster": member_limit_per_cluster,
             "selection_rule": "raw cluster members when limit is zero; otherwise sorted cluster members are truncated",
+            "raw_request": "Call get_infrastructure_clusters with member_limit_per_cluster=0 for raw members.",
             "clusters": [],
         }
     clusters: list[InfrastructureClusterSummary] = []
@@ -390,6 +428,7 @@ async def get_infrastructure_clusters(domain: str, member_limit_per_cluster: int
         "edge_count": ic.edge_count,
         "member_limit_per_cluster": member_limit_per_cluster,
         "selection_rule": "raw cluster members when limit is zero; otherwise sorted cluster members are truncated",
+        "raw_request": "Call get_infrastructure_clusters with member_limit_per_cluster=0 for raw members.",
         "clusters": clusters,
     }
 
@@ -458,6 +497,7 @@ async def export_graph(domain: str, node_limit: int = 0, edge_limit: int = 0) ->
             "selection_rule": (
                 "raw bounded graph when limits are zero; compact nodes use weighted degree descending then hostname"
             ),
+            "raw_request": "Call export_graph with node_limit=0 and edge_limit=0 for the raw bounded graph.",
             "nodes": [],
             "edges": [],
             "cluster_assignment": {},
@@ -492,6 +532,7 @@ async def export_graph(domain: str, node_limit: int = 0, edge_limit: int = 0) ->
         "selection_rule": (
             "raw bounded graph when limits are zero; compact nodes use weighted degree descending then hostname"
         ),
+        "raw_request": "Call export_graph with node_limit=0 and edge_limit=0 for the raw bounded graph.",
         "nodes": nodes_sorted,
         "edges": [
             {
