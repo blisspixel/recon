@@ -173,7 +173,9 @@ class TestDmarcRfc9989Tags:
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_invalid_policy_discards_dmarc_record(self, mock_resolve, caplog: pytest.LogCaptureFixture) -> None:  # type: ignore[no-untyped-def]
+    async def test_invalid_policy_without_valid_rua_discards_dmarc_record(
+        self, mock_resolve, caplog: pytest.LogCaptureFixture
+    ) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=bogus; pct=50; np=reject; t=y"]}
         )
@@ -184,6 +186,111 @@ class TestDmarcRfc9989Tags:
         assert result.dmarc_np is None
         assert result.dmarc_testing is False
         assert any("DMARC p= value" in r.message for r in caplog.records)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_invalid_policy_with_valid_rua_falls_back_to_none(
+        self, mock_resolve, caplog: pytest.LogCaptureFixture
+    ) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=bogus; rua=mailto:dmarc@valimail.com"]}
+        )
+        with caplog.at_level(logging.WARNING, logger="recon"):
+            result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy == "none"
+        assert "DMARC" in result.detected_services
+        assert "valimail" in result.detected_slugs
+        assert any("treating as p=none" in r.message for r in caplog.records)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_missing_policy_with_valid_rua_falls_back_to_none(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {"_dmarc.contoso.com/TXT": ["v=DMARC1; rua=mailto:dmarc@agari.com"]}
+        )
+        result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy == "none"
+        assert "DMARC" in result.detected_services
+        assert "agari" in result.detected_slugs
+
+    @pytest.mark.parametrize(
+        "record",
+        [
+            "v=DMARC1; p=bogus; rua=mailto:@",
+            "v=DMARC1; rua=mailto:user@",
+            "v=DMARC1; rua=mailto:user@localhost",
+            "v=DMARC1; rua=xmailto:dmarc@agari.com",
+        ],
+    )
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_malformed_rua_does_not_enable_policy_fallback(
+        self,
+        mock_resolve,
+        record: str,
+    ) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+        result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy is None
+        assert "DMARC" not in result.detected_services
+        assert result.detected_slugs == ()
+
+    @pytest.mark.parametrize(
+        "record",
+        [
+            "v=dmarc1; p=reject; rua=mailto:dmarc@agari.com",
+            "v=DMARC1foo; p=reject; rua=mailto:dmarc@agari.com",
+            " V=DMARC1; p=reject; rua=mailto:dmarc@agari.com",
+            "v =DMARC1; p=reject; rua=mailto:dmarc@agari.com",
+            "v= DMARC1; p=reject; rua=mailto:dmarc@agari.com",
+        ],
+    )
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_dmarc_version_value_must_be_exact_case_sensitive(
+        self,
+        mock_resolve,
+        caplog: pytest.LogCaptureFixture,
+        record: str,
+    ) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+        with caplog.at_level(logging.WARNING, logger="recon"):
+            result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy is None
+        assert "DMARC" not in result.detected_services
+        assert result.detected_slugs == ()
+        assert any("DMARC v= value" in r.message for r in caplog.records)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_dmarc_version_tag_must_be_leading(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {"_dmarc.contoso.com/TXT": ["p=reject; v=DMARC1; rua=mailto:dmarc@agari.com"]}
+        )
+        result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy is None
+        assert "DMARC" not in result.detected_services
+        assert result.detected_slugs == ()
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_malformed_and_valid_dmarc_records_discard_policy_metadata(
+        self, mock_resolve, caplog: pytest.LogCaptureFixture
+    ) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "_dmarc.contoso.com/TXT": [
+                    "v=DMARC1; p=reject; p=none; rua=mailto:dmarc@agari.com",
+                    "v=DMARC1; p=reject; rua=mailto:dmarc@valimail.com",
+                ]
+            }
+        )
+        with caplog.at_level(logging.WARNING, logger="recon"):
+            result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy is None
+        assert "DMARC" not in result.detected_services
+        assert result.detected_slugs == ()
+        assert any("Multiple DMARC records" in r.message for r in caplog.records)
 
     @pytest.mark.parametrize(
         "record",
@@ -327,6 +434,12 @@ class TestDmarcRuaExtraction:
         """rua=https://example.com → not matched by mailto regex."""
         ctx = _DetectionCtx()
         _extract_dmarc_rua(ctx, "v=DMARC1; p=reject; rua=https://example.com/report")
+        assert len(ctx.slugs) == 0
+
+    def test_mailto_must_start_uri_token(self) -> None:
+        """rua=xmailto:user@example.com is not treated as a mailto URI."""
+        ctx = _DetectionCtx()
+        _extract_dmarc_rua(ctx, "v=DMARC1; p=reject; rua=xmailto:dmarc@agari.com")
         assert len(ctx.slugs) == 0
 
     def test_matched_vendor_creates_evidence(self) -> None:

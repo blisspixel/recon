@@ -76,7 +76,7 @@ _STATUS_MESSAGES = (
     "Separating strong signals from hallway echoes...",
     # Passive-only ethos
     "No credentials were harmed in this lookup...",
-    "Strictly passive; nobody on the other end noticed...",
+    "Strictly passive; keeping the footprint light...",
     "Reading only what was left out in the open...",
     "Observing from a respectful distance...",
     "Staying on the sidewalk, reading the signs...",
@@ -97,7 +97,7 @@ def _build_explanations(
     Generates explanations for signals, insights, confidence, and observations.
     """
     from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
-    from recon_tool.email_security import compute_email_security_score
+    from recon_tool.email_security import signal_context_from_tenant_info, signal_context_metadata
     from recon_tool.explanation import (
         explain_confidence,
         explain_insights,
@@ -105,20 +105,14 @@ def _build_explanations(
         explain_signals,
     )
     from recon_tool.merger import compute_evidence_confidence, compute_inference_confidence
-    from recon_tool.models import ExplanationRecord, SignalContext
+    from recon_tool.models import ExplanationRecord
     from recon_tool.posture import analyze_posture, load_posture_rules
     from recon_tool.signals import evaluate_signals, load_signals
 
     explanations: list[ExplanationRecord] = []
 
-    # Build signal context from info
-    context = SignalContext(
-        detected_slugs=frozenset(info.slugs),
-        dmarc_policy=info.dmarc_policy,
-        auth_type=info.auth_type,
-        email_security_score=compute_email_security_score(info),
-        dmarc_pct=info.dmarc_pct,
-    )
+    context = signal_context_from_tenant_info(info)
+    context_metadata = signal_context_metadata(context)
     signals = load_signals()
     signal_matches = evaluate_signals(context)
 
@@ -132,7 +126,7 @@ def _build_explanations(
         all_signal_matches,
         signals,
         frozenset(info.slugs),
-        {},
+        context_metadata,
         info.evidence,
         info.detection_scores,
     )

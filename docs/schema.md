@@ -160,7 +160,7 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `email_security_score` | int | no | `0-5` | stable | Count of the 5 email controls present: DMARC `reject`/`quarantine`, DKIM selectors, SPF strict (`-all`), MTA-STS, BIMI. |
+| `email_security_score` | int | no | `0-5` | stable | Count of the 5 email controls present: effectively enforcing DMARC, DKIM selectors, SPF strict (`-all`), MTA-STS, BIMI. |
 | `dmarc_policy` | string | yes | `reject \| quarantine \| none` | stable | DMARC policy when a DMARC record is present. |
 | `dmarc_pct` | int | yes | `0-100` | stable | DMARC `pct=` parameter. |
 | `mta_sts_mode` | string | yes | `enforce \| testing \| none` | stable | MTA-STS policy mode. |

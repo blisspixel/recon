@@ -509,22 +509,10 @@ async def explain_signal(
 
     info, _results = resolved
 
-    from recon_tool.constants import email_security_score
-    from recon_tool.models import SignalContext
+    from recon_tool.email_security import signal_context_from_tenant_info, signal_context_metadata
     from recon_tool.signals import evaluate_signals
 
-    context = SignalContext(
-        detected_slugs=frozenset(info.slugs),
-        dmarc_policy=info.dmarc_policy,
-        auth_type=info.auth_type,
-        email_security_score=email_security_score(
-            info.services,
-            info.dmarc_policy,
-            info.dmarc_pct,
-            info.dmarc_testing,
-        ),
-        dmarc_pct=info.dmarc_pct,
-    )
+    context = signal_context_from_tenant_info(info)
     signal_matches = evaluate_signals(context)
     fired = any(m.name == signal_name for m in signal_matches)
     matched_slugs = [slug for slug in sig.candidates if slug in context.detected_slugs]
@@ -532,11 +520,7 @@ async def explain_signal(
     # Build domain-specific weakening conditions
     from recon_tool.explanation import _weakening_conditions_for_signal  # pyright: ignore[reportPrivateUsage]
 
-    context_metadata: dict[str, object] = {
-        "dmarc_policy": info.dmarc_policy,
-        "auth_type": info.auth_type,
-        "email_security_score": context.email_security_score,
-    }
+    context_metadata = signal_context_metadata(context)
     weakening = _weakening_conditions_for_signal(sig, matched_slugs, context_metadata)
 
     # Collect evidence for matched slugs

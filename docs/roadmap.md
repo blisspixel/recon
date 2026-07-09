@@ -47,7 +47,10 @@ The next work is dependency-ordered:
         9989 removes stays parsed for RFC 7489 backward compatibility. The RFC
         9989 `np=` (non-existent subdomain policy) and `t=` (testing) tags are
         now parsed internally, and `t=y` steps the effective policy down one
-        level for scoring and Bayesian signal generation.
+        level for scoring and Bayesian signal generation. The parser now also
+        preserves RFC-compatible monitoring-mode fallback for invalid or
+        missing `p=` records with valid `rua=` reporting, and requires the
+        leading DMARC version value to be exactly `DMARC1`.
         Current decision: keep `dmarc_testing` and `dmarc_np` internal for this
         pass. Exposing them as stable `--json` and MCP output fields remains a
         separate 2.3 minor-release decision under the

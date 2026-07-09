@@ -20,10 +20,14 @@ from recon_tool.constants import (
     effective_dmarc_policy,
     email_security_score,
 )
+from recon_tool.email_security import signal_context_from_tenant_info, signal_context_metadata
 from recon_tool.exposure import _compute_email_security_score
 from recon_tool.formatter_serialize import compute_email_security_score
 from recon_tool.models import ConfidenceLevel, TenantInfo
 from recon_tool.posture import _compute_metadata_value
+from recon_tool.signals import evaluate_signals
+
+GATEWAY_GAP_SIGNAL = "Security Gap \u2014 Gateway Without DMARC Enforcement"
 
 
 def _info(
@@ -32,6 +36,8 @@ def _info(
     *,
     dmarc_pct: int | None = None,
     dmarc_testing: bool = False,
+    slugs: tuple[str, ...] = (),
+    likely_primary_email_provider: str | None = None,
 ) -> TenantInfo:
     return TenantInfo(
         tenant_id=None,
@@ -41,10 +47,11 @@ def _info(
         confidence=ConfidenceLevel.HIGH,
         sources=("test_source",),
         services=tuple(services),
-        slugs=(),
+        slugs=slugs,
         dmarc_policy=dmarc_policy,
         dmarc_pct=dmarc_pct,
         dmarc_testing=dmarc_testing,
+        likely_primary_email_provider=likely_primary_email_provider,
     )
 
 
@@ -118,3 +125,28 @@ class TestAllSurfacesAgree:
         assert compute_email_security_score(info) == 0
         assert _compute_email_security_score(info) == 0
         assert _compute_metadata_value("email_security_score", info) == 0
+
+
+class TestSignalContextFromTenantInfo:
+    def test_enforcing_policy_reaches_gateway_gap_signal_context(self) -> None:
+        info = _info(
+            {SVC_DMARC, "SPF complexity: 5 includes"},
+            "reject",
+            slugs=("proofpoint",),
+            likely_primary_email_provider="Microsoft 365",
+        )
+        context = signal_context_from_tenant_info(info)
+        metadata = signal_context_metadata(context)
+        names = {match.name for match in evaluate_signals(context)}
+        assert context.dmarc_effective_policy == "reject"
+        assert metadata["dmarc_effective_policy"] == "reject"
+        assert metadata["spf_include_count"] == 5
+        assert metadata["likely_primary_email_provider"] == "Microsoft 365"
+        assert GATEWAY_GAP_SIGNAL not in names
+
+    def test_testing_mode_downgrade_reaches_gateway_gap_signal_context(self) -> None:
+        info = _info({SVC_DMARC}, "quarantine", dmarc_testing=True, slugs=("proofpoint",))
+        context = signal_context_from_tenant_info(info)
+        names = {match.name for match in evaluate_signals(context)}
+        assert context.dmarc_effective_policy == "none"
+        assert GATEWAY_GAP_SIGNAL in names
