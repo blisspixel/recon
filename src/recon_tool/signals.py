@@ -80,6 +80,7 @@ _PROVIDER_SLUG_DISPLAY_NAMES: dict[str, str] = {
 _VALID_METADATA_FIELDS = frozenset(
     {
         "dmarc_policy",
+        "dmarc_effective_policy",
         "auth_type",
         "email_security_score",
         "spf_include_count",

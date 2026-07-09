@@ -72,7 +72,7 @@ from recon_tool.bayesian_models import (  # re-exported: stable import path afte
 )
 from recon_tool.bayesian_models import Evidence as _Evidence
 from recon_tool.bayesian_models import Node as _Node
-from recon_tool.constants import SVC_SPF_STRICT
+from recon_tool.constants import SVC_SPF_STRICT, effective_dmarc_policy
 
 logger = logging.getLogger(__name__)
 
@@ -756,7 +756,7 @@ def _rank_evidence(fired: Iterable[_Evidence]) -> tuple[EvidenceContribution, ..
 # ── TenantInfo adapter ────────────────────────────────────────────────
 
 
-def _effective_dmarc_enforcement(policy: str | None, pct: int | None) -> str | None:
+def _effective_dmarc_enforcement(policy: str | None, pct: int | None, testing: bool = False) -> str | None:
     """Effective DMARC enforcement after applying the rollout-coverage tag.
 
     A policy applied to only part of the mail stream is not full enforcement:
@@ -765,18 +765,10 @@ def _effective_dmarc_enforcement(policy: str | None, pct: int | None) -> str | N
     (``reject`` to ``quarantine`` to ``none``), matching how a receiver treats
     the un-covered fraction. ``pct`` absent (``None``) means full coverage: the
     tag was removed in RFC 9989, whose records are full-coverage by default.
-    Returns the effective policy string, or ``None`` for no recognizable policy.
+    RFC 9989 ``t=y`` testing mode also steps the policy down one level. Returns
+    the effective policy string, or ``None`` for no recognizable policy.
     """
-    levels = ("none", "quarantine", "reject")
-    if policy not in levels:
-        return None
-    idx = levels.index(policy)
-    if pct is not None:
-        if pct <= 0:
-            idx = 0
-        elif pct < 100:
-            idx = max(0, idx - 1)
-    return levels[idx]
+    return effective_dmarc_policy(policy, pct, testing)
 
 
 def signals_from_tenant_info(info: object) -> set[str]:
@@ -790,7 +782,8 @@ def signals_from_tenant_info(info: object) -> set[str]:
         ``google_auth_type == "Federated"`` for GWS-primary tenants).
       * ``dmarc_reject`` / ``dmarc_quarantine``: the effective DMARC policy
         (``dmarc_policy`` downgraded when a ``pct`` rollout tag shows partial or
-        zero coverage), so a monitoring-only record is not scored as enforcing.
+        zero coverage, or when RFC 9989 ``t=y`` test mode is set), so a
+        monitoring-only record is not scored as enforcing.
       * ``mta_sts_enforce`` — derived from ``mta_sts_mode``.
       * ``dkim_present`` — true when any DKIM evidence record exists.
       * ``spf_strict`` — true when an SPF strict (``-all``) policy is
@@ -806,7 +799,9 @@ def signals_from_tenant_info(info: object) -> set[str]:
         out.add("federated_sso_hub")
 
     effective_dmarc = _effective_dmarc_enforcement(
-        getattr(info, "dmarc_policy", None), getattr(info, "dmarc_pct", None)
+        getattr(info, "dmarc_policy", None),
+        getattr(info, "dmarc_pct", None),
+        getattr(info, "dmarc_testing", False),
     )
     if effective_dmarc == "reject":
         out.add("dmarc_reject")

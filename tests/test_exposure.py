@@ -385,6 +385,46 @@ class TestProperty6GapDetectionCorrectness:
         if gateway_present and info.dmarc_policy != "reject":
             assert "gateway" in gap_observations, "Gateway without DMARC reject should produce a gap"
 
+    def test_dmarc_testing_quarantine_is_reported_as_non_enforcing(self) -> None:
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Test Corp",
+            default_domain="test.com",
+            queried_domain="test.com",
+            confidence=ConfidenceLevel.HIGH,
+            sources=("test_source",),
+            services=(SVC_DMARC,),
+            slugs=("dmarc",),
+            dmarc_policy="quarantine",
+            dmarc_testing=True,
+        )
+
+        assessment = assess_exposure_from_info(info)
+        gaps = find_gaps_from_info(info)
+
+        assert assessment.posture_score == 0
+        assert any(control.detail == "quarantine (effective none)" for control in assessment.hardening_status.controls)
+        assert any("not effectively enforcing" in gap.observation for gap in gaps.gaps)
+
+    def test_gateway_with_dmarc_testing_reject_still_has_consistency_gap(self) -> None:
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Test Corp",
+            default_domain="test.com",
+            queried_domain="test.com",
+            confidence=ConfidenceLevel.HIGH,
+            sources=("test_source",),
+            services=(SVC_DMARC,),
+            slugs=("dmarc", "proofpoint"),
+            dmarc_policy="reject",
+            dmarc_testing=True,
+        )
+
+        gaps = find_gaps_from_info(info)
+
+        assert any("gateway" in gap.observation.lower() for gap in gaps.gaps)
+        assert any("Effective DMARC policy is quarantine" in gap.observation for gap in gaps.gaps)
+
 
 # ── Property 7: Gap structure validity ────────────────────────────────
 # Feature: defensive-security-tools, Property 7: Gap structure validity

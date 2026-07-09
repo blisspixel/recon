@@ -19,7 +19,7 @@ from typing import Any
 
 import yaml
 
-from recon_tool.constants import email_security_score
+from recon_tool.constants import effective_dmarc_policy, email_security_score
 from recon_tool.models import Observation, TenantInfo
 
 logger = logging.getLogger("recon")
@@ -64,6 +64,7 @@ _VALID_SALIENCE = frozenset({"high", "medium", "low"})
 _VALID_METADATA_FIELDS = frozenset(
     {
         "dmarc_policy",
+        "dmarc_effective_policy",
         "auth_type",
         "email_security_score",
         "spf_include_count",
@@ -271,10 +272,12 @@ def _compute_metadata_value(field: str, info: TenantInfo) -> str | int | None:
     """Compute a metadata field value from TenantInfo."""
     if field == "dmarc_policy":
         return info.dmarc_policy
+    if field == "dmarc_effective_policy":
+        return effective_dmarc_policy(info.dmarc_policy, info.dmarc_pct, info.dmarc_testing)
     if field == "auth_type":
         return info.auth_type
     if field == "email_security_score":
-        return email_security_score(info.services, info.dmarc_policy)
+        return email_security_score(info.services, info.dmarc_policy, info.dmarc_pct, info.dmarc_testing)
     if field == "spf_include_count":
         for svc in sorted(info.services):
             if svc.startswith("SPF complexity:"):

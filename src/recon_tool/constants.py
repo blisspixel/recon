@@ -29,13 +29,47 @@ SVC_BIMI = "BIMI"
 SVC_MTA_STS = "MTA-STS"
 
 
-def email_security_score(services: Iterable[str], dmarc_policy: str | None) -> int:
+_DMARC_POLICY_LEVELS = ("none", "quarantine", "reject")
+
+
+def effective_dmarc_policy(
+    dmarc_policy: str | None,
+    dmarc_pct: int | None = None,
+    dmarc_testing: bool = False,
+) -> str | None:
+    """Return the effective DMARC enforcement level for scoring and signals.
+
+    RFC 7489 ``pct=`` is historic under RFC 9989, but existing records remain
+    observable and backward-compatible. RFC 9989's ``t=y`` testing mode applies
+    the stated policy one level lower. The published ``p=`` value stays visible
+    through ``dmarc_policy``; this helper is only for enforcement semantics.
+    """
+    if dmarc_policy not in _DMARC_POLICY_LEVELS:
+        return None
+    idx = _DMARC_POLICY_LEVELS.index(dmarc_policy)
+    if dmarc_pct is not None:
+        if dmarc_pct <= 0:
+            idx = 0
+        elif dmarc_pct < 100:
+            idx = max(0, idx - 1)
+    if dmarc_testing:
+        idx = max(0, idx - 1)
+    return _DMARC_POLICY_LEVELS[idx]
+
+
+def email_security_score(
+    services: Iterable[str],
+    dmarc_policy: str | None,
+    dmarc_pct: int | None = None,
+    dmarc_testing: bool = False,
+) -> int:
     """Canonical email-security score (0-5), the single definition every surface uses.
 
-    Five independent controls each count once: an *enforcing* DMARC policy
-    (``reject``/``quarantine``; a ``p=none`` record does not count), any DKIM
-    (Exchange Online or a generic selector, credited once even when both are
-    observed), strict SPF (``-all``), MTA-STS, and BIMI.
+    Five independent controls each count once: an *effectively enforcing* DMARC
+    policy (``reject``/``quarantine`` after RFC 7489 ``pct=`` and RFC 9989
+    ``t=`` downgrades; a ``p=none`` record does not count), any DKIM (Exchange
+    Online or a generic selector, credited once even when both are observed),
+    strict SPF (``-all``), MTA-STS, and BIMI.
 
     The JSON ``email_security_score`` field, ``--exposure``, posture statements,
     the MCP signal context, and ``delta`` all route through this function so the
@@ -43,7 +77,7 @@ def email_security_score(services: Iterable[str], dmarc_policy: str | None) -> i
     """
     present = set(services)
     return (
-        (1 if dmarc_policy in ("reject", "quarantine") else 0)
+        (1 if effective_dmarc_policy(dmarc_policy, dmarc_pct, dmarc_testing) in ("reject", "quarantine") else 0)
         + (1 if SVC_DKIM in present or SVC_DKIM_EXCHANGE in present else 0)
         + (1 if SVC_SPF_STRICT in present else 0)
         + (1 if SVC_MTA_STS in present else 0)

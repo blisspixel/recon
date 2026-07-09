@@ -458,6 +458,9 @@ _RUA_TAG_RE = re.compile(r"rua\s*=\s*([^;]+)", re.IGNORECASE)
 # always delimits the size.
 _RUA_MAILTO_RE = re.compile(r"mailto:([^,;\s!]+)", re.IGNORECASE)
 
+_DMARC_POLICY_VALUES = frozenset({"none", "quarantine", "reject"})
+_DMARC_TESTING_VALUES = frozenset({"n", "y"})
+
 
 def extract_dmarc_rua(ctx: dns_base.DetectionCtx, dmarc_record: str) -> None:
     """Extract rua=mailto: addresses and match vendor domains against fingerprints."""
@@ -487,38 +490,82 @@ def extract_dmarc_rua(ctx: dns_base.DetectionCtx, dmarc_record: str) -> None:
                 break  # first match wins per RUA address
 
 
-def _apply_dmarc_pct(ctx: dns_base.DetectionCtx, raw_pct: str, domain: str) -> None:
-    """Validate and record a DMARC ``pct=`` value (0-100), warning on bad input."""
+def _parse_dmarc_pct(raw_pct: str, domain: str) -> int | None:
+    """Validate a DMARC ``pct=`` value (0-100), warning on bad input."""
     try:
         pct_val = int(raw_pct)
     except ValueError:
         logger.warning("DMARC pct= value %r is not a valid integer for %s - ignored", raw_pct, domain)
-        return
+        return None
     if 0 <= pct_val <= 100:
-        ctx.dmarc_pct = pct_val
-    else:
-        logger.warning("DMARC pct= value %d out of range for %s - ignored", pct_val, domain)
+        return pct_val
+    logger.warning("DMARC pct= value %d out of range for %s - ignored", pct_val, domain)
+    return None
+
+
+def _parse_dmarc_policy(raw_policy: str, domain: str) -> str | None:
+    """Validate the required DMARC ``p=`` policy."""
+    policy = raw_policy.strip().lower()
+    if policy in _DMARC_POLICY_VALUES:
+        return policy
+    logger.warning("DMARC p= value %r is not a valid policy for %s - ignored", raw_policy, domain)
+    return None
+
+
+def _parse_dmarc_np(raw_np: str, domain: str) -> str | None:
+    """Validate RFC 9989 ``np=`` for non-existent subdomain policy."""
+    policy = raw_np.strip().lower()
+    if policy in _DMARC_POLICY_VALUES:
+        return policy
+    logger.warning("DMARC np= value %r is not a valid policy for %s - ignored", raw_np, domain)
+    return None
+
+
+def _parse_dmarc_testing(raw_testing: str, domain: str) -> bool | None:
+    """Validate RFC 9989 ``t=`` testing mode."""
+    testing = raw_testing.strip().lower()
+    if testing not in _DMARC_TESTING_VALUES:
+        logger.warning("DMARC t= value %r is not valid for %s - ignored", raw_testing, domain)
+        return None
+    return testing == "y"
+
+
+def _parse_dmarc_tags(dmarc_record: str, domain: str) -> dict[str, str] | None:
+    """Parse a DMARC tag list, rejecting duplicate tag names."""
+    tags: dict[str, str] = {}
+    for part in dmarc_record.split(";"):
+        key, sep, value = part.partition("=")
+        if not sep:
+            continue
+        key = key.strip().lower()
+        if key in tags:
+            logger.warning("DMARC record for %s contains duplicate %s= tag - ignored", domain, key)
+            return None
+        tags[key] = value.strip()
+    return tags
 
 
 def _apply_dmarc(ctx: dns_base.DetectionCtx, dmarc_results: list[str], domain: str) -> None:
-    """Record DMARC presence, policy, pct, and rua mailto fingerprints."""
-    for txt in dmarc_results:
-        if not txt.lower().startswith("v=dmarc1"):
+    """Record DMARC presence, policy tags, and rua mailto fingerprints."""
+    records = [txt for txt in dmarc_results if txt.lower().startswith("v=dmarc1")]
+    if len(records) > 1:
+        logger.warning("Multiple DMARC records found for %s - ignored", domain)
+        return
+    for txt in records:
+        tags = _parse_dmarc_tags(txt, domain)
+        if tags is None:
+            continue
+        policy = _parse_dmarc_policy(tags.get("p", ""), domain)
+        if policy is None:
             continue
         ctx.services.add(SVC_DMARC)
-        for part in txt.split(";"):
-            # Tag syntax permits whitespace around "=" (RFC 9989 / 6376 tag-spec),
-            # so parse on the first "=" and strip both sides rather than matching a
-            # "p=" prefix, which would miss a spec-legal "p = reject".
-            key, sep, value = part.partition("=")
-            if not sep:
-                continue
-            key = key.strip().lower()
-            value = value.strip()
-            if key == "p":
-                ctx.dmarc_policy = value.lower()
-            elif key == "pct":
-                _apply_dmarc_pct(ctx, value, domain)
+        ctx.dmarc_policy = policy
+        if (value := tags.get("pct")) is not None and (pct := _parse_dmarc_pct(value, domain)) is not None:
+            ctx.dmarc_pct = pct
+        if (value := tags.get("np")) is not None and (dmarc_np := _parse_dmarc_np(value, domain)) is not None:
+            ctx.dmarc_np = dmarc_np
+        if (value := tags.get("t")) is not None and (testing := _parse_dmarc_testing(value, domain)) is not None:
+            ctx.dmarc_testing = testing
         extract_dmarc_rua(ctx, txt)
 
 
