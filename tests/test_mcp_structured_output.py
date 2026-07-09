@@ -229,10 +229,14 @@ def test_graph_output_schemas_are_precise() -> None:
         "stability_runs",
         "node_count",
         "edge_count",
+        "member_limit_per_cluster",
+        "selection_rule",
         "clusters",
     }
     infra_props = infra_schema["properties"]
     assert infra_props["clusters"]["items"]["$ref"] == "#/$defs/InfrastructureClusterSummary"
+    summary = infra_schema["$defs"]["InfrastructureClusterSummary"]
+    assert "members_omitted" in summary["required"]
 
     export_schema = _tool_output_schema("export_graph")
     assert export_schema["title"] == "GraphExportEnvelope"
@@ -241,6 +245,12 @@ def test_graph_output_schemas_are_precise() -> None:
         "algorithm",
         "node_count",
         "edge_count",
+        "node_limit",
+        "edge_limit",
+        "nodes_omitted",
+        "edges_omitted",
+        "cluster_assignment_omitted",
+        "selection_rule",
         "nodes",
         "edges",
         "cluster_assignment",

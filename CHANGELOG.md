@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   passive live integration smoke suite against public reserved-domain fixtures,
   giving upstream DNS, certificate transparency, and identity-endpoint changes a
   visible non-default gate.
+- Added optional compact-output caps for MCP graph tools:
+  `get_infrastructure_clusters(member_limit_per_cluster=...)` and
+  `export_graph(node_limit=..., edge_limit=...)`. The default zero-cap path
+  still returns the raw bounded graph payload, while compact calls report
+  omitted counts and deterministic selection rules.
 
 ### Fixed
 
