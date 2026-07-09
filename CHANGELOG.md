@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.6] - 2026-07-09
+
+### Tool Surface Changes
+
+No CLI command or flag additions or removals. Ambiguous `--exposure --gaps`
+invocations now fail validation instead of selecting one mode by branch order.
+
+### Changed
+
+- **Typed lookup options model.** The Typer lookup command now translates raw
+  flags into a structured `LookupOptions` object at the CLI boundary, reducing
+  the async lookup implementation from a 34-parameter signature to `domain` plus
+  one coherent options value.
+- **Centralized lookup mode validation.** Output, display, operation, inference,
+  and execution options now carry their own normalization and validation rules,
+  with focused tests covering full/profile normalization and mutually-exclusive
+  mode combinations.
+
+### Fixed
+
+- **Ambiguous exposure and gap mode selection.** `recon lookup <domain>
+  --exposure --gaps` now exits with the validation error `--exposure and --gaps
+  are mutually exclusive`, matching the rest of the lookup mode surface.
+
 ## [2.3.5] - 2026-07-09
 
 ### Tool Surface Changes

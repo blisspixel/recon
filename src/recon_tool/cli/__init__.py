@@ -26,6 +26,14 @@ from recon_tool.cli import lookup as cli_lookup
 from recon_tool.cli.cache import cache_app
 from recon_tool.cli.fingerprints import fingerprints_app
 from recon_tool.cli.mcp import mcp_app
+from recon_tool.cli.options import (
+    LookupDisplayOptions,
+    LookupExecutionOptions,
+    LookupInferenceOptions,
+    LookupOperationOptions,
+    LookupOptions,
+    LookupOutputOptions,
+)
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.cli.signals import signals_app
 from recon_tool.formatter import get_console, get_err_console
@@ -344,36 +352,49 @@ def lookup(
     [dim]recon contoso.com is the same as recon lookup contoso.com[/dim]
     """
     effective_confidence_mode = "strict" if strict else confidence_mode
-    asyncio.run(
-        _lookup(
-            domain,
-            json_output,
-            markdown,
-            plain,
-            verbose,
-            services,
-            domains,
-            full,
-            sources,
-            timeout,
-            show_posture=posture,
+    options = LookupOptions(
+        output=LookupOutputOptions(
+            json_output=json_output,
+            markdown=markdown,
+            plain=plain,
+            include_unclassified=include_unclassified,
+        ),
+        display=LookupDisplayOptions.from_flags(
+            services=services,
+            domains=domains,
+            full=full,
+            verbose=verbose,
+            sources=sources,
+            posture=posture,
+            explain=explain,
+            profile=profile,
+            confidence_mode=effective_confidence_mode,
+        ),
+        operation=LookupOperationOptions(
             compare_file=compare,
             chain_mode=chain,
             chain_depth=depth,
-            no_cache=no_cache,
-            cache_ttl=cache_ttl,
             show_exposure=exposure,
             show_gaps=gaps,
-            show_explain=explain,
-            profile_name=profile,
-            confidence_mode=effective_confidence_mode,
+        ),
+        inference=LookupInferenceOptions(
             fusion=fusion,
             explain_dag=explain_dag,
             explain_dag_format=explain_dag_format,
-            include_unclassified=include_unclassified,
+        ),
+        execution=LookupExecutionOptions(
+            timeout=timeout,
+            no_cache=no_cache,
+            cache_ttl=cache_ttl,
             skip_ct=no_ct,
             active_probes=direct_probes,
             exact=exact,
+        ),
+    )
+    asyncio.run(
+        _lookup(
+            domain,
+            options,
         )
     )
 

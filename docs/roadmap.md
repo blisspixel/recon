@@ -5,7 +5,7 @@ This file is the current plan and scope boundary. Shipped work belongs in
 [release-process.md](release-process.md). Historical release planning lives in
 [roadmap-history.md](roadmap-history.md).
 
-> **Status:** v2.3.5 is current. recon is feature-complete for the current
+> **Status:** v2.3.6 is current. recon is feature-complete for the current
 > roadmap: the CLI, JSON schema, MCP server, validation guards, release path,
 > generated schema guard, and generated surface inventory guard are shipped.
 > Remaining work hardens the project, sharpens documentation, and improves
@@ -56,7 +56,7 @@ The next work is dependency-ordered:
         integration suite is deselected in CI, so an upstream provider change
         could silently drop a detection with no gate failure; a scheduled
         integration run or a small golden acceptance set would surface it.
-     3. Interface package-locality hardening. recon's core domain boundaries
+     3. Interface-layer debt reduction. recon's core domain boundaries
         are healthy: source collectors, resolver, merger, fingerprint catalog,
         signals, Bayesian inference, posture analysis, and validation harnesses
         each have coherent reasons to change. ADR-0008 moved the
@@ -72,6 +72,11 @@ The next work is dependency-ordered:
         surfaces; keep stable CLI, MCP, and JSON behavior unchanged; do not mix
         this work with `models.py` or schema refactors. The completed migration
         record below remains as an audit checklist for future locality work.
+        v2.3.6 added the next interface cleanup: the Typer lookup command now
+        translates raw flags into `LookupOptions` at the boundary, while
+        `cli.lookup.lookup` receives `domain` plus that one typed options value.
+        Future lookup-mode work should extend the grouped options model and its
+        validation tests instead of widening orchestration signatures.
    - Acceptance: every refinement preserves the project invariants, keeps
      examples fictional or synthetic, and publishes only public, synthetic, or
      aggregate-only evidence. Feedback on gaps, wording, and false positives is
