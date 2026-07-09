@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `cluster_verification_tokens(peer_limit_per_domain=...)` for compact
   batch-correlation output with per-domain omitted counts and a raw-request
   pointer.
+- Added `chain_lookup(result_limit=...)` for compact recursive-domain output
+  while keeping the zero-limit raw JSON response unchanged.
 
 ### Fixed
 
