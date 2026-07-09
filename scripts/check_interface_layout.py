@@ -49,6 +49,13 @@ REQUIRED_PACKAGES = (
     "server",
 )
 
+FORBIDDEN_LEGACY_MODULES = (
+    "cli.py",
+    "formatter.py",
+    "mcp_client.py",
+    "server.py",
+)
+
 
 def _is_interface_prefix(name: str) -> bool:
     return name.startswith(("cli_", "formatter_", "server_", "mcp_")) or name == "client_doctor.py"
@@ -61,6 +68,14 @@ def main() -> int:
         init_path = PKG / package / "__init__.py"
         if not init_path.exists():
             failures.append(f"missing package initializer: {init_path.relative_to(ROOT).as_posix()}")
+
+    for module_name in FORBIDDEN_LEGACY_MODULES:
+        path = PKG / module_name
+        if path.exists():
+            failures.append(
+                f"legacy interface implementation module is not allowed: "
+                f"{path.relative_to(ROOT).as_posix()}"
+            )
 
     for path in sorted(PKG.glob("*.py")):
         name = path.name

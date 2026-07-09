@@ -4,13 +4,14 @@ Extracted from ``formatter.py`` so the panel, markdown, plain, and json-dict
 renderers can be split onto a common base without circular imports. This module
 holds the classification *logic*: slug -> category, slug -> cloud vendor,
 provider-line detection, the two-pass service categorizer, and the fingerprint
-lookups they build on. The data tables live in ``formatter_classify_tables``;
-this module imports and re-exports them so ``formatter`` has one import source.
-It imports nothing from ``formatter`` and does no Rich rendering.
+lookups they build on. The data tables live in
+``recon_tool.formatter.classify_tables``; this module imports and re-exports
+them so ``recon_tool.formatter`` has one import source. It imports nothing from
+the formatter facade and does no Rich rendering.
 
-The boundary names are public; ``formatter`` re-exports them (and the tables)
-under their historical ``_NAME`` aliases so the test/validation import surface
-and formatter's own body keep working unchanged.
+The boundary names are public; the formatter facade re-exports them (and the
+tables) under their historical ``_NAME`` aliases so the test/validation import
+surface and formatter's own body keep working unchanged.
 """
 
 from __future__ import annotations

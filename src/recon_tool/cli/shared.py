@@ -1,10 +1,10 @@
 """Small shared helpers for the cli modules.
 
-Helpers used by more than one cli module live here so the sibling sub-app
-modules (`cli_fingerprints`, etc.) can import them without reaching back into
-`cli.py`, which would be a circular import. Public names because they cross a
-module boundary (pyright-strict flags cross-module underscore access); the
-callers alias them back to their historical `_name` where convenient.
+Helpers used by more than one package-local CLI module live here so sibling
+sub-app modules can import them without reaching back into the CLI facade,
+which would be a circular import. Public names because they cross a module
+boundary (pyright-strict flags cross-module underscore access); callers alias
+them back to their historical `_name` where convenient.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ def fmt_exc(exc: BaseException) -> str:
     """Render an exception for user display, falling back to the type name.
 
     httpx.ReadTimeout and similar raise with an empty message, which used
-    to render as ``FAIL  crt.sh — `` with nothing after the em-dash.
+    to render as an empty failure detail.
     """
     return str(exc) or type(exc).__name__
 

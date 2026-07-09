@@ -27,10 +27,9 @@ import time
 from dataclasses import dataclass
 from typing import Literal, TextIO
 
-# Tools we expect any healthy build to surface. Picked from the banner
-# (server.py:2456-2468) — these are the public-facing primary tools,
-# not internal debug helpers. If any of these go missing, something
-# real is broken at the registration layer.
+# Tools we expect any healthy build to surface. These are the public-facing
+# primary tools, not internal debug helpers. If any of these go missing,
+# something real is broken at the registration layer.
 _REQUIRED_TOOLS: frozenset[str] = frozenset(
     {
         "lookup_tenant",
