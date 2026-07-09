@@ -214,10 +214,19 @@ def test_graph_output_schemas_are_precise() -> None:
     """Graph data tools advertise their stable envelope fields."""
     cluster_schema = _tool_output_schema("cluster_verification_tokens")
     assert cluster_schema["title"] == "VerificationTokenClusterResult"
-    assert set(cluster_schema["required"]) == {"clusters", "errors", "disclaimer"}
+    assert set(cluster_schema["required"]) == {
+        "clusters",
+        "errors",
+        "peer_limit_per_domain",
+        "peers_omitted",
+        "selection_rule",
+        "raw_request",
+        "disclaimer",
+    }
     cluster_props = cluster_schema["properties"]
     assert cluster_props["clusters"]["additionalProperties"]["items"]["$ref"] == "#/$defs/SharedVerificationPeer"
     assert cluster_props["errors"]["items"]["$ref"] == "#/$defs/DomainToolError"
+    assert cluster_props["peers_omitted"]["additionalProperties"]["type"] == "integer"
 
     infra_schema = _tool_output_schema("get_infrastructure_clusters")
     assert infra_schema["title"] == "InfrastructureClusterEnvelope"
@@ -231,6 +240,7 @@ def test_graph_output_schemas_are_precise() -> None:
         "edge_count",
         "member_limit_per_cluster",
         "selection_rule",
+        "raw_request",
         "clusters",
     }
     infra_props = infra_schema["properties"]
@@ -251,6 +261,7 @@ def test_graph_output_schemas_are_precise() -> None:
         "edges_omitted",
         "cluster_assignment_omitted",
         "selection_rule",
+        "raw_request",
         "nodes",
         "edges",
         "cluster_assignment",
