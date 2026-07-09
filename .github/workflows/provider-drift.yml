@@ -1,0 +1,42 @@
+name: Provider drift
+
+# Passive live smoke coverage for public DNS, certificate transparency, and
+# identity discovery endpoint drift. This is separate from CI because it uses
+# real network endpoints and is meant to catch upstream behavior changes, not
+# block every pull request.
+on:
+  schedule:
+    # Wednesday 08:23 UTC. Off the top of the hour to reduce scheduled-run
+    # delay or drop risk during GitHub Actions high-load windows.
+    - cron: "23 8 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # .python-version pins the local toolchain to 3.14; force the live smoke
+      # job to the oldest supported interpreter for compatibility drift signal.
+      UV_PYTHON: "3.11"
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run passive live integration smoke
+        run: uv run pytest tests/test_integration.py -m integration -q
