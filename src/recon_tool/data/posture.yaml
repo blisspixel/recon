@@ -14,13 +14,13 @@ observations:
       slugs_any: [proofpoint, mimecast, barracuda, trendmicro, cisco-ironport, cisco-email, symantec, trellix]
       slugs_min: 1
       metadata:
-        - field: dmarc_policy
+        - field: dmarc_effective_policy
           operator: neq
           value: reject
-        - field: dmarc_policy
+        - field: dmarc_effective_policy
           operator: neq
           value: quarantine
-    template: "Email gateway ({matched_slugs}) is active while DMARC policy is not set to reject or quarantine"
+    template: "Email gateway ({matched_slugs}) is active while effective DMARC policy is not reject or quarantine"
 
   - name: no_dmarc_record
     category: email

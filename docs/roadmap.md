@@ -44,15 +44,13 @@ The next work is dependency-ordered:
         DMARC `pct=` coverage tag has shipped: a monitoring-only `pct=0` or a
         partial rollout no longer counts as full enforcement in the
         `email_security_policy_enforcing` signal, and the `pct=` tag that RFC
-        9989 removes stays parsed for RFC 7489 backward compatibility.
-        Remaining: parse the new `np=` (non-existent subdomain policy) and `t=`
-        (testing) tags and step a `t=y` testing-mode policy down one level as
-        well.
-        OPEN DECISION (owner to resolve on or after 2026-07-02): whether
-        `dmarc_testing` and `dmarc_np` are exposed as stable `--json` and MCP
-        output fields, committing to backward compatibility, or kept internal
-        to the signal layer. Exposing them is a stable JSON-schema addition, so
-        it is a 2.3 minor-release decision under the
+        9989 removes stays parsed for RFC 7489 backward compatibility. The RFC
+        9989 `np=` (non-existent subdomain policy) and `t=` (testing) tags are
+        now parsed internally, and `t=y` steps the effective policy down one
+        level for scoring and Bayesian signal generation.
+        Current decision: keep `dmarc_testing` and `dmarc_np` internal for this
+        pass. Exposing them as stable `--json` and MCP output fields remains a
+        separate 2.3 minor-release decision under the
         [ADR-0003](adr/0003-v2-schema-lock.md) schema lock, handled with the
         full schema-lock discipline (schema regen, `schema.md`, schema tests,
         drift and CPT-discipline notes), not an ad hoc edit.

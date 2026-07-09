@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 
 from recon_tool.cache import (
+    _CACHE_VERSION,
     DEFAULT_TTL,
     cache_clear,
     cache_clear_all,
@@ -283,6 +284,13 @@ class TestCacheDiskOperations:
         cache_dir().mkdir(parents=True, exist_ok=True)
         (cache_dir() / "bad.com.json").write_text("not valid json{{{", encoding="utf-8")
         assert cache_get("bad.com") is None
+
+    def test_get_old_cache_version_returns_none(self) -> None:
+        cache_dir().mkdir(parents=True, exist_ok=True)
+        data = tenant_info_to_dict(_complete_info())
+        data["_cache_version"] = _CACHE_VERSION - 1
+        (cache_dir() / "contoso.com.json").write_text(json.dumps(data), encoding="utf-8")
+        assert cache_get("contoso.com") is None
 
     def test_get_stale_returns_none(self) -> None:
         """Files older than TTL are evicted lazily by cache_get."""

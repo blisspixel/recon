@@ -485,6 +485,25 @@ class TestSignalsFromTenantInfo:
         assert "dmarc_quarantine" not in quarantine_partial
         assert "dmarc_reject" not in quarantine_partial
 
+    def test_dmarc_testing_mode_steps_down_one_level(self) -> None:
+        reject_testing = signals_from_tenant_info(SimpleNamespace(dmarc_policy="reject", dmarc_testing=True))
+        assert "dmarc_reject" not in reject_testing
+        assert "dmarc_quarantine" in reject_testing
+        quarantine_testing = signals_from_tenant_info(SimpleNamespace(dmarc_policy="quarantine", dmarc_testing=True))
+        assert "dmarc_quarantine" not in quarantine_testing
+        assert "dmarc_reject" not in quarantine_testing
+
+    @pytest.mark.parametrize(
+        ("info", "expected"),
+        [
+            (SimpleNamespace(dmarc_policy="reject", dmarc_pct=50, dmarc_testing=True), set()),
+            (SimpleNamespace(dmarc_policy="reject", dmarc_pct=100, dmarc_testing=True), {"dmarc_quarantine"}),
+            (SimpleNamespace(dmarc_policy="quarantine", dmarc_pct=50, dmarc_testing=True), set()),
+        ],
+    )
+    def test_dmarc_pct_and_testing_compose(self, info: SimpleNamespace, expected: set[str]) -> None:
+        assert signals_from_tenant_info(info) == expected
+
     def test_spf_strict_from_service_marker_only(self) -> None:
         # spf_strict is derived from the strict (-all) marker on the merged
         # service set, not from an SPF-typed evidence record. A soft SPF domain

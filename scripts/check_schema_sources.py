@@ -31,6 +31,7 @@ SPECIAL_SCHEMA_SOURCES: Mapping[str, str] = {
 
 INTENTIONAL_TENANTINFO_OMISSIONS: Mapping[str, str] = {
     "cached_at": "cache metadata, not emitted by the lookup JSON formatter",
+    "dmarc_testing": "internal RFC 9989 effective-policy input, not a stable output field",
     "merge_conflicts": "serialized as top-level evidence_conflicts",
     "resolved_at": "cache metadata, not emitted by the lookup JSON formatter",
 }
@@ -48,9 +49,7 @@ class SchemaSourceAudit:
 
     @property
     def ok(self) -> bool:
-        return not (
-            self.untraced_schema_properties or self.stale_special_sources or self.unrepresented_tenant_fields
-        )
+        return not (self.untraced_schema_properties or self.stale_special_sources or self.unrepresented_tenant_fields)
 
 
 def schema_source_map(schema_properties: Iterable[str], tenant_fields: Iterable[str]) -> dict[str, str]:

@@ -6,7 +6,12 @@ import contextlib
 from typing import Any, NamedTuple
 
 from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
-from recon_tool.constants import email_security_score
+from recon_tool.constants import (
+    effective_dmarc_policy as _effective_dmarc_policy,
+)
+from recon_tool.constants import (
+    email_security_score as _email_security_score,
+)
 from recon_tool.insights import generate_insights
 from recon_tool.lexical import lexical_observations
 from recon_tool.models import (
@@ -47,7 +52,6 @@ from recon_tool.merger_tables import (
     SLUG_HUMAN_NAMES,
 )
 
-# Re-exported under their historical private names for internal callers and tests.
 _GATEWAY_SLUGS = GATEWAY_SLUGS
 _EMAIL_PROVIDER_SLUG_NAMES = EMAIL_PROVIDER_SLUG_NAMES
 _GATEWAY_SLUG_NAMES = GATEWAY_SLUG_NAMES
@@ -57,19 +61,8 @@ _SLUG_HUMAN_NAMES = SLUG_HUMAN_NAMES
 _SLUG_ACRONYMS = SLUG_ACRONYMS
 
 
-
 def _humanize_slug(slug: str) -> str:
-    """Map a raw slug to a user-friendly display name.
-
-    Used by insight text formatting so strings like
-    ``"Google-Native Identity: google-workspace, google-managed"``
-    render as ``"Google-Native Identity: Google Workspace, Google
-    Workspace (managed)"`` instead of leaking raw identifiers.
-
-    Fallback for unmapped slugs: title-case with dashes replaced
-    by spaces. A narrow set of known acronyms (sso, idp, waf, …)
-    stays uppercase; everything else title-cases.
-    """
+    """Map a raw slug to a user-friendly display name."""
     if slug in _SLUG_HUMAN_NAMES:
         return _SLUG_HUMAN_NAMES[slug]
     parts = slug.replace("_", "-").split("-")
@@ -82,15 +75,9 @@ def _humanize_slug(slug: str) -> str:
     return " ".join(out)
 
 
-# When a signal's matched-slug list contains both a base
-# slug (``google-workspace``) and a variant slug (``google-managed``,
-# ``google-federated``) that represents the same product with an
-# identity-mode qualifier, collapse the variant into the base. Without
-# this, insight text read as ``"Google Workspace, Google Workspace
-# (managed)"`` — same product listed twice with different qualifiers.
-# The variant is dropped only when the base is present; on a signal
-# that fires only on the variant, the variant stays so the user
-# still sees the identity-mode distinction.
+# Collapse variant slugs into their base product only when the base slug is also
+# present, so signals do not list the same product twice while still preserving
+# identity-mode-only evidence.
 _VARIANT_SLUG_PARENTS: dict[str, str] = {
     "google-managed": "google-workspace",
     "google-federated": "google-workspace",
@@ -347,6 +334,7 @@ def build_insights_with_signals(
     tenant_region_sub_scope: str | None = None,
     msgraph_host: str | None = None,
     has_mx_records: bool = False,
+    dmarc_effective_policy: str | None = None,
 ) -> list[str]:
     """Generate insights and append signal intelligence.
 
@@ -354,6 +342,7 @@ def build_insights_with_signals(
     (related domain enrichment) to avoid duplicating the insight+signal
     formatting pipeline.
     """
+    dmarc_effective_policy = dmarc_effective_policy or _effective_dmarc_policy(dmarc_policy, dmarc_pct)
     insights = generate_insights(
         services,
         slugs,
@@ -369,10 +358,12 @@ def build_insights_with_signals(
         likely_primary_email_provider=likely_primary_email_provider,
         email_gateway=email_gateway,
         has_mx_records=has_mx_records,
+        dmarc_effective_policy=dmarc_effective_policy,
     )
     context = SignalContext(
         detected_slugs=frozenset(slugs),
         dmarc_policy=dmarc_policy,
+        dmarc_effective_policy=dmarc_effective_policy,
         auth_type=auth_type,
         email_security_score=email_security_score,
         spf_include_count=spf_include_count,
@@ -495,6 +486,8 @@ class _ScalarFields(NamedTuple):
     region: str | None
     auth_type: str | None
     dmarc_policy: str | None
+    dmarc_pct: int | None
+    dmarc_testing: bool
     google_auth_type: str | None
     google_idp_name: str | None
     bimi_identity: BIMIIdentity | None
@@ -528,6 +521,8 @@ def _merge_scalar_fields(results: list[SourceResult]) -> _ScalarFields:
     additionally skips placeholder values.
     """
     tenant_id = display_name = default_domain = region = auth_type = dmarc_policy = None
+    dmarc_pct: int | None = None
+    dmarc_testing = False
     google_auth_type = google_idp_name = mta_sts_mode = None
     bimi_identity: BIMIIdentity | None = None
     all_domains: set[str] = set()
@@ -545,6 +540,8 @@ def _merge_scalar_fields(results: list[SourceResult]) -> _ScalarFields:
             auth_type = result.auth_type
         if dmarc_policy is None and result.dmarc_policy is not None:
             dmarc_policy = result.dmarc_policy
+            dmarc_pct = result.dmarc_pct
+            dmarc_testing = result.dmarc_testing
         if google_auth_type is None and result.google_auth_type is not None:
             google_auth_type = result.google_auth_type
         if google_idp_name is None and result.google_idp_name is not None:
@@ -562,6 +559,8 @@ def _merge_scalar_fields(results: list[SourceResult]) -> _ScalarFields:
         region=region,
         auth_type=auth_type,
         dmarc_policy=dmarc_policy,
+        dmarc_pct=dmarc_pct,
+        dmarc_testing=dmarc_testing,
         google_auth_type=google_auth_type,
         google_idp_name=google_idp_name,
         bimi_identity=bimi_identity,
@@ -605,9 +604,7 @@ def _raise_if_all_sources_failed(results: list[SourceResult], queried_domain: st
     """
     if tenant_id is not None or not all(r.error is not None for r in results):
         return
-    source_errors: tuple[tuple[str, str], ...] = tuple(
-        (r.source_name, r.error) for r in results if r.error is not None
-    )
+    source_errors: tuple[tuple[str, str], ...] = tuple((r.source_name, r.error) for r in results if r.error is not None)
     reasons = "; ".join(f"{n}: {e}" for n, e in source_errors)
     raise ReconLookupError(
         domain=queried_domain,
@@ -662,11 +659,6 @@ def _aggregate_detections(results: list[SourceResult]) -> tuple[set[str], set[st
         slugs.update(result.detected_slugs)
         related.update(result.related_domains)
     return services, slugs, related
-
-
-def compute_email_security_score(services: set[str], dmarc_policy: str | None) -> int:
-    """Email-security score (0-5); see ``constants.email_security_score`` for the definition."""
-    return email_security_score(services, dmarc_policy)
 
 
 def extract_spf_include_count(services: set[str]) -> int | None:
@@ -851,7 +843,14 @@ def merge_results(
     domain_count = len(all_domains)
     tenant_domains = tuple(sorted(all_domains))
 
-    email_security_score = compute_email_security_score(all_services, dmarc_policy)
+    dmarc_pct = scalars.dmarc_pct
+    dmarc_effective_policy = _effective_dmarc_policy(dmarc_policy, dmarc_pct, scalars.dmarc_testing)
+    email_security_score = _email_security_score(
+        all_services,
+        dmarc_policy,
+        dmarc_pct,
+        scalars.dmarc_testing,
+    )
     spf_include_count = extract_spf_include_count(all_services)
 
     cert_summary: CertSummary | None = _first_non_none(results, "cert_summary")
@@ -862,7 +861,6 @@ def merge_results(
 
     evidence_tuple = _collect_evidence(results)
     primary_email_provider, email_gateway, likely_primary_email_provider = _compute_email_topology(evidence_tuple)
-    dmarc_pct: int | None = _first_non_none(results, "dmarc_pct")
     # True if ANY MX evidence exists, regardless of slug match — lets
     # downstream insights distinguish "no email" from "custom / self-hosted".
     has_mx_records = any(e.source_type == "MX" for e in evidence_tuple)
@@ -887,6 +885,7 @@ def merge_results(
         tenant_region_sub_scope=tenant_region_sub_scope,
         msgraph_host=msgraph_host,
         has_mx_records=has_mx_records,
+        dmarc_effective_policy=dmarc_effective_policy,
     )
 
     # Surface conflicting tenant IDs — high-value intel that explains why
@@ -939,6 +938,7 @@ def merge_results(
         primary_email_provider=primary_email_provider,
         email_gateway=email_gateway,
         dmarc_pct=dmarc_pct,
+        dmarc_testing=scalars.dmarc_testing,
         likely_primary_email_provider=likely_primary_email_provider,
         ct_provider_used=ct_provider_used,
         ct_subdomain_count=ct_subdomain_count,

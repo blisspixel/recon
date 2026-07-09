@@ -52,7 +52,7 @@ logger = logging.getLogger("recon")
 
 DEFAULT_TTL: int = 86400  # 24 hours
 
-_CACHE_VERSION = 1
+_CACHE_VERSION = 2
 
 # A cache entry is a serialized TenantInfo (a few KB, up to ~100 KB with CT
 # data). Skip a file larger than this before read_text/json.loads so a corrupt
@@ -96,6 +96,9 @@ def cache_get(domain: str, ttl: int = DEFAULT_TTL) -> TenantInfo | None:
             logger.debug("Cache stale for %s (age > %d s)", domain, ttl)
             return None
         data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("_cache_version") != _CACHE_VERSION:
+            logger.debug("Cache version mismatch for %s; treating as a miss", domain)
+            return None
         info = tenant_info_from_dict(data)
         cached_at = data.get("_cached_at")
         if isinstance(cached_at, str) and cached_at:
@@ -249,6 +252,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "primary_email_provider": info.primary_email_provider,
         "email_gateway": info.email_gateway,
         "dmarc_pct": info.dmarc_pct,
+        "dmarc_testing": info.dmarc_testing,
         "likely_primary_email_provider": info.likely_primary_email_provider,
         "ct_provider_used": info.ct_provider_used,
         "ct_subdomain_count": info.ct_subdomain_count,
@@ -870,6 +874,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         primary_email_provider=data.get("primary_email_provider"),
         email_gateway=data.get("email_gateway"),
         dmarc_pct=data.get("dmarc_pct"),
+        dmarc_testing=bool(data.get("dmarc_testing", False)),
         likely_primary_email_provider=data.get("likely_primary_email_provider"),
         ct_provider_used=data.get("ct_provider_used"),
         ct_subdomain_count=int(data.get("ct_subdomain_count", 0) or 0),

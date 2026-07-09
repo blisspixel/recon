@@ -17,6 +17,7 @@ from recon_tool.constants import (
     SVC_DMARC,
     SVC_MTA_STS,
     SVC_SPF_STRICT,
+    effective_dmarc_policy,
     email_security_score,
 )
 from recon_tool.exposure import _compute_email_security_score
@@ -25,7 +26,13 @@ from recon_tool.models import ConfidenceLevel, TenantInfo
 from recon_tool.posture import _compute_metadata_value
 
 
-def _info(services: set[str], dmarc_policy: str | None) -> TenantInfo:
+def _info(
+    services: set[str],
+    dmarc_policy: str | None,
+    *,
+    dmarc_pct: int | None = None,
+    dmarc_testing: bool = False,
+) -> TenantInfo:
     return TenantInfo(
         tenant_id=None,
         display_name="Test Corp",
@@ -36,6 +43,8 @@ def _info(services: set[str], dmarc_policy: str | None) -> TenantInfo:
         services=tuple(services),
         slugs=(),
         dmarc_policy=dmarc_policy,
+        dmarc_pct=dmarc_pct,
+        dmarc_testing=dmarc_testing,
     )
 
 
@@ -52,6 +61,32 @@ class TestCanonicalScore:
         # Mere SVC_DMARC presence with a non-enforcing / absent policy scores 0.
         assert email_security_score({SVC_DMARC}, "none") == 0
         assert email_security_score({SVC_DMARC}, None) == 0
+
+    def test_dmarc_testing_mode_steps_effective_policy_down(self) -> None:
+        assert effective_dmarc_policy("reject", dmarc_testing=True) == "quarantine"
+        assert effective_dmarc_policy("quarantine", dmarc_testing=True) == "none"
+        assert effective_dmarc_policy("none", dmarc_testing=True) == "none"
+        assert email_security_score({SVC_DMARC}, "reject", dmarc_testing=True) == 1
+        assert email_security_score({SVC_DMARC}, "quarantine", dmarc_testing=True) == 0
+
+    @pytest.mark.parametrize(
+        ("policy", "pct", "testing", "effective", "score"),
+        [
+            ("reject", 50, True, "none", 0),
+            ("reject", 100, True, "quarantine", 1),
+            ("quarantine", 50, True, "none", 0),
+        ],
+    )
+    def test_dmarc_pct_and_testing_compose(
+        self,
+        policy: str,
+        pct: int,
+        testing: bool,
+        effective: str,
+        score: int,
+    ) -> None:
+        assert effective_dmarc_policy(policy, pct, testing) == effective
+        assert email_security_score({SVC_DMARC}, policy, pct, testing) == score
 
     def test_full_stack_maxes_at_five(self) -> None:
         services = {SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI}
@@ -77,3 +112,9 @@ class TestAllSurfacesAgree:
         assert compute_email_security_score(info) == expected
         assert _compute_email_security_score(info) == expected
         assert _compute_metadata_value("email_security_score", info) == expected
+
+    def test_testing_mode_agrees_across_surfaces(self) -> None:
+        info = _info({SVC_DMARC}, "quarantine", dmarc_testing=True)
+        assert compute_email_security_score(info) == 0
+        assert _compute_email_security_score(info) == 0
+        assert _compute_metadata_value("email_security_score", info) == 0

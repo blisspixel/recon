@@ -1,19 +1,7 @@
-"""Defensive security exposure assessment — pure analysis of resolved domain data.
+"""Pure defensive exposure assessment over resolved TenantInfo data.
 
-This module synthesizes existing TenantInfo data into structured security
-posture views for defensive review, vendor due diligence, and security
-architecture planning. All functions are pure (no I/O, no network calls)
-and operate exclusively on frozen dataclasses from the existing pipeline.
-
-All recon-authored prose uses neutral, defensive language: observable facts,
-hedged assessments, and "Consider ..." phrasing rather than imperative
-directives. The terminology guard below is a copy-style lint for generated
-phrasing, not an input blocklist; domain names, evidence strings, and caller
-phrasing are data and must not be rejected because they contain a word from
-the style list.
-
-This module imports only from recon_tool.models and recon_tool.constants —
-never from httpx, dns.resolver, or any LookupSource.
+Generated prose must stay neutral and hedged. The terminology guard is a
+copy-style lint for recon-authored text, not an input blocklist.
 """
 
 from __future__ import annotations
@@ -26,6 +14,7 @@ from recon_tool.constants import (
     SVC_DKIM_EXCHANGE,
     SVC_SPF_SOFTFAIL,
     SVC_SPF_STRICT,
+    effective_dmarc_policy,
     email_security_score,
 )
 from recon_tool.exposure_models import (
@@ -61,9 +50,7 @@ EXPOSURE_DISCOURAGED_COPY_TERMS: frozenset[str] = DISCOURAGED_COPY_TERMS | froze
     }
 )
 
-# Backward-compatible alias for older tests or callers that imported the old
-# internal name. These terms guide recon-authored copy only; they are not an
-# input blocklist and never cause runtime rejection.
+# Backward-compatible alias for older tests or callers that imported the old internal name.
 EXPOSURE_BANNED_TERMS = EXPOSURE_DISCOURAGED_COPY_TERMS
 
 
@@ -194,7 +181,11 @@ def _build_evidence_refs(info: TenantInfo, slugs: frozenset[str] | set[str]) -> 
 
 def _compute_email_security_score(info: TenantInfo) -> int:
     """Email-security score (0-5); see ``constants.email_security_score`` for the definition."""
-    return email_security_score(info.services, info.dmarc_policy)
+    return email_security_score(info.services, info.dmarc_policy, info.dmarc_pct, info.dmarc_testing)
+
+
+def _effective_email_dmarc_policy(info: TenantInfo) -> str | None:
+    return effective_dmarc_policy(info.dmarc_policy, info.dmarc_pct, info.dmarc_testing)
 
 
 # ── Internal posture computation ───────────────────────────────────────
@@ -364,14 +355,15 @@ def _compute_hardening_status(info: TenantInfo) -> HardeningStatus:
     controls: list[HardeningControl] = []
 
     # DMARC enforcement
-    if info.dmarc_policy == "reject":
-        detail = "reject"
-    elif info.dmarc_policy == "quarantine":
-        detail = "quarantine"
+    dmarc_effective_policy = _effective_email_dmarc_policy(info)
+    if info.dmarc_policy is None:
+        detail = "not configured"
     elif info.dmarc_policy == "none":
         detail = "policy set to none"
+    elif dmarc_effective_policy is not None and dmarc_effective_policy != info.dmarc_policy:
+        detail = f"{info.dmarc_policy} (effective {dmarc_effective_policy})"
     else:
-        detail = "not configured"
+        detail = info.dmarc_policy
     dmarc_present = info.dmarc_policy is not None
     controls.append(
         HardeningControl(
@@ -450,17 +442,7 @@ _SCORE_EMAIL_GATEWAY = 5
 
 
 def _unconfirmable_absent_points(email: EmailPosture, info: TenantInfo) -> int:
-    """Points from absent controls whose absence is *not* passively confirmable.
-
-    The posture score counts only observed-present controls, so a low score can
-    mean "hardened but quiet" rather than "weak". This is the size of that
-    ambiguity: how many points come from controls that were not observed but
-    whose absence the passive channel cannot establish (DKIM at non-standard
-    selectors, security tooling that leaves no public trace, an email gateway
-    behind non-MX routing). The true score could be this much higher. Absent
-    declarative records (DMARC / MTA-STS / TLS-RPT / CAA) are genuinely absent
-    and are deliberately excluded — their absence *is* confirmable.
-    """
+    """Points from absent controls whose absence is not passively confirmable."""
     points = 0
     if not email.dkim_configured:
         points += _SCORE_DKIM
@@ -483,9 +465,10 @@ def _compute_posture_score(
     score = 0
 
     # DMARC: reject=20, quarantine=12 (mutually exclusive)
-    if email.dmarc_policy == "reject":
+    dmarc_effective_policy = _effective_email_dmarc_policy(info)
+    if dmarc_effective_policy == "reject":
         score += 20
-    elif email.dmarc_policy == "quarantine":
+    elif dmarc_effective_policy == "quarantine":
         score += 12
 
     # DKIM: 15
@@ -586,6 +569,7 @@ def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
     services_set = set(info.services)
     slugs_set = set(info.slugs)
     gaps: list[HardeningGap] = []
+    dmarc_effective_policy = _effective_email_dmarc_policy(info)
 
     # Missing DMARC
     if info.dmarc_policy is None:
@@ -601,25 +585,30 @@ def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
             )
         )
 
-    # DMARC not enforcing (policy == "none")
-    if info.dmarc_policy == "none":
+    # DMARC not effectively enforcing.
+    if info.dmarc_policy is not None and dmarc_effective_policy == "none":
+        observation = (
+            "DMARC policy is set to 'none' (monitoring only)"
+            if info.dmarc_policy == "none"
+            else "DMARC policy is not effectively enforcing after rollout or testing tags"
+        )
         gaps.append(
             HardeningGap(
                 category="email",
                 severity="high",
-                observation=_check_neutral_copy("DMARC policy is set to 'none' (monitoring only)"),
+                observation=_check_neutral_copy(observation),
                 recommendation=_check_neutral_copy("Consider setting DMARC policy to quarantine or reject"),
                 evidence=_build_evidence_refs(info, {"dmarc"} & slugs_set),
             )
         )
 
-    # DMARC quarantine (not reject)
-    if info.dmarc_policy == "quarantine":
+    # DMARC quarantine-level enforcement (not reject-level enforcement).
+    if dmarc_effective_policy == "quarantine":
         gaps.append(
             HardeningGap(
                 category="email",
                 severity="medium",
-                observation=_check_neutral_copy("DMARC policy is set to quarantine, not reject"),
+                observation=_check_neutral_copy("Effective DMARC policy is quarantine, not reject"),
                 recommendation=_check_neutral_copy(
                     "Consider upgrading DMARC policy from quarantine to reject for stronger enforcement"
                 ),
@@ -733,7 +722,7 @@ def _detect_inconsistencies(info: TenantInfo) -> list[HardeningGap]:
 
     # Gateway without DMARC enforcement
     gateway_slugs = slugs_set & set(_EMAIL_GATEWAY_SLUGS.keys())
-    if gateway_slugs and info.dmarc_policy != "reject":
+    if gateway_slugs and _effective_email_dmarc_policy(info) != "reject":
         gateway_names = [_EMAIL_GATEWAY_SLUGS[s] for s in sorted(gateway_slugs)]
         gaps.append(
             HardeningGap(

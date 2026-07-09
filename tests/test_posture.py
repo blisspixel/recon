@@ -32,6 +32,17 @@ class TestAnalyzePosture:
         statements = [o.statement for o in result]
         assert any("gateway" in s.lower() or "dmarc" in s.lower() for s in statements)
 
+    def test_gateway_with_testing_mode_dmarc_uses_effective_policy(self):
+        info = _make_info(
+            slugs=("proofpoint",),
+            services=("Proofpoint", "DMARC"),
+            dmarc_policy="quarantine",
+            dmarc_testing=True,
+        )
+        result = analyze_posture(info)
+        statements = [o.statement for o in result]
+        assert any("gateway" in s.lower() and "effective dmarc" in s.lower() for s in statements)
+
     def test_federated_identity_observation(self):
         info = _make_info(auth_type="Federated")
         result = analyze_posture(info)

@@ -262,7 +262,13 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
         detected_slugs=frozenset(info.slugs),
         dmarc_policy=info.dmarc_policy,
         auth_type=info.auth_type,
-        email_security_score=email_security_score(info.services, info.dmarc_policy),
+        email_security_score=email_security_score(
+            info.services,
+            info.dmarc_policy,
+            info.dmarc_pct,
+            info.dmarc_testing,
+        ),
+        dmarc_pct=info.dmarc_pct,
     )
     signal_matches = evaluate_signals(context)
     signals = load_signals()

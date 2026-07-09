@@ -33,38 +33,54 @@ _STATUS_MESSAGES = (
     # DNS and records
     "Querying public DNS records...",
     "Following CNAME breadcrumbs...",
+    "Letting DNS tell its side of the story...",
     "Reading the TXT record tea leaves...",
     "Asking the MX records who handles the mail...",
+    "Checking the mail trail...",
     "Untangling the SPF include chain...",
     "Reading DMARC policy, strictly as published...",
+    "Checking identity hints in the open...",
     # Certificate transparency
     "Sifting certificate transparency logs...",
+    "Reading certificate history like a lab notebook...",
     "Clustering SAN sets into communities...",
     "Watching for certificate issuance bursts...",
+    "Sorting yesterday's certificates from today's clues...",
     # Identity endpoints
     "Checking Microsoft's public tenant registry...",
     "Asking Google Workspace, no credentials required...",
     "Knocking politely on the OIDC discovery endpoint...",
+    "Comparing tenant hints without crossing any lines...",
     # Fingerprinting / stack
     "Fingerprinting the SaaS stack...",
+    "Looking for quiet SaaS fingerprints...",
     "Matching slugs against the catalog...",
     "Assembling the tech stack mosaic...",
     "Tracing domain verification trails...",
+    "Turning public records into a careful sketch...",
+    "Cataloging breadcrumbs without stepping on anything...",
     # The inference layer (a wink at the Bayesian core)
     "Updating priors, declining to overclaim...",
     "Propagating beliefs through the network...",
     "Widening the interval where evidence is thin...",
     "Letting absent evidence stay absent...",
     "Computing credible intervals, not false certainties...",
+    "Counting clues before drawing conclusions...",
+    "Keeping the confidence meter honest...",
+    "Letting uncertainty keep its seat at the table...",
     # Posture and footprint
     "Scoring the email security posture...",
     "Mapping the organizational footprint...",
     "Extracting signal from the public noise...",
+    "Building a public-footprint map...",
+    "Separating strong signals from hallway echoes...",
     # Passive-only ethos
     "No credentials were harmed in this lookup...",
     "Strictly passive; nobody on the other end noticed...",
     "Reading only what was left out in the open...",
     "Observing from a respectful distance...",
+    "Staying on the sidewalk, reading the signs...",
+    "Taking notes from the public record...",
 )
 
 
@@ -81,6 +97,7 @@ def _build_explanations(
     Generates explanations for signals, insights, confidence, and observations.
     """
     from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
+    from recon_tool.email_security import compute_email_security_score
     from recon_tool.explanation import (
         explain_confidence,
         explain_insights,
@@ -99,6 +116,8 @@ def _build_explanations(
         detected_slugs=frozenset(info.slugs),
         dmarc_policy=info.dmarc_policy,
         auth_type=info.auth_type,
+        email_security_score=compute_email_security_score(info),
+        dmarc_pct=info.dmarc_pct,
     )
     signals = load_signals()
     signal_matches = evaluate_signals(context)
