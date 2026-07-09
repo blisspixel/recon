@@ -6,9 +6,9 @@ the running copy was installed and produce the right upgrade command, plus a
 PyPI latest-version lookup so `recon update` can say whether an upgrade is even
 needed. The CLI command in cli.py wires them together and runs the upgrade.
 
-Network touches only pypi.org (the version check); the upgrade itself shells out
-to the detected tool. Everything here is defensive — a failed lookup or unknown
-install method degrades to a printed manual command, never a crash.
+Network touches only pypi.org for the version check; the upgrade itself shells
+out to the detected tool. Everything here is defensive: a failed lookup or
+unknown install method degrades to a printed manual command, never a crash.
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ def detect_install_method() -> str:
 
     Reads the interpreter prefix (pipx / uv live in distinctive paths) and the
     package's direct_url.json (editable installs). Falls back to
-    ``pip`` — the safe default, since ``pip install -U`` works for a plain venv
+    ``pip``, the safe default, since ``pip install -U`` works for a plain venv
     or user install.
     """
     if _is_editable():
@@ -72,7 +72,7 @@ def detect_install_method() -> str:
 
 def upgrade_command(method: str) -> list[str] | None:
     """The argv to upgrade in place, or None when the user must act manually
-    (Homebrew and editable installs are not safe to drive from here)."""
+    (retired Homebrew installs and editable installs need manual action)."""
     if method == PIPX:
         return ["pipx", "upgrade", _PACKAGE]
     if method == UV:

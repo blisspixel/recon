@@ -1,11 +1,11 @@
-"""Shared FastMCP application instance and the resolve seam for the MCP server.
+"""Shared FastMCP application instance and resolve helpers for the MCP server.
 
 Extracted from server.py (docs/roadmap.md god-file track, app-sharing variant).
 Holds the single FastMCP ``mcp`` instance the tool-group modules register on,
 the server instructions, and the validate / cache / rate-limit / resolve helpers
-every tool shares. Tool groups import ``mcp`` and these helpers from here; the
-helpers are the seam tests monkeypatch (on this module). Imports server_runtime;
-never imports server.py or the tool groups.
+every tool shares. Tool groups import ``mcp`` and these helpers from here; tests
+monkeypatch this module. Imports ``recon_tool.server.runtime``; never imports
+the server facade or the tool groups.
 """
 
 from __future__ import annotations

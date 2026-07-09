@@ -1,7 +1,7 @@
 """The `recon fingerprints` Typer sub-app (list / search / show / check / new /
 test the fingerprint catalog). Split out of cli.py; registered on the main app
 via `app.add_typer` there. Heavy dependencies are imported inline in the
-commands; the shared exception formatter comes from cli_shared.
+commands; the shared exception formatter comes from ``recon_tool.cli.shared``.
 """
 
 from __future__ import annotations

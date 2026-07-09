@@ -99,6 +99,15 @@ class TestUpdateCommand:
         assert result.exit_code == 0
         assert "999.0.0" in result.output
         assert "pipx upgrade recon-tool" in result.output
+        assert "or just: recon update" in result.output
+
+    def test_check_manual_method_does_not_claim_self_upgrade(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(updater, "fetch_latest_version", lambda: "999.0.0")
+        monkeypatch.setattr(updater, "detect_install_method", lambda: updater.HOMEBREW)
+        result = runner.invoke(app, ["update", "--check"])
+        assert result.exit_code == 0
+        assert "Homebrew install is retired" in result.output
+        assert "or just: recon update" not in result.output
 
     def test_network_failure_is_an_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(updater, "fetch_latest_version", lambda: None)

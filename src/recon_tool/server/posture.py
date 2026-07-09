@@ -1,10 +1,10 @@
 """Posture MCP tools: analyze, exposure, gaps, compare, hypothesis, simulate.
 
 Extracted from server.py (docs/roadmap.md god-file track, app-sharing variant).
-Registers its tools on the shared ``mcp`` instance imported from server_app;
-server.py imports this module to trigger registration and re-exports the tool
-functions for the test surface. Imports server_app / server_runtime; never the
-reverse.
+Registers its tools on the shared ``mcp`` instance imported from
+``recon_tool.server.app``; the server facade imports this module to trigger
+registration and re-exports the tool functions for the test surface. Imports
+``recon_tool.server.app`` and ``recon_tool.server.runtime``; never the reverse.
 """
 
 from __future__ import annotations

@@ -565,7 +565,7 @@ def update(
     err = get_err_console()
     current = updater.current_version()
 
-    err.print(f"recon {current} — checking PyPI for updates...")
+    err.print(f"recon {current}: checking PyPI for updates...")
     latest = updater.fetch_latest_version()
     if latest is None:
         render_error("Could not reach PyPI to check for updates. Try again, or upgrade manually.")
@@ -581,12 +581,14 @@ def update(
     cmd = updater.upgrade_command(method)
 
     if check:
-        hint = " ".join(cmd) if cmd else updater.manual_hint(method)
         console.print(f"  install method: {method}")
-        console.print(f"  to upgrade:     [cyan]{hint}[/cyan]   (or just: recon update)")
+        if cmd is None:
+            console.print(f"  to upgrade:     [cyan]{updater.manual_hint(method)}[/cyan]")
+        else:
+            console.print(f"  to upgrade:     [cyan]{' '.join(cmd)}[/cyan]   (or just: recon update)")
         return
     if cmd is None:
-        console.print(f"Detected a {method} install — upgrade with: [cyan]{updater.manual_hint(method)}[/cyan]")
+        console.print(f"Detected a {method} install; manual action needed: [cyan]{updater.manual_hint(method)}[/cyan]")
         return
 
     err.print(f"==> upgrading via {method}: {' '.join(cmd)}")
