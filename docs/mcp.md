@@ -101,7 +101,7 @@ If you genuinely need to drive the JSON-RPC loop by hand (e.g. piping crafted re
 | `assess_exposure` | Cache first; may resolve | Security posture score (0-100) with email, identity, infrastructure sections, using only the passive observables already collected (see [correlation.md](correlation.md) for the inference model). | `domain` |
 | `find_hardening_gaps` | Cache first; may resolve | Categorized hardening gaps with severity and "Consider" recommendations, using only the passive observables already collected (see [correlation.md](correlation.md) for the inference model). | `domain` |
 | `compare_postures` | Cache first; may resolve both domains | Side-by-side posture comparison of two domains | `domain_a`, `domain_b` |
-| `chain_lookup` | Yes | Recursive domain discovery via CNAME/CT breadcrumbs | `domain`, `depth` (1-3) |
+| `chain_lookup` | Yes | Recursive domain discovery via CNAME/CT breadcrumbs. Optional result caps report omitted counts for compact agent output while preserving raw JSON as the default. | `domain`, `depth` (1-3), `result_limit` (0 means raw) |
 | `discover_fingerprint_candidates` | Yes | Mine a domain for new-fingerprint candidates. Resolves with unclassified-CNAME-chain capture, applies intra-org and already-covered filters, returns a ranked candidate list. Pair with the `/recon-fingerprint-triage` skill to turn candidates into YAML stanzas. | `domain`, `skip_ct`: bool, `keep_intra_org`: bool, `min_count`: int |
 | `reload_data` | No | Reload fingerprints, signals, and posture rules from disk | none |
 | `get_fingerprints` | No | List all loaded fingerprints with slugs, categories, detection types | `category` (optional filter) |
@@ -141,11 +141,11 @@ inference tools (`get_fingerprints`, `get_signals`, `explain_signal`,
 `cluster_verification_tokens`, `get_infrastructure_clusters`, `export_graph`,
 `get_posteriors`, and the ephemeral-fingerprint tools).
 
-The graph and batch-correlation tools preserve raw structured access by default.
-Passing `peer_limit_per_domain`, `member_limit_per_cluster`, `node_limit`, or
-`edge_limit` asks for a compact payload; the response includes omitted counts,
-a deterministic `selection_rule`, and a `raw_request` pointer so an agent can
-decide whether to request the raw result.
+The graph, chain, and batch-correlation tools preserve raw access by default.
+Passing `result_limit`, `peer_limit_per_domain`, `member_limit_per_cluster`,
+`node_limit`, or `edge_limit` asks for a compact payload; the response includes
+omitted counts, a deterministic `selection_rule`, and a `raw_request` pointer
+so an agent can decide whether to request the raw result.
 
 Forward compatibility with the MCP 2026-07-28 release candidate is tracked in
 [mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md). recon remains a

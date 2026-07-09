@@ -18,6 +18,8 @@ from mcp.server.fastmcp.exceptions import ToolError
 
 from recon_tool import server, server_app
 from recon_tool.models import (
+    ChainReport,
+    ChainResult,
     ConfidenceLevel,
     InfrastructureCluster,
     InfrastructureClusterReport,
@@ -74,6 +76,28 @@ def _info_without_clusters() -> TenantInfo:
     )
 
 
+def _chain_info(domain: str) -> TenantInfo:
+    return TenantInfo(
+        tenant_id=None,
+        display_name=domain,
+        default_domain=domain,
+        queried_domain=domain,
+        confidence=ConfidenceLevel.MEDIUM,
+    )
+
+
+def _chain_report() -> ChainReport:
+    return ChainReport(
+        results=(
+            ChainResult(domain="example.com", info=_chain_info("example.com"), chain_depth=0),
+            ChainResult(domain="a.example.com", info=_chain_info("a.example.com"), chain_depth=1),
+            ChainResult(domain="b.example.com", info=_chain_info("b.example.com"), chain_depth=1),
+        ),
+        max_depth_reached=1,
+        truncated=False,
+    )
+
+
 @pytest.fixture
 def stub_resolve(monkeypatch: pytest.MonkeyPatch):
     """Stub _resolve_or_cache so MCP tools can run without network."""
@@ -87,6 +111,53 @@ def stub_resolve(monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setattr(server_app, "resolve_or_cache", _stub)
 
     return _make
+
+
+@pytest.fixture
+def stub_chain(monkeypatch: pytest.MonkeyPatch):
+    import recon_tool.chain as chain_module
+    import recon_tool.server.graph as server_graph
+
+    report = _chain_report()
+
+    async def _stub(domain: str, depth: int = 1) -> ChainReport:
+        assert domain == "example.com"
+        assert depth == 1
+        return report
+
+    def _allow_rate_limit(_domain: str) -> bool:
+        return True
+
+    monkeypatch.setattr(chain_module, "chain_resolve", _stub)
+    monkeypatch.setattr(server_graph, "rate_limit_try_acquire", _allow_rate_limit)
+    return report
+
+
+class TestChainLookupCompact:
+    def test_zero_result_limit_preserves_raw_formatter(self, stub_chain):
+        from recon_tool.formatter import format_chain_json
+
+        payload = asyncio.run(server.chain_lookup("example.com", result_limit=0))
+        assert payload == format_chain_json(stub_chain)
+        parsed = json.loads(payload)
+        assert "result_limit" not in parsed
+        assert len(parsed["domains"]) == 3
+
+    def test_result_limit_returns_omitted_metadata(self, stub_chain):
+        payload = json.loads(asyncio.run(server.chain_lookup("example.com", result_limit=2)))
+        assert payload["total_domains"] == 3
+        assert payload["result_limit"] == 2
+        assert payload["domains_omitted"] == 1
+        assert [entry["queried_domain"] for entry in payload["domains"]] == [
+            "example.com",
+            "a.example.com",
+        ]
+        assert "chain depth" in payload["selection_rule"]
+        assert "result_limit=0" in payload["raw_request"]
+
+    def test_negative_result_limit_rejected(self):
+        with pytest.raises(ToolError, match="result_limit"):
+            asyncio.run(server.chain_lookup("example.com", result_limit=-1))
 
 
 class TestGetInfrastructureClusters:
