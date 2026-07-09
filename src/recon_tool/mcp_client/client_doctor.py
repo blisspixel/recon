@@ -14,9 +14,9 @@ Code) explains why a plugin-scoped install would not show up here. It
 answers "did the install register with the client" rather than "is the
 server itself healthy".
 
-Pure-data, like `mcp_install`: no client SDKs, no network calls, no
-spawning. We read the same config paths the installer writes and parse
-them with the same BOM-tolerant reader.
+Pure-data, like ``recon_tool.mcp_client.install``: no client SDKs, no network
+calls, no spawning. We read the same config paths the installer writes and
+parse them with the same BOM-tolerant reader.
 """
 
 from __future__ import annotations
@@ -69,8 +69,8 @@ def _read_config(path: Path) -> tuple[Literal["missing", "invalid", "ok"], dict[
     Returns ``(state, data, detail)``. ``state`` is ``missing`` when the
     file does not exist, ``invalid`` when it exists but does not parse as
     a JSON object, and ``ok`` otherwise. The BOM-tolerant read mirrors
-    ``mcp_install._read_existing`` so a config written by a Windows tool
-    that prepends a UTF-8 BOM is not misreported as malformed.
+    the installer config reader so a config written by a Windows tool that
+    prepends a UTF-8 BOM is not misreported as malformed.
     """
     if not path.exists():
         return "missing", None, "not found"

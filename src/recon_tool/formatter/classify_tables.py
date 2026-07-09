@@ -1,15 +1,17 @@
 """Service-classification data tables.
 
-Pure data shared by the classification logic in ``formatter_classify`` and,
-through it, every formatter renderer: slug -> display category, slug -> cloud
+Pure data shared by the classification logic in
+``recon_tool.formatter.classify`` and, through it, every formatter renderer:
+slug -> display category, slug -> cloud
 vendor, display-name overrides, and the keyword / prefix / suffix sets the
 two-pass categorizer matches against. No logic and no imports, just the
 literals, kept in their own module so neither the logic module nor
-``formatter`` carries an 850-line data block.
+the formatter facade carries an 850-line data block.
 
 These are public (no leading underscore): they cross a module boundary, and the
 repo's pyright-strict gate treats cross-module underscore access as private
-usage. ``formatter`` re-exports them under their historical ``_NAME`` aliases.
+usage. The formatter facade re-exports them under their historical ``_NAME``
+aliases.
 """
 
 from __future__ import annotations

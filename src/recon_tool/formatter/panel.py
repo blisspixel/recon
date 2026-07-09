@@ -80,12 +80,10 @@ from recon_tool.models import (
 )
 from recon_tool.validator import strip_control_chars
 
-# The service-classification layer moved to ``formatter_classify`` (logic) and
-# ``formatter_classify_tables`` (data). Those modules use public names because
-# the repo's pyright-strict gate forbids cross-module access to underscore
-# names. Re-export them here under their historical ``_NAME`` aliases so the
-# test/validation surface (``from recon_tool.formatter import _CATEGORY_BY_SLUG``)
-# and this module's own body keep working unchanged after the split.
+# The service-classification layer lives in ``recon_tool.formatter.classify``
+# and ``recon_tool.formatter.classify_tables``. Those modules use public names
+# because pyright-strict forbids cross-module access to underscore names.
+# Re-export them under historical ``_NAME`` aliases for compatibility.
 _CATEGORY_BY_SLUG = CATEGORY_BY_SLUG
 _CLOUD_SLUG_QUALIFIERS = CLOUD_SLUG_QUALIFIERS
 _CLOUD_VENDOR_BY_SLUG = CLOUD_VENDOR_BY_SLUG
