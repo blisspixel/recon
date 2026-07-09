@@ -456,7 +456,7 @@ _RUA_TAG_RE = re.compile(r"rua\s*=\s*([^;]+)", re.IGNORECASE)
 # ``!<size>`` report-size suffix (e.g. ``mailto:a@x.com!10m``), and a literal
 # ``!`` inside the address itself is percent-encoded, so an unescaped ``!``
 # always delimits the size.
-_RUA_MAILTO_RE = re.compile(r"mailto:([^,;\s!]+)", re.IGNORECASE)
+_RUA_MAILTO_RE = re.compile(r"(?:^|,)\s*mailto:([^,;\s!]+)", re.IGNORECASE)
 
 _DMARC_POLICY_VALUES = frozenset({"none", "quarantine", "reject"})
 _DMARC_TESTING_VALUES = frozenset({"n", "y"})
@@ -545,17 +545,69 @@ def _parse_dmarc_tags(dmarc_record: str, domain: str) -> dict[str, str] | None:
     return tags
 
 
+def _leading_dmarc_version_value(dmarc_record: str) -> str | None:
+    """Return the leading DMARC version value when the first tag is ``v=``."""
+    first_tag = dmarc_record.split(";", 1)[0]
+    if not first_tag.startswith("v="):
+        normalized = first_tag.strip().lower()
+        if normalized.startswith("v") and "=" in normalized:
+            return first_tag
+        return None
+    return first_tag.removeprefix("v=")
+
+
+def _dmarc_rua_address_domain(addr: str) -> str | None:
+    """Return a usable public reporting-address domain, if the RUA is valid."""
+    local, sep, domain = addr.partition("@")
+    domain = domain.lower().rstrip(".")
+    if not sep or not local or not domain or "." not in domain or not is_public_dns_name(domain):
+        return None
+    return domain
+
+
+def _has_valid_dmarc_rua(tags: dict[str, str]) -> bool:
+    """Return whether the record carries at least one usable aggregate-report URI."""
+    return any(_dmarc_rua_address_domain(addr) is not None for addr in _RUA_MAILTO_RE.findall(tags.get("rua", "")))
+
+
+def _dmarc_policy_or_rua_fallback(tags: dict[str, str], domain: str) -> str | None:
+    """Return a valid DMARC policy, including RUA-backed monitoring fallback."""
+    raw_policy = tags.get("p")
+    if raw_policy is not None:
+        policy = _parse_dmarc_policy(raw_policy, domain)
+        if policy is not None:
+            return policy
+    if _has_valid_dmarc_rua(tags):
+        logger.warning(
+            "DMARC policy for %s is missing or invalid; valid rua= present, treating as p=none",
+            domain,
+        )
+        return "none"
+    if raw_policy is None:
+        logger.warning(
+            "DMARC p= tag missing for %s and no valid rua= fallback is present - ignored",
+            domain,
+        )
+    return None
+
+
 def _apply_dmarc(ctx: dns_base.DetectionCtx, dmarc_results: list[str], domain: str) -> None:
     """Record DMARC presence, policy tags, and rua mailto fingerprints."""
-    records = [txt for txt in dmarc_results if txt.lower().startswith("v=dmarc1")]
+    records: list[tuple[str, dict[str, str] | None]] = []
+    for txt in dmarc_results:
+        version = _leading_dmarc_version_value(txt)
+        if version == "DMARC1":
+            records.append((txt, _parse_dmarc_tags(txt, domain)))
+        elif version is not None:
+            logger.warning("DMARC v= value %r is not valid for %s - ignored", version, domain)
+
     if len(records) > 1:
         logger.warning("Multiple DMARC records found for %s - ignored", domain)
         return
-    for txt in records:
-        tags = _parse_dmarc_tags(txt, domain)
+    for txt, tags in records:
         if tags is None:
             continue
-        policy = _parse_dmarc_policy(tags.get("p", ""), domain)
+        policy = _dmarc_policy_or_rua_fallback(tags, domain)
         if policy is None:
             continue
         ctx.services.add(SVC_DMARC)

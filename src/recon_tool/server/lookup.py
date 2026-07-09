@@ -245,31 +245,19 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
     Includes explanations for insights, signals, confidence, and conflicts.
     """
     from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
-    from recon_tool.constants import email_security_score
+    from recon_tool.email_security import signal_context_from_tenant_info, signal_context_metadata
     from recon_tool.explanation import (
         explain_confidence,
         explain_insights,
         explain_signals,
         serialize_explanation,
     )
-    from recon_tool.models import SignalContext, serialize_conflicts
+    from recon_tool.models import serialize_conflicts
     from recon_tool.signals import evaluate_signals, load_signals
 
     base = format_tenant_dict(info)
 
-    # Build signal context for explanation
-    context = SignalContext(
-        detected_slugs=frozenset(info.slugs),
-        dmarc_policy=info.dmarc_policy,
-        auth_type=info.auth_type,
-        email_security_score=email_security_score(
-            info.services,
-            info.dmarc_policy,
-            info.dmarc_pct,
-            info.dmarc_testing,
-        ),
-        dmarc_pct=info.dmarc_pct,
-    )
+    context = signal_context_from_tenant_info(info)
     signal_matches = evaluate_signals(context)
     signals = load_signals()
 
@@ -278,11 +266,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
     positive_matches = evaluate_positive_absence(signal_matches, signals, context.detected_slugs)
     all_signal_matches = signal_matches + absence_matches + positive_matches
 
-    context_metadata: dict[str, object] = {
-        "dmarc_policy": info.dmarc_policy,
-        "auth_type": info.auth_type,
-        "email_security_score": context.email_security_score,
-    }
+    context_metadata = signal_context_metadata(context)
 
     all_explanations: list[dict[str, object]] = []
 

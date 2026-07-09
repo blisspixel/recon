@@ -25,6 +25,7 @@ def test_status_messages_have_variety_and_polish() -> None:
     assert any("certificate" in message.lower() for message in _STATUS_MESSAGES)
     assert any("confidence" in message.lower() for message in _STATUS_MESSAGES)
     assert any("passive" in message.lower() for message in _STATUS_MESSAGES)
+    assert not any("nobody on the other end" in message.lower() for message in _STATUS_MESSAGES)
 
 
 class _FakeStatus:

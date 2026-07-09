@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   level used by scoring and Bayesian signals without expanding stable JSON or
   MCP output fields. The disk cache schema version was bumped so pre-change
   cached records cannot preserve stale over-enforcing DMARC scores.
+- **DMARC parser compatibility.** Invalid or missing `p=` tags with a valid
+  aggregate-reporting `rua=` address now fall back to monitoring mode
+  (`p=none`), while malformed DMARC version values such as lowercase
+  `v=dmarc1` are ignored and only a leading exact `v=DMARC1` tag identifies a
+  DMARC policy record.
+- **Effective-policy signal contexts.** CLI explanation and MCP server signal
+  evaluation now build metadata through the canonical tenant-info context, so
+  gateway gap signals use the effective DMARC policy rather than only the raw
+  published policy.
 
 ## [2.3.6] - 2026-07-09
 
