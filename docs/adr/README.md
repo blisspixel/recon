@@ -28,3 +28,4 @@ deeper rationale for several lives in [correlation.md](../correlation.md),
 | [0006](0006-src-package-layout.md) | Adopt src package layout |
 | [0007](0007-surface-inventory-discovery-context.md) | Keep surface inventory as discovery context |
 | [0008](0008-interface-package-locality.md) | Move interface layers to local packages |
+| [0009](0009-mcp-2026-readiness.md) | Prepare for MCP 2026-07-28 without premature protocol forking |
