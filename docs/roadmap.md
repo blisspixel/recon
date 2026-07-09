@@ -34,6 +34,10 @@ The next work is dependency-ordered:
      The current step-back audit in
      [strategic-gap-audit.md](strategic-gap-audit.md) keeps process, research,
      release, archive, and data-governance gaps separated from runtime work.
+     The current engineering refinement plan is
+     [engineering-refinement-plan.md](engineering-refinement-plan.md), which
+     scopes MCP readiness, compact agent output, async/blocking audit,
+     target-poisoning fixtures, and conditional fingerprint-expression work.
    - Current near-term refinements (all passive, within-invariant, no runtime
      expansion):
      1. RFC 9989 (DMARCbis) alignment. Effective-enforcement gating on the
@@ -56,7 +60,20 @@ The next work is dependency-ordered:
         integration suite is deselected in CI, so an upstream provider change
         could silently drop a detection with no gate failure; a scheduled
         integration run or a small golden acceptance set would surface it.
-     3. Interface-layer debt reduction. recon's core domain boundaries
+     3. MCP 2026-07-28 readiness. The MCP release candidate published on
+        2026-05-21 targets a final specification on 2026-07-28 and contains
+        breaking protocol changes. recon's current MCP surface is local stdio
+        through FastMCP, so the correct near-term response is not a speculative
+        remote transport or OAuth implementation. The plan is to keep stdio as
+        the supported surface, wait for official Python SDK support, and be
+        ready to update `recon mcp doctor`, discovery tests, structured-output
+        schema guards, deterministic tool/resource listing checks, and compact
+        high-volume agent outputs as soon as the SDK exposes the final
+        behavior. Details live in
+        [mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md), with the
+        decision in
+        [ADR-0009](adr/0009-mcp-2026-readiness.md).
+     4. Interface-layer debt reduction. recon's core domain boundaries
         are healthy: source collectors, resolver, merger, fingerprint catalog,
         signals, Bayesian inference, posture analysis, and validation harnesses
         each have coherent reasons to change. ADR-0008 moved the
@@ -77,6 +94,13 @@ The next work is dependency-ordered:
         `cli.lookup.lookup` receives `domain` plus that one typed options value.
         Future lookup-mode work should extend the grouped options model and its
         validation tests instead of widening orchestration signatures.
+     5. Targeted refinement work from the architecture review. Do the parts
+        that reduce risk without overbuilding: compact MCP output for
+        high-volume tools, a measured async/blocking audit, more target-side
+        poisoning fixtures, and ADRs for cross-cutting invariants. Keep a
+        fingerprint expression grammar conditional on measured matcher pressure
+        or a real need for multi-observable boolean rules. The scoped plan is
+        [engineering-refinement-plan.md](engineering-refinement-plan.md).
    - Acceptance: every refinement preserves the project invariants, keeps
      examples fictional or synthetic, and publishes only public, synthetic, or
      aggregate-only evidence. Feedback on gaps, wording, and false positives is
