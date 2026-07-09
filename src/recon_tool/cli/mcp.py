@@ -1,7 +1,7 @@
 """The `recon mcp` Typer sub-app (start the stdio server, install client config,
 self-check). Split out of cli.py; registered on the main app via `app.add_typer`
-there. Heavy dependencies (the MCP server, mcp_install) are imported inline in
-the commands, like the rest of the CLI.
+there. Heavy dependencies (the MCP server and MCP client installer) are
+imported inline in the commands, like the rest of the CLI.
 """
 
 from __future__ import annotations

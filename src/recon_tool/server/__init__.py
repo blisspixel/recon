@@ -35,8 +35,9 @@ if not logger.handlers:
     logger.setLevel(logging.INFO)
 
 
-# Re-export facade: the FastMCP instance and instructions live in server_app
-# now; preserve the recon_tool.server import path for the test surface.
+# Re-export facade: the FastMCP instance and instructions live in
+# recon_tool.server.app; preserve the recon_tool.server import path for the
+# test surface.
 _SERVER_INSTRUCTIONS = server_app.SERVER_INSTRUCTIONS
 
 # Tool-group re-export facades (registration via the imports above).
@@ -66,7 +67,7 @@ list_ephemeral_fingerprints = server_ephemeral.list_ephemeral_fingerprints
 clear_ephemeral_fingerprints = server_ephemeral.clear_ephemeral_fingerprints
 reevaluate_domain = server_ephemeral.reevaluate_domain
 
-# Re-export facade for the server runtime state (see server_runtime.py).
+# Re-export facade for the server runtime state (see recon_tool.server.runtime).
 # Preserves the recon_tool.server import path for the tools and tests.
 CACHE_TTL = _server_runtime.CACHE_TTL
 CACHE_MAX_SIZE = _server_runtime.CACHE_MAX_SIZE

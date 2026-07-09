@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.5] - 2026-07-09
+
+### Tool Surface Changes
+
+No CLI command or flag changes.
+
+### Changed
+
+- **Interface locality ratchet tightened.** The local layout guard now rejects
+  resurrected monolith filenames such as `cli.py`, `formatter.py`, and
+  `server.py` beside the package-local interface modules, with focused tests
+  for the guard.
+- **Package-local documentation sharpened.** Live interface-layer docstrings now
+  describe the current `cli/`, `formatter/`, `server/`, and `mcp_client/`
+  package boundaries instead of the retired flat-module names.
+
+### Fixed
+
+- **Manual update hint accuracy.** `recon update --check` no longer says
+  `or just: recon update` for retired Homebrew installs or editable checkouts
+  that require manual action.
+
 ## [2.3.4] - 2026-07-09
 
 ### Tool Surface Changes

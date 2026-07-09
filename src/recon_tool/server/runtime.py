@@ -3,9 +3,9 @@ the per-domain rate limiter, and structured JSON logging.
 
 Extracted from ``server.py`` (docs/roadmap.md god-file track). A leaf: it holds
 the shared ``_ServerRuntimeState`` plus the module-level accessor wrappers the
-tools call, and depends only on the models and stdlib. ``server.py`` imports the
-wrappers (re-bound to their original underscore names); the FastMCP instance,
-resources, and tools stay there.
+tools call, and depends only on the models and stdlib. The server facade imports
+the wrappers and re-binds them to their original underscore names; the FastMCP
+instance, resources, and tools stay in the package-local tool modules.
 """
 
 from __future__ import annotations
