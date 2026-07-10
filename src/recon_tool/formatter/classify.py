@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from recon_tool.constants import SVC_DKIM_GOOGLE
 from recon_tool.fingerprints import load_fingerprints
 from recon_tool.formatter.classify_tables import (
     CATEGORY_BY_SLUG,
@@ -106,18 +107,23 @@ def is_gws_service(svc: str) -> bool:
     pg = _service_provider_group(svc)
     if pg is not None:
         return pg == "google-workspace"
-    # Fallback heuristic for services added with "Google Workspace" prefix
-    return svc.lower().startswith("google workspace")
+    svc_lower = svc.lower()
+    return svc_lower == SVC_DKIM_GOOGLE.lower() or svc_lower.startswith("google workspace")
+
+
 def is_m365_service(svc: str) -> bool:
     """Check if a service name should be categorized as M365.
 
-    Checks fingerprint provider_group first, falls back to M365_KEYWORDS.
+    Checks fingerprint provider_group first, then exact source-derived service
+    names and the explicit ``Microsoft 365:`` module prefix.
     """
     pg = _service_provider_group(svc)
     if pg is not None:
         return pg == "microsoft365"
     svc_lower = svc.lower()
-    return any(kw in svc_lower for kw in M365_KEYWORDS)
+    return svc_lower in M365_KEYWORDS or svc_lower.startswith("microsoft 365:")
+
+
 def category_for_slug(slug: str) -> str | None:
     """Return the panel category for a fingerprint slug, or ``None``.
 

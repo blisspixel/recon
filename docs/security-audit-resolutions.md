@@ -938,7 +938,12 @@ but crosses the pure-Python dependency floor.
 The v1.9.19 markdown escape covered `display_name` and issuer names but
 missed `auth_type`, `region`, `google_auth_type`, `google_idp_name`, and
 the `insights` list - all attacker-influenced free text rendered into
-the markdown report. All now go through `_markdown_escape`.
+the markdown report. All now go through `_markdown_escape`. A later sink
+audit also found source-derived service labels, Google Workspace detail labels,
+posture observations, and explanation text bypassing that boundary. They now
+use the same escape function. The function covers the complete CommonMark
+punctuation set and escapes existing backslashes so an input backslash cannot
+cancel the escape applied to the next Markdown metacharacter.
 `google-site-verification` tokens are control-stripped at extraction
 (they reach JSON / MCP output and clustering; JSON encoding contained
 them, but stripping at ingestion keeps any future renderer safe).

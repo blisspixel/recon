@@ -11,22 +11,31 @@ public and test import paths are unchanged.
 
 from __future__ import annotations
 
+import string
+
 from recon_tool.formatter.classify import is_gws_service, is_m365_service
 from recon_tool.models import ExplanationRecord, TenantInfo
+from recon_tool.validator import strip_control_chars
 
-# Backslash-escape the Markdown structural characters most useful for
-# injection (links, emphasis, code spans, tables, inline HTML). Applied to
-# attacker-derived free text (issuer names, display_name) in the markdown
-# report so a self-logged-cert issuer or a federation brand name cannot
-# inject a `[label](url)` link, a `|` table cell, a code-span breakout, or
-# an HTML tag. Control bytes are already removed upstream by
-# strip_control_chars; this only neutralizes printable metacharacters.
-MARKDOWN_ESCAPE = str.maketrans({c: "\\" + c for c in "`*_[]()|<>"})
+# CommonMark permits a backslash before every ASCII punctuation character.
+# Escape that complete set, including existing backslashes, so dynamic text is
+# literal in headings, list items, links, code spans, tables, and inline HTML.
+# Control bytes are already removed upstream by strip_control_chars.
+MARKDOWN_ESCAPE = str.maketrans({c: "\\" + c for c in string.punctuation})
+MARKDOWN_HARD_BREAK = "\\"
 
 
 def markdown_escape(value: str) -> str:
     """Neutralize Markdown structural characters in attacker-derived text."""
-    return value.translate(MARKDOWN_ESCAPE)
+    cleaned = strip_control_chars(value, max_len=len(value)).strip()
+    return cleaned.translate(MARKDOWN_ESCAPE)
+
+
+def _markdown_identifier(value: str) -> str:
+    """Render a simple ASCII identifier as code, otherwise as literal text."""
+    if value.isascii() and value and all(c.isalnum() or c == "-" for c in value):
+        return f"`{value}`"
+    return markdown_escape(value)
 
 
 def _md_header(info: TenantInfo) -> list[str]:
@@ -34,18 +43,18 @@ def _md_header(info: TenantInfo) -> list[str]:
     lines: list[str] = []
     lines.append(f"# Tenant Report: {markdown_escape(info.display_name)}")
     lines.append("")
-    lines.append(f"**Domain:** {info.queried_domain}  ")
+    lines.append(f"**Domain:** {markdown_escape(info.queried_domain)}{MARKDOWN_HARD_BREAK}")
     if info.tenant_id:
-        lines.append(f"**Tenant ID:** `{info.tenant_id}`  ")
-    lines.append(f"**Default Domain:** {markdown_escape(info.default_domain)}  ")
+        lines.append(f"**Tenant ID:** {_markdown_identifier(info.tenant_id)}{MARKDOWN_HARD_BREAK}")
+    lines.append(f"**Default Domain:** {markdown_escape(info.default_domain)}{MARKDOWN_HARD_BREAK}")
     if info.region:
-        lines.append(f"**Region:** {markdown_escape(info.region)}  ")
+        lines.append(f"**Region:** {markdown_escape(info.region)}{MARKDOWN_HARD_BREAK}")
     if info.auth_type:
-        lines.append(f"**Auth Type:** {markdown_escape(info.auth_type)}  ")
-    lines.append(f"**Confidence:** {info.confidence.value} ({len(info.sources)} sources)  ")
+        lines.append(f"**Auth Type:** {markdown_escape(info.auth_type)}{MARKDOWN_HARD_BREAK}")
+    lines.append(f"**Confidence:** {info.confidence.value} ({len(info.sources)} sources){MARKDOWN_HARD_BREAK}")
     lines.append(
-        f"**Evidence Confidence:** {info.evidence_confidence.value}  \n"
-        f"**Inference Confidence:** {info.inference_confidence.value}  "
+        f"**Evidence Confidence:** {info.evidence_confidence.value}{MARKDOWN_HARD_BREAK}\n"
+        f"**Inference Confidence:** {info.inference_confidence.value}"
     )
     lines.append("")
     return lines
@@ -55,9 +64,16 @@ def _md_services_split(info: TenantInfo) -> list[str]:
     """Services grouped into Microsoft 365 / Google Workspace / Tech Stack."""
     if not info.services:
         return []
-    m365_svcs = [s for s in info.services if is_m365_service(s)]
-    gws_svcs = [s for s in info.services if is_gws_service(s)]
-    other_svcs = [s for s in info.services if not is_m365_service(s) and not is_gws_service(s)]
+    m365_svcs: list[str] = []
+    gws_svcs: list[str] = []
+    other_svcs: list[str] = []
+    for service in info.services:
+        if is_gws_service(service):
+            gws_svcs.append(service)
+        elif is_m365_service(service):
+            m365_svcs.append(service)
+        else:
+            other_svcs.append(service)
     lines: list[str] = []
     for header, svcs in (
         ("## Microsoft 365 Services", m365_svcs),
@@ -68,7 +84,7 @@ def _md_services_split(info: TenantInfo) -> list[str]:
             lines.append(header)
             lines.append("")
             for svc in svcs:
-                lines.append(f"- {svc}")
+                lines.append(f"- {markdown_escape(svc)}")
             lines.append("")
     return lines
 
@@ -82,16 +98,20 @@ def _md_gws_details(info: TenantInfo) -> list[str]:
         return []
     lines: list[str] = ["## Google Workspace", ""]
     if info.google_auth_type:
-        lines.append(f"**Auth Type:** {markdown_escape(info.google_auth_type)}  ")
+        lines.append(f"**Auth Type:** {markdown_escape(info.google_auth_type)}{MARKDOWN_HARD_BREAK}")
     if info.google_idp_name:
-        lines.append(f"**Identity Provider:** {markdown_escape(info.google_idp_name)}  ")
+        lines.append(f"**Identity Provider:** {markdown_escape(info.google_idp_name)}{MARKDOWN_HARD_BREAK}")
     # Active modules from GWS CNAME detections.
     gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
     if gws_modules:
-        lines.append(f"**Active Modules:** {', '.join(gws_modules)}  ")
+        lines.append(
+            f"**Active Modules:** {', '.join(markdown_escape(s) for s in gws_modules)}{MARKDOWN_HARD_BREAK}"
+        )
     cse_svcs = [s for s in info.services if "CSE" in s]
     if cse_svcs:
-        lines.append(f"**CSE:** {', '.join(cse_svcs)}  ")
+        lines.append(f"**CSE:** {', '.join(markdown_escape(s) for s in cse_svcs)}{MARKDOWN_HARD_BREAK}")
+    if lines[-1].endswith(MARKDOWN_HARD_BREAK):
+        lines[-1] = lines[-1].removesuffix(MARKDOWN_HARD_BREAK)
     lines.append("")
     return lines
 
@@ -152,11 +172,12 @@ def _md_footer(info: TenantInfo) -> list[str]:
     """Footer: separator, optional degraded-sources note, and the sources line."""
     lines: list[str] = ["---"]
     if info.degraded_sources:
-        sources_list = ", ".join(info.degraded_sources)
+        sources_list = ", ".join(markdown_escape(source) for source in info.degraded_sources)
         lines.append(
-            f"*Note: Some sources were unavailable ({sources_list}) — subdomain discovery may be incomplete.*  "
+            f"*Note: Some sources were unavailable ({sources_list}) - subdomain discovery may be incomplete.*"
+            f"{MARKDOWN_HARD_BREAK}"
         )
-    lines.append(f"*Sources: {', '.join(info.sources)}*")
+    lines.append(f"*Sources: {', '.join(markdown_escape(source) for source in info.sources)}*")
     lines.append("")
     return lines
 
@@ -179,6 +200,8 @@ def format_tenant_markdown(info: TenantInfo) -> str:
     lines.extend(_md_related_domains(info))
     lines.extend(_md_footer(info))
     return "\n".join(lines)
+
+
 def format_explanations_markdown(explanations: list[ExplanationRecord]) -> str:
     """Render explanation records as markdown subsections."""
     lines: list[str] = []
@@ -186,29 +209,34 @@ def format_explanations_markdown(explanations: list[ExplanationRecord]) -> str:
     lines.append("")
 
     for rec in explanations:
-        type_label = rec.item_type.capitalize()
-        lines.append(f"### [{type_label}] {rec.item_name}")
+        type_label = markdown_escape(rec.item_type.capitalize())
+        lines.append(f"### [{type_label}] {markdown_escape(rec.item_name)}")
         lines.append("")
 
         if rec.curated_explanation:
-            lines.append(f"*{rec.curated_explanation}*")
+            lines.append(f"*{markdown_escape(rec.curated_explanation)}*")
             lines.append("")
 
         if rec.fired_rules:
-            lines.append(f"**Rules:** {', '.join(rec.fired_rules)}  ")
+            lines.append(
+                f"**Rules:** {', '.join(markdown_escape(rule) for rule in rec.fired_rules)}{MARKDOWN_HARD_BREAK}"
+            )
 
         if rec.confidence_derivation:
-            lines.append(f"**Confidence:** {rec.confidence_derivation}  ")
+            lines.append(f"**Confidence:** {markdown_escape(rec.confidence_derivation)}{MARKDOWN_HARD_BREAK}")
 
         if rec.matched_evidence:
-            lines.append(f"**Evidence:** {len(rec.matched_evidence)} record(s)  ")
+            lines.append(f"**Evidence:** {len(rec.matched_evidence)} record(s){MARKDOWN_HARD_BREAK}")
+
+        if lines[-1].endswith(MARKDOWN_HARD_BREAK):
+            lines[-1] = lines[-1].removesuffix(MARKDOWN_HARD_BREAK)
 
         if rec.weakening_conditions:
             lines.append("")
             lines.append("**Weakening conditions:**")
             lines.append("")
             for cond in rec.weakening_conditions:
-                lines.append(f"- {cond}")
+                lines.append(f"- {markdown_escape(cond)}")
 
         lines.append("")
 

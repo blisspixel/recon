@@ -604,13 +604,16 @@ def _lookup_emit_markdown(
 ) -> None:
     """Emit the tenant report as Markdown, with optional posture and explanations."""
     from recon_tool.formatter import format_tenant_markdown
+    from recon_tool.formatter.markdown import markdown_escape
 
     md = format_tenant_markdown(info)
     if show_posture and observations:
         md += "\n## Posture Analysis\n\n"
         for obs in observations:
             indicator = {"high": "●", "medium": "◐", "low": "○"}.get(obs.salience, "○")
-            md += f"- {indicator} **[{obs.category}]** {obs.statement}\n"
+            category = markdown_escape(obs.category)
+            statement = markdown_escape(obs.statement)
+            md += f"- {indicator} **[{category}]** {statement}\n"
         md += "\n"
     if show_explain:
         from recon_tool.formatter import format_explanations_markdown
